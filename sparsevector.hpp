@@ -264,6 +264,8 @@ public:
     const Vector<T> &operator()(int ib, int is, int im, retVector<T> &tmp) const;
 
     T v(int i) const;
+    template <class S>
+    void sv(int i, S x); // By using this, you can potentially avoid destroying altcontent
 
     T         &direref(int i                                  ) { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( content ); resetvecID(); killnearfar(); killaltcontent(); return (*content)("&",i);     }
     Vector<T> &direref(const Vector<int> &i, retVector<T> &tmp) { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( content ); resetvecID(); killnearfar(); killaltcontent(); return (*content)("&",i,tmp); }
@@ -3242,6 +3244,15 @@ T &SparseVector<T>::operator()(const char *, int i)
 
     return (*content)("&",pos);
 }
+
+template <class T>
+template <class S>
+void SparseVector<T>::sv(int i, S x)
+{
+    (*this)("&",i) = x;
+}
+
+
 
 template <class T>
 T &SparseVector<T>::n(const char *, int i)

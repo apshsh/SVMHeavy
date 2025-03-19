@@ -678,6 +678,11 @@ public:
 template <class S>
 const SparseVector<gentype> &SMBOOptions::model_convertx(SparseVector<gentype> &res, const SparseVector<S> &x, int useOrigin, int useShortcut) const
 {
+    if ( ( x.nupsize() == 1 ) && !ismodelaug() && ( x.f1indsize() == 0 ) && ( x.f2indsize() == 0 ) && ( x.f4indsize() == 0 ) && ( getdimfid() == 0 ) && ( ( modeltype == 0 ) || ( modeltype == 1 ) ) )
+    {
+        return GlobalOptions::model_convertx(res,x,useOrigin,useShortcut);
+    }
+
     if ( x.nindsize() )
     {
         if ( ( modeltype == 2 ) || ( modeltype == 3 ) )
@@ -687,7 +692,7 @@ const SparseVector<gentype> &SMBOOptions::model_convertx(SparseVector<gentype> &
 
         else
         {
-            GlobalOptions::model_convertx(res,x.nup(0),useOrigin,useShortcut);
+            res = GlobalOptions::model_convertx(res,x.nup(0),useOrigin,useShortcut);
         }
 
         if ( x.nupsize() > 1 )
@@ -744,7 +749,7 @@ const SparseVector<gentype> &SMBOOptions::model_convertx(SparseVector<gentype> &
 
         else
         {
-            GlobalOptions::model_convertx(farpart,x.f1up(0),useOrigin,useShortcut);
+            farpart = GlobalOptions::model_convertx(farpart,x.f1up(0),useOrigin,useShortcut);
         }
 
         for ( int i = 0 ; i < farpart.indsize() ; ++i )
@@ -806,7 +811,7 @@ const SparseVector<gentype> &SMBOOptions::model_convertx(SparseVector<gentype> &
 
         else
         {
-            GlobalOptions::model_convertx(farfarpart,x.f2up(0),useOrigin,useShortcut);
+            farfarpart = GlobalOptions::model_convertx(farfarpart,x.f2up(0),useOrigin,useShortcut);
         }
 
         for ( int i = 0 ; i < farfarpart.indsize() ; ++i )
@@ -863,7 +868,7 @@ const SparseVector<gentype> &SMBOOptions::model_convertx(int &isvarnz, SparseVec
 
         else
         {
-            GlobalOptions::model_convertx(res,x.nup(0),useOrigin,useShortcut);
+            res = GlobalOptions::model_convertx(res,x.nup(0),useOrigin,useShortcut);
         }
 
         if ( debugit )
@@ -966,7 +971,7 @@ const SparseVector<gentype> &SMBOOptions::model_convertx(int &isvarnz, SparseVec
 
         else
         {
-            GlobalOptions::model_convertx(farpart,x.f1up(0),useOrigin,useShortcut);
+            farpart = GlobalOptions::model_convertx(farpart,x.f1up(0),useOrigin,useShortcut);
         }
 
         for ( int i = 0 ; i < farpart.indsize() ; ++i )
@@ -1067,7 +1072,7 @@ const SparseVector<gentype> &SMBOOptions::model_convertx(int &isvarnz, SparseVec
 
         else
         {
-            GlobalOptions::model_convertx(farfarpart,x.f2up(0),useOrigin,useShortcut);
+            farfarpart = GlobalOptions::model_convertx(farfarpart,x.f2up(0),useOrigin,useShortcut);
         }
 
         for ( int i = 0 ; i < farfarpart.indsize() ; ++i )
@@ -1118,8 +1123,8 @@ double SMBOOptions::inf_dist(const SparseVector<S> &xz) const
         setident(locx1("&",i));
     }
 
-    model_convertx(xxz,locxz);
-    model_convertx(xx1,locx1);
+    const SparseVector<gentype> &fleh = model_convertx(xxz,locxz);
+    const SparseVector<gentype> &vleh = model_convertx(xx1,locx1);
 
     //           zeta(z) = sqrt( 1 - (K([x~z],[x~1])/K([x~0],[x~0])) )
 
@@ -1128,6 +1133,9 @@ double SMBOOptions::inf_dist(const SparseVector<S> &xz) const
 
     (*getmuapprox(0)).K2(Kxzx1,locxz,locx1); // kappa0.phi_z(||z-1||).phi_x(0) = kappa0.phi_z(||z-1||)
     (*getmuapprox(0)).K2(Kxx,  locxz,locxz); // kappa0.phi_z(0).phi_x(0) = kappa0
+
+//    (*getmuapprox(0)).K2(Kxzx1,fleh,vleh); // kappa0.phi_z(||z-1||).phi_x(0) = kappa0.phi_z(||z-1||)
+//    (*getmuapprox(0)).K2(Kxx,  fleh,fleh); // kappa0.phi_z(0).phi_x(0) = kappa0
 
     double res = 1-(((double) Kxzx1)/((double) Kxx));
 
@@ -1144,9 +1152,11 @@ int SMBOOptions::model_mu(gentype &resg, const SparseVector<S> &x, const vecInfo
         vecInfo xinfloc;
         gentype xxp;
 
+        const SparseVector<gentype> *xxx = &xx;
+
         if ( !model_issample() && xshortcutenabled )
         {
-            model_convertx(xx,x,0,1);
+            xxx = &model_convertx(xx,x,0,1);
 
             if ( !getxpweightIsWeight() )
             {
@@ -1213,7 +1223,7 @@ int SMBOOptions::model_mu(gentype &resg, const SparseVector<S> &x, const vecInfo
                 }
             }
 
-            xinf = &((*(muapprox(0))).getKernel().getvecInfo(xinfloc,xx,&xxp)); // Can't calculate the inner-product of vectors that aren't actually formed!
+            xinf = &((*(muapprox(0))).getKernel().getvecInfo(xinfloc,*xxx,&xxp)); // Can't calculate the inner-product of vectors that aren't actually formed!
         }
 
         else
@@ -1221,10 +1231,10 @@ int SMBOOptions::model_mu(gentype &resg, const SparseVector<S> &x, const vecInfo
 bailout:
             xx.zeronotnu(0);
 
-            model_convertx(xx,x);
+            xxx = &model_convertx(xx,x);
         }
 
-        xx.makealtcontent();
+        (*xxx).makealtcontent();
 
         int i,ires = 0;
 
@@ -1240,12 +1250,12 @@ bailout:
                 {
                     SparseVector<gentype> tempx;
 
-                    ires += (*getmuapprox(0)).gg(resg,convnearuptonaive(tempx,xx));
+                    ires += (*getmuapprox(0)).gg(resg,convnearuptonaive(tempx,*xxx));
                 }
 
                 else
                 {
-                    ires += (*getmuapprox(0)).gg(resg,xx,xinf,pxyprodx);
+                    ires += (*getmuapprox(0)).gg(resg,*xxx,xinf,pxyprodx);
                 }
             }
 
@@ -1259,12 +1269,12 @@ bailout:
                     {
                         SparseVector<gentype> tempx;
 
-                        ires += (*getmuapprox(i)).gg(resgvec("&",i),convnearuptonaive(tempx,xx));
+                        ires += (*getmuapprox(i)).gg(resgvec("&",i),convnearuptonaive(tempx,*xxx));
                     }
 
                     else
                     {
-                        ires += (*getmuapprox(i)).gg(resgvec("&",i),xx,xinf,pxyprodx);
+                        ires += (*getmuapprox(i)).gg(resgvec("&",i),*xxx,xinf,pxyprodx);
                     }
                 }
             }
@@ -1282,10 +1292,11 @@ int SMBOOptions::model_mu(Vector<double> &resg, const SparseVector<S> &x, const 
         vecInfo *xinf = nullptr;
         vecInfo xinfloc;
         gentype xxp;
+        const SparseVector<gentype> *xxx = &xx;
 
         if ( !model_issample() && xshortcutenabled )
         {
-            model_convertx(xx,x,0,1);
+            xxx = &model_convertx(xx,x,0,1);
 
             if ( !getxpweightIsWeight() )
             {
@@ -1352,7 +1363,7 @@ int SMBOOptions::model_mu(Vector<double> &resg, const SparseVector<S> &x, const 
                 }
             }
 
-            xinf = &((*(muapprox(0))).getKernel().getvecInfo(xinfloc,xx,&xxp)); // Can't calculate the inner-product of vectors that aren't actually formed!
+            xinf = &((*(muapprox(0))).getKernel().getvecInfo(xinfloc,*xxx,&xxp)); // Can't calculate the inner-product of vectors that aren't actually formed!
         }
 
         else
@@ -1360,10 +1371,10 @@ int SMBOOptions::model_mu(Vector<double> &resg, const SparseVector<S> &x, const 
 bailout:
             xx.zeronotnu(0);
 
-            model_convertx(xx,x);
+            xxx = &model_convertx(xx,x);
         }
 
-        xx.makealtcontent();
+        (*xxx).makealtcontent();
 
         int i,ires = 0;
 
@@ -1381,12 +1392,12 @@ bailout:
                 {
                     SparseVector<gentype> tempx;
 
-                    ires += (*getmuapprox(0)).gg(resg("&",0),convnearuptonaive(tempx,xx));
+                    ires += (*getmuapprox(0)).gg(resg("&",0),convnearuptonaive(tempx,*xxx));
                 }
 
                 else
                 {
-                    ires += (*getmuapprox(0)).gg(resg("&",0),xx,0,xinf,pxyprodx);
+                    ires += (*getmuapprox(0)).gg(resg("&",0),*xxx,0,xinf,pxyprodx);
                 }
             }
 
@@ -1400,12 +1411,12 @@ bailout:
                     {
                         SparseVector<gentype> tempx;
 
-                        ires += (*getmuapprox(i)).gg(resg,convnearuptonaive(tempx,xx));
+                        ires += (*getmuapprox(i)).gg(resg,convnearuptonaive(tempx,*xxx));
                     }
 
                     else
                     {
-                        ires += (*getmuapprox(i)).gg(resg,xx,0,xinf,pxyprodx);
+                        ires += (*getmuapprox(i)).gg(resg,*xxx,0,xinf,pxyprodx);
                     }
                 }
             }
@@ -1431,10 +1442,11 @@ int SMBOOptions::model_muvar(gentype &resv, gentype &resmu, const SparseVector<S
         vecInfo *xinf = nullptr;
         vecInfo xinfloc;
         gentype xxp;
+        const SparseVector<gentype> *xxx = &xx;
 
         if ( !model_issample() && xshortcutenabled )
         {
-            model_convertx(xx,x,0,1);
+            xxx = &model_convertx(xx,x,0,1);
 
             if ( !getxpweightIsWeight() )
             {
@@ -1501,7 +1513,7 @@ int SMBOOptions::model_muvar(gentype &resv, gentype &resmu, const SparseVector<S
                 }
             }
 
-            xinf = &((*(muapprox(0))).getKernel().getvecInfo(xinfloc,xx,&xxp)); // Can't calculate the inner-product of vectors that aren't actually formed!
+            xinf = &((*(muapprox(0))).getKernel().getvecInfo(xinfloc,*xxx,&xxp)); // Can't calculate the inner-product of vectors that aren't actually formed!
 
             MEMNEWARRAY(pxyprodxx,gentype *,2);
             pxyprodxx[0] = &xxp;
@@ -1521,7 +1533,7 @@ bailout:
                 xx.zeronotnu(0);
                 xxvar.zero();
 
-                model_convertx(isvarnz,xxvar,xx,x,0,0,debugit);
+                xxx = &model_convertx(isvarnz,xxvar,xx,x,0,0,debugit);
 
                 if ( debugit )
                 {
@@ -1536,13 +1548,13 @@ bailout:
             {
                 xx.zeronotnu(0);
 
-                model_convertx(xx,x);
+                xxx = &model_convertx(xx,x);
             }
         }
 
         int i,ires = 0;
 
-        xx.makealtcontent();
+        (*xxx).makealtcontent();
 
         if ( !sigmuseparate )
         {
@@ -1565,12 +1577,12 @@ bailout:
                             {
                                 SparseVector<gentype> tempx;
 
-                                ires += (*getmuapprox(0)).var(resv,resmu,convnearuptonaive(tempx,xx));
+                                ires += (*getmuapprox(0)).var(resv,resmu,convnearuptonaive(tempx,*xxx));
                             }
 
                             else
                             {
-                                ires += (*getmuapprox(0)).var(resv,resmu,xx,xinf,pxyprodx,pxyprodxx);
+                                ires += (*getmuapprox(0)).var(resv,resmu,*xxx,xinf,pxyprodx,pxyprodxx);
                             }
                         }
 
@@ -1585,12 +1597,12 @@ bailout:
                                 {
                                     SparseVector<gentype> tempx;
 
-                                    ires += (*getmuapprox(i)).var(resvvec("&",i),resmuvec("&",i),convnearuptonaive(tempx,xx));
+                                    ires += (*getmuapprox(i)).var(resvvec("&",i),resmuvec("&",i),convnearuptonaive(tempx,*xxx));
                                 }
 
                                 else
                                 {
-                                    ires += (*getmuapprox(i)).var(resvvec("&",i),resmuvec("&",i),xx,xinf,pxyprodx,pxyprodxx);
+                                    ires += (*getmuapprox(i)).var(resvvec("&",i),resmuvec("&",i),*xxx,xinf,pxyprodx,pxyprodxx);
                                 }
                             }
                         }
@@ -1613,12 +1625,12 @@ bailout:
                         {
                             SparseVector<gentype> tempx,tempv;
 
-                            ires += (*getmuapprox(0)).noisevar(resv,resmu,convnearuptonaive(tempx,xx),convnearuptonaive(xxvar,tempv),-1);
+                            ires += (*getmuapprox(0)).noisevar(resv,resmu,convnearuptonaive(tempx,*xxx),convnearuptonaive(xxvar,tempv),-1);
                         }
 
                         else
                         {
-                            ires += (*getmuapprox(0)).noisevar(resv,resmu,xx,xxvar,-2,xinf,pxyprodx,pxyprodxx);
+                            ires += (*getmuapprox(0)).noisevar(resv,resmu,*xxx,xxvar,-2,xinf,pxyprodx,pxyprodxx);
                         }
                     }
 
@@ -1633,12 +1645,12 @@ bailout:
                             {
                                 SparseVector<gentype> tempx,tempv;
 
-                                ires += (*getmuapprox(i)).noisevar(resvvec("&",i),resmuvec("&",i),convnearuptonaive(tempx,xx),convnearuptonaive(xxvar,tempv),-1);
+                                ires += (*getmuapprox(i)).noisevar(resvvec("&",i),resmuvec("&",i),convnearuptonaive(tempx,*xxx),convnearuptonaive(xxvar,tempv),-1);
                             }
 
                             else
                             {
-                                ires += (*getmuapprox(i)).noisevar(resvvec("&",i),resmuvec("&",i),xx,xxvar,02,xinf,pxyprodx,pxyprodxx);
+                                ires += (*getmuapprox(i)).noisevar(resvvec("&",i),resmuvec("&",i),*xxx,xxvar,02,xinf,pxyprodx,pxyprodxx);
                             }
                         }
                     }
@@ -1665,12 +1677,12 @@ bailout:
                         {
                             SparseVector<gentype> tempx;
 
-                            ires += (*getmuapprox(0)).var(resv,resmu,convnearuptonaive(tempx,xx));
+                            ires += (*getmuapprox(0)).var(resv,resmu,convnearuptonaive(tempx,*xxx));
                         }
 
                         else
                         {
-                            ires += (*getmuapprox(0)).var(resv,resmu,xx,xinf,pxyprodx,pxyprodxx);
+                            ires += (*getmuapprox(0)).var(resv,resmu,*xxx,xinf,pxyprodx,pxyprodxx);
                         }
                     }
 
@@ -1685,12 +1697,12 @@ bailout:
                             {
                                 SparseVector<gentype> tempx;
 
-                                ires += (*getmuapprox(i)).var(resvvec("&",i),resmuvec("&",i),convnearuptonaive(tempx,xx));
+                                ires += (*getmuapprox(i)).var(resvvec("&",i),resmuvec("&",i),convnearuptonaive(tempx,*xxx));
                             }
 
                             else
                             {
-                                ires += (*getmuapprox(i)).var(resvvec("&",i),resmuvec("&",i),xx,xinf,pxyprodx,pxyprodxx);
+                                ires += (*getmuapprox(i)).var(resvvec("&",i),resmuvec("&",i),*xxx,xinf,pxyprodx,pxyprodxx);
                             }
                         }
                     }
@@ -1729,12 +1741,12 @@ bailout:
                     {
                         SparseVector<gentype> tempx;
 
-                        ires += (*getmuapprox(0)).gg(resmu,convnearuptonaive(tempx,xx));
+                        ires += (*getmuapprox(0)).gg(resmu,convnearuptonaive(tempx,*xxx));
                     }
 
                     else
                     {
-                        ires += (*getmuapprox(0)).gg(resmu,xx,xinf,pxyprodx);
+                        ires += (*getmuapprox(0)).gg(resmu,*xxx,xinf,pxyprodx);
                     }
                 }
 
@@ -1749,12 +1761,12 @@ bailout:
                         {
                             SparseVector<gentype> tempx;
 
-                            ires += (*getmuapprox(i)).gg(resmuvec("&",i),convnearuptonaive(tempx,xx));
+                            ires += (*getmuapprox(i)).gg(resmuvec("&",i),convnearuptonaive(tempx,*xxx));
                         }
 
                         else
                         {
-                            ires += (*getmuapprox(i)).gg(resmuvec("&",i),xx,xinf,pxyprodx);
+                            ires += (*getmuapprox(i)).gg(resmuvec("&",i),*xxx,xinf,pxyprodx);
                         }
                     }
                 }
@@ -1770,12 +1782,12 @@ bailout:
                 {
                     SparseVector<gentype> tempx,tempv;
 
-                    ires |= (*sigmaapprox).noisevar(resscalarv,dummy,convnearuptonaive(tempx,xx),convnearuptonaive(tempv,xxvar),-1);
+                    ires |= (*sigmaapprox).noisevar(resscalarv,dummy,convnearuptonaive(tempx,*xxx),convnearuptonaive(tempv,xxvar),-1);
                 }
 
                 else
                 {
-                    ires |= (*sigmaapprox).noisevar(resscalarv,dummy,xx,xxvar,-2,xinf,pxyprodx,pxyprodxx);
+                    ires |= (*sigmaapprox).noisevar(resscalarv,dummy,*xxx,xxvar,-2,xinf,pxyprodx,pxyprodxx);
                 }
 
                 if ( !muapprox.size() )
@@ -1802,12 +1814,12 @@ bailout:
                 {
                     SparseVector<gentype> tempx;
 
-                    ires |= (*sigmaapprox).var(resscalarv,dummy,convnearuptonaive(tempx,xx));
+                    ires |= (*sigmaapprox).var(resscalarv,dummy,convnearuptonaive(tempx,*xxx));
                 }
 
                 else
                 {
-                    ires |= (*sigmaapprox).var(resscalarv,dummy,xx,xinf,pxyprodx,pxyprodxx);
+                    ires |= (*sigmaapprox).var(resscalarv,dummy,*xxx,xinf,pxyprodx,pxyprodxx);
                 }
 
                 if ( !muapprox.size() )
@@ -1848,11 +1860,9 @@ int SMBOOptions::model_covar(Matrix<gentype> &resv, const Vector<SparseVector<S>
 template <class S>
 void SMBOOptions::model_stabProb(double &res, const SparseVector<S> &x, int p, double pnrm, int rot, double mu, double B) const
 {
-    model_convertx(xx,x);
-
     SparseVector<gentype> tempx;
 
-    (*(muapprox(0))).stabProb(res,convnearuptonaive(tempx,xx),p,pnrm,rot,mu,B);
+    (*(muapprox(0))).stabProb(res,convnearuptonaive(tempx,model_convertx(xx,x)),p,pnrm,rot,mu,B);
 }
 
 

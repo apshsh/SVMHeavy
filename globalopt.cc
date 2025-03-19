@@ -238,7 +238,7 @@ int GlobalOptions::realOptim(int dim,
         Vector<gentype> allfakexmin(dim);
         Vector<gentype> allfakexmax(dim);
 
-        xwidth = calcabc(dim,allfakexmin,allfakexmax,a,b,c,xmin,xmax,distMode);
+        xwidth = calcabc(dim,allfakexmin,allfakexmax,a,b,c,xmin,xmax,distMode,varsType,ismodel_convertx_simple);
 
         Vector<gentype> fakexmin(allfakexmin);
         Vector<gentype> fakexmax(allfakexmax);
@@ -490,7 +490,7 @@ int GlobalOptions::realOptim(int dim,
                 // Grab both x result *and* put subspace in optimal state
 
                 convertx(dim,locxres,locXres);
-                model_convertx(altlocxres,( altlocXres = locXres ));
+                model_convertx(altlocxres,( altlocXres = locXres ),0,0,0,1);
 
                 // Just completed the first optimisation, so the solution must be the best so far by definition
 
@@ -515,7 +515,7 @@ int GlobalOptions::realOptim(int dim,
                 // Grab both x result *and* put subspace in optimal state
 
                 convertx(dim,locxres,locXres);
-                model_convertx(altlocxres,( altlocXres = locXres ));
+                model_convertx(altlocxres,( altlocXres = locXres ),0,0,0,1);
 
                 // Not first optimisation, but there is a new best solution
 
@@ -544,7 +544,7 @@ int GlobalOptions::realOptim(int dim,
                 // Grab both x result *and* put subspace in optimal state
 
                 convertx(dim,locxres,locXres,1); // Note that useOrigin is set here, so locXres is not actually used!
-                model_convertx(altlocxres,( altlocXres = locXres ),1); // Note that useOrigin is set here, so locXres is not actually used!
+                model_convertx(altlocxres,( altlocXres = locXres ),1,0,0,1); // Note that useOrigin is set here, so locXres is not actually used!
 
                 // Not first optimisation, no improvement found (but zero set anyhow)
 
@@ -1012,13 +1012,16 @@ outstream() << resbuffer.str() << "\n";
     return;
 }
 
-double calcabc(int dim, 
-               Vector<gentype> &fakexmin, Vector<gentype> &fakexmax, 
+double calcabc(int dim,
+               Vector<gentype> &fakexmin, Vector<gentype> &fakexmax,
                Vector<double> &a, Vector<double> &b, Vector<double> &c,
-               const Vector<gentype> &xmin, const Vector<gentype> &xmax, 
-               const Vector<int> &distMode)
+               const Vector<gentype> &xmin, const Vector<gentype> &xmax,
+               const Vector<int> &distMode, const Vector<int> &varsType,
+               bool &ismodel_convertx_simple)
 {
     double xwidth = 1;
+
+    ismodel_convertx_simple = dim ? true : false;
 
     a.resize(dim+1);
     b.resize(dim+1);
@@ -1035,6 +1038,13 @@ double calcabc(int dim,
 
             int zerowidth = ( lb == ub ) ? 1 : 0;
 
+            if ( zerowidth || distMode(i) || !varsType(i) )
+            {
+                // zero width or nonlinear scale or integral variable
+
+                ismodel_convertx_simple = false;
+            }
+
             xwidth = ( !i || ( (ub-lb) > xwidth ) ) ? (ub-lb) : xwidth;
 
             fakexmin("&",i) = 0.0;
@@ -1042,6 +1052,8 @@ double calcabc(int dim,
 
             if ( distMode(i) == 1 )
             {
+                ismodel_convertx_simple = false;
+
                 // Logarithmic grid
                 //
                 // v = a + e^(b+c.t)
@@ -1071,6 +1083,8 @@ double calcabc(int dim,
 
             else if ( distMode(i) == 2 )
             {
+                ismodel_convertx_simple = false;
+
                 // Anti-logarithmic grid (inverse of logarithmic grid)
                 //
                 // v = (1/c) log(t-a) - (b/c)
@@ -1102,6 +1116,8 @@ double calcabc(int dim,
 
             else if ( distMode(i) == 4 )
             {
+                ismodel_convertx_simple = false;
+
                 // Anti-logistic grid
                 //
                 // v = a - (1/b) log( 1/(0.5+(c*(t-0.5))) - 1 )
@@ -1231,6 +1247,11 @@ double calcabc(int dim,
                 a("&",i) = lb;
                 b("&",i) = ub-a(i);
                 c("&",i) = 0;
+
+                if ( ( a(i) != 0 ) || ( b(i) != 1 ) )
+                {
+                    ismodel_convertx_simple = false;
+                }
             }
         }
     }

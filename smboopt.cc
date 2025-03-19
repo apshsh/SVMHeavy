@@ -1300,8 +1300,11 @@ void SMBOOptions::model_sample(const Vector<double> &qmin, const Vector<double> 
 {
     if ( !model_issample() )
     {
-        SparseVector<double> xmin(qmin);
-        SparseVector<double> xmax(qmax);
+        SparseVector<double> qqmin(qmin);
+        SparseVector<double> qqmax(qmax);
+
+        SparseVector<gentype> xmin; xmin.castassign(qqmin);
+        SparseVector<gentype> xmax; xmax.castassign(qqmax);
 
         muapprox_sample.resize(muapprox.size());
 
@@ -1316,8 +1319,8 @@ errstream() << "Sample objective model\n";
         SparseVector<gentype> xxmin;
         SparseVector<gentype> xxmax;
 
-        model_convertx(xxmax,xmax);
-        model_convertx(xxmin,xmin);
+        xxmax = model_convertx(xxmax,xmax);
+        xxmin = model_convertx(xxmin,xmin);
 
         xxmax.makealtcontent();
         xxmin.makealtcontent();
@@ -1679,14 +1682,14 @@ int SMBOOptions::model_addTrainingVector_musigma(const gentype &y, const gentype
     locxresunconv("&",locxresunconv.size()-1) = x;
 
     {
-        model_convertx((xx),x);
+        const SparseVector<gentype> &xxx = model_convertx(xx,x);
 
-        ires |= modeldiff_int_addTrainingVector(y,ypred,(xx),2,varadd);
-        ires |= modelmu_int_addTrainingVector(y,x,(xx),2,varadd);
+        ires |= modeldiff_int_addTrainingVector(y,ypred,xxx,2,varadd);
+        ires |= modelmu_int_addTrainingVector(y,x,xxx,2,varadd);
 
         if ( sigmuseparate )
         {
-            ires = modelsigma_int_addTrainingVector(y,(xx),2,varadd);
+            ires = modelsigma_int_addTrainingVector(y,xxx,2,varadd);
         }
     }
 
@@ -1707,10 +1710,9 @@ int SMBOOptions::model_addTrainingVector_musigma(const gentype &y, const gentype
             // Suppress model to do initial conversion
             int dummy = usemodelaugx;
             usemodelaugx = 0;
-            model_convertx(xmod,x);
             usemodelaugx = dummy;
 
-            ires |= modelaugx_int_addTrainingVector(xsidechan,xmod,varadd);
+            ires |= modelaugx_int_addTrainingVector(xsidechan,model_convertx(xmod,x),varadd);
         }
 
         SparseVector<gentype> xxx(x);
@@ -1721,18 +1723,18 @@ int SMBOOptions::model_addTrainingVector_musigma(const gentype &y, const gentype
 //errstream() << "phantomxyzxyzxyz bayesopt addvec xxx with side: " << xxx << "\n";
 
         {
-            model_convertx((xx),xxx);
+            const SparseVector<gentype> &xxxxx = model_convertx(xx,xxx);
 //errstream() << "phantomxyzxyzxyz bayesopt addvec xx: " << xx << "\n";
 
-            ires |= modeldiff_int_addTrainingVector(y,ypred,(xx),xobstype,varadd);
+            ires |= modeldiff_int_addTrainingVector(y,ypred,xxxxx,xobstype,varadd);
 //errstream() << "phantomxyzxyzxyz bayesopt addvec xx(b): " << xx << "\n";
-            ires |= modelmu_int_addTrainingVector(y,x,(xx),xobstype,varadd);
+            ires |= modelmu_int_addTrainingVector(y,x,xxxxx,xobstype,varadd);
 
             if ( sigmuseparate )
             {
                 NiceAssert( xobstype == 2 );
 
-                ires = modelsigma_int_addTrainingVector(y,(xx),xobstype,varadd);
+                ires = modelsigma_int_addTrainingVector(y,xxxxx,xobstype,varadd);
             }
         }
 
@@ -1745,9 +1747,7 @@ int SMBOOptions::model_addTrainingVector_sigmaifsep(const gentype &y, const Spar
 
     if ( sigmuseparate )
     {
-        model_convertx((xx),x);
-
-        ires = modelsigma_int_addTrainingVector(y,(xx),2,varadd);
+        ires = modelsigma_int_addTrainingVector(y,model_convertx(xx,x),2,varadd);
     }
 
     return ires;
@@ -1767,10 +1767,9 @@ int SMBOOptions::model_addTrainingVector_mu_sigmaifsame(const gentype &y, const 
             // Suppress model to do initial conversion
             int dummy = usemodelaugx;
             usemodelaugx = 0;
-            model_convertx(xmod,x);
             usemodelaugx = dummy;
 
-            ires |= modelaugx_int_addTrainingVector(xsidechan,xmod,varadd);
+            ires |= modelaugx_int_addTrainingVector(xsidechan,model_convertx(xmod,x),varadd);
         }
 
         SparseVector<gentype> xxx(x);
@@ -1778,10 +1777,10 @@ int SMBOOptions::model_addTrainingVector_mu_sigmaifsame(const gentype &y, const 
         addinxsidechan(xxx,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4);
 
         {
-            model_convertx((xx),xxx);
+            const SparseVector<gentype> &xxxxxx = model_convertx(xx,xxx);
 
-            ires |= modeldiff_int_addTrainingVector(y,ypred,(xx),xobstype,varadd,dval);
-            ires |= modelmu_int_addTrainingVector(y,x,(xx),xobstype,varadd,dval);
+            ires |= modeldiff_int_addTrainingVector(y,ypred,xxxxxx,xobstype,varadd,dval);
+            ires |= modelmu_int_addTrainingVector(y,x,xxxxxx,xobstype,varadd,dval);
         }
 
         return ires;
@@ -2620,10 +2619,10 @@ double calcUCB(int dim, const double *x, void *arg);
 
 double calcLCB(int dim, const double *x, void *arg)
 {
-    SMBOOptions &caller      = *((SMBOOptions *)          (((void **) arg)[0]));
-    SparseVector<double> &xx = *((SparseVector<double> *) (((void **) arg)[1]));
-    gentype &mu              = *((gentype *)              (((void **) arg)[2]));
-    gentype &sigmasq         = *((gentype *)              (((void **) arg)[3]));
+    SMBOOptions &caller       = *((SMBOOptions *)           (((void **) arg)[0]));
+    SparseVector<gentype> &xx = *((SparseVector<gentype> *) (((void **) arg)[1]));
+    gentype &mu               = *((gentype *)               (((void **) arg)[2]));
+    gentype &sigmasq          = *((gentype *)               (((void **) arg)[3]));
 
     int i;
 
@@ -2639,10 +2638,10 @@ double calcLCB(int dim, const double *x, void *arg)
 
 double calcUCB(int dim, const double *x, void *arg)
 {
-    SMBOOptions &caller      = *((SMBOOptions *)          (((void **) arg)[0]));
-    SparseVector<double> &xx = *((SparseVector<double> *) (((void **) arg)[1]));
-    gentype &mu              = *((gentype *)              (((void **) arg)[2]));
-    gentype &sigmasq         = *((gentype *)              (((void **) arg)[3]));
+    SMBOOptions &caller       = *((SMBOOptions *)           (((void **) arg)[0]));
+    SparseVector<gentype> &xx = *((SparseVector<gentype> *) (((void **) arg)[1]));
+    gentype &mu               = *((gentype *)               (((void **) arg)[2]));
+    gentype &sigmasq          = *((gentype *)               (((void **) arg)[3]));
 
     int i;
 
@@ -2661,10 +2660,10 @@ void altcalcUCB(gentype &res, Vector<gentype> &x, void *arg);
 
 void altcalcLCB(gentype &res, Vector<gentype> &x, void *arg)
 {
-    SMBOOptions &caller      = *((SMBOOptions *)          (((void **) arg)[0]));
-    SparseVector<double> &xx = *((SparseVector<double> *) (((void **) arg)[1]));
-    gentype &mu              = *((gentype *)              (((void **) arg)[2]));
-    gentype &sigmasq         = *((gentype *)              (((void **) arg)[3]));
+    SMBOOptions &caller       = *((SMBOOptions *)           (((void **) arg)[0]));
+    SparseVector<gentype> &xx = *((SparseVector<gentype> *) (((void **) arg)[1]));
+    gentype &mu               = *((gentype *)               (((void **) arg)[2]));
+    gentype &sigmasq          = *((gentype *)               (((void **) arg)[3]));
 
     int i;
     int dim = x.size();
@@ -2683,10 +2682,10 @@ void altcalcLCB(gentype &res, Vector<gentype> &x, void *arg)
 
 void altcalcUCB(gentype &res, Vector<gentype> &x, void *arg)
 {
-    SMBOOptions &caller      = *((SMBOOptions *)          (((void **) arg)[0]));
-    SparseVector<double> &xx = *((SparseVector<double> *) (((void **) arg)[1]));
-    gentype &mu              = *((gentype *)              (((void **) arg)[2]));
-    gentype &sigmasq         = *((gentype *)              (((void **) arg)[3]));
+    SMBOOptions &caller       = *((SMBOOptions *)           (((void **) arg)[0]));
+    SparseVector<gentype> &xx = *((SparseVector<gentype> *) (((void **) arg)[1]));
+    gentype &mu               = *((gentype *)               (((void **) arg)[2]));
+    gentype &sigmasq          = *((gentype *)               (((void **) arg)[3]));
 
     int i;
     int dim = x.size();

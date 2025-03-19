@@ -72,7 +72,8 @@ double calcabc(int dim,
                Vector<gentype> &fakexmin, Vector<gentype> &fakexmax,
                Vector<double> &a, Vector<double> &b, Vector<double> &c,
                const Vector<gentype> &xmin, const Vector<gentype> &xmax,
-               const Vector<int> &distMode);
+               const Vector<int> &distMode, const Vector<int> &varsType,
+               bool &ismodel_convertx_simple);
 
 
 class GridOptions;
@@ -230,6 +231,8 @@ public:
         bernstart     = 1;
 
         overfnitcnt = 0;
+
+        ismodel_convertx_simple = false;
     }
 
     GlobalOptions(const GlobalOptions &src)
@@ -316,6 +319,8 @@ public:
         xbasisprod       = src.xbasisprod;
 
         overfnitcnt = src.overfnitcnt;
+
+        ismodel_convertx_simple = src.ismodel_convertx_simple;
 
         return *this;
     }
@@ -676,11 +681,16 @@ public:
     //              2 calculate both xpweight and res (where possible)
 
     template <class S>
-    const SparseVector<gentype> &model_convertx(SparseVector<gentype> &res, const SparseVector<S> &x, int useOrigin = 0, int useShortcut = 0, int givefeedback = 0) const
+    const SparseVector<gentype> &model_convertx(SparseVector<gentype> &res, const SparseVector<S> &x, int useOrigin = 0, int useShortcut = 0, int givefeedback = 0, int convertanyhow = 0) const
     {
         if ( givefeedback )
         {
             errstream() << "Debug model_convertx\n";
+        }
+
+        if ( ismodel_convertx_simple && !useOrigin && !useShortcut && !isProjection && !convertanyhow )
+        {
+            return x;
         }
 
         xpweightIsWeight = 0;
@@ -1290,7 +1300,7 @@ public:
 
             for ( i = 0 ; i < x.size() ; ++i )
             {
-                model_convertx(res("&",i),x(i));
+                model_convertx(res("&",i),x(i),0,0,0,1);
             }
         }
 
@@ -1413,7 +1423,7 @@ private:
     Vector<SparseVector<gentype> > xbasis; // when xpweightIsWeight set this will be the basis vectors themselves
     Matrix<gentype> xbasisprod; // when xpweightIsWeight set this will be the inner products of the basis vectors (function) themselves
 
-    // Convert vectors from optimisation space to "real" space.  The optimisers 
+    // Convert vectors from optimisation space to "real" space.  The optimisers
     // work on (see) the "optimisation" space, which is then converted to "real"
     // space when evaluating f(x).
 
@@ -1423,6 +1433,8 @@ private:
 
     Vector<int> locdistMode;
     Vector<int> locvarsType;
+
+    bool ismodel_convertx_simple;
 
     // Private variables
 

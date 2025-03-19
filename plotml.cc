@@ -130,7 +130,7 @@ int plotml(const ML_Base &ml, int xindex,
 
     dummyb.force_null(); // This means "no variance on x" when calling imp
 
-    for ( x("&",xindex) = xmin, xbase = xmin ; (double) x(xindex) <= xmax ; x("&",xindex) += (xmax-xmin)/NUMSAMP, xbase = x(xindex) )
+    for ( x("&",xindex).force_double() = xmin+1e-12, xbase = xmin+1e-12 ; (double) x(xindex) <= xmax+1e-12 ; x("&",xindex) += (xmax-xmin)/NUMSAMP, xbase = x(xindex) )
     {
         if ( !plotimp && incvar && ( incdata & 2 ) )
         {

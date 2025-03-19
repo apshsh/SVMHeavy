@@ -11,11 +11,12 @@
 #ifndef _gslrefs_h
 #define _gslrefs_h
 
+double gsl_zeta(double x);
+
 int gsl_dawson(double &res, double x);
 int gsl_gamma_inc(double &res, double a, double x);
 int gsl_psi(double &res, double x);
 int gsl_psi_n(double &res, int n, double x);
-int gsl_zeta(double &res, double x);
 int gsl_lambertW0(double &res, double x);
 int gsl_lambertW1(double &res, double x);
 

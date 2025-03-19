@@ -83,7 +83,7 @@ void BLK_Conect::fillCache(int Ns, int Ne)
     return;
 }
 
-double BLK_Conect::tuneKernel(int method, double xwidth, int tuneK)
+double BLK_Conect::tuneKernel(int method, double xwidth, int)
 {
     int ii;
     double res = 0;

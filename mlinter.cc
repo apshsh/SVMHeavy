@@ -1,3 +1,22 @@
+//in sparsevector.hpp:
+//sv should work in the sparse case as well (altcontentsp)
+//sv should have a gentype overload in gentype.hpp
+//Need to add: void set(int i, const T  &src) that acts like sv but for references (with double and gentype overloads in gentype.hpp)
+
+//For some reason, when plotml evaluates [0] for blk_usrfnb with 4*(x_0-0.5)^2 it gives 10???	
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //fpareto, fgrid etc need to be negated for analysis with multi-objective!
 //the optimisation code seems to be working fine, but the *recording* code is negative to what it should be.
@@ -4336,7 +4355,6 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gbj"   ) ||
                       ( currentarg == "-gba"   ) ||
                       ( currentarg == "-gbb"   ) ||
-                      ( currentarg == "-gbl"   ) ||
                       ( currentarg == "-gbt"   ) ||
                       ( currentarg == "-gbe"   ) ||
                       ( currentarg == "-gbts"  ) ||
@@ -8278,7 +8296,6 @@ errstream() << "phantomxyznlp " << theKern << "\n";
                     else if ( currcommand(0) == "-gbb"   ) { (*xbopts).algseed             = safeatoi(currcommand(1),argvariables);                                                                   }
                     else if ( currcommand(0) == "-gbt"   ) { (*xbopts).totiters            = safeatoi(currcommand(1),argvariables);                                                                   }
                     else if ( currcommand(0) == "-gbe"   ) { (*xbopts).err                 = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbl"   ) { (*xbopts).stepweight          = safeatof(currcommand(1),argvariables);                                                                   }
                     else if ( currcommand(0) == "-gbz"   ) { (*xbopts).ztol                = safeatof(currcommand(1),argvariables);                                                                   }
                     else if ( currcommand(0) == "-gbZ"   ) { (*xbopts).minstdev            = safeatof(currcommand(1),argvariables);                                                                   }
                     else if ( currcommand(0) == "-gbD"   ) { (*xbopts).delta               = safeatof(currcommand(1),argvariables);                                                                   }
@@ -17118,12 +17135,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           zero  in the  feasible region,  very large  outside\n" : "" );
     output << ( (          advanced ) ? "                           (that  is, a  penalty for  a minimisation problem).\n" : "" );
     output << ( (          advanced ) ? "                           Default value is an empty vector.                  \n" : "" );
-    output << ( (          advanced ) ? "         -gbl w          - distance   weight   (default   0).   Assuming   the\n" : "" );
-    output << ( (          advanced ) ? "                           acquisition function is  strictly positive replaces\n" : "" );
-    output << ( (          advanced ) ? "                           it with  (1-w.||p-q||_2)*acqusition(q),  where p is\n" : "" );
-    output << ( (          advanced ) ? "                           the previous  parameter set  (specified by  -g) and\n" : "" );
-    output << ( (          advanced ) ? "                           q  is the  proposed parameter  set.  Handy  to make\n" : "" );
-    output << ( (          advanced ) ? "                           incremental retrains faster.                       \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gbts $estring  - string  to be evaluated  before each (inner)  iter.\n" : "" );
     output << ( (          advanced ) ? "                           var(90,4) is the inner iteration count.            \n" : "" );

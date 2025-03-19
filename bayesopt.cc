@@ -189,8 +189,6 @@ class fninnerinnerArg
                     const double &_delta,
                     const double &_nu,
                     gentype &_ires,
-                    SparseVector<double> &_prevx,
-                    SparseVector<double> &_diffx,
                     const double &_a,
                     const double &_b,
                     const double &_r,
@@ -201,7 +199,6 @@ class fninnerinnerArg
                     const double &_mig,
                     gentype &_betafn,
                     const int &_locmethod,
-                    const double &_stepweight,
                     const int &_justreturnbeta,
                     Matrix<gentype> &_covarmatrix,
                     Vector<gentype> &_meanvector,
@@ -249,8 +246,6 @@ class fninnerinnerArg
                                                 _q_delta(_delta),
                                                 _q_nu(_nu),
                                                 ires(_ires),
-                                                _q_prevx(&_prevx),
-                                                diffx(_diffx),
                                                 _q_a(_a),
                                                 _q_b(_b),
                                                 _q_r(_r),
@@ -261,7 +256,6 @@ class fninnerinnerArg
                                                 _q_mig(_mig),
                                                 _q_betafn(&_betafn),
                                                 _q_locmethod(_locmethod),
-                                                stepweight(_stepweight),
                                                 justreturnbeta(_justreturnbeta),
                                                 covarmatrix(_covarmatrix),
                                                 meanvector(_meanvector),
@@ -297,7 +291,8 @@ class fninnerinnerArg
                                                 unscentK(_unscentK),
                                                 unscentSqrtSigma(_unscentSqrtSigma),
                                                 stabUseSig(_stabUseSig),
-                                                stabThresh(_stabThresh)
+                                                stabThresh(_stabThresh),
+                                                mode(0)
     {
         return;
     }
@@ -314,8 +309,6 @@ class fninnerinnerArg
                                                 _q_delta(src._q_delta),
                                                 _q_nu(src._q_nu),
                                                 ires(src.ires),
-                                                _q_prevx(src._q_prevx),
-                                                diffx(src.diffx),
                                                 _q_a(src._q_a),
                                                 _q_b(src._q_b),
                                                 _q_r(src._q_r),
@@ -326,7 +319,6 @@ class fninnerinnerArg
                                                 _q_mig(src._q_mig),
                                                 _q_betafn(src._q_betafn),
                                                 _q_locmethod(src._q_locmethod),
-                                                stepweight(src.stepweight),
                                                 justreturnbeta(src.justreturnbeta),
                                                 covarmatrix(src.covarmatrix),
                                                 meanvector(src.meanvector),
@@ -362,7 +354,8 @@ class fninnerinnerArg
                                                 unscentK(src.unscentK),
                                                 unscentSqrtSigma(src.unscentSqrtSigma),
                                                 stabUseSig(src.stabUseSig),
-                                                stabThresh(src.stabThresh)
+                                                stabThresh(src.stabThresh),
+                                                mode(0)
     {
         NiceThrow("Can't use copy constructer on fninnerinnerArg");
         return;
@@ -387,8 +380,6 @@ class fninnerinnerArg
     double _q_delta;
     double _q_nu;
     gentype &ires;
-    SparseVector<double> *_q_prevx;
-    SparseVector<double> &diffx;
     double _q_a;
     double _q_b;
     double _q_r;
@@ -399,7 +390,6 @@ class fninnerinnerArg
     double _q_mig;
     gentype *_q_betafn;
     int _q_locmethod;
-    const double &stepweight;
     const int &justreturnbeta;
     Matrix<gentype> &covarmatrix;
     Vector<gentype> &meanvector;
@@ -436,6 +426,9 @@ class fninnerinnerArg
     const Matrix<double> &unscentSqrtSigma;
     const int &stabUseSig;
     const double &stabThresh;
+    int mode; // 0 for normal, set 1 when entering DirECT, which will calc beta and zero x precisely once then set to 2, set 2 for no beta calc/x zero
+    double storebeta;
+    int storeepspinf;
 
     double fnfnapprox(int n, const double *xx)
     {
@@ -503,7 +496,6 @@ class fninnerinnerArg
     int gridi = _q_gridi;
 
     SparseVector<gentype> &x = *_q_x;
-    SparseVector<double> &prevx = *_q_prevx;
     gentype &betafn = *_q_betafn;
 
 
@@ -525,7 +517,9 @@ class fninnerinnerArg
     int betasgn = ( locmethod >= 0 ) ? 1 : -1;
     int method = betasgn*locmethod;
 
+//FIXME: only calculate beta_t once per inner loop if possible!
     //if ( !(bopts.isimphere()) ) - work out beta anyhow
+    if ( ( mode == 0 ) || ( mode == 1 ) )
     {
         double altiters = static_cast<double>(( itcntmethod == 2 ) ? iters-itinbatch : iters); //+1;
         double d = (double) dim;
@@ -601,13 +595,7 @@ class fninnerinnerArg
             {
                 // gpUCB p basic
 
-                double pi_t = 0;//  = numbase_zeta(p)*pow(altiters,p);
-                double modDt = 2*pow(sqrt(altiters),dvalreal);
-
-                numbase_zeta(pi_t,p);
-                pi_t *= pow(altiters,p);
-
-                eps = 2*log(modDt*pi_t/delta);
+                eps = 2*log(2*pow(sqrt(altiters),dvalreal)*numbase_zeta(p)*pow(altiters,p)/delta);
 
                 //locnu = nu;
 
@@ -618,12 +606,7 @@ class fninnerinnerArg
             {
                 // gpUCB p finite
 
-                double pi_t = 0;//  = numbase_zeta(p)*pow(altiters,p);
-
-                numbase_zeta(pi_t,p);
-                pi_t *= pow(altiters,p);
-
-                eps = 2*log(modD*pi_t/delta);
+                eps = 2*log(modD*numbase_zeta(p)*pow(altiters,p)/delta);
 
                 locnu = nu;
 
@@ -634,12 +617,7 @@ class fninnerinnerArg
             {
                 // gpUCB p infinite
 
-                double pi_t = 0;//  = numbase_zeta(p)*pow(altiters,p);
-
-                numbase_zeta(pi_t,p);
-                pi_t *= pow(altiters,p);
-
-                eps = (2*log(4*pi_t/delta))
+                eps = (2*log(4*numbase_zeta(p)*pow(altiters,p)/delta))
                     + (2*thisbatchsize*dvalreal*log(((thisbatchsize==1)?1.0:2.0)*pow(altiters,2)*dvalreal*b*r*sqrt(log(4*thisbatchsize*dvalreal*a/delta))));
 
                 locnu = nu;
@@ -654,6 +632,8 @@ class fninnerinnerArg
                 eps = valpinf();
                 epspinf = 1;
 
+                //locnu = nu;
+
                 break;
             }
 
@@ -662,6 +642,8 @@ class fninnerinnerArg
                 // MO
 
                 eps = 0;
+
+                //locnu = nu;
 
                 break;
             }
@@ -678,6 +660,8 @@ class fninnerinnerArg
 
                 eps = (double) betafn(teval,deval,deltaeval,modDeval,aeval);
 
+                //locnu = nu;
+
                 break;
             }
 
@@ -686,6 +670,8 @@ class fninnerinnerArg
                 // Thompson-sampling (Kandasamy version - actually Chowdhury version, On Kernelised Multiarm Bandits)
 
                 eps = 0;
+
+                //locnu = nu;
 
                 break;
             }
@@ -731,6 +717,8 @@ class fninnerinnerArg
 
                 eps = 0;
 
+                //locnu = nu;
+
                 break;
             }
 
@@ -774,6 +762,8 @@ class fninnerinnerArg
 
                 eps = 0.001;
 
+                //locnu = nu;
+
                 break;
             }
 
@@ -786,6 +776,8 @@ class fninnerinnerArg
                 eps = sqrt(sigval*((2*log(1/delta))+1+mig))+B;
                 eps = 7*eps*eps;
 
+                //locnu = nu;
+
                 break;
             }
 
@@ -793,11 +785,29 @@ class fninnerinnerArg
             {
                 eps = 0;
 
+                //locnu = nu;
+
                 break;
             }
         }
 
         beta = locnu*eps;
+
+        storebeta = beta;
+        storeepspinf = epspinf;
+        x.zero();
+        mode = ( mode == 1 ) ? 2 : 0;
+    }
+
+    else if ( mode == 2 )
+    {
+        beta = storebeta;
+        epspinf = storeepspinf;
+
+        if ( anyindirect )
+        {
+            x.zero();
+        }
     }
 
     if ( justreturnbeta == 1 )
@@ -809,11 +819,12 @@ class fninnerinnerArg
     // Re-express function input as sparse vector of gentype (size n)
     // =======================================================================
 
-    x.zero();
+//    x.zero(); - now done in beta calc loop (skipped for most of direct inner loop - we 
+//want to leave x alone as much as possible to avoid free/alloc spiral. Note we also the use of sv below (to avoid resetting altcontent))
 
     for ( i = 0 ; i < n ; ++i )
     {
-        x("&",i) = xx[i]; // gentype sparsevector
+        x.sv(i,xx[i]); // use accelerated sv function to preserve if possible!
     }
 
     // =======================================================================
@@ -822,7 +833,7 @@ class fninnerinnerArg
 
     for ( i = n ; i < n+xappend.size() ; ++i )
     {
-        x("&",i) = xappend(i-n);
+        x("&",i) = xappend(i-n); // FIXME: move to set function when set is implemented!
     }
 
     // =======================================================================
@@ -835,34 +846,6 @@ class fninnerinnerArg
         x = (const Vector<gentype> &) xytemp;
 
         n = xytemp.size(); // This is important.  dim cannot be used as it means something else.
-    }
-
-    // =======================================================================
-    // Calculate step cost if required
-    //
-    // stepcost = -stepweight.||prevx-x||_2
-    // (negative as we want to minimise the step cost, which is
-    //  equivalent to maximising the negative of the step cost)
-    // =======================================================================
-
-    double stepcost = 0;
-
-    if ( stepweight > 0 )
-    {
-        diffx.zero();
-
-        for ( i = 0 ; i < n ; ++i )
-        {
-            diffx("&",i) = (double) x(i);
-        }
-
-        diffx -= prevx;
-        stepcost = -stepweight*abs2(diffx);
-
-        for ( i = 0 ; i < n ; ++i )
-        {
-            prevx("&",i) = x(i);
-        }
     }
 
     // =======================================================================
@@ -1451,7 +1434,7 @@ locsigmay = stabscore*stabscore*locsigmay;
     // but keep in mind note about max/min changes).
     // =======================================================================
 
-    res = -((1+stepcost)*res); // Set up for minimiser
+    res = -res; // Set up for minimiser
 
     return res;
   }
@@ -2426,7 +2409,6 @@ int bayesOpt(int dim,
     gentype sigmax('R');
     gentype tempval;
 
-    SparseVector<double>  diffx;
     SparseVector<gentype> xappend;
 
     int justreturnbeta = 0;
@@ -2467,8 +2449,7 @@ int bayesOpt(int dim,
                                delta,
                                nu,
                                tempval,
-                               yb("&",0),
-                               diffx,
+                               //yb("&",0),
                                (bopts.a),
                                (bopts.b),
                                (bopts.r),
@@ -2479,7 +2460,6 @@ int bayesOpt(int dim,
                                mig,
                                (bopts.betafn),
                                (bopts.method),
-                               (bopts.stepweight),
                                justreturnbeta,
                                covarmatrix,
                                meanvector,
@@ -2621,7 +2601,6 @@ int bayesOpt(int dim,
             // ===============================================================
 
             fnarginner._q_x     = &(yyb("&",k));
-            fnarginner._q_prevx = &yb("&",k);
 
             ismultitargrec      = 0;
             currintrinbatchsize = bopts.intrinbatch;
@@ -2825,8 +2804,10 @@ int bayesOpt(int dim,
                     else
                     {
                         // Use DIRect
+fnarginner.mode = 1; // turn on single beta calculation fast mode
                         dres = directOpt(n,xa("&",0,1,n-1,tmpva),dummyres,direcmin(0,1,n-1,tmpvb),direcmax(0,1,n-1,tmpvc),
                                          fnfnapprox,fnarginnerdr,bopts.goptssingleobj,killSwitch);
+fnarginner.mode = 0; // turn off single beta calculation fast mode
 
                         printrec = true;
                     }
@@ -2945,7 +2926,9 @@ int bayesOpt(int dim,
 
                             gentype resvar;
 
-                            bopts.model_var(resvar,fidxloc);
+                            SparseVector<gentype> xxfidxloc; xxfidxloc.castassign(fidxloc);
+
+                            bopts.model_var(resvar,xxfidxloc);
 
                             double fidtau = sqrt( ( ((double) resvar) >= 0 ) ? ((double) resvar) : 0.0 );
 

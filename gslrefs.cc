@@ -551,11 +551,9 @@ int gsl_sf_multiply_err_e(const double x, const double dx, const double y, const
 double gsl_sf_multiply(const double x, const double y);
 
 
-int gsl_zeta(double &res, double s)
+double gsl_zeta(double s)
 {
-    res = gsl_sf_zeta(s);
-
-    return 0;
+    return gsl_sf_zeta(s);
 }
 
 

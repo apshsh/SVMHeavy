@@ -422,49 +422,37 @@ double nthrt(double x, int n);
 // i0,i1,in:    Modified Bessel functions of the first kind
 // k0,k1,kn:    Modified Bessel functions of the second kind
 // probit:      Probit function
-
-
-
-double numbase_gamma  (double x);
-double numbase_lngamma(double x);
+// erfcx(x) = exp(x^2) erfc(x)
+// normphionPhi(x) = normphi(x)/normPhi(x)
 
 inline int numbase_dawson   (double &res,           double x);
 inline int numbase_gamma_inc(double &res, double a, double x);
 inline int numbase_psi      (double &res,           double x);
 inline int numbase_psi_n    (double &res, int n,    double x);
-//inline int numbase_erf      (double &res,           double x);
-//inline int numbase_erfc     (double &res,           double x);
-//inline int numbase_Phi      (double &res,           double x);
-//inline int numbase_phi      (double &res,           double x);
-       int numbase_erfinv   (double &res,           double x);
-inline int numbase_probit   (double &res,           double x);
-inline int numbase_zeta     (double &res,           double x);
 inline int numbase_lambertW (double &res,           double x);
 inline int numbase_lambertWx(double &res,           double x);
-       int numbase_i0       (double &res,           double x);
-       int numbase_i1       (double &res,           double x);
-       int numbase_in       (double &res, int n,    double x);
-       int numbase_j0       (double &res,           double x);
-       int numbase_j1       (double &res,           double x);
-       int numbase_jn       (double &res, int n,    double x);
-       int numbase_k0       (double &res,           double x);
-       int numbase_k1       (double &res,           double x);
-       int numbase_kn       (double &res, int n,    double x);
-       int numbase_y0       (double &res,           double x);
-       int numbase_y1       (double &res,           double x);
-       int numbase_yn       (double &res, int n,    double x);
 
-// For functions that never fail
+double numbase_gamma    (double x);
+double numbase_lngamma  (double x);
+double numbase_erfinv   (double x); // may return packed NaN
+double numbase_probit   (double x); // may return packed NaN
+double numbase_zeta     (double x);
+double numbase_i0       (double x);
+double numbase_i1       (double x);
+double numbase_in(int n, double x);
+double numbase_j0       (double x);
+double numbase_j1       (double x);
+double numbase_jn(int n, double x);
+double numbase_k0       (double x);
+double numbase_k1       (double x);
+double numbase_kn(int n, double x);
+double numbase_y0       (double x);
+double numbase_y1       (double x);
+double numbase_yn(int n, double x);
+double numbase_erfcx    (double x);
 
-inline double normPhi(double x);
-inline double normphi(double x);
-
-// erfcx(x) = exp(x^2) erfc(x)
-
-double numbase_erfcx(double x);
-
-// normphi(x)/normPhi(x)
-
+inline double normPhi     (double x);
+inline double normphi     (double x);
 inline double normphionPhi(double x);
 
 
@@ -561,6 +549,12 @@ inline void fastDivBy(double *svm_restrict a, const int *svm_restrict ai, int ab
 
 
 
+
+
+//inline int numbase_erf      (double &res,           double x);
+//inline int numbase_erfc     (double &res,           double x);
+//inline int numbase_Phi      (double &res,           double x);
+//inline int numbase_phi      (double &res,           double x);
 
 
 // Some maths
@@ -1134,6 +1128,8 @@ inline double acashyp  (double a) { return log(a); }
 inline double acaschyp (double a) { return -log(a); }
 
 
+inline double numbase_probit(double x) { return NUMBASE_SQRT2*numbase_erfinv((2*x)-1); }
+
 
 inline int numbase_dawson   (double &res,           double x) { return gsl_dawson(res,x);      }
 inline int numbase_gamma_inc(double &res, double a, double x) { return gsl_gamma_inc(res,a,x); }
@@ -1145,13 +1141,12 @@ inline int numbase_lambertWx(double &res,           double x) { return gsl_lambe
 //inline int numbase_erfc     (double &res,           double x) { res = 1-erf(x);                                               return 0;    }
 //inline int numbase_Phi      (double &res,           double x) { res = 0.5 + (0.5*erf(x*NUMBASE_SQRT1ON2));                    return 0;    }
 //inline int numbase_phi      (double &res,           double x) { res = NUMBASE_1ONSQRT2PI*exp(-x*x/2);                         return 0;    }
-inline int numbase_probit   (double &res,           double x) { int ires = numbase_erfinv(res,(2*x)-1); res *= NUMBASE_SQRT2; return ires; }
 
 #ifdef IS_CPP17
-inline int numbase_zeta(double &res, double x) { res = std::riemann_zeta(x); return 0; }
+inline double numbase_zeta(double x) { return std::riemann_zeta(x); }
 #endif
 #ifndef IS_CPP17
-inline int numbase_zeta(double &res, double x) { return gsl_zeta(res,x); }
+inline double numbase_zeta(double x) { return gsl_zeta(x); }
 #endif
 
 inline double normPhi(double x)

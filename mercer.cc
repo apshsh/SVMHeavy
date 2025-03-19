@@ -11572,7 +11572,7 @@ void MercerKernel::Kbase(gentype &res, int q, int typeis,
             double r1 = (double) r(1);
             double d = (double) diffis;
 
-            numbase_jn(res.force_double(),i0+1,(r1*sqrt((double) d)/r0)/(pow(sqrt(d)/r0,-i0*(r1+1))));
+            res.force_double() = numbase_jn(i0+1,(r1*sqrt((double) d)/r0)/(pow(sqrt(d)/r0,-i0*(r1+1))));
 
             break;
         }
@@ -11946,7 +11946,7 @@ void MercerKernel::Kbase(gentype &res, int q, int typeis,
             double qq = 0;
             double gg = 0;
 
-            numbase_kn(qq,i0,dd);
+            qq = numbase_kn(i0,dd);
             gg = numbase_gamma(i0);
 
             res = ( dd < 1e-6 ) ? 1.0 : 2*pow(dd/2,i0)*qq/gg;

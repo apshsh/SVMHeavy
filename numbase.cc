@@ -894,49 +894,49 @@ NiceAssert( x > 0 );
 
 
 #ifdef DJGPP_MATHS
-int numbase_j0(double &res,        double x) { res = j0(x);      return 0; }
-int numbase_j1(double &res,        double x) { res = j1(x);      return 0; }
-int numbase_jn(double &res, int n, double x) { res = jn(n,x);    return 0; }
-int numbase_y0(double &res,        double x) { res = y0(x);      return 0; }
-int numbase_y1(double &res,        double x) { res = y1(x);      return 0; }
-int numbase_yn(double &res, int n, double x) { res = yn(n,x);    return 0; }
-int numbase_i0(double &res,        double x) { res = BESSI0(x);  return 0; }
-int numbase_i1(double &res,        double x) { res = BESSI1(x);  return 0; }
-int numbase_in(double &res, int n, double x) { res = BESSI(n,x); return 0; }
-int numbase_k0(double &res,        double x) { res = bessk0(x);  return 0; }
-int numbase_k1(double &res,        double x) { res = bessk1(x);  return 0; }
-int numbase_kn(double &res, int n, double x) { res = bessk(n,x); return 0; }
+double numbase_j0(       double x) { return j0(x);      }
+double numbase_j1(       double x) { return j1(x);      }
+double numbase_jn(int n, double x) { return jn(n,x);    }
+double numbase_y0(       double x) { return y0(x);      }
+double numbase_y1(       double x) { return y1(x);      }
+double numbase_yn(int n, double x) { return yn(n,x);    }
+double numbase_i0(       double x) { return BESSI0(x);  }
+double numbase_i1(       double x) { return BESSI1(x);  }
+double numbase_in(int n, double x) { return BESSI(n,x); }
+double numbase_k0(       double x) { return bessk0(x);  }
+double numbase_k1(       double x) { return bessk1(x);  }
+double numbase_kn(int n, double x) { return bessk(n,x); }
 #endif
 
 #ifndef DJGPP_MATHS
 #ifdef VISUAL_STUDIO_BESSEL
-int numbase_j0(double &res,        double x) { res = _j0(x);     return 0; }
-int numbase_j1(double &res,        double x) { res = _j1(x);     return 0; }
-int numbase_jn(double &res, int n, double x) { res = _jn(n,x);   return 0; }
-int numbase_y0(double &res,        double x) { res = _y0(x);     return 0; }
-int numbase_y1(double &res,        double x) { res = _y1(x);     return 0; }
-int numbase_yn(double &res, int n, double x) { res = _yn(n,x);   return 0; }
-int numbase_i0(double &res,        double x) { res = BESSI0(x);  return 0; }
-int numbase_i1(double &res,        double x) { res = BESSI1(x);  return 0; }
-int numbase_in(double &res, int n, double x) { res = BESSI(n,x); return 0; }
-int numbase_k0(double &res,        double x) { res = bessk0(x);  return 0; }
-int numbase_k1(double &res,        double x) { res = bessk1(x);  return 0; }
-int numbase_kn(double &res, int n, double x) { res = bessk(n,x); return 0; }
+double numbase_j0(       double x) { return _j0(x);     }
+double numbase_j1(       double x) { return _j1(x);     }
+double numbase_jn(int n, double x) { return _jn(n,x);   }
+double numbase_y0(       double x) { return _y0(x);     }
+double numbase_y1(       double x) { return _y1(x);     }
+double numbase_yn(int n, double x) { return _yn(n,x);   }
+double numbase_i0(       double x) { return BESSI0(x);  }
+double numbase_i1(       double x) { return BESSI1(x);  }
+double numbase_in(int n, double x) { return BESSI(n,x); }
+double numbase_k0(       double x) { return bessk0(x);  }
+double numbase_k1(       double x) { return bessk1(x);  }
+double numbase_kn(int n, double x) { return bessk(n,x); }
 #endif
 
 #ifndef VISUAL_STUDIO_BESSEL
-int numbase_j0(double &res,        double x) { res = BESSJ0(x);  return 0; }
-int numbase_j1(double &res,        double x) { res = BESSJ1(x);  return 0; }
-int numbase_jn(double &res, int n, double x) { res = BESSJ(n,x); return 0; }
-int numbase_y0(double &res,        double x) { res = BESSY0(x);  return 0; }
-int numbase_y1(double &res,        double x) { res = BESSY1(x);  return 0; }
-int numbase_yn(double &res, int n, double x) { res = BESSY(n,x); return 0; }
-int numbase_i0(double &res,        double x) { res = BESSI0(x);  return 0; }
-int numbase_i1(double &res,        double x) { res = BESSI1(x);  return 0; }
-int numbase_in(double &res, int n, double x) { res = BESSI(n,x); return 0; }
-int numbase_k0(double &res,        double x) { res = bessk0(x);  return 0; }
-int numbase_k1(double &res,        double x) { res = bessk1(x);  return 0; }
-int numbase_kn(double &res, int n, double x) { res = bessk(n,x); return 0; }
+double numbase_j0(       double x) { return BESSJ0(x);  }
+double numbase_j1(       double x) { return BESSJ1(x);  }
+double numbase_jn(int n, double x) { return BESSJ(n,x); }
+double numbase_y0(       double x) { return BESSY0(x);  }
+double numbase_y1(       double x) { return BESSY1(x);  }
+double numbase_yn(int n, double x) { return BESSY(n,x); }
+double numbase_i0(       double x) { return BESSI0(x);  }
+double numbase_i1(       double x) { return BESSI1(x);  }
+double numbase_in(int n, double x) { return BESSI(n,x); }
+double numbase_k0(       double x) { return bessk0(x);  }
+double numbase_k1(       double x) { return bessk1(x);  }
+double numbase_kn(int n, double x) { return bessk(n,x); }
 #endif
 #endif
 
@@ -1007,58 +1007,54 @@ int numbase_kn(double &res, int n, double x) { res = bessk(n,x); return 0; }
 #define erfinv_d1 3.543889200
 #define erfinv_d0 1
 
-inline int numbase_erfinv(double &res, double x)
+double numbase_erfinv(double x)
 {
+    double res = 0;
     double x2,y;
     int sign_x;
- 
+
     if ( ( x < -1 ) || ( x > 1 ) )
     {
         res = valvnan("erfinv undefined for |x|>1");
-        return 1;
     }
 
-    if ( x == 0 )
+    else if ( x != 0 )
     {
-        res = 0;
+        if ( x > 0 )
+        {
+            sign_x = 1;
+        }
 
-        return 0;
+        else
+        {
+            sign_x = -1;
+            x = -x;
+        }
+
+        if ( x <= 0.7 )
+        {
+            x2 = x*x;
+
+            res  = x * (((erfinv_a3 * x2 + erfinv_a2) * x2 + erfinv_a1) * x2 + erfinv_a0);
+            res /= (((erfinv_b4 * x2 + erfinv_b3) * x2 + erfinv_b2) * x2 + erfinv_b1) * x2 + erfinv_b0;
+        }
+
+        else
+        {
+            y  = sqrt (-log ((1 - x) / 2));
+
+            res  = (((erfinv_c3 * y + erfinv_c2) * y + erfinv_c1) * y + erfinv_c0);
+            res /= ((erfinv_d2 * y + erfinv_d1) * y + erfinv_d0);
+        }
+
+        res *= sign_x;
+        x   *= sign_x;
+
+        res -= ( erf(res) - x ) / (2 / sqrt(NUMBASE_PI) * exp(-res*res));
+        res -= ( erf(res) - x ) / (2 / sqrt(NUMBASE_PI) * exp(-res*res));
     }
 
-    if ( x > 0 )
-    {
-        sign_x = 1;
-    }
-
-    else
-    {
-        sign_x = -1;
-        x = -x;
-    }
-
-    if ( x <= 0.7 )
-    {
-        x2 = x*x;
-
-        res  = x * (((erfinv_a3 * x2 + erfinv_a2) * x2 + erfinv_a1) * x2 + erfinv_a0);
-        res /= (((erfinv_b4 * x2 + erfinv_b3) * x2 + erfinv_b2) * x2 + erfinv_b1) * x2 + erfinv_b0;
-    }
-
-    else
-    {
-        y  = sqrt (-log ((1 - x) / 2));
-
-        res  = (((erfinv_c3 * y + erfinv_c2) * y + erfinv_c1) * y + erfinv_c0);
-        res /= ((erfinv_d2 * y + erfinv_d1) * y + erfinv_d0);
-    }
-
-    res *= sign_x;
-    x   *= sign_x;
-
-    res -= ( erf(res) - x ) / (2 / sqrt(NUMBASE_PI) * exp(-res*res));
-    res -= ( erf(res) - x ) / (2 / sqrt(NUMBASE_PI) * exp(-res*res));
-
-    return 0;
+    return res;
 }
 
 

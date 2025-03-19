@@ -101,11 +101,6 @@ public:
     // totiters: total number of iterations in Bayesian optimisation
     //         set 0 for unlimited, -1 for 10d, -2 for err method (see err
     //         parameter).
-    // stepweight: typically 0.  If you want to add a penalty that is
-    //         proportional to the distance covered by the step then
-    //         set non-zero.  This can be handy for example when selecting
-    //         hyper-parameters, in which case incremental update time may
-    //         be proportional to the change in hyperparameters.
     // intrinbatch: intrinsic batch size.  Default 1.  If > 0 then:
     //         mu(x) -> max(mu(x_0),mu(x_1),...,mu(x_{d-1}))
     //         sigma(x) -> det(covar(x_i,x_j))^(1/2intrinbatch), i,j = 1,2,...,d-1
@@ -316,7 +311,6 @@ public:
     int startseed;         // this changes during optimisation setup to ensure no repeats unless specified
     int algseed;           // ...as does this
     int totiters;
-    double stepweight;
     int itcntmethod;
     int gridcache;
     double err;
@@ -396,7 +390,6 @@ public:
         startseed         = 42;
         algseed           = 69;
         totiters          = -1; //100; //200; //500;
-        stepweight        = 0;
         itcntmethod       = 0;
         gridcache         = 1;
         err               = 1e-1;
@@ -472,7 +465,6 @@ public:
         startseed         = src.startseed;
         algseed           = src.algseed;
         totiters          = src.totiters;
-        stepweight        = src.stepweight;
         itcntmethod       = src.itcntmethod;
         gridcache         = src.gridcache;
         err               = src.err;

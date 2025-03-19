@@ -16607,12 +16607,7 @@ gentype zeta(const gentype &a)
 
     else
     {
-        int ires = numbase_zeta(res.force_double(),a.cast_double(0));
-
-        if ( ires )
-	{
-            constructError(a,res,"Error calculating zeta");
-	}
+        res.force_double() = numbase_zeta(a.cast_double(0));
     }
 
     return res;

@@ -718,23 +718,25 @@ public:
     // Evaluate equation
     //
     // Note that x = var(0,0), y = var(0,1) ...
+    //
+    // Note also the overuse of .zero() to ensure zeroing!
 
-    gentype operator()(void                                                                                                      ) const { SparseVector<SparseVector<gentype> > evalargs; return (*this)(evalargs); }
-    gentype operator()(const gentype &x                                                                                          ) const { SparseVector<SparseVector<gentype> > evalargs; evalargs("&",0)("&",0) = x; return (*this)(evalargs); }
-    gentype operator()(const gentype &x, const gentype &y                                                                        ) const { SparseVector<SparseVector<gentype> > evalargs; evalargs("&",0)("&",0) = x; evalargs("&",0)("&",1) = y; return (*this)(evalargs); }
-    gentype evalyonly (                  const gentype &y                                                                        ) const { SparseVector<SparseVector<gentype> > evalargs; evalargs("&",0)("&",1) = y; return (*this)(evalargs); }
-    gentype operator()(const gentype &x, const gentype &y, const gentype &z                                                      ) const { SparseVector<SparseVector<gentype> > evalargs; evalargs("&",0)("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z; return (*this)(evalargs); }
-    gentype operator()(const gentype &x, const gentype &y, const gentype &z, const gentype &v                                    ) const { SparseVector<SparseVector<gentype> > evalargs; evalargs("&",0)("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z; evalargs("&",0)("&",3) = v;                                                         return (*this)(evalargs); }
-    gentype operator()(const gentype &x, const gentype &y, const gentype &z, const gentype &v, const gentype &w                  ) const { SparseVector<SparseVector<gentype> > evalargs; evalargs("&",0)("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z; evalargs("&",0)("&",3) = v; evalargs("&",0)("&",4) = w;                             return (*this)(evalargs); }
-    gentype operator()(const gentype &x, const gentype &y, const gentype &z, const gentype &v, const gentype &w, const gentype &g) const { SparseVector<SparseVector<gentype> > evalargs; evalargs("&",0)("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z; evalargs("&",0)("&",3) = v; evalargs("&",0)("&",4) = w; evalargs("&",0)("&",5) = g; return (*this)(evalargs); }
+    gentype operator()(void                                                                                                      ) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero(); return (*this)(evalargs); }
+    gentype operator()(const gentype &x                                                                                          ) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero(); evalargs("&",0).zero()("&",0) = x; return (*this)(evalargs); }
+    gentype operator()(const gentype &x, const gentype &y                                                                        ) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero(); evalargs("&",0).zero()("&",0) = x; evalargs("&",0)("&",1) = y; return (*this)(evalargs); }
+    gentype evalyonly (                  const gentype &y                                                                        ) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero(); evalargs("&",0).zero()("&",1) = y; return (*this)(evalargs); }
+    gentype operator()(const gentype &x, const gentype &y, const gentype &z                                                      ) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero(); evalargs("&",0).zero()("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z; return (*this)(evalargs); }
+    gentype operator()(const gentype &x, const gentype &y, const gentype &z, const gentype &v                                    ) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero(); evalargs("&",0).zero()("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z; evalargs("&",0)("&",3) = v;                                                         return (*this)(evalargs); }
+    gentype operator()(const gentype &x, const gentype &y, const gentype &z, const gentype &v, const gentype &w                  ) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero(); evalargs("&",0).zero()("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z; evalargs("&",0)("&",3) = v; evalargs("&",0)("&",4) = w;                             return (*this)(evalargs); }
+    gentype operator()(const gentype &x, const gentype &y, const gentype &z, const gentype &v, const gentype &w, const gentype &g) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero(); evalargs("&",0).zero()("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z; evalargs("&",0)("&",3) = v; evalargs("&",0)("&",4) = w; evalargs("&",0)("&",5) = g; return (*this)(evalargs); }
 
-    gentype operator()(                                                                                                            const char *, const gentype &h) const { SparseVector<SparseVector<gentype> > evalargs;                                                                                                                                                                         evalargs("&",2)("&",0) = h; return (*this)(evalargs); }
-    gentype operator()(const gentype &x,                                                                                           const char *, const gentype &h) const { SparseVector<SparseVector<gentype> > evalargs; evalargs("&",0)("&",0) = x;                                                                                                                                             evalargs("&",2)("&",0) = h; return (*this)(evalargs); }
-    gentype operator()(const gentype &x, const gentype &y,                                                                         const char *, const gentype &h) const { SparseVector<SparseVector<gentype> > evalargs; evalargs("&",0)("&",0) = x; evalargs("&",0)("&",1) = y;                                                                                                                 evalargs("&",2)("&",0) = h; return (*this)(evalargs); }
-    gentype operator()(const gentype &x, const gentype &y, const gentype &z,                                                       const char *, const gentype &h) const { SparseVector<SparseVector<gentype> > evalargs; evalargs("&",0)("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z;                                                                                     evalargs("&",2)("&",0) = h; return (*this)(evalargs); }
-    gentype operator()(const gentype &x, const gentype &y, const gentype &z, const gentype &v,                                     const char *, const gentype &h) const { SparseVector<SparseVector<gentype> > evalargs; evalargs("&",0)("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z; evalargs("&",0)("&",3) = v;                                                         evalargs("&",2)("&",0) = h; return (*this)(evalargs); }
-    gentype operator()(const gentype &x, const gentype &y, const gentype &z, const gentype &v, const gentype &w,                   const char *, const gentype &h) const { SparseVector<SparseVector<gentype> > evalargs; evalargs("&",0)("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z; evalargs("&",0)("&",3) = v; evalargs("&",0)("&",4) = w;                             evalargs("&",2)("&",0) = h; return (*this)(evalargs); }
-    gentype operator()(const gentype &x, const gentype &y, const gentype &z, const gentype &v, const gentype &w, const gentype &g, const char *, const gentype &h) const { SparseVector<SparseVector<gentype> > evalargs; evalargs("&",0)("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z; evalargs("&",0)("&",3) = v; evalargs("&",0)("&",4) = w; evalargs("&",0)("&",5) = g; evalargs("&",2)("&",0) = h; return (*this)(evalargs); }
+    gentype operator()(                                                                                                            const char *, const gentype &h) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero();                                                                                                                                                                                evalargs("&",42).zero()("&",42) = h; return (*this)(evalargs); }
+    gentype operator()(const gentype &x,                                                                                           const char *, const gentype &h) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero(); evalargs("&",0).zero()("&",0) = x;                                                                                                                                             evalargs("&",42).zero()("&",42) = h; return (*this)(evalargs); }
+    gentype operator()(const gentype &x, const gentype &y,                                                                         const char *, const gentype &h) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero(); evalargs("&",0).zero()("&",0) = x; evalargs("&",0)("&",1) = y;                                                                                                                 evalargs("&",42).zero()("&",42) = h; return (*this)(evalargs); }
+    gentype operator()(const gentype &x, const gentype &y, const gentype &z,                                                       const char *, const gentype &h) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero(); evalargs("&",0).zero()("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z;                                                                                     evalargs("&",42).zero()("&",42) = h; return (*this)(evalargs); }
+    gentype operator()(const gentype &x, const gentype &y, const gentype &z, const gentype &v,                                     const char *, const gentype &h) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero(); evalargs("&",0).zero()("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z; evalargs("&",0)("&",3) = v;                                                         evalargs("&",42).zero()("&",42) = h; return (*this)(evalargs); }
+    gentype operator()(const gentype &x, const gentype &y, const gentype &z, const gentype &v, const gentype &w,                   const char *, const gentype &h) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero(); evalargs("&",0).zero()("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z; evalargs("&",0)("&",3) = v; evalargs("&",0)("&",4) = w;                             evalargs("&",42).zero()("&",42) = h; return (*this)(evalargs); }
+    gentype operator()(const gentype &x, const gentype &y, const gentype &z, const gentype &v, const gentype &w, const gentype &g, const char *, const gentype &h) const { SparseVector<SparseVector<gentype> > evalargs; evalargs.zero(); evalargs("&",0).zero()("&",0) = x; evalargs("&",0)("&",1) = y; evalargs("&",0)("&",2) = z; evalargs("&",0)("&",3) = v; evalargs("&",0)("&",4) = w; evalargs("&",0)("&",5) = g; evalargs("&",42).zero()("&",42) = h; return (*this)(evalargs); }
 
     gentype operator()(const SparseVector<SparseVector<gentype> > &evalargs) const
     {
@@ -3280,6 +3282,8 @@ int disableAltContent(int actuallyForceEnable = 0); // saves memory by turning o
 
 template <> inline void SparseVector<gentype>::makealtcontent(void) const;
 
+template <> template <> inline void SparseVector<gentype>::sv(int i, double x);
+
 template <> gentype &innerProduct       (gentype &res, const SparseVector<gentype> &a, const SparseVector<gentype> &b);
 template <> gentype &innerProductRevConj(gentype &res, const SparseVector<gentype> &a, const SparseVector<gentype> &b);
 
@@ -3361,6 +3365,58 @@ template <> inline void SparseVector<gentype>::makealtcontent(void) const
     }
 
     return;
+}
+
+template <> template <> inline void SparseVector<gentype>::sv(int i, double x)
+{
+    NiceAssert( i >= 0 );
+    NiceAssert( content );
+
+    int pos = i;
+
+    if ( !altcontent || i >= size() )
+    {
+        pos = findind(i);
+    }
+
+    NiceAssert( pos <= indsize() );
+
+    if ( pos == indsize() )
+    {
+        resetvecID();
+        killaltcontent();
+        killnearfar();
+
+	(*indices).add(pos);
+	(*indices)("&",pos) = i;
+        (*content).add(pos);
+        (*content)("&",pos).force_double() = x;
+    }
+
+    else if ( ind(pos) != i )
+    {
+        resetvecID();
+        killaltcontent();
+        killnearfar();
+
+	(*indices).add(pos);
+	(*indices)("&",pos) = i;
+        (*content).add(pos);
+        (*content)("&",pos).force_double() = x;
+    }
+
+    else if ( !altcontent )
+    {
+        (*content)("&",pos).force_double() = x;
+    }
+
+    else
+    {
+        // This is the fast case! Can set without destroying altcontent
+
+        altcontent[i] = x; // remember that if altcontent defined the vector is non-sparse
+        (*content)("&",pos).force_double() = x;
+    }
 }
 
 
