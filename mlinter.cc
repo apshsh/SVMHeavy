@@ -1,7 +1,16 @@
+//model_convertx still fails for getfiddim()>0.  Can we fix this by defining a dereferencer of sparsevector that
+//splits the subreference of content and ind
+//ALTERNATIVE: make sure that xx stored in smboopt doesn't get reset!
+//             need a version of indalign that doesnt reset unless changes are required (and doesn't reset sparse even if ind changes)
+//LATER: can we cache nindsize, f1indsize etc in sparsevector? These take a lot to calculate!
+//
+// model_convertx at next level up (result is &xxx), using xx as (optional) result
+// res.indalign(xxx);
+// copy from xxx to xx and simultaneously split into n(0) and n(1) (use set function for speed).
+
+
 //in sparsevector.hpp:
-//sv should work in the sparse case as well (altcontentsp)
-//sv should have a gentype overload in gentype.hpp
-//Need to add: void set(int i, const T  &src) that acts like sv but for references (with double and gentype overloads in gentype.hpp)
+//sv/set should work in the sparse case as well (altcontentsp)
 
 //For some reason, when plotml evaluates [0] for blk_usrfnb with 4*(x_0-0.5)^2 it gives 10???	
 

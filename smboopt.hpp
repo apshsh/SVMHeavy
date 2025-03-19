@@ -678,9 +678,12 @@ public:
 template <class S>
 const SparseVector<gentype> &SMBOOptions::model_convertx(SparseVector<gentype> &res, const SparseVector<S> &x, int useOrigin, int useShortcut) const
 {
-    if ( ( x.nupsize() == 1 ) && !ismodelaug() && ( x.f1indsize() == 0 ) && ( x.f2indsize() == 0 ) && ( x.f4indsize() == 0 ) && ( getdimfid() == 0 ) && ( ( modeltype == 0 ) || ( modeltype == 1 ) ) )
+    if ( ( x.nupsize() == 1 ) && !ismodelaug() && ( x.f1indsize() == 0 ) && ( x.f2indsize() == 0 ) && ( x.f4indsize() == 0 ) && ( ( modeltype == 0 ) || ( modeltype == 1 ) ) )
     {
-        return GlobalOptions::model_convertx(res,x,useOrigin,useShortcut);
+        if ( getdimfid() == 0 )
+        {
+            return GlobalOptions::model_convertx(res,x,useOrigin,useShortcut);
+        }
     }
 
     if ( x.nindsize() )
@@ -1123,8 +1126,8 @@ double SMBOOptions::inf_dist(const SparseVector<S> &xz) const
         setident(locx1("&",i));
     }
 
-    const SparseVector<gentype> &fleh = model_convertx(xxz,locxz);
-    const SparseVector<gentype> &vleh = model_convertx(xx1,locx1);
+//    const SparseVector<gentype> &fleh = model_convertx(xxz,locxz);
+//    const SparseVector<gentype> &vleh = model_convertx(xx1,locx1);
 
     //           zeta(z) = sqrt( 1 - (K([x~z],[x~1])/K([x~0],[x~0])) )
 

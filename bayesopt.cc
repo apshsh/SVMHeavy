@@ -819,7 +819,7 @@ class fninnerinnerArg
     // Re-express function input as sparse vector of gentype (size n)
     // =======================================================================
 
-//    x.zero(); - now done in beta calc loop (skipped for most of direct inner loop - we 
+//    x.zero(); - now done in beta calc loop (skipped for most of direct inner loop - we
 //want to leave x alone as much as possible to avoid free/alloc spiral. Note we also the use of sv below (to avoid resetting altcontent))
 
     for ( i = 0 ; i < n ; ++i )
@@ -833,7 +833,7 @@ class fninnerinnerArg
 
     for ( i = n ; i < n+xappend.size() ; ++i )
     {
-        x("&",i) = xappend(i-n); // FIXME: move to set function when set is implemented!
+        x.set(i,xappend(i-n)); // use accelerated set function to preserve if possible!
     }
 
     // =======================================================================

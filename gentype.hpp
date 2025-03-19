@@ -3283,6 +3283,7 @@ int disableAltContent(int actuallyForceEnable = 0); // saves memory by turning o
 template <> inline void SparseVector<gentype>::makealtcontent(void) const;
 
 template <> template <> inline void SparseVector<gentype>::sv(int i, double x);
+template <> inline void SparseVector<gentype>::set(int i, const gentype &src);
 
 template <> gentype &innerProduct       (gentype &res, const SparseVector<gentype> &a, const SparseVector<gentype> &b);
 template <> gentype &innerProductRevConj(gentype &res, const SparseVector<gentype> &a, const SparseVector<gentype> &b);
@@ -3372,6 +3373,8 @@ template <> template <> inline void SparseVector<gentype>::sv(int i, double x)
     NiceAssert( i >= 0 );
     NiceAssert( content );
 
+    resetvecID();
+
     int pos = i;
 
     if ( !altcontent || i >= size() )
@@ -3383,7 +3386,6 @@ template <> template <> inline void SparseVector<gentype>::sv(int i, double x)
 
     if ( pos == indsize() )
     {
-        resetvecID();
         killaltcontent();
         killnearfar();
 
@@ -3395,7 +3397,6 @@ template <> template <> inline void SparseVector<gentype>::sv(int i, double x)
 
     else if ( ind(pos) != i )
     {
-        resetvecID();
         killaltcontent();
         killnearfar();
 
@@ -3419,7 +3420,65 @@ template <> template <> inline void SparseVector<gentype>::sv(int i, double x)
     }
 }
 
+template <> void SparseVector<gentype>::set(int i, const gentype &x)
+{
+    NiceAssert( i >= 0 );
+    NiceAssert( content );
 
+    resetvecID();
+
+    int pos = i;
+
+    if ( !altcontent || i >= size() )
+    {
+        pos = findind(i);
+    }
+
+    NiceAssert( pos <= indsize() );
+
+    if ( pos == indsize() )
+    {
+        killaltcontent();
+        killnearfar();
+
+	(*indices).add(pos);
+	(*indices)("&",pos) = i;
+        (*content).add(pos);
+        (*content)("&",pos).force_double() = x;
+    }
+
+    else if ( ind(pos) != i )
+    {
+        killaltcontent();
+        killnearfar();
+
+	(*indices).add(pos);
+	(*indices)("&",pos) = i;
+        (*content).add(pos);
+        (*content)("&",pos).force_double() = x;
+    }
+
+    else if ( !altcontent )
+    {
+        (*content)("&",pos).force_double() = x;
+    }
+
+    else if ( !x.isCastableToRealWithoutLoss() )
+    {
+        killaltcontent();
+        killnearfar();
+
+        (*content)("&",pos) = x;
+    }
+
+    else
+    {
+        // This is the fast case! Can set without destroying altcontent
+
+        altcontent[i] = (double) x; // remember that if altcontent defined the vector is non-sparse
+        (*content)("&",pos).force_double() = altcontent[i];
+    }
+}
 
 
 

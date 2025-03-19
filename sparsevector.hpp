@@ -265,7 +265,8 @@ public:
 
     T v(int i) const;
     template <class S>
-    void sv(int i, S x); // By using this, you can potentially avoid destroying altcontent
+    void sv(int i, S x); // By using this, you can potentially avoid destroying altcontent. Only override is T=gentype, S=double
+    void set(int i, const T &src); // similar fast overrides for T=gentype
 
     T         &direref(int i                                  ) { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( content ); resetvecID(); killnearfar(); killaltcontent(); return (*content)("&",i);     }
     Vector<T> &direref(const Vector<int> &i, retVector<T> &tmp) { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( content ); resetvecID(); killnearfar(); killaltcontent(); return (*content)("&",i,tmp); }
@@ -3251,6 +3252,13 @@ void SparseVector<T>::sv(int i, S x)
 {
     (*this)("&",i) = x;
 }
+
+template <class T>
+void SparseVector<T>::set(int i, const T &src)
+{
+    (*this)("&",i) = src;
+}
+
 
 
 
