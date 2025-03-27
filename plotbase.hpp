@@ -103,7 +103,8 @@ int dosurfvar(double xmin, double xmax,
               double omin, double omax,
               const std::string &fname,
               const std::string &dvname,
-              int outformat);
+              int outformat,
+              int incvar);
 
 // Plot multiple graphs (specified by y) on a single 2-d axis
 //

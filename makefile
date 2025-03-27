@@ -717,7 +717,7 @@ ML_MUTABLEDEP = ml_base.hpp $(ML_BASEDEP) \
 
 FUZZYMLDEP        = ml_base.hpp $(ML_BASEDEP)
 PLOTBASEDEP       = basefn.hpp memdebug.hpp niceassert.hpp $(VECTORDEP)
-PLOTMLDEP         = ml_base.hpp $(ML_BASEDEP) IMP_Generic.hpp $(IMP_GENERICDEP) BLK_Conect.hpp $(BLK_CONECTDEP) plotbase.hpp $(PLOTBASEDEP) basefn.hpp memdebug.hpp niceassert.hpp
+PLOTMLDEP         = ml_base.hpp $(ML_BASEDEP) imp_generic.hpp $(IMP_GENERICDEP) blk_conect.hpp $(BLK_CONECTDEP) plotbase.hpp $(PLOTBASEDEP) basefn.hpp memdebug.hpp niceassert.hpp
 XFERMLDEP         = svm_generic.hpp $(SVM_GENERICDEP) ml_base.hpp $(ML_BASEDEP)
 ERRORTESTDEP      = ml_base.hpp $(ML_BASEDEP)
 ADDDATADEP        = ml_base.hpp $(ML_BASEDEP) basefn.hpp memdebug.hpp niceassert.hpp

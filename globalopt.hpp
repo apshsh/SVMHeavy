@@ -433,6 +433,7 @@ public:
     // meanallfres, varallfres: mean and variance of allfres
     // meanallmres, varallmres: mean and variance of allfres
 
+//FIXME: add tres vector that is calculated based on either iteration (default) or budget (if used)
     virtual int optim(int dim,
                       Vector<gentype> &Xres,
                       gentype &fres,

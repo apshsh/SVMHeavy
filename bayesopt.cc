@@ -187,6 +187,7 @@ class fninnerinnerArg
                     const int &_effdim,
                     const double &_ztol,
                     const double &_delta,
+                    const double &_zeta,
                     const double &_nu,
                     gentype &_ires,
                     const double &_a,
@@ -244,6 +245,7 @@ class fninnerinnerArg
                                                 effdim(_effdim),
                                                 ztol(_ztol),
                                                 _q_delta(_delta),
+                                                _q_zeta(_zeta),
                                                 _q_nu(_nu),
                                                 ires(_ires),
                                                 _q_a(_a),
@@ -307,6 +309,7 @@ class fninnerinnerArg
                                                 effdim(src.effdim),
                                                 ztol(src.ztol),
                                                 _q_delta(src._q_delta),
+                                                _q_zeta(src._q_zeta),
                                                 _q_nu(src._q_nu),
                                                 ires(src.ires),
                                                 _q_a(src._q_a),
@@ -378,6 +381,7 @@ class fninnerinnerArg
     const int &effdim;
     const double &ztol;
     double _q_delta;
+    double _q_zeta;
     double _q_nu;
     gentype &ires;
     double _q_a;
@@ -480,6 +484,7 @@ class fninnerinnerArg
   double fnfnapproxNoUnscent(int n, const double *xx)
   {
     double delta = _q_delta;
+    double zeta = _q_zeta;
     double nu = _q_nu;
     double a = _q_a;
     double b = _q_b;
@@ -796,7 +801,6 @@ class fninnerinnerArg
         storebeta = beta;
         storeepspinf = epspinf;
         x.zero();
-        mode = ( mode == 1 ) ? 2 : 0;
     }
 
     else if ( mode == 2 )
@@ -822,9 +826,25 @@ class fninnerinnerArg
 //    x.zero(); - now done in beta calc loop (skipped for most of direct inner loop - we
 //want to leave x alone as much as possible to avoid free/alloc spiral. Note we also the use of sv below (to avoid resetting altcontent))
 
-    for ( i = 0 ; i < n ; ++i )
+    if ( !(bbopts.getdimfid()) || ( bbopts.getdimfid() && ( mode != 2 ) ) )
     {
-        x.sv(i,xx[i]); // use accelerated sv function to preserve if possible!
+        for ( i = 0 ; i < n-bbopts.getdimfid() ; ++i )
+        {
+            x.sv(i,xx[i]); // use accelerated sv function to preserve if possible!
+        }
+
+        for ( i = n-bbopts.getdimfid() ; i < n ; ++i )
+        {
+            x.svu(i-(n-bbopts.getdimfid()),1,xx[i]); // use accelerated svu function to preserve if possible!
+        }
+    }
+
+    else
+    {
+        for ( i = 0 ; i < n ; ++i )
+        {
+            x.svdirec(i,xx[i]); // use accelerated svdirec function to preserve if possible!
+        }
     }
 
     // =======================================================================
@@ -951,6 +971,8 @@ class fninnerinnerArg
 
     else
     {
+        NiceAssert( !bbopts.getdimfid() );
+
         // x(given above) = [ v0, v1, ..., vthisbatchsize-1 ], where xi has dimension
         // dim.  Need to split these up and calculate mean vector and covariance matrix,
         // then reform them to get the min mean vector and modified determinat of the
@@ -1254,8 +1276,8 @@ muy.force_double() = ((double) res); // This is done so that passthrough will ap
                         //numbase_phi(parta,(dmuy-yk)/dsigy);
                         //numbase_Phi(partb,(dmuy-yk)/dsigy);
 
-                        parta = normphi((dmuy-yk)/dsigy);
-                        partb = normPhi((dmuy-yk)/dsigy);
+                        parta = normphi((dmuy-yk-zeta)/dsigy);
+                        partb = normPhi((dmuy-yk-zeta)/dsigy);
 
                         //numbase_phi(partadec,(dmuy-ykdec)/dsigy);
                         //numbase_Phi(partbdec,(dmuy-ykdec)/dsigy);
@@ -1298,10 +1320,10 @@ muy.force_double() = ((double) res); // This is done so that passthrough will ap
                         //numbase_Phi(Phiz,z);
                         //numbase_phi(phiz,z);
 
-                        Phiz = normPhi(z);
-                        phiz = normphi(z);
+                        Phiz = normPhi(z-zeta);
+                        phiz = normphi(z-zeta);
 
-                        res = ( ( ( (double) muy ) - yymax ) * Phiz )
+                        res = ( ( ( (double) muy ) - yymax - zeta ) * Phiz )
                             + ( ( (double) sigmay ) * phiz );
                     }
 
@@ -1311,9 +1333,9 @@ muy.force_double() = ((double) res); // This is done so that passthrough will ap
                         // if muy < ymax then z = -infty, so Phiz = 0,  phiz = infty
                         // assume lim_{z->-infty} sigmay.phiz = 0
 
-                        if ( (double) muy > yymax )
+                        if ( (double) muy > yymax-zeta )
                         {
-                            res = ( (double) muy ) - yymax;
+                            res = ( (double) muy ) - yymax - zeta;
                         }
 
                         else
@@ -1435,6 +1457,10 @@ locsigmay = stabscore*stabscore*locsigmay;
     // =======================================================================
 
     res = -res; // Set up for minimiser
+
+    // Update mode to stop double-handling of x
+
+    mode = ( mode == 1 ) ? 2 : 0;
 
     return res;
   }
@@ -1851,9 +1877,9 @@ int bayesOpt(int dim,
     int dummy = 0;
 
     Vector<double> xa(dim);
-    Vector<SparseVector<double> > xb(recBatchSize);
+    Vector<SparseVector<double> > xb(recBatchSize);   // Has fidelity variables in nup(0), and augmented data
     Vector<gentype> xxa(dim);
-    Vector<SparseVector<gentype> > xxb(recBatchSize);
+    Vector<SparseVector<gentype> > xxb(recBatchSize); // Has fidelity variables in nup(1), and no augmented data
     gentype fnapproxout;
     gentype nothingmuch('N');
     SparseVector<gentype> xinb;
@@ -2012,7 +2038,7 @@ int bayesOpt(int dim,
 
                             int qqq = 1+(rand()%(bopts.numfids));
 
-                            xxb("&",k)("&",j).dir_double() = ((double) qqq)/((double) bopts.numfids);
+                            xxb("&",k).n("&",j-effdim,1).dir_double() = ((double) qqq)/((double) bopts.numfids);
 
                             if ( qqq != bopts.numfids )
                             {
@@ -2037,7 +2063,7 @@ int bayesOpt(int dim,
 
                     for ( int jij = 0 ; jij < (bopts.getdimfid()) ; jij++ )
                     {
-                        actfidel("&",0)("&",jij) = xxb(k)(effdim+jij);
+                        actfidel("&",0)("&",jij) = xxb(k).n(jij,1);
                     }
 //errstream() << "phantomxyz ewok " << actfidel << "\n";
                     fidtotcost += (double) bopts.fidpenalty(actfidel);
@@ -2052,7 +2078,20 @@ int bayesOpt(int dim,
 //errstream() << "phantomxyz woof\n";
                 for ( j = 0 ; j < dim ; ++j )
                 {
-                    xb("&",k)("&",j) = xxb(k)(j);
+                    if ( j < effdim )
+                    {
+                        xb("&",k)("&",j) = xxb(k)(j);
+                    }
+
+                    else if ( j >= effdim+(bopts.getdimfid()) )
+                    {
+                        xb("&",k)("&",j) = xxb(k)(j);
+                    }
+
+                    else
+                    {
+                        xb("&",k)("&",j) = xxb(k).n(j-effdim,1);
+                    }
                 }
 
 //errstream() << "phantomxyz wuff\n";
@@ -2427,6 +2466,7 @@ int bayesOpt(int dim,
 
     double ztol  = bopts.ztol;
     double delta = bopts.delta;
+    double zeta  = bopts.zeta;
     double nu    = bopts.nu;
 
     // Variables used in stable bayesian
@@ -2447,6 +2487,7 @@ int bayesOpt(int dim,
                                effdim,
                                ztol,
                                delta,
+                               zeta,
                                nu,
                                tempval,
                                //yb("&",0),
@@ -2513,9 +2554,9 @@ int bayesOpt(int dim,
     double maxitcnt = ( ( bopts.totiters == -2 ) ||  usefidbudget ) ? 0 : ( ( bopts.totiters == -1 ) ? DEFITERS(effdim) : bopts.totiters ); // note use of effdim, not dim ( bopts.totiters == -2 ) ? 0 : ( ( bopts.totiters == -1 ) ? 10*dim : bopts.totiters );
     int dofreqstop  = ( ( bopts.totiters == -2 ) && !usefidbudget ) ? 1 : 0;
 
-    double *uservars[]     = { &maxitcnt, &xmtrtime, &ztol, &delta, &nu, nullptr };
-    const char *varnames[] = { "itercount", "traintime", "ztol", "delta", "nu", nullptr };
-    const char *vardescr[] = { "Maximum iteration count (0 for unlimited)", "Maximum training time (seconds, 0 for unlimited)", "Zero tolerance", "delta", "nu", nullptr };
+    double *uservars[]     = { &maxitcnt, &xmtrtime, &ztol, &delta, &zeta, &nu, nullptr };
+    const char *varnames[] = { "itercount", "traintime", "ztol", "delta", "zeta", "nu", nullptr };
+    const char *vardescr[] = { "Maximum iteration count (0 for unlimited)", "Maximum training time (seconds, 0 for unlimited)", "Zero tolerance", "delta", "zeta", "nu", nullptr };
 
     time_used start_time = TIMECALL;
     time_used curr_time  = start_time;
@@ -2633,6 +2674,7 @@ int bayesOpt(int dim,
                     fnarginner._q_betafn          = ( ( ((bopts.betafn)(k)).size() >= 3 ) && !(((bopts.betafn)(k)(2 )).isValVector()) ) ? &locbetafn                                : &(bopts.betafn);
                     fnarginner._q_modD            = ( ( ((bopts.betafn)(k)).size() >= 4 ) && !(((bopts.betafn)(k)(3 )).isValVector()) ) ?  (((bopts.betafn)(k)(3 )).cast_double(0)) :  bopts.modD;
                     fnarginner._q_delta           = ( ( ((bopts.betafn)(k)).size() >= 5 ) && !(((bopts.betafn)(k)(4 )).isValVector()) ) ?  (((bopts.betafn)(k)(4 )).cast_double(0)) :  delta;
+                    fnarginner._q_zeta            = 0.01; //( ( ((bopts.betafn)(k)).size() >= 5 ) && !(((bopts.betafn)(k)(4 )).isValVector()) ) ?  (((bopts.betafn)(k)(4 )).cast_double(0)) :  delta;
                     fnarginner._q_nu              = ( ( ((bopts.betafn)(k)).size() >= 6 ) && !(((bopts.betafn)(k)(5 )).isValVector()) ) ?  (((bopts.betafn)(k)(5 )).cast_double(0)) :  nu;
                     fnarginner._q_a               = ( ( ((bopts.betafn)(k)).size() >= 7 ) && !(((bopts.betafn)(k)(6 )).isValVector()) ) ?  (((bopts.betafn)(k)(6 )).cast_double(0)) :  (bopts.a);
                     fnarginner._q_b               = ( ( ((bopts.betafn)(k)).size() >= 8 ) && !(((bopts.betafn)(k)(7 )).isValVector()) ) ?  (((bopts.betafn)(k)(7 )).cast_double(0)) :  (bopts.b);
@@ -2663,6 +2705,7 @@ int bayesOpt(int dim,
                     fnarginner._q_betafn          = &(bopts.betafn);
                     fnarginner._q_modD            = bopts.modD;
                     fnarginner._q_delta           = delta;
+                    fnarginner._q_zeta            = zeta;
                     fnarginner._q_nu              = nu;
                     fnarginner._q_a               = (bopts.a);
                     fnarginner._q_b               = (bopts.b);
@@ -2804,10 +2847,10 @@ int bayesOpt(int dim,
                     else
                     {
                         // Use DIRect
-fnarginner.mode = 1; // turn on single beta calculation fast mode
+fnarginner.mode = 1; // turn on single beta, stale x calculation fast mode
                         dres = directOpt(n,xa("&",0,1,n-1,tmpva),dummyres,direcmin(0,1,n-1,tmpvb),direcmax(0,1,n-1,tmpvc),
                                          fnfnapprox,fnarginnerdr,bopts.goptssingleobj,killSwitch);
-fnarginner.mode = 0; // turn off single beta calculation fast mode
+fnarginner.mode = 0; // turn off single beta, stale x calculation fast mode
 
                         printrec = true;
                     }
@@ -2870,7 +2913,17 @@ fnarginner.mode = 0; // turn off single beta calculation fast mode
                             xa("&",n-dimfid+jij) = 1.0/((double) numfids);
                         }
 
-                        SparseVector<double> fidxglob(xa);
+                        SparseVector<double> fidxglob;
+
+                        for ( int jij = 0 ; jij < n-dimfid ; jij++ )
+                        {
+                            fidxglob("&",jij) = xa(jij);
+                        }
+
+                        for ( int jij = 0 ; jij < dimfid ; jij++ )
+                        {
+                            fidxglob.n("&",jij,1) = xa(n-dimfid+jij);
+                        }
 
                         for ( inumfid = 1 ; !isdone ; )
                         {
@@ -2886,7 +2939,17 @@ fnarginner.mode = 0; // turn off single beta calculation fast mode
                                 xa("&",n-dimfid+jij) = ((double) inumfid(jij))/((double) numfids);
                             }
 
-                            SparseVector<double> fidxloc(xa);
+                            SparseVector<double> fidxloc;
+
+                            for ( int jij = 0 ; jij < n-dimfid ; jij++ )
+                            {
+                                fidxloc("&",jij) = xa(jij);
+                            }
+
+                            for ( int jij = 0 ; jij < dimfid ; jij++ )
+                            {
+                                fidxloc.n("&",jij,1) = xa(n-dimfid+jij);
+                            }
 
                             // Work out penalty for this z
 
@@ -2953,22 +3016,22 @@ fnarginner.mode = 0; // turn off single beta calculation fast mode
                             // 1: is the variance big enough?
                             // 2: is the information gap big enough?
 
-errstream() << "Fidelity test 1: " << fidtau << " > " << fidgammaz << "(" << fidkappa0 << "," << fidc << ")";
+//errstream() << "Fidelity test 1: " << fidtau << " > " << fidgammaz << "(" << fidkappa0 << "," << fidc << ")";
                             if ( fidtau > fidgammaz )
                             {
-errstream() << "\t" << "pass.\t";
+//errstream() << "\t" << "pass.\t";
                                 // Second condition in (7) in Kandasamy
 
-errstream() << "Test 2: " << fidzetaz << " > " << (fidzetainf/sqrt(fidbeta)) << "(" << fidzetainf << "/" << sqrt(fidbeta) << ")";
+//errstream() << "Test 2: " << fidzetaz << " > " << (fidzetainf/sqrt(fidbeta)) << "(" << fidzetainf << "/" << sqrt(fidbeta) << ")";
                                 if ( fidzetaz > (fidzetainf/sqrt(fidbeta)) )
                                 {
-errstream() << "\t" << "pass.\t";
+//errstream() << "\t" << "pass.\t";
                                     // Record if minimum
 
-errstream() << "Test 3: " << lambdaz << " < " << lambdazmin;
+//errstream() << "Test 3: " << lambdaz << " < " << lambdazmin;
                                     if ( lambdaz < lambdazmin )
                                     {
-errstream() << "\t" << "pass.";
+//errstream() << "\t" << "pass.";
                                         zindex = inumfid;
                                         lambdazmin = lambdaz;
                                     }
@@ -3026,7 +3089,7 @@ errstream() << "\t" << "pass.";
                             fidc = ( fidc > 20 ) ? 20 : fidc;
 
                             fidmaxcnt = 0;
-//errstream() << "phantomxyz fidc = " << fidc << "\n";
+errstream() << "phantomxyz fidc = " << fidc << "\n";
                         }
 
                         // Human fidelity override
@@ -3368,7 +3431,20 @@ errstream() << "\t" << "pass.";
 
                 for ( j = 0 ; j < dim ; ++j )
                 {
-                    xxb("&",numRecs)("&",j) = xb(numRecs)(j);
+                    if ( j < effdim )
+                    {
+                        xxb("&",numRecs)("&",j) = xb(numRecs)(j);
+                    }
+
+                    else if ( j >= effdim+bopts.getdimfid() )
+                    {
+                        xxb("&",numRecs)("&",j) = xb(numRecs)(j);
+                    }
+
+                    else
+                    {
+                        xxb("&",numRecs).n("&",j-effdim,1) = xb(numRecs)(j);
+                    }
                 }
 
                 // ===========================================================
@@ -3497,7 +3573,20 @@ midoptions:
 
                         for ( j = 0 ; j < dim ; ++j )
                         {
-                            xb("&",k)("&",j) = (double) xxb(k)(j);
+                            if ( j < effdim )
+                            {
+                                xb("&",k)("&",j) = (double) xxb(k)(j);
+                            }
+
+                            else if ( j >= effdim+bopts.getdimfid() )
+                            {
+                                xb("&",k)("&",j) = (double) xxb(k)(j);
+                            }
+
+                            else
+                            {
+                                xb("&",k)("&",j) = (double) xxb(k).n(j-effdim,1);
+                            }
                         }
 
                         if ( evaloption == "z" )
@@ -3549,7 +3638,20 @@ inneroptions:
 
                             for ( j = 0 ; j < dim ; ++j )
                             {
-                                xb("&",k)("&",j) = (double) xxb(k)(j);
+                                if ( j < effdim )
+                                {
+                                    xb("&",k)("&",j) = (double) xxb(k)(j);
+                                }
+
+                                else if ( j >= effdim+bopts.getdimfid() )
+                                {
+                                    xb("&",k)("&",j) = (double) xxb(k)(j);
+                                }
+
+                                else
+                                {
+                                    xb("&",k)("&",j) = (double) xxb(k).n(j-effdim,1);
+                                }
                             }
 
                             if ( evaloption == "z" )

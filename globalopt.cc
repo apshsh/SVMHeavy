@@ -62,6 +62,7 @@ int GlobalOptions::optim(int dim,
 
             for ( k = 0 ; k < allmres.size() ; ++k )
             {
+//FIXME: filter out results not at full fidelity
                 if ( k && allmres(k).isCastableToRealWithoutLoss() && allmres(k-1).isCastableToRealWithoutLoss() )
                 {
                     allmres("&",k) = ( allmres(k) < allmres(k-1) ) ? allmres(k) : allmres(k-1);
@@ -121,6 +122,7 @@ int GlobalOptions::optim(int dim,
                 {
                     if ( k && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() && vecallmres(static_cast<int>(j))(k-1).isCastableToRealWithoutLoss() )
                     {
+//FIXME: filter out results not at full fidelity
                         vecallmres("&",static_cast<int>(j))("&",k) = ( vecallmres(static_cast<int>(j))(k) < vecallmres(static_cast<int>(j))(k-1) ) ? vecallmres(static_cast<int>(j))(k) : vecallmres(static_cast<int>(j))(k-1);
                     }
                 }

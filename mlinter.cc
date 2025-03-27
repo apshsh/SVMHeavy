@@ -1,13 +1,5 @@
-//model_convertx still fails for getfiddim()>0.  Can we fix this by defining a dereferencer of sparsevector that
-//splits the subreference of content and ind
-//ALTERNATIVE: make sure that xx stored in smboopt doesn't get reset!
-//             need a version of indalign that doesnt reset unless changes are required (and doesn't reset sparse even if ind changes)
-//LATER: can we cache nindsize, f1indsize etc in sparsevector? These take a lot to calculate!
-//
-// model_convertx at next level up (result is &xxx), using xx as (optional) result
-// res.indalign(xxx);
-// copy from xxx to xx and simultaneously split into n(0) and n(1) (use set function for speed).
-
+//FIXME: should be using fewer decimal places when reporting in globalopt, smboopt and bayesopt (ie logging to cout at human readable accuracy)
+//FIXME: fix the 2-d (surf) plot.  Why doesn't it work?
 
 //in sparsevector.hpp:
 //sv/set should work in the sparse case as well (altcontentsp)
@@ -4395,6 +4387,7 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmya"  ) ||
                       ( currentarg == "-gmyb"  ) ||
                       ( currentarg == "-gbD"   ) ||
+                      ( currentarg == "-gbzz"  ) ||
                       ( currentarg == "-gbk"   ) ||
                       ( currentarg == "-gbx"   ) ||
                       ( currentarg == "-gbo"   ) ||
@@ -8308,6 +8301,7 @@ errstream() << "phantomxyznlp " << theKern << "\n";
                     else if ( currcommand(0) == "-gbz"   ) { (*xbopts).ztol                = safeatof(currcommand(1),argvariables);                                                                   }
                     else if ( currcommand(0) == "-gbZ"   ) { (*xbopts).minstdev            = safeatof(currcommand(1),argvariables);                                                                   }
                     else if ( currcommand(0) == "-gbD"   ) { (*xbopts).delta               = safeatof(currcommand(1),argvariables);                                                                   }
+                    else if ( currcommand(0) == "-gbzz"  ) { (*xbopts).zeta                = safeatof(currcommand(1),argvariables);                                                                   }
 
                     if ( currcommand(0) == "-gbk"   ) { (*xbopts).nu                  = safeatof(currcommand(1),argvariables);                                                                   }
                     else if ( currcommand(0) == "-gbx"   ) { (*xbopts).modD                = safeatof(currcommand(1),argvariables);                                                                   }
@@ -17102,6 +17096,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           in -gb) and y (must be real).                      \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gbD d          - delta factor used in GP-UCB method (default 0.1).  \n" : "" );
+    output << ( (          advanced ) ? "         -gbzz zeta      - zeta factor used in EI method (default 0.01).      \n" : "" );
     output << ( (          advanced ) ? "         -gbk n          - nu factor Srinivas GP-UCB (deft 0.2, see Srivinas).\n" : "" );
     output << ( (          advanced ) ? "         -gbx n          - |D| (size  of search  space grid) for  gpUCB finite\n" : "" );
     output << ( (          advanced ) ? "                           (default -1, which  means set to size  of grid data\n" : "" );

@@ -3283,6 +3283,8 @@ int disableAltContent(int actuallyForceEnable = 0); // saves memory by turning o
 template <> inline void SparseVector<gentype>::makealtcontent(void) const;
 
 template <> template <> inline void SparseVector<gentype>::sv(int i, double x);
+template <> template <> inline void SparseVector<gentype>::svdirec(int i, double x);
+template <> template <> inline void SparseVector<gentype>::svu(int i, int u, double x);
 template <> inline void SparseVector<gentype>::set(int i, const gentype &src);
 
 template <> gentype &innerProduct       (gentype &res, const SparseVector<gentype> &a, const SparseVector<gentype> &b);
@@ -3373,7 +3375,10 @@ template <> template <> inline void SparseVector<gentype>::sv(int i, double x)
     NiceAssert( i >= 0 );
     NiceAssert( content );
 
-    resetvecID();
+    if ( altcontentsp )
+    {
+        killaltcontent();
+    }
 
     int pos = i;
 
@@ -3386,6 +3391,7 @@ template <> template <> inline void SparseVector<gentype>::sv(int i, double x)
 
     if ( pos == indsize() )
     {
+        resetvecID();
         killaltcontent();
         killnearfar();
 
@@ -3397,6 +3403,7 @@ template <> template <> inline void SparseVector<gentype>::sv(int i, double x)
 
     else if ( ind(pos) != i )
     {
+        resetvecID();
         killaltcontent();
         killnearfar();
 
@@ -3420,14 +3427,47 @@ template <> template <> inline void SparseVector<gentype>::sv(int i, double x)
     }
 }
 
+template <> template <> inline void SparseVector<gentype>::svdirec(int pos, double x)
+{
+//    NiceAssert( i >= 0 );
+    NiceAssert( pos < indsize() );
+    NiceAssert( content );
+
+    if ( altcontentsp )
+    {
+        killaltcontent();
+    }
+
+    if ( !altcontent )
+    {
+        (*content)("&",pos).force_double() = x;
+    }
+
+    else
+    {
+        // This is the fast case! Can set without destroying altcontent
+
+        altcontent[pos] = x; // remember that if altcontent defined the vector is non-sparse
+        (*content)("&",pos).force_double() = x;
+    }
+}
+
+template <> template <> inline void SparseVector<gentype>::svu(int i, int u, double x)
+{
+    return sv(i+(u*DEFAULT_TUPLE_INDEX_STEP),x);
+}
+
 template <> void SparseVector<gentype>::set(int i, const gentype &x)
 {
     NiceAssert( i >= 0 );
     NiceAssert( content );
 
-    resetvecID();
-
     int pos = i;
+
+    if ( altcontentsp )
+    {
+        killaltcontent();
+    }
 
     if ( !altcontent || i >= size() )
     {
@@ -3438,6 +3478,7 @@ template <> void SparseVector<gentype>::set(int i, const gentype &x)
 
     if ( pos == indsize() )
     {
+        resetvecID();
         killaltcontent();
         killnearfar();
 
@@ -3449,6 +3490,7 @@ template <> void SparseVector<gentype>::set(int i, const gentype &x)
 
     else if ( ind(pos) != i )
     {
+        resetvecID();
         killaltcontent();
         killnearfar();
 
@@ -3458,17 +3500,18 @@ template <> void SparseVector<gentype>::set(int i, const gentype &x)
         (*content)("&",pos).force_double() = x;
     }
 
-    else if ( !altcontent )
-    {
-        (*content)("&",pos).force_double() = x;
-    }
-
     else if ( !x.isCastableToRealWithoutLoss() )
     {
+        resetvecID();
         killaltcontent();
         killnearfar();
 
         (*content)("&",pos) = x;
+    }
+
+    else if ( !altcontent )
+    {
+        (*content)("&",pos).force_double() = x;
     }
 
     else

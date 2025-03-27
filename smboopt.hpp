@@ -121,6 +121,7 @@ public:
     // ennornaive: 0  = normal operation, augx stuff occurs as [ x ~ x' ~ ... ]
     //             >0 = change [ x ~ x' ~ x'' ~... ] to [ x ; n:x' ; 2n:x'' ... ]
     //                  when in models, where n = ennornaive
+    //             NB: MUST BE ZERO IF USING MULTI-FIDELITY STUFF!
     //
     // Generated noise: makenoise = 0: no noise
     //                              1: add noise to samples
@@ -678,12 +679,15 @@ public:
 template <class S>
 const SparseVector<gentype> &SMBOOptions::model_convertx(SparseVector<gentype> &res, const SparseVector<S> &x, int useOrigin, int useShortcut) const
 {
-    if ( ( x.nupsize() == 1 ) && !ismodelaug() && ( x.f1indsize() == 0 ) && ( x.f2indsize() == 0 ) && ( x.f4indsize() == 0 ) && ( ( modeltype == 0 ) || ( modeltype == 1 ) ) )
+    if ( ( ( modeltype == 0 ) || ( modeltype == 1 ) ) &&
+         ( !ismodelaug() ) &&
+         ( ( x.nupsize() == 1 ) || ( ( x.nupsize() == 2 ) && getdimfid() ) ) &&
+         ( x.f1indsize() == 0 ) &&
+         ( x.f2indsize() == 0 ) &&
+         ( x.f4indsize() == 0 )    )
     {
-        if ( getdimfid() == 0 )
-        {
-            return GlobalOptions::model_convertx(res,x,useOrigin,useShortcut);
-        }
+        // Direct conversion if possible
+        return GlobalOptions::model_convertx(res,x,useOrigin,useShortcut);
     }
 
     if ( x.nindsize() )
@@ -835,16 +839,16 @@ const SparseVector<gentype> &SMBOOptions::model_convertx(SparseVector<gentype> &
         }
     }
 
-    if ( getdimfid() )
-    {
-        int zref = res.nupsize(0)-getdimfid();
-
-        for ( int i = getdimfid()-1 ; i >= 0 ; i-- )
-        {
-            res.n("&",i,1) = res.n(zref+i,0);
-            res.zeroni(zref+i);
-        }
-    }
+//    if ( getdimfid() )
+//    {
+//        int zref = res.nupsize(0)-getdimfid();
+//
+//        for ( int i = getdimfid()-1 ; i >= 0 ; i-- )
+//        {
+//            res.n("&",i,1) = res.n(zref+i,0);
+//            res.zeroni(zref+i);
+//        }
+//    }
 
     return res;
 }
@@ -1096,20 +1100,20 @@ const SparseVector<gentype> &SMBOOptions::model_convertx(int &isvarnz, SparseVec
         }
     }
 
-    if ( getdimfid() )
-    {
-        int zref = res.nupsize(0)-getdimfid();
-        int varzref = resvar.nupsize(0)-getdimfid();
-
-        for ( int i = getdimfid()-1 ; i >= 0 ; i-- )
-        {
-            res.n("&",i,1) = res.n(zref+i,0);
-            res.zeroni(zref+i);
-
-            resvar.n("&",i,1) = 0.0;
-            resvar.zeroni(varzref+i);
-        }
-    }
+//    if ( getdimfid() )
+//    {
+//        int zref = res.nupsize(0)-getdimfid();
+//        int varzref = resvar.nupsize(0)-getdimfid();
+//
+//        for ( int i = getdimfid()-1 ; i >= 0 ; i-- )
+//        {
+//            res.n("&",i,1) = res.n(zref+i,0);
+//            res.zeroni(zref+i);
+//
+//            resvar.n("&",i,1) = 0.0;
+//            resvar.zeroni(varzref+i);
+//        }
+//    }
 
     return res;
 }
@@ -1121,26 +1125,26 @@ double SMBOOptions::inf_dist(const SparseVector<S> &xz) const
     SparseVector<gentype> locxz; locxz.castassign(xz);
     SparseVector<gentype> locx1(locxz);
 
-    for ( int i = xz.size()-getdimfid() ; i < xz.size() ; i++ )
+    for ( int i = 0 ; i < getdimfid() ; i++ )
     {
-        setident(locx1("&",i));
+        setident(locx1.n("&",i,1));
     }
 
-//    const SparseVector<gentype> &fleh = model_convertx(xxz,locxz);
-//    const SparseVector<gentype> &vleh = model_convertx(xx1,locx1);
+    //           zeta(z) = sqrt( 1 - (K([x~0],[x~1])/K([x~0],[x~0])) )
 
-    //           zeta(z) = sqrt( 1 - (K([x~z],[x~1])/K([x~0],[x~0])) )
-
+//errstream() << "phantomxyz inf_dist calc: xz " << xz << "\n";
+//errstream() << "phantomxyz inf_dist calc: locxz " << locxz << "\n";
+//errstream() << "phantomxyz inf_dist calc: locx1 " << locx1 << "\n";
     gentype Kxzx1;
     gentype Kxx;
 
     (*getmuapprox(0)).K2(Kxzx1,locxz,locx1); // kappa0.phi_z(||z-1||).phi_x(0) = kappa0.phi_z(||z-1||)
     (*getmuapprox(0)).K2(Kxx,  locxz,locxz); // kappa0.phi_z(0).phi_x(0) = kappa0
-
-//    (*getmuapprox(0)).K2(Kxzx1,fleh,vleh); // kappa0.phi_z(||z-1||).phi_x(0) = kappa0.phi_z(||z-1||)
-//    (*getmuapprox(0)).K2(Kxx,  fleh,fleh); // kappa0.phi_z(0).phi_x(0) = kappa0
+//errstream() << "phantomxyz inf_dist calc: Kxzx1 " << Kxzx1 << "\n";
+//errstream() << "phantomxyz inf_dist calc: Kxx " << Kxx << "\n";
 
     double res = 1-(((double) Kxzx1)/((double) Kxx));
+//errstream() << "phantomxyz inf_dist calc:res " << res << "\n";
 
     return ( res > 0 ) ? sqrt(res) : 0;
 }

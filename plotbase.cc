@@ -15,6 +15,9 @@
 #include <sstream>
 #include <fstream>
 
+#ifdef NDEBUG
+#define DO_CLEANUP
+#endif
 
 // Get preset dash-type strings
 const char *dashtypes(int j);
@@ -352,25 +355,6 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
 
     if ( outformat <= 2 )
     {
-        if ( PARSYSCALL )
-        {
-#ifndef ENABLE_THREADS
-            std::string doplotcomm = "bash ./"+dnamesh+" &";
-
-#ifndef USE_MEX
-            res = svm_system(doplotcomm.c_str());
-#endif
-#endif
-#ifdef ENABLE_THREADS
-            std::string *doplotcomm = new std::string("bash ./"+dnamesh);
-
-#ifndef USE_MEX
-            std::thread(svm_system,(*doplotcomm).c_str());
-#endif
-#endif
-        }
-
-        else
         {
             std::string doplotcomm = "bash ./"+dnamesh;
 
@@ -382,12 +366,15 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
         // Clean up
 
 #ifndef USE_MEX
+#ifdef DO_CLEANUP
         std::string delstringa = "rm "+dnameplot;
         std::string delstringb = "rm "+dnamesh;
 
         svm_system(delstringa.c_str());
         svm_system(delstringb.c_str());
 #endif
+#endif
+errstream() << "phantomx 8\n";
     }
 
     else if ( outformat == 3 )
@@ -397,9 +384,11 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
         // Clean up
 
 #ifndef USE_MEX
+#ifdef DO_CLEANUP
         std::string delstringa = "rm "+dnameplot;
 
         svm_system(delstringa.c_str());
+#endif
 #endif
     }
 
@@ -516,7 +505,7 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
 
         if ( ( 2 & incdata ) )
         {
-            dnameplotfile << ", '' using 1:4 " << linetype << " lt -1 dt 2 " << lwcomm << " t \"\"";
+            dnameplotfile << ", '' using 1:4 " << linetype << " lt -1 dt \".\" " << lwcomm << " t \"\"";
         }
 
         if ( ( 1 & incdata ) )
@@ -739,11 +728,13 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
         // Clean up
 
 #ifndef USE_MEX
+#ifdef DO_CLEANUP
         std::string delstringa = "rm "+dnameplot;
         std::string delstringb = "rm "+dnamesh;
 
         svm_system(delstringa.c_str());
         svm_system(delstringb.c_str());
+#endif
 #endif
     }
 
@@ -754,9 +745,11 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
         // Clean up
 
 #ifndef USE_MEX
+#ifdef DO_CLEANUP
         std::string delstringa = "rm "+dnameplot;
 
         svm_system(delstringa.c_str());
+#endif
 #endif
     }
 
@@ -771,6 +764,11 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
 int dosurf(double xmin, double xmax, double ymin, double ymax, double omin, double omax,
            const std::string &fname, const std::string &dname, int outformat)
 {
+    std::string dnamepos = dname+"_pos";
+    std::string dnameneg = dname+"_neg";
+    std::string dnameequ = dname+"_equ";
+
+
     // Construct the gnuplot script to do the actual plotting
 
     std::string dnameplot(dname);
@@ -818,8 +816,8 @@ int dosurf(double xmin, double xmax, double ymin, double ymax, double omin, doub
     {
         dnameplotfile << "function svmh_fig_" << fname << " = " << dname << "()\n";
 
-        dnameplotfile << "%svmh_fig_" << fname << " = figure;\n";
-        dnameplotfile << "%hold on;\n";
+        dnameplotfile << "svmh_fig_" << fname << " = figure;\n";
+        dnameplotfile << "hold on;\n";
     }
 
     // Axis
@@ -862,7 +860,7 @@ int dosurf(double xmin, double xmax, double ymin, double ymax, double omin, doub
 
     if ( outformat <= 2 )
     {
-        dnameplotfile << "splot '" << dname << "' with lines\n";
+        dnameplotfile << "splot '" << dname << "' with lines";
     }
 
     else if ( outformat == 3 )
@@ -973,11 +971,13 @@ int dosurf(double xmin, double xmax, double ymin, double ymax, double omin, doub
         // Clean up
 
 #ifndef USE_MEX
+#ifdef DO_CLEANUP
         std::string delstringa = "rm "+dnameplot;
         std::string delstringb = "rm "+dnamesh;
 
         svm_system(delstringa.c_str());
         svm_system(delstringb.c_str());
+#endif
 #endif
     }
 
@@ -988,20 +988,39 @@ int dosurf(double xmin, double xmax, double ymin, double ymax, double omin, doub
         // Clean up
 
 #ifndef USE_MEX
+#ifdef DO_CLEANUP
         std::string delstringa = "rm "+dnameplot;
 
 //        svm_system(delstringa.c_str());
+#endif
 #endif
     }
 
     return res;
 }
 
-int dosurfvar(double xmin, double xmax, double ymin, double ymax, double omin, double omax, const std::string &fname, const std::string &dname, int outformat)
+int dosurfvar(double xmin, double xmax, double ymin, double ymax, double omin, double omax,
+              const std::string &fname, const std::string &dname, int outformat, int incdata)
 {
+(void) incdata;
     // Construct the gnuplot script to do the actual plotting
 
-    std::string dnameplot = dname+".plot";
+    std::string dnamevar = dname+"_var";
+    std::string dnamepos = dname+"_pos";
+    std::string dnameneg = dname+"_neg";
+    std::string dnameequ = dname+"_equ";
+
+    std::string dnameplot(dname);
+
+    if ( outformat <= 2 )
+    {
+        dnameplot += ".plot";
+    }
+
+    else if ( outformat == 3 )
+    {
+        dnameplot += ".m";
+    }
 
     std::ofstream dnameplotfile(dnameplot);
 
@@ -1025,7 +1044,7 @@ int dosurfvar(double xmin, double xmax, double ymin, double ymax, double omin, d
     dnameplotfile << "set size ratio 0.75\n";
 
     dnameplotfile << "set dgrid3d " << GRIDSAMP << "," << GRIDSAMP << "\n"; // << " qnorm 2\n";
-    dnameplotfile << "dataFile=\'" << dname << "\'\n";
+    dnameplotfile << "dataFile=\'" << dnamevar << "\'\n";
 
     dnameplotfile << "set table dataFile.'.grid'\n";
     dnameplotfile << "splot dataFile u 1:2:3\n";
@@ -1045,11 +1064,28 @@ int dosurfvar(double xmin, double xmax, double ymin, double ymax, double omin, d
     dnameplotfile << "set xrange [ " << xmin << " : " << xmax << " ]\n";
     dnameplotfile << "set yrange [ " << ymin << " : " << ymax << " ]\n";
     dnameplotfile << "set zrange [ " << omin << " : " << omax << " ]\n";
-    dnameplotfile << "set format x \"\"\n";
-    dnameplotfile << "set format y \"\"\n";
+    dnameplotfile << "#set format x \"\"\n";
+    dnameplotfile << "#set format y \"\"\n";
     dnameplotfile << "#set format z \"\"\n";
 
-    dnameplotfile << "splot sprintf('< paste %s.grid %s.color', dataFile, dataFile) u 1:2:3:7 with pm3d notitle\n";
+    dnameplotfile << "set xtics nomirror font \",8\"\n";
+    dnameplotfile << "set ytics nomirror font \",8\"\n";
+    dnameplotfile << "set ztics nomirror font \",8\"\n";
+
+    dnameplotfile << "splot sprintf('< paste %s.grid %s.color', dataFile, dataFile) u 1:2:3:7 with pm3d notitle";
+
+//The output is (a) ugly and (b) data is almost all occluded by surface plot
+//    if ( ( 1 & incdata ) )
+//    {
+////        dnameplotfile << ", '" << dnamepos << "' u 1:2:3 w points lt -1 lw 1 pt 1 ps 0.5 t\"\"";
+////        dnameplotfile << ", '" << dnameneg << "' u 1:2:3 w points lt -1 lw 1 pt 4 ps 0.5 t\"\"";
+////        dnameplotfile << ", '" << dnameequ << "' u 1:2:3 w points lt -1 lw 1 pt 2 ps 0.5 t\"\"";
+//        dnameplotfile << ", '" << dnamepos << "' u 1:2:3 w points pt 1 t\"\"";
+//        dnameplotfile << ", '" << dnameneg << "' u 1:2:3 w points pt 4 t\"\"";
+//        dnameplotfile << ", '" << dnameequ << "' u 1:2:3 w points pt 2 t\"\"";
+//    }
+
+    dnameplotfile << "\n";
 
     dnameplotfile.close();
 
@@ -1062,13 +1098,13 @@ int dosurfvar(double xmin, double xmax, double ymin, double ymax, double omin, d
     if ( outformat )
     {
         dnameshfile << "#!/usr/bin\n";
-        dnameshfile << "gnuplot " << dname << " >/dev/null 2>/dev/null\n";
+        dnameshfile << "gnuplot " << dnameplot << " >/dev/null 2>/dev/null\n";
     }
 
     else
     {
         dnameshfile << "#!/usr/bin\n";
-        dnameshfile << "gnuplot " << dname << "\n";
+        dnameshfile << "gnuplot " << dnameplot << "\n";
     }
 
     if ( outformat == 2 )
@@ -1114,11 +1150,17 @@ int dosurfvar(double xmin, double xmax, double ymin, double ymax, double omin, d
     // Clean up
 
 #ifndef USE_MEX
+#ifdef DO_CLEANUP
     std::string delstringa = "rm "+dnameplot;
     std::string delstringb = "rm "+dnamesh;
+    std::string delstringc = "rm "+dnamevar+".color";
+    std::string delstringd = "rm "+dnamevar+".grid";
 
     svm_system(delstringa.c_str());
     svm_system(delstringb.c_str());
+    svm_system(delstringc.c_str());
+    svm_system(delstringd.c_str());
+#endif
 #endif
 
     return res;
@@ -1244,11 +1286,13 @@ int doscatterplot2d(double xmin, double xmax, double ymin, double ymax,
     // Clean up
 
 #ifndef USE_MEX
+#ifdef DO_CLEANUP
     std::string delstringa = "rm "+dnameplot;
     std::string delstringb = "rm "+dnamesh;
 
     svm_system(delstringa.c_str());
     svm_system(delstringb.c_str());
+#endif
 #endif
 
     return res;

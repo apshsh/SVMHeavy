@@ -266,6 +266,10 @@ public:
     T v(int i) const;
     template <class S>
     void sv(int i, S x); // By using this, you can potentially avoid destroying altcontent. Only override is T=gentype, S=double
+    template <class S>
+    void svdirec(int i, S x); // By using this, you can potentially avoid destroying altcontent. Only override is T=gentype, S=double
+    template <class S>
+    void svu(int i, int u, S x); // By using this, you can potentially avoid destroying altcontent. Only override is T=gentype, S=double
     void set(int i, const T &src); // similar fast overrides for T=gentype
 
     T         &direref(int i                                  ) { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( content ); resetvecID(); killnearfar(); killaltcontent(); return (*content)("&",i);     }
@@ -2411,6 +2415,11 @@ SparseVector<T> &SparseVector<T>::rand(void)
 template <class T>
 SparseVector<T> &SparseVector<T>::zero(void)
 {
+    if ( size() == 0 )
+    {
+        return *this;
+    }
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -2599,6 +2608,12 @@ SparseVector<T> &SparseVector<T>::zeronotnu(int u)
 {
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
+
+    if ( ( size() == indsize() ) && ( u == 0 ) )
+    {
+        // Nothing to do, leave
+        return *this;
+    }
 
     int uu;
 
@@ -3251,6 +3266,20 @@ template <class S>
 void SparseVector<T>::sv(int i, S x)
 {
     (*this)("&",i) = x;
+}
+
+template <class T>
+template <class S>
+void SparseVector<T>::svdirec(int i, S x)
+{
+    (*this).direref(i) = x;
+}
+
+template <class T>
+template <class S>
+void SparseVector<T>::svu(int i, int u, S x)
+{
+    (*this).n("&",i,u) = x;
 }
 
 template <class T>

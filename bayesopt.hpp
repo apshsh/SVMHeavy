@@ -1,6 +1,3 @@
-//**    // BO-Muse: humanfreq: 0: no human recommendations
-    //                     1: one human input per recommendation
-    //
 
 //
 // Bayesian Optimiser
@@ -131,6 +128,7 @@ public:
     // R:      scale factor used in TS (mode 12) (default 1)
     // B:      if <= 0 then not used, otherwise this is the bound on ||f||_K^2
     //         (default 1)
+    // zeta:   the additional exploration heuristic for EI (default 0.01)
     //
     // impmeasu: improvement measure function.  If set will be used instead
     //           of EI/PI/whatever.
@@ -319,6 +317,7 @@ public:
 
     double ztol;
     double delta;
+    double zeta;
     double nu;
     double modD;
     double a;
@@ -398,6 +397,7 @@ public:
 
         ztol   = DEFAULT_BAYES_ZTOL;
         delta  = DEFAULT_BAYES_DELTA;
+        zeta   = 0.01;
         nu     = DEFAULT_BAYES_NU;
         modD   = -1; // this is entirely arbitrary and must be set by the user
         a      = DEFAULT_BAYES_A; // a value
@@ -479,6 +479,7 @@ public:
 
         ztol   = src.ztol;
         delta  = src.delta;
+        zeta   = src.zeta;
         nu     = src.nu;
         modD   = src.modD;
         a      = src.a;

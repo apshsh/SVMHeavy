@@ -7368,7 +7368,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
 
                         lb    = lencorrect*0.1*xwidth; // 0.01*xwidth; //1e-2*xwidth;
                         ub    = sqrt((double) xspaceDim())*xwidth; // 3*xwidth; //15*xwidth;
-                        steps = 30; //20; // 15; //20;
+                        steps = 50; //30; //20; // 15; //20;
                         addit = 1;
                         islen = 1;
                     }

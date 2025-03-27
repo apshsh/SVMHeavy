@@ -18,6 +18,11 @@
 #include <sstream>
 
 
+#ifdef NDEBUG
+#define DO_CLEANUP
+#endif
+
+
 #define NUMSAMP 1000
 //#define NUMSAMPSURF 1000
 #define NUMSAMPSURF 400
@@ -55,7 +60,15 @@ int plotfn2d(double xmin, double xmax, double omin, double omax,
 
     dnamefile.close();
 
-    return doplot(xmin,xmax,omin,omax,fname,dname,outformat,0,0);
+    int ires = doplot(xmin,xmax,omin,omax,fname,dname,outformat,0,0);
+
+#ifdef DO_CLEANUP
+    std::string delstringa = "rm "+dname;
+
+    svm_system(delstringa.c_str());
+#endif
+
+    return ires;
 }
 
 
@@ -97,7 +110,15 @@ int surffn(double xmin, double xmax, double ymin, double ymax, double omin, doub
 
     dnamefile.close();
 
-    return dosurf(xmin,xmax,ymin,ymax,omin,omax,fname,dname,outformat);
+    int ires = dosurf(xmin,xmax,ymin,ymax,omin,omax,fname,dname,outformat);
+
+#ifdef DO_CLEANUP
+    std::string delstringa = "rm "+dname;
+
+    svm_system(delstringa.c_str());
+#endif
+
+    return ires;
 }
 
 
@@ -243,6 +264,23 @@ int plotml(const ML_Base &ml, int xindex,
             ires |= plotml(ml_sub,xindex,xmin,xmax,omin,omax,fname_sub,dname_sub,outformat,incdata_sub,baseline,incvar_sub,xusevar,xtemplate,plotsq,plotimp,scale);
         }
     }
+
+#ifdef DO_CLEANUP
+    std::string delstringa = "rm "+dname;
+
+    svm_system(delstringa.c_str());
+
+    if ( ( incdata & 1 ) )
+    {
+        std::string delstringpos = "rm "+dnamepos;
+        std::string delstringneg = "rm "+dnameneg;
+        std::string delstringequ = "rm "+dnameequ;
+
+        svm_system(delstringpos.c_str());
+        svm_system(delstringneg.c_str());
+        svm_system(delstringequ.c_str());
+    }
+#endif
 
     return ires;
 }
@@ -420,19 +458,42 @@ int plotml(const ML_Base &ml, int xindex, int yindex,
 
     if ( incvar )
     {
-        ires = dosurfvar(xmin,xmax,ymin,ymax,omin,omax,fname,dvname,outformat);
+        ires = dosurfvar(xmin,xmax,ymin,ymax,omin,omax,fname,dname,outformat,1);
         //ires = dosurf(xmin,xmax,ymin,ymax,vmin,vmax,fvname,dvname,outformat);
     }
 
     else
     {
+//FIXME incdata
         ires = dosurf(xmin,xmax,ymin,ymax,omin,omax,fname,dname,outformat);
     }
 
     if ( incdata & 2 )
     {
+//FIXME incdata
         ires |= dosurf(xmin,xmax,ymin,ymax,omin,omax,fbname,dbname,outformat);
     }
+
+#ifdef DO_CLEANUP
+    std::string delstringa = "rm "+dname;
+    std::string delstringb = "rm "+dvname;
+    std::string delstringc = "rm "+dbname;
+
+    svm_system(delstringa.c_str());
+    svm_system(delstringb.c_str());
+    svm_system(delstringc.c_str());
+
+    if ( ( incdata & 1 ) )
+    {
+        std::string delstringpos = "rm "+dnamepos;
+        std::string delstringneg = "rm "+dnameneg;
+        std::string delstringequ = "rm "+dnameequ;
+
+        svm_system(delstringpos.c_str());
+        svm_system(delstringneg.c_str());
+        svm_system(delstringequ.c_str());
+    }
+#endif
 
     return ires;
 }
@@ -602,7 +663,21 @@ int multiplot2d(const Vector<Vector<gentype> > &y, const Vector<Vector<gentype> 
 
     //int numdatfiles = q; // total number of lines to draw
 
-    return domultiplot2d(xmin,xmax,omin,omax,fname,dname,outformat,title,dnamelist,repind,objind,plotlabels,maxobj,1);
+    int ires = domultiplot2d(xmin,xmax,omin,omax,fname,dname,outformat,title,dnamelist,repind,objind,plotlabels,maxobj,1);
+
+#ifdef DO_CLEANUP
+        if ( dnamelist.size() )
+        {
+            for ( int i = 0 ; i < dnamelist.size() ; i++ )
+            {
+                std::string delstringx = "rm "+dnamelist(i);
+
+                svm_system(delstringx.c_str());
+            }
+        }
+#endif
+
+    return ires;
 }
 
 
@@ -631,7 +706,15 @@ int scatterplot2d(const Vector<double> &x, const Vector<double> &y,
 
     datfile.close();
 
-    return doscatterplot2d(xmin,xmax,ymin,ymax,fname,dname,outformat);
+    int ires = doscatterplot2d(xmin,xmax,ymin,ymax,fname,dname,outformat);
+
+#ifdef DO_CLEANUP
+    std::string delstringa = "rm "+dname;
+
+    svm_system(delstringa.c_str());
+#endif
+
+    return ires;
 }
 
 

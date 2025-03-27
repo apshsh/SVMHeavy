@@ -806,6 +806,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
     if ( plotfreq && ( ( stage == 0 ) || ( stage == 2 ) || ( ( plotfreq > 0 ) && ( !(model_N_mu()%plotfreq) ) ) ) )
     {
         gentype baseline(modelbaseline);
+        int incbaseline = ( ( modelbaseline == "null" ) ? 0 : 1 );
 
         //double xmin = 0;
         //double xmax = 1;
@@ -986,14 +987,14 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
                 mlnamefile << (*(muapprox(j))) << "\n";
                 mlnamefile.close();
 
-                int incdata = 1;
+                int incdata = incbaseline ? 3 : 1;
                 int incvar  = 1;
                 int xusevar = 0;
 
                 SparseVector<gentype> xtemplate;
 
-                plotml((*(muapprox(j))),xind,xmin,xmax,omin,omax,fname, dname,modeloutformat,incdata,nullgentype(),incvar,xusevar,xtemplate,0,0,-1);
-                plotml((*(muapprox(j))),xind,xmin,xmax,omin,omax,ffname,dname,modeloutformat,incdata,nullgentype(),incvar,xusevar,xtemplate,0,0,-1);
+                plotml((*(muapprox(j))),xind,xmin,xmax,omin,omax,fname, dname,modeloutformat,incdata,baseline,incvar,xusevar,xtemplate,0,0,-1);
+                plotml((*(muapprox(j))),xind,xmin,xmax,omin,omax,ffname,dname,modeloutformat,incdata,baseline,incvar,xusevar,xtemplate,0,0,-1);
             }
 
             else if ( ( (*(muapprox(j))).tspaceDim() == 1 ) && ( (*(muapprox(j))).xspaceDim() == 2 ) )
@@ -1050,15 +1051,15 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
                 mlnamefile << (*(muapprox(j))) << "\n";
                 mlnamefile.close();
 
-                int incdata = 1;
+                int incdata = incbaseline ? 2 : 1;
                 int incvar  = 1;
                 int xusevar = 0;
                 int yusevar = 1;
 
                 SparseVector<gentype> xtemplate;
 
-                plotml((*(muapprox(j))),xind,yind,xmin,xmax,ymin,ymax,omin,omax,fname, dname,modeloutformat,incdata,nullgentype(),incvar,xusevar,yusevar,xtemplate,0,0,-1);
-                plotml((*(muapprox(j))),xind,yind,xmin,xmax,ymin,ymax,omin,omax,ffname,dname,modeloutformat,incdata,nullgentype(),incvar,xusevar,yusevar,xtemplate,0,0,-1);
+                plotml((*(muapprox(j))),xind,yind,xmin,xmax,ymin,ymax,omin,omax,fname, dname,modeloutformat,incdata,baseline,incvar,xusevar,yusevar,xtemplate,0,0,-1);
+                plotml((*(muapprox(j))),xind,yind,xmin,xmax,ymin,ymax,omin,omax,ffname,dname,modeloutformat,incdata,baseline,incvar,xusevar,yusevar,xtemplate,0,0,-1);
             }
 
             else
@@ -2754,6 +2755,8 @@ double SMBOOptions::model_err(int dim, const Vector<double> &xmin, const Vector<
 
 const SparseVector<gentype> &SMBOOptions::convnearuptonaive(SparseVector<gentype> &res, const SparseVector<gentype> &x) const
 {
+    NiceAssert ( !getdimfid() || !ennornaive );
+
     if ( !ennornaive || ( ( x.nupsize() <= 1 ) && ( x.f1upsize() <= 1 ) ) )
     {
         return x; // no point messing around
