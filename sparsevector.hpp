@@ -263,14 +263,11 @@ public:
     const Vector<T> &operator()(const Vector<int> &i,   retVector<T> &tmp) const;
     const Vector<T> &operator()(int ib, int is, int im, retVector<T> &tmp) const;
 
-    T v(int i) const;
-    template <class S>
-    void sv(int i, S x); // By using this, you can potentially avoid destroying altcontent. Only override is T=gentype, S=double
-    template <class S>
-    void svdirec(int i, S x); // By using this, you can potentially avoid destroying altcontent. Only override is T=gentype, S=double
-    template <class S>
-    void svu(int i, int u, S x); // By using this, you can potentially avoid destroying altcontent. Only override is T=gentype, S=double
-    void set(int i, const T &src); // similar fast overrides for T=gentype
+    T v(int i) const; // NOT FAST. Included for completeness
+    void set(int i, const T &src); // NOT FAST. Included for completeness
+
+    template <class S> void sv     (int i, S x); // NOT FAST. Included for completeness
+    template <class S> void svdirec(int i, S x); // FAST: By using this, you can potentially avoid destroying altcontent. Only override is T=gentype, S=double
 
     T         &direref(int i                                  ) { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( content ); resetvecID(); killnearfar(); killaltcontent(); return (*content)("&",i);     }
     Vector<T> &direref(const Vector<int> &i, retVector<T> &tmp) { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( content ); resetvecID(); killnearfar(); killaltcontent(); return (*content)("&",i,tmp); }
@@ -324,6 +321,10 @@ public:
     const SparseVector<T> &f3up(int u) const;
     const SparseVector<T> &f4up(int u) const;
 
+    // DONT USE THIS! GENTYPE NEEDS PRIVELEDGED ACCESS, YOU DONT
+
+    SparseVector<T> &nup(const char *dummy, int u);
+
     // Information functions
     //
     // Note: indices relate to sparse vectors.  The index vector contains
@@ -374,24 +375,24 @@ public:
     bool isf3indpresent(int i) const { return isindpresent(i+INDF3OFFSTART); }
     bool isf4indpresent(int i) const { return isindpresent(i+INDF4OFFSTART); }
 
-    bool isnindpresent    (void) const { return ( 0                      < findind(INDF1OFFSTART) ) ? true : false; }
-    bool isf1offindpresent(void) const { return ( findind(INDF1OFFSTART) < findind(INDF2OFFSTART) ) ? true : false; }
-    bool isf2offindpresent(void) const { return ( findind(INDF2OFFSTART) < findind(INDF3OFFSTART) ) ? true : false; }
-    bool isf3offindpresent(void) const { return ( findind(INDF3OFFSTART) < findind(INDF4OFFSTART) ) ? true : false; }
-    bool isf4offindpresent(void) const { return ( findind(INDF4OFFSTART) < indsize()              ) ? true : false; }
+    bool isnindpresent    (void) const { if ( npointer  ) { return (*npointer ).indsize() ? true : false; } return ( 0                      < findind(INDF1OFFSTART) ) ? true : false; }
+    bool isf1offindpresent(void) const { if ( f1pointer ) { return (*f1pointer).indsize() ? true : false; } return ( findind(INDF1OFFSTART) < findind(INDF2OFFSTART) ) ? true : false; }
+    bool isf2offindpresent(void) const { if ( f2pointer ) { return (*f2pointer).indsize() ? true : false; } return ( findind(INDF2OFFSTART) < findind(INDF3OFFSTART) ) ? true : false; }
+    bool isf3offindpresent(void) const { if ( f3pointer ) { return (*f3pointer).indsize() ? true : false; } return ( findind(INDF3OFFSTART) < findind(INDF4OFFSTART) ) ? true : false; }
+    bool isf4offindpresent(void) const { if ( f4pointer ) { return (*f4pointer).indsize() ? true : false; } return ( findind(INDF4OFFSTART) < indsize()              ) ? true : false; }
 
-    int ntof1indsize(void) const { return findind(INDF2OFFSTART); }
-    int ntof2indsize(void) const { return findind(INDF3OFFSTART); }
-    int ntof3indsize(void) const { return findind(INDF4OFFSTART); }
-    int ntof4indsize(void) const { return indsize();              }
+    int ntof1indsize(void) const { if ( npointer && f1pointer                           ) { return (*npointer).indsize() + (*f1pointer).indsize();                                                   } return findind(INDF2OFFSTART); }
+    int ntof2indsize(void) const { if ( npointer && f1pointer && f2pointer              ) { return (*npointer).indsize() + (*f1pointer).indsize() + (*f2pointer).indsize();                          } return findind(INDF3OFFSTART); }
+    int ntof3indsize(void) const { if ( npointer && f1pointer && f2pointer && f3pointer ) { return (*npointer).indsize() + (*f1pointer).indsize() + (*f2pointer).indsize() + (*f3pointer).indsize(); } return findind(INDF4OFFSTART); }
+    int ntof4indsize(void) const {                                                                                                                                                                     return indsize();              }
 
-    int nindsize (void) const { return findind(INDF1OFFSTART);                        }
-    int f1indsize(void) const { return findind(INDF2OFFSTART)-findind(INDF1OFFSTART); }
-    int f2indsize(void) const { return findind(INDF3OFFSTART)-findind(INDF2OFFSTART); }
-    int f3indsize(void) const { return findind(INDF4OFFSTART)-findind(INDF3OFFSTART); }
-    int f4indsize(void) const { return indsize()             -findind(INDF4OFFSTART); }
+    int nindsize (void) const { if ( npointer  ) { return (*npointer ).indsize(); } return findind(INDF1OFFSTART);                        }
+    int f1indsize(void) const { if ( f1pointer ) { return (*f1pointer).indsize(); } return findind(INDF2OFFSTART)-findind(INDF1OFFSTART); }
+    int f2indsize(void) const { if ( f2pointer ) { return (*f2pointer).indsize(); } return findind(INDF3OFFSTART)-findind(INDF2OFFSTART); }
+    int f3indsize(void) const { if ( f3pointer ) { return (*f3pointer).indsize(); } return findind(INDF4OFFSTART)-findind(INDF3OFFSTART); }
+    int f4indsize(void) const { if ( f4pointer ) { return (*f4pointer).indsize(); } return indsize()             -findind(INDF4OFFSTART); }
 
-    bool isnofaroffindpresent(void)  const { return ( findind(INDF1OFFSTART) == indsize() ) ? true : false; }
+    bool isnofaroffindpresent(void)  const { return ( nindsize() == indsize() ) ? true : false; }
 
     int nindstart (int u = 0) const { return findind(               u*DEFAULT_TUPLE_INDEX_STEP ); }
     int f1indstart(int u = 0) const { return findind(INDF1OFFSTART+(u*DEFAULT_TUPLE_INDEX_STEP)); }
@@ -546,6 +547,12 @@ private:
     mutable SparseVector<T> *f3pointer; // first element is complete f3 vector, rest are upsize elements
     mutable SparseVector<T> *f4pointer; // first element is complete f4 vector, rest are upsize elements
 
+    mutable int xnupsize;  // cached for speed
+    mutable int xf1upsize; // "
+    mutable int xf2upsize;
+    mutable int xf3upsize;
+    mutable int xf4upsize;
+
     // Private constructor that initialises exactly nothing
 
     explicit SparseVector(const char *dummy);
@@ -601,6 +608,7 @@ public:
         {
             MEMDELARRAY(npointer);
             npointer = nullptr;
+            xnupsize = -1;
         }
     }
 
@@ -610,6 +618,7 @@ public:
         {
             MEMDELARRAY(f1pointer);
             f1pointer = nullptr;
+            xf1upsize = -1;
         }
     }
 
@@ -619,6 +628,7 @@ public:
         {
             MEMDELARRAY(f2pointer);
             f2pointer = nullptr;
+            xf2upsize = -1;
         }
     }
 
@@ -628,6 +638,7 @@ public:
         {
             MEMDELARRAY(f3pointer);
             f3pointer = nullptr;
+            xf3upsize = -1;
         }
     }
 
@@ -637,6 +648,7 @@ public:
         {
             MEMDELARRAY(f4pointer);
             f4pointer = nullptr;
+            xf4upsize = -1;
         }
     }
 
@@ -704,6 +716,11 @@ template <class T> void qswap(SparseVector<T> &a, SparseVector<T> &b)
     SparseVector<T> *f2pointer;
     SparseVector<T> *f3pointer;
     SparseVector<T> *f4pointer;
+    int xnupsize;
+    int xf1upsize;
+    int xf2upsize;
+    int xf3upsize;
+    int xf4upsize;
     uintmax_t altxvecID;
     double *altcontent;
     double *altcontentsp;
@@ -713,6 +730,11 @@ template <class T> void qswap(SparseVector<T> &a, SparseVector<T> &b)
     f2pointer    = a.f2pointer;    a.f2pointer    = b.f2pointer;    b.f2pointer    = f2pointer;
     f3pointer    = a.f3pointer;    a.f3pointer    = b.f3pointer;    b.f3pointer    = f3pointer;
     f4pointer    = a.f4pointer;    a.f4pointer    = b.f4pointer;    b.f4pointer    = f4pointer;
+    xnupsize     = a.xnupsize;     a.xnupsize     = b.xnupsize;     b.xnupsize     = xnupsize;
+    xf1upsize    = a.xf1upsize;    a.xf1upsize    = b.xf1upsize;    b.xf1upsize    = xf1upsize;
+    xf2upsize    = a.xf2upsize;    a.xf2upsize    = b.xf2upsize;    b.xf2upsize    = xf2upsize;
+    xf3upsize    = a.xf3upsize;    a.xf3upsize    = b.xf3upsize;    b.xf3upsize    = xf3upsize;
+    xf4upsize    = a.xf4upsize;    a.xf4upsize    = b.xf4upsize;    b.xf4upsize    = xf4upsize;
     altcontent   = a.altcontent;   a.altcontent   = b.altcontent;   b.altcontent   = altcontent;
     altcontentsp = a.altcontentsp; a.altcontentsp = b.altcontentsp; b.altcontentsp = altcontentsp;
 
@@ -1140,118 +1162,148 @@ template <class T> Vector<T>       &kronpow(Vector<T>       &res,              c
 template <class T>
 int SparseVector<T>::nupsize(void) const
 {
-    int res = 1;
-    int i;
-
-    for ( i = indsize()-1 ; i >= 0 ; --i )
+    if ( xnupsize == -1 )
     {
-        if ( ind(i) < INDF1OFFSTART )
+        int res = 1;
+        int i;
+        int isize = indsize();
+
+        for ( i = isize-1 ; i >= 0 ; --i )
         {
-            break;
+            if ( ind(i) < INDF1OFFSTART )
+            {
+                break;
+            }
         }
+
+        if ( ( i >= 0 ) && ( i < isize ) )
+        {
+            if ( ( ind(i) >= 0 ) && ( ind(i) < INDF1OFFSTART ) )
+            {
+                res = (ind(i)/DEFAULT_TUPLE_INDEX_STEP)+1;
+            }
+        }
+
+        xnupsize = res ? res : 1;
     }
 
-    if ( ( i >= 0 ) && ( i < indsize() ) )
-    {
-        if ( ( ind(i) >= 0 ) && ( ind(i) < INDF1OFFSTART ) )
-        {
-            res = (ind(i)/DEFAULT_TUPLE_INDEX_STEP)+1;
-        }
-    }
-
-    return res ? res : 1;
+    return xnupsize;
 }
 
 template <class T>
 int SparseVector<T>::f1upsize(void) const
 {
-    int res = 1;
-    int i;
-
-    for ( i = indsize()-1 ; i >= 0 ; --i )
+    if ( xf1upsize == -1 )
     {
-        if ( ind(i) < INDF2OFFSTART )
+        int res = 1;
+        int i;
+        int isize = indsize();
+
+        for ( i = isize-1 ; i >= 0 ; --i )
         {
-            break;
+            if ( ind(i) < INDF2OFFSTART )
+            {
+                break;
+            }
         }
+
+        if ( ( i >= 0 ) && ( i < isize ) )
+        {
+            if ( ( ind(i) >= INDF1OFFSTART ) && ( ind(i) < INDF2OFFSTART ) )
+            {
+                res = ((ind(i)-INDF1OFFSTART)/DEFAULT_TUPLE_INDEX_STEP)+1;
+            }
+        }
+
+        xf1upsize = res ? res : 1;
     }
 
-    if ( ( i >= 0 ) && ( i < indsize() ) )
-    {
-        if ( ( ind(i) >= INDF1OFFSTART ) && ( ind(i) < INDF2OFFSTART ) )
-        {
-            res = ((ind(i)-INDF1OFFSTART)/DEFAULT_TUPLE_INDEX_STEP)+1;
-        }
-    }
-
-    return res ? res : 1;
+    return xf1upsize;
 }
 
 template <class T>
 int SparseVector<T>::f2upsize(void) const
 {
-    int res = 1;
-    int i;
-
-    for ( i = indsize()-1 ; i >= 0 ; --i )
+    if ( xf2upsize == -1 )
     {
-        if ( ind(i) < INDF3OFFSTART )
+        int res = 1;
+        int i;
+        int isize = indsize();
+
+        for ( i = isize-1 ; i >= 0 ; --i )
         {
-            break;
+            if ( ind(i) < INDF3OFFSTART )
+            {
+                break;
+            }
         }
+
+        if ( ( i >= 0 ) && ( i < isize ) )
+        {
+            if ( ( ind(i) >= INDF2OFFSTART ) && ( ind(i) < INDF3OFFSTART ) )
+            {
+                res = ((ind(i)-INDF2OFFSTART)/DEFAULT_TUPLE_INDEX_STEP)+1;
+            }
+        }
+
+        xf2upsize = res ? res : 1;
     }
 
-    if ( ( i >= 0 ) && ( i < indsize() ) )
-    {
-        if ( ( ind(i) >= INDF2OFFSTART ) && ( ind(i) < INDF3OFFSTART ) )
-        {
-            res = ((ind(i)-INDF2OFFSTART)/DEFAULT_TUPLE_INDEX_STEP)+1;
-        }
-    }
-
-    return res ? res : 1;
+    return xf2upsize;
 }
 
 template <class T>
 int SparseVector<T>::f3upsize(void) const
 {
-    int res = 1;
-    int i;
-
-    for ( i = indsize()-1 ; i >= 0 ; --i )
+    if ( xf3upsize == -1 )
     {
-        if ( ind(i) < INDF4OFFSTART )
+        int res = 1;
+        int i;
+        int isize = indsize();
+
+        for ( i = isize-1 ; i >= 0 ; --i )
         {
-            break;
+            if ( ind(i) < INDF4OFFSTART )
+            {
+                break;
+            }
         }
+
+        if ( ( i >= 0 ) && ( i < isize ) )
+        {
+            if ( ( ind(i) >= INDF3OFFSTART ) && ( ind(i) < INDF4OFFSTART ) )
+            {
+                res = ((ind(i)-INDF3OFFSTART)/DEFAULT_TUPLE_INDEX_STEP)+1;
+            }
+        }
+
+        xf3upsize = res ? res : 1;
     }
 
-    if ( ( i >= 0 ) && ( i < indsize() ) )
-    {
-        if ( ( ind(i) >= INDF3OFFSTART ) && ( ind(i) < INDF4OFFSTART ) )
-        {
-            res = ((ind(i)-INDF3OFFSTART)/DEFAULT_TUPLE_INDEX_STEP)+1;
-        }
-    }
-
-    return res ? res : 1;
+    return xf3upsize;
 }
 
 template <class T>
 int SparseVector<T>::f4upsize(void) const
 {
-    int res = 1;
-    int i = indsize()-1;
-
-    if ( ( i >= 0 ) && ( i < indsize() ) )
+    if ( xf4upsize == -1 )
     {
-        if ( ind(i) >= INDF4OFFSTART )
+        int res = 1;
+        int isize = indsize();
+        int i = isize-1;
+
+        if ( ( i >= 0 ) && ( i < isize ) )
         {
-            res = ((ind(i)-INDF4OFFSTART)/DEFAULT_TUPLE_INDEX_STEP)+1;
+            if ( ind(i) >= INDF4OFFSTART )
+            {
+                res = ((ind(i)-INDF4OFFSTART)/DEFAULT_TUPLE_INDEX_STEP)+1;
+            }
         }
+
+        xf4upsize = res ? res : 1;
     }
 
-    return res ? res : 1;
+    return xf4upsize;
 }
 
 template <class T>
@@ -1259,6 +1311,11 @@ int SparseVector<T>::nupindsize(int u) const
 {
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
+
+    if ( npointer )
+    {
+        return nup(u).indsize();
+    }
 
     int res = 0;
     int i;
@@ -1285,6 +1342,11 @@ int SparseVector<T>::f1upindsize(int u) const
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
 
+    if ( f1pointer )
+    {
+        return f1up(u).indsize();
+    }
+
     int res = 0;
     int i;
 
@@ -1309,6 +1371,11 @@ int SparseVector<T>::f2upindsize(int u) const
 {
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
+
+    if ( f2pointer )
+    {
+        return f2up(u).indsize();
+    }
 
     int res = 0;
     int i;
@@ -1335,6 +1402,11 @@ int SparseVector<T>::f3upindsize(int u) const
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
 
+    if ( f3pointer )
+    {
+        return f3up(u).indsize();
+    }
+
     int res = 0;
     int i;
 
@@ -1360,6 +1432,11 @@ int SparseVector<T>::f4upindsize(int u) const
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
 
+    if ( f4pointer )
+    {
+        return f4up(u).indsize();
+    }
+
     int res = 0;
     int i;
 
@@ -1384,6 +1461,11 @@ int SparseVector<T>::nupsize(int u) const
 {
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
+
+    if ( npointer )
+    {
+        return nup(u).size();
+    }
 
     int res = 0;
     int i;
@@ -1413,6 +1495,11 @@ int SparseVector<T>::f1upsize(int u) const
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
 
+    if ( f1pointer )
+    {
+        return f1up(u).size();
+    }
+
     int res = 0;
     int i;
 
@@ -1440,6 +1527,11 @@ int SparseVector<T>::f2upsize(int u) const
 {
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
+
+    if ( f2pointer )
+    {
+        return f2up(u).size();
+    }
 
     int res = 0;
     int i;
@@ -1469,6 +1561,11 @@ int SparseVector<T>::f3upsize(int u) const
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
 
+    if ( f3pointer )
+    {
+        return f3up(u).size();
+    }
+
     int res = 0;
     int i;
 
@@ -1497,6 +1594,11 @@ int SparseVector<T>::f4upsize(int u) const
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
 
+    if ( f4pointer )
+    {
+        return f4up(u).size();
+    }
+
     int res = 0;
     int i;
 
@@ -1521,6 +1623,24 @@ int SparseVector<T>::f4upsize(int u) const
 
 template <class T>
 const SparseVector<T> &SparseVector<T>::nup(int u) const
+{
+    NiceAssert( u >= 0 );
+    NiceAssert( u < nupsize() );
+
+    // Don't risk destroying altcontent if we don't have to
+
+    if ( ( nupsize() == 1 ) && isnofaroffindpresent() )
+    {
+        return *this;
+    }
+
+    n();
+
+    return npointer[u+1];
+}
+
+template <class T>
+SparseVector<T> &SparseVector<T>::nup(const char *, int u)
 {
     NiceAssert( u >= 0 );
     NiceAssert( u < nupsize() );
@@ -1593,7 +1713,7 @@ const SparseVector<T> &SparseVector<T>::n(void) const
     // Don't risk destroying altcontent if we don't have to
     // (also don't need to allocate npointer in this case as nup(0) will just return *this)
 
-    if ( ( nupsize() == 1 ) && isnofaroffindpresent() )
+    if ( ( qs == 1 ) && isnofaroffindpresent() )
     {
         return *this;
     }
@@ -1673,6 +1793,7 @@ const SparseVector<T> &SparseVector<T>::n(void) const
 //            {
                 npointer = xnpointer;
                 npointerused = true;
+                xnupsize = qs;
 //            }
 //
 //#ifdef ENABLE_THREADS
@@ -1768,6 +1889,7 @@ const SparseVector<T> &SparseVector<T>::f1(void) const
 //            {
                 f1pointer = xf1pointer;
                 f1pointerused = true;
+                xf1upsize = qs;
 //            }
 //
 //#ifdef ENABLE_THREADS
@@ -1863,6 +1985,7 @@ const SparseVector<T> &SparseVector<T>::f2(void) const
 //            {
                 f2pointer = xf2pointer;
                 f2pointerused = true;
+                xf2upsize = qs;
 //            }
 //
 //#ifdef ENABLE_THREADS
@@ -1958,6 +2081,7 @@ const SparseVector<T> &SparseVector<T>::f3(void) const
 //            {
                 f3pointer = xf3pointer;
                 f3pointerused = true;
+                xf3upsize = qs;
 //            }
 //
 //#ifdef ENABLE_THREADS
@@ -2053,6 +2177,7 @@ const SparseVector<T> &SparseVector<T>::f4(void) const
 //            {
                 f4pointer = xf4pointer;
                 f4pointerused = true;
+                xf4upsize = qs;
 //            }
 //
 //#ifdef ENABLE_THREADS
@@ -2075,6 +2200,7 @@ const SparseVector<T> &SparseVector<T>::f4(void) const
 template <class T>
 SparseVector<T>::SparseVector() : indices(nullptr), content(nullptr),
                                   npointer(nullptr), f1pointer(nullptr), f2pointer(nullptr), f3pointer(nullptr), f4pointer(nullptr),
+                                  xnupsize(-1), xf1upsize(-1), xf2upsize(-1), xf3upsize(-1), xf4upsize(-1),
                                   altcontent(nullptr), altcontentsp(nullptr), xvecID(0)
 {
     resetvecID();
@@ -2091,6 +2217,7 @@ SparseVector<T>::SparseVector() : indices(nullptr), content(nullptr),
 template <class T>
 SparseVector<T>::SparseVector(int size, const T *src) : indices(nullptr), content(nullptr),
                                   npointer(nullptr), f1pointer(nullptr), f2pointer(nullptr), f3pointer(nullptr), f4pointer(nullptr),
+                                  xnupsize(-1), xf1upsize(-1), xf2upsize(-1), xf3upsize(-1), xf4upsize(-1),
                                   altcontent(nullptr), altcontentsp(nullptr), xvecID(0)
 {
     NiceAssert( size >= 0 );
@@ -2121,6 +2248,7 @@ SparseVector<T>::SparseVector(int size, const T *src) : indices(nullptr), conten
 template <class T>
 SparseVector<T>::SparseVector(const SparseVector<T> &src) : indices(nullptr), content(nullptr),
                                   npointer(nullptr), f1pointer(nullptr), f2pointer(nullptr), f3pointer(nullptr), f4pointer(nullptr),
+                                  xnupsize(-1), xf1upsize(-1), xf2upsize(-1), xf3upsize(-1), xf4upsize(-1),
                                   altcontent(nullptr), altcontentsp(nullptr), xvecID(0)
 {
     MEMNEW(indices,Vector<int>);
@@ -2139,6 +2267,7 @@ SparseVector<T>::SparseVector(const SparseVector<T> &src) : indices(nullptr), co
 template <class T>
 SparseVector<T>::SparseVector(const Vector<T> &src) : indices(nullptr), content(nullptr),
                                   npointer(nullptr), f1pointer(nullptr), f2pointer(nullptr), f3pointer(nullptr), f4pointer(nullptr),
+                                  xnupsize(-1), xf1upsize(-1), xf2upsize(-1), xf3upsize(-1), xf4upsize(-1),
                                   altcontent(nullptr), altcontentsp(nullptr), xvecID(0)
 {
     MEMNEW(indices,Vector<int>);
@@ -2157,6 +2286,7 @@ SparseVector<T>::SparseVector(const Vector<T> &src) : indices(nullptr), content(
 template <class T>
 SparseVector<T>::SparseVector(const char *) : indices(nullptr), content(nullptr),
                                   npointer(nullptr), f1pointer(nullptr), f2pointer(nullptr), f3pointer(nullptr), f4pointer(nullptr),
+                                  xnupsize(-1), xf1upsize(-1), xf2upsize(-1), xf3upsize(-1), xf4upsize(-1),
                                   altcontent(nullptr), altcontentsp(nullptr), xvecID(0)
 {
     resetvecID();
@@ -2351,6 +2481,11 @@ SparseVector<T> &SparseVector<T>::overwrite(const SparseVector<T> &src)
 template <class T>
 SparseVector<T> &SparseVector<T>::ident(void)
 {
+    if ( altcontentsp )
+    {
+        killaltcontent(); // because n()s hvae altcontent also
+    }
+
     resetvecID();
     //killaltcontent();
     killnearfar();
@@ -3114,6 +3249,11 @@ SparseVector<T> &SparseVector<T>::zero(const Vector<int> &i)
 template <class T>
 SparseVector<T> &SparseVector<T>::softzero(void)
 {
+    if ( altcontentsp )
+    {
+        killaltcontent(); // because n()s hvae altcontent also
+    }
+
     resetvecID();
     //killaltcontent();
     killnearfar();
@@ -3179,6 +3319,11 @@ SparseVector<T> &SparseVector<T>::posate(void)
 template <class T>
 SparseVector<T> &SparseVector<T>::negate(void)
 {
+    if ( altcontentsp )
+    {
+        killaltcontent(); // because n()s hvae altcontent also
+    }
+
     resetvecID();
     //killaltcontent();
     killnearfar();
@@ -3273,13 +3418,6 @@ template <class S>
 void SparseVector<T>::svdirec(int i, S x)
 {
     (*this).direref(i) = x;
-}
-
-template <class T>
-template <class S>
-void SparseVector<T>::svu(int i, int u, S x)
-{
-    (*this).n("&",i,u) = x;
 }
 
 template <class T>

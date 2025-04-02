@@ -23449,11 +23449,14 @@ int genplotit(double xmin, double xmax, double ymin, double ymax,
 
 // Sparsevector specialisations
 
-int disableAltContent(int actuallyForceEnable)
+int disableAltContent(bool justquery, int actuallyForceEnable)
 {
     static int disableAltCont = 0;
 
-    disableAltCont = actuallyForceEnable ? 0 : 1;
+    if ( !justquery )
+    {
+        disableAltCont = actuallyForceEnable ? 0 : 1;
+    }
 
     return disableAltCont;
 }
@@ -23464,7 +23467,7 @@ template <> gentype &oneProduct(gentype &gres, const SparseVector<gentype> &a)
 {
     if ( a.altcontent )
     {
-        gres = fastoneProduct(a.altcontent,a.size());
+        gres = fastoneProduct(a.altcontent,a.indsize());
     }
 
     else if ( a.altcontentsp )
@@ -23503,7 +23506,7 @@ template <> double &oneProductAssumeReal(double &res, const SparseVector<gentype
 {
     if ( a.altcontent )
     {
-        res = fastoneProduct(a.altcontent,a.size());
+        res = fastoneProduct(a.altcontent,a.indsize());
     }
 
     else if ( a.altcontentsp )
@@ -23523,9 +23526,9 @@ template <> gentype &innerProduct(gentype &gres, const SparseVector<gentype> &a,
 {
     if ( a.altcontent && b.altcontent )
     {
-        int dim = a.size();
+        int dim = a.indsize();
 
-        dim = ( b.size() < dim ) ? b.size() : dim;
+        dim = ( b.indsize() < dim ) ? b.indsize() : dim;
 
         gres = fasttwoProduct(a.altcontent,b.altcontent,dim);
     }
@@ -23577,9 +23580,9 @@ template <> gentype &twoProduct(gentype &gres, const SparseVector<gentype> &a, c
 {
     if ( a.altcontent && b.altcontent )
     {
-        int dim = a.size();
+        int dim = a.indsize();
 
-        dim = ( b.size() < dim ) ? b.size() : dim;
+        dim = ( b.indsize() < dim ) ? b.indsize() : dim;
 
         gres = fasttwoProduct(a.altcontent,b.altcontent,dim);
     }
@@ -23631,9 +23634,9 @@ template <> gentype &innerProductRevConj(gentype &gres, const SparseVector<genty
 {
     if ( a.altcontent && b.altcontent )
     {
-        int dim = a.size();
+        int dim = a.indsize();
 
-        dim = ( b.size() < dim ) ? b.size() : dim;
+        dim = ( b.indsize() < dim ) ? b.indsize() : dim;
 
         gres = fasttwoProduct(a.altcontent,b.altcontent,dim);
     }
@@ -23685,9 +23688,9 @@ template <> double &innerProductAssumeReal(double &res, const SparseVector<genty
 {
     if ( a.altcontent && b.altcontent )
     {
-        int dim = a.size();
+        int dim = a.indsize();
 
-        dim = ( b.size() < dim ) ? b.size() : dim;
+        dim = ( b.indsize() < dim ) ? b.indsize() : dim;
 
         res = fasttwoProduct(a.altcontent,b.altcontent,dim);
     }
@@ -23719,9 +23722,9 @@ template <> double &twoProductAssumeReal(double &res, const SparseVector<gentype
 {
     if ( a.altcontent && b.altcontent )
     {
-        int dim = a.size();
+        int dim = a.indsize();
 
-        dim = ( b.size() < dim ) ? b.size() : dim;
+        dim = ( b.indsize() < dim ) ? b.indsize() : dim;
 
         res = fasttwoProduct(a.altcontent,b.altcontent,dim);
     }

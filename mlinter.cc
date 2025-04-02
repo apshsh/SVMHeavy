@@ -17056,7 +17056,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           in -gb) and y (must be real).                      \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gbD d          - delta factor used in GP-UCB method (default 0.1).  \n" : "" );
-    output << ( (          advanced ) ? "         -gbzz zeta      - zeta factor used in EI method (default 0.01).      \n" : "" );
+    output << ( (          advanced ) ? "         -gbzz zeta      - zeta factor in EI method (deflt 0.  0.01 works ok).\n" : "" );
     output << ( (          advanced ) ? "         -gbk n          - nu factor Srinivas GP-UCB (deft 0.2, see Srivinas).\n" : "" );
     output << ( (          advanced ) ? "         -gbx n          - |D| (size  of search  space grid) for  gpUCB finite\n" : "" );
     output << ( (          advanced ) ? "                           (default -1, which  means set to size  of grid data\n" : "" );

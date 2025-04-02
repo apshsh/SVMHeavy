@@ -3278,14 +3278,11 @@ inline gentype OuterProd(const gentype &a, const gentype &b) { return trans(oute
 
 // Specialisation to sparsevector for speed
 
-int disableAltContent(int actuallyForceEnable = 0); // saves memory by turning off altcontent, at the cost of speed.  Use 1 to force enable instead.  Return 1 if disabled
+int disableAltContent(bool justquery = false, int actuallyForceEnable = 0); // saves memory by turning off altcontent, at the cost of speed.  Use justquery = true to just return current value. Use actuallyforceenable = 1 to force enable instead.  Return 1 if disabled
 
 template <> inline void SparseVector<gentype>::makealtcontent(void) const;
 
-template <> template <> inline void SparseVector<gentype>::sv(int i, double x);
 template <> template <> inline void SparseVector<gentype>::svdirec(int i, double x);
-template <> template <> inline void SparseVector<gentype>::svu(int i, int u, double x);
-template <> inline void SparseVector<gentype>::set(int i, const gentype &src);
 
 template <> gentype &innerProduct       (gentype &res, const SparseVector<gentype> &a, const SparseVector<gentype> &b);
 template <> gentype &innerProductRevConj(gentype &res, const SparseVector<gentype> &a, const SparseVector<gentype> &b);
@@ -3312,9 +3309,12 @@ template <> double &twoProductAssumeReal  (double &res, const SparseVector<genty
 template <> double &threeProductAssumeReal(double &res, const SparseVector<gentype> &a, const SparseVector<gentype> &b, const SparseVector<gentype> &c);
 template <> double &fourProductAssumeReal (double &res, const SparseVector<gentype> &a, const SparseVector<gentype> &b, const SparseVector<gentype> &c, const SparseVector<gentype> &d);
 
+////errstream
+//#include "basefn.hpp"
+
 template <> inline void SparseVector<gentype>::makealtcontent(void) const
 {
-    if ( !altcontent && !altcontentsp && ( !disableAltContent() ) )
+    if ( !altcontent && !altcontentsp && ( !disableAltContent(true) ) )
     {
         //int issimple = ( nearnonsparse() && isnofaroffindpresent() ) ? 1 : 0;
         int ismoder = ( isnofaroffindpresent() ) ? 1 : 0;
@@ -3325,7 +3325,7 @@ template <> inline void SparseVector<gentype>::makealtcontent(void) const
 
         if ( issimple && asize )
         {
-            for ( int i = 0 ; isreal && ( i < asize ) ; ++i )
+            for ( int i = 0 ; isreal && ( i < adim ) ; ++i )
             {
                 if ( !(((*this).direcref(i)).isCastableToRealWithoutLoss()) )
                 {
@@ -3338,7 +3338,7 @@ template <> inline void SparseVector<gentype>::makealtcontent(void) const
             {
                 MEMNEWARRAY(altcontent,double,asize);
 
-                for ( int i = 0 ; i < asize ; ++i )
+                for ( int i = 0 ; i < adim ; ++i )
                 {
                     altcontent[i] = (double) (*this).direcref(i);
                 }
@@ -3351,17 +3351,51 @@ template <> inline void SparseVector<gentype>::makealtcontent(void) const
             {
                 if ( !(((*this).direcref(i)).isCastableToRealWithoutLoss()) )
                 {
-                    isreal = 1;
+                    isreal = 0;
+                    ismoder = 0;
                 }
             }
 
             if ( isreal )
             {
-                MEMNEWARRAY(altcontentsp,double,adim);
+                bool isok = true;
+                int usize = nupsize();
 
-                for ( int i = 0 ; i < adim ; ++i )
+                if ( usize > 1 )
                 {
-                    altcontentsp[i] = (double) (*this).direcref(i);
+                    // NB: can't call n( or nup( here, as this will trigger infinite recursion
+                    // Need the vector to be non-sparse chunks nup(0), nup(1), ...
+
+                    for ( int i = 0 ; isok && ( i < adim ) ; ++i )
+                    {
+                        if ( !i )
+                        {
+                            if ( ind(i) != 0 )
+                            {
+                                isok = false;
+                            }
+                        }
+
+                        else if ( ind(i) != ind(i-1)+1 )
+                        {
+                            if ( ind(i)%DEFAULT_TUPLE_INDEX_STEP )
+                            {
+                                isok = false;
+                            }
+                        }
+                    }
+                }
+
+                if ( isok )
+                {
+                    // No need to call makealtcontent on nup as this would have triggered above
+
+                    MEMNEWARRAY(altcontentsp,double,adim);
+
+                    for ( int i = 0 ; i < adim ; ++i )
+                    {
+                        altcontentsp[i] = (double) (*this).direcref(i);
+                    }
                 }
             }
         }
@@ -3370,158 +3404,68 @@ template <> inline void SparseVector<gentype>::makealtcontent(void) const
     return;
 }
 
-template <> template <> inline void SparseVector<gentype>::sv(int i, double x)
-{
-    NiceAssert( i >= 0 );
-    NiceAssert( content );
-
-    if ( altcontentsp )
-    {
-        killaltcontent();
-    }
-
-    int pos = i;
-
-    if ( !altcontent || i >= size() )
-    {
-        pos = findind(i);
-    }
-
-    NiceAssert( pos <= indsize() );
-
-    if ( pos == indsize() )
-    {
-        resetvecID();
-        killaltcontent();
-        killnearfar();
-
-	(*indices).add(pos);
-	(*indices)("&",pos) = i;
-        (*content).add(pos);
-        (*content)("&",pos).force_double() = x;
-    }
-
-    else if ( ind(pos) != i )
-    {
-        resetvecID();
-        killaltcontent();
-        killnearfar();
-
-	(*indices).add(pos);
-	(*indices)("&",pos) = i;
-        (*content).add(pos);
-        (*content)("&",pos).force_double() = x;
-    }
-
-    else if ( !altcontent )
-    {
-        (*content)("&",pos).force_double() = x;
-    }
-
-    else
-    {
-        // This is the fast case! Can set without destroying altcontent
-
-        altcontent[i] = x; // remember that if altcontent defined the vector is non-sparse
-        (*content)("&",pos).force_double() = x;
-    }
-}
-
 template <> template <> inline void SparseVector<gentype>::svdirec(int pos, double x)
 {
 //    NiceAssert( i >= 0 );
     NiceAssert( pos < indsize() );
     NiceAssert( content );
 
-    if ( altcontentsp )
-    {
-        killaltcontent();
-    }
+//    if ( !altcontent )
+//    {
+//        (*content)("&",pos).force_double() = x;
+//    }
 
-    if ( !altcontent )
-    {
-        (*content)("&",pos).force_double() = x;
-    }
+    resetvecID();
 
-    else
+//errstream() << "phantomxiiii: " << pos << "\t" << x << "\n";
+    if ( altcontent )
     {
         // This is the fast case! Can set without destroying altcontent
 
         altcontent[pos] = x; // remember that if altcontent defined the vector is non-sparse
-        (*content)("&",pos).force_double() = x;
-    }
-}
-
-template <> template <> inline void SparseVector<gentype>::svu(int i, int u, double x)
-{
-    return sv(i+(u*DEFAULT_TUPLE_INDEX_STEP),x);
-}
-
-template <> void SparseVector<gentype>::set(int i, const gentype &x)
-{
-    NiceAssert( i >= 0 );
-    NiceAssert( content );
-
-    int pos = i;
-
-    if ( altcontentsp )
-    {
-        killaltcontent();
     }
 
-    if ( !altcontent || i >= size() )
-    {
-        pos = findind(i);
-    }
-
-    NiceAssert( pos <= indsize() );
-
-    if ( pos == indsize() )
-    {
-        resetvecID();
-        killaltcontent();
-        killnearfar();
-
-	(*indices).add(pos);
-	(*indices)("&",pos) = i;
-        (*content).add(pos);
-        (*content)("&",pos).force_double() = x;
-    }
-
-    else if ( ind(pos) != i )
-    {
-        resetvecID();
-        killaltcontent();
-        killnearfar();
-
-	(*indices).add(pos);
-	(*indices)("&",pos) = i;
-        (*content).add(pos);
-        (*content)("&",pos).force_double() = x;
-    }
-
-    else if ( !x.isCastableToRealWithoutLoss() )
-    {
-        resetvecID();
-        killaltcontent();
-        killnearfar();
-
-        (*content)("&",pos) = x;
-    }
-
-    else if ( !altcontent )
-    {
-        (*content)("&",pos).force_double() = x;
-    }
-
-    else
+    else if ( altcontentsp )
     {
         // This is the fast case! Can set without destroying altcontent
 
-        altcontent[i] = (double) x; // remember that if altcontent defined the vector is non-sparse
-        (*content)("&",pos).force_double() = altcontent[i];
+        altcontentsp[pos] = x; // remember that if altcontent defined the vector is non-sparse
+
+//errstream() << "phantomxiiii: nupsize = " << nupsize() << "\n";
+        // NB: we only do this next bit if/when nup (npointer) stuff has already been allocated - otherwise we get stuck in an infinite loop!
+        if ( npointer && ( nupsize() > 1 ) )
+        {
+            (*npointer).svdirec(pos,x);
+
+            // Also need to update the altcontent of the up vector
+
+            int i = pos;
+            int u = 0;
+
+//errstream() << "phantomxiiii: pos = " << pos << "\n";
+//errstream() << "phantomxiiii: i = " << i << "\n";
+//errstream() << "phantomxiiii: u = " << u << "\n";
+            while ( i >= nup(u).indsize() )
+            {
+                i -= nup(u).indsize();
+                ++u;
+//errstream() << "phantomxiiii: pos = " << pos << "\n";
+//errstream() << "phantomxiiii: i = " << i << "\n";
+//errstream() << "phantomxiiii: u = " << u << "\n";
+            }
+
+//errstream() << "phantomxiiii: pos = " << pos << "\n";
+//errstream() << "phantomxiiii: i = " << i << "\n";
+//errstream() << "phantomxiiii: u = " << u << "\n";
+//errstream() << "phantomxiiii: x = " << x << "\n";
+            nup("&",u).svdirec(i,x);
+//errstream() << "phantomxiiii: nup(" << u << ") = " << nup("&",u) << "\n";
+        }
     }
+
+    (*content)("&",pos).force_double() = x;
 }
+
 
 
 

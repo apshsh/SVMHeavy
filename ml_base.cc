@@ -2026,7 +2026,7 @@ int ML_Base::addTrainingVector(int i, const gentype &y, const SparseVector<genty
     allxdatagent.add(i); qswap(allxdatagent("&",i),xxqq);
     alltraintarg.add(i); alltraintarg("&",i) = y;
 
-    if ( !(allxdatagent(i).altcontent) )
+    if ( !(allxdatagent(i).altcontent) && ! !(allxdatagent(i).altcontentsp) )
     {
         allxdatagent("&",i).makealtcontent();
     }
@@ -2102,7 +2102,7 @@ int ML_Base::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &
     allxdatagent.add(i); qswap(allxdatagent("&",i),xx);
     alltraintarg.add(i); alltraintarg("&",i) = y;
 
-    if ( !(allxdatagent(i).altcontent) )
+    if ( !(allxdatagent(i).altcontent) && !(allxdatagent(i).altcontentsp) )
     {
         allxdatagent("&",i).makealtcontent();
     }
@@ -2191,7 +2191,7 @@ int ML_Base::addTrainingVector(int i, const Vector<gentype> &y, const Vector<Spa
         allxdatagent.add(i+j); allxdatagent("&",i+j) = xx(j);
         alltraintarg.add(i+j); alltraintarg("&",i+j) = y(j);
 
-        if ( !(allxdatagent(i+j).altcontent) )
+        if ( !(allxdatagent(i+j).altcontent) && !(allxdatagent(i+j).altcontentsp) )
         {
             allxdatagent("&",i+j).makealtcontent();
         }
@@ -2281,7 +2281,7 @@ int ML_Base::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVe
         allxdatagent.add(i+j);  qswap(allxdatagent("&",i+j),xx("&",j));
         alltraintarg.add(i+j); alltraintarg("&",i+j) = y(j);
 
-        if ( !(allxdatagent(i+j).altcontent) )
+        if ( !(allxdatagent(i+j).altcontent) && !(allxdatagent(i+j).altcontentsp) )
         {
             allxdatagent("&",i+j).makealtcontent();
         }
@@ -2506,7 +2506,7 @@ int ML_Base::setx(int i, const SparseVector<gentype> &xx)
         allxdatagent("&",i) = xx;
     }
 
-    if ( !(allxdatagent(i).altcontent) && ( preallocsize() < LARGE_TRAIN_BOUNDARY ) && ( ML_Base::N() < LARGE_TRAIN_BOUNDARY ) )
+    if ( !(allxdatagent(i).altcontent) && !(allxdatagent(i).altcontentsp) && ( preallocsize() < LARGE_TRAIN_BOUNDARY ) && ( ML_Base::N() < LARGE_TRAIN_BOUNDARY ) )
     {
         allxdatagent("&",i).makealtcontent();
     }
@@ -2546,7 +2546,7 @@ int ML_Base::setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &xx
             allxdatagent("&",i(j)) = xx(j);
         }
 
-        if ( !(allxdatagent(i(j)).altcontent) && ( preallocsize() < LARGE_TRAIN_BOUNDARY ) && ( ML_Base::N() < LARGE_TRAIN_BOUNDARY ) )
+        if ( !(allxdatagent(i(j)).altcontent) && !(allxdatagent(i(j)).altcontentsp) && ( preallocsize() < LARGE_TRAIN_BOUNDARY ) && ( ML_Base::N() < LARGE_TRAIN_BOUNDARY ) )
         {
             allxdatagent("&",i(j)).makealtcontent();
         }
@@ -2624,7 +2624,7 @@ int ML_Base::qswapx(int i, SparseVector<gentype> &xx, int dontupdate)
         qswap(allxdatagent("&",i),xx);
     }
 
-    if ( !(allxdatagent(i).altcontent) && ( preallocsize() < LARGE_TRAIN_BOUNDARY ) && ( ML_Base::N() < LARGE_TRAIN_BOUNDARY ) )
+    if ( !(allxdatagent(i).altcontent) && !(allxdatagent(i).altcontentsp) && ( preallocsize() < LARGE_TRAIN_BOUNDARY ) && ( ML_Base::N() < LARGE_TRAIN_BOUNDARY ) )
     {
         allxdatagent("&",i).makealtcontent();
     }
@@ -2668,7 +2668,7 @@ int ML_Base::qswapx(const Vector<int> &i, Vector<SparseVector<gentype> > &xx, in
             qswap(allxdatagent("&",i(j)),xx("&",j));
         }
 
-        if ( !(allxdatagent(i(j)).altcontent) && ( preallocsize() < LARGE_TRAIN_BOUNDARY ) && ( ML_Base::N() < LARGE_TRAIN_BOUNDARY ) )
+        if ( !(allxdatagent(i(j)).altcontent) && !(allxdatagent(i(j)).altcontentsp) && ( preallocsize() < LARGE_TRAIN_BOUNDARY ) && ( ML_Base::N() < LARGE_TRAIN_BOUNDARY ) )
         {
             allxdatagent("&",i(j)).makealtcontent();
         }
@@ -2713,7 +2713,7 @@ int ML_Base::qswapx(Vector<SparseVector<gentype> > &xx, int dontupdate)
             qswap(allxdatagent("&",j),xx("&",j));
         }
 
-        if ( !(allxdatagent(j).altcontent) && ( preallocsize() < LARGE_TRAIN_BOUNDARY ) && ( ML_Base::N() < LARGE_TRAIN_BOUNDARY ) )
+        if ( !(allxdatagent(j).altcontent) && !(allxdatagent(j).altcontentsp) && ( preallocsize() < LARGE_TRAIN_BOUNDARY ) && ( ML_Base::N() < LARGE_TRAIN_BOUNDARY ) )
         {
             allxdatagent("&",j).makealtcontent();
         }
@@ -7321,7 +7321,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
                     {
                         // This is weight (linear)
 
-                        lb    = 0.3;
+                        lb    = 0.1;
                         ub    = 3;
                         steps = 15; //10;
                         addit = 1;

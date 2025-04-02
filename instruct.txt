@@ -3091,7 +3091,7 @@ Grid search parameter selection (after automatic parameter tuning):
          -gbj n          - number  of random  start/seed  points  (default  -1
                            translates to d+1, where d is the dimension).      
          -gbt m          - max  iteration  count for  search algorithm  (0 for
-                           no limit, default -1  translates to 15dm where d is
+                           no limit, default -1  translates to 10dm where d is
                            and m is the number of  objectives, -2 to stop when
                            min_x err(x) <= maxerr).                           
          -gbe e          - maxerr as required with -gbt -2 (see Kirschner et.,

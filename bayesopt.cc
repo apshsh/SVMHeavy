@@ -28,6 +28,7 @@ has changed!
 #include "ml_mutable.hpp"
 #include "imp_expect.hpp"
 #include "randfun.hpp"
+#include "gentype.hpp"
 #include <cmath>
 
 #define FEEDBACK_CYCLE 50
@@ -807,11 +808,6 @@ class fninnerinnerArg
     {
         beta = storebeta;
         epspinf = storeepspinf;
-
-        if ( anyindirect )
-        {
-            x.zero();
-        }
     }
 
     if ( justreturnbeta == 1 )
@@ -826,16 +822,60 @@ class fninnerinnerArg
 //    x.zero(); - now done in beta calc loop (skipped for most of direct inner loop - we
 //want to leave x alone as much as possible to avoid free/alloc spiral. Note we also the use of sv below (to avoid resetting altcontent))
 
-    if ( !(bbopts.getdimfid()) || ( bbopts.getdimfid() && ( mode != 2 ) ) )
+    bool xsimple = ( !xappend.size() && !anyindirect ) ? true : false;
+
+    if ( !(bbopts.getdimfid()) || ( mode != 2 ) )
     {
         for ( i = 0 ; i < n-bbopts.getdimfid() ; ++i )
         {
-            x.sv(i,xx[i]); // use accelerated sv function to preserve if possible!
+            x.n("&",i,0).force_double() = xx[i]; // use accelerated sv function to preserve if possible!
         }
 
         for ( i = n-bbopts.getdimfid() ; i < n ; ++i )
         {
-            x.svu(i-(n-bbopts.getdimfid()),1,xx[i]); // use accelerated svu function to preserve if possible!
+            x.n("&",i-(n-bbopts.getdimfid()),1).force_double() = xx[i]; // cant use accelerated form yet as nup may not have been made
+        }
+
+    // Update mode to stop double-handling of x
+
+        //if ( xsimple && ( !(bbopts.getdimfid()) || ( mode == 1 ) ) )
+        if ( xsimple && ( mode == 1 ) )
+        {
+//int ismoder = ( x.isnofaroffindpresent() ) ? 1 : 0;
+//int issimple = ( x.nearnonsparse() && ismoder ) ? 1 : 0;
+//int asize = x.size();
+//int adim = x.indsize();
+//errstream() << "phantomxyzyyy makealt\n";
+//errstream() << "phantomxyzyyy makealt altcontent " << x.altcontent << "\n";
+//errstream() << "phantomxyzyyy makealt altcontentsp " << x.altcontentsp << "\n";
+//errstream() << "phantomxyzyyy makealt ismode (true?): " << ismoder << " \n";
+//errstream() << "phantomxyzyyy makealt issimple: " << issimple << " \n";
+//errstream() << "phantomxyzyyy makealt asize: " << asize << " \n";
+//errstream() << "phantomxyzyyy makealt ind: " << x.ind() << " \n";
+//errstream() << "phantomxyzyyy makealt ind_step: " << DEFAULT_TUPLE_INDEX_STEP << " \n";
+//errstream() << "phantomxyzyyy makealt adim (>0): " << adim << " \n";
+//errstream() << "phantomxyzyyy makealt\n";
+            x.makealtcontent();
+//errstream() << "phantomxyzyyy makealt b " << x.altcontent << "\n";
+//errstream() << "phantomxyzyyy makealt c " << x.altcontentsp << "\n";
+//errstream() << "phantomxyzyyy makealt d " << (x.nup(0)) << "\n";
+//if ( x.nupsize() > 1 )
+//{
+//errstream() << "phantomxyzyyy makealt e " << (x.nup(1)) << "\n";
+//}
+        }
+
+        if ( mode == 1 )
+        {
+            if ( xsimple && ( x.altcontent || x.altcontentsp ) )
+            {
+                mode = 2;
+            }
+
+            else
+            {
+                mode = 0;
+            }
         }
     }
 
@@ -843,9 +883,11 @@ class fninnerinnerArg
     {
         for ( i = 0 ; i < n ; ++i )
         {
-            x.svdirec(i,xx[i]); // use accelerated svdirec function to preserve if possible!
+            x.svdirec(i,xx[i]); // use accelerated svdirec function to preserve
         }
     }
+
+//errstream() << "phantomxyzxyzxyz " << x << "\n";
 
     // =======================================================================
     // Add xappend vector to end of vector if required
@@ -967,6 +1009,8 @@ class fninnerinnerArg
                 }
             }
         }
+
+//errstream() << "phantomxyzxyzxyz " << muy << "\t" << sigmay << "\n";
     }
 
     else
@@ -1457,10 +1501,6 @@ locsigmay = stabscore*stabscore*locsigmay;
     // =======================================================================
 
     res = -res; // Set up for minimiser
-
-    // Update mode to stop double-handling of x
-
-    mode = ( mode == 1 ) ? 2 : 0;
 
     return res;
   }
@@ -2039,6 +2079,7 @@ int bayesOpt(int dim,
                             int qqq = 1+(rand()%(bopts.numfids));
 
                             xxb("&",k).n("&",j-effdim,1).dir_double() = ((double) qqq)/((double) bopts.numfids);
+//errstream() << "phantomxyz bletch\n";
 
                             if ( qqq != bopts.numfids )
                             {
@@ -2102,6 +2143,7 @@ int bayesOpt(int dim,
 
                 else
                 {
+//bopts.model_muvar(sigmapred("&",k),mupred("&",k),xxb(k),xinf,1);
                     bopts.model_muvar(sigmapred("&",k),mupred("&",k),xxb(k),xinf);
                 }
 
@@ -2161,6 +2203,7 @@ int bayesOpt(int dim,
 //errstream() << "phantomxyz bayesopt: xxb = " << xxb(k) << "\n";
                     bopts.model_addTrainingVector_musigma(fnapproxout,mupred(k),xxb(k),xsidechan,xaddranksidechan,xaddrank,xaddgrad,xaddf4,xobstype,varscale);
                     ++muapproxsize;
+//errstream() << "phantomxyz hooble\n";
                 }
 
                 if ( addvar != 0 )
@@ -2902,7 +2945,7 @@ fnarginner.mode = 0; // turn off single beta, stale x calculation fast mode
                         justreturnbeta = 1;
                         double fidbeta = fnfnapprox(dim,&(xa("&",0)),fnarginnerdr); // Get beta value for optimiser
                         justreturnbeta = 0;
-                        double fidq = 1.0/(n+2); // FIXME: just assume an SE kernel here, but in general this depends on the kernel
+                        double fidq = 1.0/((double) (n+2)); // FIXME: just assume an SE kernel here, but in general this depends on the kernel
 
                         Vector<int> inumfid(dimfid);
                         bool isdone = false;
@@ -2970,8 +3013,8 @@ fnarginner.mode = 0; // turn off single beta, stale x calculation fast mode
 //errstream() << "phantomxyz fidelity lambdazmin = " << lambdazmin << "\n";
                             // Need to check we're in the set (7) in Kandasamy
 
-                            // zeta(z)      = sqrt( 1 - (K([xa(0:n-2) z        ],[xa(0:n-2) 1])/K(xa(0:n-2),xa(0:n-2))) )
-                            // ||zeta||_inf = sqrt( 1 - (K([xa(0:n-2) 1/numfids],[xa(0:n-2) 1])/K(xa(0:n-2),xa(0:n-2))) )
+                            // zeta(z)      = sqrt( 1 - (K([xa(0:n-2) z        ],[xa(0:n-2) 1])/K(xa(0:n-2),xa(0:n-2))^2) )
+                            // ||zeta||_inf = sqrt( 1 - (K([xa(0:n-2) 1/numfids],[xa(0:n-2) 1])/K(xa(0:n-2),xa(0:n-2))^2) )
                             //
                             // Assumptions: - the kernel is formed as per the paper, so the denominator in the second part
                             //                effectively cancels out the "x" part of the kernel evaluation.
@@ -3016,28 +3059,28 @@ fnarginner.mode = 0; // turn off single beta, stale x calculation fast mode
                             // 1: is the variance big enough?
                             // 2: is the information gap big enough?
 
-//errstream() << "Fidelity test 1: " << fidtau << " > " << fidgammaz << "(" << fidkappa0 << "," << fidc << ")";
+errstream() << "Fidelity test 1: " << fidtau << " > " << fidgammaz << "(" << fidkappa0 << "," << fidc << ")";
                             if ( fidtau > fidgammaz )
                             {
-//errstream() << "\t" << "pass.\t";
+errstream() << "\t" << "pass.\t";
                                 // Second condition in (7) in Kandasamy
 
-//errstream() << "Test 2: " << fidzetaz << " > " << (fidzetainf/sqrt(fidbeta)) << "(" << fidzetainf << "/" << sqrt(fidbeta) << ")";
+errstream() << "Test 2: " << fidzetaz << " > " << (fidzetainf/sqrt(fidbeta)) << "(" << fidzetainf << "/" << sqrt(fidbeta) << ")";
                                 if ( fidzetaz > (fidzetainf/sqrt(fidbeta)) )
                                 {
-//errstream() << "\t" << "pass.\t";
+errstream() << "\t" << "pass.\t";
                                     // Record if minimum
 
-//errstream() << "Test 3: " << lambdaz << " < " << lambdazmin;
+errstream() << "Test 3: " << lambdaz << " < " << lambdazmin;
                                     if ( lambdaz < lambdazmin )
                                     {
-//errstream() << "\t" << "pass.";
+errstream() << "\t" << "pass.";
                                         zindex = inumfid;
                                         lambdazmin = lambdaz;
                                     }
                                 }
                             }
-//errstream() << "\n";
+errstream() << "\n";
 
                             for ( int jij = 0 ; jij < dimfid ; jij++ )
                             {
@@ -3089,7 +3132,7 @@ fnarginner.mode = 0; // turn off single beta, stale x calculation fast mode
                             fidc = ( fidc > 20 ) ? 20 : fidc;
 
                             fidmaxcnt = 0;
-errstream() << "phantomxyz fidc = " << fidc << "\n";
+errstream() << "Fidelity: fidc = " << fidc << "\n";
                         }
 
                         // Human fidelity override
