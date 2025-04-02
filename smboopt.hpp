@@ -1143,10 +1143,14 @@ double SMBOOptions::inf_dist(const SparseVector<S> &xz) const
 //errstream() << "phantomxyz inf_dist calc: Kxzx1 " << Kxzx1 << "\n";
 //errstream() << "phantomxyz inf_dist calc: Kxx " << Kxx << "\n";
 
-    double res = 1-(((double) Kxzx1)/((double) Kxx));
+    double Kxzx1d = (double) Kxzx1;
+    double Kxxd   = (double) Kxx;
+
+    double res = 1-((Kxzx1d/Kxxd)*(Kxzx1d/Kxxd));
+    res = ( res > 0 ) ? sqrt(res) : 0.0;
 //errstream() << "phantomxyz inf_dist calc:res " << res << "\n";
 
-    return ( res > 0 ) ? sqrt(res) : 0;
+    return res;
 }
 
 template <class S>

@@ -1319,6 +1319,10 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
         if ( NNC(-1) || NNC(+1) || NNC(2) )
         {
 //errstream() << "phantomxyggg 2\n";
+//errstream() << "phantomxyggg 2 ia: " << x(ia) << "\n";
+//errstream() << "phantomxyggg 2 ia: " << x(ib) << "\n";
+//errstream() << "phantomxyggg 2 ia: " << xinfo(ia) << "\n";
+//errstream() << "phantomxyggg 2 ia: " << xinfo(ib) << "\n";
             int j;
 
             Vector<double> Kia(N());
@@ -1339,6 +1343,7 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                 Kiaib = K2(ia,ib,(const gentype **) pxyprodij);
             }
 
+//errstream() << "phantomxyggg 2 Kiaib = " << Kiaib << "\n";
             if ( covm && ( ia >= 0 ) )
             {
                 for ( j = 0 ; j < N() ; ++j )
@@ -1378,6 +1383,10 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                 }
 
                 Kiaia = K2(ia,ia,nullptr);
+//errstream() << "phantomxyggg 2 Gp = " << Gp() << "\n";
+//errstream() << "phantomxyggg 2 kernel = " << getKernel() << "\n";
+//errstream() << "phantomxyggg 2 Kiaia = " << Kiaia << "\n";
+//errstream() << "phantomxyggg 2 Kia = " << Kia << "\n";
             }
 
             Kibib = Kiaia;

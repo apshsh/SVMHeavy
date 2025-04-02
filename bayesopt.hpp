@@ -397,7 +397,7 @@ public:
 
         ztol   = DEFAULT_BAYES_ZTOL;
         delta  = DEFAULT_BAYES_DELTA;
-        zeta   = 0.01;
+        zeta   = 0; //0.01; use true EI as default, even if it's a bit slow
         nu     = DEFAULT_BAYES_NU;
         modD   = -1; // this is entirely arbitrary and must be set by the user
         a      = DEFAULT_BAYES_A; // a value
