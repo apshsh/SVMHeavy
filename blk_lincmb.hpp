@@ -69,13 +69,13 @@ public:
     virtual int type(void)    const override { return 212; }
     virtual int subtype(void) const override { return 0;   }
 
-    virtual int tspaceDim(void)    const override { return getRepConst().tspaceDim();    }
-    virtual int xspaceDim(void)    const override { return getRepConst().xspaceDim();    }
-    virtual int fspaceDim(void)    const override { return getRepConst().fspaceDim();    }
-    virtual int tspaceSparse(void) const override { return getRepConst().tspaceSparse(); }
-    virtual int xspaceSparse(void) const override { return getRepConst().xspaceSparse(); }
-    virtual int numClasses(void)   const override { return getRepConst().numClasses();   }
-    virtual int order(void)        const override { return getRepConst().order();        }
+    virtual int tspaceDim   (void)       const override { return getRepConst().tspaceDim();    }
+    virtual int xspaceDim   (int u = -1) const override { return getRepConst().xspaceDim(u);   }
+    virtual int fspaceDim   (void)       const override { return getRepConst().fspaceDim();    }
+    virtual int tspaceSparse(void)       const override { return getRepConst().tspaceSparse(); }
+    virtual int xspaceSparse(void)       const override { return getRepConst().xspaceSparse(); }
+    virtual int numClasses  (void)       const override { return getRepConst().numClasses();   }
+    virtual int order       (void)       const override { return getRepConst().order();        }
 
     virtual int isTrained(void) const override { return getRepConst().isTrained(); }
     virtual int isMutable(void) const override { return getRepConst().isMutable(); }
@@ -340,10 +340,10 @@ public:
 
     // Training data tracking functions:
 
-    virtual const Vector<int>          &indKey(void)          const override { return getRepConst().indKey();          }
-    virtual const Vector<int>          &indKeyCount(void)     const override { return getRepConst().indKeyCount();     }
-    virtual const Vector<int>          &dattypeKey(void)      const override { return getRepConst().dattypeKey();      }
-    virtual const Vector<Vector<int> > &dattypeKeyBreak(void) const override { return getRepConst().dattypeKeyBreak(); }
+    virtual const Vector<int>          &indKey         (int u = -1) const override { return getRepConst().indKey(u);          }
+    virtual const Vector<int>          &indKeyCount    (int u = -1) const override { return getRepConst().indKeyCount(u);     }
+    virtual const Vector<int>          &dattypeKey     (int u = -1) const override { return getRepConst().dattypeKey(u);      }
+    virtual const Vector<Vector<int> > &dattypeKeyBreak(int u = -1) const override { return getRepConst().dattypeKeyBreak(u); }
 
     // Other functions
 

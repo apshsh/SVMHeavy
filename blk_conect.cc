@@ -83,7 +83,7 @@ void BLK_Conect::fillCache(int Ns, int Ne)
     return;
 }
 
-double BLK_Conect::tuneKernel(int method, double xwidth, int)
+double BLK_Conect::tuneKernel(int method, double xwidth, int, int, const tkBounds *)
 {
     int ii;
     double res = 0;
@@ -103,7 +103,7 @@ double BLK_Conect::tuneKernel(int method, double xwidth, int)
             tuneK = 1;
         }
 
-        res += getRep(ii).tuneKernel(method,xwidth,tuneK);
+        res += getRep(ii).tuneKernel(method,xwidth,tuneK,0,nullptr);
     }
 
     return res;

@@ -118,7 +118,7 @@ public:
     virtual MercerKernel &getKernel_unsafe(void)       override { return getKnumML().getKernel_unsafe(); }
     virtual void prepareKernel            (void)       override {        getKnumML().prepareKernel();    }
 
-    virtual double tuneKernel(int method, double xwidth, int tuneK = 1) override { return getKnumML().tuneKernel(method,xwidth,tuneK); }
+    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr) override { return getKnumML().tuneKernel(method,xwidth,tuneK,tuneP,tunebounds); }
 
     virtual int resetKernel(                             int modind = 1, int onlyChangeRowI = -1, int updateInfo = 1) override { int res = getKnumML().resetKernel(modind,onlyChangeRowI,updateInfo); fixMLTree(); return res; }
     virtual int setKernel  (const MercerKernel &xkernel, int modind = 1, int onlyChangeRowI = -1                    ) override { int res = getKnumML().setKernel(xkernel,modind,onlyChangeRowI);      fixMLTree(); return res; }

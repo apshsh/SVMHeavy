@@ -87,11 +87,11 @@ public:
 
     // Information functions (training data):
 
-    virtual int tspaceDim(void) const override { return 1;                          }
-    virtual int xspaceDim(void) const override { return ( zxdim >= 0 ) ? zxdim : 0; }
-    virtual int subtype  (void) const override { return 0;                          }
-    virtual int isTrained(void) const override { return disTrained;                 }
-    virtual char targType(void) const override { return 'N';                        }
+    virtual int tspaceDim(void)     const override { return 1;                          }
+    virtual int xspaceDim(int = -1) const override { return ( zxdim >= 0 ) ? zxdim : 0; }
+    virtual int subtype  (void)     const override { return 0;                          }
+    virtual int isTrained(void)     const override { return disTrained;                 }
+    virtual char targType(void)     const override { return 'N';                        }
 
     // Data modification
 

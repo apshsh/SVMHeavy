@@ -19,6 +19,7 @@
 #define _dynarray_h
 
 #include <memory>
+#include <cmath> // for the INFINITY macro
 #include "qswapbase.hpp"
 #include "memdebug.hpp"
 #include "niceassert.hpp"
@@ -46,6 +47,8 @@ inline const DynArray<int> *cntintarray (int size);
 
 inline const DynArray<double> *zerodoublearray(void);
 inline const DynArray<double> *onedoublearray (void);
+inline const DynArray<double> *ninfdoublearray(void);
+inline const DynArray<double> *pinfdoublearray(void);
 
 //template <class T>
 //class DynArray
@@ -537,6 +540,22 @@ inline const DynArray<double> *onedoublearray(void)
     static DynArray<double> onearray = { content,1,1,1,true,true,true }; // final notdelcontent
 
     return &onearray;
+}
+
+inline const DynArray<double> *ninfdoublearray(void)
+{
+    static double content[2] = { 0, -INFINITY };
+    static DynArray<double> ninfarray = { content,1,1,1,true,true,true }; // final notdelcontent
+
+    return &ninfarray;
+}
+
+inline const DynArray<double> *pinfdoublearray(void)
+{
+    static double content[2] = { 0, INFINITY };
+    static DynArray<double> pinfarray = { content,1,1,1,true,true,true }; // final notdelcontent
+
+    return &pinfarray;
 }
 
 #define MAXHACKYHEAD 1000000

@@ -130,18 +130,18 @@ public:
 
     // Information functions (training data):
 
-    virtual int N(void)       const override { return getMLconst().N  ();     }
-    virtual int NNC(int d)    const override { return getMLconst().NNC(d);    }
-    virtual int type(void)    const override { return getMLconst().type();    }
-    virtual int subtype(void) const override { return getMLconst().subtype(); }
+    virtual int N      (void)  const override { return getMLconst().N  ();     }
+    virtual int NNC    (int d) const override { return getMLconst().NNC(d);    }
+    virtual int type   (void)  const override { return getMLconst().type();    }
+    virtual int subtype(void)  const override { return getMLconst().subtype(); }
 
-    virtual int tspaceDim(void)    const override { return getMLconst().tspaceDim();    }
-    virtual int xspaceDim(void)    const override { return getMLconst().xspaceDim();    }
-    virtual int fspaceDim(void)    const override { return getMLconst().fspaceDim();    }
-    virtual int tspaceSparse(void) const override { return getMLconst().tspaceSparse(); }
-    virtual int xspaceSparse(void) const override { return getMLconst().xspaceSparse(); }
-    virtual int numClasses(void)   const override { return getMLconst().numClasses();   }
-    virtual int order(void)        const override { return getMLconst().order();        }
+    virtual int tspaceDim   (void)       const override { return getMLconst().tspaceDim();    }
+    virtual int xspaceDim   (int u = -1) const override { return getMLconst().xspaceDim(u);   }
+    virtual int fspaceDim   (void)       const override { return getMLconst().fspaceDim();    }
+    virtual int tspaceSparse(void)       const override { return getMLconst().tspaceSparse(); }
+    virtual int xspaceSparse(void)       const override { return getMLconst().xspaceSparse(); }
+    virtual int numClasses  (void)       const override { return getMLconst().numClasses();   }
+    virtual int order       (void)       const override { return getMLconst().order();        }
 
     virtual int isTrained(void) const override { return getMLconst().isTrained(); }
     virtual int isSolGlob(void) const override { return getMLconst().isSolGlob(); }
@@ -250,7 +250,7 @@ public:
     virtual MercerKernel &getKernel_unsafe(void)       override { return getML().getKernel_unsafe(); }
     virtual void prepareKernel            (void)       override {        getML().prepareKernel();    }
 
-    virtual double tuneKernel(int method, double xwidth, int tuneK = 1) override { return getML().tuneKernel(method,xwidth,tuneK); }
+    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr) override { return getML().tuneKernel(method,xwidth,tuneK,tuneP,tunebounds); }
 
     virtual int resetKernel(                             int modind = 1, int onlyChangeRowI = -1, int updateInfo = 1) override { return getML().resetKernel(modind,onlyChangeRowI,updateInfo); }
     virtual int setKernel  (const MercerKernel &xkernel, int modind = 1, int onlyChangeRowI = -1                    ) override { return getML().setKernel(xkernel,modind,onlyChangeRowI);      }
@@ -874,10 +874,10 @@ public:
 
     // Training data tracking functions:
 
-    virtual const Vector<int>          &indKey(void)          const override { return getMLconst().indKey();          }
-    virtual const Vector<int>          &indKeyCount(void)     const override { return getMLconst().indKeyCount();     }
-    virtual const Vector<int>          &dattypeKey(void)      const override { return getMLconst().dattypeKey();      }
-    virtual const Vector<Vector<int> > &dattypeKeyBreak(void) const override { return getMLconst().dattypeKeyBreak(); }
+    virtual const Vector<int>          &indKey         (int u = -1) const override { return getMLconst().indKey(u);          }
+    virtual const Vector<int>          &indKeyCount    (int u = -1) const override { return getMLconst().indKeyCount(u);     }
+    virtual const Vector<int>          &dattypeKey     (int u = -1) const override { return getMLconst().dattypeKey(u);      }
+    virtual const Vector<Vector<int> > &dattypeKeyBreak(int u = -1) const override { return getMLconst().dattypeKeyBreak(u); }
 
     // Other functions
 

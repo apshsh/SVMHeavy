@@ -1,3 +1,4 @@
+
 //FIXME: in tuneKernel, have tuneP flag.  If set, it will tune other meaningful (for the model) parameters along with the kernel.
 //       eg SVM should tune C, but GPR should not as the parameter is presumed meaningful
 
@@ -117,6 +118,31 @@ gentype &UUcallbackdef(gentype &res, int m, const ML_Base &caller, Vector<int> &
 const gentype &VVcallbacknon(gentype &res, int m, const gentype &kval, const ML_Base &caller, Vector<int> &iokr, Vector<int> &iok, Vector<const gentype *> xalt, int defbasis);
 const gentype &VVcallbackdef(gentype &res, int m, const gentype &kval, const ML_Base &caller, Vector<int> &iokr, Vector<int> &iok, Vector<const gentype *> xalt, int defbasis);
 
+class tkBounds
+{
+public:
+    explicit tkBounds(const MercerKernel &kerntemp)
+    {
+        wlb.resize(kerntemp.size()) = -INFINITY;
+        wub.resize(kerntemp.size()) = INFINITY;
+
+        klb.resize(kerntemp.size());
+        kub.resize(kerntemp.size());
+
+        for ( int q = 0 ; q < kerntemp.size() ; ++q )
+        {
+            klb("&",q).resize(kerntemp.cRealConstants(q).size()) = -INFINITY;
+            kub("&",q).resize(kerntemp.cRealConstants(q).size()) = INFINITY;
+        }
+    }
+
+    Vector<double> wlb; // kernel weight lower bounds
+    Vector<double> wub; // kernel weight upper bounds
+    Vector<Vector<double> > klb; // kernel constant lower bounds
+    Vector<Vector<double> > kub; // kernel constant upper bounds
+};
+
+
 class ML_Base : public kernPrecursor
 {
     friend class SVM_Planar;
@@ -200,7 +226,7 @@ public:
     // NwZ:  number of zero elements in w
     //
     // tspaceDim:  the dimensionality of target space.
-    // xspaceDim:  index dimensionality of input space.
+    // xspaceDim:  index dimensionality of input space (u=-1 gives overall dim, u>=0 gives only dimension for relevant minor/up type - see sparsevector).
     // fspaceDim:  dimensionality of feature space (-1 if infinite)
     // numClasses: the number of classes
     // order:      log2(tspaceDim)
@@ -272,13 +298,13 @@ public:
     virtual char hOutType(void)  const          { return '?';            }
     virtual char targType(void)  const          { return '?';            }
 
-    virtual int tspaceDim   (void) const { return 1;                                                           }
-    virtual int xspaceDim   (void) const { return ( wildxdim > indKey().size() ) ? wildxdim : indKey().size(); }
-    virtual int fspaceDim   (void) const { return getKernel().phidim(1,xspaceDim());                           }
-    virtual int tspaceSparse(void) const { return 0;                                                           }
-    virtual int xspaceSparse(void) const { return 1;                                                           }
-    virtual int numClasses  (void) const { return 0;                                                           }
-    virtual int order       (void) const { return ceilintlog2(tspaceDim());                                    }
+    virtual int tspaceDim   (void)       const { return 1;                                                             }
+    virtual int xspaceDim   (int u = -1) const { return ( wildxdim > indKey(u).size() ) ? wildxdim : indKey(u).size(); }
+    virtual int fspaceDim   (void)       const { return getKernel().phidim(1,xspaceDim());                             }
+    virtual int tspaceSparse(void)       const { return 0;                                                             }
+    virtual int xspaceSparse(void)       const { return 1;                                                             }
+    virtual int numClasses  (void)       const { return 0;                                                             }
+    virtual int order       (void)       const { return ceilintlog2(tspaceDim());                                      }
 
     virtual int isTrained(void) const { return 0; }
     virtual int isSolGlob(void) const { return 1; } // 1 if solution is global, 0 if solution is a function of initial state
@@ -602,7 +628,10 @@ public:
     //         3 = recall
     // xwidth: maximum length-scale
     // tuneK:  0 = don't tune kernel
-    //         2 = tune kernel
+    //         1 = tune kernel
+    // tuneP:  0 = don't tune model parameters
+    //         1 = tune model parameters (NOT IMPLEMENTED YET)
+    // tunebounds: optional lower and upper bound overrides for tuning. See datatypes
     //
     // Note that this is very basic.  It tunes continuous variables
     // only, parameter bounds are arbitrary, and grid sizes fixed
@@ -613,7 +642,7 @@ public:
     virtual       MercerKernel &getKernel_unsafe(void)       { return kernel; }
     virtual       void          prepareKernel   (void)       {                }
 
-    virtual double tuneKernel(int method, double xwidth, int tuneK = 1);
+    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr);
 
     virtual int resetKernel(                             int modind = 1, int onlyChangeRowI = -1, int updateInfo = 1);
     virtual int setKernel  (const MercerKernel &xkernel, int modind = 1, int onlyChangeRowI = -1);
@@ -1257,11 +1286,13 @@ public:
     // given feature.  Full description is below.
     //
     // Fucntions to translate to/from sparse form are also defined.
+    //
+    // (u=-1 for overall, u>=0 gives only dimension for relevant minor/up type - see sparsevector)
 
-    virtual const Vector<int>          &indKey         (void) const { return indexKey;      }
-    virtual const Vector<int>          &indKeyCount    (void) const { return indexKeyCount; }
-    virtual const Vector<int>          &dattypeKey     (void) const { return typeKey;       }
-    virtual const Vector<Vector<int> > &dattypeKeyBreak(void) const { return typeKeyBreak;  }
+    virtual const Vector<int>          &indKey         (int u = -1) const { if ( indexKey.isindpresent(u+1)      ) { return indexKey(u+1);      } static thread_local Vector<int>          dummy; return dummy; }
+    virtual const Vector<int>          &indKeyCount    (int u = -1) const { if ( indexKeyCount.isindpresent(u+1) ) { return indexKeyCount(u+1); } static thread_local Vector<int>          dummy; return dummy; }
+    virtual const Vector<int>          &dattypeKey     (int u = -1) const { if ( typeKey.isindpresent(u+1)       ) { return typeKey(u+1);       } static thread_local Vector<int>          dummy; return dummy; }
+    virtual const Vector<Vector<int> > &dattypeKeyBreak(int u = -1) const { if ( typeKeyBreak.isindpresent(u+1)  ) { return typeKeyBreak(u+1);  } static thread_local Vector<Vector<int> > dummy; return dummy; }
 
     // Other functions
     //
@@ -2090,10 +2121,10 @@ private:
     //               - 10: string
     //               - 11: equations
 
-    Vector<int> indexKey;
-    Vector<int> indexKeyCount;
-    Vector<int> typeKey;
-    Vector<Vector<int> > typeKeyBreak;
+    SparseVector<Vector<int> > indexKey;
+    SparseVector<Vector<int> > indexKeyCount;
+    SparseVector<Vector<int> > typeKey;
+    SparseVector<Vector<Vector<int> > > typeKeyBreak;
 
     // Each ML_Base instantiated has a unique ID, and corresponding to
     // that ID are x and g version numbers (see above).  These are 
@@ -2117,7 +2148,6 @@ private:
     int xassumedconsist;
     int xconsist;
 
-    void recalcIndTypFromScratch(void);
     virtual int indPrune(void) const { NiceAssert( ( isIndPrune == 0 ) || ( isIndPrune == 1 ) ); return isIndPrune; }
 
     // unfillIndex: Call this function to remove an index from all vectors
@@ -2131,9 +2161,10 @@ private:
     void fillIndex(int i);
 
     // Functions to update index information for addition/removal
+    // (u=-1 gives overall dim, u>=0 gives only dimension for relevant minor/up type - see sparsevector).
 
-    void addToIndexKeyAndUpdate(const SparseVector<gentype> &newz);
-    void removeFromIndexKeyAndUpdate(const SparseVector<gentype> &oldz);
+    void addToIndexKeyAndUpdate(const SparseVector<gentype> &newz, int u = -1);
+    void removeFromIndexKeyAndUpdate(const SparseVector<gentype> &oldz, int u = -1);
 
     // Returns the appropriate index type corresponding to variable y
 

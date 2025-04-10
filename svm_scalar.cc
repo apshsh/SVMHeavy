@@ -3323,7 +3323,7 @@ int SVM_Scalar::qtaddTrainingVector(int i, double zi, double Cweigh, double epsw
 
 double SVM_Scalar::loglikelihood(void) const
 {
-    if ( ! isQuasiLogLikeCalced )
+    if ( !isQuasiLogLikeCalced )
     {
         int i;
 
@@ -3346,6 +3346,7 @@ double SVM_Scalar::loglikelihood(void) const
         // the Cholesky factorisation instead.  Also the determinant of chol(G)^2 scales
         // linearly, whereas the "raw" determinant scales horribly.
 
+//errstream() << "[" << Q.fact_logdet() << "," << Q.aN() << "," << Q.aNF() << "," << Q.factbad(Gn,GPNorGPNEXT(Gpn,GpnExt)) << "]";
         (quasiloglike) -= Q.fact_logdet()/2.0; // log(Q.fact_det())/2.0;
         (quasiloglike) -= NUMBASE_LN2PI*SVM_Scalar::N()/2.0;
     }

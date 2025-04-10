@@ -1,3 +1,4 @@
+//FIXME: putting a 0.5 min on lengthscale for task relatedness seemed to help?
 
 /*
 Wmethodkey 4: set if gradorder > 0.  For everything but K2 assert that if 4 set then 2 should be set
@@ -28,6 +29,7 @@ give a vector or matrix, which could potentially be used as a matrix-valued kern
 #ifdef ENABLE_THREADS
 #include <mutex>
 #endif
+#include "nlopt_direct.hpp"
 
 #define LARGE_TRAIN_BOUNDARY       5000
 // SEE ALSO KCACHE_H
@@ -1335,43 +1337,18 @@ int ML_Base::setMLid(int nv)
 
 // private functions that are only called locally
 
-void ML_Base::recalcIndTypFromScratch(void)
-{
-    indexKey.resize(0);
-    indexKeyCount.resize(0);
-    typeKey.resize(0);
-    typeKeyBreak.resize(0);
-
-    if ( ML_Base::N() )
-    {
-        for ( int j = 0 ; j < ML_Base::N() ; ++j )
-        {
-            addToIndexKeyAndUpdate(x(j));
-        }
-    }
-
-    else
-    {
-        calcSetXdim();
-    }
-
-    calcSetAssumeReal();
-
-    return;
-}
-
 void ML_Base::unfillIndex(int i)
 {
     NiceAssert( i >= 0 );
-    NiceAssert( i < indexKey.size() );
+    NiceAssert( i < indexKey(0).size() );
 
     if ( !altxsrc )
     {
-        if ( indexKeyCount(i) )
+        if ( indexKeyCount(0)(i) )
         {
             int j,k,m,n;
 
-            for ( j = 0 ; ( j < ML_Base::N() ) && indexKeyCount(i) ; ++j )
+            for ( j = 0 ; ( j < ML_Base::N() ) && indexKeyCount(0)(i) ; ++j )
             {
                 SparseVector<gentype> &xx = allxdatagent("&",j);
 
@@ -1379,13 +1356,13 @@ void ML_Base::unfillIndex(int i)
 
                 for ( n = 0 ; n < m ; ++n )
                 {
-                    if ( xx.isnindpresent(indexKey(i),n) )
+                    if ( xx.isnindpresent(indexKey(0)(i),n) )
                     {
-                        k = gettypeind(xx.n(indexKey(i),n));
+                        k = gettypeind(xx.n(indexKey(0)(i),n));
 
-                        xx.zero(indexKey(i),n);
-                        --(indexKeyCount("&",i));
-                        --(typeKeyBreak("&",i)("&",k));
+                        xx.zero(indexKey(0)(i),n);
+                        --(indexKeyCount("&",0)("&",i));
+                        --(typeKeyBreak("&",0)("&",i)("&",k));
                     }
                 }
 
@@ -1393,19 +1370,19 @@ void ML_Base::unfillIndex(int i)
 
                 for ( n = 0 ; n < m ; ++n )
                 {
-                    if ( xx.isf1indpresent(indexKey(i),n) )
+                    if ( xx.isf1indpresent(indexKey(0)(i),n) )
                     {
-                        k = gettypeind(xx.f1(indexKey(i),n));
+                        k = gettypeind(xx.f1(indexKey(0)(i),n));
 
-                        xx.zerof1i(indexKey(i),n);
-                        --(indexKeyCount("&",i));
-                        --(typeKeyBreak("&",i)("&",k));
+                        xx.zerof1i(indexKey(0)(i),n);
+                        --(indexKeyCount("&",0)("&",i));
+                        --(typeKeyBreak("&",0)("&",i)("&",k));
                     }
                 }
             }
         }
 
-        typeKey("&",i) = 1;
+        typeKey("&",0)("&",i) = 1;
     }
 
     calcSetAssumeReal();
@@ -1416,7 +1393,7 @@ void ML_Base::unfillIndex(int i)
 void ML_Base::fillIndex(int i)
 {
     NiceAssert( i >= 0 );
-    NiceAssert( i < indexKey.size() );
+    NiceAssert( i < indexKey(0).size() );
 
     if ( !altxsrc )
     {
@@ -1433,13 +1410,13 @@ void ML_Base::fillIndex(int i)
 
                 for ( n = 0 ; n < m ; ++n )
                 {
-                    if ( !(xx.isnindpresent(indexKey(i),n)) )
+                    if ( !(xx.isnindpresent(indexKey(0)(i),n)) )
                     {
                         //k = 1;
 
-                        (xx("&",indexKey(i),n)).makeNull();
-                        ++(indexKeyCount("&",i));
-                        ++(typeKeyBreak("&",i)("&",k));
+                        (xx("&",indexKey(0)(i),n)).makeNull();
+                        ++(indexKeyCount("&",0)("&",i));
+                        ++(typeKeyBreak("&",0)("&",i)("&",k));
                     }
                 }
 
@@ -1447,13 +1424,13 @@ void ML_Base::fillIndex(int i)
 
                 for ( n = 0 ; n < m ; ++n )
                 {
-                    if ( !(xx.isf1indpresent(indexKey(i),n)) )
+                    if ( !(xx.isf1indpresent(indexKey(0)(i),n)) )
                     {
                         //k = 1;
 
-                        (xx.f1("&",indexKey(i),n)).makeNull();
-                        ++(indexKeyCount("&",i));
-                        ++(typeKeyBreak("&",i)("&",k));
+                        (xx.f1("&",indexKey(0)(i),n)).makeNull();
+                        ++(indexKeyCount("&",0)("&",i));
+                        ++(typeKeyBreak("&",0)("&",i)("&",k));
                     }
                 }
             }
@@ -1465,35 +1442,48 @@ void ML_Base::fillIndex(int i)
     return;
 }
 
-void ML_Base::addToIndexKeyAndUpdate(const SparseVector<gentype> &newz)
+void ML_Base::addToIndexKeyAndUpdate(const SparseVector<gentype> &newz, int u)
 {
     int indKeyChanged = 0;
 
     if ( ( newz.nupsize() > 1 ) || ( newz.f1upsize() > 1 ) || newz.isf1offindpresent() || newz.isf2offindpresent() || newz.isf4offindpresent() )
     {
+        NiceAssert( u == -1 );
+
         int i,s;
 
         s = newz.nupsize();
 
         for ( i = 0 ; i < s ; ++i )
         {
-            addToIndexKeyAndUpdate(newz.nup(i));
+            addToIndexKeyAndUpdate(newz.nup(i),i);
         }
 
         s = newz.f1upsize();
 
         for ( i = 0 ; i < s ; ++i )
         {
-            addToIndexKeyAndUpdate(newz.f1up(i));
+            addToIndexKeyAndUpdate(newz.f1up(i),i);
         }
     }
 
     else
     {
+        if ( !(indexKey.isindpresent(u+1)) )
+        {
+            Vector<int> dummy;
+            Vector<Vector<int> > dummyb;
+
+            indexKey("&",u+1)      = dummy;
+            indexKeyCount("&",u+1) = dummy;
+            typeKey("&",u+1)       = dummy;
+            typeKeyBreak("&",u+1)  = dummyb;
+        }
+
         if ( newz.nindsize() )
         {
             int zInd;
-            int ikInd = indexKey.size()-1;
+            int ikInd = indexKey(u+1).size()-1;
             int needaddxspacedim;
 
             for ( zInd = newz.nindsize()-1 ; zInd >= 0 ; --zInd )
@@ -1507,7 +1497,7 @@ void ML_Base::addToIndexKeyAndUpdate(const SparseVector<gentype> &newz)
 
                 if ( ikInd >= 0 )
                 {
-                    while ( indexKey(ikInd) > newz.ind(zInd) )
+                    while ( indexKey(u+1)(ikInd) > newz.ind(zInd) )
                     {
                         --ikInd;
 
@@ -1526,116 +1516,116 @@ void ML_Base::addToIndexKeyAndUpdate(const SparseVector<gentype> &newz)
 
                     ++ikInd;
 
-                    indexKey.add(ikInd);
-                    indexKey("&",ikInd) = newz.ind(zInd);
-                    indexKeyCount.add(ikInd);
-                    indexKeyCount("&",ikInd) = 0;
-                    typeKey.add(ikInd);
-                    typeKey("&",ikInd) = 1;
-                    typeKeyBreak.add(ikInd);
-                    typeKeyBreak("&",ikInd).resize(NUMXTYPES);
-                    typeKeyBreak("&",ikInd) = 0;
+                    indexKey("&",u+1).add(ikInd);
+                    indexKey("&",u+1)("&",ikInd) = newz.ind(zInd);
+                    indexKeyCount("&",u+1).add(ikInd);
+                    indexKeyCount("&",u+1)("&",ikInd) = 0;
+                    typeKey("&",u+1).add(ikInd);
+                    typeKey("&",u+1)("&",ikInd) = 1;
+                    typeKeyBreak("&",u+1).add(ikInd);
+                    typeKeyBreak("&",u+1)("&",ikInd).resize(NUMXTYPES);
+                    typeKeyBreak("&",u+1)("&",ikInd) = 0;
 
                     needaddxspacedim = 1;
                     indKeyChanged = 1;
                 }
 
-                else if ( indexKey(ikInd) != newz.ind(zInd) )
+                else if ( indexKey(u+1)(ikInd) != newz.ind(zInd) )
                 {
                     goto addInd;
                 }
 
-                NiceAssert( indexKey(ikInd) == newz.ind(zInd) );
+                NiceAssert( indexKey(u+1)(ikInd) == newz.ind(zInd) );
 
                 // Update index information
 
-                ++(indexKeyCount("&",ikInd));
+                ++(indexKeyCount("&",u+1)("&",ikInd));
 
                 int indType = gettypeind(newz.direcref(zInd));
 
                 NiceAssert( indType );
 
-                ++(typeKeyBreak("&",ikInd)("&",indType));
-                ++(typeKeyBreak("&",ikInd)("&",0));
+                ++(typeKeyBreak("&",u+1)("&",ikInd)("&",indType));
+                ++(typeKeyBreak("&",u+1)("&",ikInd)("&",0));
 
                 int indchange = 1;
 
-                if ( indType == typeKey(ikInd) )
+                if ( indType == typeKey(u+1)(ikInd) )
                 {
                     indchange = 0;
                 }
 
-                else if ( ( indType <= typeKey(ikInd) ) && ( typeKey(ikInd) <= 5 ) )
+                else if ( ( indType <= typeKey(u+1)(ikInd) ) && ( typeKey(u+1)(ikInd) <= 5 ) )
                 {
                     indchange = 0;
-                    indType = typeKey(ikInd);
+                    indType = typeKey(u+1)(ikInd);
                 }
 
                 if ( indchange )
                 {
-                    int runsum = typeKeyBreak(ikInd)(1);
+                    int runsum = typeKeyBreak(u+1)(ikInd)(1);
 
-                    if ( typeKeyBreak(ikInd)(0) == runsum )
+                    if ( typeKeyBreak(u+1)(ikInd)(0) == runsum )
                     {
                         // null
                         indType = 1;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( runsum += typeKeyBreak(ikInd)(2) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( runsum += typeKeyBreak(u+1)(ikInd)(2) ) )
                     {
                         // null or binary
                         indType = 2;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( runsum += typeKeyBreak(ikInd)(3) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( runsum += typeKeyBreak(u+1)(ikInd)(3) ) )
                     {
                         // null or binary or integer
                         indType = 3;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( runsum += typeKeyBreak(ikInd)(4) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( runsum += typeKeyBreak(u+1)(ikInd)(4) ) )
                     {
                         // null or binary or integer or double
                         indType = 4;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( runsum += typeKeyBreak(ikInd)(5) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( runsum += typeKeyBreak(u+1)(ikInd)(5) ) )
                     {
                         // null or binary or integer or double or anion
                         indType = 5;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( typeKeyBreak(ikInd)(0) + typeKeyBreak(ikInd)(6) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( typeKeyBreak(u+1)(ikInd)(0) + typeKeyBreak(u+1)(ikInd)(6) ) )
                     {
                         // null or vector
                         indType = 6;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( typeKeyBreak(ikInd)(0) + typeKeyBreak(ikInd)(7) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( typeKeyBreak(u+1)(ikInd)(0) + typeKeyBreak(u+1)(ikInd)(7) ) )
                     {
                         // null or matrix
                         indType = 7;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( typeKeyBreak(ikInd)(0) + typeKeyBreak(ikInd)(8) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( typeKeyBreak(u+1)(ikInd)(0) + typeKeyBreak(u+1)(ikInd)(8) ) )
                     {
                         // null or set
                         indType = 8;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( typeKeyBreak(ikInd)(0) + typeKeyBreak(ikInd)(9) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( typeKeyBreak(u+1)(ikInd)(0) + typeKeyBreak(u+1)(ikInd)(9) ) )
                     {
                         // null or dgraph
                         indType = 9;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( typeKeyBreak(ikInd)(0) + typeKeyBreak(ikInd)(10) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( typeKeyBreak(u+1)(ikInd)(0) + typeKeyBreak(u+1)(ikInd)(10) ) )
                     {
                         // null or string
                         indType = 10;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( typeKeyBreak(ikInd)(0) + typeKeyBreak(ikInd)(11) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( typeKeyBreak(u+1)(ikInd)(0) + typeKeyBreak(u+1)(ikInd)(11) ) )
                     {
                         // null or string
                         indType = 11;
@@ -1648,9 +1638,9 @@ void ML_Base::addToIndexKeyAndUpdate(const SparseVector<gentype> &newz)
                     }
                 }
 
-                typeKey("&",ikInd) = indType;
+                typeKey("&",u+1)("&",ikInd) = indType;
 
-                if ( indPrune() && ( indexKeyCount(ikInd) < ML_Base::N() ) )
+                if ( indPrune() && ( indexKeyCount(u+1)(ikInd) < ML_Base::N() ) )
                 {
                     // Make sure index is in all vectors, as required when
                     // pruning is set.
@@ -1668,11 +1658,11 @@ void ML_Base::addToIndexKeyAndUpdate(const SparseVector<gentype> &newz)
         // Need this to make sure the newly added training vector has
         // all relevant indices
 
-        if ( indexKey.size() && indPrune() )
+        if ( indexKey(u+1).size() && indPrune() )
         {
-            for ( int i = 0 ; i < indexKey.size() ; ++i )
+            for ( int i = 0 ; i < indexKey(u+1).size() ; ++i )
             {
-                if ( indPrune() && ( indexKeyCount(i) < ML_Base::N() ) )
+                if ( indPrune() && ( indexKeyCount(u+1)(i) < ML_Base::N() ) )
                 {
                     fillIndex(i);
                 }
@@ -1690,26 +1680,28 @@ void ML_Base::addToIndexKeyAndUpdate(const SparseVector<gentype> &newz)
     return;
 }
 
-void ML_Base::removeFromIndexKeyAndUpdate(const SparseVector<gentype> &oldz)
+void ML_Base::removeFromIndexKeyAndUpdate(const SparseVector<gentype> &oldz, int u)
 {
     int indKeyChanged = 0;
 
     if ( ( oldz.nupsize() > 1 ) || ( oldz.f1upsize() > 1 ) || oldz.isf1offindpresent() || oldz.isf2offindpresent() || oldz.isf4offindpresent() )
     {
+        NiceAssert( u == -1 );
+
         int i,s;
 
         s = oldz.nupsize();
 
         for ( i = 0 ; i < s ; ++i )
         {
-            removeFromIndexKeyAndUpdate(oldz.nup(i));
+            removeFromIndexKeyAndUpdate(oldz.nup(i),i);
         }
 
         s = oldz.f1upsize();
 
         for ( i = 0 ; i < s ; ++i )
         {
-            removeFromIndexKeyAndUpdate(oldz.f1up(i));
+            removeFromIndexKeyAndUpdate(oldz.f1up(i),i);
         }
     }
 
@@ -1718,11 +1710,11 @@ void ML_Base::removeFromIndexKeyAndUpdate(const SparseVector<gentype> &oldz)
         if ( oldz.nindsize() )
         {
             int zInd;
-            int ikInd = indexKey.size()-1;
+            int ikInd = indexKey(u+1).size()-1;
 
             for ( zInd = oldz.nindsize()-1 ; zInd >= 0 ; --zInd )
             {
-                while ( indexKey(ikInd) > oldz.ind(zInd) )
+                while ( indexKey(u+1)(ikInd) > oldz.ind(zInd) )
                 {
                     --ikInd;
                     NiceAssert( ikInd >= 0 );
@@ -1732,81 +1724,81 @@ void ML_Base::removeFromIndexKeyAndUpdate(const SparseVector<gentype> &oldz)
 
                 NiceAssert( indType );
 
-                typeKeyBreak("&",ikInd)("&",indType)--;
-                typeKeyBreak("&",ikInd)("&",0)--;
+                typeKeyBreak("&",u+1)("&",ikInd)("&",indType)--;
+                typeKeyBreak("&",u+1)("&",ikInd)("&",0)--;
 
                 int indchange = 0;
 
-                if ( typeKeyBreak(ikInd)(indType) != typeKeyBreak(ikInd)(0) )
+                if ( typeKeyBreak(u+1)(ikInd)(indType) != typeKeyBreak(u+1)(ikInd)(0) )
                 {
                     indchange = 1;
                 }
 
                 if ( indchange )
                 {
-                    int runsum = typeKeyBreak(ikInd)(1);
+                    int runsum = typeKeyBreak(u+1)(ikInd)(1);
 
-                    if ( typeKeyBreak(ikInd)(0) == runsum )
+                    if ( typeKeyBreak(u+1)(ikInd)(0) == runsum )
                     {
                         // null
                         indType = 1;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( runsum += typeKeyBreak(ikInd)(2) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( runsum += typeKeyBreak(u+1)(ikInd)(2) ) )
                     {
                         // null or binary
                         indType = 2;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( runsum += typeKeyBreak(ikInd)(3) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( runsum += typeKeyBreak(u+1)(ikInd)(3) ) )
                     {
                         // null or binary or integer
                         indType = 3;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( runsum += typeKeyBreak(ikInd)(4) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( runsum += typeKeyBreak(u+1)(ikInd)(4) ) )
                     {
                         // null or binary or integer or double
                         indType = 4;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( runsum += typeKeyBreak(ikInd)(5) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( runsum += typeKeyBreak(u+1)(ikInd)(5) ) )
                     {
                         // null or binary or integer or double or anion
                         indType = 5;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( typeKeyBreak(ikInd)(0) + typeKeyBreak(ikInd)(6) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( typeKeyBreak(u+1)(ikInd)(0) + typeKeyBreak(u+1)(ikInd)(6) ) )
                     {
                         // null or vector
                         indType = 6;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( typeKeyBreak(ikInd)(0) + typeKeyBreak(ikInd)(7) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( typeKeyBreak(u+1)(ikInd)(0) + typeKeyBreak(u+1)(ikInd)(7) ) )
                     {
                         // null or matrix
                         indType = 7;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( typeKeyBreak(ikInd)(0) + typeKeyBreak(ikInd)(8) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( typeKeyBreak(u+1)(ikInd)(0) + typeKeyBreak(u+1)(ikInd)(8) ) )
                     {
                         // null or set
                         indType = 8;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( typeKeyBreak(ikInd)(0) + typeKeyBreak(ikInd)(9) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( typeKeyBreak(u+1)(ikInd)(0) + typeKeyBreak(u+1)(ikInd)(9) ) )
                     {
                         // null or dgraph
                         indType = 9;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( typeKeyBreak(ikInd)(0) + typeKeyBreak(ikInd)(10) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( typeKeyBreak(u+1)(ikInd)(0) + typeKeyBreak(u+1)(ikInd)(10) ) )
                     {
                         // null or string
                         indType = 10;
                     }
 
-                    else if ( typeKeyBreak(ikInd)(0) == ( typeKeyBreak(ikInd)(0) + typeKeyBreak(ikInd)(11) ) )
+                    else if ( typeKeyBreak(u+1)(ikInd)(0) == ( typeKeyBreak(u+1)(ikInd)(0) + typeKeyBreak(u+1)(ikInd)(11) ) )
                     {
                         // null or string
                         indType = 11;
@@ -1819,13 +1811,13 @@ void ML_Base::removeFromIndexKeyAndUpdate(const SparseVector<gentype> &oldz)
                     }
                 }
 
-                typeKey("&",ikInd) = indType;
+                typeKey("&",u+1)("&",ikInd) = indType;
 
-                NiceAssert( indexKey(ikInd) == oldz.ind(zInd) );
+                NiceAssert( indexKey(u+1)(ikInd) == oldz.ind(zInd) );
 
-                --(indexKeyCount("&",ikInd));
+                --(indexKeyCount("&",u+1)("&",ikInd));
 
-                if ( indPrune() && ( typeKey(ikInd) == 1 ) )
+                if ( indPrune() && ( typeKey(u+1)(ikInd) == 1 ) )
                 {
                     // Remove null feature as required.  Next if statement
                     // will finish operation
@@ -1833,17 +1825,17 @@ void ML_Base::removeFromIndexKeyAndUpdate(const SparseVector<gentype> &oldz)
                     unfillIndex(ikInd);
                 }
 
-                if ( !indexKeyCount(ikInd) )
+                if ( !indexKeyCount(u+1)(ikInd) )
                 {
                     // Remove unused feature from indexing
 
                     removexspaceFeat(ikInd);
-                    indexKey.remove(ikInd);
-                    indexKeyCount.remove(ikInd);
+                    indexKey("&",u+1).remove(ikInd);
+                    indexKeyCount("&",u+1).remove(ikInd);
 
-                    if ( ikInd > indexKey.size()-1 )
+                    if ( ikInd > indexKey(u+1).size()-1 )
                     {
-                        ikInd = indexKey.size()-1;
+                        ikInd = indexKey(u+1).size()-1;
                     }
 
                     indKeyChanged = 1;
@@ -3474,10 +3466,10 @@ int ML_Base::prealloc(int expectedN)
     xCweightfuzz.prealloc(expectedN);
     xepsweight.prealloc(expectedN);
     xalphaState.prealloc(expectedN);
-    indexKey.prealloc(expectedN);
-    indexKeyCount.prealloc(expectedN);
-    typeKey.prealloc(expectedN);
-    typeKeyBreak.prealloc(expectedN);
+    //indexKey.prealloc(expectedN);
+    //indexKeyCount.prealloc(expectedN);
+    //typeKey.prealloc(expectedN);
+    //typeKeyBreak.prealloc(expectedN);
 
     return 0;
 }
@@ -7260,11 +7252,59 @@ double ML_Base::getvalIfPresent_v(int numi, int numj, int &isgood) const
 
 
 //FIXME these should be variables, not constants
-#define NUMZOOMS 3
+//#define NUMZOOMS 3
+#define NUMZOOMS 2
 #define ZOOMFACTOR 0.3
+#define PARA_REGUL 0.05
 
-double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
+//#define DEF_MAGIC_EPS 1e-4
+//#define DEF_MAGIC_EPS_ABS 0
+//#define DEF_VOLUME_RELTOL 0.0
+//#define DEF_SIGMA_RELTOL -1.0
+//
+//    volatile int killSwitch = 0;
+//    double magic_eps_abs = DEF_MAGIC_EPS_ABS;
+//    double volume_reltol = DEF_VOLUME_RELTOL;
+//    double sigma_reltol = DEF_SIGMA_RELTOL;
+//    int max_feval = 5000;
+//    int max_iter = 1000;
+//    double maxtime = 0;
+//    double eps = DEF_MAGIC_EPS;
+//    direct_algorithm algorithm = DIRECT_ORIGINAL;
+//
+//    double *x
+//    double y
+//    double *lb  0s
+//    double *u   1s
+//    void *fdata;
+//
+//    double feval(int dim, const double *x, int *, void *fdata);
+//
+//    int intres = direct_optimize(
+//         fevel,fdata,
+//         ddim,
+//         lb,ub,
+//         x,&y,
+//         max_feval,max_iter,
+//         maxtime,
+//         eps,magic_eps_abs,
+//         volume_reltol,sigma_reltol,
+//         killSwitch,
+//         DIRECT_UNKNOWN_FGLOBAL,0,
+//         algorithm);
+
+
+
+
+
+
+
+
+
+double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, const tkBounds *tuneBounds)
 {
+    (void) tuneP;
+
     if ( !tuneK )
     {
         return 0;
@@ -7291,9 +7331,28 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
     Vector<int> kelm;    // which element in cRealConstants
     Vector<double> kmin; // range minimum
     Vector<double> kmax; // range maximum
+    Vector<double> kvar; // added noise variance
     Vector<int> kstp;    // number of steps over range
-    Vector<int> isls;    // is this the lengthscale
     Vector<Vector<gentype> > constVecs(kdim);
+
+    Vector<int> uu(kdim);
+
+    uu = -1; // default to full dimension
+
+    if ( kernel.numSplits() )
+    {
+        int uuu = 0;
+
+        for ( i = 0 ; i < kdim ; ++i )
+        {
+            uu("&",i) = uuu;
+
+            if ( kernel.isSplit(i) || kernel.isMulSplit(i) )
+            {
+                ++uuu;
+            }
+        }
+    }
 
     if ( kdim )
     {
@@ -7311,7 +7370,6 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
                     double ub;
                     int steps;
                     int addit = 0;
-                    int islen = 0;
 
                     // Fixme: currently basically do lengthscale (r0) for "normal" kernels, need to extend
                     // NB: we only want to tune one "weight" per multiplicative kernel group
@@ -7325,7 +7383,11 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
                         ub    = 3;
                         steps = 15; //10;
                         addit = 1;
-                        islen = 0;
+
+                        // Bound bounding
+
+                        lb = ( !tuneBounds || ( (((*tuneBounds).wlb)(i)) < lb ) ) ? lb : (((*tuneBounds).wlb)(i));
+                        ub = ( !tuneBounds || ( (((*tuneBounds).wub)(i)) > ub ) ) ? ub : (((*tuneBounds).wub)(i));
                     }
 
                     else if ( j == -1 )
@@ -7341,7 +7403,9 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
                         ub    = 5;
                         steps = 6;
                         addit = 1;
-                        islen = 0;
+
+                        lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
+                        ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
                     }
 
                     else if ( ( kernel.cType(i) == 48 ) && ( j > 0 ) )
@@ -7352,7 +7416,9 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
                         ub    = 1;
                         steps = 15;
                         addit = 1;
-                        islen = 0;
+
+                        lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
+                        ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
                     }
 
                     else if ( ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 48 ) && ( j == 0 ) )
@@ -7362,15 +7428,24 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
                         // distance between points scales as the square-root of their dimension
                         // also correct for the 1/N^dim
 
-                        double lencorrect = std::sqrt((double) xspaceDim())/std::pow((double) N(),((double) xspaceDim()));
+                        int xdim = xspaceDim(uu(i));
+
+//errstream() << "phantomxyztune xdim(" << i << ") = " << xdim << "\n";
+                        double lencorrect = std::sqrt((double) xdim)/std::pow((double) N(),((double) xdim));
 
                         lencorrect = ( lencorrect < 0.05 ) ? 0.05 : lencorrect;
+//errstream() << "phantomxyztune lencorrect(" << i << ") = " << lencorrect << "\n";
 
                         lb    = lencorrect*0.1*xwidth; // 0.01*xwidth; //1e-2*xwidth;
-                        ub    = sqrt((double) xspaceDim())*xwidth; // 3*xwidth; //15*xwidth;
+//errstream() << "phantomxyztune lb(" << i << ") = " << lb << "\n";
+//FIXME: consider increasing ub
+                        ub    = 1.5*sqrt((double) xdim)*xwidth; //sqrt((double) xdim)*xwidth; // 3*xwidth; //15*xwidth;
+//errstream() << "phantomxyztune ub(" << i << ") = " << ub << "\n";
                         steps = 50; //30; //20; // 15; //20;
                         addit = 1;
-                        islen = 1;
+
+                        lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
+                        ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
                     }
 
                     if ( addit )
@@ -7380,7 +7455,6 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
                         kmin.add(ddim); kmin("&",ddim) = lb;
                         kmax.add(ddim); kmax("&",ddim) = ub;
                         kstp.add(ddim); kstp("&",ddim) = steps;
-                        isls.add(ddim); isls("&",ddim) = islen;
 
                         ++ddim;
                         adim *= steps;
@@ -7400,6 +7474,8 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
         Vector<double> gridres(adim);
 
         Vector<double> weightval(kdim);
+
+//        Vector<double> L1norm(adim); - tried regularization, it made it worse
 
         int bestind = -1;
         int dummy;
@@ -7464,8 +7540,12 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
 
             gridres = 0.0;
 
+//            double gridresmax = 0.0;
+//            double gridresmin = 0.0;
+
             for ( i = 0 ; i < adim ; ++i )
             {
+//                L1norm("&",i) = 0.0;
                 weightval = 1.0;
 
                 for ( j = 0 ; j < ddim ; ++j )
@@ -7479,6 +7559,8 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
                     {
                         weightval("&",kind(j))              = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
                     }
+
+//                    L1norm("&",i) += (stepgrid(i)(j)/((double) kstp(j)-1))*(stepgrid(i)(j)/((double) kstp(j)-1));
                 }
 
                 for ( j = 0 ; j < kdim ; ++j )
@@ -7495,6 +7577,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
                 if ( method == 1 )
                 {
                     gridres("&",i) = calcnegloglikelihood(model,1);
+//gridres("&",i) = (((double) (N()-1))*calcnegloglikelihood(model,1)/((double) N())) + (calcRecall(model,0,1)/((double) N()));
                 }
 
                 else if ( method == 2 )
@@ -7507,6 +7590,25 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
                     gridres("&",i) = calcRecall(model,0,1);
                 }
 
+//                if ( !i )
+//                {
+//                    gridresmax = gridres(i);
+//                    gridresmin = gridres(i);
+//                }
+//
+//                else
+//                {
+//                    if ( gridres(i) > gridresmax )
+//                    {
+//                        gridresmax = gridres(i);
+//                    }
+//
+//                    if ( gridres(i) < gridresmin )
+//                    {
+//                        gridresmin = gridres(i);
+//                    }
+//                }
+
 //                for ( j = 0 ; j < ddim ; ++j )
 //                {
 //                    if ( islen(j) )
@@ -7515,8 +7617,38 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
 //                    }
 //                }
 //errstream() << "Tuning kernel: weight " << weightval << ", const " << constVecs << " = " << gridres(i) << "\n";
+//errstream() << gridres(i) << "(" << i << "), ";
             }
 
+            // Dynamic regularisation to prevent overfit, particularly on lengthscale
+            // Note that regularisation scales to a fraction of the current result range
+
+/*
+            double resrange = std::abs(gridresmax-gridresmin);
+            double lambda = -1;
+
+            for ( i = 0 ; i < adim ; ++i )
+            {
+                if ( L1norm(i) > 0 )
+                {
+                    double loclambda = resrange/L1norm(i);
+
+                    if ( ( lambda < 0 ) || ( loclambda < lambda ) )
+                    {
+                        lambda = loclambda;
+                    }
+                }
+            }
+
+            double regul_const = PARA_REGUL*lambda;
+
+            for ( i = 0 ; i < adim ; ++i )
+            {
+                gridres("&",i) += regul_const*L1norm(i);
+            }
+*/
+
+//errstream() << "\n";
             // Find best result index
 
             bestres = min(gridres,bestind);
@@ -7552,6 +7684,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK)
                 kernel.setWeight(wv,j);
             }
 
+//errstream() << "Test: " << model << "\n";
             model.resetKernel();
             model.train(dummy);
         }

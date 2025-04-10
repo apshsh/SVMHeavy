@@ -76,7 +76,7 @@ Matrix<double> *smConst(int m, int n, double val, double offdiagval)
 {
     void **tempargs;
 
-    MEMNEWARRAY(tempargs,void *,2);
+    MEMNEWARRAY(tempargs,void *,3);
 
     double          *dvals;
     Vector<double>  *rowshow;

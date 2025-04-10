@@ -117,7 +117,7 @@ public:
     }
 
     // Make this null so that it can be included as a prior without wasting time in optimising... nothing
-    virtual double tuneKernel(int, double, int = 1) override { return 0; }
+    virtual double tuneKernel(int, double, int = 1, int = 0, const tkBounds * = nullptr) override { return 0; }
 
 
     // ================================================================

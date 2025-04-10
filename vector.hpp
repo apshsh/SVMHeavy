@@ -137,6 +137,10 @@ inline const Vector<double> &zerodoublevec(int size, retVector<double> &tmpv);
 inline const Vector<double> &onedoublevec (int size, retVector<double> &tmpv);
 //inline const Vector<double> &cntdoublevec (int size, retVector<double> &tmpv);
 
+inline const Vector<double> &ninfdoublevec(int size, retVector<double> &tmpv);
+inline const Vector<double> &pingdoublevec(int size, retVector<double> &tmpv);
+//inline const Vector<double> &cntdoublevec (int size, retVector<double> &tmpv);
+
 // Basic versions
 
 inline const Vector<int> &zerointvecbasic(void);
@@ -144,6 +148,21 @@ inline const Vector<int> &oneintvecbasic (void);
 
 inline const Vector<double> &zerodoublevecbasic(void);
 inline const Vector<double> &onedoublevecbasic (void);
+
+inline const Vector<double> &ninfdoublevecbasic(void);
+inline const Vector<double> &pinfdoublevecbasic(void);
+
+//// Cooked UDL stuff
+//
+//inline Vector<double> operator"" _zerovect(unsigned long long int dim);
+//inline Vector<double> operator"" _onevect (unsigned long long int dim);
+//inline Vector<double> operator"" _ninfvect(unsigned long long int dim);
+//inline Vector<double> operator"" _pinfvect(unsigned long long int dim);
+//
+//inline Vector<double> operator"" _zerovect(unsigned long long int dim) { retVector<double> tmpv; return zerodoublevec((int) dim,tmpv); }
+//inline Vector<double> operator"" _onevect (unsigned long long int dim) { retVector<double> tmpv; return onedoublevec ((int) dim,tmpv); };
+//inline Vector<double> operator"" _ninfvect(unsigned long long int dim) { retVector<double> tmpv; return ninfdoublevec((int) dim,tmpv); }
+//inline Vector<double> operator"" _pinfvect(unsigned long long int dim) { retVector<double> tmpv; return pinfdoublevec((int) dim,tmpv); }
 
 // The class itself
 
@@ -166,11 +185,19 @@ class Vector
     friend inline const Vector<double> &onedoublevec (int size, retVector<double> &tmpv);
 //    friend inline const Vector<double> &cntdoublevec (int size, retVector<double> &tmpv);
 
+    friend inline const Vector<double> &ninfdoublevec(int size, retVector<double> &tmpv);
+    friend inline const Vector<double> &pingdoublevec(int size, retVector<double> &tmpv);
+//    friend inline const Vector<double> &cntdoublevec (int size, retVector<double> &tmpv);
+
+
     friend inline const Vector<int> &zerointvecbasic(void);
     friend inline const Vector<int> &oneintvecbasic (void);
 
     friend inline const Vector<double> &zerodoublevecbasic(void);
     friend inline const Vector<double> &onedoublevecbasic (void);
+
+    friend inline const Vector<double> &ninfdoublevecbasic(void);
+    friend inline const Vector<double> &pinfdoublevecbasic(void);
 
     template <class S, class U> friend bool shareBase(const Vector<S> &thus, const Vector<U> &that);
 
@@ -10226,6 +10253,20 @@ inline const Vector<double> &onedoublevecbasic(void)
     return oneres;
 }
 
+inline const Vector<double> &ninfdoublevecbasic(void)
+{
+    const static Vector<double> ninfres(ninfdoublearray(),"&");
+
+    return ninfres;
+}
+
+inline const Vector<double> &pinfdoublevecbasic(void)
+{
+    const static Vector<double> pinfres(pinfdoublearray(),"&");
+
+    return pinfres;
+}
+
 inline const Vector<int> &zerointvec(int size, retVector<int> &tmpv)
 {
     return zerointvecbasic()(0,1,size-1,tmpv);
@@ -10244,6 +10285,16 @@ inline const Vector<int> &oneintvec(int size, retVector<int> &tmpv)
 inline const Vector<double> &onedoublevec(int size, retVector<double> &tmpv)
 {
     return onedoublevecbasic()(0,1,size-1,tmpv);
+}
+
+inline const Vector<double> &ninfdoublevec(int size, retVector<double> &tmpv)
+{
+    return ninfdoublevecbasic()(0,1,size-1,tmpv);
+}
+
+inline const Vector<double> &pinfdoublevec(int size, retVector<double> &tmpv)
+{
+    return pinfdoublevecbasic()(0,1,size-1,tmpv);
 }
 
 inline const Vector<int> &cntintvec(int size, retVector<int> &tmpv)

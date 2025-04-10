@@ -97,6 +97,7 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
         altfnapproxFNapprox.getKernel_unsafe().setType(1,1);
         altfnapproxFNapprox.getKernel_unsafe().setMagTerm(1);
         altfnapproxFNapprox.resetKernel();
+        //altfnapproxFNapprox.setmuBias(-1.0_gent);
 
         Nbasemu    = 0;
         firsttrain = 0;
@@ -750,7 +751,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 
     //errstream() << "Negative log likelihoods: ";
 //errstream() << "phantomxyzxyzxyz Model " << *(muapprox(0)) << "\n";
-    //errstream() << "NLL: ";
+    errstream() << "NLL: ";
 
     if ( muapprox.size() )
     {
@@ -760,15 +761,15 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
         {
             if ( muapprox(i) )
             {
-                //errstream() << ", " << calcnegloglikelihood(*muapprox(i),1) << " (mu " << i << "): ";
+                errstream() << ", " << calcnegloglikelihood(*muapprox(i),1) << " (mu " << i << "): ";
 
                 for ( int iii = 0 ; iii < ((*muapprox(i)).getKernel()).size() ; iii++ )
                 {
-                    //errstream() << ((*muapprox(i)).getKernel()).cWeight(iii) << ", ";
-                    //errstream() << ((*muapprox(i)).getKernel()).cRealConstants(iii) << "\t";
+                    errstream() << ((*muapprox(i)).getKernel()).cWeight(iii) << ", ";
+                    errstream() << ((*muapprox(i)).getKernel()).cRealConstants(iii) << "\t";
                 }
 
-                //errstream() << "\n";
+                errstream() << "\n";
             }
         }
     }
@@ -1540,7 +1541,7 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
         if ( tunediffmod && diffmodel )
         {
 //errstrean() << "phantomxyziii diffmodel\n";
-            (*diffmodel).getML().tuneKernel(tunediffmod,getxwidth(),1);
+            (*diffmodel).getML().tuneKernel(tunediffmod,getxwidth(),1,0,nullptr);
         }
 
         ires |= modelaugx_int_train(res,killSwitch);
@@ -1550,7 +1551,7 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
             for ( i = 0 ; i < augxapprox.size() ; ++i )
             {
 //errstrean() << "phantomxyziii augx " << i << "\n";
-                (*(augxapprox("&",i))).getML().tuneKernel(tuneaugxmod,getxwidth(),1);
+                (*(augxapprox("&",i))).getML().tuneKernel(tuneaugxmod,getxwidth(),1,0,nullptr);
             }
         }
 
@@ -1561,7 +1562,36 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
 //errstrean() << "phantomxyziii muapprox\n";
             for ( i = 0 ; i < muapprox.size() ; ++i )
             {
-                (*(muapprox("&",i))).getML().tuneKernel(tunemu,getxwidth(),1);
+                tkBounds tuneBounds((*(muapprox("&",i))).getML().getKernel());
+
+                // It is possible for BOCA to get "stuck" with bad parameters:
+                // - too little connection between different different fidelities (no connection)
+                // - posterior variance over-shrunk (too confindent)
+
+                if ( (*(muapprox("&",i))).getML().N() < 40 )
+                {
+                    tuneBounds.wlb = 0.5;
+
+                    for ( int i = 0 ; i < getdimfid() ; i++ )
+                    {
+                        tuneBounds.klb("&",i+1) = 0.6;
+                    }
+// original heuristic: 0.5 if N <= 40, unchange otherwise
+                }
+
+                else if ( (*(muapprox("&",i))).getML().N() < 50 )
+                {
+                    double scale = (50.0-(*(muapprox("&",i))).getML().N())/10.0;
+
+                    tuneBounds.wlb = 0.1+(0.4*scale);
+
+                    for ( int i = 0 ; i < getdimfid() ; i++ )
+                    {
+                        tuneBounds.klb("&",i+1) = 0.6*scale;
+                    }
+                }
+
+                (*(muapprox("&",i))).getML().tuneKernel(tunemu,getxwidth(),1,0,&tuneBounds);
             }
         }
 
@@ -1570,7 +1600,7 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
         if ( tunesigma && sigmuseparate )
         {
 //errstrean() << "phantomxyziii sigapprox\n";
-            (*sigmaapprox).getML().tuneKernel(tunesigma,getxwidth(),1);
+            (*sigmaapprox).getML().tuneKernel(tunesigma,getxwidth(),1,0,nullptr);
         }
 
         return ires;
@@ -2171,7 +2201,7 @@ int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype
             if ( firsttrain && srcmodel && tunesrcmod )
             {
 //outstream() << "Tuning source model\n";
-                (*srcmodel).getML().tuneKernel(tunesrcmod,getxwidth(),1);
+                (*srcmodel).getML().tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
                 firsttrain = 0;
                 int dummy = 0;
                 (*srcmodel).train(dummy);
@@ -2197,7 +2227,7 @@ int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype
 
             if ( firsttrain && srcmodel && tunesrcmod )
             {
-                (*srcmodel).getML().tuneKernel(tunesrcmod,getxwidth(),1);
+                (*srcmodel).getML().tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
                 firsttrain = 0;
                 int dummy = 0;
                 (*srcmodel).train(dummy);
@@ -2256,7 +2286,7 @@ int SMBOOptions::modeldiff_int_train(int &res, svmvolatile int &killSwitch)
 
             if ( firsttrain && srcmodel && tunesrcmod )
             {
-                (*srcmodel).getML().tuneKernel(tunesrcmod,getxwidth(),1);
+                (*srcmodel).getML().tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
                 firsttrain = 0;
                 int dummy = 0;
                 (*srcmodel).train(dummy);
@@ -2277,7 +2307,7 @@ int SMBOOptions::modeldiff_int_train(int &res, svmvolatile int &killSwitch)
 
             if ( firsttrain && srcmodel && tunesrcmod )
             {
-                (*srcmodel).getML().tuneKernel(tunesrcmod,getxwidth(),1);
+                (*srcmodel).getML().tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
                 firsttrain = 0;
                 int dummy = 0;
                 (*srcmodel).train(dummy);

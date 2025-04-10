@@ -66,18 +66,18 @@ public:
 
     // Information functions (training data):
 
-    virtual int N(void)         const override { return getQconst().N  ();  }
-    virtual int NNC(int d)      const override { return getQconst().NNC(d); }
-    virtual int type(void)      const override { return 508;          }
-    virtual int subtype(void)   const override { return 0;            }
+    virtual int N      (void)  const override { return getQconst().N  ();  }
+    virtual int NNC    (int d) const override { return getQconst().NNC(d); }
+    virtual int type   (void)  const override { return 508;          }
+    virtual int subtype(void)  const override { return 0;            }
 
-    virtual int tspaceDim(void)    const override { return getQconst().tspaceDim();    }
-    virtual int xspaceDim(void)    const override { return getQconst().xspaceDim();    }
-    virtual int fspaceDim(void)    const override { return getQconst().fspaceDim();    }
-    virtual int tspaceSparse(void) const override { return getQconst().tspaceSparse(); }
-    virtual int xspaceSparse(void) const override { return getQconst().xspaceSparse(); }
-    virtual int numClasses(void)   const override { return getQconst().numClasses();   }
-    virtual int order(void)        const override { return getQconst().order();        }
+    virtual int tspaceDim   (void)       const override { return getQconst().tspaceDim();    }
+    virtual int xspaceDim   (int u = -1) const override { return getQconst().xspaceDim(u);   }
+    virtual int fspaceDim   (void)       const override { return getQconst().fspaceDim();    }
+    virtual int tspaceSparse(void)       const override { return getQconst().tspaceSparse(); }
+    virtual int xspaceSparse(void)       const override { return getQconst().xspaceSparse(); }
+    virtual int numClasses  (void)       const override { return getQconst().numClasses();   }
+    virtual int order       (void)       const override { return getQconst().order();        }
 
     virtual int isTrained(void) const override { return getQconst().isTrained(); }
     virtual int isSolGlob(void) const override { return getQconst().isSolGlob(); }
@@ -185,7 +185,7 @@ public:
     virtual MercerKernel &getKernel_unsafe(void)       override { return getQ().getKernel_unsafe(); }
     virtual void prepareKernel            (void)       override {        getQ().prepareKernel();    }
 
-    virtual double tuneKernel(int method, double xwidth, int tuneK = 1) override { return getQ().tuneKernel(method,xwidth,tuneK); }
+    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr) override { return getQ().tuneKernel(method,xwidth,tuneK,tuneP,tunebounds); }
 
     virtual int resetKernel(                             int modind = 1, int onlyChangeRowI = -1, int updateInfo = 1) override { return getQ().resetKernel(modind,onlyChangeRowI,updateInfo); }
     virtual int setKernel  (const MercerKernel &xkernel, int modind = 1, int onlyChangeRowI = -1                    ) override { return getQ().setKernel(xkernel,modind,onlyChangeRowI);      }
@@ -629,10 +629,10 @@ public:
 
     // Training data tracking functions:
 
-    virtual const Vector<int>          &indKey(void)          const override { return getQconst().indKey();          }
-    virtual const Vector<int>          &indKeyCount(void)     const override { return getQconst().indKeyCount();     }
-    virtual const Vector<int>          &dattypeKey(void)      const override { return getQconst().dattypeKey();      }
-    virtual const Vector<Vector<int> > &dattypeKeyBreak(void) const override { return getQconst().dattypeKeyBreak(); }
+    virtual const Vector<int>          &indKey         (int u = -1) const override { return getQconst().indKey(u);          }
+    virtual const Vector<int>          &indKeyCount    (int u = -1) const override { return getQconst().indKeyCount(u);     }
+    virtual const Vector<int>          &dattypeKey     (int u = -1) const override { return getQconst().dattypeKey(u);      }
+    virtual const Vector<Vector<int> > &dattypeKeyBreak(int u = -1) const override { return getQconst().dattypeKeyBreak(u); }
 
     // Other functions
 
