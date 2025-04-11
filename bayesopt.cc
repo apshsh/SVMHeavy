@@ -1,3 +1,5 @@
+//FINAL ITERATION: no need to tune the kernel parameters after the final iteration!
+
 /*
 ADD: option to query the model at different points (and give model predictions at recommended point)
 FIX: plotting of 2d function doesn't seem to work for some reason

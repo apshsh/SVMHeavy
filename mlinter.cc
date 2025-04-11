@@ -4047,10 +4047,28 @@ int runsvmint(int threadInd,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-cX"    ) ||
-                      ( currentarg == "-tkL"   ) ||
-                      ( currentarg == "-tkloo" ) ||
-                      ( currentarg == "-tkrec" )    )
+            else if ( ( currentarg == "-cX"      ) ||
+                      ( currentarg == "-tkL"     ) ||
+                      ( currentarg == "-tkloo"   ) ||
+                      ( currentarg == "-tkrec"   ) ||
+                      ( currentarg == "-tcL"     ) ||
+                      ( currentarg == "-tcloo"   ) ||
+                      ( currentarg == "-tcrec"   ) ||
+                      ( currentarg == "-teL"     ) ||
+                      ( currentarg == "-teloo"   ) ||
+                      ( currentarg == "-terec"   ) ||
+                      ( currentarg == "-tceL"    ) ||
+                      ( currentarg == "-tceloo"  ) ||
+                      ( currentarg == "-tcerec"  ) ||
+                      ( currentarg == "-tkcL"    ) ||
+                      ( currentarg == "-tkcloo"  ) ||
+                      ( currentarg == "-tkcrec"  ) ||
+                      ( currentarg == "-tkeL"    ) ||
+                      ( currentarg == "-tkeloo"  ) ||
+                      ( currentarg == "-tkerec"  ) ||
+                      ( currentarg == "-tkceL"   ) ||
+                      ( currentarg == "-tkceloo" ) ||
+                      ( currentarg == "-tkcerec" )    )
             {
                 preelse = 1;
 
@@ -5175,12 +5193,6 @@ int runsvmint(int threadInd,
                       ( currentarg == "-tMpy"   ) ||
                       ( currentarg == "-tMpyv"  ) ||
                       ( currentarg == "-tMpyf"  ) ||
-                      ( currentarg == "-tMxpy"  ) ||
-                      ( currentarg == "-tMxpyv" ) ||
-                      ( currentarg == "-tMxpyf" ) ||
-                      ( currentarg == "-tMypy"  ) ||
-                      ( currentarg == "-tMypyv" ) ||
-                      ( currentarg == "-tMypyf" ) ||
                       ( currentarg == "-tMexe"  ) ||
                       ( currentarg == "-tMexev" ) ||
                       ( currentarg == "-tMexef" ) ||
@@ -7798,17 +7810,35 @@ int runsvmint(int threadInd,
                     currcommand = tuningopt(0);
                     tuningopt.remove(0);
 
-                    if      ( currcommand(0) == "-cA"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCNKmean();                                                                                 }
-                    else if ( currcommand(0) == "-bal"   ) { balc(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext));                                                                                            }
-                    else if ( currcommand(0) == "-cB"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCNKmedian();                                                                               }
-                    else if ( currcommand(0) == "-cAN"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCKmean();                                                                                  }
-                    else if ( currcommand(0) == "-cBN"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCKmedian();                                                                                }
-                    else if ( currcommand(0) == "-cX"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCscaled(safeatof(currcommand(1),argvariables));                                            }
-                    else if ( currcommand(0) == "-cua"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetOff();                                                                                     }
-                    else if ( currcommand(0) == "-tkL"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,0,nullptr); }
-                    else if ( currcommand(0) == "-tkloo" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,0,nullptr); }
-                    else if ( currcommand(0) == "-tkrec" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,0,nullptr); }
-                    else if ( currcommand(0) == "-NlA"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetLinBiasForce(safeatof(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    if      ( currcommand(0) == "-cA"      ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCNKmean();                                                                                 }
+                    else if ( currcommand(0) == "-bal"     ) { balc(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext));                                                                                            }
+                    else if ( currcommand(0) == "-cB"      ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCNKmedian();                                                                               }
+                    else if ( currcommand(0) == "-cAN"     ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCKmean();                                                                                  }
+                    else if ( currcommand(0) == "-cBN"     ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCKmedian();                                                                                }
+                    else if ( currcommand(0) == "-cX"      ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCscaled(safeatof(currcommand(1),argvariables));                                            }
+                    else if ( currcommand(0) == "-cua"     ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetOff();                                                                                     }
+                    else if ( currcommand(0) == "-tkL"     ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,0,nullptr); }
+                    else if ( currcommand(0) == "-tkloo"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,0,nullptr); }
+                    else if ( currcommand(0) == "-tkrec"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,0,nullptr); }
+                    else if ( currcommand(0) == "-tcL"     ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,1,nullptr); }
+                    else if ( currcommand(0) == "-tcloo"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,1,nullptr); }
+                    else if ( currcommand(0) == "-tcrec"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,1,nullptr); }
+                    else if ( currcommand(0) == "-teL"     ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,2,nullptr); }
+                    else if ( currcommand(0) == "-teloo"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,2,nullptr); }
+                    else if ( currcommand(0) == "-terec"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,2,nullptr); }
+                    else if ( currcommand(0) == "-tceL"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,3,nullptr); }
+                    else if ( currcommand(0) == "-tceloo"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,3,nullptr); }
+                    else if ( currcommand(0) == "-tcerec"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,3,nullptr); }
+                    else if ( currcommand(0) == "-tkcL"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,1,nullptr); }
+                    else if ( currcommand(0) == "-tkcloo"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,1,nullptr); }
+                    else if ( currcommand(0) == "-tkcrec"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,1,nullptr); }
+                    else if ( currcommand(0) == "-tkeL"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,2,nullptr); }
+                    else if ( currcommand(0) == "-tkeloo"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,2,nullptr); }
+                    else if ( currcommand(0) == "-tkerec"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,2,nullptr); }
+                    else if ( currcommand(0) == "-tkceL"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,3,nullptr); }
+                    else if ( currcommand(0) == "-tkceloo" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,3,nullptr); }
+                    else if ( currcommand(0) == "-tkcerec" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,3,nullptr); }
+                    else if ( currcommand(0) == "-NlA"     ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetLinBiasForce(safeatof(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
                 }
 
                 time_used endtime = TIMECALL;
@@ -9834,21 +9864,13 @@ errstream() << "phantomxyznlp " << theKern << "\n";
                         argvariables("&",1)("&",1) = finalresult;
                     }
 
-                    else if ( currcommand(0) == "-tMpy"   ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv; pyorexeeval(1,0,1,currcommand(1),sf,fv,finalresult); }
-                    else if ( currcommand(0) == "-tMpyv"  ) { gentype fv; safeatowhatever(fv,currcommand(2),argvariables); gentype sf; NiceAssert( fv.isValVector() ); NiceAssert( fv.infsize() ); pyorexeeval(0,1,1,currcommand(1),sf,fv.cast_vector(),finalresult); }
-                    else if ( currcommand(0) == "-tMpyf"  ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv; pyorexeeval(0,0,1,currcommand(1),sf,fv,finalresult); }
+                    else if ( currcommand(0) == "-tMpy"   ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv;                                                     pyorexeeval(1,0,2,currcommand(1),sf,fv,finalresult); }
+                    else if ( currcommand(0) == "-tMpyv"  ) { gentype fv; safeatowhatever(fv,currcommand(2),argvariables); gentype sf; NiceAssert( fv.isValVector() ); NiceAssert( fv.infsize() ); pyorexeeval(0,1,2,currcommand(1),sf,fv.cast_vector(),finalresult); }
+                    else if ( currcommand(0) == "-tMpyf"  ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv;                                                     pyorexeeval(0,0,2,currcommand(1),sf,fv,finalresult); }
 
-                    else if ( currcommand(0) == "-tMxpy"  ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv; pyorexeeval(1,0,2,currcommand(1),sf,fv,finalresult); }
-                    else if ( currcommand(0) == "-tMxpyv" ) { gentype fv; safeatowhatever(fv,currcommand(2),argvariables); gentype sf; NiceAssert( fv.isValVector() ); NiceAssert( fv.infsize() ); pyorexeeval(0,1,2,currcommand(1),sf,fv.cast_vector(),finalresult); }
-                    else if ( currcommand(0) == "-tMxpyf" ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv; pyorexeeval(0,0,2,currcommand(1),sf,fv,finalresult); }
-
-                    else if ( currcommand(0) == "-tMypy"  ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv; pyorexeeval(1,0,3,currcommand(1),sf,fv,finalresult); }
-                    else if ( currcommand(0) == "-tMypyv" ) { gentype fv; safeatowhatever(fv,currcommand(2),argvariables); gentype sf; NiceAssert( fv.isValVector() ); NiceAssert( fv.infsize() ); pyorexeeval(0,1,3,currcommand(1),sf,fv.cast_vector(),finalresult); }
-                    else if ( currcommand(0) == "-tMypyf" ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv; pyorexeeval(0,0,3,currcommand(1),sf,fv,finalresult); }
-
-                    else if ( currcommand(0) == "-tMexe"  ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv; pyorexeeval(1,0,0,currcommand(1),sf,fv,finalresult); }
+                    else if ( currcommand(0) == "-tMexe"  ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv;                                                     pyorexeeval(1,0,0,currcommand(1),sf,fv,finalresult); }
                     else if ( currcommand(0) == "-tMexev" ) { gentype fv; safeatowhatever(fv,currcommand(2),argvariables); gentype sf; NiceAssert( fv.isValVector() ); NiceAssert( fv.infsize() ); pyorexeeval(0,1,0,currcommand(1),sf,fv.cast_vector(),finalresult); }
-                    else if ( currcommand(0) == "-tMexef" ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv; pyorexeeval(0,0,0,currcommand(1),sf,fv,finalresult); }
+                    else if ( currcommand(0) == "-tMexef" ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv;                                                     pyorexeeval(0,0,0,currcommand(1),sf,fv,finalresult); }
 
                     else
                     {
@@ -13561,7 +13583,6 @@ void testRKHSnorm(std::string &logfile, const ML_Mutable &svmbase, int &firstsum
 // isvector = nz if vector
 // ispy     = 0 if exe
 //          = 1 if python
-//          = 2 if python, no socket, write 15 samples to lRateList.txt
 // evalname = python/exe to be called
 // sf       = scalar or function to be evaluated
 // v        = vector
@@ -13570,116 +13591,74 @@ int pyorexeeval(int isscalar, int isvector, int ispy, const std::string &evalnam
 {
     NiceAssert( !isscalar || !isvector );
 
-    if ( ( ispy == 2 ) || ( ispy == 3 ) )
-    {
-        double lr_min = 0.00001;
-        double lr_max = 0.1;
-
-        double lratesam[15];
-
-        int i;
-
-        for ( i = 0 ; i < 15 ; ++i )
-        {
-            gentype fxval;
-
-            if ( isscalar )
-            {
-                fxval = sf;
-            }
-
-            else if ( isvector && !(v.infsize()) )
-            {
-                fxval = v(i);
-            }
-
-            else if ( isvector )
-            {
-                fxval = v((int) std::round(((double) i)/15));
-            }
-
-            else if ( ispy == 2 )
-            {
-                gentype ii;
-
-                (ii.force_vector(1))("&",0) = ((double) i)/15;
-                fxval = sf(ii);
-            }
-
-            else
-            {
-                gentype ii(((double) i)/15);
-
-                fxval = sf(ii);
-            }
-
-            fxval.finalise();
-
-            lratesam[i] = (double) fxval;
-        }
-
-        double rmin = lratesam[0];
-        double rmax = lratesam[0];
-
-        for ( i = 0 ; i < 15 ; ++i )
-        {
-            if ( lratesam[i] < rmin )
-            {
-                rmin = lratesam[i];
-            }
-
-            if ( lratesam[i] > rmax )
-            {
-                rmax = lratesam[i];
-            }
-        }
-
-        if ( rmax-rmin < 1e-5 )
-        {
-            rmax = rmin+1e-5;
-        }
-
-        for ( i = 0 ; i < 15 ; ++i )
-        {
-            lratesam[i] = (((lratesam[i]-rmin)/(rmax-rmin))*(lr_max-lr_min))+lr_min;
-        }
-
-        remove("lRateList.txt");
+    //if ( ( ispy == 2 ) || ( ispy == 3 ) )
+    //{
         remove("pyres.txt");
 
-        std::ofstream lrfile("lRateList.txt");
+        std::stringstream evalstream;
 
-        for ( i = 0 ; i < 15 ; ++i )
+        if ( isscalar )
         {
-            lrfile << lratesam[i] << "\n";
-            errstream() << "Rate " << i << ": " << lratesam[i] << "\n";
-        }
-
-        lrfile.close();
-
-        svm_sleep(5);
-
-        if ( ispy )
-        {
-            svm_pycall(evalname,false);
+            evalstream << evalname;
+            evalstream << " ";
+            evalstream << sf;
+            evalstream << " > pyres.txt";
         }
 
         else
         {
-            svm_execall(evalname,false);
+            evalstream << evalname;
+            evalstream << " ";
+            evalstream << v;
+            evalstream << " > pyres.txt";
         }
 
-        svm_sleep(5);
+        std::string evalstr(evalstream.str());
+
+        if ( ispy )
+        {
+            // ; is treated as a "special" character and messes up python!
+
+            for ( int i = 0 ; i < evalstr.size() ; i++ )
+            {
+                if ( evalstr[i] == ';' )
+                {
+                    evalstr[i] = ':';
+                }
+            }
+
+            errstream() << "Python call string: " << evalstr << "\n";
+
+            svm_pycall(evalstr,false);
+        }
+
+        else
+        {
+            errstream() << "Executable call string: " << evalstr << "\n";
+
+            svm_execall(evalstr,false);
+        }
+
+//        svm_sleep(1);
 
         std::ifstream resfile("pyres.txt");
 
-        resfile >> finalresult;
+        if ( resfile.is_open() )
+        {
+            resfile >> finalresult;
+        }
+
+        else
+        {
+            finalresult.makeError("No result written");
+        }
 
         resfile.close();
 
         return 0;
-    }
+    //}
 
+/*
     std::string sockis;
     awarestream *svmsocket = makeUnixSocket(sockis,1);
 
@@ -13758,8 +13737,8 @@ int pyorexeeval(int isscalar, int isvector, int ispy, const std::string &evalnam
     }
 
     delete svmsocket;
-
     return 0;
+*/
 }
 
 
@@ -16218,6 +16197,30 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -tkloo m        - Like -tkL, but minimises leave-one-out error.      \n" : "" );
     output << ( (          advanced ) ? "         -tkrec m        - Like -tkL, but minimises recall error.             \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -tcL   m        - Like -tkL but for C praameter.                     \n" : "" );
+    output << ( (          advanced ) ? "         -tcloo m        - Like -tkloo but for C parameter.                   \n" : "" );
+    output << ( (          advanced ) ? "         -tcrec m        - Like -tkrec but for C parameter.                   \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -teL   m        - Like -tkL but for eps parameter.                   \n" : "" );
+    output << ( (          advanced ) ? "         -teloo m        - Like -tkloo but for eps parameter.                 \n" : "" );
+    output << ( (          advanced ) ? "         -terec m        - Like -tkrec but for eps parameter.                 \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -tceL   m       - Like -tkL but for C and eps parameter.             \n" : "" );
+    output << ( (          advanced ) ? "         -tceloo m       - Like -tkloo but for C and eps parameter.           \n" : "" );
+    output << ( (          advanced ) ? "         -tcerec m       - Like -tkrec but for C and eps parameter.           \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -tkeL   m       - Like -tkL but for K and eps parameters.            \n" : "" );
+    output << ( (          advanced ) ? "         -tkeloo m       - Like -tkloo but for K and eps parameters.          \n" : "" );
+    output << ( (          advanced ) ? "         -tkerec m       - Like -tkrec but for K and eps parameters.          \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -tkcL   m       - Like -tkL but for K and C parameters.              \n" : "" );
+    output << ( (          advanced ) ? "         -tkcloo m       - Like -tkloo but for K and C parameters.            \n" : "" );
+    output << ( (          advanced ) ? "         -tkcrec m       - Like -tkrec but for K and C parameters.            \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -tkceL   m      - Like -tkL but for K, C and eps parameters.         \n" : "" );
+    output << ( (          advanced ) ? "         -tkceloo m      - Like -tkloo but for K, C and eps parameters.       \n" : "" );
+    output << ( (          advanced ) ? "         -tkcerec m      - Like -tkrec but for K, C and eps parameters.       \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                  -- SVM specific options                          --         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                  ** These  options set  parameters in  such a way **         \n" : "" );
@@ -17866,19 +17869,11 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -tMMx $fn x     - combines -tM and -tMx.                             \n" : "" );
     output << ( (          advanced ) ? "         -tMMvx $fn v x  - combines -tM and -tMvw.                            \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -tMpy   fname x - evaluate python script fname with scalar x.        \n" : "" );
-    output << ( (          advanced ) ? "         -tMpyv  fname x - evaluate python script fname with vector x.        \n" : "" );
-    output << ( (          advanced ) ? "         -tMpyf  fname x - evaluate python script fname with function x.      \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -tMxpy  fname x - like -tMpy, but write to lRateList.txt (15).*      \n" : "" );
-    output << ( (          advanced ) ? "         -tMxpyv fname x - like -tMpyv, but write to lRateList.txt (15).*     \n" : "" );
-    output << ( (          advanced ) ? "         -tMxpyf fname x - like -tMpyf, but write to lRateList.txt (15).*     \n" : "" );
-    output << ( (          advanced ) ? "                           *result loaded from pyres.txt.                     \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -tMypy  fname x - like -tMpy, but write to lRateList.txt (15).*      \n" : "" );
-    output << ( (          advanced ) ? "         -tMypyv fname x - like -tMpyv, but write to lRateList.txt (15).*     \n" : "" );
-    output << ( (          advanced ) ? "         -tMypyf fname x - like -tMpyf, but write to lRateList.txt (15).*     \n" : "" );
-    output << ( (          advanced ) ? "                           *result loaded from pyres.txt.                     \n" : "" );
+    output << ( (          advanced ) ? "         -tMpy   fname x - evaluate python script fname with scalar x.*       \n" : "" );
+    output << ( (          advanced ) ? "         -tMpyv  fname x - evaluate python script fname with vector x.*       \n" : "" );
+    output << ( (          advanced ) ? "         -tMpyf  fname x - evaluate python script fname with function x.*     \n" : "" );
+    output << ( (          advanced ) ? "                           *executes \"python3  fname x > pyres.txt\"  and grabs\n" : "" );
+    output << ( (          advanced ) ? "                            result from pyres.txt.                            \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -tMexe  fname x - evaluate executable fname with scalar x.           \n" : "" );
     output << ( (          advanced ) ? "         -tMexev fname x - evaluate executable fname with vector x.           \n" : "" );

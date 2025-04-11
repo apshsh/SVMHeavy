@@ -1,7 +1,4 @@
 
-//FIXME: in tuneKernel, have tuneP flag.  If set, it will tune other meaningful (for the model) parameters along with the kernel.
-//       eg SVM should tune C, but GPR should not as the parameter is presumed meaningful
-
 //
 // ML (machine learning) base type
 //
@@ -118,9 +115,24 @@ gentype &UUcallbackdef(gentype &res, int m, const ML_Base &caller, Vector<int> &
 const gentype &VVcallbacknon(gentype &res, int m, const gentype &kval, const ML_Base &caller, Vector<int> &iokr, Vector<int> &iok, Vector<const gentype *> xalt, int defbasis);
 const gentype &VVcallbackdef(gentype &res, int m, const gentype &kval, const ML_Base &caller, Vector<int> &iokr, Vector<int> &iok, Vector<const gentype *> xalt, int defbasis);
 
+#define DEFCMIN 0.01
+#define DEFCMAX 10
+#define DEFEPSMIN 1e-5
+#define DEFEPSMAX 2
+#define NUMZOOMS   2
+#define ZOOMFACTOR 0.3
+
 class tkBounds
 {
 public:
+    explicit tkBounds()
+    {
+        Cmin = 0.01;
+        Cmax = 100;
+        epsmin = 0;
+        epsmax = 1;
+    }
+
     explicit tkBounds(const MercerKernel &kerntemp)
     {
         wlb.resize(kerntemp.size()) = -INFINITY;
@@ -134,12 +146,29 @@ public:
             klb("&",q).resize(kerntemp.cRealConstants(q).size()) = -INFINITY;
             kub("&",q).resize(kerntemp.cRealConstants(q).size()) = INFINITY;
         }
+
+        Cmin = DEFCMIN;
+        Cmax = DEFCMAX;
+
+        epsmin = DEFEPSMIN;
+        epsmax = DEFEPSMAX;
+
+        numzooms   = NUMZOOMS;
+        zoomfactor = ZOOMFACTOR;
     }
 
     Vector<double> wlb; // kernel weight lower bounds
     Vector<double> wub; // kernel weight upper bounds
     Vector<Vector<double> > klb; // kernel constant lower bounds
     Vector<Vector<double> > kub; // kernel constant upper bounds
+
+    double Cmin;
+    double Cmax;
+    double epsmin;
+    double epsmax;
+
+    int    numzooms;
+    double zoomfactor;
 };
 
 
@@ -630,7 +659,9 @@ public:
     // tuneK:  0 = don't tune kernel
     //         1 = tune kernel
     // tuneP:  0 = don't tune model parameters
-    //         1 = tune model parameters (NOT IMPLEMENTED YET)
+    //         1 = tune model parameter C (NOT IMPLEMENTED YET)
+    //         2 = tune model parameter eps (NOT IMPLEMENTED YET)
+    //         3 = tune model parameters C and eps (NOT IMPLEMENTED YET)
     // tunebounds: optional lower and upper bound overrides for tuning. See datatypes
     //
     // Note that this is very basic.  It tunes continuous variables

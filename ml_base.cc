@@ -7249,13 +7249,11 @@ double ML_Base::getvalIfPresent_v(int numi, int numj, int &isgood) const
 
 
 
-
-
 //FIXME these should be variables, not constants
 //#define NUMZOOMS 3
-#define NUMZOOMS 2
-#define ZOOMFACTOR 0.3
-#define PARA_REGUL 0.05
+//#define NUMZOOMS 2
+//#define ZOOMFACTOR 0.3
+//#define PARA_REGUL 0.05
 
 //#define DEF_MAGIC_EPS 1e-4
 //#define DEF_MAGIC_EPS_ABS 0
@@ -7303,9 +7301,10 @@ double ML_Base::getvalIfPresent_v(int numi, int numj, int &isgood) const
 
 double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, const tkBounds *tuneBounds)
 {
-    (void) tuneP;
+    int    numzooms   = !tuneBounds ? NUMZOOMS   : ((*tuneBounds).numzooms);
+    double zoomfactor = !tuneBounds ? ZOOMFACTOR : ((*tuneBounds).zoomfactor);
 
-    if ( !tuneK )
+    if ( !tuneK && !tuneP )
     {
         return 0;
     }
@@ -7464,6 +7463,50 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
         }
     }
 
+    if ( tuneP & 1 )
+    {
+        // tune C
+
+        double lb;
+        double ub;
+        int steps;
+
+        lb = !tuneBounds ? DEFCMIN : ((*tuneBounds).Cmin);
+        ub = !tuneBounds ? DEFCMAX : ((*tuneBounds).Cmax);
+        steps = 20;
+
+        kind.add(ddim); kind("&",ddim) = -2;
+        kelm.add(ddim); kelm("&",ddim) = -2;
+        kmin.add(ddim); kmin("&",ddim) = lb;
+        kmax.add(ddim); kmax("&",ddim) = ub;
+        kstp.add(ddim); kstp("&",ddim) = steps;
+
+        ++ddim;
+        adim *= steps;
+    }
+
+    if ( tuneP & 2 )
+    {
+        // tune eps
+
+        double lb;
+        double ub;
+        int steps;
+
+        lb = !tuneBounds ? DEFEPSMIN : ((*tuneBounds).epsmin);
+        ub = !tuneBounds ? DEFEPSMAX : ((*tuneBounds).epsmax);
+        steps = 20;
+
+        kind.add(ddim); kind("&",ddim) = -3;
+        kelm.add(ddim); kelm("&",ddim) = -3;
+        kmin.add(ddim); kmin("&",ddim) = lb;
+        kmax.add(ddim); kmax("&",ddim) = ub;
+        kstp.add(ddim); kstp("&",ddim) = steps;
+
+        ++ddim;
+        adim *= steps;
+    }
+
     double bestres = 1;
 
     if ( ddim )
@@ -7475,12 +7518,15 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 
         Vector<double> weightval(kdim);
 
+        double Cval = 1;
+        double epsval = 1;
+
 //        Vector<double> L1norm(adim); - tried regularization, it made it worse
 
         int bestind = -1;
         int dummy;
 
-        for ( int zooms = 0 ; zooms < NUMZOOMS ; zooms++ )
+        for ( int zooms = 0 ; zooms < numzooms ; zooms++ )
         {
             if ( bestind == -1 )
             {
@@ -7525,7 +7571,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 
                 for ( j = 0 ; j < ddim ; ++j )
                 {
-                    double ublbdiff = ZOOMFACTOR*(kmax(j)-kmin(j)); // new width should be 0.3*old width
+                    double ublbdiff = zoomfactor*(kmax(j)-kmin(j)); // new width should be 0.3*old width
                     double midpoint = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
 
                     double newkmin = midpoint-(ublbdiff/2);
@@ -7555,9 +7601,19 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
                         constVecs("&",kind(j))("&",kelm(j)) = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
                     }
 
-                    else
+                    else if ( kelm(j) == -1 )
                     {
                         weightval("&",kind(j))              = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
+                    }
+
+                    else if ( kelm(j) == -2 )
+                    {
+                        Cval                                = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
+                    }
+
+                    else if ( kelm(j) == -3 )
+                    {
+                        epsval                              = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
                     }
 
 //                    L1norm("&",i) += (stepgrid(i)(j)/((double) kstp(j)-1))*(stepgrid(i)(j)/((double) kstp(j)-1));
@@ -7572,6 +7628,17 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
                 }
 
                 model.resetKernel();
+
+                if ( tuneP & 1 )
+                {
+                    setC(Cval);
+                }
+
+                if ( tuneP & 2 )
+                {
+                    seteps(epsval);
+                }
+
                 model.train(dummy);
 
                 if ( method == 1 )
@@ -7665,9 +7732,19 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
                     constVecs("&",kind(j))("&",kelm(j)) = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
                 }
 
-                else
+                else if ( kelm(j) == -1 )
                 {
                     weightval("&",kind(j))              = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
+                }
+
+                else if ( kelm(j) == -2 )
+                {
+                    Cval                                = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
+                }
+
+                else if ( kelm(j) == -3 )
+                {
+                    epsval                              = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
                 }
             }
 
@@ -7686,6 +7763,17 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 
 //errstream() << "Test: " << model << "\n";
             model.resetKernel();
+
+            if ( tuneP & 1 )
+            {
+                setC(Cval);
+            }
+
+            if ( tuneP & 2 )
+            {
+                seteps(epsval);
+            }
+
             model.train(dummy);
         }
     }
