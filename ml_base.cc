@@ -7301,8 +7301,10 @@ double ML_Base::getvalIfPresent_v(int numi, int numj, int &isgood) const
 
 double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, const tkBounds *tuneBounds)
 {
-    int    numzooms   = !tuneBounds ? NUMZOOMS   : ((*tuneBounds).numzooms);
-    double zoomfactor = !tuneBounds ? ZOOMFACTOR : ((*tuneBounds).zoomfactor);
+    int    numzooms   = !tuneBounds ? ( tuneK ? NUMZOOMS : 1 ) : ((*tuneBounds).numzooms);
+    double zoomfactor = !tuneBounds ? ZOOMFACTOR               : ((*tuneBounds).zoomfactor);
+
+    double xscale = 1;
 
     if ( !tuneK && !tuneP )
     {
@@ -7310,6 +7312,44 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
     }
 
     ML_Base &model = *this;
+
+    if ( tuneK )
+    {
+        // If the data doesn't range 0->1 (unit hypercube) then our assumptions are off
+        // Here we calculate the max gap, which will be used to rescale the lengthscale
+        // It's not perfect and it makes a bunch of assumptions (range same on all axis, data covers full range), but it's an ok approx I think?
+
+        SparseVector<gentype> xtmpmax;
+        SparseVector<gentype> xtmpmin;
+
+        xmax(xtmpmax);
+        xmin(xtmpmin);
+
+        if ( xtmpmax.indsize() )
+        {
+            for ( int i = 0 ; i < xtmpmax.indsize() ; i++ )
+            {
+                if ( !xtmpmax.direref(i).isCastableToRealWithoutLoss() )
+                {
+                    xscale = 1;
+                    break;
+                }
+
+                if ( !xtmpmin.direref(i).isCastableToRealWithoutLoss() )
+                {
+                    xscale = 1;
+                    break;
+                }
+
+                double xgap = ((double) xtmpmax.direref(i)) - ((double) xtmpmin.direref(i));
+
+                if ( xgap > xscale )
+                {
+                    xscale = xgap;
+                }
+            }
+        }
+    }
 
     if ( !model.N() || ( model.N() <= model.NNC(0) ) )
     {
@@ -7338,7 +7378,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 
     uu = -1; // default to full dimension
 
-    if ( kernel.numSplits() )
+    if ( kernel.numSplits() || kernel.numMulSplits() )
     {
         int uuu = 0;
 
@@ -7373,8 +7413,9 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
                     // Fixme: currently basically do lengthscale (r0) for "normal" kernels, need to extend
                     // NB: we only want to tune one "weight" per multiplicative kernel group
 
-                    if ( ( kdim > 1 ) && ( j == -1 ) && ( !i || ( ( kernel.isSplit(i-1) != 1 ) && ( kernel.isMulSplit(i-1) != 1 ) ) ) )
-//                    if ( ( j == -1 ) && ( !i || ( ( kernel.isSplit(i-1) != 1 ) && ( kernel.isMulSplit(i-1) != 1 ) ) ) )
+                    if ( ( kdim > 1 ) && ( j == -1 ) && !(kernel.cWeight(i).isNomConst) ) // && kernel.isAdjWeight(i) )
+//                    if ( ( kdim > 1 ) && ( j == -1 ) && ( !i || ( ( kernel.isSplit(i-1) != 1 ) && ( kernel.isMulSplit(i-1) != 1 ) ) ) )
+////                    if ( ( j == -1 ) && ( !i || ( ( kernel.isSplit(i-1) != 1 ) && ( kernel.isMulSplit(i-1) != 1 ) ) ) )
                     {
                         // This is weight (linear)
 
@@ -7394,7 +7435,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
                         ;
                     }
 
-                    else if ( ( kernel.cType(i) == 5 ) && ( j > 0 ) )
+                    else if ( ( kernel.cType(i) == 5 ) && ( j == 1 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) //&& kernel.isAdjRealConstants(j,i) )
                     {
                         // This is norm order (linear)
 
@@ -7407,7 +7448,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
                         ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
                     }
 
-                    else if ( ( kernel.cType(i) == 48 ) && ( j > 0 ) )
+                    else if ( ( kernel.cType(i) == 48 ) && ( j == 1 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) //&& kernel.isAdjRealConstants(j,i) )
                     {
                         // This is inter-task relatedness (linear)
 
@@ -7420,7 +7461,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
                         ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
                     }
 
-                    else if ( ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 48 ) && ( j == 0 ) )
+                    else if ( ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 48 ) && ( j == 0 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) //&& kernel.isAdjRealConstants(j,i) )
                     {
                         // This is length-scale, always, with the single exception of kernels 0 and 48 where lengthscale is meaningless (log)
 
@@ -7435,10 +7476,10 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
                         lencorrect = ( lencorrect < 0.05 ) ? 0.05 : lencorrect;
 //errstream() << "phantomxyztune lencorrect(" << i << ") = " << lencorrect << "\n";
 
-                        lb    = lencorrect*0.1*xwidth; // 0.01*xwidth; //1e-2*xwidth;
+                        lb    = ( ( uu(i) == -1 ) ? xscale : 1.0 )*lencorrect*0.1*xwidth; // 0.01*xwidth; //1e-2*xwidth;
 //errstream() << "phantomxyztune lb(" << i << ") = " << lb << "\n";
 //FIXME: consider increasing ub
-                        ub    = 1.5*sqrt((double) xdim)*xwidth; //sqrt((double) xdim)*xwidth; // 3*xwidth; //15*xwidth;
+                        ub    = ( ( uu(i) == -1 ) ? xscale : 1.0 )*1.5*sqrt((double) xdim)*xwidth; //sqrt((double) xdim)*xwidth; // 3*xwidth; //15*xwidth;
 //errstream() << "phantomxyztune ub(" << i << ") = " << ub << "\n";
                         steps = 50; //30; //20; // 15; //20;
                         addit = 1;

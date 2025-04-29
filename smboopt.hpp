@@ -29,15 +29,18 @@ class SMBOOptions : public GlobalOptions
 public:
     // Default models
 
-    GPR_Scalar altfnapprox;            // Default model(s) for objective (objectives for MOO)
+    GPR_Scalar altmuapprox;            // Default model(s) for objective (objectives for MOO)
     GPR_Scalar altfxapprox;            // Default model(s) for augmented channel(s)
-    GPR_Scalar_rff altfnapprox_rff;    // Default model for RFFs
-    GPR_Scalar altfnapproxFNapprox;    // I have no idea what I included this for.  Some sort of kernel backup?
+    GPR_Scalar_rff altmuapprox_rff;    // Default model for RFFs
+    GPR_Scalar altceqapprox;           // Default model(s) for == constraints (objectives for MOO)
+    GPR_Scalar altcgtapprox;           // Default model(s) for >= constraints (objectives for MOO)
 
     // External models (moo == multi-objective), fx = model for q (see below), if used
 
-    Vector<ML_Base *> extfnapprox;      // Use this to give alternative model(s) for objective(s).
+    Vector<ML_Base *> extmuapprox;      // Use this to give alternative model(s) for objective(s).
     Vector<ML_Base *> extfxapprox;      // Use this to give alternative models for augmented channels.
+    Vector<ML_Base *> extceqapprox;     // Use this to give alternative model(s) for == constraints.
+    Vector<ML_Base *> extcgtapprox;     // Use this to give alternative model(s) for >= constraints.
 
     // sigmuseparate: for multi-recommendation by default both sigma and mu
     //         are approximated by the same ML.  Alternatively you can do
@@ -47,6 +50,8 @@ public:
     //         1 = use separate MLs.
     // ismoo:  set 1 for multi-objective optimisation
     // moodim: number of objectives
+    // numceq: number of equality constraints
+    // numcgt: number of inequality constraints
     // sampleNsamp: number of grid points in scalarisor (for TS, default -20)
     //
     // modeltype:  0 = model f(p(x)) using p(x)
@@ -94,6 +99,8 @@ public:
     // tunemu:      set to tune muapprox at every step (default 1)
     // tunesigma:   set to tune sigmaapprox at every step if sigmuseparate (default 1)
     // tunesrcmod:  set to tune srcmodel at start (default 1)
+    // tuneceq:     set to tune ceqapprox at every step (default 1)
+    // tunecgt:     set to tune cgtapprox at every step (default 1)
     // tunediffmod: set to tune diffapprox at every step (default 1)
     // tuneaugxmod: set to tune augxapprox at every step (default 1)
     //
@@ -141,6 +148,8 @@ public:
     int sigmuseparate;
     int ismoo;
     int moodim;
+    int numceq;
+    int numcgt;
     int modeltype;
     int modelrff;
     int oracleMode;
@@ -162,6 +171,8 @@ public:
     int tunemu;
     int tunesigma;
     int tunesrcmod;
+    int tuneceq;
+    int tunecgt;
     int tunediffmod;
     int tuneaugxmod;
 
@@ -247,6 +258,22 @@ public:
             }
         }
 
+        for ( i = 0 ; i < ceqapprox.size() ; i++ )
+        {
+            if ( ceqapprox(i) )
+            {
+                (*(ceqapprox("&",i))).restart();
+            }
+        }
+
+        for ( i = 0 ; i < cgtapprox.size() ; i++ )
+        {
+            if ( cgtapprox(i) )
+            {
+                (*(cgtapprox("&",i))).restart();
+            }
+        }
+
         locires.resize(0);
         locxres.resize(0);
         locxresunconv.resize(0);
@@ -260,11 +287,11 @@ public:
         xx.zero();
         xxvar.zero();
 
-        for ( i = 0 ; i < fnapprox.size() ; ++i )
+        for ( i = 0 ; i < muapprox.size() ; ++i )
         {
-            if ( fnapprox(i) )
+            if ( muapprox(i) )
             {
-                (*(fnapprox("&",i))).restart();
+                (*(muapprox("&",i))).restart();
             }
         }
 
@@ -276,10 +303,10 @@ public:
             }
         }
 
-        //fnapprox.resize(0);
+        //muapprox.resize(0);
         //fxapprox.resize(0);
 
-        //fnapproxInd.resize(0);
+        //muapproxInd.resize(0);
         //fxapproxInd.resize(0);
 
         return;
@@ -328,6 +355,8 @@ public:
                       int &mInd,
                       Vector<int> &muInd,
                       Vector<int> &augxInd,
+                      Vector<int> &ceqInd,
+                      Vector<int> &cgtInd,
                       int &sigInd,
                       int &srcmodInd,
                       int &diffmodInd,
@@ -352,7 +381,7 @@ public:
                       Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
                       Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
     {
-        int res = GlobalOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
+        int res = GlobalOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,ceqInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
 
         return res;
     }
@@ -365,6 +394,8 @@ public:
                       int &mres,
                       Vector<int> &muInd,
                       Vector<int> &augxInd,
+                      Vector<int> &ceqInd,
+                      Vector<int> &cgtInd,
                       int &sigInd,
                       int &srcmodInd,
                       int &diffmodInd,
@@ -469,12 +500,22 @@ public:
         return model_muvar(resvar,dummy,x,xing);
     }
 
+    template <class S> int  model_mu_ceq   (                         Vector<gentype> &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr               ) const;
+    template <class S> int  model_muvar_ceq(Vector<gentype> &resvar, Vector<gentype> &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr, int debug = 0) const;
+    template <class S> int  model_mu_cgt   (                         Vector<gentype> &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr               ) const;
+    template <class S> int  model_muvar_cgt(Vector<gentype> &resvar, Vector<gentype> &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr, int debug = 0) const;
+
     template <class S> double inf_dist(const SparseVector<S> &xz) const;
 
     int model_muTrainingVector   (                 gentype        &resmu,           int imu) const;
     int model_muTrainingVector   (                 Vector<double> &resmu,           int imu) const;
     int model_muvarTrainingVector(gentype &resvar, gentype        &resmu, int ivar, int imu) const;
     int model_varTrainingVector  (gentype &resvar,                        int ivar         ) const;
+
+    int model_muTrainingVector_ceq   (                         Vector<gentype> &resmu, int i) const;
+    int model_muvarTrainingVector_ceq(Vector<gentype> &resvar, Vector<gentype> &resmu, int i) const;
+    int model_muTrainingVector_cgt   (                         Vector<gentype> &resmu, int i) const;
+    int model_muvarTrainingVector_cgt(Vector<gentype> &resvar, Vector<gentype> &resmu, int i) const;
 
     int model_N_mu   (int q = 0) const { return (*(muapprox(q))).N(); }
     int model_N_sigma(void)      const { return (*sigmaapprox).N();   }
@@ -493,6 +534,11 @@ public:
     int model_addTrainingVector_sigmaifsep    (const gentype &y,                       const SparseVector<gentype> &x,                                                                                                                                                                                               double varadd = 0              );
     int model_addTrainingVector_mu_sigmaifsame(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype = 2, double varadd = 0, int dval = 2);
 
+    int model_addTrainingVector_ceq(const Vector<gentype> &y, const SparseVector<gentype> &x,                                                                                                                                                                                               double varadd = 0              );
+    int model_addTrainingVector_ceq(const Vector<gentype> &y, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype = 2, double varadd = 0              );
+    int model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x,                                                                                                                                                                                               double varadd = 0              );
+    int model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype = 2, double varadd = 0              );
+
     double model_sigma(int q) const { return (*(muapprox(q))).sigma(); }
 
     const MercerKernel &model_getKernel(int q) const { return (*(muapprox(q))).getKernel(); }
@@ -504,9 +550,14 @@ public:
     int model_train      (int &res, svmvolatile int &killSwitch);
     int model_train_sigma(int &res, svmvolatile int &killSwitch);
 
-    int model_setd                 (int imu, int isigma, int    nd);
-    int model_setd_mu              (int imu, int                nd);
-    int model_setd_sigma           (         int isigma, int    nd);
+    int model_setd      (int imu, int isigma, int nd);
+    int model_setd_mu   (int imu, int             nd);
+    int model_setd_sigma(         int isigma, int nd);
+
+    int model_setyd      (int imu, int isigma, int nd, const gentype &ny, double varadd = 0);
+    int model_setyd_mu   (int imu, int             nd, const gentype &ny, double varadd = 0);
+    int model_setyd_sigma(         int isigma, int nd, const gentype &ny, double varadd = 0);
+
     int model_setsigmaweight_addvar(int imu, int isigma, double addvar);
 
     const Vector<double> &model_xcopy(Vector<double> &resx, int i) const;
@@ -528,17 +579,29 @@ public:
 
     // Simple default-model adjustments
 
-    int default_model_settspaceDim  (int                          nv) { return altfnapprox.settspaceDim(nv);   }
-    int default_model_setsigma      (double                       nv) { return altfnapprox.setsigma(nv);       }
-    int default_model_setvarApproxim(int                          nv) { return altfnapprox.setvarApproxim(nv); }
+    int default_model_settspaceDim  (int                          nv) { return altmuapprox.settspaceDim(nv);   }
+    int default_model_setsigma      (double                       nv) { return altmuapprox.setsigma(nv);       }
+    int default_model_setvarApproxim(int                          nv) { return altmuapprox.setvarApproxim(nv); }
     int default_model_setkernelg    (const gentype               &nv);
     int default_model_setkernelgg   (const SparseVector<gentype> &nv);
 
     int default_modelaugx_settspaceDim  (int                          nv) { return altfxapprox.settspaceDim(nv); }
     int default_modelaugx_setsigma      (double                       nv) { return altfxapprox.setsigma(nv);     }
-    int default_modelaugx_setvarApproxim(int                          nv) { return altfnapprox.setvarApproxim(nv); }
+    int default_modelaugx_setvarApproxim(int                          nv) { return altfxapprox.setvarApproxim(nv); }
     int default_modelaugx_setkernelg    (const gentype               &nv);
     int default_modelaugx_setkernelgg   (const SparseVector<gentype> &nv);
+
+    int default_modelceq_settspaceDim  (int                          nv) { return altceqapprox.settspaceDim(nv);   }
+    int default_modelceq_setsigma      (double                       nv) { return altceqapprox.setsigma(nv);       }
+    int default_modelceq_setvarApproxim(int                          nv) { return altceqapprox.setvarApproxim(nv); }
+    int default_modelceq_setkernelg    (const gentype               &nv);
+    int default_modelceq_setkernelgg   (const SparseVector<gentype> &nv);
+
+    int default_modelcgt_settspaceDim  (int                          nv) { return altcgtapprox.settspaceDim(nv);   }
+    int default_modelcgt_setsigma      (double                       nv) { return altcgtapprox.setsigma(nv);       }
+    int default_modelcgt_setvarApproxim(int                          nv) { return altcgtapprox.setvarApproxim(nv); }
+    int default_modelcgt_setkernelg    (const gentype               &nv);
+    int default_modelcgt_setkernelgg   (const SparseVector<gentype> &nv);
 
 //private:
 
@@ -547,12 +610,16 @@ public:
     // This version adds to augx if enabled, augments x if required, then adds to mu - use this one by default!
 
     int modelmu_int_addTrainingVector   (const gentype         &y,                       const SparseVector<gentype> &x, const SparseVector<gentype> &xx, int xobstype = 2, double varadd = 0, int dval = 2);
-    int modelsigma_int_addTrainingVector(const gentype         &y,                                                       const SparseVector<gentype> &xx, int xobstype = 2, double varadd = 0);
+    int modelsigma_int_addTrainingVector(const gentype         &y,                                                       const SparseVector<gentype> &xx, int xobstype = 2, double varadd = 0              );
+    int modelceq_int_addTrainingVector  (const Vector<gentype> &y,                       const SparseVector<gentype> &x, const SparseVector<gentype> &xx, int xobstype = 2, double varadd = 0, int dval = 2);
+    int modelcgt_int_addTrainingVector  (const Vector<gentype> &y,                       const SparseVector<gentype> &x, const SparseVector<gentype> &xx, int xobstype = 2, double varadd = 0, int dval = 2);
     int modeldiff_int_addTrainingVector (const gentype         &y, const gentype &ypred,                                 const SparseVector<gentype> &xx, int xobstype = 2, double varadd = 0, int dval = 2);
     int modelaugx_int_addTrainingVector (const Vector<gentype> &y,                       const SparseVector<gentype> &,                                                     double varadd = 0);
 
     int modelmu_int_train   (int &res, svmvolatile int &killSwitch);
     int modelsigma_int_train(int &res, svmvolatile int &killSwitch);
+    int modelceq_int_train  (int &res, svmvolatile int &killSwitch);
+    int modelcgt_int_train  (int &res, svmvolatile int &killSwitch);
     int modeldiff_int_train (int &res, svmvolatile int &killSwitch);
     int modelaugx_int_train (int &res, svmvolatile int &killSwitch);
 
@@ -622,9 +689,10 @@ public:
 
     // Models in use
 
-    Vector<ML_Base *> muapprox;
     ML_Base *sigmaapprox;
     Vector<ML_Base *> augxapprox;
+    Vector<ML_Base *> ceqapprox;
+    Vector<ML_Base *> cgtapprox;
 
     // Sampled mu approximation
 
@@ -657,10 +725,10 @@ public:
 
     // Models (moo == multi-objective), fx = model for q (see below), if used
 
-    Vector<ML_Base *> fnapprox;
+    Vector<ML_Base *> muapprox;
     Vector<ML_Base *> fxapprox;
 
-    Vector<int> fnapproxInd;
+    Vector<int> muapproxInd;
     Vector<int> fxapproxInd;
 };
 
@@ -1245,9 +1313,11 @@ int SMBOOptions::model_mu(gentype &resg, const SparseVector<S> &x, const vecInfo
         else
         {
 bailout:
-            xx.zeronotnu(0);
+            {
+                xx.zeronotnu(0);
 
-            xxx = &model_convertx(xx,x);
+                xxx = &model_convertx(xx,x);
+            }
         }
 
         (*xxx).makealtcontent();
@@ -1385,9 +1455,11 @@ int SMBOOptions::model_mu(Vector<double> &resg, const SparseVector<S> &x, const 
         else
         {
 bailout:
-            xx.zeronotnu(0);
+            {
+                xx.zeronotnu(0);
 
-            xxx = &model_convertx(xx,x);
+                xxx = &model_convertx(xx,x);
+            }
         }
 
         (*xxx).makealtcontent();
@@ -1880,6 +1952,246 @@ void SMBOOptions::model_stabProb(double &res, const SparseVector<S> &x, int p, d
 
     (*(muapprox(0))).stabProb(res,convnearuptonaive(tempx,model_convertx(xx,x)),p,pnrm,rot,mu,B);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+template <class S>
+int SMBOOptions::model_mu_ceq(Vector<gentype> &resmu, const SparseVector<S> &x, const vecInfo *xing) const
+{
+    (void) xing;
+
+    const SparseVector<gentype> *xxx = &xx;
+
+    xx.zeronotnu(0);
+
+    xxx = &model_convertx(xx,x);
+
+    (*xxx).makealtcontent();
+
+    int i,ires = 0;
+
+    resmu.resize(ceqapprox.size());
+
+    for ( i = 0 ; i < ceqapprox.size() ; ++i )
+    {
+        if ( ennornaive )
+        {
+            SparseVector<gentype> tempx;
+
+            ires += (*ceqapprox(i)).gg(resmu("&",i),convnearuptonaive(tempx,*xxx));
+        }
+
+        else
+        {
+            ires += (*ceqapprox(i)).gg(resmu("&",i),*xxx,nullptr,nullptr);
+        }
+    }
+
+    return ires;
+}
+
+template <class S>
+int SMBOOptions::model_muvar_ceq(Vector<gentype> &resv, Vector<gentype> &resmu, const SparseVector<S> &x, const vecInfo *xing, int debugit) const
+{
+    (void) xing;
+
+    int isvarnz = 0;
+
+    const SparseVector<gentype> *xxx = &xx;
+
+    if ( ismodelaug() )
+    {
+        xx.zeronotnu(0);
+        xxvar.zero();
+
+        xxx = &model_convertx(isvarnz,xxvar,xx,x,0,0,debugit);
+    }
+
+    else
+    {
+        xx.zeronotnu(0);
+
+        xxx = &model_convertx(xx,x);
+    }
+
+    int i,ires = 0;
+
+    (*xxx).makealtcontent();
+
+    resv.resize(ceqapprox.size());
+    resmu.resize(ceqapprox.size());
+
+    if ( isvarnz && !ismodelnaive() )
+    {
+        for ( i = 0 ; i < ceqapprox.size() ; ++i )
+        {
+            if ( ennornaive )
+            {
+                SparseVector<gentype> tempx,tempv;
+
+                ires += (*ceqapprox(i)).noisevar(resv("&",i),resmu("&",i),convnearuptonaive(tempx,*xxx),convnearuptonaive(xxvar,tempv),-1);
+            }
+
+            else
+            {
+                ires += (*ceqapprox(i)).noisevar(resv("&",i),resmu("&",i),*xxx,xxvar,02,nullptr,nullptr,nullptr);
+            }
+        }
+    }
+
+    else
+    {
+        for ( i = 0 ; i < ceqapprox.size() ; ++i )
+        {
+            if ( ennornaive )
+            {
+                SparseVector<gentype> tempx;
+
+                ires += (*ceqapprox(i)).var(resv("&",i),resmu("&",i),convnearuptonaive(tempx,*xxx));
+            }
+
+            else
+            {
+                ires += (*ceqapprox(i)).var(resv("&",i),resmu("&",i),*xxx,nullptr,nullptr,nullptr);
+            }
+        }
+    }
+
+    return ires;
+}
+
+
+
+
+
+
+
+
+
+template <class S>
+int SMBOOptions::model_mu_cgt(Vector<gentype> &resmu, const SparseVector<S> &x, const vecInfo *xing) const
+{
+    (void) xing;
+
+    const SparseVector<gentype> *xxx = &xx;
+
+    xx.zeronotnu(0);
+
+    xxx = &model_convertx(xx,x);
+
+    (*xxx).makealtcontent();
+
+    int i,ires = 0;
+
+    resmu.resize(cgtapprox.size());
+
+    for ( i = 0 ; i < cgtapprox.size() ; ++i )
+    {
+        if ( ennornaive )
+        {
+            SparseVector<gentype> tempx;
+
+            ires += (*cgtapprox(i)).gg(resmu("&",i),convnearuptonaive(tempx,*xxx));
+        }
+
+        else
+        {
+            ires += (*cgtapprox(i)).gg(resmu("&",i),*xxx,nullptr,nullptr);
+        }
+    }
+
+    return ires;
+}
+
+template <class S>
+int SMBOOptions::model_muvar_cgt(Vector<gentype> &resv, Vector<gentype> &resmu, const SparseVector<S> &x, const vecInfo *xing, int debugit) const
+{
+    (void) xing;
+
+    int isvarnz = 0;
+
+    const SparseVector<gentype> *xxx = &xx;
+
+    if ( ismodelaug() )
+    {
+        xx.zeronotnu(0);
+        xxvar.zero();
+
+        xxx = &model_convertx(isvarnz,xxvar,xx,x,0,0,debugit);
+    }
+
+    else
+    {
+        xx.zeronotnu(0);
+
+        xxx = &model_convertx(xx,x);
+    }
+
+    int i,ires = 0;
+
+    (*xxx).makealtcontent();
+
+    resv.resize(cgtapprox.size());
+    resmu.resize(cgtapprox.size());
+
+    if ( isvarnz && !ismodelnaive() )
+    {
+        for ( i = 0 ; i < cgtapprox.size() ; ++i )
+        {
+            if ( ennornaive )
+            {
+                SparseVector<gentype> tempx,tempv;
+
+                ires += (*cgtapprox(i)).noisevar(resv("&",i),resmu("&",i),convnearuptonaive(tempx,*xxx),convnearuptonaive(xxvar,tempv),-1);
+            }
+
+            else
+            {
+                ires += (*cgtapprox(i)).noisevar(resv("&",i),resmu("&",i),*xxx,xxvar,02,nullptr,nullptr,nullptr);
+            }
+        }
+    }
+
+    else
+    {
+        for ( i = 0 ; i < cgtapprox.size() ; ++i )
+        {
+            if ( ennornaive )
+            {
+                SparseVector<gentype> tempx;
+
+                ires += (*cgtapprox(i)).var(resv("&",i),resmu("&",i),convnearuptonaive(tempx,*xxx));
+            }
+
+            else
+            {
+                ires += (*cgtapprox(i)).var(resv("&",i),resmu("&",i),*xxx,nullptr,nullptr,nullptr);
+            }
+        }
+    }
+
+    return ires;
+}
+
+
+
+
+
+
+
+
+
 
 
 template <class S>

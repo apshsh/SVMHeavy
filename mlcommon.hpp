@@ -111,8 +111,8 @@
 #define DEFAULT_REONLY             1
 #define DEFAULT_C                  1.0
 #define DEFAULT_D                  1.0
-#define DEFAULT_SIGMA              0.1
-#define DEFAULT_SIGMA_CUT          0.1
+#define DEFAULT_SIGMA              1e-4
+#define DEFAULT_SIGMA_CUT          1e-4
 #define DEFAULT_MEMSIZE            -1
 #define DEFAULT_OPTTOL             0.001
 #define DEFAULT_TUNEV              1

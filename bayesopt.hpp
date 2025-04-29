@@ -27,7 +27,7 @@ int bayesOpt(int dim,
              gentype &fres,
              const Vector<double> &xmin,
              const Vector<double> &xmax,
-             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype),
+             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &yceq, Vector<gentype> &ycgt),
              void *fnarg,
              BayesOptions &bopts,
              svmvolatile int &killSwitch,
@@ -40,7 +40,7 @@ class BayesOptions : public SMBOOptions
              gentype &fres,
              const Vector<double> &xmin,
              const Vector<double> &xmax,
-             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype),
+             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &yceq, Vector<gentype> &ycgt),
              void *fnarg,
              BayesOptions &bopts,
              svmvolatile int &killSwitch,
@@ -85,7 +85,7 @@ public:
     //         1 = use separate MLs.
     // startpoints: number of random (uniformly distributed) seeds used to
     //         initialise the problem.  Note that you can also put points
-    //         into fnapprox before calling this funciton if you have
+    //         into muapprox before calling this funciton if you have
     //         existing results or want to follow a particular pattern.
     // startseed: seed for RNG immediately prior to generating startpoints
     //         -1 if not used, -2 to seed with time (if >= 0 incremented whenever seeding happens so that
@@ -146,10 +146,6 @@ public:
     //           on a finite set/grid then set this to point to the ML containing
     //           the valid x data.  The y value from this will be put in
     //           x[12] and the index in x[13].  NULL by default.
-    // gridcache:0 = nothing
-    //           1 = pre-emptivelly add all points in gridsource to model with
-    //               d = 0, then kernel is cached and to "add" a point you
-    //               just set d = 2.
     //
     // penalty: this is a vector of (positive valued) penalty functions.  When
     //           evaluating the acquisition function each of these will be
@@ -304,13 +300,12 @@ public:
     int intrinbatch;
     int intrinbatchmethod;
     int evaluse;
-    int sigmuseparate;
+    //int sigmuseparate;
     int startpoints;
     int startseed;         // this changes during optimisation setup to ensure no repeats unless specified
     int algseed;           // ...as does this
     int totiters;
     int itcntmethod;
-    int gridcache;
     double err;
     double minstdev;
     int humanfreq;
@@ -384,13 +379,12 @@ public:
         intrinbatch       = 1;
         intrinbatchmethod = 0;
         evaluse           = 0;
-        sigmuseparate     = 0;
+        //sigmuseparate     = 0;
         startpoints       = -1; //5; //500; //10;
         startseed         = 42;
         algseed           = 69;
         totiters          = -1; //100; //200; //500;
         itcntmethod       = 0;
-        gridcache         = 1;
         err               = 1e-1;
         minstdev          = 0;
         humanfreq         = 0;
@@ -460,13 +454,12 @@ public:
         intrinbatch       = src.intrinbatch;
         intrinbatchmethod = src.intrinbatchmethod;
         evaluse           = src.evaluse;
-        sigmuseparate     = src.sigmuseparate;
+        //sigmuseparate     = src.sigmuseparate;
         startpoints       = src.startpoints;
         startseed         = src.startseed;
         algseed           = src.algseed;
         totiters          = src.totiters;
         itcntmethod       = src.itcntmethod;
-        gridcache         = src.gridcache;
         err               = src.err;
         minstdev          = src.minstdev;
         numfids           = src.numfids;
@@ -647,6 +640,8 @@ public:
                       int &mInd,
                       Vector<int> &muInd,
                       Vector<int> &augxInd,
+                      Vector<int> &ceqInd,
+                      Vector<int> &cgtInd,
                       int &sigInd,
                       int &srcmodInd,
                       int &diffmodInd,
@@ -671,7 +666,7 @@ public:
                       Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
                       Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
     {
-        int res = SMBOOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
+        int res = SMBOOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,ceqInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
 
         return res;
     }

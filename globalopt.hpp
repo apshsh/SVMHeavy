@@ -396,6 +396,8 @@ public:
     // mInd: for functional optimisation, this returns the (registered) index of the ML model found
     // muInd: index of mu model approximation (if any)
     // augxInd: index of augx model approximation (if any)
+    // ceqInd: index of equality constraint approximation (if any)
+    // cgtInd: index of inequality constraint approximation (if any)
     // sigInd: index of sigma model approximation (if any)
     // srcmodInd: index of source model (if used, see diff-GP and env-GP)
     // diffmodInd: index of diff model (if used, see diff-GP)
@@ -540,6 +542,8 @@ public:
                       int &mInd,
                       Vector<int> &muInd,
                       Vector<int> &augxInd,
+                      Vector<int> &ceqInd,
+                      Vector<int> &cgtInd,
                       int &sigInd,
                       int &srcmodInd,
                       int &diffmodInd,
@@ -572,6 +576,8 @@ public:
                       int &mInd,
                       Vector<int> &muInd,
                       Vector<int> &augxInd,
+                      Vector<int> &ceqInd,
+                      Vector<int> &cgtInd,
                       int &sigInd,
                       int &srcmodInd,
                       int &diffmodInd,
@@ -1389,8 +1395,8 @@ private:
     //            2  = subDef (in makeSubspace)
     //            3  = projOp (in makeSubspace)
     //            4  = projOpNow (in convertx)
-    //            5  = fnapprox (copy of altfnapprox in smboopt constructor)
-    //            6  = fnapprox (copy of altfnapproxmoo in smboopt constructor)
+    //            5  = muapprox (copy of altfnapprox in smboopt constructor)
+    //            6  = muapprox (copy of altfnapproxmoo in smboopt constructor)
     //            7  = sigmaapprox (in smboopt constructor)
     //            8  = subDef (in makeSubspace)
     //            9  = projOp (in makeSubspace)

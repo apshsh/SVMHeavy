@@ -1514,62 +1514,62 @@ d_anion pow(const std::complex<double> &a, const d_anion &b)
 
 d_anion powl(const std::complex<double> &a, const d_anion &b)
 {
-    return powl(a,b,1_anion);
+    return powl(a,b,1_ianion);
 }
 
 d_anion powr(const std::complex<double> &a, const d_anion &b)
 {
-    return powr(a,b,1_anion);
+    return powr(a,b,1_ianion);
 }
 
 d_anion pow(const d_anion &a, long b)
 {
-    return pow(a,b,1_anion);
+    return pow(a,b,1_ianion);
 }
 
 d_anion pow(const d_anion &a, double b)
 {
-    return pow(a,b,1_anion);
+    return pow(a,b,1_ianion);
 }
 
 d_anion pow(const d_anion &a, const std::complex<double> &b)
 {
-    return pow(a,b,1_anion);
+    return pow(a,b,1_ianion);
 }
 
 d_anion powl(const d_anion &a, const std::complex<double> &b)
 {
-    return powl(a,b,1_anion);
+    return powl(a,b,1_ianion);
 }
 
 d_anion powr(const d_anion &a, const std::complex<double> &b)
 {
-    return powr(a,b,1_anion);
+    return powr(a,b,1_ianion);
 }
 
 d_anion pow(const d_anion &a, const d_anion &b)
 {
-    return pow(a,b,1_anion);
+    return pow(a,b,1_ianion);
 }
 
 d_anion powl(const d_anion &a, const d_anion &b)
 {
-    return powl(a,b,1_anion);
+    return powl(a,b,1_ianion);
 }
 
 d_anion powr(const d_anion &a, const d_anion &b)
 {
-    return powr(a,b,1_anion);
+    return powr(a,b,1_ianion);
 }
 
 d_anion sqrt(const d_anion &a)
 {
-    return sqrt(a,1_anion);
+    return sqrt(a,1_ianion);
 }
 
 d_anion cbrt(const d_anion &a)
 {
-    return cbrt(a,1_anion);
+    return cbrt(a,1_ianion);
 }
 
 
@@ -1854,77 +1854,77 @@ d_anion Logbr(const d_anion &a, const d_anion &b)
 
 d_anion log(const d_anion &a)
 {
-    return log(a,1_anion);
+    return log(a,1_ianion);
 }
 
 d_anion log10(const d_anion &a)
 {
-    return log10(a,1_anion);
+    return log10(a,1_ianion);
 }
 
 d_anion logb(long a, const d_anion &b)
 {
-    return logb(a,b,1_anion);
+    return logb(a,b,1_ianion);
 }
 
 d_anion logb(double a, const d_anion &b)
 {
-    return logb(a,b,1_anion);
+    return logb(a,b,1_ianion);
 }
 
 d_anion logb(const std::complex<double> &a, const d_anion &b)
 {
-    return logb(a,b,1_anion);
+    return logb(a,b,1_ianion);
 }
 
 d_anion logbl(const std::complex<double> &a, const d_anion &b)
 {
-    return logbl(a,b,1_anion);
+    return logbl(a,b,1_ianion);
 }
 
 d_anion logbr(const std::complex<double> &a, const d_anion &b)
 {
-    return logbr(a,b,1_anion);
+    return logbr(a,b,1_ianion);
 }
 
 d_anion logb(const d_anion &a, long b)
 {
-    return logb(a,b,1_anion);
+    return logb(a,b,1_ianion);
 }
 
 d_anion logb(const d_anion &a, double b)
 {
-    return logb(a,b,1_anion);
+    return logb(a,b,1_ianion);
 }
 
 d_anion logb(const d_anion &a, const std::complex<double> &b)
 {
-    return logb(a,b,1_anion);
+    return logb(a,b,1_ianion);
 }
 
 d_anion logbl(const d_anion &a, const std::complex<double>&b)
 {
-    return logbl(a,b,1_anion);
+    return logbl(a,b,1_ianion);
 }
 
 d_anion logbr(const d_anion &a, const std::complex<double> &b)
 {
-    return logbr(a,b,1_anion);
+    return logbr(a,b,1_ianion);
 }
 
 d_anion logb(const d_anion &a, const d_anion &b)
 {
-    return logb(a,b,1_anion);
+    return logb(a,b,1_ianion);
 }
 
 d_anion logbl(const d_anion &a, const d_anion &b)
 {
-    return logbl(a,b,1_anion);
+    return logbl(a,b,1_ianion);
 }
 
 d_anion logbr(const d_anion &a, const d_anion &b)
 {
-    return logbr(a,b,1_anion);
+    return logbr(a,b,1_ianion);
 }
 
 
@@ -2566,47 +2566,47 @@ d_anion Aexsec(const d_anion &a)
 
 d_anion asin(const d_anion &a)
 {
-    return asin(a,1_anion);
+    return asin(a,1_ianion);
 }
 
 d_anion acos(const d_anion &a)
 {
-    return acos(a,1_anion);
+    return acos(a,1_ianion);
 }
 
 d_anion acosec(const d_anion &a)
 {
-    return acosec(a,1_anion);
+    return acosec(a,1_ianion);
 }
 
 d_anion asec(const d_anion &a)
 {
-    return asec(a,1_anion);
+    return asec(a,1_ianion);
 }
 
 d_anion avers(const d_anion &a)
 {
-    return avers(a,1_anion);
+    return avers(a,1_ianion);
 }
 
 d_anion acovers(const d_anion &a)
 {
-    return acovers(a,1_anion);
+    return acovers(a,1_ianion);
 }
 
 d_anion ahav(const d_anion &a)
 {
-    return ahav(a,1_anion);
+    return ahav(a,1_ianion);
 }
 
 d_anion aexcosec(const d_anion &a)
 {
-    return aexcosec(a,1_anion);
+    return aexcosec(a,1_ianion);
 }
 
 d_anion aexsec(const d_anion &a)
 {
-    return aexsec(a,1_anion);
+    return aexsec(a,1_ianion);
 }
 
 
@@ -2887,37 +2887,37 @@ d_anion Aexsech(const d_anion &a)
 
 d_anion acosh(const d_anion &a)
 {
-    return acosh(a,1_anion);
+    return acosh(a,1_ianion);
 }
 
 d_anion atanh(const d_anion &a)
 {
-    return atanh(a,1_anion);
+    return atanh(a,1_ianion);
 }
 
 d_anion asech(const d_anion &a)
 {
-    return asech(a,1_anion);
+    return asech(a,1_ianion);
 }
 
 d_anion acoth(const d_anion &a)
 {
-    return acoth(a,1_anion);
+    return acoth(a,1_ianion);
 }
 
 d_anion aversh(const d_anion &a)
 {
-    return aversh(a,1_anion);
+    return aversh(a,1_ianion);
 }
 
 d_anion ahavh(const d_anion &a)
 {
-    return ahavh(a,1_anion);
+    return ahavh(a,1_ianion);
 }
 
 d_anion aexsech(const d_anion &a)
 {
-    return aexsech(a,1_anion);
+    return aexsech(a,1_ianion);
 }
 
 
@@ -2956,12 +2956,12 @@ d_anion Agd(const d_anion &a)
 
 d_anion asigm(const d_anion &a)
 {
-    return asigm(a,1_anion);
+    return asigm(a,1_ianion);
 }
 
 d_anion agd(const d_anion &a)
 {
-    return agd(a,1_anion);
+    return agd(a,1_ianion);
 }
 
 

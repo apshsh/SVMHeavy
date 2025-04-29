@@ -1,5 +1,7 @@
+
+//FIXME: 1.33c is supposed to be nominally constant in gentype, which should then pass back and prevent tuneKernel from tuning this term.
+//       gentype can parse the c, but it currently isn't stored. Finish this.
 //FIXME: should be using fewer decimal places when reporting in globalopt, smboopt and bayesopt (ie logging to cout at human readable accuracy)
-//FIXME: fix the 2-d (surf) plot.  Why doesn't it work?
 
 //in sparsevector.hpp:
 //sv/set should work in the sparse case as well (altcontentsp)
@@ -8151,7 +8153,7 @@ int runsvmint(int threadInd,
                     else if ( currcommand(0) == "-gmt"   ) { (*xbopts).modeltype     = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmrff" ) { (*xbopts).modelrff      = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmq"   ) { (*xbopts).oracleMode    = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmw"   ) { ((*xbopts).extfnapprox).resize(1)   = &(getMLref(svmThreadOwner,svmbase,threadInd,( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) ),svmContext)); }
+                    else if ( currcommand(0) == "-gmw"   ) { ((*xbopts).extmuapprox).resize(1)   = &(getMLref(svmThreadOwner,svmbase,threadInd,( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) ),svmContext)); }
                     else if ( currcommand(0) == "-gmo"   ) { (*xbopts).ismoo         = 1; }
                     else if ( currcommand(0) == "-gms"   ) { (*xbopts).ismoo         = 0; }
                     else if ( currcommand(0) == "-gmr"   ) { (*xbopts).makenoise     = 1; }
@@ -8207,7 +8209,7 @@ int runsvmint(int threadInd,
                         std::string currcommandis = "-" + ((currcommand(0)).substr(4));
 
                         {
-                            ML_Base &kernML = (*xbopts).altfnapprox;
+                            ML_Base &kernML = (*xbopts).altmuapprox;
                             MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
                             processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gekkernnum,gekfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
@@ -8216,7 +8218,7 @@ int runsvmint(int threadInd,
                         }
 
                         {
-                            ML_Base &kernML = (*xbopts).altfnapprox_rff;
+                            ML_Base &kernML = (*xbopts).altmuapprox_rff;
                             MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
                             processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gekkernnum_rff,gekfirstcall_rff,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
@@ -8232,7 +8234,7 @@ int runsvmint(int threadInd,
                         std::string currcommandis = "-" + ((currcommand(0)).substr(4));
 
                         {
-                            ML_Base &kernML = (*xbopts).altfnapprox;
+                            ML_Base &kernML = (*xbopts).altmuapprox;
                             MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
                             processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,grkkernnum,grkfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
@@ -8241,7 +8243,7 @@ int runsvmint(int threadInd,
                         }
 
                         {
-                            ML_Base &kernML = (*xbopts).altfnapprox_rff;
+                            ML_Base &kernML = (*xbopts).altmuapprox_rff;
                             MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
                             processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,grkkernnum_rff,grkfirstcall_rff,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
@@ -8255,7 +8257,7 @@ int runsvmint(int threadInd,
                         std::string currcommandis = "-" + ((currcommand(0)).substr(3));
 
                         {
-                            ML_Base &kernML = (*xbopts).altfnapprox;
+                            ML_Base &kernML = (*xbopts).altmuapprox;
                             MercerKernel &theKern = kernML.getKernel_unsafe();
 
                             processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gkkernnum,gkfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
@@ -8264,7 +8266,7 @@ int runsvmint(int threadInd,
                         }
 
                         {
-                            ML_Base &kernML = (*xbopts).altfnapprox_rff;
+                            ML_Base &kernML = (*xbopts).altmuapprox_rff;
                             MercerKernel &theKern = kernML.getKernel_unsafe();
 
                             processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gkkernnum_rff,gkfirstcall_rff,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
@@ -8578,6 +8580,8 @@ errstream() << "phantomxyznlp " << theKern << "\n";
                                 int mInd = 0;
                                 Vector<int> muInd;
                                 Vector<int> augxInd;
+                                Vector<int> ceqInd;
+                                Vector<int> cgtInd;
                                 int sigInd = 0;
                                 int srcmodInd = 0;
                                 int diffmodInd = 0;
@@ -8651,13 +8655,15 @@ errstream() << "phantomxyznlp " << theKern << "\n";
 
 
 //NB: if you change this you'll also need to change it in globalopt.h!
-                                Vector<int> MLnumbers(7); // 0 = ML model (mu), -1 if none
+                                Vector<int> MLnumbers(9); // 0 = ML model (mu), -1 if none
                                                           // 1 = ML model (sigma), -1 if none or same as mu
                                                           // 2 = functional analysis model, -1 if not relevant
                                                           // 3 = random direction model (GPR or distribution)
                                                           // 4 = source model (env-GP,diff-GP)
                                                           // 5 = difference model (diff-GP)
                                                           // 6 = augx model, -1 if not defined
+                                                          // 7 = ceq model, -1 if not defined
+                                                          // 8 = cgt model, -1 if not defined
 
                                 MLnumbers("&",0) = bayesModelNum;
                                 MLnumbers("&",1) = -1;
@@ -8666,6 +8672,8 @@ errstream() << "phantomxyznlp " << theKern << "\n";
                                 MLnumbers("&",4) = -1;
                                 MLnumbers("&",5) = -1;
                                 MLnumbers("&",6) = -1;
+                                MLnumbers("&",7) = -1;
+                                MLnumbers("&",8) = -1;
 
                                 void *fnarg[21];
 
@@ -8707,6 +8715,8 @@ errstream() << "phantomxyznlp " << theKern << "\n";
                                                           mInd,
                                                           muInd,
                                                           augxInd,
+                                                          ceqInd,
+                                                          cgtInd,
                                                           sigInd,
                                                           srcmodInd,
                                                           diffmodInd,
@@ -8927,6 +8937,8 @@ errstream() << "phantomxyznlp " << theKern << "\n";
                                         //gridargvars("&",90)("&",7)         = raw iteration count not relevant here!
                                         //gridargvars("&",90)("&",8)         = raw start time not relevant here!
                                         gridargvars("&",90)("&",9)         = augxInd;
+                                        gridargvars("&",90)("&",10)        = ceqInd;
+                                        gridargvars("&",90)("&",11)        = cgtInd;
 
 //phantomxyzxyz
                                         int locverblevel = verblevel;
@@ -11452,16 +11464,18 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
     // MLnumbers is a curious case.  It is *shared* with the optimiser, so these variables
     // can (are) used to pass arguments back to the grid run!
 
-    gridargvars("&",90)("&",0) = MLnumbers(0);
-    gridargvars("&",90)("&",1) = MLnumbers(1);
-    gridargvars("&",90)("&",2) = MLnumbers(2);
-    gridargvars("&",90)("&",3) = MLnumbers(3);
-    gridargvars("&",90)("&",4) = ( itnum >= 0 ) ? itnum : itnumalt;
-    gridargvars("&",90)("&",5) = MLnumbers(4);
-    gridargvars("&",90)("&",6) = MLnumbers(5);
-    gridargvars("&",90)("&",7) = ++rawitcnt;
-    gridargvars("&",90)("&",8) = rawstarttime;
-    gridargvars("&",90)("&",9) = MLnumbers(6);
+    gridargvars("&",90)("&",0)  = MLnumbers(0);
+    gridargvars("&",90)("&",1)  = MLnumbers(1);
+    gridargvars("&",90)("&",2)  = MLnumbers(2);
+    gridargvars("&",90)("&",3)  = MLnumbers(3);
+    gridargvars("&",90)("&",4)  = ( itnum >= 0 ) ? itnum : itnumalt;
+    gridargvars("&",90)("&",5)  = MLnumbers(4);
+    gridargvars("&",90)("&",6)  = MLnumbers(5);
+    gridargvars("&",90)("&",7)  = ++rawitcnt;
+    gridargvars("&",90)("&",8)  = rawstarttime;
+    gridargvars("&",90)("&",9)  = MLnumbers(6);
+    gridargvars("&",90)("&",10) = MLnumbers(7);
+    gridargvars("&",90)("&",11) = MLnumbers(8);
 
     if ( x.size() )
     {
@@ -12401,7 +12415,7 @@ void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &cu
          ( currcommandis == "-kw"  ) || ( currcommandis == "-kt"  ) || ( currcommandis == "-kan"  ) ||
          ( currcommandis == "-kg"  ) || ( currcommandis == "-kr"  ) || ( currcommandis == "-kd"   ) ||
          ( currcommandis == "-kG"  ) || ( currcommandis == "-kf"  ) || ( currcommandis == "-kv"   ) ||
-         ( currcommandis == "-kV"  ) || ( currcommandis == "-kgg" ) || ( currcommandis == "-kx"   )     )
+         ( currcommandis == "-kV"  ) || ( currcommandis == "-kgg" ) || ( currcommandis == "-kx"   )    )
     {
         if ( ktype == 0 )
         {
@@ -12443,7 +12457,7 @@ void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &cu
                         else if ( currcommandis == "-km"   ) { theKern.setMagTerm(kernnum); }
                         else if ( currcommandis == "-kum"  ) { theKern.setUnMagTerm(kernnum); }
                         else if ( currcommandis == "-kU"   ) { theKern.setUnIndex(); }
-                        else if ( currcommandis == "-kw"   ) { gentype tmpg; theKern.setWeight(safeatowhatever(tmpg,currcommand(1),argvariables),kernnum); }
+                        else if ( currcommandis == "-kw"   ) { gentype tmpg; safeatowhatever(tmpg,currcommand(1),argvariables); theKern.setWeight(tmpg,kernnum); }
                         else if ( currcommandis == "-kt"   ) { theKern.setType(safeatoi(currcommand(1),argvariables),kernnum); }
                         else if ( currcommandis == "-mtb"  ) { theKern.setsuggestXYcache(1); }
                         else if ( currcommandis == "-bmx"  ) { theKern.setsuggestXYcache(0); }
@@ -13589,6 +13603,7 @@ void testRKHSnorm(std::string &logfile, const ML_Mutable &svmbase, int &firstsum
 
 int pyorexeeval(int isscalar, int isvector, int ispy, const std::string &evalname, const gentype &sf, const Vector<gentype> &v, gentype &finalresult)
 {
+(void) isvector;
     NiceAssert( !isscalar || !isvector );
 
     //if ( ( ispy == 2 ) || ( ispy == 3 ) )
@@ -13619,7 +13634,7 @@ int pyorexeeval(int isscalar, int isvector, int ispy, const std::string &evalnam
         {
             // ; is treated as a "special" character and messes up python!
 
-            for ( int i = 0 ; i < evalstr.size() ; i++ )
+            for ( int i = 0 ; i < (int) evalstr.size() ; i++ )
             {
                 if ( evalstr[i] == ';' )
                 {
@@ -15862,7 +15877,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "         -kG  x          - kernel param i0  = x   (default 1).                \n" : "" );
     output << ( ( basic || advanced ) ? "         -kV  i x        - kernel param ii  = x   (default 0).                \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -kI  v          - set kernels  indexing using  given index  vector v,\n" : "" );
     output << ( (          advanced ) ? "                           where  the  argument  is a  vector of  non-negative\n" : "" );
     output << ( (          advanced ) ? "                           integers   (eg [ 0 4 5 ])   in   increasing   order\n" : "" );
@@ -16197,6 +16211,10 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -tkloo m        - Like -tkL, but minimises leave-one-out error.      \n" : "" );
     output << ( (          advanced ) ? "         -tkrec m        - Like -tkL, but minimises recall error.             \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                           NB: if you don't want a particular parameter tuned,\n" : "" );
+    output << ( (          advanced ) ? "                               use eg  -kd 1.2c. The  c here  makes the  value\n" : "" );
+    output << ( (          advanced ) ? "                               nominally consant, so it will be left alone.   \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -tcL   m        - Like -tkL but for C praameter.                     \n" : "" );
     output << ( (          advanced ) ? "         -tcloo m        - Like -tkloo but for C parameter.                   \n" : "" );
     output << ( (          advanced ) ? "         -tcrec m        - Like -tkrec but for C parameter.                   \n" : "" );
@@ -16433,6 +16451,8 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                              - var(90,8): raw start  time (seconds,  with ref\n" : "" );
     output << ( (          advanced ) ? "                                           to some arbitrary point in time.   \n" : "" );
     output << ( (          advanced ) ? "                              - var(90,9): x augmentation model (if used).    \n" : "" );
+    output << ( (          advanced ) ? "                              - var(90,10): equality constraint model (\").    \n" : "" );
+    output << ( (          advanced ) ? "                              - var(90,11): inequality constraint model (\").  \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                              Note  that   changes  here  affect   the  *next*\n" : "" );
     output << ( (          advanced ) ? "                              projection step 3, not the current one.         \n" : "" );
@@ -16456,24 +16476,28 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           - non-trivial results are  returned for model based\n" : "" );
     output << ( (          advanced ) ? "                             methods in the following format:                 \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                 { y v [ xx1 xx2 ... xxn ] xf [ xf1 xf2 ... xfn ] xff xf3 t } \n" : "" );
+    output << ( (          advanced ) ? "             { y v [ce1..cen] [cg1..cgn] [xx1..xxn] xf [xf1..xfn] xff xf3 t } \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                             where:                                           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                             + y is the usual result.                         \n" : "" );
     output << ( (          advanced ) ? "                             + v is the variance of the measurement noise.    \n" : "" );
-    output << ( (          advanced ) ? "                             + [ xx1 xx2 ... xxn ]  is side-channel  data (see\n" : "" );
-    output << ( (          advanced ) ? "                               -gmsc etc for information (use [ ] for dflt).  \n" : "" );
+    output << ( (          advanced ) ? "                             + [ ce1 .. cen ] for  equality constraints  (want\n" : "" );
+    output << ( (          advanced ) ? "                               cei(x) = 0 for i=1,2,...,n).                   \n" : "" );
+    output << ( (          advanced ) ? "                             + [ cg1 .. cgn ] for inequality constraints (want\n" : "" );
+    output << ( (          advanced ) ? "                               cgi(x) > 0 for i=1,2,...,n).                   \n" : "" );
+    output << ( (          advanced ) ? "                             + [ xx1 ... xxn ] is side-channel data (see -gmsc\n" : "" );
+    output << ( (          advanced ) ? "                               etc for information.                           \n" : "" );
     output << ( (          advanced ) ? "                             + xf is for  rank observations  (that is,  rather\n" : "" );
     output << ( (          advanced ) ? "                               than  an  observation   g(x) = y,  this  is  an\n" : "" );
-    output << ( (          advanced ) ? "                               observation g(x) - g(xf) = y ([ ] for deflt).  \n" : "" );
-    output << ( (          advanced ) ? "                             + [ xf1 xf2 ... xfn ] is side-channel data on xf.\n" : "" );
-    output << ( (          advanced ) ? "                               (use [ ] for default).                         \n" : "" );
-    output << ( (          advanced ) ? "                             + xff is for gradient observations ([ ] is dflt).\n" : "" );
-    output << ( (          advanced ) ? "                             + xf3 is for augmented observations (\" dflt).   \n" : "" );
+    output << ( (          advanced ) ? "                               observation g(x) - g(xf) = y.                  \n" : "" );
+    output << ( (          advanced ) ? "                             + [ xf1 ... xfn ] is side-channel data on xf.    \n" : "" );
+    output << ( (          advanced ) ? "                             + xff is for gradient observations.              \n" : "" );
+    output << ( (          advanced ) ? "                             + xf3 is for augmented observations.             \n" : "" );
     output << ( (          advanced ) ? "                             + t observation type (0 n/a, +1 >=, -1 <=, 2 ==).\n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                             Not all additional data is required.             \n" : "" );
+    output << ( (          advanced ) ? "                             Not all additional data is required. Use null for\n" : "" );
+    output << ( (          advanced ) ? "                             default operation ( or [ ] for vectors).         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                           - be wary  of using  -fo, -foe, -AAi...  and -tI...\n" : "" );
     output << ( (          advanced ) ? "                             here as they will  not work as  expected (vectors\n" : "" );
@@ -17096,7 +17120,14 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gbG n          - do  grid-search,  where ML n  defines grid  data in\n" : "" );
     output << ( (          advanced ) ? "                           terms of x (dimensions  must agree  with definition\n" : "" );
-    output << ( (          advanced ) ? "                           in -gb) and y (must be real).                      \n" : "" );
+    output << ( (          advanced ) ? "                           in -gb). If y is NULL then it is ignored: otherwise\n" : "" );
+    output << ( (          advanced ) ? "                           it will  be treated  as a  prior  observation.  The\n" : "" );
+    output << ( (          advanced ) ? "                           y values in source will be filled by BO.           \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                           NB: if all data in  the ML has non-null  y then all\n" : "" );
+    output << ( (          advanced ) ? "                               data will be treated as  prior observations and\n" : "" );
+    output << ( (          advanced ) ? "                               the  BO  will  revert  to  standard  (non-grid)\n" : "" );
+    output << ( (          advanced ) ? "                               operation.                                     \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gbD d          - delta factor used in GP-UCB method (default 0.1).  \n" : "" );
     output << ( (          advanced ) ? "         -gbzz zeta      - zeta factor in EI method (deflt 0.  0.01 works ok).\n" : "" );

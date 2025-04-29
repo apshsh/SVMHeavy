@@ -3199,6 +3199,7 @@ private:
     gentype dShiftProdRevConj;
 
     mutable retVector<gentype> cRealConstantsTmp;
+    mutable retVector<int> cRealConstantsTmpb;
 
     Vector<int> linGradOrd;
     Vector<Matrix<double> > linGradScal;

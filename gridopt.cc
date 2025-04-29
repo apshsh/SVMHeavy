@@ -303,6 +303,8 @@ int GridOptions::optim(int dim,
         int submres = 0;
         Vector<int> submuInd;
         Vector<int> subaugxInd;
+        Vector<int> subceqInd;
+        Vector<int> subcgtInd;
         int subsigInd = 0;
         int subsrcmodInd = 0;
         int subdiffmodInd = 0;
@@ -358,7 +360,7 @@ int GridOptions::optim(int dim,
         Vector<gentype> dummymeanallfres, dummyvarallfres;
         Vector<gentype> dummymeanallmres, dummyvarallmres;
 
-        res |= locgopts.optim(dim,subxignore,subxres,subfres,subires,submres,submuInd,subaugxInd,subsigInd,subsrcmodInd,subdiffmodInd,suballxignore,suballxres,suballfres,suballfresmod,suballsupres,subsscore,
+        res |= locgopts.optim(dim,subxignore,subxres,subfres,subires,submres,submuInd,subaugxInd,subceqInd,subcgtInd,subsigInd,subsrcmodInd,subdiffmodInd,suballxignore,suballxres,suballfres,suballfresmod,suballsupres,subsscore,
                               subxmin,subxmax,subdistMode,subvarsType,fn,fnarg,killSwitch,1,
                               dummymeanfres,dummyvarfres,dummymeanires,dummyvarires,dummymeantres,dummyvartres,dummymeanTres,dummyvarTres,dummymeanallfres,dummyvarallfres,dummymeanallmres,dummyvarallmres);
 
@@ -372,6 +374,8 @@ int GridOptions::optim(int dim,
 //            mres   = submres;
 //            muInd  = submuInd;
 //            augxInd  = subaugxInd;
+//            ceqInd   = subceqInd;
+//            cgtInd   = subcgtInd;
 //            sigInd = subsigInd;
 //            srcmodInd = subsrcmodInd;
 //            diffmodInd = subdiffmodInd;

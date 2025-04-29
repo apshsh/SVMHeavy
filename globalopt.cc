@@ -19,6 +19,8 @@ int GlobalOptions::optim(int dim,
                       int &mInd,
                       Vector<int> &muInd,
                       Vector<int> &augxInd,
+                      Vector<int> &ceqInd,
+                      Vector<int> &cgtInd,
                       int &sigInd,
                       int &srcmodInd,
                       int &diffmodInd,
@@ -56,7 +58,7 @@ int GlobalOptions::optim(int dim,
 
             gentype nullval('N');
 
-            res = realOptim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+            res = realOptim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,ceqInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
 
             // Sort allmres to be strictly decreasing!
 
@@ -104,8 +106,8 @@ int GlobalOptions::optim(int dim,
                 allsres.resize(0);
                 s_score.resize(0);
 
-                //res += (*locopt).realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,muInd,augxInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,vecallfres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
-                res += realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,muInd,augxInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,vecallfres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+                //res += (*locopt).realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,muInd,augxInd,ceqInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,vecallfres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+                res += realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,muInd,augxInd,ceqInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,vecallfres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
 
                 if ( j == numReps-1 )
                 {
@@ -171,6 +173,8 @@ int GlobalOptions::realOptim(int dim,
                       int &mInd,
                       Vector<int> &muInd,
                       Vector<int> &augxInd,
+                      Vector<int> &ceqInd,
+                      Vector<int> &cgtInd,
                       int &sigInd,
                       int &srcmodInd,
                       int &diffmodInd,
@@ -190,6 +194,8 @@ int GlobalOptions::realOptim(int dim,
     {
         (void) muInd;
         (void) augxInd;
+        (void) ceqInd;
+        (void) cgtInd;
         (void) sigInd;
         (void) srcmodInd;
         (void) diffmodInd;
@@ -250,9 +256,9 @@ int GlobalOptions::realOptim(int dim,
 
         // These need to be passed back
 
-        Vector<int> dummyMLnumbers(7);
+        Vector<int> dummyMLnumbers(9);
         Vector<int> &MLnumbers = MLdefined ? (*((Vector<int> *) ((void **) fnarg)[15])) : dummyMLnumbers;
-        Vector<int> locMLnumbers(7); // See mlinter definition of MLnumbers
+        Vector<int> locMLnumbers(9); // See mlinter definition of MLnumbers
 
         locMLnumbers = -1;
 

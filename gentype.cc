@@ -248,7 +248,7 @@ inline eqninfoblock &postProInnerProd(eqninfoblock &a) { return a; }
 
 
 int pairBrackets(int start, int &end, const std::string &src, int LRorRL);
-int processNumLtoR(int start, int &end, const std::string &src);
+int processNumLtoR(int start, int &end, const std::string &src, bool &isconst);
 int processExprLtoR(int start, int &end, int &isitastring, const std::string &src, std::string &exprname, Vector<int> &commapos);
 std::ostream &operator<<(std::ostream &output, const eqninfoblock &src );
 void qswap(eqninfoblock &a, eqninfoblock &b);
@@ -603,13 +603,13 @@ std::ostream &operator<<(std::ostream &output, const gentype &src )
 
     //else if ( src.isValVector()  ) { output         << src.cast_vector(0); }
 
-         if ( src.isValNull()    ) { output         << "null";             }
-    else if ( src.isValInteger() ) { output         << src.cast_int(0);    }
-    else if ( src.isValAnion()   ) { output         << src.cast_anion(0);  }
+         if ( src.isValNull()    ) { output         << "null";                }
+    else if ( src.isValInteger() ) { output         << src.cast_int(0);   if ( src.isNomConst ) { output << "c"; } }
+    else if ( src.isValAnion()   ) { output         << src.cast_anion(0);     }
     else if ( src.isValVector()  ) { printoneline(output,src.cast_vector(0)); }
-    else if ( src.isValMatrix()  ) { output << "M:" << src.cast_matrix(0); }
-    else if ( src.isValSet()     ) { output         << src.cast_set(0);    }
-    else if ( src.isValDgraph()  ) { output << "G:" << src.cast_dgraph(0); }
+    else if ( src.isValMatrix()  ) { output << "M:" << src.cast_matrix(0);    }
+    else if ( src.isValSet()     ) { output         << src.cast_set(0);       }
+    else if ( src.isValDgraph()  ) { output << "G:" << src.cast_dgraph(0);    }
 
     else if ( src.isValReal() )
     {
@@ -638,6 +638,8 @@ std::ostream &operator<<(std::ostream &output, const gentype &src )
             // . is present in the printed result.
 
             streamItOut(output,srcdval,1);
+
+            if ( src.isNomConst ) { output << "c"; }
 
 //            char tempres[100];
 //            sprintf(tempres,"%.17g",srcdval);
@@ -734,6 +736,8 @@ std::istream &streamItIn(std::istream &input, gentype &dest, int processxyzvw)
 
     dest.scalarfn_seti(sfni);
     dest.scalarfn_setj(sfnj);
+
+    dest.isNomConst = false;
 
     if ( input.peek() == '@' )
     {
@@ -2183,6 +2187,7 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
         // will be deleted later anyhow and deleting them wastes time.
 
         typeis     = src.typeis;
+        isNomConst = src.isNomConst;
         intval     = src.intval;
         doubleval  = src.doubleval;
     }
@@ -2282,6 +2287,7 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
 
         typeis     = src.typeis;
         intval     = src.intval;
+        isNomConst = src.isNomConst;
         doubleval  = src.doubleval;
         fnnameind  = src.fnnameind;
         thisfninfo = src.thisfninfo;
@@ -2317,6 +2323,7 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
         char              srctypeis      = src.typeis;
         int               srcintval      = src.intval;
         double            srcdoubleval   = src.doubleval;
+        bool              srcisNomConst  = src.isNomConst;
         int               srcfnnameind   = src.fnnameind;
         const fninfoblock *srcthisfninfo = src.thisfninfo;
 
@@ -2328,8 +2335,10 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
         }
 
         typeis     = srctypeis;
+        isNomConst = src.isNomConst;
         intval     = srcintval;
         doubleval  = srcdoubleval;
+        isNomConst = srcisNomConst;
         fnnameind  = srcfnnameind;
         thisfninfo = srcthisfninfo;
 
@@ -2540,7 +2549,6 @@ gentype &gentype::toInteger(gentype &res) const
         res.deleteVectMatMem('Z');
         res.typeis = 'Z';
         res.intval = 0;
-        //res.doubleval = res.intval;
     }
 
     std::string errstr;
@@ -2550,7 +2558,8 @@ gentype &gentype::toInteger(gentype &res) const
         res.makeError(errstr);
     }
 
-    res.doubleval = res.intval;
+    res.doubleval  = res.intval;
+    res.isNomConst = isNomConst;
 
     return res;
 }
@@ -2571,7 +2580,8 @@ gentype &gentype::toReal(gentype &res)    const
         res.makeError(errstr);
     }
 
-    res.intval = (int) res.doubleval;
+    res.intval     = (int) res.doubleval;
+    res.isNomConst = isNomConst;
 
     return res;
 }
@@ -2702,6 +2712,8 @@ void gentype::cast_null(int finalise) const
         {
             NiceThrow(errstr);
         }
+
+        isNomConst = false;
     }
 
     return;
@@ -2711,6 +2723,8 @@ int gentype::cast_int(int finalise) const
 {
     if ( !isValInteger() )
     {
+        bool locisNomConst = isNomConst;
+
         std::string errstr;
 
         if ( finalise && isValEqn() )
@@ -2726,6 +2740,8 @@ int gentype::cast_int(int finalise) const
         {
             NiceThrow(errstr);
         }
+
+        isNomConst = locisNomConst;
     }
 
     return intval;
@@ -2735,6 +2751,8 @@ double gentype::cast_double(int finalise) const
 {
     if ( !isValReal() )
     {
+        bool locisNomConst = isNomConst;
+
         std::string errstr;
 
         if ( finalise && isValEqn() )
@@ -2750,6 +2768,8 @@ double gentype::cast_double(int finalise) const
         {
             NiceThrow(errstr);
         }
+
+        isNomConst = locisNomConst;
     }
 
     return doubleval;
@@ -2759,6 +2779,8 @@ const d_anion &gentype::cast_anion(int finalise) const
 {
     if ( !isValAnion() )
     {
+        isNomConst = false;
+
         std::string errstr;
 
         if ( anionval == nullptr )
@@ -2788,6 +2810,8 @@ const Vector<gentype> &gentype::cast_vector(int finalise) const
 {
     if ( !isValVector() )
     {
+        isNomConst = false;
+
         std::string errstr;
 
         if ( vectorval == nullptr )
@@ -2885,6 +2909,8 @@ const Matrix<gentype> &gentype::cast_matrix(int finalise) const
 {
     if ( !isValMatrix() )
     {
+        isNomConst = false;
+
         if ( matrixval == nullptr )
         {
             MEMNEW(matrixval,Matrix<gentype>);
@@ -2914,6 +2940,8 @@ const Set<gentype> &gentype::cast_set(int finalise) const
 {
     if ( !isValSet() )
     {
+        isNomConst = false;
+
         if ( setval == nullptr )
         {
             MEMNEW(setval,Set<gentype>);
@@ -2943,6 +2971,8 @@ const Dgraph<gentype,double> &gentype::cast_dgraph(int finalise) const
 {
     if ( !isValDgraph() )
     {
+        isNomConst = false;
+
         if ( dgraphval == nullptr )
         {
             MEMNEW(dgraphval,xDgraph);
@@ -2972,6 +3002,8 @@ const std::string  &gentype::cast_string(int finalise) const
 {
     if ( !isValString() )
     {
+        isNomConst = false;
+
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
@@ -3010,6 +3042,8 @@ gentype &gentype::morph_null(void)
 {
     if ( !isValNull() )
     {
+        isNomConst = false;
+
         std::string errstr;
 
         if ( loctoNull(errstr) )
@@ -3020,7 +3054,7 @@ gentype &gentype::morph_null(void)
         }
     }
 
-    typeis = 'N'; 
+    typeis = 'N';
 
     return *this;
 }
@@ -3029,6 +3063,8 @@ gentype &gentype::morph_int(void)
 {
     if ( !isValInteger() )
     {
+        bool locisNomConst = isNomConst;
+
         std::string errstr;
 
         if ( loctoInteger(intval,errstr) )
@@ -3037,6 +3073,8 @@ gentype &gentype::morph_int(void)
 
             return *this;
         }
+
+        isNomConst = locisNomConst;
     }
 
     typeis = 'Z';
@@ -3048,6 +3086,8 @@ gentype &gentype::morph_double(void)
 {
     if ( !isValReal() )
     {
+        bool locisNomConst = isNomConst;
+
         std::string errstr;
 
         if ( loctoReal(doubleval,errstr) )
@@ -3056,6 +3096,8 @@ gentype &gentype::morph_double(void)
 
             return *this;
         }
+
+        isNomConst = locisNomConst;
     }
 
     typeis = 'R';
@@ -3067,6 +3109,8 @@ gentype &gentype::morph_anion(void)
 {
     if ( !isValAnion() )
     {
+        isNomConst = false;
+
         if ( anionval == nullptr )
         {
             MEMNEW(anionval,d_anion);
@@ -3091,6 +3135,8 @@ gentype &gentype::morph_vector(void)
 {
     if ( !isValVector() )
     {
+        isNomConst = false;
+
         if ( vectorval == nullptr )
         {
             MEMNEW(vectorval,Vector<gentype>);
@@ -3115,6 +3161,8 @@ gentype &gentype::morph_matrix(void)
 {
     if ( !isValMatrix() )
     {
+        isNomConst = false;
+
         if ( matrixval == nullptr )
         {
             MEMNEW(matrixval,Matrix<gentype>);
@@ -3139,6 +3187,8 @@ gentype &gentype::morph_set(void)
 {
     if ( !isValSet() )
     {
+        isNomConst = false;
+
         if ( setval == nullptr )
         {
             MEMNEW(setval,Set<gentype>);
@@ -3163,6 +3213,8 @@ gentype &gentype::morph_dgraph(void)
 {
     if ( !isValDgraph() )
     {
+        isNomConst = false;
+
         if ( dgraphval == nullptr )
         {
             MEMNEW(dgraphval,xDgraph);
@@ -3187,6 +3239,8 @@ gentype &gentype::morph_string(void)
 {
     if ( !isValString() )
     {
+        isNomConst = false;
+
         if ( stringval == nullptr )
         {
             MEMNEW(stringval,std::string);
@@ -3202,7 +3256,7 @@ gentype &gentype::morph_string(void)
         }
     }
 
-    typeis = 'S'; 
+    typeis = 'S';
 
     return *this;
 }
@@ -5712,7 +5766,8 @@ int gentype::mathsparse(std::string &srcx, const std::string &src)
 
     while ( i < (int) srcx.length() )
     {
-        res = processNumLtoR(i,j,srcx);
+        bool isconst = false;
+        res = processNumLtoR(i,j,srcx,isconst);
 
 	if ( res == -1 )
 	{
@@ -6346,7 +6401,10 @@ int gentype::makeEqnInternal(const std::string &src)
 
     typeis = 'F';
 
-    res = processNumLtoR(0,i,src);
+    bool isconst = false;
+    isNomConst = false;
+
+    res = processNumLtoR(0,i,src,isconst);
 
     if ( res == -1 )
     {
@@ -6367,6 +6425,7 @@ int gentype::makeEqnInternal(const std::string &src)
         *this = zres;
 */
         *this = std::stoi(src);
+        isNomConst = isconst;
     }
 
     else if ( res == 2 )
@@ -6386,6 +6445,7 @@ int gentype::makeEqnInternal(const std::string &src)
         *this = rres;
 */
         *this = std::stod(src);
+        isNomConst = isconst;
     }
 
     else if ( res == 3 )
@@ -6680,7 +6740,7 @@ void qswap(eGenFunc &a, eGenFunc &b)
     return;
 }
 
-void getsetunsetgenFunc(int i, int j, int mode, const GenFunc fnaddr, const gentype &xa, int ia, const gentype &xb, int ib, gentype &res, int &ires);
+void getsetunsetgenFunc (int i, int j, int mode, const  GenFunc fnaddr, const gentype &xa, int ia, const gentype &xb, int ib, gentype &res, int &ires);
 void getsetunsetegenFunc(int i, int j, int mode, const eGenFunc fnaddr, const Vector<gentype> &exa, int ia, const Vector<gentype> &exb, int ib, Vector<gentype> &eres, int &ires);
 
 void setGenFunc(const GenFunc fnaddr)
@@ -7133,8 +7193,10 @@ int pairBrackets(int start, int &end, const std::string &src, int LRorRL)
 // Note that we don't include any preceeding -, as this unary operator
 // must be dealt with in correct order, for example to ensure that -3! = -6
 
-int processNumLtoR(int start, int &end, const std::string &src)
+int processNumLtoR(int start, int &end, const std::string &src, bool &isconst)
 {
+    isconst = false;
+
     int res = 0;
 
     NiceAssert( start >= 0 );
@@ -7197,6 +7259,16 @@ int processNumLtoR(int start, int &end, const std::string &src)
 
 	--end;
 
+        // c at end could indicate a constant integer
+
+        bool iscend = false;
+
+        if ( ( end+1 < (int) src.length() ) && ( src[end+1] == 'c' ) )
+        {
+            iscend = true;
+            ++end;
+        }
+
         // If numeric block is followed by . e E i I J K l m n o p q r then
         // this is not a numeric block
 
@@ -7209,7 +7281,7 @@ int processNumLtoR(int start, int &end, const std::string &src)
 		++end;
                 ++end;
 
-		if ( end >= (int) src.length() )
+	        if ( end >= (int) src.length() )
 		{
                     //. should never occur at the end of an equation
 
@@ -7222,15 +7294,31 @@ int processNumLtoR(int start, int &end, const std::string &src)
 		          ( src[end] == '6' ) || ( src[end] == '7' ) || ( src[end] == '8' ) ||
 		          ( src[end] == '9' )                                                  )
 		{
-		    // Not an integer, might be a real
+                    if ( iscend )
+                    {
+                        // Makes no sense
 
-		    res = 0;
-		    end = start;
+                        end = start-1;
+                        return -1;
+                    }
+
+                    else
+                    {
+                        // Not an integer, might be a real
+
+                        res = 0;
+                        end = start;
+                    }
 		}
 
 		else
 		{
 		    // . operator after an integer
+
+                    if ( iscend )
+                    {
+                        isconst = true;
+                    }
 
 		    --end;
 		    --end;
@@ -7243,10 +7331,33 @@ int processNumLtoR(int start, int &end, const std::string &src)
                       ( src[end+1] == 'o' ) || ( src[end+1] == 'p' ) || ( src[end+1] == 'q' ) ||
                       ( src[end+1] == 'r' )    )
 	    {
-                res = 0;
-		end = start;
+                if ( iscend )
+                {
+                    // Makes no sense
+
+                    end = start-1;
+                    return -1;
+                }
+
+                else
+                {
+                    // could be an anion, could be a real
+
+                    res = 0;
+                    end = start;
+                }
 	    }
+
+            else if ( iscend )
+            {
+                isconst = true;
+            }
 	}
+
+        else if ( iscend )
+        {
+            isconst = true;
+        }
     }
 
     if ( !res && ( ( src[start] == '0' ) || ( src[start] == '1' ) || ( src[start] == '2' ) ||
@@ -7279,25 +7390,25 @@ int processNumLtoR(int start, int &end, const std::string &src)
 	--end;
 
 	// Next we might get a decimal point, which must be followed by a numeric block.
-	// Note that we can't have an operator loke .* here as this would have been caught
+	// Note that we can't have an operator like .* here as this would have been caught
         // by the integer case.
 
 	if ( end+1 < (int) src.length() )
 	{
 	    if ( src[end+1] == '.' )
 	    {
-		++end;
-		++end;
+	        ++end;
+	        ++end;
 
-		if ( end >= (int) src.length() )
-		{
-		    // Can't have a . at the end of a string
+	        if ( end >= (int) src.length() )
+	        {
+	            // Can't have a . at the end of a string
 
-		    end = start-1;
-		    return -1;
-		}
+	            end = start-1;
+	            return -1;
+	        }
 
-		int tempend = end-1;
+	        int tempend = end-1;
 
 		while ( ( src[end] == '0' ) || ( src[end] == '1' ) || ( src[end] == '2' ) ||
 		        ( src[end] == '3' ) || ( src[end] == '4' ) || ( src[end] == '5' ) ||
@@ -7331,7 +7442,7 @@ int processNumLtoR(int start, int &end, const std::string &src)
 			end = start-1;
 			return -1;
 		    }
-		}
+	        }
 	    }
 	}
 
@@ -7341,50 +7452,60 @@ int processNumLtoR(int start, int &end, const std::string &src)
 	{
             if ( ( src[end+1] == 'e' ) || ( src[end+1] == 'E' ) )
 	    {
-		++end;
+	        ++end;
                 ++end;
 
-		if ( end >= (int) src.length() )
-		{
-		    end = start-1;
-		    return -1;
-		}
+	        if ( end >= (int) src.length() )
+	        {
+	            end = start-1;
+	            return -1;
+	        }
 
-		if ( src[end] == '-' )
-		{
-		    ++end;
-		}
+	        if ( src[end] == '-' )
+	        {
+	            ++end;
+	        }
 
-		if ( end >= (int) src.length() )
-		{
-		    end = start-1;
-		    return -1;
-		}
+	        if ( end >= (int) src.length() )
+	        {
+	            end = start-1;
+	            return -1;
+	        }
 
-		int tempend = end-1;
+	        int tempend = end-1;
 
-		while ( ( src[end] == '0' ) || ( src[end] == '1' ) || ( src[end] == '2' ) ||
-		        ( src[end] == '3' ) || ( src[end] == '4' ) || ( src[end] == '5' ) ||
-		        ( src[end] == '6' ) || ( src[end] == '7' ) || ( src[end] == '8' ) ||
-		        ( src[end] == '9' )                                                  )
-		{
-		    ++end;
+	        while ( ( src[end] == '0' ) || ( src[end] == '1' ) || ( src[end] == '2' ) ||
+	                ( src[end] == '3' ) || ( src[end] == '4' ) || ( src[end] == '5' ) ||
+	                ( src[end] == '6' ) || ( src[end] == '7' ) || ( src[end] == '8' ) ||
+	                ( src[end] == '9' )                                                  )
+	        {
+	            ++end;
 
-		    if ( end >= (int) src.length() )
-		    {
-			break;
-		    }
-		}
+	            if ( end >= (int) src.length() )
+	            {
+	                break;
+	            }
+	        }
 
-		--end;
+	        --end;
 
-		if ( end <= tempend )
-		{
-		    end = start-1;
-		    return -1;
-		}
+	        if ( end <= tempend )
+	        {
+	            end = start-1;
+	            return -1;
+	        }
 	    }
 	}
+
+        // c at end could indicate a constant real
+
+        bool iscend = false;
+
+        if ( ( end+1 < (int) src.length() ) && ( src[end+1] == 'c' ) )
+        {
+            iscend = true;
+            ++end;
+        }
 
         // Finally, if this is a quaternion, there may be an i I J K l m n o p q r at the end
 
@@ -7395,10 +7516,26 @@ int processNumLtoR(int start, int &end, const std::string &src)
 		 ( src[end+1] == 'n' ) || ( src[end+1] == 'o' ) || ( src[end+1] == 'p' ) ||
 		 ( src[end+1] == 'q' ) || ( src[end+1] == 'r' )                             )
 	    {
-		res = 3;
-                ++end;
+                if ( iscend )
+                {
+                    // Makes no sense
+
+                    end = start-1;
+                    return -1;
+                }
+
+                else
+                {
+		    res = 3;
+                    ++end;
+                }
 	    }
 	}
+
+        else if ( iscend )
+        {
+            isconst = true;
+        }
     }
 
     if ( !res && ( src[start] == '[' ) )
