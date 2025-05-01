@@ -7471,12 +7471,12 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
                         int xdim = xspaceDim(uu(i));
 
 //errstream() << "phantomxyztune xdim(" << i << ") = " << xdim << "\n";
-                        double lencorrect = std::sqrt((double) xdim)/std::pow((double) N(),((double) xdim));
+                        double lencorrect = std::sqrt((double) xdim)/std::pow( (double) N(),(double) xdim );
 
                         lencorrect = ( lencorrect < 0.05 ) ? 0.05 : lencorrect;
 //errstream() << "phantomxyztune lencorrect(" << i << ") = " << lencorrect << "\n";
 
-                        lb    = ( ( uu(i) == -1 ) ? xscale : 1.0 )*lencorrect*0.1*xwidth; // 0.01*xwidth; //1e-2*xwidth;
+                        lb    = ( ( uu(i) == -1 ) ? xscale : 1.0 )*lencorrect*0.1*xwidth; //0.3*xwidth; // 0.01*xwidth; //1e-2*xwidth;
 //errstream() << "phantomxyztune lb(" << i << ") = " << lb << "\n";
 //FIXME: consider increasing ub
                         ub    = ( ( uu(i) == -1 ) ? xscale : 1.0 )*1.5*sqrt((double) xdim)*xwidth; //sqrt((double) xdim)*xwidth; // 3*xwidth; //15*xwidth;

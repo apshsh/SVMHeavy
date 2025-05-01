@@ -3320,7 +3320,6 @@ int SVM_Scalar::qtaddTrainingVector(int i, double zi, double Cweigh, double epsw
 }
 
 
-
 double SVM_Scalar::loglikelihood(void) const
 {
     if ( !isQuasiLogLikeCalced )
@@ -3338,7 +3337,10 @@ double SVM_Scalar::loglikelihood(void) const
         {
             for ( i = 0 ; i < SVM_Scalar::N() ; ++i )
             {
-                (quasiloglike) -= (double) (y(i)*alpha()(i));
+                if ( alphaState()(i) )
+                {
+                    (quasiloglike) -= (double) (y(i)*alpha()(i));
+                }
             }
         }
 
@@ -3348,7 +3350,7 @@ double SVM_Scalar::loglikelihood(void) const
 
 //errstream() << "[" << Q.fact_logdet() << "," << Q.aN() << "," << Q.aNF() << "," << Q.factbad(Gn,GPNorGPNEXT(Gpn,GpnExt)) << "]";
         (quasiloglike) -= Q.fact_logdet()/2.0; // log(Q.fact_det())/2.0;
-        (quasiloglike) -= NUMBASE_LN2PI*SVM_Scalar::N()/2.0;
+        (quasiloglike) -= NUMBASE_LN2PI*SVM_Scalar::NS()/2.0;
     }
 
     return (quasiloglike);

@@ -27,7 +27,7 @@ int bayesOpt(int dim,
              gentype &fres,
              const Vector<double> &xmin,
              const Vector<double> &xmax,
-             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &yceq, Vector<gentype> &ycgt),
+             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &ycgt),
              void *fnarg,
              BayesOptions &bopts,
              svmvolatile int &killSwitch,
@@ -40,7 +40,7 @@ class BayesOptions : public SMBOOptions
              gentype &fres,
              const Vector<double> &xmin,
              const Vector<double> &xmax,
-             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &yceq, Vector<gentype> &ycgt),
+             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &ycgt),
              void *fnarg,
              BayesOptions &bopts,
              svmvolatile int &killSwitch,
@@ -640,7 +640,6 @@ public:
                       int &mInd,
                       Vector<int> &muInd,
                       Vector<int> &augxInd,
-                      Vector<int> &ceqInd,
                       Vector<int> &cgtInd,
                       int &sigInd,
                       int &srcmodInd,
@@ -666,7 +665,7 @@ public:
                       Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
                       Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
     {
-        int res = SMBOOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,ceqInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
+        int res = SMBOOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
 
         return res;
     }

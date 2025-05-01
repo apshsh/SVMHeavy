@@ -396,7 +396,6 @@ public:
     // mInd: for functional optimisation, this returns the (registered) index of the ML model found
     // muInd: index of mu model approximation (if any)
     // augxInd: index of augx model approximation (if any)
-    // ceqInd: index of equality constraint approximation (if any)
     // cgtInd: index of inequality constraint approximation (if any)
     // sigInd: index of sigma model approximation (if any)
     // srcmodInd: index of source model (if used, see diff-GP and env-GP)
@@ -542,7 +541,6 @@ public:
                       int &mInd,
                       Vector<int> &muInd,
                       Vector<int> &augxInd,
-                      Vector<int> &ceqInd,
                       Vector<int> &cgtInd,
                       int &sigInd,
                       int &srcmodInd,
@@ -576,7 +574,6 @@ public:
                       int &mInd,
                       Vector<int> &muInd,
                       Vector<int> &augxInd,
-                      Vector<int> &ceqInd,
                       Vector<int> &cgtInd,
                       int &sigInd,
                       int &srcmodInd,

@@ -28,7 +28,6 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
         sigmuseparate = 0;
         ismoo         = 0;
         moodim        = 1;
-        numceq        = 0;
         numcgt        = 0;
         modeltype     = 0;
         modelrff      = 0;
@@ -63,7 +62,6 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
 
         tunemu      = 1; //2;
         tunesigma   = 1; //2;
-        tuneceq     = 1; //2;
         tunecgt     = 1; //2;
         tunesrcmod  = 1; //2;
         tunediffmod = 1; //2;
@@ -133,7 +131,6 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
         sigmuseparate = src.sigmuseparate;
         ismoo         = src.ismoo;
         moodim        = src.moodim;
-        numceq        = src.numceq;
         numcgt        = src.numcgt;
         modeltype     = src.modeltype;
         modelrff      = src.modelrff;
@@ -160,7 +157,6 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
 
         tunemu      = src.tunemu;
         tunesigma   = src.tunesigma;
-        tuneceq     = src.tuneceq;
         tunecgt     = src.tunecgt;
         tunesrcmod  = src.tunesrcmod;
         tunediffmod = src.tunediffmod;
@@ -205,7 +201,6 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
         muapprox    = src.muapprox;
         sigmaapprox = src.sigmaapprox;
         augxapprox  = src.augxapprox;
-        ceqapprox   = src.ceqapprox;
         cgtapprox   = src.cgtapprox;
 
         muapprox_sample.resize(0);
@@ -213,7 +208,6 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
         altmuapprox         = src.altmuapprox;
         altmuapprox_rff     = src.altmuapprox_rff;
         altfxapprox         = src.altfxapprox;
-        altceqapprox        = src.altceqapprox;
         altcgtapprox        = src.altcgtapprox;
 
         locires       = src.locires;
@@ -344,7 +338,6 @@ int SMBOOptions::realOptim(int dim,
                       int &mres,
                       Vector<int> &muInd,
                       Vector<int> &augxInd,
-                      Vector<int> &ceqInd,
                       Vector<int> &cgtInd,
                       int &sigInd,
                       int &srcmodInd,
@@ -491,43 +484,6 @@ int SMBOOptions::realOptim(int dim,
             muInd    = muapproxInd;
 
             MLnumbers("&",0) = muapproxInd(0); //FIXME
-        }
-
-        if ( numceq )
-        {
-            ceqapprox.resize(numceq);
-            ceqInd.resize(numceq);
-
-            for ( int ii = 0 ; ii < numceq ; ii++ )
-            {
-                if ( ( extceqapprox.size() > ii ) && extceqapprox(ii) )
-                {
-                    ML_Mutable *ceqapproxRaw;
-
-                    MEMNEW(ceqapproxRaw,ML_Mutable);
-                    (*ceqapproxRaw).setMLTypeClean((*(extceqapprox(ii))).type());
-
-                    (*ceqapproxRaw).getML() = *(extceqapprox(ii));
-                    ceqInd("&",ii) = regML(ceqapproxRaw,fnarg,13);
-
-                    ceqapprox("&",ii) = &((*ceqapproxRaw).getML());
-               }
-
-                else
-                {
-                    ML_Mutable *ceqapproxRaw;
-
-                    MEMNEW(ceqapproxRaw,ML_Mutable);
-                    (*ceqapproxRaw).setMLTypeClean(altceqapprox.type());
-
-                    (*ceqapproxRaw).getML() = altceqapprox;
-                    ceqInd("&",ii) = regML(ceqapproxRaw,fnarg,13);
-
-                    ceqapprox("&",ii) = &((*ceqapproxRaw).getML());
-                }
-            }
-
-            MLnumbers("&",7) = ceqInd(0);
         }
 
         if ( numcgt )
@@ -734,7 +690,7 @@ int SMBOOptions::realOptim(int dim,
 
         // Optimise
 
-        int res = GlobalOptions::realOptim(dim,xres,rawxres,fres,ires,mres,muInd,augxInd,ceqInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allrawxres,allfres,allfresmod,supres,sscore,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+        int res = GlobalOptions::realOptim(dim,xres,rawxres,fres,ires,mres,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allrawxres,allfres,allfresmod,supres,sscore,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
 
         return res;
     }
@@ -865,36 +821,15 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 
     if ( ismodelaug() && augxapprox.size() )
     {
-        int i;
-
-        for ( i = 0 ; i < augxapprox.size() ; ++i )
-        {
-            if ( augxapprox(i) )
-            {
-                //errstream() << ", " << calcnegloglikelihood(*augxapprox(i),1) << " (augx " << i << ")";
-            }
-        }
-    }
-
-    if ( ceqapprox.size() )
-    {
-        int i;
-
-        for ( i = 0 ; i < ceqapprox.size() ; ++i )
-        {
-            if ( muapprox(i) )
-            {
-                errstream() << ", " << calcnegloglikelihood(*ceqapprox(i),1) << " (ceq " << i << "): ";
-
-                for ( int iii = 0 ; iii < ((*ceqapprox(i)).getKernel()).size() ; iii++ )
-                {
-                    errstream() << ((*ceqapprox(i)).getKernel()).cWeight(iii) << ", ";
-                    errstream() << ((*ceqapprox(i)).getKernel()).cRealConstants(iii) << "\t";
-                }
-
-                errstream() << "\n";
-            }
-        }
+//        int i;
+//
+//        for ( i = 0 ; i < augxapprox.size() ; ++i )
+//        {
+//            if ( augxapprox(i) )
+//            {
+//                errstream() << ", " << calcnegloglikelihood(*augxapprox(i),1) << " (augx " << i << ")";
+//            }
+//        }
     }
 
     if ( cgtapprox.size() )
@@ -903,7 +838,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 
         for ( i = 0 ; i < cgtapprox.size() ; ++i )
         {
-            if ( muapprox(i) )
+            if ( cgtapprox(i) )
             {
                 errstream() << ", " << calcnegloglikelihood(*cgtapprox(i),1) << " (cgt " << i << "): ";
 
@@ -922,14 +857,6 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 
     if ( plotfreq && ( ( stage == 0 ) || ( stage == 2 ) || ( ( plotfreq > 0 ) && ( !(model_N_mu()%plotfreq) ) ) ) )
     {
-        gentype baseline(modelbaseline);
-        int incbaseline = ( ( modelbaseline == "null" ) ? 0 : 1 );
-
-        //double xmin = 0;
-        //double xmax = 1;
-
-        int ydim = ismoo ? moodim : 1;
-
 /*
         gentype ytmp,yvartmp;
 
@@ -955,8 +882,41 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
         //int i;
         //double xindval;
 
+        int ydim = ismoo ? moodim : 1;
+
         for ( j = 0 ; j < ydim ; j++ )
         {
+            gentype baseline(modelbaseline);
+            int incbaseline = ( ( modelbaseline == "null" ) ? 0 : 1 );
+
+            model_sublog((*(muapprox(j))),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"model",xind,yind,stagestr,-1);
+        }
+
+        if ( usemodelaugx )
+        {
+            for ( j = 0 ; j < augxapprox.size() ; ++j )
+            {
+                gentype baseline = nullgentype();
+                int incbaseline = 0;
+
+                model_sublog((*(augxapprox(j))),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"aug",xind,yind,stagestr,+1);
+            }
+        }
+
+
+        if ( cgtapprox.size() )
+        {
+            for ( j = 0 ; j < cgtapprox.size() ; ++j )
+            {
+                gentype baseline = nullgentype();
+                int incbaseline = 0;
+
+                model_sublog((*(cgtapprox(j))),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"cgt",xind,yind,stagestr,+1);
+            }
+        }
+    }
+
+
 /*
             xplot("&",j).resize(NUMLOGSAMP);
             yplot("&",j).resize(NUMLOGSAMP);
@@ -1048,7 +1008,6 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
             mlnamefile << (*(muapprox(j))) << "\n";
 
             mlnamefile.close();
-*/
 
             if ( ( (*(muapprox(j))).tspaceDim() == 1 ) && ( (*(muapprox(j))).xspaceDim() == 1 ) )
             {
@@ -1205,10 +1164,6 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
             }
         }
 
-        if ( ismodelaug() )
-        {
-            for ( j = 0 ; j < augxapprox.size() ; ++j )
-            {
                 if ( ( (*(augxapprox(j))).tspaceDim() == 1 ) && ( (*(augxapprox(j))).xspaceDim() == 1 ) )
                 {
                     //double xmin = 0;
@@ -1360,10 +1315,92 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
                     mlnamefile.close();
                 }
             }
-        }
-    }
+*/
 
     return GlobalOptions::model_log(stage,xmin,xmax,ymin,ymax);
+}
+
+
+void SMBOOptions::model_sublog(const ML_Base &plotmodel, gentype &baselinefn, int incbaselinefn, double xmin, double xmax, double ymin, double ymax, int j, const std::string &nameof, int xind, int yind, const std::string &stagestr, double sf)
+{
+    double omin = 1;
+    double omax = 0;
+
+    std::string fname(modelname);
+    std::string ffname = "mu";
+    std::string dname(modelname);
+    std::string mlname(modelname);
+
+    fname  += "_";
+    ffname += "_";
+    dname  += "_";
+    mlname += "_";
+
+    fname  += std::to_string(j);
+    ffname += std::to_string(j);
+    dname  += std::to_string(j);
+    mlname += std::to_string(j);
+
+    fname  += "_smbo_";
+    ffname += "_smbo_";
+    dname  += "_smbo_";
+    mlname += "_smbo_";
+
+    fname  += nameof;
+    ffname += nameof;
+    dname  += nameof;
+    mlname += nameof;
+
+    fname  += "_plot";
+    ffname += "_plot";
+    dname  += "_data";
+    mlname += "_gpr";
+
+    fname  += stagestr;
+    //ffname += stagestr;
+    dname  += stagestr;
+    mlname += stagestr;
+
+    fname  += "_";
+    //ffname += "_";
+    dname  += "_";
+    mlname += "_";
+
+    fname  += std::to_string(plotmodel.N());
+    //ffname += std::to_string(plotmodel.N());
+    dname  += std::to_string(plotmodel.N());
+    mlname += std::to_string(plotmodel.N());
+
+    std::ofstream mlnamefile(mlname);
+    mlnamefile << plotmodel << "\n";
+    mlnamefile.close();
+
+    if ( ( plotmodel.tspaceDim() == 1 ) && ( plotmodel.xspaceDim() == 1 ) )
+    {
+        int incdata = incbaselinefn ? 3 : 1;
+        int incvar  = 1;
+        int xusevar = 0;
+
+        SparseVector<gentype> xtemplate;
+
+        plotml(plotmodel,xind,xmin,xmax,omin,omax,fname, dname,modeloutformat,incdata,baselinefn,incvar,xusevar,xtemplate,0,0,sf);
+        plotml(plotmodel,xind,xmin,xmax,omin,omax,ffname,dname,modeloutformat,incdata,baselinefn,incvar,xusevar,xtemplate,0,0,sf);
+    }
+
+    else if ( ( plotmodel.tspaceDim() == 1 ) && ( plotmodel.xspaceDim() == 2 ) )
+    {
+        int incdata = incbaselinefn ? 2 : 1;
+        int incvar  = 1;
+        int xusevar = 0;
+        int yusevar = 1;
+
+        SparseVector<gentype> xtemplate;
+
+        plotml(plotmodel,xind,yind,xmin,xmax,ymin,ymax,omin,omax,fname, dname,modeloutformat,incdata,baselinefn,incvar,xusevar,yusevar,xtemplate,0,0,sf);
+        plotml(plotmodel,xind,yind,xmin,xmax,ymin,ymax,omin,omax,ffname,dname,modeloutformat,incdata,baselinefn,incvar,xusevar,yusevar,xtemplate,0,0,sf);
+    }
+
+    return;
 }
 
 
@@ -1383,11 +1420,6 @@ void SMBOOptions::model_clear(void)
         for ( i = 0 ; i < augxapprox.size() ; ++i )
         {
             (*(augxapprox("&",i))).removeTrainingVector(0,(*(augxapprox(i))).N());
-        }
-
-        for ( i = 0 ; i < ceqapprox.size() ; ++i )
-        {
-            (*(ceqapprox("&",i))).removeTrainingVector(0,(*(ceqapprox(i))).N());
         }
 
         for ( i = 0 ; i < cgtapprox.size() ; ++i )
@@ -1658,35 +1690,6 @@ int SMBOOptions::model_varTrainingVector(gentype &resv, int imu) const
     return resi;
 }
 
-int SMBOOptions::model_muTrainingVector_ceq(Vector<gentype> &resmu, int imu) const
-{
-    int res = 0;
-
-    resmu.resize(ceqapprox.size());
-
-    for ( int i = 0 ; i < ceqapprox.size() ; ++i )
-    {
-        res |= (*ceqapprox(i)).ggTrainingVector(resmu("&",i),imu);
-    }
-
-    return res;
-}
-
-int SMBOOptions::model_muvarTrainingVector_ceq(Vector<gentype> &resv, Vector<gentype> &resmu, int imu) const
-{
-    int resi = 0;
-
-    resv.resize(ceqapprox.size());
-    resmu.resize(ceqapprox.size());
-
-    for ( int i = 0 ; i < ceqapprox.size() ; ++i )
-    {
-        resi |= (*ceqapprox(i)).varTrainingVector(resv("&",i),resmu("&",i),imu);
-    }
-
-    return resi;
-}
-
 int SMBOOptions::model_muTrainingVector_cgt(Vector<gentype> &resmu, int imu) const
 {
     int res = 0;
@@ -1740,7 +1743,6 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
         }
 
         ires |= modelmu_int_train(res,killSwitch);
-        ires |= modelceq_int_train(res,killSwitch);
         ires |= modelcgt_int_train(res,killSwitch);
 
         if ( tunemu )
@@ -1778,38 +1780,6 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
                 }
 
                 (*(muapprox("&",i))).getML().tuneKernel(tunemu,getxwidth(),1,0,&tuneBounds);
-            }
-        }
-
-        if ( tuneceq && ceqapprox.size() )
-        {
-            for ( i = 0 ; i < ceqapprox.size() ; ++i )
-            {
-                tkBounds tuneBounds((*(ceqapprox("&",i))).getML().getKernel());
-
-                if ( (*(ceqapprox("&",i))).getML().N() < 40 )
-                {
-                    tuneBounds.wlb = 0.5;
-
-                    for ( int i = 0 ; i < getdimfid() ; i++ )
-                    {
-                        tuneBounds.klb("&",i+1) = 0.6;
-                    }
-                }
-
-                else if ( (*(ceqapprox("&",i))).getML().N() < 50 )
-                {
-                    double scale = (50.0-(*(ceqapprox("&",i))).getML().N())/10.0;
-
-                    tuneBounds.wlb = 0.1+(0.4*scale);
-
-                    for ( int i = 0 ; i < getdimfid() ; i++ )
-                    {
-                        tuneBounds.klb("&",i+1) = 0.6*scale;
-                    }
-                }
-
-                (*(ceqapprox("&",i))).getML().tuneKernel(tuneceq,getxwidth(),1,0,&tuneBounds);
             }
         }
 
@@ -1996,19 +1966,6 @@ int SMBOOptions::modelmu_int_train(int &res, svmvolatile int &killSwitch)
     return ires;
 }
 
-int SMBOOptions::modelceq_int_train(int &res, svmvolatile int &killSwitch)
-{
-    int ires = 0;
-    int i;
-
-    for ( i = 0 ; i < ceqapprox.size() ; i++ )
-    {
-        ires += (*(ceqapprox("&",i))).train(res,killSwitch);
-    }
-
-    return ires;
-}
-
 int SMBOOptions::modelcgt_int_train(int &res, svmvolatile int &killSwitch)
 {
     int ires = 0;
@@ -2118,20 +2075,6 @@ int SMBOOptions::model_addTrainingVector_musigma(const gentype &y, const gentype
         }
 
         return ires;
-}
-
-int SMBOOptions::model_addTrainingVector_ceq(const Vector<gentype> &y, const SparseVector<gentype> &x, double varadd)
-{
-    return modelceq_int_addTrainingVector(y,x,model_convertx(xx,x),2,varadd);
-}
-
-int SMBOOptions::model_addTrainingVector_ceq(const Vector<gentype> &y, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype, double varadd)
-{
-    SparseVector<gentype> xxx(x);
-
-    addinxsidechan(xxx,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4);
-
-    return modelceq_int_addTrainingVector(y,x,model_convertx(xx,xxx),xobstype,varadd);
 }
 
 int SMBOOptions::model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x, double varadd)
@@ -2322,34 +2265,6 @@ int SMBOOptions::default_model_setkernelgg(const SparseVector<gentype> &nv)
 
     altmuapprox_rff.getKernel_unsafe().setScale(nv);
     altmuapprox_rff.resetKernel(0);
-
-    return res;
-}
-
-int SMBOOptions::default_modelceq_setkernelg(const gentype &nv)
-{
-        int res = 0;
-        int lockernnum = 0;
-
-        Vector<gentype> kernRealConstsa(altceqapprox.getKernel().cRealConstants(lockernnum));
-
-        if ( kernRealConstsa(0) != nv )
-	{
-            kernRealConstsa("&",0) = nv;
-
-            altceqapprox.getKernel_unsafe().setRealConstants(kernRealConstsa,lockernnum);
-            altceqapprox.resetKernel(0);
-	}
-
-        return res;
-}
-
-int SMBOOptions::default_modelceq_setkernelgg(const SparseVector<gentype> &nv)
-{
-    int res = 0;
-
-    altceqapprox.getKernel_unsafe().setScale(nv);
-    altceqapprox.resetKernel(0);
 
     return res;
 }
@@ -2594,80 +2509,6 @@ int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVec
         return ires;
 }
 
-int SMBOOptions::modelceq_int_addTrainingVector(const Vector<gentype> &y, const SparseVector<gentype> &x, const SparseVector<gentype> &xx, int xobstype, double varadd, int dval)
-{
-    (void) x;
-
-    SparseVector<gentype> xxx(xx);
-
-    addtemptox(xxx,xtemplate);
-
-    int i,ires = 0;
-
-    if ( ennornaive )
-    {
-        SparseVector<gentype> tempx;
-
-        NiceAssert( ceqapprox.size() == y.size() );
-
-        for ( i = 0 ; i < ceqapprox.size() ; ++i )
-        {
-            ires |= (*(ceqapprox("&",i))).addTrainingVector((*(ceqapprox(i))).N(),y(i),convnearuptonaive(tempx,xxx));
-
-            if ( varadd )
-            {
-                ires |= (*(ceqapprox("&",i))).setsigmaweight((*(ceqapprox(i))).N()-1,1+(varadd/((*(ceqapprox("&",i))).sigma())));
-            }
-
-            if ( dval != 2 )
-            {
-                int imu = (*(ceqapprox(i))).N()-1;
-                int iimu = ( ( (*(ceqapprox(i))).type() == 212 ) ? (-imu-1) : imu );
-                int ddval = ( dval == -2 ) ? 2 : dval;
-
-                ires |= (*(ceqapprox("&",i))).setd(iimu,ddval);
-            }
-        }
-    }
-
-    else
-    {
-        NiceAssert( ceqapprox.size() == y.size() );
-
-        for ( i = 0 ; i < ceqapprox.size() ; ++i )
-        {
-            ires |= (*(ceqapprox("&",i))).addTrainingVector((*(ceqapprox(i))).N(),y(i),xxx);
-
-            if ( varadd )
-            {
-                ires |= (*(ceqapprox("&",i))).setsigmaweight((*(ceqapprox(i))).N()-1,1+(varadd/((*(ceqapprox("&",i))).sigma())));
-            }
-
-            if ( dval != 2 )
-            {
-                int imu = (*(ceqapprox(i))).N()-1;
-                int iimu = ( ( (*(ceqapprox(i))).type() == 212 ) ? (-imu-1) : imu );
-                int ddval = ( dval == -2 ) ? 2 : dval;
-
-                ires |= (*(ceqapprox("&",i))).setd(iimu,ddval);
-            }
-        }
-    }
-
-    if ( xobstype != 2 )
-    {
-        for ( i = 0 ; i < ceqapprox.size() ; ++i )
-        {
-            int imu = (*(ceqapprox(i))).N()-1;
-            int iimu = ( ( (*(ceqapprox(i))).type() == 212 ) ? (-imu-1) : imu );
-
-            ires |= (*(ceqapprox("&",i))).setd(iimu,xobstype);
-        }
-    }
-
-    return ires;
-}
-
 int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const SparseVector<gentype> &x, const SparseVector<gentype> &xx, int xobstype, double varadd, int dval)
 {
     (void) x;
@@ -2686,20 +2527,23 @@ int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const 
 
         for ( i = 0 ; i < cgtapprox.size() ; ++i )
         {
-            ires |= (*(cgtapprox("&",i))).addTrainingVector((*(cgtapprox(i))).N(),y(i),convnearuptonaive(tempx,xxx));
-
-            if ( varadd )
+            if ( !y(i).isValNull() )
             {
-                ires |= (*(cgtapprox("&",i))).setsigmaweight((*(cgtapprox(i))).N()-1,1+(varadd/((*(cgtapprox("&",i))).sigma())));
-            }
+                ires |= (*(cgtapprox("&",i))).addTrainingVector((*(cgtapprox(i))).N(),y(i),convnearuptonaive(tempx,xxx));
 
-            if ( dval != 2 )
-            {
-                int imu = (*(cgtapprox(i))).N()-1;
-                int iimu = ( ( (*(cgtapprox(i))).type() == 212 ) ? (-imu-1) : imu );
-                int ddval = ( dval == -2 ) ? 2 : dval;
+                if ( varadd )
+                {
+                    ires |= (*(cgtapprox("&",i))).setsigmaweight((*(cgtapprox(i))).N()-1,1+(varadd/((*(cgtapprox("&",i))).sigma())));
+                }
 
-                ires |= (*(cgtapprox("&",i))).setd(iimu,ddval);
+                if ( dval != 2 )
+                {
+                    int imu = (*(cgtapprox(i))).N()-1;
+                    int iimu = ( ( (*(cgtapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+                    int ddval = ( dval == -2 ) ? 2 : dval;
+
+                    ires |= (*(cgtapprox("&",i))).setd(iimu,ddval);
+                }
             }
         }
     }
@@ -2710,20 +2554,23 @@ int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const 
 
         for ( i = 0 ; i < cgtapprox.size() ; ++i )
         {
-            ires |= (*(cgtapprox("&",i))).addTrainingVector((*(cgtapprox(i))).N(),y(i),xxx);
-
-            if ( varadd )
+            if ( !y(i).isValNull() )
             {
-                ires |= (*(cgtapprox("&",i))).setsigmaweight((*(cgtapprox(i))).N()-1,1+(varadd/((*(cgtapprox("&",i))).sigma())));
-            }
+                ires |= (*(cgtapprox("&",i))).addTrainingVector((*(cgtapprox(i))).N(),y(i),xxx);
 
-            if ( dval != 2 )
-            {
-                int imu = (*(cgtapprox(i))).N()-1;
-                int iimu = ( ( (*(cgtapprox(i))).type() == 212 ) ? (-imu-1) : imu );
-                int ddval = ( dval == -2 ) ? 2 : dval;
+                if ( varadd )
+                {
+                    ires |= (*(cgtapprox("&",i))).setsigmaweight((*(cgtapprox(i))).N()-1,1+(varadd/((*(cgtapprox("&",i))).sigma())));
+                }
 
-                ires |= (*(cgtapprox("&",i))).setd(iimu,ddval);
+                if ( dval != 2 )
+                {
+                    int imu = (*(cgtapprox(i))).N()-1;
+                    int iimu = ( ( (*(cgtapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+                    int ddval = ( dval == -2 ) ? 2 : dval;
+
+                    ires |= (*(cgtapprox("&",i))).setd(iimu,ddval);
+                }
             }
         }
     }
@@ -2732,10 +2579,13 @@ int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const 
     {
         for ( i = 0 ; i < cgtapprox.size() ; ++i )
         {
-            int imu = (*(cgtapprox(i))).N()-1;
-            int iimu = ( ( (*(cgtapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+            if ( !y(i).isValNull() )
+            {
+                int imu = (*(cgtapprox(i))).N()-1;
+                int iimu = ( ( (*(cgtapprox(i))).type() == 212 ) ? (-imu-1) : imu );
 
-            ires |= (*(cgtapprox("&",i))).setd(iimu,xobstype);
+                ires |= (*(cgtapprox("&",i))).setd(iimu,xobstype);
+            }
         }
     }
 

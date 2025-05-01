@@ -639,7 +639,7 @@ public:
     {
         if ( !finalise || !isValEqn() )
         {
-            return *this;
+            return 0;
         }
 
         const static SparseVector<SparseVector<gentype> > temp;

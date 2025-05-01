@@ -145,7 +145,6 @@ public:
                       int &mInd,
                       Vector<int> &muInd,
                       Vector<int> &augxInd,
-                      Vector<int> &ceqInd,
                       Vector<int> &cgtInd,
                       int &sigInd,
                       int &srcmodInd,
@@ -171,7 +170,7 @@ public:
                       Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
                       Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
     {
-        return GlobalOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,ceqInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
+        return GlobalOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
     }
 
     virtual int optdefed(void)

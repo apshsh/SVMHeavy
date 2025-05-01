@@ -1,3 +1,32 @@
+/*
+    output << ( (          advanced ) ? "             { y v [ce1..cen] [cg1..cgn] [xx1..xxn] xf [xf1..xfn] xff xf3 t } \n" : "" );
+ADD FIDELITY FEEDBACK OPTION HERE
+ACTUALLY ALLOW BASICALLY ALL OF THE INTERACTIVE STUFF VIA THIS INPUT
+
+
+varadd: maybe have varOVER-RIDE instead?
+Let the user over-ride x (including fidelity).
+
+
+tuneceq
+tunecgt
+
+mu...
+
+ismoo
+isceq
+iscgt
+
+
+bayesopt: grab inequality vectors (but ignore if y null)
+          add them to the relevant models
+          build the inequality constraints into the cost function as per Julien code
+
+mlinter: make all the inequality stuff accessible
+
+
+DO REVIEWS
+*/
 
 //FIXME: 1.33c is supposed to be nominally constant in gentype, which should then pass back and prevent tuneKernel from tuning this term.
 //       gentype can parse the c, but it currently isn't stored. Finish this.
@@ -4325,7 +4354,66 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmsrkoz"  ) ||
                       ( currentarg == "-gmsrkOz"  ) ||
                       ( currentarg == "-gmsmtb"  ) ||
-                      ( currentarg == "-gmsbmx"  )    )
+                      ( currentarg == "-gmsbmx"  ) ||
+                      ( currentarg == "-gmgtkn"   ) ||
+                      ( currentarg == "-gmgtku"   ) ||
+                      ( currentarg == "-gmgtkss"  ) ||
+                      ( currentarg == "-gmgtkus"  ) ||
+                      ( currentarg == "-gmgtknn"  ) ||
+                      ( currentarg == "-gmgtkuu"  ) ||
+                      ( currentarg == "-gmgtkc"   ) ||
+                      ( currentarg == "-gmgtkuc"  ) ||
+                      ( currentarg == "-gmgtkm"   ) ||
+                      ( currentarg == "-gmgtkum"  ) ||
+                      ( currentarg == "-gmgtkS"   ) ||
+                      ( currentarg == "-gmgtkA"   ) ||
+                      ( currentarg == "-gmgtkuS"  ) ||
+                      ( currentarg == "-gmgtkMS"  ) ||
+                      ( currentarg == "-gmgtkMA"  ) ||
+                      ( currentarg == "-gmgtkMuS" ) ||
+                      ( currentarg == "-gmgtkU"   ) ||
+                      ( currentarg == "-gmgtkoz"  ) ||
+                      ( currentarg == "-gmgtkOz"  ) ||
+                      ( currentarg == "-gmgtekn"   ) ||
+                      ( currentarg == "-gmgteku"   ) ||
+                      ( currentarg == "-gmgtekss"  ) ||
+                      ( currentarg == "-gmgtekus"  ) ||
+                      ( currentarg == "-gmgteknn"  ) ||
+                      ( currentarg == "-gmgtekuu"  ) ||
+                      ( currentarg == "-gmgtekc"   ) ||
+                      ( currentarg == "-gmgtekuc"  ) ||
+                      ( currentarg == "-gmgtekm"   ) ||
+                      ( currentarg == "-gmgtekum"  ) ||
+                      ( currentarg == "-gmgtekS"   ) ||
+                      ( currentarg == "-gmgtekA"   ) ||
+                      ( currentarg == "-gmgtekuS"  ) ||
+                      ( currentarg == "-gmgtekMS"  ) ||
+                      ( currentarg == "-gmgtekMA"  ) ||
+                      ( currentarg == "-gmgtekMuS" ) ||
+                      ( currentarg == "-gmgtekU"   ) ||
+                      ( currentarg == "-gmgtekoz"  ) ||
+                      ( currentarg == "-gmgtekOz"  ) ||
+                      ( currentarg == "-gmgtrkn"   ) ||
+                      ( currentarg == "-gmgtrku"   ) ||
+                      ( currentarg == "-gmgtrkss"  ) ||
+                      ( currentarg == "-gmgtrkus"  ) ||
+                      ( currentarg == "-gmgtrknn"  ) ||
+                      ( currentarg == "-gmgtrkuu"  ) ||
+                      ( currentarg == "-gmgtrkc"   ) ||
+                      ( currentarg == "-gmgtrkuc"  ) ||
+                      ( currentarg == "-gmgtrkm"   ) ||
+                      ( currentarg == "-gmgtrkum"  ) ||
+                      ( currentarg == "-gmgtrkS"   ) ||
+                      ( currentarg == "-gmgtrkA"   ) ||
+                      ( currentarg == "-gmgtrkuS"  ) ||
+                      ( currentarg == "-gmgtrkMS"  ) ||
+                      ( currentarg == "-gmgtrkMA"  ) ||
+                      ( currentarg == "-gmgtrkMuS" ) ||
+                      ( currentarg == "-gmgtrkU"   ) ||
+                      ( currentarg == "-gmgtrkoz"  ) ||
+                      ( currentarg == "-gmgtrkOz"  ) ||
+                      ( currentarg == "-gmgtmtb"  ) ||
+                      ( currentarg == "-gmgtbmx"  )    )
             {
                 // Learning options
 
@@ -4427,6 +4515,15 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmsg"  ) ||
                       ( currentarg == "-gmsgg" ) ||
                       ( currentarg == "-gmsmd" ) ||
+                      ( currentarg == "-gmgtc"  ) ||
+                      ( currentarg == "-gmgtn"  ) ||
+                      ( currentarg == "-gmgty"  ) ||
+                      ( currentarg == "-gmgtw"  ) ||
+                      ( currentarg == "-gmgta"  ) ||
+                      ( currentarg == "-gmgtd"  ) ||
+                      ( currentarg == "-gmgtg"  ) ||
+                      ( currentarg == "-gmgtgg" ) ||
+                      ( currentarg == "-gmgtmd" ) ||
                       ( currentarg == "-gmn"   ) ||
                       ( currentarg == "-gmLf"  ) ||
                       ( currentarg == "-gmLF"  ) ||
@@ -4442,6 +4539,7 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmd"   ) ||
                       ( currentarg == "-gmbgn" ) ||
                       ( currentarg == "-gmsbgn" ) ||
+                      ( currentarg == "-gmgtbgn" ) ||
                       ( currentarg == "-gmg"   ) ||
                       ( currentarg == "-gmgg"  ) ||
                       ( currentarg == "-gmma"  ) ||
@@ -4621,7 +4719,58 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmsrkd"   ) ||
                       ( currentarg == "-gmsrkG"   ) ||
                       ( currentarg == "-gmsrkI"   ) ||
-                      ( currentarg == "-gmsrkan"  )    )
+                      ( currentarg == "-gmsrkan"  ) ||
+                      ( currentarg == "-gmgtks"   ) ||
+                      ( currentarg == "-gmgtki"   ) ||
+                      ( currentarg == "-gmgtka"   ) ||
+                      ( currentarg == "-gmgtkb"   ) ||
+                      ( currentarg == "-gmgtke"   ) ||
+                      ( currentarg == "-gmgtkw"   ) ||
+                      ( currentarg == "-gmgtkt"   ) ||
+                      ( currentarg == "-gmgtktx"  ) ||
+                      ( currentarg == "-gmgtktk"  ) ||
+                      ( currentarg == "-gmgtkg"   ) ||
+                      ( currentarg == "-gmgtkgg"  ) ||
+                      ( currentarg == "-gmgtkf"   ) ||
+                      ( currentarg == "-gmgtkr"   ) ||
+                      ( currentarg == "-gmgtkd"   ) ||
+                      ( currentarg == "-gmgtkG"   ) ||
+                      ( currentarg == "-gmgtkI"   ) ||
+                      ( currentarg == "-gmgtkan"  ) ||
+                      ( currentarg == "-gmgteks"   ) ||
+                      ( currentarg == "-gmgteki"   ) ||
+                      ( currentarg == "-gmgteka"   ) ||
+                      ( currentarg == "-gmgtekb"   ) ||
+                      ( currentarg == "-gmgteke"   ) ||
+                      ( currentarg == "-gmgtekw"   ) ||
+                      ( currentarg == "-gmgtekt"   ) ||
+                      ( currentarg == "-gmgtektx"  ) ||
+                      ( currentarg == "-gmgtektk"  ) ||
+                      ( currentarg == "-gmgtekg"   ) ||
+                      ( currentarg == "-gmgtekgg"  ) ||
+                      ( currentarg == "-gmgtekf"   ) ||
+                      ( currentarg == "-gmgtekr"   ) ||
+                      ( currentarg == "-gmgtekd"   ) ||
+                      ( currentarg == "-gmgtekG"   ) ||
+                      ( currentarg == "-gmgtekI"   ) ||
+                      ( currentarg == "-gmgtekan"  ) ||
+                      ( currentarg == "-gmgtrks"   ) ||
+                      ( currentarg == "-gmgtrki"   ) ||
+                      ( currentarg == "-gmgtrka"   ) ||
+                      ( currentarg == "-gmgtrkb"   ) ||
+                      ( currentarg == "-gmgtrke"   ) ||
+                      ( currentarg == "-gmgtrkw"   ) ||
+                      ( currentarg == "-gmgtrkt"   ) ||
+                      ( currentarg == "-gmgtrktx"  ) ||
+                      ( currentarg == "-gmgtrktk"  ) ||
+                      ( currentarg == "-gmgtrkg"   ) ||
+                      ( currentarg == "-gmgtrkgg"  ) ||
+                      ( currentarg == "-gmgtrkf"   ) ||
+                      ( currentarg == "-gmgtrkr"   ) ||
+                      ( currentarg == "-gmgtrkd"   ) ||
+                      ( currentarg == "-gmgtrkG"   ) ||
+                      ( currentarg == "-gmgtrkI"   ) ||
+                      ( currentarg == "-gmgtrkan"  )    )
             {
                 // Learning options
 
@@ -4673,7 +4822,22 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmsrkV" ) ||
                       ( currentarg == "-gmsrko" ) ||
                       ( currentarg == "-gmsrkO" ) ||
-                      ( currentarg == "-gmsrkx" )    )
+                      ( currentarg == "-gmsrkx" ) ||
+                      ( currentarg == "-gmgtkv" ) ||
+                      ( currentarg == "-gmgtkV" ) ||
+                      ( currentarg == "-gmgtko" ) ||
+                      ( currentarg == "-gmgtkO" ) ||
+                      ( currentarg == "-gmgtkx" ) ||
+                      ( currentarg == "-gmgtekv" ) ||
+                      ( currentarg == "-gmgtekV" ) ||
+                      ( currentarg == "-gmgteko" ) ||
+                      ( currentarg == "-gmgtekO" ) ||
+                      ( currentarg == "-gmgtekx" ) ||
+                      ( currentarg == "-gmgtrkv" ) ||
+                      ( currentarg == "-gmgtrkV" ) ||
+                      ( currentarg == "-gmgtrko" ) ||
+                      ( currentarg == "-gmgtrkO" ) ||
+                      ( currentarg == "-gmgtrkx" )    )
             {
                 // Learning options
 
@@ -8163,6 +8327,7 @@ int runsvmint(int threadInd,
                     else if ( currcommand(0) == "-gmd"   ) { (*xbopts).default_model_setsigma(safeatof(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-gmbgn" ) { (*xbopts).default_model_setvarApproxim(safeatoi(currcommand(1),argvariables));}
                     else if ( currcommand(0) == "-gmsbgn") { (*xbopts).default_modelaugx_setvarApproxim(safeatoi(currcommand(1),argvariables));}
+                    else if ( currcommand(0) == "-gmgtbgn") { (*xbopts).default_modelcgt_setvarApproxim(safeatoi(currcommand(1),argvariables));}
                     else if ( currcommand(0) == "-gmg"   ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_model_setkernelg(temp); }
                     else if ( currcommand(0) == "-gmgg"  ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_model_setkernelgg(xscale); }
                     else if ( currcommand(0) == "-gmma"  ) { (*xbopts).tunemu        = safeatoi(currcommand(1),argvariables); }
@@ -8183,6 +8348,11 @@ int runsvmint(int threadInd,
                     else if ( currcommand(0) == "-gmsg"  ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_modelaugx_setkernelg(temp); }
                     else if ( currcommand(0) == "-gmsgg" ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_modelaugx_setkernelgg(xscale); }
                     else if ( currcommand(0) == "-gmsmd" ) { (*xbopts).tuneaugxmod   = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmgtc"  ) { (*xbopts).numcgt  = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmgtd"  ) { (*xbopts).default_modelcgt_setsigma(safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmgtg"  ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_modelcgt_setkernelg(temp); }
+                    else if ( currcommand(0) == "-gmgtgg" ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_modelcgt_setkernelgg(xscale); }
+                    else if ( currcommand(0) == "-gmgtmd" ) { (*xbopts).tunecgt      = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmLf"  ) { (*xbopts).plotfreq      = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmLF"  ) { (*xbopts).modeloutformat= safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmLn"  ) { (*xbopts).modelname     = currcommand(1); }
@@ -8308,6 +8478,47 @@ int runsvmint(int threadInd,
                         std::string currcommandis = "-" + ((currcommand(0)).substr(4));
 
                         ML_Base &kernML = (*xbopts).altfxapprox;
+                        MercerKernel &theKern = kernML.getKernel_unsafe();
+
+                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+
+errstream() << "phantomxyznlp " << theKern << "\n";
+                        gskfirstcall = 0;
+                    }
+
+                    else if ( ( currcommand(0).substr(0,6) == "-gmgtek" ) || ( currcommand(0) == "-gmgtemtb" ) || ( currcommand(0) == "-gmgtebmx" ) )
+                    {
+                        // output kernel
+
+                        std::string currcommandis = "-" + ((currcommand(0)).substr(6));
+
+                        ML_Base &kernML = (*xbopts).altcgtapprox;
+                        MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
+
+                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gsekkernnum,gsekfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+
+                        gsekfirstcall = 0;
+                    }
+
+                    else if ( ( currcommand(0).substr(0,6) == "-gmgtrk" ) || ( currcommand(0) == "-gmgtrmtb" ) || ( currcommand(0) == "-gmgtrbmx" ) )
+                    {
+                        // RFF similarity space kernel
+
+                        std::string currcommandis = "-" + ((currcommand(0)).substr(6));
+
+                        ML_Base &kernML = (*xbopts).altcgtapprox;
+                        MercerKernel &theKern = kernML.getRFFKernel_unsafe();
+
+                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,gsrkkernnum,gsrkfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+
+                        gsrkfirstcall = 0;
+                    }
+
+                    else if ( ( currcommand(0).substr(0,5) == "-gmgtk" ) || ( currcommand(0) == "-gmgtmtb" ) || ( currcommand(0) == "-gmgtbmx" ) )
+                    {
+                        std::string currcommandis = "-" + ((currcommand(0)).substr(5));
+
+                        ML_Base &kernML = (*xbopts).altcgtapprox;
                         MercerKernel &theKern = kernML.getKernel_unsafe();
 
                         processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
@@ -8580,7 +8791,6 @@ errstream() << "phantomxyznlp " << theKern << "\n";
                                 int mInd = 0;
                                 Vector<int> muInd;
                                 Vector<int> augxInd;
-                                Vector<int> ceqInd;
                                 Vector<int> cgtInd;
                                 int sigInd = 0;
                                 int srcmodInd = 0;
@@ -8662,8 +8872,7 @@ errstream() << "phantomxyznlp " << theKern << "\n";
                                                           // 4 = source model (env-GP,diff-GP)
                                                           // 5 = difference model (diff-GP)
                                                           // 6 = augx model, -1 if not defined
-                                                          // 7 = ceq model, -1 if not defined
-                                                          // 8 = cgt model, -1 if not defined
+                                                          // 7 = cgt model, -1 if not defined
 
                                 MLnumbers("&",0) = bayesModelNum;
                                 MLnumbers("&",1) = -1;
@@ -8673,7 +8882,6 @@ errstream() << "phantomxyznlp " << theKern << "\n";
                                 MLnumbers("&",5) = -1;
                                 MLnumbers("&",6) = -1;
                                 MLnumbers("&",7) = -1;
-                                MLnumbers("&",8) = -1;
 
                                 void *fnarg[21];
 
@@ -8715,7 +8923,6 @@ errstream() << "phantomxyznlp " << theKern << "\n";
                                                           mInd,
                                                           muInd,
                                                           augxInd,
-                                                          ceqInd,
                                                           cgtInd,
                                                           sigInd,
                                                           srcmodInd,
@@ -8937,8 +9144,7 @@ errstream() << "phantomxyznlp " << theKern << "\n";
                                         //gridargvars("&",90)("&",7)         = raw iteration count not relevant here!
                                         //gridargvars("&",90)("&",8)         = raw start time not relevant here!
                                         gridargvars("&",90)("&",9)         = augxInd;
-                                        gridargvars("&",90)("&",10)        = ceqInd;
-                                        gridargvars("&",90)("&",11)        = cgtInd;
+                                        gridargvars("&",90)("&",10)        = cgtInd;
 
 //phantomxyzxyz
                                         int locverblevel = verblevel;
@@ -11475,7 +11681,6 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
     gridargvars("&",90)("&",8)  = rawstarttime;
     gridargvars("&",90)("&",9)  = MLnumbers(6);
     gridargvars("&",90)("&",10) = MLnumbers(7);
-    gridargvars("&",90)("&",11) = MLnumbers(8);
 
     if ( x.size() )
     {
@@ -16476,16 +16681,16 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           - non-trivial results are  returned for model based\n" : "" );
     output << ( (          advanced ) ? "                             methods in the following format:                 \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "             { y v [ce1..cen] [cg1..cgn] [xx1..xxn] xf [xf1..xfn] xff xf3 t } \n" : "" );
+    output << ( (          advanced ) ? "                        { y v [cg1..cgn] [xx1..xxn] xf [xf1..xfn] xff xf3 t } \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                             where:                                           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                             + y is the usual result.                         \n" : "" );
+    output << ( (          advanced ) ? "                             + y is the usual result. You can set y=null which\n" : "" );
+    output << ( (          advanced ) ? "                               will prevent the sample from being added to the\n" : "" );
+    output << ( (          advanced ) ? "                               function model (eg if c(x)<0).                 \n" : "" );
     output << ( (          advanced ) ? "                             + v is the variance of the measurement noise.    \n" : "" );
-    output << ( (          advanced ) ? "                             + [ ce1 .. cen ] for  equality constraints  (want\n" : "" );
-    output << ( (          advanced ) ? "                               cei(x) = 0 for i=1,2,...,n).                   \n" : "" );
     output << ( (          advanced ) ? "                             + [ cg1 .. cgn ] for inequality constraints (want\n" : "" );
-    output << ( (          advanced ) ? "                               cgi(x) > 0 for i=1,2,...,n).                   \n" : "" );
+    output << ( (          advanced ) ? "                               cgi(x) > 0 for i=1,2,...,n.  See -cmgt).       \n" : "" );
     output << ( (          advanced ) ? "                             + [ xx1 ... xxn ] is side-channel data (see -gmsc\n" : "" );
     output << ( (          advanced ) ? "                               etc for information.                           \n" : "" );
     output << ( (          advanced ) ? "                             + xf is for  rank observations  (that is,  rather\n" : "" );
@@ -16868,6 +17073,8 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                  **   exceeded.                                   **         \n" : "" );
     output << ( (          advanced ) ? "                  ** - the max training time is exceeded.          **         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                  ** Model-based optimisation options.             **         \n" : "" );
     output << ( (          advanced ) ? "                  ** (this includes Bayesian optimisation)         **         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
@@ -16876,6 +17083,14 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -gma n          - set dim of default GPR for multi-objective optim.  \n" : "" );
     output << ( (          advanced ) ? "         -gmr            - add noise to model observations.                   \n" : "" );
     output << ( (          advanced ) ? "         -gmR            - don't add noise to model observations (default).   \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -gmgt n         - number of inequality constraints c(x) >= 0.        \n" : "" );
+    output << ( (          advanced ) ? "                           0 - normal operation (default).                    \n" : "" );
+    output << ( (          advanced ) ? "                           n - see above.                                     \n" : "" );
+    output << ( (          advanced ) ? "                           Equality  constraints  are   enforced  (in  BO)  by\n" : "" );
+    output << ( (          advanced ) ? "                           multiplying   the   acquisition  function   by  the\n" : "" );
+    output << ( (          advanced ) ? "                           posterior probability  that the  constraint is met.\n" : "" );
+    output << ( (          advanced ) ? "                           For EI, this is exactly cEI.                       \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmsc n         - enable/disable side-channel learning:              \n" : "" );
     output << ( (          advanced ) ? "                           0 - normal operation.                              \n" : "" );
@@ -16921,20 +17136,24 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmd s          - set noise variance for default GPR model.          \n" : "" );
     output << ( (          advanced ) ? "         -gmsd s         - set noise variance for default q(x) model.         \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtd s        - set noise variance for default c(x) model.         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmbgn n        - set default GPR model posterior variance terms. See\n" : "" );
     output << ( (          advanced ) ? "                           -bgn for details.                                  \n" : "" );
-    output << ( (          advanced ) ? "         -gmsbgn n       - set default q(x) model postrior variance terms. See\n" : "" );
-    output << ( (          advanced ) ? "                           -bgn for details.                                  \n" : "" );
+    output << ( (          advanced ) ? "         -gmsbgn n       - set default q(x) model postrior variance terms.    \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtbgn n      - set default c(x) model postrior variance terms.    \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmg g          - set length scale for default GPR kernel.           \n" : "" );
     output << ( (          advanced ) ? "         -gmsg g         - set length scale for default q(x) kernel.          \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtg g        - set length scale for default c(x) kernel.          \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmgg g         - set ARD length scale vector for default GPR kernel.\n" : "" );
     output << ( (          advanced ) ? "         -gmsgg g        - set ARD length scale vector for dfault q(x) kernel.\n" : "" );
+    output << ( (          advanced ) ? "         -gmgtgg g       - set ARD length scale vector for dfault c(x) kernel.\n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmk...         - set default kernel parameters on GP for GPR model. \n" : "" );
     output << ( (          advanced ) ? "         -gmsk...        - set default kernel paras on GP for side-channel.   \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtk...       - set default kernel paras on GP for inequality.     \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmn n          - sigma estimation model:                            \n" : "" );
     output << ( (          advanced ) ? "                           0 - mu and  sigma approximated by a single  ML that\n" : "" );
@@ -16991,6 +17210,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -gmmc n         - Automatic tuning for source model (see -gmx).      \n" : "" );
     output << ( (          advanced ) ? "         -gmmd n         - Automatic tuning for difference model (see -gmx).  \n" : "" );
     output << ( (          advanced ) ? "         -gmsmd n        - Automatic tuning for q(x) model (see -gmsc).       \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtmd n       - Automatic tuning for c(x) model (see -gmgtc).      \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                           The above tuning is of  (some of the) kernel params\n" : "" );
     output << ( (          advanced ) ? "                           on a heuristic basis using rudimentary grid search.\n" : "" );
