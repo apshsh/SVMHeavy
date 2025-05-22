@@ -440,6 +440,112 @@ int MLM_Generic::home(void)
 
 
 
+    void MLM_Generic::fixMLTree(int modind)
+    {
+        if ( tsize() )
+        {
+            int z = 0;
+            int i;
+
+            // Set alternative evaluation references at all levels.
+            // Turn off cholesky factorisation for kernel tree.
+
+            getQQ().setaltx(&(mltree(z)));
+
+            for ( i = 0 ; i < tsize() ; ++i )
+            {
+                if ( i )
+                {
+                    mltree("&",i).setaltx(&(mltree(z)));
+                }
+
+                mltree("&",i).setQuadraticCost();
+                mltree("&",i).setOptSMO();
+            }
+
+            // Keep xy cache at base level
+
+            mltree("&",z).getKernel_unsafe().setsuggestXYcache(1);
+            mltree("&",z).resetKernel(modind);
+
+            // Ensure tree makes sense
+
+            if ( tsize() > 1 )
+            {
+                for ( i = 1 ; i < tsize() ; ++i )
+                {
+                    if ( (mltree(i).getKernel().cType(0)/100) != 8 )
+                    {
+                        mltree("&",i).getKernel_unsafe().add(0);
+                    }
+
+                    mltree("&",i).getKernel_unsafe().setType(802,0);
+                    mltree("&",i).getKernel_unsafe().setChained(0);
+                    mltree("&",i).getKernel_unsafe().setAltCall(mltree(i-1).MLid(),0);
+                    mltree("&",i).resetKernel();
+                }
+            }
+
+            if ( (getQQ().getKernel().cType(0)/100) != 8 )
+            {
+                getQQ().getKernel_unsafe().add(0);
+            }
+
+            getQQ().getKernel_unsafe().setType(802,0);
+            getQQ().getKernel_unsafe().setChained(0);
+            getQQ().getKernel_unsafe().setAltCall(mltree(tsize()-1).MLid(),0);
+            getQQ().resetKernel();
+        }
+
+        else if ( (getQconst().getKernel().cType()/100) == 8 )
+        {
+            getQQ().getKernel_unsafe().remove(0);
+            getQQ().resetKernel(modind);
+        }
+
+        return;
+    }
+
+    void MLM_Generic::resetKernelTree(int modind)
+    {
+        if ( tsize() )
+        {
+            int ii;
+
+            for ( ii = 0 ; ii < tsize() ; ++ii )
+            {
+                mltree("&",ii).resetKernel(modind && !ii);
+            }
+        }
+
+        getQQ().resetKernel(modind && !tsize());
+
+        return;
+    }
+
+    ML_Base &MLM_Generic::getKnumML(int ovr)
+    {
+        int i = ( ovr <= -2 ) ? xknum : ovr;
+
+        if ( i == -1 )
+        {
+            return getQQ();
+        }
+
+        return mltree("&",i);
+    }
+
+    const ML_Base &MLM_Generic::getKnumMLconst(int ovr) const
+    {
+        int i = ( ovr <= -2 ) ? xknum : ovr;
+
+        if ( i == -1 )
+        {
+            return getQQconst();
+        }
+
+        return mltree(i);
+    }
 
 
 

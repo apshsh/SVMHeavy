@@ -124,9 +124,16 @@ public:
 
     virtual double eps(void) const override { return cyceps; }
 
-    virtual const Vector<gentype> &y        (void) const override { return locyg;        }
-    virtual const Vector<int>     &d        (void) const override { return locd;         }
-    virtual const Vector<double>  &epsweight(void) const override { return cycepsweight; }
+    virtual const Vector<gentype>         &y        (void) const override { return locyg;        }
+    virtual const Vector<double>          &yR       (void) const override { static thread_local Vector<double>          dummy; NiceThrow("yR not defined in svm_cyclic"); return dummy; }
+    virtual const Vector<d_anion>         &yA       (void) const override { static thread_local Vector<d_anion>         dummy; NiceThrow("yA not defined in svm_cyclic"); return dummy; }
+    virtual const Vector<Vector<double> > &yV       (void) const override { return locy;         }
+    virtual const Vector<gentype>         &yp       (void) const override { static thread_local Vector<gentype>         dummy; NiceThrow("yp  not defined in svm_cyclic"); return dummy; }
+    virtual const Vector<double>          &ypR      (void) const override { static thread_local Vector<double>          dummy; NiceThrow("ypR not defined in svm_cyclic"); return dummy; }
+    virtual const Vector<d_anion>         &ypA      (void) const override { static thread_local Vector<d_anion>         dummy; NiceThrow("ypA not defined in svm_cyclic"); return dummy; }
+    virtual const Vector<Vector<double> > &ypV      (void) const override { static thread_local Vector<Vector<double> > dummy; NiceThrow("ypV not defined in svm_cyclic"); return dummy; }
+    virtual const Vector<int>             &d        (void) const override { return locd;         }
+    virtual const Vector<double>          &epsweight(void) const override { return cycepsweight; }
 
     // Kernel stuff
 

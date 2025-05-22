@@ -21,7 +21,7 @@ class gentype;
 #include <cmath>
 #include "randfun.hpp"
 #include "clockbase.hpp"
-//#include "basefn.hpp"
+#include "basefn.hpp"
 #include "memdebug.hpp"
 #include "niceassert.hpp"
 #include "numbase.hpp"
@@ -268,8 +268,8 @@ public:
             case 'G': { typeis = 'G'; MEMNEW(dgraphval,Dgraph<gentype REALCOMMA double>); break; }
             case 'S': { typeis = 'S'; MEMNEW(stringval,std::string);                      break; }
             case 'E':
-            case 'F': { NiceThrow("Illegal type in gentype constructor"); break; }
-            default:  { NiceThrow("Unknown type in gentype constructor"); break; }
+            case 'F': { NiceThrow("Illegal type in gentype constructor");                 break; }
+            default:  { NiceThrow("Unknown type in gentype constructor");                 break; }
         }
     }
 
@@ -651,26 +651,30 @@ public:
 
     operator       int()                      const { if ( isValInteger() ) { return intval;     } else if ( isValReal()    ) { return (int) doubleval; } else if ( isValNull() ) { return 0; } return cast_int(3);    }
     operator       double()                   const { if ( isValReal()    ) { return doubleval;  } else if ( isValInteger() ) { return intval;          } else if ( isValNull() ) { return 0; } return cast_double(3); }
-    operator const d_anion &()                const { if ( isValAnion()   ) { return *anionval;  } return cast_anion(3);       }
-    operator const Vector<gentype> &()        const { if ( isValVector()  ) { return *vectorval; } return cast_vector(3);      }
-    operator const Vector<double> &()         const {                                              return cast_vector_real(3); }
-    operator const Matrix<gentype> &()        const { if ( isValMatrix()  ) { return *matrixval; } return cast_matrix(3);      }
-    operator const Matrix<double> &()         const {                                              return cast_matrix_real(3); }
-    operator const Set<gentype> &()           const { if ( isValSet()     ) { return *setval;    } return cast_set(3);         }
-    operator const Dgraph<gentype,double> &() const { if ( isValDgraph()  ) { return *dgraphval; } return cast_dgraph(3);      }
-    operator const std::string &()            const { if ( isValString()  ) { return *stringval; } return cast_string(3);      }
+    operator const d_anion &()                const { if ( isValAnion()   ) { return *anionval;  } return cast_anion(3);             }
+    operator const Vector<gentype> &()        const { if ( isValVector()  ) { return *vectorval; } return cast_vector(3);            }
+    operator const Vector<double> &()         const {                                              return cast_vector_real(3);       }
+    operator const SparseVector<gentype> &()  const {                                              return cast_sparsevector(3);      }
+    operator const SparseVector<double> &()   const {                                              return cast_sparsevector_real(3); }
+    operator const Matrix<gentype> &()        const { if ( isValMatrix()  ) { return *matrixval; } return cast_matrix(3);            }
+    operator const Matrix<double> &()         const {                                              return cast_matrix_real(3);       }
+    operator const Set<gentype> &()           const { if ( isValSet()     ) { return *setval;    } return cast_set(3);               }
+    operator const Dgraph<gentype,double> &() const { if ( isValDgraph()  ) { return *dgraphval; } return cast_dgraph(3);            }
+    operator const std::string &()            const { if ( isValString()  ) { return *stringval; } return cast_string(3);            }
 
-          void                    cast_null       (int finalise = 0) const;
-          int                     cast_int        (int finalise = 0) const;
-          double                  cast_double     (int finalise = 0) const;
-    const d_anion                &cast_anion      (int finalise = 0) const;
-    const Vector<gentype>        &cast_vector     (int finalise = 0) const;
-    const Vector<double>         &cast_vector_real(int finalise = 0) const;
-    const Matrix<gentype>        &cast_matrix     (int finalise = 0) const;
-    const Matrix<double>         &cast_matrix_real(int finalise = 0) const;
-    const Set<gentype>           &cast_set        (int finalise = 0) const;
-    const Dgraph<gentype,double> &cast_dgraph     (int finalise = 0) const;
-    const std::string            &cast_string     (int finalise = 0) const;
+          void                    cast_null             (int finalise = 0) const;
+          int                     cast_int              (int finalise = 0) const;
+          double                  cast_double           (int finalise = 0) const;
+    const d_anion                &cast_anion            (int finalise = 0) const;
+    const Vector<gentype>        &cast_vector           (int finalise = 0) const;
+    const Vector<double>         &cast_vector_real      (int finalise = 0) const;
+    const SparseVector<gentype>  &cast_sparsevector     (int finalise = 0) const;
+    const SparseVector<double>   &cast_sparsevector_real(int finalise = 0) const;
+    const Matrix<gentype>        &cast_matrix           (int finalise = 0) const;
+    const Matrix<double>         &cast_matrix_real      (int finalise = 0) const;
+    const Set<gentype>           &cast_set              (int finalise = 0) const;
+    const Dgraph<gentype,double> &cast_dgraph           (int finalise = 0) const;
+    const std::string            &cast_string           (int finalise = 0) const;
 
     gentype &toNull   (gentype &res) const;
     gentype &toInteger(gentype &res) const;
@@ -1041,17 +1045,21 @@ public:
 
     gentype &rand(void)
     {
-             if ( isValNull()    ) { ;                                             }
-        else if ( isValInteger() ) { setrand(intval);    doubleval = intval;       }
-        else if ( isValReal()    ) { setrand(doubleval); intval = (int) doubleval; }
-        else if ( isValAnion()   ) { setrand(*anionval);                           }
-        else if ( isValVector()  ) { (*vectorval).rand();                          }
-        else if ( isValMatrix()  ) { (*matrixval).rand();                          }
-        else if ( isValSet()     ) { (*setval).rand();                             }
-        else if ( isValDgraph()  ) { (*dgraphval).rand();                          }
+             if ( isValNull()    ) { ;                                                  }
+        else if ( isValInteger() ) { setrand(intval);     doubleval = intval;           }
+        else if ( isValReal()    ) { setrand(doubleval);  intval = (int) doubleval;     }
+        else if ( isValAnion()   ) { setrand(*anionval);                                }
+        else if ( isValVector()  ) { (*vectorval).rand();                               }
+        else if ( isValMatrix()  ) { (*matrixval).rand();                               }
+        else if ( isValSet()     ) { (*setval).rand();                                  }
+        else if ( isValDgraph()  ) { (*dgraphval).rand();                               }
+        else if ( isValString()  ) {                      (*stringval) = randomquote(); }
+        else if ( isValError()   ) { ;                                                  }
         else
         {
-            NiceThrow("Randomisation of functions, strings and errors not implemented");
+            force_double();
+            setrand(doubleval);
+            intval = (int) doubleval;
         }
 
         return *this;
@@ -1295,6 +1303,9 @@ private:
     mutable Vector<double> *vectorvalreal = nullptr;
     mutable Matrix<double> *matrixvalreal = nullptr;
 
+    mutable SparseVector<gentype> *sparsevectorval     = nullptr;
+    mutable SparseVector<double>  *sparsevectorvalreal = nullptr;
+
     // Is value equation (extended version)
 
     int isValEqnFull(void) const
@@ -1430,15 +1441,17 @@ private:
 
         isNomConst = false;
 
-        if ( ( anionval      != nullptr ) && ( ( targtype != 'A' ) )                               ) { MEMDEL(anionval);      anionval      = nullptr; }
-        if ( ( vectorval     != nullptr ) && ( ( targtype != 'V' ) || ( (*vectorval).infsize() ) ) ) { MEMDEL(vectorval);     vectorval     = nullptr; }
-        if ( ( vectorvalreal != nullptr )                                                          ) { MEMDEL(vectorvalreal); vectorvalreal = nullptr; }
-        if ( ( matrixval     != nullptr ) && ( ( targtype != 'M' ) )                               ) { MEMDEL(matrixval);     matrixval     = nullptr; }
-        if ( ( matrixvalreal != nullptr )                                                          ) { MEMDEL(matrixvalreal); matrixvalreal = nullptr; }
-        if ( ( setval        != nullptr ) && ( ( targtype != 'X' ) )                               ) { MEMDEL(setval);        setval        = nullptr; }
-        if ( ( dgraphval     != nullptr ) && ( ( targtype != 'G' ) )                               ) { MEMDEL(dgraphval);     dgraphval     = nullptr; }
-        if ( ( stringval     != nullptr ) && ( ( targtype != 'S' ) && ( targtype != 'E' ) )        ) { MEMDEL(stringval);     stringval     = nullptr; }
-        if ( ( eqnargs       != nullptr )                                                          ) { MEMDEL(eqnargs);       eqnargs       = nullptr; }
+        if ( ( anionval            != nullptr ) && ( ( targtype != 'A' ) )                               ) { MEMDEL(anionval);            anionval            = nullptr; }
+        if ( ( vectorval           != nullptr ) && ( ( targtype != 'V' ) || ( (*vectorval).infsize() ) ) ) { MEMDEL(vectorval);           vectorval           = nullptr; }
+        if ( ( vectorvalreal       != nullptr )                                                          ) { MEMDEL(vectorvalreal);       vectorvalreal       = nullptr; }
+        if ( ( sparsevectorval     != nullptr )                                                          ) { MEMDEL(sparsevectorval);     sparsevectorval     = nullptr; }
+        if ( ( sparsevectorvalreal != nullptr )                                                          ) { MEMDEL(sparsevectorvalreal); sparsevectorvalreal = nullptr; }
+        if ( ( matrixval           != nullptr ) && ( ( targtype != 'M' ) )                               ) { MEMDEL(matrixval);           matrixval           = nullptr; }
+        if ( ( matrixvalreal       != nullptr )                                                          ) { MEMDEL(matrixvalreal);       matrixvalreal       = nullptr; }
+        if ( ( setval              != nullptr ) && ( ( targtype != 'X' ) )                               ) { MEMDEL(setval);              setval              = nullptr; }
+        if ( ( dgraphval           != nullptr ) && ( ( targtype != 'G' ) )                               ) { MEMDEL(dgraphval);           dgraphval           = nullptr; }
+        if ( ( stringval           != nullptr ) && ( ( targtype != 'S' ) && ( targtype != 'E' ) )        ) { MEMDEL(stringval);           stringval           = nullptr; }
+        if ( ( eqnargs             != nullptr )                                                          ) { MEMDEL(eqnargs);             eqnargs             = nullptr; }
 
         typeis     = targtype;
         intval     = 0;
@@ -1477,7 +1490,6 @@ private:
     //                                          a$     -> psf(a)
     // 	 Unary negation and logical not (LtoR): -a     -> neg(a)
     //                                          ~a     -> lnot(a)
-    //                                          :a     -> subfact(a)
     //                                          +a     -> pos(a)       this will never occur and can be ignored as the equation is simplified
     //	 Power of (RtoL):                       a^b    -> pow(a,b)
     //                                          a^<b   -> powl(a,b)
@@ -1609,15 +1621,17 @@ inline void qswap(gentype &a, gentype &b)
 
     qswap(a.fnnameind,b.fnnameind);
 
-    d_anion                *anionval;      anionval      = a.anionval;      a.anionval      = b.anionval;      b.anionval      = anionval;
-    Vector<gentype>        *vectorval;     vectorval     = a.vectorval;     a.vectorval     = b.vectorval;     b.vectorval     = vectorval;
-    Vector<double>         *vectorvalreal; vectorvalreal = a.vectorvalreal; a.vectorvalreal = b.vectorvalreal; b.vectorvalreal = vectorvalreal;
-    Matrix<gentype>        *matrixval;     matrixval     = a.matrixval;     a.matrixval     = b.matrixval;     b.matrixval     = matrixval;
-    Matrix<double>         *matrixvalreal; matrixvalreal = a.matrixvalreal; a.matrixvalreal = b.matrixvalreal; b.matrixvalreal = matrixvalreal;
-    Set<gentype>           *setval;        setval        = a.setval;        a.setval        = b.setval;        b.setval        = setval;
-    Dgraph<gentype,double> *dgraphval;     dgraphval     = a.dgraphval;     a.dgraphval     = b.dgraphval;     b.dgraphval     = dgraphval;
-    std::string            *stringval;     stringval     = a.stringval;     a.stringval     = b.stringval;     b.stringval     = stringval;
-    Vector<gentype>        *eqnargs;       eqnargs       = a.eqnargs;       a.eqnargs       = b.eqnargs;       b.eqnargs       = eqnargs;
+    d_anion                *anionval;            anionval            = a.anionval;            a.anionval            = b.anionval;            b.anionval            = anionval;
+    Vector<gentype>        *vectorval;           vectorval           = a.vectorval;           a.vectorval           = b.vectorval;           b.vectorval           = vectorval;
+    Vector<double>         *vectorvalreal;       vectorvalreal       = a.vectorvalreal;       a.vectorvalreal       = b.vectorvalreal;       b.vectorvalreal       = vectorvalreal;
+    SparseVector<gentype>  *sparsevectorval;     sparsevectorval     = a.sparsevectorval;     a.sparsevectorval     = b.sparsevectorval;     b.sparsevectorval     = sparsevectorval;
+    SparseVector<double>   *sparsevectorvalreal; sparsevectorvalreal = a.sparsevectorvalreal; a.sparsevectorvalreal = b.sparsevectorvalreal; b.sparsevectorvalreal = sparsevectorvalreal;
+    Matrix<gentype>        *matrixval;           matrixval           = a.matrixval;           a.matrixval           = b.matrixval;           b.matrixval           = matrixval;
+    Matrix<double>         *matrixvalreal;       matrixvalreal       = a.matrixvalreal;       a.matrixvalreal       = b.matrixvalreal;       b.matrixvalreal       = matrixvalreal;
+    Set<gentype>           *setval;              setval              = a.setval;              a.setval              = b.setval;              b.setval              = setval;
+    Dgraph<gentype,double> *dgraphval;           dgraphval           = a.dgraphval;           a.dgraphval           = b.dgraphval;           b.dgraphval           = dgraphval;
+    std::string            *stringval;           stringval           = a.stringval;           a.stringval           = b.stringval;           b.stringval           = stringval;
+    Vector<gentype>        *eqnargs;             eqnargs             = a.eqnargs;             a.eqnargs             = b.eqnargs;             b.eqnargs             = eqnargs;
 
     const fninfoblock *thisfninfo; thisfninfo = a.thisfninfo; a.thisfninfo = b.thisfninfo; b.thisfninfo = thisfninfo;
 }
@@ -1886,12 +1900,12 @@ inline gentype *&setnegate(gentype *&a);
 inline gentype *&setconj  (gentype *&a);
 inline gentype *&setrand  (gentype *&a);
 
-inline gentype **&setident (gentype **&a) { NiceThrow("no"); return a; }
-inline gentype **&setzero  (gentype **&a) { return a = nullptr; }
-inline gentype **&setposate(gentype **&a) { return a; }
-inline gentype **&setnegate(gentype **&a) { NiceThrow("bleh"); return a; }
-inline gentype **&setconj  (gentype **&a) { NiceThrow("blit"); return a; }
-inline gentype **&setrand  (gentype **&a) { NiceThrow("OK, rand"); return a; }
+inline gentype **&setident (gentype **&a) { NiceThrow("Cant setident a gentype **&");  return a;           }
+inline gentype **&setzero  (gentype **&a) {                                            return a = nullptr; }
+inline gentype **&setposate(gentype **&a) {                                            return a;           }
+inline gentype **&setnegate(gentype **&a) { NiceThrow("Cant setnetage a gentype **&"); return a;           }
+inline gentype **&setconj  (gentype **&a) { NiceThrow("Cant setconj a gentype **&");   return a;           }
+inline gentype **&setrand  (gentype **&a) { NiceThrow("Cant setrand a gentype **&");   return a;           }
 
 
 
@@ -3226,19 +3240,19 @@ inline gentype &setconj       (gentype &a) { a.conj();        return a; }
 inline gentype &setrand       (gentype &a) { a.rand();        return a; }
 inline gentype &settranspose  (gentype &a) { a.transpose();   return a; }
 
-inline const gentype *&setident (const gentype *&a) { NiceThrow("no");       return a; }
-inline const gentype *&setzero  (const gentype *&a) { a = nullptr;           return a; }
-inline const gentype *&setposate(const gentype *&a) {                        return a; }
-inline const gentype *&setnegate(const gentype *&a) { NiceThrow("bleh");     return a; }
-inline const gentype *&setconj  (const gentype *&a) { NiceThrow("blit");     return a; }
-inline const gentype *&setrand  (const gentype *&a) { NiceThrow("OK, rand"); return a; }
+inline const gentype *&setident (const gentype *&a) { NiceThrow("Cant setident a const gentype *&");  return a;           }
+inline const gentype *&setzero  (const gentype *&a) {                                                 return a = nullptr; }
+inline const gentype *&setposate(const gentype *&a) {                                                 return a;           }
+inline const gentype *&setnegate(const gentype *&a) { NiceThrow("Cant setnegate a const gentype *&"); return a;           }
+inline const gentype *&setconj  (const gentype *&a) { NiceThrow("Cant setconj a const gentype *&");   return a;           }
+inline const gentype *&setrand  (const gentype *&a) { NiceThrow("Cant setrand a const gentype *&");   return a;           }
 
-inline gentype *&setident (gentype *&a) { NiceThrow("no");       return a; }
-inline gentype *&setzero  (gentype *&a) { a = nullptr;           return a; }
-inline gentype *&setposate(gentype *&a) {                        return a; }
-inline gentype *&setnegate(gentype *&a) { NiceThrow("bleh");     return a; }
-inline gentype *&setconj  (gentype *&a) { NiceThrow("blit");     return a; }
-inline gentype *&setrand  (gentype *&a) { NiceThrow("OK, rand"); return a; }
+inline gentype *&setident (gentype *&a) { NiceThrow("Cant setident a gentype *&");  return a;           }
+inline gentype *&setzero  (gentype *&a) {                                           return a = nullptr; }
+inline gentype *&setposate(gentype *&a) {                                           return a;           }
+inline gentype *&setnegate(gentype *&a) { NiceThrow("Cant setnegate a gentype *&"); return a;           }
+inline gentype *&setconj  (gentype *&a) { NiceThrow("Cant setconj a gentype *&");   return a;           }
+inline gentype *&setrand  (gentype *&a) { NiceThrow("Cant setrand a gentype *&");   return a;           }
 
 inline gentype conj(const gentype &a) { gentype res = a; res.conj(); return res; }
 

@@ -1,74 +1,3 @@
-/*
-    output << ( (          advanced ) ? "             { y v [ce1..cen] [cg1..cgn] [xx1..xxn] xf [xf1..xfn] xff xf3 t } \n" : "" );
-ADD FIDELITY FEEDBACK OPTION HERE
-ACTUALLY ALLOW BASICALLY ALL OF THE INTERACTIVE STUFF VIA THIS INPUT
-
-
-varadd: maybe have varOVER-RIDE instead?
-Let the user over-ride x (including fidelity).
-
-
-tuneceq
-tunecgt
-
-mu...
-
-ismoo
-isceq
-iscgt
-
-
-bayesopt: grab inequality vectors (but ignore if y null)
-          add them to the relevant models
-          build the inequality constraints into the cost function as per Julien code
-
-mlinter: make all the inequality stuff accessible
-
-
-DO REVIEWS
-*/
-
-//FIXME: 1.33c is supposed to be nominally constant in gentype, which should then pass back and prevent tuneKernel from tuning this term.
-//       gentype can parse the c, but it currently isn't stored. Finish this.
-//FIXME: should be using fewer decimal places when reporting in globalopt, smboopt and bayesopt (ie logging to cout at human readable accuracy)
-
-//in sparsevector.hpp:
-//sv/set should work in the sparse case as well (altcontentsp)
-
-//For some reason, when plotml evaluates [0] for blk_usrfnb with 4*(x_0-0.5)^2 it gives 10???	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//fpareto, fgrid etc need to be negated for analysis with multi-objective!
-//the optimisation code seems to be working fine, but the *recording* code is negative to what it should be.
-
-
-
-/*
-ADD ALONG WITH -SA, -SAi, -SAA
-
-    virtual int setaltMLidsKB(const Vector<int>    &nv) { KBaltMLids = nv; return 1; }
-    virtual int setMLweightKB(const Vector<double> &nv) { KBMLweight = nv; return 1; }
-
-Optimisation options:
-    virtual int setminstepKB(double nv) { KBminstep = nv; return 1; }
-    virtual int setmaxiterKB(int    nv) { KBmaxiter = nv; return 1; }
-    virtual int setlrKB     (double nv) { KBlr = nv;      return 1; }
-
-Consider integrating into xferml.h
-*/
-
 
 //
 // SVMHeavyv7 abstracted interface
@@ -3119,7 +3048,6 @@ int runsvmint(int threadInd,
                       ( currentarg == "-B"   ) ||
                       ( currentarg == "-R"   ) ||
                       ( currentarg == "-mls" ) ||
-                      ( currentarg == "-sR"  ) ||
                       ( currentarg == "-T"   ) ||
                       ( currentarg == "-TT"  ) ||
                       ( currentarg == "-N"   ) ||
@@ -3294,12 +3222,6 @@ int runsvmint(int threadInd,
                       ( currentarg == "-ot"   ) ||
                       ( currentarg == "-oy"   ) ||
                       ( currentarg == "-oY"   ) ||
-                      ( currentarg == "-oge"  ) ||
-                      ( currentarg == "-ogm"  ) ||
-                      ( currentarg == "-ogr"  ) ||
-                      ( currentarg == "-ogs"  ) ||
-                      ( currentarg == "-ogt"  ) ||
-                      ( currentarg == "-ogT"  ) ||
                       ( currentarg == "-ofa"  ) ||
                       ( currentarg == "-ofe"  ) ||
                       ( currentarg == "-ofm"  ) ||
@@ -3790,6 +3712,9 @@ int runsvmint(int threadInd,
                       ( currentarg == "-jc"   ) ||
                       ( currentarg == "-dd"   ) ||
                       ( currentarg == "-w"    ) ||
+                      ( currentarg == "-mu"   ) ||
+                      ( currentarg == "-mugt" ) ||
+                      ( currentarg == "-muml" ) ||
                       ( currentarg == "-w+"   ) ||
                       ( currentarg == "-w-"   ) ||
                       ( currentarg == "-w="   ) ||
@@ -3805,7 +3730,6 @@ int runsvmint(int threadInd,
                       ( currentarg == "-Tl"   ) ||
                       ( currentarg == "-Tq"   ) ||
                       ( currentarg == "-Nl"   ) ||
-                      ( currentarg == "-sNl"  ) ||
                       ( currentarg == "-Nq"   ) ||
                       ( currentarg == "-Fi"   ) ||
                       ( currentarg == "-Flr"  ) ||
@@ -3836,10 +3760,7 @@ int runsvmint(int threadInd,
                       ( currentarg == "-in"   ) ||
                       ( currentarg == "-il"   ) ||
                       ( currentarg == "-d"    ) ||
-                      ( currentarg == "-ccs"  ) ||
-                      ( currentarg == "-nzs"  ) ||
-                      ( currentarg == "-vlb"  ) ||
-                      ( currentarg == "-vub"  )    )
+                      ( currentarg == "-ccs"  )    )
             {
                 preelse = 1;
 
@@ -6295,13 +6216,6 @@ int runsvmint(int threadInd,
                         else if ( currcommand(1) == "R"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(22);  }
                         else if ( currcommand(1) == "B"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(23);  }
 
-                        else if ( currcommand(1) == "onr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(100); }
-                        else if ( currcommand(1) == "onv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(101); }
-                        else if ( currcommand(1) == "ona" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(102); }
-                        else if ( currcommand(1) == "onc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(103); }
-                        else if ( currcommand(1) == "one" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(104); }
-                        else if ( currcommand(1) == "ong" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(105); }
-
                         else if ( currcommand(1) == "knp" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(300); }
                         else if ( currcommand(1) == "knc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(301); }
                         else if ( currcommand(1) == "kng" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(302); }
@@ -6357,10 +6271,6 @@ int runsvmint(int threadInd,
                         else if ( currcommand(1) == "rls" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(602); }
                         else if ( currcommand(1) == "rns" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(603); }
 
-                        else if ( currcommand(1) == "ssr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(700); }
-                        else if ( currcommand(1) == "ssc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(701); }
-                        else if ( currcommand(1) == "sss" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(702); }
-
                         else if ( currcommand(1) == "ser" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(-2);  }
                         else if ( currcommand(1) == "par" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(-3);  }
 
@@ -6391,13 +6301,6 @@ int runsvmint(int threadInd,
                         else if ( currcommand(1) == "d"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(21);  }
                         else if ( currcommand(1) == "R"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(22);  }
                         else if ( currcommand(1) == "B"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(23);  }
-
-                        else if ( currcommand(1) == "onr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(100); }
-                        else if ( currcommand(1) == "onv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(101); }
-                        else if ( currcommand(1) == "ona" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(102); }
-                        else if ( currcommand(1) == "onc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(103); }
-                        else if ( currcommand(1) == "one" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(104); }
-                        else if ( currcommand(1) == "ong" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(105); }
 
                         else if ( currcommand(1) == "knp" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(300); }
                         else if ( currcommand(1) == "knc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(301); }
@@ -6453,10 +6356,6 @@ int runsvmint(int threadInd,
                         else if ( currcommand(1) == "svm" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(601); }
                         else if ( currcommand(1) == "rls" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(602); }
                         else if ( currcommand(1) == "rns" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(603); }
-
-                        else if ( currcommand(1) == "ssr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(700); }
-                        else if ( currcommand(1) == "ssc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(701); }
-                        else if ( currcommand(1) == "sss" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(702); }
 
                         else if ( currcommand(1) == "ser" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(-2);  }
                         else if ( currcommand(1) == "par" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(-3);  }
@@ -6887,15 +6786,6 @@ int runsvmint(int threadInd,
                         else { STRTHROW("Error: "+currentarg+" is not a valid -mlR mode."); }
                     }
 
-                    else if ( currcommand(0) == "-sR" )
-                    {
-                        // Set empirical risk type
-
-                        if      ( currcommand(1) == "l" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setLinRegul();  }
-                        else if ( currcommand(1) == "q" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setQuadRegul(); }
-                        else { STRTHROW("Error: "+currentarg+" is not a valid -sR mode."); }
-                    }
-
                     else if ( currcommand(0) == "-T" )
                     {
                         // Set tube type
@@ -6940,12 +6830,6 @@ int runsvmint(int threadInd,
                         else if ( currcommand(0) == "-olrc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setlrc(safeatof(currcommand(1),argvariables));           }
                         else if ( currcommand(0) == "-olrd" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setlrd(safeatof(currcommand(1),argvariables));           }
                         else if ( currcommand(0) == "-oM"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmemsize(safeatoi(currcommand(1),argvariables));       }
-                        else if ( currcommand(0) == "-oge"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setssvtol(safeatof(currcommand(1),argvariables));        }
-                        else if ( currcommand(0) == "-ogm"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setssvmom(safeatof(currcommand(1),argvariables));        }
-                        else if ( currcommand(0) == "-ogr"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setssvlr(safeatof(currcommand(1),argvariables));         }
-                        else if ( currcommand(0) == "-ogs"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setssvovsc(safeatof(currcommand(1),argvariables));       }
-                        else if ( currcommand(0) == "-ogt"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setssvmaxitcnt(safeatoi(currcommand(1),argvariables));   }
-                        else if ( currcommand(0) == "-ogT"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setssvmaxtime(safeatof(currcommand(1),argvariables));    }
                         else if ( currcommand(0) == "-ofa"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setoutermethod(safeatoi(currcommand(1),argvariables));   }
                         else if ( currcommand(0) == "-ofe"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setoutertol(safeatof(currcommand(1),argvariables));      }
                         else if ( currcommand(0) == "-ofm"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setoutermom(safeatof(currcommand(1),argvariables));      }
@@ -7799,7 +7683,6 @@ int runsvmint(int threadInd,
                     else if ( currcommand(0) == "-Tl"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setnu(safeatof(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-Tq"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setnuQuad(safeatof(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-Nl"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setLinBiasForce(-2,safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-sNl"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setBiasForce(safeatof(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-Nq"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setQuadBiasForce(-2,safeatof(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-Nld"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setLinBiasForce(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
                     else if ( currcommand(0) == "-Nqd"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setQuadBiasForce(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
@@ -7829,7 +7712,9 @@ int runsvmint(int threadInd,
                     else if ( currcommand(0) == "-ia"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setscalalpha(safeatof(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-in"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setNsamp    (safeatoi(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-il"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsampSlack(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-nzs"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setNzs      (safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-mu"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmpri(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-mugt" ) { gentype mudef(currcommand(1)); getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setprival(mudef); }
+                    else if ( currcommand(0) == "-muml" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setpriml(&(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext))); }
 
                     else if ( currcommand(0) == "-Bf"   )
                     {
@@ -7857,24 +7742,6 @@ int runsvmint(int threadInd,
                         {
                             STRTHROW("Error: -m arguments are {r,m}");
                         }
-                    }
-
-                    if ( currcommand(0) == "-vlb"  ) 
-                    {
-                        SparseVector<double> xlb;
-                        std::stringstream xstr(currcommand(1));
-                        streamItIn(xstr,xlb,0);
-
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setzmin(xlb);
-                    }
-
-                    if ( currcommand(0) == "-vub"  ) 
-                    {
-                        SparseVector<double> xub;
-                        std::stringstream xstr(currcommand(1));
-                        streamItIn(xstr,xub,0);
-
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setzmax(xub);
                     }
                 }
 
@@ -8482,7 +8349,7 @@ int runsvmint(int threadInd,
 
                         processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
 
-errstream() << "phantomxyznlp " << theKern << "\n";
+//errstream() << "phantomxyznlp " << theKern << "\n";
                         gskfirstcall = 0;
                     }
 
@@ -8523,7 +8390,7 @@ errstream() << "phantomxyznlp " << theKern << "\n";
 
                         processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
 
-errstream() << "phantomxyznlp " << theKern << "\n";
+//errstream() << "phantomxyznlp " << theKern << "\n";
                         gskfirstcall = 0;
                     }
 
@@ -10247,39 +10114,39 @@ errstream() << "phantomxyznlp " << theKern << "\n";
 
                     if ( currcommand(0) == "-ECHOsock" )
                     {
-errstream() << "phantomx 0: " << currcommand(1) << "\n";
+//errstream() << "phantomx 0: " << currcommand(1) << "\n";
                         std::string sockname(currcommand(1));
 
-errstream() << "phantomx 1 -" << sockname << "-\n";
+//errstream() << "phantomx 1 -" << sockname << "-\n";
                         awarestream *echosock = makeUnixSocket(sockname,1,1,0);
 
-errstream() << "phantomx 2\n";
+//errstream() << "phantomx 2\n";
                         NiceAssert( echosock );
 
                         if ( echosock )
                         {
-errstream() << "phantomx 3\n";
+//errstream() << "phantomx 3\n";
                             std::ostream echosockout(echosock);
 
-errstream() << "phantomx 4: " << currcommand(2) << "\n";
+//errstream() << "phantomx 4: " << currcommand(2) << "\n";
                             std::stringstream evalx;
                             gentype echoval; safeatowhatever(echoval,currcommand(2),argvariables);
-errstream() << "phantomx 5\n";
+//errstream() << "phantomx 5\n";
                             echoval.finalise(2); // First globals (leaving possible distributions in place)
                             echoval.finalise(1); // Then randoms that remain
                             echoval.finalise();  // Then just in case
-errstream() << "phantomx 6\n";
+//errstream() << "phantomx 6\n";
                             evalx << echoval << "\n";
-errstream() << "phantomx 7\n";
+//errstream() << "phantomx 7\n";
                             stopnow = puttylump(evalx.str(),commstack);
-errstream() << "phantomx 8: " << evalx.str() << "\n";
+//errstream() << "phantomx 8: " << evalx.str() << "\n";
                             echosockout << evalx.str();
-errstream() << "phantomx 9\n";
+//errstream() << "phantomx 9\n";
 
                             delUnixSocket(echosock);
-errstream() << "phantomx 10\n";
+//errstream() << "phantomx 10\n";
                         }
-errstream() << "phantomx 11\n";
+//errstream() << "phantomx 11\n";
                     }
 
                     else if ( currcommand(0) == "-ak" )
@@ -12321,15 +12188,15 @@ int safeatoi(const std::string &src, SparseVector<SparseVector<gentype> > &argva
 
     srceqn.substitute(argvariables);
 
-    try
+    if ( srceqn.isCastableToIntegerWithoutLoss() )
     {
         res = (int) srceqn;
     }
 
-    catch ( std::string errstr )
+    else
     {
         std::string errstring;
-        errstring = "Syntax error: "+src+" does not evaluate as integer ("+errstr+").";
+        errstring = "Syntax error: "+src+" does not evaluate as integer.";
         NiceThrow(errstring);
     }
 
@@ -12343,15 +12210,15 @@ double safeatof(const std::string &src, SparseVector<SparseVector<gentype> > &ar
 
     srceqn.substitute(argvariables);
 
-    try
+    if ( srceqn.isCastableToRealWithoutLoss() )
     {
         res = (double) srceqn;
     }
 
-    catch ( std::string errstr )
+    else
     {
         std::string errstring;
-        errstring = "Syntax error: "+src+" does not evaluate as double ("+errstr+").";
+        errstring = "Syntax error: "+src+" does not evaluate as double.";
         NiceThrow(errstring);
     }
 
@@ -14648,12 +14515,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                         lse - LSV: auto-encoding machine.                    \n" : "" );
     output << ( ( basic || advanced ) ? "                         lsR - LSV: scalar regression random FF.#             \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                               Super-Sparse support vector machines (SSV):    \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                         sss - SSV: single class.                             \n" : "" );
-    output << ( ( basic || advanced ) ? "                         ssc - SSV: binary classification.                    \n" : "" );
-    output << ( ( basic || advanced ) ? "                         ssr - SSV: scalar regression.                        \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                               Gaussian processes (GPR):                      \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                         gpr - GPR: gaussian process scalar regression.       \n" : "" );
@@ -14686,15 +14547,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                         kne - KNN: auto-encoder.                             \n" : "" );
     output << ( ( basic || advanced ) ? "                         knp - KNN: density estimation.                       \n" : "" );
     output << ( ( basic || advanced ) ? "                         kne - KNN: auto-encoding machine.                    \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                               One-layer Neural Networks (ONN):               \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                         onc - ONN: binary classification.                    \n" : "" );
-    output << ( ( basic || advanced ) ? "                         onr - ONN: scalar regression.                        \n" : "" );
-    output << ( ( basic || advanced ) ? "                         onv - ONN: vector regression.                        \n" : "" );
-    output << ( ( basic || advanced ) ? "                         ona - ONN: anionic regression.                       \n" : "" );
-    output << ( ( basic || advanced ) ? "                         one - ONN: auto-encoding machine.                    \n" : "" );
-    output << ( ( basic || advanced ) ? "                         ong - ONN: gentype machine.                          \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                               Improvement measures (IMPs):                   \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
@@ -15165,13 +15017,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                           q - 2-norm.                                        \n" : "" );
     output << ( ( basic || advanced ) ? "         -mls n          - Set number of layers (not including output, dft 0).\n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                  -- SSV specific options                          --         \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -sR  {l,q}      - beta  regulation  type.   In SSV  models  the  beta\n" : "" );
-    output << ( ( basic || advanced ) ? "                           regularisation term is set by this:                \n" : "" );
-    output << ( ( basic || advanced ) ? "                           l - linear: sigma.||beta||_1.                      \n" : "" );
-    output << ( ( basic || advanced ) ? "                           q - quadratic: sigma.||beta||_2^2 (default).       \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                  -- BLK specific options                          --         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -mc  n          - (Mercer kernel inheritance block): sets the size of\n" : "" );
@@ -15296,15 +15141,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -oft m          - max iterations for 4-norm optim (default 100).     \n" : "" );
     output << ( (          advanced ) ? "         -ofM n          - max 4-kernel cache for 4-norm optim (default 1000).\n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                  -- SSV specific options                          --         \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -oge e          - tolerance e>=0 for SSV optim (default 0.005).      \n" : "" );
-    output << ( ( basic || advanced ) ? "         -ogm m          - Momentum factor for SSV optim (default 0.05).      \n" : "" );
-    output << ( ( basic || advanced ) ? "         -ogr t          - Learning rate for SSV optim (default 0.3).         \n" : "" );
-    output << ( ( basic || advanced ) ? "         -ogs s          - lr scaleback factor for SSV optim (default 0.8).   \n" : "" );
-    output << ( ( basic || advanced ) ? "         -ogt m          - max iterations for SSV optim (default 100).        \n" : "" );
-    output << ( ( basic || advanced ) ? "         -ogT n          - max training time for SSV optim (default 1000).    \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                  -- MLM specific options                          --         \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         -omr r          - Learning rate for MLM optim (default 0.3).         \n" : "" );
@@ -15327,7 +15163,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -pS             - scale to ensure that abs2(alpha) = 1.              \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                           SVM: alpha and b are scaled by s.                  \n" : "" );
-    output << ( (          advanced ) ? "                           LSV/SSV: like SVM.                                 \n" : "" );
+    output << ( (          advanced ) ? "                           LSV: like SVM.                                     \n" : "" );
     output << ( (          advanced ) ? "                           GPR: y and K (kernel weight) are scaled by s.      \n" : "" );
     output << ( (          advanced ) ? "                           BLK consensus: scale all parts.                    \n" : "" );
     output << ( (          advanced ) ? "                           Others: may or may not be implemented, see code.   \n" : "" );
@@ -15692,6 +15528,13 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                               with  non-real  kernel  and  non-real  training\n" : "" );
     output << ( (          advanced ) ? "                               vectors).                                      \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "         -mu  {0,1,2}    - Prior mean type:                                   \n" : "" );
+    output << ( ( basic || advanced ) ? "                           0 - prior mean 0 (default).                        \n" : "" );
+    output << ( ( basic || advanced ) ? "                           1 - prior mean mu(x) specified directly.           \n" : "" );
+    output << ( ( basic || advanced ) ? "                           2 - prior mean g(x) inherited from ML.             \n" : "" );
+    output << ( ( basic || advanced ) ? "         -mugt mu        - Prior mean function of var(0,i), i=0,1,... (-mu 1).\n" : "" );
+    output << ( ( basic || advanced ) ? "         -muml ml        - Prior mean ML number (-mu 2).                      \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                  -- SVM specific options                          --         \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         -w   eps        - epsilon: sets  width of epsilon  tube/insensitivity\n" : "" );
@@ -15924,22 +15767,12 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "         -bfyx $fn       - save y,x data to file $fn on sys g(x) if defined.  \n" : "" );
     output << ( ( basic || advanced ) ? "         -bfr $fn        - get result from file $fn on sys g(x) if defined.   \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                  -- SSV specific options                          --         \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -nzs i          - sets number of support vectors for SSV.            \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -vlb [x]        - sets lower bound for support vectors for SSV.      \n" : "" );
-    output << ( ( basic || advanced ) ? "         -vub [x]        - sets upper bound for support vectors for SSV.      \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -sNl f          - (linear) bias forcing term f (default 0).          \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                  -- MLM specific options                          --         \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         -mlc i c        - Set C (regularisation) value for layer i (deflt 1).\n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "Kernel selection options (after learning options):                            \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                  ** By default a  single kernel is  chosen.  More **         \n" : "" );
     output << ( (          advanced ) ? "                  ** complex kernel  dictionaries are  possible by **         \n" : "" );
     output << ( (          advanced ) ? "                  ** setting kernel dictionary  size > 1.  In this **         \n" : "" );
@@ -16681,7 +16514,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           - non-trivial results are  returned for model based\n" : "" );
     output << ( (          advanced ) ? "                             methods in the following format:                 \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                        { y v [cg1..cgn] [xx1..xxn] xf [xf1..xfn] xff xf3 t } \n" : "" );
+    output << ( (          advanced ) ? "                      { y v [cg1..cgn] x' [xx1..xxn] xf [xf1..xfn] xff xf3 t }\n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                             where:                                           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
@@ -16691,6 +16524,8 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                             + v is the variance of the measurement noise.    \n" : "" );
     output << ( (          advanced ) ? "                             + [ cg1 .. cgn ] for inequality constraints (want\n" : "" );
     output << ( (          advanced ) ? "                               cgi(x) > 0 for i=1,2,...,n.  See -cmgt).       \n" : "" );
+    output << ( (          advanced ) ? "                             + x' if non-null, this  indicates that the actual\n" : "" );
+    output << ( (          advanced ) ? "                               evaluation happened (if y=f(x'), not y=f(x)).  \n" : "" );
     output << ( (          advanced ) ? "                             + [ xx1 ... xxn ] is side-channel data (see -gmsc\n" : "" );
     output << ( (          advanced ) ? "                               etc for information.                           \n" : "" );
     output << ( (          advanced ) ? "                             + xf is for  rank observations  (that is,  rather\n" : "" );
@@ -19036,30 +18871,6 @@ void printhelpvars(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "fnA(h,5003)    = delta                                                        \n" : "" );
     output << ( ( basic || advanced ) ? "fnA(h,5004)    = LSV (quasi) log-likelihood.                                  \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                  -- SSV specific options                          --         \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8000)    = Nzx                                                          \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8001)    = beta                                                         \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8002)    = b                                                            \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8003)    = zmin                                                         \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8004)    = zmax                                                         \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8005)    = x state                                                      \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8006)    = xact?                                                        \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8007)    = M                                                            \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8008)    = n                                                            \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8009)    = quadratic regularised?                                       \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8010)    = linear regularised?                                          \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8011)    = bias force.                                                  \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8012)    = anomaly class.                                               \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8013)    = ssv learning rate.                                           \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8014)    = ssv momentum.                                                \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8015)    = ssv tolerance.                                               \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8016)    = ssv ovsc.                                                    \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8017)    = ssv max iteration count.                                     \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,8018)    = ssv max training time.                                       \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "fnB(h,8100,i)  = z(i)                                                         \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                  -- GPR specific options                          --         \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "fnA(h,2000)    = mu weight.                                                   \n" : "" );
@@ -19084,12 +18895,6 @@ void printhelpvars(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "fnA(h,4000)    = k.                                                           \n" : "" );
     output << ( ( basic || advanced ) ? "fnA(h,4001)    = ktp.                                                         \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                  -- ONN specific options                          --         \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,7000)    = lr.                                                          \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,7001)    = W.                                                           \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,7004)    = B.                                                           \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                  -- IMP specific options                          --         \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );

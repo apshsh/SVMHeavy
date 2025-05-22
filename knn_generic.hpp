@@ -216,10 +216,6 @@ protected:
     virtual int ggTrainingVectorInt(Vector<double> &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const;
     virtual int ggTrainingVectorInt(d_anion        &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const;
 
-    virtual const Vector<double>          &yR(void) const { const static Vector<double>          temp; return temp; }
-    virtual const Vector<Vector<double> > &yV(void) const { const static Vector<Vector<double> > temp; return temp; }
-    virtual const Vector<d_anion>         &yA(void) const { const static Vector<d_anion>         temp; return temp; }
-
 private:
 
     int kay;

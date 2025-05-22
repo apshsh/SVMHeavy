@@ -70,21 +70,21 @@ public:
     MLM_Generic &operator=(const MLM_Generic &src) { assign(src); return *this; }
     virtual ~MLM_Generic() { return; }
 
-    virtual int prealloc(int expectedN) override;
-    virtual int preallocsize(void) const override;
-    virtual void setmemsize(int memsize) override;
+    virtual int  prealloc    (int expectedN)       override;
+    virtual int  preallocsize(void)          const override;
+    virtual void setmemsize  (int memsize)         override;
 
-    virtual void assign(const ML_Base &src, int onlySemiCopy = 0) override;
-    virtual void semicopy(const ML_Base &src) override;
-    virtual void qswapinternal(ML_Base &b) override;
+    virtual void assign       (const ML_Base &src, int onlySemiCopy = 0) override;
+    virtual void semicopy     (const ML_Base &src)                       override;
+    virtual void qswapinternal(      ML_Base &b)                         override;
 
     virtual int getparam (int ind, gentype         &val, const gentype         &xa, int ia, const gentype         &xb, int ib, charptr &desc) const override;
     virtual int egetparam(int ind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib               ) const override;
 
     virtual std::ostream &printstream(std::ostream &output, int dep) const override;
-    virtual std::istream &inputstream(std::istream &input ) override;
+    virtual std::istream &inputstream(std::istream &input          )       override;
 
-    virtual       ML_Base &getML(void)            override { return static_cast<      ML_Base &>(getMLM());      }
+    virtual       ML_Base &getML     (void)       override { return static_cast<      ML_Base &>(getMLM());      }
     virtual const ML_Base &getMLconst(void) const override { return static_cast<const ML_Base &>(getMLMconst()); }
 
     // Generate RKHS vector form of ML (if possible).
@@ -95,7 +95,7 @@ public:
 
     // Information functions (training data):
 
-    virtual int type(void)    const override { return -1;                 }
+    virtual int type   (void) const override { return -1;                 }
     virtual int subtype(void) const override { return -1;                 }
 
     virtual int isTrained(void) const override { return getQconst().isTrained() && xistrained; }
@@ -104,8 +104,8 @@ public:
     virtual double calcDistInt(int    ha, int    hb, int ia = -1, int db = 2) const override { return ML_Base::calcDistInt(ha,hb,ia,db); }
     virtual double calcDistDbl(double ha, double hb, int ia = -1, int db = 2) const override { return ML_Base::calcDistDbl(ha,hb,ia,db); }
 
-    virtual const int *ClassLabelsInt(void) const override { return ML_Base::ClassLabelsInt();       }
-    virtual int  getInternalClassInt(int y) const override { return ML_Base::getInternalClassInt(y); }
+    virtual const int *ClassLabelsInt     (void)  const override { return ML_Base::ClassLabelsInt();       }
+    virtual       int  getInternalClassInt(int y) const override { return ML_Base::getInternalClassInt(y); }
 
     virtual void npCweight    (double **res, int *dim) const override { ML_Base::npCweight    (res,dim); return; }
     virtual void npCweightfuzz(double **res, int *dim) const override { ML_Base::npCweightfuzz(res,dim); return; }
@@ -114,9 +114,9 @@ public:
 
     // Kernel Modification
 
-    virtual const MercerKernel &getKernel (void) const override { return getKnumMLconst().getKernel();   }
-    virtual MercerKernel &getKernel_unsafe(void)       override { return getKnumML().getKernel_unsafe(); }
-    virtual void prepareKernel            (void)       override {        getKnumML().prepareKernel();    }
+    virtual const MercerKernel &getKernel       (void) const override { return getKnumMLconst().getKernel();   }
+    virtual       MercerKernel &getKernel_unsafe(void)       override { return getKnumML().getKernel_unsafe(); }
+    virtual       void          prepareKernel   (void)       override {        getKnumML().prepareKernel();    }
 
     virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr) override { return getKnumML().tuneKernel(method,xwidth,tuneK,tuneP,tunebounds); }
 
@@ -161,32 +161,32 @@ public:
 
     // General modification and autoset functions
 
-    virtual int randomise(double sparsity) override;
-    virtual int renormalise(void) override { return ML_Base::renormalise(); }
-    virtual int realign(void) override;
+    virtual int randomise  (double sparsity) override;
+    virtual int renormalise(void)            override { return ML_Base::renormalise(); }
+    virtual int realign    (void)            override;
 
-    virtual int scale(double a) override;
-    virtual int reset(void) override;
-    virtual int restart(void) override;
-    virtual int home(void) override;
+    virtual int scale  (double a) override;
+    virtual int reset  (void)     override;
+    virtual int restart(void)     override;
+    virtual int home   (void)     override;
 
     virtual ML_Base &operator*=(double sf) override { scale(sf); return *this; }
 
     virtual int scaleby(double sf) override { *this *= sf; return 1; }
 
-    virtual int addxspaceFeat(int i)    override { int res = getQ().addxspaceFeat(i);    resetKernelTree(); return res; }
+    virtual int addxspaceFeat   (int i) override { int res = getQ().addxspaceFeat(i);    resetKernelTree(); return res; }
     virtual int removexspaceFeat(int i) override { int res = getQ().removexspaceFeat(i); resetKernelTree(); return res; }
 
     // Training functions:
 
-    virtual int train(int &res) override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
     virtual int train(int &res, svmvolatile int &killSwitch) override { (void) res; killSwitch = 0; return 0; }
 
     // Other functions
 
     virtual void setaltx(const ML_Base *_altxsrc) override { getQ().setaltx(_altxsrc); resetKernelTree(); return; }
 
-    virtual int disable(int i) override;
+    virtual int disable(int i)                override;
     virtual int disable(const Vector<int> &i) override;
 
 
@@ -215,33 +215,33 @@ public:
     // lsparse:  sparsity for initial random layer initialisation (1 means dense, 0 means all zero)
 
     virtual int tsize(void) const { return mltree.size(); }
-    virtual int knum(void)  const { return xknum;         }
+    virtual int knum (void) const { return xknum;         }
 
-    virtual int    regtype(int l) const { NiceAssert( ( l >= 0 ) && ( l < tsize() ) ); return xregtype(l); }
-    virtual double regC(int l)    const { NiceAssert( ( l >= 0 ) && ( l < tsize() ) ); return getKnumMLconst(l).C(); }
-    virtual double mlmlr(void)    const { return xmlmlr; }
-    virtual double diffstop(void) const { return xdiffstop; }
-    virtual double lsparse(void)  const { return xlsparse; }
+    virtual int    regtype (int l) const { NiceAssert( ( l >= 0 ) && ( l < tsize() ) ); return xregtype(l); }
+    virtual double regC    (int l) const { NiceAssert( ( l >= 0 ) && ( l < tsize() ) ); return getKnumMLconst(l).C(); }
+    virtual double mlmlr   (void)  const { return xmlmlr; }
+    virtual double diffstop(void)  const { return xdiffstop; }
+    virtual double lsparse (void)  const { return xlsparse; }
 
     virtual const Matrix<double> &GGp(int l) const { return (dynamic_cast<const SVM_Generic &>(getKnumMLconst(l))).Gp(); }
 
     virtual int settsize(int nv) { NiceAssert( ( nv >= 1 ) ); int ov = tsize(); xistrained = 0; mltree.resize(nv); xregtype.resize(nv); if ( ov > nv ) { retVector<int> tmpva; xregtype("&",ov,1,nv-1,tmpva) = DEFAULT_REGTYPE; } fixMLTree(); return 1; }
-    virtual int setknum(int nv)  { NiceAssert( ( nv >= -1 ) && ( nv < tsize() ) ); xknum = nv; return 0; }
+    virtual int setknum (int nv) { NiceAssert( ( nv >= -1 ) && ( nv < tsize() ) ); xknum = nv; return 0; }
 
-    virtual int setregtype(int l, int nv) { NiceAssert( ( l >= 0 ) && ( l < tsize() ) ); NiceAssert( ( nv == 1 ) || ( nv == 2 ) ); xistrained = 0; xregtype("&",l) = nv; return 1; }
-    virtual int setregC(int l, double nv) { NiceAssert( ( l >= 0 ) && ( l < tsize() ) ); NiceAssert( nv > 0 ); xistrained = 0; return getKnumML(l).setC(nv); }
-    virtual int setmlmlr(double nv)       { NiceAssert( nv > 0.0 ); xmlmlr = nv; return 0; }
-    virtual int setdiffstop(double nv)    { NiceAssert( nv > 0.0 ); xdiffstop = nv; return 0; }
-    virtual int setlsparse(double nv)     { NiceAssert( nv >= 0.0 ); xlsparse = nv; return 0; }
+    virtual int setregtype (int l, int    nv) { NiceAssert( ( l >= 0 ) && ( l < tsize() ) ); NiceAssert( ( nv == 1 ) || ( nv == 2 ) ); xistrained = 0; xregtype("&",l) = nv; return 1; }
+    virtual int setregC    (int l, double nv) { NiceAssert( ( l >= 0 ) && ( l < tsize() ) ); NiceAssert( nv > 0 ); xistrained = 0; return getKnumML(l).setC(nv); }
+    virtual int setmlmlr   (double nv)        { NiceAssert( nv > 0.0 ); xmlmlr = nv; return 0; }
+    virtual int setdiffstop(double nv)        { NiceAssert( nv > 0.0 ); xdiffstop = nv; return 0; }
+    virtual int setlsparse (double nv)        { NiceAssert( nv >= 0.0 ); xlsparse = nv; return 0; }
 
     // Base-level stuff
     //
     // This is overloaded by children to return correct Q type
 
-    virtual       SVM_Generic &getQQ(void)            { return QQ; }
+    virtual       SVM_Generic &getQQ     (void)       { return QQ; }
     virtual const SVM_Generic &getQQconst(void) const { return QQ; }
 
-    virtual       ML_Base &getQ(void)            override { return static_cast<      ML_Base &>(getQQ());      }
+    virtual       ML_Base &getQ     (void)       override { return static_cast<      ML_Base &>(getQQ());      }
     virtual const ML_Base &getQconst(void) const override { return static_cast<const ML_Base &>(getQQconst()); }
 
 protected:
@@ -257,112 +257,10 @@ protected:
 
     Vector<SVM_Scalar> mltree;
 
-    void fixMLTree(int modind = 0)
-    {
-        if ( tsize() )
-        {
-            int z = 0;
-            int i;
-
-            // Set alternative evaluation references at all levels.
-            // Turn off cholesky factorisation for kernel tree.
-
-            getQQ().setaltx(&(mltree(z)));
-
-            for ( i = 0 ; i < tsize() ; ++i )
-            {
-                if ( i )
-                {
-                    mltree("&",i).setaltx(&(mltree(z)));
-                }
-
-                mltree("&",i).setQuadraticCost();
-                mltree("&",i).setOptSMO();
-            }
-
-            // Keep xy cache at base level
-
-            mltree("&",z).getKernel_unsafe().setsuggestXYcache(1);
-            mltree("&",z).resetKernel(modind);
-
-            // Ensure tree makes sense
-
-            if ( tsize() > 1 )
-            {
-                for ( i = 1 ; i < tsize() ; ++i )
-                {
-                    if ( (mltree(i).getKernel().cType(0)/100) != 8 )
-                    {
-                        mltree("&",i).getKernel_unsafe().add(0);
-                    }
-
-                    mltree("&",i).getKernel_unsafe().setType(802,0);
-                    mltree("&",i).getKernel_unsafe().setChained(0);
-                    mltree("&",i).getKernel_unsafe().setAltCall(mltree(i-1).MLid(),0);
-                    mltree("&",i).resetKernel();
-                }
-            }
-
-            if ( (getQQ().getKernel().cType(0)/100) != 8 )
-            {
-                getQQ().getKernel_unsafe().add(0);
-            }
-
-            getQQ().getKernel_unsafe().setType(802,0);
-            getQQ().getKernel_unsafe().setChained(0);
-            getQQ().getKernel_unsafe().setAltCall(mltree(tsize()-1).MLid(),0);
-            getQQ().resetKernel();
-        }
-
-        else if ( (getQconst().getKernel().cType()/100) == 8 )
-        {
-            getQQ().getKernel_unsafe().remove(0);
-            getQQ().resetKernel(modind);
-        }
-
-        return;
-    }
-
-    void resetKernelTree(int modind = 0)
-    {
-        if ( tsize() )
-        {
-            int ii;
-
-            for ( ii = 0 ; ii < tsize() ; ++ii )
-            {
-                mltree("&",ii).resetKernel(modind && !ii);
-            }
-        }
-
-        getQQ().resetKernel(modind && !tsize());
-
-        return;
-    }
-
-    ML_Base &getKnumML(int ovr = -2)
-    {
-        int i = ( ovr <= -2 ) ? xknum : ovr;
-
-        if ( i == -1 )
-        {
-            return getQQ();
-        }
-
-        return mltree("&",i);
-    }
-
-    const ML_Base &getKnumMLconst(int ovr = -2) const
-    {
-        int i = ( ovr <= -2 ) ? xknum : ovr;
-
-        if ( i == -1 )
-        {
-            return getQQconst();
-        }
-
-        return mltree(i);
-    }
+    void fixMLTree(int modind = 0);
+    void resetKernelTree(int modind = 0);
+    ML_Base &getKnumML(int ovr = -2);
+    const ML_Base &getKnumMLconst(int ovr = -2) const;
 };
 
 inline double norm2(const MLM_Generic &a);

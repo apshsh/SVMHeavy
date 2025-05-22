@@ -53,9 +53,9 @@ public:
     virtual int type(void)    const override { return 305;           }
     virtual int subtype(void) const override { return 0;             }
 
-    virtual int tspaceDim(void)          const override { return 1<<order(); }
-    virtual int numClasses(void)         const override { return 0;          }
-    virtual int order(void)              const override { return dorder;     }
+    virtual int tspaceDim(void)  const override { return 1<<order(); }
+    virtual int numClasses(void) const override { return 0;          }
+    virtual int order(void)      const override { return dorder;     }
 
     virtual char gOutType(void) const override { return 'A'; }
     virtual char hOutType(void) const override { return 'A'; }
@@ -100,18 +100,17 @@ public:
 
     virtual int randomise(double sparsity) override;
 
+    virtual int settspaceDim(int newdim) override;
+    virtual int addtspaceFeat(int i) override;
+    virtual int removetspaceFeat(int i) override;
     virtual int setorder(int neword) override;
 
 private:
-
-    virtual const Vector<d_anion> &yA(void) const override { return z; }
 
     Vector<int> classlabels;
     Vector<int> classcnt;
 
     // Order reflects the largest order in the training data.
-
-    Vector<d_anion> z;
 
     int dorder;
 
@@ -150,7 +149,6 @@ inline void KNN_Anions::qswapinternal(ML_Base &bb)
     qswap(classlabels,b.classlabels);
     qswap(classcnt   ,b.classcnt   );
     qswap(dorder     ,b.dorder     );
-    qswap(z          ,b.z          );
 
     return;
 }
@@ -166,7 +164,6 @@ inline void KNN_Anions::semicopy(const ML_Base &bb)
     classlabels = b.classlabels;
     classcnt    = b.classcnt;
     dorder      = b.dorder;
-    z           = b.z;
 
     return;
 }
@@ -182,7 +179,6 @@ inline void KNN_Anions::assign(const ML_Base &bb, int onlySemiCopy)
     classlabels = src.classlabels;
     classcnt    = src.classcnt;
     dorder      = src.dorder;
-    z           = src.z;
 
     return;
 }

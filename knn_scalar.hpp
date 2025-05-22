@@ -97,12 +97,8 @@ public:
 
 private:
 
-    virtual const Vector<double> &yR(void) const override { return z; }
-
     Vector<int> classlabels;
     Vector<int> classcnt;
-
-    Vector<double> z;
 
     virtual void hfn(gentype &res, const Vector<gentype> &yk, const Vector<double> &kdistsq, const Vector<double> &weights, int Nnz, int effkay) const override;
     virtual void hfn(double &res, const Vector<double> &yk, const Vector<double> &kdistsq, const Vector<double> &weights, int Nnz, int effkay) const override;
@@ -138,7 +134,6 @@ inline void KNN_Scalar::qswapinternal(ML_Base &bb)
 
     qswap(classlabels,b.classlabels);
     qswap(classcnt   ,b.classcnt   );
-    qswap(z          ,b.z          );
 
     return;
 }
@@ -153,7 +148,6 @@ inline void KNN_Scalar::semicopy(const ML_Base &bb)
 
     classlabels = b.classlabels;
     classcnt    = b.classcnt;
-    z           = b.z;
 
     return;
 }
@@ -168,7 +162,6 @@ inline void KNN_Scalar::assign(const ML_Base &bb, int onlySemiCopy)
 
     classlabels = src.classlabels;
     classcnt    = src.classcnt;
-    z           = src.z;
 
     return;
 }

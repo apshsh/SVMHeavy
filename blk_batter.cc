@@ -1107,7 +1107,7 @@ errstream() << "!!!" << t << "!!!";
         {
             // Data in vectors pre-loaded from file
 
-errstream() << "phantomxqq 0\n";
+//errstream() << "phantomxqq 0\n";
             int m = (int) xx(1);
             int N = (int) xx(2);
             double s = (double) xx(3);
@@ -1140,7 +1140,7 @@ errstream() << "phantomxqq 0\n";
         {
             // Data in vectors pre-loaded from file, assume interior temp = exterior temp
 
-errstream() << "phantomxqq 0\n";
+//errstream() << "phantomxqq 0\n";
             int m = (int) xx(1);
             int N = (int) xx(2);
             double s = (double) xx(3);

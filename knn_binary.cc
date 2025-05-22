@@ -365,7 +365,7 @@ int KNN_Binary::randomise(double sparsity)
 
         int i,j;
 
-        for ( i = N()-1 ; i >= 0 ; i-- )
+        for ( i = N()-1 ; i >= 0 ; --i )
         {
             if ( !d()(i) )
             {
@@ -375,16 +375,20 @@ int KNN_Binary::randomise(double sparsity)
 
         // Randomise
 
+        Vector<gentype> yloc(y());
+
         for ( i = 0 ; i < canmod.size() ; ++i )
         {
             j = canmod(i);
 
             NiceAssert( d()(j) );
 
-            int &amod = y_unsafe()("&",j).force_int();
+            int &amod = yloc("&",j).force_int();
 
             setrand(amod);
         }
+
+        ML_Base::sety(yloc);
     }
 
     return res;

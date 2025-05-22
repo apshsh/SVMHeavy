@@ -22,7 +22,6 @@ std::ostream &KNN_Scalar::printstream(std::ostream &output, int dep) const
 
     repPrint(output,'>',dep) << "Class labels:  " << classlabels << "\n";
     repPrint(output,'>',dep) << "Class counts:  " << classcnt    << "\n";
-    repPrint(output,'>',dep) << "Class targets: " << z           << "\n\n";
 
     KNN_Generic::printstream(output,dep+1);
 
@@ -35,7 +34,6 @@ std::istream &KNN_Scalar::inputstream(std::istream &input )
 
     input >> dummy; input >> classlabels;
     input >> dummy; input >> classcnt;
-    input >> dummy; input >> z;
 
     KNN_Generic::inputstream(input);
 
@@ -124,8 +122,6 @@ int KNN_Scalar::addTrainingVector (int i, const gentype &y, const SparseVector<g
 
     ++(classcnt("&",3));
 
-    z.add(i); z("&",i) = (double) y;
-
     KNN_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh);
     KNN_Generic::dd("&",i) = 2;
 
@@ -137,8 +133,6 @@ int KNN_Scalar::qaddTrainingVector(int i, const gentype &y,       SparseVector<g
     NiceAssert( y.isCastableToRealWithoutLoss() );
 
     ++(classcnt("&",3));
-
-    z.add(i); z("&",i) = (double) y;
 
     KNN_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
     KNN_Generic::dd("&",i) = 2;
@@ -191,8 +185,6 @@ int KNN_Scalar::removeTrainingVector(int i, gentype &yy, SparseVector<gentype> &
         --(classcnt("&",dd(i)+1));
     }
 
-    z.remove(i);
-
     KNN_Generic::removeTrainingVector(i,yy,x);
 
     return 1;
@@ -201,8 +193,6 @@ int KNN_Scalar::removeTrainingVector(int i, gentype &yy, SparseVector<gentype> &
 int KNN_Scalar::sety(int i, const gentype &yy)
 {
     NiceAssert( yy.isCastableToRealWithoutLoss() );
-
-    z("&",i) = (double) yy;
 
     KNN_Generic::sety(i,yy);
 
@@ -327,6 +317,8 @@ int KNN_Scalar::randomise(double sparsity)
     int prefpos = ( sparsity < 0 ) ? 1 : 0;
     sparsity = ( sparsity < 0 ) ? -sparsity : sparsity;
 
+
+
     int res = 0;
     int Nnotz = N()-NNC(0);
 
@@ -353,19 +345,21 @@ int KNN_Scalar::randomise(double sparsity)
         double lbloc = prefpos ? 0.0 : -1.0;
         double ubloc = +1.0;
 
+        Vector<gentype> yloc(ML_Base::y());
+
         for ( i = 0 ; i < canmod.size() ; ++i )
         {
             j = canmod(i);
 
             NiceAssert( d()(j) );
 
-            double &amod = ML_Base::y_unsafe()("&",j).force_double();
+            double &amod = yloc("&",j).force_double();
 
             setrand(amod);
             amod = lbloc+((ubloc-lbloc)*amod);
-
-            z("&",j) = amod;
         }
+
+        ML_Base::sety(yloc);
     }
 
     return res;

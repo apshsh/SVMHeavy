@@ -93,6 +93,7 @@ public:
     virtual int settspaceDim(int newdim) override;
     virtual int addtspaceFeat(int i) override;
     virtual int removetspaceFeat(int i) override;
+    virtual int setorder(int neword) override;
 
     // Fast version of g(x)
 
@@ -105,12 +106,8 @@ public:
 
 private:
 
-    virtual const Vector<Vector<double> > &yV(void) const override { return z; }
-
     Vector<int> classlabels;
     Vector<int> classcnt;
-
-    Vector<Vector<double> > z;
 
     int dim;
 
@@ -149,7 +146,6 @@ inline void KNN_Vector::qswapinternal(ML_Base &bb)
     qswap(classlabels,b.classlabels);
     qswap(classcnt   ,b.classcnt   );
     qswap(dim        ,b.dim        );
-    qswap(z          ,b.z          );
 
     return;
 }
@@ -165,7 +161,6 @@ inline void KNN_Vector::semicopy(const ML_Base &bb)
     classlabels = b.classlabels;
     classcnt    = b.classcnt;
     dim         = b.dim;
-    //z           = b.z;
 
     return;
 }
@@ -181,7 +176,6 @@ inline void KNN_Vector::assign(const ML_Base &bb, int onlySemiCopy)
     classlabels = src.classlabels;
     classcnt    = src.classcnt;
     dim         = src.dim;
-    z           = src.z;
 
     return;
 }

@@ -408,16 +408,20 @@ int KNN_MultiC::randomise(double sparsity)
 
         // Randomise
 
+        Vector<gentype> yloc(y());
+
         for ( i = 0 ; i < canmod.size() ; ++i )
         {
             j = canmod(i);
 
             NiceAssert( d()(j) );
 
-            int &amod = y_unsafe()("&",j).force_int();
+            int &amod = yloc("&",j).force_int();
 
             setrand(amod);
         }
+
+        ML_Base::sety(yloc);
     }
 
     return res;

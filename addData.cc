@@ -661,7 +661,7 @@ int genericMLDataLoad(int binaryRelabel,
             errstream() << "#";
 
             //if ( isSVMScalar(mlbase) || isSVMVector(mlbase) || isSVMPlanar(mlbase) || isLSVScalar(mlbase) || isGPRScalar(mlbase) || isSSVScalar(mlbase) || isSVMSimLrn(mlbase) )
-            if ( isSVMScalar(mlbase) || isSVMVector(mlbase) || isSVMPlanar(mlbase) || isLSVScalar(mlbase) || isLSVVector(mlbase) || isGPRScalar(mlbase) || isGPRVector(mlbase) || isSSVScalar(mlbase) || isSVMSimLrn(mlbase) )
+            if ( isSVMScalar(mlbase) || isSVMVector(mlbase) || isSVMPlanar(mlbase) || isLSVScalar(mlbase) || isLSVVector(mlbase) || isGPRScalar(mlbase) || isGPRVector(mlbase) || isSVMSimLrn(mlbase) )
             {
                 for ( i = 0 ; i < xi.size() ; ++i )
                 {

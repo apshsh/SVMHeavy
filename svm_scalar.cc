@@ -726,6 +726,11 @@ int SVM_Scalar::setBiasR(double newBias)
     {
         Vector<double> gpnew(traintarg);
 
+        if ( mpri() )
+        {
+            gpnew -= ypR();
+        }
+
 	bfixval = newBias;
 	gpnew.negate();
 	gpnew += bfixval;
@@ -1100,6 +1105,11 @@ int SVM_Scalar::setVarBias(void)
 	{
             Vector<double> gpnew(traintarg);
 
+            if ( mpri() )
+            {
+                gpnew -= ypR();
+            }
+
 	    gpnew.negate();
 	    Q.refactgp(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gpnew,gn,hp);
 	    gp = gpnew;
@@ -1179,6 +1189,11 @@ int SVM_Scalar::setFixedBias(double newbias)
     if ( SVM_Scalar::N() )
     {
         Vector<double> gpnew(traintarg);
+
+        if ( mpri() )
+        {
+            gpnew -= ypR();
+        }
 
 	gpnew.negate();
 	gpnew += bfixval;
@@ -1288,6 +1303,11 @@ int SVM_Scalar::setPosBias(void)
 	{
             Vector<double> gpnew(traintarg);
 
+            if ( mpri() )
+            {
+                gpnew -= ypR();
+            }
+
 	    gpnew.negate();
 	    Q.refactgp(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gpnew,gn,hp);
 	    gp = gpnew;
@@ -1359,6 +1379,11 @@ int SVM_Scalar::setNegBias(void)
 	if ( wasfixedbias )
 	{
             Vector<double> gpnew(traintarg);
+
+            if ( mpri() )
+            {
+                gpnew -= ypR();
+            }
 
 	    gpnew.negate();
 	    Q.refactgp(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gpnew,gn,hp);
@@ -1912,6 +1937,11 @@ int SVM_Scalar::sety(int i, double zn)
         traintarg("&",i) = zn;
         gpnew("&",i) = bfixval-zn;
 
+        if ( mpri() )
+        {
+            gpnew("&",i) += ypR()(i);
+        }
+
 	Q.refactgp(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gpnew,gn,hp,i);
 
 	gp("&",i) = gpnew(i);
@@ -1921,6 +1951,11 @@ int SVM_Scalar::sety(int i, double zn)
     {
         traintarg = zn;
         gpnew = bfixval-zn;
+
+        if ( mpri() )
+        {
+            gpnew += ypR();
+        }
 
 	Q.refactgp(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gpnew,gn,hp,i);
 
@@ -2061,6 +2096,11 @@ int SVM_Scalar::sety(const Vector<int> &j, const Vector<double> &zn)
         gpnew("&",j,tmpva) = bfixval;
         gpnew("&",j,tmpva) -= zn;
 
+        if ( mpri() )
+        {
+            gpnew("&",j,tmpva) += ypR()(j,tmpvb);
+        }
+
         Q.refactgp(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gpnew,gn,hp,-1);
 
         gp("&",j,tmpva) = gpnew(j,tmpvb);
@@ -2161,6 +2201,11 @@ int SVM_Scalar::sety(const Vector<double> &zn)
 
     traintarg = zn;
 
+    if ( mpri() )
+    {
+        gpnew -= ypR();
+    }
+
     gpnew = bfixval;
     gpnew -= zn;
 
@@ -2169,28 +2214,6 @@ int SVM_Scalar::sety(const Vector<double> &zn)
     gp = gpnew;
 
     return res;
-}
-
-int SVM_Scalar::setyqnd(const Vector<double> &zn, Vector<double> &gpnew)
-{
-    NiceAssert( zn.size() == SVM_Scalar::N() );
-    NiceAssert( gpnew.size() == SVM_Scalar::N() );
-
-    isStateOpt = 0;
-
-    isQuasiLogLikeCalced = 0;
-    isMaxInfGainCalced   = 0;
-
-    traintarg = zn;
-
-    gpnew = bfixval;
-    gpnew -= zn;
-
-    Q.refactgp(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gpnew,gn,hp,-1);
-
-    gp = gpnew;
-
-    return 1;
 }
 
 int SVM_Scalar::setCweight(const Vector<double> &xCweight)
@@ -2720,6 +2743,13 @@ fallbackMethod:
         kerncache.clear();
         sigmacache.clear();
 
+        if ( mpri() )
+        {
+            gp = bfixval;
+            gp -= traintarg;
+            gp += ypR();
+        }
+
         Q.refact(*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
 
         res |= SVM_Scalar::fixautosettings(1,0);
@@ -2805,6 +2835,21 @@ updateInfo = 1;
             // Gradient is part wrong - fix it
 
             Q.refreshGrad_anyhow(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp,onlyChangeRowI);
+        }
+
+        if ( mpri() )
+        {
+            int i = onlyChangeRowI;
+
+            Vector<double> gpnew(gp);
+
+            gpnew("&",i) = bfixval;
+            gpnew("&",i) -= traintarg(i);
+            gpnew("&",i) += ypR()(i);
+
+            Q.refactgp(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gpnew,gn,hp,i);
+
+            gp("&",i) = gpnew(i);
         }
 
         res |= SVM_Scalar::fixautosettings(1,0);
@@ -3305,6 +3350,11 @@ int SVM_Scalar::qtaddTrainingVector(int i, double zi, double Cweigh, double epsw
     ddr.add(i);     ddr("&",i)     = DRCALC(CNval,xCclass,d,Cweigh,1.0);
     wr.add(i);      wr("&",i)      = 1.0;
 
+    if ( mpri() )
+    {
+        gp("&",i) += ypR()(i);
+    }
+
     xycache.add(i);
     kerncache.add(i);
     sigmacache.add(i);
@@ -3505,6 +3555,11 @@ int SVM_Scalar::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
         {
             goto fallback;
         }
+
+        if ( testisvnan((double) resg) )
+        {
+            goto fallback;
+        }
     }
 
     else
@@ -3615,6 +3670,23 @@ fallback:
 
         tempresh = +1;
 
+        if ( mpri() )
+        {
+            if ( i >= 0 )
+            {
+                resg += yp()(i);
+            }
+
+            else
+            {
+                gentype resprior;
+
+                calcprior(resprior,x(i));
+
+                resg += resprior;
+            }
+        }
+
         resh = resg;
     }
 
@@ -3627,6 +3699,23 @@ double SVM_Scalar::eTrainingVector(int i) const
     double res = 0;
 
     gTrainingVector(res,unusedvar,i); // This is important.  SVM_Scalar_rff overloads gTrainingVector, so calls to eTrainingVector *must* go through gTrainingVector!
+
+        if ( mpri() )
+        {
+            if ( i >= 0 )
+            {
+                res -= ypR()(i);
+            }
+
+            else
+            {
+                gentype resprior;
+
+                calcprior(resprior,x(i));
+
+                res -= (double) resprior;
+            }
+        }
 
     if ( ( i < 0 ) || ( Q.alphaRestrict(i) == 0 ) )
     {
@@ -4377,6 +4466,23 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
             }
         }
     }
+
+        if ( mpri() )
+        {
+            if ( i >= 0 )
+            {
+                res += ypR()(i);
+            }
+
+            else
+            {
+                gentype resprior;
+
+                calcprior(resprior,x(i));
+
+                res += (double) resprior;
+            }
+        }
 
     return ( unusedvar = ( res > 0 ) ? +1 : -1 );
 }
@@ -5252,6 +5358,23 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             resvv += addres;
         }
     }
+
+        if ( mpri() )
+        {
+            if ( ia >= 0 )
+            {
+                resmu += yp()(ia);
+            }
+
+            else
+            {
+                gentype resprior;
+
+                calcprior(resprior,x(ia));
+
+                resmu += resprior;
+            }
+        }
 
     return 0;
 }

@@ -75,7 +75,10 @@ public:
     // they will be called by ml_base to access inequalities, and these
     // are stored past the locN boundary
 
-    virtual const Vector<gentype> &y(void) const override { return locz; }
+    virtual const Vector<gentype>         &y (void) const override { return locz; }
+    virtual const Vector<double>          &yR(void) const override { static thread_local Vector<double>          dummy; NiceThrow("yR not defined in svm_scscor"); return dummy; }
+    virtual const Vector<d_anion>         &yA(void) const override { static thread_local Vector<d_anion>         dummy; NiceThrow("yA not defined in svm_scscor"); return dummy; }
+    virtual const Vector<Vector<double> > &yV(void) const override { static thread_local Vector<Vector<double> > dummy; NiceThrow("yV not defined in svm_scscor"); return dummy; }
 
     // Training set modification:
     //

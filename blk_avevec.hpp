@@ -95,10 +95,6 @@ public:
     virtual int setd(const Vector<int> &i, const Vector<int> &d) override;
     virtual int setd(                      const Vector<int> &d) override;
 
-    virtual int settspaceDim(int newdim) override;
-    virtual int addtspaceFeat(int i) override;
-    virtual int removetspaceFeat(int i) override;
-
     // Evaluation Functions:
     //
     // Output g(x) is average of input vector.

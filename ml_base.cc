@@ -337,6 +337,10 @@ ML_Base::ML_Base(int _isIndPrune) : kernPrecursor()
 
     globalzerotol = DEFAULT_ZTOL;
 
+    xmuprior    = 0;
+    xmuprior_gt = 0_gent;
+    xmuprior_ml = nullptr;
+
     return;
 }
 
@@ -361,6 +365,89 @@ ML_Base::~ML_Base()
     MEMDEL(that); 
 
     return; 
+}
+
+int ML_Base::xvernum(void) const
+{
+#ifdef ENABLE_THREADS
+        mleyelock.lock();
+#endif
+        int res = xvernumber.isindpresent(MLid()) ? xvernumber(MLid()) : 0;
+#ifdef ENABLE_THREADS
+        mleyelock.unlock();
+#endif
+        return res;
+}
+
+int ML_Base::gvernum(void) const
+{
+#ifdef ENABLE_THREADS
+        mleyelock.lock();
+#endif
+        int res = gvernumber.isindpresent(MLid()) ? gvernumber(MLid()) : 0;
+#ifdef ENABLE_THREADS
+        mleyelock.unlock();
+#endif
+        return res;
+}
+
+int ML_Base::xvernum(int altMLid) const
+{
+#ifdef ENABLE_THREADS
+        mleyelock.lock();
+#endif
+        int res = xvernumber.isindpresent(altMLid) ? xvernumber(altMLid) : 0;
+#ifdef ENABLE_THREADS
+        mleyelock.unlock();
+#endif
+        return res;
+}
+
+int ML_Base::gvernum(int altMLid) const
+{
+#ifdef ENABLE_THREADS
+        mleyelock.lock();
+#endif
+        int res = gvernumber.isindpresent(altMLid) ? gvernumber(altMLid) : 0;
+#ifdef ENABLE_THREADS
+        mleyelock.unlock();
+#endif
+        return res;
+}
+
+int ML_Base::incxvernum(void)
+{
+#ifdef ENABLE_THREADS
+        mleyelock.lock();
+#endif
+
+        if ( !xvernumber.isindpresent(MLid()) )
+        {
+            xvernumber("&",MLid()) = 0;
+        }
+
+        int res = ++xvernumber("&",MLid());
+#ifdef ENABLE_THREADS
+        mleyelock.unlock();
+#endif
+        return res;
+}
+
+int ML_Base::incgvernum(void)
+{
+#ifdef ENABLE_THREADS
+        mleyelock.lock();
+#endif
+        if ( !gvernumber.isindpresent(MLid()) )
+        {
+            gvernumber("&",MLid()) = 0;
+        }
+
+        int res = ++gvernumber("&",MLid());
+#ifdef ENABLE_THREADS
+        mleyelock.unlock();
+#endif
+        return res;
 }
 
 const SparseVector<gentype> &ML_Base::xsum(SparseVector<gentype> &res) const
@@ -2015,10 +2102,19 @@ int ML_Base::addTrainingVector(int i, const gentype &y, const SparseVector<genty
 
     SparseVector<gentype> xxqq(xx);
 
-    allxdatagent.add(i); qswap(allxdatagent("&",i),xxqq);
-    alltraintarg.add(i); alltraintarg("&",i) = y;
+    allxdatagent.add(i);   qswap(allxdatagent("&",i),xxqq);
 
-    if ( !(allxdatagent(i).altcontent) && ! !(allxdatagent(i).altcontentsp) )
+    alltraintarg.add(i);   alltraintarg("&",i)   = y;
+    alltraintargR.add(i);  alltraintargR("&",i)  = (double) y;
+    alltraintargA.add(i);  alltraintargA("&",i)  = (const d_anion &) y;
+    alltraintargV.add(i);  alltraintargV("&",i)  = (const Vector<double> &) y;
+
+    alltraintargp.add(i);  calcprior(alltraintargp("&",i),allxdatagent(i));
+    alltraintargpR.add(i); alltraintargpR("&",i) = (double) alltraintargp(i);
+    alltraintargpA.add(i); alltraintargpA("&",i) = (const d_anion &) alltraintargp(i);
+    alltraintargpV.add(i); alltraintargpV("&",i) = (const Vector<double> &) alltraintargp(i);
+
+    if ( !(allxdatagent(i).altcontent) && !(allxdatagent(i).altcontentsp) )
     {
         allxdatagent("&",i).makealtcontent();
     }
@@ -2091,8 +2187,17 @@ int ML_Base::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &
     xCweightfuzz.add(i); xCweightfuzz("&",i) = 1.0;
     xepsweight.add(i);   xepsweight("&",i)   = nepsweight;
 
-    allxdatagent.add(i); qswap(allxdatagent("&",i),xx);
-    alltraintarg.add(i); alltraintarg("&",i) = y;
+    allxdatagent.add(i);   qswap(allxdatagent("&",i),xx);
+
+    alltraintarg.add(i);   alltraintarg("&",i)   = y;
+    alltraintargR.add(i);  alltraintargR("&",i)  = (double) y;
+    alltraintargA.add(i);  alltraintargA("&",i)  = (const d_anion &) y;
+    alltraintargV.add(i);  alltraintargV("&",i)  = (const Vector<double> &) y;
+
+    alltraintargp.add(i);  calcprior(alltraintargp("&",i),allxdatagent(i));
+    alltraintargpR.add(i); alltraintargpR("&",i) = (double) alltraintargp(i);
+    alltraintargpA.add(i); alltraintargpA("&",i) = (const d_anion &) alltraintargp(i);
+    alltraintargpV.add(i); alltraintargpV("&",i) = (const Vector<double> &) alltraintargp(i);
 
     if ( !(allxdatagent(i).altcontent) && !(allxdatagent(i).altcontentsp) )
     {
@@ -2180,8 +2285,17 @@ int ML_Base::addTrainingVector(int i, const Vector<gentype> &y, const Vector<Spa
 
     for ( int j = 0 ; j < Nadd ; ++j )
     {
-        allxdatagent.add(i+j); allxdatagent("&",i+j) = xx(j);
-        alltraintarg.add(i+j); alltraintarg("&",i+j) = y(j);
+        allxdatagent.add(i+j);   allxdatagent("&",i+j)   = xx(j);
+
+        alltraintarg.add(i+j);   alltraintarg("&",i+j)   = y(j);
+        alltraintargR.add(i+j);  alltraintargR("&",i+j)  = (double) y(j);
+        alltraintargA.add(i+j);  alltraintargA("&",i+j)  = (const d_anion &) y(j);
+        alltraintargV.add(i+j);  alltraintargV("&",i+j)  = (const Vector<double> &) y(j);
+
+        alltraintargp.add(i+j);  calcprior(alltraintargp("&",i+j),allxdatagent(i+j));;
+        alltraintargpR.add(i+j); alltraintargpR("&",i+j) = (double) alltraintargp(i+j);
+        alltraintargpA.add(i+j); alltraintargpA("&",i+j) = (const d_anion &) alltraintargp(i+j);
+        alltraintargpV.add(i+j); alltraintargpV("&",i+j) = (const Vector<double> &) alltraintargp(i+j);
 
         if ( !(allxdatagent(i+j).altcontent) && !(allxdatagent(i+j).altcontentsp) )
         {
@@ -2270,8 +2384,17 @@ int ML_Base::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVe
 
     for ( int j = 0 ; j < Nadd ; ++j )
     {
-        allxdatagent.add(i+j);  qswap(allxdatagent("&",i+j),xx("&",j));
-        alltraintarg.add(i+j); alltraintarg("&",i+j) = y(j);
+        allxdatagent.add(i+j);   qswap(allxdatagent("&",i+j),xx("&",j));
+
+        alltraintarg.add(i+j);   alltraintarg("&",i+j)   = y(j);
+        alltraintargR.add(i+j);  alltraintargR("&",i+j)  = (double) y(j);
+        alltraintargA.add(i+j);  alltraintargA("&",i+j)  = (const d_anion &) y(j);
+        alltraintargV.add(i+j);  alltraintargV("&",i+j)  = (const Vector<double> &) y(j);
+
+        alltraintargp.add(i+j);  calcprior(alltraintargp("&",i+j),allxdatagent(i+j));;
+        alltraintargpR.add(i+j); alltraintargpR("&",i+j) = (double) alltraintargp(i+j);
+        alltraintargpA.add(i+j); alltraintargpA("&",i+j) = (const d_anion &) alltraintargp(i+j);
+        alltraintargpV.add(i+j); alltraintargpV("&",i+j) = (const Vector<double> &) alltraintargp(i+j);
 
         if ( !(allxdatagent(i+j).altcontent) && !(allxdatagent(i+j).altcontentsp) )
         {
@@ -2349,9 +2472,23 @@ int ML_Base::removeTrainingVector(int i, gentype &y, SparseVector<gentype> &xx)
 
     qswap(xx,allxdatagent("&",i));
     qswap(y,alltraintarg("&",i));
+//    qswap(y,alltraintargR("&",i));
+//    qswap(y,alltraintargA("&",i));
+//    qswap(y,alltraintargV("&",i));
+//    qswap(y,alltraintargp("&",i));
+//    qswap(y,alltraintargpR("&",i));
+//    qswap(y,alltraintargpA("&",i));
+//    qswap(y,alltraintargpV("&",i));
 
     allxdatagent.remove(i);
     alltraintarg.remove(i);
+    alltraintargR.remove(i);
+    alltraintargA.remove(i);
+    alltraintargV.remove(i);
+    alltraintargp.remove(i);
+    alltraintargpR.remove(i);
+    alltraintargpA.remove(i);
+    alltraintargpV.remove(i);
 
     traininfo.remove(i);
     traintang.remove(i);
@@ -2392,6 +2529,9 @@ int ML_Base::removeTrainingVector(int i, int num)
     return res;
 }
 
+
+
+
 int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 {
     NiceAssert( onlyChangeRowI >= -1 );
@@ -2425,6 +2565,29 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
             // If x() is not accurate don't worry as it will be done via callback
             getKernel().getvecInfo(traininfo("&",onlyChangeRowI),x(onlyChangeRowI),nullptr,isXConsistent(),assumeReal); //()(onlyChangeRowI));
             traintang("&",onlyChangeRowI) = detangle_x(onlyChangeRowI);
+        }
+    }
+
+    if ( onlyChangeRowI >= 0 )
+    {
+        int i = onlyChangeRowI;
+
+        calcprior(alltraintargp("&",i),allxdatagent(i));
+
+        alltraintargpR("&",i) = (double) alltraintargp(i);
+        alltraintargpA("&",i) = (const d_anion &) alltraintargp(i);
+        alltraintargpV("&",i) = (const Vector<double> &) alltraintargp(i);
+    }
+
+    else
+    {
+        for ( int i = 0 ; i < ML_Base::N() ; i++ )
+        {
+            calcprior(alltraintargp("&",i),allxdatagent(i));
+
+            alltraintargpR("&",i) = (double) alltraintargp(i);
+            alltraintargpA("&",i) = (const d_anion &) alltraintargp(i);
+            alltraintargpV("&",i) = (const Vector<double> &) alltraintargp(i);
         }
     }
 
@@ -2722,7 +2885,7 @@ int ML_Base::qswapx(Vector<SparseVector<gentype> > &xx, int dontupdate)
 
 int ML_Base::sety(int i, const gentype &y)
 {
-    NiceAssert( i >= 0 );
+    NiceAssert( i >= -1 );
     NiceAssert( i < ML_Base::N() );
     //NiceAssert( ( i < ML_Base::N() ) || altxsrc );
 //if ( !( i < ML_Base::N() ) )
@@ -2741,21 +2904,37 @@ int ML_Base::sety(int i, const gentype &y)
 //}
 //}
 
-    if ( isBasisUserUU )
+    if ( isBasisUserUU && ( i >= 0 ) )
     {
         isBasisUserUU = 0;
         setBasisUU(i,y);
         isBasisUserUU = 1;
     }
 
-    if ( isBasisUserVV )
+    if ( isBasisUserVV && ( i >= 0 ) )
     {
         isBasisUserVV = 0;
         setBasisVV(i,y);
         isBasisUserVV = 1;
     }
 
-    alltraintarg("&",i) = y;
+    if ( i >= 0 )
+    {
+        alltraintarg("&",i)   = y;
+        alltraintargR("&",i)  = (double) y;
+        alltraintargA("&",i)  = (const d_anion &) y;
+        alltraintargV("&",i)  = (const Vector<double> &) y;
+    }
+
+    else
+    {
+        retVector<double> tmpva;
+
+        alltraintarg   = y;
+        alltraintargR  = (double) y;
+        alltraintargA  = (const d_anion &) y;
+        alltraintargV  = (const Vector<double> &) y;
+    }
 
     return 0;
 }
@@ -2794,7 +2973,14 @@ int ML_Base::sety(const Vector<int> &j, const Vector<gentype> &yn)
 
     retVector<gentype> tmpva;
 
-    alltraintarg("&",j,tmpva) = yn;
+    alltraintarg("&",j,tmpva)  = yn;
+
+    for ( int jj = 0 ; jj < j.size() ; ++jj )
+    {
+        alltraintargR("&",j(jj))  = (double) yn(jj);
+        alltraintargA("&",j(jj))  = (const d_anion &) yn(jj);
+        alltraintargV("&",j(jj))  = (const Vector<double> &) yn(jj);
+    }
 
     return 0;
 }
@@ -2831,7 +3017,14 @@ int ML_Base::sety(const Vector<gentype> &yn)
         isBasisUserVV = 1;
     }
 
-    alltraintarg = yn;
+    alltraintarg  = yn;
+
+    for ( int jj = 0 ; jj < yn.size() ; ++jj )
+    {
+        alltraintargR("&",jj)  = (double) yn(jj);
+        alltraintargA("&",jj)  = (const d_anion &) yn(jj);
+        alltraintargV("&",jj)  = (const Vector<double> &) yn(jj);
+    }
 
     return 0;
 }
@@ -3351,8 +3544,16 @@ std::ostream &ML_Base::printstream(std::ostream &output, int dep) const
     repPrint(output,'>',dep) << " Base kernel:                      " << kernel           << "\n";
     repPrint(output,'>',dep) << " Base kernel bypass:               " << K2mat            << "\n";
     repPrint(output,'>',dep) << " Base training data:               " << allxdatagent     << "\n";
-    repPrint(output,'>',dep) << " Base wild target:                 " << (ytargdata) << "\n";
+    repPrint(output,'>',dep) << " Base wild target:                 " << (ytargdata)      << "\n";
+    repPrint(output,'>',dep) << " Base wild target real:            " << (ytargdataR)     << "\n";
     repPrint(output,'>',dep) << " Base training targets:            " << alltraintarg     << "\n";
+    repPrint(output,'>',dep) << " Base training targets real:       " << alltraintargR    << "\n";
+    repPrint(output,'>',dep) << " Base training targets anion:      " << alltraintargA    << "\n";
+    repPrint(output,'>',dep) << " Base training targets vector:     " << alltraintargV    << "\n";
+    repPrint(output,'>',dep) << " Base training targets prior:      " << alltraintargp    << "\n";
+    repPrint(output,'>',dep) << " Base training targets prior real: " << alltraintargpR   << "\n";
+    repPrint(output,'>',dep) << " Base training targets prir anion: " << alltraintargpA   << "\n";
+    repPrint(output,'>',dep) << " Base training targets prior vect: " << alltraintargpV   << "\n";
     repPrint(output,'>',dep) << " Base training info:               " << traininfo        << "\n";
     repPrint(output,'>',dep) << " Base training tangles:            " << traintang        << "\n";
     repPrint(output,'>',dep) << " Base d:                           " << xd               << "\n";
@@ -3395,7 +3596,15 @@ std::istream &ML_Base::inputstream(std::istream &input)
     input >> dummy; input >> K2mat;
     input >> dummy; input >> allxdatagent;
     input >> dummy; input >> (ytargdata);
+    input >> dummy; input >> (ytargdataR);
     input >> dummy; input >> alltraintarg;
+    input >> dummy; input >> alltraintargR;
+    input >> dummy; input >> alltraintargA;
+    input >> dummy; input >> alltraintargV;
+    input >> dummy; input >> alltraintargp;
+    input >> dummy; input >> alltraintargpR;
+    input >> dummy; input >> alltraintargpA;
+    input >> dummy; input >> alltraintargpV;
     input >> dummy; input >> traininfo;
     input >> dummy; input >> traintang;
     input >> dummy; input >> xd;
@@ -3458,6 +3667,13 @@ int ML_Base::prealloc(int expectedN)
     allxdatagent.prealloc(expectedN);
 //FIXME    allxdatagentp.prealloc(expectedN);
     alltraintarg.prealloc(expectedN);
+    alltraintargR.prealloc(expectedN);
+    alltraintargA.prealloc(expectedN);
+    alltraintargV.prealloc(expectedN);
+    alltraintargp.prealloc(expectedN);
+    alltraintargpR.prealloc(expectedN);
+    alltraintargpA.prealloc(expectedN);
+    alltraintargpV.prealloc(expectedN);
     traininfo.prealloc(expectedN);
     traintang.prealloc(expectedN);
 //FIXME    traininfop.prealloc(expectedN);
@@ -3746,6 +3962,82 @@ int ML_Base::autoen(void)
 
 
 
+
+int ML_Base::settspaceDim(int newdim)
+{
+    NiceAssert( ( ( N() == 0 ) && ( newdim >= -1 ) ) || ( newdim >= 0 ) );
+
+    if ( N() )
+    {
+        int ii;
+
+        for ( ii = 0 ; ii < N() ; ++ii )
+        {
+            alltraintarg("&",ii).dir_vector().resize(newdim);
+            alltraintargA("&",ii).resize(newdim);
+            alltraintargV("&",ii).resize(newdim);
+        }
+    }
+
+    return 1;
+}
+
+int ML_Base::addtspaceFeat(int i)
+{
+    NiceAssert( ( i >= 0 ) && ( i <= tspaceDim() ) );
+
+    if ( N() )
+    {
+        int ii;
+
+        for ( ii = 0 ; ii < N() ; ++ii )
+        {
+            alltraintarg("&",ii).dir_vector().add(i);
+            alltraintargA("&",ii) = (const d_anion &) alltraintarg(ii);
+            alltraintargV("&",ii) = (const Vector<double> &) alltraintarg(ii);
+        }
+    }
+
+    return 1;
+}
+
+int ML_Base::removetspaceFeat(int i)
+{
+    NiceAssert( ( i >= 0 ) && ( i < tspaceDim() ) );
+
+    if ( N() )
+    {
+        int ii;
+
+        for ( ii = 0 ; ii < N() ; ++ii )
+        {
+            alltraintarg("&",ii).dir_vector().remove(i);
+            alltraintargA("&",ii) = (const d_anion &) alltraintarg(ii);
+            alltraintargV("&",ii) = (const Vector<double> &) alltraintarg(ii);
+        }
+    }
+
+    return 1;
+}
+
+int ML_Base::setorder(int neword)
+{
+    NiceAssert( neword >= 0 );
+
+    if ( N() )
+    {
+        int ii;
+
+        for ( ii = 0 ; ii < N() ; ++ii )
+        {
+            alltraintarg("&",ii).dir_anion().setorder(neword);
+            alltraintargA("&",ii).setorder(neword);
+            alltraintargV("&",ii).setorder(neword);
+        }
+    }
+
+    return 1;
+}
 
 
 
@@ -7298,7 +7590,6 @@ double ML_Base::getvalIfPresent_v(int numi, int numj, int &isgood) const
 
 
 
-
 double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, const tkBounds *tuneBounds)
 {
     int    numzooms   = !tuneBounds ? ( tuneK ? NUMZOOMS : 1 ) : ((*tuneBounds).numzooms);
@@ -7393,6 +7684,56 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
         }
     }
 
+    // Preliminary adim scaling
+
+    double trycount = 1;
+
+tryagain:
+    if ( kdim )
+    {
+        for ( i = 0 ; i < kdim ; ++i )
+        {
+            constVecs("&",i) = kernel.cRealConstants(i);
+
+            if ( constVecs(i).size() )
+            {
+                for ( j = -1 ; j < constVecs(i).size() ; ++j )
+                {
+                         if ( ( kdim > 1 ) && ( j == -1 ) && !(kernel.cWeight(i).isNomConst) ) { ddim++; adim *= ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); }
+                    else if ( j == -1 ) { ; }
+                    else if ( ( kernel.cType(i) == 5 ) && ( j == 1 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) { ddim++; adim *= 6; }
+                    else if ( ( kernel.cType(i) == 48 ) && ( j == 1 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) { ddim++; adim *= ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); }
+                    else if ( ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 48 ) && ( j == 0 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) { ddim++; adim *= ( ( ((int) (50/trycount)) > 5 ) ? ((int) (50/trycount)) : 5 ); }
+                }
+            }
+        }
+    }
+
+    if ( tuneP & 1 ) { ddim++; adim *= ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); }
+    if ( tuneP & 2 ) { ddim++; adim *= ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); }
+
+    adim *= numzooms;
+
+    if ( ( adim > MAXADIM ) && ( trycount == 1 ) )
+    {
+        // adim/trycount^ddim = MAXADIM
+        // adim = MAXADIM.trycount^ddim
+        // trycount^ddim = adim/MAXADIM
+        // trycount = (adim/MAXADIM)^(1/ddim)
+
+        trycount = std::pow(adim/((double) MAXADIM),1/((double) ddim));
+
+errstream() << "tuneKernel: trycount = " << trycount << "\n";
+        adim = 1;
+        ddim = 0;
+        goto tryagain;
+    }
+
+    // Now work out the (resized) grid
+
+    adim = 1;
+    ddim = 0;
+
     if ( kdim )
     {
         for ( i = 0 ; i < kdim ; ++i )
@@ -7421,7 +7762,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 
                         lb    = 0.1;
                         ub    = 3;
-                        steps = 15; //10;
+                        steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); //15/trycount; //10;
                         addit = 1;
 
                         // Bound bounding
@@ -7454,7 +7795,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 
                         lb    = 0;
                         ub    = 1;
-                        steps = 15;
+                        steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); //15;
                         addit = 1;
 
                         lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
@@ -7481,7 +7822,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 //FIXME: consider increasing ub
                         ub    = ( ( uu(i) == -1 ) ? xscale : 1.0 )*1.5*sqrt((double) xdim)*xwidth; //sqrt((double) xdim)*xwidth; // 3*xwidth; //15*xwidth;
 //errstream() << "phantomxyztune ub(" << i << ") = " << ub << "\n";
-                        steps = 50; //30; //20; // 15; //20;
+                        steps = ( ( ((int) (50/trycount)) > 5 ) ? ((int) (50/trycount)) : 5 ); //50/trycount; //30; //20; // 15; //20;
                         addit = 1;
 
                         lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
@@ -7514,7 +7855,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 
         lb = !tuneBounds ? DEFCMIN : ((*tuneBounds).Cmin);
         ub = !tuneBounds ? DEFCMAX : ((*tuneBounds).Cmax);
-        steps = 20;
+        steps = ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); //20/trycount;
 
         kind.add(ddim); kind("&",ddim) = -2;
         kelm.add(ddim); kelm("&",ddim) = -2;
@@ -7536,7 +7877,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 
         lb = !tuneBounds ? DEFEPSMIN : ((*tuneBounds).epsmin);
         ub = !tuneBounds ? DEFEPSMAX : ((*tuneBounds).epsmax);
-        steps = 20;
+        steps = ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); //20/trycount;
 
         kind.add(ddim); kind("&",ddim) = -3;
         kelm.add(ddim); kelm("&",ddim) = -3;
@@ -7821,6 +8162,156 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 
     return bestres;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vecInfo *xainfo) const
+{
+    if ( xmuprior == 1 )
+    {
+        if ( !xainfo )
+        {
+            vecInfo xinfox;
+
+            getKernel().getvecInfo(xinfox,xa);
+
+            calcprior(res,xa,&xinfox);
+
+            return;
+        }
+
+        const SparseVector<gentype> *xanear = nullptr; // rank left
+        const SparseVector<gentype> *xafar  = nullptr; // rank right
+
+        double arankL = 1; // rank left weight
+        double arankR = 1; // rank right weight
+
+        const SparseVector<gentype> *xafarfar    = nullptr; // grad left
+        const SparseVector<gentype> *xafarfarfar = nullptr; // grad right
+
+        int agradOrderL; // grad order left
+        int agradOrderR; // grad order right
+
+        const vecInfo *xanearinfo = nullptr; // rank left
+        const vecInfo *xafarinfo  = nullptr; // rank right
+
+        // unused
+
+        const gentype *ixatup = nullptr;
+        const gentype *iiatup = nullptr;
+
+        int ixa;
+
+        SparseVector<gentype> *xauntang = nullptr;
+        vecInfo *xainfountang = nullptr;
+
+        Vector<int> sumind;
+        Vector<double> sumweight;
+
+        int iia,xalr,xarr,xagr,iaokr,iaok,adiagr,iaplanr,iaplan,iaset,iadenseint,iadensederiv;
+
+        int xagrR,agmuL,agmuR;
+
+        double iadiagoffset = 0;
+        int iavectset = 0;
+
+        // Detangling step
+
+        int ia = -1;
+
+        int loctanga = detangle_x(xauntang,xainfountang,xanear,xafar,xafarfar,xafarfarfar,xanearinfo,xafarinfo,ixa,iia,ixatup,iiatup,xalr,xarr,xagr,xagrR,iaokr,iaok,arankL,arankR,agmuL,agmuR,ia,adiagr,&xa,xainfo,agradOrderL,agradOrderR,iaplanr,iaplan,iaset,iadenseint,iadensederiv,sumind,sumweight,iadiagoffset,iavectset);
+
+        NiceAssert( !(loctanga & 2048 ) );
+        NiceAssert( !(loctanga & 2048 ) );
+
+        (void) loctanga;
+
+        res = 0.0_gent;
+
+        if ( xanear && !xafarfar )
+        {
+            // Left rank without gradient
+
+            SparseVector<SparseVector<gentype> > xargs;
+
+            xargs("&",0) = *xanear;
+
+            gentype locres = xmuprior_gt(xargs);
+
+            locres *= arankL;
+            res += locres;
+        }
+
+        if ( xanear && xafarfar && agradOrderL )
+        {
+            // Left rank with gradient
+
+            NiceThrow("Need to implement prior gradients!");
+        }
+
+        if ( xafar && !xafarfarfar )
+        {
+            // Right rank without gradient
+
+            SparseVector<SparseVector<gentype> > xargs;
+
+            xargs("&",0) = *xafar;
+
+            gentype locres = xmuprior_gt(xargs);
+
+            locres *= arankL;
+            res -= locres;
+        }
+
+        if ( xafar && xafarfarfar && agradOrderR )
+        {
+            // Right rank with gradient
+
+            NiceThrow("Need to implement prior gradients!");
+        }
+    }
+
+    else if ( xmuprior == 2 )
+    {
+        xmuprior_ml->gg(res,xa,xainfo);
+    }
+
+    else
+    {
+        res = 0.0_gent;
+    }
+
+    return;
+}
+
+void ML_Base::calcallprior(void)
+{
+    for ( int i = 0 ; i < ML_Base::N() ; i++ )
+    {
+        calcprior(alltraintargp("&",i),x(i));
+
+        alltraintargpR("&",i) = (double) alltraintargp(i);
+        alltraintargpA("&",i) = (const d_anion &) alltraintargp(i);
+        alltraintargpV("&",i) = (const Vector<double> &) alltraintargp(i);
+    }
+}
+
+
+
+
+
+
+
+
 
 
 gentype &ML_Base::K0(gentype &res, 
@@ -9971,13 +10462,13 @@ double ML_Base::K2(int ia, int ib,
 
 if ( testisvnan(res) || testisinf(res) )
 {
-errstream() << "phantomxyggghhhqqrr 1: " << res << "\n";
-errstream() << "phantomxyggghhhqqrr 2: " << *xa << "," << *xb << "\n";
-errstream() << "phantomxyggghhhqqrr 2a: " << *xai << "," << *xbi << "\n";
-errstream() << "phantomxyggghhhqqrr 2b: " << *xainfoi << "," << *xbinfoi << "\n";
-errstream() << "phantomxyggghhhqqrr 2c: " << bias << "\n";
-errstream() << "phantomxyggghhhqqrr 2d: " << ia << "," << ib << "\n";
-errstream() << "phantomxyggghhhqqrr 3: " << getKernel() << "\n";
+errstream() << "K2 evaluated null 1: " << res << "\n";
+errstream() << "K2 evaluated null 2: " << *xa << "," << *xb << "\n";
+errstream() << "K2 evaluated null 2a: " << *xai << "," << *xbi << "\n";
+errstream() << "K2 evaluated null 2b: " << *xainfoi << "," << *xbinfoi << "\n";
+errstream() << "K2 evaluated null 2c: " << bias << "\n";
+errstream() << "K2 evaluated null 2d: " << ia << "," << ib << "\n";
+errstream() << "K2 evaluated null 3: " << getKernel() << "\n";
 }
         }
 
@@ -10241,13 +10732,13 @@ T &ML_Base::K2(T &res,
 
 if ( testisvnan(res) || testisinf(res) )
 {
-errstream() << "phantomxyggghhhqqrr 1: " << res << "\n";
-errstream() << "phantomxyggghhhqqrr 2: " << *xa << "," << *xb << "\n";
-errstream() << "phantomxyggghhhqqrr 2a: " << *xai << "," << *xbi << "\n";
-errstream() << "phantomxyggghhhqqrr 2b: " << *xainfoi << "," << *xbinfoi << "\n";
-errstream() << "phantomxyggghhhqqrr 2c: " << bias << "\n";
-errstream() << "phantomxyggghhhqqrr 2d: " << ia << "," << ib << "\n";
-errstream() << "phantomxyggghhhqqrr 3: " << getKernel() << "\n";
+errstream() << "K2 evaluated null 1: " << res << "\n";
+errstream() << "K2 evaluated null 2: " << *xa << "," << *xb << "\n";
+errstream() << "K2 evaluated null 2a: " << *xai << "," << *xbi << "\n";
+errstream() << "K2 evaluated null 2b: " << *xainfoi << "," << *xbinfoi << "\n";
+errstream() << "K2 evaluated null 2c: " << bias << "\n";
+errstream() << "K2 evaluated null 2d: " << ia << "," << ib << "\n";
+errstream() << "K2 evaluated null 3: " << getKernel() << "\n";
 }
         }
 

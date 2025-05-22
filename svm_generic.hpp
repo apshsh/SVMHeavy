@@ -378,19 +378,19 @@ public:
 
     virtual const Matrix<double>          &Gp         (void)        const {             NiceThrow("Function Gp not available for this SVM type.");          return dummyMret;      }
     virtual const Matrix<double>          &XX         (void)        const {             NiceThrow("Function XX not available for this SVM type.");          return dummyMret;      }
-    virtual const Vector<double>          &kerndiag   (void)        const {             NiceThrow("Function kerndiag not available for this SVM type.");    return dummyVret;      }
-    virtual const Vector<Vector<double> > &getu       (void)        const {             NiceThrow("Function getu not available for this SVM type.");        return dummyVVret;     }
+    virtual const Vector<double>          &kerndiag   (void)        const {             NiceThrow("Function kerndiag not available for this SVM type.");    return dummyvret;      }
+    virtual const Vector<Vector<double> > &getu       (void)        const {             NiceThrow("Function getu not available for this SVM type.");        return dummyvVret;     }
     virtual const gentype                 &bias       (void)        const {                                                                                 return dbias;          }
     virtual const Vector<gentype>         &alpha      (void)        const {                                                                                 return dalpha;         }
-    virtual const Vector<double>          &zR         (void)        const {             NiceThrow("Function zR not available for this SVM type.");          return dummyVret;      }
-    virtual const Vector<Vector<double> > &zV         (void)        const {             NiceThrow("Function zV not available for this SVM type.");          return dummyVVret;     }
-    virtual const Vector<d_anion>         &zA         (void)        const {             NiceThrow("Function zA not available for this SVM type.");          return dummyAret;      }
-    virtual       double                   biasR      (void)        const {             NiceThrow("Function biasR not available for this SVM type.");       return dummyRret;      }
-    virtual const Vector<double>          &biasV      (int raw = 0) const { (void) raw; NiceThrow("Function biasV not available for this SVM type.");       return dummyVret;      }
+    virtual const Vector<double>          &zR         (void)        const {             NiceThrow("Function zR not available for this SVM type.");          return dummyvret;      }
+    virtual const Vector<Vector<double> > &zV         (void)        const {             NiceThrow("Function zV not available for this SVM type.");          return dummyvVret;     }
+    virtual const Vector<d_anion>         &zA         (void)        const {             NiceThrow("Function zA not available for this SVM type.");          return dummyaret;      }
+    virtual       double                   biasR      (void)        const {             NiceThrow("Function biasR not available for this SVM type.");       return dummyrret;      }
+    virtual const Vector<double>          &biasV      (int raw = 0) const { (void) raw; NiceThrow("Function biasV not available for this SVM type.");       return dummyvret;      }
     virtual const d_anion                 &biasA      (void)        const {             NiceThrow("Function biasA not available for this SVM type.");       return dummyanion; }
-    virtual const Vector<double>          &alphaR     (void)        const {             NiceThrow("Function alaphR not available for this SVM type.");      return dummyVret;      }
-    virtual const Vector<Vector<double> > &alphaV     (int raw = 0) const { (void) raw; NiceThrow("Function alphaV not available for this SVM type.");      return dummyVVret;     }
-    virtual const Vector<d_anion>         &alphaA     (void)        const {             NiceThrow("Function alphaA not available for this SVM type.");      return dummyAret;      }
+    virtual const Vector<double>          &alphaR     (void)        const {             NiceThrow("Function alaphR not available for this SVM type.");      return dummyvret;      }
+    virtual const Vector<Vector<double> > &alphaV     (int raw = 0) const { (void) raw; NiceThrow("Function alphaV not available for this SVM type.");      return dummyvVret;     }
+    virtual const Vector<d_anion>         &alphaA     (void)        const {             NiceThrow("Function alphaA not available for this SVM type.");      return dummyaret;      }
 
     virtual       double          zR(int i) const { (void) i; NiceThrow("Function zR not available for this SVM type.");                                    return 0;     }
     virtual const Vector<double> &zV(int i) const { (void) i; NiceThrow("Function zV not available for this SVM type."); const static Vector<double> dummy; return dummy; }
@@ -625,11 +625,11 @@ private:
     // ...
 
     Matrix<double> dummyMret;
-    Vector<double> dummyVret;
-    Vector<Vector<double> > dummyVVret;
-    double dummyRret;
+    Vector<double> dummyvret;
+    Vector<Vector<double> > dummyvVret;
+    double dummyrret;
     d_anion dummyanion;
-    Vector<d_anion> dummyAret;
+    Vector<d_anion> dummyaret;
 };
 
 inline double norm2(const SVM_Generic &a);

@@ -90,9 +90,10 @@ int BLK_AveVec::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype
 
     ++(classcnt("&",1));
 
-    BLK_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
+    gentype yy(y);
+    yy.morph_vector();
 
-    y_unsafe()("&",i).morph_vector();
+    BLK_Generic::qaddTrainingVector(i,yy,x,Cweigh,epsweigh);
 
     return 1;
 }
@@ -154,14 +155,16 @@ int BLK_AveVec::sety(int i, const gentype &yy)
     NiceAssert( yy.isCastableToVectorWithoutLoss() );
     NiceAssert( ( dim == -1 ) || ( yy.size() == dim ) );
 
+    gentype yyy(yy);
+
+    yyy.morph_vector();
+
     if ( dim == -1 )
     {
-        dim = yy.size();
+        dim = yyy.size();
     }
 
-    BLK_Generic::sety(i,yy);
-
-    y_unsafe()("&",i).morph_vector();
+    BLK_Generic::sety(i,yyy);
 
     return 1;
 }
@@ -243,62 +246,6 @@ int BLK_AveVec::setd(const Vector<int> &d)
     return 1;
 }
 
-int BLK_AveVec::settspaceDim(int newdim)
-{
-    NiceAssert( ( ( N() == 0 ) && ( newdim >= -1 ) ) || ( newdim >= 0 ) );
-
-    dim = newdim;
-
-    if ( N() )
-    {
-        int ii;
-
-        for ( ii = 0 ; ii < N() ; ++ii )
-        {
-            y_unsafe()("&",ii).dir_vector().resize(dim);
-        }
-    }
-
-    return 1;
-}
-
-int BLK_AveVec::addtspaceFeat(int i)
-{
-    NiceAssert( ( ( i >= 0 ) && ( i <= dim ) ) || ( dim == -1 ) );
-
-    ++dim;
-
-    if ( N() )
-    {
-        int ii;
-
-        for ( ii = 0 ; ii < N() ; ++ii )
-        {
-            y_unsafe()("&",ii).dir_vector().add(i);
-        }
-    }
-
-    return 1;
-}
-
-int BLK_AveVec::removetspaceFeat(int i)
-{
-    NiceAssert( ( i >= 0 ) && ( i < dim ) );
-
-    --dim;
-
-    if ( N() )
-    {
-        int ii;
-
-        for ( ii = 0 ; ii < N() ; ++ii )
-        {
-            y_unsafe()("&",ii).dir_vector().remove(i);
-        }
-    }
-
-    return 1;
-}
 
 
 

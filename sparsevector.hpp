@@ -11678,7 +11678,7 @@ std::istream &streamItIn(std::istream &input, SparseVector<T> &dest, int process
     return streamItInAlt(input,dest,processxyzvw);
 }
 
-template <class T> 
+template <class T>
 std::istream &streamItInAlt(std::istream &input, SparseVector<T> &dest, int processxyzvw, int removeZeros)
 {
     dest.killaltcontent();
@@ -11783,7 +11783,7 @@ std::istream &streamItInAlt(std::istream &input, SparseVector<T> &dest, int proc
 
             if ( j == 1 )
             {
-                // Number has form :stuff (ie no index), so use pos 2^30
+                // Number has form :stuff (ie no index)
 
                 if ( ( j == maxlen ) && ( newstuff[0] == '~' ) )
                 {
@@ -11803,7 +11803,7 @@ std::istream &streamItInAlt(std::istream &input, SparseVector<T> &dest, int proc
                 }
 
                 else if ( ( j == maxlen-1 ) || ( newstuff[j+1] != ':' ) )
-                { 
+                {
                     // newstuff[0]  = ':'
                     // newstuff[1]  = ':'
                     // newstuff[2] != ':'
@@ -11814,7 +11814,7 @@ std::istream &streamItInAlt(std::istream &input, SparseVector<T> &dest, int proc
                 }
 
                 else if ( ( j == maxlen-2 ) || ( newstuff[j+1] != ':' ) )
-                { 
+                {
                     // newstuff[0]  = ':'
                     // newstuff[1]  = ':'
                     // newstuff[2]  = ':'
@@ -11827,7 +11827,7 @@ std::istream &streamItInAlt(std::istream &input, SparseVector<T> &dest, int proc
                 }
 
                 else
-                { 
+                {
                     // newstuff[0] = ':'
                     // newstuff[1] = ':'
                     // newstuff[2] = ':'

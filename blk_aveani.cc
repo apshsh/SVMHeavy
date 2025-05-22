@@ -86,9 +86,9 @@ int BLK_AveAni::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype
 
     BLK_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
 
-    if ( y_unsafe()("&",i).dir_anion().order() > dorder )
+    if ( y(i).order() > dorder )
     {
-        dorder = y_unsafe()("&",i).dir_anion().order();
+        dorder = y(i).order();
     }
 
     return 1;
@@ -152,9 +152,9 @@ int BLK_AveAni::sety(int i, const gentype &yy)
 
     BLK_Generic::sety(i,yy);
 
-    if ( y_unsafe()("&",i).dir_anion().order() > dorder )
+    if ( y(i).order() > dorder )
     {
-        dorder = y_unsafe()("&",i).dir_anion().order();
+        dorder = y(i).order();
     }
 
     return 1;
@@ -236,26 +236,6 @@ int BLK_AveAni::setd(const Vector<int> &d)
 
     return 1;
 }
-
-int BLK_AveAni::setorder(int neword)
-{
-    NiceAssert( neword >= 0 );
-
-    dorder = neword;
-
-    if ( N() )
-    {
-        int ii;
-
-        for ( ii = 0 ; ii < N() ; ++ii )
-        {
-            y_unsafe()("&",ii).dir_anion().setorder(dorder);
-        }
-    }
-
-    return 1;
-}
-
 
 
 

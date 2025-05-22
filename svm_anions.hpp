@@ -80,10 +80,17 @@ public:
     virtual int isUnderlyingVector(void) const override { return 0; }
     virtual int isUnderlyingAnions(void) const override { return 1; }
 
-    virtual const Vector<d_anion> &zA(void)     const override { return traintarg;    }
-    virtual const d_anion         &biasA(void)  const override { return db;           }
-    virtual const Vector<d_anion> &alphaA(void) const override { return dalpha;       }
-    virtual const Vector<gentype> &y(void)      const override { return traintarggen; }
+    virtual const Vector<d_anion>         &zA(void)     const override { return traintarg;    }
+    virtual const d_anion                 &biasA(void)  const override { return db;           }
+    virtual const Vector<d_anion>         &alphaA(void) const override { return dalpha;       }
+    virtual const Vector<gentype>         &y(void)      const override { return traintarggen; }
+    virtual const Vector<double>          &yR(void)     const override { static thread_local Vector<double> dummy; NiceThrow("yR not defined in svm_anions"); return dummy;    }
+    virtual const Vector<d_anion>         &yA(void)     const override { return traintarg;    }
+    virtual const Vector<Vector<double> > &yV(void)     const override { static thread_local Vector<Vector<double> > dummy; NiceThrow("yV not defined in svm_anions");  return dummy;    }
+    virtual const Vector<gentype>         &yp(void)     const override { static thread_local Vector<gentype>         dummy; NiceThrow("yp not defined in svm_anions");  return dummy;    }
+    virtual const Vector<double>          &ypR(void)    const override { static thread_local Vector<double>          dummy; NiceThrow("ypR not defined in svm_anions"); return dummy;    }
+    virtual const Vector<d_anion>         &ypA(void)    const override { static thread_local Vector<d_anion>         dummy; NiceThrow("ypA not defined in svm_anions"); return dummy;    }
+    virtual const Vector<Vector<double> > &ypV(void)    const override { static thread_local Vector<Vector<double> > dummy; NiceThrow("ypV not defined in svm_anions"); return dummy;    }
 
     virtual const gentype &y(int i)  const override { return traintarggen(i); }
     virtual const d_anion &zA(int i) const override { return traintarg(i);    }

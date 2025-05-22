@@ -56,7 +56,14 @@ public:
     virtual int type(void)    const override { return 18; }
     virtual int subtype(void) const override { return 0;  }
 
-    virtual const Vector<gentype> &y(void)  const override { return locy;  }
+    virtual const Vector<gentype>         &y        (void) const override { return locy;  }
+    virtual const Vector<double>          &yR       (void) const override { return loczR; }
+    virtual const Vector<d_anion>         &yA       (void) const override { static thread_local Vector<d_anion>         dummy; NiceThrow("yA not defined in svm_mulbin"); return dummy; }
+    virtual const Vector<Vector<double> > &yV       (void) const override { static thread_local Vector<Vector<double> > dummy; NiceThrow("yV not defined in svm_mulbin"); return dummy; }
+    virtual const Vector<gentype>         &yp       (void) const override { static thread_local Vector<gentype>         dummy; NiceThrow("yp  not defined in svm_mulbin"); return dummy; }
+    virtual const Vector<double>          &ypR      (void) const override { static thread_local Vector<double>          dummy; NiceThrow("ypA not defined in svm_mulbin"); return dummy; }
+    virtual const Vector<d_anion>         &ypA      (void) const override { static thread_local Vector<d_anion>         dummy; NiceThrow("ypA not defined in svm_mulbin"); return dummy; }
+    virtual const Vector<Vector<double> > &ypV      (void) const override { static thread_local Vector<Vector<double> > dummy; NiceThrow("ypV not defined in svm_mulbin"); return dummy; }
     virtual const Vector<double>  &zR(void) const override { return loczR; }
 
     virtual double zR(int i) const override { if ( i >= 0 ) { return zR()(i); } return 0; } // Tests always set zR(-1) = 0, so this is safe

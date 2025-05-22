@@ -218,8 +218,8 @@ public:
 std::istream &operator>>(std::istream &input, eqninfoblock &dest);
 std::istream &streamItIn(std::istream &input, eqninfoblock &dest, int processxyzvw = 1);
 
-std::istream &operator>>(std::istream &input, eqninfoblock &dest) { (void) dest; NiceThrow("Blind"); return input; }
-std::istream &streamItIn(std::istream &input, eqninfoblock &dest, int processxyzvw) { (void) dest; (void) processxyzvw; NiceThrow("Blind"); return input; }
+std::istream &operator>>(std::istream &input, eqninfoblock &dest)                   { (void) dest;                      NiceThrow("Cant operator>> to eqninfoblock"); return input; }
+std::istream &streamItIn(std::istream &input, eqninfoblock &dest, int processxyzvw) { (void) dest; (void) processxyzvw; NiceThrow("Cant streamItIn to eqninfoblock"); return input; }
 
 STREAMINDUMMY(const eqninfoblock *); STREAMINDUMMY(eqninfoblock *);
 
@@ -235,14 +235,14 @@ inline eqninfoblock &leftmult (eqninfoblock &a, eqninfoblock  b);
 inline eqninfoblock &rightmult(eqninfoblock  a, eqninfoblock &b);
 inline eqninfoblock &postProInnerProd(eqninfoblock &a);
 
-inline eqninfoblock &setident (eqninfoblock &a) { NiceThrow("Huh?"); return a; }
-inline eqninfoblock &setzero  (eqninfoblock &a) { eqninfoblock b; return a = b; }
-inline eqninfoblock &setposate(eqninfoblock &a) { return a; }
-inline eqninfoblock &setnegate(eqninfoblock &a) { NiceThrow("Computer says no."); return a; }
-inline eqninfoblock &setconj  (eqninfoblock &a) { NiceThrow("Ummm... yeah!"); return a; }
-inline eqninfoblock &setrand  (eqninfoblock &a) { NiceThrow("What say you?"); return a; }
-inline eqninfoblock &leftmult (eqninfoblock &a, eqninfoblock  b) { (void) b; NiceThrow("No, no and no!"); return a; }
-inline eqninfoblock &rightmult(eqninfoblock  a, eqninfoblock &b) { (void) a; NiceThrow("Banana."); return b; }
+inline eqninfoblock &setident (eqninfoblock &a) { NiceThrow("Cant setident eqninfoblock");  return a;     }
+inline eqninfoblock &setzero  (eqninfoblock &a) { eqninfoblock b;                           return a = b; }
+inline eqninfoblock &setposate(eqninfoblock &a) {                                           return a;     }
+inline eqninfoblock &setnegate(eqninfoblock &a) { NiceThrow("Cant setnegate eqninfoblock"); return a;     }
+inline eqninfoblock &setconj  (eqninfoblock &a) { NiceThrow("Cant setconj eqninfoblock");   return a;     }
+inline eqninfoblock &setrand  (eqninfoblock &a) { NiceThrow("Cant setrand eqninfoblock");   return a;     }
+inline eqninfoblock &leftmult (eqninfoblock &a, eqninfoblock  b) { (void) b; NiceThrow("Cant leftmult eqninfoblock");  return a; }
+inline eqninfoblock &rightmult(eqninfoblock  a, eqninfoblock &b) { (void) a; NiceThrow("Cant rightmult eqninfoblock"); return b; }
 inline eqninfoblock &postProInnerProd(eqninfoblock &a) { return a; }
 
 
@@ -657,7 +657,11 @@ std::ostream &operator<<(std::ostream &output, const gentype &src )
     {
         std::string resstring(src.cast_string(0));
 
-        if ( src.isValString() )
+        // We want to be able to have "fake" sparse vectors by including relevant characters in
+        // a vector (:, ::, :::, ::::, ~). We need to treat these as strings in the input (without
+        // quotes) and also print them out without quotes.
+
+        if ( src.isValString() && ( resstring != ":" ) && ( resstring != "::" ) && ( resstring != ":::" ) && ( resstring != "::::" ) && ( resstring != "~" ) )
         {
             output << '\"';
         }
@@ -694,7 +698,12 @@ std::ostream &operator<<(std::ostream &output, const gentype &src )
 	    }
 	}
 
-        if ( src.isValString() || src.isValError() )
+        if ( src.isValString() && ( resstring != ":" ) && ( resstring != "::" ) && ( resstring != ":::" ) && ( resstring != "::::" ) && ( resstring != "~" ) )
+        {
+            output << '\"';
+        }
+
+        if ( src.isValError() )
         {
             output << '\"';
         }
@@ -2422,6 +2431,9 @@ int gentype::makeEqn(const std::string &src, int processxyzvw)
     //
     // Exception: the variables x,y,z,v,w,X,Y,Z,V,W are reserved and
     // will not be interpretted as string if !processxyzvw
+    //
+    // We also treat :, ::, :::, ::::, ~ as strings to emulate sparse
+    // vectors
 
     if ( src.length() == 1 )
     {
@@ -2439,14 +2451,55 @@ int gentype::makeEqn(const std::string &src, int processxyzvw)
              ( src[0] == 'E' ) || ( src[0] == 'L' ) || ( src[0] == 'S' ) ||
              ( src[0] == 'F' ) || ( src[0] == 'M' ) || ( src[0] == 'T' ) ||
                                   ( src[0] == 'N' )                      ||
-             ( !processxyzvw && ( ( src[0] == 'u' ) || ( src[0] == 'U' ) ||
-                                  ( src[0] == 'x' ) || ( src[0] == 'X' ) ||
-                                  ( src[0] == 'y' ) || ( src[0] == 'Y' ) ||
-                                  ( src[0] == 'z' ) || ( src[0] == 'Z' ) ||
+             ( src[0] == ':' ) || ( src[0] == '~' )                      ||
+             ( !processxyzvw && ( ( src[0] == 'g' ) || ( src[0] == 'G' ) ||
+                                  ( src[0] == 'h' ) || ( src[0] == 'H' ) ||
+                                  ( src[0] == 'u' ) || ( src[0] == 'U' ) ||
                                   ( src[0] == 'v' ) || ( src[0] == 'V' ) ||
                                   ( src[0] == 'w' ) || ( src[0] == 'W' ) ||
-                                  ( src[0] == 'g' ) || ( src[0] == 'G' ) ||
-                                  ( src[0] == 'h' ) || ( src[0] == 'H' )    ) ) )
+                                  ( src[0] == 'x' ) || ( src[0] == 'X' ) ||
+                                  ( src[0] == 'y' ) || ( src[0] == 'Y' ) ||
+                                  ( src[0] == 'z' ) || ( src[0] == 'Z' )    ) ) )
+        {
+            makeString(src);
+
+            return 0;
+        }
+    }
+
+    else if ( src.length() == 1 )
+    {
+        if ( ( src[0] == ':' ) || ( src[0] == '~' ) )
+        {
+            makeString(src);
+
+            return 0;
+        }
+    }
+
+    else if ( src.length() == 2 )
+    {
+        if ( ( src[0] == ':' ) && ( src[1] == ':' ) )
+        {
+            makeString(src);
+
+            return 0;
+        }
+    }
+
+    else if ( src.length() == 3 )
+    {
+        if ( ( src[0] == ':' ) && ( src[1] == ':' ) && ( src[2] == ':' ) )
+        {
+            makeString(src);
+
+            return 0;
+        }
+    }
+
+    else if ( src.length() == 4 )
+    {
+        if ( ( src[0] == ':' ) && ( src[1] == ':' ) && ( src[2] == ':' ) && ( src[3] == ':' ) )
         {
             makeString(src);
 
@@ -2766,7 +2819,9 @@ double gentype::cast_double(int finalise) const
 
         else if ( loctoReal(doubleval,errstr) )
         {
-            NiceThrow(errstr);
+            // If this is set then doubleval is a also set nan, so we'll go with that
+            //NiceThrow(errstr);
+            ;
         }
 
         isNomConst = locisNomConst;
@@ -2799,7 +2854,9 @@ const d_anion &gentype::cast_anion(int finalise) const
 
         else if ( loctoAnion(*anionval,errstr) )
         {
-            NiceThrow(errstr);
+            // If this is set then anionval is a also set nan, so we'll go with that
+            //NiceThrow(errstr);
+            ;
         }
     }
 
@@ -2830,7 +2887,9 @@ const Vector<gentype> &gentype::cast_vector(int finalise) const
 
         else if ( loctoVector(*vectorval,errstr) )
         {
-            NiceThrow(errstr);
+            // If this is set then vectorval is a vector containing *this, so we'll go with that
+            //NiceThrow(errstr);
+            ;
         }
     }
 
@@ -2839,7 +2898,7 @@ const Vector<gentype> &gentype::cast_vector(int finalise) const
 
 const Vector<double> &gentype::cast_vector_real(int finalise) const
 {
-    cast_vector(finalise);
+    cast_vector(finalise); // this can't fail by design
 
     int vsize = (*vectorval).size();
 
@@ -2867,6 +2926,141 @@ const Vector<double> &gentype::cast_vector_real(int finalise) const
     }
 
     return *vectorvalreal;
+}
+
+const SparseVector<gentype> &gentype::cast_sparsevector(int finalise) const
+{
+    cast_vector(finalise); // this can't fail by design
+
+    int vsize = (*vectorval).size();
+
+    if ( sparsevectorval == nullptr )
+    {
+        MEMNEW(sparsevectorval,SparseVector<gentype>);
+    }
+
+    (*sparsevectorval).zero();
+
+    if ( vsize )
+    {
+        Vector<gentype>       &vg = *vectorval;
+        SparseVector<gentype> &vr = *sparsevectorval;
+
+        int fnum = 0;
+        int unum = 0;
+        int iv = 0;
+
+        for ( int i = 0 ; i < vsize ; ++i )
+        {
+            bool issep = false;
+
+            if ( vg(i).isValString() )
+            {
+                     if ( ((const std::string &) vg(i)) == "~"    ) { unum++;             iv = 0; issep = true; }
+                else if ( ((const std::string &) vg(i)) == "::::" ) { unum = 0; fnum = 4; iv = 0; issep = true; }
+                else if ( ((const std::string &) vg(i)) == ":::"  ) { unum = 0; fnum = 3; iv = 0; issep = true; }
+                else if ( ((const std::string &) vg(i)) == "::"   ) { unum = 0; fnum = 2; iv = 0; issep = true; }
+                else if ( ((const std::string &) vg(i)) == ":"    ) { unum = 0; fnum = 1; iv = 0; issep = true; }
+            }
+
+            if ( !issep )
+            {
+                     if ( fnum == 0 ) { vr.n ("&",iv,unum) = vg(i); }
+                else if ( fnum == 1 ) { vr.f1("&",iv,unum) = vg(i); }
+                else if ( fnum == 2 ) { vr.f2("&",iv,unum) = vg(i); }
+                else if ( fnum == 3 ) { vr.f3("&",iv,unum) = vg(i); }
+                else if ( fnum == 4 ) { vr.f4("&",iv,unum) = vg(i); }
+
+                iv++;
+            }
+        }
+    }
+
+    return *sparsevectorval;
+}
+
+const SparseVector<double> &gentype::cast_sparsevector_real(int finalise) const
+{
+    cast_vector(finalise); // this can't fail by design
+
+    int vsize = (*vectorval).size();
+
+    if ( sparsevectorvalreal == nullptr )
+    {
+        MEMNEW(sparsevectorvalreal,SparseVector<double>);
+    }
+
+    (*sparsevectorvalreal).zero(); // empty vector
+
+    if ( vsize )
+    {
+        Vector<gentype>      &vg = *vectorval;
+        SparseVector<double> &vr = *sparsevectorvalreal;
+
+        int fnum = 0;
+        int unum = 0;
+        int iv = 0;
+
+        for ( int i = 0 ; i < vsize ; ++i )
+        {
+            bool issep = false;
+
+            if ( vg(i).isValString() )
+            {
+                     if ( ((const std::string &) vg(i)) == "~"    ) { unum++;             iv = 0; issep = true; }
+                else if ( ((const std::string &) vg(i)) == "::::" ) { unum = 0; fnum = 4; iv = 0; issep = true; }
+                else if ( ((const std::string &) vg(i)) == ":::"  ) { unum = 0; fnum = 3; iv = 0; issep = true; }
+                else if ( ((const std::string &) vg(i)) == "::"   ) { unum = 0; fnum = 2; iv = 0; issep = true; }
+                else if ( ((const std::string &) vg(i)) == ":"    ) { unum = 0; fnum = 1; iv = 0; issep = true; }
+            }
+
+            if ( !issep )
+            {
+                     if ( fnum == 0 ) { vr.n ("&",iv,unum) = (double) vg(i); }
+                else if ( fnum == 1 ) { vr.f1("&",iv,unum) = (double) vg(i); }
+                else if ( fnum == 2 ) { vr.f2("&",iv,unum) = (double) vg(i); }
+                else if ( fnum == 3 ) { vr.f3("&",iv,unum) = (double) vg(i); }
+                else if ( fnum == 4 ) { vr.f4("&",iv,unum) = (double) vg(i); }
+
+                iv++;
+            }
+        }
+    }
+
+    return *sparsevectorvalreal;
+}
+
+const Matrix<gentype> &gentype::cast_matrix(int finalise) const
+{
+    if ( !isValMatrix() )
+    {
+        isNomConst = false;
+
+        if ( matrixval == nullptr )
+        {
+            MEMNEW(matrixval,Matrix<gentype>);
+        }
+
+        std::string errstr;
+
+        if ( finalise && isValEqn() )
+        {
+            gentype temp(*this);
+            const static SparseVector<SparseVector<gentype> > tempargs;
+
+            temp.fastevaluate(tempargs,finalise);
+            *matrixval = temp.cast_matrix(0);
+        }
+
+        else if ( loctoMatrix(*matrixval,errstr) )
+        {
+            // If this is set then matrixval is a matrix containing *this, so we'll go with that
+            //NiceThrow(errstr);
+            ;
+        }
+    }
+
+    return *matrixval;
 }
 
 const Matrix<double> &gentype::cast_matrix_real(int finalise) const
@@ -2905,37 +3099,6 @@ const Matrix<double> &gentype::cast_matrix_real(int finalise) const
     return *matrixvalreal;
 }
 
-const Matrix<gentype> &gentype::cast_matrix(int finalise) const
-{
-    if ( !isValMatrix() )
-    {
-        isNomConst = false;
-
-        if ( matrixval == nullptr )
-        {
-            MEMNEW(matrixval,Matrix<gentype>);
-        }
-
-        std::string errstr;
-
-        if ( finalise && isValEqn() )
-        {
-            gentype temp(*this);
-            const static SparseVector<SparseVector<gentype> > tempargs;
-
-            temp.fastevaluate(tempargs,finalise);
-            *matrixval = temp.cast_matrix(0);
-        }
-
-        else if ( loctoMatrix(*matrixval,errstr) )
-        {
-            NiceThrow(errstr);
-        }
-    }
-
-    return *matrixval;
-}
-
 const Set<gentype> &gentype::cast_set(int finalise) const
 {
     if ( !isValSet() )
@@ -2960,7 +3123,9 @@ const Set<gentype> &gentype::cast_set(int finalise) const
 
         else if ( loctoSet(*setval,errstr) )
         {
-            NiceThrow(errstr);
+            // If this is set then setval is a set containing *this, so we'll go with that
+            //NiceThrow(errstr);
+            ;
         }
     }
 
@@ -3571,7 +3736,7 @@ int gentype::loctoReal(double &res, std::string &errstr) const
         NiceAssert( stringval );
 
         errstr = *stringval;
-	errstr += "\n";
+        errstr += "\n";
         errstr += "Can't cast error to integer.";
 
         lociserr = 1;
@@ -3579,7 +3744,9 @@ int gentype::loctoReal(double &res, std::string &errstr) const
 
     if ( lociserr )
     {
-        res = 0.0;
+        //res = 0.0;
+
+        res = valvnan(errstr.c_str());
     }
 
     return lociserr;
@@ -3686,7 +3853,9 @@ int gentype::loctoAnion(d_anion &res, std::string &errstr) const
 
     if ( lociserr )
     {
-        res = 0.0;
+//        res = 0.0;
+
+        res = valvnan(errstr.c_str());
     }
 
     return lociserr;
@@ -3729,7 +3898,12 @@ int gentype::loctoVector(Vector<gentype> &res, std::string &errstr) const
             retVector<gentype> tmpva;
             retVector<gentype> tmpvb;
 
-	    if ( (*matrixval).numRows() == 1 )
+	    if ( !(*matrixval).numRows() || !(*matrixval).numCols() )
+            {
+                res.resize(0);
+            }
+
+	    else if ( (*matrixval).numRows() == 1 )
 	    {
 		res = (*matrixval)(0,tmpva,tmpvb);
 	    }
@@ -3738,21 +3912,22 @@ int gentype::loctoVector(Vector<gentype> &res, std::string &errstr) const
 	    {
 		res.resize((*matrixval).numRows());
 
-		int i;
-
-		if ( (*matrixval).numRows() )
+                for ( int i = 0 ; i < (*matrixval).numRows() ; ++i )
 		{
-		    for ( i = 0 ; i < (*matrixval).numRows() ; ++i )
-		    {
-                        res("&",i) = (*matrixval)(i,0);
-		    }
+                    res("&",i) = (*matrixval)(i,0);
 		}
 	    }
 
-	    else if ( (*matrixval).numRows() || (*matrixval).numCols() )
+	    else
 	    {
-		errstr = "Can't cast non row matrix to vector.";
-                lociserr = 1;
+                // column vector where the rows in the matrix are the elements
+
+		res.resize((*matrixval).numRows());
+
+                for ( int i = 0 ; i < (*matrixval).numRows() ; ++i )
+		{
+                    res("&",i) = (*matrixval)(i,tmpva,tmpvb);
+		}
 	    }
 	}
 
@@ -3794,7 +3969,10 @@ int gentype::loctoVector(Vector<gentype> &res, std::string &errstr) const
 
     if ( lociserr )
     {
-        res.resize(0);
+        //res.resize(0);
+
+        res.resize(1);
+        res("&",0) = *this;
     }
 
     return lociserr;
@@ -3830,12 +4008,9 @@ int gentype::loctoMatrix(Matrix<gentype> &res, std::string &errstr) const
 
 	    int dessize = (*vectorval).size();
 
-	    //if ( dessize )
+	    for ( int i = 0 ; i < dessize ; ++i )
 	    {
-		for ( int i = 0 ; i < dessize ; ++i )
-		{
-		    res("&",i,0) = (*vectorval)(i);
-		}
+                res("&",i,0) = (*vectorval)(i);
 	    }
 	}
 
@@ -3887,7 +4062,10 @@ int gentype::loctoMatrix(Matrix<gentype> &res, std::string &errstr) const
 
     if ( lociserr )
     {
-        res.resize(0,0);
+//        res.resize(0,0);
+
+        res.resize(1,1);
+        res("&",0,0) = *this;
     }
 
     return lociserr;
@@ -3908,14 +4086,6 @@ int gentype::loctoSet(Set<gentype> &res, std::string &errstr) const
             res.zero();
 	}
 
-        else if ( isValInteger() || isValReal()   || isValAnion()  ||
-                  isValVector()  || isValMatrix() || isValString() ||
-                  isValEqn()     || isValDgraph()                     )
-	{
-            res.zero();
-            res.add(*this);
-	}
-
         else if ( isValSet() )
 	{
             // Overwriting a with a would not be sensible
@@ -3924,6 +4094,12 @@ int gentype::loctoSet(Set<gentype> &res, std::string &errstr) const
             {
                 res = *setval;
             }
+	}
+
+        else
+        {
+            res.zero();
+            res.add(*this);
 	}
     }
 
@@ -3940,7 +4116,10 @@ int gentype::loctoSet(Set<gentype> &res, std::string &errstr) const
 
     if ( lociserr )
     {
+//        res.zero();
+
         res.zero();
+        res.add(*this);
     }
 
     return lociserr;
@@ -4089,7 +4268,6 @@ int gentype::loctoString(std::string &res, std::string &errstr) const
         const static int dfactInd         = getfnind("dfact");
         const static int tfactInd         = getfnind("tfact");
         const static int psfInd           = getfnind("psf");
-        const static int subfactInd       = getfnind("subfact");
         const static int negInd           = getfnind("neg");
         const static int posInd           = getfnind("pos");
         const static int lnotInd          = getfnind("lnot");
@@ -4196,7 +4374,6 @@ int gentype::loctoString(std::string &res, std::string &errstr) const
         else if ( fnnameind == dfactInd         ) { fnnameind = 0; openbracketis = "(";  separis = "";     closebracketis = ")!!";  }
         else if ( fnnameind == tfactInd         ) { fnnameind = 0; openbracketis = "(";  separis = "";     closebracketis = ")!!!"; }
         else if ( fnnameind == psfInd           ) { fnnameind = 0; openbracketis = "(";  separis = "";     closebracketis = ")$";   }
-        else if ( fnnameind == subfactInd       ) { fnnameind = 0; openbracketis = ":("; separis = "";     closebracketis = ")";    }
         else if ( fnnameind == negInd           ) { fnnameind = 0; openbracketis = "-("; separis = "";     closebracketis = ")";    }
         else if ( fnnameind == posInd           ) { fnnameind = 0; openbracketis = "(";  separis = "";     closebracketis = ")";    }
         else if ( fnnameind == lnotInd          ) { fnnameind = 0; openbracketis = "~("; separis = "";     closebracketis = ")";    }
@@ -6232,7 +6409,6 @@ int gentype::mathsparse(std::string &srcx, const std::string &src)
     //                                                           a$     -> psf(a)
     // 	            - + ~ left to right                          -a     -> neg(a)
     //                                                           ~a     -> lnot(a)
-    //                                                           :a     -> subfact(a)
     //                                                           +a     -> pos(a)       this will never occur and can be ignored as the equation is simplified
     //	            ^ .^ ^/ (right to left)                      a^b    -> pow(a,b)
     //                                                           a^<b   -> powl(a,b)
@@ -6295,9 +6471,9 @@ int gentype::mathsparse(std::string &srcx, const std::string &src)
 
     if ( ( res = operatorToFunction(1,0,opSymb,opFuncEquiv,opRevBinOrder,srcxblock) ) ) { return res; }
 
-    opSymb.resize(3);         opSymb("&",0)        = "~";             opSymb("&",1)        = "-";     opSymb("&",2)        = ":";
-    opFuncEquiv.resize(3);    opFuncEquiv("&",0)   = "lnot";          opFuncEquiv("&",1)   = "neg";   opFuncEquiv("&",2)   = "subfact";
-    opRevBinOrder.resize(3);  opRevBinOrder("&",0) = 0;               opRevBinOrder("&",1) = 0;       opRevBinOrder("&",2) = 0;
+    opSymb.resize(2);         opSymb("&",0)        = "~";             opSymb("&",1)        = "-";
+    opFuncEquiv.resize(2);    opFuncEquiv("&",0)   = "lnot";          opFuncEquiv("&",1)   = "neg";
+    opRevBinOrder.resize(2);  opRevBinOrder("&",0) = 0;               opRevBinOrder("&",1) = 0;
 
     if ( ( res = operatorToFunction(0,0,opSymb,opFuncEquiv,opRevBinOrder,srcxblock) ) ) { return res; }
 
@@ -20115,58 +20291,20 @@ inline calcState &setzero(calcState &a)
 }
 
 inline calcState &setposate(calcState &a);
-inline calcState &setposate(calcState &a)
-{
-    return a;
-}
-
 inline calcState &setnegate(calcState &a);
-inline calcState &setnegate(calcState &a)
-{
-    NiceThrow("Don't do that");
-
-    return a;
-}
-
 inline calcState &setconj(calcState &a);
-inline calcState &setconj(calcState &a)
-{
-    NiceThrow("Don't do that");
-
-    return a;
-}
-
 inline calcState &setrand(calcState &a);
-inline calcState &setrand(calcState &a)
-{
-    NiceThrow("Don't do that");
-
-    return a;
-}
-
 inline calcState &setident(calcState &a);
-inline calcState &setident(calcState &a)
-{
-    NiceThrow("Don't do that");
-
-    return a;
-}
-
 inline calcState &setzeropassive(calcState &a);
-inline calcState &setzeropassive(calcState &a)
-{
-    NiceThrow("Don't do that");
-
-    return a;
-}
-
 inline calcState &settranspose(calcState &a);
-inline calcState &settranspose(calcState &a)
-{
-    NiceThrow("Don't do that");
 
-    return a;
-}
+inline calcState &setposate(calcState &a)      {                                           return a; }
+inline calcState &setnegate(calcState &a)      { NiceThrow("Cant setnegate calcState");    return a; }
+inline calcState &setconj(calcState &a)        { NiceThrow("Cant setconj calcState");      return a; }
+inline calcState &setrand(calcState &a)        { NiceThrow("Cant setrand calcState");      return a; }
+inline calcState &setident(calcState &a)       { NiceThrow("Cant setident calcState");     return a; }
+inline calcState &setzeropassive(calcState &a) { NiceThrow("Cant zeropassive calcState");  return a; }
+inline calcState &settranspose(calcState &a)   { NiceThrow("Cant settranspose calcState"); return a; }
 
 #define calcNest theCalcNest("&",theCalcNest.size()-1)
 

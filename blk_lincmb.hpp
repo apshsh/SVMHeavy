@@ -126,6 +126,9 @@ public:
 
     virtual const Vector<SparseVector<gentype> > &x          (void) const override { return getRepConst().x();           }
     virtual const Vector<gentype>                &y          (void) const override { return getRepConst().y();           }
+    virtual const Vector<double>                 &yR         (void) const override { return getRepConst().yR();          }
+    virtual const Vector<d_anion>                &yA         (void) const override { return getRepConst().yA();          }
+    virtual const Vector<Vector<double> >        &yV         (void) const override { return getRepConst().yV();          }
     virtual const Vector<vecInfo>                &xinfo      (void) const override { return getRepConst().xinfo();       }
     virtual const Vector<int>                    &d          (void) const;
     virtual const Vector<double>                 &Cweight    (void) const override { return getRepConst().Cweight();     }

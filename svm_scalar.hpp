@@ -853,10 +853,6 @@ private:
     int prevNZ;
     double ****emm4K4cache;
 
-    // Quick-and-dirty sety function.  This does not update the gentype y value and assumes the scratch is of size N()
-
-    int setyqnd(const Vector<double> &zn, Vector<double> &gpscratch);
-
     // Skip setting for kernel evaluation (used when adding training vectors)
 
     int iskip;

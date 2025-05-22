@@ -96,8 +96,6 @@ public:
     virtual int setd(const Vector<int> &i, const Vector<int> &d) override;
     virtual int setd(                      const Vector<int> &d) override;
 
-    virtual int setorder(int neword) override;
-
     // Evaluation Functions:
     //
     // Output g(x) is average of input vector.

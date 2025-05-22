@@ -37,13 +37,11 @@
 #include "ml_base.hpp"
 
 #include "svm_generic.hpp"
-#include "onn_generic.hpp"
 #include "blk_generic.hpp"
 #include "knn_generic.hpp"
 #include "gpr_generic.hpp"
 #include "lsv_generic.hpp"
 #include "imp_generic.hpp"
-#include "ssv_generic.hpp"
 #include "mlm_generic.hpp"
 
 #ifdef MAKENUMPYCOMP
@@ -105,19 +103,19 @@ public:
 #endif
     virtual ~ML_Mutable();
 
-    virtual int prealloc(int expectedN)  override { return getML().prealloc(expectedN); }
-    virtual int preallocsize(void) const override { return getMLconst().preallocsize(); }
-    virtual void setmemsize(int memsize) override { getML().setmemsize(memsize); }
+    virtual int  prealloc    (int expectedN)       override { return getML().prealloc(expectedN); }
+    virtual int  preallocsize(void)          const override { return getMLconst().preallocsize(); }
+    virtual void setmemsize  (int memsize)         override { getML().setmemsize(memsize);        }
 #ifndef SWIG
-    virtual void assign(const ML_Base &src, int onlySemiCopy = 0) override;
-    virtual void semicopy(const ML_Base &src) override;
-    virtual void qswapinternal(ML_Base &b) override;
+    virtual void assign       (const ML_Base &src, int onlySemiCopy = 0) override;
+    virtual void semicopy     (const ML_Base &src)                       override;
+    virtual void qswapinternal(ML_Base &b)                               override;
 
     virtual int getparam (int ind, gentype         &val, const gentype         &xa, int ia, const gentype         &xb, int ib, charptr &desc) const override;
     virtual int egetparam(int ind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib               ) const override;
 #endif
     virtual std::ostream &printstream(std::ostream &output, int dep) const override { return getMLconst().printstream(output,dep); }
-    virtual std::istream &inputstream(std::istream &input ) override;
+    virtual std::istream &inputstream(std::istream &input          )       override;
 
     virtual       ML_Base &getML     (void)       override { return (*(theML(mlind))).getML();      }
     virtual const ML_Base &getMLconst(void) const override { return (*(theML(mlind))).getMLconst(); }
@@ -130,10 +128,13 @@ public:
 
     // Information functions (training data):
 
-    virtual int N      (void)  const override { return getMLconst().N  ();     }
-    virtual int NNC    (int d) const override { return getMLconst().NNC(d);    }
-    virtual int type   (void)  const override { return getMLconst().type();    }
-    virtual int subtype(void)  const override { return getMLconst().subtype(); }
+    virtual int  N       (void)  const override { return getMLconst().N  ();      }
+    virtual int  NNC     (int d) const override { return getMLconst().NNC(d);     }
+    virtual int  type    (void)  const override { return getMLconst().type();     }
+    virtual int  subtype (void)  const override { return getMLconst().subtype();  }
+    virtual char gOutType(void)  const override { return getMLconst().gOutType(); }
+    virtual char hOutType(void)  const override { return getMLconst().hOutType(); }
+    virtual char targType(void)  const override { return getMLconst().targType(); }
 
     virtual int tspaceDim   (void)       const override { return getMLconst().tspaceDim();    }
     virtual int xspaceDim   (int u = -1) const override { return getMLconst().xspaceDim(u);   }
@@ -148,9 +149,6 @@ public:
     virtual int isMutable(void) const override { return 1;                        }
     virtual int isPool   (void) const override { return 0;                        }
 
-    virtual char gOutType(void) const override { return getMLconst().gOutType(); }
-    virtual char hOutType(void) const override { return getMLconst().hOutType(); }
-    virtual char targType(void) const override { return getMLconst().targType(); }
     virtual double calcDist(const gentype &ha, const gentype &hb, int ia = -1, int db = 2) const override { return getMLconst().calcDist(ha,hb,ia,db); }
 
     virtual double calcDistInt(int    ha, int    hb, int ia = -1, int db = 2) const override { return getMLconst().calcDistInt(ha,hb,ia,db); }
@@ -160,21 +158,28 @@ public:
     virtual int isUnderlyingVector(void) const override { return getMLconst().isUnderlyingVector(); }
     virtual int isUnderlyingAnions(void) const override { return getMLconst().isUnderlyingAnions(); }
 
-    virtual const Vector<int> &ClassLabels(void)   const override { return getMLconst().ClassLabels();               }
-    virtual int getInternalClass(const gentype &y) const override { return getMLconst().getInternalClass(y);         }
-    virtual int numInternalClasses(void)           const override { return getMLconst().numInternalClasses();        }
-    virtual int isenabled(int i)                   const override { return getMLconst().isenabled(i);                }
-    virtual int isVarDefined(void)                 const override { return getMLconst().isVarDefined();              }
+    virtual const Vector<int> &ClassLabels(void)             const override { return getMLconst().ClassLabels();               }
+    virtual int   getInternalClass        (const gentype &y) const override { return getMLconst().getInternalClass(y);         }
+    virtual int   numInternalClasses      (void)             const override { return getMLconst().numInternalClasses();        }
+    virtual int   isenabled               (int i)            const override { return getMLconst().isenabled(i);                }
+    virtual int   isVarDefined            (void)             const override { return getMLconst().isVarDefined();              }
 
-    virtual const int *ClassLabelsInt(void) const override { return getMLconst().ClassLabelsInt();       }
-    virtual int  getInternalClassInt(int y) const override { return getMLconst().getInternalClassInt(y); }
+    virtual const int *ClassLabelsInt     (void)  const override { return getMLconst().ClassLabelsInt();       }
+    virtual       int  getInternalClassInt(int y) const override { return getMLconst().getInternalClassInt(y); }
 
-    virtual double C(void)         const override { return getMLconst().C();         }
-    virtual double sigma(void)     const override { return getMLconst().sigma();     }
-    virtual double sigma_cut(void) const override { return getMLconst().sigma_cut(); }
-    virtual double eps(void)       const override { return getMLconst().eps();       }
-    virtual double Cclass(int d)   const override { return getMLconst().Cclass(d);   }
-    virtual double epsclass(int d) const override { return getMLconst().epsclass(d); }
+    virtual double C        (void)  const override { return getMLconst().C();         }
+    virtual double sigma    (void)  const override { return getMLconst().sigma();     }
+    virtual double sigma_cut(void)  const override { return getMLconst().sigma_cut(); }
+    virtual double eps      (void)  const override { return getMLconst().eps();       }
+    virtual double Cclass   (int d) const override { return getMLconst().Cclass(d);   }
+    virtual double epsclass (int d) const override { return getMLconst().epsclass(d); }
+
+    virtual       int      mpri  (void) const override { return getMLconst().mpri();   }
+    virtual const gentype &prival(void) const override { return getMLconst().prival(); }
+    virtual const ML_Base *priml (void) const override { return getMLconst().priml();  }
+
+    virtual void calcprior   (gentype &res, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { return getMLconst().calcprior(res,x,xinf); }
+    virtual void calcallprior(void)                                                                              override { return getML().calcallprior();             }
 
     virtual int    memsize     (void) const override { return getMLconst().memsize();      }
     virtual double zerotol     (void) const override { return getMLconst().zerotol();      }
@@ -191,8 +196,8 @@ public:
     virtual double traintimeend(void) const override { return getMLconst().traintimeend(); }
 
     virtual int    maxitermvrank(void) const override { return getMLconst().maxitermvrank(); }
-    virtual double lrmvrank(void)      const override { return getMLconst().lrmvrank();      }
-    virtual double ztmvrank(void)      const override { return getMLconst().ztmvrank();      }
+    virtual double lrmvrank     (void) const override { return getMLconst().lrmvrank();      }
+    virtual double ztmvrank     (void) const override { return getMLconst().ztmvrank();      }
 
     virtual double betarank(void) const override { return getMLconst().betarank(); }
 
@@ -200,6 +205,13 @@ public:
 //FIXME: ADDHERE
     virtual const Vector<SparseVector<gentype> > &x          (void) const override { return getMLconst().x();           }
     virtual const Vector<gentype>                &y          (void) const override { return getMLconst().y();           }
+    virtual const Vector<double>                 &yR         (void) const override { return getMLconst().yR();          }
+    virtual const Vector<d_anion>                &yA         (void) const override { return getMLconst().yA();          }
+    virtual const Vector<Vector<double> >        &yV         (void) const override { return getMLconst().yV();          }
+    virtual const Vector<gentype>                &yp         (void) const override { return getMLconst().yp();          }
+    virtual const Vector<double>                 &ypR        (void) const override { return getMLconst().ypR();         }
+    virtual const Vector<d_anion>                &ypA        (void) const override { return getMLconst().ypA();         }
+    virtual const Vector<Vector<double> >        &ypV        (void) const override { return getMLconst().ypV();         }
     virtual const Vector<vecInfo>                &xinfo      (void) const override { return getMLconst().xinfo();       }
     virtual const Vector<int>                    &xtang      (void) const override { return getMLconst().xtang();       }
     virtual const Vector<int>                    &d          (void) const override { return getMLconst().d();           }
@@ -207,10 +219,23 @@ public:
     virtual const Vector<double>                 &Cweightfuzz(void) const override { return getMLconst().Cweightfuzz(); }
     virtual const Vector<double>                 &sigmaweight(void) const override { return getMLconst().sigmaweight(); }
     virtual const Vector<double>                 &epsweight  (void) const override { return getMLconst().epsweight();   }
+    virtual const Vector<gentype>                &alphaVal   (void) const override { return getMLconst().alphaVal();    }
     virtual const Vector<int>                    &alphaState (void) const override { return getMLconst().alphaState();  }
 
-    virtual const Vector<gentype> &alphaVal(void)  const override { return getMLconst().alphaVal();  }
-    virtual       double           alphaVal(int i) const override { return getMLconst().alphaVal(i); }
+    virtual const SparseVector<gentype> &x       (int i)              const override { return getMLconst().x(i);                       }
+    virtual const SparseVector<gentype> &x       (int i, int altMLid) const override { return getMLconst().x(i,altMLid);               }
+    virtual const gentype               &y       (int i)              const override { return getMLconst().y(i);                       }
+    virtual       double                 yR      (int i)              const override { return getMLconst().yR(i);                      }
+    virtual const d_anion               &yA      (int i)              const override { return getMLconst().yA(i);                      }
+    virtual const Vector<double>        &yV      (int i)              const override { return getMLconst().yV(i);                      }
+    virtual const vecInfo               &xinfo   (int i)              const override { return getMLconst().xinfo(i);                   }
+    virtual       int                    xtang   (int i)              const override { return getMLconst().xtang(i);                   }
+    virtual       double                 alphaVal(int i)              const override { return getMLconst().alphaVal(i);                }
+
+    virtual int xisrank      (int i)                               const override { return getMLconst().xisrank(i);                 }
+    virtual int xisgrad      (int i)                               const override { return getMLconst().xisgrad(i);                 }
+    virtual int xisrankorgrad(int i)                               const override { return getMLconst().xisrankorgrad(i);           }
+    virtual int xisclass     (int i, int defaultclass, int q = -1) const override { return getMLconst().xisclass(i,defaultclass,q); }
 
     virtual int RFFordata(int i) const { return getMLconst().RFFordata(i); }
 
@@ -225,30 +250,32 @@ public:
 
     // Random features stuff:
 
-    virtual int NRff   (void) const { return getMLconst().NRff   (); }
-    virtual int NRffRep(void) const { return getMLconst().NRffRep(); }
-    virtual int ReOnly (void) const { return getMLconst().ReOnly (); }
-    virtual int inAdam (void) const { return getMLconst().inAdam (); }
-    virtual int outGrad(void) const { return getMLconst().outGrad(); }
+    virtual int NRff   (void) const override { return getMLconst().NRff   (); }
+    virtual int NRffRep(void) const override { return getMLconst().NRffRep(); }
+    virtual int ReOnly (void) const override { return getMLconst().ReOnly (); }
+    virtual int inAdam (void) const override { return getMLconst().inAdam (); }
+    virtual int outGrad(void) const override { return getMLconst().outGrad(); }
 
     // Version numbers
 
-    virtual int xvernum(void)        const override { return getMLconst().xvernum();        }
-    virtual int xvernum(int altMLid) const override { return getMLconst().xvernum(altMLid); }
-    virtual int incxvernum(void)           override { return getML().incxvernum();          }
-    virtual int gvernum(void)        const override { return getMLconst().gvernum();        }
-    virtual int gvernum(int altMLid) const override { return getMLconst().gvernum(altMLid); }
-    virtual int incgvernum(void)           override { return getML().incgvernum();          }
-
-    virtual int MLid(void) const override { return getMLconst().MLid(); }
-    virtual int setMLid(int nv) override { return getML().setMLid(nv); }
+    virtual int MLid    (void)                             const override { return getMLconst().MLid();                }
+    virtual int setMLid (int nv)                                 override { return getML().setMLid(nv);                }
     virtual int getaltML(kernPrecursor *&res, int altMLid) const override { return getMLconst().getaltML(res,altMLid); }
+
+    virtual int xvernum(void) const override { return getMLconst().xvernum(); }
+    virtual int gvernum(void) const override { return getMLconst().gvernum(); }
+
+    virtual int xvernum(int altMLid) const override { return getMLconst().xvernum(altMLid); }
+    virtual int gvernum(int altMLid) const override { return getMLconst().gvernum(altMLid); }
+
+    virtual int incxvernum(void) override { return getML().incxvernum(); }
+    virtual int incgvernum(void) override { return getML().incgvernum(); }
 
     // Kernel Modification
 
-    virtual const MercerKernel &getKernel (void) const override { return getMLconst().getKernel();   }
-    virtual MercerKernel &getKernel_unsafe(void)       override { return getML().getKernel_unsafe(); }
-    virtual void prepareKernel            (void)       override {        getML().prepareKernel();    }
+    virtual const MercerKernel &getKernel       (void) const override { return getMLconst().getKernel();   }
+    virtual       MercerKernel &getKernel_unsafe(void)       override { return getML().getKernel_unsafe(); }
+    virtual       void          prepareKernel   (void)       override {        getML().prepareKernel();    }
 
     virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr) override { return getML().tuneKernel(method,xwidth,tuneK,tuneP,tunebounds); }
 
@@ -392,8 +419,8 @@ public:
     virtual void K4xfer(                                  double &res, int &minmaxind, int typeis, double xyprod, double yxprod, double diffis, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo, int ia, int ib, int ic, int id, int xdim, int densetype, int resmode, int mlid) const override { getMLconst().K4xfer(res,minmaxind,typeis,xyprod,yxprod,diffis,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,ia,ib,ic,id,xdim,densetype,resmode,mlid); }
     virtual void Kmxfer(                                  double &res, int &minmaxind, int typeis, double xyprod, double yxprod, double diffis, Vector<const SparseVector<gentype> *> &x, Vector<const vecInfo *> &xzinfo, Vector<int> &i, int xdim, int m, int densetype, int resmode, int mlid) const override { getMLconst().Kmxfer(res,minmaxind,typeis,xyprod,yxprod,diffis,x,xzinfo,i,xdim,m,densetype,resmode,mlid); }
 
-    virtual const gentype &xelm(gentype &res, int i, int j) const override { return getMLconst().xelm(res,i,j); }
-    virtual int xindsize(int i) const override { return getMLconst().xindsize(i); }
+    virtual const gentype &xelm    (gentype &res, int i, int j) const override { return getMLconst().xelm(res,i,j); }
+    virtual       int      xindsize(int i)                      const override { return getMLconst().xindsize(i);   }
 
 //Variants
     int KisFullNorm       (void) const { return getKernel().isFullNorm();        }
@@ -552,47 +579,37 @@ public:
 
     virtual void xferx(const ML_Base &xsrc) override { getML().xferx(xsrc); }
 
-    virtual const vecInfo &xinfo          (int i)                               const override { return getMLconst().xinfo(i);                   }
-    virtual int   xtang                   (int i)                               const override { return getMLconst().xtang(i);                   }
-    virtual const SparseVector<gentype> &x(int i)                               const override { return getMLconst().x(i);                       }
-    virtual const SparseVector<gentype> &x(int i, int altMLid)                  const override { return getMLconst().x(i,altMLid);               }
-    virtual int   xisrank                 (int i)                               const override { return getMLconst().xisrank(i);                 }
-    virtual int   xisgrad                 (int i)                               const override { return getMLconst().xisgrad(i);                 }
-    virtual int   xisrankorgrad           (int i)                               const override { return getMLconst().xisrankorgrad(i);           }
-    virtual int   xisclass                (int i, int defaultclass, int q = -1) const override { return getMLconst().xisclass(i,defaultclass,q); }
-    virtual const gentype &y              (int i)                               const override { return getMLconst().y(i);                       }
-
     // Basis stuff
 
-    virtual int NbasisUU(void)    const override { return getMLconst().NbasisUU();    }
+    virtual int NbasisUU   (void) const override { return getMLconst().NbasisUU();    }
     virtual int basisTypeUU(void) const override { return getMLconst().basisTypeUU(); }
-    virtual int defProjUU(void)   const override { return getMLconst().defProjUU();   }
+    virtual int defProjUU  (void) const override { return getMLconst().defProjUU();   }
 
     virtual const Vector<gentype> &VbasisUU(void) const override { return getMLconst().VbasisUU(); }
 
-    virtual int setBasisYUU(void)                     override { return getML().setBasisYUU();             }
-    virtual int setBasisUUU(void)                     override { return getML().setBasisUUU();             }
-    virtual int addToBasisUU(int i, const gentype &o) override { return getML().addToBasisUU(i,o);         }
-    virtual int removeFromBasisUU(int i)              override { return getML().removeFromBasisUU(i);      }
-    virtual int setBasisUU(int i, const gentype &o)   override { return getML().setBasisUU(i,o);           }
-    virtual int setBasisUU(const Vector<gentype> &o)  override { return getML().setBasisUU(o);             }
-    virtual int setDefaultProjectionUU(int d)         override { return getML().setDefaultProjectionUU(d); }
-    virtual int setBasisUU(int n, int d)              override { return getML().setBasisUU(n,d);           }
+    virtual int setBasisYUU           (void)                     override { return getML().setBasisYUU();             }
+    virtual int setBasisUUU           (void)                     override { return getML().setBasisUUU();             }
+    virtual int addToBasisUU          (int i, const gentype &o)  override { return getML().addToBasisUU(i,o);         }
+    virtual int removeFromBasisUU     (int i)                    override { return getML().removeFromBasisUU(i);      }
+    virtual int setBasisUU            (int i, const gentype &o)  override { return getML().setBasisUU(i,o);           }
+    virtual int setBasisUU            (const Vector<gentype> &o) override { return getML().setBasisUU(o);             }
+    virtual int setDefaultProjectionUU(int d)                    override { return getML().setDefaultProjectionUU(d); }
+    virtual int setBasisUU            (int n, int d)             override { return getML().setBasisUU(n,d);           }
 
-    virtual int NbasisVV(void)    const override { return getMLconst().NbasisVV();    }
+    virtual int NbasisVV   (void) const override { return getMLconst().NbasisVV();    }
     virtual int basisTypeVV(void) const override { return getMLconst().basisTypeVV(); }
-    virtual int defProjVV(void)   const override { return getMLconst().defProjVV();   }
+    virtual int defProjVV  (void) const override { return getMLconst().defProjVV();   }
 
     virtual const Vector<gentype> &VbasisVV(void) const override { return getMLconst().VbasisVV(); }
 
-    virtual int setBasisYVV(void)                     override { return getML().setBasisYVV();             }
-    virtual int setBasisUVV(void)                     override { return getML().setBasisUVV();             }
-    virtual int addToBasisVV(int i, const gentype &o) override { return getML().addToBasisVV(i,o);         }
-    virtual int removeFromBasisVV(int i)              override { return getML().removeFromBasisVV(i);      }
-    virtual int setBasisVV(int i, const gentype &o)   override { return getML().setBasisVV(i,o);           }
-    virtual int setBasisVV(const Vector<gentype> &o)  override { return getML().setBasisVV(o);             }
-    virtual int setDefaultProjectionVV(int d)         override { return getML().setDefaultProjectionVV(d); }
-    virtual int setBasisVV(int n, int d)              override { return getML().setBasisVV(n,d);           }
+    virtual int setBasisYVV           (void)                     override { return getML().setBasisYVV();             }
+    virtual int setBasisUVV           (void)                     override { return getML().setBasisUVV();             }
+    virtual int addToBasisVV          (int i, const gentype &o)  override { return getML().addToBasisVV(i,o);         }
+    virtual int removeFromBasisVV     (int i)                    override { return getML().removeFromBasisVV(i);      }
+    virtual int setBasisVV            (int i, const gentype &o)  override { return getML().setBasisVV(i,o);           }
+    virtual int setBasisVV            (const Vector<gentype> &o) override { return getML().setBasisVV(o);             }
+    virtual int setDefaultProjectionVV(int d)                    override { return getML().setDefaultProjectionVV(d); }
+    virtual int setBasisVV            (int n, int d)             override { return getML().setBasisVV(n,d);           }
 
     virtual const MercerKernel &getUUOutputKernel       (void)                                        const override { return getMLconst().getUUOutputKernel();          }
     virtual       MercerKernel &getUUOutputKernel_unsafe(void)                                              override { return getML().getUUOutputKernel_unsafe();        }
@@ -608,10 +625,10 @@ public:
 
     // General modification and autoset functions
 
-    virtual int randomise(double sparsity) override { return getML().randomise(sparsity); }
-    virtual int autoen(void)               override { return getML().autoen();            }
-    virtual int renormalise(void)          override { return getML().renormalise();       }
-    virtual int realign(void)              override { return getML().realign();           }
+    virtual int randomise  (double sparsity) override { return getML().randomise(sparsity); }
+    virtual int autoen     (void)            override { return getML().autoen();            }
+    virtual int renormalise(void)            override { return getML().renormalise();       }
+    virtual int realign    (void)            override { return getML().realign();           }
 
     virtual int setzerotol     (double zt)            override { return getML().setzerotol(zt);                 }
     virtual int setOpttol      (double xopttol)       override { return getML().setOpttol(xopttol);             }
@@ -626,9 +643,9 @@ public:
     virtual int setmaxtraintime(double xmaxtraintime) override { return getML().setmaxtraintime(xmaxtraintime); }
     virtual int settraintimeend(double xtraintimeend) override { return getML().settraintimeend(xtraintimeend); }
 
-    virtual int setmaxitermvrank(int nv) override { return getML().setmaxitermvrank(nv); }
-    virtual int setlrmvrank(double nv)   override { return getML().setlrmvrank(nv);      }
-    virtual int setztmvrank(double nv)   override { return getML().setztmvrank(nv);      }
+    virtual int setmaxitermvrank(int    nv) override { return getML().setmaxitermvrank(nv); }
+    virtual int setlrmvrank     (double nv) override { return getML().setlrmvrank(nv);      }
+    virtual int setztmvrank     (double nv) override { return getML().setztmvrank(nv);      }
 
     virtual int setbetarank(double nv) override { return getML().setbetarank(nv); }
 
@@ -638,6 +655,10 @@ public:
     virtual int seteps      (double xeps)        override { return getML().seteps(xeps);             }
     virtual int setCclass   (int d, double xC)   override { return getML().setCclass(d,xC);          }
     virtual int setepsclass (int d, double xeps) override { return getML().setepsclass(d,xeps);      }
+
+    virtual int setmpri  (int nv)            override { return getML().setmpri(nv);   }
+    virtual int setprival(const gentype &nv) override { return getML().setprival(nv); }
+    virtual int setpriml (const ML_Base *nv) override { return getML().setpriml(nv);  }
 
     virtual int scale  (double a) override { return getML().scale(a);  }
     virtual int reset  (void)     override { return getML().reset();   }
@@ -667,17 +688,17 @@ public:
 
     // Sampling mode
 
-    virtual int isSampleMode(void) const override { return getMLconst().isSampleMode(); }
+    virtual int  isSampleMode(void) const override { return getMLconst().isSampleMode(); }
     virtual int setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double sampScale, double sampSlack = 0) override { return getML().setSampleMode(nv,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack); }
 
     // Training functions:
 
-    virtual void fudgeOn(void)  override { getML().fudgeOn();  }
+    virtual void fudgeOn (void)  override { getML().fudgeOn();  }
     virtual void fudgeOff(void) override { getML().fudgeOff(); }
 
 #ifndef SWIG
-    virtual int train(int &res) override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
-    virtual int train(int &res, svmvolatile int &killSwitch) override { return getML().train(res,killSwitch); }
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
+    virtual int train(int &res, svmvolatile int &killSwitch) override { return getML().train(res,killSwitch);                         }
 #endif
 
 //Variants
@@ -685,10 +706,10 @@ public:
 
     // Information functions:
 
-    virtual double loglikelihood(void) const { return getMLconst().loglikelihood(); }
-    virtual double maxinfogain  (void) const { return getMLconst().maxinfogain  (); }
-    virtual double RKHSnorm     (void) const { return getMLconst().RKHSnorm     (); }
-    virtual double RKHSabs      (void) const { return getMLconst().RKHSabs      (); }
+    virtual double loglikelihood(void) const override { return getMLconst().loglikelihood(); }
+    virtual double maxinfogain  (void) const override { return getMLconst().maxinfogain  (); }
+    virtual double RKHSnorm     (void) const override { return getMLconst().RKHSnorm     (); }
+    virtual double RKHSabs      (void) const override { return getMLconst().RKHSabs      (); }
 
     // Evaluation Functions:
 #ifndef SWIG
@@ -707,9 +728,9 @@ public:
 
     virtual double &d2edg2TrainingVector(double &res, int i) const override { return getMLconst().d2edg2TrainingVector(res,i); }
 
-    virtual double dedKTrainingVector(int i, int j) const override { return getMLconst().dedKTrainingVector(i,j); }
+    virtual double          dedKTrainingVector(int i, int j)               const override { return getMLconst().dedKTrainingVector(i,j);   }
     virtual Vector<double> &dedKTrainingVector(Vector<double> &res, int i) const override { return getMLconst().dedKTrainingVector(res,i); }
-    virtual Matrix<double> &dedKTrainingVector(Matrix<double> &res) const override { return getMLconst().dedKTrainingVector(res); }
+    virtual Matrix<double> &dedKTrainingVector(Matrix<double> &res)        const override { return getMLconst().dedKTrainingVector(res);   }
 //FIXME: ADDHERE
     virtual void dgTrainingVectorX(Vector<gentype> &resx, int i) const override { getMLconst().dgTrainingVectorX(resx,i); }
     virtual void dgTrainingVectorX(Vector<double>  &resx, int i) const override { getMLconst().dgTrainingVectorX(resx,i); }
@@ -845,6 +866,8 @@ public:
     virtual int covarTrainingVector(Matrix<gentype> &resv, const Vector<int> &i) const override { return getMLconst().covarTrainingVector(resv,i); }
     virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const override { return getMLconst().covar(resv,x); }
 
+    // Input-Output noise calculation
+
     virtual int noisevarTrainingVector(gentype &resv, gentype &resmu, int i, const SparseVector<gentype> &xvar, int u = -1, gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return getMLconst().noisevarTrainingVector(resv,resmu,i,xvar,u,pxyprodi,pxyprodii); }
     virtual int noisevar(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override { return getMLconst().noisevar(resv,resmu,xa,xvar,u,xainf,pxyprodx,pxyprodxx); }
 
@@ -901,6 +924,7 @@ public:
 
     // Kernel normalisation function
 
+    virtual int normKernelNone                  (void)                              override { return getML().normKernelNone();                                   }
     virtual int normKernelZeroMeanUnitVariance  (int flatnorm = 0, int noshift = 0) override { return getML().normKernelZeroMeanUnitVariance(flatnorm,noshift);   }
     virtual int normKernelZeroMedianUnitVariance(int flatnorm = 0, int noshift = 0) override { return getML().normKernelZeroMedianUnitVariance(flatnorm,noshift); }
     virtual int normKernelUnitRange             (int flatnorm = 0, int noshift = 0) override { return getML().normKernelUnitRange(flatnorm,noshift);              }
@@ -1235,29 +1259,6 @@ public:
     // Pre-training funciton
 
     virtual int pretrain(void) { return getSVM().pretrain(); }
-
-
-
-
-
-    // ================================================================
-    //     Common functions for all ONNs
-    // ================================================================
-
-#ifndef SWIG
-    virtual       ONN_Generic &getONN     (void)       { NiceAssert( ( type() >= 100 ) && ( type() <= 199 ) ); return (dynamic_cast<      ONN_Generic &>(getML     ().getML     ())).getONN();      }
-    virtual const ONN_Generic &getONNconst(void) const { NiceAssert( ( type() >= 100 ) && ( type() <= 199 ) ); return (dynamic_cast<const ONN_Generic &>(getMLconst().getMLconst())).getONNconst(); }
-#endif
-
-    // Information functions (training data):
-
-    virtual const SparseVector<gentype> &W(void) const override { return getONNconst().W(); }
-    virtual const gentype               &B(void) const { return getONNconst().B(); }
-
-    // General modification and autoset functions
-
-    virtual int setW(const SparseVector<gentype> &Wsrc) { return getONN().setW(Wsrc); }
-    virtual int setB(const gentype               &bsrc) { return getONN().setB(bsrc); }
 
 
 
@@ -1644,80 +1645,6 @@ public:
 
 
     // ================================================================
-    //     Common to all SSVs
-    // ================================================================
-
-#ifndef SWIG
-    virtual       SSV_Generic &getSSV     (void)       { NiceAssert( ( type() >= 700 ) && ( type() <= 799 ) ); return (dynamic_cast<      SSV_Generic &>(getML     ().getML     ())).getSSV();      }
-    virtual const SSV_Generic &getSSVconst(void) const { NiceAssert( ( type() >= 700 ) && ( type() <= 799 ) ); return (dynamic_cast<const SSV_Generic &>(getMLconst().getMLconst())).getSSVconst(); }
-#endif
-
-    // General information and control
-
-    virtual int Nzs(void) const { return getSSVconst().Nzs(); }
-
-//FIXME: ADDHERE
-    virtual const Vector<gentype>                &beta  (void) const { return getSSVconst().beta  (); }
-    virtual const gentype                        &b     (void) const { return getSSVconst().b     (); }
-//phantomq    virtual const Vector<SparseVector<gentype> > &z     (void) const { return getSSVconst().z     (); }
-    virtual const SparseVector<double>           &zmin  (void) const { return getSSVconst().zmin  (); }
-    virtual const SparseVector<double>           &zmax  (void) const { return getSSVconst().zmax  (); }
-    virtual const Vector<int>                    &xstate(void) const { return getSSVconst().xstate(); }
-    virtual const Vector<int>                    &xact  (void) const { return getSSVconst().xact  (); }
-    virtual const Matrix<double>                 &M     (void) const { return getSSVconst().M     (); }
-    virtual const Vector<double>                 &n     (void) const { return getSSVconst().n     (); }
-
-    virtual const SparseVector<gentype> &z(int i) const { return getSSVconst().z(i); }
-
-    virtual int isQuadRegul(void) const { return getSSVconst().isQuadRegul(); }
-    virtual int isLinRegul (void) const { return getSSVconst().isLinRegul (); }
-
-    virtual double biasForce(void) const { return getSSVconst().biasForce  (); }
-    virtual int anomalclass(void)  const { return getSSVconst().anomalclass(); }
-
-    // Control functions
-
-    virtual int setbeta(const Vector<gentype> &newBeta) { return getSSV().setbeta(newBeta); }
-    virtual int setb   (const gentype         &newb   ) { return getSSV().setb   (newb   ); }
-
-//FIXME: ADDHERE
-    virtual int setbeta(const Vector<double> &newBeta) { return getSSV().setbeta(newBeta); }
-    virtual int setb   (      double          newb   ) { return getSSV().setb   (newb   ); }
-
-    virtual int setNzs(int nv) { return getSSV().setNzs(nv); }
-
-    virtual int setzmin(const SparseVector<double> &nv) { return getSSV().setzmin(nv); }
-    virtual int setzmax(const SparseVector<double> &nv) { return getSSV().setzmax(nv); }
-
-    virtual int setQuadRegul(void) { return getSSV().setQuadRegul(); }
-    virtual int setLinRegul (void) { return getSSV().setLinRegul (); }
-
-    virtual int setBiasForce(double nv) { return getSSV().setBiasForce(nv);  }
-    virtual int setanomalclass(int n)   { return getSSV().setanomalclass(n); }
-
-    // Training control (for outer loop)
-
-    virtual double ssvlr(void)       const { return getSSVconst().ssvlr      (); }
-    virtual double ssvmom(void)      const { return getSSVconst().ssvmom     (); }
-    virtual double ssvtol(void)      const { return getSSVconst().ssvtol     (); }
-    virtual double ssvovsc(void)     const { return getSSVconst().ssvovsc    (); }
-    virtual int    ssvmaxitcnt(void) const { return getSSVconst().ssvmaxitcnt(); }
-    virtual double ssvmaxtime(void)  const { return getSSVconst().ssvmaxtime (); }
-
-    virtual int setssvlr(double nv)      { return getSSV().setssvlr      (nv); }
-    virtual int setssvmom(double nv)     { return getSSV().setssvmom     (nv); }
-    virtual int setssvtol(double nv)     { return getSSV().setssvtol     (nv); }
-    virtual int setssvovsc(double nv)    { return getSSV().setssvovsc    (nv); }
-    virtual int setssvmaxitcnt(int nv)   { return getSSV().setssvmaxitcnt(nv); }
-    virtual int setssvmaxtime(double nv) { return getSSV().setssvmaxtime (nv); }
-
-
-
-
-
-
-
-    // ================================================================
     //     Common functions for all MLMs
     // ================================================================
 
@@ -1926,12 +1853,6 @@ inline void ML_Mutable::assign(const ML_Base &bb, int onlySemiCopy)
 //        21 = bare basics SVM for kernel inheritance
 //        22 = Scalar SVM by random fourier features
 //        23 = Binary SVM by random fourier features
-//       100 = Scalar ONN
-//       101 = Vector ONN
-//       102 = Anion ONN
-//       103 = Binary ONN
-//       104 = Auto-encoding ONN
-//       105 = Generic target ONN
 //       200 = NOP machine (do nothing)
 //       201 = Consensus machine (voting)
 //       202 = Scalar average machine
@@ -1978,21 +1899,15 @@ inline void ML_Mutable::assign(const ML_Base &bb, int onlySemiCopy)
 //       601 = Pareto SVM 1-norm 1-class mono-surrogate
 //       602 = random linear scalarisation
 //       603 = random nonlinear scalarisation
-//       700 = SSV scalar regression
-//       701 = SSV binary
-//       701 = SSV 1-class
-//       800 = SSV scalar regression
 //
 // Type ranges:      -2 kernel precursor (not an ML)
 //                   -1 base type (not a functional ML)
 //                0- 99 support vector machine (SVM)
-//              100-199 one-layer layer neural network (ONN)
 //              200-299 blocks (BLK)
 //              300-399 k-nearest-neighbour machines (KNN)
 //              400-499 Gaussian processes (GP)
 //              500-599 Least-squares support vector machine (LSV)
 //              600-699 Improvement measures (IMP)
-//              700-799 Super-sparse support vector machine (SSV)
 //              800-899 Type-II multi-layer kernel-machine (MLM)
 //
 
@@ -2018,13 +1933,11 @@ int convTypeToID(std::string &idstringres, int id);
 inline int isML(const ML_Base &src) { return ( src.type() >= 0 ); }
 
 inline int isSVM(const ML_Base &src) { return ( src.type() >=   0 ) &&  ( src.type() <=  99 ); }
-inline int isONN(const ML_Base &src) { return ( src.type() >= 100 ) &&  ( src.type() <= 199 ); }
 inline int isBLK(const ML_Base &src) { return ( src.type() >= 200 ) &&  ( src.type() <= 299 ); }
 inline int isKNN(const ML_Base &src) { return ( src.type() >= 300 ) &&  ( src.type() <= 399 ); }
 inline int isGPR(const ML_Base &src) { return ( src.type() >= 400 ) &&  ( src.type() <= 499 ); }
 inline int isLSV(const ML_Base &src) { return ( src.type() >= 500 ) &&  ( src.type() <= 599 ); }
 inline int isIMP(const ML_Base &src) { return ( src.type() >= 600 ) &&  ( src.type() <= 699 ); }
-inline int isSSV(const ML_Base &src) { return ( src.type() >= 700 ) &&  ( src.type() <= 799 ); }
 inline int isMLM(const ML_Base &src) { return ( src.type() >= 800 ) &&  ( src.type() <= 899 ); }
 
 inline int isSVMScalar    (const ML_Base &src) { return ( src.type() ==   0 ); }
@@ -2047,13 +1960,6 @@ inline int isSVMCyclic    (const ML_Base &src) { return ( src.type() ==  20 ); }
 inline int isSVMKConst    (const ML_Base &src) { return ( src.type() ==  21 ); }
 inline int isSVMScalar_rff(const ML_Base &src) { return ( src.type() ==  22 ); }
 inline int isSVMBinary_rff(const ML_Base &src) { return ( src.type() ==  23 ); }
-
-inline int isONNScalar(const ML_Base &src) { return ( src.type() == 100 ); }
-inline int isONNVector(const ML_Base &src) { return ( src.type() == 101 ); }
-inline int isONNAnions(const ML_Base &src) { return ( src.type() == 102 ); }
-inline int isONNBinary(const ML_Base &src) { return ( src.type() == 103 ); }
-inline int isONNAutoEn(const ML_Base &src) { return ( src.type() == 104 ); }
-inline int isONNGentyp(const ML_Base &src) { return ( src.type() == 105 ); }
 
 inline int isBLKNopnop(const ML_Base &src) { return ( src.type() == 200 ); }
 inline int isBLKConsen(const ML_Base &src) { return ( src.type() == 201 ); }
@@ -2105,10 +2011,6 @@ inline int isIMPExpect(const ML_Base &src) { return ( src.type() == 600 ); }
 inline int isIMPParSVM(const ML_Base &src) { return ( src.type() == 601 ); }
 inline int isIMPRLSamp(const ML_Base &src) { return ( src.type() == 602 ); }
 inline int isIMPNLSamp(const ML_Base &src) { return ( src.type() == 603 ); }
-
-inline int isSSVScalar(const ML_Base &src) { return ( src.type() == 700 ); }
-inline int isSSVBinary(const ML_Base &src) { return ( src.type() == 701 ); }
-inline int isSSVSingle(const ML_Base &src) { return ( src.type() == 702 ); }
 
 inline int isMLMScalar(const ML_Base &src) { return ( src.type() == 800 ); }
 inline int isMLMBinary(const ML_Base &src) { return ( src.type() == 801 ); }

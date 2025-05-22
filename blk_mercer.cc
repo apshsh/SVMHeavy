@@ -126,7 +126,6 @@ void BLK_Mercer::K2xfer(gentype &dxyprod, gentype &ddiffis, gentype &res, int &m
                         int i, int j,
                         int xdim, int densetype, int resmode, int mlid) const
 {
-errstream() << "phantomx 0\n";
     if ( ( mercachesize() >= 0 ) && ( i >= 0 ) && ( j >= 0 ) && !resmode )
     {
         NiceAssert( i <= mercachesize() );
@@ -134,15 +133,12 @@ errstream() << "phantomx 0\n";
 
         // If no hit then need to pre-calculate kernel first
 
-errstream() << "phantomx 1\n";
         if ( !( merHit(i,j/MINUINTSIZE) & (1<<(j%MINUINTSIZE)) ) )
         {
             merHit("&",i,j/MINUINTSIZE) |= (1<<(j%MINUINTSIZE));
 
-errstream() << "phantomx 2\n";
             if ( !mercachenorm() )
             {
-errstream() << "phantomx 3\n";
                 ML_Base::K2xfer(dxyprod,ddiffis,res,minmaxind,typeis,xyprod,yxprod,diffis,xa,xb,xainfo,xbinfo,i,j,xdim,densetype,resmode,mlid);
             }
 
@@ -151,7 +147,6 @@ errstream() << "phantomx 3\n";
                 gentype tma;
                 gentype tmb;
 
-errstream() << "phantomx 4\n";
                 ML_Base::K2xfer(dxyprod,ddiffis,res,minmaxind,typeis,xyprod,yxprod,diffis,xa,xb,xainfo,xbinfo,i,j,xdim,densetype,resmode,mlid);
                 ML_Base::K2xfer(dxyprod,ddiffis,tma,minmaxind,typeis,xyprod,yxprod,diffis,xa,xa,xainfo,xainfo,i,i,xdim,densetype,resmode,mlid);
                 ML_Base::K2xfer(dxyprod,ddiffis,tmb,minmaxind,typeis,xyprod,yxprod,diffis,xb,xb,xbinfo,xbinfo,j,j,xdim,densetype,resmode,mlid);
@@ -213,7 +208,6 @@ void BLK_Mercer::K2xfer(double &dxyprod, double &ddiffis, double &res, int &minm
                         int i, int j,
                         int xdim, int densetype, int resmode, int mlid) const
 {
-errstream() << "phantomx 5\n";
     if ( ( mercachesize() >= 0 ) && ( i >= 0 ) && ( j >= 0 ) && !resmode )
     {
         NiceAssert( i <= mercachesize() );
@@ -221,20 +215,17 @@ errstream() << "phantomx 5\n";
 
         // If no hit then need to pre-calculate kernel first
 
-errstream() << "phantomx 6\n";
         if ( !( merHit(i,j/MINUINTSIZE) & (1<<(j%MINUINTSIZE)) ) )
         {
             merHit("&",i,j/MINUINTSIZE) |= (1<<(j%MINUINTSIZE));
 
             if ( !mercachenorm() )
             {
-errstream() << "phantomx 7\n";
                 ML_Base::K2xfer(dxyprod,ddiffis,res,minmaxind,typeis,xyprod,yxprod,diffis,xa,xb,xainfo,xbinfo,i,j,xdim,densetype,resmode,mlid);
             }
 
             else
             {
-errstream() << "phantomx 8\n";
                 double tma;
                 double tmb;
 

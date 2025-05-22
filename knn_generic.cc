@@ -620,8 +620,11 @@ int KNN_Generic::ghTrainingVector(gentype &resh, gentype &resg, int j, int retal
         retVector<int>     tmpvb;
         retVector<gentype> tmpvc;
         retVector<double>  tmpvd;
+        retVector<int>     tmpve;
+        retVector<gentype> tmpvf;
 
         const Vector<gentype> &yk = y()(iiscr(0,1,effkay-1,tmpva),tmpvc);
+        const Vector<gentype> &ykp = yp()(iiscr(0,1,effkay-1,tmpve),tmpvf);
         const Vector<double> &kdistk = kdistscr(iiscr(0,1,effkay-1,tmpvb),tmpvd);
 
         // knext is the next distance after k set, or final in kset plus a
@@ -645,6 +648,15 @@ int KNN_Generic::ghTrainingVector(gentype &resh, gentype &resg, int j, int retal
         }
 
         hfn(resg,yk,kdistk,weights,Nnz,effkay);
+
+        if ( mpri() )
+        {
+            gentype resgp;
+            hfn(resgp,ykp,kdistk,weights,Nnz,effkay);
+
+            resg -= resgp;
+        }
+
         resh = resg;
     }
 
@@ -676,8 +688,11 @@ int KNN_Generic::ggTrainingVectorInt(double &resg, int j, int retaltg, gentype *
         retVector<int>    tmpvb;
         retVector<double> tmpvc;
         retVector<double> tmpvd;
+        retVector<int>    tmpve;
+        retVector<double> tmpvf;
 
         const Vector<double> &yk = yR()(iiscr(0,1,effkay-1,tmpva),tmpvc);
+        const Vector<double> &ykp = ypR()(iiscr(0,1,effkay-1,tmpve),tmpvf);
         const Vector<double> &kdistk = kdistscr(iiscr(0,1,effkay-1,tmpvb),tmpvd);
 
         // knext is the next distance after k set, or final in kset plus a
@@ -701,6 +716,14 @@ int KNN_Generic::ggTrainingVectorInt(double &resg, int j, int retaltg, gentype *
         }
 
         hfn(resg,yk,kdistk,weights,Nnz,effkay);
+
+        if ( mpri() )
+        {
+            double resgp;
+            hfn(resgp,ykp,kdistk,weights,Nnz,effkay);
+
+            resg -= resgp;
+        }
     }
 
     return ( resg > 0 ) ? +1 : ( ( resg < 0 ) ? -1 : 0 );
@@ -724,8 +747,11 @@ int KNN_Generic::ggTrainingVectorInt(Vector<double> &resg, int j, int retaltg, g
         retVector<int>             tmpvb;
         retVector<Vector<double> > tmpvc;
         retVector<double>          tmpvd;
+        retVector<int>             tmpve;
+        retVector<Vector<double> > tmpvf;
 
         const Vector<Vector<double> > &yk = yV()(iiscr(0,1,effkay-1,tmpva),tmpvc);
+        const Vector<Vector<double> > &ykp = ypV()(iiscr(0,1,effkay-1,tmpve),tmpvf);
         const Vector<double> &kdistk = kdistscr(iiscr(0,1,effkay-1,tmpvb),tmpvd);
 
         // knext is the next distance after k set, or final in kset plus a
@@ -749,6 +775,14 @@ int KNN_Generic::ggTrainingVectorInt(Vector<double> &resg, int j, int retaltg, g
         }
 
         hfn(resg,yk,kdistk,weights,Nnz,effkay);
+
+        if ( mpri() )
+        {
+            Vector<double> resgp;
+            hfn(resgp,ykp,kdistk,weights,Nnz,effkay);
+
+            resg -= resgp;
+        }
     }
 
     return 0;
@@ -772,8 +806,11 @@ int KNN_Generic::ggTrainingVectorInt(d_anion &resg, int j, int retaltg, gentype 
         retVector<int>     tmpvb;
         retVector<d_anion> tmpvc;
         retVector<double>  tmpvd;
+        retVector<int>     tmpve;
+        retVector<d_anion> tmpvf;
 
         const Vector<d_anion> &yk = yA()(iiscr(0,1,effkay-1,tmpva),tmpvc);
+        const Vector<d_anion> &ykp = ypA()(iiscr(0,1,effkay-1,tmpve),tmpvf);
         const Vector<double> &kdistk = kdistscr(iiscr(0,1,effkay-1,tmpvb),tmpvd);
 
         // knext is the next distance after k set, or final in kset plus a
@@ -797,6 +834,14 @@ int KNN_Generic::ggTrainingVectorInt(d_anion &resg, int j, int retaltg, gentype 
         }
 
         hfn(resg,yk,kdistk,weights,Nnz,effkay);
+
+        if ( mpri() )
+        {
+            d_anion resgp;
+            hfn(resgp,ykp,kdistk,weights,Nnz,effkay);
+
+            resg -= resgp;
+        }
     }
 
     return 0;

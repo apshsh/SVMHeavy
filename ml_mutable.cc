@@ -36,12 +36,6 @@
 #include "svm_kconst.hpp"
 #include "svm_scalar_rff.hpp"
 #include "svm_binary_rff.hpp"
-#include "onn_scalar.hpp"
-#include "onn_vector.hpp"
-#include "onn_anions.hpp"
-#include "onn_binary.hpp"
-#include "onn_autoen.hpp"
-#include "onn_gentyp.hpp"
 #include "blk_nopnop.hpp"
 #include "blk_consen.hpp"
 #include "blk_avesca.hpp"
@@ -88,9 +82,6 @@
 #include "imp_parsvm.hpp"
 #include "imp_rlsamp.hpp"
 #include "imp_nlsamp.hpp"
-#include "ssv_scalar.hpp"
-#include "ssv_binary.hpp"
-#include "ssv_single.hpp"
 #include "mlm_scalar.hpp"
 #include "mlm_binary.hpp"
 #include "mlm_vector.hpp"
@@ -781,13 +772,6 @@ int convIDToType(const std::string &keytype)
     else if ( keytype == "SVM_Scalar_rff" ) { type =  22; }
     else if ( keytype == "SVM_Binary_rff" ) { type =  23; }
 
-    else if ( keytype == "ONN_Scalar" ) { type = 100; }
-    else if ( keytype == "ONN_Vector" ) { type = 101; }
-    else if ( keytype == "ONN_Anions" ) { type = 102; }
-    else if ( keytype == "ONN_Binary" ) { type = 103; }
-    else if ( keytype == "ONN_AutoEn" ) { type = 104; }
-    else if ( keytype == "ONN_Gentyp" ) { type = 105; }
-
     else if ( keytype == "BLK_Nopnop" ) { type = 200; }
     else if ( keytype == "BLK_Consen" ) { type = 201; }
     else if ( keytype == "BLK_AveSca" ) { type = 202; }
@@ -839,10 +823,6 @@ int convIDToType(const std::string &keytype)
     else if ( keytype == "IMP_RLSamp" ) { type = 602; }
     else if ( keytype == "IMP_NLSamp" ) { type = 603; }
 
-    else if ( keytype == "SSV_Scalar" ) { type = 700; }
-    else if ( keytype == "SSV_Binary" ) { type = 701; }
-    else if ( keytype == "SSV_Single" ) { type = 702; }
-
     else if ( keytype == "MLM_Scalar" ) { type = 800; }
     else if ( keytype == "MLM_Binary" ) { type = 801; }
     else if ( keytype == "MLM_Vector" ) { type = 802; }
@@ -883,13 +863,6 @@ int convTypeToID(std::string &res, int id)
         case  21: { res = "SVM_KConst";     break; }
         case  22: { res = "SVM_Scalar_rff"; break; }
         case  23: { res = "SVM_Binary_rff"; break; }
-
-        case 100: { res = "ONN_Scalar"; break; }
-        case 101: { res = "ONN_Vector"; break; }
-        case 102: { res = "ONN_Anions"; break; }
-        case 103: { res = "ONN_Binary"; break; }
-        case 104: { res = "ONN_AutoEn"; break; }
-        case 105: { res = "ONN_Gentyp"; break; }
 
         case 200: { res = "BLK_Nopnop"; break; }
         case 201: { res = "BLK_Consen"; break; }
@@ -942,10 +915,6 @@ int convTypeToID(std::string &res, int id)
         case 602: { res = "IMP_RLSamp"; break; }
         case 603: { res = "IMP_NLSamp"; break; }
 
-        case 700: { res = "SSV_Scalar"; break; }
-        case 701: { res = "SSV_Binary"; break; }
-        case 702: { res = "SSV_Single"; break; }
-
         case 800: { res = "MLM_Scalar"; break; }
         case 801: { res = "MLM_Binary"; break; }
         case 802: { res = "MLM_Vector"; break; }
@@ -986,13 +955,6 @@ ML_Base *makeNewML(int type, int subtype)
         case  21: { MEMNEW(res,SVM_KConst    ()); break; }
         case  22: { MEMNEW(res,SVM_Scalar_rff()); break; }
         case  23: { MEMNEW(res,SVM_Binary_rff()); break; }
-
-        case 100: { MEMNEW(res,ONN_Scalar()); break; }
-        case 101: { MEMNEW(res,ONN_Vector()); break; }
-        case 102: { MEMNEW(res,ONN_Anions()); break; }
-        case 103: { MEMNEW(res,ONN_Binary()); break; }
-        case 104: { MEMNEW(res,ONN_AutoEn()); break; }
-        case 105: { MEMNEW(res,ONN_Gentyp()); break; }
 
         case 200: { MEMNEW(res,BLK_Nopnop()); break; }
         case 201: { MEMNEW(res,BLK_Consen()); break; }
@@ -1045,10 +1007,6 @@ ML_Base *makeNewML(int type, int subtype)
         case 602: { MEMNEW(res,IMP_RLSamp()); break; }
         case 603: { MEMNEW(res,IMP_NLSamp()); break; }
 
-        case 700: { MEMNEW(res,SSV_Scalar()); break; }
-        case 701: { MEMNEW(res,SSV_Binary()); break; }
-        case 702: { MEMNEW(res,SSV_Single()); break; }
-
         case 800: { MEMNEW(res,MLM_Scalar()); break; }
         case 801: { MEMNEW(res,MLM_Binary()); break; }
         case 802: { MEMNEW(res,MLM_Vector()); break; }
@@ -1095,13 +1053,6 @@ ML_Base *makeDupML(const ML_Base &src, const ML_Base *srcx)
         case  21: { MEMNEW(res,SVM_KConst    (dynamic_cast<const SVM_KConst     &>(src.getMLconst()),srcx)); break; }
         case  22: { MEMNEW(res,SVM_Scalar_rff(dynamic_cast<const SVM_Scalar_rff &>(src.getMLconst()),srcx)); break; }
         case  23: { MEMNEW(res,SVM_Binary_rff(dynamic_cast<const SVM_Binary_rff &>(src.getMLconst()),srcx)); break; }
-
-        case 100: { MEMNEW(res,ONN_Scalar(dynamic_cast<const ONN_Scalar &>(src.getMLconst()),srcx)); break; }
-        case 101: { MEMNEW(res,ONN_Vector(dynamic_cast<const ONN_Vector &>(src.getMLconst()),srcx)); break; }
-        case 102: { MEMNEW(res,ONN_Anions(dynamic_cast<const ONN_Anions &>(src.getMLconst()),srcx)); break; }
-        case 103: { MEMNEW(res,ONN_Binary(dynamic_cast<const ONN_Binary &>(src.getMLconst()),srcx)); break; }
-        case 104: { MEMNEW(res,ONN_AutoEn(dynamic_cast<const ONN_AutoEn &>(src.getMLconst()),srcx)); break; }
-        case 105: { MEMNEW(res,ONN_Gentyp(dynamic_cast<const ONN_Gentyp &>(src.getMLconst()),srcx)); break; }
 
         case 200: { MEMNEW(res,BLK_Nopnop(dynamic_cast<const BLK_Nopnop &>(src.getMLconst()),srcx)); break; }
         case 201: { MEMNEW(res,BLK_Consen(dynamic_cast<const BLK_Consen &>(src.getMLconst()),srcx)); break; }
@@ -1154,10 +1105,6 @@ ML_Base *makeDupML(const ML_Base &src, const ML_Base *srcx)
         case 602: { MEMNEW(res,IMP_RLSamp(dynamic_cast<const IMP_RLSamp &>(src.getMLconst()),srcx)); break; }
         case 603: { MEMNEW(res,IMP_NLSamp(dynamic_cast<const IMP_NLSamp &>(src.getMLconst()),srcx)); break; }
 
-        case 700: { MEMNEW(res,SSV_Scalar(dynamic_cast<const SSV_Scalar &>(src.getMLconst()),srcx)); break; }
-        case 701: { MEMNEW(res,SSV_Binary(dynamic_cast<const SSV_Binary &>(src.getMLconst()),srcx)); break; }
-        case 702: { MEMNEW(res,SSV_Single(dynamic_cast<const SSV_Single &>(src.getMLconst()),srcx)); break; }
-
         case 800: { MEMNEW(res,MLM_Scalar(dynamic_cast<const MLM_Scalar &>(src.getMLconst()),srcx)); break; }
         case 801: { MEMNEW(res,MLM_Binary(dynamic_cast<const MLM_Binary &>(src.getMLconst()),srcx)); break; }
         case 802: { MEMNEW(res,MLM_Vector(dynamic_cast<const MLM_Vector &>(src.getMLconst()),srcx)); break; }
@@ -1190,13 +1137,6 @@ ML_Base *makeDupML(const ML_Base &src, const ML_Base *srcx)
         case  21: { MEMNEW(res,SVM_KConst    (dynamic_cast<const SVM_KConst     &>(src.getMLconst()))); break; }
         case  22: { MEMNEW(res,SVM_Scalar_rff(dynamic_cast<const SVM_Scalar_rff &>(src.getMLconst()))); break; }
         case  23: { MEMNEW(res,SVM_Binary_rff(dynamic_cast<const SVM_Binary_rff &>(src.getMLconst()))); break; }
-
-        case 100: { MEMNEW(res,ONN_Scalar(dynamic_cast<const ONN_Scalar &>(src.getMLconst()))); break; }
-        case 101: { MEMNEW(res,ONN_Vector(dynamic_cast<const ONN_Vector &>(src.getMLconst()))); break; }
-        case 102: { MEMNEW(res,ONN_Anions(dynamic_cast<const ONN_Anions &>(src.getMLconst()))); break; }
-        case 103: { MEMNEW(res,ONN_Binary(dynamic_cast<const ONN_Binary &>(src.getMLconst()))); break; }
-        case 104: { MEMNEW(res,ONN_AutoEn(dynamic_cast<const ONN_AutoEn &>(src.getMLconst()))); break; }
-        case 105: { MEMNEW(res,ONN_Gentyp(dynamic_cast<const ONN_Gentyp &>(src.getMLconst()))); break; }
 
         case 200: { MEMNEW(res,BLK_Nopnop(dynamic_cast<const BLK_Nopnop &>(src.getMLconst()))); break; }
         case 201: { MEMNEW(res,BLK_Consen(dynamic_cast<const BLK_Consen &>(src.getMLconst()))); break; }
@@ -1249,10 +1189,6 @@ ML_Base *makeDupML(const ML_Base &src, const ML_Base *srcx)
         case 602: { MEMNEW(res,IMP_RLSamp(dynamic_cast<const IMP_RLSamp &>(src.getMLconst()))); break; }
         case 603: { MEMNEW(res,IMP_NLSamp(dynamic_cast<const IMP_NLSamp &>(src.getMLconst()))); break; }
 
-        case 700: { MEMNEW(res,SSV_Scalar(dynamic_cast<const SSV_Scalar &>(src.getMLconst()))); break; }
-        case 701: { MEMNEW(res,SSV_Binary(dynamic_cast<const SSV_Binary &>(src.getMLconst()))); break; }
-        case 702: { MEMNEW(res,SSV_Single(dynamic_cast<const SSV_Single &>(src.getMLconst()))); break; }
-
         case 800: { MEMNEW(res,MLM_Scalar(dynamic_cast<const MLM_Scalar &>(src.getMLconst()))); break; }
         case 801: { MEMNEW(res,MLM_Binary(dynamic_cast<const MLM_Binary &>(src.getMLconst()))); break; }
         case 802: { MEMNEW(res,MLM_Vector(dynamic_cast<const MLM_Vector &>(src.getMLconst()))); break; }
@@ -1296,13 +1232,6 @@ ML_Base &assign(ML_Base **dest, const ML_Base *src, int onlySemiCopy)
         case  21: { dynamic_cast<SVM_KConst &>((**dest).getML()).assign(dynamic_cast<const SVM_KConst &>((*src).getMLconst()),onlySemiCopy); break; }
         case  22: { dynamic_cast<SVM_Scalar_rff &>((**dest).getML()).assign(dynamic_cast<const SVM_Scalar_rff &>((*src).getMLconst()),onlySemiCopy); break; }
         case  23: { dynamic_cast<SVM_Binary_rff &>((**dest).getML()).assign(dynamic_cast<const SVM_Binary_rff &>((*src).getMLconst()),onlySemiCopy); break; }
-
-        case 100: { dynamic_cast<ONN_Scalar &>((**dest).getML()).assign(dynamic_cast<const ONN_Scalar &>((*src).getMLconst()),onlySemiCopy); break; }
-        case 101: { dynamic_cast<ONN_Vector &>((**dest).getML()).assign(dynamic_cast<const ONN_Vector &>((*src).getMLconst()),onlySemiCopy); break; }
-        case 102: { dynamic_cast<ONN_Anions &>((**dest).getML()).assign(dynamic_cast<const ONN_Anions &>((*src).getMLconst()),onlySemiCopy); break; }
-        case 103: { dynamic_cast<ONN_Binary &>((**dest).getML()).assign(dynamic_cast<const ONN_Binary &>((*src).getMLconst()),onlySemiCopy); break; }
-        case 104: { dynamic_cast<ONN_AutoEn &>((**dest).getML()).assign(dynamic_cast<const ONN_AutoEn &>((*src).getMLconst()),onlySemiCopy); break; }
-        case 105: { dynamic_cast<ONN_Gentyp &>((**dest).getML()).assign(dynamic_cast<const ONN_Gentyp &>((*src).getMLconst()),onlySemiCopy); break; }
 
         case 200: { dynamic_cast<BLK_Nopnop &>((**dest).getML()).assign(dynamic_cast<const BLK_Nopnop &>((*src).getMLconst()),onlySemiCopy); break; }
         case 201: { dynamic_cast<BLK_Consen &>((**dest).getML()).assign(dynamic_cast<const BLK_Consen &>((*src).getMLconst()),onlySemiCopy); break; }
@@ -1355,10 +1284,6 @@ ML_Base &assign(ML_Base **dest, const ML_Base *src, int onlySemiCopy)
         case 602: { dynamic_cast<IMP_RLSamp &>((**dest).getML()).assign(dynamic_cast<const IMP_RLSamp &>((*src).getMLconst()),onlySemiCopy); break; }
         case 603: { dynamic_cast<IMP_NLSamp &>((**dest).getML()).assign(dynamic_cast<const IMP_NLSamp &>((*src).getMLconst()),onlySemiCopy); break; }
 
-        case 700: { dynamic_cast<SSV_Scalar &>((**dest).getML()).assign(dynamic_cast<const SSV_Scalar &>((*src).getMLconst()),onlySemiCopy); break; }
-        case 701: { dynamic_cast<SSV_Binary &>((**dest).getML()).assign(dynamic_cast<const SSV_Binary &>((*src).getMLconst()),onlySemiCopy); break; }
-        case 702: { dynamic_cast<SSV_Single &>((**dest).getML()).assign(dynamic_cast<const SSV_Single &>((*src).getMLconst()),onlySemiCopy); break; }
-
         case 800: { dynamic_cast<MLM_Scalar &>((**dest).getML()).assign(dynamic_cast<const MLM_Scalar &>((*src).getMLconst()),onlySemiCopy); break; }
         case 801: { dynamic_cast<MLM_Binary &>((**dest).getML()).assign(dynamic_cast<const MLM_Binary &>((*src).getMLconst()),onlySemiCopy); break; }
         case 802: { dynamic_cast<MLM_Vector &>((**dest).getML()).assign(dynamic_cast<const MLM_Vector &>((*src).getMLconst()),onlySemiCopy); break; }
@@ -1408,13 +1333,6 @@ ML_Base &xfer(ML_Base &dest, ML_Base &src)
             case  21: { dynamic_cast<SVM_KConst &>(dest) = dynamic_cast<const SVM_KConst &>(src); break; }
             case  22: { dynamic_cast<SVM_Scalar_rff &>(dest) = dynamic_cast<const SVM_Scalar_rff &>(src); break; }
             case  23: { dynamic_cast<SVM_Binary_rff &>(dest) = dynamic_cast<const SVM_Binary_rff &>(src); break; }
-
-            case 100: { dynamic_cast<ONN_Scalar &>(dest) = dynamic_cast<const ONN_Scalar &>(src); break; }
-            case 101: { dynamic_cast<ONN_Vector &>(dest) = dynamic_cast<const ONN_Vector &>(src); break; }
-            case 102: { dynamic_cast<ONN_Anions &>(dest) = dynamic_cast<const ONN_Anions &>(src); break; }
-            case 103: { dynamic_cast<ONN_Binary &>(dest) = dynamic_cast<const ONN_Binary &>(src); break; }
-            case 104: { dynamic_cast<ONN_AutoEn &>(dest) = dynamic_cast<const ONN_AutoEn &>(src); break; }
-            case 105: { dynamic_cast<ONN_Gentyp &>(dest) = dynamic_cast<const ONN_Gentyp &>(src); break; }
 
             case 200: { dynamic_cast<BLK_Nopnop &>(dest) = dynamic_cast<const BLK_Nopnop &>(src); break; }
             case 201: { dynamic_cast<BLK_Consen &>(dest) = dynamic_cast<const BLK_Consen &>(src); break; }
@@ -1466,10 +1384,6 @@ ML_Base &xfer(ML_Base &dest, ML_Base &src)
             case 601: { dynamic_cast<IMP_ParSVM &>(dest) = dynamic_cast<const IMP_ParSVM &>(src); break; }
             case 602: { dynamic_cast<IMP_RLSamp &>(dest) = dynamic_cast<const IMP_RLSamp &>(src); break; }
             case 603: { dynamic_cast<IMP_NLSamp &>(dest) = dynamic_cast<const IMP_NLSamp &>(src); break; }
-
-            case 700: { dynamic_cast<SSV_Scalar &>(dest) = dynamic_cast<const SSV_Scalar &>(src); break; }
-            case 701: { dynamic_cast<SSV_Binary &>(dest) = dynamic_cast<const SSV_Binary &>(src); break; }
-            case 702: { dynamic_cast<SSV_Single &>(dest) = dynamic_cast<const SSV_Single &>(src); break; }
 
             case 800: { dynamic_cast<MLM_Scalar &>(dest) = dynamic_cast<const MLM_Scalar &>(src); break; }
             case 801: { dynamic_cast<MLM_Binary &>(dest) = dynamic_cast<const MLM_Binary &>(src); break; }
@@ -1548,18 +1462,6 @@ void xferInfo(ML_Base &mldest, const ML_Base &mlsrc)
     mldest.settraintimeend(mlsrc.traintimeend());
 
     mldest.setKernel(mlsrc.getKernel());
-
-    if ( isONN(mlsrc) && !(isONN(mldest)) )
-    {
-        mldest.getKernel_unsafe().setLeftNormal();
-        mldest.resetKernel();
-    }
-
-    if ( !(isONN(mlsrc)) && isONN(mldest) )
-    {
-        mldest.getKernel_unsafe().setLeftPlain();
-        mldest.resetKernel();
-    }
 
     // Type specifics follow
 
@@ -1971,54 +1873,6 @@ void xferInfo(ML_Base &mldest, const ML_Base &mlsrc)
         (void) dest;
     }
 
-    else if ( isONNScalar(mldest) && isONN(mlsrc) )
-    {
-              ONN_Scalar  &dest = dynamic_cast<      ONN_Scalar  &>(mldest);
-        const ONN_Generic &src  = dynamic_cast<const ONN_Generic &>(mlsrc );
-
-        dest.setlr(src.lr());
-    }
-
-    else if ( isONNVector(mldest) && isONN(mlsrc) )
-    {
-              ONN_Vector  &dest = dynamic_cast<      ONN_Vector  &>(mldest);
-        const ONN_Generic &src  = dynamic_cast<const ONN_Generic &>(mlsrc );
-
-        dest.setlr(src.lr());
-    }
-
-    else if ( isONNAnions(mldest) && isONN(mlsrc) )
-    {
-              ONN_Anions  &dest = dynamic_cast<      ONN_Anions  &>(mldest);
-        const ONN_Generic &src  = dynamic_cast<const ONN_Generic &>(mlsrc );
-
-        dest.setlr(src.lr());
-    }
-
-    else if ( isONNBinary(mldest) && isONN(mlsrc) )
-    {
-              ONN_Binary  &dest = dynamic_cast<      ONN_Binary  &>(mldest);
-        const ONN_Generic &src  = dynamic_cast<const ONN_Generic &>(mlsrc );
-
-        dest.setlr(src.lr());
-    }
-
-    else if ( isONNAutoEn(mldest) && isONN(mlsrc) )
-    {
-              ONN_AutoEn  &dest = dynamic_cast<      ONN_AutoEn  &>(mldest);
-        const ONN_Generic &src  = dynamic_cast<const ONN_Generic &>(mlsrc );
-
-        dest.setlr(src.lr());
-    }
-
-    else if ( isONNGentyp(mldest) && isONN(mlsrc) )
-    {
-              ONN_Gentyp  &dest = dynamic_cast<      ONN_Gentyp  &>(mldest);
-        const ONN_Generic &src  = dynamic_cast<const ONN_Generic &>(mlsrc );
-
-        dest.setlr(src.lr());
-    }
-
     else if ( isBLKNopnop(mldest) && isBLK(mlsrc) )
     {
               BLK_Nopnop  &dest = dynamic_cast<      BLK_Nopnop  &>(mldest);
@@ -2396,33 +2250,6 @@ void xferInfo(ML_Base &mldest, const ML_Base &mlsrc)
     {
               IMP_NLSamp  &dest = dynamic_cast<      IMP_NLSamp  &>(mldest);
         const IMP_Generic &src  = dynamic_cast<const IMP_Generic &>(mlsrc );
-
-        (void) src;
-        (void) dest;
-    }
-
-    else if ( isSSVScalar(mldest) && isSSV(mlsrc) )
-    {
-              SSV_Scalar  &dest = dynamic_cast<      SSV_Scalar  &>(mldest);
-        const SSV_Generic &src  = dynamic_cast<const SSV_Generic &>(mlsrc );
-
-        (void) src;
-        (void) dest;
-    }
-
-    else if ( isSSVBinary(mldest) && isSSV(mlsrc) )
-    {
-              SSV_Binary  &dest = dynamic_cast<      SSV_Binary  &>(mldest);
-        const SSV_Generic &src  = dynamic_cast<const SSV_Generic &>(mlsrc );
-
-        (void) src;
-        (void) dest;
-    }
-
-    else if ( isSSVSingle(mldest) && isSSV(mlsrc) )
-    {
-              SSV_Single  &dest = dynamic_cast<      SSV_Single  &>(mldest);
-        const SSV_Generic &src  = dynamic_cast<const SSV_Generic &>(mlsrc );
 
         (void) src;
         (void) dest;

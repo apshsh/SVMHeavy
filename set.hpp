@@ -433,7 +433,7 @@ template <class T>
 Set<T>::Set(const Vector<T> &src)
 {
     contents = src;
-    removeDuplicates();
+    //removeDuplicates();
 }
 
 // Assignment
@@ -559,7 +559,7 @@ template <class T>
 Set<T> &Set<T>::applyon(T (*fn)(T))
 {
     contents.applyon(fn);
-    removeDuplicates();
+    //removeDuplicates();
 
     return *this;
 }
@@ -568,7 +568,7 @@ template <class T>
 Set<T> &Set<T>::applyon(T (*fn)(const T &))
 {
     contents.applyon(fn);
-    removeDuplicates();
+    //removeDuplicates();
 
     return *this;
 }
@@ -577,7 +577,7 @@ template <class T>
 Set<T> &Set<T>::applyon(T &(*fn)(T &))
 {
     contents.applyon(fn);
-    removeDuplicates();
+    //removeDuplicates();
 
     return *this;
 }
@@ -586,7 +586,7 @@ template <class T>
 Set<T> &Set<T>::applyon(T (*fn)(T, const void *), const void *a)
 {
     contents.applyon(fn,a);
-    removeDuplicates();
+    //removeDuplicates();
 
     return *this;
 }
@@ -595,7 +595,7 @@ template <class T>
 Set<T> &Set<T>::applyon(T (*fn)(const T &, const void *), const void *a)
 {
     contents.applyon(fn,a);
-    removeDuplicates();
+    //removeDuplicates();
 
     return *this;
 }
@@ -604,7 +604,7 @@ template <class T>
 Set<T> &Set<T>::applyon(T &(*fn)(T &, const void *), const void *a)
 {
     contents.applyon(fn,a);
-    removeDuplicates();
+    //removeDuplicates();
 
     return *this;
 }
@@ -1561,7 +1561,7 @@ std::istream &operator>>(std::istream &input, Set<T> &dest)
         ++size;
     }
 
-    dest.removeDuplicates();
+    //dest.removeDuplicates();
 
     return input;
 }
@@ -1606,7 +1606,7 @@ std::istream &streamItIn(std::istream &input, Set<T> &dest, int processxyzvw)
         ++size;
     }
 
-    dest.removeDuplicates();
+    //dest.removeDuplicates();
 
     return input;
 }

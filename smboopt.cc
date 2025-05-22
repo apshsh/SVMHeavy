@@ -601,7 +601,7 @@ int SMBOOptions::realOptim(int dim,
 
         if ( kernapprox )
         {
-            errstream() << "phantomx: about to transfer kernel: " << kernapprox << "\n";
+            errstream() << "realOptim: about to transfer kernel: " << kernapprox << "\n";
 
             MercerKernel newkern;
 
@@ -639,7 +639,7 @@ int SMBOOptions::realOptim(int dim,
         {
             retVector<int> tmpva;
 
-            errstream() << "phantomx 501 env-GP?\n";
+            errstream() << "realOptim: 501 env-GP?\n";
 
             indpremu = cntintvec(Nbasemu,tmpva);
             presigweightmu.resize(Nbasemu) = 1.0;
@@ -655,7 +655,7 @@ int SMBOOptions::realOptim(int dim,
 //RKHSFIXME
             //(*srcmodel).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
 
-            errstream() << "phantomx 501 env-GP: type = " << (*srcmodel).type() << "\n";
+            errstream() << "realOptim: 501 env-GP: type = " << (*srcmodel).type() << "\n";
 
             MLnumbers("&",4) = srcmodelInd;
         }

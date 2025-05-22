@@ -58,7 +58,14 @@ public:
     virtual char hOutType(void) const override { return '?'; }
     virtual char targType(void) const override { return '?'; }
 
-    virtual const Vector<gentype> &y(void) const override { return locyval; }
+    virtual const Vector<gentype>         &y (void) const override { return locyval; }
+    virtual const Vector<double>          &yR(void) const override { static thread_local Vector<double>          dummy; NiceThrow("yR not defined in svm_gentyp"); return dummy; }
+    virtual const Vector<d_anion>         &yA(void) const override { static thread_local Vector<d_anion>         dummy; NiceThrow("yA not defined in svm_gentyp"); return dummy; }
+    virtual const Vector<Vector<double> > &yV(void) const override { static thread_local Vector<Vector<double> > dummy; NiceThrow("yV not defined in svm_gentyp"); return dummy; }
+    virtual const Vector<gentype>         &yp (void) const override { static thread_local Vector<gentype>         dummy; NiceThrow("yp  not defined in svm_gentyp"); return dummy; }
+    virtual const Vector<double>          &ypR(void) const override { static thread_local Vector<double>          dummy; NiceThrow("ypR not defined in svm_gentyp"); return dummy; }
+    virtual const Vector<d_anion>         &ypA(void) const override { static thread_local Vector<d_anion>         dummy; NiceThrow("ypA not defined in svm_gentyp"); return dummy; }
+    virtual const Vector<Vector<double> > &ypV(void) const override { static thread_local Vector<Vector<double> > dummy; NiceThrow("ypV not defined in svm_gentyp"); return dummy; }
 
     // Training set modification - need to overload to maintain counts
 
@@ -88,7 +95,10 @@ public:
     virtual int sety(const Vector<int> &i, const Vector<d_anion> &z) override { return ML_Base::sety(i,z); }
     virtual int sety(                      const Vector<d_anion> &z) override { return ML_Base::sety(z);   }
 
-    virtual const gentype &y(int i) const override { return locyval(i); }
+    virtual const gentype        &y (int i) const override { return locyval(i); }
+    virtual       double          yR(int i) const override { return yR()(i); }
+    virtual const d_anion        &yA(int i) const override { return yA()(i); }
+    virtual const Vector<double> &yV(int i) const override { return yV()(i); }
 
     // Evaluation Functions:
 

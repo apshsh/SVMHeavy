@@ -121,6 +121,8 @@ const gentype &VVcallbackdef(gentype &res, int m, const gentype &kval, const ML_
 #define DEFEPSMAX 2
 #define NUMZOOMS   2
 #define ZOOMFACTOR 0.3
+//#define MAXADIM 10000
+#define MAXADIM 15000
 
 class tkBounds
 {
@@ -228,13 +230,13 @@ public:
 
     virtual void assign       (const ML_Base &src, int onlySemiCopy = 0);
     virtual void semicopy     (const ML_Base &src);
-    virtual void qswapinternal(ML_Base &b);
+    virtual void qswapinternal(      ML_Base &b);
 
     virtual int getparam (int ind, gentype         &val, const gentype         &xa, int ia, const gentype         &xb, int ib, charptr &desc) const override;
     virtual int egetparam(int ind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib               ) const override;
 
     virtual std::ostream &printstream(std::ostream &output, int dep) const override;
-    virtual std::istream &inputstream(std::istream &input )                override;
+    virtual std::istream &inputstream(std::istream &input          )       override;
 
     virtual       ML_Base &getML     (void)       { return *this; }
     virtual const ML_Base &getMLconst(void) const { return *this; }
@@ -271,10 +273,14 @@ public:
     // isUnderlyingVector: true if underlying weight type is vector
     // isUnderlyingAnions: true if underlying weight type is anions
     //
+    // mpri:   mean prior type: 0 (none), 1 (gentype evaluated), 2 (ML)
+    // prival: prior mean function (mpri == 1)
+    // priml:  prior ML_Base object (mpri == 2)
+    //
     // ClassLabels: returns a vector of all class labels.
     // getInternalClass: for classifiers this returns the internal class
-    //     representation number (0 for regressor).  For all classifiers each 
-    //     class is assigned a number 0,1,...,m, where m = numInternalClasses, 
+    //     representation number (0 for regressor).  For all classifiers each
+    //     class is assigned a number 0,1,...,m, where m = numInternalClasses,
     //     which is the number of actual classes plus the anomaly class, if
     //     there is one.
     // numInternalClasses: number of internal classes
@@ -283,8 +289,8 @@ public:
     // hOutType: processed h(x) output type of machine (see gentype)
     // targType: target data y type of machine (see gentype)
     // calcDist: given processed outputs ha, hb calculate, for this ML, the
-    //     norm  squared error.  db applies to scalar types and is ignored 
-    //     elsewhere.  +1 indicates lower bound only, -1 upper bound only.  
+    //     norm  squared error.  db applies to scalar types and is ignored
+    //     elsewhere.  +1 indicates lower bound only, -1 upper bound only.
     //     For all types 0 means don't include.
     //
     // sparlvl: sparsity level (1 completely sparse, 0 non-sparse)
@@ -349,11 +355,11 @@ public:
     virtual int isUnderlyingVector(void) const { return 0; }
     virtual int isUnderlyingAnions(void) const { return 0; }
 
-    virtual const Vector<int> &ClassLabels(void)            const { const static Vector<int> temp; return temp;         }
-    virtual int   getInternalClass        (const gentype &) const {                                return 0;            }
-    virtual int   numInternalClasses      (void)            const {                                return numClasses(); }
-    virtual int   isenabled               (int i)           const {                                return d()(i);       }
-    virtual int   isVarDefined            (void)            const {                                return 0;            }
+    virtual const Vector<int> &ClassLabels(void)             const { const static Vector<int> temp; return temp;         }
+    virtual int   getInternalClass        (const gentype &)  const {                                return 0;            }
+    virtual int   numInternalClasses      (void)             const {                                return numClasses(); }
+    virtual int   isenabled               (int i)            const {                                return d()(i);       }
+    virtual int   isVarDefined            (void)             const {                                return 0;            }
 
     virtual const int *ClassLabelsInt     (void)  const { return &(getMLconst().ClassLabels()(0));    }
     virtual       int  getInternalClassInt(int y) const { gentype yy(y); return getInternalClass(yy); }
@@ -364,6 +370,13 @@ public:
     virtual double eps      (void)  const { return DEFAULTEPS;        }
     virtual double Cclass   (int d) const { (void) d; return 1;       }
     virtual double epsclass (int d) const { (void) d; return 1;       }
+
+    virtual       int      mpri  (void) const { return xmuprior;    }
+    virtual const gentype &prival(void) const { return xmuprior_gt; }
+    virtual const ML_Base *priml (void) const { return xmuprior_ml; }
+
+    virtual void calcprior   (gentype &res, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const;
+    virtual void calcallprior(void);
 
     virtual int    memsize     (void) const { return DEFAULT_MEMSIZE;      }
     virtual double zerotol     (void) const { return globalzerotol;        }
@@ -389,6 +402,13 @@ public:
 
     virtual const Vector<SparseVector<gentype> > &x          (void) const { return altxsrc ? (*altxsrc).x() : allxdatagent;  }
     virtual const Vector<gentype>                &y          (void) const { return alltraintarg;                             }
+    virtual const Vector<double>                 &yR         (void) const { return alltraintargR;                            }
+    virtual const Vector<d_anion>                &yA         (void) const { return alltraintargA;                            }
+    virtual const Vector<Vector<double> >        &yV         (void) const { return alltraintargV;                            }
+    virtual const Vector<gentype>                &yp         (void) const { return alltraintargp;                            }
+    virtual const Vector<double>                 &ypR        (void) const { return alltraintargpR;                           }
+    virtual const Vector<d_anion>                &ypA        (void) const { return alltraintargpA;                           }
+    virtual const Vector<Vector<double> >        &ypV        (void) const { return alltraintargpV;                           }
     virtual const Vector<vecInfo>                &xinfo      (void) const { return altxsrc ? (*altxsrc).xinfo() : traininfo; }
     virtual const Vector<int>                    &xtang      (void) const { return altxsrc ? (*altxsrc).xtang() : traintang; }
     virtual const Vector<int>                    &d          (void) const { return xd;                                       }
@@ -396,10 +416,23 @@ public:
     virtual const Vector<double>                 &Cweightfuzz(void) const { return xCweightfuzz;                             }
     virtual const Vector<double>                 &sigmaweight(void) const;
     virtual const Vector<double>                 &epsweight  (void) const { return xepsweight;                               }
+    virtual const Vector<gentype>                &alphaVal   (void) const { NiceThrow("alphaVal has no meaning here"); static const Vector<gentype> dummy; return dummy; }
     virtual const Vector<int>                    &alphaState (void) const { return xalphaState;                              }
 
-    virtual const Vector<gentype> &alphaVal(void)  const { NiceThrow("alphaVal has no meaning here"); static const Vector<gentype> dummy; return dummy; }
-    virtual       double           alphaVal(int i) const { (void) i; NiceThrow("alphaVal has no meaning here");                           return 0.0;   }
+    virtual const SparseVector<gentype> &x       (int i)              const override { return xgetloc(i);  }
+    virtual const SparseVector<gentype> &x       (int i, int altMLid) const override { kernPrecursor *tmp = nullptr; getaltML(tmp,altMLid);  NiceAssert(tmp); return (*tmp).x(i);  }
+    virtual const gentype               &y       (int i)              const          { if ( i >= 0 ) { return y()(i);  } return ytargdata; }
+    virtual       double                 yR      (int i)              const          { if ( i >= 0 ) { return yR()(i); } return (double) ytargdata; }
+    virtual const d_anion               &yA      (int i)              const          { if ( i >= 0 ) { return yA()(i); } return (const d_anion &) ytargdata; }
+    virtual const Vector<double>        &yV      (int i)              const          { if ( i >= 0 ) { return yV()(i); } return (const Vector<double> &) ytargdata; }
+    virtual const vecInfo               &xinfo   (int i)              const          { return locxinfo(i); }
+    virtual       int                    xtang   (int i)              const          { return locxtang(i); }
+    virtual       double                 alphaVal(int)                const          { NiceThrow("alphaVal has no meaning here"); return 0.0; }
+
+    virtual int xisrank      (int i)                               const { const SparseVector<gentype> &xres = x(i); return xres.isf1offindpresent() || xres.isf4indpresent(1);  }
+    virtual int xisgrad      (int i)                               const { const SparseVector<gentype> &xres = x(i); return xres.isf2offindpresent(); }
+    virtual int xisrankorgrad(int i)                               const { const SparseVector<gentype> &xres = x(i); return xres.isf1offindpresent() || xres.isf4indpresent(1) || xres.isf2offindpresent(); }
+    virtual int xisclass     (int i, int defaultclass, int q = -1) const { const SparseVector<gentype> &xres = x(i); return ( q == -1 ) ? defaultclass : ( xres.isf4indpresent((100*q)+0) ? ( (int) xres.f4((100*q)+0) ) : defaultclass ); }
 
     virtual int RFFordata(int i) const { (void) i; return 0; }
 
@@ -452,92 +485,18 @@ public:
     virtual int setMLid (int nv)                                 override;
     virtual int getaltML(kernPrecursor *&res, int altMLid) const override { return kernPrecursor::getaltML(res,altMLid); }
 
-    virtual int xvernum(void) const
-    {
-#ifdef ENABLE_THREADS
-        mleyelock.lock();
-#endif
-        int res = xvernumber.isindpresent(MLid()) ? xvernumber(MLid()) : 0;
-#ifdef ENABLE_THREADS
-        mleyelock.unlock();
-#endif
-        return res;
-    }
+    virtual int xvernum(void) const;
+    virtual int gvernum(void) const;
 
-    virtual int gvernum(void) const
-    {
-#ifdef ENABLE_THREADS
-        mleyelock.lock();
-#endif
-        int res = gvernumber.isindpresent(MLid()) ? gvernumber(MLid()) : 0;
-#ifdef ENABLE_THREADS
-        mleyelock.unlock();
-#endif
-        return res;
-    }
+    virtual int xvernum(int altMLid) const;
+    virtual int gvernum(int altMLid) const;
 
-    virtual int xvernum(int altMLid) const
-    {
-#ifdef ENABLE_THREADS
-        mleyelock.lock();
-#endif
-        int res = xvernumber.isindpresent(altMLid) ? xvernumber(altMLid) : 0;
-#ifdef ENABLE_THREADS
-        mleyelock.unlock();
-#endif
-        return res;
-    }
-
-    virtual int gvernum(int altMLid) const
-    {
-#ifdef ENABLE_THREADS
-        mleyelock.lock();
-#endif
-        int res = gvernumber.isindpresent(altMLid) ? gvernumber(altMLid) : 0;
-#ifdef ENABLE_THREADS
-        mleyelock.unlock();
-#endif
-        return res;
-    }
-
-    virtual int incxvernum(void)
-    {
-#ifdef ENABLE_THREADS
-        mleyelock.lock();
-#endif
-
-        if ( !xvernumber.isindpresent(MLid()) )
-        {
-            xvernumber("&",MLid()) = 0;
-        }
-
-        int res = ++xvernumber("&",MLid());
-#ifdef ENABLE_THREADS
-        mleyelock.unlock();
-#endif
-        return res;
-    }
-
-    virtual int incgvernum(void)
-    {
-#ifdef ENABLE_THREADS
-        mleyelock.lock();
-#endif
-        if ( !gvernumber.isindpresent(MLid()) )
-        {
-            gvernumber("&",MLid()) = 0;
-        }
-
-        int res = ++gvernumber("&",MLid());
-#ifdef ENABLE_THREADS
-        mleyelock.unlock();
-#endif
-        return res;
-    }
+    virtual int incxvernum(void);
+    virtual int incgvernum(void);
 
     // Kernel Modification
     //
-    // The safe way to modify the kernel is to use k = getKernel() to get a 
+    // The safe way to modify the kernel is to use k = getKernel() to get a
     // copy of the current kernel, modify the copy, and then use the function
     // setKernel(k) to update (set) the kernel used by the ML.  Which can be
     // slow due to all the copying of kernels required.
@@ -676,7 +635,7 @@ public:
     virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr);
 
     virtual int resetKernel(                             int modind = 1, int onlyChangeRowI = -1, int updateInfo = 1);
-    virtual int setKernel  (const MercerKernel &xkernel, int modind = 1, int onlyChangeRowI = -1);
+    virtual int setKernel  (const MercerKernel &xkernel, int modind = 1, int onlyChangeRowI = -1                    );
 
     virtual int isKreal  (void) const { return 1; }
     virtual int isKunreal(void) const { return 0; }
@@ -693,9 +652,9 @@ public:
     virtual gentype &Keqn(gentype &res,                           int resmode = 1) const;
     virtual gentype &Keqn(gentype &res, const MercerKernel &altK, int resmode = 1) const;
 
-    virtual gentype &K1(gentype &res, const SparseVector<gentype> &xa,                                                                                                    const vecInfo *xainf = nullptr)                                                                                                 const { setInnerWildpa(&xa,xainf); K1(res,-1); resetInnerWildp(( xainf == nullptr )); return res; }
-    virtual gentype &K2(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,                                                                   const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr)                                                                 const { setInnerWildpa(&xa,xainf); setInnerWildpb(&xb,xbinf); K2(res,-1,-3); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
-    virtual gentype &K3(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc,                                  const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xcinf = nullptr)                                 const { setInnerWildpa(&xa,xainf); setInnerWildpb(&xb,xbinf); setInnerWildpc(&xc,xcinf); K3(res,-1,-3,-4);  resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr ),( xcinf == nullptr )); return res; }
+    virtual gentype &K1(gentype &res, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr) const { setInnerWildpa(&xa,xainf); K1(res,-1); resetInnerWildp(( xainf == nullptr )); return res; }
+    virtual gentype &K2(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr) const { setInnerWildpa(&xa,xainf); setInnerWildpb(&xb,xbinf); K2(res,-1,-3); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
+    virtual gentype &K3(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xcinf = nullptr) const { setInnerWildpa(&xa,xainf); setInnerWildpb(&xb,xbinf); setInnerWildpc(&xc,xcinf); K3(res,-1,-3,-4);  resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr ),( xcinf == nullptr )); return res; }
     virtual gentype &K4(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xcinf = nullptr, const vecInfo *xdinf = nullptr) const { setInnerWildpa(&xa,xainf); setInnerWildpb(&xb,xbinf); setInnerWildpc(&xc,xcinf); setInnerWildpd(&xd,xdinf); K4(res,-1,-3,-4,-5); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr ),(xcinf == nullptr),(xdinf == nullptr)); return res; }
     virtual gentype &Km(gentype &res, const Vector<SparseVector<gentype> > &xx) const { int m = xx.size(); setInnerWildpx(&xx); retVector<int> tmpva; Vector<int> ii(cntintvec(m,tmpva)); ii += 1; ii *= -100; Km(m,res,ii); resetInnerWildp(); return res; }
 
@@ -816,7 +775,7 @@ public:
     virtual void Kmxfer(                                  double &res, int &minmaxind, int typeis, double xyprod, double yxprod, double diffis, Vector<const SparseVector<gentype> *> &x, Vector<const vecInfo *> &xzinfo, Vector<int> &i, int xdim, int m, int densetype, int resmode, int mlid) const override;
 
     virtual const gentype &xelm    (gentype &res, int i, int j) const;
-    virtual int            xindsize(int i)                      const;
+    virtual       int      xindsize(int i)                      const;
 
     // Training set modification:
     //
@@ -886,19 +845,19 @@ public:
     virtual int setd(const Vector<int> &i, const Vector<int> &d);
     virtual int setd(                      const Vector<int> &d);
 
-    virtual int setCweight(int i,                double nv               );
+    virtual int setCweight(int                i, double                nv);
     virtual int setCweight(const Vector<int> &i, const Vector<double> &nv);
     virtual int setCweight(                      const Vector<double> &nv);
 
-    virtual int setCweightfuzz(int i,                double nv               );
+    virtual int setCweightfuzz(int                i, double                nv);
     virtual int setCweightfuzz(const Vector<int> &i, const Vector<double> &nv);
     virtual int setCweightfuzz(                      const Vector<double> &nv);
 
-    virtual int setsigmaweight(int i,                double nv               );
+    virtual int setsigmaweight(int                i, double                nv);
     virtual int setsigmaweight(const Vector<int> &i, const Vector<double> &nv);
     virtual int setsigmaweight(                      const Vector<double> &nv);
 
-    virtual int setepsweight(int i,                double nv               );
+    virtual int setepsweight(int                i, double                nv);
     virtual int setepsweight(const Vector<int> &i, const Vector<double> &nv);
     virtual int setepsweight(                      const Vector<double> &nv);
 
@@ -915,19 +874,9 @@ public:
 
     virtual void xferx(const ML_Base &xsrc);
 
-    virtual const vecInfo &xinfo          (int i)                               const          { return locxinfo(i); }
-    virtual int   xtang                   (int i)                               const          { return locxtang(i); }
-    virtual const SparseVector<gentype> &x(int i)                               const override { return xgetloc(i);  }
-    virtual const SparseVector<gentype> &x(int i, int altMLid)                  const override { kernPrecursor *tmp = nullptr; getaltML(tmp,altMLid);  NiceAssert(tmp); return (*tmp).x(i);  }
-    virtual int   xisrank                 (int i)                               const          { const SparseVector<gentype> &xres = x(i); return xres.isf1offindpresent() || xres.isf4indpresent(1);  }
-    virtual int   xisgrad                 (int i)                               const          { const SparseVector<gentype> &xres = x(i); return xres.isf2offindpresent(); }
-    virtual int   xisrankorgrad           (int i)                               const          { const SparseVector<gentype> &xres = x(i); return xres.isf1offindpresent() || xres.isf4indpresent(1) || xres.isf2offindpresent(); }
-    virtual int   xisclass                (int i, int defaultclass, int q = -1) const          { const SparseVector<gentype> &xres = x(i); return ( q == -1 ) ? defaultclass : ( xres.isf4indpresent((100*q)+0) ? ( (int) xres.f4((100*q)+0) ) : defaultclass ); }
-    virtual const gentype &y              (int i)                               const          { if ( i >= 0 ) { return y()(i); } return ytargdata; }
-
     // Generic target controls: in some generic target classes the output
     // is restricted to lie in the span of a particular basis.  In this case
-    // these functions control contents of this basis.  The output kernel 
+    // these functions control contents of this basis.  The output kernel
     // specifies the similarity measure between basis elements.
     //
     // basisType: 0 = gentype basis defined by user
@@ -948,7 +897,7 @@ public:
     virtual int removeFromBasisUU     (int i);
     virtual int setBasisUU            (int i, const gentype &o);
     virtual int setBasisUU            (const Vector<gentype> &o);
-    virtual int setDefaultProjectionUU(int d) { int res = defbasisUU; defbasisUU = d; return res; }
+    virtual int setDefaultProjectionUU(int d)                    { int res = defbasisUU; defbasisUU = d; return res; }
     virtual int setBasisUU            (int n, int d);
 
     virtual int NbasisVV   (void) const { return locbasisVV.size(); }
@@ -963,7 +912,7 @@ public:
     virtual int removeFromBasisVV     (int i);
     virtual int setBasisVV            (int i, const gentype &o);
     virtual int setBasisVV            (const Vector<gentype> &o);
-    virtual int setDefaultProjectionVV(int d) { int res = defbasisVV; defbasisVV = d; return res; }
+    virtual int setDefaultProjectionVV(int d)                    { int res = defbasisVV; defbasisVV = d; return res; }
     virtual int setBasisVV            (int n, int d);
 
     virtual const MercerKernel &getUUOutputKernel       (void)                                        const { return UUoutkernel;                                     }
@@ -1034,8 +983,8 @@ public:
     virtual int settraintimeend(double xtraintimeend) { (void) xtraintimeend; return 0; }
 
     virtual int setmaxitermvrank(int    nv) { (void) nv; NiceThrow("Function setmaxitermvrank not available for this ML type."); return 0; }
-    virtual int setlrmvrank     (double nv) { (void) nv; NiceThrow("Function setlrmvrank not available for this ML type."); return 0; }
-    virtual int setztmvrank     (double nv) { (void) nv; NiceThrow("Function setztmvrank not available for this ML type."); return 0; }
+    virtual int setlrmvrank     (double nv) { (void) nv; NiceThrow("Function setlrmvrank not available for this ML type.");      return 0; }
+    virtual int setztmvrank     (double nv) { (void) nv; NiceThrow("Function setztmvrank not available for this ML type.");      return 0; }
 
     virtual int setbetarank(double nv) { (void) nv; NiceThrow("Function setbetarank not available for this ML type."); return 0; }
 
@@ -1046,6 +995,10 @@ public:
     virtual int setCclass   (int d, double xC)   { (void) d; (void) xC;         return 0; }
     virtual int setepsclass (int d, double xeps) { (void) d; (void) xeps;       return 0; }
 
+    virtual int setmpri  (int nv)            { xmuprior    = nv; calcallprior(); return 0; }
+    virtual int setprival(const gentype &nv) { xmuprior_gt = nv; calcallprior(); return 0; }
+    virtual int setpriml (const ML_Base *nv) { xmuprior_ml = nv; calcallprior(); return 0; }
+
     virtual int scale  (double a) { (void) a; return 0; }
     virtual int reset  (void)     {           return 0; }
     virtual int restart(void)     {           return 0; }
@@ -1055,15 +1008,15 @@ public:
 
     virtual int scaleby(double sf) { *this *= sf; return 1; }
 
-    virtual int settspaceDim    (int newdim) { (void) newdim; NiceThrow("Function settspaceDim not available for this ML type.");     return 0; }
-    virtual int addtspaceFeat   (int i)      { (void) i;      NiceThrow("Function addtspaceFeat not available for this ML type.");    return 0; }
-    virtual int removetspaceFeat(int i)      { (void) i;      NiceThrow("Function removetspaceFeat not available for this ML type."); return 0; }
-    virtual int addxspaceFeat   (int i)      { (void) i;                                                                          return 0; }
-    virtual int removexspaceFeat(int i)      { (void) i;                                                                          return 0; }
+    virtual int settspaceDim    (int newdim);
+    virtual int addtspaceFeat   (int i);
+    virtual int removetspaceFeat(int i);
+    virtual int addxspaceFeat   (int) { return 0; }
+    virtual int removexspaceFeat(int) { return 0; }
 
     virtual int setsubtype(int i) { (void) i; NiceAssert( i == 0 ); return 0; }
 
-    virtual int setorder(int neword)                 { (void) neword;                NiceThrow("Function setorder not available for this ML type"); return 0; }
+    virtual int setorder(int neword);
     virtual int addclass(int label, int epszero = 0) { (void) label; (void) epszero; NiceThrow("Function addclass not available for this ML type"); return 0; }
 
     virtual int setNRff   (int nv) { (void) nv; NiceThrow("Function setNRff not available for this ML type.");    return 0; }
@@ -1465,7 +1418,7 @@ public:
 
     // x detangling
     //
-    // x "vectors" can get a little confusing, as they can refer to "normal" vectors, 
+    // x "vectors" can get a little confusing, as they can refer to "normal" vectors,
     // rank constraints, gradient constraints and other things.  To keep it together
     // the following function disentangles it all.  Given i, xx and xzinfo this function
     // returns the following:
@@ -2024,7 +1977,15 @@ private:
 //FIXME    Vector<const SparseVector<gentype> *> allxdatagentp;
     MercerKernel kernel;
     mutable gentype ytargdata;
+    mutable double ytargdataR;
     Vector<gentype> alltraintarg;
+    Vector<double> alltraintargR;
+    Vector<d_anion> alltraintargA;
+    Vector<Vector<double> > alltraintargV;
+    Vector<gentype> alltraintargp;
+    Vector<double> alltraintargpR;
+    Vector<d_anion> alltraintargpA;
+    Vector<Vector<double> > alltraintargpV;
     Vector<vecInfo> traininfo;
     Vector<int> traintang;
 //FIXME    Vector<const vecInfo *> traininfop;
@@ -2038,6 +1999,10 @@ private:
     int xdzero; // number of elements in xd that are zero
 
     int xpreallocsize;
+
+    int xmuprior;
+    gentype xmuprior_gt;
+    const ML_Base *xmuprior_ml;
 
     // Base data extended
 
@@ -2158,7 +2123,7 @@ private:
     SparseVector<Vector<Vector<int> > > typeKeyBreak;
 
     // Each ML_Base instantiated has a unique ID, and corresponding to
-    // that ID are x and g version numbers (see above).  These are 
+    // that ID are x and g version numbers (see above).  These are
     // shared.
 
     static SparseVector<int> xvernumber;
@@ -2207,15 +2172,11 @@ private:
 
     ML_Base **that;
 
-    // Direct y access
-
-    virtual Vector<gentype> &y_unsafe(void) { return alltraintarg; }
-
     // Fixes x pointer vector
 
     void fixpvects(void)
     {
-return;
+;
 //FIXME
 /*
         if ( allxdatagent.size() )
@@ -2241,8 +2202,6 @@ return;
                 traininfop("&",i) = &traininfo(i);
             }
         }
-
-        return;
 */
     }
 
@@ -2491,7 +2450,8 @@ return;
 
     virtual void setWildTargpp(const gentype &yI) const
     {
-        ytargdata = yI;
+        ytargdata  = yI;
+        ytargdataR = (double) yI;
     }
 
     virtual void resetInnerWildp(int wasnulla = 0, int wasnullb = 0, int wasnullc = 0, int wasnulld = 0) const
@@ -2812,8 +2772,6 @@ return;
     void calcSetXdim(void)
     {
         getKernel_unsafe().setdefindKey(indKey());
-
-        return;
     }
 
     void calcSetAssumeReal(int fulltest = 1, int assumeUnreal = 0) const
@@ -2989,7 +2947,15 @@ inline void ML_Base::qswapinternal(ML_Base &bb)
     qswap(allxdatagent   ,b.allxdatagent   );
 //FIXME    qswap(allxdatagentp  ,b.allxdatagentp  );
     qswap(ytargdata      ,b.ytargdata      );
+    qswap(ytargdataR     ,b.ytargdataR     );
     qswap(alltraintarg   ,b.alltraintarg   );
+    qswap(alltraintargp  ,b.alltraintargp  );
+    qswap(alltraintargR  ,b.alltraintargR  );
+    qswap(alltraintargA  ,b.alltraintargA  );
+    qswap(alltraintargV  ,b.alltraintargV  );
+    qswap(alltraintargpR ,b.alltraintargpR );
+    qswap(alltraintargpA ,b.alltraintargpA );
+    qswap(alltraintargpV ,b.alltraintargpV );
     qswap(xd             ,b.xd             );
     qswap(xdzero         ,b.xdzero         );
     qswap(loclr          ,b.loclr          );
@@ -3019,6 +2985,10 @@ inline void ML_Base::qswapinternal(ML_Base &bb)
     qswap(locbasisVV     ,b.locbasisVV     );
     qswap(xpreallocsize  ,b.xpreallocsize  );
     qswap(K2mat          ,b.K2mat          );
+
+    qswap(xmuprior   ,b.xmuprior);
+    qswap(xmuprior_gt,b.xmuprior_gt);
+    qswap(xmuprior_ml,b.xmuprior_ml);
 
     qswap(assumeReal      ,b.assumeReal      );
     qswap(trainingDataReal,b.trainingDataReal);
@@ -3060,6 +3030,7 @@ inline void ML_Base::semicopy(const ML_Base &bb)
     //traininfo
     //allxdatagent
     //ytargdata
+    //ytargdataR
     //indexKey
     //indexKeyCount
     //typeKey
@@ -3074,18 +3045,29 @@ inline void ML_Base::semicopy(const ML_Base &bb)
     //locbasis
     //K2mat
 
-    xd            = b.xd;
-    xdzero        = b.xdzero;
-    loclr         = b.loclr;
-    loclrb        = b.loclrb;
-    loclrc        = b.loclrc;
-    loclrd        = b.loclrd;
-    alltraintarg  = b.alltraintarg;
-    globalzerotol = b.globalzerotol;
-    defbasisUU    = b.defbasisUU;
-    defbasisVV    = b.defbasisVV;
-    UUcallback    = b.UUcallback;
-    VVcallback    = b.VVcallback;
+    xmuprior    = b.xmuprior;
+    xmuprior_gt = b.xmuprior_gt;
+    xmuprior_ml = b.xmuprior_ml;
+
+    xd             = b.xd;
+    xdzero         = b.xdzero;
+    loclr          = b.loclr;
+    loclrb         = b.loclrb;
+    loclrc         = b.loclrc;
+    loclrd         = b.loclrd;
+    alltraintarg   = b.alltraintarg;
+    alltraintargp  = b.alltraintargp; // evaluated prior
+    alltraintargR  = b.alltraintargR;
+    alltraintargA  = b.alltraintargA;
+    alltraintargV  = b.alltraintargV;
+    alltraintargpR = b.alltraintargpR; // evaluated prior
+    alltraintargpA = b.alltraintargpA; // evaluated prior
+    alltraintargpV = b.alltraintargpV; // evaluated prior
+    globalzerotol  = b.globalzerotol;
+    defbasisUU     = b.defbasisUU;
+    defbasisVV     = b.defbasisVV;
+    UUcallback     = b.UUcallback;
+    VVcallback     = b.VVcallback;
 
     // These are in svm_generic, where it is relevant
     //incxvernum();
@@ -3131,8 +3113,16 @@ inline void ML_Base::assign(const ML_Base &bb, int onlySemiCopy)
         traininfo     = src.traininfo;
         traintang     = src.traintang;
         ytargdata     = src.ytargdata;
+        ytargdataR    = src.ytargdataR;
 
-        alltraintarg = src.alltraintarg;
+        alltraintarg   = src.alltraintarg;
+        alltraintargp  = src.alltraintargp;
+        alltraintargR  = src.alltraintargR;
+        alltraintargA  = src.alltraintargA;
+        alltraintargV  = src.alltraintargV;
+        alltraintargpR = src.alltraintargpR;
+        alltraintargpA = src.alltraintargpA;
+        alltraintargpV = src.alltraintargpV;
 
         xd           = src.xd;
         xdzero       = src.xdzero;
@@ -3144,6 +3134,10 @@ inline void ML_Base::assign(const ML_Base &bb, int onlySemiCopy)
         xCweightfuzz = src.xCweightfuzz;
         xepsweight   = src.xepsweight;
         K2mat        = src.K2mat;
+
+        xmuprior    = src.xmuprior;
+        xmuprior_gt = src.xmuprior_gt;
+        xmuprior_ml = src.xmuprior_ml;
 
         fixpvects();
     }
@@ -3155,9 +3149,17 @@ inline void ML_Base::assign(const ML_Base &bb, int onlySemiCopy)
         allxdatagent.resize((src.allxdatagent).size());
         traininfo.resize((src.traininfo).size());
         traintang.resize((src.traintang).size());
-        ytargdata = src.ytargdata;
+        ytargdata  = src.ytargdata;
+        ytargdataR = src.ytargdataR;
 
-        alltraintarg = src.alltraintarg;
+        alltraintarg   = src.alltraintarg;
+        alltraintargp  = src.alltraintargp;
+        alltraintargR  = src.alltraintargR;
+        alltraintargA  = src.alltraintargA;
+        alltraintargV  = src.alltraintargV;
+        alltraintargpR = src.alltraintargpR;
+        alltraintargpA = src.alltraintargpA;
+        alltraintargpV = src.alltraintargpV;
 
         xd           = src.xd;
         xdzero       = src.xdzero;
@@ -3170,6 +3172,10 @@ inline void ML_Base::assign(const ML_Base &bb, int onlySemiCopy)
         xepsweight   = src.xepsweight;
         K2mat        = src.K2mat;
 
+        xmuprior    = src.xmuprior;
+        xmuprior_gt = src.xmuprior_gt;
+        xmuprior_ml = src.xmuprior_ml;
+
         fixpvects();
     }
 
@@ -3180,7 +3186,14 @@ inline void ML_Base::assign(const ML_Base &bb, int onlySemiCopy)
         allxdatagent.resize((src.allxdatagent).size());
         traininfo.resize((src.traininfo).size());
         traintang.resize((src.traintang).size());
-        alltraintarg = src.alltraintarg;
+        alltraintarg   = src.alltraintarg;
+        alltraintargp  = src.alltraintargp;
+        alltraintargR  = src.alltraintargR;
+        alltraintargA  = src.alltraintargA;
+        alltraintargV  = src.alltraintargV;
+        alltraintargpR = src.alltraintargpR;
+        alltraintargpA = src.alltraintargpA;
+        alltraintargpV = src.alltraintargpV;
 
         xd           = src.xd;
         xdzero       = src.xdzero;

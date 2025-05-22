@@ -23,7 +23,6 @@ std::ostream &KNN_Vector::printstream(std::ostream &output, int dep) const
     repPrint(output,'>',dep) << "Class labels:  " << classlabels << "\n";
     repPrint(output,'>',dep) << "Class counts:  " << classcnt    << "\n";
     repPrint(output,'>',dep) << "Dimension:     " << dim         << "\n";
-    repPrint(output,'>',dep) << "Class targets: " << z           << "\n\n";
 
     KNN_Generic::printstream(output,dep+1);
 
@@ -37,7 +36,6 @@ std::istream &KNN_Vector::inputstream(std::istream &input )
     input >> dummy; input >> classlabels;
     input >> dummy; input >> classcnt;
     input >> dummy; input >> dim;
-    input >> dummy; input >> z;
 
     KNN_Generic::inputstream(input);
 
@@ -114,8 +112,6 @@ int KNN_Vector::addTrainingVector (int i, const gentype &_y, const SparseVector<
 
     ++(classcnt("&",1));
 
-    z.add(i); ::assign(z("&",i),(const Vector<gentype> &) y);
-
     KNN_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh);
     KNN_Generic::dd("&",i) = 2;
 
@@ -139,8 +135,6 @@ int KNN_Vector::qaddTrainingVector(int i, const gentype &_y,       SparseVector<
     NiceAssert( y.size() == dim );
 
     ++(classcnt("&",1));
-
-    z.add(i); ::assign(z("&",i),(const Vector<gentype> &) y);
 
     KNN_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
     KNN_Generic::dd("&",i) = 2;
@@ -193,8 +187,6 @@ int KNN_Vector::removeTrainingVector(int i, gentype &yy, SparseVector<gentype> &
         --(classcnt("&",dd(i)/2));
     }
 
-    z.remove(i);
-
     KNN_Generic::removeTrainingVector(i,yy,x);
 
     return 1;
@@ -213,8 +205,6 @@ int KNN_Vector::sety(int i, const gentype &_yy)
     {
         dim = yy.size();
     }
-
-    ::assign(z("&",i),(const Vector<gentype> &) yy);
 
     KNN_Generic::sety(i,yy);
 
@@ -340,6 +330,8 @@ int KNN_Vector::randomise(double sparsity)
     int prefpos = ( sparsity < 0 ) ? 1 : 0;
     sparsity = ( sparsity < 0 ) ? -sparsity : sparsity;
 
+
+
     int res = 0;
     int Nnotz = N()-NNC(0);
 
@@ -366,13 +358,15 @@ int KNN_Vector::randomise(double sparsity)
         double lbloc = prefpos ? 0.0 : -1.0;
         double ubloc = +1.0;
 
+        Vector<gentype> yloc(y());
+
         for ( i = 0 ; i < canmod.size() ; ++i )
         {
             j = canmod(i);
 
             NiceAssert( d()(j) );
 
-            Vector<gentype> &bmod = y_unsafe()("&",j).dir_vector();
+            Vector<gentype> &bmod = yloc("&",j).dir_vector();
 
             if ( bmod.size() )
             {
@@ -384,9 +378,9 @@ int KNN_Vector::randomise(double sparsity)
                     amod = lbloc+((ubloc-lbloc)*amod);
                 }
             }
-
-            ::assign(z("&",j),bmod);
         }
+
+        ML_Base::sety(yloc);
     }
 
     return res;
@@ -396,18 +390,9 @@ int KNN_Vector::settspaceDim(int newdim)
 {
     NiceAssert( ( ( N() == 0 ) && ( newdim >= -1 ) ) || ( newdim >= 0 ) );
 
+    ML_Base::settspaceDim(newdim);
+
     dim = newdim;
-
-    if ( N() )
-    {
-        int ii;
-
-        for ( ii = 0 ; ii < N() ; ++ii )
-        {
-            y_unsafe()("&",ii).dir_vector().resize(dim);
-            z("&",ii).resize(dim);
-        }
-    }
 
     return 1;
 }
@@ -416,18 +401,9 @@ int KNN_Vector::addtspaceFeat(int i)
 {
     NiceAssert( ( ( i >= 0 ) && ( i <= dim ) ) || ( dim == -1 ) );
 
+    ML_Base::addtspaceFeat(i);
+
     ++dim;
-
-    if ( N() )
-    {
-        int ii;
-
-        for ( ii = 0 ; ii < N() ; ++ii )
-        {
-            y_unsafe()("&",ii).dir_vector().add(i);
-            z("&",ii).add(i);
-        }
-    }
 
     return 1;
 }
@@ -436,18 +412,20 @@ int KNN_Vector::removetspaceFeat(int i)
 {
     NiceAssert( ( i >= 0 ) && ( i < dim ) );
 
+    ML_Base::removetspaceFeat(i);
+
     --dim;
 
-    if ( N() )
-    {
-        int ii;
+    return 1;
+}
 
-        for ( ii = 0 ; ii < N() ; ++ii )
-        {
-            y_unsafe()("&",ii).dir_vector().remove(i);
-            z("&",ii).add(i);
-        }
-    }
+int KNN_Vector::setorder(int neword)
+{
+    NiceAssert( neword >= 0 );
+
+    ML_Base::setorder(neword);
+
+    dim = ceilintlog2(tspaceDim());
 
     return 1;
 }

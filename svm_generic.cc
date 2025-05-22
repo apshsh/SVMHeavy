@@ -614,7 +614,7 @@ void SVM_Generic::K0xfer(gentype &res, int &minmaxind, int typeis,
     NiceAssert( !densetype );
 
     gentype dummy;
-    double dummyR = 0.0;
+    double dummyr = 0.0;
 
     switch ( typeis )
     {
@@ -674,7 +674,7 @@ void SVM_Generic::K0xfer(gentype &res, int &minmaxind, int typeis,
 
                                 else if ( isUnderlyingVector() )
                                 {
-                                    Kij *= twoProduct(dummyR,alphaV()(j),alphaV()(k));
+                                    Kij *= twoProduct(dummyr,alphaV()(j),alphaV()(k));
                                 }
 
                                 else
@@ -776,7 +776,7 @@ void SVM_Generic::K0xfer(gentype &res, int &minmaxind, int typeis,
 
                                 else if ( isUnderlyingVector() )
                                 {
-                                    Kija *= twoProduct(dummyR,alphaV()(j),alphaV()(k));
+                                    Kija *= twoProduct(dummyr,alphaV()(j),alphaV()(k));
                                 }
 
                                 else
@@ -843,7 +843,7 @@ void SVM_Generic::K0xfer(double &res, int &minmaxind, int typeis,
     }
 
     //gentype dummy;
-    double dummyR = 0.0;
+    double dummyr = 0.0;
 
     switch ( typeis )
     {
@@ -903,7 +903,7 @@ void SVM_Generic::K0xfer(double &res, int &minmaxind, int typeis,
 
                                 else if ( isUnderlyingVector() )
                                 {
-                                    Kij *= twoProduct(dummyR,alphaV()(j),alphaV()(k));
+                                    Kij *= twoProduct(dummyr,alphaV()(j),alphaV()(k));
                                 }
 
                                 else
@@ -1005,7 +1005,7 @@ void SVM_Generic::K0xfer(double &res, int &minmaxind, int typeis,
 
                                 else if ( isUnderlyingVector() )
                                 {
-                                    Kija *= twoProduct(dummyR,alphaV()(j),alphaV()(k));
+                                    Kija *= twoProduct(dummyr,alphaV()(j),alphaV()(k));
                                 }
 
                                 else
@@ -1064,7 +1064,7 @@ void SVM_Generic::K1xfer(gentype &res, int &minmaxind, int typeis,
     (void) densetype;
     (void) xdim;
     gentype dummy;
-    double dummyR = 0.0;
+    double dummyr = 0.0;
 
     ia = (typeis-(100*(typeis/100)))/10 ? ia : -42;
 
@@ -1137,7 +1137,7 @@ void SVM_Generic::K1xfer(gentype &res, int &minmaxind, int typeis,
 
                                                 else if ( isUnderlyingVector() )
                                                 {
-                                                    Kij *= oneProduct(dummyR,alphaV()(j));
+                                                    Kij *= oneProduct(dummyr,alphaV()(j));
                                                 }
 
                                                 else
@@ -1157,7 +1157,7 @@ void SVM_Generic::K1xfer(gentype &res, int &minmaxind, int typeis,
         case 817:
         {
             gentype Kintemp;
-            double dummyR;
+            double dummyr;
 
             K1(Kintemp,xa,&xainfo);
 
@@ -1188,7 +1188,7 @@ void SVM_Generic::K1xfer(gentype &res, int &minmaxind, int typeis,
 
                         else if ( isUnderlyingVector() )
                         {
-                            temp *= oneProduct(dummyR,alphaV()(j));
+                            temp *= oneProduct(dummyr,alphaV()(j));
                         }
 
                         else
@@ -1238,7 +1238,7 @@ void SVM_Generic::K1xfer(double &res, int &minmaxind, int typeis,
     }
 
     //gentype dummy;
-    double dummyR = 0.0;
+    double dummyr = 0.0;
 
     ia = (typeis-(100*(typeis/100)))/10 ? ia : -42;
 
@@ -1311,7 +1311,7 @@ void SVM_Generic::K1xfer(double &res, int &minmaxind, int typeis,
 
                                                 else if ( isUnderlyingVector() )
                                                 {
-                                                    Kij *= oneProduct(dummyR,alphaV()(j));
+                                                    Kij *= oneProduct(dummyr,alphaV()(j));
                                                 }
 
                                                 else
@@ -1331,7 +1331,7 @@ void SVM_Generic::K1xfer(double &res, int &minmaxind, int typeis,
         case 817:
         {
             gentype Kintemp;
-            double dummyR;
+            double dummyr;
 
             K1(Kintemp,xa,&xainfo);
 
@@ -1362,7 +1362,7 @@ void SVM_Generic::K1xfer(double &res, int &minmaxind, int typeis,
 
                         else if ( isUnderlyingVector() )
                         {
-                            temp *= oneProduct(dummyR,alphaV()(j));
+                            temp *= oneProduct(dummyr,alphaV()(j));
                         }
 
                         else
@@ -1408,7 +1408,7 @@ errstream() << "BADBADBAD";
     NiceAssert( !densetype );
 
     gentype dummy;
-    double dummyR = 0.0;
+    double dummyr = 0.0;
 
     int iacall = ia;
     int ibcall = ib;
@@ -1721,7 +1721,7 @@ errstream() << "BADBADBAD";
 
                                 else if ( isUnderlyingVector() )
                                 {
-                                    aadirectProdsFull("&",j,k) = twoProduct(dummyR,alphaV()(j),alphaV()(k));
+                                    aadirectProdsFull("&",j,k) = twoProduct(dummyr,alphaV()(j),alphaV()(k));
                                 }
 
                                 else
@@ -1780,7 +1780,7 @@ errstream() << "BADBADBAD";
 
                                 else if ( isUnderlyingVector() )
                                 {
-                                    aadirectProdsFull("&",j,k) = twoProduct(dummyR,alphaV()(j),alphaV()(k));
+                                    aadirectProdsFull("&",j,k) = twoProduct(dummyr,alphaV()(j),alphaV()(k));
                                 }
 
                                 else
@@ -2139,7 +2139,7 @@ errstream() << "BADBADBAD";
 
                                     else if ( isUnderlyingVector() )
                                     {
-                                        Kij *= twoProduct(dummyR,alphaV()(j),alphaV()(k));
+                                        Kij *= twoProduct(dummyr,alphaV()(j),alphaV()(k));
                                     }
 
                                     else
@@ -2247,7 +2247,7 @@ errstream() << "BADBADBAD";
 
                                 else if ( isUnderlyingVector() )
                                 {
-                                    Kija *= twoProduct(dummyR,alphaV()(j),alphaV()(k));
+                                    Kija *= twoProduct(dummyr,alphaV()(j),alphaV()(k));
                                 }
 
                                 else
@@ -2272,7 +2272,7 @@ errstream() << "BADBADBAD";
         case 817:
         {
             gentype Kintemp;
-            double dummyR;
+            double dummyr;
 
             K1(Kintemp,xa,&xainfo);
 
@@ -2307,7 +2307,7 @@ errstream() << "BADBADBAD";
 
                                 else if ( isUnderlyingVector() )
                                 {
-                                    temp *= innerProduct(dummyR,alphaV()(j),alphaV()(k));
+                                    temp *= innerProduct(dummyr,alphaV()(j),alphaV()(k));
                                 }
 
                                 else
@@ -2370,7 +2370,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
     }
 
     //gentype dummy;
-    double dummyR = 0.0;
+    double dummyr = 0.0;
 
     if ( ( ia >= 0 ) && ( ib < 0 ) )
     {
@@ -2712,7 +2712,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
 
                                 else if ( isUnderlyingVector() )
                                 {
-                                    aadirectProdsFull("&",j,k) = twoProduct(dummyR,alphaV()(j),alphaV()(k));
+                                    aadirectProdsFull("&",j,k) = twoProduct(dummyr,alphaV()(j),alphaV()(k));
                                 }
 
                                 else
@@ -2774,7 +2774,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
 
                                 else if ( isUnderlyingVector() )
                                 {
-                                    aadirectProdsFull("&",j,k) = twoProduct(dummyR,alphaV()(j),alphaV()(k));
+                                    aadirectProdsFull("&",j,k) = twoProduct(dummyr,alphaV()(j),alphaV()(k));
                                 }
 
                                 else
@@ -3195,7 +3195,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
 
                                     else if ( isUnderlyingVector() )
                                     {
-                                        Kij *= twoProduct(dummyR,alphaV()(j),alphaV()(k));
+                                        Kij *= twoProduct(dummyr,alphaV()(j),alphaV()(k));
                                     }
 
                                     else
@@ -3305,7 +3305,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
 
                                 else if ( isUnderlyingVector() )
                                 {
-                                    Kija *= twoProduct(dummyR,alphaV()(j),alphaV()(k));
+                                    Kija *= twoProduct(dummyr,alphaV()(j),alphaV()(k));
                                 }
 
                                 else
@@ -3331,7 +3331,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
         case 817:
         {
             gentype Kintemp;
-            double dummyR;
+            double dummyr;
 
             K1(Kintemp,xa,&xainfo);
 
@@ -3366,7 +3366,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
 
                                 else if ( isUnderlyingVector() )
                                 {
-                                    temp *= innerProduct(dummyR,alphaV()(j),alphaV()(k));
+                                    temp *= innerProduct(dummyr,alphaV()(j),alphaV()(k));
                                 }
 
                                 else
@@ -3431,7 +3431,7 @@ void SVM_Generic::K3xfer(gentype &res, int &minmaxind, int typeis,
     (void) densetype;
     (void) xdim;
     gentype dummy;
-    double dummyR = 0.0;
+    double dummyr = 0.0;
 
     ia = (typeis-(100*(typeis/100)))/10 ? ia : -42;
     ib = (typeis-(100*(typeis/100)))/10 ? ib : -43;
@@ -3530,7 +3530,7 @@ void SVM_Generic::K3xfer(gentype &res, int &minmaxind, int typeis,
                                         
                                                 else if ( isUnderlyingVector() )
                                                 {
-                                                    Kij *= threeProduct(dummyR,alphaV()(j),alphaV()(k),alphaV()(l));
+                                                    Kij *= threeProduct(dummyr,alphaV()(j),alphaV()(k),alphaV()(l));
                                                 }
                                         
                                                 else
@@ -3586,7 +3586,7 @@ void SVM_Generic::K3xfer(gentype &res, int &minmaxind, int typeis,
         case 817:
         {
             gentype Kintemp;
-            double dummyR;
+            double dummyr;
 
             K1(Kintemp,xa,&xainfo);
 
@@ -3625,7 +3625,7 @@ void SVM_Generic::K3xfer(gentype &res, int &minmaxind, int typeis,
 
                                         else if ( isUnderlyingVector() )
                                         {
-                                            temp *= threeProduct(dummyR,alphaV()(j),alphaV()(k),alphaV()(l));
+                                            temp *= threeProduct(dummyr,alphaV()(j),alphaV()(k),alphaV()(l));
                                         }
 
                                         else
@@ -3679,7 +3679,7 @@ void SVM_Generic::K3xfer(double &res, int &minmaxind, int typeis,
     }
 
     gentype dummy;
-    double dummyR = 0.0;
+    double dummyr = 0.0;
 
     ia = (typeis-(100*(typeis/100)))/10 ? ia : -42;
     ib = (typeis-(100*(typeis/100)))/10 ? ib : -43;
@@ -3778,7 +3778,7 @@ void SVM_Generic::K3xfer(double &res, int &minmaxind, int typeis,
                                         
                                                 else if ( isUnderlyingVector() )
                                                 {
-                                                    Kij *= threeProduct(dummyR,alphaV()(j),alphaV()(k),alphaV()(l));
+                                                    Kij *= threeProduct(dummyr,alphaV()(j),alphaV()(k),alphaV()(l));
                                                 }
                                         
                                                 else
@@ -3834,7 +3834,7 @@ void SVM_Generic::K3xfer(double &res, int &minmaxind, int typeis,
         case 817:
         {
             gentype Kintemp;
-            double dummyR;
+            double dummyr;
 
             K1(Kintemp,xa,&xainfo);
 
@@ -3873,7 +3873,7 @@ void SVM_Generic::K3xfer(double &res, int &minmaxind, int typeis,
 
                                         else if ( isUnderlyingVector() )
                                         {
-                                            temp *= threeProduct(dummyR,alphaV()(j),alphaV()(k),alphaV()(l));
+                                            temp *= threeProduct(dummyr,alphaV()(j),alphaV()(k),alphaV()(l));
                                         }
 
                                         else
@@ -3937,7 +3937,7 @@ void SVM_Generic::K4xfer(gentype &res, int &minmaxind, int typeis,
     (void) densetype;
     (void) xdim;
     gentype dummy;
-    double dummyR = 0.0;
+    double dummyr = 0.0;
 
     ia = (typeis-(100*(typeis/100)))/10 ? ia : -42;
     ib = (typeis-(100*(typeis/100)))/10 ? ib : -43;
@@ -4049,7 +4049,7 @@ void SVM_Generic::K4xfer(gentype &res, int &minmaxind, int typeis,
                                         
                                                 else if ( isUnderlyingVector() )
                                                 {
-                                                    Kij *= fourProduct(dummyR,alphaV()(j),alphaV()(k),alphaV()(l),alphaV()(m));
+                                                    Kij *= fourProduct(dummyr,alphaV()(j),alphaV()(k),alphaV()(l),alphaV()(m));
                                                 }
                                         
                                                 else
@@ -4214,7 +4214,7 @@ void SVM_Generic::K4xfer(gentype &res, int &minmaxind, int typeis,
                                         
                                                 else if ( isUnderlyingVector() )
                                                 {
-                                                    Kij *= fourProduct(dummyR,alphaV()(j),alphaV()(k),alphaV()(l),alphaV()(m));
+                                                    Kij *= fourProduct(dummyr,alphaV()(j),alphaV()(k),alphaV()(l),alphaV()(m));
                                                 }
                                         
                                                 else
@@ -4245,7 +4245,7 @@ void SVM_Generic::K4xfer(gentype &res, int &minmaxind, int typeis,
         case 817:
         {
             gentype Kintemp;
-            double dummyR;
+            double dummyr;
 
             K1(Kintemp,xa,&xainfo);
 
@@ -4288,7 +4288,7 @@ void SVM_Generic::K4xfer(gentype &res, int &minmaxind, int typeis,
 
                                                 else if ( isUnderlyingVector() )
                                                 {
-                                                    temp *= fourProduct(dummyR,alphaV()(j),alphaV()(k),alphaV()(l),alphaV()(m));
+                                                    temp *= fourProduct(dummyr,alphaV()(j),alphaV()(k),alphaV()(l),alphaV()(m));
                                                 }
 
                                                 else
@@ -4344,7 +4344,7 @@ void SVM_Generic::K4xfer(double &res, int &minmaxind, int typeis,
     }
 
     gentype dummy;
-    double dummyR = 0.0;
+    double dummyr = 0.0;
 
     ia = (typeis-(100*(typeis/100)))/10 ? ia : -42;
     ib = (typeis-(100*(typeis/100)))/10 ? ib : -43;
@@ -4456,7 +4456,7 @@ void SVM_Generic::K4xfer(double &res, int &minmaxind, int typeis,
                                         
                                                 else if ( isUnderlyingVector() )
                                                 {
-                                                    Kij *= fourProduct(dummyR,alphaV()(j),alphaV()(k),alphaV()(l),alphaV()(m));
+                                                    Kij *= fourProduct(dummyr,alphaV()(j),alphaV()(k),alphaV()(l),alphaV()(m));
                                                 }
                                         
                                                 else
@@ -4621,7 +4621,7 @@ void SVM_Generic::K4xfer(double &res, int &minmaxind, int typeis,
                                         
                                                 else if ( isUnderlyingVector() )
                                                 {
-                                                    Kij *= fourProduct(dummyR,alphaV()(j),alphaV()(k),alphaV()(l),alphaV()(m));
+                                                    Kij *= fourProduct(dummyr,alphaV()(j),alphaV()(k),alphaV()(l),alphaV()(m));
                                                 }
                                         
                                                 else
@@ -4652,7 +4652,7 @@ void SVM_Generic::K4xfer(double &res, int &minmaxind, int typeis,
         case 817:
         {
             gentype Kintemp;
-            double dummyR;
+            double dummyr;
 
             K1(Kintemp,xa,&xainfo);
 
@@ -4695,7 +4695,7 @@ void SVM_Generic::K4xfer(double &res, int &minmaxind, int typeis,
 
                                                 else if ( isUnderlyingVector() )
                                                 {
-                                                    temp *= fourProduct(dummyR,alphaV()(j),alphaV()(k),alphaV()(l),alphaV()(m));
+                                                    temp *= fourProduct(dummyr,alphaV()(j),alphaV()(k),alphaV()(l),alphaV()(m));
                                                 }
 
                                                 else

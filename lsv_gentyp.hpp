@@ -43,9 +43,9 @@ public:
     LSV_Gentyp &operator=(const LSV_Gentyp &src) { assign(src); return *this; }
     virtual ~LSV_Gentyp() { return; }
 
-    virtual int prealloc(int expectedN) override { return getQ().prealloc(expectedN); }
-    virtual int preallocsize(void) const override { return getQconst().preallocsize(); }
-    virtual void setmemsize(int memsize) override { getQ().setmemsize(memsize); return; }
+    virtual int  prealloc    (int expectedN)       override { return getQ().prealloc(expectedN);  }
+    virtual int  preallocsize(void)          const override { return getQconst().preallocsize();  }
+    virtual void setmemsize  (int memsize)         override { getQ().setmemsize(memsize); return; }
 
     virtual void assign(const ML_Base &src, int onlySemiCopy = 0) override;
     virtual void semicopy(const ML_Base &src) override;
@@ -111,6 +111,13 @@ public:
     virtual double Cclass(int d)   const override { return getQconst().Cclass(d);   }
     virtual double epsclass(int d) const override { return getQconst().epsclass(d); }
 
+    virtual       int      mpri  (void) const override { return getQconst().mpri();   }
+    virtual const gentype &prival(void) const override { return getQconst().prival(); }
+    virtual const ML_Base *priml (void) const override { return getQconst().priml();  }
+
+    virtual void calcprior   (gentype &res, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { return getQconst().calcprior(res,x,xinf); }
+    virtual void calcallprior(void)                                                                              override { return getQ().calcallprior();             }
+
     virtual int    memsize     (void) const override { return getQconst().memsize();      }
     virtual double zerotol     (void) const override { return getQconst().zerotol();      }
     virtual double Opttol      (void) const override { return getQconst().Opttol();       }
@@ -135,6 +142,13 @@ public:
 
     virtual const Vector<SparseVector<gentype> > &x          (void) const override { return getQconst().x();           }
     virtual const Vector<gentype>                &y          (void) const override { return getQconst().y();           }
+    virtual const Vector<double>                 &yR         (void) const override { return getQconst().yR();          }
+    virtual const Vector<d_anion>                &yA         (void) const override { return getQconst().yA();          }
+    virtual const Vector<Vector<double> >        &yV         (void) const override { return getQconst().yV();          }
+    virtual const Vector<gentype>                &yp         (void) const override { return getQconst().yp();          }
+    virtual const Vector<double>                 &ypR        (void) const override { return getQconst().ypR();         }
+    virtual const Vector<d_anion>                &ypA        (void) const override { return getQconst().ypA();         }
+    virtual const Vector<Vector<double> >        &ypV        (void) const override { return getQconst().ypV();         }
     virtual const Vector<vecInfo>                &xinfo      (void) const override { return getQconst().xinfo();       }
     virtual const Vector<int>                    &xtang      (void) const override { return getQconst().xtang();       }
     virtual const Vector<int>                    &d          (void) const override { return getQconst().d();           }
@@ -412,6 +426,9 @@ public:
     virtual int   xisrankorgrad              (int i)                    const override { return getQconst().xisrankorgrad(i); }
     virtual int   xisclass                   (int i, int d, int q = -1) const override { return getQconst().xisclass(i,d,q);  }
     virtual const gentype &y                 (int i)                    const override { return getQconst().y(i);             }
+    virtual       double yR                  (int i)                    const override { return getQconst().yR(i);            }
+    virtual const d_anion &yA                (int i)                    const override { return getQconst().yA(i);            }
+    virtual const Vector<double> &yV         (int i)                    const override { return getQconst().yV(i);            }
 
     // Basis stuff
 
@@ -483,12 +500,16 @@ public:
 
     virtual int setbetarank(double nv) override { return getQ().setbetarank(nv); }
 
-    virtual int setC(double xC)                 override { return getQ().setC(xC);            }
-    virtual int setsigma(double xC)             override { return getQ().setsigma(xC);        }
-    virtual int setsigma_cut(double xC)         override { return getQ().setsigma_cut(xC);    }
-    virtual int seteps(double xeps)             override { return getQ().seteps(xeps);        }
-    virtual int setCclass(int d, double xC)     override { return getQ().setCclass(d,xC);     }
-    virtual int setepsclass(int d, double xeps) override { return getQ().setepsclass(d,xeps); }
+    virtual int setC        (double xC)          override { return getQ().setC(xC);            }
+    virtual int setsigma    (double xC)          override { return getQ().setsigma(xC);        }
+    virtual int setsigma_cut(double xC)          override { return getQ().setsigma_cut(xC);    }
+    virtual int seteps      (double xeps)        override { return getQ().seteps(xeps);        }
+    virtual int setCclass   (int d, double xC)   override { return getQ().setCclass(d,xC);     }
+    virtual int setepsclass (int d, double xeps) override { return getQ().setepsclass(d,xeps); }
+
+    virtual int setmpri  (int nv)            override { return getQ().setmpri(nv);   }
+    virtual int setprival(const gentype &nv) override { return getQ().setprival(nv); }
+    virtual int setpriml (const ML_Base *nv) override { return getQ().setpriml(nv);  }
 
     virtual int scale  (double a) override { return getQ().scale(a);  }
     virtual int reset  (void)     override { return getQ().reset();   }

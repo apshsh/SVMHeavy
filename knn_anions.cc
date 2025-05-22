@@ -23,7 +23,6 @@ std::ostream &KNN_Anions::printstream(std::ostream &output, int dep) const
     repPrint(output,'>',dep) << "Class labels:  " << classlabels << "\n";
     repPrint(output,'>',dep) << "Class counts:  " << classcnt    << "\n";
     repPrint(output,'>',dep) << "Order:         " << dorder      << "\n";
-    repPrint(output,'>',dep) << "Class targets: " << z           << "\n\n";
 
     KNN_Generic::printstream(output,dep+1);
 
@@ -37,7 +36,6 @@ std::istream &KNN_Anions::inputstream(std::istream &input )
     input >> dummy; input >> classlabels;
     input >> dummy; input >> classcnt;
     input >> dummy; input >> dorder;
-    input >> dummy; input >> z;
 
     KNN_Generic::inputstream(input);
 
@@ -102,14 +100,12 @@ int KNN_Anions::addTrainingVector (int i, const gentype &y, const SparseVector<g
 
     ++(classcnt("&",1));
 
-    z.add(i); z("&",i) = (const d_anion &) y;
-
     KNN_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh);
     KNN_Generic::dd("&",i) = 2;
 
-    if ( y_unsafe()("&",i).dir_anion().order() > dorder )
+    if ( ML_Base::y(i).order() > dorder )
     {
-        dorder = y_unsafe()("&",i).dir_anion().order();
+        dorder = (ML_Base::y(i)).order();
     }
 
     return 1;
@@ -121,14 +117,12 @@ int KNN_Anions::qaddTrainingVector(int i, const gentype &y,       SparseVector<g
 
     ++(classcnt("&",1));
 
-    z.add(i); z("&",i) = (const d_anion &) y;
-
     KNN_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
     KNN_Generic::dd("&",i) = 2;
 
-    if ( y_unsafe()("&",i).dir_anion().order() > dorder )
+    if ( (ML_Base::y(i)).order() > dorder )
     {
-        dorder = y_unsafe()("&",i).dir_anion().order();
+        dorder = (ML_Base::y(i)).order();
     }
 
     return 1;
@@ -179,8 +173,6 @@ int KNN_Anions::removeTrainingVector(int i, gentype &yy, SparseVector<gentype> &
         --(classcnt("&",dd(i)/2));
     }
 
-    z.remove(i);
-
     KNN_Generic::removeTrainingVector(i,yy,x);
 
     return 1;
@@ -190,13 +182,11 @@ int KNN_Anions::sety(int i, const gentype &yy)
 {
     NiceAssert( yy.isCastableToAnionWithoutLoss() );
 
-    z("&",i) = (const d_anion &) yy;
-
     KNN_Generic::sety(i,yy);
 
-    if ( y_unsafe()("&",i).dir_anion().order() > dorder )
+    if ( (ML_Base::y(i)).order() > dorder )
     {
-        dorder = y_unsafe()("&",i).dir_anion().order();
+        dorder = (ML_Base::y(i)).order();
     }
 
     return 1;
@@ -320,6 +310,8 @@ int KNN_Anions::randomise(double sparsity)
     int prefpos = ( sparsity < 0 ) ? 1 : 0;
     sparsity = ( sparsity < 0 ) ? -sparsity : sparsity;
 
+
+
     int res = 0;
     int Nnotz = N()-NNC(0);
 
@@ -346,13 +338,15 @@ int KNN_Anions::randomise(double sparsity)
         double lbloc = prefpos ? 0.0 : -1.0;
         double ubloc = +1.0;
 
+        Vector<gentype> yloc(y());
+
         for ( i = 0 ; i < canmod.size() ; ++i )
         {
             j = canmod(i);
 
             NiceAssert( d()(j) );
 
-            d_anion &bmod = y_unsafe()("&",j).dir_anion();
+            d_anion &bmod = yloc("&",j).dir_anion();
 
             if ( bmod.size() )
             {
@@ -364,30 +358,54 @@ int KNN_Anions::randomise(double sparsity)
                     amod = lbloc+((ubloc-lbloc)*amod);
                 }
             }
-
-            z("&",j) = bmod;
         }
+
+        ML_Base::sety(yloc);
     }
 
     return res;
+}
+
+int KNN_Anions::settspaceDim(int newdim)
+{
+    NiceAssert( ( ( N() == 0 ) && ( newdim >= -1 ) ) || ( newdim >= 0 ) );
+
+    ML_Base::settspaceDim(newdim);
+
+    dorder = 1<<newdim;
+
+    return 1;
+}
+
+int KNN_Anions::addtspaceFeat(int i)
+{
+    NiceAssert( ( ( i >= 0 ) && ( i <= tspaceDim() ) ) || ( tspaceDim() == -1 ) );
+
+    ML_Base::addtspaceFeat(i);
+
+    dorder = 1<<tspaceDim();
+
+    return 1;
+}
+
+int KNN_Anions::removetspaceFeat(int i)
+{
+    NiceAssert( ( i >= 0 ) && ( i < tspaceDim() ) );
+
+    ML_Base::removetspaceFeat(i);
+
+    dorder = 1<<tspaceDim();
+
+    return 1;
 }
 
 int KNN_Anions::setorder(int neword)
 {
     NiceAssert( neword >= 0 );
 
+    ML_Base::setorder(neword);
+
     dorder = neword;
-
-    if ( N() )
-    {
-        int ii;
-
-        for ( ii = 0 ; ii < N() ; ++ii )
-        {
-            y_unsafe()("&",ii).dir_anion().setorder(dorder);
-            z("&",ii).setorder(dorder);
-        }
-    }
 
     return 1;
 }

@@ -3280,14 +3280,14 @@ andagain:
 #ifndef NDEBUG
 if ( testisvnan(f) )
 {
-errstream() << "phantomx 0: " << d(dsize-dnbad) << "\n";
-errstream() << "phantomx 1: " << real(L(dsize-dnbad,dsize-dnbad)) << "\n";
-errstream() << "phantomx 2: " << real(innerProduct(temp,b,bd)) << "\n";
-errstream() << "phantomx 3: " << L(dsize-dnbad,dsize-dnbad) << "\n";
-errstream() << "phantomx 4: " << innerProduct(temp,b,bd) << "\n";
-errstream() << "phantomx 5: " << b << "\n";
-errstream() << "phantomx 6: " << bd << "\n";
-errstream() << "phantomx 7: " << L << "\n";
+errstream() << "chol.hpp testisvnan(f) 0: " << d(dsize-dnbad) << "\n";
+errstream() << "chol.hpp testisvnan(f) 1: " << real(L(dsize-dnbad,dsize-dnbad)) << "\n";
+errstream() << "chol.hpp testisvnan(f) 2: " << real(innerProduct(temp,b,bd)) << "\n";
+errstream() << "chol.hpp testisvnan(f) 3: " << L(dsize-dnbad,dsize-dnbad) << "\n";
+errstream() << "chol.hpp testisvnan(f) 4: " << innerProduct(temp,b,bd) << "\n";
+errstream() << "chol.hpp testisvnan(f) 5: " << b << "\n";
+errstream() << "chol.hpp testisvnan(f) 6: " << bd << "\n";
+errstream() << "chol.hpp testisvnan(f) 7: " << L << "\n";
 }
 #endif
     NiceAssert( !testisvnan(f) );
@@ -3394,14 +3394,14 @@ template <> inline int Chol<double>::xxfact(void)
 #ifndef NDEBUG
 if ( testisvnan(f) )
 {
-errstream() << "phantomx 0: " << d(dsize-dnbad) << "\n";
-errstream() << "phantomx 1: " << L(dsize-dnbad,dsize-dnbad) << "\n";
-errstream() << "phantomx 2: " << twoProduct(temp,b,bd) << "\n";
-errstream() << "phantomx 3: " << L(dsize-dnbad,dsize-dnbad) << "\n";
-errstream() << "phantomx 4: " << twoProduct(temp,b,bd) << "\n";
-errstream() << "phantomx 5: " << b << "\n";
-errstream() << "phantomx 6: " << bd << "\n";
-errstream() << "phantomx 7: " << L << "\n";
+errstream() << "chol.hpp testisvnan(f) 0: " << d(dsize-dnbad) << "\n";
+errstream() << "chol.hpp testisvnan(f) 1: " << L(dsize-dnbad,dsize-dnbad) << "\n";
+errstream() << "chol.hpp testisvnan(f) 2: " << twoProduct(temp,b,bd) << "\n";
+errstream() << "chol.hpp testisvnan(f) 3: " << L(dsize-dnbad,dsize-dnbad) << "\n";
+errstream() << "chol.hpp testisvnan(f) 4: " << twoProduct(temp,b,bd) << "\n";
+errstream() << "chol.hpp testisvnan(f) 5: " << b << "\n";
+errstream() << "chol.hpp testisvnan(f) 6: " << bd << "\n";
+errstream() << "chol.hpp testisvnan(f) 7: " << L << "\n";
 }
 #endif
         NiceAssert( !testisvnan(f) );

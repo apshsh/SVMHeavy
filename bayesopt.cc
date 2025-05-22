@@ -1787,7 +1787,7 @@ int bayesOpt(int dim,
              gentype &fres,
              const Vector<double> &qmin,
              const Vector<double> &qmax,
-             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &ycgt),
+             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex),
              void *fnarg,
              BayesOptions &bopts,
              svmvolatile int &killSwitch,
@@ -1798,6 +1798,8 @@ int bayesOpt(int dim,
     int i,j,k;
     double addvar = 0;
     Vector<gentype> ycgt;
+    SparseVector<gentype> xreplace;
+    int replacex = 0;
     Vector<gentype> xsidechan;
     Vector<gentype> xaddrank;
     Vector<gentype> xaddranksidechan;
@@ -1925,8 +1927,12 @@ int bayesOpt(int dim,
     int Nbasesigma      = Nbasemu; // bopts.model_N_sigma(); - these are the same at this point (no hallucinations yet!)
     int Ngrid           = 0;
     const vecInfo *xinf = nullptr;
+    int Npreadd         = 0;
 
     Vector<int> gridind;
+
+    int ires = -1;
+    fres = 0;
 
     if ( gridsource )
     {
@@ -1936,7 +1942,7 @@ int bayesOpt(int dim,
         {
             int isnull = ((*gridsource).y())(i).isValNull();
             gentype yyval = ((*gridsource).y())(i);
-            gentype yval = isnull ? 0.0_gent : yyval;
+            gentype yval = isnull ? 0.0_gent : yyval.negate();
 
             bopts.model_addTrainingVector_musigma(yval,((*gridsource).y())(i),(*gridsource).x(i)); //,1);
 
@@ -1958,10 +1964,20 @@ int bayesOpt(int dim,
 
                 bopts.model_setd(Nbasemu+i,Nbasesigma+i,((*gridsource).d())(i));
 
+                if ( ( ires == -1 ) || ( yval > fres ) )
+                {
+                    fres = (double) yval;
+                    ires = Nbasemu+i;
+                }
+
                 ++muapproxsize;
+                ++Npreadd;
             }
         }
     }
+
+    Nbasemu    += Npreadd;
+    Nbasesigma += Npreadd;
 
     int isgridopt = Ngrid ? 1 : 0;
 
@@ -2031,7 +2047,6 @@ int bayesOpt(int dim,
     double modD       = ( bopts.modD == -1 ) ? ( isgridopt ? Ngrid : 10 ) : bopts.modD; // 10 is arbitrary here!
     int Nmodel        = Nbasemu; //bopts.model_N_mu();
     int Nsigma        = Nbasesigma; //bopts.model_N_sigma();
-    int ires          = -1;
     double B          = 1; // set per iteration
     double mig        = 1; // set per iteration
     //double fidc       = 0.5; // see Kandasamy supplementary and the fidelity stuff
@@ -2046,8 +2061,6 @@ int bayesOpt(int dim,
     {
         startpoints = 0;
     }
-
-    fres = 0;
 
     // =======================================================================
     // Initial batch generation
@@ -2238,9 +2251,16 @@ int bayesOpt(int dim,
 
 //errstream() << "phantomxyz wah\n";
                 fnapproxout.force_int() = -1;
-                (*fn)(dim,fnapproxout,&xb(k)(0),fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,ycgt);
+                (*fn)(dim,fnapproxout,&xb(k)(0),fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,ycgt,xreplace,replacex);
                 fnapproxout.negate();
 //errstream() << "phantomxyz ahem\n";
+
+                NiceAssert( !isgridopt || !replacex );
+
+                if ( replacex )
+                {
+                    xxb("&",k) = xreplace;
+                }
 
                 // ===========================================================
                 // Update constraint models
@@ -2750,7 +2770,7 @@ int bayesOpt(int dim,
         gentype dummyyres;
 
         dummyyres.force_int() = 0;
-        (*fn)(-1,dummyyres,nullptr,fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,ycgt);
+        (*fn)(-1,dummyyres,nullptr,fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,ycgt,xreplace,replacex);
 
         //errstream() << "-------------------------------------------\n";
 
@@ -3197,38 +3217,6 @@ errstream() << "\n";
                             }
                         }
 
-                        // Heuristic from Kandasamy supplementary C.1
-
-                        if ( zindex == numfids )
-                        {
-                            ++fidmaxcnt;
-                        }
-
-                        // NB: really don't want to do this on the first iteration!
-                        //if ( !((itcnt+1)%10) )
-                        if ( !((itcnt+1)%20) )
-                        {
-                            //if ( fidmaxcnt > 7 )
-                            if ( fidmaxcnt > 15 )
-                            {
-                                //fidc /= sqrt(2.0);
-                                fidc /= 2;
-                            }
-
-                            //if ( fidmaxcnt < 3 )
-                            if ( fidmaxcnt < 5 )
-                            {
-                                //fidc *= sqrt(2.0);
-                                fidc *= 2;
-                            }
-
-                            fidc = ( fidc < 0.1 ) ? 0.1 : fidc;
-                            fidc = ( fidc > 20 ) ? 20 : fidc;
-
-                            fidmaxcnt = 0;
-errstream() << "Fidelity: fidc = " << fidc << "\n";
-                        }
-
                         // Human fidelity override
 
                         if ( bopts.fidover == 1 )
@@ -3264,25 +3252,6 @@ errstream() << "Fidelity: fidc = " << fidc << "\n";
                         for ( int jij = 0 ; jij < dimfid ; jij++ )
                         {
                             xa("&",n-dimfid+jij) = ((double) zindex(jij))/((double) numfids);
-
-                            if ( zindex(jij) != numfids )
-                            {
-                                isfullfid = false;
-                            }
-                        }
-
-                        // Fidelity budget
-
-                        {
-                            SparseVector<SparseVector<gentype> > actfidel;
-
-                            for ( int jij = 0 ; jij < dimfid ; jij++ )
-                            {
-                                actfidel("&",0)("&",jij) = xa(n-dimfid+jij);
-                            }
-
-                            fidtotcost += (double) bopts.fidpenalty(actfidel);
-                            varscale    = (double) bopts.fidvar(actfidel);
                         }
                     }
 
@@ -3534,14 +3503,6 @@ errstream() << "Fidelity: fidc = " << fidc << "\n";
                 //widePrint(errstream(),resbuffer.str(),15);
             }
             //errstream() << " " << bayesruntime << " sec ";
-
-
-
-
-
-
-
-
 
             // ===============================================================
             // Update models, record results etc
@@ -3898,13 +3859,110 @@ inneroptions:
             if ( doeval )
             {
                 fnapproxout.force_int() = static_cast<int>(itcnt+1);
-                (*fn)(dim,fnapproxout,&(xb(k)(0)),fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,ycgt);
+                (*fn)(dim,fnapproxout,&(xb(k)(0)),fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,ycgt,xreplace,replacex);
                 fnapproxout.negate();
             }
 
             else if ( recordeval )
             {
 ; //FIXME how to record the new x?  *Should* we record the new x (outside of the model) given that this isn't a "real" result?
+            }
+
+            NiceAssert( !isgridopt || !replacex );
+
+            if ( replacex )
+            {
+                xxb("&",k) = xreplace;
+
+                int numfids = bopts.numfids;
+                int dimfid = bopts.getdimfid();
+
+                if ( numfids )
+                {
+                    // Retrieve fidelity
+
+                    for ( int jij = dimfid-1 ; jij >= 0 ; jij-- )
+                    {
+                        xxb("&",k).n("&",jij,1) = xxb(k)(dim-dimfid+jij);
+                        xxb("&",k).zero(dim-dimfid+jij);
+                    }
+                }
+            }
+
+
+
+
+
+
+
+
+            {
+                int numfids = bopts.numfids;
+                int dimfid = bopts.getdimfid();
+
+                Vector<int> zindex(dimfid);
+                zindex = numfids; // default to highest fidelity if set empty
+
+                if ( numfids )
+                {
+                    // Retrieve fidelity
+
+                    for ( int jij = 0 ; jij < dimfid ; jij++ )
+                    {
+                        zindex("&",jij) = (int) std::lround(((double) (xxb(k).n(jij,1)))*numfids);
+
+                        if ( zindex(jij) != numfids )
+                        {
+                            isfullfid = false;
+                        }
+                    }
+
+                    // Heuristic from Kandasamy supplementary C.1
+
+                    if ( zindex == numfids )
+                    {
+                        ++fidmaxcnt;
+                    }
+
+                    // NB: really don't want to do this on the first iteration!
+                    //if ( !((itcnt+1)%10) )
+                    if ( !((itcnt+1)%20) )
+                    {
+                        //if ( fidmaxcnt > 7 )
+                        if ( fidmaxcnt > 15 )
+                        {
+                            //fidc /= sqrt(2.0);
+                            fidc /= 2;
+                        }
+
+                        //if ( fidmaxcnt < 3 )
+                        if ( fidmaxcnt < 5 )
+                        {
+                            //fidc *= sqrt(2.0);
+                            fidc *= 2;
+                        }
+
+                        fidc = ( fidc < 0.1 ) ? 0.1 : fidc;
+                        fidc = ( fidc > 20 ) ? 20 : fidc;
+
+                        fidmaxcnt = 0;
+errstream() << "Fidelity: fidc = " << fidc << "\n";
+                    }
+
+                    // Fidelity budget
+
+                    {
+                        SparseVector<SparseVector<gentype> > actfidel;
+
+                        for ( int jij = 0 ; jij < dimfid ; jij++ )
+                        {
+                            actfidel("&",0)("&",jij) = xa(dim-dimfid+jij);
+                        }
+
+                        fidtotcost += (double) bopts.fidpenalty(actfidel);
+                        varscale    = (double) bopts.fidvar(actfidel);
+                    }
+                }
             }
 
 
@@ -4315,7 +4373,7 @@ class fninnerArg
     int dimfid;
     Vector<double> &scnoise;
 
-    void operator()(int dim, gentype &res, const double *x, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &ycgt)
+    void operator()(int dim, gentype &res, const double *x, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex)
     {
         // ===========================================================================
         // Inner loop evaluation function.  This is used as a buffer between the
@@ -4383,21 +4441,23 @@ class fninnerArg
         xaddgrad.resize(0);
         xaddf4.resize(0);
         xobstype = 2; // by default assume result is an equality observation
+        replacex = 0;
 
 //errstream() << "phantomxyzabc bayesopt 0: res = " << res << "\n";
         if ( res.isValSet() )
         {
             // Modified variance is returned as the second element of a set
 
-            if ( ( res.size() >= 9 ) && !(res.all())(9).isValNull() ) { xobstype         = (int)    ((res.all())(8));               }
-            if ( ( res.size() >= 8 ) && !(res.all())(8).isValNull() ) { xaddf4           =          ((res.all())(7)).cast_vector(); }
-            if ( ( res.size() >= 7 ) && !(res.all())(7).isValNull() ) { xaddgrad         =          ((res.all())(6)).cast_vector(); }
-            if ( ( res.size() >= 6 ) && !(res.all())(6).isValNull() ) { xaddranksidechan =          ((res.all())(5)).cast_vector(); }
-            if ( ( res.size() >= 5 ) && !(res.all())(5).isValNull() ) { xaddrank         =          ((res.all())(4)).cast_vector(); }
-            if ( ( res.size() >= 4 ) && !(res.all())(4).isValNull() ) { xsidechan        =          ((res.all())(3)).cast_vector(); }
-            if ( ( res.size() >= 3 ) && !(res.all())(2).isValNull() ) { ycgt             =          ((res.all())(2)).cast_vector(); }
-            if ( ( res.size() >= 2 ) && !(res.all())(1).isValNull() ) { addvar           = (double) ((res.all())(1));               }
-            if ( ( res.size() >= 1 )                                ) { res              =          ((res.all())(0));               }
+            if ( ( res.size() >= 10 ) && !(res.all())(9).isValNull() ) { xobstype         = (int)    ((res.all())(9));                                   }
+            if ( ( res.size() >=  9 ) && !(res.all())(8).isValNull() ) { xaddf4           =          ((res.all())(8)).cast_vector();                     }
+            if ( ( res.size() >=  8 ) && !(res.all())(7).isValNull() ) { xaddgrad         =          ((res.all())(7)).cast_vector();                     }
+            if ( ( res.size() >=  7 ) && !(res.all())(6).isValNull() ) { xaddranksidechan =          ((res.all())(6)).cast_vector();                     }
+            if ( ( res.size() >=  6 ) && !(res.all())(5).isValNull() ) { xaddrank         =          ((res.all())(5)).cast_vector();                     }
+            if ( ( res.size() >=  5 ) && !(res.all())(4).isValNull() ) { xsidechan        =          ((res.all())(4)).cast_vector();                     }
+            if ( ( res.size() >=  4 ) && !(res.all())(3).isValNull() ) { xreplace         =          ((res.all())(3)).cast_sparsevector(); replacex = 1; }
+            if ( ( res.size() >=  3 ) && !(res.all())(2).isValNull() ) { ycgt             =          ((res.all())(2)).cast_vector();                     }
+            if ( ( res.size() >=  2 ) && !(res.all())(1).isValNull() ) { addvar           = (double) ((res.all())(1));                                   }
+            if ( ( res.size() >=  1 )                                ) { res              =          ((res.all())(0));                                   }
         }
 
 //FIXME: between addvar and sidechan, add two new elements:
@@ -4534,10 +4594,10 @@ class fninnerArg
 // and saves things like timing, beta etc.
 // ===========================================================================
 
-void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &ycgt);
-void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &ycgt)
+void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex);
+void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex)
 {
-    (*((fninnerArg *) arg))(dim,res,x,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,ycgt);
+    (*((fninnerArg *) arg))(dim,res,x,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,ycgt,xreplace,replacex);
     return;
 }
 
