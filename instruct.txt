@@ -512,12 +512,6 @@ Pre-Setup options (after multi-ML options):
                          lse - LSV: auto-encoding machine.                    
                          lsR - LSV: scalar regression random FF.#             
                                                                               
-                               Super-Sparse support vector machines (SSV):    
-                                                                              
-                         sss - SSV: single class.                             
-                         ssc - SSV: binary classification.                    
-                         ssr - SSV: scalar regression.                        
-                                                                              
                                Gaussian processes (GPR):                      
                                                                               
                          gpr - GPR: gaussian process scalar regression.       
@@ -550,15 +544,6 @@ Pre-Setup options (after multi-ML options):
                          kne - KNN: auto-encoder.                             
                          knp - KNN: density estimation.                       
                          kne - KNN: auto-encoding machine.                    
-                                                                              
-                               One-layer Neural Networks (ONN):               
-                                                                              
-                         onc - ONN: binary classification.                    
-                         onr - ONN: scalar regression.                        
-                         onv - ONN: vector regression.                        
-                         ona - ONN: anionic regression.                       
-                         one - ONN: auto-encoding machine.                    
-                         ong - ONN: gentype machine.                          
                                                                               
                                Improvement measures (IMPs):                   
                                                                               
@@ -1029,13 +1014,6 @@ Setup options (after pre-setup options):
                            q - 2-norm.                                        
          -mls n          - Set number of layers (not including output, dft 0).
                                                                               
-                  -- SSV specific options                          --         
-                                                                              
-         -sR  {l,q}      - beta  regulation  type.   In SSV  models  the  beta
-                           regularisation term is set by this:                
-                           l - linear: sigma.||beta||_1.                      
-                           q - quadratic: sigma.||beta||_2^2 (default).       
-                                                                              
                   -- BLK specific options                          --         
                                                                               
          -mc  n          - (Mercer kernel inheritance block): sets the size of
@@ -1160,15 +1138,6 @@ Optimization options (after setup options):
          -oft m          - max iterations for 4-norm optim (default 100).     
          -ofM n          - max 4-kernel cache for 4-norm optim (default 1000).
                                                                               
-                  -- SSV specific options                          --         
-                                                                              
-         -oge e          - tolerance e>=0 for SSV optim (default 0.005).      
-         -ogm m          - Momentum factor for SSV optim (default 0.05).      
-         -ogr t          - Learning rate for SSV optim (default 0.3).         
-         -ogs s          - lr scaleback factor for SSV optim (default 0.8).   
-         -ogt m          - max iterations for SSV optim (default 100).        
-         -ogT n          - max training time for SSV optim (default 1000).    
-                                                                              
                   -- MLM specific options                          --         
                                                                               
          -omr r          - Learning rate for MLM optim (default 0.3).         
@@ -1191,7 +1160,7 @@ Preload options (after training options):
          -pS             - scale to ensure that abs2(alpha) = 1.              
                                                                               
                            SVM: alpha and b are scaled by s.                  
-                           LSV/SSV: like SVM.                                 
+                           LSV: like SVM.                                     
                            GPR: y and K (kernel weight) are scaled by s.      
                            BLK consensus: scale all parts.                    
                            Others: may or may not be implemented, see code.   
@@ -1556,6 +1525,13 @@ Learning options (after post-load modifications):
                                with  non-real  kernel  and  non-real  training
                                vectors).                                      
                                                                               
+         -mu  {0,1,2}    - Prior mean type:                                   
+                           0 - prior mean 0 (default).                        
+                           1 - prior mean mu(x) specified directly.           
+                           2 - prior mean g(x) inherited from ML.             
+         -mugt mu        - Prior mean function of var(0,i), i=0,1,... (-mu 1).
+         -muml ml        - Prior mean ML number (-mu 2).                      
+                                                                              
                   -- SVM specific options                          --         
                                                                               
          -w   eps        - epsilon: sets  width of epsilon  tube/insensitivity
@@ -1788,21 +1764,11 @@ Learning options (after post-load modifications):
          -bfyx $fn       - save y,x data to file $fn on sys g(x) if defined.  
          -bfr $fn        - get result from file $fn on sys g(x) if defined.   
                                                                               
-                  -- SSV specific options                          --         
-                                                                              
-         -nzs i          - sets number of support vectors for SSV.            
-                                                                              
-         -vlb [x]        - sets lower bound for support vectors for SSV.      
-         -vub [x]        - sets upper bound for support vectors for SSV.      
-                                                                              
-         -sNl f          - (linear) bias forcing term f (default 0).          
-                                                                              
                   -- MLM specific options                          --         
                                                                               
          -mlc i c        - Set C (regularisation) value for layer i (deflt 1).
                                                                               
 Kernel selection options (after learning options):                            
-                                                                              
                                                                               
                   ** By default a  single kernel is  chosen.  More **         
                   ** complex kernel  dictionaries are  possible by **         
@@ -1945,7 +1911,6 @@ Kernel selection options (after learning options):
          -kd  x          - kernel param i0  = x   (default 2).                
          -kG  x          - kernel param i0  = x   (default 1).                
          -kV  i x        - kernel param ii  = x   (default 0).                
-                                                                              
                                                                               
          -kI  v          - set kernels  indexing using  given index  vector v,
                            where  the  argument  is a  vector of  non-negative
@@ -2246,6 +2211,34 @@ Automatic parameter tuning options (after kernel selection):
          -tkloo m        - Like -tkL, but minimises leave-one-out error.      
          -tkrec m        - Like -tkL, but minimises recall error.             
                                                                               
+                           NB: if you don't want a particular parameter tuned,
+                               use eg  -kd 1.2c. The  c here  makes the  value
+                               nominally consant, so it will be left alone.   
+                                                                              
+         -tcL   m        - Like -tkL but for C praameter.                     
+         -tcloo m        - Like -tkloo but for C parameter.                   
+         -tcrec m        - Like -tkrec but for C parameter.                   
+                                                                              
+         -teL   m        - Like -tkL but for eps parameter.                   
+         -teloo m        - Like -tkloo but for eps parameter.                 
+         -terec m        - Like -tkrec but for eps parameter.                 
+                                                                              
+         -tceL   m       - Like -tkL but for C and eps parameter.             
+         -tceloo m       - Like -tkloo but for C and eps parameter.           
+         -tcerec m       - Like -tkrec but for C and eps parameter.           
+                                                                              
+         -tkeL   m       - Like -tkL but for K and eps parameters.            
+         -tkeloo m       - Like -tkloo but for K and eps parameters.          
+         -tkerec m       - Like -tkrec but for K and eps parameters.          
+                                                                              
+         -tkcL   m       - Like -tkL but for K and C parameters.              
+         -tkcloo m       - Like -tkloo but for K and C parameters.            
+         -tkcrec m       - Like -tkrec but for K and C parameters.            
+                                                                              
+         -tkceL   m      - Like -tkL but for K, C and eps parameters.         
+         -tkceloo m      - Like -tkloo but for K, C and eps parameters.       
+         -tkcerec m      - Like -tkrec but for K, C and eps parameters.       
+                                                                              
                   -- SVM specific options                          --         
                                                                               
                   ** These  options set  parameters in  such a way **         
@@ -2458,6 +2451,8 @@ Grid search parameter selection (after automatic parameter tuning):
                               - var(90,8): raw start  time (seconds,  with ref
                                            to some arbitrary point in time.   
                               - var(90,9): x augmentation model (if used).    
+                              - var(90,10): equality constraint model (").    
+                              - var(90,11): inequality constraint model (").  
                                                                               
                               Note  that   changes  here  affect   the  *next*
                               projection step 3, not the current one.         
@@ -2481,24 +2476,30 @@ Grid search parameter selection (after automatic parameter tuning):
                            - non-trivial results are  returned for model based
                              methods in the following format:                 
                                                                               
-                 { y v [ xx1 xx2 ... xxn ] xf [ xf1 xf2 ... xfn ] xff xf3 t } 
+                      { y v [cg1..cgn] x' [xx1..xxn] xf [xf1..xfn] xff xf3 t }
                                                                               
                              where:                                           
                                                                               
-                             + y is the usual result.                         
+                             + y is the usual result. You can set y=null which
+                               will prevent the sample from being added to the
+                               function model (eg if c(x)<0).                 
                              + v is the variance of the measurement noise.    
-                             + [ xx1 xx2 ... xxn ]  is side-channel  data (see
-                               -gmsc etc for information (use [ ] for dflt).  
+                             + [ cg1 .. cgn ] for inequality constraints (want
+                               cgi(x) > 0 for i=1,2,...,n.  See -cmgt).       
+                             + x' if non-null, this  indicates that the actual
+                               evaluation happened (if y=f(x'), not y=f(x)).  
+                             + [ xx1 ... xxn ] is side-channel data (see -gmsc
+                               etc for information.                           
                              + xf is for  rank observations  (that is,  rather
                                than  an  observation   g(x) = y,  this  is  an
-                               observation g(x) - g(xf) = y ([ ] for deflt).  
-                             + [ xf1 xf2 ... xfn ] is side-channel data on xf.
-                               (use [ ] for default).                         
-                             + xff is for gradient observations ([ ] is dflt).
-                             + xf3 is for augmented observations (" dflt).   
+                               observation g(x) - g(xf) = y.                  
+                             + [ xf1 ... xfn ] is side-channel data on xf.    
+                             + xff is for gradient observations.              
+                             + xf3 is for augmented observations.             
                              + t observation type (0 n/a, +1 >=, -1 <=, 2 ==).
                                                                               
-                             Not all additional data is required.             
+                             Not all additional data is required. Use null for
+                             default operation ( or [ ] for vectors).         
                                                                               
                            - be wary  of using  -fo, -foe, -AAi...  and -tI...
                              here as they will  not work as  expected (vectors
@@ -2869,6 +2870,8 @@ Grid search parameter selection (after automatic parameter tuning):
                   **   exceeded.                                   **         
                   ** - the max training time is exceeded.          **         
                                                                               
+                                                                              
+                                                                              
                   ** Model-based optimisation options.             **         
                   ** (this includes Bayesian optimisation)         **         
                                                                               
@@ -2877,6 +2880,14 @@ Grid search parameter selection (after automatic parameter tuning):
          -gma n          - set dim of default GPR for multi-objective optim.  
          -gmr            - add noise to model observations.                   
          -gmR            - don't add noise to model observations (default).   
+                                                                              
+         -gmgt n         - number of inequality constraints c(x) >= 0.        
+                           0 - normal operation (default).                    
+                           n - see above.                                     
+                           Equality  constraints  are   enforced  (in  BO)  by
+                           multiplying   the   acquisition  function   by  the
+                           posterior probability  that the  constraint is met.
+                           For EI, this is exactly cEI.                       
                                                                               
          -gmsc n         - enable/disable side-channel learning:              
                            0 - normal operation.                              
@@ -2922,20 +2933,24 @@ Grid search parameter selection (after automatic parameter tuning):
                                                                               
          -gmd s          - set noise variance for default GPR model.          
          -gmsd s         - set noise variance for default q(x) model.         
+         -gmgtd s        - set noise variance for default c(x) model.         
                                                                               
          -gmbgn n        - set default GPR model posterior variance terms. See
                            -bgn for details.                                  
-         -gmsbgn n       - set default q(x) model postrior variance terms. See
-                           -bgn for details.                                  
+         -gmsbgn n       - set default q(x) model postrior variance terms.    
+         -gmgtbgn n      - set default c(x) model postrior variance terms.    
                                                                               
          -gmg g          - set length scale for default GPR kernel.           
          -gmsg g         - set length scale for default q(x) kernel.          
+         -gmgtg g        - set length scale for default c(x) kernel.          
                                                                               
          -gmgg g         - set ARD length scale vector for default GPR kernel.
          -gmsgg g        - set ARD length scale vector for dfault q(x) kernel.
+         -gmgtgg g       - set ARD length scale vector for dfault c(x) kernel.
                                                                               
          -gmk...         - set default kernel parameters on GP for GPR model. 
          -gmsk...        - set default kernel paras on GP for side-channel.   
+         -gmgtk...       - set default kernel paras on GP for inequality.     
                                                                               
          -gmn n          - sigma estimation model:                            
                            0 - mu and  sigma approximated by a single  ML that
@@ -2992,6 +3007,7 @@ Grid search parameter selection (after automatic parameter tuning):
          -gmmc n         - Automatic tuning for source model (see -gmx).      
          -gmmd n         - Automatic tuning for difference model (see -gmx).  
          -gmsmd n        - Automatic tuning for q(x) model (see -gmsc).       
+         -gmgtmd n       - Automatic tuning for c(x) model (see -gmgtc).      
                                                                               
                            The above tuning is of  (some of the) kernel params
                            on a heuristic basis using rudimentary grid search.
@@ -3091,7 +3107,7 @@ Grid search parameter selection (after automatic parameter tuning):
          -gbj n          - number  of random  start/seed  points  (default  -1
                            translates to d+1, where d is the dimension).      
          -gbt m          - max  iteration  count for  search algorithm  (0 for
-                           no limit, default -1  translates to 10dm where d is
+                           no limit, default -1  translates to 15dm where d is
                            and m is the number of  objectives, -2 to stop when
                            min_x err(x) <= maxerr).                           
          -gbe e          - maxerr as required with -gbt -2 (see Kirschner et.,
@@ -3121,9 +3137,17 @@ Grid search parameter selection (after automatic parameter tuning):
                                                                               
          -gbG n          - do  grid-search,  where ML n  defines grid  data in
                            terms of x (dimensions  must agree  with definition
-                           in -gb) and y (must be real).                      
+                           in -gb). If y is NULL then it is ignored: otherwise
+                           it will  be treated  as a  prior  observation.  The
+                           y values in source will be filled by BO.           
+                                                                              
+                           NB: if all data in  the ML has non-null  y then all
+                               data will be treated as  prior observations and
+                               the  BO  will  revert  to  standard  (non-grid)
+                               operation.                                     
                                                                               
          -gbD d          - delta factor used in GP-UCB method (default 0.1).  
+         -gbzz zeta      - zeta factor in EI method (deflt 0.  0.01 works ok).
          -gbk n          - nu factor Srinivas GP-UCB (deft 0.2, see Srivinas).
          -gbx n          - |D| (size  of search  space grid) for  gpUCB finite
                            (default -1, which  means set to size  of grid data
@@ -3166,12 +3190,6 @@ Grid search parameter selection (after automatic parameter tuning):
                            zero  in the  feasible region,  very large  outside
                            (that  is, a  penalty for  a minimisation problem).
                            Default value is an empty vector.                  
-         -gbl w          - distance   weight   (default   0).   Assuming   the
-                           acquisition function is  strictly positive replaces
-                           it with  (1-w.||p-q||_2)*acqusition(q),  where p is
-                           the previous  parameter set  (specified by  -g) and
-                           q  is the  proposed parameter  set.  Handy  to make
-                           incremental retrains faster.                       
                                                                               
          -gbts $estring  - string  to be evaluated  before each (inner)  iter.
                            var(90,4) is the inner iteration count.            
@@ -3899,19 +3917,11 @@ Performance estimation options (after bootstrap):
          -tMMx $fn x     - combines -tM and -tMx.                             
          -tMMvx $fn v x  - combines -tM and -tMvw.                            
                                                                               
-         -tMpy   fname x - evaluate python script fname with scalar x.        
-         -tMpyv  fname x - evaluate python script fname with vector x.        
-         -tMpyf  fname x - evaluate python script fname with function x.      
-                                                                              
-         -tMxpy  fname x - like -tMpy, but write to lRateList.txt (15).*      
-         -tMxpyv fname x - like -tMpyv, but write to lRateList.txt (15).*     
-         -tMxpyf fname x - like -tMpyf, but write to lRateList.txt (15).*     
-                           *result loaded from pyres.txt.                     
-                                                                              
-         -tMypy  fname x - like -tMpy, but write to lRateList.txt (15).*      
-         -tMypyv fname x - like -tMpyv, but write to lRateList.txt (15).*     
-         -tMypyf fname x - like -tMpyf, but write to lRateList.txt (15).*     
-                           *result loaded from pyres.txt.                     
+         -tMpy   fname x - evaluate python script fname with scalar x.*       
+         -tMpyv  fname x - evaluate python script fname with vector x.*       
+         -tMpyf  fname x - evaluate python script fname with function x.*     
+                           *executes "python3  fname x > pyres.txt"  and grabs
+                            result from pyres.txt.                            
                                                                               
          -tMexe  fname x - evaluate executable fname with scalar x.           
          -tMexev fname x - evaluate executable fname with vector x.           
