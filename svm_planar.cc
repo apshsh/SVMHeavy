@@ -1629,14 +1629,14 @@ int SVM_Planar::qaddTrainingVector(int i, const Vector<double> &z, Vector<Sparse
     return res;
 }
 
-int SVM_Planar::addTrainingVector(int i, const gentype &zi, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Planar::addTrainingVector(int i, const gentype &zi, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
-    return SVM_Planar::addTrainingVector(i,(double) zi,x,Cweigh,epsweigh,2);
+    return SVM_Planar::addTrainingVector(i,(double) zi,x,Cweigh,epsweigh,dval); //2);
 }
 
-int SVM_Planar::qaddTrainingVector(int i, const gentype &zi, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Planar::qaddTrainingVector(int i, const gentype &zi, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
-    return SVM_Planar::qaddTrainingVector(i,(double) zi,x,Cweigh,epsweigh,2);
+    return SVM_Planar::qaddTrainingVector(i,(double) zi,x,Cweigh,epsweigh,dval); //2);
 }
 
 int SVM_Planar::addTrainingVector(int i, const Vector<gentype> &zi, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)

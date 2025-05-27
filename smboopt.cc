@@ -876,9 +876,10 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 */
 
         int xind = 0;
-        int yind = 1;
+        int yind = getdimfid() ? (DEFAULT_TUPLE_INDEX_STEP) : 1; // this is very naive, but as we are only doing 2-dimensions it makes sense
         int j;
 
+//errstream() << "phantomxyz yind = " << yind << "\n";
         //int i;
         //double xindval;
 
@@ -1375,11 +1376,14 @@ void SMBOOptions::model_sublog(const ML_Base &plotmodel, gentype &baselinefn, in
     mlnamefile << plotmodel << "\n";
     mlnamefile.close();
 
-    if ( ( plotmodel.tspaceDim() == 1 ) && ( plotmodel.xspaceDim() == 1 ) )
+//errstream() << "phantomxyz tspaceDim = " << plotmodel.tspaceDim() << "\n";
+//errstream() << "phantomxyz xspaceDim = " << plotmodel.xspaceDim() << "\n";
+    if ( ( plotmodel.tspaceDim() == 1 ) && plotmodel.N() && ( plotmodel.x()(0).indsize() == 1 ) ) //( plotmodel.xspaceDim() == 1 ) )
     {
         int incdata = incbaselinefn ? 3 : 1;
         int incvar  = 1;
         int xusevar = 0;
+//errstream() << "phantomxyz plot model 1d\n";
 
         SparseVector<gentype> xtemplate;
 
@@ -1387,12 +1391,13 @@ void SMBOOptions::model_sublog(const ML_Base &plotmodel, gentype &baselinefn, in
         plotml(plotmodel,xind,xmin,xmax,omin,omax,ffname,dname,modeloutformat,incdata,baselinefn,incvar,xusevar,xtemplate,0,0,sf);
     }
 
-    else if ( ( plotmodel.tspaceDim() == 1 ) && ( plotmodel.xspaceDim() == 2 ) )
+    else if ( ( plotmodel.tspaceDim() == 1 ) && plotmodel.N() && ( plotmodel.x()(0).indsize() == 2 ) ) //( plotmodel.xspaceDim() == 2 ) )
     {
         int incdata = incbaselinefn ? 2 : 1;
         int incvar  = 1;
         int xusevar = 0;
         int yusevar = 1;
+//errstream() << "phantomxyz plot model 2d\n";
 
         SparseVector<gentype> xtemplate;
 
@@ -1868,6 +1873,22 @@ int SMBOOptions::model_setd_mu(int imu, int nd)
     return res;
 }
 
+int SMBOOptions::model_setd_cgt(int imu, const Vector<int> &nd)
+{
+    int res = 0;
+    int i;
+
+    for ( i = 0 ; i < cgtapprox.size() ; i++ )
+    {
+        int iimu = ( ( (*(cgtapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+        int nnd = ( nd(i) == -2 ) ? 2 : nd(i);
+
+        res += (*(cgtapprox("&",i))).setd(iimu,nnd);
+    }
+
+    return res;
+}
+
 int SMBOOptions::model_setd_sigma(int isigma, int nd)
 {
     int res = 0;
@@ -1929,6 +1950,28 @@ int SMBOOptions::model_setyd_mu(int imu, int nd, const gentype &ny, double varad
         if ( varadd )
         {
             res |= (*(muapprox("&",i))).setsigmaweight((*(muapprox(i))).N()-1,1+(varadd/((*(muapprox("&",i))).sigma())));
+        }
+    }
+
+    return res;
+}
+
+int SMBOOptions::model_setyd_cgt(int imu, const Vector<int> &nd, const Vector<gentype> &ny, double varadd)
+{
+    int res = 0;
+    int i;
+
+    for ( i = 0 ; i < cgtapprox.size() ; i++ )
+    {
+        int iimu = ( ( (*(cgtapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+        int nnd = ( nd(i) == -2 ) ? 2 : nd(i);
+
+        res += (*(cgtapprox("&",i))).sety(iimu,ny(i));
+        res += (*(cgtapprox("&",i))).setd(iimu,nnd);
+
+        if ( varadd )
+        {
+            res |= (*(cgtapprox("&",i))).setsigmaweight((*(cgtapprox(i))).N()-1,1+(varadd/((*(cgtapprox("&",i))).sigma())));
         }
     }
 
@@ -2079,10 +2122,12 @@ int SMBOOptions::model_addTrainingVector_musigma(const gentype &y, const gentype
 
 int SMBOOptions::model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x, double varadd)
 {
-    return modelcgt_int_addTrainingVector(y,x,model_convertx(xx,x),2,varadd);
+    Vector<int> xobstype;
+
+    return modelcgt_int_addTrainingVector(y,x,model_convertx(xx,x),xobstype,varadd);
 }
 
-int SMBOOptions::model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype, double varadd)
+int SMBOOptions::model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, const Vector<int> &xobstype, double varadd)
 {
     SparseVector<gentype> xxx(x);
 
@@ -2103,7 +2148,7 @@ int SMBOOptions::model_addTrainingVector_sigmaifsep(const gentype &y, const Spar
     return ires;
 }
 
-int SMBOOptions::model_addTrainingVector_mu_sigmaifsame(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype, double varadd, int dval)
+int SMBOOptions::model_addTrainingVector_mu_sigmaifsame(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype, double varadd)
 {
         int ires = 0;
 
@@ -2129,8 +2174,8 @@ int SMBOOptions::model_addTrainingVector_mu_sigmaifsame(const gentype &y, const 
         {
             const SparseVector<gentype> &xxxxxx = model_convertx(xx,xxx);
 
-            ires |= modeldiff_int_addTrainingVector(y,ypred,xxxxxx,xobstype,varadd,dval);
-            ires |= modelmu_int_addTrainingVector(y,x,xxxxxx,xobstype,varadd,dval);
+            ires |= modeldiff_int_addTrainingVector(y,ypred,xxxxxx,xobstype,varadd);
+            ires |= modelmu_int_addTrainingVector(y,x,xxxxxx,xobstype,varadd);
         }
 
         return ires;
@@ -2368,7 +2413,7 @@ int SMBOOptions::default_modelaugx_setkernelgg (const SparseVector<gentype> &nv)
 
 
 
-int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVector<gentype> &x, const SparseVector<gentype> &xx, int xobstype, double varadd, int dval)
+int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVector<gentype> &x, const SparseVector<gentype> &xx, int xobstype, double varadd)
 {
         locires.add(locires.size()); locires("&",locires.size()-1) = (*(muapprox(0))).N();
         locxres.add(locxres.size()); locxres("&",locxres.size()-1) = x;
@@ -2385,6 +2430,7 @@ int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVec
 //errstream() << "phantomxyzxyzxyz bayesopt addvec int xtemplate (b): " << xtemplate << "\n";
 
         int i,ires = 0;
+        int dval = xobstype;
 
         if ( ennornaive )
         {
@@ -2394,18 +2440,20 @@ int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVec
 
             for ( i = 0 ; i < muapprox.size() ; ++i )
             {
+                int locdval = ( (*(muapprox(i))).type() == 212 ) ? 2 : dval;
+
                 if ( y.isValVector() )
                 {
                     const gentype &yi = ((const Vector<gentype> &) y)(i);
 
-                    ires |= (*(muapprox("&",i))).addTrainingVector((*(muapprox(i))).N(),yi,convnearuptonaive(tempx,xxx));
+                    ires |= (*(muapprox("&",i))).addTrainingVector((*(muapprox(i))).N(),yi,convnearuptonaive(tempx,xxx),1.0,1.0,locdval);
 
                     if ( varadd )
                     {
                         ires |= (*(muapprox("&",i))).setsigmaweight((*(muapprox(i))).N()-1,1+(varadd/((*(muapprox("&",i))).sigma())));
                     }
 
-                    if ( dval != 2 )
+                    if ( dval != locdval )
                     {
                         int imu = (*(muapprox(i))).N()-1;
                         int iimu = ( ( (*(muapprox(i))).type() == 212 ) ? (-imu-1) : imu );
@@ -2417,14 +2465,14 @@ int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVec
 
                 else
                 {
-                    ires |= (*(muapprox("&",i))).addTrainingVector((*(muapprox(i))).N(),y,convnearuptonaive(tempx,xxx));
+                    ires |= (*(muapprox("&",i))).addTrainingVector((*(muapprox(i))).N(),y,convnearuptonaive(tempx,xxx),1.0,1.0,locdval);
 
                     if ( varadd )
                     {
                         ires |= (*(muapprox("&",i))).setsigmaweight((*(muapprox(i))).N()-1,1+(varadd/((*(muapprox("&",i))).sigma())));
                     }
 
-                    if ( dval != 2 )
+                    if ( dval != locdval )
                     {
                         int imu = (*(muapprox(i))).N()-1;
                         int iimu = ( ( (*(muapprox(i))).type() == 212 ) ? (-imu-1) : imu );
@@ -2445,18 +2493,20 @@ int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVec
 
             for ( i = 0 ; i < muapprox.size() ; ++i )
             {
+                int locdval = ( (*(muapprox(i))).type() == 212 ) ? 2 : dval;
+
                 if ( y.isValVector() )
                 {
                     const gentype &yi = ((const Vector<gentype> &) y)(i);
 
-                    ires |= (*(muapprox("&",i))).addTrainingVector((*(muapprox(i))).N(),yi,xxx);
+                    ires |= (*(muapprox("&",i))).addTrainingVector((*(muapprox(i))).N(),yi,xxx,1.0,1.0,locdval);
 
                     if ( varadd )
                     {
                         ires |= (*(muapprox("&",i))).setsigmaweight((*(muapprox(i))).N()-1,1+(varadd/((*(muapprox("&",i))).sigma())));
                     }
 
-                    if ( dval != 2 )
+                    if ( dval != locdval )
                     {
                         int imu = (*(muapprox(i))).N()-1;
                         int iimu = ( ( (*(muapprox(i))).type() == 212 ) ? (-imu-1) : imu );
@@ -2468,14 +2518,14 @@ int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVec
 
                 else
                 {
-                    ires |= (*(muapprox("&",i))).qaddTrainingVector((*(muapprox(i))).N(),y,xxx);
+                    ires |= (*(muapprox("&",i))).qaddTrainingVector((*(muapprox(i))).N(),y,xxx,1.0,1.0,locdval);
 
                     if ( varadd )
                     {
                         ires |= (*(muapprox("&",i))).setsigmaweight((*(muapprox(i))).N()-1,1+(varadd/((*(muapprox("&",i))).sigma())));
                     }
 
-                    if ( dval != 2 )
+                    if ( dval != locdval )
                     {
                         int imu = (*(muapprox(i))).N()-1;
                         int iimu = ( ( (*(muapprox(i))).type() == 212 ) ? (-imu-1) : imu );
@@ -2487,6 +2537,7 @@ int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVec
             }
         }
 
+/*
         if ( xobstype != 2 )
         {
             for ( i = 0 ; i < muapprox.size() ; ++i )
@@ -2497,6 +2548,7 @@ int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVec
                 ires |= (*(muapprox("&",i))).setd(iimu,xobstype);
             }
         }
+*/
 
         for ( i = 0 ; i < muapprox.size() ; ++i )
         {
@@ -2509,7 +2561,7 @@ int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVec
         return ires;
 }
 
-int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const SparseVector<gentype> &x, const SparseVector<gentype> &xx, int xobstype, double varadd, int dval)
+int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const SparseVector<gentype> &x, const SparseVector<gentype> &xx, const Vector<int> &xobstype, double varadd)
 {
     (void) x;
 
@@ -2527,14 +2579,17 @@ int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const 
 
         for ( i = 0 ; i < cgtapprox.size() ; ++i )
         {
-            if ( !y(i).isValNull() )
+            gentype yval = y(i).isValNull() ? 0.0_gent : y(i);
+
             {
-                ires |= (*(cgtapprox("&",i))).addTrainingVector((*(cgtapprox(i))).N(),y(i),convnearuptonaive(tempx,xxx));
+                ires |= (*(cgtapprox("&",i))).addTrainingVector((*(cgtapprox(i))).N(),yval,convnearuptonaive(tempx,xxx));
 
                 if ( varadd )
                 {
                     ires |= (*(cgtapprox("&",i))).setsigmaweight((*(cgtapprox(i))).N()-1,1+(varadd/((*(cgtapprox("&",i))).sigma())));
                 }
+
+                int dval = xobstype.size() ? xobstype(i) : 0;
 
                 if ( dval != 2 )
                 {
@@ -2554,14 +2609,18 @@ int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const 
 
         for ( i = 0 ; i < cgtapprox.size() ; ++i )
         {
-            if ( !y(i).isValNull() )
+            gentype yval = y(i).isValNull() ? 0.0_gent : y(i);
+
+            //if ( !y(i).isValNull() )
             {
-                ires |= (*(cgtapprox("&",i))).addTrainingVector((*(cgtapprox(i))).N(),y(i),xxx);
+                ires |= (*(cgtapprox("&",i))).addTrainingVector((*(cgtapprox(i))).N(),yval,xxx);
 
                 if ( varadd )
                 {
                     ires |= (*(cgtapprox("&",i))).setsigmaweight((*(cgtapprox(i))).N()-1,1+(varadd/((*(cgtapprox("&",i))).sigma())));
                 }
+
+                int dval = xobstype.size() ? xobstype(i) : 0;
 
                 if ( dval != 2 )
                 {
@@ -2571,20 +2630,6 @@ int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const 
 
                     ires |= (*(cgtapprox("&",i))).setd(iimu,ddval);
                 }
-            }
-        }
-    }
-
-    if ( xobstype != 2 )
-    {
-        for ( i = 0 ; i < cgtapprox.size() ; ++i )
-        {
-            if ( !y(i).isValNull() )
-            {
-                int imu = (*(cgtapprox(i))).N()-1;
-                int iimu = ( ( (*(cgtapprox(i))).type() == 212 ) ? (-imu-1) : imu );
-
-                ires |= (*(cgtapprox("&",i))).setd(iimu,xobstype);
             }
         }
     }
@@ -2617,7 +2662,7 @@ int SMBOOptions::modelsigma_int_addTrainingVector(const gentype &y, const Sparse
     return ires;
 }
 
-int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype &ypred, const SparseVector<gentype> &xx, int xobstype, double varadd, int dval)
+int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype &ypred, const SparseVector<gentype> &xx, int xobstype, double varadd)
 {
         (void) ypred;
         (void) xobstype;
@@ -2697,10 +2742,10 @@ int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype
 
             ires |= (*diffmodel).addTrainingVector((*diffmodel).N(),diffval,convnearuptonaive(tempx,xxx),Cweight);
 
-            if ( dval != 2 )
-            {
-                ires |= (*diffmodel).setd((*diffmodel).N()-1,dval);
-            }
+//            if ( dval != 2 )
+//            {
+//                ires |= (*diffmodel).setd((*diffmodel).N()-1,dval);
+//            }
         }
 
         return ires;

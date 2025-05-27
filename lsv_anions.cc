@@ -78,7 +78,7 @@ int LSV_Anions::getInternalClass(const gentype &y) const
     return 0;
 }
 
-int LSV_Anions::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int LSV_Anions::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
@@ -91,10 +91,10 @@ int LSV_Anions::addTrainingVector(int i, const gentype &y, const SparseVector<ge
     alltraintargA.add(i);
     alltraintargA("&",i) = (const d_anion &) y;
 
-    return LSV_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh);
+    return LSV_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 }
 
-int LSV_Anions::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int LSV_Anions::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
@@ -107,7 +107,7 @@ int LSV_Anions::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype
     alltraintargA.add(i);
     alltraintargA("&",i) = (const d_anion &) y;
 
-    return LSV_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
+    return LSV_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 }
 
 int LSV_Anions::removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x)

@@ -174,6 +174,10 @@ public:
     virtual       double                 yR      (int i)              const override { return getQconst().yR(i);        }
     virtual const d_anion               &yA      (int i)              const override { return getQconst().yA(i);        }
     virtual const Vector<double>        &yV      (int i)              const override { return getQconst().yV(i);        }
+    virtual const gentype               &yp      (int i)              const override { return getQconst().yp(i);        }
+    virtual       double                 ypR     (int i)              const override { return getQconst().ypR(i);       }
+    virtual const d_anion               &ypA     (int i)              const override { return getQconst().ypA(i);       }
+    virtual const Vector<double>        &ypV     (int i)              const override { return getQconst().ypV(i);       }
     virtual const vecInfo               &xinfo   (int i)              const override { return getQconst().xinfo(i);     }
     virtual       int                    xtang   (int i)              const override { return getQconst().xtang(i);     }
     virtual       double                 alphaVal(int i)              const override { return getQconst().alphaVal(i);  }
@@ -370,8 +374,8 @@ public:
 
     // Training set modification:
 
-    virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1) override { return  getQ().addTrainingVector(i,y,x,Cweigh,epsweigh); }
-    virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1) override { return getQ().qaddTrainingVector(i,y,x,Cweigh,epsweigh); }
+    virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override { return  getQ().addTrainingVector(i,y,x,Cweigh,epsweigh,d); }
+    virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override { return getQ().qaddTrainingVector(i,y,x,Cweigh,epsweigh,d); }
 
     virtual int addTrainingVector(int i,            double *xxa, int dima, double Cweigh = 1, double epsweigh = 1) override { return getQ().addTrainingVector(i,   xxa,dima,Cweigh,epsweigh); }
     virtual int addTrainingVector(int i, int zz,    double *xxa, int dima, double Cweigh = 1, double epsweigh = 1) override { return getQ().addTrainingVector(i,zz,xxa,dima,Cweigh,epsweigh); }

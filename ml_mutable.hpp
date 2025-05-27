@@ -228,6 +228,10 @@ public:
     virtual       double                 yR      (int i)              const override { return getMLconst().yR(i);                      }
     virtual const d_anion               &yA      (int i)              const override { return getMLconst().yA(i);                      }
     virtual const Vector<double>        &yV      (int i)              const override { return getMLconst().yV(i);                      }
+    virtual const gentype               &yp      (int i)              const override { return getMLconst().yp(i);        }
+    virtual       double                 ypR     (int i)              const override { return getMLconst().ypR(i);       }
+    virtual const d_anion               &ypA     (int i)              const override { return getMLconst().ypA(i);       }
+    virtual const Vector<double>        &ypV     (int i)              const override { return getMLconst().ypV(i);       }
     virtual const vecInfo               &xinfo   (int i)              const override { return getMLconst().xinfo(i);                   }
     virtual       int                    xtang   (int i)              const override { return getMLconst().xtang(i);                   }
     virtual       double                 alphaVal(int i)              const override { return getMLconst().alphaVal(i);                }
@@ -508,8 +512,8 @@ public:
 
     // Training set modification:
 
-    virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1) override { return getML().addTrainingVector (i,z,x,Cweigh,epsweigh); }
-    virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1) override { return getML().qaddTrainingVector(i,z,x,Cweigh,epsweigh); }
+    virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override { return getML().addTrainingVector (i,z,x,Cweigh,epsweigh,d); }
+    virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override { return getML().qaddTrainingVector(i,z,x,Cweigh,epsweigh,d); }
 
     virtual int addTrainingVector(int i,            double *xxa, int dima, double Cweigh = 1, double epsweigh = 1) override { return getML().addTrainingVector(i,   xxa,dima,Cweigh,epsweigh); }
     virtual int addTrainingVector(int i, int zz,    double *xxa, int dima, double Cweigh = 1, double epsweigh = 1) override { return getML().addTrainingVector(i,zz,xxa,dima,Cweigh,epsweigh); }
@@ -1838,7 +1842,6 @@ inline void ML_Mutable::assign(const ML_Base &bb, int onlySemiCopy)
 //         3 = Multiclass SVM
 //         4 = Vector SVM
 //         5 = Anionic SVM (real, complex, quaternion, octonion)
-//         6 = auto-encoding SVM
 //         7 = Density estimation SVM
 //         8 = Pareto frontier SVM
 //        12 = Binary score SVM
@@ -1875,7 +1878,6 @@ inline void ML_Mutable::assign(const ML_Base &bb, int onlySemiCopy)
 //       303 = KNN scalar regression
 //       304 = KNN vector regression
 //       305 = KNN anionic regression
-//       306 = KNN autoencoder
 //       307 = KNN multiclass classifier
 //       400 = Scalar GP
 //       401 = Vector GP
@@ -1889,7 +1891,6 @@ inline void ML_Mutable::assign(const ML_Base &bb, int onlySemiCopy)
 //       502 = Anion LSV (LS-SVM)
 //       505 = Scalar Regression Scoring LSV (LS-SVM)
 //       506 = Vector Regression Scoring LSV (LS-SVM)
-//       507 = auto-encoding LSV (LS-SVM)
 //       508 = Generic target LSV (LS-SVM)
 //       509 = Planar LSV (LS-SVM)
 //       510 = Multi-expert rank LSV (LS-SVM)
@@ -1946,7 +1947,6 @@ inline int isSVMSingle    (const ML_Base &src) { return ( src.type() ==   2 ); }
 inline int isSVMMultiC    (const ML_Base &src) { return ( src.type() ==   3 ); }
 inline int isSVMVector    (const ML_Base &src) { return ( src.type() ==   4 ); }
 inline int isSVMAnions    (const ML_Base &src) { return ( src.type() ==   5 ); }
-inline int isSVMAutoEn    (const ML_Base &src) { return ( src.type() ==   6 ); }
 inline int isSVMDensit    (const ML_Base &src) { return ( src.type() ==   7 ); }
 inline int isSVMPFront    (const ML_Base &src) { return ( src.type() ==   8 ); }
 inline int isSVMBiScor    (const ML_Base &src) { return ( src.type() ==  12 ); }
@@ -1985,14 +1985,12 @@ inline int isKNNGentyp(const ML_Base &src) { return ( src.type() == 302 ); }
 inline int isKNNScalar(const ML_Base &src) { return ( src.type() == 303 ); }
 inline int isKNNVector(const ML_Base &src) { return ( src.type() == 304 ); }
 inline int isKNNAnions(const ML_Base &src) { return ( src.type() == 305 ); }
-inline int isKNNAutoEn(const ML_Base &src) { return ( src.type() == 306 ); }
 inline int isKNNMultiC(const ML_Base &src) { return ( src.type() == 307 ); }
 
 inline int isLSVScalar    (const ML_Base &src) { return ( src.type() == 500 ); }
 inline int isLSVVector    (const ML_Base &src) { return ( src.type() == 501 ); }
 inline int isLSVAnions    (const ML_Base &src) { return ( src.type() == 502 ); }
 inline int isLSVScScor    (const ML_Base &src) { return ( src.type() == 505 ); }
-inline int isLSVAutoEn    (const ML_Base &src) { return ( src.type() == 507 ); }
 inline int isLSVGentyp    (const ML_Base &src) { return ( src.type() == 508 ); }
 inline int isLSVPlanar    (const ML_Base &src) { return ( src.type() == 509 ); }
 inline int isLSVMvRank    (const ML_Base &src) { return ( src.type() == 510 ); }

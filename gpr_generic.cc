@@ -134,7 +134,7 @@ std::istream &GPR_Generic::inputstream(std::istream &input )
     return input;
 }
 
-int GPR_Generic::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int GPR_Generic::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
@@ -146,17 +146,17 @@ int GPR_Generic::addTrainingVector(int i, const gentype &y, const SparseVector<g
     dCweight("&",i) = Cweigh;
 
     xd.add(i);
-    xd("&",i) = 2;
+    xd("&",i) = dval; //2;
 
     dy.add(i);
     dy("&",i) = y;
 
     ++(Nnc("&",xd(i)+1));
 
-    return getQ().addTrainingVector(i,y,x,Cweigh,epsweigh);
+    return getQ().addTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 }
 
-int GPR_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int GPR_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
@@ -168,14 +168,14 @@ int GPR_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentyp
     dCweight("&",i) = Cweigh;
 
     xd.add(i);
-    xd("&",i) = 2;
+    xd("&",i) = dval; //2;
 
     dy.add(i);
     dy("&",i) = y;
 
     ++(Nnc("&",xd(i)+1));
 
-    return getQ().qaddTrainingVector(i,y,x,Cweigh,epsweigh);
+    return getQ().qaddTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 }
 
 int GPR_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)

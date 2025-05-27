@@ -71,20 +71,20 @@ double BLK_AveAni::calcDist(const gentype &ha, const gentype &hb, int ia, int db
     return res;
 }
 
-int BLK_AveAni::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int BLK_AveAni::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     SparseVector<gentype> xx(x);
 
-    return qaddTrainingVector(i,y,xx,Cweigh,epsweigh);
+    return qaddTrainingVector(i,y,xx,Cweigh,epsweigh,dval);
 }
 
-int BLK_AveAni::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int BLK_AveAni::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( y.isCastableToAnionWithoutLoss() );
 
     ++(classcnt("&",1));
 
-    BLK_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
+    BLK_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 
     if ( y(i).order() > dorder )
     {

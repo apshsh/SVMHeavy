@@ -89,7 +89,7 @@ SVM_Gentyp::~SVM_Gentyp()
     return;
 }
 
-int SVM_Gentyp::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Gentyp::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     Vector<double> yrep;
 
@@ -105,10 +105,10 @@ int SVM_Gentyp::addTrainingVector(int i, const gentype &y, const SparseVector<ge
     locyval.add(locyval.size());
     locyval("&",locyval.size()-1) = y;
 
-    return SVM_Vector::addTrainingVector(i,yrep,x,Cweigh,epsweigh);
+    return SVM_Vector::addTrainingVector(i,yrep,x,Cweigh,epsweigh,dval);
 }
 
-int SVM_Gentyp::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Gentyp::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     Vector<double> yrep;
 
@@ -124,7 +124,7 @@ int SVM_Gentyp::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype
     locyval.add(locyval.size());
     locyval("&",locyval.size()-1) = y;
 
-    return SVM_Vector::qaddTrainingVector(i,yrep,x,Cweigh,epsweigh);
+    return SVM_Vector::qaddTrainingVector(i,yrep,x,Cweigh,epsweigh,dval);
 }
 
 int SVM_Gentyp::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)

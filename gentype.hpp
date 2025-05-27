@@ -654,6 +654,7 @@ public:
     operator const d_anion &()                const { if ( isValAnion()   ) { return *anionval;  } return cast_anion(3);             }
     operator const Vector<gentype> &()        const { if ( isValVector()  ) { return *vectorval; } return cast_vector(3);            }
     operator const Vector<double> &()         const {                                              return cast_vector_real(3);       }
+    operator const Vector<int> &()            const {                                              return cast_vector_int(3);        }
     operator const SparseVector<gentype> &()  const {                                              return cast_sparsevector(3);      }
     operator const SparseVector<double> &()   const {                                              return cast_sparsevector_real(3); }
     operator const Matrix<gentype> &()        const { if ( isValMatrix()  ) { return *matrixval; } return cast_matrix(3);            }
@@ -668,6 +669,7 @@ public:
     const d_anion                &cast_anion            (int finalise = 0) const;
     const Vector<gentype>        &cast_vector           (int finalise = 0) const;
     const Vector<double>         &cast_vector_real      (int finalise = 0) const;
+    const Vector<int>            &cast_vector_int       (int finalise = 0) const;
     const SparseVector<gentype>  &cast_sparsevector     (int finalise = 0) const;
     const SparseVector<double>   &cast_sparsevector_real(int finalise = 0) const;
     const Matrix<gentype>        &cast_matrix           (int finalise = 0) const;
@@ -1301,6 +1303,7 @@ private:
     const fninfoblock *thisfninfo = nullptr;
 
     mutable Vector<double> *vectorvalreal = nullptr;
+    mutable Vector<int>    *vectorvalint  = nullptr;
     mutable Matrix<double> *matrixvalreal = nullptr;
 
     mutable SparseVector<gentype> *sparsevectorval     = nullptr;
@@ -1444,6 +1447,7 @@ private:
         if ( ( anionval            != nullptr ) && ( ( targtype != 'A' ) )                               ) { MEMDEL(anionval);            anionval            = nullptr; }
         if ( ( vectorval           != nullptr ) && ( ( targtype != 'V' ) || ( (*vectorval).infsize() ) ) ) { MEMDEL(vectorval);           vectorval           = nullptr; }
         if ( ( vectorvalreal       != nullptr )                                                          ) { MEMDEL(vectorvalreal);       vectorvalreal       = nullptr; }
+        if ( ( vectorvalint        != nullptr )                                                          ) { MEMDEL(vectorvalint);        vectorvalint        = nullptr; }
         if ( ( sparsevectorval     != nullptr )                                                          ) { MEMDEL(sparsevectorval);     sparsevectorval     = nullptr; }
         if ( ( sparsevectorvalreal != nullptr )                                                          ) { MEMDEL(sparsevectorvalreal); sparsevectorvalreal = nullptr; }
         if ( ( matrixval           != nullptr ) && ( ( targtype != 'M' ) )                               ) { MEMDEL(matrixval);           matrixval           = nullptr; }
@@ -1624,6 +1628,7 @@ inline void qswap(gentype &a, gentype &b)
     d_anion                *anionval;            anionval            = a.anionval;            a.anionval            = b.anionval;            b.anionval            = anionval;
     Vector<gentype>        *vectorval;           vectorval           = a.vectorval;           a.vectorval           = b.vectorval;           b.vectorval           = vectorval;
     Vector<double>         *vectorvalreal;       vectorvalreal       = a.vectorvalreal;       a.vectorvalreal       = b.vectorvalreal;       b.vectorvalreal       = vectorvalreal;
+    Vector<int>            *vectorvalint;        vectorvalint        = a.vectorvalint;        a.vectorvalint        = b.vectorvalint;        b.vectorvalint        = vectorvalint;
     SparseVector<gentype>  *sparsevectorval;     sparsevectorval     = a.sparsevectorval;     a.sparsevectorval     = b.sparsevectorval;     b.sparsevectorval     = sparsevectorval;
     SparseVector<double>   *sparsevectorvalreal; sparsevectorvalreal = a.sparsevectorvalreal; a.sparsevectorvalreal = b.sparsevectorvalreal; b.sparsevectorvalreal = sparsevectorvalreal;
     Matrix<gentype>        *matrixval;           matrixval           = a.matrixval;           a.matrixval           = b.matrixval;           b.matrixval           = matrixval;

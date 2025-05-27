@@ -81,6 +81,10 @@ MercerKernel::MercerKernel()
 
     dRealConstants.resize(1);
     dIntConstants.resize(1);
+    dRealConstantsLB.resize(1);
+    dIntConstantsLB.resize(1);
+    dRealConstantsUB.resize(1);
+    dIntConstantsUB.resize(1);
     dRealOverwrite.resize(1);
     dIntOverwrite.resize(1);
 
@@ -151,6 +155,10 @@ MercerKernel &MercerKernel::operator=(const MercerKernel &src)
     kernflags            = src.kernflags;
     dRealConstants       = src.dRealConstants;
     dIntConstants        = src.dIntConstants;
+    dRealConstantsLB     = src.dRealConstantsLB;
+    dIntConstantsLB      = src.dIntConstantsLB;
+    dRealConstantsUB     = src.dRealConstantsUB;
+    dIntConstantsUB      = src.dIntConstantsUB;
     dRealOverwrite       = src.dRealOverwrite;
     dIntOverwrite        = src.dIntOverwrite;
     altcallback          = src.altcallback;
@@ -618,6 +626,10 @@ MercerKernel &MercerKernel::add(int q)
 
     dRealConstants.add(q);
     dIntConstants.add(q);
+    dRealConstantsLB.add(q);
+    dIntConstantsLB.add(q);
+    dRealConstantsUB.add(q);
+    dIntConstantsUB.add(q);
     dRealOverwrite.add(q);
     dIntOverwrite.add(q);
 
@@ -661,6 +673,10 @@ MercerKernel &MercerKernel::remove(int q)
 
     dRealConstants.remove(q);
     dIntConstants.remove(q);
+    dRealConstantsLB.remove(q);
+    dIntConstantsLB.remove(q);
+    dRealConstantsUB.remove(q);
+    dIntConstantsUB.remove(q);
     dRealOverwrite.remove(q);
     dIntOverwrite.remove(q);
 
@@ -697,6 +713,10 @@ MercerKernel &MercerKernel::resize(int nsize)
 
     dRealConstants.resize(nsize);
     dIntConstants.resize(nsize);
+    dRealConstantsLB.resize(nsize);
+    dIntConstantsLB.resize(nsize);
+    dRealConstantsUB.resize(nsize);
+    dIntConstantsUB.resize(nsize);
     dRealOverwrite.resize(nsize);
     dIntOverwrite.resize(nsize);
 
@@ -13940,6 +13960,18 @@ MercerKernel &MercerKernel::setType(int ndtype, int q)
 
     r("&",0) = 1.0;
 
+    dRealConstantsLB("&",q).resize(dRealConstants(q).size());
+    dRealConstantsUB("&",q).resize(dRealConstants(q).size());
+
+    dRealConstantsLB("&",q) = nullgentype();
+    dRealConstantsUB("&",q) = nullgentype();
+
+    dIntConstantsLB("&",q).resize(dIntConstants(q).size());
+    dIntConstantsUB("&",q).resize(dIntConstants(q).size());
+
+    dIntConstantsLB("&",q) = 0;
+    dIntConstantsUB("&",q) = 0;
+
     recalcRandFeats(q);
 
     return *this;
@@ -16190,6 +16222,10 @@ std::ostream &MercerKernel::printstream(std::ostream &output, int dep) const
         output << "Rank Type Terms:       " << src.xranktype           << "\n";
         output << "Real constants:        " << src.dRealConstants      << "\n";
         output << "Integer constants:     " << src.dIntConstants       << "\n";
+        output << "Real constants LB:     " << src.dRealConstantsLB    << "\n";
+        output << "Integer constants LB:  " << src.dIntConstantsLB     << "\n";
+        output << "Real constants UB:     " << src.dRealConstantsUB    << "\n";
+        output << "Integer constants UB:  " << src.dIntConstantsUB     << "\n";
         output << "Real overwrites:       " << src.dRealOverwrite      << "\n";
         output << "Integer overwrites:    " << src.dIntOverwrite       << "\n";
         output << "Alt callback:          " << src.altcallback         << "\n";
@@ -16266,6 +16302,16 @@ std::istream &MercerKernel::inputstream(std::istream &input)
 
         dest.dRealConstants("&",0).resize(1);
         dest.dIntConstants("&",0).resize(1);
+        dest.dRealConstantsLB("&",0).resize(1);
+        dest.dIntConstantsLB("&",0).resize(1);
+        dest.dRealConstantsUB("&",0).resize(1);
+        dest.dIntConstantsUB("&",0).resize(1);
+
+        dest.dRealConstantsLB("&",0)("&",0).makeNull();
+        dest.dRealConstantsUB("&",0)("&",0).makeNull();
+
+        dest.dIntConstantsLB("&",0)("&",0) = 0;
+        dest.dIntConstantsLB("&",0)("&",0) = 0;
 
         while ( input.peek() != '(' )
         {
@@ -16310,8 +16356,13 @@ std::istream &MercerKernel::inputstream(std::istream &input)
             }
 
             dest.dRealConstants("&",0).add(i);
+            dest.dRealConstantsLB("&",0).add(i);
+            dest.dRealConstantsUB("&",0).add(i);
 
             sbuff >> dest.dRealConstants("&",0)("&",i);
+
+            dest.dRealConstantsLB("&",0)("&",i).makeNull();
+            dest.dRealConstantsUB("&",0)("&",i).makeNull();
 
             if ( input.peek() == ',' )
             {
@@ -16334,8 +16385,13 @@ std::istream &MercerKernel::inputstream(std::istream &input)
             }
 
             dest.dIntConstants("&",0).add(i);
+            dest.dIntConstantsLB("&",0).add(i);
+            dest.dIntConstantsUB("&",0).add(i);
 
             sbuff >> dest.dIntConstants("&",0)("&",i);
+
+            dest.dIntConstantsLB("&",0)("&",i) = 0;
+            dest.dIntConstantsUB("&",0)("&",i) = 0;
 
             if ( input.peek() == ',' )
             {
@@ -16423,6 +16479,10 @@ std::istream &MercerKernel::inputstream(std::istream &input)
         input >> dummy; input >> dest.xranktype;
         input >> dummy; input >> dest.dRealConstants;
         input >> dummy; input >> dest.dIntConstants;
+        input >> dummy; input >> dest.dRealConstantsLB;
+        input >> dummy; input >> dest.dIntConstantsLB;
+        input >> dummy; input >> dest.dRealConstantsUB;
+        input >> dummy; input >> dest.dIntConstantsUB;
         input >> dummy; input >> dest.dRealOverwrite;
         input >> dummy; input >> dest.dIntOverwrite;
         input >> dummy; input >> dest.altcallback;
@@ -16560,6 +16620,10 @@ int operator==(const MercerKernel &leftop, const MercerKernel &rightop)
     if ( !( leftop.dShiftProdRevConj    == rightop.dShiftProdRevConj    ) ) { return 0; }
     if ( !( leftop.dRealConstants       == rightop.dRealConstants       ) ) { return 0; }
     if ( !( leftop.dIntConstants        == rightop.dIntConstants        ) ) { return 0; }
+//    if ( !( leftop.dRealConstantsLB     == rightop.dRealConstantsLB     ) ) { return 0; }
+//    if ( !( leftop.dIntConstantsLB      == rightop.dIntConstantsLB      ) ) { return 0; }
+//    if ( !( leftop.dRealConstantsUB     == rightop.dRealConstantsUB     ) ) { return 0; }
+//    if ( !( leftop.dIntConstantsUB      == rightop.dIntConstantsUB      ) ) { return 0; }
     if ( !( leftop.dRealOverwrite       == rightop.dRealOverwrite       ) ) { return 0; }
     if ( !( leftop.dIntOverwrite        == rightop.dIntOverwrite        ) ) { return 0; }
     if ( !( leftop.combinedOverwriteSrc == rightop.combinedOverwriteSrc ) ) { return 0; }

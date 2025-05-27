@@ -453,14 +453,14 @@ int SVM_Anions::removeTrainingVector(int i, int num)
     return res;
 }
 
-int SVM_Anions::addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Anions::addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
-    return SVM_Anions::addTrainingVector(i,(const d_anion &) z,x,Cweigh,epsweigh,2);
+    return SVM_Anions::addTrainingVector(i,(const d_anion &) z,x,Cweigh,epsweigh,dval); //2);
 }
 
-int SVM_Anions::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Anions::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
-    return SVM_Anions::qaddTrainingVector(i,(const d_anion &) z,x,Cweigh,epsweigh,2);
+    return SVM_Anions::qaddTrainingVector(i,(const d_anion &) z,x,Cweigh,epsweigh,dval); //2);
 }
 
 int SVM_Anions::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)

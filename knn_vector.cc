@@ -94,7 +94,7 @@ double KNN_Vector::calcDist(const gentype &ha, const gentype &hb, int ia, int db
     return res;
 }
 
-int KNN_Vector::addTrainingVector (int i, const gentype &_y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_Vector::addTrainingVector (int i, const gentype &_y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( _y.isCastableToVectorWithoutLoss() );
     NiceAssert( ( dim == -1 ) || ( _y.size() == dim ) );
@@ -113,12 +113,12 @@ int KNN_Vector::addTrainingVector (int i, const gentype &_y, const SparseVector<
     ++(classcnt("&",1));
 
     KNN_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh);
-    KNN_Generic::dd("&",i) = 2;
+    KNN_Generic::dd("&",i) = dval; //2;
 
     return 1;
 }
 
-int KNN_Vector::qaddTrainingVector(int i, const gentype &_y,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_Vector::qaddTrainingVector(int i, const gentype &_y,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( _y.isCastableToVectorWithoutLoss() );
     NiceAssert( ( dim == -1 ) || ( _y.size() == dim ) );
@@ -137,7 +137,7 @@ int KNN_Vector::qaddTrainingVector(int i, const gentype &_y,       SparseVector<
     ++(classcnt("&",1));
 
     KNN_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
-    KNN_Generic::dd("&",i) = 2;
+    KNN_Generic::dd("&",i) = dval; //2;
 
     return 1;
 }

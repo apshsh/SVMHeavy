@@ -2490,6 +2490,24 @@ public:
 
     double effweight(int q = 0) const; // return effective weight for kernel starting at q (ie product of is isSplit == 1 terms)
 
+    // Nominal bounds on constants (used in tuneKernel)
+
+    const gentype &cWeightLB(int q = 0) const { return dRealConstantsLB(q)(0); }
+
+    const Vector<gentype> &cRealConstantsLB(int q = 0) const { return dRealConstantsLB(q)(1,1,dRealConstantsLB(q).size()-1,cRealConstantsTmp); }
+    const Vector<int>     &cIntConstantsLB (int q = 0) const { return dIntConstantsLB(q);                                                      }
+
+    const gentype &getRealConstZeroLB(int q = 0) const { return cRealConstantsLB(q)(0); }
+          int      getIntConstZeroLB (int q = 0) const { return cIntConstantsLB(q)(0);  }
+
+    const gentype &cWeightUB(int q = 0) const { return dRealConstantsUB(q)(0); }
+
+    const Vector<gentype> &cRealConstantsUB(int q = 0) const { return dRealConstantsUB(q)(1,1,dRealConstantsUB(q).size()-1,cRealConstantsTmp); }
+    const Vector<int>     &cIntConstantsUB (int q = 0) const { return dIntConstantsUB(q);                                                      }
+
+    const gentype &getRealConstZeroUB(int q = 0) const { return cRealConstantsUB(q)(0); }
+          int      getIntConstZeroUB (int q = 0) const { return cIntConstantsUB(q)(0);  }
+
     // Random features
     //
     // getRandFeats: random features for kernel q, if any
@@ -2654,6 +2672,24 @@ public:
 
     MercerKernel &setRealConstZero(double nv, int q = 0) { dRealConstants("&",q)("&",1) = nv; recalcRandFeats(q); return *this; }
     MercerKernel &setIntConstZero (int    nv, int q = 0) { dIntConstants("&",q)("&",0)  = nv; recalcRandFeats(q); return *this; }
+
+    // Nominal bounds on constants (used in tuneKernel)
+
+    MercerKernel &setWeightLB(const gentype &nwLB, int q = 0) { dRealConstantsLB("&",q)("&",0) = nwLB; return *this; }
+
+    MercerKernel &setRealConstantsLB(const Vector<gentype> &ndRealConstantsLB, int q = 0) { NiceAssert( dRealConstantsLB(q).size()-1 == ndRealConstantsLB.size() ); retVector<gentype> tmpva; dRealConstantsLB("&",q)("&",1,1,dRealConstantsLB(q).size()-1,tmpva) = ndRealConstantsLB; return *this; }
+    MercerKernel &setIntConstantsLB (const Vector<int>     &ndIntConstantsLB,  int q = 0) { NiceAssert( dIntConstantsLB(q).size()  == ndIntConstantsLB.size() ); dIntConstantsLB("&",q) = ndIntConstantsLB; return *this; }
+
+    MercerKernel &setRealConstZeroLB(double nvLB, int q = 0) { dRealConstantsLB("&",q)("&",1) = nvLB; return *this; }
+    MercerKernel &setIntConstZeroLB (int    nvLB, int q = 0) { dIntConstantsLB("&",q)("&",0)  = nvLB; return *this; }
+
+    MercerKernel &setWeightUB(const gentype &nwUB, int q = 0) { dRealConstantsUB("&",q)("&",0) = nwUB; return *this; }
+
+    MercerKernel &setRealConstantsUB(const Vector<gentype> &ndRealConstantsUB, int q = 0) { NiceAssert( dRealConstantsUB(q).size()-1 == ndRealConstantsUB.size() ); retVector<gentype> tmpva; dRealConstantsUB("&",q)("&",1,1,dRealConstantsUB(q).size()-1,tmpva) = ndRealConstantsUB; return *this; }
+    MercerKernel &setIntConstantsUB (const Vector<int>     &ndIntConstantsUB,  int q = 0) { NiceAssert( dIntConstantsUB(q).size()  == ndIntConstantsUB.size() ); dIntConstantsUB("&",q) = ndIntConstantsUB; return *this; }
+
+    MercerKernel &setRealConstZeroUB(double nvUB, int q = 0) { dRealConstantsUB("&",q)("&",1) = nvUB; return *this; }
+    MercerKernel &setIntConstZeroUB (int    nvUB, int q = 0) { dIntConstantsUB("&",q)("&",0)  = nvUB; return *this; }
 
     // setnumRandFeats triggers calculation/drawing of features.
     // setRandFeats and sertRandFeatAngle does this manually.
@@ -3148,6 +3184,10 @@ private:
     //         (now stored as index 0 of real constants)
     // dIntConstants: integer constants in kernel
     // dRealConstants: real constants in kernel
+    // dIntConstantsLB: lower bound integer constants in kernel
+    // dRealConstantsLB: lower bound real constants in kernel
+    // dIntConstantsUB: upper bound integer constants in kernel
+    // dRealConstantsUB: upper bound real constants in kernel
     // dIntOverwrite: selects which variables will be overwritten by which x(i)*y(i)
     // dRealOverwrite: selects which variables will be overwritten by which x(i)*y(i)
     // dIndexes: indices used in index products
@@ -3184,6 +3224,10 @@ private:
     Vector<kernInfo> kernflags;
     mutable Vector<Vector<gentype> > dRealConstants;
     mutable Vector<Vector<int> > dIntConstants;
+    mutable Vector<Vector<gentype> > dRealConstantsLB;
+    mutable Vector<Vector<int> > dIntConstantsLB;
+    mutable Vector<Vector<gentype> > dRealConstantsUB;
+    mutable Vector<Vector<int> > dIntConstantsUB;
     Vector<SparseVector<int> > dRealOverwrite;
     Vector<SparseVector<int> > dIntOverwrite;
     Vector<int> altcallback;
@@ -4522,6 +4566,10 @@ inline void qswap(MercerKernel &a, MercerKernel &b)
     qswap(a.kernflags           ,b.kernflags           );
     qswap(a.dRealConstants      ,b.dRealConstants      );
     qswap(a.dIntConstants       ,b.dIntConstants       );
+    qswap(a.dRealConstantsLB    ,b.dRealConstantsLB    );
+    qswap(a.dIntConstantsLB     ,b.dIntConstantsLB     );
+    qswap(a.dRealConstantsUB    ,b.dRealConstantsUB    );
+    qswap(a.dIntConstantsUB     ,b.dIntConstantsUB     );
     qswap(a.dRealOverwrite      ,b.dRealOverwrite      );
     qswap(a.dIntOverwrite       ,b.dIntOverwrite       );
     qswap(a.altcallback         ,b.altcallback         );

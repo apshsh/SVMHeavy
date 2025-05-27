@@ -71,13 +71,15 @@ int SVM_PFront::train(int &res, svmvolatile int &killSwitch)
     return SVM_Binary::train(res,killSwitch);
 }
 
-int SVM_PFront::addTrainingVector(int i, const gentype &, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_PFront::addTrainingVector(int i, const gentype &, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
     return SVM_PFront::addTrainingVector(i,x,Cweigh,epsweigh);
 }
 
-int SVM_PFront::qaddTrainingVector(int i, const gentype &, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_PFront::qaddTrainingVector(int i, const gentype &, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
     return SVM_PFront::qaddTrainingVector(i,x,Cweigh,epsweigh);
 }
 

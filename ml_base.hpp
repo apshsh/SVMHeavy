@@ -1,4 +1,5 @@
 
+
 //
 // ML (machine learning) base type
 //
@@ -355,21 +356,21 @@ public:
     virtual int isUnderlyingVector(void) const { return 0; }
     virtual int isUnderlyingAnions(void) const { return 0; }
 
-    virtual const Vector<int> &ClassLabels(void)             const { const static Vector<int> temp; return temp;         }
-    virtual int   getInternalClass        (const gentype &)  const {                                return 0;            }
-    virtual int   numInternalClasses      (void)             const {                                return numClasses(); }
-    virtual int   isenabled               (int i)            const {                                return d()(i);       }
-    virtual int   isVarDefined            (void)             const {                                return 0;            }
+    virtual const Vector<int> &ClassLabels       (void)             const { const static Vector<int> temp; return temp;         }
+    virtual       int          getInternalClass  (const gentype &)  const {                                return 0;            }
+    virtual       int          numInternalClasses(void)             const {                                return numClasses(); }
+    virtual       int          isenabled         (int i)            const {                                return d()(i);       }
+    virtual       int          isVarDefined      (void)             const {                                return 0;            }
 
-    virtual const int *ClassLabelsInt     (void)  const { return &(getMLconst().ClassLabels()(0));    }
-    virtual       int  getInternalClassInt(int y) const { gentype yy(y); return getInternalClass(yy); }
+    virtual const int *ClassLabelsInt     (void)  const {                return &(getMLconst().ClassLabels()(0)); }
+    virtual       int  getInternalClassInt(int y) const { gentype yy(y); return getInternalClass(yy);             }
 
-    virtual double C        (void)  const { return DEFAULT_C;         }
-    virtual double sigma    (void)  const { return 1.0/C();           }
-    virtual double sigma_cut(void)  const { return DEFAULT_SIGMA_CUT; }
-    virtual double eps      (void)  const { return DEFAULTEPS;        }
-    virtual double Cclass   (int d) const { (void) d; return 1;       }
-    virtual double epsclass (int d) const { (void) d; return 1;       }
+    virtual double C        (void) const { return DEFAULT_C;         }
+    virtual double sigma    (void) const { return 1.0/C();           }
+    virtual double sigma_cut(void) const { return DEFAULT_SIGMA_CUT; }
+    virtual double eps      (void) const { return DEFAULTEPS;        }
+    virtual double Cclass   (int)  const { return 1;                 }
+    virtual double epsclass (int)  const { return 1;                 }
 
     virtual       int      mpri  (void) const { return xmuprior;    }
     virtual const gentype &prival(void) const { return xmuprior_gt; }
@@ -419,12 +420,16 @@ public:
     virtual const Vector<gentype>                &alphaVal   (void) const { NiceThrow("alphaVal has no meaning here"); static const Vector<gentype> dummy; return dummy; }
     virtual const Vector<int>                    &alphaState (void) const { return xalphaState;                              }
 
-    virtual const SparseVector<gentype> &x       (int i)              const override { return xgetloc(i);  }
+    virtual const SparseVector<gentype> &x       (int i)              const override { return xgetloc(i); }
     virtual const SparseVector<gentype> &x       (int i, int altMLid) const override { kernPrecursor *tmp = nullptr; getaltML(tmp,altMLid);  NiceAssert(tmp); return (*tmp).x(i);  }
-    virtual const gentype               &y       (int i)              const          { if ( i >= 0 ) { return y()(i);  } return ytargdata; }
-    virtual       double                 yR      (int i)              const          { if ( i >= 0 ) { return yR()(i); } return (double) ytargdata; }
-    virtual const d_anion               &yA      (int i)              const          { if ( i >= 0 ) { return yA()(i); } return (const d_anion &) ytargdata; }
-    virtual const Vector<double>        &yV      (int i)              const          { if ( i >= 0 ) { return yV()(i); } return (const Vector<double> &) ytargdata; }
+    virtual const gentype               &y       (int i)              const          { if ( i >= 0 ) { return y()(i);   } return ytargdata;   }
+    virtual       double                 yR      (int i)              const          { if ( i >= 0 ) { return yR()(i);  } return ytargdataR;  }
+    virtual const d_anion               &yA      (int i)              const          { if ( i >= 0 ) { return yA()(i);  } return ytargdataA;  }
+    virtual const Vector<double>        &yV      (int i)              const          { if ( i >= 0 ) { return yV()(i);  } return ytargdataV;  }
+    virtual const gentype               &yp      (int i)              const          { if ( i >= 0 ) { return yp()(i);  } return ytargdatap;  }
+    virtual       double                 ypR     (int i)              const          { if ( i >= 0 ) { return ypR()(i); } return ytargdatapR; }
+    virtual const d_anion               &ypA     (int i)              const          { if ( i >= 0 ) { return ypA()(i); } return ytargdatapA; }
+    virtual const Vector<double>        &ypV     (int i)              const          { if ( i >= 0 ) { return ypV()(i); } return ytargdatapV; }
     virtual const vecInfo               &xinfo   (int i)              const          { return locxinfo(i); }
     virtual       int                    xtang   (int i)              const          { return locxtang(i); }
     virtual       double                 alphaVal(int)                const          { NiceThrow("alphaVal has no meaning here"); return 0.0; }
@@ -434,7 +439,7 @@ public:
     virtual int xisrankorgrad(int i)                               const { const SparseVector<gentype> &xres = x(i); return xres.isf1offindpresent() || xres.isf4indpresent(1) || xres.isf2offindpresent(); }
     virtual int xisclass     (int i, int defaultclass, int q = -1) const { const SparseVector<gentype> &xres = x(i); return ( q == -1 ) ? defaultclass : ( xres.isf4indpresent((100*q)+0) ? ( (int) xres.f4((100*q)+0) ) : defaultclass ); }
 
-    virtual int RFFordata(int i) const { (void) i; return 0; }
+    virtual int RFFordata(int) const { return 0; }
 
     virtual void npCweight    (double **res, int *dim) const { *dim = Cweight().size();     yCweight     = Cweight();     *res = &yCweight("&",0);     }
     virtual void npCweightfuzz(double **res, int *dim) const { *dim = Cweightfuzz().size(); yCweightfuzz = Cweightfuzz(); *res = &yCweightfuzz("&",0); }
@@ -803,8 +808,8 @@ public:
     // or change indexKey when vector x(0) is modified, and will lead to
     // speedups elsewhere.
 
-    virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1);
-    virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1);
+    virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
+    virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
 
     virtual int addTrainingVector(int i,            double *xxa, int dima, double Cweigh = 1, double epsweigh = 1);
     virtual int addTrainingVector(int i, int zz,    double *xxa, int dima, double Cweigh = 1, double epsweigh = 1);
@@ -1978,6 +1983,12 @@ private:
     MercerKernel kernel;
     mutable gentype ytargdata;
     mutable double ytargdataR;
+    mutable d_anion ytargdataA;
+    mutable Vector<double> ytargdataV;
+    mutable gentype ytargdatap;
+    mutable double ytargdatapR;
+    mutable d_anion ytargdatapA;
+    mutable Vector<double> ytargdatapV;
     Vector<gentype> alltraintarg;
     Vector<double> alltraintargR;
     Vector<d_anion> alltraintargA;
@@ -2262,6 +2273,14 @@ private:
         {
             calcSetAssumeReal(0);
         }
+
+        {
+            calcprior(ytargdatap,*wildxgenta,wildxinfoa);
+
+            ytargdatapR = (double) ytargdatap;
+            ytargdatapA = (const d_anion &) ytargdatap;
+            ytargdatapV = (const Vector<double> &) ytargdatap;
+        }
     }
 
     virtual void setInnerWildpb(const SparseVector<gentype> *xl, const vecInfo *xinf = nullptr) const
@@ -2451,7 +2470,10 @@ private:
     virtual void setWildTargpp(const gentype &yI) const
     {
         ytargdata  = yI;
-        ytargdataR = (double) yI;
+
+        ytargdataR = (double) ytargdata;
+        ytargdataA = (const d_anion &) ytargdata;
+        ytargdataV = (const Vector<double> &) ytargdata;
     }
 
     virtual void resetInnerWildp(int wasnulla = 0, int wasnullb = 0, int wasnullc = 0, int wasnulld = 0) const
@@ -2948,6 +2970,12 @@ inline void ML_Base::qswapinternal(ML_Base &bb)
 //FIXME    qswap(allxdatagentp  ,b.allxdatagentp  );
     qswap(ytargdata      ,b.ytargdata      );
     qswap(ytargdataR     ,b.ytargdataR     );
+    qswap(ytargdataA     ,b.ytargdataA     );
+    qswap(ytargdataV     ,b.ytargdataV     );
+    qswap(ytargdatap     ,b.ytargdatap     );
+    qswap(ytargdatapR    ,b.ytargdatapR    );
+    qswap(ytargdatapA    ,b.ytargdatapA    );
+    qswap(ytargdatapV    ,b.ytargdatapV    );
     qswap(alltraintarg   ,b.alltraintarg   );
     qswap(alltraintargp  ,b.alltraintargp  );
     qswap(alltraintargR  ,b.alltraintargR  );
@@ -3031,6 +3059,12 @@ inline void ML_Base::semicopy(const ML_Base &bb)
     //allxdatagent
     //ytargdata
     //ytargdataR
+    //ytargdataA
+    //ytargdataV
+    //ytargdatap
+    //ytargdatapR
+    //ytargdatapA
+    //ytargdatapV
     //indexKey
     //indexKeyCount
     //typeKey
@@ -3114,6 +3148,12 @@ inline void ML_Base::assign(const ML_Base &bb, int onlySemiCopy)
         traintang     = src.traintang;
         ytargdata     = src.ytargdata;
         ytargdataR    = src.ytargdataR;
+        ytargdataA    = src.ytargdataA;
+        ytargdataV    = src.ytargdataV;
+        ytargdatap    = src.ytargdatap;
+        ytargdatapR   = src.ytargdatapR;
+        ytargdatapA   = src.ytargdatapA;
+        ytargdatapV   = src.ytargdatapV;
 
         alltraintarg   = src.alltraintarg;
         alltraintargp  = src.alltraintargp;
@@ -3149,8 +3189,14 @@ inline void ML_Base::assign(const ML_Base &bb, int onlySemiCopy)
         allxdatagent.resize((src.allxdatagent).size());
         traininfo.resize((src.traininfo).size());
         traintang.resize((src.traintang).size());
-        ytargdata  = src.ytargdata;
-        ytargdataR = src.ytargdataR;
+        ytargdata   = src.ytargdata;
+        ytargdataR  = src.ytargdataR;
+        ytargdataA  = src.ytargdataA;
+        ytargdataV  = src.ytargdataV;
+        ytargdatap  = src.ytargdatap;
+        ytargdatapR = src.ytargdatapR;
+        ytargdatapA = src.ytargdatapA;
+        ytargdatapV = src.ytargdatapV;
 
         alltraintarg   = src.alltraintarg;
         alltraintargp  = src.alltraintargp;

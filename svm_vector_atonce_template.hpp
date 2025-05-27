@@ -277,8 +277,8 @@ public:
 
     // Training set control
 
-    virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1) override;
-    virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1) override;
+    virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
+    virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
     virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
     virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
@@ -1800,7 +1800,7 @@ int SVM_Vector_atonce_temp<T>::settraintimeend(double xtraintimeend)
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Vector_atonce_temp<T>::addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     Vector<double> zd;
     Vector<gentype> zz((const Vector<gentype> &) z);
@@ -1817,11 +1817,11 @@ int SVM_Vector_atonce_temp<T>::addTrainingVector (int i, const gentype &z, const
         }
     }
 
-    return SVM_Vector_atonce_temp<T>::addTrainingVector(i,zd,x,Cweigh,epsweigh,2);
+    return SVM_Vector_atonce_temp<T>::addTrainingVector(i,zd,x,Cweigh,epsweigh,dval); //2);
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Vector_atonce_temp<T>::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     Vector<double> zd(z.size());
     Vector<gentype> zz((const Vector<gentype> &) z);
@@ -1838,7 +1838,7 @@ int SVM_Vector_atonce_temp<T>::qaddTrainingVector(int i, const gentype &z,      
         }
     }
 
-    return SVM_Vector_atonce_temp<T>::qaddTrainingVector(i,zd,x,Cweigh,epsweigh,2);
+    return SVM_Vector_atonce_temp<T>::qaddTrainingVector(i,zd,x,Cweigh,epsweigh,dval); //2);
 }
 
 template <class T>

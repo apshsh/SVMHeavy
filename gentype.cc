@@ -2928,6 +2928,38 @@ const Vector<double> &gentype::cast_vector_real(int finalise) const
     return *vectorvalreal;
 }
 
+const Vector<int> &gentype::cast_vector_int(int finalise) const
+{
+    cast_vector(finalise); // this can't fail by design
+
+    int vsize = (*vectorval).size();
+
+    if ( vectorvalint == nullptr )
+    {
+        MEMNEW(vectorvalint,Vector<int>(vsize));
+    }
+
+    else
+    {
+        (*vectorvalint).resize(vsize);
+    }
+
+    if ( vsize )
+    {
+        Vector<gentype> &vg = *vectorval;
+        Vector<int>     &vi = *vectorvalint;
+
+        int i;
+
+        for ( i = 0 ; i < vsize ; ++i )
+        {
+            vi("&",i) = (int) ((double) vg(i)); // *first* cast to double to avoid throw, *then* cast to int
+        }
+    }
+
+    return *vectorvalint;
+}
+
 const SparseVector<gentype> &gentype::cast_sparsevector(int finalise) const
 {
     cast_vector(finalise); // this can't fail by design

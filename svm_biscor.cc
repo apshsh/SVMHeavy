@@ -80,9 +80,9 @@ std::istream &SVM_BiScor::inputstream(std::istream &input)
     return input;
 }
 
-int SVM_BiScor::qaddTrainingVector(int i, const gentype &zzz, SparseVector<gentype> &xxxx, double Cweigh, double epsweigh)
+int SVM_BiScor::qaddTrainingVector(int i, const gentype &zzz, SparseVector<gentype> &xxxx, double Cweigh, double epsweigh, int dval)
 {
-    int dd = 1;
+    int dd = dval; //1;
 
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
@@ -565,11 +565,11 @@ int SVM_BiScor::processz(int i)
 
 
 
-int SVM_BiScor::addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_BiScor::addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     SparseVector<gentype> xxx(x);
 
-    return qaddTrainingVector(i,z,xxx,Cweigh,epsweigh);
+    return qaddTrainingVector(i,z,xxx,Cweigh,epsweigh,dval);
 }
 
 int SVM_BiScor::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)

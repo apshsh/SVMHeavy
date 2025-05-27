@@ -230,7 +230,7 @@ void BLK_Conect::assumeInconsistentX(void)
     return;
 }
 
-int BLK_Conect::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int BLK_Conect::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     int ii;
     int res = 0;
@@ -242,7 +242,7 @@ int BLK_Conect::addTrainingVector(int i, const gentype &y, const SparseVector<ge
 
     for ( ii = 0 ; ii < numReps() ; ++ii )
     {
-        res |= getRep(ii).addTrainingVector(i,yrem,x,Cweigh,epsweigh);
+        res |= getRep(ii).addTrainingVector(i,yrem,x,Cweigh,epsweigh,dval);
 
         if ( getmlqmode() )
         {
@@ -284,7 +284,7 @@ int BLK_Conect::addTrainingVector(int i, const gentype &y, const SparseVector<ge
     return res;
 }
 
-int BLK_Conect::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int BLK_Conect::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     int ii;
     int res = 0;
@@ -296,7 +296,7 @@ int BLK_Conect::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype
 
     for ( ii = 0 ; ii < numReps() ; ++ii )
     {
-        res |= getRep(ii).addTrainingVector(i,yrem,x,Cweigh,epsweigh);
+        res |= getRep(ii).addTrainingVector(i,yrem,x,Cweigh,epsweigh,dval);
 
         if ( getmlqmode() )
         {

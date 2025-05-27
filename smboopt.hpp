@@ -474,34 +474,29 @@ public:
     //                effectively cancels out the "x" part of the kernel evaluation.
     //              - the kernel is decreasing in ||x-x'||, so the inf-norm is as stated
 
-    template <class S> int  model_mu   (                 gentype        &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr               ) const;
-    template <class S> int  model_mu   (                 Vector<double> &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr               ) const;
-    template <class S> int  model_muvar(gentype &resvar, gentype        &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr, int debug = 0) const;
-    template <class S> int  model_var  (gentype &resvar,                        const SparseVector<S> &x, const vecInfo *xing = nullptr               ) const
-    {
-        gentype dummy;
+    template <class S> int model_mu   (                 gentype &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr               ) const;
+    template <class S> int model_muvar(gentype &resvar, gentype &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr, int debug = 0) const;
 
-        return model_muvar(resvar,dummy,x,xing);
-    }
+    int model_muTrainingVector   (                 gentype &resmu,           int i) const;
+    int model_muvarTrainingVector(gentype &resvar, gentype &resmu, int ivar, int i) const;
 
-    template <class S> int  model_mu_cgt   (                         Vector<gentype> &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr               ) const;
-    template <class S> int  model_muvar_cgt(Vector<gentype> &resvar, Vector<gentype> &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr, int debug = 0) const;
-
-    template <class S> double inf_dist(const SparseVector<S> &xz) const;
-
-    int model_muTrainingVector   (                 gentype        &resmu,           int imu) const;
-    int model_muTrainingVector   (                 Vector<double> &resmu,           int imu) const;
-    int model_muvarTrainingVector(gentype &resvar, gentype        &resmu, int ivar, int imu) const;
-    int model_varTrainingVector  (gentype &resvar,                        int ivar         ) const;
+    template <class S> int model_mu_cgt   (                         Vector<gentype> &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr               ) const;
+    template <class S> int model_muvar_cgt(Vector<gentype> &resvar, Vector<gentype> &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr, int debug = 0) const;
 
     int model_muTrainingVector_cgt   (                         Vector<gentype> &resmu, int i) const;
     int model_muvarTrainingVector_cgt(Vector<gentype> &resvar, Vector<gentype> &resmu, int i) const;
 
-    int model_N_mu   (int q = 0) const { return (*(muapprox(q))).N(); }
-    int model_N_sigma(void)      const { return (*sigmaapprox).N();   }
+    int model_addTrainingVector_musigma(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x,                                                                                                                                                                                               double varadd = 0);
+    int model_addTrainingVector_musigma(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype = 2, double varadd = 0);
 
-    int model_NNCz_mu   (int q) const { return (*(muapprox(q))).NNC(0); }
-    int model_NNCz_sigma(void)  const { return (*sigmaapprox).NNC(0);   }
+    int model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x,                                                                                                                                                                                                          double varadd = 0);
+    int model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, const Vector<int> &xobstype, double varadd = 0);
+
+    template <class S> int model_mu (Vector<double> &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr) const;
+    template <class S> int model_var(gentype &resvar,       const SparseVector<S> &x, const vecInfo *xing = nullptr) const;
+
+    int model_muTrainingVector (Vector<double> &resmu, int i) const;
+    int model_varTrainingVector(gentype &resvar,       int i) const;
 
     template <class S> int  model_covar(Matrix<gentype> &rescov, const Vector<SparseVector<S> > &x) const;
     template <class S> void model_stabProb(double &res, const SparseVector<S> &x, int p, double pnrm, int rot, double mu, double B) const;
@@ -509,13 +504,17 @@ public:
     int  model_covarTrainingVector(Matrix<gentype> &rescov, const Vector<int> &i) const { return (*sigmaapprox).covarTrainingVector(rescov,i); }
     void model_stabProbTrainingVector(double &res, int i, int p, double pnrm, int rot, double mu, double B, int q = 0) const { (*(muapprox(q))).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B); }
 
-    int model_addTrainingVector_musigma       (const gentype &y, const gentype &ypred, const SparseVector<gentype> &x,                                                                                                                                                                                               double varadd = 0              );
-    int model_addTrainingVector_musigma       (const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype = 2, double varadd = 0              );
-    int model_addTrainingVector_sigmaifsep    (const gentype &y,                       const SparseVector<gentype> &x,                                                                                                                                                                                               double varadd = 0              );
-    int model_addTrainingVector_mu_sigmaifsame(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype = 2, double varadd = 0, int dval = 2);
+    int model_addTrainingVector_sigmaifsep    (const gentype &y,                       const SparseVector<gentype> &x,                                                                                                                                                                                               double varadd = 0);
+    int model_addTrainingVector_mu_sigmaifsame(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype = 2, double varadd = 0);
 
-    int model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x,                                                                                                                                                                                               double varadd = 0);
-    int model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype = 2, double varadd = 0);
+    int model_N_mu   (int q = 0) const { return (*(muapprox(q))).N();  }
+    int model_N_sigma(void)      const { return (*sigmaapprox).N();    }
+    int model_N_cgt  (int q = 0) const { return (*(cgtapprox(q))).N(); }
+
+    int model_NNCz_mu   (int q) const { return (*(muapprox(q))).NNC(0); }
+    int model_NNCz_sigma(void)  const { return (*sigmaapprox).NNC(0);   }
+
+    template <class S> double inf_dist(const SparseVector<S> &xz) const;
 
     double model_sigma(int q) const { return (*(muapprox(q))).sigma(); }
 
@@ -525,16 +524,22 @@ public:
     const Vector<gentype>       &model_y(int q = -1)       const { return ( q == -1 ) ? ( ismoo ? locyres : (*(muapprox(0))).y() ) : (*(muapprox(q))).y();  }
     const Vector<int>           &model_d(int q = 0)        const { return (*(muapprox(q))).d();  }
 
+    const SparseVector<gentype> &model_x_cgt(int i, int q = 0) const { return (*(cgtapprox(q))).x(i); }
+    const Vector<gentype>       &model_y_cgt(int q = 0)        const { return (*(cgtapprox(q))).y();  }
+    const Vector<int>           &model_d_cgt(int q = 0)        const { return (*(cgtapprox(q))).d();  }
+
     int model_train      (int &res, svmvolatile int &killSwitch);
     int model_train_sigma(int &res, svmvolatile int &killSwitch);
 
     int model_setd      (int imu, int isigma, int nd);
     int model_setd_mu   (int imu, int             nd);
     int model_setd_sigma(         int isigma, int nd);
+    int model_setd_cgt  (int imu, const Vector<int> &nd);
 
-    int model_setyd      (int imu, int isigma, int nd, const gentype &ny, double varadd = 0);
-    int model_setyd_mu   (int imu, int             nd, const gentype &ny, double varadd = 0);
-    int model_setyd_sigma(         int isigma, int nd, const gentype &ny, double varadd = 0);
+    int model_setyd      (int imu, int isigma, int nd, const        gentype  &ny, double varadd = 0);
+    int model_setyd_mu   (int imu, int             nd, const        gentype  &ny, double varadd = 0);
+    int model_setyd_sigma(         int isigma, int nd, const        gentype  &ny, double varadd = 0);
+    int model_setyd_cgt  (int imu, const Vector<int> &nd, const Vector<gentype> &ny, double varadd = 0);
 
     int model_setsigmaweight_addvar(int imu, int isigma, double addvar);
 
@@ -581,11 +586,11 @@ public:
 
     // This version adds to augx if enabled, augments x if required, then adds to mu - use this one by default!
 
-    int modelmu_int_addTrainingVector   (const gentype         &y,                       const SparseVector<gentype> &x, const SparseVector<gentype> &xx, int xobstype = 2, double varadd = 0, int dval = 2);
-    int modelsigma_int_addTrainingVector(const gentype         &y,                                                       const SparseVector<gentype> &xx, int xobstype = 2, double varadd = 0              );
-    int modelcgt_int_addTrainingVector  (const Vector<gentype> &y,                       const SparseVector<gentype> &x, const SparseVector<gentype> &xx, int xobstype = 2, double varadd = 0, int dval = 2);
-    int modeldiff_int_addTrainingVector (const gentype         &y, const gentype &ypred,                                 const SparseVector<gentype> &xx, int xobstype = 2, double varadd = 0, int dval = 2);
-    int modelaugx_int_addTrainingVector (const Vector<gentype> &y,                       const SparseVector<gentype> &,                                                     double varadd = 0              );
+    int modelmu_int_addTrainingVector   (const gentype         &y,                       const SparseVector<gentype> &x, const SparseVector<gentype> &xx,       int          xobstype = 2, double varadd = 0);
+    int modelsigma_int_addTrainingVector(const gentype         &y,                                                       const SparseVector<gentype> &xx,       int          xobstype = 2, double varadd = 0);
+    int modelcgt_int_addTrainingVector  (const Vector<gentype> &y,                       const SparseVector<gentype> &x, const SparseVector<gentype> &xx, const Vector<int> &xobstype,     double varadd = 0);
+    int modeldiff_int_addTrainingVector (const gentype         &y, const gentype &ypred,                                 const SparseVector<gentype> &xx,       int          xobstype = 2, double varadd = 0);
+    int modelaugx_int_addTrainingVector (const Vector<gentype> &y,                       const SparseVector<gentype> &,                                                                    double varadd = 0);
 
     int modelmu_int_train   (int &res, svmvolatile int &killSwitch);
     int modelsigma_int_train(int &res, svmvolatile int &killSwitch);
@@ -719,6 +724,13 @@ public:
 
 
 
+template <class S>
+int SMBOOptions::model_var(gentype &resvar, const SparseVector<S> &x, const vecInfo *xing) const
+{
+    gentype dummy;
+
+    return model_muvar(resvar,dummy,x,xing);
+}
 
 
 

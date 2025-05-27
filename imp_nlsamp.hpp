@@ -60,7 +60,7 @@ public:
 
     // Block data addition from bayesopt
 
-    virtual int addTrainingVector (int, const gentype &, const SparseVector<gentype> &, double a = 1, double b = 1) override { (void) a; (void) b; return 0; }
+    virtual int addTrainingVector (int, const gentype &, const SparseVector<gentype> &, double a = 1, double b = 1, int d = 2) override { (void) a; (void) b; (void) d; return 0; }
 
     // Training function (pre-calculates min_i(x(i)) for x(i) enabled)
 

@@ -1533,24 +1533,26 @@ void ML_Base::addToIndexKeyAndUpdate(const SparseVector<gentype> &newz, int u)
 {
     int indKeyChanged = 0;
 
-    if ( ( newz.nupsize() > 1 ) || ( newz.f1upsize() > 1 ) || newz.isf1offindpresent() || newz.isf2offindpresent() || newz.isf4offindpresent() )
+    if ( ( newz.nupsize() > 1 ) || newz.isf1offindpresent() || newz.isf2offindpresent() || newz.isf4offindpresent() )
     {
         NiceAssert( u == -1 );
 
-        int i,s;
+        int s;
 
         s = newz.nupsize();
 
-        for ( i = 0 ; i < s ; ++i )
+        for ( u = 0 ; u < s ; ++u )
         {
-            addToIndexKeyAndUpdate(newz.nup(i),i);
+            addToIndexKeyAndUpdate(newz.nup(u),-1);
+            addToIndexKeyAndUpdate(newz.nup(u),u);
         }
 
         s = newz.f1upsize();
 
-        for ( i = 0 ; i < s ; ++i )
+        for ( u = 0 ; u < s ; ++u )
         {
-            addToIndexKeyAndUpdate(newz.f1up(i),i);
+            addToIndexKeyAndUpdate(newz.f1up(u),-1);
+            addToIndexKeyAndUpdate(newz.f1up(u),u);
         }
     }
 
@@ -1735,7 +1737,7 @@ void ML_Base::addToIndexKeyAndUpdate(const SparseVector<gentype> &newz, int u)
                     fillIndex(ikInd);
                 }
 
-                if ( needaddxspacedim )
+                if ( needaddxspacedim && ( u == -1 ) )
                 {
                     addxspaceFeat(ikInd);
                 }
@@ -1775,20 +1777,22 @@ void ML_Base::removeFromIndexKeyAndUpdate(const SparseVector<gentype> &oldz, int
     {
         NiceAssert( u == -1 );
 
-        int i,s;
+        int s;
 
         s = oldz.nupsize();
 
-        for ( i = 0 ; i < s ; ++i )
+        for ( u = 0 ; u < s ; ++u )
         {
-            removeFromIndexKeyAndUpdate(oldz.nup(i),i);
+            removeFromIndexKeyAndUpdate(oldz.nup(u),-1);
+            removeFromIndexKeyAndUpdate(oldz.nup(u),u);
         }
 
         s = oldz.f1upsize();
 
-        for ( i = 0 ; i < s ; ++i )
+        for ( u = 0 ; u < s ; ++u )
         {
-            removeFromIndexKeyAndUpdate(oldz.f1up(i),i);
+            removeFromIndexKeyAndUpdate(oldz.f1up(u),-1);
+            removeFromIndexKeyAndUpdate(oldz.f1up(u),u);
         }
     }
 
@@ -2066,7 +2070,7 @@ int ML_Base::addTrainingVector(int i, double zz, double *xxa, int dima, double C
 
 // Functions that *should* be polymorphed.
 
-int ML_Base::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &xx, double nCweight, double nepsweight)
+int ML_Base::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &xx, double nCweight, double nepsweight, int dval)
 {
     if ( ML_Base::N()+1 > LARGE_TRAIN_BOUNDARY )
     {
@@ -2095,7 +2099,7 @@ int ML_Base::addTrainingVector(int i, const gentype &y, const SparseVector<genty
         isBasisUserVV = 1;
     }
 
-    xd.add(i);           xd("&",i)           = 2;
+    xd.add(i);           xd("&",i)           = dval; //2;
     xCweight.add(i);     xCweight("&",i)     = nCweight;
     xCweightfuzz.add(i); xCweightfuzz("&",i) = 1.0;
     xepsweight.add(i);   xepsweight("&",i)   = nepsweight;
@@ -2109,10 +2113,12 @@ int ML_Base::addTrainingVector(int i, const gentype &y, const SparseVector<genty
     alltraintargA.add(i);  alltraintargA("&",i)  = (const d_anion &) y;
     alltraintargV.add(i);  alltraintargV("&",i)  = (const Vector<double> &) y;
 
+    static thread_local Vector<double> empvec;
+
     alltraintargp.add(i);  calcprior(alltraintargp("&",i),allxdatagent(i));
-    alltraintargpR.add(i); alltraintargpR("&",i) = (double) alltraintargp(i);
-    alltraintargpA.add(i); alltraintargpA("&",i) = (const d_anion &) alltraintargp(i);
-    alltraintargpV.add(i); alltraintargpV("&",i) = (const Vector<double> &) alltraintargp(i);
+    alltraintargpR.add(i); alltraintargpR("&",i) = ( hOutType() == 'Z' ) ? ( (double) alltraintargp(i) ) : 0.0;
+    alltraintargpA.add(i); alltraintargpA("&",i) = ( hOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+    alltraintargpV.add(i); alltraintargpV("&",i) = ( hOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
 
     if ( !(allxdatagent(i).altcontent) && !(allxdatagent(i).altcontentsp) )
     {
@@ -2142,7 +2148,7 @@ int ML_Base::addTrainingVector(int i, const gentype &y, const SparseVector<genty
     // If x() is not accurate don't worry as it will be done via callback
     getKernel().getvecInfo(traininfo("&",i),x(i),nullptr,isXConsistent(),assumeReal); //x()(i));
     traintang("&",i)   = detangle_x(i);
-    xalphaState("&",i) = 1;
+    xalphaState("&",i) = dval ? 1 : 0; //1;
 
 //FIXME    allxdatagentp.add(i);
 //FIXME    traininfop.add(i);
@@ -2153,7 +2159,7 @@ int ML_Base::addTrainingVector(int i, const gentype &y, const SparseVector<genty
     return 0;
 }
 
-int ML_Base::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &xx, double nCweight, double nepsweight)
+int ML_Base::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &xx, double nCweight, double nepsweight, int dval)
 {
     if ( ML_Base::N()+1 > LARGE_TRAIN_BOUNDARY )
     {
@@ -2182,7 +2188,7 @@ int ML_Base::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &
         isBasisUserVV = 1;
     }
 
-    xd.add(i);           xd("&",i)           = 2;
+    xd.add(i);           xd("&",i)           = dval; //2;
     xCweight.add(i);     xCweight("&",i)     = nCweight;
     xCweightfuzz.add(i); xCweightfuzz("&",i) = 1.0;
     xepsweight.add(i);   xepsweight("&",i)   = nepsweight;
@@ -2194,10 +2200,12 @@ int ML_Base::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &
     alltraintargA.add(i);  alltraintargA("&",i)  = (const d_anion &) y;
     alltraintargV.add(i);  alltraintargV("&",i)  = (const Vector<double> &) y;
 
+    static thread_local Vector<double> empvec;
+
     alltraintargp.add(i);  calcprior(alltraintargp("&",i),allxdatagent(i));
-    alltraintargpR.add(i); alltraintargpR("&",i) = (double) alltraintargp(i);
-    alltraintargpA.add(i); alltraintargpA("&",i) = (const d_anion &) alltraintargp(i);
-    alltraintargpV.add(i); alltraintargpV("&",i) = (const Vector<double> &) alltraintargp(i);
+    alltraintargpR.add(i); alltraintargpR("&",i) = ( hOutType() == 'Z' ) ? ( (double) alltraintargp(i) ) : 0.0;
+    alltraintargpA.add(i); alltraintargpA("&",i) = ( hOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+    alltraintargpV.add(i); alltraintargpV("&",i) = ( hOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
 
     if ( !(allxdatagent(i).altcontent) && !(allxdatagent(i).altcontentsp) )
     {
@@ -2227,7 +2235,7 @@ int ML_Base::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &
     // If x() is not accurate don't worry as it will be done via callback
     getKernel().getvecInfo(traininfo("&",i),x(i),nullptr,isXConsistent(),assumeReal); //x()(i));
     traintang("&",i)   = detangle_x(i);
-    xalphaState("&",i) = 1;
+    xalphaState("&",i) = dval ? 1 : 0; //1;
 
 //FIXME    allxdatagentp.add(i);
 //FIXME    traininfop.add(i);
@@ -2292,10 +2300,12 @@ int ML_Base::addTrainingVector(int i, const Vector<gentype> &y, const Vector<Spa
         alltraintargA.add(i+j);  alltraintargA("&",i+j)  = (const d_anion &) y(j);
         alltraintargV.add(i+j);  alltraintargV("&",i+j)  = (const Vector<double> &) y(j);
 
+        static thread_local Vector<double> empvec;
+
         alltraintargp.add(i+j);  calcprior(alltraintargp("&",i+j),allxdatagent(i+j));;
-        alltraintargpR.add(i+j); alltraintargpR("&",i+j) = (double) alltraintargp(i+j);
-        alltraintargpA.add(i+j); alltraintargpA("&",i+j) = (const d_anion &) alltraintargp(i+j);
-        alltraintargpV.add(i+j); alltraintargpV("&",i+j) = (const Vector<double> &) alltraintargp(i+j);
+        alltraintargpR.add(i+j); alltraintargpR("&",i+j) = ( hOutType() == 'Z' ) ? ( (double) alltraintargp(i+j) ) : 0.0;
+        alltraintargpA.add(i+j); alltraintargpA("&",i+j) = ( hOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i+j) ) : 0_gent;
+        alltraintargpV.add(i+j); alltraintargpV("&",i+j) = ( hOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i+j) ) : empvec;
 
         if ( !(allxdatagent(i+j).altcontent) && !(allxdatagent(i+j).altcontentsp) )
         {
@@ -2391,10 +2401,12 @@ int ML_Base::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVe
         alltraintargA.add(i+j);  alltraintargA("&",i+j)  = (const d_anion &) y(j);
         alltraintargV.add(i+j);  alltraintargV("&",i+j)  = (const Vector<double> &) y(j);
 
+        static thread_local Vector<double> empvec;
+
         alltraintargp.add(i+j);  calcprior(alltraintargp("&",i+j),allxdatagent(i+j));;
-        alltraintargpR.add(i+j); alltraintargpR("&",i+j) = (double) alltraintargp(i+j);
-        alltraintargpA.add(i+j); alltraintargpA("&",i+j) = (const d_anion &) alltraintargp(i+j);
-        alltraintargpV.add(i+j); alltraintargpV("&",i+j) = (const Vector<double> &) alltraintargp(i+j);
+        alltraintargpR.add(i+j); alltraintargpR("&",i+j) = ( hOutType() == 'Z' ) ? ( (double) alltraintargp(i+j) ) : 0.0;
+        alltraintargpA.add(i+j); alltraintargpA("&",i+j) = ( hOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i+j) ) : 0_gent;
+        alltraintargpV.add(i+j); alltraintargpV("&",i+j) = ( hOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i+j) ) : empvec;
 
         if ( !(allxdatagent(i+j).altcontent) && !(allxdatagent(i+j).altcontentsp) )
         {
@@ -2572,22 +2584,24 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
     {
         int i = onlyChangeRowI;
 
-        calcprior(alltraintargp("&",i),allxdatagent(i));
+        static thread_local Vector<double> empvec;
 
-        alltraintargpR("&",i) = (double) alltraintargp(i);
-        alltraintargpA("&",i) = (const d_anion &) alltraintargp(i);
-        alltraintargpV("&",i) = (const Vector<double> &) alltraintargp(i);
+        calcprior(alltraintargp("&",i),allxdatagent(i));
+        alltraintargpR("&",i) = ( hOutType() == 'Z' ) ? ( (double) alltraintargp(i) ) : 0.0;
+        alltraintargpA("&",i) = ( hOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+        alltraintargpV("&",i) = ( hOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
     }
 
     else
     {
+        static thread_local Vector<double> empvec;
+
         for ( int i = 0 ; i < ML_Base::N() ; i++ )
         {
             calcprior(alltraintargp("&",i),allxdatagent(i));
-
-            alltraintargpR("&",i) = (double) alltraintargp(i);
-            alltraintargpA("&",i) = (const d_anion &) alltraintargp(i);
-            alltraintargpV("&",i) = (const Vector<double> &) alltraintargp(i);
+            alltraintargpR("&",i) = ( hOutType() == 'Z' ) ? ( (double) alltraintargp(i) ) : 0.0;
+            alltraintargpA("&",i) = ( hOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+            alltraintargpV("&",i) = ( hOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
         }
     }
 
@@ -3543,9 +3557,18 @@ std::ostream &ML_Base::printstream(std::ostream &output, int dep) const
     repPrint(output,'>',dep) << " \n";
     repPrint(output,'>',dep) << " Base kernel:                      " << kernel           << "\n";
     repPrint(output,'>',dep) << " Base kernel bypass:               " << K2mat            << "\n";
+    repPrint(output,'>',dep) << " Base prior mean type:             " << xmuprior         << "\n";
+    repPrint(output,'>',dep) << " Base prior mean gentype:          " << xmuprior_gt      << "\n";
+    repPrint(output,'>',dep) << " Base prior mean ML:               " << xmuprior_ml      << "\n";
     repPrint(output,'>',dep) << " Base training data:               " << allxdatagent     << "\n";
     repPrint(output,'>',dep) << " Base wild target:                 " << (ytargdata)      << "\n";
     repPrint(output,'>',dep) << " Base wild target real:            " << (ytargdataR)     << "\n";
+    repPrint(output,'>',dep) << " Base wild target anion:           " << (ytargdataA)     << "\n";
+    repPrint(output,'>',dep) << " Base wild target vector:          " << (ytargdataV)     << "\n";
+    repPrint(output,'>',dep) << " Base wild target prior:           " << (ytargdatap)     << "\n";
+    repPrint(output,'>',dep) << " Base wild target prior real:      " << (ytargdatapR)    << "\n";
+    repPrint(output,'>',dep) << " Base wild target prior anion:     " << (ytargdatapA)    << "\n";
+    repPrint(output,'>',dep) << " Base wild target prior vector:    " << (ytargdatapV)    << "\n";
     repPrint(output,'>',dep) << " Base training targets:            " << alltraintarg     << "\n";
     repPrint(output,'>',dep) << " Base training targets real:       " << alltraintargR    << "\n";
     repPrint(output,'>',dep) << " Base training targets anion:      " << alltraintargA    << "\n";
@@ -3594,9 +3617,18 @@ std::istream &ML_Base::inputstream(std::istream &input)
 
     input >> dummy; input >> kernel;
     input >> dummy; input >> K2mat;
+    input >> dummy; input >> xmuprior;
+    input >> dummy; input >> xmuprior_gt;
+    input >> dummy; //input >> xmuprior_ml;
     input >> dummy; input >> allxdatagent;
     input >> dummy; input >> (ytargdata);
     input >> dummy; input >> (ytargdataR);
+    input >> dummy; input >> (ytargdataA);
+    input >> dummy; input >> (ytargdataV);
+    input >> dummy; input >> (ytargdatap);
+    input >> dummy; input >> (ytargdatapR);
+    input >> dummy; input >> (ytargdatapA);
+    input >> dummy; input >> (ytargdatapV);
     input >> dummy; input >> alltraintarg;
     input >> dummy; input >> alltraintargR;
     input >> dummy; input >> alltraintargA;
@@ -7767,6 +7799,9 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
 
                         // Bound bounding
 
+                        lb = kernel.cWeightLB(i).isValNull() ? lb : ( (double) kernel.cWeightLB(i) );
+                        ub = kernel.cWeightUB(i).isValNull() ? ub : ( (double) kernel.cWeightUB(i) );
+
                         lb = ( !tuneBounds || ( (((*tuneBounds).wlb)(i)) < lb ) ) ? lb : (((*tuneBounds).wlb)(i));
                         ub = ( !tuneBounds || ( (((*tuneBounds).wub)(i)) > ub ) ) ? ub : (((*tuneBounds).wub)(i));
                     }
@@ -7785,6 +7820,9 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
                         steps = 6;
                         addit = 1;
 
+                        lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
+                        ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
+
                         lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
                         ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
                     }
@@ -7797,6 +7835,9 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
                         ub    = 1;
                         steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); //15;
                         addit = 1;
+
+                        lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
+                        ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
 
                         lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
                         ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
@@ -7824,6 +7865,9 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
 //errstream() << "phantomxyztune ub(" << i << ") = " << ub << "\n";
                         steps = ( ( ((int) (50/trycount)) > 5 ) ? ((int) (50/trycount)) : 5 ); //50/trycount; //30; //20; // 15; //20;
                         addit = 1;
+
+                        lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
+                        ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
 
                         lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
                         ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
@@ -8237,7 +8281,13 @@ void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vec
 
         res = 0.0_gent;
 
-        if ( xanear && !xafarfar )
+    // 128:  xfarfar refers to direction of gradient constraint, gradOrder > 0
+    // 256:  gradOrder > 0, but xfarfar not set
+    // 512:  xfarfarfar refers to direction of gradient constraint, gradOrderR > 0
+    // 1024: gradOrderR > 0, but xfarfarfar not set
+
+
+        if ( !( loctanga & (128+256) ) && xanear )
         {
             // Left rank without gradient
 
@@ -8251,14 +8301,14 @@ void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vec
             res += locres;
         }
 
-        if ( xanear && xafarfar && agradOrderL )
+        else if ( xanear )
         {
             // Left rank with gradient
 
             NiceThrow("Need to implement prior gradients!");
         }
 
-        if ( xafar && !xafarfarfar )
+        if ( ( loctanga & 1 ) && !( loctanga & (512+1024) ) && xafar )
         {
             // Right rank without gradient
 
@@ -8268,11 +8318,11 @@ void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vec
 
             gentype locres = xmuprior_gt(xargs);
 
-            locres *= arankL;
+            locres *= arankR;
             res -= locres;
         }
 
-        if ( xafar && xafarfarfar && agradOrderR )
+        if ( ( loctanga & 1 ) && xafar )
         {
             // Right rank with gradient
 
@@ -8295,13 +8345,14 @@ void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vec
 
 void ML_Base::calcallprior(void)
 {
+    static thread_local Vector<double> empvec;
+
     for ( int i = 0 ; i < ML_Base::N() ; i++ )
     {
         calcprior(alltraintargp("&",i),x(i));
-
-        alltraintargpR("&",i) = (double) alltraintargp(i);
-        alltraintargpA("&",i) = (const d_anion &) alltraintargp(i);
-        alltraintargpV("&",i) = (const Vector<double> &) alltraintargp(i);
+        alltraintargpR("&",i) = ( hOutType() == 'Z' ) ? ( (double) alltraintargp(i) ) : 0.0;
+        alltraintargpA("&",i) = ( hOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+        alltraintargpV("&",i) = ( hOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
     }
 }
 

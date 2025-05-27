@@ -2056,16 +2056,16 @@ void SVM_MultiC_atonce::resetCandeps(void)
     return;
 }
 
-int SVM_MultiC_atonce::addTrainingVector(int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_MultiC_atonce::addTrainingVector(int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
-
+    (void) dval;
 
     return SVM_MultiC_atonce::addTrainingVector(i,(int) z,x,Cweigh,epsweigh);
 }
 
-int SVM_MultiC_atonce::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_MultiC_atonce::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
-
+    (void) dval;
 
     return SVM_MultiC_atonce::qaddTrainingVector(i,(int) z,x,Cweigh,epsweigh);
 }

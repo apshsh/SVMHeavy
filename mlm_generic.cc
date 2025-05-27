@@ -138,7 +138,7 @@ void MLM_Generic::setmemsize(int expectedN)
     return;
 }
 
-int MLM_Generic::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double sigmaweigh, double epsweigh)
+int MLM_Generic::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double sigmaweigh, double epsweigh, int dval)
 {
     if ( tsize() )
     {
@@ -153,10 +153,10 @@ int MLM_Generic::addTrainingVector(int i, const gentype &y, const SparseVector<g
         }
     }
 
-    return getQQ().addTrainingVector(i,y,x,sigmaweigh,epsweigh);
+    return getQQ().addTrainingVector(i,y,x,sigmaweigh,epsweigh,dval);
 }
 
-int MLM_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double sigmaweigh, double epsweigh)
+int MLM_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double sigmaweigh, double epsweigh, int dval)
 {
     if ( tsize() )
     {
@@ -171,7 +171,7 @@ int MLM_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentyp
         }
     }
 
-    return getQQ().qaddTrainingVector(i,y,x,sigmaweigh,epsweigh);
+    return getQQ().qaddTrainingVector(i,y,x,sigmaweigh,epsweigh,dval);
 }
 
 int MLM_Generic::addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &sigmaweigh, const Vector<double> &epsweigh)

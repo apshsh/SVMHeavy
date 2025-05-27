@@ -94,8 +94,10 @@ double KNN_Binary::calcDist(const gentype &ha, const gentype &hb, int ia, int db
     return res;
 }
 
-int KNN_Binary::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_Binary::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
+
     NiceAssert( y.isValInteger() );
     NiceAssert( ( (int) y == +1 ) || ( (int) y == -1 ) );
 
@@ -107,8 +109,10 @@ int KNN_Binary::addTrainingVector (int i, const gentype &y, const SparseVector<g
     return 1;
 }
 
-int KNN_Binary::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_Binary::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
+
     NiceAssert( y.isValInteger() );
     NiceAssert( ( (int) y == +1 ) || ( (int) y == -1 ) );
 

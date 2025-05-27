@@ -185,7 +185,7 @@ int LSV_Generic::sety(const Vector<gentype> &y)
     return SVM_Scalar::sety(yy);
 }
 
-int LSV_Generic::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int LSV_Generic::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
@@ -202,18 +202,18 @@ int LSV_Generic::addTrainingVector(int i, const gentype &y, const SparseVector<g
 
     if ( y.isCastableToRealWithoutLoss() )
     {
-        res = SVM_Scalar::addTrainingVector(i,y,x,Cweigh,epsweigh);
+        res = SVM_Scalar::addTrainingVector(i,y,x,Cweigh,epsweigh,dval);
     }
 
     else
     {
-        res = SVM_Scalar::addTrainingVector(i,0.0_gent,x,Cweigh,epsweigh);
+        res = SVM_Scalar::addTrainingVector(i,0.0_gent,x,Cweigh,epsweigh,dval);
     }
 
     return res;
 }
 
-int LSV_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int LSV_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
@@ -230,12 +230,12 @@ int LSV_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentyp
 
     if ( y.isCastableToRealWithoutLoss() )
     {
-        res = SVM_Scalar::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
+        res = SVM_Scalar::qaddTrainingVector(i,y,x,Cweigh,epsweigh,dval);
     }
 
     else
     {
-        res = SVM_Scalar::qaddTrainingVector(i,0.0_gent,x,Cweigh,epsweigh);
+        res = SVM_Scalar::qaddTrainingVector(i,0.0_gent,x,Cweigh,epsweigh,dval);
     }
 
     return res;

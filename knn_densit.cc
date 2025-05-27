@@ -128,20 +128,20 @@ const Vector<int> &KNN_Densit::ClassLabels(void) const
     return *pres;
 }
 
-int KNN_Densit::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_Densit::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( y.isValNull() );
 
-    KNN_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh);
+    KNN_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 
     return 1;
 }
 
-int KNN_Densit::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_Densit::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( y.isValNull() );
 
-    KNN_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
+    KNN_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 
     return 1;
 }

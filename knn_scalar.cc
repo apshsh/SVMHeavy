@@ -116,8 +116,10 @@ double KNN_Scalar::calcDist(const gentype &ha, const gentype &hb, int ia, int db
     return res;
 }
 
-int KNN_Scalar::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_Scalar::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
+
     NiceAssert( y.isCastableToRealWithoutLoss() );
 
     ++(classcnt("&",3));
@@ -128,8 +130,10 @@ int KNN_Scalar::addTrainingVector (int i, const gentype &y, const SparseVector<g
     return 1;
 }
 
-int KNN_Scalar::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_Scalar::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
+
     NiceAssert( y.isCastableToRealWithoutLoss() );
 
     ++(classcnt("&",3));

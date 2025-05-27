@@ -113,8 +113,9 @@ std::istream &SVM_Cyclic::inputstream(std::istream &input)
     return input;
 }
 
-int SVM_Cyclic::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Cyclic::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
     NiceAssert( i >= 0 );
     NiceAssert( i <= SVM_Cyclic::N() );
     NiceAssert( !SVM_Cyclic::tspaceDim() || SVM_Cyclic::tspaceDim() == z.size() );
@@ -166,7 +167,7 @@ int SVM_Cyclic::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype
         res |= SVM_Planar::setd(i+((j+1)*SVM_Cyclic::N()),1);
     }
 
-    return res;    
+    return res;
 }
 
 int SVM_Cyclic::removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x)
@@ -736,11 +737,11 @@ int SVM_Cyclic::removeTrainingVector(int i, int num)
     return res;
 }
 
-int SVM_Cyclic::addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Cyclic::addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     SparseVector<gentype> xx(x);
 
-    return qaddTrainingVector(i,z,xx,Cweigh,epsweigh);
+    return qaddTrainingVector(i,z,xx,Cweigh,epsweigh,dval);
 }
 
 int SVM_Cyclic::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)

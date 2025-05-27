@@ -160,8 +160,10 @@ int SVM_MulBin::removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x
 
 
 
-int SVM_MulBin::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_MulBin::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
+
     int d = (int) z;
 
     return qaddTrainingVector(i,d,x,Cweigh,epsweigh,0.0);
@@ -195,11 +197,11 @@ int SVM_MulBin::sety(int i, const gentype &z)
 
 
 
-int SVM_MulBin::addTrainingVector(int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_MulBin::addTrainingVector(int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     SparseVector<gentype> xx(x);
 
-    return qaddTrainingVector(i,z,xx,Cweigh,epsweigh);
+    return qaddTrainingVector(i,z,xx,Cweigh,epsweigh,dval);
 }
 
 int SVM_MulBin::addTrainingVector(int i, int d, const SparseVector<gentype> &x, double Cweigh, double epsweigh, double z)

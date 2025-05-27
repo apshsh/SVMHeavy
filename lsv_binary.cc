@@ -612,13 +612,15 @@ int LSV_Binary::setdinternal(int i, int xd)
     return res;
 }
 
-int LSV_Binary::addTrainingVector(int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int LSV_Binary::addTrainingVector(int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
     return LSV_Binary::addTrainingVector(i,(int) z,x,Cweigh,epsweigh);
 }
 
-int LSV_Binary::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int LSV_Binary::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
     return LSV_Binary::qaddTrainingVector(i,(int) z,x,Cweigh,epsweigh);
 }
 

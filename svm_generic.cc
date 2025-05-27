@@ -121,32 +121,32 @@ int SVM_Generic::setFixedBias(const gentype &newBias)
     return 1;
 }
 
-int SVM_Generic::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Generic::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     incgvernum();
 
     NiceAssert( i >= 0 );
     //NiceAssert( i <= SVM_Generic::N() );
 
-    int res = ML_Base::addTrainingVector(i,y,x,Cweigh,epsweigh);
+    int res = ML_Base::addTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 
     dalpha.add(i);      dalpha("&",i) = 0;
-    xalphaState.add(i); xalphaState("&",i) = 1;
+    xalphaState.add(i); xalphaState("&",i) = dval ? 1 : 0; //1;
 
     return res;
 }
 
-int SVM_Generic::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Generic::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     incgvernum();
 
     NiceAssert( i >= 0 );
     //NiceAssert( i <= SVM_Generic::N() );
 
-    int res = ML_Base::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
+    int res = ML_Base::qaddTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 
     dalpha.add(i);      dalpha("&",i) = 0;
-    xalphaState.add(i); xalphaState("&",i) = 1;
+    xalphaState.add(i); xalphaState("&",i) = dval ? 1 : 0; //1;
 
     return res;
 }

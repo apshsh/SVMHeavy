@@ -141,22 +141,26 @@ double KNN_Gentyp::calcDist(const gentype &ha, const gentype &hb, int ia, int db
     return res;
 }
 
-int KNN_Gentyp::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_Gentyp::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
+
     ++(classcnt("&",3));
 
     KNN_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh);
-    KNN_Generic::dd("&",i) = 2;
+    KNN_Generic::dd("&",i) = dval;
 
     return 1;
 }
 
-int KNN_Gentyp::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_Gentyp::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
+
     ++(classcnt("&",3));
 
     KNN_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
-    KNN_Generic::dd("&",i) = 2;
+    KNN_Generic::dd("&",i) = dval;
 
     return 1;
 }

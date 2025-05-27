@@ -244,9 +244,9 @@ void SVM_KConst::fastg(gentype &res,
     return;
 }
 
-int SVM_KConst::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_KConst::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
-    int res = SVM_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh);
+    int res = SVM_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 
     ddalphaR.add(i);
     ddalphaR("&",i) = 0;
@@ -254,9 +254,9 @@ int SVM_KConst::addTrainingVector (int i, const gentype &y, const SparseVector<g
     return res;
 }
 
-int SVM_KConst::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_KConst::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
-    int res = SVM_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
+    int res = SVM_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 
     ddalphaR.add(i);
     ddalphaR("&",i) = 0;

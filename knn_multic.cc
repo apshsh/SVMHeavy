@@ -87,8 +87,10 @@ double KNN_MultiC::calcDist(const gentype &ha, const gentype &hb, int ia, int db
     return res;
 }
 
-int KNN_MultiC::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_MultiC::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
+
     NiceAssert( y.isValInteger() );
 
     if ( ((int) y) != 0 )
@@ -104,8 +106,10 @@ int KNN_MultiC::addTrainingVector (int i, const gentype &y, const SparseVector<g
     return 1;
 }
 
-int KNN_MultiC::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_MultiC::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
+
     NiceAssert( y.isValInteger() );
 
     if ( ((int) y) != 0 )

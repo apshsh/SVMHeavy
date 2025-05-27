@@ -27,7 +27,7 @@ int bayesOpt(int dim,
              gentype &fres,
              const Vector<double> &xmin,
              const Vector<double> &xmax,
-             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex),
+             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, const Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex),
              void *fnarg,
              BayesOptions &bopts,
              svmvolatile int &killSwitch,
@@ -40,7 +40,7 @@ class BayesOptions : public SMBOOptions
              gentype &fres,
              const Vector<double> &xmin,
              const Vector<double> &xmax,
-             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex),
+             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, const Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex),
              void *fnarg,
              BayesOptions &bopts,
              svmvolatile int &killSwitch,
@@ -734,7 +734,7 @@ public:
 
     virtual int getdimfid(void) const override { return numfids ? dimfid : 0;  }
 
-private:
+//private:
     // We actually work with this local version as it may need to be overwritten
     // (reset restores from ext... copy)
 

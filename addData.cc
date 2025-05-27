@@ -406,23 +406,11 @@ int genericMLDataLoad(int binaryRelabel,
 
                 x.fix(); // get it ready.  This avoids possible non-threadsafe access to vectors
 
-                if ( ( realtargtype == 'N' ) && !isSVMAutoEn(mlbase) && !isKNNAutoEn(mlbase) )
+                if ( realtargtype == 'N' )
                 {
                     // No target for this type, so make target nullptr
 
                     z.makeNull();
-                }
-
-                else if ( ( realtargtype == 'N' ) && isSVMAutoEn(mlbase) && isKNNAutoEn(mlbase) )
-                {
-                    // For the auto-encoder, target is always input (even
-                    // when target given)
-
-                    Vector<gentype> temp;
-
-                    (*mldest).xlateFromSparse(temp,x);
-
-                    z = temp;
                 }
 
                 else

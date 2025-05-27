@@ -1679,13 +1679,15 @@ int SVM_MultiC_redbin::setMOC(void)
     return 1;
 }
 
-int SVM_MultiC_redbin::addTrainingVector(int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_MultiC_redbin::addTrainingVector(int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
     return SVM_MultiC_redbin::addTrainingVector(i,(int) z,x,Cweigh,epsweigh);
 }
 
-int SVM_MultiC_redbin::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_MultiC_redbin::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
     return SVM_MultiC_redbin::qaddTrainingVector(i,(int) z,x,Cweigh,epsweigh);
 }
 

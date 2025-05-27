@@ -362,7 +362,7 @@ void addclass(int label, int epszero)
     return;
 }
 
-int SVM_Vector::addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Vector::addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     Vector<double> zd;
     Vector<gentype> zz((const Vector<gentype> &) z);
@@ -379,10 +379,10 @@ int SVM_Vector::addTrainingVector (int i, const gentype &z, const SparseVector<g
         }
     }
 
-    return SVM_Vector::addTrainingVector(i,zd,x,Cweigh,epsweigh);
+    return SVM_Vector::addTrainingVector(i,zd,x,Cweigh,epsweigh,dval);
 }
 
-int SVM_Vector::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Vector::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     Vector<double> zd(z.size());
 
@@ -398,7 +398,7 @@ int SVM_Vector::qaddTrainingVector(int i, const gentype &z,       SparseVector<g
         }
     }
 
-    return SVM_Vector::qaddTrainingVector(i,zd,x,Cweigh,epsweigh);
+    return SVM_Vector::qaddTrainingVector(i,zd,x,Cweigh,epsweigh,dval);
 }
 
 int SVM_Vector::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)

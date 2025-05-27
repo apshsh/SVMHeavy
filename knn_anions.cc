@@ -94,13 +94,15 @@ double KNN_Anions::calcDist(const gentype &ha, const gentype &hb, int ia, int db
     return res;
 }
 
-int KNN_Anions::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_Anions::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
+
     NiceAssert( y.isCastableToAnionWithoutLoss() );
 
     ++(classcnt("&",1));
 
-    KNN_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh);
+    KNN_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh,dval);
     KNN_Generic::dd("&",i) = 2;
 
     if ( ML_Base::y(i).order() > dorder )
@@ -111,13 +113,15 @@ int KNN_Anions::addTrainingVector (int i, const gentype &y, const SparseVector<g
     return 1;
 }
 
-int KNN_Anions::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_Anions::qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
+
     NiceAssert( y.isCastableToAnionWithoutLoss() );
 
     ++(classcnt("&",1));
 
-    KNN_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
+    KNN_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh,dval);
     KNN_Generic::dd("&",i) = 2;
 
     if ( (ML_Base::y(i)).order() > dorder )

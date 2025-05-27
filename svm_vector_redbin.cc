@@ -21,7 +21,7 @@
 
 
 template <>
-int SVM_Vector_redbin<SVM_Scalar>::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh);
+int SVM_Vector_redbin<SVM_Scalar>::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval);
 
 template <>
 int SVM_Vector_redbin<SVM_Scalar>::qaddTrainingVector(int i, const Vector<double> &z, SparseVector<gentype> &x, double Cweigh, double epsweigh, int d);
@@ -351,7 +351,7 @@ int SVM_Vector_redbin<SVM_Scalar>::qaddTrainingVector(int i, const Vector<gentyp
 }
 
 template <>
-int SVM_Vector_redbin<SVM_Scalar>::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Vector_redbin<SVM_Scalar>::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     Vector<double> zd;
     Vector<gentype> zz((const Vector<gentype> &) z);
@@ -368,7 +368,7 @@ int SVM_Vector_redbin<SVM_Scalar>::qaddTrainingVector(int i, const gentype &z,  
         }
     }
 
-    return SVM_Vector_redbin<SVM_Scalar>::qaddTrainingVector(i,zd,x,Cweigh,epsweigh,2);
+    return SVM_Vector_redbin<SVM_Scalar>::qaddTrainingVector(i,zd,x,Cweigh,epsweigh,dval); //2);
 }
 
 template <>

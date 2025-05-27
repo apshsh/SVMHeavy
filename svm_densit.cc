@@ -168,7 +168,7 @@ int SVM_Densit::removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x
     return res;
 }
 
-int SVM_Densit::addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Densit::addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     (void) z;
 
@@ -176,13 +176,13 @@ int SVM_Densit::addTrainingVector (int i, const gentype &z, const SparseVector<g
 
     double zz = 0.0;
 
-    int res = SVM_Scalar::addTrainingVector(i,zz,x,Cweigh,epsweigh);
+    int res = SVM_Scalar::addTrainingVector(i,zz,x,Cweigh,epsweigh,dval);
     fixz();
 
     return res;
 }
 
-int SVM_Densit::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Densit::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     (void) z;
 
@@ -190,7 +190,7 @@ int SVM_Densit::qaddTrainingVector(int i, const gentype &z,       SparseVector<g
 
     double zz = 0.0;
 
-    int res = SVM_Scalar::qaddTrainingVector(i,zz,x,Cweigh,epsweigh);
+    int res = SVM_Scalar::qaddTrainingVector(i,zz,x,Cweigh,epsweigh,dval);
     fixz();
 
     return res;

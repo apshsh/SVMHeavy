@@ -310,23 +310,19 @@ SRC = basefn.cc randfun.cc clockbase.cc memdebug.cc gslrefs.cc zerocross.cc \
       svm_scalar.cc svm_binary.cc svm_single.cc svm_biscor.cc svm_scscor.cc svm_densit.cc svm_pfront.cc svm_scalar_rff.cc svm_binary_rff.cc \
       svm_vector_atonce_template.cc \
       svm_multic_redbin.cc svm_multic_atonce.cc svm_vector_redbin.cc svm_vector_atonce.cc svm_vector_mredbin.cc svm_vector_matonce.cc \
-      svm_multic.cc svm_vector.cc svm_anions.cc svm_autoen.cc svm_gentyp.cc svm_planar.cc svm_mvrank.cc svm_mulbin.cc \
+      svm_multic.cc svm_vector.cc svm_anions.cc svm_gentyp.cc svm_planar.cc svm_mvrank.cc svm_mulbin.cc \
       svm_simlrn.cc svm_cyclic.cc svm_kconst.cc \
-      onn_generic.cc \
-      onn_scalar.cc onn_binary.cc onn_vector.cc onn_anions.cc onn_autoen.cc onn_gentyp.cc \
       knn_generic.cc \
-      knn_scalar.cc knn_binary.cc knn_multic.cc knn_vector.cc knn_anions.cc knn_autoen.cc knn_gentyp.cc knn_densit.cc \
+      knn_scalar.cc knn_binary.cc knn_multic.cc knn_vector.cc knn_anions.cc knn_gentyp.cc knn_densit.cc \
       blk_generic.cc \
       blk_nopnop.cc blk_consen.cc blk_avesca.cc blk_avevec.cc blk_aveani.cc blk_usrfna.cc blk_usrfnb.cc blk_userio.cc blk_calbak.cc \
       blk_mexfna.cc blk_mexfnb.cc blk_mercer.cc blk_conect.cc blk_system.cc blk_kernel.cc blk_bernst.cc blk_batter.cc \
       imp_generic.cc \
       imp_expect.cc imp_parsvm.cc imp_rlsamp.cc imp_nlsamp.cc \
       lsv_generic.cc \
-      lsv_scalar.cc lsv_vector.cc lsv_anions.cc lsv_scscor.cc lsv_autoen.cc lsv_gentyp.cc lsv_planar.cc lsv_mvrank.cc lsv_binary.cc lsv_scalar_rff.cc \
+      lsv_scalar.cc lsv_vector.cc lsv_anions.cc lsv_scscor.cc lsv_gentyp.cc lsv_planar.cc lsv_mvrank.cc lsv_binary.cc lsv_scalar_rff.cc \
       gpr_generic.cc \
       gpr_scalar.cc gpr_vector.cc gpr_anions.cc gpr_gentyp.cc gpr_binary.cc gpr_scalar_rff.cc gpr_binary_rff.cc \
-      ssv_generic.cc \
-      ssv_scalar.cc ssv_binary.cc ssv_single.cc \
       mlm_generic.cc \
       mlm_scalar.cc mlm_binary.cc mlm_vector.cc \
       ml_mutable.cc \
@@ -615,22 +611,12 @@ SVM_VECTORDEP = svm_generic.hpp $(SVM_GENERICDEP) svm_scalar.hpp $(SVM_SCALARDEP
                 svm_vector_redbin.hpp $(SVM_MULTIC_REDBINDEP) svm_vector_atonce.hpp $(SVM_MULTIC_ATONCEDEP) \
                 svm_vector_mredbin.hpp $(SVM_MULTIC_MREDBINDEP) svm_vector_matonce.hpp $(SVM_MULTIC_MATONCEDEP)
 SVM_ANIONSDEP = svm_vector.hpp $(SVM_VECTORDEP)
-SVM_AUTOENDEP = svm_vector.hpp $(SVM_VECTORDEP)
 SVM_GENTYPDEP = svm_vector.hpp $(SVM_VECTORDEP)
 SVM_PLANARDEP = svm_planar.hpp $(SVM_SCALARDEP)
 SVM_MVRANKDEP = svm_mvrank.hpp $(SVM_PLANARDEP)
 SVM_MULBINDEP = svm_mulbin.hpp $(SVM_MVRANKDEP)
 SVM_CYCLICDEP = svm_cyclic.hpp $(SVM_PLANARDEP)
 SVM_KCONSTDEP = svm_kconst.hpp $(SVM_GENERICDEP)
-
-ONN_GENERICDEP = ml_base.hpp $(ML_BASEDEP)
-
-ONN_SCALARDEP = onn_generic.hpp $(ONN_GENERICDEP)
-ONN_BINARYDEP = onn_generic.hpp $(ONN_GENERICDEP)
-ONN_VECTORDEP = onn_generic.hpp $(ONN_GENERICDEP)
-ONN_ANIONSDEP = onn_generic.hpp $(ONN_GENERICDEP)
-ONN_AUTOENDEP = onn_vector.hpp  $(ONN_VECTORDEP)
-ONN_GENTYPDEP = onn_generic.hpp $(ONN_GENERICDEP)
 
 KNN_GENERICDEP = ml_base.hpp $(ML_BASEDEP) kcache.hpp $(KCACHEDEP)
 
@@ -639,7 +625,6 @@ KNN_BINARYDEP = knn_generic.hpp $(KNN_GENERICDEP)
 KNN_MULTICDEP = knn_generic.hpp $(KNN_GENERICDEP)
 KNN_VECTORDEP = knn_generic.hpp $(KNN_GENERICDEP)
 KNN_ANIONSDEP = knn_generic.hpp $(KNN_GENERICDEP)
-KNN_AUTOENDEP = knn_vector.hpp  $(KNN_VECTORDEP)
 KNN_GENTYPDEP = knn_generic.hpp $(KNN_GENERICDEP)
 KNN_DENSITDEP = knn_generic.hpp $(KNN_GENERICDEP)
 
@@ -676,7 +661,6 @@ LSV_SCALARDEP = lsv_generic.hpp $(LSV_GENERICDEP)
 LSV_VECTORDEP = lsv_generic.hpp $(LSV_GENERICDEP) svm_vector.hpp $(SVM_VECTORDEP) lsv_generic_deref.hpp
 LSV_ANIONSDEP = lsv_generic.hpp $(LSV_GENERICDEP)
 LSV_SCSCORDEP = lsv_generic.hpp $(LSV_GENERICDEP) svm_scscor.hpp $(SVM_SCSCORDEP)
-LSV_AUTOENDEP = lsv_vector.hpp $(LSV_VECTORDEP)
 LSV_GENTYPDEP = lsv_generic.hpp $(LSV_GENERICDEP) svm_gentyp.hpp $(SVM_GENTYPDEP)
 LSV_PLANARDEP = lsv_generic.hpp $(LSV_GENERICDEP) svm_planar.hpp $(SVM_PLANARDEP)
 LSV_MVRANKDEP = lsv_generic.hpp $(LSV_GENERICDEP) svm_mvrank.hpp $(SVM_MVRANKDEP)
@@ -693,12 +677,6 @@ GPR_BINARYDEP = gpr_scalar.hpp $(GPR_SCALARDEP)
 GPR_SCALAR_RFFDEP = gpr_generic.hpp $(GPR_GENERICDEP) lsv_scalar_rff.hpp $(LSV_SCALAR_RFFDEP)
 GPR_BINARY_RFFDEP = gpr_scalar_rff.hpp $(GPR_SCALAR_RFFDEP)
 
-SSV_GENERICDEP = ml_base.hpp $(ML_BASEDEP) svm_scalar.hpp $(SVM_SCALARDEP)
-
-SSV_SCALARDEP = ssv_generic.hpp $(SSV_GENERICDEP)
-SSV_BINARYDEP = ssv_generic.hpp $(SSV_GENERICDEP) ssv_scalar.hpp $(SSV_SCALARDEP)
-SSV_SINGLEDEP = ssv_generic.hpp $(SSV_GENERICDEP) ssv_binary.hpp $(SSV_BINAYRDEP)
-
 MLM_GENERICDEP = ml_base.hpp $(ML_BASEDEP) ml_base_deref.hpp svm_generic.hpp $(SVM_GENERICDEP) svm_scalar.hpp $(SVM_SCALARDEP)
 
 MLM_SCALARDEP = mlm_generic.hpp $(MLM_GENERICDEP) svm_scalar.hpp $(SVM_SCALARDEP)
@@ -709,10 +687,9 @@ MLM_VECTORDEP = mlm_generic.hpp $(MLM_GENERICDEP) svm_vector.hpp $(SVM_VECTORDEP
 
 #ML_MUTABLEDEP = $(MLMUTATEFILE)
 ML_MUTABLEDEP = ml_base.hpp $(ML_BASEDEP) \
-                svm_generic.hpp $(SVM_GENERICDEP) onn_generic.hpp $(ONN_GENERICDEP) \
-                blk_generic.hpp $(BLK_GENERICDEP) knn_generic.hpp $(KNN_GENERICDEP) \
-                gpr_generic.hpp $(GPR_GENERICDEP) lsv_generic.hpp $(LSV_GENERICDEP) \
-                imp_generic.hpp $(IMP_GENERICDEP) ssv_generic.hpp $(SSV_GENERICDEP) \
+                svm_generic.hpp $(SVM_GENERICDEP) blk_generic.hpp $(BLK_GENERICDEP) \
+                knn_generic.hpp $(KNN_GENERICDEP) gpr_generic.hpp $(GPR_GENERICDEP) \
+                lsv_generic.hpp $(LSV_GENERICDEP) imp_generic.hpp $(IMP_GENERICDEP) \
                 mlm_generic.hpp $(MLM_GENERICDEP)
 
 FUZZYMLDEP        = ml_base.hpp $(ML_BASEDEP)
@@ -753,16 +730,13 @@ MLINTERDEP   = ml_base.hpp $(ML_BASEDEP) mlcommon.hpp $(MLCOMMONDEP) \
 ML_MUTABLE_CCDEP = svm_single.hpp $(SVM_SINGLEDEP) svm_binary.hpp $(SVM_BINARYDEP) \
                svm_scalar.hpp $(SVM_SCALARDEP) svm_multic.hpp $(SVM_MULTICDEP) \
                svm_vector.hpp $(SVM_VECTORDEP) svm_anions.hpp $(SVM_ANIONSDEP) \
-               svm_autoen.hpp $(SVM_AUTOENDEP) svm_densit.hpp $(SVM_DENSITDEP) \
+               svm_densit.hpp $(SVM_DENSITDEP) \
                svm_pfront.hpp $(SVM_PFRONTDEP) svm_biscor.hpp $(SVM_BISCORDEP) \
                svm_scscor.hpp $(SVM_SCSCORDEP) svm_gentyp.hpp $(SVM_GENTYPDEP) \
                svm_planar.hpp $(SVM_PLANARDEP) svm_mvrank.hpp $(SVM_MVRANKDEP) \
                svm_mulbin.hpp $(SVM_MULBINDEP) svm_cyclic.hpp $(SVM_CYCLICDEP) \
                svm_simlrn.hpp $(SVM_SIMLRNDEP) svm_kconst.hpp $(SVM_KCONSTDEP) \
                svm_scalar_rff.hpp $(SVM_SCALAR_RFFDEP) svm_binary_rff.hpp $(SVM_BINARY_RFFDEP) \
-               onn_scalar.hpp $(ONN_SCALARDEP) onn_vector.hpp $(ONN_VECTORDEP) \
-               onn_anions.hpp $(ONN_ANIONSDEP) onn_binary.hpp $(ONN_BINARYDEP) \
-               onn_autoen.hpp $(ONN_AUTOENDEP) onn_gentyp.hpp $(ONN_GENTYPDEP) \
                blk_nopnop.hpp $(BLK_NOPNOPDEP) blk_consen.hpp $(BLK_CONSENDEP) \
                blk_avesca.hpp $(BLK_AVESCADEP) blk_avevec.hpp $(BLK_AVEVECDEP) \
                blk_aveani.hpp $(BLK_AVEANIDEP) blk_usrfna.hpp $(BLK_USRFNADEP) \
@@ -775,20 +749,18 @@ ML_MUTABLE_CCDEP = svm_single.hpp $(SVM_SINGLEDEP) svm_binary.hpp $(SVM_BINARYDE
                knn_densit.hpp $(KNN_DENSITDEP) knn_binary.hpp $(KNN_BINARYDEP) \
                knn_multic.hpp $(KNN_MULTICDEP) knn_gentyp.hpp $(KNN_GENTYPDEP) \
                knn_scalar.hpp $(KNN_SCALARDEP) knn_vector.hpp $(KNN_VECTORDEP) \
-               knn_anions.hpp $(KNN_ANIONSDEP) knn_autoen.hpp $(KNN_AUTOENDEP) \
+               knn_anions.hpp $(KNN_ANIONSDEP) \
                gpr_scalar.hpp $(GPR_SCALARDEP) gpr_vector.hpp $(GPR_VECTORDEP) \
                gpr_anions.hpp $(GPR_ANIONSDEP) gpr_gentyp.hpp $(GPR_GENTYPDEP) \
                gpr_binary.hpp $(GPR_BINARYDEP) gpr_scalar_rff.hpp $(GPR_SCALAR_RFFDEP) \
                gpr_binary_rff.hpp $(GPR_BINARY_RFFDEP) \
                lsv_scalar.hpp $(LSV_SCALARDEP) lsv_vector.hpp $(LSV_VECTORDEP) \
                lsv_anions.hpp $(LSV_ANIONSDEP) lsv_scscor.hpp $(LSV_SCSCORDEP) \
-               lsv_autoen.hpp $(LSV_AUTOENDEP) lsv_gentyp.hpp $(LSV_GENTYPDEP) \
+               lsv_gentyp.hpp $(LSV_GENTYPDEP) \
                lsv_planar.hpp $(LSV_PLANARDEP) lsv_mvrank.hpp $(LSV_MVRANKDEP) \
                lsv_binary.hpp $(LSV_BINARYDEP) lsv_scalar_rff.hpp $(LSV_SCALAR_RFFDEP) \
                imp_expect.hpp $(IMP_EXPECTDEP) imp_parsvm.hpp $(IMP_PARSVMDEP) \
                imp_rlsamp.hpp $(IMP_RLSAMPDEP) imp_nlsamp.hpp $(IMP_NLSAMPDEP) \
-               ssv_scalar.hpp $(SSV_SCALARDEP) ssv_binary.hpp $(SSV_BINARYDEP) \
-               ssv_single.hpp $(SSV_SINGLEDEP) \
                mlm_scalar.hpp $(MLM_SCALARDEP) mlm_binary.hpp $(MLM_BINARYDEP) \
                mlm_vector.hpp $(MLM_VECTORDEP)
 
@@ -949,8 +921,6 @@ svm_anions.o : svm_anions.cc svm_anions.hpp $(SVM_ANIONSDEP)
 	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
 svm_gentyp.o : svm_gentyp.cc svm_gentyp.hpp $(SVM_GENTYPDEP)
 	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
-svm_autoen.o : svm_autoen.cc svm_autoen.hpp $(SVM_AUTOENDEP)
-	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
 svm_planar.o : svm_planar.cc svm_planar.hpp $(SVM_PLANARDEP)
 	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
 svm_mvrank.o : svm_mvrank.cc svm_mvrank.hpp $(SVM_MVRANKDEP)
@@ -960,22 +930,6 @@ svm_mulbin.o : svm_mulbin.cc svm_mulbin.hpp $(SVM_MULBINDEP)
 svm_cyclic.o : svm_cyclic.cc svm_cyclic.hpp $(SVM_CYCLICDEP)
 	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
 svm_kconst.o : svm_kconst.cc svm_kconst.hpp $(SVM_KCONSTDEP)
-	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
-
-onn_generic.o : onn_generic.cc onn_generic.hpp $(ONN_GENERICDEP)
-	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
-
-onn_scalar.o : onn_scalar.cc onn_scalar.hpp $(ONN_SCALARDEP)
-	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
-onn_binary.o : onn_binary.cc onn_binary.hpp $(ONN_BINARYDEP)
-	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
-onn_vector.o : onn_vector.cc onn_vector.hpp $(ONN_VECTORDEP)
-	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
-onn_anions.o : onn_anions.cc onn_anions.hpp $(ONN_ANIONSDEP)
-	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
-onn_autoen.o : onn_autoen.cc onn_autoen.hpp $(ONN_AUTOENDEP)
-	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
-onn_gentyp.o : onn_gentyp.cc onn_gentyp.hpp $(ONN_GENTYPDEP)
 	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
 
 knn_generic.o : knn_generic.cc knn_generic.hpp $(KNN_GENERICDEP)
@@ -990,8 +944,6 @@ knn_multic.o : knn_multic.cc knn_multic.hpp $(KNN_MULTICDEP)
 knn_vector.o : knn_vector.cc knn_vector.hpp $(KNN_VECTORDEP)
 	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
 knn_anions.o : knn_anions.cc knn_anions.hpp $(KNN_ANIONSDEP)
-	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
-knn_autoen.o : knn_autoen.cc knn_autoen.hpp $(KNN_AUTOENDEP)
 	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
 knn_gentyp.o : knn_gentyp.cc knn_gentyp.hpp $(KNN_GENTYPDEP)
 	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
@@ -1059,8 +1011,6 @@ lsv_anions.o : lsv_anions.cc lsv_anions.hpp $(LSV_ANIONSDEP)
 	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
 lsv_scscor.o : lsv_scscor.cc lsv_scscor.hpp $(LSV_SCSCORDEP)
 	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
-lsv_autoen.o : lsv_autoen.cc lsv_autoen.hpp $(LSV_AUTOENDEP)
-	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
 lsv_gentyp.o : lsv_gentyp.cc lsv_gentyp.hpp $(LSV_GENTYPDEP)
 	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
 lsv_planar.o : lsv_planar.cc lsv_planar.hpp $(LSV_PLANARDEP)
@@ -1088,16 +1038,6 @@ gpr_binary.o : gpr_binary.cc gpr_binary.hpp $(GPR_BINARYDEP)
 gpr_scalar_rff.o : gpr_scalar_rff.cc gpr_scalar_rff.hpp $(GPR_SCALAR_RFFDEP)
 	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
 gpr_binary_rff.o : gpr_binary_rff.cc gpr_binary_rff.hpp $(GPR_BINARY_RFFDEP)
-	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
-
-ssv_generic.o : ssv_generic.cc ssv_generic.hpp $(SSV_GENERICDEP)
-	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
-
-ssv_scalar.o : ssv_scalar.cc ssv_scalar.hpp $(SSV_SCALARDEP)
-	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
-ssv_binary.o : ssv_binary.cc ssv_binary.hpp $(SSV_BINARYDEP)
-	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
-ssv_single.o : ssv_single.cc ssv_single.hpp $(SSV_SINGLEDEP)
 	$(CC) $< -o $@ -c $(CFLAGS) > $(MLMUTATEFILE)
 
 mlm_generic.o : mlm_generic.cc mlm_generic.hpp $(MLM_GENERICDEP)

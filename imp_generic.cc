@@ -91,18 +91,18 @@ IMP_Generic::~IMP_Generic()
     return;
 }
 
-int IMP_Generic::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int IMP_Generic::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     untrain();
-    getQ().addTrainingVector(i,y,x,Cweigh,epsweigh);
+    getQ().addTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 
     return 1;
 }
 
-int IMP_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int IMP_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     untrain();
-    getQ().qaddTrainingVector(i,y,x,Cweigh,epsweigh);
+    getQ().qaddTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 
     return 1;
 }

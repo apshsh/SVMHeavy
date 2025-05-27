@@ -97,20 +97,20 @@ double BLK_AveSca::calcDist(const gentype &ha, const gentype &hb, int ia, int db
 }
 
 
-int BLK_AveSca::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int BLK_AveSca::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     SparseVector<gentype> xx(x);
 
-    return qaddTrainingVector(i,y,xx,Cweigh,epsweigh);
+    return qaddTrainingVector(i,y,xx,Cweigh,epsweigh,dval);
 }
 
-int BLK_AveSca::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int BLK_AveSca::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( y.isCastableToRealWithoutLoss() );
 
     ++(classcnt("&",3));
 
-    BLK_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
+    BLK_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 
     return 1;
 }

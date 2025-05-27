@@ -185,8 +185,10 @@ int GPR_Binary::setd(int i, int xd)
     return res;
 }
 
-int GPR_Binary::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int GPR_Binary::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
+
     NiceAssert( y.isCastableToIntegerWithoutLoss() && ( ( (int) y == -1 ) || ( (int) y == 0 ) || ( (int) y == +1 ) ) );
 
     bintraintarg.add(i);
@@ -200,8 +202,10 @@ int GPR_Binary::addTrainingVector(int i, const gentype &y, const SparseVector<ge
     return res;
 }
 
-int GPR_Binary::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int GPR_Binary::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
+    (void) dval;
+
     NiceAssert( y.isCastableToIntegerWithoutLoss() && ( ( (int) y == -1 ) || ( (int) y == 0 ) || ( (int) y == +1 ) ) );
 
     bintraintarg.add(i);

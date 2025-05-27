@@ -6047,16 +6047,14 @@ randufill(iv("&",vdim+wdim),-1,1);
 
 
 
-int SVM_Scalar_rff::addTrainingVector(int i, const gentype &zi, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Scalar_rff::addTrainingVector(int i, const gentype &zi, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
-    return SVM_Scalar_rff::addTrainingVector(i,(double) zi,x,Cweigh,epsweigh,2);
+    return SVM_Scalar_rff::addTrainingVector(i,(double) zi,x,Cweigh,epsweigh,dval); //2);
 }
 
-int SVM_Scalar_rff::qaddTrainingVector(int i, const gentype &zi, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Scalar_rff::qaddTrainingVector(int i, const gentype &zi, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
-    int res = SVM_Scalar_rff::qaddTrainingVector(i,(double) zi,x,Cweigh,epsweigh,2);
-
-    return res;
+    return SVM_Scalar_rff::qaddTrainingVector(i,(double) zi,x,Cweigh,epsweigh,dval); //2);
 }
 
 int SVM_Scalar_rff::addTrainingVector(int i, const Vector<gentype> &zi, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)

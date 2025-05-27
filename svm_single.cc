@@ -287,16 +287,18 @@ int SVM_Single::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
     return tempresh;
 }
 
-int SVM_Single::addTrainingVector(int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Single::addTrainingVector(int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     (void) z;
+    (void) dval;
 
     return SVM_Single::addTrainingVector(i,x,Cweigh,epsweigh);
 }
 
-int SVM_Single::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Single::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     (void) z;
+    (void) dval;
 
     return SVM_Single::qaddTrainingVector(i,x,Cweigh,epsweigh);
 }

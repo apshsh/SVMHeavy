@@ -80,7 +80,7 @@ int LSV_Scalar::getInternalClass(const gentype &y) const
     return y.isCastableToRealWithoutLoss() ? ( ( ( (double) y ) < 0 ) ? 0 : 1 ) : 0;
 }
 
-int LSV_Scalar::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int LSV_Scalar::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
@@ -91,10 +91,10 @@ int LSV_Scalar::addTrainingVector(int i, const gentype &y, const SparseVector<ge
     alltraintargR.add(i);
     alltraintargR("&",i) = (double) y;
 
-    return LSV_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh);
+    return LSV_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 }
 
-int LSV_Scalar::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int LSV_Scalar::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
@@ -105,7 +105,7 @@ int LSV_Scalar::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype
     alltraintargR.add(i);
     alltraintargR("&",i) = (double) y;
 
-    return LSV_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
+    return LSV_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 }
 
 int LSV_Scalar::removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x)
@@ -342,16 +342,36 @@ int LSV_Scalar::train(int &res, svmvolatile int &killSwitch)
 //errstream() << "phantomx lsvtrain 4c: " << *this << "\n";
         int badindex = -1;
 
-//tryagain:
-        if ( ( badindex = fact_minverse(dalphaR,dbetaR,alltraintargR,dybeta) ) >= 0 )
+        if ( !mpri() )
         {
+//tryagain:
+            if ( ( badindex = fact_minverse(dalphaR,dbetaR,alltraintargR,dybeta) ) >= 0 )
+            {
 //errstream() << "_" << badindex << "," << SVM_Scalar::Cweight()(badindex) << "_";
 //SVM_Scalar::setCweight(badindex,Cweight()(badindex)/10);
 //goto tryagain;
-            goto fallback_method; // training has failed as Hessian is indefinite!
-        }
+                goto fallback_method; // training has failed as Hessian is indefinite!
+            }
 //errstream() << "phantomx lsvtrain 5: " << dalphaR << "\n";
 //errstream() << "phantomx lsvtrain 6: " << dbetaR << "\n";
+        }
+
+        else
+        {
+            Vector<double> correctedTrainTargR(alltraintargR);
+
+            correctedTrainTargR -= ypR();
+//tryagain:
+            if ( ( badindex = fact_minverse(dalphaR,dbetaR,correctedTrainTargR,dybeta) ) >= 0 )
+            {
+//errstream() << "_" << badindex << "," << SVM_Scalar::Cweight()(badindex) << "_";
+//SVM_Scalar::setCweight(badindex,Cweight()(badindex)/10);
+//goto tryagain;
+                goto fallback_method; // training has failed as Hessian is indefinite!
+            }
+//errstream() << "phantomx lsvtrain 5: " << dalphaR << "\n";
+//errstream() << "phantomx lsvtrain 6: " << dbetaR << "\n";
+        }
 
         dbiasR = dbetaR(0);
 
@@ -402,23 +422,6 @@ int LSV_Scalar::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
         setzero(res);
 
         res = ( -((double) dalpha(i)) * ((diagoffset())(i)) ) + ((double) alltraintarg(i));
-
-        if ( mpri() )
-        {
-            if ( i >= 0 )
-            {
-                res += ypR()(i);
-            }
-
-            else
-            {
-                gentype resprior;
-
-                calcprior(resprior,x(i));
-
-                res += (double) resprior;
-            }
-        }
     }
 
     else if ( ( dtv & 4 ) )
@@ -466,22 +469,24 @@ int LSV_Scalar::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
             }
         }
 
-        if ( mpri() )
-        {
-            if ( i >= 0 )
-            {
-                resg += yp()(i);
-            }
+        resg += yp(i);
 
-            else
-            {
-                gentype resprior;
-
-                calcprior(resprior,x(i));
-
-                resg += resprior;
-            }
-        }
+//        if ( mpri() )
+//        {
+//            if ( i >= 0 )
+//            {
+//                resg += yp()(i);
+//            }
+//
+//            else
+//            {
+//                gentype resprior;
+//
+//                calcprior(resprior,x(i));
+//
+//                resg += resprior;
+//            }
+//        }
     }
 
     else if ( !( retaltg & 2 ) )
@@ -631,22 +636,24 @@ double LSV_Scalar::ghTrainingVectorUnbiasedUnsquaredNotundirectedgradIneg(int i,
         }
     }
 
-        if ( mpri() )
-        {
-            if ( i >= 0 )
-            {
-                res += ypR()(i);
-            }
+    res += ypR(i);
 
-            else
-            {
-                gentype resprior;
-
-                calcprior(resprior,x(i));
-
-                res += (double) resprior;
-            }
-        }
+//        if ( mpri() )
+//        {
+//            if ( i >= 0 )
+//            {
+//                res += ypR()(i);
+//            }
+//
+//            else
+//            {
+//                gentype resprior;
+//
+//                calcprior(resprior,x(i));
+//
+//                res += (double) resprior;
+//            }
+//        }
 
     return res;
 }
@@ -837,22 +844,24 @@ double LSV_Scalar::ghTrainingVectorUnbiasedSquaredNotundirectedgradIneg(int i, i
         }
     }
 
-        if ( mpri() )
-        {
-            if ( i >= 0 )
-            {
-                res += ypR()(i);
-            }
+    res += ypR(i);
 
-            else
-            {
-                gentype resprior;
-
-                calcprior(resprior,x(i));
-
-                res += (double) resprior;
-            }
-        }
+//        if ( mpri() )
+//        {
+//            if ( i >= 0 )
+//            {
+//                res += ypR()(i);
+//            }
+//
+//            else
+//            {
+//                gentype resprior;
+//
+//                calcprior(resprior,x(i));
+//
+//                res += (double) resprior;
+//            }
+//        }
 
     return res;
 }
@@ -866,23 +875,6 @@ double LSV_Scalar::eTrainingVector(int i) const
     ggTrainingVector(resg,i);
 
     double res = (double) resg;
-
-        if ( mpri() )
-        {
-            if ( i >= 0 )
-            {
-                res -= ypR()(i);
-            }
-
-            else
-            {
-                gentype resprior;
-
-                calcprior(resprior,x(i));
-
-                res -= (double) resprior;
-            }
-        }
 
     if ( ( i < 0 ) || isenabled(i) )
     {
@@ -1751,22 +1743,24 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
         }
     }
 
-        if ( mpri() )
-        {
-            if ( ia >= 0 )
-            {
-                resmu += yp()(ia);
-            }
+    resmu += yp(ia);
 
-            else
-            {
-                gentype resprior;
-
-                calcprior(resprior,x(ia));
-
-                resmu += resprior;
-            }
-        }
+//        if ( mpri() )
+//        {
+//            if ( ia >= 0 )
+//            {
+//                resmu += yp()(ia);
+//            }
+//
+//            else
+//            {
+//                gentype resprior;
+//
+//                calcprior(resprior,x(ia));
+//
+//                resmu += resprior;
+//            }
+//        }
 
     return tres;
 }

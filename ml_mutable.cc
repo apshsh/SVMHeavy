@@ -22,7 +22,6 @@
 #include "svm_multic.hpp"
 #include "svm_vector.hpp"
 #include "svm_anions.hpp"
-#include "svm_autoen.hpp"
 #include "svm_densit.hpp"
 #include "svm_pfront.hpp"
 #include "svm_biscor.hpp"
@@ -60,7 +59,6 @@
 #include "knn_scalar.hpp"
 #include "knn_vector.hpp"
 #include "knn_anions.hpp"
-#include "knn_autoen.hpp"
 #include "gpr_scalar.hpp"
 #include "gpr_vector.hpp"
 #include "gpr_anions.hpp"
@@ -72,7 +70,6 @@
 #include "lsv_vector.hpp"
 #include "lsv_anions.hpp"
 #include "lsv_scscor.hpp"
-#include "lsv_autoen.hpp"
 #include "lsv_gentyp.hpp"
 #include "lsv_planar.hpp"
 #include "lsv_mvrank.hpp"
@@ -757,7 +754,6 @@ int convIDToType(const std::string &keytype)
     else if ( keytype == "SVM_MultiC"     ) { type =   3; }
     else if ( keytype == "SVM_Vector"     ) { type =   4; }
     else if ( keytype == "SVM_Anions"     ) { type =   5; }
-    else if ( keytype == "SVM_AutoEn"     ) { type =   6; }
     else if ( keytype == "SVM_Densit"     ) { type =   7; }
     else if ( keytype == "SVM_PFront"     ) { type =   8; }
     else if ( keytype == "SVM_BiScor"     ) { type =  12; }
@@ -796,7 +792,6 @@ int convIDToType(const std::string &keytype)
     else if ( keytype == "KNN_Scalar" ) { type = 303; }
     else if ( keytype == "KNN_Vector" ) { type = 304; }
     else if ( keytype == "KNN_Anions" ) { type = 305; }
-    else if ( keytype == "KNN_AutoEn" ) { type = 306; }
     else if ( keytype == "KNN_MultiC" ) { type = 307; }
 
     else if ( keytype == "GPR_Scalar"     ) { type = 400; }
@@ -811,7 +806,6 @@ int convIDToType(const std::string &keytype)
     else if ( keytype == "LSV_Vector"     ) { type = 501; }
     else if ( keytype == "LSV_Anions"     ) { type = 502; }
     else if ( keytype == "LSV_ScScor"     ) { type = 505; }
-    else if ( keytype == "LSV_AutoEn"     ) { type = 507; }
     else if ( keytype == "LSV_Gentyp"     ) { type = 508; }
     else if ( keytype == "LSV_Planar"     ) { type = 509; }
     else if ( keytype == "LSV_MvRank"     ) { type = 510; }
@@ -849,7 +843,6 @@ int convTypeToID(std::string &res, int id)
         case   3: { res = "SVM_MultiC";     break; }
         case   4: { res = "SVM_Vector";     break; }
         case   5: { res = "SVM_Anions";     break; }
-        case   6: { res = "SVM_AutoEn";     break; }
         case   7: { res = "SVM_Densit";     break; }
         case   8: { res = "SVM_PFront";     break; }
         case  12: { res = "SVM_BiScor";     break; }
@@ -888,7 +881,6 @@ int convTypeToID(std::string &res, int id)
         case 303: { res = "KNN_Scalar"; break; }
         case 304: { res = "KNN_Vector"; break; }
         case 305: { res = "KNN_Anions"; break; }
-        case 306: { res = "KNN_AutoEn"; break; }
         case 307: { res = "KNN_MultiC"; break; }
 
         case 400: { res = "GPR_Scalar";     break; }
@@ -903,7 +895,6 @@ int convTypeToID(std::string &res, int id)
         case 501: { res = "LSV_Vector";     break; }
         case 502: { res = "LSV_Anions";     break; }
         case 505: { res = "LSV_ScScor";     break; }
-        case 507: { res = "LSV_AutoEn";     break; }
         case 508: { res = "LSV_Gentyp";     break; }
         case 509: { res = "LSV_Planar";     break; }
         case 510: { res = "LSV_MvRank";     break; }
@@ -941,7 +932,6 @@ ML_Base *makeNewML(int type, int subtype)
         case   3: { MEMNEW(res,SVM_MultiC    ()); break; }
         case   4: { MEMNEW(res,SVM_Vector    ()); break; }
         case   5: { MEMNEW(res,SVM_Anions    ()); break; }
-        case   6: { MEMNEW(res,SVM_AutoEn    ()); break; }
         case   7: { MEMNEW(res,SVM_Densit    ()); break; }
         case   8: { MEMNEW(res,SVM_PFront    ()); break; }
         case  12: { MEMNEW(res,SVM_BiScor    ()); break; }
@@ -980,7 +970,6 @@ ML_Base *makeNewML(int type, int subtype)
         case 303: { MEMNEW(res,KNN_Scalar()); break; }
         case 304: { MEMNEW(res,KNN_Vector()); break; }
         case 305: { MEMNEW(res,KNN_Anions()); break; }
-        case 306: { MEMNEW(res,KNN_AutoEn()); break; }
         case 307: { MEMNEW(res,KNN_MultiC()); break; }
 
         case 400: { MEMNEW(res,GPR_Scalar    ()); break; }
@@ -995,7 +984,6 @@ ML_Base *makeNewML(int type, int subtype)
         case 501: { MEMNEW(res,LSV_Vector    ()); break; }
         case 502: { MEMNEW(res,LSV_Anions    ()); break; }
         case 505: { MEMNEW(res,LSV_ScScor    ()); break; }
-        case 507: { MEMNEW(res,LSV_AutoEn    ()); break; }
         case 508: { MEMNEW(res,LSV_Gentyp    ()); break; }
         case 509: { MEMNEW(res,LSV_Planar    ()); break; }
         case 510: { MEMNEW(res,LSV_MvRank    ()); break; }
@@ -1039,7 +1027,6 @@ ML_Base *makeDupML(const ML_Base &src, const ML_Base *srcx)
         case   3: { MEMNEW(res,SVM_MultiC    (dynamic_cast<const SVM_MultiC     &>(src.getMLconst()),srcx)); break; }
         case   4: { MEMNEW(res,SVM_Vector    (dynamic_cast<const SVM_Vector     &>(src.getMLconst()),srcx)); break; }
         case   5: { MEMNEW(res,SVM_Anions    (dynamic_cast<const SVM_Anions     &>(src.getMLconst()),srcx)); break; }
-        case   6: { MEMNEW(res,SVM_AutoEn    (dynamic_cast<const SVM_AutoEn     &>(src.getMLconst()),srcx)); break; }
         case   7: { MEMNEW(res,SVM_Densit    (dynamic_cast<const SVM_Densit     &>(src.getMLconst()),srcx)); break; }
         case   8: { MEMNEW(res,SVM_PFront    (dynamic_cast<const SVM_PFront     &>(src.getMLconst()),srcx)); break; }
         case  12: { MEMNEW(res,SVM_BiScor    (dynamic_cast<const SVM_BiScor     &>(src.getMLconst()),srcx)); break; }
@@ -1078,7 +1065,6 @@ ML_Base *makeDupML(const ML_Base &src, const ML_Base *srcx)
         case 303: { MEMNEW(res,KNN_Scalar(dynamic_cast<const KNN_Scalar &>(src.getMLconst()),srcx)); break; }
         case 304: { MEMNEW(res,KNN_Vector(dynamic_cast<const KNN_Vector &>(src.getMLconst()),srcx)); break; }
         case 305: { MEMNEW(res,KNN_Anions(dynamic_cast<const KNN_Anions &>(src.getMLconst()),srcx)); break; }
-        case 306: { MEMNEW(res,KNN_AutoEn(dynamic_cast<const KNN_AutoEn &>(src.getMLconst()),srcx)); break; }
         case 307: { MEMNEW(res,KNN_MultiC(dynamic_cast<const KNN_MultiC &>(src.getMLconst()),srcx)); break; }
 
         case 400: { MEMNEW(res,GPR_Scalar    (dynamic_cast<const GPR_Scalar     &>(src.getMLconst()),srcx)); break; }
@@ -1093,7 +1079,6 @@ ML_Base *makeDupML(const ML_Base &src, const ML_Base *srcx)
         case 501: { MEMNEW(res,LSV_Vector    (dynamic_cast<const LSV_Vector     &>(src.getMLconst()),srcx)); break; }
         case 502: { MEMNEW(res,LSV_Anions    (dynamic_cast<const LSV_Anions     &>(src.getMLconst()),srcx)); break; }
         case 505: { MEMNEW(res,LSV_ScScor    (dynamic_cast<const LSV_ScScor     &>(src.getMLconst()),srcx)); break; }
-        case 507: { MEMNEW(res,LSV_AutoEn    (dynamic_cast<const LSV_AutoEn     &>(src.getMLconst()),srcx)); break; }
         case 508: { MEMNEW(res,LSV_Gentyp    (dynamic_cast<const LSV_Gentyp     &>(src.getMLconst()),srcx)); break; }
         case 509: { MEMNEW(res,LSV_Planar    (dynamic_cast<const LSV_Planar     &>(src.getMLconst()),srcx)); break; }
         case 510: { MEMNEW(res,LSV_MvRank    (dynamic_cast<const LSV_MvRank     &>(src.getMLconst()),srcx)); break; }
@@ -1123,7 +1108,6 @@ ML_Base *makeDupML(const ML_Base &src, const ML_Base *srcx)
         case   3: { MEMNEW(res,SVM_MultiC    (dynamic_cast<const SVM_MultiC     &>(src.getMLconst()))); break; }
         case   4: { MEMNEW(res,SVM_Vector    (dynamic_cast<const SVM_Vector     &>(src.getMLconst()))); break; }
         case   5: { MEMNEW(res,SVM_Anions    (dynamic_cast<const SVM_Anions     &>(src.getMLconst()))); break; }
-        case   6: { MEMNEW(res,SVM_AutoEn    (dynamic_cast<const SVM_AutoEn     &>(src.getMLconst()))); break; }
         case   7: { MEMNEW(res,SVM_Densit    (dynamic_cast<const SVM_Densit     &>(src.getMLconst()))); break; }
         case   8: { MEMNEW(res,SVM_PFront    (dynamic_cast<const SVM_PFront     &>(src.getMLconst()))); break; }
         case  12: { MEMNEW(res,SVM_BiScor    (dynamic_cast<const SVM_BiScor     &>(src.getMLconst()))); break; }
@@ -1162,7 +1146,6 @@ ML_Base *makeDupML(const ML_Base &src, const ML_Base *srcx)
         case 303: { MEMNEW(res,KNN_Scalar(dynamic_cast<const KNN_Scalar &>(src.getMLconst()))); break; }
         case 304: { MEMNEW(res,KNN_Vector(dynamic_cast<const KNN_Vector &>(src.getMLconst()))); break; }
         case 305: { MEMNEW(res,KNN_Anions(dynamic_cast<const KNN_Anions &>(src.getMLconst()))); break; }
-        case 306: { MEMNEW(res,KNN_AutoEn(dynamic_cast<const KNN_AutoEn &>(src.getMLconst()))); break; }
         case 307: { MEMNEW(res,KNN_MultiC(dynamic_cast<const KNN_MultiC &>(src.getMLconst()))); break; }
 
         case 400: { MEMNEW(res,GPR_Scalar    (dynamic_cast<const GPR_Scalar     &>(src.getMLconst()))); break; }
@@ -1177,7 +1160,6 @@ ML_Base *makeDupML(const ML_Base &src, const ML_Base *srcx)
         case 501: { MEMNEW(res,LSV_Vector    (dynamic_cast<const LSV_Vector     &>(src.getMLconst()))); break; }
         case 502: { MEMNEW(res,LSV_Anions    (dynamic_cast<const LSV_Anions     &>(src.getMLconst()))); break; }
         case 505: { MEMNEW(res,LSV_ScScor    (dynamic_cast<const LSV_ScScor     &>(src.getMLconst()))); break; }
-        case 507: { MEMNEW(res,LSV_AutoEn    (dynamic_cast<const LSV_AutoEn     &>(src.getMLconst()))); break; }
         case 508: { MEMNEW(res,LSV_Gentyp    (dynamic_cast<const LSV_Gentyp     &>(src.getMLconst()))); break; }
         case 509: { MEMNEW(res,LSV_Planar    (dynamic_cast<const LSV_Planar     &>(src.getMLconst()))); break; }
         case 510: { MEMNEW(res,LSV_MvRank    (dynamic_cast<const LSV_MvRank     &>(src.getMLconst()))); break; }
@@ -1218,7 +1200,6 @@ ML_Base &assign(ML_Base **dest, const ML_Base *src, int onlySemiCopy)
         case   3: { dynamic_cast<SVM_MultiC &>((**dest).getML()).assign(dynamic_cast<const SVM_MultiC &>((*src).getMLconst()),onlySemiCopy); break; }
         case   4: { dynamic_cast<SVM_Vector &>((**dest).getML()).assign(dynamic_cast<const SVM_Vector &>((*src).getMLconst()),onlySemiCopy); break; }
         case   5: { dynamic_cast<SVM_Anions &>((**dest).getML()).assign(dynamic_cast<const SVM_Anions &>((*src).getMLconst()),onlySemiCopy); break; }
-        case   6: { dynamic_cast<SVM_AutoEn &>((**dest).getML()).assign(dynamic_cast<const SVM_AutoEn &>((*src).getMLconst()),onlySemiCopy); break; }
         case   7: { dynamic_cast<SVM_Densit &>((**dest).getML()).assign(dynamic_cast<const SVM_Densit &>((*src).getMLconst()),onlySemiCopy); break; }
         case   8: { dynamic_cast<SVM_PFront &>((**dest).getML()).assign(dynamic_cast<const SVM_PFront &>((*src).getMLconst()),onlySemiCopy); break; }
         case  12: { dynamic_cast<SVM_BiScor &>((**dest).getML()).assign(dynamic_cast<const SVM_BiScor &>((*src).getMLconst()),onlySemiCopy); break; }
@@ -1257,7 +1238,6 @@ ML_Base &assign(ML_Base **dest, const ML_Base *src, int onlySemiCopy)
         case 303: { dynamic_cast<KNN_Scalar &>((**dest).getML()).assign(dynamic_cast<const KNN_Scalar &>((*src).getMLconst()),onlySemiCopy); break; }
         case 304: { dynamic_cast<KNN_Vector &>((**dest).getML()).assign(dynamic_cast<const KNN_Vector &>((*src).getMLconst()),onlySemiCopy); break; }
         case 305: { dynamic_cast<KNN_Anions &>((**dest).getML()).assign(dynamic_cast<const KNN_Anions &>((*src).getMLconst()),onlySemiCopy); break; }
-        case 306: { dynamic_cast<KNN_AutoEn &>((**dest).getML()).assign(dynamic_cast<const KNN_AutoEn &>((*src).getMLconst()),onlySemiCopy); break; }
         case 307: { dynamic_cast<KNN_MultiC &>((**dest).getML()).assign(dynamic_cast<const KNN_MultiC &>((*src).getMLconst()),onlySemiCopy); break; }
 
         case 400: { dynamic_cast<GPR_Scalar     &>((**dest).getML()).assign(dynamic_cast<const GPR_Scalar     &>((*src).getMLconst()),onlySemiCopy); break; }
@@ -1272,7 +1252,6 @@ ML_Base &assign(ML_Base **dest, const ML_Base *src, int onlySemiCopy)
         case 501: { dynamic_cast<LSV_Vector &>((**dest).getML()).assign(dynamic_cast<const LSV_Vector &>((*src).getMLconst()),onlySemiCopy); break; }
         case 502: { dynamic_cast<LSV_Anions &>((**dest).getML()).assign(dynamic_cast<const LSV_Anions &>((*src).getMLconst()),onlySemiCopy); break; }
         case 505: { dynamic_cast<LSV_ScScor &>((**dest).getML()).assign(dynamic_cast<const LSV_ScScor &>((*src).getMLconst()),onlySemiCopy); break; }
-        case 507: { dynamic_cast<LSV_AutoEn &>((**dest).getML()).assign(dynamic_cast<const LSV_AutoEn &>((*src).getMLconst()),onlySemiCopy); break; }
         case 508: { dynamic_cast<LSV_Gentyp &>((**dest).getML()).assign(dynamic_cast<const LSV_Gentyp &>((*src).getMLconst()),onlySemiCopy); break; }
         case 509: { dynamic_cast<LSV_Planar &>((**dest).getML()).assign(dynamic_cast<const LSV_Planar &>((*src).getMLconst()),onlySemiCopy); break; }
         case 510: { dynamic_cast<LSV_MvRank &>((**dest).getML()).assign(dynamic_cast<const LSV_MvRank &>((*src).getMLconst()),onlySemiCopy); break; }
@@ -1319,7 +1298,6 @@ ML_Base &xfer(ML_Base &dest, ML_Base &src)
             case   3: { dynamic_cast<SVM_MultiC &>(dest) = dynamic_cast<const SVM_MultiC &>(src); break; }
             case   4: { dynamic_cast<SVM_Vector &>(dest) = dynamic_cast<const SVM_Vector &>(src); break; }
             case   5: { dynamic_cast<SVM_Anions &>(dest) = dynamic_cast<const SVM_Anions &>(src); break; }
-            case   6: { dynamic_cast<SVM_AutoEn &>(dest) = dynamic_cast<const SVM_AutoEn &>(src); break; }
             case   7: { dynamic_cast<SVM_Densit &>(dest) = dynamic_cast<const SVM_Densit &>(src); break; }
             case   8: { dynamic_cast<SVM_PFront &>(dest) = dynamic_cast<const SVM_PFront &>(src); break; }
             case  12: { dynamic_cast<SVM_BiScor &>(dest) = dynamic_cast<const SVM_BiScor &>(src); break; }
@@ -1358,7 +1336,6 @@ ML_Base &xfer(ML_Base &dest, ML_Base &src)
             case 303: { dynamic_cast<KNN_Scalar &>(dest) = dynamic_cast<const KNN_Scalar &>(src); break; }
             case 304: { dynamic_cast<KNN_Vector &>(dest) = dynamic_cast<const KNN_Vector &>(src); break; }
             case 305: { dynamic_cast<KNN_Anions &>(dest) = dynamic_cast<const KNN_Anions &>(src); break; }
-            case 306: { dynamic_cast<KNN_AutoEn &>(dest) = dynamic_cast<const KNN_AutoEn &>(src); break; }
             case 307: { dynamic_cast<KNN_MultiC &>(dest) = dynamic_cast<const KNN_MultiC &>(src); break; }
 
             case 400: { dynamic_cast<GPR_Scalar     &>(dest) = dynamic_cast<const GPR_Scalar     &>(src); break; }
@@ -1373,7 +1350,6 @@ ML_Base &xfer(ML_Base &dest, ML_Base &src)
             case 501: { dynamic_cast<LSV_Vector &>(dest) = dynamic_cast<const LSV_Vector &>(src); break; }
             case 502: { dynamic_cast<LSV_Anions &>(dest) = dynamic_cast<const LSV_Anions &>(src); break; }
             case 505: { dynamic_cast<LSV_ScScor &>(dest) = dynamic_cast<const LSV_ScScor &>(src); break; }
-            case 507: { dynamic_cast<LSV_AutoEn &>(dest) = dynamic_cast<const LSV_AutoEn &>(src); break; }
             case 508: { dynamic_cast<LSV_Gentyp &>(dest) = dynamic_cast<const LSV_Gentyp &>(src); break; }
             case 509: { dynamic_cast<LSV_Planar &>(dest) = dynamic_cast<const LSV_Planar &>(src); break; }
             case 510: { dynamic_cast<LSV_MvRank &>(dest) = dynamic_cast<const LSV_MvRank &>(src); break; }
@@ -1620,25 +1596,6 @@ void xferInfo(ML_Base &mldest, const ML_Base &mlsrc)
         const SVM_Generic &src  = dynamic_cast<const SVM_Generic &>(mlsrc );
 
         dest.setouterlr(src.outerlr());
-        dest.setoutertol(src.outertol());
-
-        if ( src.isLinearCost()    ) { dest.setLinearCost();    }
-        if ( src.isQuadraticCost() ) { dest.setQuadraticCost(); }
-        if ( src.is1NormCost()     ) { dest.is1NormCost();      }
-
-        if ( src.isautosetCscaled()      ) { dest.autosetCscaled(src.autosetCval());                         }
-        if ( src.isautosetCKmean()       ) { dest.autosetCKmean();                                           }
-        if ( src.isautosetCKmedian()     ) { dest.autosetCKmedian();                                         }
-        if ( src.isautosetCNKmean()      ) { dest.autosetCNKmean();                                          }
-        if ( src.isautosetCNKmedian()    ) { dest.autosetCNKmedian();                                        }
-    }
-
-    else if ( isSVMAutoEn(mldest) && isSVM(mlsrc) )
-    {
-              SVM_AutoEn  &dest = dynamic_cast<      SVM_AutoEn  &>(mldest);
-        const SVM_Generic &src  = dynamic_cast<const SVM_Generic &>(mlsrc );
-
-        dest.setouterlr (src.outerlr());
         dest.setoutertol(src.outertol());
 
         if ( src.isLinearCost()    ) { dest.setLinearCost();    }
@@ -2057,14 +2014,6 @@ void xferInfo(ML_Base &mldest, const ML_Base &mlsrc)
         dest.setk(src.k());
     }
 
-    else if ( isKNNAutoEn(mldest) && isKNN(mlsrc) )
-    {
-              KNN_AutoEn  &dest = dynamic_cast<      KNN_AutoEn  &>(mldest);
-        const KNN_Generic &src  = dynamic_cast<const KNN_Generic &>(mlsrc );
-
-        dest.setk(src.k());
-    }
-
     else if ( isKNNMultiC(mldest) && isKNN(mlsrc) )
     {
               KNN_MultiC  &dest = dynamic_cast<      KNN_MultiC  &>(mldest);
@@ -2159,15 +2108,6 @@ void xferInfo(ML_Base &mldest, const ML_Base &mlsrc)
     else if ( isLSVScScor(mldest) && isLSV(mlsrc) )
     {
               LSV_ScScor  &dest = dynamic_cast<      LSV_ScScor  &>(mldest);
-        const LSV_Generic &src  = dynamic_cast<const LSV_Generic &>(mlsrc );
-
-        (void) src;
-        (void) dest;
-    }
-
-    else if ( isLSVAutoEn(mldest) && isLSV(mlsrc) )
-    {
-              LSV_AutoEn  &dest = dynamic_cast<      LSV_AutoEn  &>(mldest);
         const LSV_Generic &src  = dynamic_cast<const LSV_Generic &>(mlsrc );
 
         (void) src;

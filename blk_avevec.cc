@@ -71,14 +71,14 @@ double BLK_AveVec::calcDist(const gentype &ha, const gentype &hb, int ia, int db
     return res;
 }
 
-int BLK_AveVec::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int BLK_AveVec::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     SparseVector<gentype> xx(x);
 
-    return qaddTrainingVector(i,y,xx,Cweigh,epsweigh);
+    return qaddTrainingVector(i,y,xx,Cweigh,epsweigh,dval);
 }
 
-int BLK_AveVec::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int BLK_AveVec::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     NiceAssert( y.isCastableToVectorWithoutLoss() );
     NiceAssert( ( dim == -1 ) || ( y.size() == dim ) );
@@ -93,7 +93,7 @@ int BLK_AveVec::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype
     gentype yy(y);
     yy.morph_vector();
 
-    BLK_Generic::qaddTrainingVector(i,yy,x,Cweigh,epsweigh);
+    BLK_Generic::qaddTrainingVector(i,yy,x,Cweigh,epsweigh,dval);
 
     return 1;
 }

@@ -1321,7 +1321,7 @@ int SVM_Vector_Mredbin::gTrainingVector(Vector<double>  &res, int &dummy, int i,
     return 0;
 }
 
-int SVM_Vector_Mredbin::addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Vector_Mredbin::addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     Vector<double> zd;
     Vector<gentype> zz((const Vector<gentype> &) z);
@@ -1338,10 +1338,10 @@ int SVM_Vector_Mredbin::addTrainingVector (int i, const gentype &z, const Sparse
         }
     }
 
-    return SVM_Vector_Mredbin::addTrainingVector(i,zd,x,Cweigh,epsweigh,2);
+    return SVM_Vector_Mredbin::addTrainingVector(i,zd,x,Cweigh,epsweigh,dval); //2);
 }
 
-int SVM_Vector_Mredbin::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Vector_Mredbin::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     Vector<double> zd;
     Vector<gentype> zz((const Vector<gentype> &) z);
@@ -1358,7 +1358,7 @@ int SVM_Vector_Mredbin::qaddTrainingVector(int i, const gentype &z,       Sparse
         }
     }
 
-    return SVM_Vector_Mredbin::qaddTrainingVector(i,zd,x,Cweigh,epsweigh,2);
+    return SVM_Vector_Mredbin::qaddTrainingVector(i,zd,x,Cweigh,epsweigh,dval); //2);
 }
 
 int SVM_Vector_Mredbin::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)

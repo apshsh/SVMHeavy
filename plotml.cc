@@ -21,6 +21,7 @@
 #ifdef NDEBUG
 #define DO_CLEANUP
 #endif
+//#define DO_CLEANUP
 
 
 #define NUMSAMP 1000

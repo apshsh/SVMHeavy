@@ -122,20 +122,20 @@ int BLK_Consen::addclass(int label, int epszero)
     return 1;
 }
 
-int BLK_Consen::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int BLK_Consen::addTrainingVector(int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     SparseVector<gentype> xx(x);
 
-    return qaddTrainingVector(i,y,xx,Cweigh,epsweigh);
+    return qaddTrainingVector(i,y,xx,Cweigh,epsweigh,dval);
 }
 
-int BLK_Consen::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int BLK_Consen::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     int res = addclass((int) y);
 
     Nnc("&",(label_placeholder.findID((int) y)+1))++;
 
-    return res | BLK_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
+    return res | BLK_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 }
 
 int BLK_Consen::addTrainingVector(int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)

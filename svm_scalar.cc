@@ -3138,16 +3138,14 @@ int SVM_Scalar::qaddTrainingVector(int i, double zi, SparseVector<gentype> &x, d
     return res;
 }
 
-int SVM_Scalar::addTrainingVector(int i, const gentype &zi, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Scalar::addTrainingVector(int i, const gentype &zi, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
-    return SVM_Scalar::addTrainingVector(i,(double) zi,x,Cweigh,epsweigh,2);
+    return SVM_Scalar::addTrainingVector(i,(double) zi,x,Cweigh,epsweigh,dval); //2);
 }
 
-int SVM_Scalar::qaddTrainingVector(int i, const gentype &zi, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int SVM_Scalar::qaddTrainingVector(int i, const gentype &zi, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
-    int res = SVM_Scalar::qaddTrainingVector(i,(double) zi,x,Cweigh,epsweigh,2);
-
-    return res;
+    return SVM_Scalar::qaddTrainingVector(i,(double) zi,x,Cweigh,epsweigh,dval); //2);
 }
 
 int SVM_Scalar::addTrainingVector(int i, const Vector<double> &zi, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
@@ -3544,19 +3542,19 @@ int SVM_Scalar::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
 
     if ( !( dtv & 4 ) )
     {
-        try
-        {
+//        try
+//        {
             tempresh = gTrainingVector(resg.force_double(),unusedvar,i,retaltg,pxyprodi);
 
             resh.force_double() = (double) resg;
-        }
+//        }
 
-        catch (...)
-        {
-            goto fallback;
-        }
+//        catch (...)
+//        {
+//            goto fallback;
+//        }
 
-        if ( testisvnan((double) resg) )
+        if ( testisvnan(resh) )
         {
             goto fallback;
         }
@@ -3661,6 +3659,25 @@ fallback:
                     }
                 }
             }
+
+            resg += yp(i);
+
+//            if ( mpri() )
+//            {
+//                if ( i >= 0 )
+//                {
+//                    resg += yp()(i);
+//                }
+//
+//                else
+//                {
+//                    gentype resprior;
+//
+//                    calcprior(resprior,x(i));
+//
+//                    resg += resprior;
+//                }
+//            }
         }
 
         else
@@ -3669,23 +3686,6 @@ fallback:
         }
 
         tempresh = +1;
-
-        if ( mpri() )
-        {
-            if ( i >= 0 )
-            {
-                resg += yp()(i);
-            }
-
-            else
-            {
-                gentype resprior;
-
-                calcprior(resprior,x(i));
-
-                resg += resprior;
-            }
-        }
 
         resh = resg;
     }
@@ -3699,23 +3699,6 @@ double SVM_Scalar::eTrainingVector(int i) const
     double res = 0;
 
     gTrainingVector(res,unusedvar,i); // This is important.  SVM_Scalar_rff overloads gTrainingVector, so calls to eTrainingVector *must* go through gTrainingVector!
-
-        if ( mpri() )
-        {
-            if ( i >= 0 )
-            {
-                res -= ypR()(i);
-            }
-
-            else
-            {
-                gentype resprior;
-
-                calcprior(resprior,x(i));
-
-                res -= (double) resprior;
-            }
-        }
 
     if ( ( i < 0 ) || ( Q.alphaRestrict(i) == 0 ) )
     {
@@ -4049,6 +4032,25 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                 res += (alphaR()(j))*Kxj;
             }
         }
+
+        res += ypR(i);
+
+//        if ( mpri() )
+//        {
+//            if ( i >= 0 )
+//            {
+//                res += ypR()(i);
+//            }
+//
+//            else
+//            {
+//                gentype resprior;
+//
+//                calcprior(resprior,x(i));
+//
+//                res += (double) resprior;
+//            }
+//        }
     }
 
     else if ( emm == 2 )
@@ -4223,6 +4225,25 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                 }
             }
         }
+
+        res += ypR(i);
+
+//        if ( mpri() )
+//        {
+//            if ( i >= 0 )
+//            {
+//                res += ypR()(i);
+//            }
+//
+//            else
+//            {
+//                gentype resprior;
+//
+//                calcprior(resprior,x(i));
+//
+//                res += (double) resprior;
+//            }
+//        }
     }
 
     else if ( resbad && ( emm == 4 ) )
@@ -4355,6 +4376,25 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
 		}
 	    }
 	}
+
+        res += ypR(i);
+
+//        if ( mpri() )
+//        {
+//            if ( i >= 0 )
+//            {
+//                res += ypR()(i);
+//            }
+//
+//            else
+//            {
+//                gentype resprior;
+//
+//                calcprior(resprior,x(i));
+//
+//                res += (double) resprior;
+//            }
+//        }
     }
 
     else if ( resbad )
@@ -4465,24 +4505,26 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                 }
             }
         }
+
+        res += ypR(i);
+
+//        if ( mpri() )
+//        {
+//            if ( i >= 0 )
+//            {
+//                res += ypR()(i);
+//            }
+//
+//            else
+//            {
+//                gentype resprior;
+//
+//                calcprior(resprior,x(i));
+//
+//                res += (double) resprior;
+//            }
+//        }
     }
-
-        if ( mpri() )
-        {
-            if ( i >= 0 )
-            {
-                res += ypR()(i);
-            }
-
-            else
-            {
-                gentype resprior;
-
-                calcprior(resprior,x(i));
-
-                res += (double) resprior;
-            }
-        }
 
     return ( unusedvar = ( res > 0 ) ? +1 : -1 );
 }
@@ -5359,22 +5401,24 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
         }
     }
 
-        if ( mpri() )
-        {
-            if ( ia >= 0 )
-            {
-                resmu += yp()(ia);
-            }
+    resmu += yp(ia);
 
-            else
-            {
-                gentype resprior;
-
-                calcprior(resprior,x(ia));
-
-                resmu += resprior;
-            }
-        }
+//        if ( mpri() )
+//        {
+//            if ( ia >= 0 )
+//            {
+//                resmu += yp()(ia);
+//            }
+//
+//            else
+//            {
+//                gentype resprior;
+//
+//                calcprior(resprior,x(ia));
+//
+//                resmu += resprior;
+//            }
+//        }
 
     return 0;
 }

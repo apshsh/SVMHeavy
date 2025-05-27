@@ -1,3 +1,108 @@
+//FIXME: having added d = 2 to addTrainingVector functionality thoughout (gentype y), fix non-trivial versions to make sense (d = -4 as *default*?)
+
+/*
+TO DO:
+- have -mu 3 mode where training data is added to prior ML and training goes to prior ML (like the BLK, but done right)
+- extend prior to non-scalar types
+
+
+FIXME: TEST NEW FIDELITY CODE WITH FIDELITY FEEDBACK!
+FIXME: IS FIDELITY FEEDBACK BEING CORRECTLY ACCOUNTED FOR?
+FIXME: IS FIDELITY COST BEING CORECTLY CALCULATED AND USED FOR TERMINATION?
+*/
+
+/*REALLY BIG GRID TOO MUCH FOR MEMORY HOW TO DO IT?
+fidelity on constraints
+mixed integer programming
+
+if x feedback changes fidelity (or other high-level "stuff")... how do we do that? How do we feed back "actual" fidelity? This needs to be done!
+could you code sparsevectors as gentype vectors by coding things like :, ::, ~ etc as strings and then reinterpretting into sparse format? In gentype
+streaming you might need a bit of code to treat :, ::, ~ etc on their own as strings!
+
+:
+::
+:::
+::::
+~
+
+could you have xreplace in gridopt?
+
+
+subfact - the notation for this is wrong, so get rid of :a notation
+*/
+
+
+/*
+    output << ( (          advanced ) ? "             { y v [ce1..cen] [cg1..cgn] [xx1..xxn] xf [xf1..xfn] xff xf3 t } \n" : "" );
+ADD FIDELITY FEEDBACK OPTION HERE
+ACTUALLY ALLOW BASICALLY ALL OF THE INTERACTIVE STUFF VIA THIS INPUT
+
+
+varadd: maybe have varOVER-RIDE instead?
+Let the user over-ride x (including fidelity).
+
+
+tuneceq
+tunecgt
+
+mu...
+
+ismoo
+isceq
+iscgt
+
+
+bayesopt: grab inequality vectors (but ignore if y null)
+          add them to the relevant models
+          build the inequality constraints into the cost function as per Julien code
+
+mlinter: make all the inequality stuff accessible
+
+
+DO REVIEWS
+*/
+
+//FIXME: 1.33c is supposed to be nominally constant in gentype, which should then pass back and prevent tuneKernel from tuning this term.
+//       gentype can parse the c, but it currently isn't stored. Finish this.
+//FIXME: should be using fewer decimal places when reporting in globalopt, smboopt and bayesopt (ie logging to cout at human readable accuracy)
+
+//in sparsevector.hpp:
+//sv/set should work in the sparse case as well (altcontentsp)
+
+//For some reason, when plotml evaluates [0] for blk_usrfnb with 4*(x_0-0.5)^2 it gives 10???	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//fpareto, fgrid etc need to be negated for analysis with multi-objective!
+//the optimisation code seems to be working fine, but the *recording* code is negative to what it should be.
+
+
+
+/*
+ADD ALONG WITH -SA, -SAi, -SAA
+
+    virtual int setaltMLidsKB(const Vector<int>    &nv) { KBaltMLids = nv; return 1; }
+    virtual int setMLweightKB(const Vector<double> &nv) { KBMLweight = nv; return 1; }
+
+Optimisation options:
+    virtual int setminstepKB(double nv) { KBminstep = nv; return 1; }
+    virtual int setmaxiterKB(int    nv) { KBmaxiter = nv; return 1; }
+    virtual int setlrKB     (double nv) { KBlr = nv;      return 1; }
+
+Consider integrating into xferml.h
+*/
+
 
 //
 // SVMHeavyv7 abstracted interface
@@ -3888,16 +3993,26 @@ int runsvmint(int threadInd,
                       ( currentarg == "-kb"    ) ||
                       ( currentarg == "-ke"    ) ||
                       ( currentarg == "-kw"    ) ||
+                      ( currentarg == "-kwlb"    ) ||
+                      ( currentarg == "-kwub"    ) ||
                       ( currentarg == "-kt"    ) ||
                       ( currentarg == "-ktx"   ) ||
                       ( currentarg == "-ktk"   ) ||
                       ( currentarg == "-krn"   ) ||
-                      ( currentarg == "-kg"    ) ||
                       ( currentarg == "-kgg"   ) ||
                       ( currentarg == "-kf"    ) ||
                       ( currentarg == "-kr"    ) ||
+                      ( currentarg == "-kg"    ) ||
                       ( currentarg == "-kd"    ) ||
                       ( currentarg == "-kG"    ) ||
+                      ( currentarg == "-krlb"    ) ||
+                      ( currentarg == "-kglb"    ) ||
+                      ( currentarg == "-kdlb"    ) ||
+                      ( currentarg == "-kGlb"    ) ||
+                      ( currentarg == "-krub"    ) ||
+                      ( currentarg == "-kgub"    ) ||
+                      ( currentarg == "-kdub"    ) ||
+                      ( currentarg == "-kGub"    ) ||
                       ( currentarg == "-kI"    ) ||
                       ( currentarg == "-kan"   ) ||
                       ( currentarg == "-eks"   ) ||
@@ -3906,16 +4021,26 @@ int runsvmint(int threadInd,
                       ( currentarg == "-ekb"   ) ||
                       ( currentarg == "-eke"   ) ||
                       ( currentarg == "-ekw"   ) ||
+                      ( currentarg == "-ekwlb"   ) ||
+                      ( currentarg == "-ekwub"   ) ||
                       ( currentarg == "-ekt"   ) ||
                       ( currentarg == "-ektx"  ) ||
                       ( currentarg == "-ektk"  ) ||
-                      ( currentarg == "-ekg"   ) ||
                       ( currentarg == "-ekgg"  ) ||
                       ( currentarg == "-ekf"   ) ||
                       ( currentarg == "-ekrn"  ) ||
                       ( currentarg == "-ekr"   ) ||
+                      ( currentarg == "-ekg"   ) ||
                       ( currentarg == "-ekd"   ) ||
                       ( currentarg == "-ekG"   ) ||
+                      ( currentarg == "-ekrlb"   ) ||
+                      ( currentarg == "-ekglb"   ) ||
+                      ( currentarg == "-ekdlb"   ) ||
+                      ( currentarg == "-ekGlb"   ) ||
+                      ( currentarg == "-ekrub"   ) ||
+                      ( currentarg == "-ekgub"   ) ||
+                      ( currentarg == "-ekdub"   ) ||
+                      ( currentarg == "-ekGub"   ) ||
                       ( currentarg == "-ekI"   ) ||
                       ( currentarg == "-ekan"  ) ||
                       ( currentarg == "-rks"   ) ||
@@ -3925,15 +4050,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-rkb"   ) ||
                       ( currentarg == "-rke"   ) ||
                       ( currentarg == "-rkw"   ) ||
+                      ( currentarg == "-rkwlb"   ) ||
+                      ( currentarg == "-rkwub"   ) ||
                       ( currentarg == "-rkt"   ) ||
                       ( currentarg == "-rktx"  ) ||
                       ( currentarg == "-rktk"  ) ||
-                      ( currentarg == "-rkg"   ) ||
                       ( currentarg == "-rkgg"  ) ||
                       ( currentarg == "-rkf"   ) ||
                       ( currentarg == "-rkr"   ) ||
+                      ( currentarg == "-rkg"   ) ||
                       ( currentarg == "-rkd"   ) ||
                       ( currentarg == "-rkG"   ) ||
+                      ( currentarg == "-rkrlb"   ) ||
+                      ( currentarg == "-rkglb"   ) ||
+                      ( currentarg == "-rkdlb"   ) ||
+                      ( currentarg == "-rkGlb"   ) ||
+                      ( currentarg == "-rkrub"   ) ||
+                      ( currentarg == "-rkgub"   ) ||
+                      ( currentarg == "-rkdub"   ) ||
+                      ( currentarg == "-rkGub"   ) ||
                       ( currentarg == "-rkI"   ) ||
                       ( currentarg == "-rkan"  )    )
             {
@@ -3952,16 +4087,28 @@ int runsvmint(int threadInd,
 
             else if ( ( currentarg == "-kv"  ) ||
                       ( currentarg == "-kV"  ) ||
+                      ( currentarg == "-kvlb"  ) ||
+                      ( currentarg == "-kVlb"  ) ||
+                      ( currentarg == "-kvub"  ) ||
+                      ( currentarg == "-kVub"  ) ||
                       ( currentarg == "-ko"  ) ||
                       ( currentarg == "-kO"  ) ||
                       ( currentarg == "-kx"  ) ||
                       ( currentarg == "-ekv" ) ||
                       ( currentarg == "-ekV" ) ||
+                      ( currentarg == "-ekvlb" ) ||
+                      ( currentarg == "-ekVlb" ) ||
+                      ( currentarg == "-ekvub" ) ||
+                      ( currentarg == "-ekVub" ) ||
                       ( currentarg == "-eko" ) ||
                       ( currentarg == "-ekO" ) ||
                       ( currentarg == "-ekx" ) ||
                       ( currentarg == "-rkv" ) ||
                       ( currentarg == "-rkV" ) ||
+                      ( currentarg == "-rkvlb" ) ||
+                      ( currentarg == "-rkVlb" ) ||
+                      ( currentarg == "-rkvub" ) ||
+                      ( currentarg == "-rkVub" ) ||
                       ( currentarg == "-rko" ) ||
                       ( currentarg == "-rkO" ) ||
                       ( currentarg == "-rkx" )    )
@@ -4511,15 +4658,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gphkb"   ) ||
                       ( currentarg == "-gphke"   ) ||
                       ( currentarg == "-gphkw"   ) ||
+                      ( currentarg == "-gphkwlb"   ) ||
+                      ( currentarg == "-gphkwub"   ) ||
                       ( currentarg == "-gphkt"   ) ||
                       ( currentarg == "-gphktx"  ) ||
                       ( currentarg == "-gphktk"  ) ||
-                      ( currentarg == "-gphkg"   ) ||
                       ( currentarg == "-gphkgg"  ) ||
                       ( currentarg == "-gphkf"   ) ||
                       ( currentarg == "-gphkr"   ) ||
+                      ( currentarg == "-gphkg"   ) ||
                       ( currentarg == "-gphkd"   ) ||
                       ( currentarg == "-gphkG"   ) ||
+                      ( currentarg == "-gphkrlb"   ) ||
+                      ( currentarg == "-gphkglb"   ) ||
+                      ( currentarg == "-gphkdlb"   ) ||
+                      ( currentarg == "-gphkGlb"   ) ||
+                      ( currentarg == "-gphkrub"   ) ||
+                      ( currentarg == "-gphkgub"   ) ||
+                      ( currentarg == "-gphkdub"   ) ||
+                      ( currentarg == "-gphkGub"   ) ||
                       ( currentarg == "-gphkI"   ) ||
                       ( currentarg == "-gphkan"  ) ||
                       ( currentarg == "-gPks"    ) ||
@@ -4528,15 +4685,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gPkb"    ) ||
                       ( currentarg == "-gPke"    ) ||
                       ( currentarg == "-gPkw"    ) ||
+                      ( currentarg == "-gPkwlb"    ) ||
+                      ( currentarg == "-gPkwub"    ) ||
                       ( currentarg == "-gPkt"    ) ||
                       ( currentarg == "-gPktx"   ) ||
                       ( currentarg == "-gPktk"   ) ||
-                      ( currentarg == "-gPkg"    ) ||
                       ( currentarg == "-gPkgg"   ) ||
                       ( currentarg == "-gPkf"    ) ||
                       ( currentarg == "-gPkr"    ) ||
+                      ( currentarg == "-gPkg"    ) ||
                       ( currentarg == "-gPkd"    ) ||
                       ( currentarg == "-gPkG"    ) ||
+                      ( currentarg == "-gPkrlb"    ) ||
+                      ( currentarg == "-gPkglb"    ) ||
+                      ( currentarg == "-gPkdlb"    ) ||
+                      ( currentarg == "-gPkGlb"    ) ||
+                      ( currentarg == "-gPkrub"    ) ||
+                      ( currentarg == "-gPkgub"    ) ||
+                      ( currentarg == "-gPkdub"    ) ||
+                      ( currentarg == "-gPkGub"    ) ||
                       ( currentarg == "-gPkI"    ) ||
                       ( currentarg == "-gPkan"   ) ||
                       ( currentarg == "-gmks"    ) ||
@@ -4545,15 +4712,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmkb"    ) ||
                       ( currentarg == "-gmke"    ) ||
                       ( currentarg == "-gmkw"    ) ||
+                      ( currentarg == "-gmkwlb"    ) ||
+                      ( currentarg == "-gmkwub"    ) ||
                       ( currentarg == "-gmkt"    ) ||
                       ( currentarg == "-gmktx"   ) ||
                       ( currentarg == "-gmktk"   ) ||
-                      ( currentarg == "-gmkg"    ) ||
                       ( currentarg == "-gmkgg"   ) ||
                       ( currentarg == "-gmkf"    ) ||
                       ( currentarg == "-gmkr"    ) ||
+                      ( currentarg == "-gmkg"    ) ||
                       ( currentarg == "-gmkd"    ) ||
                       ( currentarg == "-gmkG"    ) ||
+                      ( currentarg == "-gmkrlb"    ) ||
+                      ( currentarg == "-gmkglb"    ) ||
+                      ( currentarg == "-gmkdlb"    ) ||
+                      ( currentarg == "-gmkGlb"    ) ||
+                      ( currentarg == "-gmkrub"    ) ||
+                      ( currentarg == "-gmkgub"    ) ||
+                      ( currentarg == "-gmkdub"    ) ||
+                      ( currentarg == "-gmkGub"    ) ||
                       ( currentarg == "-gmkI"    ) ||
                       ( currentarg == "-gmkan"   ) ||
                       ( currentarg == "-gmeks"    ) ||
@@ -4562,15 +4739,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmekb"    ) ||
                       ( currentarg == "-gmeke"    ) ||
                       ( currentarg == "-gmekw"    ) ||
+                      ( currentarg == "-gmekwlb"    ) ||
+                      ( currentarg == "-gmekwub"    ) ||
                       ( currentarg == "-gmekt"    ) ||
                       ( currentarg == "-gmektx"   ) ||
                       ( currentarg == "-gmektk"   ) ||
-                      ( currentarg == "-gmekg"    ) ||
                       ( currentarg == "-gmekgg"   ) ||
                       ( currentarg == "-gmekf"    ) ||
                       ( currentarg == "-gmekr"    ) ||
+                      ( currentarg == "-gmekg"    ) ||
                       ( currentarg == "-gmekd"    ) ||
                       ( currentarg == "-gmekG"    ) ||
+                      ( currentarg == "-gmekrlb"    ) ||
+                      ( currentarg == "-gmekglb"    ) ||
+                      ( currentarg == "-gmekdlb"    ) ||
+                      ( currentarg == "-gmekGlb"    ) ||
+                      ( currentarg == "-gmekrub"    ) ||
+                      ( currentarg == "-gmekgub"    ) ||
+                      ( currentarg == "-gmekdub"    ) ||
+                      ( currentarg == "-gmekGub"    ) ||
                       ( currentarg == "-gmekI"    ) ||
                       ( currentarg == "-gmekan"   ) ||
                       ( currentarg == "-gmrks"    ) ||
@@ -4579,15 +4766,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmrkb"    ) ||
                       ( currentarg == "-gmrke"    ) ||
                       ( currentarg == "-gmrkw"    ) ||
+                      ( currentarg == "-gmrkwlb"    ) ||
+                      ( currentarg == "-gmrkwub"    ) ||
                       ( currentarg == "-gmrkt"    ) ||
                       ( currentarg == "-gmrktx"   ) ||
                       ( currentarg == "-gmrktk"   ) ||
-                      ( currentarg == "-gmrkg"    ) ||
                       ( currentarg == "-gmrkgg"   ) ||
                       ( currentarg == "-gmrkf"    ) ||
                       ( currentarg == "-gmrkr"    ) ||
+                      ( currentarg == "-gmrkg"    ) ||
                       ( currentarg == "-gmrkd"    ) ||
                       ( currentarg == "-gmrkG"    ) ||
+                      ( currentarg == "-gmrkrlb"    ) ||
+                      ( currentarg == "-gmrkglb"    ) ||
+                      ( currentarg == "-gmrkdlb"    ) ||
+                      ( currentarg == "-gmrkGlb"    ) ||
+                      ( currentarg == "-gmrkrub"    ) ||
+                      ( currentarg == "-gmrkgub"    ) ||
+                      ( currentarg == "-gmrkdub"    ) ||
+                      ( currentarg == "-gmrkGub"    ) ||
                       ( currentarg == "-gmrkI"    ) ||
                       ( currentarg == "-gmrkan"   ) ||
                       ( currentarg == "-gmsks"   ) ||
@@ -4596,15 +4793,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmskb"   ) ||
                       ( currentarg == "-gmske"   ) ||
                       ( currentarg == "-gmskw"   ) ||
+                      ( currentarg == "-gmskwlb"   ) ||
+                      ( currentarg == "-gmskwub"   ) ||
                       ( currentarg == "-gmskt"   ) ||
                       ( currentarg == "-gmsktx"  ) ||
                       ( currentarg == "-gmsktk"  ) ||
-                      ( currentarg == "-gmskg"   ) ||
                       ( currentarg == "-gmskgg"  ) ||
                       ( currentarg == "-gmskf"   ) ||
                       ( currentarg == "-gmskr"   ) ||
+                      ( currentarg == "-gmskg"   ) ||
                       ( currentarg == "-gmskd"   ) ||
                       ( currentarg == "-gmskG"   ) ||
+                      ( currentarg == "-gmskrlb"   ) ||
+                      ( currentarg == "-gmskglb"   ) ||
+                      ( currentarg == "-gmskdlb"   ) ||
+                      ( currentarg == "-gmskGlb"   ) ||
+                      ( currentarg == "-gmskrub"   ) ||
+                      ( currentarg == "-gmskgub"   ) ||
+                      ( currentarg == "-gmskdub"   ) ||
+                      ( currentarg == "-gmskGub"   ) ||
                       ( currentarg == "-gmskI"   ) ||
                       ( currentarg == "-gmskan"  ) ||
                       ( currentarg == "-gmseks"   ) ||
@@ -4613,15 +4820,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmsekb"   ) ||
                       ( currentarg == "-gmseke"   ) ||
                       ( currentarg == "-gmsekw"   ) ||
+                      ( currentarg == "-gmsekwlb"   ) ||
+                      ( currentarg == "-gmsekwub"   ) ||
                       ( currentarg == "-gmsekt"   ) ||
                       ( currentarg == "-gmsektx"  ) ||
                       ( currentarg == "-gmsektk"  ) ||
-                      ( currentarg == "-gmsekg"   ) ||
                       ( currentarg == "-gmsekgg"  ) ||
                       ( currentarg == "-gmsekf"   ) ||
                       ( currentarg == "-gmsekr"   ) ||
+                      ( currentarg == "-gmsekg"   ) ||
                       ( currentarg == "-gmsekd"   ) ||
                       ( currentarg == "-gmsekG"   ) ||
+                      ( currentarg == "-gmsekrlb"   ) ||
+                      ( currentarg == "-gmsekglb"   ) ||
+                      ( currentarg == "-gmsekdlb"   ) ||
+                      ( currentarg == "-gmsekGlb"   ) ||
+                      ( currentarg == "-gmsekrub"   ) ||
+                      ( currentarg == "-gmsekgub"   ) ||
+                      ( currentarg == "-gmsekdub"   ) ||
+                      ( currentarg == "-gmsekGub"   ) ||
                       ( currentarg == "-gmsekI"   ) ||
                       ( currentarg == "-gmsekan"  ) ||
                       ( currentarg == "-gmsrks"   ) ||
@@ -4630,15 +4847,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmsrkb"   ) ||
                       ( currentarg == "-gmsrke"   ) ||
                       ( currentarg == "-gmsrkw"   ) ||
+                      ( currentarg == "-gmsrkwlb"   ) ||
+                      ( currentarg == "-gmsrkwub"   ) ||
                       ( currentarg == "-gmsrkt"   ) ||
                       ( currentarg == "-gmsrktx"  ) ||
                       ( currentarg == "-gmsrktk"  ) ||
-                      ( currentarg == "-gmsrkg"   ) ||
                       ( currentarg == "-gmsrkgg"  ) ||
                       ( currentarg == "-gmsrkf"   ) ||
                       ( currentarg == "-gmsrkr"   ) ||
+                      ( currentarg == "-gmsrkg"   ) ||
                       ( currentarg == "-gmsrkd"   ) ||
                       ( currentarg == "-gmsrkG"   ) ||
+                      ( currentarg == "-gmsrkrlb"   ) ||
+                      ( currentarg == "-gmsrkglb"   ) ||
+                      ( currentarg == "-gmsrkdlb"   ) ||
+                      ( currentarg == "-gmsrkGlb"   ) ||
+                      ( currentarg == "-gmsrkrub"   ) ||
+                      ( currentarg == "-gmsrkgub"   ) ||
+                      ( currentarg == "-gmsrkdub"   ) ||
+                      ( currentarg == "-gmsrkGub"   ) ||
                       ( currentarg == "-gmsrkI"   ) ||
                       ( currentarg == "-gmsrkan"  ) ||
                       ( currentarg == "-gmgtks"   ) ||
@@ -4647,15 +4874,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmgtkb"   ) ||
                       ( currentarg == "-gmgtke"   ) ||
                       ( currentarg == "-gmgtkw"   ) ||
+                      ( currentarg == "-gmgtkwlb"   ) ||
+                      ( currentarg == "-gmgtkwub"   ) ||
                       ( currentarg == "-gmgtkt"   ) ||
                       ( currentarg == "-gmgtktx"  ) ||
                       ( currentarg == "-gmgtktk"  ) ||
-                      ( currentarg == "-gmgtkg"   ) ||
                       ( currentarg == "-gmgtkgg"  ) ||
                       ( currentarg == "-gmgtkf"   ) ||
                       ( currentarg == "-gmgtkr"   ) ||
+                      ( currentarg == "-gmgtkg"   ) ||
                       ( currentarg == "-gmgtkd"   ) ||
                       ( currentarg == "-gmgtkG"   ) ||
+                      ( currentarg == "-gmgtkrlb"   ) ||
+                      ( currentarg == "-gmgtkglb"   ) ||
+                      ( currentarg == "-gmgtkdlb"   ) ||
+                      ( currentarg == "-gmgtkGlb"   ) ||
+                      ( currentarg == "-gmgtkrub"   ) ||
+                      ( currentarg == "-gmgtkgub"   ) ||
+                      ( currentarg == "-gmgtkdub"   ) ||
+                      ( currentarg == "-gmgtkGub"   ) ||
                       ( currentarg == "-gmgtkI"   ) ||
                       ( currentarg == "-gmgtkan"  ) ||
                       ( currentarg == "-gmgteks"   ) ||
@@ -4664,15 +4901,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmgtekb"   ) ||
                       ( currentarg == "-gmgteke"   ) ||
                       ( currentarg == "-gmgtekw"   ) ||
+                      ( currentarg == "-gmgtekwlb"   ) ||
+                      ( currentarg == "-gmgtekwub"   ) ||
                       ( currentarg == "-gmgtekt"   ) ||
                       ( currentarg == "-gmgtektx"  ) ||
                       ( currentarg == "-gmgtektk"  ) ||
-                      ( currentarg == "-gmgtekg"   ) ||
                       ( currentarg == "-gmgtekgg"  ) ||
                       ( currentarg == "-gmgtekf"   ) ||
                       ( currentarg == "-gmgtekr"   ) ||
+                      ( currentarg == "-gmgtekg"   ) ||
                       ( currentarg == "-gmgtekd"   ) ||
                       ( currentarg == "-gmgtekG"   ) ||
+                      ( currentarg == "-gmgtekrlb"   ) ||
+                      ( currentarg == "-gmgtekglb"   ) ||
+                      ( currentarg == "-gmgtekdlb"   ) ||
+                      ( currentarg == "-gmgtekGlb"   ) ||
+                      ( currentarg == "-gmgtekrub"   ) ||
+                      ( currentarg == "-gmgtekgub"   ) ||
+                      ( currentarg == "-gmgtekdub"   ) ||
+                      ( currentarg == "-gmgtekGub"   ) ||
                       ( currentarg == "-gmgtekI"   ) ||
                       ( currentarg == "-gmgtekan"  ) ||
                       ( currentarg == "-gmgtrks"   ) ||
@@ -4681,15 +4928,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmgtrkb"   ) ||
                       ( currentarg == "-gmgtrke"   ) ||
                       ( currentarg == "-gmgtrkw"   ) ||
+                      ( currentarg == "-gmgtrkwlb"   ) ||
+                      ( currentarg == "-gmgtrkwub"   ) ||
                       ( currentarg == "-gmgtrkt"   ) ||
                       ( currentarg == "-gmgtrktx"  ) ||
                       ( currentarg == "-gmgtrktk"  ) ||
-                      ( currentarg == "-gmgtrkg"   ) ||
                       ( currentarg == "-gmgtrkgg"  ) ||
                       ( currentarg == "-gmgtrkf"   ) ||
                       ( currentarg == "-gmgtrkr"   ) ||
+                      ( currentarg == "-gmgtrkg"   ) ||
                       ( currentarg == "-gmgtrkd"   ) ||
                       ( currentarg == "-gmgtrkG"   ) ||
+                      ( currentarg == "-gmgtrkrlb"   ) ||
+                      ( currentarg == "-gmgtrkglb"   ) ||
+                      ( currentarg == "-gmgtrkdlb"   ) ||
+                      ( currentarg == "-gmgtrkGlb"   ) ||
+                      ( currentarg == "-gmgtrkrub"   ) ||
+                      ( currentarg == "-gmgtrkgub"   ) ||
+                      ( currentarg == "-gmgtrkdub"   ) ||
+                      ( currentarg == "-gmgtrkGub"   ) ||
                       ( currentarg == "-gmgtrkI"   ) ||
                       ( currentarg == "-gmgtrkan"  )    )
             {
@@ -4706,56 +4963,100 @@ int runsvmint(int threadInd,
 
             else if ( ( currentarg == "-gphkv" ) ||
                       ( currentarg == "-gphkV" ) ||
+                      ( currentarg == "-gphkvlb" ) ||
+                      ( currentarg == "-gphkVlb" ) ||
+                      ( currentarg == "-gphkvub" ) ||
+                      ( currentarg == "-gphkVub" ) ||
                       ( currentarg == "-gphko" ) ||
                       ( currentarg == "-gphkO" ) ||
                       ( currentarg == "-gphkx" ) ||
                       ( currentarg == "-gPkv"  ) ||
                       ( currentarg == "-gPkV"  ) ||
+                      ( currentarg == "-gPkvlb"  ) ||
+                      ( currentarg == "-gPkVlb"  ) ||
+                      ( currentarg == "-gPkvub"  ) ||
+                      ( currentarg == "-gPkVub"  ) ||
                       ( currentarg == "-gPko"  ) ||
                       ( currentarg == "-gPkO"  ) ||
                       ( currentarg == "-gPkx"  ) ||
                       ( currentarg == "-gmkv"  ) ||
                       ( currentarg == "-gmkV"  ) ||
+                      ( currentarg == "-gmkvlb"  ) ||
+                      ( currentarg == "-gmkVlb"  ) ||
+                      ( currentarg == "-gmkvub"  ) ||
+                      ( currentarg == "-gmkVub"  ) ||
                       ( currentarg == "-gmko"  ) ||
                       ( currentarg == "-gmkO"  ) ||
                       ( currentarg == "-gmkx"  ) ||
                       ( currentarg == "-gmekv"  ) ||
                       ( currentarg == "-gmekV"  ) ||
+                      ( currentarg == "-gmekvlb"  ) ||
+                      ( currentarg == "-gmekVlb"  ) ||
+                      ( currentarg == "-gmekvub"  ) ||
+                      ( currentarg == "-gmekVub"  ) ||
                       ( currentarg == "-gmeko"  ) ||
                       ( currentarg == "-gmekO"  ) ||
                       ( currentarg == "-gmekx"  ) ||
                       ( currentarg == "-gmrkv"  ) ||
                       ( currentarg == "-gmrkV"  ) ||
+                      ( currentarg == "-gmrkvlb"  ) ||
+                      ( currentarg == "-gmrkVlb"  ) ||
+                      ( currentarg == "-gmrkvub"  ) ||
+                      ( currentarg == "-gmrkVub"  ) ||
                       ( currentarg == "-gmrko"  ) ||
                       ( currentarg == "-gmrkO"  ) ||
                       ( currentarg == "-gmrkx"  ) ||
                       ( currentarg == "-gmskv" ) ||
                       ( currentarg == "-gmskV" ) ||
+                      ( currentarg == "-gmskvlb" ) ||
+                      ( currentarg == "-gmskVlb" ) ||
+                      ( currentarg == "-gmskvub" ) ||
+                      ( currentarg == "-gmskVub" ) ||
                       ( currentarg == "-gmsko" ) ||
                       ( currentarg == "-gmskO" ) ||
                       ( currentarg == "-gmskx" ) ||
                       ( currentarg == "-gmsekv" ) ||
                       ( currentarg == "-gmsekV" ) ||
+                      ( currentarg == "-gmsekvlb" ) ||
+                      ( currentarg == "-gmsekVlb" ) ||
+                      ( currentarg == "-gmsekvub" ) ||
+                      ( currentarg == "-gmsekVub" ) ||
                       ( currentarg == "-gmseko" ) ||
                       ( currentarg == "-gmsekO" ) ||
                       ( currentarg == "-gmsekx" ) ||
                       ( currentarg == "-gmsrkv" ) ||
                       ( currentarg == "-gmsrkV" ) ||
+                      ( currentarg == "-gmsrkvlb" ) ||
+                      ( currentarg == "-gmsrkVlb" ) ||
+                      ( currentarg == "-gmsrkvub" ) ||
+                      ( currentarg == "-gmsrkVub" ) ||
                       ( currentarg == "-gmsrko" ) ||
                       ( currentarg == "-gmsrkO" ) ||
                       ( currentarg == "-gmsrkx" ) ||
                       ( currentarg == "-gmgtkv" ) ||
                       ( currentarg == "-gmgtkV" ) ||
+                      ( currentarg == "-gmgtkvlb" ) ||
+                      ( currentarg == "-gmgtkVlb" ) ||
+                      ( currentarg == "-gmgtkvub" ) ||
+                      ( currentarg == "-gmgtkVub" ) ||
                       ( currentarg == "-gmgtko" ) ||
                       ( currentarg == "-gmgtkO" ) ||
                       ( currentarg == "-gmgtkx" ) ||
                       ( currentarg == "-gmgtekv" ) ||
                       ( currentarg == "-gmgtekV" ) ||
+                      ( currentarg == "-gmgtekvlb" ) ||
+                      ( currentarg == "-gmgtekVlb" ) ||
+                      ( currentarg == "-gmgtekvub" ) ||
+                      ( currentarg == "-gmgtekVub" ) ||
                       ( currentarg == "-gmgteko" ) ||
                       ( currentarg == "-gmgtekO" ) ||
                       ( currentarg == "-gmgtekx" ) ||
                       ( currentarg == "-gmgtrkv" ) ||
                       ( currentarg == "-gmgtrkV" ) ||
+                      ( currentarg == "-gmgtrkvlb" ) ||
+                      ( currentarg == "-gmgtrkVlb" ) ||
+                      ( currentarg == "-gmgtrkvub" ) ||
+                      ( currentarg == "-gmgtrkVub" ) ||
                       ( currentarg == "-gmgtrko" ) ||
                       ( currentarg == "-gmgtrkO" ) ||
                       ( currentarg == "-gmgtrkx" )    )
@@ -5098,15 +5399,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-fztkb"   ) ||
                       ( currentarg == "-fztke"   ) ||
                       ( currentarg == "-fztkw"   ) ||
+                      ( currentarg == "-fztkwlb"   ) ||
+                      ( currentarg == "-fztkwub"   ) ||
                       ( currentarg == "-fztkt"   ) ||
                       ( currentarg == "-fztktx"  ) ||
                       ( currentarg == "-fztktk"  ) ||
-                      ( currentarg == "-fztkg"   ) ||
                       ( currentarg == "-fztkgg"  ) ||
                       ( currentarg == "-fztkf"   ) ||
                       ( currentarg == "-fztkr"   ) ||
+                      ( currentarg == "-fztkg"   ) ||
                       ( currentarg == "-fztkd"   ) ||
                       ( currentarg == "-fztkG"   ) ||
+                      ( currentarg == "-fztkrlb"   ) ||
+                      ( currentarg == "-fztkglb"   ) ||
+                      ( currentarg == "-fztkdlb"   ) ||
+                      ( currentarg == "-fztkGlb"   ) ||
+                      ( currentarg == "-fztkrub"   ) ||
+                      ( currentarg == "-fztkgub"   ) ||
+                      ( currentarg == "-fztkdub"   ) ||
+                      ( currentarg == "-fztkGub"   ) ||
                       ( currentarg == "-fztkI"   ) ||
                       ( currentarg == "-fztkan"  ) ||
                       ( currentarg == "-fzsks"   ) ||
@@ -5115,15 +5426,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-fzskb"   ) ||
                       ( currentarg == "-fzske"   ) ||
                       ( currentarg == "-fzskw"   ) ||
+                      ( currentarg == "-fzskwlb"   ) ||
+                      ( currentarg == "-fzskwub"   ) ||
                       ( currentarg == "-fzskt"   ) ||
                       ( currentarg == "-fzsktx"  ) ||
                       ( currentarg == "-fzsktk"  ) ||
-                      ( currentarg == "-fzskg"   ) ||
                       ( currentarg == "-fzskgg"  ) ||
                       ( currentarg == "-fzskf"   ) ||
                       ( currentarg == "-fzskr"   ) ||
+                      ( currentarg == "-fzskg"   ) ||
                       ( currentarg == "-fzskd"   ) ||
                       ( currentarg == "-fzskG"   ) ||
+                      ( currentarg == "-fzskrlb"   ) ||
+                      ( currentarg == "-fzskglb"   ) ||
+                      ( currentarg == "-fzskdlb"   ) ||
+                      ( currentarg == "-fzskGlb"   ) ||
+                      ( currentarg == "-fzskrub"   ) ||
+                      ( currentarg == "-fzskgub"   ) ||
+                      ( currentarg == "-fzskdub"   ) ||
+                      ( currentarg == "-fzskGub"   ) ||
                       ( currentarg == "-fzskI"   ) ||
                       ( currentarg == "-fzskan"  )    )
             {
@@ -5140,11 +5461,19 @@ int runsvmint(int threadInd,
 
             else if ( ( currentarg == "-fztkv" ) ||
                       ( currentarg == "-fztkV" ) ||
+                      ( currentarg == "-fztkvlb" ) ||
+                      ( currentarg == "-fztkVlb" ) ||
+                      ( currentarg == "-fztkvub" ) ||
+                      ( currentarg == "-fztkVub" ) ||
                       ( currentarg == "-fztko" ) ||
                       ( currentarg == "-fztkO" ) ||
                       ( currentarg == "-fztkx" ) ||
                       ( currentarg == "-fzskv" ) ||
                       ( currentarg == "-fzskV" ) ||
+                      ( currentarg == "-fzskvlb" ) ||
+                      ( currentarg == "-fzskVlb" ) ||
+                      ( currentarg == "-fzskvub" ) ||
+                      ( currentarg == "-fzskVub" ) ||
                       ( currentarg == "-fzsko" ) ||
                       ( currentarg == "-fzskO" ) ||
                       ( currentarg == "-fzskx" )    )
@@ -6201,7 +6530,6 @@ int runsvmint(int threadInd,
                         else if ( currcommand(1) == "m"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(3);   }
                         else if ( currcommand(1) == "v"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(4);   }
                         else if ( currcommand(1) == "a"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(5);   }
-                        else if ( currcommand(1) == "e"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(6);   }
                         else if ( currcommand(1) == "p"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(7);   }
                         else if ( currcommand(1) == "t"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(8);   }
                         else if ( currcommand(1) == "l"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(12);  }
@@ -6222,7 +6550,6 @@ int runsvmint(int threadInd,
                         else if ( currcommand(1) == "knr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(303); }
                         else if ( currcommand(1) == "knv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(304); }
                         else if ( currcommand(1) == "kna" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(305); }
-                        else if ( currcommand(1) == "kne" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(306); }
                         else if ( currcommand(1) == "knm" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(307); }
 
                         else if ( currcommand(1) == "gpr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(400); }
@@ -6241,7 +6568,6 @@ int runsvmint(int threadInd,
                         else if ( currcommand(1) == "lsv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(501); }
                         else if ( currcommand(1) == "lsa" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(502); }
                         else if ( currcommand(1) == "lso" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(505); }
-                        else if ( currcommand(1) == "lse" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(507); }
                         else if ( currcommand(1) == "lsg" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(508); }
                         else if ( currcommand(1) == "lsi" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(509); }
                         else if ( currcommand(1) == "lsh" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(510); }
@@ -6287,7 +6613,6 @@ int runsvmint(int threadInd,
                         else if ( currcommand(1) == "m"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(3);   }
                         else if ( currcommand(1) == "v"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(4);   }
                         else if ( currcommand(1) == "a"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(5);   }
-                        else if ( currcommand(1) == "e"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(6);   }
                         else if ( currcommand(1) == "p"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(7);   }
                         else if ( currcommand(1) == "t"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(8);   }
                         else if ( currcommand(1) == "l"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(12);  }
@@ -6308,7 +6633,6 @@ int runsvmint(int threadInd,
                         else if ( currcommand(1) == "knr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(303); }
                         else if ( currcommand(1) == "knv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(304); }
                         else if ( currcommand(1) == "kna" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(305); }
-                        else if ( currcommand(1) == "kne" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(306); }
                         else if ( currcommand(1) == "knm" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(307); }
 
                         else if ( currcommand(1) == "gpr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(400); }
@@ -6327,7 +6651,6 @@ int runsvmint(int threadInd,
                         else if ( currcommand(1) == "lsv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(501); }
                         else if ( currcommand(1) == "lsa" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(502); }
                         else if ( currcommand(1) == "lso" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(505); }
-                        else if ( currcommand(1) == "lse" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(507); }
                         else if ( currcommand(1) == "lsg" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(508); }
                         else if ( currcommand(1) == "lsi" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(509); }
                         else if ( currcommand(1) == "lsh" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(510); }
@@ -12530,6 +12853,8 @@ void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &cu
                         else if ( currcommandis == "-kum"  ) { theKern.setUnMagTerm(kernnum); }
                         else if ( currcommandis == "-kU"   ) { theKern.setUnIndex(); }
                         else if ( currcommandis == "-kw"   ) { gentype tmpg; safeatowhatever(tmpg,currcommand(1),argvariables); theKern.setWeight(tmpg,kernnum); }
+                        else if ( currcommandis == "-kwlb"   ) { gentype tmpg; safeatowhatever(tmpg,currcommand(1),argvariables); theKern.setWeightLB(tmpg,kernnum); }
+                        else if ( currcommandis == "-kwub"   ) { gentype tmpg; safeatowhatever(tmpg,currcommand(1),argvariables); theKern.setWeightUB(tmpg,kernnum); }
                         else if ( currcommandis == "-kt"   ) { theKern.setType(safeatoi(currcommand(1),argvariables),kernnum); }
                         else if ( currcommandis == "-mtb"  ) { theKern.setsuggestXYcache(1); }
                         else if ( currcommandis == "-bmx"  ) { theKern.setsuggestXYcache(0); }
@@ -12591,23 +12916,6 @@ void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &cu
                             theKern.setIntOverwrite(newintover,kernnum);
                         }
 
-                        else if ( currcommandis == "-kg" )
-                        {
-                            Vector<gentype> kernRealConsts(theKern.cRealConstants(kernnum));
-                            gentype temparg;
-
-                            if ( kernRealConsts.size() <= 0 )
-                            {
-                                STRTHROW("Error: constant r0 not present in kernel.");
-                            }
-
-                            safeatowhatever(temparg,currcommand(1),argvariables);
-
-                            kernRealConsts("&",0) = temparg;
-
-                            theKern.setRealConstants(kernRealConsts,kernnum);
-                        }
-
                         else if ( currcommandis == "-kgg" )
                         {
                             Vector<gentype> xxscale;
@@ -12632,6 +12940,23 @@ errstream() << "set xscale: " << xscale << "\n";
                             safeatowhatever(temparg,currcommand(1),argvariables);
 
                             kernRealConsts("&",1) = temparg;
+
+                            theKern.setRealConstants(kernRealConsts,kernnum);
+                        }
+
+                        else if ( currcommandis == "-kg" )
+                        {
+                            Vector<gentype> kernRealConsts(theKern.cRealConstants(kernnum));
+                            gentype temparg;
+
+                            if ( kernRealConsts.size() <= 0 )
+                            {
+                                STRTHROW("Error: constant r0 not present in kernel.");
+                            }
+
+                            safeatowhatever(temparg,currcommand(1),argvariables);
+
+                            kernRealConsts("&",0) = temparg;
 
                             theKern.setRealConstants(kernRealConsts,kernnum);
                         }
@@ -12669,6 +12994,165 @@ errstream() << "set xscale: " << xscale << "\n";
 
                             theKern.setIntConstants(kernIntConsts,kernnum);
                         }
+
+
+
+
+
+
+
+
+                        else if ( currcommandis == "-krlb" )
+                        {
+                            Vector<gentype> kernRealConstsLB(theKern.cRealConstantsLB(kernnum));
+                            gentype temparg;
+
+                            if ( kernRealConstsLB.size() <= 1 )
+                            {
+                                STRTHROW("Error: constant r1 not present in kernel.");
+                            }
+
+                            safeatowhatever(temparg,currcommand(1),argvariables);
+
+                            kernRealConstsLB("&",1) = temparg;
+
+                            theKern.setRealConstantsLB(kernRealConstsLB,kernnum);
+                        }
+
+                        else if ( currcommandis == "-kglb" )
+                        {
+                            Vector<gentype> kernRealConstsLB(theKern.cRealConstantsLB(kernnum));
+                            gentype temparg;
+
+                            if ( kernRealConstsLB.size() <= 0 )
+                            {
+                                STRTHROW("Error: constant r0 not present in kernel.");
+                            }
+
+                            safeatowhatever(temparg,currcommand(1),argvariables);
+
+                            kernRealConstsLB("&",0) = temparg;
+
+                            theKern.setRealConstantsLB(kernRealConstsLB,kernnum);
+                        }
+
+                        else if ( currcommandis == "-kdlb" )
+                        {
+                            Vector<int> kernIntConstsLB(theKern.cIntConstantsLB(kernnum));
+                            int temparg;
+
+                            if ( kernIntConstsLB.size() <= 0 )
+                            {
+                                STRTHROW("Error: constant i0 not present in kernel.");
+                            }
+
+                            safeatowhatever(temparg,currcommand(1),argvariables);
+
+                            kernIntConstsLB("&",0) = temparg;
+
+                            theKern.setIntConstantsLB(kernIntConstsLB,kernnum);
+                        }
+
+                        else if ( currcommandis == "-kGlb" )
+                        {
+                            Vector<int> kernIntConstsLB(theKern.cIntConstantsLB(kernnum));
+                            int temparg;
+
+                            if ( kernIntConstsLB.size() <= 0 )
+                            {
+                                STRTHROW("Error: constant i0 not present in kernel.");
+                            }
+
+                            safeatowhatever(temparg,currcommand(1),argvariables);
+
+                            kernIntConstsLB("&",0) = temparg;
+
+                            theKern.setIntConstantsLB(kernIntConstsLB,kernnum);
+                        }
+
+
+
+
+
+
+
+
+
+                        else if ( currcommandis == "-krub" )
+                        {
+                            Vector<gentype> kernRealConstsUB(theKern.cRealConstantsUB(kernnum));
+                            gentype temparg;
+
+                            if ( kernRealConstsUB.size() <= 1 )
+                            {
+                                STRTHROW("Error: constant r1 not present in kernel.");
+                            }
+
+                            safeatowhatever(temparg,currcommand(1),argvariables);
+
+                            kernRealConstsUB("&",1) = temparg;
+
+                            theKern.setRealConstantsUB(kernRealConstsUB,kernnum);
+                        }
+
+                        else if ( currcommandis == "-kgub" )
+                        {
+                            Vector<gentype> kernRealConstsUB(theKern.cRealConstantsUB(kernnum));
+                            gentype temparg;
+
+                            if ( kernRealConstsUB.size() <= 0 )
+                            {
+                                STRTHROW("Error: constant r0 not present in kernel.");
+                            }
+
+                            safeatowhatever(temparg,currcommand(1),argvariables);
+
+                            kernRealConstsUB("&",0) = temparg;
+
+                            theKern.setRealConstantsUB(kernRealConstsUB,kernnum);
+                        }
+
+                        else if ( currcommandis == "-kdub" )
+                        {
+                            Vector<int> kernIntConstsUB(theKern.cIntConstantsUB(kernnum));
+                            int temparg;
+
+                            if ( kernIntConstsUB.size() <= 0 )
+                            {
+                                STRTHROW("Error: constant i0 not present in kernel.");
+                            }
+
+                            safeatowhatever(temparg,currcommand(1),argvariables);
+
+                            kernIntConstsUB("&",0) = temparg;
+
+                            theKern.setIntConstantsUB(kernIntConstsUB,kernnum);
+                        }
+
+                        else if ( currcommandis == "-kGub" )
+                        {
+                            Vector<int> kernIntConstsUB(theKern.cIntConstantsUB(kernnum));
+                            int temparg;
+
+                            if ( kernIntConstsUB.size() <= 0 )
+                            {
+                                STRTHROW("Error: constant i0 not present in kernel.");
+                            }
+
+                            safeatowhatever(temparg,currcommand(1),argvariables);
+
+                            kernIntConstsUB("&",0) = temparg;
+
+                            theKern.setIntConstantsUB(kernIntConstsUB,kernnum);
+                        }
+
+
+
+
+
+
+
+
 
                         else if ( currcommandis == "-kf" )
                         {
@@ -12736,6 +13220,93 @@ errstream() << "set xscale: " << xscale << "\n";
 
                             theKern.setIntConstants(kernIntConsts,kernnum);
                         }
+
+
+
+
+
+
+
+
+                        else if ( currcommandis == "-kvlb" )
+                        {
+                            Vector<gentype> kernRealConstsLB(theKern.cRealConstantsLB(kernnum));
+                            gentype temparg;
+
+                            if ( kernRealConstsLB.size() <= safeatoi(currcommand(1),argvariables) )
+                            {
+                                STRTHROW("Error: constant r"+currcommand(1)+" not present in kernel.");
+                            }
+
+                            safeatowhatever(temparg,currcommand(2),argvariables);
+
+                            kernRealConstsLB("&",safeatoi(currcommand(1),argvariables)) = temparg;
+
+                            theKern.setRealConstantsLB(kernRealConstsLB,kernnum);
+                        }
+
+                        else if ( currcommandis == "-kVlb" )
+                        {
+                            Vector<int> kernIntConstsLB(theKern.cIntConstants(kernnum));
+                            int temparg;
+
+                            if ( kernIntConstsLB.size() <= safeatoi(currcommand(1),argvariables) )
+                            {
+                                STRTHROW("Error: constant i"+currcommand(1)+" not present in kernel.");
+                            }
+
+                            safeatowhatever(temparg,currcommand(2),argvariables);
+
+                            kernIntConstsLB("&",safeatoi(currcommand(1),argvariables)) = temparg;
+
+                            theKern.setIntConstantsLB(kernIntConstsLB,kernnum);
+                        }
+
+
+
+
+
+
+
+                        else if ( currcommandis == "-kvub" )
+                        {
+                            Vector<gentype> kernRealConstsUB(theKern.cRealConstantsUB(kernnum));
+                            gentype temparg;
+
+                            if ( kernRealConstsUB.size() <= safeatoi(currcommand(1),argvariables) )
+                            {
+                                STRTHROW("Error: constant r"+currcommand(1)+" not present in kernel.");
+                            }
+
+                            safeatowhatever(temparg,currcommand(2),argvariables);
+
+                            kernRealConstsUB("&",safeatoi(currcommand(1),argvariables)) = temparg;
+
+                            theKern.setRealConstantsUB(kernRealConstsUB,kernnum);
+                        }
+
+                        else if ( currcommandis == "-kVub" )
+                        {
+                            Vector<int> kernIntConstsUB(theKern.cIntConstants(kernnum));
+                            int temparg;
+
+                            if ( kernIntConstsUB.size() <= safeatoi(currcommand(1),argvariables) )
+                            {
+                                STRTHROW("Error: constant i"+currcommand(1)+" not present in kernel.");
+                            }
+
+                            safeatowhatever(temparg,currcommand(2),argvariables);
+
+                            kernIntConstsUB("&",safeatoi(currcommand(1),argvariables)) = temparg;
+
+                            theKern.setIntConstantsUB(kernIntConstsUB,kernnum);
+                        }
+
+
+
+
+
+
 
     // Reset kernel if required
 
@@ -14050,14 +14621,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "       - {eVAL} or {EVAL} sets the distance to surface scale.                 \n" : "" );
     output << ( ( basic || advanced ) ? "       - x is the training vector.                                            \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "Auto-Encoder:                                                                 \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {>,=,!=,!,<} must not be included.                                   \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y must not be included (target is same as input x).                  \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {tVAL} or {TVAL} sets the empirical risk scale.                      \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {eVAL} or {EVAL} sets the distance to surface scale.                 \n" : "" );
-    output << ( ( basic || advanced ) ? "       - x is the training vector.                                            \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "Classification with Scoring:                                                  \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "       - {>,=,!=,!,<} must not be included.                                   \n" : "" );
@@ -14483,7 +15046,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                           a - SVM: anionic regression.                       \n" : "" );
     output << ( ( basic || advanced ) ? "                           u - SVM: cyclic regression.                        \n" : "" );
     output << ( ( basic || advanced ) ? "                           g - SVM: gentype regression (any target).          \n" : "" );
-    output << ( ( basic || advanced ) ? "                           e - SVM: auto-encoding SVM.                        \n" : "" );
     output << ( ( basic || advanced ) ? "                           p - SVM:*density estimation.                       \n" : "" );
     output << ( ( basic || advanced ) ? "                           t - SVM: pareto frontier SVM.                      \n" : "" );
     output << ( ( basic || advanced ) ? "                           l - SVM: binary scoring (zero bias by default).    \n" : "" );
@@ -14512,7 +15074,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                         lso - LSV: scalar regression with scoring.           \n" : "" );
     output << ( ( basic || advanced ) ? "                         lsq - LSV: vector regression with scoring.           \n" : "" );
     output << ( ( basic || advanced ) ? "                         lsh - LSV: multi-expert ranking.                     \n" : "" );
-    output << ( ( basic || advanced ) ? "                         lse - LSV: auto-encoding machine.                    \n" : "" );
     output << ( ( basic || advanced ) ? "                         lsR - LSV: scalar regression random FF.#             \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                               Gaussian processes (GPR):                      \n" : "" );
@@ -14544,9 +15105,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                         knv - KNN: vector regression.                        \n" : "" );
     output << ( ( basic || advanced ) ? "                         kna - KNN: anionic regression.                       \n" : "" );
     output << ( ( basic || advanced ) ? "                         kng - KNN: gentype regression.                       \n" : "" );
-    output << ( ( basic || advanced ) ? "                         kne - KNN: auto-encoder.                             \n" : "" );
     output << ( ( basic || advanced ) ? "                         knp - KNN: density estimation.                       \n" : "" );
-    output << ( ( basic || advanced ) ? "                         kne - KNN: auto-encoding machine.                    \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                               Improvement measures (IMPs):                   \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
@@ -15915,6 +16474,20 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "         -kG  x          - kernel param i0  = x   (default 1).                \n" : "" );
     output << ( ( basic || advanced ) ? "         -kV  i x        - kernel param ii  = x   (default 0).                \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -kglb  x        - kernel param r0 nominal lower bound (kernel tune). \n" : "" );
+    output << ( (          advanced ) ? "         -krlb  x        - kernel param r1 nominal lower bound (kernel tune). \n" : "" );
+    output << ( (          advanced ) ? "         -kvlb  i x      - kernel param ri nominal lower bound (kernel tune). \n" : "" );
+    output << ( (          advanced ) ? "         -kdlb  x        - kernel param i0 nominal lower bound (kernel tune). \n" : "" );
+    output << ( (          advanced ) ? "         -kGlb  x        - kernel param i0 nominal lower bound (kernel tune). \n" : "" );
+    output << ( (          advanced ) ? "         -kVlb  i x      - kernel param ii nominal lower bound (kernel tune). \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -kgub  x        - kernel param r0 nominal upper bound (kernel tune). \n" : "" );
+    output << ( (          advanced ) ? "         -krub  x        - kernel param r1 nominal upper bound (kernel tune). \n" : "" );
+    output << ( (          advanced ) ? "         -kvub  i x      - kernel param ri nominal upper bound (kernel tune). \n" : "" );
+    output << ( (          advanced ) ? "         -kdub  x        - kernel param i0 nominal upper bound (kernel tune). \n" : "" );
+    output << ( (          advanced ) ? "         -kGub  x        - kernel param i0 nominal upper bound (kernel tune). \n" : "" );
+    output << ( (          advanced ) ? "         -kVub  i x      - kernel param ii nominal upper bound (kernel tune). \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -kI  v          - set kernels  indexing using  given index  vector v,\n" : "" );
     output << ( (          advanced ) ? "                           where  the  argument  is a  vector of  non-negative\n" : "" );
     output << ( (          advanced ) ? "                           integers   (eg [ 0 4 5 ])   in   increasing   order\n" : "" );
@@ -15923,6 +16496,8 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -kw  w          - set weight w>=0 of kernel function (default 1). The\n" : "" );
     output << ( (          advanced ) ? "                           weight can be anything (not just double), which may\n" : "" );
     output << ( (          advanced ) ? "                           be useful eg for matrix-valued kernels.            \n" : "" );
+    output << ( (          advanced ) ? "         -kwlb w         - nominal lower bound on -kw for kernel tuning.      \n" : "" );
+    output << ( (          advanced ) ? "         -kwub w         - nominal upper bound on -kw for kernel tuning.      \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -kx  [ n0 ... ] [ A0 ... ] - set kernel transform, so:               \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
@@ -16514,7 +17089,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           - non-trivial results are  returned for model based\n" : "" );
     output << ( (          advanced ) ? "                             methods in the following format:                 \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                      { y v [cg1..cgn] x' [xx1..xxn] xf [xf1..xfn] xff xf3 t }\n" : "" );
+    output << ( (          advanced ) ? "         { y v [cg1..cgm] x' q [xx1..xxn] xf [xf1..xfn] xff xf3 t [tg1..tgm] }\n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                             where:                                           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
@@ -16524,8 +17099,9 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                             + v is the variance of the measurement noise.    \n" : "" );
     output << ( (          advanced ) ? "                             + [ cg1 .. cgn ] for inequality constraints (want\n" : "" );
     output << ( (          advanced ) ? "                               cgi(x) > 0 for i=1,2,...,n.  See -cmgt).       \n" : "" );
-    output << ( (          advanced ) ? "                             + x' if non-null, this  indicates that the actual\n" : "" );
+    output << ( (          advanced ) ? "                             + x' if non-null, this indicates where the actual\n" : "" );
     output << ( (          advanced ) ? "                               evaluation happened (if y=f(x'), not y=f(x)).  \n" : "" );
+    output << ( (          advanced ) ? "                             + q if non-null and nz, stop optim immediately.  \n" : "" );
     output << ( (          advanced ) ? "                             + [ xx1 ... xxn ] is side-channel data (see -gmsc\n" : "" );
     output << ( (          advanced ) ? "                               etc for information.                           \n" : "" );
     output << ( (          advanced ) ? "                             + xf is for  rank observations  (that is,  rather\n" : "" );
@@ -16535,6 +17111,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                             + xff is for gradient observations.              \n" : "" );
     output << ( (          advanced ) ? "                             + xf3 is for augmented observations.             \n" : "" );
     output << ( (          advanced ) ? "                             + t observation type (0 n/a, +1 >=, -1 <=, 2 ==).\n" : "" );
+    output << ( (          advanced ) ? "                             + tcg like t but for [cg1..cgn].                 \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                             Not all additional data is required. Use null for\n" : "" );
     output << ( (          advanced ) ? "                             default operation ( or [ ] for vectors).         \n" : "" );
@@ -16919,7 +17496,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -gmr            - add noise to model observations.                   \n" : "" );
     output << ( (          advanced ) ? "         -gmR            - don't add noise to model observations (default).   \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -gmgt n         - number of inequality constraints c(x) >= 0.        \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtc n        - number of inequality constraints c(x) >= 0.        \n" : "" );
     output << ( (          advanced ) ? "                           0 - normal operation (default).                    \n" : "" );
     output << ( (          advanced ) ? "                           n - see above.                                     \n" : "" );
     output << ( (          advanced ) ? "                           Equality  constraints  are   enforced  (in  BO)  by\n" : "" );
@@ -17183,6 +17760,11 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                               data will be treated as  prior observations and\n" : "" );
     output << ( (          advanced ) ? "                               the  BO  will  revert  to  standard  (non-grid)\n" : "" );
     output << ( (          advanced ) ? "                               operation.                                     \n" : "" );
+    output << ( (          advanced ) ? "                           NB: when evaluating, x is  pre-loaded with the grid\n" : "" );
+    output << ( (          advanced ) ? "                               index. To access, use eg:                      \n" : "" );
+    output << ( (          advanced ) ? "                                          -fW 3 x -Zx                         \n" : "" );
+    output << ( (          advanced ) ? "                               this  will load x  (which  contains  the index)\n" : "" );
+    output << ( (          advanced ) ? "                               into var(3,0) for later use.                   \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gbD d          - delta factor used in GP-UCB method (default 0.1).  \n" : "" );
     output << ( (          advanced ) ? "         -gbzz zeta      - zeta factor in EI method (deflt 0.  0.01 works ok).\n" : "" );

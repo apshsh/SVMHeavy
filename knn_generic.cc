@@ -125,13 +125,13 @@ KNN_Generic::~KNN_Generic()
     return;
 }
 
-int KNN_Generic::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_Generic::addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     incgvernum();
 
-    ML_Base::addTrainingVector (i,y,x,Cweigh,epsweigh);
+    ML_Base::addTrainingVector (i,y,x,Cweigh,epsweigh,dval);
 
-    dd.add(i); dd("&",i) = 2;
+    dd.add(i); dd("&",i) = dval; //2;
     onevec.add(i); onevec("&",i) = 1;
     kdistscr.add(i); kdistscr("&",i) = 0.0;
     iiscr.add(i); iiscr("&",i) = 0;
@@ -149,13 +149,13 @@ int KNN_Generic::addTrainingVector (int i, const gentype &y, const SparseVector<
     return 1;
 }
 
-int KNN_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh)
+int KNN_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
 {
     incgvernum();
 
-    ML_Base::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
+    ML_Base::qaddTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 
-    dd.add(i); dd("&",i) = 2;
+    dd.add(i); dd("&",i) = dval; //2;
     onevec.add(i); onevec("&",i) = 1;
     kdistscr.add(i); kdistscr("&",i) = 0.0;
     iiscr.add(i); iiscr("&",i) = 0;
