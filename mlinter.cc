@@ -1,3 +1,5 @@
+//FIXME:in bayesopt postprocessing need to disgard if constraints not met
+
 //FIXME: having added d = 2 to addTrainingVector functionality thoughout (gentype y), fix non-trivial versions to make sense (d = -4 as *default*?)
 
 /*
@@ -9228,10 +9230,11 @@ int runsvmint(int threadInd,
                                     hres = allhres(optvarind(0));
                                 }
 
-                                else if ( allfres.size() )
+                                else if ( allfres.size() && ( ires >= 0 ) )
                                 {
                                     optvarind.resize(1) = ires;
 
+errstream() << "phantomabc ires = " << ires << "\n";
                                     // Still need to retieve supplementary results!
 
                                     xres = allxres(optvarind(0)); // Important to do this: xres is non-converted, allxres is
@@ -9241,7 +9244,7 @@ int runsvmint(int threadInd,
                                     hres = allhres(optvarind(0));
                                 }
 
-                                else
+                                else if ( ires >= 0 )
                                 {
                                     optvarind.resize(1) = ires;
                                 }
@@ -11888,7 +11891,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
                 // This is bayes on grid, result in ML is stored in x(dim),
                 // so load into gridargvars(0,0)
 
-                gridargvars("&",0)("&",0) = x(i);
+                gridargvars("&",5)("&",5) = x(i);
             }
         }
 
@@ -17694,8 +17697,8 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                  ** Bayesian optimiser options.                   **         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gbH n          - method used to select points in optimisation:      \n" : "" );
-    output << ( (          advanced ) ? "                           0  - PE (pure explotation, mean only minimisation).\n" : "" );
-    output << ( (          advanced ) ? "                           1  - EI (expected improvement - default).          \n" : "" );
+    output << ( (          advanced ) ? "                           0  - MO (mean only minimisation).                  \n" : "" );
+    output << ( (          advanced ) ? "                           1  - EI (expected improvement). Default.           \n" : "" );
     output << ( (          advanced ) ? "                           2  - PI (probability of improvement).              \n" : "" );
     output << ( (          advanced ) ? "                           3  - GP-UCB as per Brochu (recommended GP-UCB).*   \n" : "" );
     output << ( (          advanced ) ? "                           4  - GP-UCB |D| finite as per Srinivas.            \n" : "" );
@@ -17703,8 +17706,8 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           6  - GP-UCB p based on Brochu.                     \n" : "" );
     output << ( (          advanced ) ? "                           7  - GP-UCB p |D| finite based on Srinivas.        \n" : "" );
     output << ( (          advanced ) ? "                           8  - GP-UCB p |D| infinite based on Srinivas.      \n" : "" );
-    output << ( (          advanced ) ? "                           9  - PE (variance-only maximisation).              \n" : "" );
-    output << ( (          advanced ) ? "                           10 - mean-only minimisation.                       \n" : "" );
+    output << ( (          advanced ) ? "                           9  - PE (pure exploration - variance only).$       \n" : "" );
+    output << ( (          advanced ) ? "                           10 - PEc (pure exploration - total variance only).@\n" : "" );
     output << ( (          advanced ) ? "                           11 - GP-UCB with user-defined beta_t (see -gbv).   \n" : "" );
     output << ( (          advanced ) ? "                           12 - Thompson sampling.#                           \n" : "" );
     output << ( (          advanced ) ? "                           13 - GP-UCB RKHS as per Srinivas.                  \n" : "" );
@@ -17714,11 +17717,13 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           17 - GP-UCB as per Kandasamy (multifidelity 2017). \n" : "" );
     output << ( (          advanced ) ? "                           18 - Human will be prompted to input x.            \n" : "" );
     output << ( (          advanced ) ? "                           19 - HE (human-level exploitation beta = 0.01).    \n" : "" );
-    output << ( (          advanced ) ? "                           20 - GP-UCB as per  BO-Muse (single AI).  Typically\n" : "" );
-    output << ( (          advanced ) ? "                                combined with human prompt.                   \n" : "" );
+    output << ( (          advanced ) ? "                           20 - GP-UCB as per BO-Muse (single AI).^           \n" : "" );
     output << ( (          advanced ) ? "                           * beta_n = 2.log((n^{2+dim/2}).(pi^2)/(3.delta))   \n" : "" );
+    output << ( (          advanced ) ? "                           $ variance of model only.                          \n" : "" );
+    output << ( (          advanced ) ? "                           @ total variance of model and contraints.          \n" : "" );
     output << ( (          advanced ) ? "                           # Chowdhury, On Kernelised Multi-Arm Bandits, Alg 2\n" : "" );
     output << ( (          advanced ) ? "                           ~ Bogunovic, Misspecified GP Bandit Optim., Lemma 1\n" : "" );
+    output << ( (          advanced ) ? "                           ^ Intendid to be combined with human prompt.       \n" : "" );
     output << ( (          advanced ) ? "         -gbj n          - number  of random  start/seed  points  (default  -1\n" : "" );
     output << ( (          advanced ) ? "                           translates to d+1, where d is the dimension).      \n" : "" );
     output << ( (          advanced ) ? "         -gbt m          - max  iteration  count for  search algorithm  (0 for\n" : "" );
@@ -17760,11 +17765,8 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                               data will be treated as  prior observations and\n" : "" );
     output << ( (          advanced ) ? "                               the  BO  will  revert  to  standard  (non-grid)\n" : "" );
     output << ( (          advanced ) ? "                               operation.                                     \n" : "" );
-    output << ( (          advanced ) ? "                           NB: when evaluating, x is  pre-loaded with the grid\n" : "" );
-    output << ( (          advanced ) ? "                               index. To access, use eg:                      \n" : "" );
-    output << ( (          advanced ) ? "                                          -fW 3 x -Zx                         \n" : "" );
-    output << ( (          advanced ) ? "                               this  will load x  (which  contains  the index)\n" : "" );
-    output << ( (          advanced ) ? "                               into var(3,0) for later use.                   \n" : "" );
+    output << ( (          advanced ) ? "                           NB: when evaluating var(5,5) is pre-loaded with the\n" : "" );
+    output << ( (          advanced ) ? "                               grid index.                                    \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gbD d          - delta factor used in GP-UCB method (default 0.1).  \n" : "" );
     output << ( (          advanced ) ? "         -gbzz zeta      - zeta factor in EI method (deflt 0.  0.01 works ok).\n" : "" );

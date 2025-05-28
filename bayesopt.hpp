@@ -60,7 +60,7 @@ public:
     //         7  - GP-UCB p |D| finite based on Srinivas.
     //         8  - GP-UCB p |D| infinite based on Srinivas.
     //         9  - PE (variance-only maximisation).
-    //         10 - mean-only minimisation.
+    //         10 - PEc (total variance-only, including constraints in variance maximisation).
     //         11 - GP-UCB with user-defined beta_t (see -gbv).
     //         12 - Thompson sampling.#
     //         13 - GP-UCB RKHS as per Srinivas.
@@ -623,7 +623,7 @@ public:
                       int &ires,
                       Vector<Vector<gentype> > &allxres,
                       Vector<gentype> &allfres,
-                      Vector<gentype> &allfresmod,
+                      Vector<gentype> &allmres,
                       Vector<gentype> &supres,
                       Vector<double> &sscore,
                       const Vector<gentype> &xmin,

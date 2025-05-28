@@ -402,8 +402,8 @@ public:
     // diffmodInd: index of diff model (if used, see diff-GP)
     // allxres: all x results.
     // allfres: all f(x) results.
-    // allmres: all f(x) results, modified (eg scaled by probability of 
-    //     feasibility etc, hypervolume etc - what you should be judging 
+    // allmres: all f(x) results, modified (eg scaled by probability of
+    //     feasibility etc, hypervolume etc - what you should be judging
     //     performance on).
     // allsres: suplementary results (timing etc - see specific method)
     // s_score: stability score of x (default 1)
