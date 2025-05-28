@@ -2122,7 +2122,9 @@ int SMBOOptions::model_addTrainingVector_musigma(const gentype &y, const gentype
 
 int SMBOOptions::model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x, double varadd)
 {
-    Vector<int> xobstype;
+    Vector<int> xobstype(y.size());
+
+    xobstype = 2;
 
     return modelcgt_int_addTrainingVector(y,x,model_convertx(xx,x),xobstype,varadd);
 }
@@ -2589,7 +2591,7 @@ int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const 
                     ires |= (*(cgtapprox("&",i))).setsigmaweight((*(cgtapprox(i))).N()-1,1+(varadd/((*(cgtapprox("&",i))).sigma())));
                 }
 
-                int dval = xobstype.size() ? xobstype(i) : 0;
+                int dval = xobstype.size() ? xobstype(i) : 2;
 
                 if ( dval != 2 )
                 {
@@ -2620,7 +2622,7 @@ int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const 
                     ires |= (*(cgtapprox("&",i))).setsigmaweight((*(cgtapprox(i))).N()-1,1+(varadd/((*(cgtapprox("&",i))).sigma())));
                 }
 
-                int dval = xobstype.size() ? xobstype(i) : 0;
+                int dval = xobstype.size() ? xobstype(i) : 2;
 
                 if ( dval != 2 )
                 {

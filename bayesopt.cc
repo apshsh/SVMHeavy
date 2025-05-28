@@ -2208,7 +2208,7 @@ int bayesOpt(int dim,
             if ( !ycgt.size() )
             {
                 ycgt.resize(bopts.numcgt) = nullgentype();
-                xobstype_cgt.resize(bopts.numcgt) = 2;
+                xobstype_cgt.resize(bopts.numcgt) = 0;
             }
 
             if ( isfullgrid )
