@@ -191,6 +191,106 @@ errstream() << "full call " << fullcommand << "\n";
     return svm_system(fullcommand.c_str());
 }
 
+// Call executable.  If runbg then attempt to leave it running in the background
+
+int svm_execall(std::string &res, const std::string &evalstr)
+{
+    //errstream() << "Executable call string: " << evalstr << "\n";
+
+    std::string fullcommand = "";
+
+    fullcommand += evalstr;
+
+    int ires = svm_system(fullcommand.c_str());
+
+    if ( ires )
+    {
+        res = "E:\"system call ";
+        res += fullcommand;
+        res += " returned errorcode ";
+        res += std::to_string(ires);
+        res += "\"";
+    }
+
+    else
+    {
+        std::ifstream resfile("pyres.txt");
+
+        if ( resfile.is_open() )
+        {
+            std::stringstream buffer;
+            buffer << resfile.rdbuf();
+            res = buffer.str();
+
+            resfile.close();
+        }
+
+        else
+        {
+            res = "E:\"system call ";
+            res += fullcommand;
+            res += " failed to create result file pyres.txt\"";
+        }
+    }
+
+    return ires;
+}
+
+// Call python script.  If runbg then attempt to leave it running in the background
+
+int svm_pycall(std::string &res, const std::string &command)
+{
+    // Replace ; with : (python treats ; as a "special" character, so we must avoid it)
+
+    std::string evalstr(command);
+
+    for ( int i = 0 ; i < (int) evalstr.size() ; i++ )
+    {
+        if ( evalstr[i] == ';' )
+        {
+            evalstr[i] = ':';
+        }
+    }
+
+    std::string fullcommand = "python3 ";
+
+    fullcommand += evalstr;
+
+    int ires = svm_system(fullcommand.c_str());
+
+    if ( ires )
+    {
+        res = "E:\"system (python) call ";
+        res += fullcommand;
+        res += " returned errorcode ";
+        res += std::to_string(ires);
+        res += "\"";
+    }
+
+    else
+    {
+        std::ifstream resfile("pyres.txt");
+
+        if ( resfile.is_open() )
+        {
+            std::stringstream buffer;
+            buffer << resfile.rdbuf();
+            res = buffer.str();
+
+            resfile.close();
+        }
+
+        else
+        {
+            res = "E:\"system (python) call ";
+            res += fullcommand;
+            res += " failed to create result file pyres.txt\"";
+        }
+    }
+
+    return ires;
+}
+
 
 
 
@@ -1263,7 +1363,7 @@ int makeMathsStringNice(std::string &dest, const std::string &src)
 
     // Make sure - is used only for negation, so replace any subtraction ( - not at start or preceeded by e(^*/\%:|=><~& ) with +-
 
-    isQuote = 0;
+    isQuote = ( dest[0] == '\"' ) ? 1 : 0;
     //prevchar = ' ';
 
     //if ( dest.length() > 1 )
@@ -1272,7 +1372,7 @@ int makeMathsStringNice(std::string &dest, const std::string &src)
 
 	for ( i = 1 ; i < dest.length() ; ++i )
 	{
-	    if ( ( dest[i] == '\"' ) && ( dest[i] != '\\' ) )
+	    if ( ( dest[i] == '\"' ) && ( !i || ( dest[i-1] != '\\' ) ) )
 	    {
 		isQuote = isQuote ? 0 : 1;
 	    }
@@ -1306,7 +1406,7 @@ int makeMathsStringNice(std::string &dest, const std::string &src)
 	}
     }
 
-    isQuote = 0;
+    isQuote = ( dest[0] == '\"' ) ? 1 : 0;
     //prevchar = ' ';
 
     //if ( dest.length() > 1 )
@@ -1315,12 +1415,12 @@ int makeMathsStringNice(std::string &dest, const std::string &src)
 
 	for ( i = 1 ; i < dest.length() ; ++i )
 	{
-	    if ( ( dest[i] == '\"' ) && ( dest[i] != '\\' ) )
+	    if ( ( dest[i] == '\"' ) && ( !i || ( dest[i-1] != '\\' ) ) )
 	    {
 		isQuote = isQuote ? 0 : 1;
 	    }
 
-            if ( !isQuote && ( ( dest[i] == '+' ) && (    ( dest[j] == 'e'  ) || ( dest[j] == 'E'  ) || ( dest[j] == '(' ) || ( dest[j] == '^' ) || ( dest[j] == '*' ) || ( dest[j] == '/' )
+            if ( !isQuote && ( ( dest[i] == '+' ) && (    ( dest[j] == 'e'  ) || ( dest[j] == 'E' ) || ( dest[j] == '(' ) || ( dest[j] == '^' ) || ( dest[j] == '*' ) || ( dest[j] == '/' )
 		                                       || ( dest[j] == '\\' ) || ( dest[j] == '%' ) || ( dest[j] == ':' ) || ( dest[j] == '!' ) || ( dest[j] == '=' )
 		                                       || ( dest[j] == '>'  ) || ( dest[j] == '<' ) || ( dest[j] == '~' ) || ( dest[j] == '&' ) ) ) )
 	    {
@@ -1340,15 +1440,22 @@ int makeMathsStringNice(std::string &dest, const std::string &src)
 
     // Put zero after any .s that aren't a part of an operator ( so e.g. 10. is replaced by 10.0)
 
+    isQuote = ( dest[0] == '\"' ) ? 1 : 0;
+
     //if ( dest.length() > 1 )
     {
 	j = 0;
 
 	for ( i = 1 ; i < dest.length() ; ++i )
 	{
-            if ( ( dest[j] == '.' ) && ( dest[i] != '^' ) && ( dest[i] != '*' ) && ( dest[i] != '/' ) && ( dest[i] != '\\' ) && ( dest[i] != '%' ) &&
-                 ( dest[i] != '0' ) && ( dest[i] != '1' ) && ( dest[i] != '2' ) && ( dest[i] != '3' ) && ( dest[i] != '4'  ) && ( dest[i] != '5' ) &&
-                 ( dest[i] != '6' ) && ( dest[i] != '7' ) && ( dest[i] != '8' ) && ( dest[i] != '9' ) )
+	    if ( ( dest[i] == '\"' ) && ( !i || ( dest[i-1] != '\\' ) ) )
+	    {
+		isQuote = isQuote ? 0 : 1;
+	    }
+
+            else if ( !isQuote && ( ( dest[j] == '.' ) && ( dest[i] != '^' ) && ( dest[i] != '*' ) && ( dest[i] != '/' ) && ( dest[i] != '\\' ) && ( dest[i] != '%' ) &&
+                                    ( dest[i] != '0' ) && ( dest[i] != '1' ) && ( dest[i] != '2' ) && ( dest[i] != '3' ) && ( dest[i] != '4'  ) && ( dest[i] != '5' ) &&
+                                    ( dest[i] != '6' ) && ( dest[i] != '7' ) && ( dest[i] != '8' ) && ( dest[i] != '9' ) ) )
             {
                 dest.insert(i,1,'0');
 

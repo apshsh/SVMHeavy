@@ -108,7 +108,7 @@ Vector<double > &assign(Vector<double > &dest, const Vector<gentype> &src);
 void intercalc(std::ostream &output, std::istream &input);
 
 // Global functions.  This function table is access by fnB(i,arg) in
-// gentype and allows gentype to build on top of pretty much anything.  
+// gentype and allows gentype to build on top of pretty much anything.
 // These functions are assumed non-deterministic, so you need to finalise
 // them when evaluating, either with cast_...(3), (double) or (int).
 //
@@ -146,14 +146,27 @@ struct fninfoblock
 {
 //    public:
 
-    const char *fnname;
-    int numargs;
-    int dirchkargs;
-    int widechkargs;
-    int preEvalArgs;
+    const char *fnname;      // function name
+    int numargs;             // number of arguments
+    int dirchkargs;          // binary, bit set if functionality test in evaluation requires isValEqnDir true.
+                             // eg: 6 = 110b means apply isValEqnDir to arguments 2 and 3 but not argument 1
+    int widechkargs;         // like dirchkargs, but using isValEqn (basically if an argument is elementwise
+                             // you need to set dirchkargs, and otherwise you need to set widechkargs.  For
+                             // example sin is elementwise and norm2 is not).
+    int preEvalArgs;         // binary, bit set if evaluate should be applied to this argument prior to
+                             // evaluating the function itself.
+    bool derivDeffed;        // set if derivative is defined for this function
+    int isInDetermin;        // 0 if function is deterministic (eg sin)
+                             // 1 global function indeterminant (eg calls to system, python or the like)
+                             // 2 random indeterminant (eg urand)
 
-    bool derivDeffed;
-    int isInDetermin;
+    // fn0arg: pointer to 0 argument fn
+    // fn1arg: pointer to 1 argument fn
+    // fn2arg: pointer to 2 argument fn
+    // fn3arg: pointer to 3 argument fn
+    // fn4arg: pointer to 4 argument fn
+    // fn5arg: pointer to 5 argument fn
+    // fn6arg: pointer to 6 argument fn
 
     gentype (*fn0arg)();
     gentype (*fn1arg)(const gentype &);
@@ -163,6 +176,14 @@ struct fninfoblock
     gentype (*fn5arg)(const gentype &, const gentype &, const gentype &, const gentype &, const gentype &);
     gentype (*fn6arg)(const gentype &, const gentype &, const gentype &, const gentype &, const gentype &, const gentype &);
 
+    // fn0arg: pointer to 0 argument fn, operator type (if defined)
+    // fn1arg: pointer to 1 argument fn, operator type (if defined)
+    // fn2arg: pointer to 2 argument fn, operator type (if defined)
+    // fn3arg: pointer to 3 argument fn, operator type (if defined)
+    // fn4arg: pointer to 4 argument fn, operator type (if defined)
+    // fn5arg: pointer to 5 argument fn, operator type (if defined)
+    // fn6arg: pointer to 6 argument fn, operator type (if defined)
+
     gentype &(*OP_fn0arg)();
     gentype &(*OP_fn1arg)(gentype &);
     gentype &(*OP_fn2arg)(gentype &, const gentype &);
@@ -171,16 +192,23 @@ struct fninfoblock
     gentype &(*OP_fn5arg)(gentype &, const gentype &, const gentype &, const gentype &, const gentype &);
     gentype &(*OP_fn6arg)(gentype &, const gentype &, const gentype &, const gentype &, const gentype &, const gentype &);
 
-    int conjargmod;
-    const char *conjfnname;
-    int fnconjind; // index of conjugate function
-
-    int realargcopy;
-    int realdrvcopy;
-    gentype *realderiv;
-    const char *realderivfn;
-
-    const char *descript; // description of function
+    int conjargmod;          // if negative, reverse order post conjugation (see e.g. matrices)
+                             // bit 0: conjugate arg 0 if set
+                             // bit 1: conjugate arg 1 if set
+                             //    ...
+    const char *conjfnname;  // conjugated function name (~ means unchanged)
+    int fnconjind;           // index of conjugated function
+    int realargcopy;         // bit 0: argument 0 used if set
+                             // bit 1: argument 1 used if set
+                             //    ...
+    int realdrvcopy;         // bit 0: derivative 0 used if set
+                             // bit 1: derivative 1 used if set
+                             //    ...
+    gentype *realderiv;      // real derivative, parsed, if constructed.
+    const char *realderivfn; // real derivative string.
+                             // var(0,i) is the argument i
+                             // var(1,i) is the derivative of argument i
+    const char *descript;    // description of function
 
 //    ~fninfoblock()
 //    {
@@ -856,9 +884,9 @@ public:
 
     gentype &zeropassive(void)
     {
-             if ( isValNull()    ) { intval = 0; doubleval = 0; }
-        else if ( isValInteger() ) { intval = 0; doubleval = 0; }
-        else if ( isValReal()    ) { intval = 0; doubleval = 0; }
+             if ( isValNull()    ) { intval = 0; doubleval = 0;                      }
+        else if ( isValInteger() ) { intval = 0; doubleval = 0;                      }
+        else if ( isValReal()    ) { intval = 0; doubleval = 0;                      }
         else if ( isValAnion()   ) { intval = 0; doubleval = 0; (*anionval) = 0.0;   }
         else if ( isValVector()  ) { intval = 0; doubleval = 0; (*vectorval).zero(); }
         else if ( isValMatrix()  ) { intval = 0; doubleval = 0; (*matrixval).zero(); }
@@ -912,9 +940,9 @@ public:
     {
         const static int negInd = getfnind("neg");
 
-             if ( isValNull()    ) { intval *= -1; doubleval *= -1; }
-        else if ( isValInteger() ) { intval *= -1; doubleval *= -1; }
-        else if ( isValReal()    ) { intval *= -1; doubleval *= -1; }
+             if ( isValNull()    ) { intval *= -1; doubleval *= -1;                        }
+        else if ( isValInteger() ) { intval *= -1; doubleval *= -1;                        }
+        else if ( isValReal()    ) { intval *= -1; doubleval *= -1;                        }
         else if ( isValAnion()   ) { intval *= -1; doubleval *= -1; (*anionval) *= -1.0;   }
         else if ( isValVector()  ) { intval *= -1; doubleval *= -1; (*vectorval).negate(); }
         else if ( isValMatrix()  ) { intval *= -1; doubleval *= -1; (*matrixval).negate(); }
@@ -2010,23 +2038,23 @@ inline gentype makeVar(int i, int j)
 //
 // NB: - the elementwise operations will iterate until a non matrix/vector is found
 
-inline gentype pos  (const gentype &a);
-inline gentype neg  (const gentype &a);
+inline gentype pos(const gentype &a);
+inline gentype neg(const gentype &a);
 
-inline gentype add  (const gentype &a, const gentype &b);
-inline gentype sub  (const gentype &a, const gentype &b);
-inline gentype mul  (const gentype &a, const gentype &b);
-       gentype rmul (const gentype &a, const gentype &b);
-inline gentype div  (const gentype &a, const gentype &b);
-       gentype idiv (const gentype &a, const gentype &b);
-inline gentype rdiv (const gentype &a, const gentype &b);
-inline gentype mod  (const gentype &a, const gentype &b);
-       gentype pow  (const gentype &a, const gentype &b);
-       gentype Pow  (const gentype &a, const gentype &b);
-       gentype powl (const gentype &a, const gentype &b);
-       gentype Powl (const gentype &a, const gentype &b);
-       gentype powr (const gentype &a, const gentype &b);
-       gentype Powr (const gentype &a, const gentype &b);
+inline gentype add (const gentype &a, const gentype &b);
+inline gentype sub (const gentype &a, const gentype &b);
+inline gentype mul (const gentype &a, const gentype &b);
+       gentype rmul(const gentype &a, const gentype &b);
+inline gentype div (const gentype &a, const gentype &b);
+       gentype idiv(const gentype &a, const gentype &b);
+inline gentype rdiv(const gentype &a, const gentype &b);
+inline gentype mod (const gentype &a, const gentype &b);
+       gentype pow (const gentype &a, const gentype &b);
+       gentype Pow (const gentype &a, const gentype &b);
+       gentype powl(const gentype &a, const gentype &b);
+       gentype Powl(const gentype &a, const gentype &b);
+       gentype powr(const gentype &a, const gentype &b);
+       gentype Powr(const gentype &a, const gentype &b);
 
 gentype emul (const gentype &a, const gentype &b);
 gentype ermul(const gentype &a, const gentype &b);
@@ -2041,17 +2069,17 @@ gentype Epowl(const gentype &a, const gentype &b);
 gentype epowr(const gentype &a, const gentype &b);
 gentype Epowr(const gentype &a, const gentype &b);
 
-inline gentype &OP_pos  (gentype &a);
-inline gentype &OP_neg  (gentype &a);
+inline gentype &OP_pos(gentype &a);
+inline gentype &OP_neg(gentype &a);
 
-inline gentype &OP_add  (gentype &a, const gentype &b);
-inline gentype &OP_sub  (gentype &a, const gentype &b);
-inline gentype &OP_mul  (gentype &a, const gentype &b);
-       gentype &OP_rmul (gentype &a, const gentype &b);
-inline gentype &OP_div  (gentype &a, const gentype &b);
-       gentype &OP_idiv (gentype &a, const gentype &b);
-inline gentype &OP_rdiv (gentype &a, const gentype &b);
-inline gentype &OP_mod  (gentype &a, const gentype &b);
+inline gentype &OP_add (gentype &a, const gentype &b);
+inline gentype &OP_sub (gentype &a, const gentype &b);
+inline gentype &OP_mul (gentype &a, const gentype &b);
+       gentype &OP_rmul(gentype &a, const gentype &b);
+inline gentype &OP_div (gentype &a, const gentype &b);
+       gentype &OP_idiv(gentype &a, const gentype &b);
+inline gentype &OP_rdiv(gentype &a, const gentype &b);
+inline gentype &OP_mod (gentype &a, const gentype &b);
 
 //gentype emaxv(const gentype &a, const gentype &b);
 //gentype eminv(const gentype &a, const gentype &b);
@@ -2560,9 +2588,9 @@ inline gentype gami     (const gentype &a, const gentype &x);
        gentype lambertW (const gentype &a);
        gentype lambertWx(const gentype &a);
 
-gentype erf      (const gentype &x);
-gentype erfc     (const gentype &x);
-gentype dawson   (const gentype &x);
+gentype erf   (const gentype &x);
+gentype erfc  (const gentype &x);
+gentype dawson(const gentype &x);
 
 // Type conversion functions
 //
@@ -2640,12 +2668,12 @@ gentype floor(const gentype &a);
 inline gentype OuterProd(const gentype &a, const gentype &b);
        gentype fourProd (const gentype &a, const gentype &b, const gentype &c, const gentype &d);
 
-//gentype trans    (const gentype &a);
-gentype det      (const gentype &a);
-gentype trace    (const gentype &a);
-gentype miner    (const gentype &a, const gentype &i, const gentype &j);
-gentype cofactor (const gentype &a, const gentype &i, const gentype &j);
-gentype adj      (const gentype &a);
+//gentype trans   (const gentype &a);
+gentype det     (const gentype &a);
+gentype trace   (const gentype &a);
+gentype miner   (const gentype &a, const gentype &i, const gentype &j);
+gentype cofactor(const gentype &a, const gentype &i, const gentype &j);
+gentype adj     (const gentype &a);
 
 gentype max          (const gentype &a);
 gentype min          (const gentype &a);
@@ -2712,6 +2740,9 @@ gentype collapse(const gentype &a);
 //
 // partestfn:  evaluate multi-objective test function i, target dim M, with input vector x
 // partestfnA: evaluate multi-objective test function i, target dim M, with input vector x, using alpha given (see paretotest.h)
+//
+// syscall: evaluate the command "c x" via a system call, retrieving results from pyres.txt
+// pycall:  evaluate the command "c x" via the system call python3 c x, retrieving results from pyres.txt
 
 inline gentype fnA(const gentype &i, const gentype &j);
 inline gentype fnB(const gentype &i, const gentype &j, const gentype &xa);
@@ -2736,6 +2767,8 @@ gentype testfnA(const gentype &i, const gentype &x, const gentype &A);
 gentype partestfn (const gentype &i, const gentype &M, const gentype &x);
 gentype partestfnA(const gentype &i, const gentype &M, const gentype &x, const gentype &A);
 
+gentype syscall(const gentype &c, const gentype &x);
+gentype pycall (const gentype &c, const gentype &x);
 
 
 

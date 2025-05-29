@@ -1,20 +1,18 @@
-/*
-ADD: option to query the model at different points (and give model predictions at recommended point)
-FIX: plotting of 2d function doesn't seem to work for some reason
-FIX: why is it so slow?  Can we speed up the recommendation proceedure?
-DO: upload current version to github
-DO: can we plot slices on request?
-DO: press key to turn feedback on (but suppressed for next layer in).  Plus feedback option to turn feedback off.
-    that way the operator can see how the model is evolving and intervene to suggest points in real time.
-DO: feedback options to change optimization policy (method) and many other things.
-*/
-
-/*
-FIXME: have option for human feedback that does disable(-i-1) to disable in the GP layer of blk_conect but not the prior model(s)
-THAT IS: present the experiment.  Human gp say 'go ahead", "give hard feedback" (ie some sort of observation for all levels of the model) or "give soft feedback,
-which uses disable (-i-1) to only change the prior.  If answer is "give feedback" then you don't do the experiment, you go back and find another x as the model
-has changed!
-*/
+//FIXME: do discrete loop inside continuous loop for mixed-integer version
+//FIXME: can we plot slides on request
+//FIXME: press key to turn feedback on (but suppressed for next layer in).
+//       Plus feedback option to turn feedback off. That way the operator
+//       can see how the model is evolving and intervene to suggest points
+//       in real time.
+// FIXME: feedback options to change optimization policy (method) etc.
+// FIXME: have option for human feedback that does disable(-i-1) to disable
+//        in the GP layer of blk_conect but not the prior model(s)
+//        THAT IS: present the experiment.  Human gp say 'go ahead", "give
+//        hard feedback" (ie some sort of observation for all levels of the
+//        model) or "give soft feedback, which uses disable (-i-1) to only
+//        change the prior.  If answer is "give feedback" then you don't do
+//        the experiment, you go back and find another x as the model has
+//        changed!
 
 //
 // Bayesian Optimiser
@@ -39,7 +37,23 @@ has changed!
 //#define DEFITERS(_effdim_) (10*_effdim_)
 #define DEFITERS(_effdim_) (15*_effdim_)
 
-//
+int bayesOpt(int dim,
+             Vector<gentype> &xres,
+             gentype &fres,
+             int &ires,
+             Vector<Vector<gentype> > &allxres,
+             Vector<gentype> &allfres,
+             Vector<Vector<gentype> > &allcres,
+             Vector<gentype> &allmres,
+             Vector<gentype> &supres,
+             Vector<double> &sscore,
+             const Vector<gentype> &xmin,
+             const Vector<gentype> &xmax,
+             void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
+             void *fnarg,
+             BayesOptions &bopts,
+             svmvolatile int &killSwitch);
+
 // Notes:
 //
 // - Max/min decisions:
@@ -62,38 +76,6 @@ has changed!
 
 
 
-int bayesOpt(int dim,
-             Vector<gentype> &xres,
-             gentype &fres,
-             int &ires,
-             Vector<Vector<gentype> > &allxres,
-             Vector<gentype> &allfres,
-             Vector<gentype> &allmres,
-             Vector<gentype> &supres,
-             Vector<double> &sscore,
-             const Vector<gentype> &xmin,
-             const Vector<gentype> &xmax,
-             void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
-             void *fnarg,
-             BayesOptions &bopts,
-             svmvolatile int &killSwitch);
-
-// The term addvar here is additional variance (on top of whatever is assumed
-// by the GPR (or similar) model).  This is included as a sigma scaling factor
-// when updating the model.  Set to zero for no additional variance.
-
-/*
-int bayesOpt(int dim,
-             Vector<double> &xres,
-             gentype &fres,
-             const Vector<double> &xmin,
-             const Vector<double> &xmax,
-             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype),
-             void *fnarg,
-             BayesOptions &bopts,
-             svmvolatile int &killSwitch,
-             Vector<double> &sscore);
-*/
 
 
 int BayesOptions::optim(int dim,
@@ -102,6 +84,7 @@ int BayesOptions::optim(int dim,
                       int &ires,
                       Vector<Vector<gentype> > &allxres,
                       Vector<gentype> &allfres,
+                      Vector<Vector<gentype> > &allcres,
                       Vector<gentype> &allmres,
                       Vector<gentype> &supres,
                       Vector<double> &sscore,
@@ -111,37 +94,9 @@ int BayesOptions::optim(int dim,
                       void *fnarg,
                       svmvolatile int &killSwitch)
 {
-    return bayesOpt(dim,xres,fres,ires,allxres,allfres,allmres,supres,sscore,
+    return bayesOpt(dim,xres,fres,ires,allxres,allfres,allcres,allmres,supres,sscore,
                         xmin,xmax,fn,fnarg,*this,killSwitch);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//inline double Phifn(double z);
-//inline double phifn(double z);
-//
-//inline double Phifn(double z)
-//{
-//    double res;
-//
-//    return 0.5 + (0.5*erf(z*NUMBASE_SQRT1ON2));
-//}
-//
-//inline double phifn(double z)
-//{
-//    return exp(-z*z/2)/2.506628;
-//}
 
 
 
@@ -303,74 +258,72 @@ class fninnerinnerArg
     }
 
     fninnerinnerArg(const fninnerinnerArg &src) : bbopts(src.bbopts),
-                                                _q_x(src._q_x),
-                                                muy(src.muy),
-                                                sigmay(src.sigmay),
-                                                ymax(src.ymax),
-                                                iters(src.iters),
-                                                dim(src.dim),
-                                                effdim(src.effdim),
-                                                ztol(src.ztol),
-                                                _q_delta(src._q_delta),
-                                                _q_zeta(src._q_zeta),
-                                                _q_nu(src._q_nu),
-                                                ires(src.ires),
-                                                _q_a(src._q_a),
-                                                _q_b(src._q_b),
-                                                _q_r(src._q_r),
-                                                _q_p(src._q_p),
-                                                _q_modD(src._q_modD),
-                                                _q_R(src._q_R),
-                                                _q_BB(src._q_BB),
-                                                _q_mig(src._q_mig),
-                                                _q_betafn(src._q_betafn),
-                                                _q_locmethod(src._q_locmethod),
-                                                justreturnbeta(src.justreturnbeta),
-                                                covarmatrix(src.covarmatrix),
-                                                meanvector(src.meanvector),
-                                                _q_thisbatchsize(src._q_thisbatchsize),
-                                                multivecin(src.multivecin),
-                                                direcpre(src.direcpre),
-                                                xytemp(src.xytemp),
-                                                _q_thisbatchmethod(src._q_thisbatchmethod),
-                                                xappend(src.xappend),
-                                                anyindirect(src.anyindirect),
-                                                softmax(src.softmax),
-                                                itcntmethod(src.itcntmethod),
-                                                itinbatch(src.itinbatch),
-                                                penalty(src.penalty),
-                                                locpen(src.locpen),
-                                                xinf(src.xinf),
-                                                Nbasemu(src.Nbasemu),
-                                                Nbasesigma(src.Nbasesigma),
-                                                Nbasecgt(src.Nbasecgt),
-                                                _q_gridi(src._q_gridi),
-                                                isgridopt(src.isgridopt),
-                                                isfullgrid(src.isfullgrid),
-                                                isstable(src.isstable),
-                                                ysort(src.ysort),
-                                                stabp(src.stabp),
-                                                stabpnrm(src.stabpnrm),
-                                                stabrot(src.stabrot),
-                                                stabmu(src.stabmu),
-                                                stabB(src.stabB),
-                                                sscore(src.sscore),
-                                                firstevalinseq(src.firstevalinseq),
-                                                stabZeroPt(src.stabZeroPt),
-                                                unscentUse(src.unscentUse),
-                                                unscentK(src.unscentK),
-                                                unscentSqrtSigma(src.unscentSqrtSigma),
-                                                stabUseSig(src.stabUseSig),
-                                                stabThresh(src.stabThresh),
-                                                mode(0)
+                                                  _q_x(src._q_x),
+                                                  muy(src.muy),
+                                                  sigmay(src.sigmay),
+                                                  ymax(src.ymax),
+                                                  iters(src.iters),
+                                                  dim(src.dim),
+                                                  effdim(src.effdim),
+                                                  ztol(src.ztol),
+                                                  _q_delta(src._q_delta),
+                                                  _q_zeta(src._q_zeta),
+                                                  _q_nu(src._q_nu),
+                                                  ires(src.ires),
+                                                  _q_a(src._q_a),
+                                                  _q_b(src._q_b),
+                                                  _q_r(src._q_r),
+                                                  _q_p(src._q_p),
+                                                  _q_modD(src._q_modD),
+                                                  _q_R(src._q_R),
+                                                  _q_BB(src._q_BB),
+                                                  _q_mig(src._q_mig),
+                                                  _q_betafn(src._q_betafn),
+                                                  _q_locmethod(src._q_locmethod),
+                                                  justreturnbeta(src.justreturnbeta),
+                                                  covarmatrix(src.covarmatrix),
+                                                  meanvector(src.meanvector),
+                                                  _q_thisbatchsize(src._q_thisbatchsize),
+                                                  multivecin(src.multivecin),
+                                                  direcpre(src.direcpre),
+                                                  xytemp(src.xytemp),
+                                                  _q_thisbatchmethod(src._q_thisbatchmethod),
+                                                  xappend(src.xappend),
+                                                  anyindirect(src.anyindirect),
+                                                  softmax(src.softmax),
+                                                  itcntmethod(src.itcntmethod),
+                                                  itinbatch(src.itinbatch),
+                                                  penalty(src.penalty),
+                                                  locpen(src.locpen),
+                                                  xinf(src.xinf),
+                                                  Nbasemu(src.Nbasemu),
+                                                  Nbasesigma(src.Nbasesigma),
+                                                  Nbasecgt(src.Nbasecgt),
+                                                  _q_gridi(src._q_gridi),
+                                                  isgridopt(src.isgridopt),
+                                                  isfullgrid(src.isfullgrid),
+                                                  isstable(src.isstable),
+                                                  ysort(src.ysort),
+                                                  stabp(src.stabp),
+                                                  stabpnrm(src.stabpnrm),
+                                                  stabrot(src.stabrot),
+                                                  stabmu(src.stabmu),
+                                                  stabB(src.stabB),
+                                                  sscore(src.sscore),
+                                                  firstevalinseq(src.firstevalinseq),
+                                                  stabZeroPt(src.stabZeroPt),
+                                                  unscentUse(src.unscentUse),
+                                                  unscentK(src.unscentK),
+                                                  unscentSqrtSigma(src.unscentSqrtSigma),
+                                                  stabUseSig(src.stabUseSig),
+                                                  stabThresh(src.stabThresh),
+                                                  mode(0)
     {
         NiceThrow("Can't use copy constructer on fninnerinnerArg");
-        return;
     }
 
-    fninnerinnerArg &operator=(const fninnerinnerArg &src)
+    fninnerinnerArg &operator=(const fninnerinnerArg &)
     {
-        (void) src;
         NiceThrow("Can't copy fninnerinnerArg");
         return *this;
     }
@@ -435,6 +388,7 @@ class fninnerinnerArg
     const Matrix<double> &unscentSqrtSigma;
     const int &stabUseSig;
     const double &stabThresh;
+
     int mode; // 0 for normal, set 1 when entering DirECT, which will calc beta and zero x precisely once then set to 2, set 2 for no beta calc/x zero
     double storebeta;
     int storeepspinf;
@@ -742,27 +696,14 @@ class fninnerinnerArg
 
 //FIXME ell1 should be the L1 diameter of X computed by scaling each dimension by the inverse of the SE bandwitdh
                 double ell1 = dvalreal/(bbopts.model_lenscale(0));
-//errstream() << "phantomxyz altiters = " << altiters << "\n";
-//errstream() << "phantomxyz d = " << d << "\n";
-//errstream() << "phantomxyz lenscale0 " << bbopts.model_lenscale(0,0) << "\n";
 
-//                if ( bbopts.getdimfid() > 0 )
-//                {
-//                    ell1 += (bbopts.getdimfid())/(bbopts.model_lenscale(0,1));
-////errstream() << "phantomxyz lenscale1 " << bbopts.model_lenscale(0,1) << "\n";
-//                }
+                //if ( bbopts.getdimfid() > 0 )
+                //{
+                //    ell1 += (bbopts.getdimfid())/(bbopts.model_lenscale(0,1));
+                //}
 
                 eps = 0.5*dvalreal*log((2*ell1*altiters)+1);
 
-//if ( justreturnbeta == 1 )
-//{
-//errstream() << "ell1 = " << ell1 << " = " << dvalreal << "/" << (bbopts.model_lenscale(0)) << "\n";
-//errstream() << "eps = " << eps << "\n";
-//errstream() << "nu = " << nu << "\n";
-//}
-
-//errstream() << "phantomxyz ell1 = " << ell1 << "\n";
-//errstream() << "phantomxyz eps = " << eps << "\n";
                 //locnu = nu;
 
                 break;
@@ -831,11 +772,14 @@ class fninnerinnerArg
     }
 
     // =======================================================================
+    // =======================================================================
     // Re-express function input as sparse vector of gentype (size n)
     // =======================================================================
+    // =======================================================================
 
-//    x.zero(); - now done in beta calc loop (skipped for most of direct inner loop - we
-//want to leave x alone as much as possible to avoid free/alloc spiral. Note we also the use of sv below (to avoid resetting altcontent))
+    //x.zero(); - now done in beta calc loop (skipped for most of direct inner loop - we
+    //want to leave x alone as much as possible to avoid free/alloc spiral. Note we also
+    //the use of sv below (to avoid resetting altcontent))
 
     bool xsimple = ( !xappend.size() && !anyindirect ) ? true : false;
 
@@ -856,28 +800,7 @@ class fninnerinnerArg
         //if ( xsimple && ( !(bbopts.getdimfid()) || ( mode == 1 ) ) )
         if ( xsimple && ( mode == 1 ) )
         {
-//int ismoder = ( x.isnofaroffindpresent() ) ? 1 : 0;
-//int issimple = ( x.nearnonsparse() && ismoder ) ? 1 : 0;
-//int asize = x.size();
-//int adim = x.indsize();
-//errstream() << "phantomxyzyyy makealt\n";
-//errstream() << "phantomxyzyyy makealt altcontent " << x.altcontent << "\n";
-//errstream() << "phantomxyzyyy makealt altcontentsp " << x.altcontentsp << "\n";
-//errstream() << "phantomxyzyyy makealt ismode (true?): " << ismoder << " \n";
-//errstream() << "phantomxyzyyy makealt issimple: " << issimple << " \n";
-//errstream() << "phantomxyzyyy makealt asize: " << asize << " \n";
-//errstream() << "phantomxyzyyy makealt ind: " << x.ind() << " \n";
-//errstream() << "phantomxyzyyy makealt ind_step: " << DEFAULT_TUPLE_INDEX_STEP << " \n";
-//errstream() << "phantomxyzyyy makealt adim (>0): " << adim << " \n";
-//errstream() << "phantomxyzyyy makealt\n";
             x.makealtcontent();
-//errstream() << "phantomxyzyyy makealt b " << x.altcontent << "\n";
-//errstream() << "phantomxyzyyy makealt c " << x.altcontentsp << "\n";
-//errstream() << "phantomxyzyyy makealt d " << (x.nup(0)) << "\n";
-//if ( x.nupsize() > 1 )
-//{
-//errstream() << "phantomxyzyyy makealt e " << (x.nup(1)) << "\n";
-//}
         }
 
         if ( mode == 1 )
@@ -902,10 +825,10 @@ class fninnerinnerArg
         }
     }
 
-//errstream() << "phantomxyzxyzxyz " << x << "\n";
-
+    // =======================================================================
     // =======================================================================
     // Add xappend vector to end of vector if required
+    // =======================================================================
     // =======================================================================
 
     for ( i = n ; i < n+xappend.size() ; ++i )
@@ -914,7 +837,9 @@ class fninnerinnerArg
     }
 
     // =======================================================================
+    // =======================================================================
     // Pre-process DIRect input if required
+    // =======================================================================
     // =======================================================================
 
     if ( anyindirect )
@@ -922,13 +847,15 @@ class fninnerinnerArg
         (*direcpre).gg(xytemp,x,*xinf);
         x = (const Vector<gentype> &) xytemp;
 
-        n = xytemp.size(); // This is important.  dim cannot be used as it means something else.
+        n = xytemp.size(); // This is important. dim cannot be used as it means something else.
     }
 
+    // =======================================================================
     // =======================================================================
     // Calculate output mean and variance
     // (Note that muy can be a vector (multi-objective optim) or
     //  a scalar (regular optimiser))
+    // =======================================================================
     // =======================================================================
 
     NiceAssert( thisbatchsize >= 1 );
@@ -1048,8 +975,6 @@ class fninnerinnerArg
                 }
             }
         }
-
-//errstream() << "phantomxyzxyzxyz " << muy << "\t" << sigmay << "\n";
     }
 
     else
@@ -1183,12 +1108,14 @@ class fninnerinnerArg
 
     double stabscore = 1.0;
 
+    // =======================================================================
+    // =======================================================================
+    // Calculate stability scores
+    // =======================================================================
+    // =======================================================================
+
     if ( isstable )
     {
-        // =======================================================================
-        // Calculate stability scores
-        // =======================================================================
-
         // Calculate stability score on x
 
         if ( !( isgridopt && ( gridi >= 0 ) ) )
@@ -1205,9 +1132,9 @@ class fninnerinnerArg
 
         if ( stabUseSig )
         {
-//stabscore = ( stabscore >= stabThresh ) ? 1.0 : DISCOUNTRATE;
-stabscore = 1/(1+exp(-1000*(stabscore-stabThresh)));
-//            stabscore = 1/(1+exp(-(stabscore-stabThresh)/(stabscore*(1-stabscore))));
+            //stabscore = ( stabscore >= stabThresh ) ? 1.0 : DISCOUNTRATE;
+            stabscore = 1/(1+exp(-1000*(stabscore-stabThresh)));
+            //stabscore = 1/(1+exp(-(stabscore-stabThresh)/(stabscore*(1-stabscore))));
         }
 
         if ( firstevalinseq && ( method == 1 ) )
@@ -1237,16 +1164,18 @@ stabscore = 1/(1+exp(-1000*(stabscore-stabThresh)));
             {
                 for ( j = 0 ; j < sscore.size() ; ++j )
                 {
-//sscore("&",j) = ( sscore(j) >= stabThresh ) ? 1.0 : DISCOUNTRATE;
-sscore("&",j) = 1/(1+exp(-1000*(sscore(j)-stabThresh)));
-//                    sscore("&",j) = 1/(1+exp(-(sscore(j)-stabThresh)/(sscore(j)*(1-sscore(j)))));
+                    //sscore("&",j) = ( sscore(j) >= stabThresh ) ? 1.0 : DISCOUNTRATE;
+                    sscore("&",j) = 1/(1+exp(-1000*(sscore(j)-stabThresh)));
+                    //sscore("&",j) = 1/(1+exp(-(sscore(j)-stabThresh)/(sscore(j)*(1-sscore(j)))));
                 }
             }
         }
     }
 
     // =======================================================================
+    // =======================================================================
     // Work out improvement measure
+    // =======================================================================
     // =======================================================================
 
     double res = 0;
@@ -1279,18 +1208,13 @@ sscore("&",j) = 1/(1+exp(-1000*(sscore(j)-stabThresh)));
 
         gentype altresv;
 
-//errstream() << "phantomxyz 1 calling imp: mean,var = " << xmean << "," << sigmay << "\n";
         bbopts.modelimp_imp(ires,altresv,xmean,sigmay); // IMP may or may not update sigmay
         //res = -((double) ires);
-res = ((double) ires);
-
-//errstream() << "phantomxyz: imp(" << xmean << "," << sigmay << ") = ";
+        res = ((double) ires);
 
         //muy.force_double() = -((double) res); // This is done so that passthrough will apply to IMP
-muy.force_double() = ((double) res); // This is done so that passthrough will apply to IMP
+        muy.force_double() = ((double) res); // This is done so that passthrough will apply to IMP
         sigmay.force_double() = sqrt((double) altresv);
-
-//errstream() << "(" << muy << "," << sigmay << ")\n";
 
         if ( ymax.isValVector() && ( ( method == 1 ) || ( method == 2 ) ) )
         {
@@ -1314,7 +1238,6 @@ muy.force_double() = ((double) res); // This is done so that passthrough will ap
 
             dummyvar.force_vector(muymax.size()) = dummy;
 
-//errstream() << "phantomxyz 2 calling imp: mean,var = " << xmean << "," << sigmay << "\n";
             bbopts.modelimp_imp(muypr,dummy,muymean,dummyvar);
 
             yymax = ((double) muypr);
@@ -1521,10 +1444,11 @@ locsigmay = stabscore*stabscore*locsigmay;
             }
         }
     }
-//errstream() << "mu + beta.sigma = " << muy << " + " << beta << "*" << sigmay << " = " << res << "\n"; // phantomx
 
     // =======================================================================
+    // =======================================================================
     // Add penalties
+    // =======================================================================
     // =======================================================================
 
     if ( penalty.size() )
@@ -1537,7 +1461,10 @@ locsigmay = stabscore*stabscore*locsigmay;
     }
 
     // =======================================================================
+    // =======================================================================
     // Scale by probability that constraints are met
+    // (or add variances together for PEc (method 10)
+    // =======================================================================
     // =======================================================================
 
     if ( (bbopts.cgtapprox).size() )
@@ -1591,8 +1518,10 @@ locsigmay = stabscore*stabscore*locsigmay;
     }
 
     // =======================================================================
+    // =======================================================================
     // Negate on return (DIRect minimises, Bayesian Optimisation maximises -
     // but keep in mind note about max/min changes).
+    // =======================================================================
     // =======================================================================
 
     res = -res; // Set up for minimiser
@@ -1679,7 +1608,6 @@ int dogridOpt(int dim,
 
     (void) gridsource;
 
-    //const vecInfo **xinf = (*((fninnerinnerArg *) fnarg)).xinf;
     int &gridi = (*((fninnerinnerArg *) fnarg))._q_gridi;
     int Nbasemu = (*((fninnerinnerArg *) fnarg)).Nbasemu;
 
@@ -1692,12 +1620,9 @@ int dogridOpt(int dim,
     double *x = &xres("&",0);
     double *xx;
 
-    //const vecInfo *xinfopt = nullptr;
-
     MEMNEWARRAY(xx,double,dim);
 
     nullPrint(errstream(),"MLGrid Optimisation Initiated");
-    //errstream() << "MLGrid Optimisation Initiated:\n";
 
     int i,j;
     int oldgridi = gridi;
@@ -1714,7 +1639,6 @@ int dogridOpt(int dim,
 
     for ( i = 0 ; ( i < gridind.size() ) && !killSwitch && !timeout ; ++i )
     {
-//errstream() << "~";
         // This will propagate through fnarg[41], which will then be passed into function
         gridi = gridind(i);
 
@@ -1769,10 +1693,8 @@ int dogridOpt(int dim,
     }
 
     gridi = oldgridi;
-    // *xinf = xinfopt;
 
     nullPrint(errstream(),"MLGrid Optimisation Ended");
-    //errstream() << "MLGrid Optimisation Ended\n";
 
     MEMDELARRAY(xx);
 
@@ -1784,7 +1706,6 @@ int dogridOpt(int dim,
 
 
 
-//FIXME: working backwards, up (back) to here!
 
 
 
@@ -1905,7 +1826,7 @@ void readres(gentype &res, double &addvar,
             xobstype_cgt.resize(ycgt.size()) = 2;
         }
 
-// Deliberately last
+        // Deliberately last
 
         if ( ( res.size() >= 12 ) && !(res.all())(11).isValNull() ) { xobstype_cgt     =          ((res.all())(11)).cast_vector_int();                 }
     }
@@ -1997,7 +1918,7 @@ int bayesOpt(int dim,
              gentype &fres,
              const Vector<double> &qmin,
              const Vector<double> &qmax,
-             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize),
+             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt),
              void *fnarg,
              BayesOptions &bopts,
              svmvolatile int &killSwitch,
@@ -2576,8 +2497,20 @@ int bayesOpt(int dim,
                     gridresis.negate();
                 }
 
+                Vector<gentype> ycgtis(bopts.numcgt);
+
+                ycgtis = nullgentype();
+
+                if ( isgridopt && bopts.numcgt )
+                {
+                    for ( int iy = 0 ; iy < bopts.numcgt ; ++iy )
+                    {
+                        ycgtis("&",iy) = bopts.model_y(iy)(Nbasemu+gridi);
+                    }
+                }
+
                 fnapproxout.force_int() = -1;
-                (*fn)(dim,fnapproxout,&xb(k)(0),fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,gridresis,muapproxsize);
+                (*fn)(dim,fnapproxout,&xb(k)(0),fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,gridresis,muapproxsize,ycgtis);
                 fnapproxout.negate();
 
                 // Work out if this is a full observation, and also zero out nulls
@@ -3215,9 +3148,10 @@ int bayesOpt(int dim,
         // ===================================================================
 
         gentype dummyyres;
+        Vector<gentype> dummyyres_cgt;
 
         dummyyres.force_int() = 0;
-        (*fn)(-1,dummyyres,nullptr,fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,nullgentype(),muapproxsize);
+        (*fn)(-1,dummyyres,nullptr,fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,nullgentype(),muapproxsize,dummyyres_cgt);
 
         // ===================================================================
         // ===================================================================
@@ -3232,8 +3166,8 @@ int bayesOpt(int dim,
 
         // Loop for multi-recommendation
 
-        Vector<int> gridrefvec;
         Vector<int> gridivec;
+        Vector<int> gridrefvec;
         Vector<int> gridindtmp(gridind);
 
         for ( k = 0 ; k < recBatchSize ; ++k )
@@ -3775,8 +3709,8 @@ int bayesOpt(int dim,
                     gridy = (double) bopts.model_y()(Nbasemu+gridi); //((*gridsource).y())(gridi);
 
                     gridindtmp.remove(itorem);
+                    gridivec.add(gridivec.size());     gridivec("&",gridivec.size()-1)     = gridi;
                     gridrefvec.add(gridrefvec.size()); gridrefvec("&",gridrefvec.size()-1) = gridref;
-                    gridivec.add(gridivec.size()); gridivec("&",gridivec.size()-1) = gridi;
                 }
 
                 bopts.hardmin = temphardmin;
@@ -3892,6 +3826,7 @@ int bayesOpt(int dim,
 
                 Vector<Vector<gentype> > locallxres;
                 Vector<gentype> locallfres;
+                Vector<Vector<gentype> > locallcres;
                 Vector<gentype> locallmres;
                 Vector<gentype> locsupres;
                 Vector<double> locsscore;
@@ -3911,6 +3846,7 @@ int bayesOpt(int dim,
                          dummyires,
                          locallxres,
                          locallfres,
+                         locallcres,
                          locallmres,
                          locsupres,
                          locsscore,
@@ -3926,7 +3862,7 @@ int bayesOpt(int dim,
                 // Pareto set will be indexed by locparind
                 // ===========================================================
 
-                newRecs = bopts.analyse(locallxres,locallmres,dummyhypervol,locparind,1);
+                newRecs = bopts.analyse(locallxres,locallmres,locallcres,dummyhypervol,locparind,1);
 
                 NiceAssert( newRecs );
 
@@ -4124,6 +4060,8 @@ int bayesOpt(int dim,
             // Get ready to run experiment
             // ===============================================================
             // ===============================================================
+
+            gridi = gridivec(k);
 
             doeval = true;
             bool recordeval = true;
@@ -4371,8 +4309,20 @@ inneroptions:
                     gridresis.negate();
                 }
 
+                Vector<gentype> ycgtis(bopts.numcgt);
+
+                ycgtis = nullgentype();
+
+                if ( isgridopt && bopts.numcgt )
+                {
+                    for ( int iy = 0 ; iy < bopts.numcgt ; ++iy )
+                    {
+                        ycgtis("&",iy) = bopts.model_y(iy)(Nbasemu+gridi);
+                    }
+                }
+
                 fnapproxout.force_int() = static_cast<int>(itcnt+1);
-                (*fn)(dim,fnapproxout,&(xb(k)(0)),fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,gridresis,muapproxsize);
+                (*fn)(dim,fnapproxout,&(xb(k)(0)),fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,gridresis,muapproxsize,ycgtis);
                 fnapproxout.negate();
 
                 fullobs = process_obs(fnapproxout,ycgt,xobstype,xobstype_cgt);
@@ -4495,8 +4445,6 @@ inneroptions:
             {
                 if ( isgridopt )
                 {
-                    gridi = gridivec(k);
-
                     for ( int iy = 0 ; iy < gridind.size() ; ++iy )
                     {
                         if ( gridind(iy) == gridi )
@@ -4636,6 +4584,18 @@ inneroptions:
                 ysort.add(jj);
                 ysort("&",jj) = addpointpos;
             }
+
+            // ===================================================================
+            // ===================================================================
+            // Update fres and ires
+            // ===================================================================
+            // ===================================================================
+
+            if ( doeval && isfullfid && !fnapproxout.isValNull() && ( ( ires == -1 ) || ( fnapproxout > fres ) ) && ( ycgt >= 0.0_gent ) )
+            {
+                fres = fnapproxout;
+                ires = isgridopt ? Nbasemu+gridi : (bopts.model_N_mu())-1;
+            }
         }
 
         // ===================================================================
@@ -4666,18 +4626,6 @@ inneroptions:
 
         time_used mugpendtime = TIMECALL;
         mugptraintime = TIMEDIFFSEC(mugpendtime,mugpbegintime);
-
-        // ===================================================================
-        // ===================================================================
-        // Update fres and ires
-        // ===================================================================
-        // ===================================================================
-
-        if ( doeval && isfullfid && !fnapproxout.isValNull() && ( ( ires == -1 ) || ( fnapproxout > fres ) ) && ( ycgt >= 0.0_gent ) )
-        {
-            fres = fnapproxout;
-            ires = isgridopt ? Nbasemu+gridi : (bopts.model_N_mu())-1;
-        }
 
         // ===================================================================
         // ===================================================================
@@ -4859,6 +4807,7 @@ class fninnerArg
                int &_ires,
                Vector<Vector<gentype> > &_allxres,
                Vector<gentype> &_allfres,
+               Vector<Vector<gentype> > &_allcres,
                Vector<gentype> &_allmres,
                gentype &_fres,
                Vector<gentype> &_xres,
@@ -4873,6 +4822,7 @@ class fninnerArg
                                    ires(_ires),
                                    allxres(_allxres),
                                    allfres(_allfres),
+                                   allcres(_allcres),
                                    allmres(_allmres),
                                    fres(_fres),
                                    xres(_xres),
@@ -4887,6 +4837,7 @@ class fninnerArg
         xx.prealloc(dim+1);
         allxres.prealloc(nres);
         allfres.prealloc(nres);
+        allcres.prealloc(nres);
         allmres.prealloc(nres);
         supres.prealloc(nres);
 
@@ -4900,6 +4851,7 @@ class fninnerArg
                                    ires(src.ires),
                                    allxres(src.allxres),
                                    allfres(src.allfres),
+                                   allcres(src.allcres),
                                    allmres(src.allmres),
                                    fres(src.fres),
                                    xres(src.xres),
@@ -4930,6 +4882,7 @@ class fninnerArg
     int &ires;
     Vector<Vector<gentype> > &allxres;
     Vector<gentype> &allfres;
+    Vector<Vector<gentype> > &allcres;
     Vector<gentype> &allmres;
     gentype &fres;
     Vector<gentype> &xres;
@@ -4941,7 +4894,7 @@ class fninnerArg
     int dimfid;
     Vector<double> &scnoise;
 
-    void operator()(int dim, gentype &res, const double *x, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize)
+    void operator()(int dim, gentype &res, const double *x, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_ycgt)
     {
         // ===========================================================================
         // Inner loop evaluation function.  This is used as a buffer between the
@@ -4998,13 +4951,26 @@ class fninnerArg
             xx.resize(dim);
         }
 
-        // Process results:
+        // Process results, also fill null-spots
 
         xobstype_cgt.resize(0);
 
         readres(res,addvar,ycgt,xreplace,replacex,stopnow,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt);
 
         gentype altres = res.isValNull() ? gridres : res;
+
+        Vector<gentype> altycgt(ycgt);
+
+        if ( altycgt.size() == gridres_ycgt.size() )
+        {
+            for ( int iy = 0 ; iy < altycgt.size() ; ++iy )
+            {
+                if ( altycgt(iy).isValNull() && !gridres_ycgt(iy).isValNull() )
+                {
+                    altycgt("&",iy) = gridres_ycgt(iy);
+                }
+            }
+        }
 
         if ( !(altres.isValVector()) )
         {
@@ -5023,7 +4989,7 @@ class fninnerArg
             }
 
             //if ( ( allfres.size() == 0 ) || ( res < fres ) )
-            if ( ismaxfid && !altres.isValNull() && ( ( ires == -1 ) || ( altres < fres ) ) && ( ycgt >= 0.0_gent ) )
+            if ( ismaxfid && !altres.isValNull() && ( ( ires == -1 ) || ( altres < fres ) ) && ( altycgt >= 0.0_gent ) )
             {
                 ires = allfres.size();
                 fres = altres;
@@ -5051,12 +5017,13 @@ class fninnerArg
 
         if ( 1 )
         {
-            if ( !altres.isValNull() )
+//            if ( !altres.isValNull() )
             {
                 muapproxsize++;
 
                 allxres.append(allxres.size(),xx);
                 allfres.append(allfres.size(),altres);
+                allcres.append(allcres.size(),altycgt);
                 allmres.append(allmres.size(),altres);
                 supres.add(supres.size());
 
@@ -5089,6 +5056,15 @@ class fninnerArg
                 supres("&",supres.size()-1)("&",18) = x[dim+15]; // max info gain
                 supres("&",supres.size()-1)("&",19) = x[dim+16]; // fidelity cost
             }
+
+//            else
+//            {
+//                // Not a true observation, so flush the x record at one level up
+//
+//                gentype tmpnum('N');
+//
+//                (*fn)(tmpnum,dummyxarg,arginner);
+//            }
         }
 
         // =======================================================================
@@ -5135,10 +5111,10 @@ class fninnerArg
 // and saves things like timing, beta etc.
 // ===========================================================================
 
-void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize);
-void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize)
+void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt);
+void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt)
 {
-    (*((fninnerArg *) arg))(dim,res,x,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,gridres,muapproxsize);
+    (*((fninnerArg *) arg))(dim,res,x,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,gridres,muapproxsize,gridres_cgt);
     return;
 }
 
@@ -5159,6 +5135,7 @@ int bayesOpt(int dim,
               int &ires,
               Vector<Vector<gentype> > &allxres,
               Vector<gentype> &allfres,
+              Vector<Vector<gentype> > &allcres,
               Vector<gentype> &allmres,
               Vector<gentype> &supres,
               Vector<double> &sscore,
@@ -5178,6 +5155,7 @@ int bayesOpt(int dim,
 
     allxres.resize(0);
     allfres.resize(0);
+    allcres.resize(0);
     allmres.resize(0);
     supres.resize(0);
     sscore.resize(0);
@@ -5221,6 +5199,7 @@ int bayesOpt(int dim,
                        ires,
                        allxres,
                        allfres,
+                       allcres,
                        allmres,
                        fres,
                        xres,

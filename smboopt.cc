@@ -345,7 +345,8 @@ int SMBOOptions::realOptim(int dim,
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allrawxres,
                       Vector<gentype> &allfres,
-                      Vector<gentype> &allfresmod,
+                      Vector<Vector<gentype> > &allcres,
+                      Vector<gentype> &allmres,
                       Vector<gentype> &supres,
                       Vector<double> &sscore,
                       const Vector<gentype> &xmin,
@@ -690,7 +691,7 @@ int SMBOOptions::realOptim(int dim,
 
         // Optimise
 
-        int res = GlobalOptions::realOptim(dim,xres,rawxres,fres,ires,mres,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allrawxres,allfres,allfresmod,supres,sscore,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+        int res = GlobalOptions::realOptim(dim,xres,rawxres,fres,ires,mres,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allrawxres,allfres,allcres,allmres,supres,sscore,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
 
         return res;
     }
@@ -3230,7 +3231,8 @@ double SMBOOptions::model_err(int dim, const Vector<double> &xmin, const Vector<
     int idummy;
     Vector<Vector<gentype> > allxdummy;
     Vector<gentype> allfdummy;
-    Vector<gentype> allfmoddummy;
+    Vector<Vector<gentype> > allcdummy;
+    Vector<gentype> allmdummy;
     Vector<gentype> allsupdummy;
     Vector<double> allsdummy;
     Vector<gentype> altxmin;
@@ -3247,8 +3249,8 @@ double SMBOOptions::model_err(int dim, const Vector<double> &xmin, const Vector<
 
     GlobalOptions &dopts = getModelErrOptim();
 
-    int dresa = dopts.optim(dim,xdummy,minLCB,idummy,allxdummy,allfdummy,allfmoddummy,allsupdummy,allsdummy,altxmin,altxmax,altcalcLCB,modelarg,killSwitch);
-    int dresb = dopts.optim(dim,xdummy,minUCB,idummy,allxdummy,allfdummy,allfmoddummy,allsupdummy,allsdummy,altxmin,altxmax,altcalcUCB,modelarg,killSwitch);
+    int dresa = dopts.optim(dim,xdummy,minLCB,idummy,allxdummy,allfdummy,allcdummy,allmdummy,allsupdummy,allsdummy,altxmin,altxmax,altcalcLCB,modelarg,killSwitch);
+    int dresb = dopts.optim(dim,xdummy,minUCB,idummy,allxdummy,allfdummy,allcdummy,allmdummy,allsupdummy,allsdummy,altxmin,altxmax,altcalcUCB,modelarg,killSwitch);
 
     std::stringstream resbuffer;
     resbuffer << "Model error codes = " << dresa << "," << dresb << "  ";

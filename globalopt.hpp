@@ -392,6 +392,7 @@ public:
     // xres: x result.
     // Xres: x result (raw, unprocessed format).
     // fres: f(x) result.
+    // cres: c(x) result
     // ires: index of result.
     // mInd: for functional optimisation, this returns the (registered) index of the ML model found
     // muInd: index of mu model approximation (if any)
@@ -402,6 +403,7 @@ public:
     // diffmodInd: index of diff model (if used, see diff-GP)
     // allxres: all x results.
     // allfres: all f(x) results.
+    // allcres: all c(x) results.
     // allmres: all f(x) results, modified (eg scaled by probability of
     //     feasibility etc, hypervolume etc - what you should be judging
     //     performance on).
@@ -441,6 +443,7 @@ public:
                       int &ires,
                       Vector<Vector<gentype> > &allXres,
                       Vector<gentype> &allfres,
+                      Vector<Vector<gentype> > &allcres,
                       Vector<gentype> &allmres,
                       Vector<gentype> &allsres,
                       Vector<double>  &s_score,
@@ -456,6 +459,7 @@ public:
         (void) ires;
         (void) allXres;
         (void) allfres;
+        (void) allcres;
         (void) allmres;
         (void) allsres;
         (void) s_score;
@@ -548,6 +552,7 @@ public:
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
                       Vector<gentype> &allfres,
+                      Vector<Vector<gentype> > &allcres,
                       Vector<gentype> &allmres,
                       Vector<gentype> &allsres,
                       Vector<double>  &s_score,
@@ -581,6 +586,7 @@ public:
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
                       Vector<gentype> &allfres,
+                      Vector<Vector<gentype> > &allcres,
                       Vector<gentype> &allmres,
                       Vector<gentype> &allsres,
                       Vector<double>  &s_score,
@@ -615,9 +621,12 @@ public:
 
     int analyse(const Vector<Vector<gentype> > &allxres,
                 const Vector<gentype> &allmres,
+                const Vector<Vector<gentype> > &allcres,
                 Vector<double> &hypervol,
                 Vector<int> &parind,
                 int calchypervol) const; // = 1) const;
+
+    int isFeasible(const Vector<gentype> &cres, const Vector<gentype> &xres) const;
 
     // Internal function to differentiate between the base class and the
     // actual optimisation problem classes.  Will return zero for base

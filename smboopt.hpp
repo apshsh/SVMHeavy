@@ -321,7 +321,8 @@ public:
                       int &ires,
                       Vector<Vector<gentype> > &allrawxres,
                       Vector<gentype> &allfres,
-                      Vector<gentype> &allfresmod,
+                      Vector<Vector<gentype> > &allcres,
+                      Vector<gentype> &allmres,
                       Vector<gentype> &supres,
                       Vector<double> &sscore,
                       const Vector<gentype> &xmin,
@@ -330,7 +331,7 @@ public:
                       void *fnarg,
                       svmvolatile int &killSwitch)
     {
-        return GlobalOptions::optim(dim,rawxres,fres,ires,allrawxres,allfres,allfresmod,supres,sscore,xmin,xmax,fn,fnarg,killSwitch);
+        return GlobalOptions::optim(dim,rawxres,fres,ires,allrawxres,allfres,allcres,allmres,supres,sscore,xmin,xmax,fn,fnarg,killSwitch);
     }
 
     virtual int optim(int dim,
@@ -348,6 +349,7 @@ public:
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
                       Vector<gentype> &allfres,
+                      Vector<Vector<gentype> > &allcres,
                       Vector<gentype> &allmres,
                       Vector<gentype> &allsres,
                       Vector<double>  &s_score,
@@ -366,7 +368,7 @@ public:
                       Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
                       Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
     {
-        int res = GlobalOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
+        int res = GlobalOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
 
         return res;
     }
@@ -386,7 +388,8 @@ public:
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allrawxres,
                       Vector<gentype> &allfres,
-                      Vector<gentype> &allfresmod,
+                      Vector<Vector<gentype> > &allcres,
+                      Vector<gentype> &allmres,
                       Vector<gentype> &supres,
                       Vector<double> &sscore,
                       const Vector<gentype> &xmin,

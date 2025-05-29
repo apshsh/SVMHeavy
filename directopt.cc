@@ -19,6 +19,7 @@ int directOpt(int dim,
               int &ires,
               Vector<Vector<gentype> > &allxres,
               Vector<gentype> &allfres,
+              Vector<Vector<gentype> > &allcres,
               Vector<gentype> &supres,
               const Vector<gentype> &xmin,
               const Vector<gentype> &xmax,
@@ -35,7 +36,7 @@ double tst_obj(int n, const double *x, int *undefined_flag, void *fnarginnerdr);
 double tst_obj(int n, const double *x, int *undefined_flag, void *fnarginnerdr)
 {
     (void) n;
- 
+
     void **fnarginner = (void **) fnarginnerdr;
 
     double (*fn)(int, const double *, void *) = (double (*)(int, const double *, void *)) fnarginner[0];
@@ -218,6 +219,7 @@ double fninnerd(int dim, const double *x, void *arg)
     int &ires                                              = *((int *)                      (((void **) arg)[3]));
     Vector<Vector<gentype> > &allxres                      = *((Vector<Vector<gentype> > *) (((void **) arg)[4]));
     Vector<gentype> &allfres                               = *((Vector<gentype> *)          (((void **) arg)[5]));
+    Vector<Vector<gentype> > &allcres                      = *((Vector<Vector<gentype> > *) (((void **) arg)[6]));
     gentype &fres                                          = *((gentype *)                  (((void **) arg)[7]));
     Vector<gentype> &xres                                  = *((Vector<gentype> *)          (((void **) arg)[8]));
     gentype &tempres                                       = *((gentype *)                  (((void **) arg)[9]));
@@ -245,7 +247,10 @@ errstream() << "\n";
 
     if ( 1 )
     {
+        Vector<gentype> tempcgt;
+
         allfres.append(allfres.size(),tempres);
+        allcres.append(allcres.size(),tempcgt);
         allxres.append(allxres.size(),xx);
     }
 
@@ -258,6 +263,7 @@ int directOpt(int dim,
               int &ires,
               Vector<Vector<gentype> > &allxres,
               Vector<gentype> &allfres,
+              Vector<Vector<gentype> > &allcres,
               Vector<gentype> &supres,
               const Vector<gentype> &xmin,
               const Vector<gentype> &xmax,
@@ -272,6 +278,7 @@ int directOpt(int dim,
 
     allxres.resize(0);
     allfres.resize(0);
+    allcres.resize(0);
     supres.resize(0);
 
     Vector<double> locxres;
@@ -298,6 +305,7 @@ int directOpt(int dim,
     fnarginner[3] = (void *) &ires;
     fnarginner[4] = (void *) &allxres;
     fnarginner[5] = (void *) &allfres;
+    fnarginner[6] = (void *) &allcres;
     fnarginner[7] = (void *) &fres;
     fnarginner[8] = (void *) &xres;
     fnarginner[9] = (void *) &tempres;
@@ -331,7 +339,8 @@ int DIRectOptions::optim(int dim,
                       int &ires,
                       Vector<Vector<gentype> > &allxres,
                       Vector<gentype> &allfres,
-                      Vector<gentype> &allfresmod,
+                      Vector<Vector<gentype> > &allcres,
+                      Vector<gentype> &allmres,
                       Vector<gentype> &supres,
                       Vector<double> &sscore,
                       const Vector<gentype> &xmin,
@@ -340,10 +349,10 @@ int DIRectOptions::optim(int dim,
                       void *fnarg,
                       svmvolatile int &killSwitch)
 {
-    int res = directOpt(dim,xres,fres,ires,allxres,allfres,supres,
+    int res = directOpt(dim,xres,fres,ires,allxres,allfres,allcres,supres,
                         xmin,xmax,fn,fnarg,*this,killSwitch);
 
-    allfresmod = allfres;
+    allmres = allfres;
 
     sscore.resize(allfres.size());
     sscore = 1.0;

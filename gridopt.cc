@@ -20,7 +20,8 @@ int GridOptions::optim(int dim,
                        int &ires,
                        Vector<Vector<gentype> > &allxres,
                        Vector<gentype> &allfres,
-                       Vector<gentype> &allfresmod,
+                       Vector<Vector<gentype> > &allcres,
+                       Vector<gentype> &allmres,
                        Vector<gentype> &allsupres,
                        Vector<double> &sscore,
                        const Vector<gentype> &xmin,
@@ -74,7 +75,8 @@ int GridOptions::optim(int dim,
 
     allxres.resize(0);
     allfres.resize(0);
-    allfresmod.resize(0);
+    allcres.resize(0);
+    allmres.resize(0);
     allsupres.resize(0);
 
     // Enumerate testpoints on all axis
@@ -214,9 +216,12 @@ int GridOptions::optim(int dim,
 
         if ( 1 )
         {
+            Vector<gentype> loccres;
+
             allxres.append(allxres.size(),locxres);
             allfres.append(allfres.size(),locfres);
-            allfresmod.append(allfresmod.size(),locfres);
+            allcres.append(allcres.size(),loccres);
+            allmres.append(allmres.size(),locfres);
             allsupres.append(allsupres.size(),locsupres);
             sscore.append(sscore.size(),1.0);
         }
@@ -309,7 +314,8 @@ int GridOptions::optim(int dim,
         int subdiffmodInd = 0;
         Vector<Vector<gentype> > suballxres;
         Vector<gentype> suballfres;
-        Vector<gentype> suballfresmod;
+        Vector<Vector<gentype> > suballcres;
+        Vector<gentype> suballmres;
         Vector<gentype> suballsupres;
         Vector<double> subsscore;
         Vector<gentype> subxmin(xmin);
@@ -359,7 +365,7 @@ int GridOptions::optim(int dim,
         Vector<gentype> dummymeanallfres, dummyvarallfres;
         Vector<gentype> dummymeanallmres, dummyvarallmres;
 
-        res |= locgopts.optim(dim,subxignore,subxres,subfres,subires,submres,submuInd,subaugxInd,subcgtInd,subsigInd,subsrcmodInd,subdiffmodInd,suballxignore,suballxres,suballfres,suballfresmod,suballsupres,subsscore,
+        res |= locgopts.optim(dim,subxignore,subxres,subfres,subires,submres,submuInd,subaugxInd,subcgtInd,subsigInd,subsrcmodInd,subdiffmodInd,suballxignore,suballxres,suballfres,suballcres,suballmres,suballsupres,subsscore,
                               subxmin,subxmax,subdistMode,subvarsType,fn,fnarg,killSwitch,1,
                               dummymeanfres,dummyvarfres,dummymeanires,dummyvarires,dummymeantres,dummyvartres,dummymeanTres,dummyvarTres,dummymeanallfres,dummyvarallfres,dummymeanallmres,dummyvarallmres);
 
@@ -383,7 +389,8 @@ int GridOptions::optim(int dim,
         {
             allxres.append(allxres.size(),suballxres);
             allfres.append(allfres.size(),suballfres);
-            allfresmod.append(allfresmod.size(),suballfresmod);
+            allcres.append(allcres.size(),suballcres);
+            allmres.append(allmres.size(),suballmres);
             allsupres.append(allsupres.size(),suballsupres);
             sscore.append(sscore.size(),subsscore);
         }

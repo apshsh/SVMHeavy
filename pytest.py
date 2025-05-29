@@ -6,4 +6,6 @@ def testfn(y,z):
 if __name__ == "__main__":
   y = sys.argv[2]
   z = sys.argv[4]
-  print(testfn(y,z))
+  with open("pyres.txt", "w") as f:
+    print("{ null 0 [",testfn(y,z),"] }", file=f)
+  #print(testfn(y,z))

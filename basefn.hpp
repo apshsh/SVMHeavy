@@ -414,11 +414,16 @@ int addremoveptr(void *addr, int newdel, int type, int size, const char *desc);
 // svm_execall: Call executable.  If runbg then attempt to leave it running in the background
 // svm_pycall: Call python script.  If runbg then attempt to leave it running in the background
 //
+// Versions with result (res) string read this from pyres.txt, which must
+// be created by the command.
+//
 // NB: these are disabled in HEADLESS mode
 
 int svm_system (const char *command);
 int svm_execall(const std::string &command, bool runbg);
 int svm_pycall (const std::string &command, bool runbg);
+int svm_execall(std::string &res, const std::string &command);
+int svm_pycall (std::string &res, const std::string &command);
 
 // The above function uses system by default.  However
 // this is not suitable in some environments (eg mex).  The following function

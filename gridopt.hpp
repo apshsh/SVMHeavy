@@ -85,7 +85,8 @@ public:
                       int &ires,
                       Vector<Vector<gentype> > &allxres,
                       Vector<gentype> &allfres,
-                      Vector<gentype> &allfresmod,
+                      Vector<Vector<gentype> > &allcres,
+                      Vector<gentype> &allmres,
                       Vector<gentype> &supres,
                       Vector<double> &sscore,
                       const Vector<gentype> &xmin,
@@ -109,6 +110,7 @@ public:
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
                       Vector<gentype> &allfres,
+                      Vector<Vector<gentype> > &allcres,
                       Vector<gentype> &allmres,
                       Vector<gentype> &allsres,
                       Vector<double>  &s_score,
@@ -119,7 +121,7 @@ public:
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
                       void *fnarg,
                       svmvolatile int &killSwitch,
-                      size_t numReps, 
+                      size_t numReps,
                       gentype &meanfres, gentype &varfres,
                       gentype &meanires, gentype &varires,
                       gentype &meantres, gentype &vartres,
@@ -127,7 +129,7 @@ public:
                       Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
                       Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
     {
-        return GlobalOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
+        return GlobalOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
     }
 
     virtual int optdefed(void)

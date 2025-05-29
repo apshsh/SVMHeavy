@@ -1,3 +1,17 @@
+//FIXME: make c(x) part of the testlog plot - line 9181 - suspect mean includes non-valid results!
+
+//FIXME: consider removing -tMpy etc (they aren't needed anymore)
+//remove -tMpy... -tMexe... pyorexeeval
+
+//FIXME: option to set prior on bayesopt models
+//FIXME: with models that don't have variance, let them return sigma when asked for variance. Then you can plug them in for e.g. the weight
+//       function in our method and they'll just be a trivial block.
+//       TO DO THIS YOU NEED TO MAKE THE var TREE RETURN SOMETHING SENSIBLE IN THESE CASES!
+//FIXME: mixed integer program. gridfile has nulls for continuous variabels. nulls are filled by direct, non-nulls are called by the
+//       activation function to do a grid sweep.
+//FIXME: if lower fidelity falls outside of range then never do higher fidelity (assumed surrogate accuracty bounds)
+//FIXME: clean up multi-threaded mess!
+
 //FIXME:in bayesopt postprocessing need to disgard if constraints not met
 
 //FIXME: having added d = 2 to addTrainingVector functionality thoughout (gentype y), fix non-trivial versions to make sense (d = -4 as *default*?)
@@ -9,7 +23,7 @@ TO DO:
 
 
 FIXME: TEST NEW FIDELITY CODE WITH FIDELITY FEEDBACK!
- FIXME: IS FIDELITY FEEDBACK BEING CORRECTLY ACCOUNTED FOR?
+FIXME: IS FIDELITY FEEDBACK BEING CORRECTLY ACCOUNTED FOR?
 FIXME: IS FIDELITY COST BEING CORECTLY CALCULATED AND USED FOR TERMINATION?
 */
 
@@ -1461,9 +1475,6 @@ int runsvmint(int threadInd,
     int retval    = 0; // return value on exit
     std::string currentarg;
     int i;
-    #ifdef ALLOW_SOCKETS
-    int tcpfeedback = 0;
-    #endif
 
     // Increment "depth" counter
 
@@ -2395,360 +2406,6 @@ int runsvmint(int threadInd,
                     stopnow = 1;
                 }
             }
-
-#ifdef ALLOW_SOCKETS
-            else if ( ( currentarg == "-Zu"   ) ||
-                      ( currentarg == "-Zuf"  ) ||
-                      ( currentarg == "-Zau"  ) ||
-                      ( currentarg == "-Zauf" )    )
-            {
-                preelse = 1;
-
-                // Switch input to UDP client
-
-                tcpfeedback = 0;
-
-                if ( ( currentarg == "-Zuf" ) || ( currentarg == "-Zauf" ) )
-                {
-                    // Feedback on
-
-                    tcpfeedback = 1;
-                }
-
-                int popflag = 0;
-
-                if ( ( currentarg == "-Zau" ) || ( currentarg == "-Zauf" ) )
-                {
-                    // Pop element of command stack
-
-                    popflag = 1;
-                }
-
-                stopnow = grabnextarg(commstack,currentarg);
-
-                if ( !stopnow )
-                {
-                    if ( popflag )
-                    {
-                        // Pop element of command stack
-
-                        MEMDEL(commstack.accessTop());
-                        commstack.pop();
-                    }
-
-                    awarestream *newudpstream;
-
-                    MEMNEW(newudpstream,awarestream(safeatoi(currentarg,argvariables),SVM_SOCK_DGRAM,tcpfeedback));
-
-                    commstack.push(newudpstream);
-                }
-
-                else
-                {
-                    errstream() << "Syntax error: -Zu, -Zuf, -Zau and -Zauf require 1 argument\n";
-                    retval  = 29;
-                    stopnow = 1;
-                }
-            }
-
-            else if ( ( currentarg == "-Zt"   ) ||
-                      ( currentarg == "-Ztf"  ) ||
-                      ( currentarg == "-Zat"  ) ||
-                      ( currentarg == "-Zatf" )    )
-            {
-                preelse = 1;
-
-                tcpfeedback = 0;
-
-                // Switch input to TCP client
-
-                if ( ( currentarg == "-Ztf" ) || ( currentarg == "-Zatf" ) )
-                {
-                    // Feedback on
-
-                    tcpfeedback = 1;
-                }
-
-                int popflag = 0;
-
-                if ( ( currentarg == "-Zat" ) || ( currentarg == "-Zatf" ) )
-                {
-                    // Pop element of command stack
-
-                    popflag = 1;
-                }
-
-                stopnow = grabnextarg(commstack,currentarg);
-
-                if ( !stopnow )
-                {
-                    if ( popflag )
-                    {
-                        // Pop element of command stack
-
-                        MEMDEL(commstack.accessTop());
-                        commstack.pop();
-                    }
-
-                    awarestream *newtcpstream;
-
-                    MEMNEW(newtcpstream,awarestream(safeatoi(currentarg,argvariables),SVM_SOCK_STREAM,tcpfeedback));
-
-                    commstack.push(newtcpstream);
-                }
-
-                else
-                {
-                    errstream() << "Syntax error: -Zt, -Ztf, -Zat and -Zatf require 1 argument\n";
-                    retval  = 30;
-                    stopnow = 1;
-                }
-            }
-
-            else if ( ( currentarg == "-Zn"   ) ||
-                      ( currentarg == "-Znf"  ) ||
-                      ( currentarg == "-Zan"  ) ||
-                      ( currentarg == "-Zanf" )    )
-            {
-                preelse = 1;
-
-                // Switch input to *nix client
-
-                tcpfeedback = 0;
-
-                if ( ( currentarg == "-Znf" ) || ( currentarg == "-Zanf" ) )
-                {
-                    // Feedback on
-
-                    tcpfeedback = 1;
-                }
-
-                int popflag = 0;
-
-                if ( ( currentarg == "-Zan" ) || ( currentarg == "-Zanf" ) )
-                {
-                    // Pop element of command stack
-
-                    popflag = 1;
-                }
-
-                stopnow = grabnextarg(commstack,currentarg);
-
-                if ( !stopnow )
-                {
-                    if ( popflag )
-                    {
-                        // Pop element of command stack
-
-                        MEMDEL(commstack.accessTop());
-                        commstack.pop();
-                    }
-
-                    awarestream *newtcpstream;
-
-                    MEMNEW(newtcpstream,awarestream("&",currentarg,SVM_SOCK_STREAM,tcpfeedback,0));
-
-                    commstack.push(newtcpstream);
-                }
-
-                else
-                {
-                    errstream() << "Syntax error: -Zn, -Znf, -Zan and -Zanf require 1 argument\n";
-                    retval  = 31;
-                    stopnow = 1;
-                }
-            }
-
-            else if ( ( currentarg == "-ZU"   ) ||
-                      ( currentarg == "-ZaU"  ) ||
-                      ( currentarg == "-ZUf"  ) ||
-                      ( currentarg == "-ZaUf" )    )
-            {
-                preelse = 1;
-
-                tcpfeedback = 0;
-
-                // Switch input to UDP server
-
-                if ( ( currentarg == "-ZUf" ) || ( currentarg == "-ZaUf" ) )
-                {
-                    // Feedback on
-
-                    tcpfeedback = 1;
-                }
-
-                int popflag = 0;
-
-                if ( ( currentarg == "-ZaU" ) || ( currentarg == "-ZaUf" ) )
-                {
-                    // Pop element of command stack
-
-                    popflag = 1;
-                }
-
-                stopnow = grabnextarg(commstack,currentarg);
-
-                if ( !stopnow )
-                {
-                    long portx = safeatoi(currentarg,argvariables);
-
-                    stopnow = grabnextarg(commstack,currentarg);
-
-                    if ( !stopnow )
-                    {
-                        if ( popflag )
-                        {
-                            // Pop element of command stack
-
-                            MEMDEL(commstack.accessTop());
-                            commstack.pop();
-                        }
-
-                        awarestream *newudpstream;
-
-                        MEMNEW(newudpstream,awarestream(currentarg,portx,SVM_SOCK_DGRAM,tcpfeedback));
-
-                        commstack.push(newudpstream);
-                    }
-
-                    else
-                    {
-                        errstream() << "Syntax error: -ZU, -ZUf, -ZaU and -ZaUf require 2 arguments\n";
-                        retval  = 32;
-                        stopnow = 1;
-                    }
-                }
-
-                else
-                {
-                    errstream() << "Syntax error: -ZU, -ZUf, -ZaU and -ZaUf require 2 arguments\n";
-                    retval  = 33;
-                    stopnow = 1;
-                }
-            }
-
-            else if ( ( currentarg == "-ZT"   ) ||
-                      ( currentarg == "-ZTf"  ) ||
-                      ( currentarg == "-ZaTf" ) ||
-                      ( currentarg == "-ZaT"  )    )
-            {
-                preelse = 1;
-
-                tcpfeedback = 0;
-
-                // Switch input to TCP Server
-
-                if ( ( currentarg == "-ZTf" ) || ( currentarg == "-ZaTf" ) )
-                {
-                    // Feedback on
-
-                    tcpfeedback = 1;
-                }
-
-                int popflag = 0;
-
-                if ( ( currentarg == "-ZaT" ) || ( currentarg == "-ZaTf" ) )
-                {
-                    // Pop element of command stack
-
-                    popflag = 1;
-                }
-
-                stopnow = grabnextarg(commstack,currentarg);
-
-                if ( !stopnow )
-                {
-                    long portx = safeatoi(currentarg,argvariables);
-
-                    stopnow = grabnextarg(commstack,currentarg);
-
-                    if ( !stopnow )
-                    {
-                        if ( popflag )
-                        {
-                            // Pop element of command stack
-
-                            MEMDEL(commstack.accessTop());
-                            commstack.pop();
-                        }
-
-                        awarestream *newudpstream;
-
-                        MEMNEW(newudpstream,awarestream(currentarg,portx,tcpfeedback));
-
-                        commstack.push(newudpstream);
-                    }
-
-                    else
-                    {
-                        errstream() << "Syntax error: -ZT, -ZTf, -ZaT and -ZaTf require 2 arguments\n";
-                        retval  = 34;
-                        stopnow = 1;
-                    }
-                }
-
-                else
-                {
-                    errstream() << "Syntax error: -ZT, -ZTf, -ZaT and -ZaTf require 2 arguments\n";
-                    retval  = 35;
-                    stopnow = 1;
-                }
-            }
-
-            else if ( ( currentarg == "-ZN"   ) ||
-                      ( currentarg == "-ZNf"  ) ||
-                      ( currentarg == "-ZaN"  ) ||
-                      ( currentarg == "-ZaNf" )    )
-            {
-                preelse = 1;
-
-                // Switch input to *nix server
-
-                tcpfeedback = 0;
-
-                if ( ( currentarg == "-ZNf" ) || ( currentarg == "-ZaNf" ) )
-                {
-                    // Feedback on
-
-                    tcpfeedback = 1;
-                }
-
-                int popflag = 0;
-
-                if ( ( currentarg == "-ZaN" ) || ( currentarg == "-ZaNf" ) )
-                {
-                    // Pop element of command stack
-
-                    popflag = 1;
-                }
-
-                stopnow = grabnextarg(commstack,currentarg);
-
-                if ( !stopnow )
-                {
-                    if ( popflag )
-                    {
-                        // Pop element of command stack
-
-                        MEMDEL(commstack.accessTop());
-                        commstack.pop();
-                    }
-
-                    awarestream *newtcpstream;
-
-                    MEMNEW(newtcpstream,awarestream("&",currentarg,SVM_SOCK_STREAM,tcpfeedback,1));
-
-                    commstack.push(newtcpstream);
-                }
-
-                else
-                {
-                    errstream() << "Syntax error: -ZN, -ZNf, -ZaN and -ZaNf require 1 argument\n";
-                    retval  = 36;
-                    stopnow = 1;
-                }
-            }
-#endif
 
             else if ( currentarg == "-Zf" )
             {
@@ -5829,9 +5486,7 @@ int runsvmint(int threadInd,
                       ( currentarg == "-K2"   ) ||
                       ( currentarg == "-hYc"  ) ||
                       ( currentarg == "-hWc"  ) ||
-                      ( currentarg == "-hZv"  ) ||
-                      ( currentarg == "-echosock" ) ||
-                      ( currentarg == "-ECHOsock" )    )
+                      ( currentarg == "-hZv"  )    )
             {
                 // Reporting options
 
@@ -8287,6 +7942,7 @@ int runsvmint(int threadInd,
                 Vector<Vector<Vector<gentype> > > vecallxres;
                 Vector<Vector<Vector<gentype> > > vecallrawxres;
                 Vector<Vector<gentype> >          vecallfres;
+                Vector<Vector<Vector<gentype> > > vecallcres;
                 Vector<Vector<gentype> >          vecallmres;
                 Vector<Vector<int> >              vecallires;
                 Vector<Vector<gentype> >          vecallsres;
@@ -8979,6 +8635,7 @@ int runsvmint(int threadInd,
                                 Vector<gentype> xres(defxres);
                                 Vector<gentype> rawxres(defxres);
                                 gentype fres;
+                                Vector<gentype> cres;
                                 int ires = 0;
                                 int mInd = 0;
                                 Vector<int> muInd;
@@ -8999,6 +8656,7 @@ int runsvmint(int threadInd,
                                 vecallxres.add(numtests);
                                 vecallrawxres.add(numtests);
                                 vecallfres.add(numtests);
+                                vecallcres.add(numtests);
                                 vecallmres.add(numtests);
                                 vecallires.add(numtests);
                                 vecallsres.add(numtests);
@@ -9024,6 +8682,7 @@ int runsvmint(int threadInd,
                                 Vector<Vector<gentype> > &allxres    = vecallxres("&",numtests);
                                 Vector<Vector<gentype> > &allrawxres = vecallrawxres("&",numtests);
                                 Vector<gentype>          &allfres    = vecallfres("&",numtests);
+                                Vector<Vector<gentype> > &allcres    = vecallcres("&",numtests);
                                 Vector<gentype>          &allmres    = vecallmres("&",numtests);
                                 Vector<int>              &allires    = vecallires("&",numtests);
                                 Vector<gentype>          &allsres    = vecallsres("&",numtests);
@@ -9122,6 +8781,7 @@ int runsvmint(int threadInd,
                                                           allxres,
                                                           allrawxres,
                                                           allfres,
+                                                          allcres,
                                                           allmres,
                                                           allsres,
                                                           sscore,
@@ -9209,7 +8869,7 @@ int runsvmint(int threadInd,
 
                                 Vector<int> optvarind(allxres.size() ? 1 : 0);
 
-                                xopts.analyse(allxres,allmres,allhres,optvarind,1);
+                                xopts.analyse(allxres,allmres,allcres,allhres,optvarind,1);
 
                                 if ( allfres.size() && ( allfres(0).size() > 1 ) )
                                 {
@@ -9225,6 +8885,7 @@ int runsvmint(int threadInd,
 
                                     xres = allxres(optvarind(0));
                                     fres = allfres(optvarind(0));
+                                    cres = allcres(optvarind(0));
                                     ires = allires(optvarind(0));
                                     sres = allsres(optvarind(0));
                                     hres = allhres(optvarind(0));
@@ -9239,6 +8900,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                                     xres = allxres(optvarind(0)); // Important to do this: xres is non-converted, allxres is
                                     // fres = allfres(optvarind(0));
+                                    // cres = allcres(optvarind(0));
                                     // ires = allires(optvarind(0));
                                     sres = allsres(optvarind(0));
                                     hres = allhres(optvarind(0));
@@ -9298,6 +8960,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                         {
                                             gridargvars("&",60)("&",i) = allxres(optvarind(i));
                                             gridargvars("&",61)("&",i) = allfres(optvarind(i));
+                                            //FIXME gridargvars("&",61)("&",i) = allcres(optvarind(i));
                                             gridargvars("&",62)("&",i) = allires(optvarind(i));
                                             gridargvars("&",63)("&",i) = allsres(optvarind(i));
                                             gridargvars("&",64)("&",i) = allhres(optvarind(i));
@@ -9310,6 +8973,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                         {
                                             gridargvars("&",70)("&",i) = allxres(i);
                                             gridargvars("&",71)("&",i) = allfres(i);
+                                            //FIXME gridargvars("&",71)("&",i) = allcres(i);
                                             gridargvars("&",72)("&",i) = allires(i);
                                             gridargvars("&",73)("&",i) = allsres(i);
                                             gridargvars("&",74)("&",i) = allhres(i);
@@ -9320,6 +8984,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                                         gridargvars("&",80)("&",0) = allxres;
                                         gridargvars("&",81)("&",0) = allfres;
+                                        //FIXME gridargvars("&",81)("&",0) = allcres;
                                         gridargvars("&",82)("&",0) = allires;
                                         gridargvars("&",83)("&",0) = allsres;
                                         gridargvars("&",84)("&",0) = allhres;
@@ -9368,6 +9033,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                         retVector<Vector<gentype> > tmpva;
                                         retVector<gentype>          tmpvb;
                                         retVector<gentype>          tmpvc;
+                                        retVector<Vector<gentype> > tmpvq;
                                         retVector<double>           tmpvd;
                                         retVector<int>              tmpve;
 
@@ -9375,6 +9041,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                                         std::string xgridfilenamefull = logfile+"_xgrid"; // x values
                                         std::string fgridfilenamefull = logfile+"_fgrid"; // results
+                                        std::string cgridfilenamefull = logfile+"_cgrid"; // results
                                         std::string mgridfilenamefull = logfile+"_mgrid"; // results modified
                                         std::string igridfilenamefull = logfile+"_igrid"; // indices
                                         std::string sgridfilenamefull = logfile+"_sgrid"; // suplementary information
@@ -9392,6 +9059,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                                         writeLog(allxres,xgridfilenamefull,getsetExtVar);
                                         writeLog(allfres,fgridfilenamefull,getsetExtVar);
+                                        writeLog(allcres,cgridfilenamefull,getsetExtVar);
                                         writeLog(allmres,mgridfilenamefull,getsetExtVar);
                                         writeLog(allires,igridfilenamefull,getsetExtVar);
                                         writeLog(allsres,sgridfilenamefull,getsetExtVar);
@@ -9411,6 +9079,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                                         std::string xparetofilenamefull = logfile+"_xpareto";
                                         std::string fparetofilenamefull = logfile+"_fpareto";
+                                        std::string cparetofilenamefull = logfile+"_cpareto";
                                         std::string mparetofilenamefull = logfile+"_mpareto";
                                         std::string iparetofilenamefull = logfile+"_ipareto";
                                         std::string sparetofilenamefull = logfile+"_spareto";
@@ -9428,6 +9097,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                                         writeLog(allxres(optvarind,tmpva),xparetofilenamefull,getsetExtVar);
                                         writeLog(allfres(optvarind,tmpvc),fparetofilenamefull,getsetExtVar);
+                                        writeLog(allcres(optvarind,tmpvq),cparetofilenamefull,getsetExtVar);
                                         writeLog(allmres(optvarind,tmpvc),mparetofilenamefull,getsetExtVar);
                                         writeLog(allires(optvarind,tmpve),iparetofilenamefull,getsetExtVar);
                                         writeLog(allsres(optvarind,tmpvc),sparetofilenamefull,getsetExtVar);
@@ -10414,65 +10084,6 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         evalx << echoval << "\n";
                         stopnow = puttylump(evalx.str(),commstack);
                         outstream() << currcommand(1) << " = " << evalx.str();
-                    }
-
-                    if ( currcommand(0) == "-echosock" )
-                    {
-                        std::string sockname(currcommand(1));
-
-                        awarestream *echosock = makeUnixSocket(sockname,1,1,0);
-
-                        NiceAssert( echosock );
-
-                        if ( echosock )
-                        {
-                            std::ostream echosockout(echosock);
-
-                            std::stringstream evalx;
-                            gentype echoval; safeatowhatever(echoval,currcommand(2),argvariables);
-                            evalx << echoval << "\n";
-                            stopnow = puttylump(evalx.str(),commstack);
-                            echosockout << evalx.str();
-
-                            delUnixSocket(echosock);
-                        }
-                    }
-
-                    if ( currcommand(0) == "-ECHOsock" )
-                    {
-//errstream() << "phantomx 0: " << currcommand(1) << "\n";
-                        std::string sockname(currcommand(1));
-
-//errstream() << "phantomx 1 -" << sockname << "-\n";
-                        awarestream *echosock = makeUnixSocket(sockname,1,1,0);
-
-//errstream() << "phantomx 2\n";
-                        NiceAssert( echosock );
-
-                        if ( echosock )
-                        {
-//errstream() << "phantomx 3\n";
-                            std::ostream echosockout(echosock);
-
-//errstream() << "phantomx 4: " << currcommand(2) << "\n";
-                            std::stringstream evalx;
-                            gentype echoval; safeatowhatever(echoval,currcommand(2),argvariables);
-//errstream() << "phantomx 5\n";
-                            echoval.finalise(2); // First globals (leaving possible distributions in place)
-                            echoval.finalise(1); // Then randoms that remain
-                            echoval.finalise();  // Then just in case
-//errstream() << "phantomx 6\n";
-                            evalx << echoval << "\n";
-//errstream() << "phantomx 7\n";
-                            stopnow = puttylump(evalx.str(),commstack);
-//errstream() << "phantomx 8: " << evalx.str() << "\n";
-                            echosockout << evalx.str();
-//errstream() << "phantomx 9\n";
-
-                            delUnixSocket(echosock);
-//errstream() << "phantomx 10\n";
-                        }
-//errstream() << "phantomx 11\n";
                     }
 
                     else if ( currcommand(0) == "-ak" )
@@ -14318,88 +13929,6 @@ int pyorexeeval(int isscalar, int isvector, int ispy, const std::string &evalnam
 
         return 0;
     //}
-
-/*
-    std::string sockis;
-    awarestream *svmsocket = makeUnixSocket(sockis,1);
-
-    if ( svmsocket )
-    {
-        // Curly bracket to ensure that out-of-scope doesn't mess things up!
-
-        awarestream &svmsock = *svmsocket;
-
-        std::istream svmsockin(&svmsock);
-        std::ostream svmsockout(&svmsock);
-
-        std::cout << "socket name: " << sockis << "\n";
-        std::string clientstarter(evalname);
-        clientstarter += " ";
-        clientstarter += sockis;
-        std::cout << "Start client: " << clientstarter << "\n";
-
-        if ( ispy )
-        {
-            svm_pycall(clientstarter,true);
-        }
-
-        else
-        {
-            svm_execall(clientstarter,true);
-        }
-
-        gentype ind;
-
-        while ( !ind.isValNull() )
-        {
-            svmsockin >> ind;
-
-            if ( !ind.isValNull() )
-            {
-                gentype fxval;
-
-                if ( isscalar )
-                {
-                    fxval = sf;
-                }
-
-                else if ( isvector && !(v.infsize()) )
-                {
-                    fxval = v((int) ind);
-                }
-
-                else if ( isvector )
-                {
-                    fxval = v(ind);
-                }
-
-                else
-                {
-                    gentype ii;
-
-                    (ii.force_vector(1))("&",0) = ind;
-                    fxval = sf(ii);
-                }
-
-                fxval.finalise();
-                //errstream() << "received " << ind << ", returning " << fxval << ", ";
-                svmsockout << fxval << "\n"; // newline flushes the buffer
-                //errstream() << "done.\n";
-            }
-        }
-
-        svmsockin >> finalresult;
-        errstream() << "overall result = " << finalresult << "\n";
-    }
-
-    else
-    {
-        return 1;
-    }
-
-    delete svmsocket;
-    return 0;
-*/
 }
 
 
@@ -16456,11 +15985,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "    304 = p-norm distance:    K(x,y) = -1/2 ||x-y||_r1^2/(r0.r0)              \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "    8xx = kernel transfer (see below)                                         \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "    900 = evaluate kernel by sending x,y data to unix socket kerni0.sock.  See\n" : "" );
-    output << ( ( basic || advanced ) ? "          kernel9xx function in mercer.cc for details.  Assumes K symmetric.  \n" : "" );
-    output << ( ( basic || advanced ) ? "    901 = like 900, but assumes K anti-symmetric.                             \n" : "" );
-    output << ( ( basic || advanced ) ? "    902 = like 900, but assumes K non-symmetric.                              \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "        Notes: - ' indicates conjugate transpose                              \n" : "" );
     output << ( ( basic || advanced ) ? "               - ||x||^2 = conj(x)'x        (not the norm if (hyper-)complex).\n" : "" );
@@ -18549,25 +18073,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -tMexev fname x - evaluate executable fname with vector x.           \n" : "" );
     output << ( (          advanced ) ? "         -tMexef fname x - evaluate executable fname with function x.         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                  ** Function  evaluation works as  follows.  SVM- **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** Heavy works as follows:                       **         \n" : "" );
-    output << ( (          advanced ) ? "                  **                                               **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** - SVMHeavy opens a unix socket as server.     **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** - SVMHeavy calls  external program  pname and **         \n" : "" );
-    output << ( (          advanced ) ? "                  **   tells it the socket name, fname sockname.   **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** - SVMHeavy waits for pname to send gentype i: **         \n" : "" );
-    output << ( (          advanced ) ? "                  **   * if !nullptr, scalar x SVMHeavy returns x.    **         \n" : "" );
-    output << ( (          advanced ) ? "                  **   * if !nullptr, vector x SVMHeavy returns x(i). **         \n" : "" );
-    output << ( (          advanced ) ? "                  **   * if !nullptr, function x SVMHeavy returns x(i)**         \n" : "" );
-    output << ( (          advanced ) ? "                  ** - when  nullptr   received  SVMHeavy   waits  to **         \n" : "" );
-    output << ( (          advanced ) ? "                  **   receive the result, then kills the socket.  **         \n" : "" );
-    output << ( (          advanced ) ? "                  **                                               **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** The python script is  assumed to wait 5 secs, **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** open the unix socket as  client, then perform **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** as per above.                                 **         \n" : "" );
-    output << ( (          advanced ) ? "                  **                                               **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** Example: see unixevaltest.py                  **         \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         -tl             - Calculate  negative  (of) log-likelihood.  This  is\n" : "" );
     output << ( ( basic || advanced ) ? "                           well defined for  the GPR and formally  defined (by\n" : "" );
     output << ( ( basic || advanced ) ? "                           analogy) for SVM and LSV.                          \n" : "" );
@@ -18705,9 +18210,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           file: filename                                     \n" : "" );
     output << ( (          advanced ) ? "                           format: 0 for text, 1 ps, 2 pdf, 3 mex.            \n" : "" );
     output << ( (          advanced ) ? "                           ymin>ymax: select auto y range                     \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -echosock $sock $fn - echoes $fn to unix socket server $sock.        \n" : "" );
-    output << ( (          advanced ) ? "         -ECHOsock $sock $fn - echoes $fn (eval/final) to \" \" \" $sock.        \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -K0             - evaluate K0().                                     \n" : "" );
     output << ( (          advanced ) ? "         -K1  [x]        - evaluate K1(x).                                    \n" : "" );
@@ -18853,32 +18355,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -Zac n          - pop first, then -Zc.                               \n" : "" );
     output << ( (          advanced ) ? "         -Zawf $file $of - pop first, then -Zwf $file $of.                    \n" : "" );
     output << ( (          advanced ) ? "         -Zakf           - pop first, then -Zkf.                              \n" : "" );
-#ifdef ALLOW_SOCKETS
-    output << ( (          advanced ) ? "         -Zu  $p         - process args from UDP socket client port $p (push).\n" : "" );
-    output << ( (          advanced ) ? "         -Zt  $p         - process args from TCP socket client port $p (push).\n" : "" );
-    output << ( (          advanced ) ? "         -Zn  $f         - process args from unix sock. client file $f (push).\n" : "" );
-    output << ( (          advanced ) ? "         -ZU  $p $addr   - process args from UDP socket server port $p (push).\n" : "" );
-    output << ( (          advanced ) ? "         -ZT  $p $addr   - process args from TCP socket server port $p (push).\n" : "" );
-    output << ( (          advanced ) ? "         -ZN  $f         - process args from unix sock. server file $f (push).\n" : "" );
-    output << ( (          advanced ) ? "         -Zuf $p         - like -Zu but with feedback.                        \n" : "" );
-    output << ( (          advanced ) ? "         -Ztf $p         - like -Zt but with feedback.                        \n" : "" );
-    output << ( (          advanced ) ? "         -Znf $f         - like -Zn but with feedback.                        \n" : "" );
-    output << ( (          advanced ) ? "         -ZUf $p $addr   - like -ZU but with feedback.                        \n" : "" );
-    output << ( (          advanced ) ? "         -ZTf $p $addr   - like -ZT but with feedback.                        \n" : "" );
-    output << ( (          advanced ) ? "         -ZNf $f         - like -ZN but with feedback.                        \n" : "" );
-    output << ( (          advanced ) ? "         -Zau $p         - pop first, then -Zu $p.                            \n" : "" );
-    output << ( (          advanced ) ? "         -Zat $p         - pop first, then -Zt $p.                            \n" : "" );
-    output << ( (          advanced ) ? "         -Zan $f         - pop first, then -Zn $p.                            \n" : "" );
-    output << ( (          advanced ) ? "         -ZaU $p $addr   - pop first, then -ZU $p $addr.                      \n" : "" );
-    output << ( (          advanced ) ? "         -ZaT $p $addr   - pop first, then -ZT $p $addr.                      \n" : "" );
-    output << ( (          advanced ) ? "         -ZaN $f         - pop first, then -ZN $p $addr.                      \n" : "" );
-    output << ( (          advanced ) ? "         -Zauf $p        - like -Zau but with feedback.                       \n" : "" );
-    output << ( (          advanced ) ? "         -Zatf $p        - like -Zat but with feedback.                       \n" : "" );
-    output << ( (          advanced ) ? "         -Zanf $f        - like -Zan but with feedback.                       \n" : "" );
-    output << ( (          advanced ) ? "         -ZaUf $p $addr  - like -ZaU but with feedback.                       \n" : "" );
-    output << ( (          advanced ) ? "         -ZaTf $p $addr  - like -ZaT but with feedback.                       \n" : "" );
-    output << ( (          advanced ) ? "         -ZaNf $f        - like -ZaN but with feedback.                       \n" : "" );
-#endif
     output << ( (          advanced ) ? "         -Za             - abandom input stream and return to previous (pop). \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -Zcw n $pstring - push string onto shared stream n.                  \n" : "" );

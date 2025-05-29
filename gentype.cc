@@ -43,7 +43,7 @@
 // NUMFNDEF number of defined functions
 
 #define MAXINTFACT 12
-#define NUMFNDEF   337
+#define NUMFNDEF   339
 
 // Needed because you can't have commas in macro arguments
 
@@ -62,7 +62,7 @@ class fninfoblock
     // fnname:      function name
     // numargs:     number of arguments taken by function
     //
-    // dirchkargs:  binary, bit set if functionality test in evaluation 
+    // dirchkargs:  binary, bit set if functionality test in evaluation
     //              requires isValEqnDir true. eg: 6 = 110b means apply
     //              isValEqnDir to arguments 2 and 3 but not argument 1
     // widechkargs: like dirchkargs, but using isValEqn.
@@ -8879,18 +8879,30 @@ static fninfoblock qqqfninfo[NUMFNDEF] = {
           "Vector of all maximum diagonal element indices." },
         { "allargmindiag"   ,1,0 ,1 ,1 ,1,0,nullptr ,allargmindiag      ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
           "Vector of all minimum diagonal element indices." },
-        { "maxabs"          ,1,0 ,1 ,1 ,1,0,nullptr ,maxabs             ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,1 ,1 ,nullptr ,"deref(var(1,0),argmaxabs(x))", "" },
-        { "minabs"          ,1,0 ,1 ,1 ,1,0,nullptr ,minabs             ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,1 ,1 ,nullptr ,"deref(var(1,0),argminabs(x))", "" },
-        { "maxabsdiag"      ,1,0 ,1 ,1 ,1,0,nullptr ,maxabsdiag         ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,1 ,1 ,nullptr ,"deref(var(1,0),argmaxabsdiag(x))", "" },
-        { "minabsdiag"      ,1,0 ,1 ,1 ,1,0,nullptr ,minabsdiag         ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,1 ,1 ,nullptr ,"deref(var(1,0),argminabsdiag(x))", "" },
-        { "argmaxabs"       ,1,0 ,1 ,1 ,1,0,nullptr ,argmaxabs          ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", "" },
-        { "argminabs"       ,1,0 ,1 ,1 ,1,0,nullptr ,argminabs          ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", "" },
-        { "argmaxabsdiag"   ,1,0 ,1 ,1 ,1,0,nullptr ,argmaxabsdiag      ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", "" },
-        { "argminabsdiag"   ,1,0 ,1 ,1 ,1,0,nullptr ,argminabsdiag      ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", "" },
-        { "allargmaxabs"    ,1,0 ,1 ,1 ,1,0,nullptr ,allargmaxabs       ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", "" },
-        { "allargminabs"    ,1,0 ,1 ,1 ,1,0,nullptr ,allargminabs       ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", "" },
-        { "allargmaxabsdiag",1,0 ,1 ,1 ,1,0,nullptr ,allargmaxabsdiag   ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", "" },
-        { "allargminabsdiag",1,0 ,1 ,1 ,1,0,nullptr ,allargminabsdiag   ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", "" },
+        { "maxabs"          ,1,0 ,1 ,1 ,1,0,nullptr ,maxabs             ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,1 ,1 ,nullptr ,"deref(var(1,0),argmaxabs(x))", 
+          "maximum absolute element of a" },
+        { "minabs"          ,1,0 ,1 ,1 ,1,0,nullptr ,minabs             ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,1 ,1 ,nullptr ,"deref(var(1,0),argminabs(x))", 
+          "minimum absolute element of a" },
+        { "maxabsdiag"      ,1,0 ,1 ,1 ,1,0,nullptr ,maxabsdiag         ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,1 ,1 ,nullptr ,"deref(var(1,0),argmaxabsdiag(x))", 
+          "maximum absolute element of a" },
+        { "minabsdiag"      ,1,0 ,1 ,1 ,1,0,nullptr ,minabsdiag         ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,1 ,1 ,nullptr ,"deref(var(1,0),argminabsdiag(x))", 
+          "minimum absolute element of a" },
+        { "argmaxabs"       ,1,0 ,1 ,1 ,1,0,nullptr ,argmaxabs          ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "first index maximum absolute element of a" },
+        { "argminabs"       ,1,0 ,1 ,1 ,1,0,nullptr ,argminabs          ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "first index minimum absolute element of a" },
+        { "argmaxabsdiag"   ,1,0 ,1 ,1 ,1,0,nullptr ,argmaxabsdiag      ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "first index maximum absolute element of a" },
+        { "argminabsdiag"   ,1,0 ,1 ,1 ,1,0,nullptr ,argminabsdiag      ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "first index minimum absolute element of a" },
+        { "allargmaxabs"    ,1,0 ,1 ,1 ,1,0,nullptr ,allargmaxabs       ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "all maximum absolute elements of a" },
+        { "allargminabs"    ,1,0 ,1 ,1 ,1,0,nullptr ,allargminabs       ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "all minimum absolute elements of a" },
+        { "allargmaxabsdiag",1,0 ,1 ,1 ,1,0,nullptr ,allargmaxabsdiag   ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "all maximum absolute elements of a" },
+        { "allargminabsdiag",1,0 ,1 ,1 ,1,0,nullptr ,allargminabsdiag   ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "all minimum absolute elements of a" },
         { "sum"             ,1,1 ,0 ,1 ,1,0,nullptr ,sum                ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,0 ,1 ,nullptr ,"sum(var(1,0))", 
           "Summation of all elements." },
         { "prod"            ,1,1 ,0 ,1 ,1,0,nullptr ,prod               ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"Prod"          ,-1,1 ,0 ,nullptr ,"realDeriv(0,0,prod(sgn(var(0,0)))*exp(sum(log(eabs2(var(0,0))))))*var(1,0)", 
@@ -8903,33 +8915,54 @@ static fninfoblock qqqfninfo[NUMFNDEF] = {
           "Median of elements." },
         { "argmedian"       ,1,0 ,1 ,1 ,1,0,nullptr ,argmedian          ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
           "index of median element." },
-        { "deref"           ,2,3 ,0 ,3 ,1,0,nullptr ,nullptr            ,deref        ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,2 ,1 ,nullptr ,"deref(var(1,0),y)", "" },
-        { "derefv"          ,2,3 ,0 ,3 ,1,0,nullptr ,nullptr            ,derefv       ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,2 ,1 ,nullptr ,"derefv(var(1,0),y)", "" },
-        { "derefm"          ,3,7 ,0 ,7 ,1,0,nullptr ,nullptr            ,nullptr      ,derefm          ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,2 ,1 ,nullptr ,"derefm(var(1,0),y,z)", "" },
-        { "derefa"          ,2,3 ,0 ,3 ,1,0,nullptr ,nullptr            ,derefa       ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,2 ,1 ,nullptr ,"derefa(var(1,0),y)" , "" },
-        { "collapse"        ,1,1 ,0 ,1 ,1,0,nullptr ,collapse           ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,0 ,1 ,nullptr ,"collapse(var(1,0))", "" },
+        { "deref"           ,2,3 ,0 ,3 ,1,0,nullptr ,nullptr            ,deref        ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,2 ,1 ,nullptr ,"deref(var(1,0),y)", 
+          "deref(a,x) returns element x in a. scalar: x = [ ] -> a, x = [ i ] -> derefv(a,i), x = [ i j ] -> derefm(a,i,j)" },
+        { "derefv"          ,2,3 ,0 ,3 ,1,0,nullptr ,nullptr            ,derefv       ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,2 ,1 ,nullptr ,"derefv(var(1,0),y)", 
+          "derefv(a,i) returns element i in vector a" },
+        { "derefm"          ,3,7 ,0 ,7 ,1,0,nullptr ,nullptr            ,nullptr      ,derefm          ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,2 ,1 ,nullptr ,"derefm(var(1,0),y,z)", 
+          "derefm(a,i,j) returns element i,j in matrix a" },
+        { "derefa"          ,2,3 ,0 ,3 ,1,0,nullptr ,nullptr            ,derefa       ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,2 ,1 ,nullptr ,"derefa(var(1,0),y)" , 
+          "derefa(a,i) return a(i) for anion a" },
+        { "collapse"        ,1,1 ,0 ,1 ,1,0,nullptr ,collapse           ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,0 ,1 ,nullptr ,"collapse(var(1,0))", 
+          "" },
         { "zeta"            ,1,1 ,0 ,1 ,1,0,nullptr ,zeta               ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,1 ,1 ,nullptr ,"E: \"Gradient of zeta not defined\"", 
           "Reimann zeta function" },
         { "lambertW"        ,1,1 ,0 ,1 ,1,0,nullptr ,lambertW           ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,1 ,1 ,nullptr ,"(lambertW(x)./(x.*(1+lambertW(x)))).*var(1,0)", 
           "Lambert W function main branch W0 (W>-1)" },
         { "lambertWx"       ,1,1 ,0 ,1 ,1,0,nullptr ,lambertWx          ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,1 ,"~"             ,-1,1 ,1 ,nullptr ,"(lambertWx(x)./(x.*(1+lambertWx(x)))).*var(1,0)", 
           "Lambert W function lower branch W1 (W<-1)" },
-        { "fnA"             ,2,3 ,0 ,3 ,1,1,nullptr ,nullptr            ,fnA          ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", "" },
-        { "fnB"             ,3,3 ,4 ,7 ,1,1,nullptr ,nullptr            ,nullptr      ,fnB             ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,7 ,4 ,nullptr ,"dfnB(x,y,z,1).*var(1,2)", "" },
-        { "fnC"             ,4,3 ,12,15,1,1,nullptr ,nullptr            ,nullptr      ,nullptr         ,fnC        ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,15,12,nullptr ,"(dfnC(x,y,z,1,var(0,3),0).*var(1,2))+(dfnC(x,y,z,0,var(0,3),1).*var(1,3))", "" },
-        { "dfnB"            ,4,11,4 ,15,1,1,nullptr ,nullptr            ,nullptr      ,nullptr         ,dfnB       ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,15,4 ,nullptr ,"dfnB(x,y,z,var(0,3)+1).*var(1,2)", "" },
-        { "dfnC"            ,6,43,20,63,1,1,nullptr ,nullptr            ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,dfnC   ,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,63,20,nullptr ,"(dfnC(x,y,z,var(0,3)+1,var(0,4),var(0,5)).*var(1,2))+(dfnC(x,y,z,var(0,3),var(0,4),var(0,5)+1).*var(1,4))", "" },
-        { "efnB"            ,3,3 ,4 ,7 ,1,1,nullptr ,nullptr            ,nullptr      ,efnB            ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,7 ,4 ,nullptr ,"edfnB(x,y,z,1).*var(1,2)", "" },
-        { "efnC"            ,4,3 ,12,15,1,1,nullptr ,nullptr            ,nullptr      ,nullptr         ,efnC       ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,15,12,nullptr ,"(edfnC(x,y,z,1,var(0,3),0).*var(1,2))+(edfnC(x,y,z,0,var(0,3),1).*var(1,3))", "" },
-        { "edfnB"           ,4,11,4 ,15,1,1,nullptr ,nullptr            ,nullptr      ,nullptr         ,edfnB      ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,15,4 ,nullptr ,"edfnB(x,y,z,var(0,3)+1).*var(1,2)", "" },
-        { "edfnC"           ,6,43,20,63,1,1,nullptr ,nullptr            ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,edfnC  ,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,63,20,nullptr ,"(edfnC(x,y,z,var(0,3)+1,var(0,4),var(0,5)).*var(1,2))+(edfnC(x,y,z,var(0,3),var(0,4),var(0,5)+1).*var(1,4))", "" },
-        { "irand"           ,1,1 ,0 ,1 ,1,2,nullptr ,irand              ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", "" },
-        { "urand"           ,2,3 ,0 ,3 ,1,2,nullptr ,nullptr            ,urand        ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"urand(var(1,0),var(1,1))", "" },
-        { "grand"           ,2,0 ,3 ,3 ,1,2,nullptr ,nullptr            ,grand        ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"grand(var(1,0),var(1,1))", "" }, 
-        { "testfn"          ,2,2 ,3 ,3 ,1,0,nullptr ,nullptr            ,testfn       ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", "" },
-        { "testfnA"         ,3,2 ,7 ,7 ,1,0,nullptr ,nullptr            ,nullptr      ,testfnA         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", "" },
-        { "partestfn"       ,3,4 ,7 ,7 ,1,0,nullptr ,nullptr            ,nullptr      ,partestfn       ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", "" },
-        { "partestfnA"      ,4,4 ,15,15,1,0,nullptr ,nullptr            ,nullptr      ,nullptr         ,partestfnA ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", "" },
+        { "fnA"             ,2,3 ,0 ,3 ,1,1,nullptr ,nullptr            ,fnA          ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "" },
+        { "fnB"             ,3,3 ,4 ,7 ,1,1,nullptr ,nullptr            ,nullptr      ,fnB             ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,7 ,4 ,nullptr ,"dfnB(x,y,z,1).*var(1,2)", 
+          "" },
+        { "fnC"             ,4,3 ,12,15,1,1,nullptr ,nullptr            ,nullptr      ,nullptr         ,fnC        ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,15,12,nullptr ,"(dfnC(x,y,z,1,var(0,3),0).*var(1,2))+(dfnC(x,y,z,0,var(0,3),1).*var(1,3))", 
+          "" },
+        { "dfnB"            ,4,11,4 ,15,1,1,nullptr ,nullptr            ,nullptr      ,nullptr         ,dfnB       ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,15,4 ,nullptr ,"dfnB(x,y,z,var(0,3)+1).*var(1,2)", 
+          "" },
+        { "dfnC"            ,6,43,20,63,1,1,nullptr ,nullptr            ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,dfnC   ,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,63,20,nullptr ,"(dfnC(x,y,z,var(0,3)+1,var(0,4),var(0,5)).*var(1,2))+(dfnC(x,y,z,var(0,3),var(0,4),var(0,5)+1).*var(1,4))", 
+          "" },
+        { "efnB"            ,3,3 ,4 ,7 ,1,1,nullptr ,nullptr            ,nullptr      ,efnB            ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,7 ,4 ,nullptr ,"edfnB(x,y,z,1).*var(1,2)", 
+          "" },
+        { "efnC"            ,4,3 ,12,15,1,1,nullptr ,nullptr            ,nullptr      ,nullptr         ,efnC       ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,15,12,nullptr ,"(edfnC(x,y,z,1,var(0,3),0).*var(1,2))+(edfnC(x,y,z,0,var(0,3),1).*var(1,3))", 
+          "" },
+        { "edfnB"           ,4,11,4 ,15,1,1,nullptr ,nullptr            ,nullptr      ,nullptr         ,edfnB      ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,15,4 ,nullptr ,"edfnB(x,y,z,var(0,3)+1).*var(1,2)", 
+          "" },
+        { "edfnC"           ,6,43,20,63,1,1,nullptr ,nullptr            ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,edfnC  ,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,63,20,nullptr ,"(edfnC(x,y,z,var(0,3)+1,var(0,4),var(0,5)).*var(1,2))+(edfnC(x,y,z,var(0,3),var(0,4),var(0,5)+1).*var(1,4))", 
+          "" },
+        { "irand"           ,1,1 ,0 ,1 ,1,2,nullptr ,irand              ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "uniform positive random integer [0,i-1]" },
+        { "urand"           ,2,3 ,0 ,3 ,1,2,nullptr ,nullptr            ,urand        ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"urand(var(1,0),var(1,1))", 
+          "uniform random double [x,y]" },
+        { "grand"           ,2,0 ,3 ,3 ,1,2,nullptr ,nullptr            ,grand        ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"grand(var(1,0),var(1,1))", 
+          "gaussian random double from N(m,c)" },
+        { "testfn"          ,2,2 ,3 ,3 ,1,0,nullptr ,nullptr            ,testfn       ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "" },
+        { "testfnA"         ,3,2 ,7 ,7 ,1,0,nullptr ,nullptr            ,nullptr      ,testfnA         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "" },
+        { "partestfn"       ,3,4 ,7 ,7 ,1,0,nullptr ,nullptr            ,nullptr      ,partestfn       ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "" },
+        { "partestfnA"      ,4,4 ,15,15,1,0,nullptr ,nullptr            ,nullptr      ,nullptr         ,partestfnA ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "" },
         { "isvnan"          ,1,1 ,0 ,1 ,1,0,nullptr ,isvnan             ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,OP_isvnan      ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
           "True of NaN." },
         { "isinf"           ,1,1 ,0 ,1 ,1,0,nullptr ,isinf              ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,OP_isinf       ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
@@ -8963,7 +8996,11 @@ static fninfoblock qqqfninfo[NUMFNDEF] = {
         { "psf"             ,1,1 ,0 ,1 ,1,0,nullptr ,psf                ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
           "Pickover's superfactorial " },
         { "subfact"         ,1,1 ,0 ,1 ,1,0,nullptr ,subfact            ,nullptr      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,1 ,1 ,nullptr ,"realDeriv(0,0,gami(-1,x+1)/exp(1))*var(1,0)", 
-          "Subfactorial !a" }
+          "Subfactorial !a" },
+        { "syscall"         ,2,0 ,3 ,3 ,0,1,nullptr ,nullptr            ,syscall      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "System call to evaluate, eg syscall(\"command\",x)" },
+        { "pycall"          ,2,0 ,3 ,3 ,0,1,nullptr ,nullptr            ,pycall       ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "System (python3) call to evaluate, eg pycall(\"sin\",x)" }
 };
 
 
@@ -18105,6 +18142,90 @@ gentype partestfnA(const gentype &i, const gentype &M, const gentype &x, const g
 
     return res;
 }
+
+
+
+
+
+
+
+
+
+
+
+// System/exe/python calls
+
+gentype syscall(const gentype &c, const gentype &x)
+{
+    gentype res;
+
+    if ( c.isValEqnDir() || x.isValEqnDir() )
+    {
+        const static gentype resx("syscall(x,y)");
+        return resx(c,x);
+    }
+
+    if ( !(c.isValString()) )
+    {
+        constructError(c,x,res,"Command must evaluate to string in syscall.");
+    }
+
+    else
+    {
+        std::string resstr;
+        std::string callstr((const std::string &) c);
+
+        callstr += " ";
+        callstr += (const std::string &) x;
+        svm_execall(resstr,callstr);
+
+        // Just in case you call python this way... see comment in pycall function.
+
+        std::stringstream pleasework(resstr);
+        pleasework >> res;
+    }
+
+    return res;
+}
+
+gentype pycall(const gentype &c, const gentype &x)
+{
+    gentype res;
+
+    if ( c.isValEqnDir() || x.isValEqnDir() )
+    {
+        const static gentype resx("pycall(x,y)");
+        return resx(c,x);
+    }
+
+    if ( !(c.isValString()) )
+    {
+        constructError(c,x,res,"Command must evaluate to string in pycall.");
+    }
+
+    else
+    {
+        std::string resstr;
+        std::string callstr((const std::string &) c);
+
+        callstr += " ";
+        callstr += (const std::string &) x;
+        svm_pycall(resstr,callstr);
+
+        // At this point I would like to just write "res = resstr", but
+        // python messes things up with unix-y newlines that seem to
+        // break stuff, and C++ seems to actively impede me stripping
+        // said characters from the string. Quick workaround below...
+        //
+        // Why the actual fuck is this sort of crap still a thing?
+
+        std::stringstream pleasework(resstr);
+        pleasework >> res;
+    }
+
+    return res;
+}
+
 
 
 

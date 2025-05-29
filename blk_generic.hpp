@@ -119,6 +119,12 @@ public:
     // Make this null so that it can be included as a prior without wasting time in optimising... nothing
     virtual double tuneKernel(int, double, int = 1, int = 0, const tkBounds * = nullptr) override { return 0; }
 
+    virtual double C    (void) const { return DEFAULT_C;   }
+    virtual double sigma(void) const { return 1.0/sigma(); }
+
+    virtual int setC    (double xC)     { return setsigma(1/xC);       }
+    virtual int setsigma(double xsigma) { locsigma = xsigma; return 1; }
+
 
     // ================================================================
     //     BLK Specific functions
@@ -386,6 +392,8 @@ private:
 
     int xmlqmode;
 
+    double locsigma;
+
     gentype doutfn;
 
     std::istream *xuseristream;
@@ -485,6 +493,8 @@ inline void BLK_Generic::qswapinternal(ML_Base &bb)
     qswap(xissample,b.xissample);
 
     qswap(xmlqmode,b.xmlqmode);
+
+    qswap(locsigma,b.locsigma);
 
     qswap(doutfn       ,b.doutfn       );
     qswap(xmercachesize,b.xmercachesize);
@@ -588,6 +598,8 @@ inline void BLK_Generic::semicopy(const ML_Base &bb)
 
     xmlqmode = b.xmlqmode;
 
+    locsigma = b.locsigma;
+
     doutfn        = b.doutfn;
     xmercachesize = b.xmercachesize;
     xmercachenorm = b.xmercachenorm;
@@ -661,6 +673,8 @@ inline void BLK_Generic::assign(const ML_Base &bb, int onlySemiCopy)
     xissample = src.xissample;
 
     xmlqmode = src.xmlqmode;
+
+    locsigma = src.locsigma;
 
     doutfn        = src.doutfn;
     xmercachesize = src.xmercachesize;

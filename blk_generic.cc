@@ -36,6 +36,7 @@ std::ostream &BLK_Generic::printstream(std::ostream &output, int dep) const
     repPrint(output,'>',dep) << "Mercer cache size:     " << xmercachesize         << "\n";
     repPrint(output,'>',dep) << "Mercer cache norm:     " << xmercachenorm         << "\n";
     repPrint(output,'>',dep) << "Averaging mode:        " << xmlqmode              << "\n";
+    repPrint(output,'>',dep) << "Sigma:                 " << locsigma              << "\n";
     repPrint(output,'>',dep) << "Output function:       " << doutfn                << "\n";
     repPrint(output,'>',dep) << "Is this a sample:      " << xissample             << "\n";
     repPrint(output,'>',dep) << "MEX callback:          " << mexfn                 << "\n";
@@ -76,6 +77,7 @@ std::istream &BLK_Generic::inputstream(std::istream &input )
     input >> dummy; input >> xmercachesize;
     input >> dummy; input >> xmercachenorm;
     input >> dummy; input >> xmlqmode;
+    input >> dummy; input >> locsigma;
     input >> dummy; input >> doutfn;
     input >> dummy; input >> xissample;
     input >> dummy; input >> mexfn;
@@ -401,6 +403,8 @@ BLK_Generic::BLK_Generic(int isIndPrune) : ML_Base(isIndPrune)
     xmercachenorm = 0;
 
     xmlqmode = 0;
+
+    locsigma = 1.0/DEFAULT_C;
 
     doutfn.makeNull();
 

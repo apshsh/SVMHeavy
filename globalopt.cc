@@ -11,6 +11,16 @@
 #include "hyper_base.hpp"
 #include "randfun.hpp"
 
+
+//FIXME: polymorph in bayesopt for fidelity
+
+int GlobalOptions::isFeasible(const Vector<gentype> &cres, const Vector<gentype> &xres) const
+{
+    (void) xres;
+
+    return ( cres >= 0.0_gent );
+}
+
 int GlobalOptions::optim(int dim,
                       Vector<gentype> &xres,
                       Vector<gentype> &Xres,
@@ -26,6 +36,7 @@ int GlobalOptions::optim(int dim,
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
                       Vector<gentype> &allfres,
+                      Vector<Vector<gentype> > &allcres,
                       Vector<gentype> &allmres,
                       Vector<gentype> &allsres,
                       Vector<double>  &s_score,
@@ -57,16 +68,43 @@ int GlobalOptions::optim(int dim,
 
             gentype nullval('N');
 
-            res = realOptim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+            res = realOptim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
 
             // Sort allmres to be strictly decreasing!
 
+            int startyet = 0;
+
             for ( k = 0 ; k < allmres.size() ; ++k )
             {
-//FIXME: filter out results not at full fidelity
-                if ( k && allmres(k).isCastableToRealWithoutLoss() && allmres(k-1).isCastableToRealWithoutLoss() )
+                if ( !startyet )
                 {
-                    allmres("&",k) = ( allmres(k) < allmres(k-1) ) ? allmres(k) : allmres(k-1);
+                    if ( isFeasible(allcres(k),allxres(k)) && allmres(k).isCastableToRealWithoutLoss() )
+                    {
+                        for ( int kk = k-1 ; kk >= 0 ; --kk )
+                        {
+                            allmres("&",kk) = allmres(k);
+                        }
+
+                        startyet = 1;
+                    }
+
+                    else
+                    {
+                        allmres("&",k) = nullgentype();
+                    }
+                }
+
+                else
+                {
+                    if ( isFeasible(allcres(k),allxres(k)) && allmres(k).isCastableToRealWithoutLoss() )
+                    {
+                        allmres("&",k) = ( allmres(k) < allmres(k-1) ) ? allmres(k) : allmres(k-1);
+                    }
+
+                    else
+                    {
+                        allmres("&",k) = allmres(k-1);
+                    }
                 }
             }
 
@@ -89,6 +127,8 @@ int GlobalOptions::optim(int dim,
             Vector<gentype> vecires(static_cast<int>(numReps));
 
             Vector<Vector<gentype> > vecallfres(static_cast<int>(numReps));
+            Vector<Vector<Vector<gentype> > > vecallcres(static_cast<int>(numReps));
+            Vector<Vector<Vector<gentype> > > vecallxres(static_cast<int>(numReps));
             Vector<Vector<gentype> > vecallmres(static_cast<int>(numReps));
 
             Vector<gentype> vectres(static_cast<int>(numReps));
@@ -100,13 +140,50 @@ int GlobalOptions::optim(int dim,
             {
                 //GlobalOptions *locopt = makeDup();
 
-                allxres.resize(0);
                 allXres.resize(0);
                 allsres.resize(0);
                 s_score.resize(0);
 
                 //res += (*locopt).realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,vecallfres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
-                res += realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,vecallfres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+                res += realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,vecallxres("&",static_cast<int>(j)),allXres,vecallfres("&",static_cast<int>(j)),vecallcres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+
+                // Sort vecallmres(j) to be strictly decreasing!
+
+                int startyet = 0;
+
+                for ( k = 0 ; k < vecallfres(static_cast<int>(j)).size() ; ++k )
+                {
+                    if ( !startyet )
+                    {
+                        if ( isFeasible(vecallcres(static_cast<int>(j))(k),vecallxres(static_cast<int>(j))(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
+                        {
+                            for ( int kk = k-1 ; kk >= 0 ; --kk )
+                            {
+                                vecallmres("&",static_cast<int>(j))("&",kk) = vecallmres(static_cast<int>(j))(k);
+                            }
+
+                            startyet = 1;
+                        }
+
+                        else
+                        {
+                            vecallmres("&",static_cast<int>(j))("&",k) = nullgentype();
+                        }
+                    }
+
+                    else
+                    {
+                        if ( isFeasible(vecallcres(static_cast<int>(j))(k),vecallxres(static_cast<int>(j))(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
+                        {
+                            vecallmres("&",static_cast<int>(j))("&",k) = ( vecallmres(static_cast<int>(j))(k) < vecallmres(static_cast<int>(j))(k-1) ) ? vecallmres(static_cast<int>(j))(k) : vecallmres(static_cast<int>(j))(k-1);
+                        }
+
+                        else
+                        {
+                            vecallmres("&",static_cast<int>(j))("&",k) = vecallmres(static_cast<int>(j))(k-1);
+                        }
+                    }
+                }
 
                 if ( j == numReps-1 )
                 {
@@ -114,21 +191,12 @@ int GlobalOptions::optim(int dim,
                     ires = (int) vecires(static_cast<int>(j));
 
                     allfres = vecallfres(static_cast<int>(j));
+                    allcres = vecallcres(static_cast<int>(j));
+                    allxres = vecallxres(static_cast<int>(j));
                     allmres = vecallmres(static_cast<int>(j));
                 }
 
-                // Sort vecallmres(j) to be strictly decreasing!
-
-                for ( k = 0 ; k < vecallfres(static_cast<int>(j)).size() ; ++k )
-                {
-                    if ( k && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() && vecallmres(static_cast<int>(j))(k-1).isCastableToRealWithoutLoss() )
-                    {
-//FIXME: filter out results not at full fidelity
-                        vecallmres("&",static_cast<int>(j))("&",k) = ( vecallmres(static_cast<int>(j))(k) < vecallmres(static_cast<int>(j))(k-1) ) ? vecallmres(static_cast<int>(j))(k) : vecallmres(static_cast<int>(j))(k-1);
-                    }
-                }
-
-                maxxlen = ( vecallmres(static_cast<int>(j)).size() > maxxlen ) ? vecallmres(static_cast<int>(j)).size() : maxxlen; 
+                maxxlen = ( vecallmres(static_cast<int>(j)).size() > maxxlen ) ? vecallmres(static_cast<int>(j)).size() : maxxlen;
 
                 findfirstLT(vectres("&",static_cast<int>(j)),vecallmres(static_cast<int>(j)),softmin);
                 findfirstLT(vecTres("&",static_cast<int>(j)),vecallmres(static_cast<int>(j)),hardmin);
@@ -142,12 +210,15 @@ int GlobalOptions::optim(int dim,
             }
 
             retVector<gentype> tmpva;
+            retVector<Vector<gentype> > tmpvu;
 
             for ( j = 0 ; j < numReps ; ++j )
             {
                 if ( ( k = vecallmres(static_cast<int>(j)).size() ) < maxxlen )
                 {
                     (vecallfres("&",static_cast<int>(j)).resize(maxxlen))("&",k,1,maxxlen-1,tmpva) = vecallfres(static_cast<int>(j))(k-1);
+                    (vecallcres("&",static_cast<int>(j)).resize(maxxlen))("&",k,1,maxxlen-1,tmpvu) = vecallcres(static_cast<int>(j))(k-1);
+                    (vecallxres("&",static_cast<int>(j)).resize(maxxlen))("&",k,1,maxxlen-1,tmpvu) = vecallxres(static_cast<int>(j))(k-1);
                     (vecallmres("&",static_cast<int>(j)).resize(maxxlen))("&",k,1,maxxlen-1,tmpva) = vecallmres(static_cast<int>(j))(k-1);
                 }
             }
@@ -179,6 +250,7 @@ int GlobalOptions::realOptim(int dim,
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
                       Vector<gentype> &allfres,
+                      Vector<Vector<gentype> > &allcres,
                       Vector<gentype> &allmres,
                       Vector<gentype> &allsres,
                       Vector<double>  &s_score,
@@ -207,6 +279,7 @@ int GlobalOptions::realOptim(int dim,
         // allxres: vector of all vectors evaluated
         // allXres: vector of all vectors evaluated, in raw (unprojected/undistorted) format
         // allfres: vector of all f(x) evaluations
+        // allcres: vector of all c(x) evaluations
         // xmin: lower bound on variables
         // xmax: upper bound on variables
         // distMode: 0 = linear distribution of points
@@ -428,6 +501,7 @@ int GlobalOptions::realOptim(int dim,
             Vector<Vector<gentype> > locallxres;
             Vector<Vector<gentype> > locallXres;
             Vector<gentype> locallfres;
+            Vector<Vector<gentype> > locallcres;
             Vector<gentype> locallmres;
             Vector<gentype> locallsres;
             Vector<double>  locs_score;
@@ -483,7 +557,7 @@ int GlobalOptions::realOptim(int dim,
 
             model_log(0,locxmin,locxmax,locymin,locymax); // model_log records these min/max for later use!
 
-            res = optim(dim,locXres,locfres,locires,locallXres,locallfres,locallmres,locallsres,locs_score,
+            res = optim(dim,locXres,locfres,locires,locallXres,locallfres,locallcres,locallmres,locallsres,locs_score,
                         fakexmin,fakexmax,overfn,overfnargs,killSwitch);
 
             model_log(2);
@@ -508,6 +582,7 @@ int GlobalOptions::realOptim(int dim,
                 allxres.append(allxres.size(),locallxres);
                 allXres.append(allXres.size(),locallXres);
                 allfres.append(allfres.size(),locallfres);
+                allcres.append(allcres.size(),locallcres);
                 allmres.append(allmres.size(),locallmres);
                 allsres.append(allsres.size(),locallsres);
                 s_score.append(s_score.size(),locs_score);
@@ -533,6 +608,7 @@ int GlobalOptions::realOptim(int dim,
                 allxres.append(allxres.size(),locallxres);
                 allXres.append(allXres.size(),locallXres);
                 allfres.append(allfres.size(),locallfres);
+                allcres.append(allcres.size(),locallcres);
                 allmres.append(allmres.size(),locallmres);
                 allsres.append(allsres.size(),locallsres);
                 s_score.append(s_score.size(),locs_score);
@@ -562,6 +638,7 @@ int GlobalOptions::realOptim(int dim,
                 allxres.append(allxres.size(),locallxres);
                 allXres.append(allXres.size(),locallXres);
                 allfres.append(allfres.size(),locallfres);
+                allcres.append(allcres.size(),locallcres);
                 allmres.append(allmres.size(),locallmres);
                 allsres.append(allsres.size(),locallsres);
                 s_score.append(s_score.size(),locs_score);
@@ -916,6 +993,13 @@ void overfn(gentype &res, Vector<gentype> &x, void *arg)
 
     bool actualtest = false;
 
+    if ( res.isValNull() )
+    {
+        // Process request to remove the previous (non) observation
+        allxres.remove(allxres.size()-1);
+        return;
+    }
+
     if ( xmod.size() )
     {
         actualtest = true;
@@ -1269,14 +1353,15 @@ double calcabc(int dim,
 
 
 int GlobalOptions::analyse(const Vector<Vector<gentype> > &allxres,
-                           const Vector<gentype> &allfresmod,
+                           const Vector<gentype> &allmres,
+                           const Vector<Vector<gentype> > &allcres,
                            Vector<double> &hypervol,
                            Vector<int> &parind,
                            int calchypervol) const
 {
-    NiceAssert( allxres.size() == allfresmod.size() );
+    NiceAssert( allxres.size() == allmres.size() );
 
-//errstream() << "DEBUG: allfresmod = " << allfresmod << "\n";
+//errstream() << "DEBUG: allmres = " << allmres << "\n";
     int N = allxres.size();
 
     parind.resize(N);
@@ -1290,15 +1375,15 @@ int GlobalOptions::analyse(const Vector<Vector<gentype> > &allxres,
 
         if ( calchypervol )
         {
-            if ( allfresmod(0).isValReal() )
+            if ( allmres(0).isValReal() )
             {
                 int i;
 
                 for ( i = 0 ; i < N ; ++i )
                 {
-                    if ( !i || ( (double) allfresmod(i) < -(hypervol(i-1)) ) )
+                    if ( !i || ( (double) allmres(i) < -(hypervol(i-1)) ) )
                     {
-                        hypervol("&",i) = -((double) allfresmod(i));
+                        hypervol("&",i) = -((double) allmres(i));
                     }
 
                     else
@@ -1312,7 +1397,7 @@ int GlobalOptions::analyse(const Vector<Vector<gentype> > &allxres,
             {
                 int i,j;
 
-                int M = (allfresmod(0)).size();
+                int M = (allmres(0)).size();
                 double **X;
 
                 MEMNEWARRAY(X,double *,N);
@@ -1327,7 +1412,7 @@ int GlobalOptions::analyse(const Vector<Vector<gentype> > &allxres,
 
                     for ( j = 0 ; j < M ; ++j )
                     {
-                        X[i][j] = -((double) ((allfresmod(i))(j)));
+                        X[i][j] = -((double) ((allmres(i))(j)));
                     }
 
                     hypervol("&",i) = h(X,i+1,M);
@@ -1344,17 +1429,27 @@ int GlobalOptions::analyse(const Vector<Vector<gentype> > &allxres,
 
         // Work out Pareto set
 
-        int m = allfresmod(0).size();
+        int m = allmres(0).size();
 
         retVector<int> tmpva;
 
         parind = cntintvec(N,tmpva);
 
+        // First remove all points that are infeasible - ie !(c(x) >= 0). Note that c(x)<0 can't be use (what if c(x) is 0-dimensional inequalities evaluate as true)
+
+        for ( int pos = parind.size()-1 ; pos >= 0 ; --pos )
+        {
+            if ( !isFeasible(allcres(pos),allxres(pos)) )
+            {
+                parind.remove(pos);
+            }
+        }
+
         int pos,i,j,isdom;
 
         for ( pos = parind.size()-1 ; pos >= 0 ; --pos )
         {
-            NiceAssert( allfresmod(pos).size() == m );
+            NiceAssert( allmres(pos).size() == m );
 
             // Test if allfres(parind(pos)) is dominated by any points
             // in parind != pos.  If it is then remove it from parind.
@@ -1372,7 +1467,7 @@ int GlobalOptions::analyse(const Vector<Vector<gentype> > &allxres,
 
                     for ( j = 0 ; j < m ; ++j )
                     {
-                        if ( allfresmod(parind(pos))(j) < allfresmod(parind(i))(j) )
+                        if ( allmres(parind(pos))(j) < allmres(parind(i))(j) )
                         {
                             isdom = 0;
                             break;
@@ -1388,7 +1483,7 @@ int GlobalOptions::analyse(const Vector<Vector<gentype> > &allxres,
 
             if ( isdom )
             {
-//errstream() << "DEBUG: " << allfresmod(parind(i)) << " dominates " << allfresmod(parind(pos)) << "\n";
+//errstream() << "DEBUG: " << allmres(parind(i)) << " dominates " << allmres(parind(pos)) << "\n";
 //errstream() << "DEBUG: index " << parind(i) << " dominates index " << parind(pos) << "\n";
 //errstream() << "DEBUG: subindex " << i << " dominates subindex " << pos << "\n";
                 parind.remove(pos);

@@ -17,7 +17,6 @@
 #include <mutex>
 #endif
 #include "mercer.hpp"
-#include "awarestream.hpp"
 #include "randfun.hpp"
 
 

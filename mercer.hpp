@@ -111,7 +111,6 @@ xagradordadd = amount to be added to xagradOrder, use this rather than modify x
 #include "sparsevector.hpp"
 #include "matrix.hpp"
 #include "numbase.hpp"
-#include "awarestream.hpp"
 #include "mlcommon.hpp"
 
 

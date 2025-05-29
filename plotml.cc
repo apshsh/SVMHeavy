@@ -16,6 +16,7 @@
 #include "plotbase.hpp"
 #include "blk_conect.hpp"
 #include <sstream>
+#include <fstream>
 
 
 #ifdef NDEBUG
