@@ -177,7 +177,8 @@ class fninnerinnerArg
                     const int &_qNbasecgt,
                     const int &_gridi,
                     const int &_isgridopt,
-                    const int &_isfullgrid,
+                    const int &_iscontopt,
+                    const bool &_isfullgrid,
                     const int &_isstable,
                     Vector<int> &_ysort,
                     const int &_stabp,
@@ -236,6 +237,7 @@ class fninnerinnerArg
                                                 Nbasecgt(_qNbasecgt),
                                                 _q_gridi(_gridi),
                                                 isgridopt(_isgridopt),
+                                                iscontopt(_iscontopt),
                                                 isfullgrid(_isfullgrid),
                                                 isstable(_isstable),
                                                 ysort(_ysort),
@@ -301,6 +303,7 @@ class fninnerinnerArg
                                                   Nbasecgt(src.Nbasecgt),
                                                   _q_gridi(src._q_gridi),
                                                   isgridopt(src.isgridopt),
+                                                  iscontopt(src.iscontopt),
                                                   isfullgrid(src.isfullgrid),
                                                   isstable(src.isstable),
                                                   ysort(src.ysort),
@@ -372,7 +375,8 @@ class fninnerinnerArg
     const int &Nbasecgt;
     int _q_gridi;
     const int &isgridopt;
-    const int &isfullgrid;
+    const int &iscontopt;
+    const bool &isfullgrid;
     const int &isstable;
     Vector<int> &ysort;
     const int &stabp;
@@ -862,9 +866,9 @@ class fninnerinnerArg
 
     if ( thisbatchsize == 1 )
     {
-        if ( isgridopt && isfullgrid && ( gridi >= 0 ) )
+        if ( isgridopt && ( gridi >= 0 ) && ( isfullgrid || ( bbopts.model_d()(Nbasemu+gridi) == 2 ) ) )
         {
-            if ( ( ( method != 0 ) && ( method != 12 ) && ( method != 16 ) ) || bbopts.isimphere() )
+//            if ( ( ( method != 0 ) && ( method != 12 ) && ( method != 16 ) ) || bbopts.isimphere() )
             {
                 // Model requires sigma
 
@@ -875,18 +879,18 @@ class fninnerinnerArg
                 OP_sqrt(sigmay);
             }
 
-            else
-            {
-                // Model does not require sigma, so don't waste time calculating it.
-
-                muy = bbopts.model_y()(Nbasemu+gridi);
-                //bbopts.model_muTrainingVector(muy,Nbasemu+gridi);
-
-                sigmay = 0.0;
-            }
+//            else
+//            {
+//                // Model does not require sigma, so don't waste time calculating it.
+//
+//                muy = bbopts.model_y()(Nbasemu+gridi);
+//                //bbopts.model_muTrainingVector(muy,Nbasemu+gridi);
+//
+//                sigmay = 0.0;
+//            }
         }
 
-        else if ( isgridopt && !isfullgrid && ( gridi >= 0 ) )
+        else if ( isgridopt && !iscontopt && ( gridi >= 0 ) )
         {
             if ( ( ( method != 0 ) && ( method != 12 ) && ( method != 16 ) ) || bbopts.isimphere() )
             {
@@ -902,8 +906,9 @@ class fninnerinnerArg
                 // Model does not require sigma, so don't waste time calculating it.
 
                 bbopts.model_muTrainingVector(muy,Nbasemu+gridi);
+                sigmay = bbopts.model_sigma(0); // Yes this is lazy.
 
-                sigmay = 0.0;
+//                sigmay = 0.0;
             }
         }
 
@@ -1126,7 +1131,7 @@ class fninnerinnerArg
         else
         {
             NiceAssert( !isfullgrid );
-
+            NiceAssert( gridi >= 0 );
             bbopts.model_stabProbTrainingVector(stabscore,Nbasemu+gridi,stabp,stabpnrm,stabrot,stabmu,stabB);
         }
 
@@ -1402,6 +1407,9 @@ class fninnerinnerArg
                 double locsigmay = (double) sigmay;
                 double locmuy = (double) muy;
 
+                locmuy += 1.0; // DESIGN DECISION: typically mu will range between -1,0 here, but this scaling is bad for the constrained case. Thus we
+                               // add 1 to "fix" the problem and make mu range from 0,1 (somewhat arbitrarily).
+
                 //FIXME: assuming binomial distribution here, may not be valid
 
                 if ( isstable && !stabUseSig )
@@ -1475,7 +1483,7 @@ locsigmay = stabscore*stabscore*locsigmay;
         Vector<gentype> mucgt;
         Vector<gentype> varcgt;
 
-        if ( isgridopt )
+        if ( isgridopt && !iscontopt && ( gridi >= 0 ) )
         {
             bbopts.model_muvarTrainingVector_cgt(varcgt,mucgt,Nbasecgt+gridi);
         }
@@ -1581,12 +1589,15 @@ int dogridOpt(int dim,
               gentype &fres,
               int &ires,
               int &gridires,
+              const Vector<double> &xmin,
+              const Vector<double> &xmax,
               double (*fn)(int n, const double *x, void *arg),
               void *fnarg,
-              const BayesOptions &dopts,
+              const BayesOptions &bopts,
               ML_Base &gridsource,
               Vector<int> &gridind,
               svmvolatile int &killSwitch,
+              const DIRectOptions &dopts,
               double xmtrtime);
 
 
@@ -1595,40 +1606,46 @@ int dogridOpt(int dim,
               gentype &fres,
               int &ires,
               int &gridires,
+              const Vector<double> &xmin,
+              const Vector<double> &xmax,
               double (*fn)(int n, const double *x, void *arg),
               void *fnarg,
-              const BayesOptions &dopts,
+              const BayesOptions &bopts,
               ML_Base &gridsource,
               Vector<int> &gridind,
               svmvolatile int &killSwitch,
+              const DIRectOptions &dopts,
               double xmtrtime)
 {
     NiceAssert( dim > 0 );
     NiceAssert( gridind.size() > 0 );
+
+    ires = -1;
+    gridires = -1;
+
+    int locires = -1;
+    int locgridires = -1;
 
     (void) gridsource;
 
     int &gridi = (*((fninnerinnerArg *) fnarg))._q_gridi;
     int Nbasemu = (*((fninnerinnerArg *) fnarg)).Nbasemu;
 
-    double hardmin = dopts.hardmin;
-    double hardmax = dopts.hardmax;
+    double hardmin = bopts.hardmin;
+    double hardmax = bopts.hardmax;
     double tempfres;
 
     xres.resize(dim);
 
-    double *x = &xres("&",0);
-    double *xx;
+    Vector<double> xxres(dim);
 
-    MEMNEWARRAY(xx,double,dim);
+    double *x = &xres("&",0);
+    double *xx = &xxres("&",0);
 
     nullPrint(errstream(),"MLGrid Optimisation Initiated");
 
     int i,j;
     int oldgridi = gridi;
-
-    ires     = -1;
-    gridires = -1;
 
     int timeout = 0;
     double *uservars[] = { &xmtrtime, nullptr };
@@ -1645,23 +1662,74 @@ int dogridOpt(int dim,
         // This will propagate through fnarg[38], which will then be passed into function
         // *xinf = &((gridsource.xinfo(gridi)));
 
+        Vector<double> locxmin(dim);
+        Vector<double> locxmax(dim);
+
+        int numnulls = 0;
+
         for ( j = 0 ; j < dim ; ++j )
         {
-            xx[j] = (double) dopts.model_x(Nbasemu+gridi)(j); //(gridsource.x(gridi))(j);
+            if ( !bopts.model_x(Nbasemu+gridi)(j).isValNull() )
+            {
+                xxres("&",j) = (double) bopts.model_x(Nbasemu+gridi)(j); //(gridsource.x(gridi))(j);
+
+                locxmin("&",j) = xx[j];
+                locxmax("&",j) = xx[j];
+            }
+
+            else if ( xmin(j) == xmax(j) )
+            {
+                locxmin("&",j) = xmin(j);
+                locxmax("&",j) = xmax(j);
+
+                xxres("&",j) = xmin(j);
+            }
+
+            else
+            {
+                locxmin("&",j) = xmin(j);
+                locxmax("&",j) = xmax(j);
+
+                ++numnulls;
+            }
         }
 
-        tempfres = (*fn)(dim,xx,fnarg);
+        if ( !numnulls )
+        {
+            // x is fully defined by the grid, so we need only evaluate the acquisition function
 
-        if ( ( ires == -1 ) || ( tempfres < (double) fres ) )
+            tempfres = (*fn)(dim,xx,fnarg);
+        }
+
+        else
+        {
+            // x is not fully defined by the grid, so we need to invoke direct to optimise the continuous factors
+            // Note that the bounds xmin,xmax are already clamped to the non-null grid components to prevent change
+
+            gentype dummyres;
+
+//errstream() << "Local DIRect call on grid element " << gridi << "...\t";
+//FIXME: should probably check the return type here to make sure direct terminated properly!
+//            int neargridi = gridi; gridi = -1; // want the inner direct to think this is continuous!
+            int directres = directOpt(dim,xxres,dummyres,locxmin,locxmax,fnfnapprox,fnarg,dopts,killSwitch);
+//            gridi = neargridi;
+//errstream() << directres << "\n";
+errstream() << "(" << gridi << "," << directres << "):";
+            (void) directres;
+
+            tempfres = (double) dummyres;
+        }
+
+        if ( ( locires == -1 ) || ( tempfres < (double) fres ) )
         {
             for ( j = 0 ; j < dim ; ++j )
             {
                 x[j] = xx[j];
             }
 
-            fres     = tempfres;
-            ires     = i;
-            gridires = gridi;
+            fres        = tempfres;
+            locires     = i;
+            locgridires = gridi;
 
             //xinfopt = *xinf;
 
@@ -1692,11 +1760,14 @@ int dogridOpt(int dim,
         }
     }
 
+    ires     = locires;
+    gridires = locgridires;
+
     gridi = oldgridi;
 
     nullPrint(errstream(),"MLGrid Optimisation Ended");
 
-    MEMDELARRAY(xx);
+//    MEMDELARRAY(xx);
 
     return 0;
 }
@@ -1793,7 +1864,7 @@ void readres(gentype &res, double &addvar,
 {
     // Defaults
 
-    //xobstype = 2;
+    //xobstype = 2; // this may be preset in gridsource
     xobstype_cgt.resize(0);
     xaddf4.resize(0);
     xaddgrad.resize(0);
@@ -1911,7 +1982,7 @@ bool process_obs(gentype &y, Vector<gentype> &ycgt, int &xobstype, Vector<int> &
 // ===========================================================================
 // ===========================================================================
 
-#define CONT_TEST ( !stopnow && !stopearly && !killSwitch && !isopt && ( ( itcnt-skipcnt < (size_t) maxitcnt ) || !maxitcnt ) && !timeout && ( !isgridopt || gridind.size() ) && ( !usefidbudget || ( fidtotcost < bopts.fidbudget ) ) )
+#define CONT_TEST ( !stopnow && !stopearly && !killSwitch && !isopt && ( ( itcnt-skipcnt < (size_t) maxitcnt ) || !maxitcnt ) && !timeout && ( !isgridopt || ( gridind.size() > recBatchSize ) ) && ( !usefidbudget || ( fidtotcost < bopts.fidbudget ) ) )
 
 int bayesOpt(int dim,
              Vector<double> &xres,
@@ -2054,6 +2125,7 @@ int bayesOpt(int dim,
     retVector<int> tmpva;
 
     ML_Base *gridsource = bopts.gridsource;
+    ML_Base *presource  = bopts.presource;
     int gridi           = -1;
     int gridref         = -1;
     double gridy        = 0;
@@ -2065,21 +2137,30 @@ int bayesOpt(int dim,
     int Npreadd         = 0;
     gentype ggridy;
 
+    Vector<int> gridall;
     Vector<int> gridind;
+    Vector<int> griddone; // this will store indices that have been added
+    Vector<int> grid_xobstype;
+    Vector<int> griddone_xobstype;
 
     int ires = -1;
     fres = 0;
 
-    int isfullgrid = 0; // full grid with unknown constraints
+    bool isfullgrid   = false; // full grid with unknown constraints if true (so don't actually need a GP model for the objective, just the constraints)
+    bool gridHasNulls = false; // true if grid has undefined x's that may trigger inner-inner continuous optimizer
+
+    Vector<int> xhasnulls;
 
     if ( gridsource )
     {
         // Work out if this is a full grid with unknown constraints
 
+        xhasnulls.resize((*gridsource).N()) = 0;
+
         if ( bopts.numcgt )
         {
-            isfullgrid = 1;
-            int allfullobs = 0;
+            isfullgrid = true;
+            int allfullobs = 1;
 
             for ( i = 0 ; i < (*gridsource).N() ; ++i )
             {
@@ -2092,22 +2173,40 @@ int bayesOpt(int dim,
                 gentype ytoadd = yyval.negate(); // by default, negative of model
 
                 bool fullobs = process_obs(ytoadd,ycgt,xobstype,xobstype_cgt);
+                const SparseVector<gentype> &xtoadd = replacex ? xreplace : (*gridsource).x(i);
 
-                if ( ytoadd.isValNull() )
+                if ( !xobstype )
                 {
-                    isfullgrid = 0;
-                    break;
+                    isfullgrid = false;
                 }
 
                 if ( !fullobs )
                 {
                     allfullobs = 0;
                 }
+
+                for ( int aa = 0 ; aa < effdim ; ++aa )
+                {
+                    if ( xtoadd(aa).isValNull() )
+                    {
+                        gridHasNulls = true;
+                        xhasnulls("&",i) = 1;
+                    }
+                }
+
+// Design decision: if there is a null in the vector but y is defined then this indicates that y is independent of nulled x values
+//phantomabc                for ( int aa = 0 ; aa < effdim ; ++aa )
+//                {
+//                    if ( xtoadd(aa).isValNull() )
+//                    {
+//                        isfullgrid = false;
+//                    }
+//                }
             }
 
             if ( allfullobs )
             {
-                isfullgrid = 0;
+                isfullgrid = false;
             }
         }
 
@@ -2115,9 +2214,9 @@ int bayesOpt(int dim,
 
         for ( i = 0 ; i < (*gridsource).N() ; ++i )
         {
-            gentype yyval = ((*gridsource).y())(i); // y value as defined in the model (not processed yet)
+            gentype yyval = (*gridsource).y()(i); // y value as defined in the model (not processed yet)
 
-            xobstype = ((*gridsource).d())(i); // default value as specified in gridsource
+            xobstype = (*gridsource).d()(i); // default value as specified in gridsource
             xobstype_cgt.resize(0); //bopts.numcgt) = 2; // default value is equality on constraints
 
             readres(yyval,addvar,ycgt,xreplace,replacex,stopnow,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt);
@@ -2132,11 +2231,21 @@ int bayesOpt(int dim,
                 xobstype_cgt.resize(bopts.numcgt) = 0;
             }
 
-            if ( isfullgrid )
+            if ( xhasnulls(i) )
+            {
+                Vector<int> loczerovec(xobstype_cgt);
+
+                loczerovec = 0;
+
+                bopts.model_addTrainingVector_musigma(ytoadd,yyval,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,0); // we set d=0 because this is a placeholder
+                bopts.model_addTrainingVector_cgt(ycgt,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,loczerovec); // we set d=0 because this is a placeholder
+            }
+
+            else if ( isfullgrid )
             {
                 NiceAssert( ( xobstype == 0 ) || ( xobstype == 2 ) );
 
-                bopts.model_addTrainingVector_musigma(ytoadd,yyval,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,0);
+                bopts.model_addTrainingVector_musigma(ytoadd,yyval,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,0); // we set d=0 to prevent training and hence time-wasting
                 bopts.model_addTrainingVector_cgt(ycgt,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype_cgt);
             }
 
@@ -2162,8 +2271,17 @@ int bayesOpt(int dim,
 
             else
             {
+                gridall.add(gridall.size());
+                gridall("&",gridall.size()-1) = i;
+
                 gridind.add(gridind.size());
                 gridind("&",gridind.size()-1) = i;
+
+                grid_xobstype.add(grid_xobstype.size());
+                grid_xobstype("&",grid_xobstype.size()-1) = xobstype;
+
+//                grid_xobstype_cgt.add(grid_xobstype_cgt.size());
+//                grid_xobstype_cgt("&",grid_xobstype_cgt.size()-1) = xobstype_cgt;
 
                 ++Ngrid;
             }
@@ -2174,11 +2292,76 @@ int bayesOpt(int dim,
     Nbasesigma += Npreadd;
     Nbasecgt   += Npreadd;
 
+    int Npreadd_mu = 0;
+    int Npreadd_sigma = 0;
+    int Npreadd_cgt = 0;
+
+    if ( presource && !isfullgrid )
+    {
+        NiceAssert( !isfullgrid );
+
+        for ( i = 0 ; i < (*presource).N() ; ++i )
+        {
+            gentype yyval = (*presource).y()(i); // y value as defined in the model (not processed yet)
+
+            xobstype = (*presource).d()(i); // default value as specified in presource
+            xobstype_cgt.resize(0); //bopts.numcgt) = 2; // default value is equality on constraints
+
+            readres(yyval,addvar,ycgt,xreplace,replacex,stopnow,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt);
+            gentype ytoadd = yyval.negate(); // by default, negative of model
+
+            process_obs(ytoadd,ycgt,xobstype,xobstype_cgt);
+            const SparseVector<gentype> &xtoadd = replacex ? xreplace : (*presource).x(i); // allow x to be redefined (design choice)
+
+            if ( xobstype )
+            {
+                bopts.model_addTrainingVector_musigma(ytoadd,yyval,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype);
+
+                ++Npreadd_mu;
+                ++Npreadd_sigma;
+
+                if ( ( ( ires == -1 ) || ( ytoadd > fres ) ) && ( ycgt >= 0.0_gent ) )
+                {
+                    fres = (double) ytoadd;
+                    ires = Nbasemu+i;
+                }
+            }
+
+            bool fullcgt = true;
+
+            for ( int aa = 0 ; fullcgt && ( aa < bopts.numcgt ) ; ++aa )
+            {
+                if ( xobstype_cgt(aa) == 0 )
+                {
+                    fullcgt = false;
+                }
+            }
+
+            if ( fullcgt )
+            {
+                bopts.model_addTrainingVector_cgt(ycgt,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype_cgt);
+
+                ++Npreadd_cgt;
+            }
+        }
+    }
+
+    Nbasemu    += Npreadd_mu;
+    Nbasesigma += Npreadd_sigma;
+    Nbasecgt   += Npreadd_cgt;
+
+    // Possible optimiser modes:
+    //
+    // Pure grid:        isgridopt && !iscontopt
+    // Pure continuous: !isgridopt &&  iscontopt
+    // Mixed integer:    isgridopt &&  iscontopt
+
     int isgridopt = Ngrid ? 1 : 0;
+    int iscontopt = ( gridHasNulls || !isgridopt ) ? 1 : 0;
 
     if ( !isgridopt )
     {
-        isfullgrid = 0;
+        isfullgrid = false;
     }
 
     NiceAssert( !isgridopt || !(bopts.isXconvertNonTrivial()) );
@@ -2304,7 +2487,7 @@ int bayesOpt(int dim,
                 randfill(dodum,'S',(int) time(nullptr));
             }
 
-            for ( i = Nstart ; ( ( ( i < Nstart+startpoints ) || !startpoints ) && !killSwitch && ( !isgridopt || gridind.size() ) && ( !usefidbudget || ( fidtotcost < (bopts.fidbudget)/10 ) ) ) ; ++i )
+            for ( i = Nstart ; ( ( ( i < Nstart+startpoints ) || !startpoints ) && !killSwitch && ( !isgridopt || ( gridind.size() > recBatchSize ) ) && ( !usefidbudget || ( fidtotcost < (bopts.fidbudget)/10 ) ) ) ; ++i )
             {
                 double varscale = 0;
 
@@ -2332,7 +2515,7 @@ int bayesOpt(int dim,
                 // ===========================================================
                 // ===========================================================
 
-                if ( isgridopt ) //&& isfullgrid )
+                if ( isgridopt )
                 {
                     gridref = rand()%(gridind.size()); // stored for later when we *may* (or may not) remove from grid if the observation is "full"
                     gridi   = gridind(gridref);
@@ -2341,56 +2524,49 @@ int bayesOpt(int dim,
 // TODO: multi-fidelity grid optimization?
                 }
 
-//                else if ( isgridopt && !isfullgrid )
-//                {
-//                    gridref = rand()%(gridind.size()); // stored for later when we *may* (or may not) remove from grid if the observation is "full"
-//                    gridi   = gridind(gridref);
-//                    gridy   = bopts.model_y()(Nbasemu+gridi); //(double) ((*gridsource).y())(gridi);
-//                    //xinf    = &(((*gridsource).xinfo(gridi)));
-//// TODO: multi-fidelity grid optimization?
-//                }
-
                 isfullfid = true;
 
                 for ( j = 0 ; j < dim ; ++j )
                 {
-                    if ( !isgridopt && ( j < effdim ) )
+                    if ( j < effdim )
                     {
-                        // Continuous approximation: values are chosen randomly from
-                        // uniform distribution on (continuous) search space.
+                        // Regular variables
 
-                        randufill(xxb("&",k)("&",j),xmin(j),xmax(j));
-                    }
-
-                    else if ( !isgridopt && ( j >= effdim ) )
-                    {
-                        if ( j >= effdim+(bopts.getdimfid()) )
+                        //if ( nullxlist(j) )
+                        if ( !isgridopt || bopts.model_x(Nbasemu+gridi)(j).isValNull() ) // short-circuit means model_x only used for isgridopt case
                         {
-                            xxb("&",k)("&",j).dir_double() = xmin(j);
+                            // Continuous approximation: values are chosen randomly from
+                            // uniform distribution on (continuous) search space.
+
+                            randufill(xxb("&",k)("&",j),xmin(j),xmax(j));
                         }
 
                         else
                         {
-                            // Final variable is fidelity, do all initial random experiments at fidelity 1
+                            // Discrete approximation: values are chosen randomly from
+                            // a finite grid.
 
-                            int qqq = 1+(rand()%(bopts.numfids));
+                            xxb("&",k)("&",j) = bopts.model_x(Nbasemu+gridi)(j); // ((*gridsource).x(gridi))(j);
+                        }
+                    }
 
-                            xxb("&",k).n("&",j-effdim,1).dir_double() = ((double) qqq)/((double) bopts.numfids);
+                    else if ( j < effdim+(bopts.getdimfid()) )
+                    {
+                        // Fidelity variables
 
-                            if ( qqq != bopts.numfids )
-                            {
-                                isfullfid = false;
-                            }
+                        int qqq = 1+(rand()%(bopts.numfids));
+
+                        xxb("&",k).n("&",j-effdim,1).dir_double() = ((double) qqq)/((double) bopts.numfids);
+
+                        if ( qqq != bopts.numfids )
+                        {
+                            isfullfid = false;
                         }
                     }
 
                     else
                     {
-                        //isgridopt
-                        // Discrete approximation: values are chosen randomly from
-                        // a finite grid.
-
-                        xxb("&",k)("&",j) = bopts.model_x(Nbasemu+gridi)(j); // ((*gridsource).x(gridi))(j);
+                        xxb("&",k)("&",j).dir_double() = xmin(j);
                     }
                 }
 
@@ -2422,14 +2598,14 @@ int bayesOpt(int dim,
                         xb("&",k)("&",j) = xxb(k)(j);
                     }
 
-                    else if ( j >= effdim+(bopts.getdimfid()) )
+                    else if ( j < effdim+(bopts.getdimfid()) )
                     {
-                        xb("&",k)("&",j) = xxb(k)(j);
+                        xb("&",k)("&",j) = xxb(k).n(j-effdim,1);
                     }
 
                     else
                     {
-                        xb("&",k)("&",j) = xxb(k).n(j-effdim,1);
+                        xb("&",k)("&",j) = xxb(k)(j);
                     }
                 }
 
@@ -2439,13 +2615,14 @@ int bayesOpt(int dim,
                 // ===========================================================
                 // ===========================================================
 
-                if ( isgridopt && isfullgrid )
+//phantomabc                if ( isgridopt && !iscontopt && ( bopts.model_d()(Nbasemu+gridi) == 2 ) )
+                if ( isgridopt && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
                 {
                     mupred("&",k) = bopts.model_y()(Nbasemu+gridi);
                     sigmapred("&",k) = bopts.model_sigma(0);
                 }
 
-                else if ( isgridopt && !isfullgrid )
+                else if ( isgridopt && !iscontopt )
                 {
                     bopts.model_muvarTrainingVector(sigmapred("&",k),mupred("&",k),Nbasesigma+gridi,Nbasemu+gridi);
                 }
@@ -2490,25 +2667,32 @@ int bayesOpt(int dim,
                 // ===========================================================
 
                 gentype gridresis = nullgentype();
+                Vector<gentype> ycgtis(bopts.numcgt,nullgentype());
 
-                if ( isgridopt && !bopts.model_y()(Nbasemu+gridi).isValNull() )
+//phantomabc                if ( isgridopt && !iscontopt )
+                if ( isgridopt )
                 {
-                    gridresis = bopts.model_y()(Nbasemu+gridi);
-                    gridresis.negate();
-                }
+                    // Grid may have defined solutions already loaded.
 
-                Vector<gentype> ycgtis(bopts.numcgt);
-
-                ycgtis = nullgentype();
-
-                if ( isgridopt && bopts.numcgt )
-                {
-                    for ( int iy = 0 ; iy < bopts.numcgt ; ++iy )
+                    if ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) )
                     {
-                        ycgtis("&",iy) = bopts.model_y(iy)(Nbasemu+gridi);
+                        gridresis = bopts.model_y()(Nbasemu+gridi);
+                        gridresis.negate();
                     }
                 }
 
+                if ( isgridopt && !iscontopt )
+                {
+                    for ( int iy = 0 ; iy < bopts.numcgt ; ++iy )
+                    {
+                        if ( bopts.model_d_cgt(iy)(Nbasemu+gridi) == 2 )
+                        {
+                            ycgtis("&",iy) = bopts.model_y_cgt(iy)(Nbasemu+gridi);
+                        }
+                    }
+                }
+
+                xobstype = 2;
                 fnapproxout.force_int() = -1;
                 (*fn)(dim,fnapproxout,&xb(k)(0),fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,gridresis,muapproxsize,ycgtis);
                 fnapproxout.negate();
@@ -2544,7 +2728,7 @@ int bayesOpt(int dim,
                 // ===========================================================
                 // ===========================================================
 
-                if ( isgridopt )
+                if ( isgridopt && !iscontopt )
                 {
                     // Remove the index from grid for full experiment, update model appropriately
 
@@ -2552,7 +2736,7 @@ int bayesOpt(int dim,
 
                     if ( !isfullgrid )
                     {
-                        if ( !fnapproxout.isValNull() )
+                        if ( xobstype )
                         {
                             bopts.model_setyd(Nbasemu+gridi,Nbasesigma+gridi,xobstype,fnapproxout,varscale);
                             //gridsource->sety(gridi,fnapproxout);
@@ -2569,22 +2753,27 @@ int bayesOpt(int dim,
                         }
                     }
 
+                    else
+                    {
+                        ; //grid_xobstype("&",gridi) = xobstype; // so we can update later
+                    }
+
                     if ( ycgt.size() )
                     {
                         for ( int iy = 0 ; iy < ycgt.size() ; ++iy )
                         {
-                            if ( ycgt(iy).isValNull() )
+                            if ( !xobstype_cgt(iy) ) // ycgt(iy).isValNull() )
                             {
                                 if ( bopts.model_d_cgt(iy)(Nbasecgt+gridi) )
                                 {
                                     ycgt("&",iy) = bopts.model_y_cgt(iy)(Nbasecgt+gridi);
                                     xobstype_cgt("&",iy) = bopts.model_d_cgt(iy)(Nbasecgt+gridi);
                                 }
-                            }
 
-                            else if ( !bopts.model_d_cgt(iy)(Nbasecgt+gridi) )
-                            {
-                                fullobs = false;
+                                else
+                                {
+                                    fullobs = false;
+                                }
                             }
                         }
 
@@ -2593,15 +2782,21 @@ int bayesOpt(int dim,
 
                     if ( fullobs )
                     {
+                        griddone.add(griddone.size());
+                        griddone("&",griddone.size()-1) = gridind(gridref);
+                        griddone_xobstype.add(griddone_xobstype.size());
+                        griddone_xobstype("&",griddone_xobstype.size()-1) = grid_xobstype(gridref);
                         gridind.remove(gridref);
+                        grid_xobstype.remove(gridref);
                     }
                 }
 
                 else
                 {
-                    if ( !fnapproxout.isValNull() )
+//phantomabc                    if ( xobstype )
+                    if ( !isfullgrid )
                     {
-                        bopts.model_addTrainingVector_musigma(fnapproxout,mupred(k),xxb(k),xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,varscale);
+                        bopts.model_addTrainingVector_musigma(((fnapproxout.isValNull()) ? 0.0_gent : fnapproxout),mupred(k),xxb(k),xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,varscale);
 
                         if ( addvar != 0 )
                         {
@@ -2621,7 +2816,7 @@ int bayesOpt(int dim,
                 // ===========================================================
                 // ===========================================================
 
-                int Ninmu = isgridopt ? Nbasemu+gridi : Nmodel;
+                int Ninmu = ( isgridopt && !iscontopt ) ? Nbasemu+gridi : Nmodel;
 
                 if ( bopts.isimphere() )
                 {
@@ -2668,10 +2863,17 @@ int bayesOpt(int dim,
                 // ===========================================================
 
 //FIXME TS-MOO
-                if ( isfullfid && !fnapproxout.isValNull() && ( ( ires == -1 ) || ( fnapproxout > fres ) ) && ( ycgt >= 0.0_gent ) )
+                if ( isfullfid && ( xobstype == 2 ) && ( ( ires == -1 ) || ( fnapproxout > fres ) ) && ( ycgt >= 0.0_gent ) )
                 {
                     fres = (double) fnapproxout;
                     ires = Ninmu;
+                }
+
+//phantomabc                else if ( isfullfid && isgridopt && !iscontopt && isfullgrid && ( ( ires == -1 ) || ( bopts.model_y()(Nbasemu+gridi) > fres ) ) && ( ycgt >= 0.0_gent ) )
+                else if ( isfullfid && isgridopt && isfullgrid && ( ( ires == -1 ) || ( bopts.model_y()(Nbasemu+gridi) > fres ) ) && ( ycgt >= 0.0_gent ) )
+                {
+                    fres = bopts.model_y()(Nbasemu+gridi);
+                    ires = ( isgridopt && !iscontopt ) ? Nbasemu+gridi : (bopts.model_N_mu())-1;
                 }
 
                 // ===========================================================
@@ -2680,7 +2882,7 @@ int bayesOpt(int dim,
                 // ===========================================================
                 // ===========================================================
 
-                if ( !fnapproxout.isValNull() )
+                if ( xobstype || fullobs || ( isgridopt && iscontopt && isfullgrid ) )
                 {
                     ++Nmodel;
                     ++Nsigma;
@@ -3028,6 +3230,7 @@ int bayesOpt(int dim,
                                Nbasecgt,
                                gridi,
                                isgridopt,
+                               iscontopt,
                                isfullgrid,
                                isstable,
                                ysort,
@@ -3104,7 +3307,8 @@ int bayesOpt(int dim,
     // =======================================================================
 
     errstream() << "Entering main optimisation loop.\n";
-    outstream() << "***\n";
+    if ( bopts.method != 11 ) { outstream() << "***(method " << bopts.method << ")\n"; }
+    else                      { outstream() << "***(method " << bopts.method << "," << bopts.betafn << ")\n"; }
 
     if ( algseed >= 0 )
     {
@@ -3150,6 +3354,7 @@ int bayesOpt(int dim,
         gentype dummyyres;
         Vector<gentype> dummyyres_cgt;
 
+        xobstype = 2;
         dummyyres.force_int() = 0;
         (*fn)(-1,dummyyres,nullptr,fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,nullgentype(),muapproxsize,dummyyres_cgt);
 
@@ -3323,11 +3528,15 @@ int bayesOpt(int dim,
                 double B   = ( bopts.B <= 0 ) ? bopts.model_RKHSnorm(0) : bopts.B;
                 double mig = bopts.model_maxinfogain(0);
 
-                if ( !isgridopt )
+                if ( !isgridopt && iscontopt )
                 {
-                     NiceAssert( !anyindirect );
-
+                    // ===============================================================
+                    // ===============================================================
                     // Continuous search space, use DIRect to find minimum
+                    // ===============================================================
+                    // ===============================================================
+
+                     NiceAssert( !anyindirect );
 
                     // but first over-ride goptssingleobj with relevant components from *this (assuming non-virtual assignment operators)
                     static_cast<GlobalOptions &>(bopts.goptssingleobj) = static_cast<GlobalOptions &>(bopts);
@@ -3668,8 +3877,15 @@ int bayesOpt(int dim,
                     //errstream() << "Unfiltered result y: " << dummyres << "\n";
                 }
 
-                else
+                else if ( isgridopt )
                 {
+                    // ===============================================================
+                    // ===============================================================
+                    // Optimization on a grid, use sweep of gridpoints
+                    // (May be mixed-integer, in which case we also have an inner loop)
+                    // ===============================================================
+                    // ===============================================================
+
                     //isgridopt - for easier searching
 // TODO: add fidelity related stuff here (partially continuous? How to do this?) Also need to randomise fidelities on input
                     // Discrete (grid) search space, use grid search.
@@ -3694,8 +3910,28 @@ int bayesOpt(int dim,
                         bopts.model_sample(xmin,xmax,sampScale);
                     }
 
-                    dres = dogridOpt(n,xa("&",0,1,n-1,tmpva),dummyres,itorem,gridires,
-                                     fnfnapprox,fnarginnerdr,bopts,*gridsource,gridindtmp,killSwitch,xmtrtime);
+                    {
+                        retVector<double> tmpvb;
+                        retVector<double> tmpvc;
+
+                        fnarginner.mode = 1;
+                        dres = dogridOpt(n,
+                                         xa("&",0,1,n-1,tmpva),
+                                         dummyres,
+                                         itorem,
+                                         gridires,
+                                         direcmin(0,1,n-1,tmpvb),
+                                         direcmax(0,1,n-1,tmpvc),
+                                         fnfnapprox,
+                                         fnarginnerdr,
+                                         bopts,
+                                         *gridsource,
+                                         gridindtmp,
+                                         killSwitch,
+                                         bopts.goptssingleobj,
+                                         xmtrtime);
+                        fnarginner.mode = 0;
+                    }
 
                     if ( ( locmethod == 12 ) || ( locmethod == 16 ) )
                     {
@@ -3708,7 +3944,11 @@ int bayesOpt(int dim,
                     gridref = itorem;
                     gridy = (double) bopts.model_y()(Nbasemu+gridi); //((*gridsource).y())(gridi);
 
-                    gridindtmp.remove(itorem);
+                    if ( !iscontopt )
+                    {
+                        gridindtmp.remove(itorem);
+                    }
+
                     gridivec.add(gridivec.size());     gridivec("&",gridivec.size()-1)     = gridi;
                     gridrefvec.add(gridrefvec.size()); gridrefvec("&",gridrefvec.size()-1) = gridref;
                 }
@@ -3787,7 +4027,9 @@ int bayesOpt(int dim,
             {
 // TODO: need to be able to do grid-search here
                 // ===========================================================
+                // ===========================================================
                 // grid-search is incompatible with this method!
+                // ===========================================================
                 // ===========================================================
 
                 NiceAssert( currintrinbatchsize == 1 );
@@ -3978,23 +4220,24 @@ int bayesOpt(int dim,
                 // ===========================================================
                 // ===========================================================
 
-                if ( bopts.sigmuseparate && isgridopt && isfullgrid )
-                {
-                    ;
-                }
-
-                else if ( bopts.sigmuseparate && isgridopt && !isfullgrid )
-                {
-                    bopts.model_setyd_sigma(Nbasesigma+gridi,2,fnapproxout,varscale);
-                }
-
-                else
-                {
-                    bopts.model_addTrainingVector_sigmaifsep(fnapproxout,xxb(numRecs),varscale);
-                }
-
                 if ( bopts.sigmuseparate )
                 {
+                    if ( isfullgrid )
+                    {
+                        ;
+                    }
+
+                    else if ( isgridopt && !iscontopt )
+                    {
+                        bopts.model_setyd_sigma(Nbasesigma+gridi,2,fnapproxout,varscale);
+                    }
+
+//phantomabc                    else
+                    else if ( !isfullgrid )
+                    {
+                        bopts.model_addTrainingVector_sigmaifsep(fnapproxout,xxb(numRecs),varscale);
+                    }
+
                     bopts.model_train_sigma(dummy,killSwitch);
                 }
 
@@ -4004,13 +4247,14 @@ int bayesOpt(int dim,
                 // ===========================================================
                 // ===========================================================
 
-                if ( isgridopt && isfullgrid )
+//phantomabc                if ( isgridopt && !iscontopt && ( bopts.model_d()(Nbasemu+gridi) == 2 ) )
+                if ( isgridopt && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
                 {
                     mupred("&",numRecs) = bopts.model_y()(Nbasemu+gridi);
                     sigmapred("&",numRecs) = bopts.model_sigma(0);
                 }
 
-                else if ( isgridopt && !isfullgrid )
+                else if ( isgridopt && !iscontopt )
                 {
                     bopts.model_muvarTrainingVector(sigmapred("&",numRecs),mupred("&",numRecs),Nbasesigma+gridi,Nbasemu+gridi);
                 }
@@ -4061,11 +4305,25 @@ int bayesOpt(int dim,
             // ===============================================================
             // ===============================================================
 
-            gridi = gridivec(k);
+            if ( isgridopt )
+            {
+                gridi = gridivec(k);
+            }
+
+            else
+            {
+                gridi = -1;
+            }
 
             doeval = true;
             bool recordeval = true;
             int dval = 2;
+
+            // ===============================================================
+            // ===============================================================
+            // Process User input if required
+            // ===============================================================
+            // ===============================================================
 
             if ( bopts.evaluse )
             {
@@ -4293,7 +4551,7 @@ inneroptions:
 
             // ===============================================================
             // ===============================================================
-            // Run experiment
+            // User input processed - Run experiment
             // ===============================================================
             // ===============================================================
 
@@ -4302,25 +4560,29 @@ inneroptions:
             if ( doeval )
             {
                 gentype gridresis = nullgentype();
+                Vector<gentype> ycgtis(bopts.numcgt,nullgentype());
 
-                if ( isgridopt && !bopts.model_y()(Nbasemu+gridi).isValNull() )
+//phantomabc                if ( isgridopt && !iscontopt )
+                if ( isgridopt )
                 {
-                    gridresis = bopts.model_y()(Nbasemu+gridi);
-                    gridresis.negate();
-                }
+                    // Grid may have defined solutions already loaded.
 
-                Vector<gentype> ycgtis(bopts.numcgt);
-
-                ycgtis = nullgentype();
-
-                if ( isgridopt && bopts.numcgt )
-                {
-                    for ( int iy = 0 ; iy < bopts.numcgt ; ++iy )
+                    if ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) )
                     {
-                        ycgtis("&",iy) = bopts.model_y(iy)(Nbasemu+gridi);
+                        gridresis = bopts.model_y()(Nbasemu+gridi);
+                        gridresis.negate();
                     }
                 }
 
+                if ( isgridopt && !iscontopt )
+                {
+                    for ( int iy = 0 ; iy < bopts.numcgt ; ++iy )
+                    {
+                        ycgtis("&",iy) = bopts.model_y_cgt(iy)(Nbasemu+gridi);
+                    }
+                }
+
+                xobstype = 2;
                 fnapproxout.force_int() = static_cast<int>(itcnt+1);
                 (*fn)(dim,fnapproxout,&(xb(k)(0)),fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,gridresis,muapproxsize,ycgtis);
                 fnapproxout.negate();
@@ -4362,6 +4624,12 @@ inneroptions:
 
                 Vector<int> zindex(dimfid);
                 zindex = numfids; // default to highest fidelity if set empty
+
+                // ===============================================================
+                // ===============================================================
+                // Update fidelity information
+                // ===============================================================
+                // ===============================================================
 
                 if ( numfids )
                 {
@@ -4453,7 +4721,10 @@ inneroptions:
                             break;
                         }
                     }
+                }
 
+                if ( isgridopt && !iscontopt )
+                {
                     // Remove the index from grid for full experiment, update model appropriately
 
                     fullobs = true;
@@ -4462,7 +4733,7 @@ inneroptions:
 
                     if ( !isfullgrid )
                     {
-                        if ( !fnapproxout.isValNull() )
+                        if ( xobstype )
                         {
                             bopts.model_setyd_mu(Nbasemu+gridi,2,fnapproxout,varscale);
                             //gridsource->sety(gridi,fnapproxout);
@@ -4479,11 +4750,16 @@ inneroptions:
                         }
                     }
 
+                    else
+                    {
+                        ; //grid_xobstype("&",gridi) = xobstype; // so we can update later
+                    }
+
                     if ( ycgt.size() )
                     {
                         for ( int iy = 0 ; iy < ycgt.size() ; ++iy )
                         {
-                            if ( ycgt(iy).isValNull() )
+                            if ( !xobstype_cgt(iy) ) //ycgt(iy).isValNull() )
                             {
                                 if ( bopts.model_d_cgt(iy)(Nbasecgt+gridi) )
                                 {
@@ -4503,7 +4779,12 @@ inneroptions:
 
                     if ( fullobs )
                     {
+                        griddone.add(griddone.size());
+                        griddone("&",griddone.size()-1) = gridind(gridref);
+                        griddone_xobstype.add(griddone_xobstype.size());
+                        griddone_xobstype("&",griddone_xobstype.size()-1) = grid_xobstype(gridref);
                         gridind.remove(gridref);
+                        grid_xobstype.remove(gridref);
                     }
                 }
 
@@ -4513,6 +4794,8 @@ inneroptions:
                     // so here we update mu (and sigma if model is shared).
 
                     //if ( !fnapproxout.isValNull() )
+//phantomabc
+                    if ( !isfullgrid )
                     {
                         bopts.model_addTrainingVector_mu_sigmaifsame(((fnapproxout.isValNull()) ? 0.0_gent : fnapproxout),mupred(k),xxb(k),xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,dval,varscale);
 
@@ -4591,10 +4874,17 @@ inneroptions:
             // ===================================================================
             // ===================================================================
 
-            if ( doeval && isfullfid && !fnapproxout.isValNull() && ( ( ires == -1 ) || ( fnapproxout > fres ) ) && ( ycgt >= 0.0_gent ) )
+            if ( doeval && isfullfid && ( xobstype == 2 ) && ( ( ires == -1 ) || ( fnapproxout > fres ) ) && ( ycgt >= 0.0_gent ) )
             {
                 fres = fnapproxout;
-                ires = isgridopt ? Nbasemu+gridi : (bopts.model_N_mu())-1;
+                ires = ( isgridopt && !iscontopt ) ? Nbasemu+gridi : (bopts.model_N_mu())-1;
+            }
+
+//phantomabc            else if ( doeval && isfullfid && isgridopt && !iscontopt && isfullgrid && ( ( ires == -1 ) || ( bopts.model_y()(Nbasemu+gridi) > fres ) ) && ( ycgt >= 0.0_gent ) )
+            else if ( doeval && isfullfid && isgridopt && isfullgrid && ( ( ires == -1 ) || ( bopts.model_y()(Nbasemu+gridi) > fres ) ) && ( ycgt >= 0.0_gent ) )
+            {
+                fres = bopts.model_y()(Nbasemu+gridi);
+                ires = ( isgridopt && !iscontopt ) ? Nbasemu+gridi : (bopts.model_N_mu())-1;
             }
         }
 

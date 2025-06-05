@@ -330,6 +330,8 @@ ML_Base::ML_Base(int _isIndPrune) : kernPrecursor()
 
     xdzero = 0;
 
+    locsigma = 1.0/DEFAULT_C;
+
     loclr  = DEFAULT_LR;
     loclrb = DEFAULT_LR;
     loclrc = DEFAULT_LR;
@@ -2544,6 +2546,24 @@ int ML_Base::removeTrainingVector(int i, int num)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 {
     NiceAssert( onlyChangeRowI >= -1 );
@@ -3349,6 +3369,25 @@ const Vector<double> &ML_Base::sigmaweight(void) const
     return (xsigmaweightonfly);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void ML_Base::stabProbTrainingVector(double &res, int i, int p, double pnrm, int rot, double mu, double B) const
 {
     NiceAssert( p >= 0 );
@@ -3581,6 +3620,7 @@ std::ostream &ML_Base::printstream(std::ostream &output, int dep) const
     repPrint(output,'>',dep) << " Base training tangles:            " << traintang        << "\n";
     repPrint(output,'>',dep) << " Base d:                           " << xd               << "\n";
     repPrint(output,'>',dep) << " Base dnz:                         " << xdzero           << "\n";
+    repPrint(output,'>',dep) << " Base sigma:                       " << locsigma         << "\n";
     repPrint(output,'>',dep) << " Base learning rate:               " << loclr            << "\n";
     repPrint(output,'>',dep) << " Base learning rate:               " << loclrb           << "\n";
     repPrint(output,'>',dep) << " Base learning rate:               " << loclrc           << "\n";
@@ -3641,6 +3681,7 @@ std::istream &ML_Base::inputstream(std::istream &input)
     input >> dummy; input >> traintang;
     input >> dummy; input >> xd;
     input >> dummy; input >> xdzero;
+    input >> dummy; input >> locsigma;
     input >> dummy; input >> loclr;
     input >> dummy; input >> loclrb;
     input >> dummy; input >> loclrc;

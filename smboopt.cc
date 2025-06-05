@@ -520,7 +520,7 @@ int SMBOOptions::realOptim(int dim,
                     cgtapprox("&",ii) = &((*cgtapproxRaw).getML());
                 }
 
-                MLnumbers("&",8) = cgtInd(0);
+                MLnumbers("&",7) = cgtInd(0);
             }
         }
 

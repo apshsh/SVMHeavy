@@ -365,8 +365,8 @@ public:
     virtual const int *ClassLabelsInt     (void)  const {                return &(getMLconst().ClassLabels()(0)); }
     virtual       int  getInternalClassInt(int y) const { gentype yy(y); return getInternalClass(yy);             }
 
-    virtual double C        (void) const { return DEFAULT_C;         }
-    virtual double sigma    (void) const { return 1.0/C();           }
+    virtual double C        (void) const { return 1/locsigma;        } // Originally there was no sigma here and the code was designed assuming C() was defined locally,
+    virtual double sigma    (void) const { return 1.0/C();           } // sigma relied on the base version. We can't change this, so we have the roundabout bit here.
     virtual double sigma_cut(void) const { return DEFAULT_SIGMA_CUT; }
     virtual double eps      (void) const { return DEFAULTEPS;        }
     virtual double Cclass   (int)  const { return 1;                 }
@@ -645,8 +645,8 @@ public:
     virtual int isKreal  (void) const { return 1; }
     virtual int isKunreal(void) const { return 0; }
 
-    virtual int setKreal  (void) { NiceThrow("Can't set unreal kernels for this ML type"); return 1; }
-    virtual int setKunreal(void) {                                                         return 0; }
+    virtual int setKreal  (void) {                                                         return 0; }
+    virtual int setKunreal(void) { NiceThrow("Can't set unreal kernels for this ML type"); return 1; }
 
     virtual double k2diag(int ia) const { return K2(ia,ia); }
 
@@ -672,18 +672,18 @@ public:
     virtual Vector<double> &phi2(Vector<double> &res,         const SparseVector<gentype> &xa,           const vecInfo *xainf = nullptr) const { setInnerWildpa(&xa,xainf); phi2(res,-1); resetInnerWildp(( xainf == nullptr )); return res; }
     virtual Vector<double> &phi2(Vector<double> &res, int ia, const SparseVector<gentype> *xa = nullptr, const vecInfo *xainf = nullptr) const;
 
-    virtual double K0ip(                                       const gentype **pxyprod = nullptr)                                                                                                                                                                                                                                                                                                                 const { return KK0ip(0.0,pxyprod);                                                     }
-    virtual double K1ip(       int ia,                         const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr,                                                                                                                                  const vecInfo *xainfo = nullptr)                                                                                                    const { return KK1ip(ia,0.0,pxyprod,xa,xainfo);                                        }
-    virtual double K2ip(       int ia, int ib,                 const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr,                                                                                       const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr)                                                                   const { return KK2ip(ia,ib,0.0,pxyprod,xa,xb,xainfo,xbinfo);                           }
-    virtual double K3ip(       int ia, int ib, int ic,         const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr,                                            const vecInfo *xainfo = nullptr,           const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr)                        const { return KK3ip(ia,ib,ic,0.0,pxyprod,xa,xb,xc,xainfo,xbinfo,xcinfo);              }
-    virtual double K4ip(       int ia, int ib, int ic, int id, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr, const SparseVector<gentype> *xd = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr, const vecInfo *xdinfo = nullptr) const { return KK4ip(ia,ib,ic,id,0.0,pxyprod,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo); }
+    virtual double K0ip(                                const gentype **pxyprod = nullptr)                                                                                                                                                                                                                                                                                                                 const { return KK0ip(0.0,pxyprod);                                                     }
+    virtual double K1ip(int ia,                         const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr,                                                                                                                                  const vecInfo *xainfo = nullptr)                                                                                                    const { return KK1ip(ia,0.0,pxyprod,xa,xainfo);                                        }
+    virtual double K2ip(int ia, int ib,                 const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr,                                                                                       const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr)                                                                   const { return KK2ip(ia,ib,0.0,pxyprod,xa,xb,xainfo,xbinfo);                           }
+    virtual double K3ip(int ia, int ib, int ic,         const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr,                                            const vecInfo *xainfo = nullptr,           const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr)                        const { return KK3ip(ia,ib,ic,0.0,pxyprod,xa,xb,xc,xainfo,xbinfo,xcinfo);              }
+    virtual double K4ip(int ia, int ib, int ic, int id, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr, const SparseVector<gentype> *xd = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr, const vecInfo *xdinfo = nullptr) const { return KK4ip(ia,ib,ic,id,0.0,pxyprod,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo); }
     virtual double Kmip(int m, Vector<int> &i, const gentype **pxyprod = nullptr, Vector<const SparseVector<gentype> *> *xx = nullptr, Vector<const vecInfo *> *xzinfo = nullptr) const { return KKmip(m,i,0.0,pxyprod,xx,xzinfo); }
 
-    virtual double K0ip(                                       double bias, const gentype **pxyprod = nullptr)                                                                                                                                                                                                                                                                                                                 const { return KK0ip(bias,pxyprod); }
-    virtual double K1ip(       int ia,                         double bias, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr,                                                                                                                                  const vecInfo *xainfo = nullptr)                                                                                                    const { return KK1ip(ia,bias,pxyprod,xa,xainfo); }
-    virtual double K2ip(       int ia, int ib,                 double bias, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr,                                                                                       const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr)                                                                   const { return KK2ip(ia,ib,bias,pxyprod,xa,xb,xainfo,xbinfo); }
-    virtual double K3ip(       int ia, int ib, int ic,         double bias, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr,                                            const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr)                                  const { return KK3ip(ia,ib,ic,bias,pxyprod,xa,xb,xc,xainfo,xbinfo,xcinfo); }
-    virtual double K4ip(       int ia, int ib, int ic, int id, double bias, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr, const SparseVector<gentype> *xd = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr, const vecInfo *xdinfo = nullptr) const { return KK4ip(ia,ib,ic,id,bias,pxyprod,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo); }
+    virtual double K0ip(                                double bias, const gentype **pxyprod = nullptr)                                                                                                                                                                                                                                                                                                                 const { return KK0ip(bias,pxyprod); }
+    virtual double K1ip(int ia,                         double bias, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr,                                                                                                                                  const vecInfo *xainfo = nullptr)                                                                                                    const { return KK1ip(ia,bias,pxyprod,xa,xainfo); }
+    virtual double K2ip(int ia, int ib,                 double bias, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr,                                                                                       const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr)                                                                   const { return KK2ip(ia,ib,bias,pxyprod,xa,xb,xainfo,xbinfo); }
+    virtual double K3ip(int ia, int ib, int ic,         double bias, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr,                                            const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr)                                  const { return KK3ip(ia,ib,ic,bias,pxyprod,xa,xb,xc,xainfo,xbinfo,xcinfo); }
+    virtual double K4ip(int ia, int ib, int ic, int id, double bias, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr, const SparseVector<gentype> *xd = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr, const vecInfo *xdinfo = nullptr) const { return KK4ip(ia,ib,ic,id,bias,pxyprod,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo); }
     virtual double Kmip(int m, Vector<int> &i, double bias, const gentype **pxyprod = nullptr, Vector<const SparseVector<gentype> *> *xx = nullptr, Vector<const vecInfo *> *xzinfo = nullptr) const { return KKmip(m,i,bias,pxyprod,xx,xzinfo); }
 
     virtual gentype        &K0(              gentype        &res                          , const gentype **pxyprod = nullptr, int resmode = 0) const;
@@ -993,8 +993,8 @@ public:
 
     virtual int setbetarank(double nv) { (void) nv; NiceThrow("Function setbetarank not available for this ML type."); return 0; }
 
-    virtual int setC        (double xC)          {           (void) xC;         return 0; }
-    virtual int setsigma    (double xsigma)      { return setC(1/xsigma);                 }
+    virtual int setC        (double xC)          { locsigma = 1/xC;             return 1; }
+    virtual int setsigma    (double xsigma)      { return setC(1/((xsigma<1e12)?1e-12:xsigma));                 }
     virtual int setsigma_cut(double xsigma_cut)  {           (void) xsigma_cut; return 0; }
     virtual int seteps      (double xeps)        {           (void) xeps;       return 0; }
     virtual int setCclass   (int d, double xC)   { (void) d; (void) xC;         return 0; }
@@ -1131,6 +1131,8 @@ public:
     //
     // - stabProb: probability of mu_{1:p} stability, using ||.||_pnrm (or rotated inf-norm if rot != 0)
     //
+    // By default gh is the prior mean and cov is the kernel.
+    //
     // The error is q(x)-y, where q(x) = h(x) for the regression types, and
     // some version of the sigmoid function for classification.  Note that
     // the error may be a scalar, vector or anion.  The gradient de is a
@@ -1160,11 +1162,11 @@ public:
 
     virtual int ggTrainingVector(               gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const { gentype resh; return ghTrainingVector(resh,resg,i,retaltg,pxyprodi); }
     virtual int hhTrainingVector(gentype &resh,                int i,                  gentype ***pxyprodi = nullptr) const { gentype resg; return ghTrainingVector(resh,resg,i,0,      pxyprodi); }
-    virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const { (void) resh; (void) resg; (void) i; (void) retaltg; (void) pxyprodi; NiceThrow("ghTrainingVector not implemented for this ML."); return 0; }
+    virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const { resg = yp(i); resh = resg; (void) retaltg; (void) pxyprodi; return 0; }
 
     virtual double eTrainingVector(int i) const { (void) i; NiceThrow("eTrainingVector not implemented for this ML"); return 0.0; }
 
-    virtual int covTrainingVector(gentype &resv, gentype &resmu, int i, int j, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const { (void) resv; (void) resmu; (void) i; (void) j; (void) pxyprodi; (void) pxyprodj; (void) pxyprodij; NiceThrow("covTrainingVector not implemented for this ML."); return 0; }
+    virtual int covTrainingVector(gentype &resv, gentype &resmu, int i, int j, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const { K2(resv,i,j); resmu = yp(i); (void) pxyprodi; (void) pxyprodj; (void) pxyprodij; (void) pxyprodij; return 0; }
 
     virtual double         &dedgTrainingVector(double         &res, int i) const { gentype gres; dedgTrainingVector(gres,i); res = (double) gres;                 return res; }
     virtual Vector<double> &dedgTrainingVector(Vector<double> &res, int i) const { gentype gres; dedgTrainingVector(gres,i); res = (const Vector<double> &) gres; return res; }
@@ -1872,15 +1874,6 @@ public:
 
 protected:
 
-    // ONN precursor:
-    //
-    // We keep this as a placeholder.  The weight is actually required as
-    // index -2 when evaluating kernels.
-
-    virtual const SparseVector<gentype> &W(void) const { NiceThrow("Can't used index -2 in non-ONN type W.");     const static SparseVector<gentype> dummy; return dummy; }
-    virtual const vecInfo &getWinfo(void)        const { NiceThrow("Can't used index -2 in non-ONN type Winfo."); const static vecInfo               dummy; return dummy; }
-    virtual int getWtang(void)                   const { NiceThrow("Can't used index -2 in non-ONN type Wtang.");                                           return -1;    }
-
     // Kernel cache access
     //
     // If a kernel cache is attached to this then this will set isgood = 0 if
@@ -1960,11 +1953,11 @@ private:
 
     template <class T> T &K2x2(T &res, int i, int ia, int ib, const T &bias, const MercerKernel &Kx, const SparseVector<gentype> *x, const SparseVector<gentype> *xa, const SparseVector<gentype> *xb, const vecInfo *xinfo, const vecInfo *xainfo, const vecInfo *xbinfo, int resmode) const;
 
-    virtual double KK0ip(                                       double bias, const gentype **pxyprod) const;
-    virtual double KK1ip(       int ia,                         double bias, const gentype **pxyprod, const SparseVector<gentype> *xa, const vecInfo *xainfo) const;
-    virtual double KK2ip(       int ia, int ib,                 double bias, const gentype **pxyprod, const SparseVector<gentype> *xa, const SparseVector<gentype> *xb, const vecInfo *xainfo, const vecInfo *xbinfo) const;
-    virtual double KK3ip(       int ia, int ib, int ic,         double bias, const gentype **pxyprod, const SparseVector<gentype> *xa, const SparseVector<gentype> *xb, const SparseVector<gentype> *xc, const vecInfo *xainfo, const vecInfo *xbinfo, const vecInfo *xcinfo) const;
-    virtual double KK4ip(       int ia, int ib, int ic, int id, double bias, const gentype **pxyprod, const SparseVector<gentype> *xa, const SparseVector<gentype> *xb, const SparseVector<gentype> *xc, const SparseVector<gentype> *xd, const vecInfo *xainfo, const vecInfo *xbinfo, const vecInfo *xcinfo, const vecInfo *xdinfo) const;
+    virtual double KK0ip(                                double bias, const gentype **pxyprod) const;
+    virtual double KK1ip(int ia,                         double bias, const gentype **pxyprod, const SparseVector<gentype> *xa, const vecInfo *xainfo) const;
+    virtual double KK2ip(int ia, int ib,                 double bias, const gentype **pxyprod, const SparseVector<gentype> *xa, const SparseVector<gentype> *xb, const vecInfo *xainfo, const vecInfo *xbinfo) const;
+    virtual double KK3ip(int ia, int ib, int ic,         double bias, const gentype **pxyprod, const SparseVector<gentype> *xa, const SparseVector<gentype> *xb, const SparseVector<gentype> *xc, const vecInfo *xainfo, const vecInfo *xbinfo, const vecInfo *xcinfo) const;
+    virtual double KK4ip(int ia, int ib, int ic, int id, double bias, const gentype **pxyprod, const SparseVector<gentype> *xa, const SparseVector<gentype> *xb, const SparseVector<gentype> *xc, const SparseVector<gentype> *xd, const vecInfo *xainfo, const vecInfo *xbinfo, const vecInfo *xcinfo, const vecInfo *xdinfo) const;
     virtual double KKmip(int m, Vector<int> &i, double bias, const gentype **pxyprod, Vector<const SparseVector<gentype> *> *xx, Vector<const vecInfo *> *xzinfo) const;
 
     template <class T> void dK(T &xygrad, T &xnormgrad, int i, int j, const T &bias, const MercerKernel &Kx, const gentype **pxyprod, const SparseVector<gentype> *xx, const SparseVector<gentype> *yy, const vecInfo *xzinfo, const vecInfo *yyinfo, int deepDeriv) const;
@@ -2014,6 +2007,10 @@ private:
     int xmuprior;
     gentype xmuprior_gt;
     const ML_Base *xmuprior_ml;
+
+    // default sigma (variance)
+
+    double locsigma;
 
     // Base data extended
 
@@ -2555,12 +2552,12 @@ private:
             return *wildxgenta;
         }
 
-        else if ( i == -2 )
-        {
-            // ONN weight vector (error-throwing placeholder unless ONN type).
-
-            return W();
-        }
+//        else if ( i == -2 )
+//        {
+//            // ONN weight vector (error-throwing placeholder unless ONN type).
+//
+//            return W();
+//        }
 
         else if ( i == -3 )
         {
@@ -2633,10 +2630,10 @@ private:
             return wildxtanga;
         }
 
-        else if ( i == -2 )
-        {
-            return getWtang();
-        }
+//        else if ( i == -2 )
+//        {
+//            return getWtang();
+//        }
 
         else if ( i == -3 )
         {
@@ -2701,10 +2698,10 @@ private:
             return *wildxinfoa;
         }
 
-        else if ( i == -2 )
-        {
-            return getWinfo();
-        }
+//        else if ( i == -2 )
+//        {
+//            return getWinfo();
+//        }
 
         else if ( i == -3 )
         {
@@ -2986,6 +2983,7 @@ inline void ML_Base::qswapinternal(ML_Base &bb)
     qswap(alltraintargpV ,b.alltraintargpV );
     qswap(xd             ,b.xd             );
     qswap(xdzero         ,b.xdzero         );
+    qswap(locsigma       ,b.locsigma       );
     qswap(loclr          ,b.loclr          );
     qswap(loclrb         ,b.loclrb         );
     qswap(loclrc         ,b.loclrc         );
@@ -3085,6 +3083,7 @@ inline void ML_Base::semicopy(const ML_Base &bb)
 
     xd             = b.xd;
     xdzero         = b.xdzero;
+    locsigma       = b.locsigma;
     loclr          = b.loclr;
     loclrb         = b.loclrb;
     loclrc         = b.loclrc;
@@ -3166,6 +3165,7 @@ inline void ML_Base::assign(const ML_Base &bb, int onlySemiCopy)
 
         xd           = src.xd;
         xdzero       = src.xdzero;
+        locsigma     = src.locsigma;
         loclr        = src.loclr;
         loclrb       = src.loclrb;
         loclrc       = src.loclrc;
@@ -3209,6 +3209,7 @@ inline void ML_Base::assign(const ML_Base &bb, int onlySemiCopy)
 
         xd           = src.xd;
         xdzero       = src.xdzero;
+        locsigma     = src.locsigma;
         loclr        = src.loclr;
         loclrb       = src.loclrb;
         loclrc       = src.loclrc;
@@ -3243,6 +3244,7 @@ inline void ML_Base::assign(const ML_Base &bb, int onlySemiCopy)
 
         xd           = src.xd;
         xdzero       = src.xdzero;
+        locsigma     = src.locsigma;
         loclr        = src.loclr;
         loclrb       = src.loclrb;
         loclrc       = src.loclrc;

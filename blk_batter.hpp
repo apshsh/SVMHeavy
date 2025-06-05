@@ -54,10 +54,10 @@ public:
 
     // Information functions
 
-    virtual int type(void)    const override { return 216; }
+    virtual int type   (void) const override { return 216; }
     virtual int subtype(void) const override { return 0;   }
 
-    virtual int tspaceDim(void)  const override { return 1; }
+    virtual int tspaceDim (void) const override { return 1; }
     virtual int numClasses(void) const override { return 1; }
 
     virtual char gOutType(void) const override { return 'R'; }

@@ -530,8 +530,7 @@ GENTYPEDEP    = basefn.hpp memdebug.hpp niceassert.hpp numbase.hpp $(NUMBASEDEP)
                 matrix.hpp $(MATRIXDEP) set.hpp $(SETDEP) dgraph.hpp $(DGRAPHDEP) \
                 opttest.hpp $(OPTTESTDEP) paretotest.hpp $(PARETOTESTDEP)
 MERCERDEP     = vector.hpp $(VECTORDEP) sparsevector.hpp $(SPARSEVECTORDEP) \
-                matrix.hpp $(MATRIXDEP) gentype.hpp $(GENTYPEDEP) numbase.hpp \
-                awarestream.hpp $(AWARESTREAMDEP)
+                matrix.hpp $(MATRIXDEP) gentype.hpp $(GENTYPEDEP) numbase.hpp
 MLCOMMONDEP   = sparsevector.hpp $(SPARSEVECTORDEP) anion.hpp $(ANIONDEP) \
                 mercer.hpp $(MERCERDEP)
 KCACHEDEP     = vector.hpp $(VECTORDEP) gentype.hpp $(GENTYPEDEP)

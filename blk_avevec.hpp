@@ -54,12 +54,13 @@ public:
 
     // Information functions (training data):
 
-    virtual int NNC(int d)    const override { return classcnt(d/2); }
-    virtual int type(void)    const override { return 202;           }
-    virtual int subtype(void) const override { return 0;             }
+    virtual int NNC    (int d) const override { return classcnt(d/2); }
+    virtual int type   (void)  const override { return 202;           }
+    virtual int subtype(void)  const override { return 0;             }
 
-    virtual int tspaceDim(void)    const override { return dim; }
-    virtual int numClasses(void)   const override { return 0;   }
+    virtual int tspaceDim (void) const override { return dim; }
+    virtual int numClasses(void) const override { return 0;   }
+
 
     virtual char gOutType(void) const override { return 'V'; }
     virtual char hOutType(void) const override { return 'V'; }

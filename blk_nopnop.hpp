@@ -54,7 +54,7 @@ public:
     virtual std::ostream &printstream(std::ostream &output, int dep) const override;
     virtual std::istream &inputstream(std::istream &input ) override;
 
-    virtual int type(void)    const override { return 200; }
+    virtual int type   (void) const override { return 200; }
     virtual int subtype(void) const override { return 0;   }
 };
 

@@ -211,6 +211,7 @@ public:
 
     explicit Vector() : newln('\n'), nbase(false), pbase(true), dsize(0), defaulttightalloc(0), iib(0), iis(1), imoverhere(nullptr), bkref(nullptr), content(nullptr), ccontent(nullptr), pivot(nullptr) { ; }
     explicit Vector(int size, const T *src = nullptr, int tightalloc = 0);
+    explicit Vector(int size, const T &src, int tightalloc = 0);
     explicit Vector(const char *, int tightalloc) : newln('\n'), nbase(false), pbase(true), dsize(0), defaulttightalloc(tightalloc), iib(0), iis(1), imoverhere(nullptr), bkref(nullptr), content(nullptr), ccontent(nullptr), pivot(nullptr) { ; }
              Vector(const Vector<T> &src);
 
@@ -1503,6 +1504,37 @@ Vector<T>::Vector(int size, const T *src, int tightalloc) : newln('\n'),
         for ( int i = 0 ; i < size ; ++i )
         {
             (*this).set(i,src[i]);
+        }
+    }
+}
+
+template <class T>
+Vector<T>::Vector(int size, const T &src, int tightalloc) : newln('\n'),
+                                                            nbase(false),
+                                                            pbase(true),
+                                                            dsize(size),
+                                                            defaulttightalloc(tightalloc),
+                                                            iib(0),
+                                                            iis(1),
+                                                            imoverhere(nullptr),
+                                                            bkref(this),
+                                                            content(nullptr),
+                                                            ccontent(nullptr),
+                                                            pivot(cntintarray(size))
+{
+    NiceAssert( size >= 0 );
+
+    MEMNEW(content,DynArray<T>);
+    (*content) = { nullptr,0,0,defaulttightalloc,false,false,false };
+    (*content).resize(dsize);
+    ccontent = content;
+
+    NiceAssert( content );
+
+    {
+        for ( int i = 0 ; i < size ; ++i )
+        {
+            (*this).set(i,src);
         }
     }
 }

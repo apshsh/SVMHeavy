@@ -54,19 +54,19 @@ public:
 
     // Information functions
 
-    virtual int type(void)    const { return 215; }
-    virtual int subtype(void) const { return 0;   }
+    virtual int type   (void) const override { return 215; }
+    virtual int subtype(void) const override { return 0;   }
 
-    virtual int tspaceDim(void)  const { return 1; }
-    virtual int numClasses(void) const { return 1; }
+    virtual int tspaceDim (void) const override { return 1; }
+    virtual int numClasses(void) const override { return 1; }
 
-    virtual char gOutType(void) const { return 'R'; }
-    virtual char hOutType(void) const { return 'R'; }
-    virtual char targType(void) const { return 'R'; }
-    virtual double calcDist(const gentype &ha, const gentype &hb, int ia = -1, int db = 2) const { (void) ia; return db ? ( ( (double) ha ) - ( (double) hb ) )*( ( (double) ha ) - ( (double) hb ) ) : 0; }
+    virtual char gOutType(void) const override { return 'R'; }
+    virtual char hOutType(void) const override { return 'R'; }
+    virtual char targType(void) const override { return 'R'; }
+    virtual double calcDist(const gentype &ha, const gentype &hb, int ia = -1, int db = 2) const override { (void) ia; return db ? ( ( (double) ha ) - ( (double) hb ) )*( ( (double) ha ) - ( (double) hb ) ) : 0; }
 
-    virtual int isClassifier(void) const { return 0; }
-    virtual int isRegression(void) const { return 1; }
+    virtual int isClassifier(void) const override { return 0; }
+    virtual int isRegression(void) const override { return 1; }
 
     // Evaluation Functions:
 
@@ -93,7 +93,7 @@ public:
     // Trips for y update
 
     virtual int setBernDegree(const gentype &nv) { localygood = 0; return BLK_Generic::setBernDegree(nv); }
-    virtual int setBernIndex(const gentype &nv)  { localygood = 0; return BLK_Generic::setBernIndex(nv);  }
+    virtual int setBernIndex (const gentype &nv) { localygood = 0; return BLK_Generic::setBernIndex(nv);  }
 
     // This is really only used in one place - see globalopt.h
 

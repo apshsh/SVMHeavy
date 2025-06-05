@@ -142,10 +142,23 @@ public:
     //           a is the acquisition function and p is the function
     //           defined here.  The input of this must have dimension direcdim.
     //
-    // gridsource: usually optimisation is continuous.  If you want to optimise
+    // gridsource: usually optimisation is continuous. If you want to optimise
     //           on a finite set/grid then set this to point to the ML containing
-    //           the valid x data.  The y value from this will be put in
-    //           x[12] and the index in x[13].  NULL by default.
+    //           the valid x data. The index will be put in x[13]. There are a
+    //           few modes:
+    //           - null x1 x2 ... (no nulls in x)   - this is just a grid point, result unknown a-prior.
+    //           - null x1 x2 ... (with nulls in x) - this is a partial grid point, the nulls will be optimised on a continuum.
+    //           - y x1 x2 ...    (no nulls in x)   - this is a prior observation. It goes to build the objective model.
+    //           - y x1 x2 ...    (with nulls in x) - this is a partial grid point where y is independent of the nulled xs.
+    //           Constrained optimization: in this case y must include the constraint
+    //           or it won't be considered a "full" observation. For example you can
+    //           specify a grid in a constrained case containing only y: y will be
+    //           treated as "known" and a model will be built for cgt
+    //           NB: if there are nulls in any x then the method is selected *as
+    //           if* the nulls were present in all x's.
+    //           NULL by default.
+    // presource: like gridsource, but only contains prior observations and does
+    //           not define a search grid. Only for f model, not constraints.
     //
     // penalty: this is a vector of (positive valued) penalty functions.  When
     //           evaluating the acquisition function each of these will be
@@ -330,6 +343,7 @@ public:
     Vector<double> direcmin;
     Vector<double> direcmax;
     ML_Base *gridsource;
+    ML_Base *presource;
 
     Vector<ML_Base *> penalty;
 
@@ -371,7 +385,7 @@ public:
     int totitersmultiobj;
     int ehimethodmultiobj;
 
-    BayesOptions(IMP_Generic *impmeasux = nullptr, ML_Base *xdirecpre = nullptr, int xdirecdim = 0, ML_Base *xdirecsubseqpre = nullptr, ML_Base *xgridsource = nullptr) : SMBOOptions()
+    BayesOptions(IMP_Generic *impmeasux = nullptr, ML_Base *xdirecpre = nullptr, int xdirecdim = 0, ML_Base *xdirecsubseqpre = nullptr, ML_Base *xgridsource = nullptr, ML_Base *xpresource = nullptr) : SMBOOptions()
     {
         optname = "Bayesian Optimisation";
 
@@ -420,6 +434,7 @@ public:
         direcmax.resize(direcdim);
 
         gridsource = xgridsource;
+        presource  = xpresource;
 
         startpointsmultiobj = startpoints;
         totitersmultiobj    = totiters;
@@ -490,6 +505,7 @@ public:
         direcmin       = src.direcmin;
         direcmax       = src.direcmax;
         gridsource     = src.gridsource;
+        presource      = src.presource;
 
         penalty           = src.penalty;
 

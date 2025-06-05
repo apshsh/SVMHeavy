@@ -1,5 +1,186 @@
 
 //
+// Average result block
+//
+// Version: 7
+// Date: 08/04/2016
+// Written by: Alistair Shilton (AlShilton@gmail.com)
+// Copyright: all rights reserved
+//
+
+#ifndef _blk_avesca_h
+#define _blk_avesca_h
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <iostream>
+#include <string.h>
+#include <string>
+#include "blk_generic.hpp"
+
+
+// Defines a very basic set of blocks for use in machine learning.
+
+
+class BLK_AveSca;
+
+
+// Swap and zeroing (restarting) functions
+
+inline void qswap(BLK_AveSca &a, BLK_AveSca &b);
+
+
+class BLK_AveSca : public BLK_Generic
+{
+public:
+
+    // Assumptions: all virtual functions inherited from ML_Base are left
+    // unchanged in this class.
+
+    // Constructors, destructors, assignment etc..
+
+    BLK_AveSca(int isIndPrune = 0);
+    BLK_AveSca(const BLK_AveSca &src, int isIndPrune = 0)                      : BLK_Generic(isIndPrune) { setaltx(nullptr); assign(src,0);  return; }
+    BLK_AveSca(const BLK_AveSca &src, const ML_Base *xsrc, int isIndPrune = 0) : BLK_Generic(isIndPrune) { setaltx(xsrc); assign(src,-1); return; }
+    BLK_AveSca &operator=(const BLK_AveSca &src) { assign(src); return *this; }
+    virtual ~BLK_AveSca() { return; }
+
+    virtual void assign(const ML_Base &src, int onlySemiCopy = 0) override;
+    virtual void semicopy(const ML_Base &src) override;
+    virtual void qswapinternal(ML_Base &b) override;
+
+    virtual std::ostream &printstream(std::ostream &output, int dep) const override;
+    virtual std::istream &inputstream(std::istream &input ) override;
+
+    // Information functions (training data):
+
+    virtual int NNC    (int d) const override { return classcnt(d+1); }
+    virtual int type   (void)  const override { return 202;           }
+    virtual int subtype(void)  const override { return 0;             }
+
+    virtual int tspaceDim (void) const override { return 1; }
+    virtual int numClasses(void) const override { return 0; }
+
+
+    virtual char gOutType(void) const override { return 'R'; }
+    virtual char hOutType(void) const override { return 'R'; }
+    virtual char targType(void) const override { return 'R'; }
+    virtual double calcDist(const gentype &ha, const gentype &hb, int ia = -1, int db = 2) const override;
+
+    virtual const Vector<int> &ClassLabels(void)   const override { return classlabels; }
+    virtual int getInternalClass(const gentype &y) const override { return ( ( (double) y ) < 0 ) ? 0 : 1; }
+
+
+
+
+
+    virtual int isClassifier(void) const override { return 0; }
+
+    // Training set modification - need to overload to maintain counts
+
+    virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
+    virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
+
+    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+
+    virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
+    virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
+    virtual int removeTrainingVector(int i, int num                             ) override { return ML_Base::removeTrainingVector(i,num); }
+
+    virtual int sety(int                i, const gentype         &y) override;
+    virtual int sety(const Vector<int> &i, const Vector<gentype> &y) override;
+    virtual int sety(                      const Vector<gentype> &y) override;
+
+    virtual int setd(int                i, int                d) override;
+    virtual int setd(const Vector<int> &i, const Vector<int> &d) override;
+    virtual int setd(                      const Vector<int> &d) override;
+
+    // Evaluation Functions:
+    //
+    // Output g(x) is average of input vector.
+    // Output h(x) is g(x) with outfn applied to it (or g(x) if outfn null).
+    // Raw output is sum of vectors (not average)
+
+    virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+
+    // Treat these as *posterior* observations unless otherwise required
+    virtual int covTrainingVector(gentype &resv, gentype &resmu, int i, int j, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override { resv.force_double() = ( i == j ) ? sigma() : 0.0; gentype resh; int ires = ghTrainingVector(resh,resmu,i); (void) pxyprodi; (void) pxyprodj; (void) pxyprodij; return ires; }
+
+    virtual void dgTrainingVector(Vector<gentype>         &res, gentype        &resn, int i) const override;
+    virtual void dgTrainingVector(Vector<double>          &res, double         &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
+    virtual void dgTrainingVector(Vector<Vector<double> > &res, Vector<double> &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
+    virtual void dgTrainingVector(Vector<d_anion>         &res, d_anion        &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
+
+    virtual void dgTrainingVector(Vector<gentype>         &res, const Vector<int> &i) const override;
+    virtual void dgTrainingVector(Vector<double>          &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<Vector<double> > &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<d_anion>         &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+
+private:
+
+    Vector<int> classlabels;
+    Vector<int> classcnt;
+};
+
+inline double norm2(const BLK_AveSca &a);
+inline double abs2 (const BLK_AveSca &a);
+
+inline double norm2(const BLK_AveSca &a) { return a.RKHSnorm(); }
+inline double abs2 (const BLK_AveSca &a) { return a.RKHSabs();  }
+
+inline void qswap(BLK_AveSca &a, BLK_AveSca &b)
+{
+    a.qswapinternal(b);
+
+    return;
+}
+
+inline void BLK_AveSca::qswapinternal(ML_Base &bb)
+{
+    NiceAssert( isQswapCompat(*this,bb) );
+
+    BLK_AveSca &b = dynamic_cast<BLK_AveSca &>(bb.getML());
+
+    BLK_Generic::qswapinternal(b);
+
+    qswap(classlabels,b.classlabels);
+    qswap(classcnt   ,b.classcnt   );
+
+    return;
+}
+
+inline void BLK_AveSca::semicopy(const ML_Base &bb)
+{
+    NiceAssert( isSemicopyCompat(*this,bb) );
+
+    const BLK_AveSca &b = dynamic_cast<const BLK_AveSca &>(bb.getMLconst());
+
+    BLK_Generic::semicopy(b);
+
+    classlabels = b.classlabels;
+    classcnt    = b.classcnt;
+
+    return;
+}
+
+inline void BLK_AveSca::assign(const ML_Base &bb, int onlySemiCopy)
+{
+    NiceAssert( isAssignCompat(*this,bb) );
+
+    const BLK_AveSca &src = dynamic_cast<const BLK_AveSca &>(bb.getMLconst());
+
+    BLK_Generic::assign(src,onlySemiCopy);
+
+    classlabels = src.classlabels;
+    classcnt    = src.classcnt;
+
+    return;
+}
+
+#endif
+
+//
 // Functional block base class
 //
 // Version: 7
@@ -119,12 +300,6 @@ public:
     // Make this null so that it can be included as a prior without wasting time in optimising... nothing
     virtual double tuneKernel(int, double, int = 1, int = 0, const tkBounds * = nullptr) override { return 0; }
 
-    virtual double C    (void) const { return DEFAULT_C;   }
-    virtual double sigma(void) const { return 1.0/sigma(); }
-
-    virtual int setC    (double xC)     { return setsigma(1/xC);       }
-    virtual int setsigma(double xsigma) { locsigma = xsigma; return 1; }
-
 
     // ================================================================
     //     BLK Specific functions
@@ -179,7 +354,7 @@ public:
                                                                                                                                   xK0callbackalt = nullptr; xK1callbackalt = nullptr; xK2callbackalt = nullptr; xK3callbackalt = nullptr; xK4callbackalt = nullptr; xKmcallbackalt = nullptr; 
                                                                                                                                   xKcallbackalt = nKcallbackalt ? nKcallbackalt : Kcallbackaltdummy; xKcallbackdata = nKcallbackdata; return 1; }
 
-    virtual gcallback callback(void)   const { return xcallback; }
+    virtual gcallback callback(void) const { return xcallback; }
 
     virtual K0callbackfn K0callback(void) const { return xK0callback; }
     virtual K1callbackfn K1callback(void) const { return xK1callback; }
@@ -214,8 +389,9 @@ public:
 
     virtual int setmexcall  (const std::string &xmexfn) { mexfn   = xmexfn;   return 1; }
     virtual int setmexcallid(int xmexfnid)              { mexfnid = xmexfnid; return 1; }
-    virtual const std::string &getmexcall  (void) const { return mexfn;                 }
-    virtual int                getmexcallid(void) const { return mexfnid;               }
+
+    virtual const std::string &getmexcall  (void) const { return mexfn;   }
+    virtual       int          getmexcallid(void) const { return mexfnid; }
 
     // Callback string used by sytem call interface
     //
@@ -227,19 +403,19 @@ public:
     // yxfilename: datafile containing yx (target at start) data (not written if string empty)
     // rfilename:  name of file where result is retrieved (nullptr if string empty)
 
-    virtual int setsyscall(const std::string &xsysfn)   { sysfn   = xsysfn; return 1; }
-    virtual int setxfilename(const std::string &fname)  { xfname  = fname;  return 1; }
-    virtual int setyfilename(const std::string &fname)  { yfname  = fname;  return 1; }
-    virtual int setxyfilename(const std::string &fname) { xyfname = fname;  return 1; }
-    virtual int setyxfilename(const std::string &fname) { yxfname = fname;  return 1; }
-    virtual int setrfilename(const std::string &fname)  { rfname  = fname;  return 1; }
+    virtual int setsyscall   (const std::string &xsysfn) { sysfn   = xsysfn; return 1; }
+    virtual int setxfilename (const std::string &fname)  { xfname  = fname;  return 1; }
+    virtual int setyfilename (const std::string &fname)  { yfname  = fname;  return 1; }
+    virtual int setxyfilename(const std::string &fname)  { xyfname = fname;  return 1; }
+    virtual int setyxfilename(const std::string &fname)  { yxfname = fname;  return 1; }
+    virtual int setrfilename (const std::string &fname)  { rfname  = fname;  return 1; }
 
-    virtual const std::string &getsyscall(void)    const { return sysfn;   }
-    virtual const std::string &getxfilename(void)  const { return xfname;  }
-    virtual const std::string &getyfilename(void)  const { return yfname;  }
+    virtual const std::string &getsyscall   (void) const { return sysfn;   }
+    virtual const std::string &getxfilename (void) const { return xfname;  }
+    virtual const std::string &getyfilename (void) const { return yfname;  }
     virtual const std::string &getxyfilename(void) const { return xyfname; }
     virtual const std::string &getyxfilename(void) const { return yxfname; }
-    virtual const std::string &getrfilename(void)  const { return rfname;  }
+    virtual const std::string &getrfilename (void) const { return rfname;  }
 
     // MEX function: mex does not actually exist as far as this code is concerned.
     // Hence for the mex callback blocks you need to give it a funciton to call.
@@ -326,10 +502,10 @@ public:
     // degree and index can be either null, int or Vector<int>.
 
     virtual const gentype &bernDegree(void) const { return berndeg; }
-    virtual const gentype &bernIndex(void)  const { return bernind; }
+    virtual const gentype &bernIndex (void) const { return bernind; }
 
     virtual int setBernDegree(const gentype &nv) { berndeg = nv; return 1; }
-    virtual int setBernIndex(const gentype &nv)  { bernind = nv; return 1; }
+    virtual int setBernIndex (const gentype &nv) { bernind = nv; return 1; }
 
     typedef int (*mexcallsyn)(gentype &, const gentype &, int);
     static mexcallsyn getsetExtVar;
@@ -345,14 +521,14 @@ public:
     // battneglectParasitic: neglect parasitic branch if set
     // battfixedTheta: if >-1000 then use this fixed theta
 
-    virtual const Vector<double> &battparam(void)            const { return xbattParam;            }
-    virtual       double          batttmax(void)             const { return xbatttmax;             }
-    virtual       double          battImax(void)             const { return xbattImax;             }
-    virtual       double          batttdelta(void)           const { return xbatttdelta;           }
-    virtual       double          battVstart(void)           const { return xbattVstart;           }
-    virtual       double          battthetaStart(void)       const { return xbattthetaStart;       }
+    virtual const Vector<double> &battparam           (void) const { return xbattParam;            }
+    virtual       double          batttmax            (void) const { return xbatttmax;             }
+    virtual       double          battImax            (void) const { return xbattImax;             }
+    virtual       double          batttdelta          (void) const { return xbatttdelta;           }
+    virtual       double          battVstart          (void) const { return xbattVstart;           }
+    virtual       double          battthetaStart      (void) const { return xbattthetaStart;       }
     virtual       int             battneglectParasitic(void) const { return xbattneglectParasitic; }
-    virtual       double          battfixedTheta(void)       const { return xbattfixedTheta;       }
+    virtual       double          battfixedTheta      (void) const { return xbattfixedTheta;       }
 
     virtual int setbattparam(const Vector<gentype> &nv)
     {
@@ -375,13 +551,13 @@ public:
         return 1;
     }
 
-    virtual int setbatttmax(double nv)          { xbatttmax             = nv; return 1; }
-    virtual int setbattImax(double nv)          { xbattImax             = nv; return 1; }
-    virtual int setbatttdelta(double nv)        { xbatttdelta           = nv; return 1; }
-    virtual int setbattVstart(double nv)        { xbattVstart           = nv; return 1; }
-    virtual int setbattthetaStart(double nv)    { xbattthetaStart       = nv; return 1; }
-    virtual int setbattneglectParasitic(int nv) { xbattneglectParasitic = nv; return 1; }
-    virtual int setbattfixedTheta(double nv)    { xbattfixedTheta       = nv; return 1; }
+    virtual int setbatttmax            (double nv) { xbatttmax             = nv; return 1; }
+    virtual int setbattImax            (double nv) { xbattImax             = nv; return 1; }
+    virtual int setbatttdelta          (double nv) { xbatttdelta           = nv; return 1; }
+    virtual int setbattVstart          (double nv) { xbattVstart           = nv; return 1; }
+    virtual int setbattthetaStart      (double nv) { xbattthetaStart       = nv; return 1; }
+    virtual int setbattneglectParasitic(int    nv) { xbattneglectParasitic = nv; return 1; }
+    virtual int setbattfixedTheta      (double nv) { xbattfixedTheta       = nv; return 1; }
 
 private:
 
@@ -391,8 +567,6 @@ private:
     int xmercachenorm;
 
     int xmlqmode;
-
-    double locsigma;
 
     gentype doutfn;
 
@@ -493,8 +667,6 @@ inline void BLK_Generic::qswapinternal(ML_Base &bb)
     qswap(xissample,b.xissample);
 
     qswap(xmlqmode,b.xmlqmode);
-
-    qswap(locsigma,b.locsigma);
 
     qswap(doutfn       ,b.doutfn       );
     qswap(xmercachesize,b.xmercachesize);
@@ -598,8 +770,6 @@ inline void BLK_Generic::semicopy(const ML_Base &bb)
 
     xmlqmode = b.xmlqmode;
 
-    locsigma = b.locsigma;
-
     doutfn        = b.doutfn;
     xmercachesize = b.xmercachesize;
     xmercachenorm = b.xmercachenorm;
@@ -673,8 +843,6 @@ inline void BLK_Generic::assign(const ML_Base &bb, int onlySemiCopy)
     xissample = src.xissample;
 
     xmlqmode = src.xmlqmode;
-
-    locsigma = src.locsigma;
 
     doutfn        = src.doutfn;
     xmercachesize = src.xmercachesize;

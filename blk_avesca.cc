@@ -288,13 +288,11 @@ int BLK_AveSca::setd(const Vector<int> &d)
 
 
 
-
-int BLK_AveSca::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int BLK_AveSca::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***) const
 {
     NiceAssert( !retaltg );
 
     (void) retaltg;
-    (void) pxyprodi;
 
     resg = 0.0;
 

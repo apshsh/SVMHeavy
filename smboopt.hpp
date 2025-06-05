@@ -512,7 +512,7 @@ public:
 
     int model_N_mu   (int q = 0) const { return (*(muapprox(q))).N();  }
     int model_N_sigma(void)      const { return (*sigmaapprox).N();    }
-    int model_N_cgt  (int q = 0) const { return (*(cgtapprox(q))).N(); }
+    int model_N_cgt  (int q = 0) const { return numcgt ? (*(cgtapprox(q))).N() : 0; }
 
     int model_NNCz_mu   (int q) const { return (*(muapprox(q))).NNC(0); }
     int model_NNCz_sigma(void)  const { return (*sigmaapprox).NNC(0);   }

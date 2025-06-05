@@ -1,20 +1,13 @@
-//FIXME: make c(x) part of the testlog plot - line 9181 - suspect mean includes non-valid results!
+//FIXME: document the fullgrid stuff! In particular, the gridsource file format and the various special cases
 
-//FIXME: consider removing -tMpy etc (they aren't needed anymore)
-//remove -tMpy... -tMexe... pyorexeeval
+//FIXME: deal with case where some isfullgrid have nulls and others dont
 
-//FIXME: option to set prior on bayesopt models
-//FIXME: with models that don't have variance, let them return sigma when asked for variance. Then you can plug them in for e.g. the weight
-//       function in our method and they'll just be a trivial block.
-//       TO DO THIS YOU NEED TO MAKE THE var TREE RETURN SOMETHING SENSIBLE IN THESE CASES!
-//FIXME: mixed integer program. gridfile has nulls for continuous variabels. nulls are filled by direct, non-nulls are called by the
-//       activation function to do a grid sweep.
+//FIXME: isfullgrid override: suppose the model is linear and the data is not: you might want to enforce linearity (approx), so you need the model.
+
+//FIXME: make fidelity part of the testlog plot
+
 //FIXME: if lower fidelity falls outside of range then never do higher fidelity (assumed surrogate accuracty bounds)
 //FIXME: clean up multi-threaded mess!
-
-//FIXME:in bayesopt postprocessing need to disgard if constraints not met
-
-//FIXME: having added d = 2 to addTrainingVector functionality thoughout (gentype y), fix non-trivial versions to make sense (d = -4 as *default*?)
 
 /*
 TO DO:
@@ -26,61 +19,6 @@ FIXME: TEST NEW FIDELITY CODE WITH FIDELITY FEEDBACK!
 FIXME: IS FIDELITY FEEDBACK BEING CORRECTLY ACCOUNTED FOR?
 FIXME: IS FIDELITY COST BEING CORECTLY CALCULATED AND USED FOR TERMINATION?
 */
-
-/*REALLY BIG GRID TOO MUCH FOR MEMORY HOW TO DO IT?
-fidelity on constraints
-mixed integer programming
-
-if x feedback changes fidelity (or other high-level "stuff")... how do we do that? How do we feed back "actual" fidelity? This needs to be done!
-could you code sparsevectors as gentype vectors by coding things like :, ::, ~ etc as strings and then reinterpretting into sparse format? In gentype
-streaming you might need a bit of code to treat :, ::, ~ etc on their own as strings!
-
-:
-::
-:::
-::::
-~
-
-could you have xreplace in gridopt?
-
-
-subfact - the notation for this is wrong, so get rid of :a notation
-*/
-
-
-/*
-    output << ( (          advanced ) ? "             { y v [ce1..cen] [cg1..cgn] [xx1..xxn] xf [xf1..xfn] xff xf3 t } \n" : "" );
-ADD FIDELITY FEEDBACK OPTION HERE
-ACTUALLY ALLOW BASICALLY ALL OF THE INTERACTIVE STUFF VIA THIS INPUT
-
-
-varadd: maybe have varOVER-RIDE instead?
-Let the user over-ride x (including fidelity).
-
-
-tuneceq
-tunecgt
-
-mu...
-
-ismoo
-isceq
-iscgt
-
-
-bayesopt: grab inequality vectors (but ignore if y null)
-          add them to the relevant models
-          build the inequality constraints into the cost function as per Julien code
-
-mlinter: make all the inequality stuff accessible
-
-
-DO REVIEWS
-*/
-
-//FIXME: 1.33c is supposed to be nominally constant in gentype, which should then pass back and prevent tuneKernel from tuning this term.
-//       gentype can parse the c, but it currently isn't stored. Finish this.
-//FIXME: should be using fewer decimal places when reporting in globalopt, smboopt and bayesopt (ie logging to cout at human readable accuracy)
 
 //in sparsevector.hpp:
 //sv/set should work in the sparse case as well (altcontentsp)
@@ -324,19 +262,6 @@ void testRKHSnorm   (                                   std::string &logfile, co
 
 
 int loadDataFromMatlab(const std::string &xmatname, const std::string &ymatname, Vector<SparseVector<gentype> > &x, Vector<gentype> &dz, char targtype, int (*getsetExtVar)(gentype &res, const gentype &src, int num));
-
-// Funciton to evaluate f(x) using external python script or exe
-// =============================================================
-//
-// isscalar = nz if scalar
-// isvector = nz if vector
-// ispy     = 0 if exe
-//          = 1 if python
-// evalname = python/exe to be called
-// sf       = scalar or function to be evaluated
-// v        = vector
-
-int pyorexeeval(int isscalar, int isvector, int ispy, const std::string &evalname, const gentype &sf, const Vector<gentype> &v, gentype &finalresult);
 
 // Help function
 // =============
@@ -1116,9 +1041,9 @@ void grabsvm(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmb
 
     // If svmInd does not exist we need to make it and own it
 
-    if ( svmbase(svmInd) == nullptr ) 
-    { 
-        MEMNEW(const_cast<svmvolatile ML_Mutable *&>(svmbase("&",svmInd)),ML_Mutable); 
+    if ( svmbase(svmInd) == nullptr )
+    {
+        MEMNEW(const_cast<svmvolatile ML_Mutable *&>(svmbase("&",svmInd)),ML_Mutable);
     }
 
     if ( !svmThreadOwner.isindpresent(svmInd) )
@@ -1144,7 +1069,7 @@ void grabsvm(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmb
         svmvolatile int &controlThreadInd = (*(svmContext("&",threadOwner))).controlThreadInd;
 
         int killmethod = (*(svmContext("&",threadInd))).killmethod;
-    
+
         // Cannot proceed until we own this thread.
 
         int oldkillswitch = killswitch;
@@ -1633,7 +1558,7 @@ int runsvmint(int threadInd,
             else if ( currentarg == "-??v"       ) { preelse = 1; printhelpvars(outstream(),1,1); }
             else if ( currentarg == "-??g"       ) { preelse = 1; printhelpgentype(outstream(),1,1); }
             else if ( currentarg == "-???"       ) { preelse = 1; errstream() << "\n\n\n\n\n\n\n\n\n\n"; }
-            else if ( currentarg == "-Zinteract" ) { preelse = 1; kbquitdet("Root",nullptr,nullptr,nullptr,1); }
+            else if ( currentarg == "-Zinteract" ) { preelse = 1; int tmpval = setgetkbstate(); enablekbquitdet(); kbquitdet("Root",nullptr,nullptr,nullptr,1); setgetkbstate(tmpval); }
             else if ( currentarg == "-Zgod"      ) { preelse = 1; enablekbquitdet(); }
             else if ( currentarg == "-Zdawkins"  ) { preelse = 1; disablekbquitdet(); }
             else if ( currentarg == "-Zx"        ) { preelse = 1; skipon = 1; goto processnow; }
@@ -3074,11 +2999,11 @@ int runsvmint(int threadInd,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-Acd"   ) ||
-                      ( currentarg == "-Aby"   ) ||
-                      ( currentarg == "-ABy"   ) ||
-                      ( currentarg == "-Abu"   ) ||
-                      ( currentarg == "-ABu"   )    )
+            else if ( ( currentarg == "-Acd" ) ||
+                      ( currentarg == "-Aby" ) ||
+                      ( currentarg == "-ABy" ) ||
+                      ( currentarg == "-Abu" ) ||
+                      ( currentarg == "-ABu" )    )
             {
                 preelse = 1;
 
@@ -3331,27 +3256,27 @@ int runsvmint(int threadInd,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-Snx" ) ||
-                      ( currentarg == "-Sna" ) ||
-                      ( currentarg == "-Snb" ) ||
-                      ( currentarg == "-Snc" ) ||
-                      ( currentarg == "-SNa" ) ||
-                      ( currentarg == "-SNb" ) ||
-                      ( currentarg == "-SNc" ) ||
-                      ( currentarg == "-SnA" ) ||
-                      ( currentarg == "-SnB" ) ||
-                      ( currentarg == "-SnC" ) ||
-                      ( currentarg == "-SNA" ) ||
-                      ( currentarg == "-SNB" ) ||
-                      ( currentarg == "-SNC" ) ||
-                      ( currentarg == "-St"  ) ||
-                      ( currentarg == "-Spt" ) ||
-                      ( currentarg == "-SPt" ) ||
-                      ( currentarg == "-Sjt" ) ||
+            else if ( ( currentarg == "-Snx"  ) ||
+                      ( currentarg == "-Sna"  ) ||
+                      ( currentarg == "-Snb"  ) ||
+                      ( currentarg == "-Snc"  ) ||
+                      ( currentarg == "-SNa"  ) ||
+                      ( currentarg == "-SNb"  ) ||
+                      ( currentarg == "-SNc"  ) ||
+                      ( currentarg == "-SnA"  ) ||
+                      ( currentarg == "-SnB"  ) ||
+                      ( currentarg == "-SnC"  ) ||
+                      ( currentarg == "-SNA"  ) ||
+                      ( currentarg == "-SNB"  ) ||
+                      ( currentarg == "-SNC"  ) ||
+                      ( currentarg == "-St"   ) ||
+                      ( currentarg == "-Spt"  ) ||
+                      ( currentarg == "-SPt"  ) ||
+                      ( currentarg == "-Sjt"  ) ||
                       ( currentarg == "-Sjt+" ) ||
                       ( currentarg == "-Sjt-" ) ||
-                      ( currentarg == "-Srt" ) ||
-                      ( currentarg == "-Snt" )    )
+                      ( currentarg == "-Srt"  ) ||
+                      ( currentarg == "-Snt"  )    )
             {
                 preelse = 1;
 
@@ -3429,9 +3354,9 @@ int runsvmint(int threadInd,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-Mn"  ) ||
-                      ( currentarg == "-Mi"  ) ||
-                      ( currentarg == "-Md"  )    )
+            else if ( ( currentarg == "-Mn" ) ||
+                      ( currentarg == "-Mi" ) ||
+                      ( currentarg == "-Md" )    )
             {
                 preelse = 1;
 
@@ -3539,16 +3464,16 @@ int runsvmint(int threadInd,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-cd"   ) ||
-                      ( currentarg == "-cw"   ) ||
-                      ( currentarg == "-dw"   ) ||
-                      ( currentarg == "-mlc"  ) ||
-                      ( currentarg == "-cds"  ) ||
-                      ( currentarg == "-wd"   ) ||
-                      ( currentarg == "-ww"   ) ||
-                      ( currentarg == "-wds"  ) ||
-                      ( currentarg == "-Nld"  ) ||
-                      ( currentarg == "-Nqd"  )    )
+            else if ( ( currentarg == "-cd"  ) ||
+                      ( currentarg == "-cw"  ) ||
+                      ( currentarg == "-dw"  ) ||
+                      ( currentarg == "-mlc" ) ||
+                      ( currentarg == "-cds" ) ||
+                      ( currentarg == "-wd"  ) ||
+                      ( currentarg == "-ww"  ) ||
+                      ( currentarg == "-wds" ) ||
+                      ( currentarg == "-Nld" ) ||
+                      ( currentarg == "-Nqd" )    )
             {
                 preelse = 1;
 
@@ -3652,8 +3577,8 @@ int runsvmint(int threadInd,
                       ( currentarg == "-kb"    ) ||
                       ( currentarg == "-ke"    ) ||
                       ( currentarg == "-kw"    ) ||
-                      ( currentarg == "-kwlb"    ) ||
-                      ( currentarg == "-kwub"    ) ||
+                      ( currentarg == "-kwlb"  ) ||
+                      ( currentarg == "-kwub"  ) ||
                       ( currentarg == "-kt"    ) ||
                       ( currentarg == "-ktx"   ) ||
                       ( currentarg == "-ktk"   ) ||
@@ -3664,14 +3589,14 @@ int runsvmint(int threadInd,
                       ( currentarg == "-kg"    ) ||
                       ( currentarg == "-kd"    ) ||
                       ( currentarg == "-kG"    ) ||
-                      ( currentarg == "-krlb"    ) ||
-                      ( currentarg == "-kglb"    ) ||
-                      ( currentarg == "-kdlb"    ) ||
-                      ( currentarg == "-kGlb"    ) ||
-                      ( currentarg == "-krub"    ) ||
-                      ( currentarg == "-kgub"    ) ||
-                      ( currentarg == "-kdub"    ) ||
-                      ( currentarg == "-kGub"    ) ||
+                      ( currentarg == "-krlb"  ) ||
+                      ( currentarg == "-kglb"  ) ||
+                      ( currentarg == "-kdlb"  ) ||
+                      ( currentarg == "-kGlb"  ) ||
+                      ( currentarg == "-krub"  ) ||
+                      ( currentarg == "-kgub"  ) ||
+                      ( currentarg == "-kdub"  ) ||
+                      ( currentarg == "-kGub"  ) ||
                       ( currentarg == "-kI"    ) ||
                       ( currentarg == "-kan"   ) ||
                       ( currentarg == "-eks"   ) ||
@@ -3680,8 +3605,8 @@ int runsvmint(int threadInd,
                       ( currentarg == "-ekb"   ) ||
                       ( currentarg == "-eke"   ) ||
                       ( currentarg == "-ekw"   ) ||
-                      ( currentarg == "-ekwlb"   ) ||
-                      ( currentarg == "-ekwub"   ) ||
+                      ( currentarg == "-ekwlb" ) ||
+                      ( currentarg == "-ekwub" ) ||
                       ( currentarg == "-ekt"   ) ||
                       ( currentarg == "-ektx"  ) ||
                       ( currentarg == "-ektk"  ) ||
@@ -3692,14 +3617,14 @@ int runsvmint(int threadInd,
                       ( currentarg == "-ekg"   ) ||
                       ( currentarg == "-ekd"   ) ||
                       ( currentarg == "-ekG"   ) ||
-                      ( currentarg == "-ekrlb"   ) ||
-                      ( currentarg == "-ekglb"   ) ||
-                      ( currentarg == "-ekdlb"   ) ||
-                      ( currentarg == "-ekGlb"   ) ||
-                      ( currentarg == "-ekrub"   ) ||
-                      ( currentarg == "-ekgub"   ) ||
-                      ( currentarg == "-ekdub"   ) ||
-                      ( currentarg == "-ekGub"   ) ||
+                      ( currentarg == "-ekrlb" ) ||
+                      ( currentarg == "-ekglb" ) ||
+                      ( currentarg == "-ekdlb" ) ||
+                      ( currentarg == "-ekGlb" ) ||
+                      ( currentarg == "-ekrub" ) ||
+                      ( currentarg == "-ekgub" ) ||
+                      ( currentarg == "-ekdub" ) ||
+                      ( currentarg == "-ekGub" ) ||
                       ( currentarg == "-ekI"   ) ||
                       ( currentarg == "-ekan"  ) ||
                       ( currentarg == "-rks"   ) ||
@@ -3709,8 +3634,8 @@ int runsvmint(int threadInd,
                       ( currentarg == "-rkb"   ) ||
                       ( currentarg == "-rke"   ) ||
                       ( currentarg == "-rkw"   ) ||
-                      ( currentarg == "-rkwlb"   ) ||
-                      ( currentarg == "-rkwub"   ) ||
+                      ( currentarg == "-rkwlb" ) ||
+                      ( currentarg == "-rkwub" ) ||
                       ( currentarg == "-rkt"   ) ||
                       ( currentarg == "-rktx"  ) ||
                       ( currentarg == "-rktk"  ) ||
@@ -3720,14 +3645,14 @@ int runsvmint(int threadInd,
                       ( currentarg == "-rkg"   ) ||
                       ( currentarg == "-rkd"   ) ||
                       ( currentarg == "-rkG"   ) ||
-                      ( currentarg == "-rkrlb"   ) ||
-                      ( currentarg == "-rkglb"   ) ||
-                      ( currentarg == "-rkdlb"   ) ||
-                      ( currentarg == "-rkGlb"   ) ||
-                      ( currentarg == "-rkrub"   ) ||
-                      ( currentarg == "-rkgub"   ) ||
-                      ( currentarg == "-rkdub"   ) ||
-                      ( currentarg == "-rkGub"   ) ||
+                      ( currentarg == "-rkrlb" ) ||
+                      ( currentarg == "-rkglb" ) ||
+                      ( currentarg == "-rkdlb" ) ||
+                      ( currentarg == "-rkGlb" ) ||
+                      ( currentarg == "-rkrub" ) ||
+                      ( currentarg == "-rkgub" ) ||
+                      ( currentarg == "-rkdub" ) ||
+                      ( currentarg == "-rkGub" ) ||
                       ( currentarg == "-rkI"   ) ||
                       ( currentarg == "-rkan"  )    )
             {
@@ -3744,33 +3669,33 @@ int runsvmint(int threadInd,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-kv"  ) ||
-                      ( currentarg == "-kV"  ) ||
+            else if ( ( currentarg == "-kv"    ) ||
+                      ( currentarg == "-kV"    ) ||
                       ( currentarg == "-kvlb"  ) ||
                       ( currentarg == "-kVlb"  ) ||
                       ( currentarg == "-kvub"  ) ||
                       ( currentarg == "-kVub"  ) ||
-                      ( currentarg == "-ko"  ) ||
-                      ( currentarg == "-kO"  ) ||
-                      ( currentarg == "-kx"  ) ||
-                      ( currentarg == "-ekv" ) ||
-                      ( currentarg == "-ekV" ) ||
+                      ( currentarg == "-ko"    ) ||
+                      ( currentarg == "-kO"    ) ||
+                      ( currentarg == "-kx"    ) ||
+                      ( currentarg == "-ekv"   ) ||
+                      ( currentarg == "-ekV"   ) ||
                       ( currentarg == "-ekvlb" ) ||
                       ( currentarg == "-ekVlb" ) ||
                       ( currentarg == "-ekvub" ) ||
                       ( currentarg == "-ekVub" ) ||
-                      ( currentarg == "-eko" ) ||
-                      ( currentarg == "-ekO" ) ||
-                      ( currentarg == "-ekx" ) ||
-                      ( currentarg == "-rkv" ) ||
-                      ( currentarg == "-rkV" ) ||
+                      ( currentarg == "-eko"   ) ||
+                      ( currentarg == "-ekO"   ) ||
+                      ( currentarg == "-ekx"   ) ||
+                      ( currentarg == "-rkv"   ) ||
+                      ( currentarg == "-rkV"   ) ||
                       ( currentarg == "-rkvlb" ) ||
                       ( currentarg == "-rkVlb" ) ||
                       ( currentarg == "-rkvub" ) ||
                       ( currentarg == "-rkVub" ) ||
-                      ( currentarg == "-rko" ) ||
-                      ( currentarg == "-rkO" ) ||
-                      ( currentarg == "-rkx" )    )
+                      ( currentarg == "-rko"   ) ||
+                      ( currentarg == "-rkO"   ) ||
+                      ( currentarg == "-rkx"   )    )
             {
                 preelse = 1;
 
@@ -3858,7 +3783,10 @@ int runsvmint(int threadInd,
 
             if ( preelse ) { ; }
 
-            else if ( ( currentarg == "-g"  ) || ( currentarg == "-gd"  ) || ( currentarg == "-gN" ) || ( currentarg == "-gb"  ) )
+            else if ( ( currentarg == "-g"  ) ||
+                      ( currentarg == "-gd" ) ||
+                      ( currentarg == "-gN" ) ||
+                      ( currentarg == "-gb" )    )
             {
                 // Gridsearch options
                 //
@@ -3912,195 +3840,195 @@ int runsvmint(int threadInd,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-gmo"     ) ||
-                      ( currentarg == "-gms"     ) ||
-                      ( currentarg == "-gmr"     ) ||
-                      ( currentarg == "-gmR"     ) ||
-                      ( currentarg == "-gnp"     ) ||
-                      ( currentarg == "-gpb"     ) ||
-                      ( currentarg == "-gph"     ) ||
-                      ( currentarg == "-gnr"     ) ||
-                      ( currentarg == "-gan"     ) ||
-                      ( currentarg == "-gplot"   ) ||
-                      ( currentarg == "-gphkn"   ) ||
-                      ( currentarg == "-gphku"   ) ||
-                      ( currentarg == "-gphkss"  ) ||
-                      ( currentarg == "-gphkus"  ) ||
-                      ( currentarg == "-gphknn"  ) ||
-                      ( currentarg == "-gphkuu"  ) ||
-                      ( currentarg == "-gphkc"   ) ||
-                      ( currentarg == "-gphkuc"  ) ||
-                      ( currentarg == "-gphkm"   ) ||
-                      ( currentarg == "-gphkum"  ) ||
-                      ( currentarg == "-gphkS"   ) ||
-                      ( currentarg == "-gphkA"   ) ||
-                      ( currentarg == "-gphkuS"  ) ||
-                      ( currentarg == "-gphkMS"  ) ||
-                      ( currentarg == "-gphkMA"  ) ||
-                      ( currentarg == "-gphkMuS" ) ||
-                      ( currentarg == "-gphkU"   ) ||
-                      ( currentarg == "-gphkoz"  ) ||
-                      ( currentarg == "-gphmtb"  ) ||
-                      ( currentarg == "-gphbmx"  ) ||
-                      ( currentarg == "-gphkOz"  ) ||
-                      ( currentarg == "-gPkn"    ) ||
-                      ( currentarg == "-gPku"    ) ||
-                      ( currentarg == "-gPkss"   ) ||
-                      ( currentarg == "-gPkus"   ) ||
-                      ( currentarg == "-gPknn"   ) ||
-                      ( currentarg == "-gPkuu"   ) ||
-                      ( currentarg == "-gPkc"    ) ||
-                      ( currentarg == "-gPkuc"   ) ||
-                      ( currentarg == "-gPkm"    ) ||
-                      ( currentarg == "-gPkum"   ) ||
-                      ( currentarg == "-gPkS"    ) ||
-                      ( currentarg == "-gPkA"    ) ||
-                      ( currentarg == "-gPkuS"   ) ||
-                      ( currentarg == "-gPkMS"   ) ||
-                      ( currentarg == "-gPkMA"   ) ||
-                      ( currentarg == "-gPkMuS"  ) ||
-                      ( currentarg == "-gPkU"    ) ||
-                      ( currentarg == "-gPkoz"   ) ||
-                      ( currentarg == "-gPmtb"   ) ||
-                      ( currentarg == "-gPbmx"   ) ||
-                      ( currentarg == "-gPkOz"   ) ||
-                      ( currentarg == "-gmkn"    ) ||
-                      ( currentarg == "-gmku"    ) ||
-                      ( currentarg == "-gmkss"   ) ||
-                      ( currentarg == "-gmkus"   ) ||
-                      ( currentarg == "-gmknn"   ) ||
-                      ( currentarg == "-gmkuu"   ) ||
-                      ( currentarg == "-gmkc"    ) ||
-                      ( currentarg == "-gmkuc"   ) ||
-                      ( currentarg == "-gmkm"    ) ||
-                      ( currentarg == "-gmkum"   ) ||
-                      ( currentarg == "-gmkS"    ) ||
-                      ( currentarg == "-gmkA"    ) ||
-                      ( currentarg == "-gmkuS"   ) ||
-                      ( currentarg == "-gmkMS"   ) ||
-                      ( currentarg == "-gmkMA"   ) ||
-                      ( currentarg == "-gmkMuS"  ) ||
-                      ( currentarg == "-gmkU"    ) ||
-                      ( currentarg == "-gmkoz"   ) ||
-                      ( currentarg == "-gmkOz"   ) ||
-                      ( currentarg == "-gmekn"    ) ||
-                      ( currentarg == "-gmeku"    ) ||
-                      ( currentarg == "-gmekss"   ) ||
-                      ( currentarg == "-gmekus"   ) ||
-                      ( currentarg == "-gmeknn"   ) ||
-                      ( currentarg == "-gmekuu"   ) ||
-                      ( currentarg == "-gmekc"    ) ||
-                      ( currentarg == "-gmekuc"   ) ||
-                      ( currentarg == "-gmekm"    ) ||
-                      ( currentarg == "-gmekum"   ) ||
-                      ( currentarg == "-gmekS"    ) ||
-                      ( currentarg == "-gmekA"    ) ||
-                      ( currentarg == "-gmekuS"   ) ||
-                      ( currentarg == "-gmekMS"   ) ||
-                      ( currentarg == "-gmekMA"   ) ||
-                      ( currentarg == "-gmekMuS"  ) ||
-                      ( currentarg == "-gmekU"    ) ||
-                      ( currentarg == "-gmekoz"   ) ||
-                      ( currentarg == "-gmekOz"   ) ||
-                      ( currentarg == "-gmrkn"    ) ||
-                      ( currentarg == "-gmrku"    ) ||
-                      ( currentarg == "-gmrkss"   ) ||
-                      ( currentarg == "-gmrkus"   ) ||
-                      ( currentarg == "-gmrknn"   ) ||
-                      ( currentarg == "-gmrkuu"   ) ||
-                      ( currentarg == "-gmrkc"    ) ||
-                      ( currentarg == "-gmrkuc"   ) ||
-                      ( currentarg == "-gmrkm"    ) ||
-                      ( currentarg == "-gmrkum"   ) ||
-                      ( currentarg == "-gmrkS"    ) ||
-                      ( currentarg == "-gmrkA"    ) ||
-                      ( currentarg == "-gmrkuS"   ) ||
-                      ( currentarg == "-gmrkMS"   ) ||
-                      ( currentarg == "-gmrkMA"   ) ||
-                      ( currentarg == "-gmrkMuS"  ) ||
-                      ( currentarg == "-gmrkU"    ) ||
-                      ( currentarg == "-gmrkoz"   ) ||
-                      ( currentarg == "-gmrkOz"   ) ||
-                      ( currentarg == "-gmmtb"   ) ||
-                      ( currentarg == "-gmbmx"   ) ||
-                      ( currentarg == "-gmskn"   ) ||
-                      ( currentarg == "-gmsku"   ) ||
-                      ( currentarg == "-gmskss"  ) ||
-                      ( currentarg == "-gmskus"  ) ||
-                      ( currentarg == "-gmsknn"  ) ||
-                      ( currentarg == "-gmskuu"  ) ||
-                      ( currentarg == "-gmskc"   ) ||
-                      ( currentarg == "-gmskuc"  ) ||
-                      ( currentarg == "-gmskm"   ) ||
-                      ( currentarg == "-gmskum"  ) ||
-                      ( currentarg == "-gmskS"   ) ||
-                      ( currentarg == "-gmskA"   ) ||
-                      ( currentarg == "-gmskuS"  ) ||
-                      ( currentarg == "-gmskMS"  ) ||
-                      ( currentarg == "-gmskMA"  ) ||
-                      ( currentarg == "-gmskMuS" ) ||
-                      ( currentarg == "-gmskU"   ) ||
-                      ( currentarg == "-gmskoz"  ) ||
-                      ( currentarg == "-gmskOz"  ) ||
-                      ( currentarg == "-gmsekn"   ) ||
-                      ( currentarg == "-gmseku"   ) ||
-                      ( currentarg == "-gmsekss"  ) ||
-                      ( currentarg == "-gmsekus"  ) ||
-                      ( currentarg == "-gmseknn"  ) ||
-                      ( currentarg == "-gmsekuu"  ) ||
-                      ( currentarg == "-gmsekc"   ) ||
-                      ( currentarg == "-gmsekuc"  ) ||
-                      ( currentarg == "-gmsekm"   ) ||
-                      ( currentarg == "-gmsekum"  ) ||
-                      ( currentarg == "-gmsekS"   ) ||
-                      ( currentarg == "-gmsekA"   ) ||
-                      ( currentarg == "-gmsekuS"  ) ||
-                      ( currentarg == "-gmsekMS"  ) ||
-                      ( currentarg == "-gmsekMA"  ) ||
-                      ( currentarg == "-gmsekMuS" ) ||
-                      ( currentarg == "-gmsekU"   ) ||
-                      ( currentarg == "-gmsekoz"  ) ||
-                      ( currentarg == "-gmsekOz"  ) ||
-                      ( currentarg == "-gmsrkn"   ) ||
-                      ( currentarg == "-gmsrku"   ) ||
-                      ( currentarg == "-gmsrkss"  ) ||
-                      ( currentarg == "-gmsrkus"  ) ||
-                      ( currentarg == "-gmsrknn"  ) ||
-                      ( currentarg == "-gmsrkuu"  ) ||
-                      ( currentarg == "-gmsrkc"   ) ||
-                      ( currentarg == "-gmsrkuc"  ) ||
-                      ( currentarg == "-gmsrkm"   ) ||
-                      ( currentarg == "-gmsrkum"  ) ||
-                      ( currentarg == "-gmsrkS"   ) ||
-                      ( currentarg == "-gmsrkA"   ) ||
-                      ( currentarg == "-gmsrkuS"  ) ||
-                      ( currentarg == "-gmsrkMS"  ) ||
-                      ( currentarg == "-gmsrkMA"  ) ||
-                      ( currentarg == "-gmsrkMuS" ) ||
-                      ( currentarg == "-gmsrkU"   ) ||
-                      ( currentarg == "-gmsrkoz"  ) ||
-                      ( currentarg == "-gmsrkOz"  ) ||
-                      ( currentarg == "-gmsmtb"  ) ||
-                      ( currentarg == "-gmsbmx"  ) ||
-                      ( currentarg == "-gmgtkn"   ) ||
-                      ( currentarg == "-gmgtku"   ) ||
-                      ( currentarg == "-gmgtkss"  ) ||
-                      ( currentarg == "-gmgtkus"  ) ||
-                      ( currentarg == "-gmgtknn"  ) ||
-                      ( currentarg == "-gmgtkuu"  ) ||
-                      ( currentarg == "-gmgtkc"   ) ||
-                      ( currentarg == "-gmgtkuc"  ) ||
-                      ( currentarg == "-gmgtkm"   ) ||
-                      ( currentarg == "-gmgtkum"  ) ||
-                      ( currentarg == "-gmgtkS"   ) ||
-                      ( currentarg == "-gmgtkA"   ) ||
-                      ( currentarg == "-gmgtkuS"  ) ||
-                      ( currentarg == "-gmgtkMS"  ) ||
-                      ( currentarg == "-gmgtkMA"  ) ||
-                      ( currentarg == "-gmgtkMuS" ) ||
-                      ( currentarg == "-gmgtkU"   ) ||
-                      ( currentarg == "-gmgtkoz"  ) ||
-                      ( currentarg == "-gmgtkOz"  ) ||
+            else if ( ( currentarg == "-gmo"       ) ||
+                      ( currentarg == "-gms"       ) ||
+                      ( currentarg == "-gmr"       ) ||
+                      ( currentarg == "-gmR"       ) ||
+                      ( currentarg == "-gnp"       ) ||
+                      ( currentarg == "-gpb"       ) ||
+                      ( currentarg == "-gph"       ) ||
+                      ( currentarg == "-gnr"       ) ||
+                      ( currentarg == "-gan"       ) ||
+                      ( currentarg == "-gplot"     ) ||
+                      ( currentarg == "-gphkn"     ) ||
+                      ( currentarg == "-gphku"     ) ||
+                      ( currentarg == "-gphkss"    ) ||
+                      ( currentarg == "-gphkus"    ) ||
+                      ( currentarg == "-gphknn"    ) ||
+                      ( currentarg == "-gphkuu"    ) ||
+                      ( currentarg == "-gphkc"     ) ||
+                      ( currentarg == "-gphkuc"    ) ||
+                      ( currentarg == "-gphkm"     ) ||
+                      ( currentarg == "-gphkum"    ) ||
+                      ( currentarg == "-gphkS"     ) ||
+                      ( currentarg == "-gphkA"     ) ||
+                      ( currentarg == "-gphkuS"    ) ||
+                      ( currentarg == "-gphkMS"    ) ||
+                      ( currentarg == "-gphkMA"    ) ||
+                      ( currentarg == "-gphkMuS"   ) ||
+                      ( currentarg == "-gphkU"     ) ||
+                      ( currentarg == "-gphkoz"    ) ||
+                      ( currentarg == "-gphmtb"    ) ||
+                      ( currentarg == "-gphbmx"    ) ||
+                      ( currentarg == "-gphkOz"    ) ||
+                      ( currentarg == "-gPkn"      ) ||
+                      ( currentarg == "-gPku"      ) ||
+                      ( currentarg == "-gPkss"     ) ||
+                      ( currentarg == "-gPkus"     ) ||
+                      ( currentarg == "-gPknn"     ) ||
+                      ( currentarg == "-gPkuu"     ) ||
+                      ( currentarg == "-gPkc"      ) ||
+                      ( currentarg == "-gPkuc"     ) ||
+                      ( currentarg == "-gPkm"      ) ||
+                      ( currentarg == "-gPkum"     ) ||
+                      ( currentarg == "-gPkS"      ) ||
+                      ( currentarg == "-gPkA"      ) ||
+                      ( currentarg == "-gPkuS"     ) ||
+                      ( currentarg == "-gPkMS"     ) ||
+                      ( currentarg == "-gPkMA"     ) ||
+                      ( currentarg == "-gPkMuS"    ) ||
+                      ( currentarg == "-gPkU"      ) ||
+                      ( currentarg == "-gPkoz"     ) ||
+                      ( currentarg == "-gPmtb"     ) ||
+                      ( currentarg == "-gPbmx"     ) ||
+                      ( currentarg == "-gPkOz"     ) ||
+                      ( currentarg == "-gmkn"      ) ||
+                      ( currentarg == "-gmku"      ) ||
+                      ( currentarg == "-gmkss"     ) ||
+                      ( currentarg == "-gmkus"     ) ||
+                      ( currentarg == "-gmknn"     ) ||
+                      ( currentarg == "-gmkuu"     ) ||
+                      ( currentarg == "-gmkc"      ) ||
+                      ( currentarg == "-gmkuc"     ) ||
+                      ( currentarg == "-gmkm"      ) ||
+                      ( currentarg == "-gmkum"     ) ||
+                      ( currentarg == "-gmkS"      ) ||
+                      ( currentarg == "-gmkA"      ) ||
+                      ( currentarg == "-gmkuS"     ) ||
+                      ( currentarg == "-gmkMS"     ) ||
+                      ( currentarg == "-gmkMA"     ) ||
+                      ( currentarg == "-gmkMuS"    ) ||
+                      ( currentarg == "-gmkU"      ) ||
+                      ( currentarg == "-gmkoz"     ) ||
+                      ( currentarg == "-gmkOz"     ) ||
+                      ( currentarg == "-gmekn"     ) ||
+                      ( currentarg == "-gmeku"     ) ||
+                      ( currentarg == "-gmekss"    ) ||
+                      ( currentarg == "-gmekus"    ) ||
+                      ( currentarg == "-gmeknn"    ) ||
+                      ( currentarg == "-gmekuu"    ) ||
+                      ( currentarg == "-gmekc"     ) ||
+                      ( currentarg == "-gmekuc"    ) ||
+                      ( currentarg == "-gmekm"     ) ||
+                      ( currentarg == "-gmekum"    ) ||
+                      ( currentarg == "-gmekS"     ) ||
+                      ( currentarg == "-gmekA"     ) ||
+                      ( currentarg == "-gmekuS"    ) ||
+                      ( currentarg == "-gmekMS"    ) ||
+                      ( currentarg == "-gmekMA"    ) ||
+                      ( currentarg == "-gmekMuS"   ) ||
+                      ( currentarg == "-gmekU"     ) ||
+                      ( currentarg == "-gmekoz"    ) ||
+                      ( currentarg == "-gmekOz"    ) ||
+                      ( currentarg == "-gmrkn"     ) ||
+                      ( currentarg == "-gmrku"     ) ||
+                      ( currentarg == "-gmrkss"    ) ||
+                      ( currentarg == "-gmrkus"    ) ||
+                      ( currentarg == "-gmrknn"    ) ||
+                      ( currentarg == "-gmrkuu"    ) ||
+                      ( currentarg == "-gmrkc"     ) ||
+                      ( currentarg == "-gmrkuc"    ) ||
+                      ( currentarg == "-gmrkm"     ) ||
+                      ( currentarg == "-gmrkum"    ) ||
+                      ( currentarg == "-gmrkS"     ) ||
+                      ( currentarg == "-gmrkA"     ) ||
+                      ( currentarg == "-gmrkuS"    ) ||
+                      ( currentarg == "-gmrkMS"    ) ||
+                      ( currentarg == "-gmrkMA"    ) ||
+                      ( currentarg == "-gmrkMuS"   ) ||
+                      ( currentarg == "-gmrkU"     ) ||
+                      ( currentarg == "-gmrkoz"    ) ||
+                      ( currentarg == "-gmrkOz"    ) ||
+                      ( currentarg == "-gmmtb"     ) ||
+                      ( currentarg == "-gmbmx"     ) ||
+                      ( currentarg == "-gmskn"     ) ||
+                      ( currentarg == "-gmsku"     ) ||
+                      ( currentarg == "-gmskss"    ) ||
+                      ( currentarg == "-gmskus"    ) ||
+                      ( currentarg == "-gmsknn"    ) ||
+                      ( currentarg == "-gmskuu"    ) ||
+                      ( currentarg == "-gmskc"     ) ||
+                      ( currentarg == "-gmskuc"    ) ||
+                      ( currentarg == "-gmskm"     ) ||
+                      ( currentarg == "-gmskum"    ) ||
+                      ( currentarg == "-gmskS"     ) ||
+                      ( currentarg == "-gmskA"     ) ||
+                      ( currentarg == "-gmskuS"    ) ||
+                      ( currentarg == "-gmskMS"    ) ||
+                      ( currentarg == "-gmskMA"    ) ||
+                      ( currentarg == "-gmskMuS"   ) ||
+                      ( currentarg == "-gmskU"     ) ||
+                      ( currentarg == "-gmskoz"    ) ||
+                      ( currentarg == "-gmskOz"    ) ||
+                      ( currentarg == "-gmsekn"    ) ||
+                      ( currentarg == "-gmseku"    ) ||
+                      ( currentarg == "-gmsekss"   ) ||
+                      ( currentarg == "-gmsekus"   ) ||
+                      ( currentarg == "-gmseknn"   ) ||
+                      ( currentarg == "-gmsekuu"   ) ||
+                      ( currentarg == "-gmsekc"    ) ||
+                      ( currentarg == "-gmsekuc"   ) ||
+                      ( currentarg == "-gmsekm"    ) ||
+                      ( currentarg == "-gmsekum"   ) ||
+                      ( currentarg == "-gmsekS"    ) ||
+                      ( currentarg == "-gmsekA"    ) ||
+                      ( currentarg == "-gmsekuS"   ) ||
+                      ( currentarg == "-gmsekMS"   ) ||
+                      ( currentarg == "-gmsekMA"   ) ||
+                      ( currentarg == "-gmsekMuS"  ) ||
+                      ( currentarg == "-gmsekU"    ) ||
+                      ( currentarg == "-gmsekoz"   ) ||
+                      ( currentarg == "-gmsekOz"   ) ||
+                      ( currentarg == "-gmsrkn"    ) ||
+                      ( currentarg == "-gmsrku"    ) ||
+                      ( currentarg == "-gmsrkss"   ) ||
+                      ( currentarg == "-gmsrkus"   ) ||
+                      ( currentarg == "-gmsrknn"   ) ||
+                      ( currentarg == "-gmsrkuu"   ) ||
+                      ( currentarg == "-gmsrkc"    ) ||
+                      ( currentarg == "-gmsrkuc"   ) ||
+                      ( currentarg == "-gmsrkm"    ) ||
+                      ( currentarg == "-gmsrkum"   ) ||
+                      ( currentarg == "-gmsrkS"    ) ||
+                      ( currentarg == "-gmsrkA"    ) ||
+                      ( currentarg == "-gmsrkuS"   ) ||
+                      ( currentarg == "-gmsrkMS"   ) ||
+                      ( currentarg == "-gmsrkMA"   ) ||
+                      ( currentarg == "-gmsrkMuS"  ) ||
+                      ( currentarg == "-gmsrkU"    ) ||
+                      ( currentarg == "-gmsrkoz"   ) ||
+                      ( currentarg == "-gmsrkOz"   ) ||
+                      ( currentarg == "-gmsmtb"    ) ||
+                      ( currentarg == "-gmsbmx"    ) ||
+                      ( currentarg == "-gmgtkn"    ) ||
+                      ( currentarg == "-gmgtku"    ) ||
+                      ( currentarg == "-gmgtkss"   ) ||
+                      ( currentarg == "-gmgtkus"   ) ||
+                      ( currentarg == "-gmgtknn"   ) ||
+                      ( currentarg == "-gmgtkuu"   ) ||
+                      ( currentarg == "-gmgtkc"    ) ||
+                      ( currentarg == "-gmgtkuc"   ) ||
+                      ( currentarg == "-gmgtkm"    ) ||
+                      ( currentarg == "-gmgtkum"   ) ||
+                      ( currentarg == "-gmgtkS"    ) ||
+                      ( currentarg == "-gmgtkA"    ) ||
+                      ( currentarg == "-gmgtkuS"   ) ||
+                      ( currentarg == "-gmgtkMS"   ) ||
+                      ( currentarg == "-gmgtkMA"   ) ||
+                      ( currentarg == "-gmgtkMuS"  ) ||
+                      ( currentarg == "-gmgtkU"    ) ||
+                      ( currentarg == "-gmgtkoz"   ) ||
+                      ( currentarg == "-gmgtkOz"   ) ||
                       ( currentarg == "-gmgtekn"   ) ||
                       ( currentarg == "-gmgteku"   ) ||
                       ( currentarg == "-gmgtekss"  ) ||
@@ -4139,8 +4067,8 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmgtrkU"   ) ||
                       ( currentarg == "-gmgtrkoz"  ) ||
                       ( currentarg == "-gmgtrkOz"  ) ||
-                      ( currentarg == "-gmgtmtb"  ) ||
-                      ( currentarg == "-gmgtbmx"  )    )
+                      ( currentarg == "-gmgtmtb"   ) ||
+                      ( currentarg == "-gmgtbmx"   )    )
             {
                 // Learning options
 
@@ -4153,424 +4081,424 @@ int runsvmint(int threadInd,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-gy"    ) ||
-                      ( currentarg == "-gao"   ) ||
-                      ( currentarg == "-gr"    ) ||
-                      ( currentarg == "-gpr"   ) ||
-                      ( currentarg == "-gnr"   ) ||
-                      ( currentarg == "-gp"    ) ||
-                      ( currentarg == "-gP"    ) ||
-                      ( currentarg == "-gpd"   ) ||
-                      ( currentarg == "-gf"    ) ||
-                      ( currentarg == "-gc"    ) ||
-                      ( currentarg == "-gC"    ) ||
-                      ( currentarg == "-g+"    ) ||
-                      ( currentarg == "-gpln"  ) ||
-                      ( currentarg == "-gpld"  ) ||
-                      ( currentarg == "-gplT"  ) ||
-                      ( currentarg == "-gplt"  ) ||
-                      ( currentarg == "-gplm"  ) ||
-                      ( currentarg == "-gplM"  ) ||
-                      ( currentarg == "-gns"   ) ||
-                      ( currentarg == "-gkm"   ) ||
-                      ( currentarg == "-gkt"   ) ||
-                      ( currentarg == "-gfm"   ) ||
-                      ( currentarg == "-gfu"   ) ||
-                      ( currentarg == "-gfM"   ) ||
-                      ( currentarg == "-gfU"   ) ||
-                      ( currentarg == "-gxs"   ) ||
-                      ( currentarg == "-ggm"   ) ||
-                      ( currentarg == "-ggi"   ) ||
-                      ( currentarg == "-gdc"   ) ||
-                      ( currentarg == "-gdf"   ) ||
-                      ( currentarg == "-gde"   ) ||
-                      ( currentarg == "-gda"   ) ||
-                      ( currentarg == "-gbH"   ) ||
-                      ( currentarg == "-gbs"   ) ||
-                      ( currentarg == "-gbm"   ) ||
-                      ( currentarg == "-gbj"   ) ||
-                      ( currentarg == "-gba"   ) ||
-                      ( currentarg == "-gbb"   ) ||
-                      ( currentarg == "-gbt"   ) ||
-                      ( currentarg == "-gbe"   ) ||
-                      ( currentarg == "-gbts"  ) ||
-                      ( currentarg == "-gbTm"  ) ||
-                      ( currentarg == "-gbTs"  ) ||
-                      ( currentarg == "-gbTx"  ) ||
-                      ( currentarg == "-gbTv"  ) ||
-                      ( currentarg == "-gbeu"  ) ||
-                      ( currentarg == "-gbTn"  ) ||
-                      ( currentarg == "-gtp"   ) ||
-                      ( currentarg == "-gtP"   ) ||
-                      ( currentarg == "-gtx"   ) ||
-                      ( currentarg == "-gref"  ) ||
-                      ( currentarg == "-gbpp"  ) ||
-                      ( currentarg == "-gbfid" ) ||
-                      ( currentarg == "-gbfn"  ) ||
-                      ( currentarg == "-gbfo"  ) ||
-                      ( currentarg == "-gbfp"  ) ||
-                      ( currentarg == "-gbfv"  ) ||
-                      ( currentarg == "-gbfb"  ) ||
-                      ( currentarg == "-gbfk"  ) ||
-                      ( currentarg == "-gbz"   ) ||
-                      ( currentarg == "-gbZ"   ) ||
-                      ( currentarg == "-gpB"   ) ||
-                      ( currentarg == "-gmx"   ) ||
-                      ( currentarg == "-gmxa"  ) ||
-                      ( currentarg == "-gmxb"  ) ||
-                      ( currentarg == "-gmy"   ) ||
-                      ( currentarg == "-gmya"  ) ||
-                      ( currentarg == "-gmyb"  ) ||
-                      ( currentarg == "-gbD"   ) ||
-                      ( currentarg == "-gbzz"  ) ||
-                      ( currentarg == "-gbk"   ) ||
-                      ( currentarg == "-gbx"   ) ||
-                      ( currentarg == "-gbo"   ) ||
-                      ( currentarg == "-gbB"   ) ||
-                      ( currentarg == "-gbr"   ) ||
-                      ( currentarg == "-gbRR"  ) ||
-                      ( currentarg == "-gbBB"  ) ||
-                      ( currentarg == "-gbu"   ) ||
-                      ( currentarg == "-gbv"   ) ||
-                      ( currentarg == "-gmw"   ) ||
-                      ( currentarg == "-gmsc"  ) ||
-                      ( currentarg == "-gmsn"  ) ||
-                      ( currentarg == "-gmsy"  ) ||
-                      ( currentarg == "-gmsw"  ) ||
-                      ( currentarg == "-gmsa"  ) ||
-                      ( currentarg == "-gmsd"  ) ||
-                      ( currentarg == "-gmsg"  ) ||
-                      ( currentarg == "-gmsgg" ) ||
-                      ( currentarg == "-gmsmd" ) ||
-                      ( currentarg == "-gmgtc"  ) ||
-                      ( currentarg == "-gmgtn"  ) ||
-                      ( currentarg == "-gmgty"  ) ||
-                      ( currentarg == "-gmgtw"  ) ||
-                      ( currentarg == "-gmgta"  ) ||
-                      ( currentarg == "-gmgtd"  ) ||
-                      ( currentarg == "-gmgtg"  ) ||
-                      ( currentarg == "-gmgtgg" ) ||
-                      ( currentarg == "-gmgtmd" ) ||
-                      ( currentarg == "-gmn"   ) ||
-                      ( currentarg == "-gmLf"  ) ||
-                      ( currentarg == "-gmLF"  ) ||
-                      ( currentarg == "-gmLn"  ) ||
-                      ( currentarg == "-gmhplb") ||
-                      ( currentarg == "-gmt"   ) ||
-                      ( currentarg == "-gmrff" ) ||
-                      ( currentarg == "-gmq"   ) ||
-                      ( currentarg == "-gbim"  ) ||
-                      ( currentarg == "-gbq"   ) ||
-                      ( currentarg == "-gma"   ) ||
-                      ( currentarg == "-gmT"   ) ||
-                      ( currentarg == "-gmd"   ) ||
-                      ( currentarg == "-gmbgn" ) ||
-                      ( currentarg == "-gmsbgn" ) ||
-                      ( currentarg == "-gmgtbgn" ) ||
-                      ( currentarg == "-gmg"   ) ||
-                      ( currentarg == "-gmgg"  ) ||
-                      ( currentarg == "-gmma"  ) ||
-                      ( currentarg == "-gmmb"  ) ||
-                      ( currentarg == "-gmmc"  ) ||
-                      ( currentarg == "-gmmd"  ) ||
-                      ( currentarg == "-gbG"   ) ||
-                      ( currentarg == "-gbmm"  ) ||
-                      ( currentarg == "-gbpd"  ) ||
-                      ( currentarg == "-gbp"   ) ||
-                      ( currentarg == "-gbpl"  ) ||
-                      ( currentarg == "-gbpu"  ) ||
-                      ( currentarg == "-gdy"   ) ||
-                      ( currentarg == "-gNa"   ) ||
-                      ( currentarg == "-gNb"   ) ||
-                      ( currentarg == "-gNc"   ) ||
-                      ( currentarg == "-gNd"   ) ||
-                      ( currentarg == "-gNg"   ) ||
-                      ( currentarg == "-gNe"   ) ||
-                      ( currentarg == "-gNf"   ) ||
-                      ( currentarg == "-gBy"   ) ||
-                      ( currentarg == "-gBfm"  ) ||
-                      ( currentarg == "-gBfM"  ) ||
-                      ( currentarg == "-gBfU"  ) ||
-                      ( currentarg == "-gBdc"  ) ||
-                      ( currentarg == "-gBdf"  ) ||
-                      ( currentarg == "-gBde"  ) ||
-                      ( currentarg == "-gBda"  ) ||
-                      ( currentarg == "-gBdy"  ) ||
-                      ( currentarg == "-gBbj"  ) ||
-                      ( currentarg == "-gBbt"  ) ||
-                      ( currentarg == "-gBbH"  ) ||
-                      ( currentarg == "-gbsp"  ) ||
-                      ( currentarg == "-gbsP"  ) ||
-                      ( currentarg == "-gbsA"  ) ||
-                      ( currentarg == "-gbsB"  ) ||
-                      ( currentarg == "-gbsF"  ) ||
-                      ( currentarg == "-gbsr"  ) ||
-                      ( currentarg == "-gbsz"  ) ||
-                      ( currentarg == "-gbss"  ) ||
-                      ( currentarg == "-gbst"  ) ||
-                      ( currentarg == "-gbuu"  ) ||
-                      ( currentarg == "-gbuk"  ) ||
-                      ( currentarg == "-gbuS"  ) ||
-                      ( currentarg == "-gphks"   ) ||
-                      ( currentarg == "-gphki"   ) ||
-                      ( currentarg == "-gphka"   ) ||
-                      ( currentarg == "-gphkb"   ) ||
-                      ( currentarg == "-gphke"   ) ||
-                      ( currentarg == "-gphkw"   ) ||
-                      ( currentarg == "-gphkwlb"   ) ||
-                      ( currentarg == "-gphkwub"   ) ||
-                      ( currentarg == "-gphkt"   ) ||
-                      ( currentarg == "-gphktx"  ) ||
-                      ( currentarg == "-gphktk"  ) ||
-                      ( currentarg == "-gphkgg"  ) ||
-                      ( currentarg == "-gphkf"   ) ||
-                      ( currentarg == "-gphkr"   ) ||
-                      ( currentarg == "-gphkg"   ) ||
-                      ( currentarg == "-gphkd"   ) ||
-                      ( currentarg == "-gphkG"   ) ||
-                      ( currentarg == "-gphkrlb"   ) ||
-                      ( currentarg == "-gphkglb"   ) ||
-                      ( currentarg == "-gphkdlb"   ) ||
-                      ( currentarg == "-gphkGlb"   ) ||
-                      ( currentarg == "-gphkrub"   ) ||
-                      ( currentarg == "-gphkgub"   ) ||
-                      ( currentarg == "-gphkdub"   ) ||
-                      ( currentarg == "-gphkGub"   ) ||
-                      ( currentarg == "-gphkI"   ) ||
-                      ( currentarg == "-gphkan"  ) ||
-                      ( currentarg == "-gPks"    ) ||
-                      ( currentarg == "-gPki"    ) ||
-                      ( currentarg == "-gPka"    ) ||
-                      ( currentarg == "-gPkb"    ) ||
-                      ( currentarg == "-gPke"    ) ||
-                      ( currentarg == "-gPkw"    ) ||
-                      ( currentarg == "-gPkwlb"    ) ||
-                      ( currentarg == "-gPkwub"    ) ||
-                      ( currentarg == "-gPkt"    ) ||
-                      ( currentarg == "-gPktx"   ) ||
-                      ( currentarg == "-gPktk"   ) ||
-                      ( currentarg == "-gPkgg"   ) ||
-                      ( currentarg == "-gPkf"    ) ||
-                      ( currentarg == "-gPkr"    ) ||
-                      ( currentarg == "-gPkg"    ) ||
-                      ( currentarg == "-gPkd"    ) ||
-                      ( currentarg == "-gPkG"    ) ||
-                      ( currentarg == "-gPkrlb"    ) ||
-                      ( currentarg == "-gPkglb"    ) ||
-                      ( currentarg == "-gPkdlb"    ) ||
-                      ( currentarg == "-gPkGlb"    ) ||
-                      ( currentarg == "-gPkrub"    ) ||
-                      ( currentarg == "-gPkgub"    ) ||
-                      ( currentarg == "-gPkdub"    ) ||
-                      ( currentarg == "-gPkGub"    ) ||
-                      ( currentarg == "-gPkI"    ) ||
-                      ( currentarg == "-gPkan"   ) ||
-                      ( currentarg == "-gmks"    ) ||
-                      ( currentarg == "-gmki"    ) ||
-                      ( currentarg == "-gmka"    ) ||
-                      ( currentarg == "-gmkb"    ) ||
-                      ( currentarg == "-gmke"    ) ||
-                      ( currentarg == "-gmkw"    ) ||
-                      ( currentarg == "-gmkwlb"    ) ||
-                      ( currentarg == "-gmkwub"    ) ||
-                      ( currentarg == "-gmkt"    ) ||
-                      ( currentarg == "-gmktx"   ) ||
-                      ( currentarg == "-gmktk"   ) ||
-                      ( currentarg == "-gmkgg"   ) ||
-                      ( currentarg == "-gmkf"    ) ||
-                      ( currentarg == "-gmkr"    ) ||
-                      ( currentarg == "-gmkg"    ) ||
-                      ( currentarg == "-gmkd"    ) ||
-                      ( currentarg == "-gmkG"    ) ||
-                      ( currentarg == "-gmkrlb"    ) ||
-                      ( currentarg == "-gmkglb"    ) ||
-                      ( currentarg == "-gmkdlb"    ) ||
-                      ( currentarg == "-gmkGlb"    ) ||
-                      ( currentarg == "-gmkrub"    ) ||
-                      ( currentarg == "-gmkgub"    ) ||
-                      ( currentarg == "-gmkdub"    ) ||
-                      ( currentarg == "-gmkGub"    ) ||
-                      ( currentarg == "-gmkI"    ) ||
-                      ( currentarg == "-gmkan"   ) ||
-                      ( currentarg == "-gmeks"    ) ||
-                      ( currentarg == "-gmeki"    ) ||
-                      ( currentarg == "-gmeka"    ) ||
-                      ( currentarg == "-gmekb"    ) ||
-                      ( currentarg == "-gmeke"    ) ||
-                      ( currentarg == "-gmekw"    ) ||
-                      ( currentarg == "-gmekwlb"    ) ||
-                      ( currentarg == "-gmekwub"    ) ||
-                      ( currentarg == "-gmekt"    ) ||
-                      ( currentarg == "-gmektx"   ) ||
-                      ( currentarg == "-gmektk"   ) ||
-                      ( currentarg == "-gmekgg"   ) ||
-                      ( currentarg == "-gmekf"    ) ||
-                      ( currentarg == "-gmekr"    ) ||
-                      ( currentarg == "-gmekg"    ) ||
-                      ( currentarg == "-gmekd"    ) ||
-                      ( currentarg == "-gmekG"    ) ||
-                      ( currentarg == "-gmekrlb"    ) ||
-                      ( currentarg == "-gmekglb"    ) ||
-                      ( currentarg == "-gmekdlb"    ) ||
-                      ( currentarg == "-gmekGlb"    ) ||
-                      ( currentarg == "-gmekrub"    ) ||
-                      ( currentarg == "-gmekgub"    ) ||
-                      ( currentarg == "-gmekdub"    ) ||
-                      ( currentarg == "-gmekGub"    ) ||
-                      ( currentarg == "-gmekI"    ) ||
-                      ( currentarg == "-gmekan"   ) ||
-                      ( currentarg == "-gmrks"    ) ||
-                      ( currentarg == "-gmrki"    ) ||
-                      ( currentarg == "-gmrka"    ) ||
-                      ( currentarg == "-gmrkb"    ) ||
-                      ( currentarg == "-gmrke"    ) ||
-                      ( currentarg == "-gmrkw"    ) ||
-                      ( currentarg == "-gmrkwlb"    ) ||
-                      ( currentarg == "-gmrkwub"    ) ||
-                      ( currentarg == "-gmrkt"    ) ||
-                      ( currentarg == "-gmrktx"   ) ||
-                      ( currentarg == "-gmrktk"   ) ||
-                      ( currentarg == "-gmrkgg"   ) ||
-                      ( currentarg == "-gmrkf"    ) ||
-                      ( currentarg == "-gmrkr"    ) ||
-                      ( currentarg == "-gmrkg"    ) ||
-                      ( currentarg == "-gmrkd"    ) ||
-                      ( currentarg == "-gmrkG"    ) ||
-                      ( currentarg == "-gmrkrlb"    ) ||
-                      ( currentarg == "-gmrkglb"    ) ||
-                      ( currentarg == "-gmrkdlb"    ) ||
-                      ( currentarg == "-gmrkGlb"    ) ||
-                      ( currentarg == "-gmrkrub"    ) ||
-                      ( currentarg == "-gmrkgub"    ) ||
-                      ( currentarg == "-gmrkdub"    ) ||
-                      ( currentarg == "-gmrkGub"    ) ||
-                      ( currentarg == "-gmrkI"    ) ||
-                      ( currentarg == "-gmrkan"   ) ||
-                      ( currentarg == "-gmsks"   ) ||
-                      ( currentarg == "-gmski"   ) ||
-                      ( currentarg == "-gmska"   ) ||
-                      ( currentarg == "-gmskb"   ) ||
-                      ( currentarg == "-gmske"   ) ||
-                      ( currentarg == "-gmskw"   ) ||
-                      ( currentarg == "-gmskwlb"   ) ||
-                      ( currentarg == "-gmskwub"   ) ||
-                      ( currentarg == "-gmskt"   ) ||
-                      ( currentarg == "-gmsktx"  ) ||
-                      ( currentarg == "-gmsktk"  ) ||
-                      ( currentarg == "-gmskgg"  ) ||
-                      ( currentarg == "-gmskf"   ) ||
-                      ( currentarg == "-gmskr"   ) ||
-                      ( currentarg == "-gmskg"   ) ||
-                      ( currentarg == "-gmskd"   ) ||
-                      ( currentarg == "-gmskG"   ) ||
-                      ( currentarg == "-gmskrlb"   ) ||
-                      ( currentarg == "-gmskglb"   ) ||
-                      ( currentarg == "-gmskdlb"   ) ||
-                      ( currentarg == "-gmskGlb"   ) ||
-                      ( currentarg == "-gmskrub"   ) ||
-                      ( currentarg == "-gmskgub"   ) ||
-                      ( currentarg == "-gmskdub"   ) ||
-                      ( currentarg == "-gmskGub"   ) ||
-                      ( currentarg == "-gmskI"   ) ||
-                      ( currentarg == "-gmskan"  ) ||
-                      ( currentarg == "-gmseks"   ) ||
-                      ( currentarg == "-gmseki"   ) ||
-                      ( currentarg == "-gmseka"   ) ||
-                      ( currentarg == "-gmsekb"   ) ||
-                      ( currentarg == "-gmseke"   ) ||
-                      ( currentarg == "-gmsekw"   ) ||
-                      ( currentarg == "-gmsekwlb"   ) ||
-                      ( currentarg == "-gmsekwub"   ) ||
-                      ( currentarg == "-gmsekt"   ) ||
-                      ( currentarg == "-gmsektx"  ) ||
-                      ( currentarg == "-gmsektk"  ) ||
-                      ( currentarg == "-gmsekgg"  ) ||
-                      ( currentarg == "-gmsekf"   ) ||
-                      ( currentarg == "-gmsekr"   ) ||
-                      ( currentarg == "-gmsekg"   ) ||
-                      ( currentarg == "-gmsekd"   ) ||
-                      ( currentarg == "-gmsekG"   ) ||
-                      ( currentarg == "-gmsekrlb"   ) ||
-                      ( currentarg == "-gmsekglb"   ) ||
-                      ( currentarg == "-gmsekdlb"   ) ||
-                      ( currentarg == "-gmsekGlb"   ) ||
-                      ( currentarg == "-gmsekrub"   ) ||
-                      ( currentarg == "-gmsekgub"   ) ||
-                      ( currentarg == "-gmsekdub"   ) ||
-                      ( currentarg == "-gmsekGub"   ) ||
-                      ( currentarg == "-gmsekI"   ) ||
-                      ( currentarg == "-gmsekan"  ) ||
-                      ( currentarg == "-gmsrks"   ) ||
-                      ( currentarg == "-gmsrki"   ) ||
-                      ( currentarg == "-gmsrka"   ) ||
-                      ( currentarg == "-gmsrkb"   ) ||
-                      ( currentarg == "-gmsrke"   ) ||
-                      ( currentarg == "-gmsrkw"   ) ||
-                      ( currentarg == "-gmsrkwlb"   ) ||
-                      ( currentarg == "-gmsrkwub"   ) ||
-                      ( currentarg == "-gmsrkt"   ) ||
-                      ( currentarg == "-gmsrktx"  ) ||
-                      ( currentarg == "-gmsrktk"  ) ||
-                      ( currentarg == "-gmsrkgg"  ) ||
-                      ( currentarg == "-gmsrkf"   ) ||
-                      ( currentarg == "-gmsrkr"   ) ||
-                      ( currentarg == "-gmsrkg"   ) ||
-                      ( currentarg == "-gmsrkd"   ) ||
-                      ( currentarg == "-gmsrkG"   ) ||
-                      ( currentarg == "-gmsrkrlb"   ) ||
-                      ( currentarg == "-gmsrkglb"   ) ||
-                      ( currentarg == "-gmsrkdlb"   ) ||
-                      ( currentarg == "-gmsrkGlb"   ) ||
-                      ( currentarg == "-gmsrkrub"   ) ||
-                      ( currentarg == "-gmsrkgub"   ) ||
-                      ( currentarg == "-gmsrkdub"   ) ||
-                      ( currentarg == "-gmsrkGub"   ) ||
-                      ( currentarg == "-gmsrkI"   ) ||
-                      ( currentarg == "-gmsrkan"  ) ||
-                      ( currentarg == "-gmgtks"   ) ||
-                      ( currentarg == "-gmgtki"   ) ||
-                      ( currentarg == "-gmgtka"   ) ||
-                      ( currentarg == "-gmgtkb"   ) ||
-                      ( currentarg == "-gmgtke"   ) ||
-                      ( currentarg == "-gmgtkw"   ) ||
-                      ( currentarg == "-gmgtkwlb"   ) ||
-                      ( currentarg == "-gmgtkwub"   ) ||
-                      ( currentarg == "-gmgtkt"   ) ||
-                      ( currentarg == "-gmgtktx"  ) ||
-                      ( currentarg == "-gmgtktk"  ) ||
-                      ( currentarg == "-gmgtkgg"  ) ||
-                      ( currentarg == "-gmgtkf"   ) ||
-                      ( currentarg == "-gmgtkr"   ) ||
-                      ( currentarg == "-gmgtkg"   ) ||
-                      ( currentarg == "-gmgtkd"   ) ||
-                      ( currentarg == "-gmgtkG"   ) ||
-                      ( currentarg == "-gmgtkrlb"   ) ||
-                      ( currentarg == "-gmgtkglb"   ) ||
-                      ( currentarg == "-gmgtkdlb"   ) ||
-                      ( currentarg == "-gmgtkGlb"   ) ||
-                      ( currentarg == "-gmgtkrub"   ) ||
-                      ( currentarg == "-gmgtkgub"   ) ||
-                      ( currentarg == "-gmgtkdub"   ) ||
-                      ( currentarg == "-gmgtkGub"   ) ||
-                      ( currentarg == "-gmgtkI"   ) ||
-                      ( currentarg == "-gmgtkan"  ) ||
-                      ( currentarg == "-gmgteks"   ) ||
-                      ( currentarg == "-gmgteki"   ) ||
-                      ( currentarg == "-gmgteka"   ) ||
-                      ( currentarg == "-gmgtekb"   ) ||
-                      ( currentarg == "-gmgteke"   ) ||
-                      ( currentarg == "-gmgtekw"   ) ||
+            else if ( ( currentarg == "-gy"          ) ||
+                      ( currentarg == "-gao"         ) ||
+                      ( currentarg == "-gr"          ) ||
+                      ( currentarg == "-gpr"         ) ||
+                      ( currentarg == "-gnr"         ) ||
+                      ( currentarg == "-gp"          ) ||
+                      ( currentarg == "-gP"          ) ||
+                      ( currentarg == "-gpd"         ) ||
+                      ( currentarg == "-gf"          ) ||
+                      ( currentarg == "-gc"          ) ||
+                      ( currentarg == "-gC"          ) ||
+                      ( currentarg == "-g+"          ) ||
+                      ( currentarg == "-gpln"        ) ||
+                      ( currentarg == "-gpld"        ) ||
+                      ( currentarg == "-gplT"        ) ||
+                      ( currentarg == "-gplt"        ) ||
+                      ( currentarg == "-gplm"        ) ||
+                      ( currentarg == "-gplM"        ) ||
+                      ( currentarg == "-gns"         ) ||
+                      ( currentarg == "-gkm"         ) ||
+                      ( currentarg == "-gkt"         ) ||
+                      ( currentarg == "-gfm"         ) ||
+                      ( currentarg == "-gfu"         ) ||
+                      ( currentarg == "-gfM"         ) ||
+                      ( currentarg == "-gfU"         ) ||
+                      ( currentarg == "-gxs"         ) ||
+                      ( currentarg == "-ggm"         ) ||
+                      ( currentarg == "-ggi"         ) ||
+                      ( currentarg == "-gdc"         ) ||
+                      ( currentarg == "-gdf"         ) ||
+                      ( currentarg == "-gde"         ) ||
+                      ( currentarg == "-gda"         ) ||
+                      ( currentarg == "-gbH"         ) ||
+                      ( currentarg == "-gbs"         ) ||
+                      ( currentarg == "-gbm"         ) ||
+                      ( currentarg == "-gbj"         ) ||
+                      ( currentarg == "-gba"         ) ||
+                      ( currentarg == "-gbb"         ) ||
+                      ( currentarg == "-gbt"         ) ||
+                      ( currentarg == "-gbe"         ) ||
+                      ( currentarg == "-gbts"        ) ||
+                      ( currentarg == "-gbTm"        ) ||
+                      ( currentarg == "-gbTs"        ) ||
+                      ( currentarg == "-gbTx"        ) ||
+                      ( currentarg == "-gbTv"        ) ||
+                      ( currentarg == "-gbeu"        ) ||
+                      ( currentarg == "-gbTn"        ) ||
+                      ( currentarg == "-gtp"         ) ||
+                      ( currentarg == "-gtP"         ) ||
+                      ( currentarg == "-gtx"         ) ||
+                      ( currentarg == "-gref"        ) ||
+                      ( currentarg == "-gbpp"        ) ||
+                      ( currentarg == "-gbfid"       ) ||
+                      ( currentarg == "-gbfn"        ) ||
+                      ( currentarg == "-gbfo"        ) ||
+                      ( currentarg == "-gbfp"        ) ||
+                      ( currentarg == "-gbfv"        ) ||
+                      ( currentarg == "-gbfb"        ) ||
+                      ( currentarg == "-gbfk"        ) ||
+                      ( currentarg == "-gbz"         ) ||
+                      ( currentarg == "-gbZ"         ) ||
+                      ( currentarg == "-gpB"         ) ||
+                      ( currentarg == "-gmx"         ) ||
+                      ( currentarg == "-gmxa"        ) ||
+                      ( currentarg == "-gmxb"        ) ||
+                      ( currentarg == "-gmy"         ) ||
+                      ( currentarg == "-gmya"        ) ||
+                      ( currentarg == "-gmyb"        ) ||
+                      ( currentarg == "-gbD"         ) ||
+                      ( currentarg == "-gbzz"        ) ||
+                      ( currentarg == "-gbk"         ) ||
+                      ( currentarg == "-gbx"         ) ||
+                      ( currentarg == "-gbo"         ) ||
+                      ( currentarg == "-gbB"         ) ||
+                      ( currentarg == "-gbr"         ) ||
+                      ( currentarg == "-gbRR"        ) ||
+                      ( currentarg == "-gbBB"        ) ||
+                      ( currentarg == "-gbu"         ) ||
+                      ( currentarg == "-gbv"         ) ||
+                      ( currentarg == "-gmw"         ) ||
+                      ( currentarg == "-gmsc"        ) ||
+                      ( currentarg == "-gmsn"        ) ||
+                      ( currentarg == "-gmsy"        ) ||
+                      ( currentarg == "-gmsw"        ) ||
+                      ( currentarg == "-gmsa"        ) ||
+                      ( currentarg == "-gmsd"        ) ||
+                      ( currentarg == "-gmsg"        ) ||
+                      ( currentarg == "-gmsgg"       ) ||
+                      ( currentarg == "-gmsmd"       ) ||
+                      ( currentarg == "-gmgtc"       ) ||
+                      ( currentarg == "-gmgtn"       ) ||
+                      ( currentarg == "-gmgty"       ) ||
+                      ( currentarg == "-gmgtw"       ) ||
+                      ( currentarg == "-gmgta"       ) ||
+                      ( currentarg == "-gmgtd"       ) ||
+                      ( currentarg == "-gmgtg"       ) ||
+                      ( currentarg == "-gmgtgg"      ) ||
+                      ( currentarg == "-gmgtmd"      ) ||
+                      ( currentarg == "-gmn"         ) ||
+                      ( currentarg == "-gmLf"        ) ||
+                      ( currentarg == "-gmLF"        ) ||
+                      ( currentarg == "-gmLn"        ) ||
+                      ( currentarg == "-gmhplb"      ) ||
+                      ( currentarg == "-gmt"         ) ||
+                      ( currentarg == "-gmrff"       ) ||
+                      ( currentarg == "-gmq"         ) ||
+                      ( currentarg == "-gbim"        ) ||
+                      ( currentarg == "-gbq"         ) ||
+                      ( currentarg == "-gma"         ) ||
+                      ( currentarg == "-gmT"         ) ||
+                      ( currentarg == "-gmd"         ) ||
+                      ( currentarg == "-gmbgn"       ) ||
+                      ( currentarg == "-gmsbgn"      ) ||
+                      ( currentarg == "-gmgtbgn"     ) ||
+                      ( currentarg == "-gmg"         ) ||
+                      ( currentarg == "-gmgg"        ) ||
+                      ( currentarg == "-gmma"        ) ||
+                      ( currentarg == "-gmmb"        ) ||
+                      ( currentarg == "-gmmc"        ) ||
+                      ( currentarg == "-gmmd"        ) ||
+                      ( currentarg == "-gbG"         ) ||
+                      ( currentarg == "-gbmm"        ) ||
+                      ( currentarg == "-gbpd"        ) ||
+                      ( currentarg == "-gbp"         ) ||
+                      ( currentarg == "-gbpl"        ) ||
+                      ( currentarg == "-gbpu"        ) ||
+                      ( currentarg == "-gdy"         ) ||
+                      ( currentarg == "-gNa"         ) ||
+                      ( currentarg == "-gNb"         ) ||
+                      ( currentarg == "-gNc"         ) ||
+                      ( currentarg == "-gNd"         ) ||
+                      ( currentarg == "-gNg"         ) ||
+                      ( currentarg == "-gNe"         ) ||
+                      ( currentarg == "-gNf"         ) ||
+                      ( currentarg == "-gBy"         ) ||
+                      ( currentarg == "-gBfm"        ) ||
+                      ( currentarg == "-gBfM"        ) ||
+                      ( currentarg == "-gBfU"        ) ||
+                      ( currentarg == "-gBdc"        ) ||
+                      ( currentarg == "-gBdf"        ) ||
+                      ( currentarg == "-gBde"        ) ||
+                      ( currentarg == "-gBda"        ) ||
+                      ( currentarg == "-gBdy"        ) ||
+                      ( currentarg == "-gBbj"        ) ||
+                      ( currentarg == "-gBbt"        ) ||
+                      ( currentarg == "-gBbH"        ) ||
+                      ( currentarg == "-gbsp"        ) ||
+                      ( currentarg == "-gbsP"        ) ||
+                      ( currentarg == "-gbsA"        ) ||
+                      ( currentarg == "-gbsB"        ) ||
+                      ( currentarg == "-gbsF"        ) ||
+                      ( currentarg == "-gbsr"        ) ||
+                      ( currentarg == "-gbsz"        ) ||
+                      ( currentarg == "-gbss"        ) ||
+                      ( currentarg == "-gbst"        ) ||
+                      ( currentarg == "-gbuu"        ) ||
+                      ( currentarg == "-gbuk"        ) ||
+                      ( currentarg == "-gbuS"        ) ||
+                      ( currentarg == "-gphks"       ) ||
+                      ( currentarg == "-gphki"       ) ||
+                      ( currentarg == "-gphka"       ) ||
+                      ( currentarg == "-gphkb"       ) ||
+                      ( currentarg == "-gphke"       ) ||
+                      ( currentarg == "-gphkw"       ) ||
+                      ( currentarg == "-gphkwlb"     ) ||
+                      ( currentarg == "-gphkwub"     ) ||
+                      ( currentarg == "-gphkt"       ) ||
+                      ( currentarg == "-gphktx"      ) ||
+                      ( currentarg == "-gphktk"      ) ||
+                      ( currentarg == "-gphkgg"      ) ||
+                      ( currentarg == "-gphkf"       ) ||
+                      ( currentarg == "-gphkr"       ) ||
+                      ( currentarg == "-gphkg"       ) ||
+                      ( currentarg == "-gphkd"       ) ||
+                      ( currentarg == "-gphkG"       ) ||
+                      ( currentarg == "-gphkrlb"     ) ||
+                      ( currentarg == "-gphkglb"     ) ||
+                      ( currentarg == "-gphkdlb"     ) ||
+                      ( currentarg == "-gphkGlb"     ) ||
+                      ( currentarg == "-gphkrub"     ) ||
+                      ( currentarg == "-gphkgub"     ) ||
+                      ( currentarg == "-gphkdub"     ) ||
+                      ( currentarg == "-gphkGub"     ) ||
+                      ( currentarg == "-gphkI"       ) ||
+                      ( currentarg == "-gphkan"      ) ||
+                      ( currentarg == "-gPks"        ) ||
+                      ( currentarg == "-gPki"        ) ||
+                      ( currentarg == "-gPka"        ) ||
+                      ( currentarg == "-gPkb"        ) ||
+                      ( currentarg == "-gPke"        ) ||
+                      ( currentarg == "-gPkw"        ) ||
+                      ( currentarg == "-gPkwlb"      ) ||
+                      ( currentarg == "-gPkwub"      ) ||
+                      ( currentarg == "-gPkt"        ) ||
+                      ( currentarg == "-gPktx"       ) ||
+                      ( currentarg == "-gPktk"       ) ||
+                      ( currentarg == "-gPkgg"       ) ||
+                      ( currentarg == "-gPkf"        ) ||
+                      ( currentarg == "-gPkr"        ) ||
+                      ( currentarg == "-gPkg"        ) ||
+                      ( currentarg == "-gPkd"        ) ||
+                      ( currentarg == "-gPkG"        ) ||
+                      ( currentarg == "-gPkrlb"      ) ||
+                      ( currentarg == "-gPkglb"      ) ||
+                      ( currentarg == "-gPkdlb"      ) ||
+                      ( currentarg == "-gPkGlb"      ) ||
+                      ( currentarg == "-gPkrub"      ) ||
+                      ( currentarg == "-gPkgub"      ) ||
+                      ( currentarg == "-gPkdub"      ) ||
+                      ( currentarg == "-gPkGub"      ) ||
+                      ( currentarg == "-gPkI"        ) ||
+                      ( currentarg == "-gPkan"       ) ||
+                      ( currentarg == "-gmks"        ) ||
+                      ( currentarg == "-gmki"        ) ||
+                      ( currentarg == "-gmka"        ) ||
+                      ( currentarg == "-gmkb"        ) ||
+                      ( currentarg == "-gmke"        ) ||
+                      ( currentarg == "-gmkw"        ) ||
+                      ( currentarg == "-gmkwlb"      ) ||
+                      ( currentarg == "-gmkwub"      ) ||
+                      ( currentarg == "-gmkt"        ) ||
+                      ( currentarg == "-gmktx"       ) ||
+                      ( currentarg == "-gmktk"       ) ||
+                      ( currentarg == "-gmkgg"       ) ||
+                      ( currentarg == "-gmkf"        ) ||
+                      ( currentarg == "-gmkr"        ) ||
+                      ( currentarg == "-gmkg"        ) ||
+                      ( currentarg == "-gmkd"        ) ||
+                      ( currentarg == "-gmkG"        ) ||
+                      ( currentarg == "-gmkrlb"      ) ||
+                      ( currentarg == "-gmkglb"      ) ||
+                      ( currentarg == "-gmkdlb"      ) ||
+                      ( currentarg == "-gmkGlb"      ) ||
+                      ( currentarg == "-gmkrub"      ) ||
+                      ( currentarg == "-gmkgub"      ) ||
+                      ( currentarg == "-gmkdub"      ) ||
+                      ( currentarg == "-gmkGub"      ) ||
+                      ( currentarg == "-gmkI"        ) ||
+                      ( currentarg == "-gmkan"       ) ||
+                      ( currentarg == "-gmeks"       ) ||
+                      ( currentarg == "-gmeki"       ) ||
+                      ( currentarg == "-gmeka"       ) ||
+                      ( currentarg == "-gmekb"       ) ||
+                      ( currentarg == "-gmeke"       ) ||
+                      ( currentarg == "-gmekw"       ) ||
+                      ( currentarg == "-gmekwlb"     ) ||
+                      ( currentarg == "-gmekwub"     ) ||
+                      ( currentarg == "-gmekt"       ) ||
+                      ( currentarg == "-gmektx"      ) ||
+                      ( currentarg == "-gmektk"      ) ||
+                      ( currentarg == "-gmekgg"      ) ||
+                      ( currentarg == "-gmekf"       ) ||
+                      ( currentarg == "-gmekr"       ) ||
+                      ( currentarg == "-gmekg"       ) ||
+                      ( currentarg == "-gmekd"       ) ||
+                      ( currentarg == "-gmekG"       ) ||
+                      ( currentarg == "-gmekrlb"     ) ||
+                      ( currentarg == "-gmekglb"     ) ||
+                      ( currentarg == "-gmekdlb"     ) ||
+                      ( currentarg == "-gmekGlb"     ) ||
+                      ( currentarg == "-gmekrub"     ) ||
+                      ( currentarg == "-gmekgub"     ) ||
+                      ( currentarg == "-gmekdub"     ) ||
+                      ( currentarg == "-gmekGub"     ) ||
+                      ( currentarg == "-gmekI"       ) ||
+                      ( currentarg == "-gmekan"      ) ||
+                      ( currentarg == "-gmrks"       ) ||
+                      ( currentarg == "-gmrki"       ) ||
+                      ( currentarg == "-gmrka"       ) ||
+                      ( currentarg == "-gmrkb"       ) ||
+                      ( currentarg == "-gmrke"       ) ||
+                      ( currentarg == "-gmrkw"       ) ||
+                      ( currentarg == "-gmrkwlb"     ) ||
+                      ( currentarg == "-gmrkwub"     ) ||
+                      ( currentarg == "-gmrkt"       ) ||
+                      ( currentarg == "-gmrktx"      ) ||
+                      ( currentarg == "-gmrktk"      ) ||
+                      ( currentarg == "-gmrkgg"      ) ||
+                      ( currentarg == "-gmrkf"       ) ||
+                      ( currentarg == "-gmrkr"       ) ||
+                      ( currentarg == "-gmrkg"       ) ||
+                      ( currentarg == "-gmrkd"       ) ||
+                      ( currentarg == "-gmrkG"       ) ||
+                      ( currentarg == "-gmrkrlb"     ) ||
+                      ( currentarg == "-gmrkglb"     ) ||
+                      ( currentarg == "-gmrkdlb"     ) ||
+                      ( currentarg == "-gmrkGlb"     ) ||
+                      ( currentarg == "-gmrkrub"     ) ||
+                      ( currentarg == "-gmrkgub"     ) ||
+                      ( currentarg == "-gmrkdub"     ) ||
+                      ( currentarg == "-gmrkGub"     ) ||
+                      ( currentarg == "-gmrkI"       ) ||
+                      ( currentarg == "-gmrkan"      ) ||
+                      ( currentarg == "-gmsks"       ) ||
+                      ( currentarg == "-gmski"       ) ||
+                      ( currentarg == "-gmska"       ) ||
+                      ( currentarg == "-gmskb"       ) ||
+                      ( currentarg == "-gmske"       ) ||
+                      ( currentarg == "-gmskw"       ) ||
+                      ( currentarg == "-gmskwlb"     ) ||
+                      ( currentarg == "-gmskwub"     ) ||
+                      ( currentarg == "-gmskt"       ) ||
+                      ( currentarg == "-gmsktx"      ) ||
+                      ( currentarg == "-gmsktk"      ) ||
+                      ( currentarg == "-gmskgg"      ) ||
+                      ( currentarg == "-gmskf"       ) ||
+                      ( currentarg == "-gmskr"       ) ||
+                      ( currentarg == "-gmskg"       ) ||
+                      ( currentarg == "-gmskd"       ) ||
+                      ( currentarg == "-gmskG"       ) ||
+                      ( currentarg == "-gmskrlb"     ) ||
+                      ( currentarg == "-gmskglb"     ) ||
+                      ( currentarg == "-gmskdlb"     ) ||
+                      ( currentarg == "-gmskGlb"     ) ||
+                      ( currentarg == "-gmskrub"     ) ||
+                      ( currentarg == "-gmskgub"     ) ||
+                      ( currentarg == "-gmskdub"     ) ||
+                      ( currentarg == "-gmskGub"     ) ||
+                      ( currentarg == "-gmskI"       ) ||
+                      ( currentarg == "-gmskan"      ) ||
+                      ( currentarg == "-gmseks"      ) ||
+                      ( currentarg == "-gmseki"      ) ||
+                      ( currentarg == "-gmseka"      ) ||
+                      ( currentarg == "-gmsekb"      ) ||
+                      ( currentarg == "-gmseke"      ) ||
+                      ( currentarg == "-gmsekw"      ) ||
+                      ( currentarg == "-gmsekwlb"    ) ||
+                      ( currentarg == "-gmsekwub"    ) ||
+                      ( currentarg == "-gmsekt"      ) ||
+                      ( currentarg == "-gmsektx"     ) ||
+                      ( currentarg == "-gmsektk"     ) ||
+                      ( currentarg == "-gmsekgg"     ) ||
+                      ( currentarg == "-gmsekf"      ) ||
+                      ( currentarg == "-gmsekr"      ) ||
+                      ( currentarg == "-gmsekg"      ) ||
+                      ( currentarg == "-gmsekd"      ) ||
+                      ( currentarg == "-gmsekG"      ) ||
+                      ( currentarg == "-gmsekrlb"    ) ||
+                      ( currentarg == "-gmsekglb"    ) ||
+                      ( currentarg == "-gmsekdlb"    ) ||
+                      ( currentarg == "-gmsekGlb"    ) ||
+                      ( currentarg == "-gmsekrub"    ) ||
+                      ( currentarg == "-gmsekgub"    ) ||
+                      ( currentarg == "-gmsekdub"    ) ||
+                      ( currentarg == "-gmsekGub"    ) ||
+                      ( currentarg == "-gmsekI"      ) ||
+                      ( currentarg == "-gmsekan"     ) ||
+                      ( currentarg == "-gmsrks"      ) ||
+                      ( currentarg == "-gmsrki"      ) ||
+                      ( currentarg == "-gmsrka"      ) ||
+                      ( currentarg == "-gmsrkb"      ) ||
+                      ( currentarg == "-gmsrke"      ) ||
+                      ( currentarg == "-gmsrkw"      ) ||
+                      ( currentarg == "-gmsrkwlb"    ) ||
+                      ( currentarg == "-gmsrkwub"    ) ||
+                      ( currentarg == "-gmsrkt"      ) ||
+                      ( currentarg == "-gmsrktx"     ) ||
+                      ( currentarg == "-gmsrktk"     ) ||
+                      ( currentarg == "-gmsrkgg"     ) ||
+                      ( currentarg == "-gmsrkf"      ) ||
+                      ( currentarg == "-gmsrkr"      ) ||
+                      ( currentarg == "-gmsrkg"      ) ||
+                      ( currentarg == "-gmsrkd"      ) ||
+                      ( currentarg == "-gmsrkG"      ) ||
+                      ( currentarg == "-gmsrkrlb"    ) ||
+                      ( currentarg == "-gmsrkglb"    ) ||
+                      ( currentarg == "-gmsrkdlb"    ) ||
+                      ( currentarg == "-gmsrkGlb"    ) ||
+                      ( currentarg == "-gmsrkrub"    ) ||
+                      ( currentarg == "-gmsrkgub"    ) ||
+                      ( currentarg == "-gmsrkdub"    ) ||
+                      ( currentarg == "-gmsrkGub"    ) ||
+                      ( currentarg == "-gmsrkI"      ) ||
+                      ( currentarg == "-gmsrkan"     ) ||
+                      ( currentarg == "-gmgtks"      ) ||
+                      ( currentarg == "-gmgtki"      ) ||
+                      ( currentarg == "-gmgtka"      ) ||
+                      ( currentarg == "-gmgtkb"      ) ||
+                      ( currentarg == "-gmgtke"      ) ||
+                      ( currentarg == "-gmgtkw"      ) ||
+                      ( currentarg == "-gmgtkwlb"    ) ||
+                      ( currentarg == "-gmgtkwub"    ) ||
+                      ( currentarg == "-gmgtkt"      ) ||
+                      ( currentarg == "-gmgtktx"     ) ||
+                      ( currentarg == "-gmgtktk"     ) ||
+                      ( currentarg == "-gmgtkgg"     ) ||
+                      ( currentarg == "-gmgtkf"      ) ||
+                      ( currentarg == "-gmgtkr"      ) ||
+                      ( currentarg == "-gmgtkg"      ) ||
+                      ( currentarg == "-gmgtkd"      ) ||
+                      ( currentarg == "-gmgtkG"      ) ||
+                      ( currentarg == "-gmgtkrlb"    ) ||
+                      ( currentarg == "-gmgtkglb"    ) ||
+                      ( currentarg == "-gmgtkdlb"    ) ||
+                      ( currentarg == "-gmgtkGlb"    ) ||
+                      ( currentarg == "-gmgtkrub"    ) ||
+                      ( currentarg == "-gmgtkgub"    ) ||
+                      ( currentarg == "-gmgtkdub"    ) ||
+                      ( currentarg == "-gmgtkGub"    ) ||
+                      ( currentarg == "-gmgtkI"      ) ||
+                      ( currentarg == "-gmgtkan"     ) ||
+                      ( currentarg == "-gmgteks"     ) ||
+                      ( currentarg == "-gmgteki"     ) ||
+                      ( currentarg == "-gmgteka"     ) ||
+                      ( currentarg == "-gmgtekb"     ) ||
+                      ( currentarg == "-gmgteke"     ) ||
+                      ( currentarg == "-gmgtekw"     ) ||
                       ( currentarg == "-gmgtekwlb"   ) ||
                       ( currentarg == "-gmgtekwub"   ) ||
-                      ( currentarg == "-gmgtekt"   ) ||
-                      ( currentarg == "-gmgtektx"  ) ||
-                      ( currentarg == "-gmgtektk"  ) ||
-                      ( currentarg == "-gmgtekgg"  ) ||
-                      ( currentarg == "-gmgtekf"   ) ||
-                      ( currentarg == "-gmgtekr"   ) ||
-                      ( currentarg == "-gmgtekg"   ) ||
-                      ( currentarg == "-gmgtekd"   ) ||
-                      ( currentarg == "-gmgtekG"   ) ||
+                      ( currentarg == "-gmgtekt"     ) ||
+                      ( currentarg == "-gmgtektx"    ) ||
+                      ( currentarg == "-gmgtektk"    ) ||
+                      ( currentarg == "-gmgtekgg"    ) ||
+                      ( currentarg == "-gmgtekf"     ) ||
+                      ( currentarg == "-gmgtekr"     ) ||
+                      ( currentarg == "-gmgtekg"     ) ||
+                      ( currentarg == "-gmgtekd"     ) ||
+                      ( currentarg == "-gmgtekG"     ) ||
                       ( currentarg == "-gmgtekrlb"   ) ||
                       ( currentarg == "-gmgtekglb"   ) ||
                       ( currentarg == "-gmgtekdlb"   ) ||
@@ -4579,25 +4507,25 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmgtekgub"   ) ||
                       ( currentarg == "-gmgtekdub"   ) ||
                       ( currentarg == "-gmgtekGub"   ) ||
-                      ( currentarg == "-gmgtekI"   ) ||
-                      ( currentarg == "-gmgtekan"  ) ||
-                      ( currentarg == "-gmgtrks"   ) ||
-                      ( currentarg == "-gmgtrki"   ) ||
-                      ( currentarg == "-gmgtrka"   ) ||
-                      ( currentarg == "-gmgtrkb"   ) ||
-                      ( currentarg == "-gmgtrke"   ) ||
-                      ( currentarg == "-gmgtrkw"   ) ||
+                      ( currentarg == "-gmgtekI"     ) ||
+                      ( currentarg == "-gmgtekan"    ) ||
+                      ( currentarg == "-gmgtrks"     ) ||
+                      ( currentarg == "-gmgtrki"     ) ||
+                      ( currentarg == "-gmgtrka"     ) ||
+                      ( currentarg == "-gmgtrkb"     ) ||
+                      ( currentarg == "-gmgtrke"     ) ||
+                      ( currentarg == "-gmgtrkw"     ) ||
                       ( currentarg == "-gmgtrkwlb"   ) ||
                       ( currentarg == "-gmgtrkwub"   ) ||
-                      ( currentarg == "-gmgtrkt"   ) ||
-                      ( currentarg == "-gmgtrktx"  ) ||
-                      ( currentarg == "-gmgtrktk"  ) ||
-                      ( currentarg == "-gmgtrkgg"  ) ||
-                      ( currentarg == "-gmgtrkf"   ) ||
-                      ( currentarg == "-gmgtrkr"   ) ||
-                      ( currentarg == "-gmgtrkg"   ) ||
-                      ( currentarg == "-gmgtrkd"   ) ||
-                      ( currentarg == "-gmgtrkG"   ) ||
+                      ( currentarg == "-gmgtrkt"     ) ||
+                      ( currentarg == "-gmgtrktx"    ) ||
+                      ( currentarg == "-gmgtrktk"    ) ||
+                      ( currentarg == "-gmgtrkgg"    ) ||
+                      ( currentarg == "-gmgtrkf"     ) ||
+                      ( currentarg == "-gmgtrkr"     ) ||
+                      ( currentarg == "-gmgtrkg"     ) ||
+                      ( currentarg == "-gmgtrkd"     ) ||
+                      ( currentarg == "-gmgtrkG"     ) ||
                       ( currentarg == "-gmgtrkrlb"   ) ||
                       ( currentarg == "-gmgtrkglb"   ) ||
                       ( currentarg == "-gmgtrkdlb"   ) ||
@@ -4606,8 +4534,17 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmgtrkgub"   ) ||
                       ( currentarg == "-gmgtrkdub"   ) ||
                       ( currentarg == "-gmgtrkGub"   ) ||
-                      ( currentarg == "-gmgtrkI"   ) ||
-                      ( currentarg == "-gmgtrkan"  )    )
+                      ( currentarg == "-gmgtrkI"     ) ||
+                      ( currentarg == "-gmgtrkan"    ) ||
+                      ( currentarg == "-gmmu"        ) ||
+                      ( currentarg == "-gmmugt"      ) ||
+                      ( currentarg == "-gmmuml"      ) ||
+                      ( currentarg == "-gmsmu"       ) ||
+                      ( currentarg == "-gmsmugt"     ) ||
+                      ( currentarg == "-gmsmuml"     ) ||
+                      ( currentarg == "-gmgtmu"      ) ||
+                      ( currentarg == "-gmgtmugt"    ) ||
+                      ( currentarg == "-gmgtmuml"    )    )
             {
                 // Learning options
 
@@ -4620,105 +4557,105 @@ int runsvmint(int threadInd,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-gphkv" ) ||
-                      ( currentarg == "-gphkV" ) ||
-                      ( currentarg == "-gphkvlb" ) ||
-                      ( currentarg == "-gphkVlb" ) ||
-                      ( currentarg == "-gphkvub" ) ||
-                      ( currentarg == "-gphkVub" ) ||
-                      ( currentarg == "-gphko" ) ||
-                      ( currentarg == "-gphkO" ) ||
-                      ( currentarg == "-gphkx" ) ||
-                      ( currentarg == "-gPkv"  ) ||
-                      ( currentarg == "-gPkV"  ) ||
-                      ( currentarg == "-gPkvlb"  ) ||
-                      ( currentarg == "-gPkVlb"  ) ||
-                      ( currentarg == "-gPkvub"  ) ||
-                      ( currentarg == "-gPkVub"  ) ||
-                      ( currentarg == "-gPko"  ) ||
-                      ( currentarg == "-gPkO"  ) ||
-                      ( currentarg == "-gPkx"  ) ||
-                      ( currentarg == "-gmkv"  ) ||
-                      ( currentarg == "-gmkV"  ) ||
-                      ( currentarg == "-gmkvlb"  ) ||
-                      ( currentarg == "-gmkVlb"  ) ||
-                      ( currentarg == "-gmkvub"  ) ||
-                      ( currentarg == "-gmkVub"  ) ||
-                      ( currentarg == "-gmko"  ) ||
-                      ( currentarg == "-gmkO"  ) ||
-                      ( currentarg == "-gmkx"  ) ||
-                      ( currentarg == "-gmekv"  ) ||
-                      ( currentarg == "-gmekV"  ) ||
-                      ( currentarg == "-gmekvlb"  ) ||
-                      ( currentarg == "-gmekVlb"  ) ||
-                      ( currentarg == "-gmekvub"  ) ||
-                      ( currentarg == "-gmekVub"  ) ||
-                      ( currentarg == "-gmeko"  ) ||
-                      ( currentarg == "-gmekO"  ) ||
-                      ( currentarg == "-gmekx"  ) ||
-                      ( currentarg == "-gmrkv"  ) ||
-                      ( currentarg == "-gmrkV"  ) ||
-                      ( currentarg == "-gmrkvlb"  ) ||
-                      ( currentarg == "-gmrkVlb"  ) ||
-                      ( currentarg == "-gmrkvub"  ) ||
-                      ( currentarg == "-gmrkVub"  ) ||
-                      ( currentarg == "-gmrko"  ) ||
-                      ( currentarg == "-gmrkO"  ) ||
-                      ( currentarg == "-gmrkx"  ) ||
-                      ( currentarg == "-gmskv" ) ||
-                      ( currentarg == "-gmskV" ) ||
-                      ( currentarg == "-gmskvlb" ) ||
-                      ( currentarg == "-gmskVlb" ) ||
-                      ( currentarg == "-gmskvub" ) ||
-                      ( currentarg == "-gmskVub" ) ||
-                      ( currentarg == "-gmsko" ) ||
-                      ( currentarg == "-gmskO" ) ||
-                      ( currentarg == "-gmskx" ) ||
-                      ( currentarg == "-gmsekv" ) ||
-                      ( currentarg == "-gmsekV" ) ||
-                      ( currentarg == "-gmsekvlb" ) ||
-                      ( currentarg == "-gmsekVlb" ) ||
-                      ( currentarg == "-gmsekvub" ) ||
-                      ( currentarg == "-gmsekVub" ) ||
-                      ( currentarg == "-gmseko" ) ||
-                      ( currentarg == "-gmsekO" ) ||
-                      ( currentarg == "-gmsekx" ) ||
-                      ( currentarg == "-gmsrkv" ) ||
-                      ( currentarg == "-gmsrkV" ) ||
-                      ( currentarg == "-gmsrkvlb" ) ||
-                      ( currentarg == "-gmsrkVlb" ) ||
-                      ( currentarg == "-gmsrkvub" ) ||
-                      ( currentarg == "-gmsrkVub" ) ||
-                      ( currentarg == "-gmsrko" ) ||
-                      ( currentarg == "-gmsrkO" ) ||
-                      ( currentarg == "-gmsrkx" ) ||
-                      ( currentarg == "-gmgtkv" ) ||
-                      ( currentarg == "-gmgtkV" ) ||
-                      ( currentarg == "-gmgtkvlb" ) ||
-                      ( currentarg == "-gmgtkVlb" ) ||
-                      ( currentarg == "-gmgtkvub" ) ||
-                      ( currentarg == "-gmgtkVub" ) ||
-                      ( currentarg == "-gmgtko" ) ||
-                      ( currentarg == "-gmgtkO" ) ||
-                      ( currentarg == "-gmgtkx" ) ||
-                      ( currentarg == "-gmgtekv" ) ||
-                      ( currentarg == "-gmgtekV" ) ||
+            else if ( ( currentarg == "-gphkv"     ) ||
+                      ( currentarg == "-gphkV"     ) ||
+                      ( currentarg == "-gphkvlb"   ) ||
+                      ( currentarg == "-gphkVlb"   ) ||
+                      ( currentarg == "-gphkvub"   ) ||
+                      ( currentarg == "-gphkVub"   ) ||
+                      ( currentarg == "-gphko"     ) ||
+                      ( currentarg == "-gphkO"     ) ||
+                      ( currentarg == "-gphkx"     ) ||
+                      ( currentarg == "-gPkv"      ) ||
+                      ( currentarg == "-gPkV"      ) ||
+                      ( currentarg == "-gPkvlb"    ) ||
+                      ( currentarg == "-gPkVlb"    ) ||
+                      ( currentarg == "-gPkvub"    ) ||
+                      ( currentarg == "-gPkVub"    ) ||
+                      ( currentarg == "-gPko"      ) ||
+                      ( currentarg == "-gPkO"      ) ||
+                      ( currentarg == "-gPkx"      ) ||
+                      ( currentarg == "-gmkv"      ) ||
+                      ( currentarg == "-gmkV"      ) ||
+                      ( currentarg == "-gmkvlb"    ) ||
+                      ( currentarg == "-gmkVlb"    ) ||
+                      ( currentarg == "-gmkvub"    ) ||
+                      ( currentarg == "-gmkVub"    ) ||
+                      ( currentarg == "-gmko"      ) ||
+                      ( currentarg == "-gmkO"      ) ||
+                      ( currentarg == "-gmkx"      ) ||
+                      ( currentarg == "-gmekv"     ) ||
+                      ( currentarg == "-gmekV"     ) ||
+                      ( currentarg == "-gmekvlb"   ) ||
+                      ( currentarg == "-gmekVlb"   ) ||
+                      ( currentarg == "-gmekvub"   ) ||
+                      ( currentarg == "-gmekVub"   ) ||
+                      ( currentarg == "-gmeko"     ) ||
+                      ( currentarg == "-gmekO"     ) ||
+                      ( currentarg == "-gmekx"     ) ||
+                      ( currentarg == "-gmrkv"     ) ||
+                      ( currentarg == "-gmrkV"     ) ||
+                      ( currentarg == "-gmrkvlb"   ) ||
+                      ( currentarg == "-gmrkVlb"   ) ||
+                      ( currentarg == "-gmrkvub"   ) ||
+                      ( currentarg == "-gmrkVub"   ) ||
+                      ( currentarg == "-gmrko"     ) ||
+                      ( currentarg == "-gmrkO"     ) ||
+                      ( currentarg == "-gmrkx"     ) ||
+                      ( currentarg == "-gmskv"     ) ||
+                      ( currentarg == "-gmskV"     ) ||
+                      ( currentarg == "-gmskvlb"   ) ||
+                      ( currentarg == "-gmskVlb"   ) ||
+                      ( currentarg == "-gmskvub"   ) ||
+                      ( currentarg == "-gmskVub"   ) ||
+                      ( currentarg == "-gmsko"     ) ||
+                      ( currentarg == "-gmskO"     ) ||
+                      ( currentarg == "-gmskx"     ) ||
+                      ( currentarg == "-gmsekv"    ) ||
+                      ( currentarg == "-gmsekV"    ) ||
+                      ( currentarg == "-gmsekvlb"  ) ||
+                      ( currentarg == "-gmsekVlb"  ) ||
+                      ( currentarg == "-gmsekvub"  ) ||
+                      ( currentarg == "-gmsekVub"  ) ||
+                      ( currentarg == "-gmseko"    ) ||
+                      ( currentarg == "-gmsekO"    ) ||
+                      ( currentarg == "-gmsekx"    ) ||
+                      ( currentarg == "-gmsrkv"    ) ||
+                      ( currentarg == "-gmsrkV"    ) ||
+                      ( currentarg == "-gmsrkvlb"  ) ||
+                      ( currentarg == "-gmsrkVlb"  ) ||
+                      ( currentarg == "-gmsrkvub"  ) ||
+                      ( currentarg == "-gmsrkVub"  ) ||
+                      ( currentarg == "-gmsrko"    ) ||
+                      ( currentarg == "-gmsrkO"    ) ||
+                      ( currentarg == "-gmsrkx"    ) ||
+                      ( currentarg == "-gmgtkv"    ) ||
+                      ( currentarg == "-gmgtkV"    ) ||
+                      ( currentarg == "-gmgtkvlb"  ) ||
+                      ( currentarg == "-gmgtkVlb"  ) ||
+                      ( currentarg == "-gmgtkvub"  ) ||
+                      ( currentarg == "-gmgtkVub"  ) ||
+                      ( currentarg == "-gmgtko"    ) ||
+                      ( currentarg == "-gmgtkO"    ) ||
+                      ( currentarg == "-gmgtkx"    ) ||
+                      ( currentarg == "-gmgtekv"   ) ||
+                      ( currentarg == "-gmgtekV"   ) ||
                       ( currentarg == "-gmgtekvlb" ) ||
                       ( currentarg == "-gmgtekVlb" ) ||
                       ( currentarg == "-gmgtekvub" ) ||
                       ( currentarg == "-gmgtekVub" ) ||
-                      ( currentarg == "-gmgteko" ) ||
-                      ( currentarg == "-gmgtekO" ) ||
-                      ( currentarg == "-gmgtekx" ) ||
-                      ( currentarg == "-gmgtrkv" ) ||
-                      ( currentarg == "-gmgtrkV" ) ||
+                      ( currentarg == "-gmgteko"   ) ||
+                      ( currentarg == "-gmgtekO"   ) ||
+                      ( currentarg == "-gmgtekx"   ) ||
+                      ( currentarg == "-gmgtrkv"   ) ||
+                      ( currentarg == "-gmgtrkV"   ) ||
                       ( currentarg == "-gmgtrkvlb" ) ||
                       ( currentarg == "-gmgtrkVlb" ) ||
                       ( currentarg == "-gmgtrkvub" ) ||
                       ( currentarg == "-gmgtrkVub" ) ||
-                      ( currentarg == "-gmgtrko" ) ||
-                      ( currentarg == "-gmgtrkO" ) ||
-                      ( currentarg == "-gmgtrkx" )    )
+                      ( currentarg == "-gmgtrko"   ) ||
+                      ( currentarg == "-gmgtrkO"   ) ||
+                      ( currentarg == "-gmgtrkx"   )    )
             {
                 // Learning options
 
@@ -5058,8 +4995,8 @@ int runsvmint(int threadInd,
                       ( currentarg == "-fztkb"   ) ||
                       ( currentarg == "-fztke"   ) ||
                       ( currentarg == "-fztkw"   ) ||
-                      ( currentarg == "-fztkwlb"   ) ||
-                      ( currentarg == "-fztkwub"   ) ||
+                      ( currentarg == "-fztkwlb" ) ||
+                      ( currentarg == "-fztkwub" ) ||
                       ( currentarg == "-fztkt"   ) ||
                       ( currentarg == "-fztktx"  ) ||
                       ( currentarg == "-fztktk"  ) ||
@@ -5069,14 +5006,14 @@ int runsvmint(int threadInd,
                       ( currentarg == "-fztkg"   ) ||
                       ( currentarg == "-fztkd"   ) ||
                       ( currentarg == "-fztkG"   ) ||
-                      ( currentarg == "-fztkrlb"   ) ||
-                      ( currentarg == "-fztkglb"   ) ||
-                      ( currentarg == "-fztkdlb"   ) ||
-                      ( currentarg == "-fztkGlb"   ) ||
-                      ( currentarg == "-fztkrub"   ) ||
-                      ( currentarg == "-fztkgub"   ) ||
-                      ( currentarg == "-fztkdub"   ) ||
-                      ( currentarg == "-fztkGub"   ) ||
+                      ( currentarg == "-fztkrlb" ) ||
+                      ( currentarg == "-fztkglb" ) ||
+                      ( currentarg == "-fztkdlb" ) ||
+                      ( currentarg == "-fztkGlb" ) ||
+                      ( currentarg == "-fztkrub" ) ||
+                      ( currentarg == "-fztkgub" ) ||
+                      ( currentarg == "-fztkdub" ) ||
+                      ( currentarg == "-fztkGub" ) ||
                       ( currentarg == "-fztkI"   ) ||
                       ( currentarg == "-fztkan"  ) ||
                       ( currentarg == "-fzsks"   ) ||
@@ -5085,8 +5022,8 @@ int runsvmint(int threadInd,
                       ( currentarg == "-fzskb"   ) ||
                       ( currentarg == "-fzske"   ) ||
                       ( currentarg == "-fzskw"   ) ||
-                      ( currentarg == "-fzskwlb"   ) ||
-                      ( currentarg == "-fzskwub"   ) ||
+                      ( currentarg == "-fzskwlb" ) ||
+                      ( currentarg == "-fzskwub" ) ||
                       ( currentarg == "-fzskt"   ) ||
                       ( currentarg == "-fzsktx"  ) ||
                       ( currentarg == "-fzsktk"  ) ||
@@ -5096,14 +5033,14 @@ int runsvmint(int threadInd,
                       ( currentarg == "-fzskg"   ) ||
                       ( currentarg == "-fzskd"   ) ||
                       ( currentarg == "-fzskG"   ) ||
-                      ( currentarg == "-fzskrlb"   ) ||
-                      ( currentarg == "-fzskglb"   ) ||
-                      ( currentarg == "-fzskdlb"   ) ||
-                      ( currentarg == "-fzskGlb"   ) ||
-                      ( currentarg == "-fzskrub"   ) ||
-                      ( currentarg == "-fzskgub"   ) ||
-                      ( currentarg == "-fzskdub"   ) ||
-                      ( currentarg == "-fzskGub"   ) ||
+                      ( currentarg == "-fzskrlb" ) ||
+                      ( currentarg == "-fzskglb" ) ||
+                      ( currentarg == "-fzskdlb" ) ||
+                      ( currentarg == "-fzskGlb" ) ||
+                      ( currentarg == "-fzskrub" ) ||
+                      ( currentarg == "-fzskgub" ) ||
+                      ( currentarg == "-fzskdub" ) ||
+                      ( currentarg == "-fzskGub" ) ||
                       ( currentarg == "-fzskI"   ) ||
                       ( currentarg == "-fzskan"  )    )
             {
@@ -5118,24 +5055,24 @@ int runsvmint(int threadInd,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fztkv" ) ||
-                      ( currentarg == "-fztkV" ) ||
+            else if ( ( currentarg == "-fztkv"   ) ||
+                      ( currentarg == "-fztkV"   ) ||
                       ( currentarg == "-fztkvlb" ) ||
                       ( currentarg == "-fztkVlb" ) ||
                       ( currentarg == "-fztkvub" ) ||
                       ( currentarg == "-fztkVub" ) ||
-                      ( currentarg == "-fztko" ) ||
-                      ( currentarg == "-fztkO" ) ||
-                      ( currentarg == "-fztkx" ) ||
-                      ( currentarg == "-fzskv" ) ||
-                      ( currentarg == "-fzskV" ) ||
+                      ( currentarg == "-fztko"   ) ||
+                      ( currentarg == "-fztkO"   ) ||
+                      ( currentarg == "-fztkx"   ) ||
+                      ( currentarg == "-fzskv"   ) ||
+                      ( currentarg == "-fzskV"   ) ||
                       ( currentarg == "-fzskvlb" ) ||
                       ( currentarg == "-fzskVlb" ) ||
                       ( currentarg == "-fzskvub" ) ||
                       ( currentarg == "-fzskVub" ) ||
-                      ( currentarg == "-fzsko" ) ||
-                      ( currentarg == "-fzskO" ) ||
-                      ( currentarg == "-fzskx" )    )
+                      ( currentarg == "-fzsko"   ) ||
+                      ( currentarg == "-fzskO"   ) ||
+                      ( currentarg == "-fzskx"   )    )
             {
                 // Fuzzy options
 
@@ -5161,22 +5098,22 @@ int runsvmint(int threadInd,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-tx"    ) ||
-                      ( currentarg == "-tl"    ) ||
-                      ( currentarg == "-tmg"   ) ||
-                      ( currentarg == "-ta"    ) ||
-                      ( currentarg == "-tQ"    ) ||
-                      ( currentarg == "-tnQ"   ) ||
-                      ( currentarg == "-tQx"   ) ||
-                      ( currentarg == "-tnQx"  ) ||
-                      ( currentarg == "-tvar"  ) ||
-                      ( currentarg == "-txz"   ) ||
-                      ( currentarg == "-txf"   ) ||
-                      ( currentarg == "-txB"   ) ||
-                      ( currentarg == "-txzB"  ) ||
-                      ( currentarg == "-txfB"  ) ||
-                      ( currentarg == "-tr"    ) ||
-                      ( currentarg == "-trB"   )    )
+            else if ( ( currentarg == "-tx"   ) ||
+                      ( currentarg == "-tl"   ) ||
+                      ( currentarg == "-tmg"  ) ||
+                      ( currentarg == "-ta"   ) ||
+                      ( currentarg == "-tQ"   ) ||
+                      ( currentarg == "-tnQ"  ) ||
+                      ( currentarg == "-tQx"  ) ||
+                      ( currentarg == "-tnQx" ) ||
+                      ( currentarg == "-tvar" ) ||
+                      ( currentarg == "-txz"  ) ||
+                      ( currentarg == "-txf"  ) ||
+                      ( currentarg == "-txB"  ) ||
+                      ( currentarg == "-txzB" ) ||
+                      ( currentarg == "-txfB" ) ||
+                      ( currentarg == "-tr"   ) ||
+                      ( currentarg == "-trB"  )    )
             {
                 // Testing options
 
@@ -5265,12 +5202,6 @@ int runsvmint(int threadInd,
                       ( currentarg == "-tCfB"   ) ||
                       ( currentarg == "-tMMv"   ) ||
                       ( currentarg == "-tMMx"   ) ||
-                      ( currentarg == "-tMpy"   ) ||
-                      ( currentarg == "-tMpyv"  ) ||
-                      ( currentarg == "-tMpyf"  ) ||
-                      ( currentarg == "-tMexe"  ) ||
-                      ( currentarg == "-tMexev" ) ||
-                      ( currentarg == "-tMexef" ) ||
                       ( currentarg == "-tfl"    ) ||
                       ( currentarg == "-tfel"   ) ||
                       ( currentarg == "-tfil"   ) ||
@@ -5568,7 +5499,7 @@ int runsvmint(int threadInd,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-Km" )    )
+            else if ( ( currentarg == "-Km" ) )
             {
                 // Reporting options
                 //
@@ -6720,13 +6651,13 @@ int runsvmint(int threadInd,
                         else { STRTHROW("Error: "+currentarg+" is not a valid -ac mode."); }
                     }
 
-                    else if ( currcommand(0) == "-bv"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setVardelta();   }
-                    else if ( currcommand(0) == "-bz"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setZerodelta();  }
+                    else if ( currcommand(0) == "-bv"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setVardelta(); }
+                    else if ( currcommand(0) == "-bz"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setZerodelta(); }
                     else if ( currcommand(0) == "-bn"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setvarApprox(safeatoi(currcommand(1),argvariables));}
                     else if ( currcommand(0) == "-bgn"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setvarApproxim(safeatoi(currcommand(1),argvariables));}
-                    else if ( currcommand(0) == "-bgv"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setVarmuBias();  }
+                    else if ( currcommand(0) == "-bgv"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setVarmuBias(); }
                     else if ( currcommand(0) == "-bgz"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setZeromuBias(); }
-                    else if ( currcommand(0) == "-bgep" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setEPConst();    }
+                    else if ( currcommand(0) == "-bgep" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setEPConst(); }
                     else if ( currcommand(0) == "-bgnc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setNaiveConst(); }
 
                     else if ( currcommand(0) == "-B" )
@@ -6734,9 +6665,9 @@ int runsvmint(int threadInd,
                         // Set bias type
 
                         if      ( currcommand(1) == "f" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setFixedBias(biasdefault); }
-                        else if ( currcommand(1) == "v" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setVarBias();              }
-                        else if ( currcommand(1) == "p" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setPosBias();              }
-                        else if ( currcommand(1) == "n" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setNegBias();              }
+                        else if ( currcommand(1) == "v" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setVarBias(); }
+                        else if ( currcommand(1) == "p" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setPosBias(); }
+                        else if ( currcommand(1) == "n" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setNegBias(); }
                         else { STRTHROW("Error: "+currentarg+" is not a valid -B mode."); }
                     }
 
@@ -8155,56 +8086,59 @@ int runsvmint(int threadInd,
                     else if ( currcommand(0) == "-gNe"  ) { (*xnopts).maxeval  = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gNf"  ) { (*xnopts).method   = safeatoi(currcommand(1),argvariables); }
 
-
-
-
-
-
-
-                    else if ( currcommand(0) == "-gmn"   ) { (*xbopts).sigmuseparate = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmt"   ) { (*xbopts).modeltype     = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmrff" ) { (*xbopts).modelrff      = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmq"   ) { (*xbopts).oracleMode    = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmw"   ) { ((*xbopts).extmuapprox).resize(1)   = &(getMLref(svmThreadOwner,svmbase,threadInd,( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) ),svmContext)); }
-                    else if ( currcommand(0) == "-gmo"   ) { (*xbopts).ismoo         = 1; }
-                    else if ( currcommand(0) == "-gms"   ) { (*xbopts).ismoo         = 0; }
-                    else if ( currcommand(0) == "-gmr"   ) { (*xbopts).makenoise     = 1; }
-                    else if ( currcommand(0) == "-gmR"   ) { (*xbopts).makenoise     = 0; }
-                    else if ( currcommand(0) == "-gma"   ) { (*xbopts).moodim        = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmT"   ) { std::stringstream xstr(currcommand(1)); SparseVector<gentype> xt; streamItIn(xstr,xt,0); (*xbopts).xtemplate = xt; }
-                    else if ( currcommand(0) == "-gmd"   ) { (*xbopts).default_model_setsigma(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-gmbgn" ) { (*xbopts).default_model_setvarApproxim(safeatoi(currcommand(1),argvariables));}
-                    else if ( currcommand(0) == "-gmsbgn") { (*xbopts).default_modelaugx_setvarApproxim(safeatoi(currcommand(1),argvariables));}
-                    else if ( currcommand(0) == "-gmgtbgn") { (*xbopts).default_modelcgt_setvarApproxim(safeatoi(currcommand(1),argvariables));}
-                    else if ( currcommand(0) == "-gmg"   ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_model_setkernelg(temp); }
-                    else if ( currcommand(0) == "-gmgg"  ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_model_setkernelgg(xscale); }
-                    else if ( currcommand(0) == "-gmma"  ) { (*xbopts).tunemu        = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmmb"  ) { (*xbopts).tunesigma     = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmmc"  ) { (*xbopts).tunesrcmod    = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmmd"  ) { (*xbopts).tunediffmod   = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmx"   ) { (*xbopts).tranmeth      = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmxa"  ) { (*xbopts).alpha0        = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmxb"  ) { (*xbopts).beta0         = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmy"   ) { (*xbopts).kernapprox    = &(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext)); }
-                    else if ( currcommand(0) == "-gmya"  ) { (*xbopts).kxfnum        = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmyb"  ) { (*xbopts).kxfnorm       = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmsc"  ) { (*xbopts).usemodelaugx  = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmsn"  ) { (*xbopts).modelnaive    = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmsy"  ) { (*xbopts).ennornaive    = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmsa"  ) { (*xbopts).default_modelaugx_settspaceDim(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-gmsd"  ) { (*xbopts).default_modelaugx_setsigma(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-gmsg"  ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_modelaugx_setkernelg(temp); }
-                    else if ( currcommand(0) == "-gmsgg" ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_modelaugx_setkernelgg(xscale); }
-                    else if ( currcommand(0) == "-gmsmd" ) { (*xbopts).tuneaugxmod   = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmgtc"  ) { (*xbopts).numcgt  = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmgtd"  ) { (*xbopts).default_modelcgt_setsigma(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-gmgtg"  ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_modelcgt_setkernelg(temp); }
-                    else if ( currcommand(0) == "-gmgtgg" ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_modelcgt_setkernelgg(xscale); }
-                    else if ( currcommand(0) == "-gmgtmd" ) { (*xbopts).tunecgt      = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmLf"  ) { (*xbopts).plotfreq      = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmLF"  ) { (*xbopts).modeloutformat= safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmLn"  ) { (*xbopts).modelname     = currcommand(1); }
-                    else if ( currcommand(0) == "-gmhplb") { (*xbopts).modelbaseline = currcommand(1); }
+                    else if ( currcommand(0) == "-gmn"      ) { (*xbopts).sigmuseparate = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmt"      ) { (*xbopts).modeltype     = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmrff"    ) { (*xbopts).modelrff      = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmq"      ) { (*xbopts).oracleMode    = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmw"      ) { ((*xbopts).extmuapprox).resize(1)   = &(getMLref(svmThreadOwner,svmbase,threadInd,( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) ),svmContext)); }
+                    else if ( currcommand(0) == "-gmo"      ) { (*xbopts).ismoo         = 1; }
+                    else if ( currcommand(0) == "-gms"      ) { (*xbopts).ismoo         = 0; }
+                    else if ( currcommand(0) == "-gmr"      ) { (*xbopts).makenoise     = 1; }
+                    else if ( currcommand(0) == "-gmR"      ) { (*xbopts).makenoise     = 0; }
+                    else if ( currcommand(0) == "-gma"      ) { (*xbopts).moodim        = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmT"      ) { std::stringstream xstr(currcommand(1)); SparseVector<gentype> xt; streamItIn(xstr,xt,0); (*xbopts).xtemplate = xt; }
+                    else if ( currcommand(0) == "-gmd"      ) { (*xbopts).default_model_setsigma(safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmbgn"    ) { (*xbopts).default_model_setvarApproxim(safeatoi(currcommand(1),argvariables));}
+                    else if ( currcommand(0) == "-gmsbgn"   ) { (*xbopts).default_modelaugx_setvarApproxim(safeatoi(currcommand(1),argvariables));}
+                    else if ( currcommand(0) == "-gmgtbgn"  ) { (*xbopts).default_modelcgt_setvarApproxim(safeatoi(currcommand(1),argvariables));}
+                    else if ( currcommand(0) == "-gmg"      ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_model_setkernelg(temp); }
+                    else if ( currcommand(0) == "-gmgg"     ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_model_setkernelgg(xscale); }
+                    else if ( currcommand(0) == "-gmma"     ) { (*xbopts).tunemu        = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmmb"     ) { (*xbopts).tunesigma     = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmmc"     ) { (*xbopts).tunesrcmod    = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmmd"     ) { (*xbopts).tunediffmod   = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmx"      ) { (*xbopts).tranmeth      = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmxa"     ) { (*xbopts).alpha0        = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmxb"     ) { (*xbopts).beta0         = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmy"      ) { (*xbopts).kernapprox    = &(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext)); }
+                    else if ( currcommand(0) == "-gmya"     ) { (*xbopts).kxfnum        = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmyb"     ) { (*xbopts).kxfnorm       = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmsc"     ) { (*xbopts).usemodelaugx  = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmsn"     ) { (*xbopts).modelnaive    = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmsy"     ) { (*xbopts).ennornaive    = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmsa"     ) { (*xbopts).default_modelaugx_settspaceDim(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmsd"     ) { (*xbopts).default_modelaugx_setsigma(safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmsg"     ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_modelaugx_setkernelg(temp); }
+                    else if ( currcommand(0) == "-gmsgg"    ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_modelaugx_setkernelgg(xscale); }
+                    else if ( currcommand(0) == "-gmsmd"    ) { (*xbopts).tuneaugxmod   = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmgtc"    ) { (*xbopts).numcgt  = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmgtd"    ) { (*xbopts).default_modelcgt_setsigma(safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmgtg"    ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_modelcgt_setkernelg(temp); }
+                    else if ( currcommand(0) == "-gmgtgg"   ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_modelcgt_setkernelgg(xscale); }
+                    else if ( currcommand(0) == "-gmgtmd"   ) { (*xbopts).tunecgt      = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmLf"     ) { (*xbopts).plotfreq      = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmLF"     ) { (*xbopts).modeloutformat= safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmLn"     ) { (*xbopts).modelname     = currcommand(1); }
+                    else if ( currcommand(0) == "-gmhplb"   ) { (*xbopts).modelbaseline = currcommand(1); }
+                    else if ( currcommand(0) == "-gmmu"     ) { ((*xbopts).altmuapprox).setmpri(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmmugt"   ) { gentype mudef(currcommand(1)); ((*xbopts).altmuapprox).setprival(mudef); }
+                    else if ( currcommand(0) == "-gmmuml"   ) { ((*xbopts).altmuapprox).setpriml(&(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext))); }
+                    else if ( currcommand(0) == "-gmsmu"    ) { ((*xbopts).altfxapprox).setmpri(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmsmugt"  ) { gentype mudef(currcommand(1)); ((*xbopts).altfxapprox).setprival(mudef); }
+                    else if ( currcommand(0) == "-gmsmuml"  ) { ((*xbopts).altfxapprox).setpriml(&(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext))); }
+                    else if ( currcommand(0) == "-gmgtmu"   ) { ((*xbopts).altcgtapprox).setmpri(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmgtmugt" ) { gentype mudef(currcommand(1)); ((*xbopts).altcgtapprox).setprival(mudef); }
+                    else if ( currcommand(0) == "-gmgtmuml" ) { ((*xbopts).altcgtapprox).setpriml(&(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext))); }
 
                     else if ( currcommand(0) == "-gmsw" )
                     {
@@ -8375,63 +8309,63 @@ int runsvmint(int threadInd,
                         gskfirstcall = 0;
                     }
 
-                    else if ( currcommand(0) == "-gbH"   ) { (*xbopts).method              = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbs"   ) { (*xbopts).intrinbatch         = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbm"   ) { (*xbopts).intrinbatchmethod   = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbj"   ) { (*xbopts).startpoints         = safeatoi(currcommand(1),argvariables);                                                                   }
+                    else if ( currcommand(0) == "-gbH"   ) { (*xbopts).method              = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbs"   ) { (*xbopts).intrinbatch         = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbm"   ) { (*xbopts).intrinbatchmethod   = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbj"   ) { (*xbopts).startpoints         = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbTv"  ) { (*xbopts).sigma_cut           = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbeu"  ) { (*xbopts).evaluse             = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbTs"  ) { (*xbopts).TSsampType          = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbTx"  ) { (*xbopts).TSxsampType         = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbTm"  ) { (*xbopts).TSmode              = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbTn"  ) { (*xbopts).TSNsamp             = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gba"   ) { (*xbopts).startseed           = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbb"   ) { (*xbopts).algseed             = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbt"   ) { (*xbopts).totiters            = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbe"   ) { (*xbopts).err                 = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbz"   ) { (*xbopts).ztol                = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbZ"   ) { (*xbopts).minstdev            = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbD"   ) { (*xbopts).delta               = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbzz"  ) { (*xbopts).zeta                = safeatof(currcommand(1),argvariables);                                                                   }
+                    else if ( currcommand(0) == "-gbTm"  ) { (*xbopts).TSmode              = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbTn"  ) { (*xbopts).TSNsamp             = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gba"   ) { (*xbopts).startseed           = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbb"   ) { (*xbopts).algseed             = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbt"   ) { (*xbopts).totiters            = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbe"   ) { (*xbopts).err                 = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbz"   ) { (*xbopts).ztol                = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbZ"   ) { (*xbopts).minstdev            = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbD"   ) { (*xbopts).delta               = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbzz"  ) { (*xbopts).zeta                = safeatof(currcommand(1),argvariables); }
 
-                    if ( currcommand(0) == "-gbk"   ) { (*xbopts).nu                  = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbx"   ) { (*xbopts).modD                = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbo"   ) { (*xbopts).a                   = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbB"   ) { (*xbopts).b                   = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbr"   ) { (*xbopts).r                   = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbRR"  ) { (*xbopts).R                   = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbBB"  ) { (*xbopts).B                   = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbu"   ) { (*xbopts).p                   = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbv"   ) { (*xbopts).betafn              = currcommand(1);                                                                                          }
-                    else if ( currcommand(0) == "-gbim"  ) { (*xbopts).itcntmethod         = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbpd"  ) { (*xbopts).direcdim            = safeatoi(currcommand(1),argvariables);                                                                   }
+                    if      ( currcommand(0) == "-gbk"   ) { (*xbopts).nu                  = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbx"   ) { (*xbopts).modD                = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbo"   ) { (*xbopts).a                   = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbB"   ) { (*xbopts).b                   = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbr"   ) { (*xbopts).r                   = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbRR"  ) { (*xbopts).R                   = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbBB"  ) { (*xbopts).B                   = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbu"   ) { (*xbopts).p                   = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbv"   ) { (*xbopts).betafn              = currcommand(1); }
+                    else if ( currcommand(0) == "-gbim"  ) { (*xbopts).itcntmethod         = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbpd"  ) { (*xbopts).direcdim            = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbq"   ) { (*xbopts).impmeasu            = &(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext).getIMP()); }
-                    else if ( currcommand(0) == "-gbpp"  ) { (*xbopts).direcpre            = &(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext).getML());  }
-                    else if ( currcommand(0) == "-gbmm"  ) { (*xbopts).direcsubseqpre      = &(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext).getML());  }
-                    else if ( currcommand(0) == "-gbG"   ) { (*xbopts).gridsource          = &(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext));          }
-                    else if ( currcommand(0) == "-gbsp"  ) { (*xbopts).stabpmax            = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbsP"  ) { (*xbopts).stabpmin            = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbsA"  ) { (*xbopts).stabA               = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbsB"  ) { (*xbopts).stabB               = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbsF"  ) { (*xbopts).stabF               = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbsr"  ) { (*xbopts).stabbal             = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbsz"  ) { (*xbopts).stabZeroPt          = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbss"  ) { (*xbopts).stabUseSig          = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbst"  ) { (*xbopts).stabThresh          = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbuu"  ) { (*xbopts).unscentUse          = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbuk"  ) { (*xbopts).unscentK            = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbfid" ) { (*xbopts).numfids             = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbfn"  ) { (*xbopts).dimfid              = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbfb"  ) { (*xbopts).fidbudget           = safeatof(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbfp"  ) { (*xbopts).fidpenalty          = currcommand(1);                                                                                          }
-                    else if ( currcommand(0) == "-gbfv"  ) { (*xbopts).fidvar              = currcommand(1);                                                                                          }
-                    else if ( currcommand(0) == "-gbfo"  ) { (*xbopts).fidover             = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gBbj"  ) { (*xbopts).startpointsmultiobj = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gBbt"  ) { (*xbopts).totitersmultiobj    = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gBbH"  ) { (*xbopts).ehimethodmultiobj   = safeatoi(currcommand(1),argvariables);                                                                   }
-                    else if ( currcommand(0) == "-gbpl"  ) { safeatowhatever((*xbopts).direcmin,currcommand(1),argvariables);                                                                         }
-                    else if ( currcommand(0) == "-gbpu"  ) { safeatowhatever((*xbopts).direcmax,currcommand(1),argvariables);                                                                         }
-                    else if ( currcommand(0) == "-gbuS"  ) { safeatowhatever((*xbopts).unscentSqrtSigma,currcommand(1),argvariables);                                                                 }
+                    else if ( currcommand(0) == "-gbpp"  ) { (*xbopts).direcpre            = &(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext).getML()); }
+                    else if ( currcommand(0) == "-gbmm"  ) { (*xbopts).direcsubseqpre      = &(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext).getML()); }
+                    else if ( currcommand(0) == "-gbG"   ) { (*xbopts).gridsource          = &(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext)); }
+                    else if ( currcommand(0) == "-gbsp"  ) { (*xbopts).stabpmax            = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbsP"  ) { (*xbopts).stabpmin            = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbsA"  ) { (*xbopts).stabA               = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbsB"  ) { (*xbopts).stabB               = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbsF"  ) { (*xbopts).stabF               = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbsr"  ) { (*xbopts).stabbal             = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbsz"  ) { (*xbopts).stabZeroPt          = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbss"  ) { (*xbopts).stabUseSig          = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbst"  ) { (*xbopts).stabThresh          = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbuu"  ) { (*xbopts).unscentUse          = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbuk"  ) { (*xbopts).unscentK            = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbfid" ) { (*xbopts).numfids             = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbfn"  ) { (*xbopts).dimfid              = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbfb"  ) { (*xbopts).fidbudget           = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbfp"  ) { (*xbopts).fidpenalty          = currcommand(1); }
+                    else if ( currcommand(0) == "-gbfv"  ) { (*xbopts).fidvar              = currcommand(1); }
+                    else if ( currcommand(0) == "-gbfo"  ) { (*xbopts).fidover             = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gBbj"  ) { (*xbopts).startpointsmultiobj = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gBbt"  ) { (*xbopts).totitersmultiobj    = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gBbH"  ) { (*xbopts).ehimethodmultiobj   = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbpl"  ) { safeatowhatever((*xbopts).direcmin,currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbpu"  ) { safeatowhatever((*xbopts).direcmax,currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbuS"  ) { safeatowhatever((*xbopts).unscentSqrtSigma,currcommand(1),argvariables); }
 
                     else if ( currcommand(0) == "-gbp"  )
                     {
@@ -8460,12 +8394,12 @@ int runsvmint(int threadInd,
 
 
                     else if ( currcommand(0) == "-gxs"  ) { std::stringstream xstr(currcommand(1)); streamItIn(xstr,defxres,0); }
-                    else if ( currcommand(0) == "-gtp"  ) { prestring   = currcommand(1);                                       }
-                    else if ( currcommand(0) == "-gtP"  ) { midstring   = currcommand(1);                                       }
-                    else if ( currcommand(0) == "-gbts" ) { interstring = currcommand(1);                                       }
-                    else if ( currcommand(0) == "-gtx"  ) { xfnis       = currcommand(1);                                       }
-                    else if ( currcommand(0) == "-gr"   ) { numOptReps  = safeatoi(currcommand(1),argvariables);                }
-                    else if ( currcommand(0) == "-gref" ) { optname     = currcommand(1);                                       }
+                    else if ( currcommand(0) == "-gtp"  ) { prestring   = currcommand(1); }
+                    else if ( currcommand(0) == "-gtP"  ) { midstring   = currcommand(1); }
+                    else if ( currcommand(0) == "-gbts" ) { interstring = currcommand(1); }
+                    else if ( currcommand(0) == "-gtx"  ) { xfnis       = currcommand(1); }
+                    else if ( currcommand(0) == "-gr"   ) { numOptReps  = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gref" ) { optname     = currcommand(1); }
                     else if ( currcommand(0) == "-gpd"  ) { optname = ( (*xnopts).optname = ( (*xgopts).optname = ( (*xdopts).optname = ( (*xbopts).optname = currcommand(1) ) ) ) ); }
 
                     else if ( ( currcommand(0) == "-g"  ) ||
@@ -8712,18 +8646,15 @@ int runsvmint(int threadInd,
                                     optname = "sim "+ssj.str();
                                 }
 
-
-
-
 //NB: if you change this you'll also need to change it in globalopt.h!
-                                Vector<int> MLnumbers(9); // 0 = ML model (mu), -1 if none
-                                                          // 1 = ML model (sigma), -1 if none or same as mu
-                                                          // 2 = functional analysis model, -1 if not relevant
-                                                          // 3 = random direction model (GPR or distribution)
-                                                          // 4 = source model (env-GP,diff-GP)
-                                                          // 5 = difference model (diff-GP)
-                                                          // 6 = augx model, -1 if not defined
-                                                          // 7 = cgt model, -1 if not defined
+                                Vector<int> MLnumbers(9); // 0 = ML model (mu), -1 if none (smboopt)
+                                                          // 1 = ML model (sigma), -1 if none or same as mu (smboopt)
+                                                          // 2 = functional analysis model, -1 if not relevant (globalopt)
+                                                          // 3 = random direction model (GPR or distribution) (globalopt)
+                                                          // 4 = source model (env-GP,diff-GP) (smboopt)
+                                                          // 5 = difference model (diff-GP) (smboopt)
+                                                          // 6 = augx model, -1 if not defined (smboopt)
+                                                          // 7 = cgt model, -1 if not defined (smboopt)
 
                                 MLnumbers("&",0) = bayesModelNum;
                                 MLnumbers("&",1) = -1;
@@ -9944,14 +9875,6 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         argvariables("&",1)("&",1) = finalresult;
                     }
-
-                    else if ( currcommand(0) == "-tMpy"   ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv;                                                     pyorexeeval(1,0,2,currcommand(1),sf,fv,finalresult); }
-                    else if ( currcommand(0) == "-tMpyv"  ) { gentype fv; safeatowhatever(fv,currcommand(2),argvariables); gentype sf; NiceAssert( fv.isValVector() ); NiceAssert( fv.infsize() ); pyorexeeval(0,1,2,currcommand(1),sf,fv.cast_vector(),finalresult); }
-                    else if ( currcommand(0) == "-tMpyf"  ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv;                                                     pyorexeeval(0,0,2,currcommand(1),sf,fv,finalresult); }
-
-                    else if ( currcommand(0) == "-tMexe"  ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv;                                                     pyorexeeval(1,0,0,currcommand(1),sf,fv,finalresult); }
-                    else if ( currcommand(0) == "-tMexev" ) { gentype fv; safeatowhatever(fv,currcommand(2),argvariables); gentype sf; NiceAssert( fv.isValVector() ); NiceAssert( fv.infsize() ); pyorexeeval(0,1,0,currcommand(1),sf,fv.cast_vector(),finalresult); }
-                    else if ( currcommand(0) == "-tMexef" ) { gentype sf; safeatowhatever(sf,currcommand(2),argvariables); Vector<gentype> fv;                                                     pyorexeeval(0,0,0,currcommand(1),sf,fv,finalresult); }
 
                     else
                     {
@@ -13850,138 +13773,6 @@ void testRKHSnorm(std::string &logfile, const ML_Mutable &svmbase, int &firstsum
 
 
 
-// isscalar = nz if scalar
-// isvector = nz if vector
-// ispy     = 0 if exe
-//          = 1 if python
-// evalname = python/exe to be called
-// sf       = scalar or function to be evaluated
-// v        = vector
-
-int pyorexeeval(int isscalar, int isvector, int ispy, const std::string &evalname, const gentype &sf, const Vector<gentype> &v, gentype &finalresult)
-{
-(void) isvector;
-    NiceAssert( !isscalar || !isvector );
-
-    //if ( ( ispy == 2 ) || ( ispy == 3 ) )
-    //{
-        remove("pyres.txt");
-
-        std::stringstream evalstream;
-
-        if ( isscalar )
-        {
-            evalstream << evalname;
-            evalstream << " ";
-            evalstream << sf;
-            evalstream << " > pyres.txt";
-        }
-
-        else
-        {
-            evalstream << evalname;
-            evalstream << " ";
-            evalstream << v;
-            evalstream << " > pyres.txt";
-        }
-
-        std::string evalstr(evalstream.str());
-
-        if ( ispy )
-        {
-            // ; is treated as a "special" character and messes up python!
-
-            for ( int i = 0 ; i < (int) evalstr.size() ; i++ )
-            {
-                if ( evalstr[i] == ';' )
-                {
-                    evalstr[i] = ':';
-                }
-            }
-
-            errstream() << "Python call string: " << evalstr << "\n";
-
-            svm_pycall(evalstr,false);
-        }
-
-        else
-        {
-            errstream() << "Executable call string: " << evalstr << "\n";
-
-            svm_execall(evalstr,false);
-        }
-
-//        svm_sleep(1);
-
-        std::ifstream resfile("pyres.txt");
-
-        if ( resfile.is_open() )
-        {
-            resfile >> finalresult;
-        }
-
-        else
-        {
-            finalresult.makeError("No result written");
-        }
-
-        resfile.close();
-
-        return 0;
-    //}
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 int loadDataFromMatlab(const std::string &xmatname, const std::string &ymatname, Vector<SparseVector<gentype> > &x, Vector<gentype> &dz, char targtype, int (*getsetExtVar)(gentype &res, const gentype &src, int num))
@@ -14509,11 +14300,23 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -fV being unevaluated  and -fW evaluated), and  -echo x, which simply\n" : "" );
     output << ( (          advanced ) ? "         evaluates x and echoes it to standard out.                           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "Python calls: the function  pycall(\"some.py\",x)  lets you  evaluate the python\n" : "" );
+    output << ( (          advanced ) ? "         code some.py x (via  a system call python3 some.py x).  The result is\n" : "" );
+    output << ( (          advanced ) ? "         read from the file pyres.txt, which some.py needs to create.         \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "System calls: the function  syscall(\"some.exe\",x) lets you make a  system call\n" : "" );
+    output << ( (          advanced ) ? "         code some.exe x.  The result  isread from the  file pyres.txt,  which\n" : "" );
+    output << ( (          advanced ) ? "         some.exe needs to create.                                            \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "Comments: comments  can be  included in  argument streams,  which is  handy if\n" : "" );
     output << ( (          advanced ) ? "         you want to put commands in a  file.  Comments are C style - that is,\n" : "" );
     output << ( (          advanced ) ? "         /* comment goes here and gets ignored */.  Note that comments may not\n" : "" );
     output << ( (          advanced ) ? "         interupt commands, so for example  the sequence \"-c 1 /* set c */\" is\n" : "" );
     output << ( (          advanced ) ? "         good, but \"-c /* set c */\" 1 is a syntax error.                      \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "Nominal constants: in some places (eg kernels) it is helpful to set parameters\n" : "" );
+    output << ( (          advanced ) ? "         nominally constant using the syntax e.g. 1.32c.  This is used in e.g.\n" : "" );
+    output << ( (          advanced ) ? "         BO hyperparameter tuning to stop that parameter being changed/tuned. \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "Help options (run when encountered):                                          \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
@@ -14623,8 +14426,8 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                               Type-II Multi-Layer Kernel Machines (MLM):     \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                         mlr - MLM: Type-II MLK machine scalar regression.    \n" : "" );
-    output << ( (          advanced ) ? "                         mlc - MLM: Type-II MLK machine scalar regression.    \n" : "" );
-    output << ( (          advanced ) ? "                         mlv - MLM: Type-II MLK machine scalar regression.    \n" : "" );
+    output << ( (          advanced ) ? "                         mlc - MLM: Type-II MLK machine binary classifier.    \n" : "" );
+    output << ( (          advanced ) ? "                         mlv - MLM: Type-II MLK machine vector regression.    \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                         NB: MLM  is  extremely  experimental.   Binary  might\n" : "" );
     output << ( (          advanced ) ? "                             work (probably not), but none of the others do.  \n" : "" );
@@ -15054,10 +14857,10 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "         -R   {l,q,o,g,G}- empirical risk type.                               \n" : "" );
     output << ( ( basic || advanced ) ? "                           l - linear (default).                              \n" : "" );
     output << ( ( basic || advanced ) ? "                           q - quadratic.                                     \n" : "" );
-    output << ( ( basic || advanced ) ? "                           o - linear cost, but with  1-norm regularisation on\n" : "" ); 
-    output << ( ( basic || advanced ) ? "                               alpha  (not feature  space:  use -m  for that).\n" : "" ); 
-    output << ( ( basic || advanced ) ? "                               (to  enforce 1-norm  regularisation  with hard-\n" : "" ); 
-    output << ( ( basic || advanced ) ? "                               margin use this in combination with -c 1e20).  \n" : "" ); 
+    output << ( ( basic || advanced ) ? "                           o - linear cost, but with  1-norm regularisation on\n" : "" );
+    output << ( ( basic || advanced ) ? "                               alpha  (not feature  space:  use -m  for that).\n" : "" );
+    output << ( ( basic || advanced ) ? "                               (to  enforce 1-norm  regularisation  with hard-\n" : "" );
+    output << ( ( basic || advanced ) ? "                               margin use this in combination with -c 1e20).  \n" : "" );
     output << ( ( basic || advanced ) ? "                           g - generalised linear cost (iterative fuzzy).     \n" : "" );
     output << ( ( basic || advanced ) ? "                           G - generalised quadratic cost (iterative fuzzy).  \n" : "" );
     output << ( ( basic || advanced ) ? "                           Note  that  quadratic  quadratic empirical  ignores\n" : "" );
@@ -16591,8 +16394,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                              - var(90,8): raw start  time (seconds,  with ref\n" : "" );
     output << ( (          advanced ) ? "                                           to some arbitrary point in time.   \n" : "" );
     output << ( (          advanced ) ? "                              - var(90,9): x augmentation model (if used).    \n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,10): equality constraint model (\").    \n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,11): inequality constraint model (\").  \n" : "" );
+    output << ( (          advanced ) ? "                              - var(90,10): inequality constraint model (\").  \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                              Note  that   changes  here  affect   the  *next*\n" : "" );
     output << ( (          advanced ) ? "                              projection step 3, not the current one.         \n" : "" );
@@ -17026,7 +16828,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -gmgtc n        - number of inequality constraints c(x) >= 0.        \n" : "" );
     output << ( (          advanced ) ? "                           0 - normal operation (default).                    \n" : "" );
     output << ( (          advanced ) ? "                           n - see above.                                     \n" : "" );
-    output << ( (          advanced ) ? "                           Equality  constraints  are   enforced  (in  BO)  by\n" : "" );
+    output << ( (          advanced ) ? "                           Inequality constraints  are   enforced (in  BO)  by\n" : "" );
     output << ( (          advanced ) ? "                           multiplying   the   acquisition  function   by  the\n" : "" );
     output << ( (          advanced ) ? "                           posterior probability  that the  constraint is met.\n" : "" );
     output << ( (          advanced ) ? "                           For EI, this is exactly cEI.                       \n" : "" );
@@ -17089,6 +16891,18 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -gmgg g         - set ARD length scale vector for default GPR kernel.\n" : "" );
     output << ( (          advanced ) ? "         -gmsgg g        - set ARD length scale vector for dfault q(x) kernel.\n" : "" );
     output << ( (          advanced ) ? "         -gmgtgg g       - set ARD length scale vector for dfault c(x) kernel.\n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -gmmu  {0,1,2}  - Prior mean type on GP for GPR model.               \n" : "" );
+    output << ( (          advanced ) ? "         -gmmugt mu      - Prior mean function on GP for GPR model.           \n" : "" );
+    output << ( (          advanced ) ? "         -gmmuml ml      - Prior mean ML number on GP for GPR model           \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -gmsmu  {0,1,2} - Prior mean type on GP for GPR model.               \n" : "" );
+    output << ( (          advanced ) ? "         -gmsmugt mu     - Prior mean function on GP for GPR model.           \n" : "" );
+    output << ( (          advanced ) ? "         -gmsmuml ml     - Prior mean ML number on GP for GPR model           \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtmu {0,1,2} - Prior mean type on GP for GPR model.               \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtmugt mu    - Prior mean function on GP for GPR model.           \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtmuml ml    - Prior mean ML number on GP for GPR model           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmk...         - set default kernel parameters on GP for GPR model. \n" : "" );
     output << ( (          advanced ) ? "         -gmsk...        - set default kernel paras on GP for side-channel.   \n" : "" );
@@ -18062,16 +17876,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -tMMv $fn v     - combines -tM and -tMv.                             \n" : "" );
     output << ( (          advanced ) ? "         -tMMx $fn x     - combines -tM and -tMx.                             \n" : "" );
     output << ( (          advanced ) ? "         -tMMvx $fn v x  - combines -tM and -tMvw.                            \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -tMpy   fname x - evaluate python script fname with scalar x.*       \n" : "" );
-    output << ( (          advanced ) ? "         -tMpyv  fname x - evaluate python script fname with vector x.*       \n" : "" );
-    output << ( (          advanced ) ? "         -tMpyf  fname x - evaluate python script fname with function x.*     \n" : "" );
-    output << ( (          advanced ) ? "                           *executes \"python3  fname x > pyres.txt\"  and grabs\n" : "" );
-    output << ( (          advanced ) ? "                            result from pyres.txt.                            \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -tMexe  fname x - evaluate executable fname with scalar x.           \n" : "" );
-    output << ( (          advanced ) ? "         -tMexev fname x - evaluate executable fname with vector x.           \n" : "" );
-    output << ( (          advanced ) ? "         -tMexef fname x - evaluate executable fname with function x.         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         -tl             - Calculate  negative  (of) log-likelihood.  This  is\n" : "" );
     output << ( ( basic || advanced ) ? "                           well defined for  the GPR and formally  defined (by\n" : "" );

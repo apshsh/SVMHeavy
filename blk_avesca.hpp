@@ -54,12 +54,13 @@ public:
 
     // Information functions (training data):
 
-    virtual int NNC(int d)    const override { return classcnt(d+1); }
-    virtual int type(void)    const override { return 202;           }
-    virtual int subtype(void) const override { return 0;             }
+    virtual int NNC    (int d) const override { return classcnt(d+1); }
+    virtual int type   (void)  const override { return 202;           }
+    virtual int subtype(void)  const override { return 0;             }
 
-    virtual int tspaceDim(void)    const override { return 1; }
-    virtual int numClasses(void)   const override { return 0; }
+    virtual int tspaceDim (void) const override { return 1; }
+    virtual int numClasses(void) const override { return 0; }
+
 
     virtual char gOutType(void) const override { return 'R'; }
     virtual char hOutType(void) const override { return 'R'; }
@@ -68,6 +69,10 @@ public:
 
     virtual const Vector<int> &ClassLabels(void)   const override { return classlabels; }
     virtual int getInternalClass(const gentype &y) const override { return ( ( (double) y ) < 0 ) ? 0 : 1; }
+
+
+
+
 
     virtual int isClassifier(void) const override { return 0; }
 
