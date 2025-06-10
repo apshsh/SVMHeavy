@@ -35,7 +35,7 @@ std::complex<double> cplvalsrc(int i);
 void intpush(int x);
 void dblpush(double x);
 void strpush(std::string x);
-void compush(std::string x);
+void compush(std::string x); // this is actually a char, but unfortunately python treats chars as strings of length 1, so...
 
 void svmheavya(void);                               // just get help screen
 void svmheavyb(int permode);                        // set persistence mode
@@ -47,14 +47,14 @@ PYBIND11_MODULE(pyheavy, m) {
     m.def("mode", &svmheavyb, "Set persistence mode");
     m.def("exec", &svmheavyc, "Run with string given");
     m.def("execmod", &svmheavyd, "Run with string given on ML given");
-    m.def("intvalsrc", &intvalsrc, "Internal use");
-    m.def("dblvalsrc", &dblvalsrc, "Internal use");
-    m.def("strvalsrc", &strvalsrc, "Internal use");
-    m.def("cplvalsrc", &cplvalsrc, "Internal use");
-    m.def("intpush", &intpush, "Internal use");
-    m.def("dblpush", &dblpush, "Internal use");
-    m.def("strpush", &strpush, "Internal use");
-    m.def("compush", &compush, "Internal use");
+    m.def("z_intvalsrc", &intvalsrc, "Internal use");
+    m.def("z_dblvalsrc", &dblvalsrc, "Internal use");
+    m.def("z_strvalsrc", &strvalsrc, "Internal use");
+    m.def("z_cplvalsrc", &cplvalsrc, "Internal use");
+    m.def("z_intpush", &intpush, "Internal use");
+    m.def("z_dblpush", &dblpush, "Internal use");
+    m.def("z_strpush", &strpush, "Internal use");
+    m.def("z_compush", &compush, "Internal use");
 }
 
 void svmheavy(int method, int permode, const std::string commstr, int wml);
@@ -98,6 +98,12 @@ int cligetsetExtVar(gentype &res, const gentype &src, int num)
 #define LOGOUTTOFILE 1
 #define LOGERRTOFILE 1
 
+// Print state: 0 no output to stream (but file still done)
+//              1 output to stream and file
+
+int pyAllowPrintOut(int mod = -1);
+int pyAllowPrintErr(int mod = -1);
+
 void cliCharPrintOut(char c);
 void cliCharPrintErr(char c);
 
@@ -116,7 +122,7 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
 {
     static thread_local int hasbeeninit = 0;
     static thread_local int persistenceset = 0;
-    static thread_local int persistencereq = 0;
+    static thread_local int persistencereq = 1;
 
     isMainThread(1);
 
@@ -144,6 +150,7 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
         setoutstream(&clicout);
 
         suppresserrstreamcout();
+        pyAllowPrintErr(0);
 
         // Print help if no commands given, or too many
         //
@@ -182,7 +189,7 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
             outstream() << "trained ML in memory for use.                                                 \n";
             outstream() << "                                                                              \n";
             outstream() << "Turn off persistence: pyheavy.mode(0)                                         \n";
-            outstream() << "Turn on persistence:  pyheavy.mode(1)                                         \n";
+            outstream() << "Turn on persistence:  pyheavy.mode(1)  (default)                              \n";
             outstream() << "                                                                              \n";
             outstream() << "Multiple MLs: multiple  MLs can  run simultaneously  (see -?? for  details, in\n";
             outstream() << "particular  the  -q...  commands) in  parallel.  To  simplify  operation  when\n";
@@ -207,7 +214,7 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
 
             else if ( permode == 1 )
             {
-                persistencereq = 1;
+                persistencereq = 0;
             }
         }
 
@@ -347,13 +354,38 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
 
 
 
+int pyAllowPrintOut(int mod)
+{
+    static int allowprint = 1;
+
+    int tempstat = allowprint;
+
+    if ( mod == 0 ) { allowprint = 0; }
+    if ( mod == 1 ) { allowprint = 1; }
+
+    return tempstat;
+}
+
+int pyAllowPrintErr(int mod)
+{
+    static int allowprint = 0;
+
+    int tempstat = allowprint;
+
+    if ( mod == 0 ) { allowprint = 0; }
+    if ( mod == 1 ) { allowprint = 1; }
+
+    return tempstat;
+}
+
+
 
 void cliCharPrintOut(char c)
 {
     cliPrintToOutLog(c);
 
 #ifndef HEADLESS
-    if ( !LoggingOstreamOut::suppressStreamCout )
+    if ( !LoggingOstreamOut::suppressStreamCout && pyAllowPrintOut() )
     {
         std::cout << c;
     }
@@ -367,7 +399,7 @@ void cliCharPrintErr(char c)
     cliPrintToErrLog(c);
 
 #ifndef HEADLESS
-    if ( !LoggingOstreamErr::suppressStreamCout )
+    if ( !LoggingOstreamErr::suppressStreamCout && pyAllowPrintErr() )
     {
         std::cerr << c;
     }
@@ -588,7 +620,7 @@ int convGentype(std::string &res, const gentype &src, int &iint, int &idbl, int 
 
     else if ( src.isValInteger() )
     {
-        res = "pyheavy.intvalsrc(";
+        res = "pyheavy.z_intvalsrc(";
         res += std::to_string(iint);
         res += ")";
 
@@ -599,7 +631,7 @@ int convGentype(std::string &res, const gentype &src, int &iint, int &idbl, int 
 
     else if ( src.isValReal() )
     {
-        res = "pyheavy.dblvalsrc(";
+        res = "pyheavy.z_dblvalsrc(";
         res += std::to_string(idbl);
         res += ")";
 
@@ -610,7 +642,7 @@ int convGentype(std::string &res, const gentype &src, int &iint, int &idbl, int 
 
     else if ( src.isValString() )
     {
-        res = "pyheavy.strvalsrc(";
+        res = "pyheavy.z_strvalsrc(";
         res += std::to_string(istr);
         res += ")";
 
@@ -621,7 +653,7 @@ int convGentype(std::string &res, const gentype &src, int &iint, int &idbl, int 
 
     else if ( ( src.isValAnion() ) && ( src.order() <= 1 ) )
     {
-        res = "pyheavy.cplvalsrc(";
+        res = "pyheavy.z_cplvalsrc(";
         res += std::to_string(icpl);
         res += ")";
 
@@ -712,12 +744,12 @@ int convGentype(std::string &res, const gentype &src, int &iint, int &idbl, int 
 int         setintvalres(int mode, const int &val);
 double      setdblvalres(int mode, const double &val);
 std::string setstrvalres(int mode, const std::string &val);
-std::string setcomvalres(int mode, const std::string &val);
+char        setcomvalres(int mode, const char &val);
 
 int         intpop(void);
 double      dblpop(void);
 std::string strpop(void);
-std::string compop(void);
+char        compop(void);
 
 void intvalresreset(void);
 void dblvalresreset(void);
@@ -727,22 +759,22 @@ void comvalresreset(void);
 int         setintvalres(int mode, const int &val)         { static thread_local FiFo<int> xval;         int res(0);      if ( mode == 2 ) { xval.resize(0); } else if ( mode == 1 ) { xval.pop(res); } else if ( mode == 0 ) { xval.push(val); } return res; }
 double      setdblvalres(int mode, const double &val)      { static thread_local FiFo<double> xval;      double res(0);   if ( mode == 2 ) { xval.resize(0); } else if ( mode == 1 ) { xval.pop(res); } else if ( mode == 0 ) { xval.push(val); } return res; }
 std::string setstrvalres(int mode, const std::string &val) { static thread_local FiFo<std::string> xval; std::string res; if ( mode == 2 ) { xval.resize(0); } else if ( mode == 1 ) { xval.pop(res); } else if ( mode == 0 ) { xval.push(val); } return res; }
-std::string setcomvalres(int mode, const std::string &val) { static thread_local FiFo<std::string> xval; std::string res; if ( mode == 2 ) { xval.resize(0); } else if ( mode == 1 ) { xval.pop(res); } else if ( mode == 0 ) { xval.push(val); } return res; }
+char        setcomvalres(int mode, const char &val)        { static thread_local FiFo<char> xval;        char res('E');   if ( mode == 2 ) { xval.resize(0); } else if ( mode == 1 ) { xval.pop(res); } else if ( mode == 0 ) { xval.push(val); } return res; }
 
 void intpush(int val)         { setintvalres(0,val); }
 void dblpush(double val)      { setdblvalres(0,val); }
 void strpush(std::string val) { setstrvalres(0,val); }
-void compush(std::string val) { setcomvalres(0,val); }
+void compush(std::string val) { char altval = 'E'; if ( val.length() ) { altval = val[0]; } setcomvalres(0,altval); }
 
 int         intpop(void) { const int tmp(0);      return setintvalres(1,tmp); }
 double      dblpop(void) { const double tmp(0);   return setdblvalres(1,tmp); }
 std::string strpop(void) { const std::string tmp; return setstrvalres(1,tmp); }
-std::string compop(void) { const std::string tmp; return setcomvalres(1,tmp); }
+char        compop(void) { const char tmp('E');   return setcomvalres(1,tmp); }
 
 void intvalresreset(void) { const int tmp(0);      setintvalres(2,tmp); }
 void dblvalresreset(void) { const double tmp(0);   setdblvalres(2,tmp); }
 void strvalresreset(void) { const std::string tmp; setstrvalres(2,tmp); }
-void comvalresreset(void) { const std::string tmp; setcomvalres(2,tmp); }
+void comvalresreset(void) { const char tmp('E');   setcomvalres(2,tmp); }
 
 // This funciton interrogates the return stacks to work out what the result was.
 // The following helper function in pyheavypy.py does the serialisation on the
@@ -751,32 +783,32 @@ void comvalresreset(void) { const std::string tmp; setcomvalres(2,tmp); }
 // def convgen(h):
 //    import pyheavy
 //    if type(h) is None:
-//        pyheavy.compush("none")
+//        pyheavy.z_compush("N")
 //    elif type(h) is int:
-//        pyheavy.compush("int")
-//        pyheavy.intpush(h)
+//        pyheavy.z_compush("Z")
+//        pyheavy.z_intpush(h)
 //    elif type(h) is float:
-//        pyheavy.compush("float")
-//        pyheavy.dblpush(h)
+//        pyheavy.z_compush("R")
+//        pyheavy.z_dblpush(h)
 //    elif type(h) is complex:
-//        pyheavy.compush("complex")
-//        pyheavy.dblpush(h.real)
-//        pyheavy.dblpush(h.imag)
+//        pyheavy.z_compush("C")
+//        pyheavy.z_dblpush(h.real)
+//        pyheavy.z_dblpush(h.imag)
 //    elif type(h) is str:
-//        pyheavy.compush("string")
-//        pyheavy.strpush(h)
+//        pyheavy.z_compush("S")
+//        pyheavy.z_strpush(h)
 //    elif type(h) is list:
-//        pyheavy.compush("list")
-//        pyheavy.intpush(len(h))
+//        pyheavy.z_compush("V")
+//        pyheavy.z_intpush(len(h))
 //        for x in h:
 //            convgen(x)
 //    elif type(h) is tuple:
-//        pyheavy.compush("tuple")
-//        pyheavy.intpush(len(h))
+//        pyheavy.z_compush("X")
+//        pyheavy.z_intpush(len(h))
 //        for x in h:
 //            convgen(x)
 //    else:
-//        pyheavy.compush("badtype")
+//        pyheavy.z_compush("E")
 //
 //
 // mode: 0 push, 1 pop, 2 reset
@@ -784,25 +816,25 @@ void comvalresreset(void) { const std::string tmp; setcomvalres(2,tmp); }
 int convPytoGentype(gentype &res);
 int convPytoGentype(gentype &res)
 {
-    std::string comis = compop();
+    char comis = compop();
     int errcode = 0;
 
-    if ( comis == "none" )
+    if ( comis == 'N' )
     {
         res.force_null();
     }
 
-    else if ( comis == "int" )
+    else if ( comis == 'Z' )
     {
         res.force_int() = intpop();
     }
 
-    else if ( comis == "float" )
+    else if ( comis == 'R' )
     {
         res.force_double() = dblpop();
     }
 
-    else if ( comis == "complex" )
+    else if ( comis == 'C' )
     {
         d_anion altres = res.force_anion();
 
@@ -811,12 +843,12 @@ int convPytoGentype(gentype &res)
         altres("&",1) = dblpop();
     }
 
-    else if ( comis == "string" )
+    else if ( comis == 'S' )
     {
         res.force_string() = strpop();
     }
 
-    else if ( comis == "list" )
+    else if ( comis == 'V' )
     {
         Vector<gentype> &altres = res.force_vector();
 
@@ -830,7 +862,7 @@ int convPytoGentype(gentype &res)
         }
     }
 
-    else if ( comis == "tuple" )
+    else if ( comis == 'X' )
     {
         Set<gentype> temp;
         res.force_set() = temp;

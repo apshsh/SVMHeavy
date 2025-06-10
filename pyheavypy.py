@@ -1,30 +1,38 @@
 def convgen(h):
     import pyheavy
-    if type(h) is None:
-        pyheavy.compush("none")
+    if h is None:
+        #print("N")
+        pyheavy.z_compush("N")
     elif type(h) is int:
-        pyheavy.compush("int")
-        pyheavy.intpush(h)
+        #print("Z")
+        pyheavy.z_compush("Z")
+        pyheavy.z_intpush(h)
     elif type(h) is float:
-        pyheavy.compush("float")
-        pyheavy.dblpush(h)
+        #print("R")
+        pyheavy.z_compush("R")
+        pyheavy.z_dblpush(h)
     elif type(h) is complex:
-        pyheavy.compush("complex")
-        pyheavy.dblpush(h.real)
-        pyheavy.dblpush(h.imag)
+        #print("C")
+        pyheavy.z_compush("C")
+        pyheavy.z_dblpush(h.real)
+        pyheavy.z_dblpush(h.imag)
     elif type(h) is str:
-        pyheavy.compush("string")
-        pyheavy.strpush(h)
+        #print("S")
+        pyheavy.z_compush("S")
+        pyheavy.z_strpush(h)
     elif type(h) is list:
-        pyheavy.compush("list")
-        pyheavy.intpush(len(h))
+        #print("V")
+        pyheavy.z_compush("V")
+        pyheavy.z_intpush(len(h))
         for x in h:
             convgen(x)
     elif type(h) is tuple:
-        pyheavy.compush("tuple")
-        pyheavy.intpush(len(h))
+        #print("X")
+        pyheavy.z_compush("X")
+        pyheavy.z_intpush(len(h))
         for x in h:
             convgen(x)
     else:
-        pyheavy.compush("badtype")
+        #print("E")
+        pyheavy.z_compush("E")
 
