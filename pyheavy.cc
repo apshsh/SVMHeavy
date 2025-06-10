@@ -1,485 +1,522 @@
 
 //
-// Python frontent for SVMHeavy
+// SVMHeavyv7 Python CLI-like Interface
 //
 // Version: 7
-// Date: 08/04/2016
+// Date: 05/12/2014
 // Written by: Alistair Shilton (AlShilton@gmail.com)
 // Copyright: all rights reserved
 //
 
+//
+// Usage: svmpython('commands'), where commands are just like the regular CLI
+//
+
+#include <string>
+#include <sstream>
+#include <pybind11/pybind11.h>
+#include <pybind11/complex.h>
+#include <pybind11/stl.h>
+#include <iostream>
+#include <vector>
+#include "mlinter.hpp"
+#include "basefn.hpp"
+#include "memdebug.hpp"
+#include "niceassert.hpp"
+#include "vecfifo.hpp"
+
+namespace py = pybind11;
+
+int                  intvalsrc(int i);
+double               dblvalsrc(int i);
+std::string          strvalsrc(int i);
+std::complex<double> cplvalsrc(int i);
+
+void intpush(int x);
+void dblpush(double x);
+void strpush(std::string x);
+void compush(std::string x);
+
+void svmheavya(void);                               // just get help screen
+void svmheavyb(int permode);                        // set persistence mode
+void svmheavyc(const std::string commstr);          // execute with string
+void svmheavyd(const std::string commstr, int wml); // execute with string and ml number
+
+PYBIND11_MODULE(pyheavy, m) {
+    m.def("help", &svmheavya, "Help screen");
+    m.def("mode", &svmheavyb, "Set persistence mode");
+    m.def("exec", &svmheavyc, "Run with string given");
+    m.def("execmod", &svmheavyd, "Run with string given on ML given");
+    m.def("intvalsrc", &intvalsrc, "Internal use");
+    m.def("dblvalsrc", &dblvalsrc, "Internal use");
+    m.def("strvalsrc", &strvalsrc, "Internal use");
+    m.def("cplvalsrc", &cplvalsrc, "Internal use");
+    m.def("intpush", &intpush, "Internal use");
+    m.def("dblpush", &dblpush, "Internal use");
+    m.def("strpush", &strpush, "Internal use");
+    m.def("compush", &compush, "Internal use");
+}
+
+void svmheavy(int method, int permode, const std::string commstr, int wml);
+
+void svmheavya(void)
+{
+    std::string dummy;
+
+    svmheavy(1,-1,dummy,-1);
+}
+
+void svmheavyb(int permode)
+{
+    std::string dummy;
+
+    svmheavy(2,permode,dummy,-1);
+}
+
+void svmheavyc(const std::string commstr)
+{
+    svmheavy(3,-1,commstr,-1);
+}
+
+void svmheavyd(const std::string commstr, int wml)
+{
+    svmheavy(3,-1,commstr,wml);
+}
+
+int cligetsetExtVar(gentype &res, const gentype &src, int num);
+int cligetsetExtVar(gentype &res, const gentype &src, int num)
+{
+    (void) res;
+    (void) src;
+    (void) num;
+
+    // Do nothing: this means you can throw logs out and not cause issues
+
+    return -1;
+}
+
+#define LOGOUTTOFILE 1
+#define LOGERRTOFILE 1
+
+void cliCharPrintOut(char c);
+void cliCharPrintErr(char c);
+
+void cliPrintToOutLog(char c, int mode = 0);
+void cliPrintToErrLog(char c, int mode = 0);
+
+
+
+// Python function
+//
+// method: 1 - print help
+//         2 - set persistence mode (permode)
+//         3 - run commands (in ML wml if wml != -1)
+
+void svmheavy(int method, int permode, const std::string commstr, int wml)
+{
+    static thread_local int hasbeeninit = 0;
+    static thread_local int persistenceset = 0;
+    static thread_local int persistencereq = 0;
+
+    isMainThread(1);
+
+    try
+    {
+        std::string commline;
+
+        // Initialisation of static, overall state, set-once type, streamy stuff
+
+        if ( !hasbeeninit )
+        {
+            // Register "time 0"
+
+            TIMEABSSEC(TIMECALL);
+        }
+
+        // Set up streams (we divert outputs to logfiles)
+
+        void(*xcliCharPrintErr)(char c) = cliCharPrintErr;
+        static LoggingOstreamErr clicerr(xcliCharPrintErr);
+        seterrstream(&clicerr);
+
+        void(*xcliCharPrintOut)(char c) = cliCharPrintOut;
+        static LoggingOstreamOut clicout(xcliCharPrintOut);
+        setoutstream(&clicout);
+
+        suppresserrstreamcout();
+
+        // Print help if no commands given, or too many
+        //
+        // Assumption: either no arguments or just one
+
+        if ( 1 == method )
+        {
+            outstream() << "SVMheavy 7.0                                                                  \n";
+            outstream() << "============                                                                  \n";
+            outstream() << "                                                                              \n";
+            outstream() << "Copyright: all rights reserved.                                               \n";
+            outstream() << "Author: Alistair Shilton                                                      \n";
+            outstream() << "                                                                              \n";
+            outstream() << "Basic operation: pyheavy.exec(\"commands\")                                     \n";
+            outstream() << "                                                                              \n";
+            outstream() << "Example:                                                                      \n";
+            outstream() << "                                                                              \n";
+            outstream() << ">>> import pyheavy,pyheavypy,math                                             \n";
+            outstream() << ">>> pyheavy.exec(\"-ECHO pycall(\\\"math.sin\\\",5/pi)\")                           \n";
+            outstream() << "                                                                              \n";
+            outstream() << "Translation rules:                                                            \n";
+            outstream() << "                                                                              \n";
+            outstream() << "- null (svmheavy) translates to None                                          \n";
+            outstream() << "- int, double and string remain unchanged                                     \n";
+            outstream() << "- complex (1st order anion, svmheavy) translates to complex.                  \n";
+            outstream() << "- vector [ a b ... ] (svmheavy) translates to list [ a, b, ... ]              \n";
+            outstream() << "- set { a b ... } (svmheavy) translates to tuple ( a, b, ... )                \n";
+            outstream() << "                                                                              \n";
+            outstream() << "Note that sets containing a single  element translate to a tuple of 1 and, due\n";
+            outstream() << "to pythons rules for tuples, get downgraded to scalars.                       \n";
+            outstream() << "                                                                              \n";
+            outstream() << "Persistence: by default calls to  svmheavy are independent of each other. This\n";
+            outstream() << "can be changed by turning on  persistence.  When persistence is on all MLs are\n";
+            outstream() << "retained in memory between calls, allowing multiple operations on the ML.  For\n";
+            outstream() << "example this  can be used  to test different  parameter settings, or  retain a\n";
+            outstream() << "trained ML in memory for use.                                                 \n";
+            outstream() << "                                                                              \n";
+            outstream() << "Turn off persistence: pyheavy.mode(0)                                         \n";
+            outstream() << "Turn on persistence:  pyheavy.mode(1)                                         \n";
+            outstream() << "                                                                              \n";
+            outstream() << "Multiple MLs: multiple  MLs can  run simultaneously  (see -?? for  details, in\n";
+            outstream() << "particular  the  -q...  commands) in  parallel.  To  simplify  operation  when\n";
+            outstream() << "multiple MLs are  present an optional  second argument may  be used to specify\n";
+            outstream() << "which ML is being addressed by the  command string.  The syntax for this is as\n";
+            outstream() << "follows:                                                                      \n";
+            outstream() << "                                                                              \n";
+            outstream() << "pyheavy.execmod(\"commands\",mlnum)                                             \n";
+            outstream() << "                                                                              \n";
+            outstream() << "which runs  the command \"-qw mlnum -Zx\"  before executing the  commands given.\n";
+            outstream() << "Use -1 to leave number unchanged.                                             \n";
+
+            return;
+        }
+
+        if ( 2 == method )
+        {
+            if ( permode == 0 )
+            {
+                persistencereq = 0;
+            }
+
+            else if ( permode == 1 )
+            {
+                persistencereq = 1;
+            }
+        }
+
+        if ( ( 3 == method ) && ( -1 != wml ) )
+        {
+            // Add prefix to command
+
+            std::ostringstream oss;
+
+            oss << wml;
+
+            commline += "-qw ";
+            commline += oss.str();
+            commline += " -Zx ";
+        }
+
+        // If currently not persistent and persistence requested then turn on
+
+        if ( !persistenceset && persistencereq )
+        {
+            outstream() << "Locking ML stack...\n";
+
+            persistenceset = 1;
+        }
+
+        // Convert the command line arguments into a command string
+
+        commline += commstr;
+
+        // Add -Zx to the end of the command string to ensure that the output
+        // stream used by -echo will remain available until the end.
+
+        commline += " -Zx";
+        outstream() << "Running command: " << commline << "\n";
 
-#include "pyheavy.hpp"
+        // Define global variable store
 
-void setMLTypeClean(int nv) { thewhatsit.setMLTypeClean(nv); return; }
+        static thread_local svmvolatile SparseVector<SparseVector<gentype> > globargvariables;
 
-int preallocsize(void) const { return thewhatsit.preallocsize(); }
-
-int  prealloc    (int expectedN) { return thewhatsit.prealloc(expectedN); }
-void setmemsize  (int memsize)   {        thewhatsit.setmemsize(memsize); }
-
-int N      (void)  const { return thewhatsit.N();       }
-int NNC    (int d) const { return thewhatsit.NNC(d);    }
-int type   (void)  const { return thewhatsit.type();    }
-int subtype(void)  const { return thewhatsit.subtype(); }
+        // Construct command stack.  All commands must be in awarestream, which
+        // is similar to a regular stream but can supply commands from a
+        // variety of different sources: for example a string (as here), a stream
+        // such as standard input, or various ports etc.  You can then open
+        // further awarestreams, which are stored on the stack, with the uppermost
+        // stream being the active stream from which current commands are sourced.
 
-int tspaceDim   (void) const { return thewhatsit.tspaceDim();    }
-int xspaceDim   (void) const { return thewhatsit.xspaceDim();    }
-int fspaceDim   (void) const { return thewhatsit.fspaceDim();    }
-int tspaceSparse(void) const { return thewhatsit.tspaceSparse(); }
-int xspaceSparse(void) const { return thewhatsit.xspaceSparse(); }
-int numClasses  (void) const { return thewhatsit.numClasses();   }
-int order       (void) const { return thewhatsit.order();        }
-
-int isTrained(void) const { return thewhatsit.isTrained(); }
-int isMutable(void) const { return thewhatsit.isMutable(); }
-int isPool   (void) const { return thewhatsit.isPool();    }
-
-char gOutType(void) const { return thewhatsit.gOutType(); }
-char hOutType(void) const { return thewhatsit.hOutType(); }
-char targType(void) const { return thewhatsit.targType(); }
-
-int isUnderlyingScalar(void) const { return thewhatsit.isUnderlyingScalar(); }
-int isUnderlyingVector(void) const { return thewhatsit.isUnderlyingVector(); }
-int isUnderlyingAnions(void) const { return thewhatsit.isUnderlyingAnions(); }
-
-int  getInternalClass  (int y)    const { return thewhatsit.getInternalClass(y);  }
-int  numInternalClasses(void)     const { return thewhatsit.getInternalClasses(); }
-int  isenabled         (int i)    const { return thewhatsit.isenabled(i);         }
+        Stack<awarestream *> *commstack;
+        MEMNEW(commstack,Stack<awarestream *>);
+        std::stringstream *commlinestring;
+        MEMNEW(commlinestring,std::stringstream(commline));
+        awarestream *commlinestringbox;
+        MEMNEW(commlinestringbox,awarestream(commlinestring,1));
+        commstack->push(commlinestringbox);
 
-double C       (void)  const { return thewhatsit.C();         }
-double sigma   (void)  const { return thewhatsit.sigma();     }
-double eps     (void)  const { return thewhatsit.eps();       }
-double Cclass  (int d) const { return thewhatsit.Cclass(d);   }
-double epsclass(int d) const { return thewhatsit.epsclass(d); }
+        // Threaded data.  Each ML is an element in svmContext, with threadInd
+        // specifying which is currently in use.  At this point we only have
+        // a single ML with index 0.
 
-int    memsize     (void) const { return thewhatsit.memsize();      }
-double zerotol     (void) const { return thewhatsit.zerotol();      }
-double Opttol      (void) const { return thewhatsit.Opttol();       }
-int    maxitcnt    (void) const { return thewhatsit.maxitcnt();     }
-double maxtraintime(void) const { return thewhatsit.maxtraintime(); }
+        static thread_local int threadInd = 0;
+        static thread_local int svmInd = 0;
+        static thread_local SparseVector<SVMThreadContext *> svmContext;
+        static thread_local SparseVector<int> svmThreadOwner;
+        static thread_local SparseVector<ML_Mutable *> svmbase;
+        MEMNEW(svmContext("&",threadInd),SVMThreadContext(svmInd,threadInd));
+        errstream() << "{";
 
-int    maxitermvrank(void) const { return thewhatsit.maxitermvrank(); }
-double lrmvrank     (void) const { return thewhatsit.lrmvrank();      }
-double ztmvrank     (void) const { return thewhatsit.ztmvrank();      }
-
-double betarank(void) const { return thewhatsit.betarank(); }
+        // Now that everything has been set up so we can run the actual code.
 
-double sparlvl(void) const { return thewhatsit.sparlvl; }
-
-int isClassifier(void) const { return thewhatsit.isClassifier(); }
-int isRegression(void) const { return thewhatsit.isRegression(); }
-
-void fillCache(void) { thewhatsit.fillCache(); return; }
-
-int removeTrainingVector (int i)          { return thewhatsit.removeTrainingVector(i);      }
-int removeTrainingVectors(int i, int num) { return thewhatsit.removeTrainingVectors(i,num); }
-
-int setCweight    (int i, double nv) { return thewhatsit.setCweight(i,nv);     }
-int setCweightfuzz(int i, double nv) { return thewhatsit.setCweightfuzz(i,nv); }
-int setsigmaweight(int i, double nv) { return thewhatsit.setsigmaweight(i,nv); }
-int setepsweight  (int i, double nv) { return thewhatsit.setepsweight(i,nv);   }
-
-int scaleCweight    (double s) { return thewhatsit.scaleCweight(s);     }
-int scaleCweightfuzz(double s) { return thewhatsit.scaleCweightfuzz(s); }
-int scalesigmaweight(double s) { return thewhatsit.scalesigmaweight(s); }
-int scaleepsweight  (double s) { return thewhatsit.scaleepsweight(s);   }
-
-int NbasisUU   (void) { return thewhatsit.NbasisUU();    }
-int basisTypeUU(void) { return thewhatsit.basisTypeUU(); }
-int defProjUU  (void) { return thewhatsit.defProjUU();   }
-
-int setBasisYUU           (void)         { return thewhatsit.setBasisYUU();             }
-int setBasisUUU           (void)         { return thewhatsit.setBasisUUU();             }
-int removeFromBasisUU     (int i)        { return thewhatsit.removeFromBasisUU(i);      }
-int setDefaultProjectionUU(int d)        { return thewhatsit.setDefaultProjectionUU(d); }
-int setBasisUU            (int n, int d) { return thewhatsit.setBasisUU(n,d);           }
-
-int NbasisVV   (void) const { return thewhatsit.NbasisVV();    }
-int basisTypeVV(void) const { return thewhatsit.basistypeVV(); }
-int defProjVV  (void) const { return thewhatsit.defProjVV();   }
-
-int setBasisYVV           (void)         { return thewhatsit.setBasisYVV();             }
-int setBasisUVV           (void)         { return thewhatsit.setBasisUVV();             }
-int removeFromBasisVV     (int i)        { return thewhatsit.removeFromBasisVV(i);      }
-int setDefaultProjectionVV(int d)        { return thewhatsit.setDefaultProjectionVV(d); }
-int setBasisVV            (int n, int d) { return thewhatsit.setBasisVV(n,d);           }
-
-int randomise  (double sparsity) { return thewhatsit.randomise(sparsity); }
-int autoen     (void)            { return thewhatsit.autoen();            }
-int renormalise(void)            { return thewhatsit.renormalise();       }
-int realign    (void)            { return thewhatsit.realign();           }
-
-int setzerotol     (double zt)            { return thewhatsit.setzerotol(zt);                 }
-int setOpttol      (double xopttol)       { return thewhatsit.setOpttol(xopttol);             }
-int setmaxitcnt    (int xmaxitcnt)        { return thewhatsit.setmaxitcnt(xmaxitcnt);         }
-int setmaxtraintime(double xmaxtraintime) { return thewhatsit.setmaxtraintime(xmaxtraintime); }
-
-int setmaxitermvrank(int nv)    { return thewhatsit.setmaxitermvrank(nv); }
-int setlrmvrank     (double nv) { return thewhatsit.setlrmvrank(nv);      }
-int setztmvrank     (double nv) { return thewhatsit.setztmvrank(nv);      }
-
-int setbetarank(double nv) { return thewhatsit.setbetarank(nv); }
-
-int setC       (double xC)          { return thewhatsit.setC(xC);            }
-int setsigma   (double xsigma)      { return thewhatsit.setsigma(xsigma);    }
-int seteps     (double xeps)        { return thewhatsit.seteps(xeps);        }
-int setCclass  (int d, double xC)   { return thewhatsit.setCclass(d,xC);     }
-int setepsclass(int d, double xeps) { return thewhatsit.setepsclass(d,xeps); }
-
-int scale  (double a) { return thewhatsit.scale(a);  }
-int reset  (void)     { return thewhatsit.reset();   }
-int restart(void)     { return thewhatsit.restart(); }
-int home   (void)     { return thewhatsit.home();    }
-
-int settspaceDim    (int newdim) { return thewhatsit.settspaceDim(newdim); }
-int addtspaceFeat   (int i)      { return thewhatsit.addtspaceFeat(i);     }
-int removetspaceFeat(int i)      { return thewhatsit.removetspaceFeat(i);  }
-int addxspaceFeat   (int i)      { return thewhatsit.addxspaceFeat(i);     }
-int removexspaceFeat(int i)      { return thewhatsit.removexspaceFeat(i);  }
-
-int setsubtype(int i) { return thewhatsit.setsubtype(i); }
-
-int setorder(int neword)             { return thewhatsit.setorder(neword);        }
-int addclass(int label, int epszero) { return thewhatsit.addclass(label,epszero); }
-
-int isSampleMode(void) const { return thewhatsit.isSampleMode(); }
-
-void fudgeOn (void) { thewhatsit.fudgeOn();  return; }
-void fudgeOff(void) { thewhatsit.fudgeOff(); return; }
-
-int disable(int i) { return thewhatsit.disable(i); }
-
-int normKernelZeroMeanUnitVariance  (int flatnorm, int noshift) { return thewhatsit.normKernelZeroMeanUnitVariance(flatnorm,noshift);   }
-int normKernelZeroMedianUnitVariance(int flatnorm, int noshift) { return thewhatsit.normKernelZeroMedianUnitVariance(flatnorm,noshift); }
-int normKernelUnitRange             (int flatnorm, int noshift) { return thewhatsit.normKernelUnitRange(flatnorm,noshift);              }
-
-int NZ (void)  const { return thewhatsit.NZ();   }
-int NF (void)  const { return thewhatsit.NF();   }
-int NS (void)  const { return thewhatsit.NS();   }
-int NC (void)  const { return thewhatsit.NC();   }
-int NLB(void)  const { return thewhatsit.NLB();  }
-int NLF(void)  const { return thewhatsit.NLF();  }
-int NUF(void)  const { return thewhatsit.NUF();  }
-int NUB(void)  const { return thewhatsit.NUB();  }
-
-int isLinearCost   (void)  const { return thewhatsit.isLinearCost();    }
-int isQuadraticCost(void)  const { return thewhatsit.isQuadraticCost(); }
-int is1NormCost    (void)  const { return thewhatsit.is1NormCost();     }
-int isVarBias      (void)  const { return thewhatsit.isVarBias();       }
-int isPosBias      (void)  const { return thewhatsit.isPosBias();       }
-int isNegBias      (void)  const { return thewhatsit.isNegBias();       }
-int isFixedBias    (void)  const { return thewhatsit.isFixedBias();     }
-
-int isNoMonotonicConstraints   (void) const { return thewhatsit.isMonotonicConstraints();      }
-int isForcedMonotonicIncreasing(void) const { return thewhatsit.isForcedMonotonicIncreasing(); }
-int isForcedMonotonicDecreasing(void) const { return thewhatsit.isForcedMonotonicDecreasing(); }
-
-int isOptActive(void) const { return thewhatsit.isOptActive(); }
-int isOptSMO   (void) const { return thewhatsit.isOptSMO();    }
-int isOptD2C   (void) const { return thewhatsit.isOptD2C();    }
-int isOptGrad  (void) const { return thewhatsit.isOptGrad();   }
-
-int isFixedTube (void) const { return thewhatsit.isFixedTube();  }
-int isShrinkTube(void) const { return thewhatsit.isShrinkTube(); }
-
-int isRestrictEpsPos(void) const { return thewhatsit.isRestrictEpsPos(); }
-int isRestrictEpsNeg(void) const { return thewhatsit.isRestrictEpsNeg(); }
-
-int isClassifyViaSVR(void) const { return thewhatsit.isClassifyViaSVR(); }
-int isClassifyViaSVM(void) const { return thewhatsit.isClassifyViaSVM(); }
-
-int is1vsA   (void) const { return thewhatsit.is1vsA();    }
-int is1vs1   (void) const { return thewhatsit.is1vs1();    }
-int isDAGSVM (void) const { return thewhatsit.isDAGSVM();  }
-int isMOC    (void) const { return thewhatsit.isMOC();     }
-int ismaxwins(void) const { return thewhatsit.ismaxwins(); }
-int isrecdiv (void) const { return thewhatsit.isrecdiv();  }
-
-int isatonce(void) const { return thewhatsit.isatonce(); }
-int isredbin(void) const { return thewhatsit.isredbin(); }
-
-int isKreal  (void) const { return thewhatsit.isKreal();   }
-int isKunreal(void) const { return thewhatsit.isKunreal(); }
-
-int isanomalyOn (void) const { return thewhatsit.isanomalyOn();  }
-int isanomalyOff(void) const { return thewhatsit.isanomalyOff(); }
-
-int isautosetOff         (void) const { return thewhatsit.isautosetOff();          }
-int isautosetCscaled     (void) const { return thewhatsit.isautosetCscaled();      }
-int isautosetCKmean      (void) const { return thewhatsit.isautosetCKmean();       }
-int isautosetCKmedian    (void) const { return thewhatsit.isautosetCKmedian();     }
-int isautosetCNKmean     (void) const { return thewhatsit.isautosetCNKmean();      }
-int isautosetCNKmedian   (void) const { return thewhatsit.isautosetCNKmedian();    }
-int isautosetLinBiasForce(void) const { return thewhatsit.isautosetLinBiasForce(); }
-
-double outerlr      (void) const { return thewhatsit.outerlr();       }
-double outermom     (void) const { return thewhatsit.outermom();      }
-int    outermethod  (void) const { return thewhatsit.outermethod();   }
-double outertol     (void) const { return thewhatsit.outertol();      }
-double outerovsc    (void) const { return thewhatsit.outerovsc();     }
-int    outermaxitcnt(void) const { return thewhatsit.outermaxitcnt(); }
-int    outermaxcache(void) const { return thewhatsit.outermaxcache(); }
-
-int    maxiterfuzzt(void) const { return thewhatsit.maxiterfuzzt(); }
-int    usefuzzt    (void) const { return thewhatsit.usefzzt();      }
-double lrfuzzt     (void) const { return thewhatsit.lrfuzzt();      }
-double ztfuzzt     (void) const { return thewhatsit.ztfufft();      }
-
-int m(void) const { return thewhatsit.m(); }
-
-double LinBiasForce (void)  const { return thewhatsit.LinBiasForce();  }
-double QuadBiasForce(void)  const { return thewhatsit.QuadBiasForce(); }
-
-double nu    (void) const { return thewhatsit.nu();     }
-double nuQuad(void) const { return thewhatsit.nuQuad(); }
-
-double theta  (void) const { return thewhatsit.theta();   }
-int    simnorm(void) const { return thewhatsit.simnorm(); }
-
-double anomalyNu   (void) const { return thewhatsit.anomalyNu();    }
-int    anomalyClass(void) const { return thewhatsit.anomalyClass(); }
-
-double autosetCval (void) const { return thewhatsit.autosetCval();  }
-double autosetnuval(void) const { return thewhatsit.autosetnuval(); }
-
-int    anomclass      (void) const { return thewhatsit.anomclass();       }
-int    singmethod     (void) const { return thewhatsit.singmethod();      }
-double rejectThreshold(void) const { return thewhatsit.rejectThreshold(); }
+        SparseVector<SparseVector<int> > returntag;
 
-int removeNonSupports(void)        { return thewhatsit.removeNonSupports();      }
-int trimTrainingSet  (int maxsize) { return thewhatsit.trimTrainingSet(maxsize); }
+        runsvm(threadInd,svmContext,svmbase,svmThreadOwner,commstack,globargvariables,cligetsetExtVar,returntag);
 
-int setLinearCost   (void) { return thewhatsit.setLinearCost();    }
-int setQuadraticCost(void) { return thewhatsit.setQuadraticCost(); }
-int set1NormCost    (void) { return thewhatsit.set1NormCost();     }
-int setVarBias      (void) { return thewhatsit.setVarBias();       }
-int setPosBias      (void) { return thewhatsit.setPosBias();       }
-int setNegBias      (void) { return thewhatsit.setNegBias();       }
+        // Unlock the thread, signalling that the context can be deleted etc
 
-int setNoMonotonicConstraints   (void) { return thewhatsit.
-int setForcedMonotonicIncreasing(void) { return thewhatsit.
-int setForcedMonotonicDecreasing(void) { return thewhatsit.
+        errstream() << "}";
 
-int setOptActive(void) { return thewhatsit.
-int setOptSMO   (void) { return thewhatsit.
-int setOptD2C   (void) { return thewhatsit.
-int setOptGrad  (void) { return thewhatsit.
+        MEMDEL(commstack);
 
-int setFixedTube (void) { return thewhatsit.
-int setShrinkTube(void) { return thewhatsit.
+        // If currently persistent and persistence not requested then turn off
 
-int setRestrictEpsPos(void) { return thewhatsit.
-int setRestrictEpsNeg(void) { return thewhatsit.
+        if ( persistenceset && !persistencereq )
+        {
+            outstream() << "Unlocking ML stack...\n";
 
-int setClassifyViaSVR(void) { return thewhatsit.
-int setClassifyViaSVM(void) { return thewhatsit.
+            persistenceset = 0;
+        }
 
-int set1vsA   (void) { return thewhatsit.
-int set1vs1   (void) { return thewhatsit.
-int setDAGSVM (void) { return thewhatsit.
-int setMOC    (void) { return thewhatsit.
-int setmaxwins(void) { return thewhatsit.
-int setrecdiv (void) { return thewhatsit.
+        // Delete everything if not persistent
 
-int setatonce(void) { return thewhatsit.
-int setredbin(void) { return thewhatsit.
+        if ( !persistenceset )
+        {
+            outstream() << "Removing ML stack...\n";
 
-int setKreal  (void) { return thewhatsit.
-int setKunreal(void) { return thewhatsit.
+            // Delete the thread SVM context and remove from vector.
 
-int anomalyOn (int danomalyClass, double danomalyNu) { return thewhatsit.
-int anomalyOff(void)                                 { return thewhatsit.
+            killallthreads(svmContext,1);
 
-int setouterlr      (double xouterlr)     { return thewhatsit.
-int setoutermom     (double xoutermom)    { return thewhatsit.
-int setoutermethod  (int xoutermethod)    { return thewhatsit.
-int setoutertol     (double xoutertol)    { return thewhatsit.
-int setouterovsc    (double xouterovsc)   { return thewhatsit.
-int setoutermaxitcnt(int xoutermaxits)    { return thewhatsit.
-int setoutermaxcache(int xoutermaxcacheN) { return thewhatsit.
+            deleteMLs(svmbase);
 
-int setmaxiterfuzzt(int xmaxiterfuzzt)               { return thewhatsit.
-int setusefuzzt    (int xusefuzzt)                   { return thewhatsit.
-int setlrfuzzt     (double xlrfuzzt)                 { return thewhatsit.
-int setztfuzzt     (double xztfuzzt)                 { return thewhatsit.
+            cliPrintToOutLog('*',1);
+            cliPrintToErrLog('*',1);
 
-int setm(int xm) { return thewhatsit.
+            hasbeeninit = 0;
+        }
 
-int setLinBiasForce (double newval)        { return thewhatsit.
-int setQuadBiasForce(double newval)        { return thewhatsit.
+        else
+        {
+            hasbeeninit = 1;
+        }
+    }
 
-int setnu    (double xnu)     { return thewhatsit.
-int setnuQuad(double xnuQuad) { return thewhatsit.
+    catch ( const char *errcode )
+    {
+        outstream() << "Unknown error: " << errcode << ".\n";
+        return;
+    }
 
-int settheta  (double nv) { return thewhatsit.
-int setsimnorm(int nv)    { return thewhatsit.
+    catch ( const std::string errcode )
+    {
+        outstream() << "Unknown error: " << errcode << ".\n";
+        return;
+    }
 
-int autosetOff         (void)                      { return thewhatsit.
-int autosetCscaled     (double Cval)               { return thewhatsit.
-int autosetCKmean      (void)                      { return thewhatsit.
-int autosetCKmedian    (void)                      { return thewhatsit.
-int autosetCNKmean     (void)                      { return thewhatsit.
-int autosetCNKmedian   (void)                      { return thewhatsit.
-int autosetLinBiasForce(double nuval, double Cval) { return thewhatsit.
+    isMainThread(0);
 
-void setanomalyclass   (int n)     { thewhatsit.
-void setsingmethod     (int nv)    { thewhatsit.
-void setRejectThreshold(double nv) { thewhatsit.
+    return;
+}
 
-double quasiloglikelihood(void) const { return thewhatsit.
 
-int isZeromuBias(void) const { return thewhatsit.
-int isVarmuBias (void) const { return thewhatsit.
 
-int setZeromuBias(void) { return thewhatsit.
-int setVarmuBias (void) { return thewhatsit.
 
-double loglikelihood(void) const { return thewhatsit.
 
-int isVardelta (void) const { return thewhatsit.
-int isZerodelta(void) const { return thewhatsit.
 
-int setVardelta (void) { return thewhatsit.
-int setZerodelta(void) { return thewhatsit.
 
-double lsvloglikelihood(void) const { return thewhatsit.
 
-int k  (void) const { return thewhatsit.
-int ktp(void) const { return thewhatsit.
 
-int setk  (int xk) { return thewhatsit.
-int setktp(int xk) { return thewhatsit.
 
-int bernDegree(void) const { return thewhatsit.
-int bernIndex (void) const { return thewhatsit.
 
-int setBernDegree(int nv) { return thewhatsit.
-int setBernIndex (int nv) { return thewhatsit.
 
-double batttmax      (void) const { return thewhatsit.
-double battImax      (void) const { return thewhatsit.
-double batttdelta    (void) const { return thewhatsit.
-double battVstart    (void) const { return thewhatsit.
-double battthetaStart(void) const { return thewhatsit.
 
-int setbatttmax      (double nv) { return thewhatsit.
-int setbattImax      (double nv) { return thewhatsit.
-int setbatttdelta    (double nv) { return thewhatsit.
-int setbattVstart    (double nv) { return thewhatsit.
-int setbattthetaStart(double nv) { return thewhatsit.
+void cliCharPrintOut(char c)
+{
+    cliPrintToOutLog(c);
 
+#ifndef HEADLESS
+    if ( !LoggingOstreamOut::suppressStreamCout )
+    {
+        std::cout << c;
+    }
+#endif
 
+    return;
+}
 
+void cliCharPrintErr(char c)
+{
+    cliPrintToErrLog(c);
 
+#ifndef HEADLESS
+    if ( !LoggingOstreamErr::suppressStreamCout )
+    {
+        std::cerr << c;
+    }
+#endif
 
+    return;
+}
 
+void cliPrintToOutLog(char c, int mode)
+{
+    // mode = 0: print char
+    //        1: close file for exit
 
+    if ( LOGOUTTOFILE )
+    {
+        static std::ofstream *outlog = nullptr;
 
+        if ( !mode && !outlog )
+        {
+            outlog = new std::ofstream;
 
+            NiceAssert(outlog);
 
+            std::string outfname("svmheavy.out.log");
+            std::string outfnamebase("svmheavy.out.log");
 
+            int fcnt = 0;
 
+            while ( fileExists(outfname) )
+            {
+                ++fcnt;
 
+                std::stringstream ss;
 
+                ss << outfnamebase;
+                ss << ".";
+                ss << fcnt;
 
+                outfname = ss.str();
+            }
 
+            (*outlog).open(outfname.c_str());
+        }
 
+        if ( mode )
+        {
+            if ( outlog )
+            {
+                (*outlog).close();
+                delete outlog;
+                outlog = nullptr;
+            }
+        }
 
+        else if ( outlog && !LoggingOstreamOut::suppressStreamFile )
+        {
+            static int bstring = 0;
 
-int kernel_isFullNorm       (void) const
-int kernel_isProd           (void) const
-int kernel_isIndex          (void) const
-int kernel_isShifted        (void) const
-int kernel_isScaled         (void) const
-int kernel_isShiftedScaled  (void) const
-int kernel_isLeftPlain      (void) const
-int kernel_isRightPlain     (void) const
-int kernel_isLeftRightPlain (void) const
-int kernel_isLeftNormal     (void) const
-int kernel_isRightNormal    (void) const
-int kernel_isLeftRightNormal(void) const
-int kernel_isPartNormal     (void) const
-int kernel_isAltDiff        (void) const
-int kernel_needsmProd       (void) const
-int kernel_wantsXYprod      (void) const
-int kernel_suggestXYcache   (void) const
-int kernel_isIPdiffered     (void) const
+            if ( c != '\b' )
+            {
+                bstring = 0;
 
-int kernel_size       (void) const
-int kernel_getSymmetry(void) const
+                (*outlog) << c;
+                (*outlog).flush();
+            }
 
-double kernel_cWeight(int q) const
-int    kernel_cType  (int q) const
+            else if ( !bstring )
+            {
+                bstring = 1;
 
-int kernel_isNormalised(int q) const
-int kernel_isChained   (int q) const
-int kernel_isSplit     (int q) const
-int kernel_isMulSplit  (int q) const
-int kernel_isMagTerm   (int q) const
+                (*outlog) << '\n';
+                (*outlog).flush();
+            }
+        }
+    }
 
-int kernel_numSplits   (void) const
-int kernel_numMulSplits(void) const
+    return;
+}
 
-double kernel_cRealConstants(int i, int q) const
-int    kernel_cIntConstants (int i, int q) const
-int    kernel_cRealOverwrite(int i, int q) const
-int    kernel_cIntOverwrite (int i, int q) const
+void cliPrintToErrLog(char c, int mode)
+{
+    // mode = 0: print char
+    //        1: close file for exit
 
-double kernel_getRealConstZero(int q)
-int    kernel_getIntConstZero (int q)
+    if ( LOGERRTOFILE )
+    {
+        static std::ofstream *errlog = nullptr;
 
-int kernel_isKVarianceNZ(void) const
+        if ( !mode && !errlog )
+        {
+            errlog = new std::ofstream;
 
-void kernel_add   (int q)
-void kernel_remove(int q)
-void kernel_resize(int nsize)
+            NiceAssert(errlog);
 
-void kernel_setFullNorm       (void)
-void kernel_setNoFullNorm     (void)
-void kernel_setProd           (void)
-void kernel_setnonProd        (void)
-void kernel_setLeftPlain      (void)
-void kernel_setRightPlain     (void)
-void kernel_setLeftRightPlain (void)
-void kernel_setLeftNormal     (void)
-void kernel_setRightNormal    (void)
-void kernel_setLeftRightNormal(void)
+            std::string errfname("svmheavy.err.log");
+            std::string errfnamebase("svmheavy.err.log");
 
-void kernel_setAltDiff       (int nv)
-void kernel_setsuggestXYcache(int nv)
-void kernel_setIPdiffered    (int nv)
+            int fcnt = 0;
 
-void kernel_setChained   (int q)
-void kernel_setNormalised(int q)
-void kernel_setSplit     (int q)
-void kernel_setMulSplit  (int q)
-void kernel_setMagTerm   (int q)
+            while ( fileExists(errfname) )
+            {
+                ++fcnt;
 
-void kernel_setUnChained   (int q)
-void kernel_setUnNormalised(int q)
-void kernel_setUnSplit     (int q)
-void kernel_setUnMulSplit  (int q)
-void kernel_setUnMagTerm   (int q)
+                std::stringstream ss;
 
-void kernel_setWeight (double nw,   int q)
-void kernel_setType   (int ndtype,  int q)
-void kernel_setAltCall(int newMLid, int q)
+                ss << errfnamebase;
+                ss << ".";
+                ss << fcnt;
 
-void kernel_setRealConstants(double ndRealConstants, int i, int q)
-void kernel_setIntConstants (int    ndIntConstants,  int i, int q)
-void kernel_setRealOverwrite(int    ndRealOverwrite, int i, int q)
-void kernel_setIntOverwrite (int    ndIntOverwrite,  int i, int q)
+                errfname = ss.str();
+            }
 
-void kernel_setRealConstZero(double nv, int q)
-void kernel_setIntConstZero (int nv,    int q)
+            (*errlog).open(errfname.c_str());
+        }
 
+        if ( mode )
+        {
+            if ( errlog )
+            {
+                (*errlog).close();
+                delete errlog;
+                errlog = nullptr;
+            }
+        }
 
+        else if ( errlog && !LoggingOstreamErr::suppressStreamFile )
+        {
+            static int bstring = 0;
 
+            if ( c != '\b' )
+            {
+                bstring = 0;
 
+                (*errlog) << c;
+                (*errlog).flush();
+            }
 
+            else if ( !bstring )
+            {
+                bstring = 1;
 
+                (*errlog) << '\n';
+                (*errlog).flush();
+            }
+        }
+    }
 
+    return;
+}
 
 
 
@@ -488,175 +525,396 @@ void kernel_setIntConstZero (int nv,    int q)
 
 
 
-int kernelUU_isFullNorm       (void) const
-int kernelUU_isProd           (void) const
-int kernelUU_isIndex          (void) const
-int kernelUU_isShifted        (void) const
-int kernelUU_isScaled         (void) const
-int kernelUU_isShiftedScaled  (void) const
-int kernelUU_isLeftPlain      (void) const
-int kernelUU_isRightPlain     (void) const
-int kernelUU_isLeftRightPlain (void) const
-int kernelUU_isLeftNormal     (void) const
-int kernelUU_isRightNormal    (void) const
-int kernelUU_isLeftRightNormal(void) const
-int kernelUU_isPartNormal     (void) const
-int kernelUU_isAltDiff        (void) const
-int kernelUU_needsmProd       (void) const
-int kernelUU_wantsXYprod      (void) const
-int kernelUU_suggestXYcache   (void) const
-int kernelUU_isIPdiffered     (void) const
 
-int kernelUU_size       (void) const
-int kernelUU_getSymmetry(void) const
 
-double kernelUU_cWeight(int q) const
-int    kernelUU_cType  (int q) const
 
-int kernelUU_isNormalised(int q) const
-int kernelUU_isChained   (int q) const
-int kernelUU_isSplit     (int q) const
-int kernelUU_isMulSplit  (int q) const
-int kernelUU_isMagTerm   (int q) const
 
-int kernelUU_numSplits   (void) const
-int kernelUU_numMulSplits(void) const
 
-double kernelUU_cRealConstants(int i, int q) const
-int    kernelUU_cIntConstants (int i, int q) const
-int    kernelUU_cRealOverwrite(int i, int q) const
-int    kernelUU_cIntOverwrite (int i, int q) const
 
-double kernelUU_getRealConstZero(int q)
-int    kernelUU_getIntConstZero (int q)
 
-int kernelUU_isKVarianceNZ(void) const
 
-void kernelUU_add   (int q)
-void kernelUU_remove(int q)
-void kernelUU_resize(int nsize)
 
-void kernelUU_setFullNorm       (void)
-void kernelUU_setNoFullNorm     (void)
-void kernelUU_setProd           (void)
-void kernelUU_setnonProd        (void)
-void kernelUU_setLeftPlain      (void)
-void kernelUU_setRightPlain     (void)
-void kernelUU_setLeftRightPlain (void)
-void kernelUU_setLeftNormal     (void)
-void kernelUU_setRightNormal    (void)
-void kernelUU_setLeftRightNormal(void)
+// To prevent truncation, arguments sent to pycall are stored in a series of
+// arrays. These functions maintain static arrays that the c++ code can store
+// values in and python can then access.
 
-void kernelUU_setAltDiff       (int nv)
-void kernelUU_setsuggestXYcache(int nv)
-void kernelUU_setIPdiffered    (int nv)
+int                  setintvalsrc(int i, int doset, const int &val);
+double               setdblvalsrc(int i, int doset, const double &val);
+std::string          setstrvalsrc(int i, int doset, const std::string &val);
+std::complex<double> setcplvalsrc(int i, int doset, const std::complex<double> &val);
 
-void kernelUU_setChained   (int q)
-void kernelUU_setNormalised(int q)
-void kernelUU_setSplit     (int q)
-void kernelUU_setMulSplit  (int q)
-void kernelUU_setMagTerm   (int q)
+void intvalsrcreset(void);
+void dblvalsrcreset(void);
+void strvalsrcreset(void);
+void cplvalsrcreset(void);
 
-void kernelUU_setUnChained   (int q)
-void kernelUU_setUnNormalised(int q)
-void kernelUU_setUnSplit     (int q)
-void kernelUU_setUnMulSplit  (int q)
-void kernelUU_setUnMagTerm   (int q)
+int                  setintvalsrc(int i, int doset, const int &val)                  { static thread_local SparseVector<int> xval;                   if ( doset == 2 ) { xval.zero(); } else if ( doset ) { xval("&",i) = val; } return xval(i); }
+double               setdblvalsrc(int i, int doset, const double &val)               { static thread_local SparseVector<double> xval;                if ( doset == 2 ) { xval.zero(); } else if ( doset ) { xval("&",i) = val; } return xval(i); }
+std::string          setstrvalsrc(int i, int doset, const std::string &val)          { static thread_local SparseVector<std::string> xval;           if ( doset == 2 ) { xval.zero(); } else if ( doset ) { xval("&",i) = val; } return xval(i); }
+std::complex<double> setcplvalsrc(int i, int doset, const std::complex<double> &val) { static thread_local SparseVector<std::complex<double> > xval; if ( doset == 2 ) { xval.zero(); } else if ( doset ) { xval("&",i) = val; } return xval(i); }
 
-void kernelUU_setWeight (double nw,   int q)
-void kernelUU_setType   (int ndtype,  int q)
-void kernelUU_setAltCall(int newMLid, int q)
+int                  intvalsrc(int i) { const int tmp(0);               return setintvalsrc(i,0,tmp); }
+double               dblvalsrc(int i) { const double tmp(0);            return setdblvalsrc(i,0,tmp); }
+std::string          strvalsrc(int i) { const std::string tmp;          return setstrvalsrc(i,0,tmp); }
+std::complex<double> cplvalsrc(int i) { const std::complex<double> tmp; return setcplvalsrc(i,0,tmp); }
 
-void kernelUU_setRealConstants(double ndRealConstants, int i, int q)
-void kernelUU_setIntConstants (int    ndIntConstants,  int i, int q)
-void kernelUU_setRealOverwrite(int    ndRealOverwrite, int i, int q)
-void kernelUU_setIntOverwrite (int    ndIntOverwrite,  int i, int q)
+void intvalsrcreset(void) { const int tmp(0);               setintvalsrc(0,2,tmp); }
+void dblvalsrcreset(void) { const double tmp(0);            setdblvalsrc(0,2,tmp); }
+void strvalsrcreset(void) { const std::string tmp;          setstrvalsrc(0,2,tmp); }
+void cplvalsrcreset(void) { const std::complex<double> tmp; setcplvalsrc(0,2,tmp); }
 
-void kernelUU_setRealConstZero(double nv, int q)
-void kernelUU_setIntConstZero (int nv,    int q)
+// This function rewrites gentype as a string in python format.
+//
+// - null is translated to None
+// - ints are translated to pyheavy.intvalsrc(i), which is a callback that holds the value for python to grab
+// - reals are translated to pyheavy.dblvalsrc(i), which is a callback that holds the value for python to grab
+// - complex numbers are translated to pyheavy.cplvalsrc(i), which is a callback that holds the value for python to grab
+// - strings are translated to pyheavy.strvalsrc(i), which is a callback that holds the value for python to grab
+// - vectors are translated to lists [ a, b, ... ]
+// - sets are translated to tuples ( a, b, ... ) (this is because sets require hashes in python, and vectors cannot be hashed)
+// - anything else returns non-zero
 
+int convGentype(std::string &res, const gentype &src, int &iint, int &idbl, int &istr, int &icpl);
+int convGentype(std::string &res, const gentype &src, int &iint, int &idbl, int &istr, int &icpl)
+{
+    int errnum = 0;
 
+    if ( src.isValNull() )
+    {
+        // Map null to None
 
+        res = "None";
+    }
 
+    else if ( src.isValInteger() )
+    {
+        res = "pyheavy.intvalsrc(";
+        res += std::to_string(iint);
+        res += ")";
 
+        setintvalsrc(iint,1,(int) src);
 
+        iint++;
+    }
 
+    else if ( src.isValReal() )
+    {
+        res = "pyheavy.dblvalsrc(";
+        res += std::to_string(idbl);
+        res += ")";
 
+        setdblvalsrc(idbl,1,(double) src);
 
+        idbl++;
+    }
 
+    else if ( src.isValString() )
+    {
+        res = "pyheavy.strvalsrc(";
+        res += std::to_string(istr);
+        res += ")";
 
+        setstrvalsrc(istr,1,(const std::string &) src);
 
+        istr++;
+    }
 
+    else if ( ( src.isValAnion() ) && ( src.order() <= 1 ) )
+    {
+        res = "pyheavy.cplvalsrc(";
+        res += std::to_string(icpl);
+        res += ")";
 
-int train(int &res) { return thewhatsit.train(res);
+        d_anion tmp((const d_anion &) src);
 
-int setFixedBias    (double newbias) { return thewhatsit.
+        setcplvalsrc(icpl,1,(std::complex<double>) tmp);
 
-double calcDistNul(                      int ia, int db)
-double calcDistInt(int    ha, int    hb, int ia, int db)
-double calcDistDbl(double ha, double hb, int ia, int db)
+        icpl++;
+    }
 
-void ClassLabels(int *res) const
+    else if ( src.isValVector() )
+    {
+        // Map vectors to lists
 
-int addTrainingVectorNul(int i,           const double *x, int dim, double Cweigh, double epsweigh)
-int addTrainingVectorInt(int i, int    z, const double *x, int dim, double Cweigh, double epsweigh)
-int addTrainingVectorDbl(int i, double z, const double *x, int dim, double Cweigh, double epsweigh)
+        const Vector<gentype> &tmp = (const Vector<gentype> &) src;
 
-int setx(int i, const double *x, int dim)
+        if ( tmp.infsize() )
+        {
+            return 1;
+        }
 
-int setyInt(int i, double  y)
-int setyDbl(int i, double  y)
+        res = "[";
 
-int addToBasisUU(int i, const double *o, int dim)
-int setBasisUU  (int i, const double *o, int dim)
+        for ( int i = 0 ; i < tmp.size() ; ++i )
+        {
+            std::string ires;
 
-int addToBasisVV(int i, const double *o, int dim)
-int setBasisVV  (int i, const double *o, int dim)
+            if ( ( errnum = convGentype(ires,tmp(i),iint,idbl,istr,icpl) ) )
+            {
+                return errnum;
+            }
 
-int setSampleMode(int nv, const double *xmin, const double *xmax, int dim, int Nsamp, int sampSplit, int sampType, double sampScale)
+            res += ires;
 
-double ggTrainingVector(int i) const
-double hhTrainingVector(int i) const
+            if ( i < tmp.size()-1 )
+            {
+                res += ",";
+            }
+        }
 
-double varTrainingVector     (int i)                                                   const
-double covTrainingVector     (int i, int j)                                            const
-double stabProbTrainingVector(int i, int p, double pnrm, int rot, double mu, double B) const
+        res += "]";
+    }
 
-double gg(const double *x, int dim) const
-double hh(const double *x, int dim) const
+    else if ( src.isValSet() )
+    {
+        // Map sets to tuples
 
-double var     (const double *xa, int dim)                                         const
-double cov     (const double *xa, const double *xb, int dim)                       const
-double stabProb(const double *x, int p, double pnrm, int rot, double mu, double B) const
+        const Vector<gentype> &tmp = ((const Set<gentype> &) src).all();
 
-int setAlpha(const double *newAlpha)
-int setBias (double newBias)
+        res = "(";
 
-int setmuWeight(const double *nv, int dim)
-int setmuBias  (double nv)
+        for ( int i = 0 ; i < tmp.size() ; ++i )
+        {
+            std::string ires;
 
-void   muWeight(double *res) const
-double muBias(void)          const
+            if ( ( errnum = convGentype(ires,tmp(i),iint,idbl,istr,icpl) ) )
+            {
+                return errnum;
+            }
 
-int setgamma(const double *newW, int dim)
-int setdelta(double newB)
+            res += ires;
 
-void gamma(double *res) const
-double delta(void) const
+            if ( i < tmp.size()-1 )
+            {
+                res += ",";
+            }
+        }
 
-int setbattparam(const double *nv, int dim)
-void battparam(double *res) const
+        res += ")";
+    }
 
+    else
+    {
+        errnum = 1;
+    }
 
+    return errnum;
+}
 
 
 
 
 
+// To prevent truncation, the return value from pycall is serialised in
+// FIFO buffers to be reconstructed afterwards. These functions provide
+// python with buffers to push onto and c++ can pull off of.
 
+int         setintvalres(int mode, const int &val);
+double      setdblvalres(int mode, const double &val);
+std::string setstrvalres(int mode, const std::string &val);
+std::string setcomvalres(int mode, const std::string &val);
 
+int         intpop(void);
+double      dblpop(void);
+std::string strpop(void);
+std::string compop(void);
 
+void intvalresreset(void);
+void dblvalresreset(void);
+void strvalresreset(void);
+void comvalresreset(void);
 
+int         setintvalres(int mode, const int &val)         { static thread_local FiFo<int> xval;         int res(0);      if ( mode == 2 ) { xval.resize(0); } else if ( mode == 1 ) { xval.pop(res); } else if ( mode == 0 ) { xval.push(val); } return res; }
+double      setdblvalres(int mode, const double &val)      { static thread_local FiFo<double> xval;      double res(0);   if ( mode == 2 ) { xval.resize(0); } else if ( mode == 1 ) { xval.pop(res); } else if ( mode == 0 ) { xval.push(val); } return res; }
+std::string setstrvalres(int mode, const std::string &val) { static thread_local FiFo<std::string> xval; std::string res; if ( mode == 2 ) { xval.resize(0); } else if ( mode == 1 ) { xval.pop(res); } else if ( mode == 0 ) { xval.push(val); } return res; }
+std::string setcomvalres(int mode, const std::string &val) { static thread_local FiFo<std::string> xval; std::string res; if ( mode == 2 ) { xval.resize(0); } else if ( mode == 1 ) { xval.pop(res); } else if ( mode == 0 ) { xval.push(val); } return res; }
 
+void intpush(int val)         { setintvalres(0,val); }
+void dblpush(double val)      { setdblvalres(0,val); }
+void strpush(std::string val) { setstrvalres(0,val); }
+void compush(std::string val) { setcomvalres(0,val); }
+
+int         intpop(void) { const int tmp(0);      return setintvalres(1,tmp); }
+double      dblpop(void) { const double tmp(0);   return setdblvalres(1,tmp); }
+std::string strpop(void) { const std::string tmp; return setstrvalres(1,tmp); }
+std::string compop(void) { const std::string tmp; return setcomvalres(1,tmp); }
+
+void intvalresreset(void) { const int tmp(0);      setintvalres(2,tmp); }
+void dblvalresreset(void) { const double tmp(0);   setdblvalres(2,tmp); }
+void strvalresreset(void) { const std::string tmp; setstrvalres(2,tmp); }
+void comvalresreset(void) { const std::string tmp; setcomvalres(2,tmp); }
+
+// This funciton interrogates the return stacks to work out what the result was.
+// The following helper function in pyheavypy.py does the serialisation on the
+// python side which we are reversing here.
+//
+// def convgen(h):
+//    import pyheavy
+//    if type(h) is None:
+//        pyheavy.compush("none")
+//    elif type(h) is int:
+//        pyheavy.compush("int")
+//        pyheavy.intpush(h)
+//    elif type(h) is float:
+//        pyheavy.compush("float")
+//        pyheavy.dblpush(h)
+//    elif type(h) is complex:
+//        pyheavy.compush("complex")
+//        pyheavy.dblpush(h.real)
+//        pyheavy.dblpush(h.imag)
+//    elif type(h) is str:
+//        pyheavy.compush("string")
+//        pyheavy.strpush(h)
+//    elif type(h) is list:
+//        pyheavy.compush("list")
+//        pyheavy.intpush(len(h))
+//        for x in h:
+//            convgen(x)
+//    elif type(h) is tuple:
+//        pyheavy.compush("tuple")
+//        pyheavy.intpush(len(h))
+//        for x in h:
+//            convgen(x)
+//    else:
+//        pyheavy.compush("badtype")
+//
+//
+// mode: 0 push, 1 pop, 2 reset
+
+int convPytoGentype(gentype &res);
+int convPytoGentype(gentype &res)
+{
+    std::string comis = compop();
+    int errcode = 0;
+
+    if ( comis == "none" )
+    {
+        res.force_null();
+    }
+
+    else if ( comis == "int" )
+    {
+        res.force_int() = intpop();
+    }
+
+    else if ( comis == "float" )
+    {
+        res.force_double() = dblpop();
+    }
+
+    else if ( comis == "complex" )
+    {
+        d_anion altres = res.force_anion();
+
+        altres.setorder(1);
+        altres("&",0) = dblpop();
+        altres("&",1) = dblpop();
+    }
+
+    else if ( comis == "string" )
+    {
+        res.force_string() = strpop();
+    }
+
+    else if ( comis == "list" )
+    {
+        Vector<gentype> &altres = res.force_vector();
+
+        int numadd = intpop();
+
+        altres.resize(numadd);
+
+        for ( int i = 0 ; !errcode && ( i < altres.size() ) ; ++i )
+        {
+            errcode = convPytoGentype(altres("&",i));
+        }
+    }
+
+    else if ( comis == "tuple" )
+    {
+        Set<gentype> temp;
+        res.force_set() = temp;
+        Set<gentype> &altres = res.force_set();
+
+        int numadd = intpop();
+
+        for ( int i = 0 ; !errcode && ( i < numadd ) ; ++i )
+        {
+            gentype tg;
+
+            errcode = convPytoGentype(tg);
+
+            altres.add(tg); // will add to end
+        }
+    }
+
+    else
+    {
+        errcode = 1;
+    }
+
+    return errcode;
+}
+
+
+// drop-in replacement for pycall function in gentype.cc
+// (the gentype version, which uses a system call, is disabled by the macro PYLOCAL)
+
+void pycall(const std::string &fn, gentype &res, const gentype &x)
+{
+    // Load x into holder function so that python, then use eval
+
+    intvalsrcreset();
+    dblvalsrcreset();
+    strvalsrcreset();
+    cplvalsrcreset();
+
+    intvalresreset();
+    dblvalresreset();
+    strvalresreset();
+    comvalresreset();
+
+    std::string xstr;
+
+    // Store arguments for python function and create reconstruction string
+
+    int iint = 0;
+    int idbl = 0;
+    int istr = 0;
+    int icpl = 0;
+
+    if ( convGentype(xstr,x,iint,idbl,istr,icpl) )
+    {
+        res.makeError("Can't convert to python string");
+
+        return;
+    }
+
+    // Construct run command
+
+    std::string evalfn;
+
+    evalfn = "eval('";
+    evalfn += "pyheavypy.convgen(";
+    evalfn += fn;
+    evalfn += "(";
+    evalfn += xstr;
+    evalfn += "))";
+    evalfn += "')";
+
+    //errstream() << "evalfn: " << evalfn << "\n";
+
+    py::object builtins = py::module_::import("builtins");
+    py::object eval = builtins.attr("eval");
+    auto resultobj = eval(evalfn);
+
+    // Retrieve results of operation
+
+    convPytoGentype(res);
+
+    //errstream() << "result: " << res << "\n";
+
+    return;
+}
 
 

@@ -14,9 +14,9 @@
 #include <iostream>
 #include <string.h>
 #include <string>
-#ifdef ENABLE_THREADS
-#include <mutex>
-#endif
+//#ifdef ENABLE_THREADS
+//#include <mutex>
+//#endif
 #include "svm_generic.hpp"
 
 std::ostream &SVM_Generic::printstream(std::ostream &output, int dep) const
@@ -1471,10 +1471,10 @@ errstream() << "BADBADBAD";
 
                 if ( ( getKernel().isAltDiff() == 0 ) || ( getKernel().isAltDiff() == 1 ) ||  ( getKernel().isAltDiff() == 2 ) || ( getKernel().isAltDiff() == 5 ) )
                 {
-#ifdef ENABLE_THREADS
-                    static std::mutex eyelock;
-                    eyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//                    static std::mutex eyelock;
+//                    eyelock.lock();
+//#endif
 
 //errstream() << "phantomx 0 gentype (" << mlid << ")\n";
                     // This bit of code is speed-critical.  To optimise we cache the
@@ -2110,9 +2110,9 @@ errstream() << "BADBADBAD";
                     }
 
 //errstream() << "phantomx 0 gentype res = " << res << "\n";
-#ifdef ENABLE_THREADS
-                    eyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//                    eyelock.unlock();
+//#endif
                 }
 
                 else
@@ -2452,10 +2452,10 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
                 if ( ( getKernel().isAltDiff() == 0 ) || ( getKernel().isAltDiff() == 1 ) ||  ( getKernel().isAltDiff() == 2 ) || ( getKernel().isAltDiff() == 5 ) )
                 {
 //errstream() << "phantomx 1: " << getKernel().isAltDiff() << "\n";
-#ifdef ENABLE_THREADS
-                    static std::mutex eyelock;
-                    eyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//                    static std::mutex eyelock;
+//                    eyelock.lock();
+//#endif
 
                     // duplicate of gentype, with gentype -> double
 
@@ -3138,9 +3138,9 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
                     }
 
 //errstream() << "phantomx 999 K(" << xa << "," << xb << ") = " << res << "\n";
-#ifdef ENABLE_THREADS
-                    eyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//                    eyelock.unlock();
+//#endif
                 }
 
                 else

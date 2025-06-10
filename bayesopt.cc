@@ -1,4 +1,3 @@
-//FIXME: do discrete loop inside continuous loop for mixed-integer version
 //FIXME: can we plot slides on request
 //FIXME: press key to turn feedback on (but suppressed for next layer in).
 //       Plus feedback option to turn feedback off. That way the operator
@@ -1708,14 +1707,8 @@ int dogridOpt(int dim,
 
             gentype dummyres;
 
-//errstream() << "Local DIRect call on grid element " << gridi << "...\t";
-//FIXME: should probably check the return type here to make sure direct terminated properly!
-//            int neargridi = gridi; gridi = -1; // want the inner direct to think this is continuous!
             int directres = directOpt(dim,xxres,dummyres,locxmin,locxmax,fnfnapprox,fnarg,dopts,killSwitch);
-//            gridi = neargridi;
-//errstream() << directres << "\n";
-errstream() << "(" << gridi << "," << directres << "):";
-            (void) directres;
+            errstream() << "(" << gridi << "," << directres << "):";
 
             tempfres = (double) dummyres;
         }

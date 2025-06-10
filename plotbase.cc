@@ -19,6 +19,13 @@
 #define DO_CLEANUP
 #endif
 
+//#ifdef ENABLE_THREADS
+//#define PARSYSCALL false
+//#endif
+//#ifndef ENABLE_THREADS
+#define PARSYSCALL false
+//#endif
+
 // Get preset dash-type strings
 const char *dashtypes(int j);
 
@@ -700,20 +707,20 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
     {
         if ( PARSYSCALL )
         {
-#ifndef ENABLE_THREADS
+//#ifndef ENABLE_THREADS
             std::string doplotcomm = "bash ./"+dnamesh+" &";
 
 #ifndef USE_MEX
             res = svm_system(doplotcomm.c_str());
 #endif
-#endif
-#ifdef ENABLE_THREADS
-            std::string *doplotcomm = new std::string("bash ./"+dnamesh);
-
-#ifndef USE_MEX
-            std::thread(svm_system,(*doplotcomm).c_str());
-#endif
-#endif
+//#endif
+//#ifdef ENABLE_THREADS
+//            std::string *doplotcomm = new std::string("bash ./"+dnamesh);
+//
+//#ifndef USE_MEX
+//            std::thread(svm_system,(*doplotcomm).c_str());
+//#endif
+//#endif
         }
 
         else
@@ -943,20 +950,20 @@ int dosurf(double xmin, double xmax, double ymin, double ymax, double omin, doub
     {
         if ( PARSYSCALL )
         {
-#ifndef ENABLE_THREADS
+//#ifndef ENABLE_THREADS
             std::string doplotcomm = "bash ./"+dnamesh+" &";
 
 #ifndef USE_MEX
             res = svm_system(doplotcomm.c_str());
 #endif
-#endif
-#ifdef ENABLE_THREADS
-            std::string *doplotcomm = new std::string("bash ./"+dnamesh);
-
-#ifndef USE_MEX
-            std::thread(svm_system,(*doplotcomm).c_str());
-#endif
-#endif
+//#endif
+//#ifdef ENABLE_THREADS
+//            std::string *doplotcomm = new std::string("bash ./"+dnamesh);
+//
+//#ifndef USE_MEX
+//            std::thread(svm_system,(*doplotcomm).c_str());
+//#endif
+//#endif
         }
 
         else
@@ -1122,20 +1129,20 @@ int dosurfvar(double xmin, double xmax, double ymin, double ymax, double omin, d
 
     if ( PARSYSCALL )
     {
-#ifndef ENABLE_THREADS
+//#ifndef ENABLE_THREADS
         std::string doplotcomm = "bash ./"+dnamesh+" &";
 
 #ifndef USE_MEX
         res = svm_system(doplotcomm.c_str());
 #endif
-#endif
-#ifdef ENABLE_THREADS
-        std::string *doplotcomm = new std::string("bash ./"+dnamesh);
-
-#ifndef USE_MEX
-        std::thread(svm_system,(*doplotcomm).c_str());
-#endif
-#endif
+//#endif
+//#ifdef ENABLE_THREADS
+//        std::string *doplotcomm = new std::string("bash ./"+dnamesh);
+//
+//#ifndef USE_MEX
+//        std::thread(svm_system,(*doplotcomm).c_str());
+//#endif
+//#endif
     }
 
     else
@@ -1258,20 +1265,20 @@ int doscatterplot2d(double xmin, double xmax, double ymin, double ymax,
 
     if ( PARSYSCALL )
     {
-#ifndef ENABLE_THREADS
+//#ifndef ENABLE_THREADS
         std::string doplotcomm = "bash ./"+dnamesh+" &";
 
 #ifndef USE_MEX
         res = svm_system(doplotcomm.c_str());
 #endif
-#endif
-#ifdef ENABLE_THREADS
-        std::string *doplotcomm = new std::string("bash ./"+dnamesh);
-
-#ifndef USE_MEX
-        std::thread(svm_system,(*doplotcomm).c_str());
-#endif
-#endif
+//#endif
+//#ifdef ENABLE_THREADS
+//        std::string *doplotcomm = new std::string("bash ./"+dnamesh);
+//
+//#ifndef USE_MEX
+//        std::thread(svm_system,(*doplotcomm).c_str());
+//#endif
+//#endif
     }
 
     else

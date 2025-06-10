@@ -1,3 +1,4 @@
+#include .env - if this worked it would make python much easier
 #consider -fuse-ld=mold or -fuse-ld=gold
 
 # Makefile for SVMHeavy v6
@@ -120,8 +121,10 @@
 
 # linux/gcc - socketless and threadless
 
-CC = g++
-CCC = g++
+CC = c++
+CCC = c++
+#CC = g++
+#CCC = g++
 RM = rm -f
 MLMUTATEFILE = POSTSIG.TXT
 #CBASEFLAGS = -DSPECIFYSYSVIAMAKE -DHAVE_TERMIOS -DDISABLE_KB_BY_DEF -DHAVE_IOCTL -DNOPURGE -DIS_CPP20 -std=c++2a -Wno-overloaded-virtual
@@ -361,16 +364,28 @@ DEBUGFLAGSC = -DDEBUGDEEP
 DEBUGFLAGSX = -g -fsanitize=undefined -fsanitize=address
 TARGNAME = svmheavyv7.exe
 TARGSRC = svmheavyv7.cc
-PYFLAGS = -fPIC -DMAKENUMPYCOMP -fpermissive
-PYTHONI = -I/usr/include/python3.5/ -I/usr/local/lib/python3.5/dist-packages/numpy/core/include/
-PYTHONL = -Xlinker -export-dynamic
+#PYFLAGS = -fPIC -DMAKENUMPYCOMP -fpermissive
+#PYTHONI = -I/usr/include/python3.8/ -I/usr/local/lib/python3.8/dist-packages/numpy/core/include/
+#PYTHONL = -Xlinker -export-dynamic
+PYFLAGS = -shared -fPIC
+PYTHONI = -I/usr/include/python3.8 -I/home/ashilton/.local/lib/python3.8/site-packages/pybind11/include
+#PYTHONI = $(python3 -m pybind11 --includes)
+PYTARGNAME = pyheavy.cpython-38-x86_64-linux-gnu.so
+#PYTARGNAME = pyheavy$(python3-config --extension-suffix)
+PYTARGSRC = pyheavy.cc
+PYTHONL =
 #headless blocks all cout/cerr and system calls for running in batch mode
 HEADLESSFLAGS = -DHEADLESS
 USERLESSFLAGS = -DUSERLESS
 
 
 
-
+# python working version c++ -O3 -Wall -shared -std=c++11 -fPIC $(python3 -m pybind11 --includes) example.cc -o example$(python3-config --extension-suffix)
+#echo $(python3 -m pybind11 --includes)
+#-I/usr/include/python3.8 -I/home/ashilton/.local/lib/python3.8/site-packages/pybind11/include
+#
+#echo $(python3-config --extension-suffix)
+#.cpython-38-x86_64-linux-gnu.so
 
 
 
@@ -420,35 +435,49 @@ optmax: $(OBJS)
 
 
 
-pybasic: CFLAGS = $(PYFLAGS) $(CBASEFLAGS) $(PYTHONI)
+
+
+pybasic: CFLAGS = $(BASEFLAGS) $(CBASEFLAGS) $(PYTHONI) $(PYFLAGS) -DPYLOCAL
 pybasic: $(OBJS)
-	swig -c++ -python -o ml_mutable_wrap.cxx ml_mutable.i
-	$(CCC) $(CFLAGS) $(PYTHONI) -c ml_mutable_wrap.cxx -o ml_mutable_wrap.o
-	$(CCC) $(PYTHONL) $(LIBFLAGS) -shared $(OBJS) ml_mutable_wrap.o -o _ml_mutable.so
+	$(CCC) $(PYTHONI) $(PYTARGSRC) -o $(PYTARGNAME) $(OBJS) $(CFLAGS) $(LIBFLAGS) $(PYTHONL)
 
-pyopt: CFLAGS = $(PYFLAGS) $(CBASEFLAGS) $(OPTFLAGS) $(PYTHONI)
-pyopt: $(OBJS)
-	swig -c++ -python -o ml_mutable_wrap.cxx ml_mutable.i
-	$(CCC) $(CFLAGS) $(PYTHONI) -c ml_mutable_wrap.cxx -o ml_mutable_wrap.o
-	$(CCC) $(PYTHONL) $(LIBFLAGS) -shared $(OBJS) ml_mutable_wrap.o -o _ml_mutable.so
-
-pyoptmath: CFLAGS = $(PYFLAGS) $(CBASEFLAGS) $(OPTFLAGS) $(OPTFLAGSMATHS) $(PYTHONI)
+pyoptmath: CFLAGS = $(BASEFLAGS) $(CBASEFLAGS) $(OPTFLAGS) $(OPTFLAGSMATHS) $(PYTHONI) $(PYFLAGS) -DPYLOCAL
 pyoptmath: $(OBJS)
-	swig -c++ -python -o ml_mutable_wrap.cxx ml_mutable.i
-	$(CCC) $(CFLAGS) $(PYTHONI) -c ml_mutable_wrap.cxx -o ml_mutable_wrap.o
-	$(CCC) $(PYTHONL) $(LIBFLAGS) -shared $(OBJS) ml_mutable_wrap.o -o _ml_mutable.so
+	$(CCC) $(PYTHONI) $(PYTARGSRC) -o $(PYTARGNAME) $(OBJS) $(CFLAGS) $(LIBFLAGS) $(PYTHONL)
 
-pyoptavx2: CFLAGS = $(PYFLAGS) $(CBASEFLAGS) $(OPTFLAGS) $(AVX2FLAGS) $(PYTHONI)
-pyoptavx2: $(OBJS)
-	swig -c++ -python -o ml_mutable_wrap.cxx ml_mutable.i
-	$(CCC) $(CFLAGS) $(PYTHONI) -c ml_mutable_wrap.cxx -o ml_mutable_wrap.o
-	$(CCC) $(PYTHONL) $(LIBFLAGS) -shared $(OBJS) ml_mutable_wrap.o -o _ml_mutable.so
 
-pyoptmax: CFLAGS = $(PYFLAGS) $(CBASEFLAGS) $(OPTFLAGS) $(AVX2FLAGS) $(OPTFLAGSMATHS) $(PYTHONI)
-pyoptmax: $(OBJS)
-	swig -c++ -python -o ml_mutable_wrap.cxx ml_mutable.i
-	$(CCC) $(CFLAGS) $(PYTHONI) -c ml_mutable_wrap.cxx -o ml_mutable_wrap.o
-	$(CCC) $(PYTHONL) $(LIBFLAGS) -shared $(OBJS) ml_mutable_wrap.o -o _ml_mutable.so
+
+
+
+#pybasic: CFLAGS = $(PYFLAGS) $(CBASEFLAGS) $(PYTHONI)
+#pybasic: $(OBJS)
+#	swig -c++ -python -o ml_mutable_wrap.cxx ml_mutable.i
+#	$(CCC) $(CFLAGS) $(PYTHONI) -c ml_mutable_wrap.cxx -o ml_mutable_wrap.o
+#	$(CCC) $(PYTHONL) $(LIBFLAGS) -shared $(OBJS) ml_mutable_wrap.o -o _ml_mutable.so
+#
+#pyopt: CFLAGS = $(PYFLAGS) $(CBASEFLAGS) $(OPTFLAGS) $(PYTHONI)
+#pyopt: $(OBJS)
+#	swig -c++ -python -o ml_mutable_wrap.cxx ml_mutable.i
+#	$(CCC) $(CFLAGS) $(PYTHONI) -c ml_mutable_wrap.cxx -o ml_mutable_wrap.o
+#	$(CCC) $(PYTHONL) $(LIBFLAGS) -shared $(OBJS) ml_mutable_wrap.o -o _ml_mutable.so
+#
+#pyoptmath: CFLAGS = $(PYFLAGS) $(CBASEFLAGS) $(OPTFLAGS) $(OPTFLAGSMATHS) $(PYTHONI)
+#pyoptmath: $(OBJS)
+#	swig -c++ -python -o ml_mutable_wrap.cxx ml_mutable.i
+#	$(CCC) $(CFLAGS) $(PYTHONI) -c ml_mutable_wrap.cxx -o ml_mutable_wrap.o
+#	$(CCC) $(PYTHONL) $(LIBFLAGS) -shared $(OBJS) ml_mutable_wrap.o -o _ml_mutable.so
+#
+#pyoptavx2: CFLAGS = $(PYFLAGS) $(CBASEFLAGS) $(OPTFLAGS) $(AVX2FLAGS) $(PYTHONI)
+#pyoptavx2: $(OBJS)
+#	swig -c++ -python -o ml_mutable_wrap.cxx ml_mutable.i
+#	$(CCC) $(CFLAGS) $(PYTHONI) -c ml_mutable_wrap.cxx -o ml_mutable_wrap.o
+#	$(CCC) $(PYTHONL) $(LIBFLAGS) -shared $(OBJS) ml_mutable_wrap.o -o _ml_mutable.so
+#
+#pyoptmax: CFLAGS = $(PYFLAGS) $(CBASEFLAGS) $(OPTFLAGS) $(AVX2FLAGS) $(OPTFLAGSMATHS) $(PYTHONI)
+#pyoptmax: $(OBJS)
+#	swig -c++ -python -o ml_mutable_wrap.cxx ml_mutable.i
+#	$(CCC) $(CFLAGS) $(PYTHONI) -c ml_mutable_wrap.cxx -o ml_mutable_wrap.o
+#	$(CCC) $(PYTHONL) $(LIBFLAGS) -shared $(OBJS) ml_mutable_wrap.o -o _ml_mutable.so
 
 
 

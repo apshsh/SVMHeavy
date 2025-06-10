@@ -28,9 +28,9 @@
 #include "basefn.hpp"
 #include "memdebug.hpp"
 #include "niceassert.hpp"
-#ifdef ENABLE_THREADS
-#include <mutex>
-#endif
+//#ifdef ENABLE_THREADS
+//#include <mutex>
+//#endif
 
 
 
@@ -722,14 +722,14 @@ public:
 
         else if ( srcsel == 4 )
         {
-#ifdef ENABLE_THREADS
-            fifolock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//            fifolock.lock();
+//#endif
             res = strfifo.push(fifoind,src);
 
-#ifdef ENABLE_THREADS
-            fifolock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//            fifolock.unlock();
+//#endif
         }
 
         return res;
@@ -829,9 +829,9 @@ public:
 
             while ( !isdone )
             {
-#ifdef ENABLE_THREADS
-                fifolock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//                fifolock.lock();
+//#endif
 
                 int fifosizeval = strfifo.size(fifoind);
 
@@ -841,9 +841,9 @@ public:
 
                     res = strfifo.pop(fifoind,dest);
 
-#ifdef ENABLE_THREADS
-                    fifolock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//                    fifolock.unlock();
+//#endif
 
                     isdone = 1;
                 }
@@ -855,9 +855,9 @@ public:
                     // threads a chance to push onto fifo or kill it, then
                     // retry.
 
-#ifdef ENABLE_THREADS
-                    fifolock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//                    fifolock.unlock();
+//#endif
 
                     //svm_usleep(FIFO_BASESLEEP+(svm_rand()%FIFO_ADDSLEEP_RAND));
                     svm_usleep(FIFO_BASESLEEP+(rand()%FIFO_ADDSLEEP_RAND));
@@ -868,9 +868,9 @@ public:
                     // fifo has kill-flag set, so treat it like a dead
                     // socket.
 
-#ifdef ENABLE_THREADS
-                    fifolock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//                    fifolock.unlock();
+//#endif
 
                     dest = "";
                     res = fifosizeval;
@@ -925,15 +925,15 @@ exitpoint:
 
         else if ( srcsel == 4 )
         {
-#ifdef ENABLE_THREADS
-            fifolock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//            fifolock.lock();
+//#endif
 
             res = ( strfifo.size(fifoind) >= 0 ) ? 1 : 0;
 
-#ifdef ENABLE_THREADS
-            fifolock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//            fifolock.unlock();
+//#endif
         }
 
         return res;
@@ -1005,28 +1005,28 @@ exitpoint:
 
     void killfifo(int num)
     {
-#ifdef ENABLE_THREADS
-        fifolock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        fifolock.lock();
+//#endif
 
         strfifo.setkillflag(num);
 
-#ifdef ENABLE_THREADS
-        fifolock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        fifolock.unlock();
+//#endif
     }
 
     void killfifo(void)
     {
-#ifdef ENABLE_THREADS
-        fifolock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        fifolock.lock();
+//#endif
 
         strfifo.setkillflag();
 
-#ifdef ENABLE_THREADS
-        fifolock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        fifolock.unlock();
+//#endif
 
         // Sleep long enough to ensure that all threads waiting for
         // data on fifo receive kill signal
@@ -1052,9 +1052,9 @@ private:
     int streamtype;
     std::string sun_path;
     int fifoind;
-#ifdef ENABLE_THREADS
-    static std::mutex fifolock;
-#endif
+//#ifdef ENABLE_THREADS
+//    static std::mutex fifolock;
+//#endif
     svmvolatile static fifolist strfifo;
 
     char inputbuffer[2048];

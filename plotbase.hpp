@@ -12,12 +12,6 @@
 #define _plotbase_h
 
 #define GRIDSAMP 100
-#ifdef ENABLE_THREADS
-#define PARSYSCALL false
-#endif
-#ifndef ENABLE_THREADS
-#define PARSYSCALL false
-#endif
 
 #include "vector.hpp"
 #include <string>

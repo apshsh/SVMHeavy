@@ -283,12 +283,12 @@ int gridelmMLreg(int ind, ML_Mutable *MLreg, void *arg);
 
 const ML_Mutable &getMLrefconst(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmbase, int threadInd, int svmInd, SparseVector<SVMThreadContext *> &svmContext);
 
-int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib, 
+int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib,
               SparseVector<int> *svmThreadOwner = nullptr,
               SparseVector<ML_Mutable *> *svmbase = nullptr,
               int *threadInd = nullptr,
               SparseVector<SVMThreadContext *> *svmContext = nullptr);
-int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib, 
+int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib,
               SparseVector<int> *xsvmThreadOwner,
               SparseVector<ML_Mutable *> *xsvmbase,
               int *xthreadInd,
@@ -923,7 +923,7 @@ void *brTrainRun(void *svmBGContext)
     svmvolatile int &trainKillSwitch = (*((bgTrainData *) svmBGContext)).trainKillSwitch;
     svmvolatile int &traincontrolThreadInd = (*((bgTrainData *) svmBGContext)).traincontrolThreadInd;
 
-    // Train the SVM, with killswitch referred back to other thread. 
+    // Train the SVM, with killswitch referred back to other thread.
 
     errstream() << "\n\n*** Background training commenced in sub-thread " << traincontrolThreadInd << ".\n\n";
 

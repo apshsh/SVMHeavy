@@ -38,9 +38,9 @@
 #include <string>
 #include <sstream>
 #include <cstdint>
-#ifdef ENABLE_THREADS
-#include <atomic>
-#endif
+//#ifdef ENABLE_THREADS
+//#include <atomic>
+//#endif
 #include "randfun.hpp"
 #include "vector.hpp"
 #include "strfns.hpp"
@@ -12429,12 +12429,13 @@ template <class T> int operator<=(const T               &left_op, const SparseVe
 
 inline uintmax_t getnewID(void)
 {
-#ifdef ENABLE_THREADS
-    static std::atomic<uintmax_t> currid(0);
-#endif
-#ifndef ENABLE_THREADS
-    static uintmax_t currid(0);
-#endif
+// DESIGN DECISION: don't let x get shared accross thread boundary!
+//#ifdef ENABLE_THREADS
+//    static std::atomic<uintmax_t> currid(0);
+//#endif
+//#ifndef ENABLE_THREADS
+    static thread_local uintmax_t currid(0);
+//#endif
 
     return (uintmax_t) currid++;
 }

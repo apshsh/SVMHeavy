@@ -42,6 +42,18 @@ class gentype;
 class gentype;
 
 
+// Python call default (override for python integration)
+//
+// The gentype function pycall("some_fn",x) will result in
+// a call to some_fn(x). In non-local version this triggers
+// a system call to python3 with x sent as a string and the
+// result being written to (and subsequently read from) a
+// temporary file, but in the python-local version you can
+// override this and do something more sensible.
+
+void pycall(const std::string &evalstr, gentype &res, const gentype &x);
+
+
 // Optimisation is as follows: scaladd assumes that all values
 // are integer or double and does a += b*c.  scalmul performs a *= b.
 

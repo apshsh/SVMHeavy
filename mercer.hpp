@@ -101,10 +101,10 @@ xagradordadd = amount to be added to xagradOrder, use this rather than modify x
 #include <iostream>
 #include <string.h>
 #include <math.h>
-#ifdef ENABLE_THREADS
-#include <atomic>
-#include <mutex>
-#endif
+//#ifdef ENABLE_THREADS
+//#include <atomic>
+//#include <mutex>
+//#endif
 #include "qswapbase.hpp"
 #include "gentype.hpp"
 #include "vector.hpp"
@@ -1535,9 +1535,9 @@ public:
     {
         if ( !scratch || !((*scratch).isindpresent((2*xmajind)+xminind)) )
         {
-#ifdef ENABLE_THREADS
-            vecinfoeyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//            vecinfoeyelock.lock();
+//#endif
 
             if ( !scratch )
             {
@@ -1549,17 +1549,17 @@ public:
                 (*scratch)((2*xmajind)+xminind);
             }
 
-#ifdef ENABLE_THREADS
-            vecinfoeyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//            vecinfoeyelock.unlock();
+//#endif
         }
 
         return (*scratch)("&",(2*xmajind)+xminind);
     }
 
-#ifdef ENABLE_THREADS
-    mutable std::mutex vecinfoeyelock;
-#endif
+//#ifdef ENABLE_THREADS
+//    mutable std::mutex vecinfoeyelock;
+//#endif
 };
 
 inline vecInfo &setident (vecInfo &a) { NiceThrow("no"); return a; }
@@ -1636,9 +1636,9 @@ class kernPrecursor
 public:
     explicit kernPrecursor()
     {
-#ifdef ENABLE_THREADS
-        kerneyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        kerneyelock.lock();
+//#endif
 
         if ( fullmllist == nullptr )
         {
@@ -1665,16 +1665,16 @@ public:
 
         themllist("&",xmlid) = this;
 
-#ifdef ENABLE_THREADS
-        kerneyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        kerneyelock.unlock();
+//#endif
     }
 
     virtual ~kernPrecursor()
     {
-#ifdef ENABLE_THREADS
-        kerneyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        kerneyelock.lock();
+//#endif
 
         SparseVector<kernPrecursor *> &themllist = *fullmllist;
 
@@ -1686,9 +1686,9 @@ public:
             fullmllist = nullptr;
         }
 
-#ifdef ENABLE_THREADS
-        kerneyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        kerneyelock.unlock();
+//#endif
     }
 
     kernPrecursor &operator=(const kernPrecursor &src)
@@ -2049,9 +2049,9 @@ public:
     {
         int res = 0;
 
-#ifdef ENABLE_THREADS
-        kerneyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        kerneyelock.lock();
+//#endif
 
         SparseVector<kernPrecursor *> &themllist = *fullmllist;
 
@@ -2073,18 +2073,18 @@ public:
             themllist("&",xmlid) = this;
         }
 
-#ifdef ENABLE_THREADS
-        kerneyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        kerneyelock.unlock();
+//#endif
 
         return res;
     }
 
     virtual int getaltML(kernPrecursor *&res, int altMLid) const
     {
-#ifdef ENABLE_THREADS
-        kerneyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        kerneyelock.lock();
+//#endif
 
         SparseVector<kernPrecursor *> &themllist = *fullmllist;
 
@@ -2097,9 +2097,9 @@ public:
             res = themllist("&",altMLid);
         }
 
-#ifdef ENABLE_THREADS
-        kerneyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        kerneyelock.unlock();
+//#endif
 
         return ires;
     }
@@ -2114,29 +2114,29 @@ public:
 //        svm_mutex_unlock(kerneyelock);
 //#endif
         return res;
-}
+    }
 
     int mllistind(int i)
     {
-#ifdef ENABLE_THREADS
-        kerneyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        kerneyelock.lock();
+//#endif
         int res = (*fullmllist).ind(i);
-#ifdef ENABLE_THREADS
-        kerneyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        kerneyelock.unlock();
+//#endif
         return res;
     }
 
     int mllistisindpresent(int i)
     {
-#ifdef ENABLE_THREADS
-        kerneyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        kerneyelock.lock();
+//#endif
         int res = (*fullmllist).isindpresent(i);
-#ifdef ENABLE_THREADS
-        kerneyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        kerneyelock.unlock();
+//#endif
         return res;
     }
 
@@ -2164,20 +2164,20 @@ private:
 
     int xmlidcnt(void)
     {
-#ifdef ENABLE_THREADS
-        static std::atomic<int> loccnt(STARTMLID); //NUMMLINSTANCES/2);
-#endif
-#ifndef ENABLE_THREADS
-        static int loccnt(STARTMLID); //NUMMLINSTANCES/2);
-#endif
+//#ifdef ENABLE_THREADS
+//        static std::atomic<int> loccnt(STARTMLID); //NUMMLINSTANCES/2);
+//#endif
+//#ifndef ENABLE_THREADS
+        static thread_local int loccnt(STARTMLID); //NUMMLINSTANCES/2);
+//#endif
 
         return (int) ++loccnt;
     }
 
-    static SparseVector<kernPrecursor *>* fullmllist;
-#ifdef ENABLE_THREADS
-    static std::mutex kerneyelock;
-#endif
+    static thread_local SparseVector<kernPrecursor *>* fullmllist;
+//#ifdef ENABLE_THREADS
+//    static std::mutex kerneyelock;
+//#endif
 };
 
 inline kernPrecursor *&setident (kernPrecursor *&a) { NiceThrow("no"); return a; }

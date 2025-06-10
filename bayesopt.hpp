@@ -50,7 +50,7 @@ public:
 
     // WARNING: some documentation may be out of date.  Check code.
     //
-    // method: 0  - PE (pure exploitation, mean only minimisation).
+    // method: 0  - MO (pure exploitation, mean only minimisation).
     //         1  - EI (expected improvement - default).
     //         2  - PI (probability of improvement).
     //         3  - GP-UCB as per Brochu (recommended GP-UCB).*

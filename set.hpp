@@ -1543,7 +1543,7 @@ std::istream &operator>>(std::istream &input, Set<T> &dest)
 
     while ( 1 )
     {
-        while ( ( isspace(input.peek()) ) || ( input.peek() == ';' ) )
+        while ( ( isspace(input.peek()) ) || ( input.peek() == ';' ) || ( input.peek() == ',' ) )
         {
             input.get(tt);
         }
@@ -1588,7 +1588,7 @@ std::istream &streamItIn(std::istream &input, Set<T> &dest, int processxyzvw)
 
     while ( 1 )
     {
-        while ( ( isspace(input.peek()) ) || ( input.peek() == ';' ) )
+        while ( ( isspace(input.peek()) ) || ( input.peek() == ';' ) || ( input.peek() == ',' ) )
         {
             input.get(tt);
         }

@@ -28,7 +28,7 @@ int dummygetsetExtVar(gentype &res, const gentype &src, int num)
     return -1;
 }
 
-BLK_Generic::mexcallsyn BLK_Generic::getsetExtVar = dummygetsetExtVar;
+thread_local BLK_Generic::mexcallsyn BLK_Generic::getsetExtVar = dummygetsetExtVar;
 
 
 std::ostream &BLK_Generic::printstream(std::ostream &output, int dep) const
@@ -370,7 +370,7 @@ BLK_Generic::BLK_Generic(int isIndPrune) : ML_Base(isIndPrune)
 {
     setaltx(nullptr);
 
-    static std::string dummy = "";
+    static thread_local std::string dummy = "";
 
     xuseristream = &promptstream(dummy);
     xuserostream = &promptoutstream();

@@ -18,9 +18,9 @@
 #include <string.h>
 #include <string>
 #include <cmath>
-#ifdef ENABLE_THREADS
-#include <mutex>
-#endif
+//#ifdef ENABLE_THREADS
+//#include <mutex>
+//#endif
 #include "mercer.hpp"
 #include "vector.hpp"
 #include "sparsevector.hpp"
@@ -810,10 +810,6 @@ public:
 
     virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
     virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
-
-    virtual int addTrainingVector(int i,            double *xxa, int dima, double Cweigh = 1, double epsweigh = 1);
-    virtual int addTrainingVector(int i, int zz,    double *xxa, int dima, double Cweigh = 1, double epsweigh = 1);
-    virtual int addTrainingVector(int i, double zz, double *xxa, int dima, double Cweigh = 1, double epsweigh = 1);
 
     virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh);
     virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh);
@@ -2134,11 +2130,11 @@ private:
     // that ID are x and g version numbers (see above).  These are
     // shared.
 
-    static SparseVector<int> xvernumber;
-    static SparseVector<int> gvernumber;
-#ifdef ENABLE_THREADS
-    static std::mutex mleyelock;
-#endif
+    static thread_local SparseVector<int> xvernumber;
+    static thread_local SparseVector<int> gvernumber;
+//#ifdef ENABLE_THREADS
+//    static std::mutex mleyelock;
+//#endif
 
     // indPrune: 0 by default, 1 to indicate that x should be "filled out"
     //           with nulls so that each training vector has the same

@@ -253,6 +253,8 @@
 #include <limits>
 #include <random>
 #include <chrono>
+#include <vector>
+#include <complex>
 
 #ifdef VISUAL_STU
 #include <windows.h>
@@ -295,6 +297,7 @@
 // spoilers...
 
 inline int isMainThread(int val = 0);
+inline int getThreadID(void);
 
 
 
@@ -782,8 +785,11 @@ inline int svm_listen(int,   int) { return -1; }
 //     Call with val == +1 to set current thread as main
 //     Call with val == 0  to test if current thread is main thread (nz is true)
 //     Call with val == -1 to set no main thread (so isMainThread will always return true)
+//
+// getThreadID: generates, sets and returns a unique ID for this thread
 
 //inline int isMainThread(int val = 0);
+//inline int getThreadID(void);
 
 // No point in using volatile if threads not available (we use them sparingly
 // for thread-related tasks only)
@@ -875,6 +881,7 @@ inline size_t numThreadsGuess(void)
     return std::thread::hardware_concurrency();
 }
 
+//inline int isMainThread(int val)
 inline int isMainThread(int val)
 {
     static thread_local int mainThread = 0; // this will be set per thread, remember, and should
@@ -924,6 +931,26 @@ inline int isMainThread(int val)
 */
 }
 
+//inline int getThreadID(void);
+inline int getThreadID(void)
+{
+    static thread_local int threadID = -1; // this holds our ID in thread_local storage. -1 indicates not yet set
+
+    if ( threadID == -1 )
+    {
+        std::mutex cachelock;
+        cachelock.lock();
+
+        static std::atomic<int> loccnt(-1); // global and atomic, so safe to use
+
+        threadID = ++loccnt; // increment atomic count and use this as threadID
+
+        cachelock.unlock();
+    }
+
+    return threadID;
+}
+
 #endif
 
 
@@ -932,9 +959,16 @@ inline int isMainThread(int val)
 // --- to enable compilation and return relevant error codes etc.      ---
 
 #ifndef ENABLE_THREADS
+//inline int isMainThread(int val)
 inline int isMainThread(int)
 {
     return 1;
+}
+
+//inline int getThreadID(void);
+inline int getThreadID(void)
+{
+    return 0;
 }
 
 typedef size_t svm_pthread_t;
@@ -2646,6 +2680,29 @@ const std::string &getUniqueFile(std::string &res, const std::string &pre, const
 
 
 
+
+
+
+template <class T> inline std::vector<T> &setident        (std::vector<T> &a) { throw("Operation not defined"); return a; }
+template <class T> inline std::vector<T> &setzero         (std::vector<T> &a) { throw("Operation not defined"); return a; }
+template <class T> inline std::vector<T> &setzeropassive  (std::vector<T> &a) { throw("Operation not defined"); return a; }
+template <class T> inline std::vector<T> &setposate       (std::vector<T> &a) { throw("Operation not defined"); return a; }
+template <class T> inline std::vector<T> &setnegate       (std::vector<T> &a) { throw("Operation not defined"); return a; }
+template <class T> inline std::vector<T> &setconj         (std::vector<T> &a) { throw("Operation not defined"); return a; }
+template <class T> inline std::vector<T> &setrand         (std::vector<T> &a) { throw("Operation not defined"); return a; }
+template <class T> inline std::vector<T> &postProInnerProd(std::vector<T> &a) { return a; }
+
+template <class T> inline void qswap(std::vector<T> &a, std::vector<T> &b);
+template <class T> inline void qswap(std::vector<T> &a, std::vector<T> &b)
+{
+    std::vector<T> x = a; a = b; b = x;
+}
+
+inline void qswap(std::complex<double> &a, std::complex<double> &b);
+inline void qswap(std::complex<double> &a, std::complex<double> &b)
+{
+    std::complex<double> x = a; a = b; b = x;
+}
 
 
 

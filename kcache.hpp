@@ -14,9 +14,10 @@
 #include "vector.hpp"
 #include "gentype.hpp"
 #include "basefn.hpp"
-#ifdef ENABLE_THREADS
-#include <mutex>
-#endif
+//Design decision: don't share kcache over thread boundary
+//#ifdef ENABLE_THREADS
+//#include <mutex>
+//#endif
 
 template <class T> class Klink;
 template <class T> class Kcache;
@@ -350,9 +351,9 @@ private:
     // that memsize == -1 must be assumed for parallel operation
     // (or at least trainsize <= cache length).
 
-#ifdef ENABLE_THREADS
-    mutable std::mutex cachelock;
-#endif
+//#ifdef ENABLE_THREADS
+//    mutable std::mutex cachelock;
+//#endif
 };
 
 template <class T> void qswap(Klink<T> *&a, Klink<T> *&b)
@@ -1495,10 +1496,9 @@ template <> inline const Vector<double> &Kcache<double>::getrow(int numi, retVec
     if ( !pos_ptr )
     {
         // This block must be thread-safe!
-
-#ifdef ENABLE_THREADS
-        cachelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        cachelock.lock();
+//#endif
 
         pos_ptr = lookup.v(numi); // in case this has changed (race condition)
 
@@ -1553,18 +1553,17 @@ template <> inline const Vector<double> &Kcache<double>::getrow(int numi, retVec
             lookup.sv(numi,first_element);
         }
 
-#ifdef ENABLE_THREADS
-        cachelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        cachelock.unlock();
+//#endif
     }
 
     else if ( ( memsize != -1 ) && ( maxrows >= trainsize ) && ( pos_ptr != first_element ) )
     {
         // Lock for safety, but note we really shouldn't be here!
-
-#ifdef ENABLE_THREADS
-        cachelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        cachelock.lock();
+//#endif
         if ( pos_ptr != first_element )
         {
 	    /*
@@ -1596,9 +1595,9 @@ template <> inline const Vector<double> &Kcache<double>::getrow(int numi, retVec
 	    }
 	}
 
-#ifdef ENABLE_THREADS
-        cachelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        cachelock.unlock();
+//#endif
     }
 
     return (pos_ptr->kernel_row)(0,1,trainsize+padsize-1,tmp);
@@ -1616,10 +1615,9 @@ const Vector<T> &Kcache<T>::getrow(int numi, retVector<T> &tmp)
     if ( !pos_ptr )
     {
         // This block must be thread-safe!
-
-#ifdef ENABLE_THREADS
-        cachelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        cachelock.lock();
+//#endif
 
         pos_ptr = lookup.v(numi); // in case this has changed (race condition)
 
@@ -1674,18 +1672,17 @@ const Vector<T> &Kcache<T>::getrow(int numi, retVector<T> &tmp)
             lookup.sv(numi,first_element);
         }
 
-#ifdef ENABLE_THREADS
-        cachelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        cachelock.unlock();
+//#endif
     }
 
     else if ( ( memsize != -1 ) && ( maxrows >= trainsize ) && ( pos_ptr != first_element ) )
     {
         // Lock for safety, but note we really shouldn't be here!
-
-#ifdef ENABLE_THREADS
-        cachelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        cachelock.lock();
+//#endif
         if ( pos_ptr != first_element )
         {
 	    /*
@@ -1717,9 +1714,9 @@ const Vector<T> &Kcache<T>::getrow(int numi, retVector<T> &tmp)
 	    }
 	}
 
-#ifdef ENABLE_THREADS
-        cachelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        cachelock.unlock();
+//#endif
     }
 
     return (pos_ptr->kernel_row)(0,1,trainsize+padsize-1,tmp);

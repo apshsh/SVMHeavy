@@ -75,38 +75,28 @@ int addtrainingdata(      ML_Base &mlbase, const char *trainfile, int reverse = 
 int loadFileAndTest(const ML_Base &mlbase, const char *trainfile, int reverse = 0, int ignoreStart = 0, int imax = -1, int ibase = -1, int coercetosingle = 0, int coercefromsingle = 0, int fromsingletarget = 0, int binaryRelabel = 0, int singleDrop = 0, int savex = 0);
 int loadFileAndSave(const ML_Base &mlbase, const char *trainfile, int reverse = 0, int ignoreStart = 0, int imax = -1, int ibase = -1, int coercetosingle = 0, int coercefromsingle = 0, int fromsingletarget = 0, int binaryRelabel = 0, int singleDrop = 0, const char *savefile = nullptr);
 
-#ifndef SWIG
 int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, const std::string &savefile);
-#endif
 
-#ifndef SWIG
 int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, Vector<SparseVector<gentype> > &x, const Vector<gentype> &y,                                     int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget);
 int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, Vector<SparseVector<gentype> > &x, const Vector<gentype> &y, const Vector<gentype> &sigmaweight, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget);
 int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread, const std::string &savefile);
-#endif
 
-#ifndef SWIG
 int loadFileForHillClimb(const ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax,            int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread, Vector<SparseVector<gentype> > &xtest, Vector<gentype> &ytest);
 int loadFileAndTest(     const ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread,                                        Vector<gentype> &ytest, Vector<gentype> &ytestresh, Vector<gentype> &ytestresg, Vector<gentype> &gvarres, int dovartest, Vector<int> &outkernind, int savex = 0);
 int loadFileAndSave(     const ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread,                                        Vector<gentype> &ytest, Vector<gentype> &ytestresh, Vector<gentype> &ytestresg, Vector<gentype> &gvarres, int dovartest, Vector<int> &outkernind, const std::string &savefile);
-#endif
 
 // Add point to basis
 
-#ifndef SWIG
 int addbasisdataUU(ML_Base &dest, const std::string &fname);
 int addbasisdataVV(ML_Base &dest, const std::string &fname);
-#endif
 
 // x templating
 // ============
 //
 // Writes (but never over-writes) parts of x with contents of xtemp
 
-#ifndef SWIG
 SparseVector<gentype> &addtemptox(SparseVector<gentype> &x, const SparseVector<gentype> &xtemp);
 Vector<SparseVector<gentype> > &addtemptox(Vector<SparseVector<gentype> > &x, const SparseVector<gentype> &xtemp);
-#endif
 
 
 

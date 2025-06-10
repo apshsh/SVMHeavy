@@ -26,19 +26,19 @@ give a vector or matrix, which could potentially be used as a matrix-valued kern
 #include "mercer.hpp"
 #include "ml_base.hpp"
 #include "randfun.hpp"
-#ifdef ENABLE_THREADS
-#include <mutex>
-#endif
+//#ifdef ENABLE_THREADS
+//#include <mutex>
+//#endif
 #include "nlopt_direct.hpp"
 
 #define LARGE_TRAIN_BOUNDARY       5000
 // SEE ALSO KCACHE_H
 
-SparseVector<int> ML_Base::xvernumber;
-SparseVector<int> ML_Base::gvernumber;
-#ifdef ENABLE_THREADS
-std::mutex ML_Base::mleyelock;
-#endif
+thread_local SparseVector<int> ML_Base::xvernumber;
+thread_local SparseVector<int> ML_Base::gvernumber;
+//#ifdef ENABLE_THREADS
+//std::mutex ML_Base::mleyelock;
+//#endif
 
 //The original version used fixed-length arrays.  This is a very bad idea and the version numbers quite quickly overflow!
 //std::atomic<int> *ML_Base::xvernumber = nullptr;
@@ -242,9 +242,9 @@ int convertSparseToSet(gentype &rres, const SparseVector<gentype> &src)
 ML_Base::ML_Base(int _isIndPrune) : kernPrecursor()
 {
     {
-#ifdef ENABLE_THREADS
-        mleyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.lock();
+//#endif
 
         //if ( xvernumber == nullptr )
         //{
@@ -263,9 +263,9 @@ ML_Base::ML_Base(int _isIndPrune) : kernPrecursor()
         xvernumber("&",MLid()) = 1; // non-zero to indicate existence
         gvernumber("&",MLid()) = 1; // non-zero to indicate existence
 
-#ifdef ENABLE_THREADS
-        mleyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.unlock();
+//#endif
     }
 
     assumeReal       = 1;
@@ -346,12 +346,12 @@ ML_Base::ML_Base(int _isIndPrune) : kernPrecursor()
     return;
 }
 
-ML_Base::~ML_Base() 
-{ 
+ML_Base::~ML_Base()
+{
     {
-#ifdef ENABLE_THREADS
-        mleyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.lock();
+//#endif
 
         xvernumber("&",MLid()) = 0;
         gvernumber("&",MLid()) = 0;
@@ -359,69 +359,69 @@ ML_Base::~ML_Base()
         xvernumber.zero(MLid());
         gvernumber.zero(MLid());
 
-#ifdef ENABLE_THREADS
-        mleyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.unlock();
+//#endif
     }
 
-    MEMDEL(that); 
+    MEMDEL(that);
 
-    return; 
+    return;
 }
 
 int ML_Base::xvernum(void) const
 {
-#ifdef ENABLE_THREADS
-        mleyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.lock();
+//#endif
         int res = xvernumber.isindpresent(MLid()) ? xvernumber(MLid()) : 0;
-#ifdef ENABLE_THREADS
-        mleyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.unlock();
+//#endif
         return res;
 }
 
 int ML_Base::gvernum(void) const
 {
-#ifdef ENABLE_THREADS
-        mleyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.lock();
+//#endif
         int res = gvernumber.isindpresent(MLid()) ? gvernumber(MLid()) : 0;
-#ifdef ENABLE_THREADS
-        mleyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.unlock();
+//#endif
         return res;
 }
 
 int ML_Base::xvernum(int altMLid) const
 {
-#ifdef ENABLE_THREADS
-        mleyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.lock();
+//#endif
         int res = xvernumber.isindpresent(altMLid) ? xvernumber(altMLid) : 0;
-#ifdef ENABLE_THREADS
-        mleyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.unlock();
+//#endif
         return res;
 }
 
 int ML_Base::gvernum(int altMLid) const
 {
-#ifdef ENABLE_THREADS
-        mleyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.lock();
+//#endif
         int res = gvernumber.isindpresent(altMLid) ? gvernumber(altMLid) : 0;
-#ifdef ENABLE_THREADS
-        mleyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.unlock();
+//#endif
         return res;
 }
 
 int ML_Base::incxvernum(void)
 {
-#ifdef ENABLE_THREADS
-        mleyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.lock();
+//#endif
 
         if ( !xvernumber.isindpresent(MLid()) )
         {
@@ -429,26 +429,26 @@ int ML_Base::incxvernum(void)
         }
 
         int res = ++xvernumber("&",MLid());
-#ifdef ENABLE_THREADS
-        mleyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.unlock();
+//#endif
         return res;
 }
 
 int ML_Base::incgvernum(void)
 {
-#ifdef ENABLE_THREADS
-        mleyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.lock();
+//#endif
         if ( !gvernumber.isindpresent(MLid()) )
         {
             gvernumber("&",MLid()) = 0;
         }
 
         int res = ++gvernumber("&",MLid());
-#ifdef ENABLE_THREADS
-        mleyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//        mleyelock.unlock();
+//#endif
         return res;
 }
 
@@ -1358,9 +1358,9 @@ SparseVector<gentype> &ML_Base::makeFullSparse(SparseVector<gentype> &dest) cons
 
 int ML_Base::setMLid(int nv)
 {
-#ifdef ENABLE_THREADS
-    mleyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//    mleyelock.lock();
+//#endif
 
     int oldMLid = MLid();
     int res = kernPrecursor::setMLid(nv);
@@ -1385,9 +1385,9 @@ int ML_Base::setMLid(int nv)
         gvernumber("&",nv) = gvn;
     }
 
-#ifdef ENABLE_THREADS
-    mleyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//    mleyelock.unlock();
+//#endif
 
     return res;
 }
@@ -2006,49 +2006,6 @@ int ML_Base::gettypeind(const gentype &y) const
 
 
 
-// Variants for the sake of python
-// note we *DO NOT* use ML_Base:: here as we want to use virtual
-
-int ML_Base::addTrainingVector(int i, double *xxa, int dima, double Cweigh, double epsweigh)
-{
-        SparseVector<gentype> x;
-        int ii;
-
-        for ( ii = 0 ; ii < dima ; ++ii )
-        {
-            x("&",ii) = xxa[ii];
-        }
-
-        return qaddTrainingVector(i,nullgentype(),x,Cweigh,epsweigh);
-}
-
-int ML_Base::addTrainingVector(int i, int zz, double *xxa, int dima, double Cweigh, double epsweigh)
-{
-        const gentype z(zz);
-        SparseVector<gentype> x;
-        int ii;
-
-        for ( ii = 0 ; ii < dima ; ++ii )
-        {
-            x("&",ii) = xxa[ii];
-        }
-
-        return qaddTrainingVector(i,z,x,Cweigh,epsweigh);
-}
-
-int ML_Base::addTrainingVector(int i, double zz, double *xxa, int dima, double Cweigh, double epsweigh)
-{
-        const gentype z(zz);
-        SparseVector<gentype> x;
-        int ii;
-
-        for ( ii = 0 ; ii < dima ; ++ii )
-        {
-            x("&",ii) = xxa[ii];
-        }
-
-        return qaddTrainingVector(i,z,x,Cweigh,epsweigh);
-}
 
 
 

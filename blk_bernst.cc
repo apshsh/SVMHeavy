@@ -55,7 +55,7 @@ const Vector<gentype> &BLK_Bernst::y(void) const
         // Generate x grid
 
         Vector<SparseVector<gentype> > xgrid;
-        static GPR_Generic sampler;
+        static thread_local GPR_Generic sampler;
         sampler.genSampleGrid(xgrid,locxmin,locxmax,locNsamp,locsampSplit,locxsampType,locsampSlack);
 
         int totsamp = xgrid.size();

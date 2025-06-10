@@ -64,7 +64,6 @@ double calcnegloglikelihood(const ML_Base &baseML, int suppressfb = 0);
 double calcmaxinfogain     (const ML_Base &baseML, int suppressfb = 0);
 double calcRKHSnorm        (const ML_Base &baseML, int suppressfb = 0); // ||f||_K^2
 
-#ifndef SWIG
 double calcLOO     (const ML_Base &baseML,                                           Vector<int>    &cnt, Matrix<int>    &cfm,                                                                    int startpoint = 0, int suppressfb = 0, int useThreads = 0);
 double calcRecall  (const ML_Base &baseML,                                           Vector<int>    &cnt, Matrix<int>    &cfm,                                                                    int startpoint = 0, int suppressfb = 0, int useThreads = 0);
 double calcCross   (const ML_Base &baseML, int m, int rndit, Vector<double> &repres, Vector<double> &cnt, Matrix<double> &cfm, int numreps = 1,                                                   int startpoint = 0, int suppressfb = 0, int useThreads = 0);
@@ -78,11 +77,8 @@ double calcSparSens(const ML_Base &baseML,                   Vector<double> &rep
 double calcTest(const ML_Base &baseML, const Vector<SparseVector<gentype> > &xtest, const Vector<gentype> &ytest,                                                                                                                                 int startpoint = 0, int suppressfb = 0, int useThreads = 0);
 double calcTest(const ML_Base &baseML, const Vector<SparseVector<gentype> > &xtest, const Vector<gentype> &ytest, Vector<int> &cnt, Matrix<int> &cfm,                                                                                             int startpoint = 0, int suppressfb = 0, int useThreads = 0);
 double calcTest(const ML_Base &baseML, const Vector<SparseVector<gentype> > &xtest, const Vector<gentype> &ytest, Vector<int> &cnt, Matrix<int> &cfm, Vector<gentype> &resh, Vector<gentype> &resg, Vector<gentype> &gvarres, int calcvarres = 0, int startpoint = 0, int suppressfb = 0, int useThreads = 0);
-#endif
 
-#ifndef SWIG
 double assessResult(const ML_Base &baseML, Vector<int> &cnt, Matrix<int> &cfm, const Vector<gentype> &ytestresh, const Vector<gentype> &ytest, const Vector<int> &outkernind);
-#endif
 
 // Measure "goodness" for binary result:
 //
@@ -94,9 +90,7 @@ double assessResult(const ML_Base &baseML, Vector<int> &cnt, Matrix<int> &cfm, c
 // res(5) = reserved for sparsity
 // res(6) = 1-accuracy
 
-#ifndef SWIG
 void measureAccuracy(Vector<double> &res, const Vector<gentype> &resg, const Vector<gentype> &resh, const Vector<gentype> &ytarg, const Vector<int> &dstat, const ML_Base &ml);
-#endif
 
 // Bootstrap: this simplified version simply takes the indices of those points d(i) != 0 (of which there are m), randomly
 // selects m of these (with repetition allowed), then sets d(i) = 0 for those not in the list so selected.

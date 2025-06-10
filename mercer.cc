@@ -13,9 +13,9 @@
 #include <iostream>
 #include <string.h>
 #include <math.h>
-#ifdef ENABLE_THREADS
-#include <mutex>
-#endif
+//#ifdef ENABLE_THREADS
+//#include <mutex>
+//#endif
 #include "mercer.hpp"
 #include "randfun.hpp"
 
@@ -24,10 +24,10 @@
 //Adding kernels: search for ADDHERE
 
 
-SparseVector<kernPrecursor *>* kernPrecursor::fullmllist = nullptr;
-#ifdef ENABLE_THREADS
-std::mutex kernPrecursor::kerneyelock;
-#endif
+thread_local SparseVector<kernPrecursor *>* kernPrecursor::fullmllist = nullptr;
+//#ifdef ENABLE_THREADS
+//std::mutex kernPrecursor::kerneyelock;
+//#endif
 
 
 
@@ -3956,16 +3956,16 @@ const gentype &MercerKernel::getmnorm(const vecInfo &xinfo, const SparseVector<g
 
                 twoProductDiverted(tmpres,x,x,xconsist,assumreal);
 
-#ifdef ENABLE_THREADS
-                static std::mutex eyelock;
-                eyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//                static std::mutex eyelock;
+//                eyelock.lock();
+//#endif
 
                 xhalfmprod("&",0) = tmpres;
 
-#ifdef ENABLE_THREADS
-                eyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//                eyelock.unlock();
+//#endif
 
                 oldm = 2;
             }
@@ -3976,16 +3976,16 @@ const gentype &MercerKernel::getmnorm(const vecInfo &xinfo, const SparseVector<g
 
                 fourProductDiverted(xhalfmprod("&",1),x,x,x,x,xconsist,assumreal);
 
-#ifdef ENABLE_THREADS
-                static std::mutex eyelock;
-                eyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//                static std::mutex eyelock;
+//                eyelock.lock();
+//#endif
 
                 xhalfmprod("&",1) = tmpres;
 
-#ifdef ENABLE_THREADS
-                eyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//                eyelock.unlock();
+//#endif
 
                 oldm = 4;
             }
@@ -4003,19 +4003,19 @@ const gentype &MercerKernel::getmnorm(const vecInfo &xinfo, const SparseVector<g
                 retVector<const SparseVector<gentype> *> tmpva;
                 retVector<const vecInfo *>               tmpvb;
 
-#ifdef ENABLE_THREADS
-                static std::mutex eyelock;
-                eyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//                static std::mutex eyelock;
+//                eyelock.lock();
+//#endif
 
                 for ( i = oldm+2 ; i <= m ; i += 2 )
                 {
                     mProductDiverted(i,xhalfmprod("&",(i/2)-1),aa(0,1,i-1,tmpva),xconsist,assumreal);
                 }
 
-#ifdef ENABLE_THREADS
-                eyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//                eyelock.unlock();
+//#endif
 
                 oldm = m;
             }
@@ -4073,10 +4073,10 @@ gentype &MercerKernel::getmnorm(vecInfo &xinfo, const SparseVector<gentype> &x, 
 
             if ( ( m >= 2 ) && ( m > oldm ) )
             {
-#ifdef ENABLE_THREADS
-                static std::mutex eyelock;
-                eyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//                static std::mutex eyelock;
+//                eyelock.lock();
+//#endif
 
                 gentype tmpres;
 
@@ -4084,19 +4084,19 @@ gentype &MercerKernel::getmnorm(vecInfo &xinfo, const SparseVector<gentype> &x, 
 
                 xhalfmprod("&",0) = tmpres;
 
-#ifdef ENABLE_THREADS
-                eyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//                eyelock.unlock();
+//#endif
 
                 oldm = 2;
             }
 
             if ( ( m >= 4 ) && ( m > oldm ) )
             {
-#ifdef ENABLE_THREADS
-                static std::mutex eyelock;
-                eyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//                static std::mutex eyelock;
+//                eyelock.lock();
+//#endif
 
                 gentype tmpres;
 
@@ -4104,9 +4104,9 @@ gentype &MercerKernel::getmnorm(vecInfo &xinfo, const SparseVector<gentype> &x, 
 
                 xhalfmprod("&",1) = tmpres;
 
-#ifdef ENABLE_THREADS
-                eyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//                eyelock.unlock();
+//#endif
 
                 oldm = 4;
             }
@@ -4121,10 +4121,10 @@ gentype &MercerKernel::getmnorm(vecInfo &xinfo, const SparseVector<gentype> &x, 
 
                 int i;
 
-#ifdef ENABLE_THREADS
-                static std::mutex eyelock;
-                eyelock.lock();
-#endif
+//#ifdef ENABLE_THREADS
+//                static std::mutex eyelock;
+//                eyelock.lock();
+//#endif
 
                 for ( i = oldm+2 ; i <= m ; i += 2 )
                 {
@@ -4134,9 +4134,9 @@ gentype &MercerKernel::getmnorm(vecInfo &xinfo, const SparseVector<gentype> &x, 
                     mProductDiverted(i,xhalfmprod("&",(i/2)-1),aa(0,1,i-1,tmpva),xconsist,assumreal);
                 }
 
-#ifdef ENABLE_THREADS
-                eyelock.unlock();
-#endif
+//#ifdef ENABLE_THREADS
+//                eyelock.unlock();
+//#endif
 
                 oldm = m;
             }

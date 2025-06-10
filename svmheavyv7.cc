@@ -1,3 +1,83 @@
+/*
+PYTHON INTERFACE EXAMPLE (SEE tmp2 DIRECTORY):
+
+c++ -O3 -Wall -shared -std=c++11 -fPIC $(python3 -m pybind11 --includes) example.cc -o example$(python3-config --extension-suffix)
+
+#include <pybind11/pybind11.h>
+#include <iostream>
+#include <string>
+
+// General scheme:
+//
+// if gentype is null then eval without argument
+// if gentype is int then cast as int and send to an intvalsrc and use this in eval
+// if gentype is double then cast as double and send to an doublevalsrc and use this in eval
+// if gentype is complex then cast as double and send to an complexvalsrc and use this in eval
+// if gentype is realvector then cast as std::vector and send to an realvectorvalsrc and use this in eval
+// if gentype is realmatrix then cast as eigen::matrix and send to an realmatrixvalsrc and use this in eval
+// if gentype is string then cast as int and send to an stringvalsrc and use this in eval
+// for set, then have as many arguments as there are values in the set
+// otherwise act as if double is nan and call with that (including values in vectors, matrices and sets)
+
+namespace py = pybind11;
+
+double setvalsrc(int doset = 0, double val = 0)
+{
+    static thread_local double xval;
+
+    if ( doset )
+    {
+        xval = val;
+    }
+
+    return xval;
+}
+
+double valsrc(void)
+{
+    return setvalsrc();
+}
+
+int intvalsrc(void)
+{
+    return (int) setvalsrc();
+}
+
+void procdata(void)
+{
+    double x;
+    std::string fn;
+
+    std::cout << "Function: "; std::cin >> fn;
+    std::cout << "x: "; std::cin >> x;
+
+    setvalsrc(1,x);
+
+    std::string evalfn("eval('");
+    evalfn += fn;
+    evalfn += "(example.intvalsrc())')";
+
+    //std::cout << "Evaluation string: " << evalfn << "\n";
+
+    py::object builtins = py::module_::import("builtins");
+    py::object eval = builtins.attr("eval");
+    auto resultobj = eval(evalfn);
+    double result = resultobj.cast<double>();
+
+    std::cout << "Result = " << result << "\n";
+
+    return;
+}
+
+PYBIND11_MODULE(example, m) {
+    m.doc() = "pybind11 example plugin"; // optional module docstring
+    m.def("valsrc", &valsrc, "Get double for eval");
+    m.def("intvalsrc", &intvalsrc, "Get int for eval");
+    m.def("procdata", &procdata, "Apply user function to data stream");
+}
+
+*/
+
 //FIXME: in sparsevector, have an optional "information" field that is literally just a text description.
 //FIXME: in tuneKernel, test if variables are isNomConst and don't include if they are
 //FIXME: remove kernel -kwc, -kwuc etc and use const variables instead!
@@ -952,6 +1032,7 @@ int main(int argc, char *argv[])
         // stream used by -echo will remain available until the end.
 
         commline += " -Zx";
+//        outstream() << "Running command: " << commline << "\n";
 
         // Define global variable store
 
@@ -984,17 +1065,17 @@ int main(int argc, char *argv[])
         MEMNEW(svmContext("&",threadInd),SVMThreadContext(svmInd,threadInd));
         errstream() << "{";
 
-        // Now that everything has been set upo we can run the actual code.
+        // Now that everything has been set up so we can run the actual code.
 
         SparseVector<SparseVector<int> > returntag;
 
         runsvm(threadInd,svmContext,svmbase,svmThreadOwner,commstack,globargvariables,cligetsetExtVar,returntag);
 
-        MEMDEL(commstack);
-
         // Unlock the thread, signalling that the context can be deleted etc
 
         errstream() << "}";
+
+        MEMDEL(commstack);
 
         // Code not re-entrant, so need to blitz threads, and also delete remaining MLs
 

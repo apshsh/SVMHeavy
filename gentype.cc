@@ -6623,6 +6623,8 @@ int gentype::makeEqnInternal(const std::string &src)
 
     else if ( res == 1 )
     {
+        // Type: int
+
 /*
         int zres;
 	std::stringstream resbuffer;
@@ -6638,6 +6640,8 @@ int gentype::makeEqnInternal(const std::string &src)
 
     else if ( res == 2 )
     {
+        // Type: real
+
         // Must deal with E to e substitution first
 
         std::string locsrc(src);
@@ -6658,6 +6662,8 @@ int gentype::makeEqnInternal(const std::string &src)
 
     else if ( res == 3 )
     {
+        // Type: anion
+
         // Must deal with E to e substitution first
 
         std::string locsrc(src);
@@ -6672,44 +6678,17 @@ int gentype::makeEqnInternal(const std::string &src)
         *this = ares;
     }
 
-    else if ( res == 4 )
-    {
-        Vector<gentype> vres;
-	std::stringstream resbuffer;
-
-	resbuffer << src;
-	resbuffer >> vres;
-
-        *this = vres;
-    }
-
-    else if ( res == 5 )
-    {
-        Matrix<gentype> mres;
-	std::stringstream resbuffer;
-
-	i = 0;
-
-	while ( src[i] != '[' )
-	{
-	    ++i;
-
-            NiceAssert( i < (int) src.length() );
-	}
-
-	resbuffer << src.substr(i,(src.length())-i);
-	resbuffer >> mres;
-
-        *this = mres;
-    }
-
     else if ( res == 6 )
     {
+        // Type: string
+
         makeString(src.substr(1,src.length()-2));
     }
 
     else if ( res == 7 )
     {
+        // Type: error
+
 	i = 0;
 
 	while ( src[i] != '\"' )
@@ -6722,19 +6701,130 @@ int gentype::makeEqnInternal(const std::string &src)
 	makeError(src.substr(i+1,src.length()-i-2));
     }
 
+    else if ( res == 4 )
+    {
+        // Type: vector
+
+        Vector<gentype> vres;
+	std::stringstream resbuffer;
+
+        NiceAssert( src.length() >= 2 );
+
+        if ( src.length() == 2 )
+        {
+            ; // []
+        }
+
+        else if ( std::isspace(src[1]) && std::isspace(src[src.length()-2]) )
+        {
+            resbuffer << src;
+            resbuffer >> vres;
+        }
+
+        else
+        {
+            // Need to put in spaces
+
+            std::string altsrc;
+
+            altsrc = "[ ";
+            altsrc += src.substr(1,(src.length())-2);
+            altsrc += " ]";
+
+            resbuffer << altsrc;
+            resbuffer >> vres;
+        }
+
+        *this = vres;
+    }
+
+    else if ( res == 5 )
+    {
+        // Type: matrix
+
+        Matrix<gentype> mres;
+	std::stringstream resbuffer;
+
+	i = 0;
+
+	while ( src[i] != '[' )
+	{
+	    ++i;
+
+            NiceAssert( i < (int) src.length() );
+	}
+
+        NiceAssert( src.length()-i >= 2 );
+
+        if ( src.length()-i == 2 )
+        {
+            ; // []
+        }
+
+        else if ( std::isspace(src[i+1]) && std::isspace(src[src.length()-2]) )
+        {
+            resbuffer << src.substr(i,(src.length())-i);
+            resbuffer >> mres;
+        }
+
+        else
+        {
+            // Need to put in spaces
+
+            std::string altsrc;
+
+            altsrc = "[ ";
+            altsrc += src.substr(i+1,(src.length())-2);
+            altsrc += " ]";
+
+            resbuffer << altsrc;
+            resbuffer >> mres;
+        }
+
+        *this = mres;
+    }
+
     else if ( res == 8 )
     {
+        // Type: set
+
         Set<gentype> sres;
 	std::stringstream resbuffer;
 
-	resbuffer << src;
-        resbuffer >> sres;
+        NiceAssert( src.length() >= 2 );
+
+        if ( src.length() == 2 )
+        {
+            ; // {}
+        }
+
+        else if ( std::isspace(src[1]) && std::isspace(src[src.length()-2]) )
+        {
+            resbuffer << src;
+            resbuffer >> sres;
+        }
+
+        else
+        {
+            // Need to put in spaces
+
+            std::string altsrc;
+
+            altsrc = "{ ";
+            altsrc += src.substr(1,(src.length())-2);
+            altsrc += " }";
+
+            resbuffer << altsrc;
+            resbuffer >> sres;
+        }
 
         *this = sres;
     }
 
     else if ( res == 9 )
     {
+        // Type: dgraph
+
         Dgraph<gentype,double> dgres;
 	std::stringstream resbuffer;
 
@@ -6747,14 +6837,40 @@ int gentype::makeEqnInternal(const std::string &src)
             NiceAssert( i < (int) src.length() );
 	}
 
-	resbuffer << src.substr(i,(src.length())-i);
-        resbuffer >> dgres;
+        NiceAssert( src.length()-i >= 2 );
+
+        if ( src.length()-i == 2 )
+        {
+            ; // {}
+        }
+
+        else if ( std::isspace(src[i+1]) && std::isspace(src[src.length()-2]) )
+        {
+            resbuffer << src.substr(i,(src.length())-i);
+            resbuffer >> dgres;
+        }
+
+        else
+        {
+            // Need to put in spaces
+
+            std::string altsrc;
+
+            altsrc = "{ ";
+            altsrc += src.substr(i+1,(src.length())-2);
+            altsrc += " }";
+
+            resbuffer << altsrc;
+            resbuffer >> dgres;
+        }
 
         *this = dgres;
     }
 
     else
     {
+        // Syntax error
+
 	Vector<int> commapos;
         std::string locfnname;
 
@@ -9077,7 +9193,7 @@ const fninfoblock *getfninfo(int ires)
 {
     initgentype(); // not ready to JIT yet
 
-    static gentype blind(0);
+    static thread_local gentype blind(0);
     fninfoblock *res = nullptr;
 
     if ( ires != -1 )
@@ -9117,7 +9233,7 @@ void exitgentype(void)
 {
     int i;
 
-    static gentype blind(0); // never modified, so no need for this to be volatile
+    static thread_local gentype blind(0); // never modified, so no need for this to be volatile
 
     for ( i = 0 ; i < NUMFNDEF ; ++i )
     {
@@ -18205,6 +18321,8 @@ gentype pycall(const gentype &c, const gentype &x)
 
     else
     {
+        pycall((const std::string &) c,res,x);
+/*
         std::string resstr;
         std::string callstr((const std::string &) c);
 
@@ -18221,10 +18339,34 @@ gentype pycall(const gentype &c, const gentype &x)
 
         std::stringstream pleasework(resstr);
         pleasework >> res;
+*/
     }
 
     return res;
 }
+
+#ifndef PYLOCAL
+// If not local python then we use a system call
+void pycall(const std::string &evalstr, gentype &res, const gentype &x)
+{
+        std::string resstr;
+        std::string callstr(evalstr);
+
+        callstr += " ";
+        callstr += (const std::string &) x;
+        svm_pycall(resstr,callstr);
+
+        // At this point I would like to just write "res = resstr", but
+        // python messes things up with unix-y newlines that seem to
+        // break stuff, and C++ seems to actively impede me stripping
+        // said characters from the string. Quick workaround below...
+        //
+        // Why the actual fuck is this sort of crap still a thing?
+
+        std::stringstream pleasework(resstr);
+        pleasework >> res;
+}
+#endif
 
 
 
@@ -23879,7 +24021,7 @@ int genplotit(double xmin, double xmax, double ymin, double ymax,
 
 int disableAltContent(bool justquery, int actuallyForceEnable)
 {
-    static int disableAltCont = 0;
+    static thread_local int disableAltCont = 0;
 
     if ( !justquery )
     {

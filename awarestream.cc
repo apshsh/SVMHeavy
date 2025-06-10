@@ -13,13 +13,13 @@
 
 #include "awarestream.hpp"
 #include <stdio.h>
-#ifdef ENABLE_THREADS
-#include <mutex>
-#endif
+//#ifdef ENABLE_THREADS
+//#include <mutex>
+//#endif
 
-#ifdef ENABLE_THREADS
-std::mutex awarestream::fifolock;
-#endif
+//#ifdef ENABLE_THREADS
+//std::mutex awarestream::fifolock;
+//#endif
 svmvolatile fifolist awarestream::strfifo;
 
 //using namespace std::literals;

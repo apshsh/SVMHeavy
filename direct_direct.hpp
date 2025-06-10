@@ -185,7 +185,7 @@ inline std::ostream &directstream(void)
 {
     return std::cerr;
 //    return errstream();
-    static NullOStream devnullstream;
+    static thread_local NullOStream devnullstream;
 
     return devnullstream;
 }

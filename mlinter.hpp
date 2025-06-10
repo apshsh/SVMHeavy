@@ -93,11 +93,11 @@ inline SVMThreadContext *&setzero(SVMThreadContext *&x);
 inline void qswap(SVMThreadContext *&a, SVMThreadContext *&b);
 inline ML_Mutable *&setzero(ML_Mutable *&x);
 
-inline SVMThreadContext *&setident (SVMThreadContext *&a) { NiceThrow("Whatever"); return a; }
+inline SVMThreadContext *&setident (SVMThreadContext *&a) { NiceThrow("SVMThreadContext setident not defined"); return a; }
 inline SVMThreadContext *&setposate(SVMThreadContext *&a) { return a; }
-inline SVMThreadContext *&setnegate(SVMThreadContext *&a) { NiceThrow("I reject your reality and substitute my own"); return a; }
-inline SVMThreadContext *&setconj  (SVMThreadContext *&a) { NiceThrow("Mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"); return a; }
-inline SVMThreadContext *&setrand  (SVMThreadContext *&a) { NiceThrow("Blippity Blappity Blue"); return a; }
+inline SVMThreadContext *&setnegate(SVMThreadContext *&a) { NiceThrow("SVMThreadContext setnegate not defined"); return a; }
+inline SVMThreadContext *&setconj  (SVMThreadContext *&a) { NiceThrow("SVMThreadContext setconj not defined"); return a; }
+inline SVMThreadContext *&setrand  (SVMThreadContext *&a) { NiceThrow("SVMThreadContext setrand not defined"); return a; }
 inline SVMThreadContext *&postProInnerProd(SVMThreadContext *&x);
 
 
@@ -188,7 +188,7 @@ public:
     //                0: wait patiently for other thread(s) to finish
     //                1: set killswitch on other threads to terminate them early
     // MLindstack:    used to keep indices when pushing/popping MLs
-    // 
+    //
     // killswitch:       set this 1 to tell thread to stop.
     // controlThreadInd: if thread is running then this is set to the threadInd of the
     //                   controlling thread.  Otherwise it is set -1.

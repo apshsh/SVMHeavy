@@ -164,10 +164,9 @@ struct DynArray
     // for standard automatic operation instead.  Set fillval != nullptr to
     // assign all values as this.  Set -3 to force array_hold() behaviour.
     //
-    // int only: - if you set suggestedallocsize == -2 then this sets
-    //       contents to 0,1,2,... (-1 for "zero" element) and does
-    //       rudimentary threaded memory safety.
-    //     - If leavemem set then does not dealloc previous memory.
+    // int only: - if you set suggestedallocsize == -2 (for T = int) this
+    //             sets contents to 0,1,2,... (-1 for "zero" element).
+    //          - If leavemem set then does not dealloc previous memory.
 
     DynArray<T> &resize(int size, int suggestedallocsize = -1, const T *fillval = nullptr, bool leavemem = false)
     {
@@ -319,6 +318,7 @@ struct DynArray
 //private: - don't abuse this, treat as private!  We commented this out to enable aggregate initialisation in zerointbasic etc
 
     // Need specialised versions, so no default arguments allowed!
+    // Note that the general version does not do suggestedallocsize == -2 (only works for the int override)
 
     void locresize(int size, int suggestedallocsize, const T *fillval, bool leavemem)
     {
@@ -389,12 +389,6 @@ struct DynArray
                 )
         {
             // Resize array
-
-            // NB: this is called (in zerointarry et al) in a multi-threaded
-            // context.  This is not ideal, but only occurs when extending the
-            // array.  So long as we take care to ensure that all variables are
-            // ready to go before over-writing then it should (fingers crossed)
-            // work OK.
 
             T *newcontent = nullptr;
 
@@ -512,48 +506,48 @@ template <> void DynArray<int>::locresize(   int size, int suggestedallocsize, c
 
 inline const DynArray<int> *zerointarray(void)
 {
-    static int content[2] = { 0, 0 };
-    static DynArray<int> zeroarray = { content,1,1,1,true,true,true }; // final notdelcontent
+    static thread_local int content[2] = { 0, 0 };
+    static thread_local DynArray<int> zeroarray = { content,1,1,1,true,true,true }; // final notdelcontent
 
     return &zeroarray;
 }
 
 inline const DynArray<int> *oneintarray(void)
 {
-    static int content[2] = { 0, 1 };
-    static DynArray<int> onearray = { content,1,1,1,true,true,true }; // final notdelcontent
+    static thread_local int content[2] = { 0, 1 };
+    static thread_local DynArray<int> onearray = { content,1,1,1,true,true,true }; // final notdelcontent
 
     return &onearray;
 }
 
 inline const DynArray<double> *zerodoublearray(void)
 {
-    static double content[2] = { 0, 0 };
-    static DynArray<double> zeroarray = { content,1,1,1,true,true,true }; // final notdelcontent
+    static thread_local double content[2] = { 0, 0 };
+    static thread_local DynArray<double> zeroarray = { content,1,1,1,true,true,true }; // final notdelcontent
 
     return &zeroarray;
 }
 
 inline const DynArray<double> *onedoublearray(void)
 {
-    static double content[2] = { 0, 1 };
-    static DynArray<double> onearray = { content,1,1,1,true,true,true }; // final notdelcontent
+    static thread_local double content[2] = { 0, 1 };
+    static thread_local DynArray<double> onearray = { content,1,1,1,true,true,true }; // final notdelcontent
 
     return &onearray;
 }
 
 inline const DynArray<double> *ninfdoublearray(void)
 {
-    static double content[2] = { 0, -INFINITY };
-    static DynArray<double> ninfarray = { content,1,1,1,true,true,true }; // final notdelcontent
+    static thread_local double content[2] = { 0, -INFINITY };
+    static thread_local DynArray<double> ninfarray = { content,1,1,1,true,true,true }; // final notdelcontent
 
     return &ninfarray;
 }
 
 inline const DynArray<double> *pinfdoublearray(void)
 {
-    static double content[2] = { 0, INFINITY };
-    static DynArray<double> pinfarray = { content,1,1,1,true,true,true }; // final notdelcontent
+    static thread_local double content[2] = { 0, INFINITY };
+    static thread_local DynArray<double> pinfarray = { content,1,1,1,true,true,true }; // final notdelcontent
 
     return &pinfarray;
 }
@@ -562,9 +556,9 @@ inline const DynArray<double> *pinfdoublearray(void)
 
 inline const DynArray<int> *cntintarray(int size)
 {
-    static int maxsize = 0;
-    static std::unique_ptr<DynArray<int> > vogonpoetry(new DynArray<int>({nullptr,0,0,0,false,false,false})); // deletion is automatic thanks to unique_ptr ownership
-    static DynArray<int> *cntarray = vogonpoetry.get();
+    static thread_local int maxsize = 0;
+    static thread_local std::unique_ptr<DynArray<int> > vogonpoetry(new DynArray<int>({nullptr,0,0,0,false,false,false})); // deletion is automatic thanks to unique_ptr ownership
+    static thread_local DynArray<int> *cntarray = vogonpoetry.get();
 
     NiceAssert( size >= 0 );
 

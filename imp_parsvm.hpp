@@ -76,10 +76,6 @@ public:
 
     // Training set modification:
 
-    virtual int addTrainingVector(int i,            double *xxa, int dima, double Cweigh = 1, double epsweigh = 1) override { return bypassml.addTrainingVector(i,   xxa,dima,Cweigh,epsweigh); }
-    virtual int addTrainingVector(int i, int zz,    double *xxa, int dima, double Cweigh = 1, double epsweigh = 1) override { return bypassml.addTrainingVector(i,zz,xxa,dima,Cweigh,epsweigh); }
-    virtual int addTrainingVector(int i, double zz, double *xxa, int dima, double Cweigh = 1, double epsweigh = 1) override { return bypassml.addTrainingVector(i,zz,xxa,dima,Cweigh,epsweigh); }
-
     virtual int removeTrainingVector(int i, int num) override { return IMP_Generic::removeTrainingVector(i,num); }
 
     // Training functions:

@@ -508,7 +508,7 @@ public:
     virtual int setBernIndex (const gentype &nv) { bernind = nv; return 1; }
 
     typedef int (*mexcallsyn)(gentype &, const gentype &, int);
-    static mexcallsyn getsetExtVar;
+    static thread_local mexcallsyn getsetExtVar;
 
     // Battery modelling parameters
     //

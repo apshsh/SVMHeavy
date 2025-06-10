@@ -3,18 +3,6 @@
 //FIXME: add variants to return vectors where it sayd ADDHERE
 //FIXME: ADDHERE
 
-//Python examples:
-//
-//
-// ML = ml_mutable.ML_Mutable(1)
-// x = ml_mutable.new_doubleArray(2)
-// doubleArray_setitem(x,0,1.23)
-// doubleArray_setitem(x,1,2.91)
-// y = x.gg(xx,2) const
-// delete_doubleArray(a)
-//
-// NOTE: the dimension arument is always right after the pointer
-
 //
 // Mutable ML
 //
@@ -44,11 +32,6 @@
 #include "imp_generic.hpp"
 #include "mlm_generic.hpp"
 
-#ifdef MAKENUMPYCOMP
-#include "Python.hpp"
-#include <numpy/numpyconfig.h>
-#include <numpy/arrayobject.h>
-#endif
 
 // ML examiner functions
 
@@ -58,14 +41,8 @@ class ML_Mutable;
 
 // Swap function
 
-#ifndef SWIG
 inline void qswap(ML_Mutable &a, ML_Mutable &b);
 inline void qswap(ML_Mutable *&a, ML_Mutable *&b);
-#endif
-
-#ifdef SWIG
-class ML_Base;
-#endif
 
 class ML_Mutable : public ML_Base
 {
@@ -94,26 +71,22 @@ public:
 
     ML_Mutable();
     ML_Mutable(int type);
-#ifndef SWIG
     ML_Mutable(const char *dummy, ML_Base *xtheML); // this is a special version that puts a wrapper around an existing ML.  Note that xtheML is not deleted when wrapper is!
     void settheMLdirect(ML_Base *xtheML);                // this is the corresponding "setter" version
     ML_Mutable(const ML_Mutable &src);
     ML_Mutable(const ML_Mutable &src, const ML_Base *srcx);
     ML_Mutable &operator=(const ML_Mutable &src) { assign(src); return *this; }
-#endif
     virtual ~ML_Mutable();
 
     virtual int  prealloc    (int expectedN)       override { return getML().prealloc(expectedN); }
     virtual int  preallocsize(void)          const override { return getMLconst().preallocsize(); }
     virtual void setmemsize  (int memsize)         override { getML().setmemsize(memsize);        }
-#ifndef SWIG
     virtual void assign       (const ML_Base &src, int onlySemiCopy = 0) override;
     virtual void semicopy     (const ML_Base &src)                       override;
     virtual void qswapinternal(ML_Base &b)                               override;
 
     virtual int getparam (int ind, gentype         &val, const gentype         &xa, int ia, const gentype         &xb, int ib, charptr &desc) const override;
     virtual int egetparam(int ind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib               ) const override;
-#endif
     virtual std::ostream &printstream(std::ostream &output, int dep) const override { return getMLconst().printstream(output,dep); }
     virtual std::istream &inputstream(std::istream &input          )       override;
 
@@ -515,10 +488,6 @@ public:
     virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override { return getML().addTrainingVector (i,z,x,Cweigh,epsweigh,d); }
     virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override { return getML().qaddTrainingVector(i,z,x,Cweigh,epsweigh,d); }
 
-    virtual int addTrainingVector(int i,            double *xxa, int dima, double Cweigh = 1, double epsweigh = 1) override { return getML().addTrainingVector(i,   xxa,dima,Cweigh,epsweigh); }
-    virtual int addTrainingVector(int i, int zz,    double *xxa, int dima, double Cweigh = 1, double epsweigh = 1) override { return getML().addTrainingVector(i,zz,xxa,dima,Cweigh,epsweigh); }
-    virtual int addTrainingVector(int i, double zz, double *xxa, int dima, double Cweigh = 1, double epsweigh = 1) override { return getML().addTrainingVector(i,zz,xxa,dima,Cweigh,epsweigh); }
-
     virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override { return getML().addTrainingVector (i,z,x,Cweigh,epsweigh); }
     virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override { return getML().qaddTrainingVector(i,z,x,Cweigh,epsweigh); }
 
@@ -700,10 +669,8 @@ public:
     virtual void fudgeOn (void)  override { getML().fudgeOn();  }
     virtual void fudgeOff(void) override { getML().fudgeOff(); }
 
-#ifndef SWIG
     virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
     virtual int train(int &res, svmvolatile int &killSwitch) override { return getML().train(res,killSwitch);                         }
-#endif
 
 //Variants
     virtual int train(void) { int res = 0; svmvolatile int killSwitch = 0; train(res,killSwitch); return res; }
@@ -716,7 +683,6 @@ public:
     virtual double RKHSabs      (void) const override { return getMLconst().RKHSabs      (); }
 
     // Evaluation Functions:
-#ifndef SWIG
     virtual int ggTrainingVector(               gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return getMLconst().ggTrainingVector(     resg,i,retaltg,pxyprodi); }
     virtual int hhTrainingVector(gentype &resh,                int i,                  gentype ***pxyprodi = nullptr) const override { return getMLconst().hhTrainingVector(resh,     i,        pxyprodi); }
     virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return getMLconst().ghTrainingVector(resh,resg,i,retaltg,pxyprodi); }
@@ -798,7 +764,6 @@ public:
     virtual void de(Vector<gentype> &res, gentype &resn, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { getMLconst().de(res,resn,y,x,xinf); }
 
     virtual void stabProb(double  &res, const SparseVector<gentype> &x, int p, double pnrm, int rot, double mu, double B) const override { getMLconst().stabProb(res,x,p,pnrm,rot,mu,B); }
-#endif
 //Variants
     virtual double ggTrainingVector(int i) const { gentype res; ggTrainingVector(res,i); return (double) res; }
     virtual double hhTrainingVector(int i) const { gentype res; hhTrainingVector(res,i); return (double) res; }
@@ -1276,10 +1241,8 @@ public:
     //     Common functions for all BLKs
     // ================================================================
 
-#ifndef SWIG
     virtual       BLK_Generic &getBLK     (void)       { NiceAssert( ( type() >= 200 ) && ( type() <= 299 ) ); return (dynamic_cast<      BLK_Generic &>(getML     ().getML     ())).getBLK();      }
     virtual const BLK_Generic &getBLKconst(void) const { NiceAssert( ( type() >= 200 ) && ( type() <= 299 ) ); return (dynamic_cast<const BLK_Generic &>(getMLconst().getMLconst())).getBLKconst(); }
-#endif
 
     // Information functions (training data):
 
@@ -1320,27 +1283,6 @@ public:
     virtual int setKmcallbackalt(double (*nKmcallbackalt)(int, const double **, const int *, const int *, int,                                                         int, int, int, int, void *), void *nKmcallbackdata) { return getBLK().setKmcallbackalt(nKmcallbackalt,nKmcallbackdata); }
 
     virtual int setKcallbackalt(double (*nKcallbackalt)(int, double, double, int, int, int, int, void *), void *nKcallbackdata) { return getBLK().setKcallbackalt(nKcallbackalt,nKcallbackdata); }
-
-#ifdef SWIG
-#define KCALLALTS
-#endif
-
-#ifdef MAKENUMPYCOMP
-#define KCALLALTS
-#endif
-
-#ifdef KCALLALTS
-    virtual int setcallbackalt(PyObject *pycallback);
-
-    virtual int setK0callbackalt(PyObject *pycallback);
-    virtual int setK1callbackalt(PyObject *pycallback);
-    virtual int setK2callbackalt(PyObject *pycallback);
-    virtual int setK3callbackalt(PyObject *pycallback);
-    virtual int setK4callbackalt(PyObject *pycallback);
-    virtual int setKmcallbackalt(PyObject *pycallback);
-
-    virtual int setKcallbackalt(PyObject *pycallback);
-#endif
 
     virtual gcallback callback(void)   const { return getBLKconst().callback(); }
 
@@ -1478,10 +1420,8 @@ public:
     //     Common functions for all KNNs
     // ================================================================
 
-#ifndef SWIG
     virtual       KNN_Generic &getKNN     (void)       { NiceAssert( ( type() >= 300 ) && ( type() <= 399 ) ); return (dynamic_cast<      KNN_Generic &>(getML     ().getML     ())).getKNN();      }
     virtual const KNN_Generic &getKNNconst(void) const { NiceAssert( ( type() >= 300 ) && ( type() <= 399 ) ); return (dynamic_cast<const KNN_Generic &>(getMLconst().getMLconst())).getKNNconst(); }
-#endif
 
     // Information functions (training data):
 
@@ -1505,10 +1445,8 @@ public:
     //     Common functions for all GPs
     // ================================================================
 
-#ifndef SWIG
     virtual       GPR_Generic &getGPR     (void)       { NiceAssert( ( type() >= 400 ) && ( type() <= 499 ) ); return (dynamic_cast<      GPR_Generic &>(getML     ().getML     ())).getGPR();      }
     virtual const GPR_Generic &getGPRconst(void) const { NiceAssert( ( type() >= 400 ) && ( type() <= 499 ) ); return (dynamic_cast<const GPR_Generic &>(getMLconst().getMLconst())).getGPRconst(); }
-#endif
 
     // General modification and autoset functions
 
@@ -1554,10 +1492,8 @@ public:
     //     Common functions for all LS-SVMs
     // ================================================================
 
-#ifndef SWIG
     virtual       LSV_Generic &getLSV     (void)       { NiceAssert( ( type() >= 500 ) && ( type() <= 599 ) ); return (dynamic_cast<      LSV_Generic &>(getML     ().getML     ())).getLSV();      }
     virtual const LSV_Generic &getLSVconst(void) const { NiceAssert( ( type() >= 500 ) && ( type() <= 599 ) ); return (dynamic_cast<const LSV_Generic &>(getMLconst().getMLconst())).getLSVconst(); }
-#endif
 
 //FIXME: ADDHERE
     virtual int setgamma(const Vector<gentype> &newW) { return getLSV().setgamma(newW); }
@@ -1600,10 +1536,8 @@ public:
     //     Common to all IMPs
     // ================================================================
 
-#ifndef SWIG
     virtual       IMP_Generic &getIMP     (void)       { NiceAssert( ( type() >= 600 ) && ( type() <= 699 ) ); return (dynamic_cast<      IMP_Generic &>(getML     ().getML     ())).getIMP();      }
     virtual const IMP_Generic &getIMPconst(void) const { NiceAssert( ( type() >= 600 ) && ( type() <= 699 ) ); return (dynamic_cast<const IMP_Generic &>(getMLconst().getMLconst())).getIMPconst(); }
-#endif
 
     // Improvement functions.
 
@@ -1652,10 +1586,8 @@ public:
     //     Common functions for all MLMs
     // ================================================================
 
-#ifndef SWIG
     virtual       MLM_Generic &getMLM     (void)       { NiceAssert( ( type() >= 800 ) && ( type() <= 899 ) ); return (dynamic_cast<      MLM_Generic &>(getML     ().getML     ())).getMLM();      }
     virtual const MLM_Generic &getMLMconst(void) const { NiceAssert( ( type() >= 800 ) && ( type() <= 899 ) ); return (dynamic_cast<const MLM_Generic &>(getMLconst().getMLconst())).getMLMconst(); }
-#endif
 
     // Back-propogation control
     //
@@ -1700,14 +1632,12 @@ private:
     SparseVector<std::string> locinfstore;
 };
 
-#ifndef SWIG
 inline ML_Mutable *&setident (ML_Mutable *&a) { NiceThrow("What does that mean"); return a; }
 inline ML_Mutable *&setposate(ML_Mutable *&a) { return a; }
 inline ML_Mutable *&setnegate(ML_Mutable *&a) { NiceThrow("I reject your reality and substitute my own"); return a; }
 inline ML_Mutable *&setconj  (ML_Mutable *&a) { NiceThrow("Have a kipper"); return a; }
 inline ML_Mutable *&setrand  (ML_Mutable *&a) { NiceThrow("Cool...."); return a; }
 inline ML_Mutable *&postProInnerProd(ML_Mutable *&a) { return a; }
-#endif
 
 inline double norm2(const ML_Mutable &a);
 inline double abs2 (const ML_Mutable &a);
@@ -1716,14 +1646,11 @@ inline double norm2(const ML_Mutable &a) { return a.RKHSnorm(); }
 inline double abs2 (const ML_Mutable &a) { return a.RKHSabs();  }
 
 
-#ifndef SWIG
 inline void qswap(ML_Mutable &a, ML_Mutable &b)
 {
     a.qswapinternal(b);
 }
-#endif
 
-#ifndef SWIG
 inline void qswap(ML_Mutable *&a, ML_Mutable *&b)
 {
     ML_Mutable *temp;
@@ -1732,9 +1659,7 @@ inline void qswap(ML_Mutable *&a, ML_Mutable *&b)
     a = b;
     b = temp;
 }
-#endif
 
-#ifndef SWIG
 inline void ML_Mutable::qswapinternal(ML_Base &bb)
 {
     NiceAssert( isQswapCompat(*this,bb) );
@@ -1772,20 +1697,14 @@ Old version: don't need this AFAICT and it makes things much too complicated.
     return;
 */
 }
-#endif
 
-#ifndef SWIG
 inline void ML_Mutable::semicopy(const ML_Base &bb)
 {
     getML().semicopy(bb);
 }
-#endif
 
-#ifndef SWIG
 ML_Base &assign(ML_Base **dest, const ML_Base *src, int onlySemiCopy = 0);
-#endif
 
-#ifndef SWIG
 inline void ML_Mutable::assign(const ML_Base &bb, int onlySemiCopy)
 {
     NiceAssert( isAssignCompat(*this,bb) );
@@ -1818,7 +1737,6 @@ inline void ML_Mutable::assign(const ML_Base &bb, int onlySemiCopy)
         getML().assign(bb.getMLconst(),onlySemiCopy);
     }
 }
-#endif
 
 
 

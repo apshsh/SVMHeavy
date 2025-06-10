@@ -19,9 +19,9 @@
 
 
 #include "dynarray.hpp"
-#ifdef ENABLE_THREADS
-#include <mutex>
-#endif
+//#ifdef ENABLE_THREADS
+//#include <mutex>
+//#endif
 
 #define MAXOLDCONTENT 1000000
 
@@ -173,37 +173,31 @@ void DynArray<int>::locresize(int size, int suggestedallocsize, const int *fillv
             }
         }
 
-#ifdef ENABLE_THREADS
-        if ( suggestedallocsize == -2 )
-        {
-            static std::mutex eyelock;
-            eyelock.lock();
-
-            content   = newcontent;
-            dsize     = newdsize;
-            allocsize = newallocsize;
-            holdalloc = newholdalloc;
-
-            eyelock.unlock();
-        }
-
-        else
-        {
-            content   = newcontent;
-            dsize     = newdsize;
-            allocsize = newallocsize;
-            holdalloc = newholdalloc;
-        }
-#endif
-
-#ifndef ENABLE_THREADS
+//NB: this is always called with leavemem true, so it shouldn't really matter is this gets disordered
+//
+//#ifdef ENABLE_THREADS
+//        if ( suggestedallocsize == -2 )
+//        {
+//            static std::mutex eyelock;
+//            eyelock.lock();
+//
+//            content   = newcontent;
+//            dsize     = newdsize;
+//            allocsize = newallocsize;
+//            holdalloc = newholdalloc;
+//
+//            eyelock.unlock();
+//        }
+//
+//        else
+//#endif
         {
             content   = newcontent;
             dsize     = newdsize;
             allocsize = newallocsize;
             holdalloc = newholdalloc;
         }
-#endif
+
         if ( !leavemem && oldcontent )
         {
             MEMDELARRAY(oldcontent);
