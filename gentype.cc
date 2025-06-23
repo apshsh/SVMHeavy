@@ -578,8 +578,6 @@ Matrix<double> &gentypeToMatrixRep(Matrix<double> &res, const gentype &src, int 
 
 
 
-
-
 std::istream &operator>>(std::istream &input, gentype &dest)
 {
     return streamItIn(input,dest);
@@ -2997,7 +2995,8 @@ const SparseVector<gentype> &gentype::cast_sparsevector(int finalise) const
 
             if ( !issep )
             {
-                     if ( fnum == 0 ) { vr.n ("&",iv,unum) = vg(i); }
+                if ( vg(i).isValNull() ) { ; } // null means "there is no element here"
+                else if ( fnum == 0 ) { vr.n ("&",iv,unum) = vg(i); }
                 else if ( fnum == 1 ) { vr.f1("&",iv,unum) = vg(i); }
                 else if ( fnum == 2 ) { vr.f2("&",iv,unum) = vg(i); }
                 else if ( fnum == 3 ) { vr.f3("&",iv,unum) = vg(i); }
@@ -3048,7 +3047,8 @@ const SparseVector<double> &gentype::cast_sparsevector_real(int finalise) const
 
             if ( !issep )
             {
-                     if ( fnum == 0 ) { vr.n ("&",iv,unum) = (double) vg(i); }
+                if ( vg(i).isValNull() ) { ; } // null means "there is no element here"
+                else if ( fnum == 0 ) { vr.n ("&",iv,unum) = (double) vg(i); }
                 else if ( fnum == 1 ) { vr.f1("&",iv,unum) = (double) vg(i); }
                 else if ( fnum == 2 ) { vr.f2("&",iv,unum) = (double) vg(i); }
                 else if ( fnum == 3 ) { vr.f3("&",iv,unum) = (double) vg(i); }
@@ -5247,13 +5247,30 @@ int gentype::fastevaluate(const SparseVector<SparseVector<gentype> > &evalargs, 
 
     else
     {
-        int argsize = (*thisfninfo).numargs;
-        int isInDetermin = (*thisfninfo).isInDetermin;
-	int isresfunction = 0;
-        int argbit = 1;
-        int isresfullyeval = 1;
+//fnname "pycall"                sin
+//numargs      2                 1
+//dirchkargs   0                 1
+//widechkargs  3                 0
+//preEvalArgs  3                 1
+//derivDeffed  0                 1
+//isInDetermin 0                 0
+//fn2arg pycall
+//congfnname "~"
+//fnconjind -1                   -1
+//realargcopy 0                  1
+//realdrvcopy 0                  1
+//realderiv nullptr              nullprt
+//realderivfn "0"
+//descript "..."
+//phantomqwerty
+//bool rundebug = ( evalargs.isindpresent(0) && evalargs(0).isindpresent(0) && evalargs(0)(0).isValVector() );
+        int  argsize              = (*thisfninfo).numargs;
+        int  isInDetermin         = (*thisfninfo).isInDetermin;
+	int  isresfunction        = 0;
+        int  argbit               = 1;
+        int  isresfullyeval       = 1;
         char res_varid_isscalarfn = 0;
-        int res_varid_numpts     = 0;
+        int  res_varid_numpts     = 0;
 
         Vector<int> res_varid_xi(1);
         Vector<int> res_varid_xj(1);
@@ -9115,8 +9132,14 @@ static fninfoblock qqqfninfo[NUMFNDEF] = {
           "Subfactorial !a" },
         { "syscall"         ,2,0 ,3 ,3 ,0,1,nullptr ,nullptr            ,syscall      ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
           "System call to evaluate, eg syscall(\"command\",x)" },
+#ifndef PYLOCAL
         { "pycall"          ,2,0 ,3 ,3 ,0,1,nullptr ,nullptr            ,pycall       ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
           "System (python3) call to evaluate, eg pycall(\"sin\",x)" }
+#endif
+#ifdef PYLOCAL
+        { "pycall"          ,2,0 ,3 ,3 ,0,0,nullptr ,nullptr            ,pycall       ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
+          "System (python3) call to evaluate, eg pycall(\"sin\",x)" }
+#endif
 };
 
 
@@ -18342,6 +18365,7 @@ gentype pycall(const gentype &c, const gentype &x)
 */
     }
 
+//outstream() << "gentype pycall result " << res << "\n";
     return res;
 }
 

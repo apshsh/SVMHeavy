@@ -2220,7 +2220,7 @@ int testforerror(std::istream &input)
 }
 
 void minesweeper(int gamewidth, int gameheight, int nummines);
-void snakes(int gamewidth, int gameheight, int numrabbits, int startsnakelen, int addrate, int usleeptime);
+//void snakes(int gamewidth, int gameheight, int numrabbits, int startsnakelen, int addrate, int usleeptime);
 void hyperspin(int gamewidth, int gameheight, int usleeptime);
 
 void keytest(void);
@@ -2931,9 +2931,7 @@ void keytest(void)
 
         if ( keycode != -1 )
         {
-#ifndef HEADLESS
             std::cerr << "Key code " << keycode << std::endl;
-#endif
         }
     }
 

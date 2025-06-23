@@ -101,11 +101,6 @@ public:
     virtual const Vector<double>                 &Cweight    (void) const override { return dCweight;                  }
     virtual const Vector<double>                 &sigmaweight(void) const override { return dsigmaweight;              }
 
-    virtual void npCweight    (double **res, int *dim) const override { ML_Base::npCweight    (res,dim); return; }
-    virtual void npCweightfuzz(double **res, int *dim) const override { ML_Base::npCweightfuzz(res,dim); return; }
-    virtual void npsigmaweight(double **res, int *dim) const override { ML_Base::npsigmaweight(res,dim); return; }
-    virtual void npepsweight  (double **res, int *dim) const override { ML_Base::npepsweight  (res,dim); return; }
-
     // Training set modification:
 
     virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;

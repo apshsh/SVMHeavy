@@ -341,10 +341,10 @@ public:
 
     virtual int m(void) const { return DEFAULT_EMM; }
 
-    virtual double LinBiasForce (void)  const { return 0;           }
-    virtual double QuadBiasForce(void)  const { return 0;           }
-    virtual double LinBiasForce (int q) const { (void) q; return 0; }
-    virtual double QuadBiasForce(int q) const { (void) q; return 0; }
+    virtual double LinBiasForce      (void)  const { return 0;           }
+    virtual double QuadBiasForce     (void)  const { return 0;           }
+    virtual double LinBiasForceclass (int q) const { (void) q; return 0; }
+    virtual double QuadBiasForceclass(int q) const { (void) q; return 0; }
 
     virtual double nu    (void) const { return 0; }
     virtual double nuQuad(void) const { return 0; }
@@ -489,10 +489,10 @@ public:
 
     virtual int setm(int xm) { (void) xm; NiceThrow("Function setm not available for this SVM type."); return 0; }
 
-    virtual int setLinBiasForce (double newval)        { (void) newval;           NiceThrow("Function setLinBiasForce not available for this SVM type.");  return 0; }
-    virtual int setQuadBiasForce(double newval)        { (void) newval;           NiceThrow("Function setQuadBiasForce not available for this SVM type."); return 0; }
-    virtual int setLinBiasForce (int q, double newval) { (void) q; (void) newval; NiceThrow("Function setLinBiasForce not available for this SVM type.");  return 0; }
-    virtual int setQuadBiasForce(int q, double newval) { (void) q; (void) newval; NiceThrow("Function setQuadBiasForce not available for this SVM type."); return 0; }
+    virtual int setLinBiasForce      (       double newval) { (void) newval;           NiceThrow("Function setLinBiasForce not available for this SVM type.");       return 0; }
+    virtual int setQuadBiasForce     (       double newval) { (void) newval;           NiceThrow("Function setQuadBiasForce not available for this SVM type.");      return 0; }
+    virtual int setLinBiasForceclass (int q, double newval) { (void) q; (void) newval; NiceThrow("Function setLinBiasForceclass not available for this SVM type.");  return 0; }
+    virtual int setQuadBiasForceclass(int q, double newval) { (void) q; (void) newval; NiceThrow("Function setQuadBiasForceclass not available for this SVM type."); return 0; }
 
     virtual int setnu    (double xnu)     { (void) xnu;     NiceThrow("Function setnu not available for this SVM type.");     return 0; }
     virtual int setnuQuad(double xnuQuad) { (void) xnuQuad; NiceThrow("Function setnuQuad not available for this SVM type."); return 0; }

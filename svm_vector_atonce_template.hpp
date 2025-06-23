@@ -158,8 +158,8 @@ public:
 
     virtual double LinBiasForce(void)        const override { return 0;           }
     virtual double QuadBiasForce(void)       const override { return 0;           }
-    virtual double LinBiasForce(int q)       const override { (void) q; return 0; }
-    virtual double QuadBiasForce(int q)      const override { (void) q; return 0; }
+    virtual double LinBiasForceclass(int q)  const override { (void) q; return 0; }
+    virtual double QuadBiasForceclass(int q) const override { (void) q; return 0; }
 
     virtual int isFixedTube(void)  const override { return 1; }
     virtual int isShrinkTube(void) const override { return 0; }

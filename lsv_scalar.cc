@@ -342,7 +342,7 @@ int LSV_Scalar::train(int &res, svmvolatile int &killSwitch)
 //errstream() << "phantomx lsvtrain 4c: " << *this << "\n";
         int badindex = -1;
 
-        if ( !mpri() )
+        if ( !prim() )
         {
 //tryagain:
             if ( ( badindex = fact_minverse(dalphaR,dbetaR,alltraintargR,dybeta) ) >= 0 )
@@ -471,7 +471,7 @@ int LSV_Scalar::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
 
         resg += yp(i);
 
-//        if ( mpri() )
+//        if ( prim() )
 //        {
 //            if ( i >= 0 )
 //            {
@@ -638,7 +638,7 @@ double LSV_Scalar::ghTrainingVectorUnbiasedUnsquaredNotundirectedgradIneg(int i,
 
     res += ypR(i);
 
-//        if ( mpri() )
+//        if ( prim() )
 //        {
 //            if ( i >= 0 )
 //            {
@@ -846,7 +846,7 @@ double LSV_Scalar::ghTrainingVectorUnbiasedSquaredNotundirectedgradIneg(int i, i
 
     res += ypR(i);
 
-//        if ( mpri() )
+//        if ( prim() )
 //        {
 //            if ( i >= 0 )
 //            {
@@ -1745,7 +1745,7 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
 
     resmu += yp(ia);
 
-//        if ( mpri() )
+//        if ( prim() )
 //        {
 //            if ( ia >= 0 )
 //            {

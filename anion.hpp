@@ -896,14 +896,6 @@ inline std::complex<double> vangle(const std::complex<double> &a, const std::com
 inline std::complex<double> inv(const std::complex<double> &a);
 inline std::complex<double> sgn(const std::complex<double> &a);
 
-inline std::complex<double> &setident(std::complex<double> &a);
-inline std::complex<double> &setzero(std::complex<double> &a);
-inline std::complex<double> &setposate(std::complex<double> &a);
-inline std::complex<double> &setnegate(std::complex<double> &a);
-inline std::complex<double> &setconj(std::complex<double> &a);
-inline std::complex<double> &setrand(std::complex<double> &a);
-inline std::complex<double> &postProInnerProd(std::complex<double> &a) { return a; }
-
 inline std::complex<double> &leftmult (std::complex<double>  &a, const std::complex<double>  &b);
 inline std::complex<double> &leftmult (std::complex<double>  &a,       double                 b);
 inline std::complex<double> &rightmult(const std::complex<double>  &a, std::complex<double>  &b);

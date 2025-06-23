@@ -1181,7 +1181,7 @@ double runfullsim(battSim &simuBatt, const char *datfname, int m, int N, double 
 {
     // Count number of samples
 
-    std::cerr << "Counting samples... ";
+    errstream() << "Counting samples... ";
 
     std::ifstream datfilepre(datfname);
 
@@ -1203,13 +1203,13 @@ double runfullsim(battSim &simuBatt, const char *datfname, int m, int N, double 
 
     datfilepre.close();
 
-    std::cerr << "done (there are " << numpts << ")\n";
+    errstream() << "done (there are " << numpts << ")\n";
 
     // Load experiment data
 
     std::string skip;
 
-    std::cerr << "Loading experimental results... ";
+    errstream() << "Loading experimental results... ";
 
     std::ifstream datfile(datfname);
 
@@ -1256,7 +1256,7 @@ double runfullsim(battSim &simuBatt, const char *datfname, int m, int N, double 
 
     datfile.close();
 
-    std::cerr << "done\n";
+    errstream() << "done\n";
 
     return runfullsim(simuBatt,Tset,Iin,Vterm,theta_a,mode,m,N,s,ires,battfixedTheta,numpts,assumeIntExtSameTemp);
 }
@@ -1275,7 +1275,7 @@ double runfullsim(battSim &simuBatt, const Vector<gentype> &Tset, const Vector<g
 
     // Run simulation and report
 
-    std::cerr << "Start simulation (m = " << m << ", N = " << N << ", s = " << s << ", numpts = " << numpts << "):\n";
+    errstream() << "Start simulation (m = " << m << ", N = " << N << ", s = " << s << ", numpts = " << numpts << "):\n";
 
     N = ( m+N > numpts ) ? numpts-m : N;
 
@@ -1373,7 +1373,7 @@ double runfullsim(battSim &simuBatt, const Vector<gentype> &Tset, const Vector<g
     double res = (s*(maxrunlen-runlen))+Verr;
 
     //std::cerr << maxrunlen-runlen << "\t" << Verr << "\n";
-    std::cerr << (s*(maxrunlen-runlen))+Verr << "\n";
+    errstream() << (s*(maxrunlen-runlen))+Verr << "\n";
 
     return res;
 }

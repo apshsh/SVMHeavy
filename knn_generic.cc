@@ -649,7 +649,7 @@ int KNN_Generic::ghTrainingVector(gentype &resh, gentype &resg, int j, int retal
 
         hfn(resg,yk,kdistk,weights,Nnz,effkay);
 
-        if ( mpri() )
+        if ( prim() )
         {
             gentype resgp;
             hfn(resgp,ykp,kdistk,weights,Nnz,effkay);
@@ -717,7 +717,7 @@ int KNN_Generic::ggTrainingVectorInt(double &resg, int j, int retaltg, gentype *
 
         hfn(resg,yk,kdistk,weights,Nnz,effkay);
 
-        if ( mpri() )
+        if ( prim() )
         {
             double resgp;
             hfn(resgp,ykp,kdistk,weights,Nnz,effkay);
@@ -776,7 +776,7 @@ int KNN_Generic::ggTrainingVectorInt(Vector<double> &resg, int j, int retaltg, g
 
         hfn(resg,yk,kdistk,weights,Nnz,effkay);
 
-        if ( mpri() )
+        if ( prim() )
         {
             Vector<double> resgp;
             hfn(resgp,ykp,kdistk,weights,Nnz,effkay);
@@ -835,7 +835,7 @@ int KNN_Generic::ggTrainingVectorInt(d_anion &resg, int j, int retaltg, gentype 
 
         hfn(resg,yk,kdistk,weights,Nnz,effkay);
 
-        if ( mpri() )
+        if ( prim() )
         {
             d_anion resgp;
             hfn(resgp,ykp,kdistk,weights,Nnz,effkay);

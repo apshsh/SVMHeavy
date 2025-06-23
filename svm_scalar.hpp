@@ -208,10 +208,10 @@ public:
     virtual       double   ztfuzzt     (void) const override { return ztfuzztval;      }
     virtual const gentype &costfnfuzzt (void) const override { return costfnfuzztval;  }
 
-    virtual double LinBiasForce (void)  const override { return LinBiasForce(0);  }
-    virtual double QuadBiasForce(void)  const override { return QuadBiasForce(0); }
-    virtual double LinBiasForce (int q) const override { return gn(q);            }
-    virtual double QuadBiasForce(int q) const override { return -Gn(q,q);         }
+    virtual double LinBiasForce      (void)  const override { return LinBiasForceclass(0);  }
+    virtual double QuadBiasForce     (void)  const override { return QuadBiasForceclass(0); }
+    virtual double LinBiasForceclass (int q) const override { return gn(q);                 }
+    virtual double QuadBiasForceclass(int q) const override { return -Gn(q,q);              }
 
     virtual int isFixedTube (void) const override { return tubeshrink == 0; }
     virtual int isShrinkTube(void) const override { return tubeshrink == 1; }
@@ -308,6 +308,10 @@ public:
     virtual int setCclass  (int d, double nv) override;
     virtual int setepsclass(int d, double nv) override;
 
+    virtual int setprim  (int nv)            { isStateOpt = 0; return ML_Base::setprim  (nv) | sety(y()); }
+    virtual int setprival(const gentype &nv) { isStateOpt = 0; return ML_Base::setprival(nv) | sety(y()); }
+    virtual int setpriml (const ML_Base *nv) { isStateOpt = 0; return ML_Base::setpriml (nv) | sety(y()); }
+
     virtual int setOptActive(void) override;
     virtual int setOptSMO   (void) override;
     virtual int setOptD2C   (void) override;
@@ -349,10 +353,10 @@ public:
     virtual int setCweightfuzz(const Vector<int> &i, const Vector<double> &xCweight) override;
     virtual int setCweightfuzz(                      const Vector<double> &xCweight) override;
 
-    virtual int setLinBiasForce (       double newval) override;
-    virtual int setQuadBiasForce(       double newval) override;
-    virtual int setLinBiasForce (int q, double newval) override;
-    virtual int setQuadBiasForce(int q, double newval) override { NiceAssert( q == 0 ); (void) q; setQuadBiasForce(newval); return 0; }
+    virtual int setLinBiasForce      (       double newval) override;
+    virtual int setQuadBiasForce     (       double newval) override;
+    virtual int setLinBiasForceclass (int q, double newval) override;
+    virtual int setQuadBiasForceclass(int q, double newval) override { NiceAssert( q == 0 ); (void) q; setQuadBiasForce(newval); return 0; }
 
     virtual int setFixedTube (void) override;
     virtual int setShrinkTube(void) override;

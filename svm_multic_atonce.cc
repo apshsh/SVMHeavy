@@ -1812,7 +1812,7 @@ int SVM_MultiC_atonce::setepsweight(const Vector<double> &xepsweight)
     return res;
 }
 
-int SVM_MultiC_atonce::setLinBiasForce(int d, double newval)
+int SVM_MultiC_atonce::setLinBiasForceclass(int d, double newval)
 {
     NiceAssert( d == linbfd );
 
@@ -2441,8 +2441,8 @@ int SVM_MultiC_atonce::addclass(int label, int epszero)
 
             if ( epszero && ( linbfq >= 0 ) && linbiasforceset )
 	    {
-                oldlinbiasforce = LinBiasForce(linbfd);
-                setLinBiasForce(linbfd,0);
+                oldlinbiasforce = LinBiasForceclass(linbfd);
+                setLinBiasForceclass(linbfd,0);
 	    }
 
             isStateOpt = 0;
@@ -2678,7 +2678,7 @@ int SVM_MultiC_atonce::addclass(int label, int epszero)
 
             if ( linbiasforceset )
 	    {
-                setLinBiasForce(linbfd,oldlinbiasforce);
+                setLinBiasForceclass(linbfd,oldlinbiasforce);
 	    }
         }
     }
@@ -4881,7 +4881,7 @@ int SVM_MultiC_atonce::autosetLinBiasForce(double nuval, double Cval, int ncut)
 
     int res = setC(( (N()-NNC(0)-ncut) ) ? ((((((double) numClasses())-1))/nuval)*(Cval/((double) ((N()-NNC(0)-ncut))))) : 1.0);
     res |= seteps(( numClasses() >= 3 ) ? (sqrt((((double) numClasses())-1)/(2*(((double) numClasses())-2)))) : 0.0);
-    res |= setLinBiasForce(linbfd,Cval); 
+    res |= setLinBiasForceclass(linbfd,Cval); 
     autosetLevel = 6;
 
     return res;

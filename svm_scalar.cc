@@ -726,7 +726,7 @@ int SVM_Scalar::setBiasR(double newBias)
     {
         Vector<double> gpnew(traintarg);
 
-        if ( mpri() )
+        if ( prim() )
         {
             gpnew -= ypR();
         }
@@ -1105,7 +1105,7 @@ int SVM_Scalar::setVarBias(void)
 	{
             Vector<double> gpnew(traintarg);
 
-            if ( mpri() )
+            if ( prim() )
             {
                 gpnew -= ypR();
             }
@@ -1190,7 +1190,7 @@ int SVM_Scalar::setFixedBias(double newbias)
     {
         Vector<double> gpnew(traintarg);
 
-        if ( mpri() )
+        if ( prim() )
         {
             gpnew -= ypR();
         }
@@ -1303,7 +1303,7 @@ int SVM_Scalar::setPosBias(void)
 	{
             Vector<double> gpnew(traintarg);
 
-            if ( mpri() )
+            if ( prim() )
             {
                 gpnew -= ypR();
             }
@@ -1380,7 +1380,7 @@ int SVM_Scalar::setNegBias(void)
 	{
             Vector<double> gpnew(traintarg);
 
-            if ( mpri() )
+            if ( prim() )
             {
                 gpnew -= ypR();
             }
@@ -1937,8 +1937,9 @@ int SVM_Scalar::sety(int i, double zn)
         traintarg("&",i) = zn;
         gpnew("&",i) = bfixval-zn;
 
-        if ( mpri() )
+        if ( prim() )
         {
+//outstream() << "phantomxyzabc: sety: Adjustment made!\n";
             gpnew("&",i) += ypR()(i);
         }
 
@@ -1952,7 +1953,7 @@ int SVM_Scalar::sety(int i, double zn)
         traintarg = zn;
         gpnew = bfixval-zn;
 
-        if ( mpri() )
+        if ( prim() )
         {
             gpnew += ypR();
         }
@@ -2096,7 +2097,7 @@ int SVM_Scalar::sety(const Vector<int> &j, const Vector<double> &zn)
         gpnew("&",j,tmpva) = bfixval;
         gpnew("&",j,tmpva) -= zn;
 
-        if ( mpri() )
+        if ( prim() )
         {
             gpnew("&",j,tmpva) += ypR()(j,tmpvb);
         }
@@ -2201,7 +2202,7 @@ int SVM_Scalar::sety(const Vector<double> &zn)
 
     traintarg = zn;
 
-    if ( mpri() )
+    if ( prim() )
     {
         gpnew -= ypR();
     }
@@ -2743,7 +2744,7 @@ fallbackMethod:
         kerncache.clear();
         sigmacache.clear();
 
-        if ( mpri() )
+        if ( prim() )
         {
             gp = bfixval;
             gp -= traintarg;
@@ -2837,7 +2838,7 @@ updateInfo = 1;
             Q.refreshGrad_anyhow(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp,onlyChangeRowI);
         }
 
-        if ( mpri() )
+        if ( prim() )
         {
             int i = onlyChangeRowI;
 
@@ -3348,8 +3349,9 @@ int SVM_Scalar::qtaddTrainingVector(int i, double zi, double Cweigh, double epsw
     ddr.add(i);     ddr("&",i)     = DRCALC(CNval,xCclass,d,Cweigh,1.0);
     wr.add(i);      wr("&",i)      = 1.0;
 
-    if ( mpri() )
+    if ( prim() )
     {
+//outstream() << "phantomxyzabc: qtadd: Adjustment made " << (ypR()(i)) << "," << (yp()(i)) << "!\n";
         gp("&",i) += ypR()(i);
     }
 
@@ -3662,7 +3664,7 @@ fallback:
 
             resg += yp(i);
 
-//            if ( mpri() )
+//            if ( prim() )
 //            {
 //                if ( i >= 0 )
 //                {
@@ -4035,7 +4037,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
 
         res += ypR(i);
 
-//        if ( mpri() )
+//        if ( prim() )
 //        {
 //            if ( i >= 0 )
 //            {
@@ -4228,7 +4230,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
 
         res += ypR(i);
 
-//        if ( mpri() )
+//        if ( prim() )
 //        {
 //            if ( i >= 0 )
 //            {
@@ -4379,7 +4381,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
 
         res += ypR(i);
 
-//        if ( mpri() )
+//        if ( prim() )
 //        {
 //            if ( i >= 0 )
 //            {
@@ -4508,7 +4510,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
 
         res += ypR(i);
 
-//        if ( mpri() )
+//        if ( prim() )
 //        {
 //            if ( i >= 0 )
 //            {
@@ -5403,7 +5405,7 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
 
     resmu += yp(ia);
 
-//        if ( mpri() )
+//        if ( prim() )
 //        {
 //            if ( ia >= 0 )
 //            {
@@ -7576,7 +7578,7 @@ void SVM_Scalar::setbiasdim(int xbiasdim, int addpos, double addval, int rempos)
     return;
 }
 
-int SVM_Scalar::setLinBiasForce(int i, double newval)
+int SVM_Scalar::setLinBiasForceclass(int i, double newval)
 {
     int res = 0;
 

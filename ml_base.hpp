@@ -274,9 +274,9 @@ public:
     // isUnderlyingVector: true if underlying weight type is vector
     // isUnderlyingAnions: true if underlying weight type is anions
     //
-    // mpri:   mean prior type: 0 (none), 1 (gentype evaluated), 2 (ML)
-    // prival: prior mean function (mpri == 1)
-    // priml:  prior ML_Base object (mpri == 2)
+    // prim:   mean prior type: 0 (none), 1 (gentype evaluated), 2 (ML)
+    // prival: prior mean function (prim == 1)
+    // priml:  prior ML_Base object (prim == 2)
     //
     // ClassLabels: returns a vector of all class labels.
     // getInternalClass: for classifiers this returns the internal class
@@ -372,7 +372,7 @@ public:
     virtual double Cclass   (int)  const { return 1;                 }
     virtual double epsclass (int)  const { return 1;                 }
 
-    virtual       int      mpri  (void) const { return xmuprior;    }
+    virtual       int      prim  (void) const { return xmuprior;    }
     virtual const gentype &prival(void) const { return xmuprior_gt; }
     virtual const ML_Base *priml (void) const { return xmuprior_ml; }
 
@@ -440,11 +440,6 @@ public:
     virtual int xisclass     (int i, int defaultclass, int q = -1) const { const SparseVector<gentype> &xres = x(i); return ( q == -1 ) ? defaultclass : ( xres.isf4indpresent((100*q)+0) ? ( (int) xres.f4((100*q)+0) ) : defaultclass ); }
 
     virtual int RFFordata(int) const { return 0; }
-
-    virtual void npCweight    (double **res, int *dim) const { *dim = Cweight().size();     yCweight     = Cweight();     *res = &yCweight("&",0);     }
-    virtual void npCweightfuzz(double **res, int *dim) const { *dim = Cweightfuzz().size(); yCweightfuzz = Cweightfuzz(); *res = &yCweightfuzz("&",0); }
-    virtual void npsigmaweight(double **res, int *dim) const { *dim = sigmaweight().size(); ysigmaweight = sigmaweight(); *res = &ysigmaweight("&",0); }
-    virtual void npepsweight  (double **res, int *dim) const { *dim = epsweight().size();   yepsweight   = epsweight();   *res = &yepsweight("&",0);   }
 
     virtual int isClassifier(void) const { return 0;               }
     virtual int isRegression(void) const { return !isClassifier(); }
@@ -996,7 +991,7 @@ public:
     virtual int setCclass   (int d, double xC)   { (void) d; (void) xC;         return 0; }
     virtual int setepsclass (int d, double xeps) { (void) d; (void) xeps;       return 0; }
 
-    virtual int setmpri  (int nv)            { xmuprior    = nv; calcallprior(); return 0; }
+    virtual int setprim  (int nv)            { xmuprior    = nv; calcallprior(); return 0; }
     virtual int setprival(const gentype &nv) { xmuprior_gt = nv; calcallprior(); return 0; }
     virtual int setpriml (const ML_Base *nv) { xmuprior_ml = nv; calcallprior(); return 0; }
 

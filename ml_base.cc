@@ -2075,9 +2075,9 @@ int ML_Base::addTrainingVector(int i, const gentype &y, const SparseVector<genty
     static thread_local Vector<double> empvec;
 
     alltraintargp.add(i);  calcprior(alltraintargp("&",i),allxdatagent(i));
-    alltraintargpR.add(i); alltraintargpR("&",i) = ( hOutType() == 'Z' ) ? ( (double) alltraintargp(i) ) : 0.0;
-    alltraintargpA.add(i); alltraintargpA("&",i) = ( hOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
-    alltraintargpV.add(i); alltraintargpV("&",i) = ( hOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
+    alltraintargpR.add(i); alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
+    alltraintargpA.add(i); alltraintargpA("&",i) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+    alltraintargpV.add(i); alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
 
     if ( !(allxdatagent(i).altcontent) && !(allxdatagent(i).altcontentsp) )
     {
@@ -2162,9 +2162,9 @@ int ML_Base::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &
     static thread_local Vector<double> empvec;
 
     alltraintargp.add(i);  calcprior(alltraintargp("&",i),allxdatagent(i));
-    alltraintargpR.add(i); alltraintargpR("&",i) = ( hOutType() == 'Z' ) ? ( (double) alltraintargp(i) ) : 0.0;
-    alltraintargpA.add(i); alltraintargpA("&",i) = ( hOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
-    alltraintargpV.add(i); alltraintargpV("&",i) = ( hOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
+    alltraintargpR.add(i); alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
+    alltraintargpA.add(i); alltraintargpA("&",i) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+    alltraintargpV.add(i); alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
 
     if ( !(allxdatagent(i).altcontent) && !(allxdatagent(i).altcontentsp) )
     {
@@ -2262,9 +2262,9 @@ int ML_Base::addTrainingVector(int i, const Vector<gentype> &y, const Vector<Spa
         static thread_local Vector<double> empvec;
 
         alltraintargp.add(i+j);  calcprior(alltraintargp("&",i+j),allxdatagent(i+j));;
-        alltraintargpR.add(i+j); alltraintargpR("&",i+j) = ( hOutType() == 'Z' ) ? ( (double) alltraintargp(i+j) ) : 0.0;
-        alltraintargpA.add(i+j); alltraintargpA("&",i+j) = ( hOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i+j) ) : 0_gent;
-        alltraintargpV.add(i+j); alltraintargpV("&",i+j) = ( hOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i+j) ) : empvec;
+        alltraintargpR.add(i+j); alltraintargpR("&",i+j) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i+j) ) : 0.0;
+        alltraintargpA.add(i+j); alltraintargpA("&",i+j) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i+j) ) : 0_gent;
+        alltraintargpV.add(i+j); alltraintargpV("&",i+j) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i+j) ) : empvec;
 
         if ( !(allxdatagent(i+j).altcontent) && !(allxdatagent(i+j).altcontentsp) )
         {
@@ -2363,9 +2363,9 @@ int ML_Base::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVe
         static thread_local Vector<double> empvec;
 
         alltraintargp.add(i+j);  calcprior(alltraintargp("&",i+j),allxdatagent(i+j));;
-        alltraintargpR.add(i+j); alltraintargpR("&",i+j) = ( hOutType() == 'Z' ) ? ( (double) alltraintargp(i+j) ) : 0.0;
-        alltraintargpA.add(i+j); alltraintargpA("&",i+j) = ( hOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i+j) ) : 0_gent;
-        alltraintargpV.add(i+j); alltraintargpV("&",i+j) = ( hOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i+j) ) : empvec;
+        alltraintargpR.add(i+j); alltraintargpR("&",i+j) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i+j) ) : 0.0;
+        alltraintargpA.add(i+j); alltraintargpA("&",i+j) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i+j) ) : 0_gent;
+        alltraintargpV.add(i+j); alltraintargpV("&",i+j) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i+j) ) : empvec;
 
         if ( !(allxdatagent(i+j).altcontent) && !(allxdatagent(i+j).altcontentsp) )
         {
@@ -2564,9 +2564,9 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
         static thread_local Vector<double> empvec;
 
         calcprior(alltraintargp("&",i),allxdatagent(i));
-        alltraintargpR("&",i) = ( hOutType() == 'Z' ) ? ( (double) alltraintargp(i) ) : 0.0;
-        alltraintargpA("&",i) = ( hOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
-        alltraintargpV("&",i) = ( hOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
+        alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
+        alltraintargpA("&",i) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+        alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
     }
 
     else
@@ -2576,9 +2576,9 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
         for ( int i = 0 ; i < ML_Base::N() ; i++ )
         {
             calcprior(alltraintargp("&",i),allxdatagent(i));
-            alltraintargpR("&",i) = ( hOutType() == 'Z' ) ? ( (double) alltraintargp(i) ) : 0.0;
-            alltraintargpA("&",i) = ( hOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
-            alltraintargpV("&",i) = ( hOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
+            alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
+            alltraintargpA("&",i) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+            alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
         }
     }
 
@@ -8289,14 +8289,14 @@ void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vec
         {
             // Left rank without gradient
 
-            SparseVector<SparseVector<gentype> > xargs;
-
-            xargs("&",0) = *xanear;
-
+            gentype xargs(*xanear);
+//outstream() << "gentype pycall xargs " << xargs << "\n";
             gentype locres = xmuprior_gt(xargs);
 
+//outstream() << "gentype pycall locres " << locres << "\n";
             locres *= arankL;
             res += locres;
+//outstream() << "gentype pycall res " << res << "\n";
         }
 
         else if ( xanear )
@@ -8310,14 +8310,13 @@ void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vec
         {
             // Right rank without gradient
 
-            SparseVector<SparseVector<gentype> > xargs;
-
-            xargs("&",0) = *xafar;
-
+            gentype xargs(*xafar);
             gentype locres = xmuprior_gt(xargs);
+//outstream() << "gentype pycall locres " << locres << " alt\n";
 
             locres *= arankR;
             res -= locres;
+//outstream() << "gentype pycall res " << res << " alt\n";
         }
 
         if ( ( loctanga & 1 ) && xafar )
@@ -8326,6 +8325,7 @@ void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vec
 
             NiceThrow("Need to implement prior gradients!");
         }
+//outstream() << "gentype pycall res " << res << " later\n";
     }
 
     else if ( xmuprior == 2 )
@@ -8338,6 +8338,7 @@ void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vec
         res = 0.0_gent;
     }
 
+//outstream() << "gentype pycall res " << res << " final\n";
     return;
 }
 
@@ -8348,9 +8349,10 @@ void ML_Base::calcallprior(void)
     for ( int i = 0 ; i < ML_Base::N() ; i++ )
     {
         calcprior(alltraintargp("&",i),x(i));
-        alltraintargpR("&",i) = ( hOutType() == 'Z' ) ? ( (double) alltraintargp(i) ) : 0.0;
-        alltraintargpA("&",i) = ( hOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
-        alltraintargpV("&",i) = ( hOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
+//outstream() << "gentype pycall doneprior " << alltraintargp(i) << " final\n";
+        alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
+        alltraintargpA("&",i) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+        alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
     }
 }
 

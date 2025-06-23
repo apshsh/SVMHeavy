@@ -69,11 +69,6 @@ public:
     virtual const int *ClassLabelsInt(void) const override { return bypassml.ClassLabelsInt();       }
     virtual int  getInternalClassInt(int y) const override { return bypassml.getInternalClassInt(y); }
 
-    virtual void npCweight    (double **res, int *dim) const override { bypassml.npCweight    (res,dim); return; }
-    virtual void npCweightfuzz(double **res, int *dim) const override { bypassml.npCweightfuzz(res,dim); return; }
-    virtual void npsigmaweight(double **res, int *dim) const override { bypassml.npsigmaweight(res,dim); return; }
-    virtual void npepsweight  (double **res, int *dim) const override { bypassml.npepsweight  (res,dim); return; }
-
     // Training set modification:
 
     virtual int removeTrainingVector(int i, int num) override { return IMP_Generic::removeTrainingVector(i,num); }

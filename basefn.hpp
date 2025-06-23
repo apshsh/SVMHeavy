@@ -320,6 +320,48 @@ inline int getThreadID(void);
 
 
 
+inline std::string *&setident (std::string *&a) { throw("something"); return a; }
+inline std::string *&setzero  (std::string *&a) { return a; }
+inline std::string *&setposate(std::string *&a) { return a; }
+inline std::string *&setnegate(std::string *&a) { throw("something"); return a; }
+inline std::string *&setconj  (std::string *&a) { throw("something"); return a; }
+inline std::string *&setrand  (std::string *&a) { throw("something"); return a; }
+inline std::string *&postProInnerProd(std::string *&a) { return a; }
+
+inline void qswap(std::complex<double> *&a, std::complex<double> *&b);
+inline void qswap(std::complex<double> *&a, std::complex<double> *&b)
+{
+    std::complex<double> *x = a; a = b; b = x;
+}
+
+inline std::complex<double> *&setident (std::complex<double> *&a) { throw("something"); return a; }
+inline std::complex<double> *&setzero  (std::complex<double> *&a) { return a; }
+inline std::complex<double> *&setposate(std::complex<double> *&a) { return a; }
+inline std::complex<double> *&setnegate(std::complex<double> *&a) { throw("something"); return a; }
+inline std::complex<double> *&setconj  (std::complex<double> *&a) { throw("something"); return a; }
+inline std::complex<double> *&setrand  (std::complex<double> *&a) { throw("something"); return a; }
+inline std::complex<double> *&postProInnerProd(std::complex<double> *&a) { return a; }
+
+inline void qswap(double *&a, double *&b);
+inline void qswap(double *&a, double *&b)
+{
+    double *x = a; a = b; b = x;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // ------------------------------------------------------------------------
@@ -2149,6 +2191,8 @@ int interactmenu(int &dummy, int &dostep, const char *stateDescr, double **userv
 inline int haskeybeenpressed(void);
 const char *randomquote(void);
 
+void snakes(int gamewidth, int gameheight, int numrabbits, int startsnakelen, int addrate, int usleeptime);
+
 // Stuff in linux but not windows
 
 #ifndef STDIN_FILENO
@@ -2365,6 +2409,7 @@ inline bool kbquitdet(const char *stateDescr, double **uservars, const char **va
     static thread_local int reallymainthread = isMainThread(); // only need to call once this way
     bool res = false;
 
+#ifndef USERLESS
 #ifndef HEADLESS
     // short-circuit logic, ordered by ease of evaluation
     if ( reallymainthread && setgetkbstate() && ( dostep || goupone || goanyhow || retkeytriggerandclear() || gkbcallback() || haskeybeenpressed() ) ) // && isMainThread() )
@@ -2386,6 +2431,7 @@ inline bool kbquitdet(const char *stateDescr, double **uservars, const char **va
             res = interactmenu(goupone,dostep,stateDescr,uservars,varnames,vardescr);
         }
     }
+#endif
 #endif
 
     return res;

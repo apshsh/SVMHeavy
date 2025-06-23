@@ -74,11 +74,6 @@ public:
     virtual const int *ClassLabelsInt(void) const override { return ML_Base::ClassLabelsInt();       }
     virtual int  getInternalClassInt(int y) const override { return ML_Base::getInternalClassInt(y); }
 
-    virtual void npCweight    (double **res, int *dim) const override { ML_Base::npCweight    (res,dim); return; }
-    virtual void npCweightfuzz(double **res, int *dim) const override { ML_Base::npCweightfuzz(res,dim); return; }
-    virtual void npsigmaweight(double **res, int *dim) const override { ML_Base::npsigmaweight(res,dim); return; }
-    virtual void npepsweight  (double **res, int *dim) const override { ML_Base::npepsweight  (res,dim); return; }
-
     // Kernel Modification
 
     virtual int resetKernel(int modind = 1, int onlyChangeRowI = -1, int updateInfo = 1)        override { int res = Qatonce.resetKernel(modind,onlyChangeRowI,updateInfo); res |= Qredbin.resetKernel(modind,onlyChangeRowI,updateInfo); return res; }
@@ -230,10 +225,10 @@ public:
 
     virtual int setm(int xm) override { int res = Qatonce.setm(xm); res |= Qredbin.setm(xm); res |= QMatonce.setm(xm); res |= QMredbin.setm(xm); return res; }
 
-    virtual int setLinBiasForce (double newval)         override { int res = Qatonce.setLinBiasForce(newval);    res |= Qredbin.setLinBiasForce(newval);    res |= QMatonce.setLinBiasForce(newval);    res |= QMredbin.setLinBiasForce(newval);    return res; }
-    virtual int setQuadBiasForce(double newval)         override { int res = Qatonce.setQuadBiasForce(newval);   res |= Qredbin.setQuadBiasForce(newval);   res |= QMatonce.setQuadBiasForce(newval);   res |= QMredbin.setQuadBiasForce(newval);   return res; }
-    virtual int setLinBiasForce (int  q, double newval) override { int res = Qatonce.setLinBiasForce(q,newval);  res |= Qredbin.setLinBiasForce(q,newval);  res |= QMatonce.setLinBiasForce(q,newval);  res |= QMredbin.setLinBiasForce(q,newval);  return res; }
-    virtual int setQuadBiasForce(int  q, double newval) override { int res = Qatonce.setQuadBiasForce(q,newval); res |= Qredbin.setQuadBiasForce(q,newval); res |= QMatonce.setQuadBiasForce(q,newval); res |= QMredbin.setQuadBiasForce(q,newval); return res; }
+    virtual int setLinBiasForce      (        double newval) override { int res = Qatonce.setLinBiasForce(newval);         res |= Qredbin.setLinBiasForce(newval);         res |= QMatonce.setLinBiasForce(newval);         res |= QMredbin.setLinBiasForce(newval);         return res; }
+    virtual int setQuadBiasForce     (        double newval) override { int res = Qatonce.setQuadBiasForce(newval);        res |= Qredbin.setQuadBiasForce(newval);        res |= QMatonce.setQuadBiasForce(newval);        res |= QMredbin.setQuadBiasForce(newval);        return res; }
+    virtual int setLinBiasForceclass (int  q, double newval) override { int res = Qatonce.setLinBiasForceclass(q,newval);  res |= Qredbin.setLinBiasForceclass(q,newval);  res |= QMatonce.setLinBiasForceclass(q,newval);  res |= QMredbin.setLinBiasForceclass(q,newval);  return res; }
+    virtual int setQuadBiasForceclass(int  q, double newval) override { int res = Qatonce.setQuadBiasForceclass(q,newval); res |= Qredbin.setQuadBiasForceclass(q,newval); res |= QMatonce.setQuadBiasForceclass(q,newval); res |= QMredbin.setQuadBiasForceclass(q,newval); return res; }
 
     virtual int setnu    (double xnu)     override { int res = Qatonce.setnu(xnu);         res |= Qredbin.setnu(xnu);         res |= QMatonce.setnu(xnu);         res |= QMredbin.setnu(xnu);         return res; }
     virtual int setnuQuad(double xnuQuad) override { int res = Qatonce.setnuQuad(xnuQuad); res |= Qredbin.setnuQuad(xnuQuad); res |= QMatonce.setnuQuad(xnuQuad); res |= QMredbin.setnuQuad(xnuQuad); return res; }

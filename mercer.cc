@@ -17542,3 +17542,24188 @@ int MercerKernel::getparam(int ind, gentype &val, const gentype &xa, int ia, con
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+
+// ====================================================================================
+
+
+
+
+
+
+
+
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+// ===================================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+// ========================================================================================
+
+
+//FIXME: define dKKprodip, dKKprodd for inner product and diffis derivatives
+//FIXME: then make dKdz, dKdz functions that follow same form as K to this level, then pass off into base afterwards (with throw if m > 2 and isaltdiff != 0 for simplicity)
+
+template <class T>
+int MercerKernel::KKpro(T &totres, const T &inxyprod, const T &diffis, int *i, int locindstart, int locindend, int xdim, int m, T &logres, const T *xprod) const
+{
+    NiceAssert( ( m == 2 ) || ( ismagterm == 0 ) );
+
+    T xyprod = inxyprod;
+
+    totres = xyprod;
+
+    int logresvalid = 0;
+
+    if ( !isFastKernelSum() && ( locindstart > locindend ) )
+    {
+        return 0;
+    }
+
+    else if ( locindstart == locindend )
+    {
+        // shortcut version.
+
+        int ind = locindstart;
+        {
+            logresvalid = 0;
+
+            T &res = totres;
+
+            retVector<gentype> tmpva;
+
+            const Vector<gentype> &r = dRealConstants(ind)(1,1,dRealConstants(ind).size()-1,tmpva);
+            const Vector<int> &ic = dIntConstants(ind);
+
+            int ktype = cType(ind);
+
+            KKprosingle(res,xyprod,diffis,i,xdim,m,logres,xprod,ktype,logresvalid,cWeight(ind),r,ic,isMagTerm(ind));
+        }
+    }
+
+    else
+    {
+        retVector<int>     tmpva;
+        retVector<gentype> tmpvb;
+
+        (void) tmpva;
+
+        NiceAssert( isFastKernelSum() || ( ismagterm(locindstart,1,locindend,tmpva) == 0 ) );
+
+        int ind = locindstart;
+
+        // NB: xyprod is used at all layers for chained kernels
+        //     diffis is used only at first layer for chained kernels
+
+        Vector<T> allres(locindend-locindstart+1);
+
+        Vector<T> allxygrad(locindend-locindstart+1);
+        Vector<T> alldiffgrad(locindend-locindstart+1);
+
+        for ( ; ind <= locindend ; ++ind )
+        {
+            logresvalid = 0; // only final in chain can set logres
+
+            T &res = allres("&",ind-locindstart);
+
+            const Vector<gentype> &r = dRealConstants(ind)(1,1,dRealConstants(ind).size()-1,tmpvb);
+            const Vector<int> &ic = dIntConstants(ind);
+
+            int ktype = cType(ind);
+
+            KKprosingle(res,xyprod,diffis,i,xdim,m,logres,xprod,ktype,logresvalid,cWeight(ind),r,ic,isMagTerm(ind));
+
+            if ( isFastKernelSum() && ( ind == locindstart ) )
+            {
+                totres = res;
+            }
+
+            else if ( isFastKernelSum() )
+            {
+                totres += res;
+            }
+
+            else if ( ( ind == locindend ) && ( ind == locindstart ) )
+            {
+                totres = res;
+            }
+
+            else if ( ind == locindstart )
+            {
+                xyprod = res;
+            }
+
+            else if ( ind < locindend )
+            {
+                xyprod = res;
+            }
+
+            else
+            {
+                totres = res;
+            }
+
+            //if ( isSplit(ind) )
+            //{
+            //    ++ind;
+            //    break;
+            //}
+        }
+    }
+
+    return logresvalid && ( !isFastKernelSum() || ( locindstart == locindend ) );
+}
+
+template <class T>
+int MercerKernel::QQpro(int m, Vector<T> &res, const SparseVector<gentype> &xa, const vecInfo &xainfo, int ia, int allowfinite, int xdim, int xconsist, int assumreal, int gradOrder, int xagradup, int indstart, int indend) const
+{
+    int dres = 0;
+    int ind;
+
+    retVector<gentype> tmpva;
+
+    for ( ind = indstart ; ind <= indend ; ++ind )
+    {
+        if ( ind == indstart )
+        {
+            int ddres = QQprosingle(m,res,xa,xainfo,ia,allowfinite,xdim,xconsist,assumreal,gradOrder,xagradup,ind,cType(ind),cWeight(ind),dRealConstants(ind)(1,1,dRealConstants(ind).size()-1,tmpva),dIntConstants(ind));
+
+            dres = ( ddres == -1 ) ? -1 : dres+ddres;
+        }
+
+        else
+        {
+            Vector<T> tmp;
+
+            int ddres = QQprosingle(m,tmp,xa,xainfo,ia,allowfinite,xdim,xconsist,assumreal,gradOrder,xagradup,ind,cType(ind),cWeight(ind),dRealConstants(ind)(1,1,dRealConstants(ind).size()-1,tmpva),dIntConstants(ind));
+
+            dres = ( ddres == -1 ) ? -1 : dres+ddres;
+
+            res.append(res.size(),tmp);
+        }
+    }
+
+    return dres;
+}
+
+//KERNELSHERE
+//phantomx
+//ADDHERE
+
+template <class T>
+int MercerKernel::KKprosingle(T &res, const T &xyprod, const T &diffis, int *i, int xdim, int m, T &logres, const T *xprod, int ktype, int &logresvalid, const gentype &weight, const Vector<gentype> &r, const Vector<int> &ic, int magterm) const
+{
+//FIXME see also KKprosinglediffiszero
+    if ( magterm )
+    {
+        NiceAssert( m == 2 );
+
+        res         = (const T &) weight;
+        logres      = log((const T &) weight);
+        logresvalid = 0;
+
+        int retval = 0;
+        int j,k;
+
+        T altdiffis; altdiffis = 0.0;
+
+        int *ix; MEMNEWARRAY(ix,int,m);
+        T *xxprod; MEMNEWARRAY(xxprod,T,m);
+
+        for ( j = 0 ; j < m ; ++j )
+        {
+            T resx;    resx    = 0.0;
+            T logresx; logresx = 0.0;
+            int logresxvalid = 0;
+
+            for ( k = 0 ; k < m ; ++k )
+            {
+                ix[k]     = i[j];
+                xxprod[k] = xprod[j];
+            }
+
+            int retvalx = KKprosingle(resx,xprod[j],altdiffis,ix,xdim,m,logresx,xxprod,ktype,logresxvalid,1.0_gent,r,ic,0);
+
+            res         *= resx;
+            logres      += logresx;
+            logresvalid *= logresxvalid;
+
+            retval += retvalx;
+        }
+
+        MEMDELARRAY(ix);
+        MEMDELARRAY(xxprod);
+
+        return retval;
+    }
+
+    res = 0.0;
+
+    int retval = 0;
+
+    switch ( ktype )
+    {
+        case 0:
+        {
+            // K = r1
+
+            res = r(1);
+
+            break;
+        }
+
+        case 1:
+        {
+            // K = z/(r0.r0)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            break;
+        }
+
+        case 2:
+        {
+            // K = ( r1 + z/(r0.r0) )^i0
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scaladd(res,r(1));
+            raiseto(res,ic(0));
+
+            break;
+        }
+
+        case 3:
+        {
+            // K = exp(-d/(2.r0.r0)-r1)
+
+            res  = diffis;
+            res *= -0.5;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scalsub(res,r(1));
+            res += log(AltDiffNormConst(xdim,m,r(0)));
+
+            logres      = res;
+            logresvalid = 1;
+
+            OP_exp(res);
+
+            break;
+        }
+
+        case 4:
+        {
+            // K = exp(-sqrt(d)/r0)
+            //
+            // At d=0: dK = 0, d2K = 0
+
+            T tmp(diffis);
+
+            OP_sqrt(tmp);
+
+            res = tmp;
+            setnegate(res);
+            scaldiv(res,r(0));
+            scalsub(res,r(1));
+
+            logres      = res;
+            logresvalid = 1;
+
+            OP_exp(res);
+
+            break;
+        }
+
+        case 5:
+        {
+            // K = exp(-sqrt(d)^r1/(r1*r0^r1))
+            //
+            // At d=0, if r1 < 2: dK = 0, d2K = 0
+
+            T tmpb = pow(sqrt(diffis),(T) r(1));
+            T tmpc = pow((T) r(0),(T) r(1));
+
+            res  = tmpb;
+            res /= tmpc;
+            scaldiv(res,r(1));
+            setnegate(res);
+            scalsub(res,r(2));
+
+            logres      = res;
+            logresvalid = 1;
+
+            OP_exp(res);
+
+            break;
+        }
+
+        case 7:
+        {
+            // K = tanh( z/(r0.r0) + r1 )
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scaladd(res,r(1));
+            OP_tanh(res);
+
+            break;
+        }
+
+        case 8:
+        {
+            // K = ( 1 + d/(2*r0*r0*r1) )^(-r1)
+
+            //OLD     8  | Rational quadratic     | 1 - d/(d+r0)
+            //OLD     8  | Rational quadratic     | -1/(d+r0) + d/(d+r0)^2 = -K(x,y)/(d+r0)
+            //OLD     8  | Rational quadratic     | K(x,y)/((d+r0)^2) - K(x,y)/((d+r0)^2) = 0
+
+            T tmp;
+
+            tmp  = diffis;
+            tmp *= 0.5;
+            scaldiv(tmp,r(0));
+            scaldiv(tmp,r(0));
+            scaldiv(tmp,r(1));
+            tmp += 1.0;
+
+            res = pow(tmp,-((T) r(1)));
+
+//OLD            res = diffis;
+//OLD            scaldiv(res,(diffis+r(0)));
+//OLD            setnegate(res);
+//OLD            res += 1.0;
+//OLD
+//OLD            xygrad = 0.0;
+//OLD
+//OLD            diffgrad = res;
+//OLD            setnegate(diffgrad);
+//OLD            scaldiv(res,(diffis+r(0)));
+
+            break;
+        }
+
+        case 9:
+        {
+            // K = sqrt( d/(r0.r0) + r1^2 )
+            //
+            // if d/(r0.r0) + r1^2 = 0 then dk,d2K = 0
+
+            res = diffis;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scaladd(res,r(1),r(1));
+            OP_sqrt(res);
+
+            break;
+        }
+
+        case 10:
+        {
+            // K = 1/sqrt( d/(r0.r0) + r1^2 )
+            //
+            // Ill-defined as d + r1^2 -> 0
+
+            res = diffis;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scaladd(res,r(1),r(1));
+            OP_sqrt(res);
+            OP_einv(res);
+
+            break;
+        }
+
+        case 11:
+        {
+            // K = 2/pi * arccos(-sqrt(d)/r0) - 2/pi * sqrt(d)/r0 * sqrt(1 - d/r0^2)
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+            tempres *= -1.0;
+
+            T tempsq(tempres);
+            tempsq *= tempsq;
+            tempsq *= -1.0;
+            tempsq += 1.0;
+            OP_sqrt(tempsq);
+
+            if ( (double) abs2(tempres) < 1.0 )
+            {
+                // K = 2/pi * arccos(-sqrt(d)/r0) - 2/pi * sqrt(d)/r0 * sqrt(1 - d/r0^2)
+
+                res  = tempsq;
+                res *= tempres;
+                res += acos(tempres);
+                res *= NUMBASE_2ONPI;
+            }
+
+            break;
+        }
+
+        case 12:
+        {
+            // K = 1 - 3/2 * sqrt(d)/r0 + 1/2 * sqrt(d)^3/r0^3
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+
+            // K = 1 - 3/2 * sqrt(d)/r0 + 1/2 * sqrt(d)^3/r0^3
+
+            res = tempres;
+            res *= tempres;
+            res *= tempres;
+            res /= 3.0;
+            res -= tempres;
+            res /= 2.0;
+            res *= 3.0;
+            res += 1.0;
+
+            //res = tempres;
+            //res *= tempres;
+            //res *= tempres;
+            //res /= 2.0;
+            //res *= 0.6666666666666666666666;
+            //res -= tempres;
+            //res /= 0.6666666666666666666666;
+            //res += 1.0;
+
+            break;
+        }
+
+        case 13:
+        {
+            // K = sinc(sqrt(d)/r0)
+            //
+            // if d = 0 then dK,d2K = 0
+
+            T tmp(diffis);
+
+            OP_sqrt(tmp);
+
+            T tmpb(tmp);
+
+            scaldiv(tmpb,r(0));
+
+            res = tmpb;
+            OP_sinc(res);
+
+            break;
+        }
+
+        case 14:
+        {
+            // K = -sqrt(d)^r1
+            //
+            // if d = 0 then dK,d2K = 0
+
+            res  = diffis;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            OP_sqrt(res);
+            res  = pow(res,(T) r(1));
+            res *= -1.0;
+
+            break;
+        }
+
+        case 15:
+        {
+            // K = -log(sqrt(d)^r1 + 1)
+
+            T tmpa(diffis);
+
+            scaldiv(tmpa,r(0));
+            scaldiv(tmpa,r(0));
+
+            OP_sqrt(tmpa);
+
+            T tmpb;
+
+            tmpb = pow(tmpa,(T) r(1));
+            tmpb += 1.0;
+
+            res = tmpb;
+            OP_log(res);
+            setnegate(res);
+
+            break;
+        }
+
+        case 19:
+        {
+            // K = 1/(1+(d/(r0.r0)))
+
+            res = diffis;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            res += 1.0;
+            OP_einv(res);
+
+            break;
+        }
+
+        case 23:
+        {
+            // K = 1/(1+(sqrt(d)/r0)^r1)
+
+            T tmp(diffis);
+
+            OP_sqrt(tmp);
+            scaldiv(tmp,r(0));
+
+            res  = pow(tmp,(T) r(1));
+            res += 1.0;
+            OP_einv(res);
+
+            break;
+        }
+
+        case 24:
+        {
+            // K = (1-((z/(r0.r0))^i0))/(1-(z/(r0.r0)))
+            //
+            // Ill-defined at z = 1
+
+            T zsc(xyprod);
+
+            scaldiv(zsc,r(0));
+            scaldiv(zsc,r(0));
+
+            if ( ( (double) abs2(zsc) > BADZEROTOL ) || ( ic(0) == 0 ) )
+            {
+                T tmp = zsc;
+
+                raiseto(tmp,ic(0));
+
+                res  = 1.0;
+                res -= tmp;
+                res /= (1.0-zsc);
+            }
+
+            break;
+        }
+
+        case 25:
+        {
+            // K = pi.cosh(pi-(sqrt(d)/r0))
+
+            T tmp(diffis);
+
+            OP_sqrt(tmp);
+
+            res  = tmp;
+            scaldiv(res,r(0));
+            res -= NUMBASE_PI;
+            res *= -1.0;
+            OP_cosh(res);
+            res *= NUMBASE_PI;
+
+            break;
+        }
+
+        case 26:
+        {
+            // K = ((d/r0)^(r1+0.5))
+
+            res  = diffis;
+            scaldiv(res,r(0));
+            res  = pow(res,((T) r(1))+0.5);
+
+            break;
+        }
+
+        case 27:
+        {
+            // K = ((d/r0)^r1).ln(sqrt(d/r0))
+
+            T scalres(diffis);
+
+            scaldiv(scalres,r(0));
+            OP_sqrt(scalres);
+
+            T tempres(scalres);
+
+            OP_log(tempres);
+
+            scalres = pow(scalres,(T) r(1));
+
+            res  = scalres;
+            res *= tempres;
+
+            break;
+        }
+
+        case 32:
+        {
+            // K = r1 if i == j >= 0, 0 otherwise
+
+            if ( m )
+            {
+                if ( i[0] >= 0 )
+                {
+                    int j;
+
+                    for ( j = 0 ; j < m ; ++j )
+                    {
+                        if ( i[0] != i[j] )
+                        {
+                            break;
+                        }
+                    }
+
+                    if ( j == m )
+                    {
+                        res = r(1);
+                    }
+                }
+            }
+
+            break;
+        }
+
+        case 33:
+        {
+            // K = 1/(2.r0) ( 1 if real(sqrt(d)) < r0, 0 otherwise )
+
+            //if ( real(sqrt(diffis)-r(0)) < zerogentype() )
+            if ( real(sqrt(diffis)-r(0)) < 0.0_gent )
+            {
+                res = 0.5/r(0);
+            }
+
+            break;
+        }
+
+        case 34:
+        {
+            // K = (1-sqrt(d)/r0)/r0 if real(sqrt(d)) < r0, 0 otherwise )
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+
+            if ( (double) real(tempres-1.0) < 0.0 )
+            {
+                res  = 1.0;
+                res -= tempres;
+                scaldiv(res,r(0));
+            }
+
+            break;
+        }
+
+        case 38:
+        {
+            // K = exp(-sqrt(d)/r0)
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+            tempres *= -1.0;
+
+            res = tempres;
+
+            logres      = res;
+            logresvalid = 1;
+
+            OP_exp(res);
+
+            break;
+        }
+
+        case 39:
+        {
+            // K = (1+((sqrt(3)/r0).sqrt(d))) . exp(-(sqrt(3)/r0).sqrt(d))
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+            tempres *= sqrt(3.0);
+
+            T expres(tempres);
+            expres *= -1.0;
+            OP_exp(expres);
+
+            res  = tempres;
+            res += 1;
+            res *= expres;
+
+            break;
+        }
+
+        case 42:
+        {
+            // K = agd(z/(r0.r0))
+
+            T scalres = diffis;
+            scaldiv(scalres,r(0));
+            scaldiv(scalres,r(0));
+
+            T scz = scalres;
+            OP_sec(scz);
+            scz *= scz;
+
+            T taz = scalres;
+            OP_tan(taz);
+
+            res = scalres;
+            OP_agd(res);
+
+            break;
+        }
+
+        case 43:
+        {
+            // K = log((1+z/(r0.r0))/(1-z/(r0.r0)))
+
+            T tempa = xyprod;
+
+            tempa  = xyprod;
+            scaldiv(tempa,r(0));
+            scaldiv(tempa,r(0));
+
+            T tempb = tempa;
+
+            tempa += 1.0;
+            tempb -= 1.0;
+
+            res  = tempa;
+            res /= tempb;
+            OP_log(res);
+
+            break;
+        }
+
+        case 44:
+        {
+            // K = exp(z/(r0.r0)-r1)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scalsub(res,r(1));
+
+            logres      = res;
+            logresvalid = 1;
+
+            OP_exp(res);
+
+            break;
+        }
+
+        case 45:
+        {
+            // K = sinh(z/(r0.r0))
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            OP_sinh(res);
+
+            break;
+        }
+
+        case 46:
+        {
+            // K = cosh(z/(r0.r0))
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            OP_cosh(res);
+
+            break;
+        }
+
+        case 47:
+        {
+            // K = sinc(sqrt(d)/r0).cos(2*pi*sqrt(d)/(r0.r1))
+            //
+            // if d = 0 then dK,d2K = 0
+
+            T tmp(diffis);
+
+            OP_sqrt(tmp);
+
+            T tmpb(tmp);
+
+            scaldiv(tmpb,r(0));
+
+            res = tmpb;
+            OP_sinc(res);
+
+            T tmpc;
+
+            tmpc = tmpb;
+            tmpc *= (2*NUMBASE_PI);
+            scaldiv(tmpc,r(1));
+            OP_cos(tmpc);
+
+            res *= tmpc;
+
+            break;
+        }
+
+        case 49:
+        {
+            // K = exp(-d/(2.r0.r0)-r1)
+
+            T tmp;
+
+            tmp  = diffis;
+            tmp *= -0.5;
+            scaldiv(tmp,r(0));
+            scaldiv(tmp,r(0));
+            scalsub(tmp,r(1));
+            tmp += log(AltDiffNormConst(xdim,m,r(0)));
+            OP_exp(tmp);
+            scalmul(tmp,r(2));
+            tmp -= 1.0;
+
+            res  = r(2);
+            res -= 1.0;
+            scaldiv(res,tmp);
+
+            break;
+        }
+
+        case 50:
+        {
+            // K = pi - arccos(z)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            OP_acos(res);
+            res *= -1.0;
+            res += NUMBASE_PI;
+
+            break;
+        }
+
+        case 51:
+        {
+            // K = 1 / ( 2 - z/(r0.r0) )
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            res *= -1.0;
+            res += 2.0;
+            OP_einv(res);
+
+            break;
+        }
+
+        case 52:
+        {
+            // K = sqrt(a).sqrt(b)/(r0.r0)
+
+            res = 1.0;
+
+            for ( int j = 0 ; j < m ; ++j )
+            {
+                res *= xprod[j];
+            }
+
+            T oneonm(1.0/m);
+            res = pow(res,oneonm);
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            break;
+        }
+
+        case 53:
+        {
+            // K = (1-(1-sqrt(a)^r1)^r2).(1-(1-sqrt(b)^r1)^r2)/(r0.r0)
+
+            T oneonm(1.0/m);
+
+            res = 1.0;
+
+            for ( int j = 0 ; j < m ; ++j )
+            {
+                T tempres(xprod[j]);
+
+                tempres = pow(tempres,oneonm);
+
+                tempres = pow(tempres,(T) r(1));
+                tempres *= -1.0;
+                tempres += 1.0;
+                tempres = pow(tempres,(T) r(2));
+                tempres *= -1.0;
+                tempres += 1.0;
+
+                res *= tempres;
+            }
+
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            break;
+        }
+
+        case 100:
+        {
+            // K = z/(r0.r0)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            break;
+        }
+
+        case 103:
+        {
+            // K = 0 if real(z) < 0, 1 otherwise
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = 0.0;
+            }
+
+            else
+            {
+                res = 1.0;
+            }
+
+            break;
+        }
+
+        case 104:
+        {
+            // K = 0 if real(z) < 0, z/(r0*r0) otherwise
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = 0.0;
+            }
+
+            else
+            {
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+            }
+
+            break;
+        }
+
+        case 106:
+        {
+            // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
+
+            const static T zgt(0.0);
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            if ( xyprod < zgt )
+            {
+                scalmul(res,r(1));
+            }
+
+            break;
+        }
+
+        case 200:
+        {
+            // K = z/(r0.r0) - 1
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            res -= 1.0;
+
+            break;
+        }
+
+        case 203:
+        {
+            // K = -1 if real(z) < 0, 1 otherwise
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = -1.0;
+            }
+
+            else
+            {
+                res = 1.0;
+            }
+
+            break;
+        }
+
+        case 204:
+        {
+            // K = 0 if real(z) < 0, z/(r0*r0) otherwise    - 1
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = -1.0;
+            }
+
+            else
+            {
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+                res -= 1.0;
+            }
+
+            break;
+        }
+
+        case 206:
+        {
+            // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
+
+            const static T zgt(0.0);
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            if ( xyprod < zgt )
+            {
+                scalmul(res,r(1));
+            }
+
+            res -= 1.0;
+
+            break;
+        }
+
+        default:
+        {
+            NiceThrow("fee fi fo fum");
+
+            retval = 1;
+            break;
+        }
+    }
+
+    res    *= (const T &) weight;
+    logres += log((const T &) weight);
+
+    return retval;
+}
+
+template <class T>
+int MercerKernel::KKprosinglediffiszero(T &res, const T &xyprod, int ia, int ib, const T &xxprod, const T &yyprod, int ktype, const gentype &weight, const Vector<gentype> &r, const Vector<int> &ic) const
+{
+// See KKprosingle
+    res = 0.0;
+
+    int retval = 0;
+
+    switch ( ktype )
+    {
+        case 0:
+        case 9:
+        {
+            // 0: K = r1
+            // 9: K = sqrt( d/(r0.r0) + r1^2 )
+            //    K = r1
+
+            res = r(1);
+
+            break;
+        }
+
+        case 3:
+        case 4:
+        {
+            // 3: K = exp(-d/(2.r0.r0)-r1)
+            //    K = exp(-r1)
+            // 4: K = exp(-sqrt(d)/r0 - r1)
+            //    K = exp(-r1)
+
+            res = -r(1);
+
+            OP_exp(res);
+
+            break;
+        }
+
+        case 8:
+        case 11:
+        case 12:
+        case 13:
+        case 19:
+        case 23:
+        case 38:
+        case 39:
+        case 47:
+        {
+            // 8:  K = ( 1 + d/(2*r0*r0*r1) )^(-r1)
+            //     K = 1
+            // 11: K = 2/pi * arccos(-sqrt(d)/r0) - 2/pi * sqrt(d)/r0 * sqrt(1 - d/r0^2)
+            //     K = 2/pi * arccos(0)
+            //     K = 2/pi * pi/2
+            //     K = 1
+            // 12: K = 1 - 3/2 * sqrt(d)/r0 + 1/2 * sqrt(d)^3/r0^3
+            //     K = 1
+            // 13: K = sinc(sqrt(d)/r0)
+            //     K = 1
+            // 19: K = 1/(1+(d/(r0.r0)))
+            //     K = 1
+            // 23: K = 1/(1+(sqrt(d)/r0)^r1)
+            //     K = 1
+            // 38: K = exp(-sqrt(d)/r0)
+            //     K = exp(0) = 1
+            // 39: K = (1+((sqrt(3)/r0).sqrt(d))) . exp(-(sqrt(3)/r0).sqrt(d))
+            //     K = 1
+            // 47: K = sinc(sqrt(d)/r0).cos(2*pi*sqrt(d)/(r0.r1))
+            //     K = 1
+
+            res = 1.0;
+
+            break;
+        }
+
+        case 14:
+        case 15:
+        case 26:
+        case 27:
+        case 42:
+        {
+            // 14: K = -sqrt(d)^r1
+            //     K = 0
+            // 15: K = -log(sqrt(d)^r1 + 1)
+            //     K = 0
+            // 26: K = ((d/r0)^(r1+0.5))
+            //     K = 0
+            // 27: K = ((d/r0)^r1).ln(sqrt(d/r0)) (0 for d=0)
+            //     K = 0
+            // 42: K = agd(d/(r0.r0))
+            //     K = 0
+
+            break;
+        }
+
+
+
+
+        case 1:
+        {
+            // K = z/(r0.r0)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            break;
+        }
+
+        case 2:
+        {
+            // K = ( r1 + z/(r0.r0) )^i0
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scaladd(res,r(1));
+            raiseto(res,ic(0));
+
+            break;
+        }
+
+        case 5:
+        {
+            // K = exp(-sqrt(d)^r1/(r1*r0^r1) - r2)
+            // K = exp(-r2)
+
+            res = -r(2);
+
+            OP_exp(res);
+
+            break;
+        }
+
+        case 7:
+        {
+            // K = tanh( z/(r0.r0) + r1 )
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scaladd(res,r(1));
+            OP_tanh(res);
+
+            break;
+        }
+
+        case 10:
+        {
+            // K = 1/sqrt( d/(r0.r0) + r1^2 )
+            // K = 1/r1
+
+            res = r(1);
+
+            OP_einv(res);
+
+            break;
+        }
+
+        case 24:
+        {
+            // K = (1-((z/(r0.r0))^i0))/(1-(z/(r0.r0)))
+            //
+            // Ill-defined at z = 1
+
+            T zsc(xyprod);
+
+            scaldiv(zsc,r(0));
+            scaldiv(zsc,r(0));
+
+            if ( ( (double) abs2(zsc) > BADZEROTOL ) || ( ic(0) == 0 ) )
+            {
+                T tmp = zsc;
+
+                raiseto(tmp,ic(0));
+
+                res  = 1.0;
+                res -= tmp;
+                res /= (1.0-zsc);
+            }
+
+            break;
+        }
+
+        case 25:
+        {
+            // K = pi.cosh(pi-(sqrt(d)/r0))
+            // K = pi.cosh(pi)
+
+            res = 36.4171952511;
+
+            break;
+        }
+
+        case 32:
+        {
+            // K = r1 if i == j >= 0, 0 otherwise
+
+            if ( ( ia == ib ) && ( ia >= 0 ) )
+            {
+                res = r(1);
+            }
+
+            break;
+        }
+
+        case 33:
+        {
+            // K = 1/(2.r0) ( 1 if real(sqrt(d)) < r0, 0 otherwise )
+
+            res = 0.5/r(0);
+
+            break;
+        }
+
+        case 34:
+        {
+            // K = (1-sqrt(d)/r0)/r0 if real(sqrt(d)) < r0, 0 otherwise )
+            // K = 1/r0
+
+            res = r(0);
+
+            OP_einv(res);
+
+            break;
+        }
+
+        case 43:
+        {
+            // K = log((1+z/(r0.r0))/(1-z/(r0.r0)))
+
+            T tempa = xyprod;
+
+            tempa  = xyprod;
+            scaldiv(tempa,r(0));
+            scaldiv(tempa,r(0));
+
+            T tempb = tempa;
+
+            tempa += 1.0;
+            tempb -= 1.0;
+
+            res  = tempa;
+            res /= tempb;
+            OP_log(res);
+
+            break;
+        }
+
+        case 44:
+        {
+            // K = exp(z/(r0.r0)-r1)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scalsub(res,r(1));
+
+            OP_exp(res);
+
+            break;
+        }
+
+        case 45:
+        {
+            // K = sinh(z/(r0.r0))
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            OP_sinh(res);
+
+            break;
+        }
+
+        case 46:
+        {
+            // K = cosh(z/(r0.r0))
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            OP_cosh(res);
+
+            break;
+        }
+
+        case 49:
+        {
+            // K = exp(-d/(2.r0.r0)-r1)
+            // K = exp(-r1)
+
+            res = -r(1);
+
+            OP_exp(res);
+
+            break;
+        }
+
+        case 50:
+        {
+            // K = pi - arccos(z)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            OP_acos(res);
+            res *= -1.0;
+            res += NUMBASE_PI;
+
+            break;
+        }
+
+        case 51:
+        {
+            // K = 1 / ( 2 - z/(r0.r0) )
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            res *= -1.0;
+            res += 2.0;
+            OP_einv(res);
+
+            break;
+        }
+
+        case 52:
+        {
+            // K = sqrt(a).sqrt(b)/(r0.r0)
+
+            res  = xxprod;
+            res *= yyprod;
+            OP_sqrt(res);
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            break;
+        }
+
+        case 53:
+        {
+            // K = (1-(1-sqrt(a)^r1)^r2).(1-(1-sqrt(b)^r1)^r2)/(r0.r0)
+
+            T oneonm(1.0/2);
+
+            res = 1.0;
+
+            {
+                T tempres(xxprod);
+
+                tempres = pow(tempres,oneonm);
+
+                tempres = pow(tempres,(T) r(1));
+                tempres *= -1.0;
+                tempres += 1.0;
+                tempres = pow(tempres,(T) r(2));
+                tempres *= -1.0;
+                tempres += 1.0;
+
+                res *= tempres;
+            }
+
+            {
+                T tempres(yyprod);
+
+                tempres = pow(tempres,oneonm);
+
+                tempres = pow(tempres,(T) r(1));
+                tempres *= -1.0;
+                tempres += 1.0;
+                tempres = pow(tempres,(T) r(2));
+                tempres *= -1.0;
+                tempres += 1.0;
+
+                res *= tempres;
+            }
+
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            break;
+        }
+
+        case 100:
+        {
+            // K = z/(r0.r0)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            break;
+        }
+
+        case 103:
+        {
+            // K = 0 if real(z) < 0, 1 otherwise
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = 0.0;
+            }
+
+            else
+            {
+                res = 1.0;
+            }
+
+            break;
+        }
+
+        case 104:
+        {
+            // K = 0 if real(z) < 0, z/(r0*r0) otherwise
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = 0.0;
+            }
+
+            else
+            {
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+            }
+
+            break;
+        }
+
+        case 106:
+        {
+            // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
+
+            const static T zgt(0.0);
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            if ( xyprod < zgt )
+            {
+                scalmul(res,r(1));
+            }
+
+            break;
+        }
+
+        case 200:
+        {
+            // K = z/(r0.r0) - 1
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            res -= 1.0;
+
+            break;
+        }
+
+        case 203:
+        {
+            // K = -1 if real(z) < 0, 1 otherwise
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = -1.0;
+            }
+
+            else
+            {
+                res = 1.0;
+            }
+
+            break;
+        }
+
+        case 204:
+        {
+            // K = 0 if real(z) < 0, z/(r0*r0) otherwise    - 1
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = -1.0;
+            }
+
+            else
+            {
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+                res -= 1.0;
+            }
+
+            break;
+        }
+
+        case 206:
+        {
+            // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
+
+            const static T zgt(0.0);
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            if ( xyprod < zgt )
+            {
+                scalmul(res,r(1));
+            }
+
+            res -= 1.0;
+
+            break;
+        }
+
+        default:
+        {
+            NiceThrow("fee fi fo fum");
+
+            retval = 1;
+            break;
+        }
+    }
+
+    res *= (const T &) weight;
+
+    return retval;
+}
+
+
+template <class T>
+int MercerKernel::QQprosingle(int m, Vector<T> &res, const SparseVector<gentype> &xa, const vecInfo &xainfo, int ia, int allowfinite, int xdim, int xconsist, int assumreal, int gradOrder, int xagradup, int ind, int ktype, const gentype &weight, const Vector<gentype> &r, const Vector<int> &ic) const
+{
+    (void) xainfo;
+    (void) ia;
+
+    NiceAssert( !gradOrder );
+
+    (void) gradOrder;
+    (void) xagradup;
+
+    int i;
+    int dres = -1; // This signifies default infdim vector, which is the default
+
+    if ( allowfinite && ( ktype == 0 ) )
+    {
+        // K(x,y) = r1
+
+        dres = 1;
+    }
+
+    else if ( allowfinite && ( ( ktype == 1 ) || ( ktype == 100 ) ) )
+    {
+        // K(x,y) = <x/r0,y/r0>
+
+        dres = xdim;
+    }
+
+    else if ( allowfinite && ( ktype == 2 ) )
+    {
+        // K(x,y) = ( r1 + <x/r0,y/r0> )^i0
+
+        dres = (int) pow(xdim+1,ic(0));
+    }
+
+    else if ( randFeats(ind).size() )
+    {
+        // Use random features approximation
+
+        dres = randFeatReOnly(ind) ? (randFeats(ind).size()) : (2*(randFeats(ind).size()));
+    }
+
+    if ( m >= 0 )
+    {
+        if ( allowfinite && ( ktype == 0 ) )
+        {
+            // K(x,y) = r1
+
+            if ( res.infsize() )
+            {
+                const static Vector<T> temp(1);
+
+                res = temp;
+            }
+
+            gentype oneonm(1.0/m);
+
+            (res.resize(1))("&",0) = pow(r(1),oneonm);
+        }
+
+        else if ( allowfinite && ( ( ktype == 1 ) || ( ktype == 100 ) ) )
+        {
+            // K(x,y) = <x/r0,y/r0>
+
+            if ( res.infsize() )
+            {
+                const static Vector<T> temp;
+
+                res = temp;
+            }
+
+            res.resize(xdim);
+
+            for ( i = 0 ; i < xdim ; ++i )
+            {
+                res("&",i) = (T) xa(i);
+                res("&",i) /= (T) r(0);
+            }
+        }
+
+        else if ( allowfinite && ( ktype == 2 ) )
+        {
+            // K(x,y) = ( r1 + <x/r0,y/r0> )^i0
+
+            if ( res.infsize() )
+            {
+                const static Vector<T> temp;
+
+                res = temp;
+            }
+
+            SparseVector<gentype> tmp(xa);
+
+            gentype oneonm(1.0/m);
+
+            tmp /= r(0);
+            tmp("&",xdim) = pow(r(1),oneonm);
+
+            Vector<gentype> tmpres;
+
+            kronpow(tmpres,tmp,xdim+1,ic(0));
+
+            int ii;
+
+            res.resize(tmpres.size());
+
+            for ( ii = 0 ; ii < res.size() ; ++ii )
+            {
+                res("&",ii) = (T) tmpres(ii);
+            }
+        }
+
+        else if ( dres >= 0 )
+        {
+            // Return RFF approximation of translation invariant kernel
+            //
+            // - Only works for translation-invariant kernels
+            // - Which kernel this is approximating depends entirely on the
+            //   distribution from which the random features were drawn!
+
+            NiceAssert( !kinf(ind).usesInner   );
+            NiceAssert( !kinf(ind).usesNorm    );
+            NiceAssert( !kinf(ind).usesVector  );
+            NiceAssert( !kinf(ind).usesMinDiff );
+            NiceAssert( !kinf(ind).usesMaxDiff );
+
+            res.resize(dres);
+
+            int ii;
+            int M = randFeats(ind).size();
+            bool ImOnly = ( randFeatReOnly(ind) == -1 );
+            T xyprod;
+
+            for ( ii = 0 ; ii < dres ; ++ii )
+            {
+                innerProductDiverted(xyprod,xa,randFeats(ind)(ii%M),xconsist,assumreal);
+                xyprod += ( randFeatNoAngle(ind) ? 0.0 : randFeatAngle(ind)(ii%M) );
+
+                bool isSinPart = ( ( ii >= M ) || ImOnly );
+
+                if ( isSinPart )
+                {
+                    res("&",ii) = sin(xyprod);
+                    res("&",ii) *= sqrt(1.0/((double) M));
+                }
+
+                else
+                {
+                    res("&",ii) = cos(xyprod);
+                    res("&",ii) *= sqrt(1.0/((double) M));
+                }
+            }
+        }
+
+        else
+        {
+            // Return as RKHS vector
+
+            gentype a(1.0);
+
+            local_makeanRKHSVector(res,*this,xa,a,m);
+        }
+    }
+
+    gentype oneonm(1.0/m);
+
+    res.scale((T) pow(weight,oneonm));
+
+    return dres;
+}
+
+
+template <class T>
+void MercerKernel::dKKpro(T &totxygrad, T &totxnormgrad, T &totres, const T &inxyprod, const T &diffis, int i, int j, int locindstart, int locindend, int xdim, int m, const T &xxprod, const T &yyprod) const
+{
+    // Assumptions enforced here
+    //
+    // - magterm only included if this is a kernel sum
+    // - if kernel chain then only the final term can use diffis
+    // - no mixed sum/chain
+
+    T xyprod = inxyprod;
+
+    totres = xyprod;
+
+    totxygrad    = 1.0;
+    totxnormgrad = 0.0;
+
+    if ( !isFastKernelSum() && ( locindstart > locindend ) )
+    {
+        return;
+    }
+
+    // Chained derivative is the prod: dkn(k{n-1}(...k1(k0(q)))) * dk{n-1}(...k1(k0(q)))... * dk1(k0(q)) * dk0(q)
+
+    T totdiffgrad;
+
+    totdiffgrad = 0.0;
+
+    int ind;
+
+    // NB: xyprod is used at all layers for chained kernels
+    //     diffis is used only at first layer for chained kernels
+
+    Vector<T> allres(locindend-locindstart+1);
+
+    Vector<T> allxygrad(locindend-locindstart+1);
+    Vector<T> alldiffgrad(locindend-locindstart+1);
+    Vector<T> allxnormonlygrad(locindend-locindstart+1);
+
+    retVector<gentype> tmpva;
+
+    for ( ind = locindstart ; ind <= locindend ; ++ind )
+    {
+        T &res = allres("&",ind-locindstart);
+
+        T &xygrad        = allxygrad("&",ind-locindstart);
+        T &diffgrad      = alldiffgrad("&",ind-locindstart);
+        T &xnormonlygrad = allxnormonlygrad("&",ind-locindstart);
+
+        const Vector<gentype> &r = dRealConstants(ind)(1,1,dRealConstants(ind).size()-1,tmpva);
+        const Vector<int> &ic = dIntConstants(ind);
+
+        int ktype = cType(ind);
+
+        dKKprosingle(xygrad,diffgrad,xnormonlygrad,res,xyprod,diffis,i,j,xdim,m,xxprod,yyprod,ktype,cWeight(ind),r,ic,isMagTerm(ind));
+
+        if ( isFastKernelSum() && ( ind == locindstart ) )
+        {
+            totres = res;
+
+            totxygrad    = xygrad;
+            totdiffgrad  = diffgrad;
+            totxnormgrad = xnormonlygrad;
+        }
+
+        else if ( isFastKernelSum() )
+        {
+            totres += res;
+
+            totxygrad    += xygrad;
+            totdiffgrad  += diffgrad;
+            totxnormgrad += xnormonlygrad;
+        }
+
+        else if ( ( ind == locindend ) && ( ind == locindstart ) )
+        {
+            totres = res;
+
+            totxygrad    = xygrad;
+            totdiffgrad  = diffgrad;
+            totxnormgrad = xnormonlygrad;
+        }
+
+        else if ( ind == locindstart )
+        {
+            xyprod = res;
+
+            totxygrad    = xygrad;
+            totdiffgrad  = diffgrad;
+            totxnormgrad = xnormonlygrad;
+        }
+
+        else if ( ind < locindend )
+        {
+            xyprod = res;
+
+            totxygrad    *= xygrad;
+            totdiffgrad  *= xygrad; // diffgrad zero here by definition
+            totxnormgrad *= xnormonlygrad; // xnormonlygrad likely
+        }
+
+        else
+        {
+            totres = res;
+
+            totxygrad    *= xygrad;
+            totdiffgrad  *= xygrad; // diffgrad zero here by definition
+            totxnormgrad *= xnormonlygrad; // xnormonlygrad likely
+        }
+    }
+
+    // diffis = ||x-y||^2 = ||x||^2 + ||y||^2 - 2<x,y>
+    //
+    // dK/dxyprod = partialK/partialxyprod + partialK/partialdiffis partialdiffis/partialxyprod
+    //            = partialK/partialxyprod - 2*partialK/partialdiffis
+    // dK/dxnorm  = partialK/partialdiffis partialdiffis/partialxnorm
+    //            = partialK/partialdiffis 
+
+    totxygrad -= totdiffgrad;
+    totxygrad -= totdiffgrad;
+
+    totxnormgrad += totdiffgrad;
+}
+
+//KERNELSHERE
+//phantomx
+
+//ADDHERE
+template <class T>
+void MercerKernel::dKKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad, T &res, const T &xyprod, const T &diffis, int i, int j, int xdim, int m, const T &xxprod, const T &yyprod, int ktype, const gentype &weight, const Vector<gentype> &r, const Vector<int> &ic, int magterm) const
+{
+    res = 0.0;
+
+    xygrad        = 0.0;
+    diffgrad      = 0.0;
+    xnormonlygrad = 0.0;
+
+    if ( magterm )
+    {
+        xygrad = 0.0;
+
+        T xres; xres = 0.0;
+        T yres; yres = 0.0;
+
+        T ddgrad;         ddgrad         = 0.0;
+        T ddiffgrad;      ddiffgrad      = 0.0;
+        T ddnormonlygrad; ddnormonlygrad = 0.0;
+
+        T altdiffis; altdiffis = 0.0;
+
+        T xxgrad; xxgrad = 0.0;
+
+        dKKprosingle(xxgrad,ddiffgrad,ddnormonlygrad,xres,xxprod,altdiffis,i,i,xdim,m,xxprod,xxprod,ktype,1.0_gent,r,ic,0);
+        dKKprosingle(ddgrad,ddiffgrad,ddnormonlygrad,yres,yyprod,altdiffis,j,j,xdim,m,yyprod,yyprod,ktype,1.0_gent,r,ic,0);
+
+        (void) ddgrad;
+        (void) ddiffgrad;
+        (void) ddnormonlygrad;
+
+        res  = xres;
+        res *= yres;
+
+        //xygrad  = 0.0;
+        //xygrad *= yres;
+
+        //diffgrad  = 0.0;
+        //diffgrad *= yres;
+
+        xnormonlygrad  = xxgrad;
+        xnormonlygrad *= yres;
+
+        res           *= (const T &) weight;
+        //xygrad        *= (const T &) weight;
+        //diffgrad      *= (const T &) weight;
+        xnormonlygrad *= (const T &) weight;
+
+        return;
+    }
+
+    switch ( ktype )
+    {
+        case 0:
+        {
+            // K = r1
+            // dK = 0
+
+            res = r(1);
+
+            break;
+        }
+
+        case 1:
+        {
+            // K = z/(r0.r0)
+            // dK = 1/(r0.r0)
+
+            res    = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            xygrad = 1.0;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            break;
+        }
+
+        case 2:
+        {
+            // K = ( r1 + z/(r0.r0) )^i0
+            // dK = i0/(r0.r0) * ( r1 + z/(r0.r0) )^(i0-1)            if ( i0 >= 1 )
+
+            T temp(xyprod);
+
+            scaldiv(temp,r(0));
+            scaldiv(temp,r(0));
+            scaladd(temp,r(1));
+
+            res = temp;
+            raiseto(res,ic(0));
+
+            if ( ic(0) >= 1 )
+            {
+                xygrad = temp;
+                raiseto(xygrad,ic(0)-1);
+                xygrad *= ic(0);
+                scaldiv(xygrad,r(0));
+                scaldiv(xygrad,r(0));
+            }
+
+            break;
+        }
+
+        case 3:
+        {
+            // K = exp(-d/(2.r0.r0))
+            // dK = -K/(2*r0*r0)
+
+            res  = diffis;
+            res *= -0.5;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            res += log(AltDiffNormConst(xdim,m,r(0)));
+            scalsub(res,r(1));
+            OP_exp(res);
+
+            diffgrad  = res;
+            diffgrad *= -0.5;
+            scaldiv(diffgrad,r(0));
+            scaldiv(diffgrad,r(0));
+
+            break;
+        }
+
+        case 4:
+        {
+            // K = exp(-sqrt(d)/r0)
+            // dK = -K/(2*r0*sqrt(d))
+            //
+            // At d=0: dK = 0, d2K = 0
+
+            T tmp(diffis);
+
+            OP_sqrt(tmp);
+
+            res = tmp;
+            setnegate(res);
+            scaldiv(res,r(0));
+            scalsub(res,r(1));
+            OP_exp(res);
+
+            if ( (double) abs2(diffis) > BADZEROTOL )
+            {
+                diffgrad = res;
+                diffgrad *= -0.5;
+                scaldiv(diffgrad,r(0));
+                diffgrad /= tmp;
+            }
+
+            break;
+        }
+
+        case 5:
+        {
+            // K = exp(-sqrt(d)^r1/(r1*r0^r1))
+            // dK = -K*((sqrt(d)^(r1-2))/(2*r0^r1))
+            //    = -K*((sqrt(d)^r1)/(2*d*r0^r1))
+            //
+            // At d=0, if r1 < 2: dK = 0, d2K = 0
+
+            T tmpb = pow(sqrt(diffis),(T) r(1));
+            T tmpc = pow((T) r(0),(T) r(1));
+
+            res  = tmpb;
+            res /= tmpc;
+            scaldiv(res,r(1));
+            setnegate(res);
+            scalsub(res,r(2));
+            OP_exp(res);
+
+            if ( ( (double) abs2(diffis) > BADZEROTOL ) || ( (double) abs2(r(1)) >= 2.0 ) )
+            {
+                // dK = -K*((sqrt(d)^r1)/(2*d*r0^r1))
+
+                diffgrad  = res;
+                diffgrad *= tmpb;
+                diffgrad *= -0.5;
+                diffgrad /= diffis;
+                diffgrad /= tmpc;
+            }
+
+            break;
+        }
+
+        case 7:
+        {
+            // K = tanh( z/(r0.r0) + r1 )
+            // dK = 1/(r0.r0) * sech^2( r0 z + r1 )
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scaladd(res,r(1));
+            OP_tanh(res);
+
+            xygrad = xyprod;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+            scaladd(xygrad,r(1));
+            OP_sech(xygrad);
+            xygrad *= xygrad;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            break;
+        }
+
+        case 8:
+        {
+            // K = ( 1 + d/(2*r0*r0*r1) )^(-r1)
+            // dK = -(( 1 + d/(2*r0*r0*r1) )^(-r1-1))/(2*r0*r0)
+            //    = -K/(2*r0*r0*( 1 + d/(2*r0*r0*r1) ))
+
+            //OLD     8  | Rational quadratic     | 1 - d/(d+r0)
+            //OLD     8  | Rational quadratic     | -1/(d+r0) + d/(d+r0)^2 = -K(x,y)/(d+r0)
+            //OLD     8  | Rational quadratic     | K(x,y)/((d+r0)^2) - K(x,y)/((d+r0)^2) = 0
+
+            T tmp;
+
+            tmp  = diffis;
+            tmp *= 0.5;
+            scaldiv(tmp,r(0));
+            scaldiv(tmp,r(0));
+            scaldiv(tmp,r(1));
+            tmp += 1.0;
+
+            res = pow(tmp,-((T) r(1)));
+
+            xygrad  = res;
+            xygrad *= -0.5;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+            xygrad /= tmp;
+
+//OLD            res = diffis;
+//OLD            scaldiv(res,(diffis+r(0)));
+//OLD            setnegate(res);
+//OLD            res += 1.0;
+//OLD
+//OLD            xygrad = 0.0;
+//OLD
+//OLD            diffgrad = res;
+//OLD            setnegate(diffgrad);
+//OLD            scaldiv(res,(diffis+r(0)));
+
+            break;
+        }
+
+        case 9:
+        {
+            // K = sqrt( d/(r0.r0) + r1^2 )
+            // dK = (1/(r0.r0))/(2.K)
+            //
+            // if d/(r0.r0) + r1^2 = 0 then dk,d2K = 0
+
+            res = diffis;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scaladd(res,r(1),r(1));
+            OP_sqrt(res);
+
+            if ( (double) abs2(res) > 1e-24 )
+            {
+                diffgrad  = res;
+                diffgrad *= 2.0;
+                OP_einv(diffgrad);
+                scaldiv(diffgrad,r(0));
+                scaldiv(diffgrad,r(0));
+            }
+
+            break;
+        }
+
+        case 10:
+        {
+            // K = 1/sqrt( d/(r0.r0) + r1^2 )
+            // dK = (1/(r0.r0))*-(K^3)/2
+            //
+            // Ill-defined as d + r1^2 -> 0
+
+            res = diffis;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scaladd(res,r(1),r(1));
+            OP_sqrt(res);
+            OP_einv(res);
+
+            diffgrad  = res;
+            diffgrad *= res;
+            diffgrad *= res;
+            diffgrad *= -2.0;
+            OP_einv(diffgrad);
+            scaldiv(diffgrad,r(0));
+            scaldiv(diffgrad,r(0));
+
+            break;
+        }
+
+        case 11:
+        {
+            // K = 2/pi * arccos(-sqrt(d)/r0) - 2/pi * sqrt(d)/r0 * sqrt(1 - d/r0^2)
+            // dK = ( 2/pi * 1/sqrt(1 - d/r0^2) - 2/pi * sqrt(1 - d/r0^2) - 1/pi * sqrt(d)/r0 * 1/sqrt(1 - d/r0^2) * -2 sqrt(d)/r0 ) * 1/(2*r0*sqrt(d))
+            //    = ( 2/pi * 1/sqrt(1 - d/r0^2) - 2/pi * sqrt(1 - d/r0^2) + 2/pi * d/r0^2 * 1/sqrt(1 - d/r0^2) ) * 1/(2*r0*sqrt(d))
+            //    = ( 1/sqrt(1 - d/r0^2) - sqrt(1 - d/r0^2) + d/r0^2 * 1/sqrt(1 - d/r0^2) ) * 1/(pi*r0*sqrt(d))
+            //    = ( 1 - 1 + d/r0^2 + d/r0^2 ) * 1/(pi*r0*sqrt(d)*sqrt(1 - d/r0^2))
+            //    = ( d/r0^2 + d/r0^2 ) * 1/(pi*r0*sqrt(d)*sqrt(1 - d/r0^2))
+            //    = d/r0^2 * 2/(pi*r0*sqrt(d)*sqrt(1 - d/r0^2))
+            //    = sqrt(d)/r0^2 * 2/(pi*r0*sqrt(1 - d/r0^2))
+            //    = 2/pi 1/r0^2 sqrt(d)/r0 * 1/sqrt(1 - d/r0^2)
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+            tempres *= -1.0;
+
+            T tempsq(tempres);
+            tempsq *= tempsq;
+            tempsq *= -1.0;
+            tempsq += 1.0;
+            OP_sqrt(tempsq);
+
+            if ( (double) abs2(tempres) < 1.0 )
+            {
+                // K = 2/pi * arccos(-sqrt(d)/r0) - 2/pi * sqrt(d)/r0 * sqrt(1 - d/r0^2)
+
+                res  = tempsq;
+                res *= tempres;
+                res += acos(tempres);
+                res *= NUMBASE_2ONPI;
+
+                //    = 2/pi 1/r0^2 sqrt(d)/r0 * 1/sqrt(1 - d/r0^2)
+
+                diffgrad  = tempsq;
+                OP_einv(diffgrad);
+                diffgrad *= tempres;
+                res *= NUMBASE_2ONPI;
+                scaldiv(diffgrad,r(0));
+                scaldiv(diffgrad,r(0));
+            }
+
+            break;
+        }
+
+        case 12:
+        {
+            // K = 1 - 3/2 * sqrt(d)/r0 + 1/2 * sqrt(d)^3/r0^3
+            // dK = ( 3/2 + 3/2 * (sqrt(d)/r0)^2 ) 1/(2*sqrt(d)*r0)
+            //    = ( 3/2 + 3/2 * (sqrt(d)/r0)^2 ) 1/2 1/r0^2 r0/sqrt(d)
+            //    = 3/4 1/r0^2 ( (sqrt(d)/r0)^{-1} + sqrt(d)/r0 )
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+
+            // K = 1 - 3/2 * sqrt(d)/r0 + 1/2 * sqrt(d)^3/r0^3
+
+            res = tempres;
+            res *= tempres;
+            res *= tempres;
+            res /= 2.0;
+            res *= 0.6666666666666666666666;
+            res -= tempres;
+            res /= 0.6666666666666666666666;
+            res += 1.0;
+
+            //    = 3/4 1/r0^2 ( (sqrt(d)/r0)^{-1} + sqrt(d)/r0 )
+
+            diffgrad  = tempres;
+            OP_einv(diffgrad);
+            diffgrad += tempres;
+            diffgrad *= 0.75;
+            scaldiv(diffgrad,r(0));
+            scaldiv(diffgrad,r(0));
+
+            break;
+        }
+
+        case 13:
+        {
+            // K = sinc(sqrt(d)/r0)
+            // dK = ( cos(sqrt(d)/r0) - K )/(2*r0*sqrt(d))
+            //
+            // if d = 0 then dK,d2K = 0
+
+            T tmp(diffis);
+
+            OP_sqrt(tmp);
+
+            T tmpb(tmp);
+
+            scaldiv(tmpb,r(0));
+
+            res = tmpb;
+            OP_sinc(res);
+
+            if ( (double) tmpb > BADZEROTOL )
+            {
+                diffgrad  = tmpb;
+                OP_cos(diffgrad);
+                diffgrad -= res;
+                diffgrad *= 0.5;
+                scaldiv(diffgrad,r(0));
+                diffgrad /= tmp;
+            }
+
+            break;
+        }
+
+        case 14:
+        {
+            // K = -sqrt(d)^r1
+            // dK = -(r1*sqrt(d)^(r1-2))/2 
+            //    = -(r1*sqrt(d)^r1)/(2*d) 
+            //    = (r1*K)/(2*d) 
+            //    = r1*K/(2*d)
+            //
+            // if d = 0 then dK,d2K = 0
+
+            res  = diffis;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            OP_sqrt(res);
+            res  = pow(res,(T) r(1));
+            res *= -1.0;
+
+            if ( (double) diffis > BADZEROTOL )
+            {
+                diffgrad  = res;
+                scalmul(diffgrad,r(1));
+                diffgrad *= -0.5;
+                diffgrad /= diffis;
+                scaldiv(diffgrad,r(0));
+                scaldiv(diffgrad,r(0));
+            }
+
+            break;
+        }
+
+        case 15:
+        {
+            // K = -log(sqrt(d)^r1 + 1)
+            // dK = -(r1.sqrt(d)^(r1-2))/(2*(sqrt(d)^r1 + 1))
+
+            T tmpa(diffis);
+
+            scaldiv(tmpa,r(0));
+            scaldiv(tmpa,r(0));
+
+            OP_sqrt(tmpa);
+
+            T tmpb;
+
+            tmpb = pow(tmpa,(T) r(1));
+            tmpb += 1.0;
+
+            res = tmpb;
+            OP_log(res);
+            setnegate(res);
+
+            diffgrad = pow(tmpb,((T) r(1))-2.0);
+            scalmul(diffgrad,r(1));
+            diffgrad *= -0.5;
+            diffgrad /= tmpb;
+            scaldiv(diffgrad,r(0));
+            scaldiv(diffgrad,r(0));
+
+            break;
+        }
+
+        case 19:
+        {
+            // K = 1/(1+(d/(r0.r0)))
+            // dK = -K^2/(r0.r0)
+
+            res = diffis;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            res += 1.0;
+            OP_einv(res);
+
+            diffgrad  = res;
+            diffgrad *= res;
+            diffgrad *= -1.0;
+            scaldiv(diffgrad,r(0));
+            scaldiv(diffgrad,r(0));
+
+            break;
+        }
+
+        case 23:
+        {
+            // K = 1/(1+(sqrt(d)/r0)^r1)
+            // dK = -(r1/(2.r0)) * (sqrt(d)/r(0))^(r1-2) * K^2
+
+            T tmp(diffis);
+
+            OP_sqrt(tmp);
+            scaldiv(tmp,r(0));
+
+            res  = pow(tmp,(T) r(1));
+            res += 1.0;
+            OP_einv(res);
+
+            T tmpb;
+            tmpb = pow(tmp,(T) r(1)-2.0);
+
+            diffgrad  = res;
+            diffgrad *= res;
+            diffgrad *= -0.5;
+            scaldiv(diffgrad,r(0));
+            scalmul(diffgrad,r(1));
+            diffgrad *= tmpb;
+
+            break;
+        }
+
+        case 24:
+        {
+            // K = (1-(z^i0))/(1-z)
+            // dK = ( -i0.(z^(i0-1)) + (1-(z^i0))/(1-z) )/(1-z) 
+            //    = ( -i0.(z^i0)/z + K )/(1-z)                         if ( i0 >= 1 )
+            //
+            // Ill-defined at z = 1
+            //
+            // z -> z/(r0.r0) and blah blah
+
+            T zsc(xyprod);
+
+            scaldiv(zsc,r(0));
+            scaldiv(zsc,r(0));
+
+            if ( ( (double) abs2(zsc) > BADZEROTOL ) || ( ic(0) == 0 ) )
+            {
+                T tmp = zsc;
+
+                raiseto(tmp,ic(0));
+
+                res  = 1.0;
+                res -= tmp;
+                res /= (1.0-zsc);
+            }
+
+            if ( ( (double) abs2(zsc) > BADZEROTOL ) || ( ic(0) == 1 ) )
+            {
+                T tmp = zsc;
+
+                raiseto(tmp,ic(0)-1);
+
+                xygrad  = tmp;
+                xygrad *= -ic(0);
+                xygrad += res;
+                xygrad /= (1.0-zsc);
+                scaldiv(xygrad,r(0));
+                scaldiv(xygrad,r(0));
+            }
+
+            break;
+        }
+
+        case 25:
+        {
+            // K = pi.cosh(pi-(sqrt(d)/r0))
+            // dK = -pi/(2.r0) * sinh(pi-sqrt(d)/r0) / sqrt(d)
+
+            T tmp(diffis);
+
+            OP_sqrt(tmp);
+
+            res  = tmp;
+            scaldiv(res,r(0));
+            res -= NUMBASE_PI;
+            res *= -1.0;
+            OP_cosh(res);
+            res *= NUMBASE_PI;
+
+            diffgrad  = tmp;
+            scaldiv(diffgrad,r(0));
+            diffgrad -= NUMBASE_PI;
+            diffgrad *= -1.0;
+            OP_sinh(diffgrad);
+            diffgrad *= NUMBASE_PION2;            
+            diffgrad *= -0.5;
+            scaldiv(diffgrad,r(0));
+            diffgrad /= tmp;
+
+            break;
+        }
+
+        case 26:
+        {
+            // K = ((d/r0)^(r1+0.5))
+            // dK = 1/r0 * (r1+0.5) * (d/r0)^(r1-0.5)
+            //    = 1/r0 * (r1+0.5) * K/d
+
+            res  = diffis;
+            scaldiv(res,r(0));
+            res  = pow(res,((T) r(1))+0.5);
+
+            if ( (double) diffis > BADZEROTOL )
+            {
+                diffgrad = 0.5;
+                scaladd(diffgrad,r(1));
+                scaldiv(diffgrad,r(0));
+                diffgrad *= res;
+                diffgrad /= diffis;
+            }
+
+            break;
+        }
+
+        case 27:
+        {
+            // K = ((d/r0)^r1).ln(sqrt(d/r0))
+            // dK = (r1/r0).((d/r0)^(r1-1)).ln(sqrt(d/r0)) + ((d/r0)^r1) 1/(sqrt(d/r0)) 1/2 1/sqrt(d*r0)
+            //    = (r1/r0).((d/r0)^r1).ln(sqrt(d/r0)).(r0/d) + ((d/r0)^r1)/(2d)
+            //    = 2.r1.((d/r0)^r1).ln(sqrt(d/r0))/(2d) + ((d/r0)^r1)/(2d)
+            //    = ( 2.r1.ln(sqrt(d/r0)) + 1 ).((d/r0)^r1)/(2d)
+            //    = ( ln(sqrt(d/r0)) + 1/(2.r1) ).((d/r0)^r1).(2.r1)/(2d)
+            //    = ( ((d/r0)^r1).ln(sqrt(d/r0)) + ((d/r0)^r1)/(2.r1) ).(2.r1)/(2d)
+            //    = ( K + ((d/r0)^r1)/(2.r1) ).(2.r1)/(2d)
+
+            T scalres(diffis);
+
+            scaldiv(scalres,r(0));
+            OP_sqrt(scalres);
+
+            T tempres(scalres);
+
+            OP_log(tempres);
+
+            scalres = pow(scalres,(T) r(1));
+
+            res  = scalres;
+            res *= tempres;
+
+            if ( (double) diffis > BADZEROTOL )
+            {
+                diffgrad  = scalres;
+                diffgrad *= 0.5;
+                scaldiv(diffgrad,r(1));
+                diffgrad += res;
+                diffgrad *= 2;
+                scalmul(diffgrad,r(1));
+                diffgrad *= 0.5;
+                diffgrad /= diffis;
+            }
+
+            break;
+        }
+
+        case 32:
+        {
+            // K = r1 if i == j >= 0, 0 otherwise
+            // dK = 0.0
+
+            if ( ( i == j ) && ( i >= 0 ) )
+            {
+                res = r(1);
+            }
+
+            break;
+        }
+
+        case 33:
+        {
+            // K = 1/(2.r0) ( 1 if real(sqrt(d)) < r0, 0 otherwise )
+            // dK = 0
+
+            //if ( real(sqrt(diffis)-r(0)) < zerogentype() )
+            if ( real(sqrt(diffis)-r(0)) < 0.0_gent )
+            {
+                res = 0.5/r(0);
+            }
+
+            break;
+        }
+
+        case 34:
+        {
+            // K = (1-sqrt(d)/r0)/r0 if real(sqrt(d)) < r0, 0 otherwise )
+            // dK = 1/r0 1/(2*sqrt(d)*r0)
+            //    = 1/r0 1/2 1/r0^2 r0/sqrt(d)
+            //    = 1/r0^3 1/2 r0/sqrt(d)
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+
+            if ( (double) real(tempres-1.0) < 0.0 )
+            {
+                res  = 1.0;
+                res -= tempres;
+                scaldiv(res,r(0));
+
+                diffgrad = tempres;
+                OP_einv(diffgrad);
+                diffgrad /= 2.0;
+                scaldiv(diffgrad,r(0));
+                scaldiv(diffgrad,r(0));
+                scaldiv(diffgrad,r(0));
+            }
+
+            break;
+        }
+
+        case 38:
+        {
+            // K = exp(-sqrt(d)/r0)
+            // dK = 1/r0^2 -r0/sqrt(d) exp(-sqrt(d)/r0)
+            //    = 1/r0^2 -r0/sqrt(d) K
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+            tempres *= -1.0;
+
+            res = tempres;
+            OP_exp(res);
+
+            diffgrad  = res;
+            diffgrad *= tempres;
+            scaldiv(diffgrad,r(0));
+            scaldiv(diffgrad,r(0));
+
+            break;
+        }
+
+        case 39:
+        {
+            // K = (1+((sqrt(3)/r0).sqrt(d))) . exp(-(sqrt(3)/r0).sqrt(d))
+            // dK = ( exp( -sqrt(3)/r0 sqrt(d) ) - ( 1 + sqrt(3)/r0 sqrt(d) ) exp( -sqrt(3)/r0 sqrt(d) ) ) sqrt(3)/r0 1/2 1/sqrt(d)
+            //    = -((sqrt(3)/r0).sqrt(d)) exp(-((sqrt(3)/r0).sqrt(d))) sqrt(3)/r0 1/2 1/sqrt(d)
+            //    = -1/2 3/r0^2 exp(-((sqrt(3)/r0).sqrt(d)))
+            //    = -3/2 1/r0^2 exp(-((sqrt(3)/r0).sqrt(d)))
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+            tempres *= sqrt(3.0);
+
+            T expres(tempres);
+            expres *= -1.0;
+            OP_exp(expres);
+
+            res  = tempres;
+            res += 1;
+            res *= expres;
+
+            diffgrad  = expres;
+            diffgrad *= -1.5;
+            scaldiv(diffgrad,r(0));
+            scaldiv(diffgrad,r(0));
+
+            break;
+        }
+
+        case 42:
+        {
+            // K = agd(z/(r0.r0))
+            // dK = (1/(r0.r0)) sec^2(z/(r0.r0)) / ( 1 - tan^2(z/(r0.r0)) )
+
+            T scalres = diffis;
+            scaldiv(scalres,r(0));
+            scaldiv(scalres,r(0));
+
+            T scz = scalres;
+            OP_sec(scz);
+            scz *= scz;
+
+            T taz = scalres;
+            OP_tan(taz);
+
+            res = scalres;
+            OP_agd(res);
+
+            xygrad  = taz;
+            xygrad *= taz;
+            xygrad *= -1.0;
+            xygrad += 1.0;
+            OP_einv(xygrad);
+            xygrad *= scz;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            break;
+        }
+
+        case 43:
+        {
+            // K = log((1+r0.z)/(1-r0.z))
+            // dK = r0*(1-r0.z)/(1+r0.z)*( 1/(1-r0.z) + (1+r0.z)/(1-r0.z)^2 )
+            //    = r0*(1-r0.z)/(1+r0.z)*( (1-r0.z) + (1+r0.z) )/(1-r0.z)^2
+            //    = r0*((1-r0.z)/(1+r0.z))/(1-r0.z)^2
+            //    = r0/((1+r0.z)*(1-r0.z))
+            // ADDENDUM: replace ro with 1/(r0.r0)
+
+            T tempa = xyprod;
+
+            tempa  = xyprod;
+            scaldiv(tempa,r(0));
+            scaldiv(tempa,r(0));
+
+            T tempb = tempa;
+
+            tempa += 1.0;
+            tempb -= 1.0;
+
+            res  = tempa;
+            res /= tempb;
+            OP_log(res);
+
+            xygrad  = tempa;
+            xygrad *= tempb;
+            OP_einv(xygrad);
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            break;
+        }
+
+        case 44:
+        {
+            // K = exp(z/(r0.r0))
+            // dK = K/(r0.r0)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scalsub(res,r(1));
+            OP_exp(res);
+
+            xygrad = res;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            break;
+        }
+
+        case 45:
+        {
+            // K = sinh(z/(r0.r0))
+            // dK = cosh(z/(r0.r0))/(r0.r0)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            OP_sinh(res);
+
+            xygrad = xyprod;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+            OP_cosh(xygrad);
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            break;
+        }
+
+        case 46:
+        {
+            // K = cosh(z/(r0.r0))
+            // dK = sinh(z/(r0.r0))/(r0.r0)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            OP_cosh(res);
+
+            xygrad = xyprod;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+            OP_sinh(xygrad);
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            break;
+        }
+
+        case 47:
+        {
+            // K = sinc(sqrt(d)/r0).cos(2*pi*sqrt(d)/(r0.r1))
+            //
+            // if d = 0 then dK,d2K = 0
+
+            NiceThrow("bugger that");
+
+            break;
+        }
+
+        case 49:
+        {
+            // K = exp(-d/(2.r0.r0)-r1)
+
+            NiceThrow("Maybe one day");
+
+            break;
+        }
+
+        case 50:
+        {
+            // K = pi - arccos(z)
+            // dK = 1/(r0.r0.sqrt(1-(z/r0.r0)^2))
+
+            T temp(xyprod);
+
+            scaldiv(temp,r(0));
+            scaldiv(temp,r(0));
+
+            res = temp;
+            OP_acos(res);
+            res *= -1.0;
+            res += NUMBASE_PI;
+
+            xygrad = temp;
+            xygrad *= temp;
+            xygrad *= -1.0;
+            xygrad += 1.0;
+            OP_sqrt(xygrad);
+            scalmul(xygrad,r(0));
+            scalmul(xygrad,r(0));
+            OP_einv(xygrad);
+
+            break;
+        }
+
+        case 51:
+        {
+            // K = 1 / ( 2 - z/(r0.r0) )
+            // dK = 1/r0.r0.(2-(z/r0.r0))^2
+
+            T temp(xyprod);
+
+            scaldiv(temp,r(0));
+            scaldiv(temp,r(0));
+
+            temp *= -1.0;
+            temp += 2.0;
+
+            res = temp;
+            res *= temp;
+            scalmul(xygrad,r(0));
+            scalmul(xygrad,r(0));
+            OP_einv(res);
+
+            xygrad = temp;
+
+            break;
+        }
+
+        case 52:
+        {
+            // K = sqrt(a.b)/(r0.r0)
+            // dK/da = sqrt(b/a)/(2.r0.r0)
+
+            xnormonlygrad = yyprod;
+            xnormonlygrad /= xxprod;
+            OP_sqrt(xnormonlygrad);
+            scaldiv(xnormonlygrad,r(0));
+            scaldiv(xnormonlygrad,r(0));
+            xnormonlygrad *= 0.5;
+
+            res = yyprod;
+            res *= xxprod;
+            OP_sqrt(res);
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            break;
+        }
+
+        case 53:
+        {
+            // K = (1-(1-sqrt(a)^r1)^r2).(1-(1-sqrt(b)^r1)^r2)/(r0.r0)
+            // dK/da = (-r2.(1-sqrt(a)^r1)^(r2-1))  .  (-r1.sqrt(a)^(r1-1))  .  (1/(2.sqrt(a)))  .  (1-(1-sqrt(b)^r1)^r2)/(r0.r0)
+
+            xnormonlygrad = yyprod;
+
+            T xxsqrt(xxprod);
+
+            OP_sqrt(xxsqrt);
+
+            {
+                T tempres(xxsqrt);
+
+                tempres = pow(tempres,(T) r(1));
+                tempres *= -1.0;
+                tempres += 1.0;
+                tempres = pow(tempres,((T) r(2))-1.0);
+                tempres *= -1.0;
+                scalmul(tempres,r(2));
+
+                xnormonlygrad *= tempres;
+            }
+
+            {
+                T tempres(xxsqrt);
+
+                tempres = pow(tempres,((T) r(1))-1.0);
+                tempres *= -1.0;
+                scalmul(tempres,r(1));
+
+                xnormonlygrad *= tempres;
+            }
+
+            {
+                xnormonlygrad /= xxsqrt;
+                xnormonlygrad *= 0.5;
+            }
+
+            {
+                T tempres(yyprod);
+
+                OP_sqrt(tempres);
+
+                tempres = pow(tempres,(T) r(1));
+                tempres *= -1.0;
+                tempres += 1.0;
+                tempres = pow(tempres,(T) r(2));
+                tempres *= -1.0;
+                tempres += 1.0;
+
+                xnormonlygrad *= tempres;
+            }
+
+            scaldiv(xnormonlygrad,r(0));
+            scaldiv(xnormonlygrad,r(0));
+
+            res = 1.0;
+
+            {
+                T tempres(xxprod);
+
+                OP_sqrt(tempres);
+
+                tempres = pow(tempres,(T) r(1));
+                tempres *= -1.0;
+                tempres += 1.0;
+                tempres = pow(tempres,(T) r(2));
+                tempres *= -1.0;
+                tempres += 1.0;
+
+                res *= tempres;
+            }
+
+            {
+                T tempres(yyprod);
+
+                OP_sqrt(tempres);
+
+                tempres = pow(tempres,(T) r(1));
+                tempres *= -1.0;
+                tempres += 1.0;
+                tempres = pow(tempres,(T) r(2));
+                tempres *= -1.0;
+                tempres += 1.0;
+
+                res *= tempres;
+            }
+
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            break;
+        }
+
+        case 100:
+        {
+            // K = z/(r0.r0)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            xygrad = 1.0;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            break;
+        }
+
+        case 103:
+        {
+            // K = 0 if real(z) < 0, 1 otherwise
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = 0.0;
+            }
+
+            else
+            {
+                res = 1.0;
+            }
+
+            xygrad = 0.0;
+
+            break;
+        }
+
+        case 104:
+        {
+            // K = 0 if real(z) < 0, z/(r0*r0) otherwise
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = 0.0;
+
+                xygrad = 0.0;
+            }
+
+            else
+            {
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+
+                xygrad = 1.0;
+                scaldiv(xygrad,r(0));
+                scaldiv(xygrad,r(0));
+            }
+
+            break;
+        }
+
+        case 106:
+        {
+            // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
+
+            const static T zgt(0.0);
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            xygrad = 1.0;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            if ( xyprod < zgt )
+            {
+                scalmul(res,r(1));
+                scalmul(xygrad,r(1));
+            }
+
+            break;
+        }
+
+        case 200:
+        {
+            // K = z/(r0.r0) - 1
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            res -= 1.0;
+
+            xygrad = 1.0;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            break;
+        }
+
+        case 203:
+        {
+            // K = -1 if real(z) < 0, 1 otherwise
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = -1.0;
+            }
+
+            else
+            {
+                res = 1.0;
+            }
+
+            xygrad = 0.0;
+
+            break;
+        }
+
+        case 204:
+        {
+            // K = 0 if real(z) < 0, z/(r0*r0) otherwise    - 1
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = -1.0;
+
+                xygrad = 0.0;
+            }
+
+            else
+            {
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+                res -= 1.0;
+
+                xygrad = 1.0;
+                scaldiv(xygrad,r(0));
+                scaldiv(xygrad,r(0));
+            }
+
+            break;
+        }
+
+        case 206:
+        {
+            // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
+
+            const static T zgt(0.0);
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            xygrad = 1.0;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            if ( xyprod < zgt )
+            {
+                scalmul(res,r(1));
+                scalmul(xygrad,r(1));
+            }
+
+            res -= 1.0;
+
+            break;
+        }
+
+        default:
+        {
+            NiceThrow("fee fi fo fum");
+
+            break;
+        }
+    }
+
+    res      *= (const T &) weight;
+    xygrad   *= (const T &) weight;
+    diffgrad *= (const T &) weight;
+}
+
+template <class T>
+void MercerKernel::d2KKpro(T &totxygrad, T &totxnormgrad, T &totxyxygrad,
+                           T &totxyxnormgrad, T &totxyynormgrad,
+                           T &totxnormxnormgrad, T &totxnormynormgrad, T &totynormynormgrad,
+                           T &totres,
+                           const T &inxyprod, const T &diffis,
+                           int i, int j,
+                           int locindstart, int locindend,
+                           int xdim, int m, const T &xxprod, const T &yyprod) const
+{
+    T xyprod = inxyprod;
+
+    totres = xyprod;
+
+    totxygrad    = 1.0;
+    totxnormgrad = 0.0;
+
+    totxyxygrad       = 0.0;
+    totxyxnormgrad    = 0.0;
+    totxyynormgrad    = 0.0;
+    totxnormxnormgrad = 0.0;
+    totxnormynormgrad = 0.0;
+    //totynormxnormgrad = 0.0;
+    totynormynormgrad = 0.0;
+
+    if ( !isFastKernelSum() && ( locindstart > locindend ) )
+    {
+        return;
+    }
+
+    // Base kernel is: kn(k{n-1}(...k1(k0(q))...)), where q is either <x,y> or ||x-y||^2
+    //
+    // Chained derivative is the prod: dkn(k{n-1}(...k1(k0(q)))) * dk{n-1}(...k1(k0(q)))... * dk1(k0(q)) * dk0(q)
+    //
+    // Chained 2nd derivative is sum/prod:   d2kn(k{n-1}(...k1(k0(q)))) * dk{n-1}(...k1(k0(q)))... * dk1(k0(q)) * dk0(q)
+    //                                     + dkn(dk{n-1(...k1(k0(q)))) * d2k{n-1}(...k1(k0(q)))... * dk1(k0(q)) * dk0(q)
+    //                                     + dkn(dk{n-1(...k1(k0(q)))) * dk{n-1}(...k1(k0(q)))... * d2k1(k0(q)) * dk0(q)
+    //                                     + dkn(dk{n-1(...k1(k0(q)))) * dk{n-1}(...k1(k0(q)))... * dk1(k0(q)) * d2k0(q)
+
+    T totdiffgrad;
+    T totdiffdiffgrad;
+
+    totdiffgrad     = 0.0;
+    totdiffdiffgrad = 0.0;
+
+    int ind;
+
+    // NB: xyprod is used at all layers for chained kernels
+    //     diffis is used only at first layer for chained kernels
+
+    Vector<T> allres(locindend-locindstart+1);
+
+    Vector<T> allxygrad(locindend-locindstart+1);
+    Vector<T> alldiffgrad(locindend-locindstart+1);
+    Vector<T> allxnormonlygrad(locindend-locindstart+1);
+
+    Vector<T> allxyxygrad(locindend-locindstart+1);
+    Vector<T> alldiffdiffgrad(locindend-locindstart+1);
+    Vector<T> allxnormxnormonlygrad(locindend-locindstart+1);
+    Vector<T> allxnormynormonlygrad(locindend-locindstart+1);
+    //Vector<T> allynormxnormonlygrad(locindend-locindstart+1);
+    Vector<T> allynormynormonlygrad(locindend-locindstart+1);
+
+    retVector<gentype> tmpva;
+
+    for ( ind = locindstart ; ind <= locindend ; ++ind )
+    {
+        T &res = allres("&",ind-locindstart);
+
+        T &xygrad        = allxygrad("&",ind-locindstart);
+        T &diffgrad      = alldiffgrad("&",ind-locindstart);
+        T &xnormonlygrad = allxnormonlygrad("&",ind-locindstart);
+
+        T &xyxygrad           = allxyxygrad("&",ind-locindstart);
+        T &diffdiffgrad       = alldiffdiffgrad("&",ind-locindstart);
+        T &xnornxnormonlygrad = allxnormxnormonlygrad("&",ind-locindstart);
+        T &xnornynormonlygrad = allxnormynormonlygrad("&",ind-locindstart);
+        //T &ynornxnormonlygrad = allynormxnormonlygrad("&",ind-locindstart);
+        T &ynornynormonlygrad = allynormynormonlygrad("&",ind-locindstart);
+
+        const Vector<gentype> &r = dRealConstants(ind)(1,1,dRealConstants(ind).size()-1,tmpva);
+        const Vector<int> &ic = dIntConstants(ind);
+
+        int ktype = cType(ind);
+
+        d2KKprosingle(xygrad,diffgrad,xnormonlygrad,xyxygrad,diffdiffgrad,xnornxnormonlygrad,xnornynormonlygrad,ynornynormonlygrad,res,xyprod,diffis,i,j,xdim,m,xxprod,yyprod,ktype,cWeight(locindstart),r,ic,isMagTerm(ind));
+
+        if ( isFastKernelSum() && ( ind == locindstart ) )
+        {
+            totres = res;
+
+            totxygrad    = xygrad;
+            totdiffgrad  = diffgrad;
+            totxnormgrad = xnormonlygrad;
+
+            totxyxygrad       = xyxygrad;
+            totdiffdiffgrad   = diffdiffgrad;
+            totxnormxnormgrad = xnornxnormonlygrad;
+            totxnormynormgrad = xnornynormonlygrad;
+            //totynormxnormgrad = ynornxnormonlygrad;
+            totynormynormgrad = ynornynormonlygrad;
+        }
+
+        else if ( isFastKernelSum() )
+        {
+            totres += res;
+
+            totxygrad    += xygrad;
+            totdiffgrad  += diffgrad;
+            totxnormgrad += xnormonlygrad;
+
+            totxyxygrad       += xyxygrad;
+            totdiffdiffgrad   += diffdiffgrad;
+            totxnormxnormgrad += xnornxnormonlygrad;
+            totxnormynormgrad += xnornynormonlygrad;
+            //totynormxnormgrad += ynornxnormonlygrad;
+            totynormynormgrad += ynornynormonlygrad;
+        }
+
+        else if ( ( ind == locindend ) && ( ind == locindstart ) )
+        {
+            totres = res;
+
+            totxygrad    = xygrad;
+            totdiffgrad  = diffgrad;
+            totxnormgrad = xnormonlygrad;
+
+            totxyxygrad       = xyxygrad;
+            totdiffdiffgrad   = diffdiffgrad;
+            totxnormxnormgrad = xnornxnormonlygrad;
+            totxnormynormgrad = xnornynormonlygrad;
+            //totynormxnormgrad = ynornxnormonlygrad;
+            totynormynormgrad = ynornynormonlygrad;
+        }
+
+        else if ( ind == locindstart )
+        {
+            xyprod = res;
+
+            totxygrad    = xygrad;
+            totdiffgrad  = diffgrad;
+            totxnormgrad = xnormonlygrad;
+
+            // second-order gradients need to be post-calculated
+        }
+
+        else if ( ind < locindend )
+        {
+            xyprod = res;
+
+            totxygrad    *= xygrad;
+            totdiffgrad  *= xygrad; // diffgrad zero here by definition
+            totxnormgrad *= xnormonlygrad; // likewise
+
+            // second-order gradients need to be post-calculated
+        }
+
+        else
+        {
+            totres = res;
+
+            totxygrad    *= xygrad;
+            totdiffgrad  *= xygrad; // diffgrad zero here by definition
+            totxnormgrad *= xnormonlygrad; // likewise
+
+            // second-order gradients need to be post-calculated
+        }
+    }
+
+    // second-oder gradient post-calculation
+
+    if ( !isFastKernelSum() && ( locindend > locindstart ) )
+    {
+        // So *not* magterm, meaning totxnormgrad = 0 at this point
+
+        totxyxygrad     = 0.0;
+        totdiffdiffgrad = 0.0;
+
+        int indin;
+
+        for ( ind = locindstart ; ind <= locindend ; ++ind )
+        {
+            T tempxyxygrad;     tempxyxygrad     = 1.0;
+            T tempdiffdiffgrad; tempdiffdiffgrad = 1.0;
+
+            for ( indin = locindstart ; indin <= locindend ; ++indin )
+            {
+                if ( indin == ind )
+                {
+                    T &xyxygrad     = allxyxygrad("&",indin-locindstart);
+                    T &diffdiffgrad = alldiffdiffgrad("&",indin-locindstart);
+
+                    tempxyxygrad     *= xyxygrad;
+                    tempdiffdiffgrad *= diffdiffgrad;
+                }
+
+                else
+                {
+                    T &xygrad   = allxygrad("&",indin-locindstart);
+                    T &diffgrad = alldiffgrad("&",indin-locindstart);
+
+                    tempxyxygrad     *= xygrad;
+                    tempdiffdiffgrad *= diffgrad;
+                }
+            }
+
+            totxyxygrad     += tempxyxygrad;
+            totdiffdiffgrad += tempdiffdiffgrad;
+        }
+    }
+
+    // diffis = ||x-y||^2 = ||x||^2 + ||y||^2 - 2<x,y>
+    //
+    // dK/dxyprod = partialK/partialxyprod + partialK/partialdiffis partialdiffis/partialxyprod
+    //            = partialK/partialxyprod - 2*partialK/partialdiffis
+    // dK/dxnorm  = partialK/partialdiffis partialdiffis/partialxnorm
+    //            = partialK/partialdiffis 
+
+    totxygrad -= totdiffgrad;
+    totxygrad -= totdiffgrad;
+
+    totxnormgrad += totdiffgrad;
+
+    // diffis = ||x-y||^2 = ||x||^2 + ||y||^2 - 2<x,y>
+    //
+    // dK/dxyprod = partialK/partialxyprod + partialK/partialdiffis partialdiffis/partialxyprod
+    //            = partialK/partialxyprod - 2*partialK/partialdiffis
+    // dK/dxnorm  = partialK/partialdiffis partialdiffis/partialxnorm
+    //            = partialK/partialdiffis 
+    // dK/dynorm  = partialK/partialdiffis partialdiffis/partialynorm
+    //            = partialK/partialdiffis 
+    //
+    // d2K/dxyxy = partial2K/partialxyxy - 2*partial2K/partialdiffdiffis partialdiffis/partialxyprod
+    //           = partial2K/partialxyxy + 4*partial2K/partialdiffdiffis
+    // d2K/dxyxnorm = partial2K/partialdiffdiffis partialdiffis/partialxyprod
+    //              = -2*partial2K/partialdiffdiffis
+    // d2K/dxyynorm = partial2K/partialdiffdiffis partialdiffis/partialxyprod
+    //              = -2*partial2K/partialdiffdiffis
+    // d2K/dxnormxnorm = partial2K/partialdiffdiffis partialdiffis/partialxnorm
+    //                 = partial2K/partialdiffdiffis
+    // d2K/dxnormynorm = partial2K/partialdiffdiffis partialdiffis/partialynorm
+    //                 = partial2K/partialdiffdiffis
+    // d2K/dynormxnorm = partial2K/partialdiffdiffis partialdiffis/partialxnorm
+    //                 = partial2K/partialdiffdiffis
+    // d2K/dynormynorm = partial2K/partialdiffdiffis partialdiffis/partialynorm
+    //                 = partial2K/partialdiffdiffis
+
+    totxyxygrad += totdiffdiffgrad;
+    totxyxygrad += totdiffdiffgrad;
+    totxyxygrad += totdiffdiffgrad;
+    totxyxygrad += totdiffdiffgrad;
+
+    totxyxnormgrad  = totdiffdiffgrad;
+    totxyxnormgrad += totdiffdiffgrad;
+    totxyxnormgrad *= -1.0;
+
+    totxyynormgrad  = totdiffdiffgrad;
+    totxyynormgrad += totdiffdiffgrad;
+    totxyynormgrad *= -1.0;
+
+    totxnormxnormgrad += totdiffdiffgrad;
+    totxnormynormgrad += totdiffdiffgrad;
+//    totynormxnormgrad += totdiffdiffgrad;
+    totynormynormgrad += totdiffdiffgrad;
+}
+
+
+
+//KERNELSHERE
+//phantomx
+
+//ADDHERE
+template <class T>
+void MercerKernel::d2KKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad,
+                                 T &xyxygrad, T &diffdiffgrad,
+                                 T &xnormxnormonlygrad, T &xnormynormonlygrad, T &ynormynormonlygrad,
+                                 T &res,
+                                 const T &xyprod, const T &diffis,
+                                 int i, int j,
+                                 int xdim, int m,
+                                 const T &xxprod, const T &yyprod,
+                                 int ktype, const gentype &weight,
+                                 const Vector<gentype> &r, const Vector<int> &ic,
+                                 int magterm) const
+{
+    res = 0.0;
+
+    xygrad        = 0.0;
+    diffgrad      = 0.0;
+    xnormonlygrad = 0.0;
+
+    xyxygrad     = 0.0;
+    diffdiffgrad = 0.0;
+
+    if ( magterm )
+    {
+        xygrad = 0.0;
+
+        T xres; xres = 0.0;
+        T yres; yres = 0.0;
+
+        T ddgrad;         ddgrad         = 0.0;
+        T ddiffgrad;      ddiffgrad      = 0.0;
+        T ddnormonlygrad; ddnormonlygrad = 0.0;
+
+        T ddiffdiffgrad;      ddiffdiffgrad      = 0.0;
+        T dnormdnormonlygrad; dnormdnormonlygrad = 0.0;
+
+        T altdiffis; altdiffis = 0.0;
+
+        T xxgrad; xxgrad = 0.0;
+        T yygrad; yygrad = 0.0;
+
+        T xxxxgrad; xxxxgrad = 0.0;
+        T yyyygrad; yyyygrad = 0.0;
+
+        d2KKprosingle(xxgrad,ddiffgrad,ddnormonlygrad,xxxxgrad,ddiffdiffgrad,dnormdnormonlygrad,dnormdnormonlygrad,dnormdnormonlygrad,xres,xxprod,altdiffis,i,i,xdim,m,xxprod,xxprod,ktype,1.0_gent,r,ic,0);
+        d2KKprosingle(yygrad,ddiffgrad,ddnormonlygrad,yyyygrad,ddiffdiffgrad,dnormdnormonlygrad,dnormdnormonlygrad,dnormdnormonlygrad,yres,yyprod,altdiffis,j,j,xdim,m,yyprod,yyprod,ktype,1.0_gent,r,ic,0);
+
+        (void) ddgrad;
+        (void) ddiffgrad;
+        (void) ddnormonlygrad;
+
+        (void) ddiffdiffgrad;
+        (void) dnormdnormonlygrad;
+
+        res  = xres;
+        res *= yres;
+
+        //xygrad  = 0.0;
+        //xygrad *= yres;
+        
+        //diffgrad  = 0.0;
+        //diffgrad *= yres;
+
+        xnormonlygrad  = xxgrad;
+        xnormonlygrad *= yres;
+
+        //xyxygrad  = 0.0;
+        //xyxygrad *= yres;
+
+        //diffdiffgrad  = 0.0;
+        //diffdiffgrad *= yres;
+
+        xnormxnormonlygrad  = xxxxgrad;
+        xnormxnormonlygrad *= yres;
+
+        xnormynormonlygrad  = xxgrad;
+        xnormynormonlygrad *= yygrad;
+
+        //ynormxnormonlygrad  = ??grad;
+        //ynormxnormonlygrad *= ??grad;
+
+        ynormynormonlygrad  = xres;
+        ynormynormonlygrad *= yyyygrad;
+
+        res                *= (const T &) weight;
+        //xygrad             *= (const T &) weight;
+        //diffgrad           *= (const T &) weight;
+        xnormonlygrad      *= (const T &) weight;
+        xyxygrad           *= (const T &) weight;
+        diffdiffgrad       *= (const T &) weight;
+        xnormxnormonlygrad *= (const T &) weight;
+        xnormynormonlygrad *= (const T &) weight;
+        //ynormxnormonlygrad *= (const T &) weight;
+        ynormynormonlygrad *= (const T &) weight;
+
+        return;
+    }
+
+    switch ( ktype )
+    {
+        case 0:
+        {
+            // K = r1
+            // dK = 0
+            // d2K = 0
+
+            res = r(1);
+
+            break;
+        }
+
+        case 1:
+        {
+            // K = z/(r0.r0)
+            // dK = 1/(r0.r0)
+            // d2K = 0
+
+            res    = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            xygrad = 1.0;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            break;
+        }
+
+        case 2:
+        {
+            // K = ( r1 + z/(r0.r0) )^i0
+            // dK = i0/(r0.r0) * ( r1 + z/(r0.r0) )^(i0-1)               if ( i0 >= 1 )
+            // d2K = i0.(i0-1)/(r0.r0.r0.r0) * ( r1 + z/(r0.r0) )^(i0-2) if ( i0 >= 2 )
+
+            T temp(xyprod);
+
+            scaldiv(temp,r(0));
+            scaldiv(temp,r(0));
+            scaladd(temp,r(1));
+
+            res = temp;
+            raiseto(res,ic(0));
+
+            if ( ic(0) >= 1 )
+            {
+                xygrad = temp;
+                raiseto(xygrad,ic(0)-1);
+                xygrad *= ic(0);
+                scaldiv(xygrad,r(0));
+                scaldiv(xygrad,r(0));
+            }
+
+            if ( ic(0) >= 2 )
+            {
+                xyxygrad = temp;
+                raiseto(xyxygrad,ic(0)-2);
+                xyxygrad *= ic(0)*(ic(0)-1);
+                scaldiv(xyxygrad,r(0));
+                scaldiv(xyxygrad,r(0));
+                scaldiv(xyxygrad,r(0));
+                scaldiv(xyxygrad,r(0));
+            }
+
+            break;
+        }
+
+        case 3:
+        {
+            // K = exp(-d/(2.r0.r0))
+            // dK = -K/(2*r0*r0)
+            // d2K = -dK/(2*r0*r0)
+
+            res  = diffis;
+            res *= -0.5;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            res += log(AltDiffNormConst(xdim,m,r(0)));
+            scalsub(res,r(1));
+            OP_exp(res);
+
+            diffgrad  = res;
+            diffgrad *= -0.5;
+            scaldiv(diffgrad,r(0));
+            scaldiv(diffgrad,r(0));
+
+            diffdiffgrad  = diffgrad;
+            diffdiffgrad *= -0.5;
+            scaldiv(diffdiffgrad,r(0));
+            scaldiv(diffdiffgrad,r(0));
+
+            break;
+        }
+
+        case 4:
+        {
+            // K = exp(-sqrt(d)/r0)
+            // dK = -K/(2*r0*sqrt(d))
+            // d2K = -dK/(2*r0*sqrt(d)) + K/(4*r0*d*sqrt(d))
+            //     = -dK/(2*r0*sqrt(d)) - dK/(2*d)
+            //     = -( 1/(r0*sqrt(d)) + 1/d )*dK/2
+            //     = -( sqrt(d)/r0 + 1 )*dK/(2.d)
+            //
+            // At d=0: dK = 0, d2K = 0
+
+            T tmp(diffis);
+
+            OP_sqrt(tmp);
+
+            res = tmp;
+            setnegate(res);
+            scaldiv(res,r(0));
+            scalsub(res,r(1));
+            OP_exp(res);
+
+            if ( (double) abs2(diffis) > BADZEROTOL )
+            {
+                diffgrad = res;
+                diffgrad *= -0.5;
+                scaldiv(diffgrad,r(0));
+                diffgrad /= tmp;
+
+                diffdiffgrad = tmp;
+                scaldiv(diffdiffgrad,r(0));
+                diffdiffgrad += 1.0;
+                diffdiffgrad *= diffgrad;
+                diffdiffgrad *= -0.5;
+                scaldiv(diffdiffgrad,diffis);
+            }
+
+            break;
+        }
+
+        case 5:
+        {
+            // K = exp(-sqrt(d)^r1/(r1*r0^r1))
+            // dK = -K*((sqrt(d)^(r1-2))/(2*r0^r1))
+            //    = -K*((sqrt(d)^r1)/(2*d*r0^r1))
+            // d2K = -dK*((sqrt(d)^(r1-2))/(2*r0^r1)) - K*(r1-2)*((sqrt(d)^(r1-4))/(4*r0^r1))
+            //     = -dK*((sqrt(d)^(r1-2))/(2*r0^r1)) - (r1-2)*K*((sqrt(d)^(r1-2))/(4*d*r0^r1))
+            //     = -dK*((sqrt(d)^(r1-2))/(2*r0^r1)) + (r1-2)*dK/(2*d)
+            //     = -( ((sqrt(d)^(r1-2))/(r0^r1)) - (r1-2)/d )*dK/2
+            //     = -( ((sqrt(d)^r1)/(d*r0^r1)) - (r1-2)/d )*dK/2
+            //     = -( ((sqrt(d)^r1)/(r0^r1)) - (r1-2) )*dK/(2*d)
+            //     = ( -((sqrt(d)^r1)/(r0^r1)) + (r1-2) )*dK/(2*d)
+            //
+            // At d=0, if r1 < 2: dK = 0, d2K = 0
+
+            T tmpb = pow(sqrt(diffis),(T) r(1));
+            T tmpc = pow((T) r(0),(T) r(1));
+
+            res  = tmpb;
+            res /= tmpc;
+            scaldiv(res,r(1));
+            setnegate(res);
+            scalsub(res,r(2));
+            OP_exp(res);
+
+            if ( ( (double) abs2(diffis) > BADZEROTOL ) || ( (double) abs2(r(1)) >= 2.0 ) )
+            {
+                // dK = -K*((sqrt(d)^r1)/(2*d*r0^r1))
+
+                diffgrad  = res;
+                diffgrad *= tmpb;
+                diffgrad *= -0.5;
+                diffgrad /= diffis;
+                diffgrad /= tmpc;
+
+                // d2K = ( -((sqrt(d)^r1)/(r0^r1)) + (r1-2) )*dK/(2*d)
+
+                diffdiffgrad  = tmpb;
+                diffdiffgrad /= tmpc;
+                diffdiffgrad *= -1.0;
+                scaladd(diffdiffgrad,r(1));
+                diffdiffgrad -= 2.0;
+                diffdiffgrad *= diffgrad;
+                diffdiffgrad *= 0.5;
+                diffdiffgrad /= diffis;
+            }
+
+            break;
+        }
+
+        case 7:
+        {
+            // K = tanh( z/(r0.r0) + r1 )
+            // dK = 1/(r0.r0) * sech^2( z/(r0.r0) + r1 )
+            // d2K = -2.sech( z/(r0.r0) + r1 ).sech( z/(r0.r0) + r1).tanh( z/(r0.r0) + r1)/(r0.r0.r0.r0)
+            //     = -2.sech^2( z/(r0.r0) + r1 ).tanh( z/(r0.r0) + r1)/(r0.r0.r0.r0)
+            //     = -2.dK.K/(r0.r0)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scaladd(res,r(1));
+            OP_tanh(res);
+
+            xygrad = xyprod;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+            scaladd(xygrad,r(1));
+            OP_sech(xygrad);
+            xygrad *= xygrad;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            xyxygrad  = xygrad;
+            xyxygrad *= res;
+            scaldiv(xyxygrad,r(0));
+            scaldiv(xyxygrad,r(0));
+            xyxygrad *= -2.0;
+
+            break;
+        }
+
+        case 8:
+        {
+            // K = ( 1 + d/(2*r0*r0*r1) )^(-r1)
+            // dK = -(( 1 + d/(2*r0*r0*r1) )^(-r1-1))/(2*r0*r0)
+            //    = -K/(2*r0*r0*( 1 + d/(2*r0*r0*r1) ))
+            // d2K = (r1-1).(( 1 + d/(2*r0*r0*r1) )^(-r1-2))/(4*r0*r0*r0*r0*r1)
+            //     = (r1-1).(( 1 + d/(2*r0*r0*r1) )^(-r1))/(2*r0*r0*( 1 + d/(2*r0*r0*r1) )*2*r0*r0*( 1 + d/(2*r0*r0*r1) )*r1)
+            //     = -(r1-1).dK/(2*r0*r0*( 1 + d/(2*r0*r0*r1) )*r1)
+
+            //OLD     8  | Rational quadratic     | 1 - d/(d+r0)
+            //OLD     8  | Rational quadratic     | -1/(d+r0) + d/(d+r0)^2 = -K(x,y)/(d+r0)
+            //OLD     8  | Rational quadratic     | K(x,y)/((d+r0)^2) - K(x,y)/((d+r0)^2) = 0
+
+            T tmp;
+
+            tmp  = diffis;
+            tmp *= 0.5;
+            scaldiv(tmp,r(0));
+            scaldiv(tmp,r(0));
+            scaldiv(tmp,r(1));
+            tmp += 1.0;
+
+            res = pow(tmp,-((T) r(1)));
+
+            xygrad  = res;
+            xygrad *= -0.5;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+            xygrad /= tmp;
+
+            xyxygrad  = xygrad;
+            xyxygrad *= ((T) res)-1.0;
+            xyxygrad *= -0.5;
+            scaldiv(xyxygrad,r(0));
+            scaldiv(xyxygrad,r(0));
+            scaldiv(xyxygrad,r(1));
+            xyxygrad /= tmp;
+
+//OLD            res = diffis;
+//OLD            scaldiv(res,(diffis+r(0)));
+//OLD            setnegate(res);
+//OLD            res += 1.0;
+//OLD
+//OLD            xygrad = 0.0;
+//OLD
+//OLD            diffgrad = res;
+//OLD            setnegate(diffgrad);
+//OLD            scaldiv(res,(diffis+r(0)));
+
+            break;
+        }
+
+        case 9:
+        {
+            // K = sqrt( d + r1^2 )
+            // dK = 1/(2.K)
+            // d2K = -1/(4.K^3)
+            //
+            // if d + r1^2 = 0 then dk,d2K = 0
+            //
+            // d -> d/(r0.r0) blah blah
+
+            res = diffis;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scaladd(res,r(1),r(1));
+            OP_sqrt(res);
+
+            if ( (double) abs2(res) > 1e-24 )
+            {
+                diffgrad  = res;
+                diffgrad *= 2.0;
+                OP_einv(diffgrad);
+                scaldiv(diffgrad,r(0));
+                scaldiv(diffgrad,r(0));
+
+                diffdiffgrad  = res;
+                diffdiffgrad *= res;
+                diffdiffgrad *= res;
+                diffdiffgrad *= 4.0;
+                OP_einv(diffdiffgrad);
+                diffdiffgrad *= -1.0;
+                scaldiv(diffdiffgrad,r(0));
+                scaldiv(diffdiffgrad,r(0));
+                scaldiv(diffdiffgrad,r(0));
+                scaldiv(diffdiffgrad,r(0));
+            }
+
+            break;
+        }
+
+        case 10:
+        {
+            // K = 1/sqrt( d + r1^2 )
+            // dK = -(K^3)/2
+            // d2K = 3.(K^5)/4
+            //
+            // Ill-defined as d + r0^2 -> 0
+            //
+            // d -> d/(r0.r0) blah blah
+
+            res = diffis;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scaladd(res,r(1),r(1));
+            OP_sqrt(res);
+            OP_einv(res);
+
+            diffgrad  = res;
+            diffgrad *= res;
+            diffgrad *= res;
+            diffgrad *= -2.0;
+            OP_einv(diffgrad);
+            scaldiv(diffgrad,r(0));
+            scaldiv(diffgrad,r(0));
+
+            diffdiffgrad  = res;
+            diffdiffgrad *= res;
+            diffdiffgrad *= res;
+            diffdiffgrad *= res;
+            diffdiffgrad *= res;
+            diffdiffgrad *= 4.0;
+            OP_einv(diffdiffgrad);
+            diffdiffgrad *= 3.0;
+            scaldiv(diffdiffgrad,r(0));
+            scaldiv(diffdiffgrad,r(0));
+            scaldiv(diffdiffgrad,r(0));
+            scaldiv(diffdiffgrad,r(0));
+
+            break;
+        }
+
+        case 11:
+        {
+            // K = 2/pi * arccos(-sqrt(d)/r0) - 2/pi * sqrt(d)/r0 * sqrt(1 - d/r0^2)
+            // dK = ( 2/pi * 1/sqrt(1 - d/r0^2) - 2/pi * sqrt(1 - d/r0^2) - 1/pi * sqrt(d)/r0 * 1/sqrt(1 - d/r0^2) * -2 sqrt(d)/r0 ) * 1/(2*r0*sqrt(d))
+            //    = ( 2/pi * 1/sqrt(1 - d/r0^2) - 2/pi * sqrt(1 - d/r0^2) + 2/pi * d/r0^2 * 1/sqrt(1 - d/r0^2) ) * 1/(2*r0*sqrt(d))
+            //    = ( 1/sqrt(1 - d/r0^2) - sqrt(1 - d/r0^2) + d/r0^2 * 1/sqrt(1 - d/r0^2) ) * 1/(pi*r0*sqrt(d))
+            //    = ( 1 - 1 + d/r0^2 + d/r0^2 ) * 1/(pi*r0*sqrt(d)*sqrt(1 - d/r0^2))
+            //    = ( d/r0^2 + d/r0^2 ) * 1/(pi*r0*sqrt(d)*sqrt(1 - d/r0^2))
+            //    = d/r0^2 * 2/(pi*r0*sqrt(d)*sqrt(1 - d/r0^2))
+            //    = sqrt(d)/r0^2 * 2/(pi*r0*sqrt(1 - d/r0^2))
+            //    = 2/pi 1/r0^2 sqrt(d)/r0 * 1/sqrt(1 - d/r0^2)
+            // d2K = 2/pi 1/r0^2 ( 1/sqrt(1 - d/r0^2) - 1/2 sqrt(d)/r0 1/(1 - d/r0^2)^(3/2) -2 sqrt(d)/r0 ) 1/(2*r0*sqrt(d))
+            //     = 2/pi 1/r0^2 ( 1 - d/r0^2 + d/r0^2 ) 1/(2*r0*sqrt(d)) 1/(1 - d/r0^2) 1/sqrt(1 - d/r0^2)
+            //     = 2/pi 1/r0^2 1/(2*r0*sqrt(d)) 1/(1 - d/r0^2) 1/sqrt(1 - d/r0^2)
+            //     = 2/pi 1/r0^2 1/(2*r0^2*sqrt(d)/r0) 1/(1 - d/r0^2) 1/sqrt(1 - d/r0^2)
+            //     = 1/pi 1/r0^4 1/(sqrt(d)/r0) 1/(1 - d/r0^2) 1/sqrt(1 - d/r0^2)
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+            tempres *= -1.0;
+
+            T tempsq(tempres);
+            tempsq *= tempsq;
+            tempsq *= -1.0;
+            tempsq += 1.0;
+            OP_sqrt(tempsq);
+
+            if ( (double) abs2(tempres) < 1.0 )
+            {
+                // K = 2/pi * arccos(-sqrt(d)/r0) - 2/pi * sqrt(d)/r0 * sqrt(1 - d/r0^2)
+
+                res  = tempsq;
+                res *= tempres;
+                res += acos(tempres);
+                res *= NUMBASE_2ONPI;
+
+                //    = 2/pi 1/r0^2 sqrt(d)/r0 * 1/sqrt(1 - d/r0^2)
+
+                diffgrad  = tempsq;
+                OP_einv(diffgrad);
+                diffgrad *= tempres;
+                res *= NUMBASE_2ONPI;
+                scaldiv(diffgrad,r(0));
+                scaldiv(diffgrad,r(0));
+
+                //     = 1/pi 1/r0^4 1/(sqrt(d)/r0) 1/sqrt(1 - d/r0^2)^3
+
+                diffdiffgrad  = tempsq;
+                diffdiffgrad *= tempsq;
+                diffdiffgrad *= tempsq;
+                diffdiffgrad /= tempres;
+                diffdiffgrad /= NUMBASE_PI;
+                scaldiv(diffdiffgrad,r(0));
+                scaldiv(diffdiffgrad,r(0));
+                scaldiv(diffdiffgrad,r(0));
+                scaldiv(diffdiffgrad,r(0));
+            }
+
+            break;
+        }
+
+        case 12:
+        {
+            // K = 1 - 3/2 * sqrt(d)/r0 + 1/2 * sqrt(d)^3/r0^3
+            // dK = ( 3/2 + 3/2 * (sqrt(d)/r0)^2 ) 1/(2*sqrt(d)*r0)
+            //    = ( 3/2 + 3/2 * (sqrt(d)/r0)^2 ) 1/2 1/r0^2 r0/sqrt(d)
+            //    = 3/4 1/r0^2 ( (sqrt(d)/r0)^{-1} + sqrt(d)/r0 )
+            // d2K = 3/4 1/r0^2 ( 1 - (sqrt(d)/r0)^{-2} ) 1/(2*sqrt(d)*r0)
+            //     = 3/4 1/r0^2 ( 1 - (sqrt(d)/r0)^{-2} ) 1/2 1/r0^2 r0/sqrt(d)
+            //     = 3/8 1/r0^4 ( (sqrt(d)/r0)^{-1} - (sqrt(d)/r0)^{-3} )
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+
+            // K = 1 - 3/2 * sqrt(d)/r0 + 1/2 * sqrt(d)^3/r0^3
+
+            res = tempres;
+            res *= tempres;
+            res *= tempres;
+            res /= 2.0;
+            res *= 0.6666666666666666666666;
+            res -= tempres;
+            res /= 0.6666666666666666666666;
+            res += 1.0;
+
+            //    = 3/4 1/r0^2 ( (sqrt(d)/r0)^{-1} + sqrt(d)/r0 )
+
+            diffgrad  = tempres;
+            OP_einv(diffgrad);
+            diffgrad += tempres;
+            diffgrad *= 0.75;
+            scaldiv(diffgrad,r(0));
+            scaldiv(diffgrad,r(0));
+
+            //     = 3/8 1/r0^4 ( (sqrt(d)/r0)^{-1} - (sqrt(d)/r0)^{-3} )
+
+            OP_einv(tempres);
+            diffdiffgrad  = tempres;            
+            diffdiffgrad *= tempres;            
+            diffdiffgrad -= 1.0;            
+            diffdiffgrad *= tempres;            
+            diffdiffgrad *= -1.0;            
+            diffdiffgrad *= 3.0/8.0;
+            scaldiv(diffdiffgrad,r(0));
+            scaldiv(diffdiffgrad,r(0));
+            scaldiv(diffdiffgrad,r(0));
+            scaldiv(diffdiffgrad,r(0));
+
+            break;
+        }
+
+        case 13:
+        {
+            // K = sinc(sqrt(d)/r0)
+            // dK = ( cos(sqrt(d)/r0) - K )/(2*r0*sqrt(d))
+            // d2K = ( -sin(sqrt(d)/r0)/(2*r0*sqrt(d)) - dK )/(2*r0*sqrt(d)) - ( cos(sqrt(d)/r0) - K )/(4*r0*d*sqrt(d))
+            //     = ( -K/(2*r0^2) - dK )/(2*r0*sqrt(d)) - dK/(2*d)
+            //     = ( -K/(2*r0^2) - dK )/(2*r0*sqrt(d)) - ( dK*(2*r0*sqrt(d))/(2*d) )/(2*r0*sqrt(d))
+            //     = ( -K/(2*r0^2) - dK*( 1 + r0/sqrt(d) ) )/(2*r0*sqrt(d))
+            //     = ( -K/(2*r0^2) - dK*( sqrt(d) + r0 )/sqrt(d) )/(2*r0*sqrt(d))
+            //     = ( -K - dK*(2*r0^2)*( sqrt(d) + r0 )/sqrt(d) )/(4*(r0^3)*sqrt(d))
+            //     = -( K + dK*(2*r0^2)*( sqrt(d) + r0 )/sqrt(d) )/(4*(r0^3)*sqrt(d))
+            //
+            // if d = 0 then dK,d2K = 0
+
+            T tmp(diffis);
+
+            OP_sqrt(tmp);
+
+            T tmpb(tmp);
+
+            scaldiv(tmpb,r(0));
+
+            res = tmpb;
+            OP_sinc(res);
+
+            if ( (double) tmpb > BADZEROTOL )
+            {
+                diffgrad  = tmpb;
+                OP_cos(diffgrad);
+                diffgrad -= res;
+                diffgrad *= 0.5;
+                scaldiv(diffgrad,r(0));
+                diffgrad /= tmp;
+
+                diffdiffgrad  = tmp;
+                scaladd(diffdiffgrad,r(0));
+                diffdiffgrad *= diffgrad;
+                diffdiffgrad *= 2.0;
+                scalmul(diffdiffgrad,r(0));
+                scalmul(diffdiffgrad,r(0));
+                diffdiffgrad /= tmp;
+                diffdiffgrad += res;
+                diffgrad *= -0.25;
+                scaldiv(diffdiffgrad,r(0));
+                scaldiv(diffdiffgrad,r(0));
+                scaldiv(diffdiffgrad,r(0));
+                diffdiffgrad /= tmp;
+            }
+
+            break;
+        }
+
+        case 14:
+        {
+            // K = -sqrt(d)^r1
+            // dK = -(r1*sqrt(d)^(r1-2))/2 
+            //    = -(r1*sqrt(d)^r1)/(2*d) 
+            //    = (r1*K)/(2*d) 
+            //    = r1*K/(2*d)
+            // d2K = -(r1*(r1-2)*sqrt(d)^(r1-4))/4
+            //     = -(r1*(r1-2)*sqrt(d)^r1)/(4*d^2)
+            //     = (r1*(r1-2)*K)/(4*d^2)
+            //     = (r1-2)*dK/(2*d)
+            //
+            // if d = 0 then dK,d2K = 0
+
+            res  = diffis;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            OP_sqrt(res);
+            res  = pow(res,(T) r(1));
+            res *= -1.0;
+
+            if ( (double) abs2(diffis) > BADZEROTOL )
+            {
+                diffgrad  = res;
+                scalmul(diffgrad,r(1));
+                diffgrad *= -0.5;
+                diffgrad /= diffis;
+                scaldiv(diffgrad,r(0));
+                scaldiv(diffgrad,r(0));
+
+                diffdiffgrad  = diffgrad;
+                scalmul(diffdiffgrad,((T) r(1))-2.0);
+                diffdiffgrad *= -0.5;
+                diffdiffgrad /= diffis;
+                scaldiv(diffdiffgrad,r(0));
+                scaldiv(diffdiffgrad,r(0));
+            }
+
+            break;
+        }
+
+        case 15:
+        {
+            // K = -log(sqrt(d)^r1 + 1)
+            // dK = -(r1.sqrt(d)^(r1-2))/(2*(sqrt(d)^r1 + 1))
+            // d2K = -(r1.(r1-2).sqrt(d)^(r1-4))/(4.(sqrt(d)^r1 + 1)) + ((r1.sqrt(d)^(r1-2))^2)/((2*(sqrt(d)^r1 + 1))^2)
+            //     = -(r1-2)*dK/(2*d) + dK^2
+            //     = dK*( dK - (r1-2)/(2*d) )
+
+            T tmpa(diffis);
+
+            scaldiv(tmpa,r(0));
+            scaldiv(tmpa,r(0));
+
+            OP_sqrt(tmpa);
+
+            T tmpb;
+
+            tmpb = pow(tmpa,(T) r(1));
+            tmpb += 1.0;
+
+            res = tmpb;
+            OP_log(res);
+            setnegate(res);
+
+            diffgrad = pow(tmpb,((T) r(1))-2.0);
+            scalmul(diffgrad,r(1));
+            diffgrad *= -0.5;
+            diffgrad /= tmpb;
+            scaldiv(diffgrad,r(0));
+            scaldiv(diffgrad,r(0));
+
+            diffdiffgrad = (T) r(1);
+            diffdiffgrad -= 2.0;
+            diffdiffgrad *= -0.5;
+            diffdiffgrad /= diffis;
+            diffdiffgrad += diffgrad;
+            diffdiffgrad *= diffgrad;
+            scaldiv(diffdiffgrad,r(0));
+            scaldiv(diffdiffgrad,r(0));
+
+            break;
+        }
+
+        case 19:
+        {
+            // K = 1/(1+(d/(r0.r0)))
+            // dK = -K^2/(r0.r0)
+            // d2K = 2*K^3/r0^4
+            //     = -2*dK*K/(r0*r0)
+
+            res = diffis;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            res += 1.0;
+            OP_einv(res);
+
+            diffgrad  = res;
+            diffgrad *= res;
+            diffgrad *= -1.0;
+            scaldiv(diffgrad,r(0));
+            scaldiv(diffgrad,r(0));
+
+            diffdiffgrad = diffgrad;
+            diffdiffgrad *= res;
+            diffdiffgrad *= -2.0;
+            scaldiv(diffdiffgrad,r(0));
+            scaldiv(diffdiffgrad,r(0));
+
+            break;
+        }
+
+        case 23:
+        {
+            // K = 1/(1+(sqrt(d)/r0)^r1)
+            // dK = -r1/(2.r0) * (sqrt(d)/r0)^(r1-2) * K^2
+            // d2K = ( -r1/(4.r0^2) * (r1-2) * (sqrt(d)/r0)^(r1-4) * K^2 ) + ( -r1/(2.r0) * (sqrt(d)/r0)^(r1-2) * 2 * K * dK )
+            //     = ( -r1/(2.r0^2) * (sqrt(d)/r0)^(r1-2) * K^2 * (r1-2)/(2*d/r0) ) + ( -r1/(2.r0) * (sqrt(d)/r0)^(r1-2) * K^2 * dK/(2*K) )
+            //     = ( -r1/(2.r0) * (sqrt(d)/r0)^(r1-2) * K^2 * (r1-2)/(2*d) ) + ( -r1/(2.r0) * (sqrt(d)/r0)^(r1-2) * K^2 * dK/(2*K) )
+            //     = ( dK*(r1-2)/(2*d) ) + ( dK^2/(2*K) )
+            //     = ( dK*(r1-2)/(2*d) ) + ( d*dK*dK/(2*d*K) )
+            //     = ( (r1-2) + d*dK/K )*dK/(2*d)
+
+            T tmp(diffis);
+
+            OP_sqrt(tmp);
+            scaldiv(tmp,r(0));
+
+            res  = pow(tmp,(T) r(1));
+            res += 1.0;
+            OP_einv(res);
+
+            T tmpb;
+            tmpb = pow(tmp,(T) r(1)-2.0);
+
+            diffgrad  = res;
+            diffgrad *= res;
+            diffgrad *= -0.5;
+            scaldiv(diffgrad,r(0));
+            scalmul(diffgrad,r(1));
+            diffgrad *= tmpb;
+
+            diffdiffgrad  = diffgrad;
+            diffdiffgrad /= res;
+            diffdiffgrad *= diffis;
+            scaladd(diffdiffgrad,r(1));
+            diffdiffgrad -= 2.0;
+            diffdiffgrad *= diffgrad;
+            diffdiffgrad *= 0.5;
+            diffdiffgrad /= diffis;
+
+            break;
+        }
+
+        case 24:
+        {
+            // K = (1-(z^i0))/(1-z)
+            // dK = ( -i0.(z^(i0-1)) + (1-(z^i0))/(1-z) )/(1-z) 
+            //    = ( -i0.(z^i0)/z + K )/(1-z)                         if ( i0 >= 1 )
+            // d2K = ( -i0.(i0-1).(z^(i0))/z^2 + dK )/(1-z) + dK/(1-z)
+            //     = ( -i0.(i0-1).(z^(i0))/z^2 + 2*K )/(1-z)           if ( i0 >= 2 )
+            //
+            // Ill-defined at z = 1
+            //
+            // z -> z/(r0.r0) and blah blah
+
+            T zsc(xyprod);
+
+            scaldiv(zsc,r(0));
+            scaldiv(zsc,r(0));
+
+            if ( ( (double) abs2(zsc) > BADZEROTOL ) || ( ic(0) == 0 ) )
+            {
+                T tmp = zsc;
+
+                raiseto(tmp,ic(0));
+
+                res  = 1.0;
+                res -= tmp;
+                res /= (1.0-zsc);
+            }
+
+            if ( ( (double) abs2(zsc) > BADZEROTOL ) || ( ic(0) == 1 ) )
+            {
+                T tmp = zsc;
+
+                raiseto(tmp,ic(0)-1);
+
+                xygrad  = tmp;
+                xygrad *= -ic(0);
+                xygrad += res;
+                xygrad /= (1.0-zsc);
+                scaldiv(xygrad,r(0));
+                scaldiv(xygrad,r(0));
+            }
+
+            if ( ( (double) abs2(zsc) > BADZEROTOL ) || ( ic(0) == 2 ) )
+            {
+                T tmp = xyprod;
+
+                raiseto(tmp,ic(0)-2);
+
+                xyxygrad  = tmp;
+                xyxygrad *= -ic(0)*(ic(0)-1);
+                xyxygrad += res;
+                xyxygrad += res;
+                xyxygrad /= (1.0-zsc);
+                scaldiv(xyxygrad,r(0));
+                scaldiv(xyxygrad,r(0));
+                scaldiv(xyxygrad,r(0));
+                scaldiv(xyxygrad,r(0));
+            }
+
+            break;
+        }
+
+        case 25:
+        {
+            // K = pi.cosh(pi-(sqrt(d)/r0))
+            // dK = -pi/(2.r0) * sinh(pi-sqrt(d)/r0) / sqrt(d)
+            // d2K = pi^2/(4.r0*r0) * cosh(pi-sqrt(d)/r0) / d  - 1/2d dK
+            //     = pi/(4.r0*r0) * K / d  - 1/2d dK
+            //     = ( pi*K/(2.r0*r0) - dK )/(2*d)
+
+            T tmp(diffis);
+
+            OP_sqrt(tmp);
+
+            res  = tmp;
+            scaldiv(res,r(0));
+            res -= NUMBASE_PI;
+            res *= -1.0;
+            OP_cosh(res);
+            res *= NUMBASE_PI;
+
+            diffgrad  = tmp;
+            scaldiv(diffgrad,r(0));
+            diffgrad -= NUMBASE_PI;
+            diffgrad *= -1.0;
+            OP_sinh(diffgrad);
+            diffgrad *= NUMBASE_PION2;            
+            diffgrad *= -0.5;
+            scaldiv(diffgrad,r(0));
+            diffgrad /= tmp;
+
+            diffdiffgrad  = res;
+            diffdiffgrad *= NUMBASE_PI;
+            diffdiffgrad *= 0.5;
+            scaldiv(diffdiffgrad,r(0));
+            scaldiv(diffdiffgrad,r(0));
+            diffdiffgrad -= diffgrad;
+            diffdiffgrad *= 0.5;
+            diffdiffgrad /= diffis;
+
+            break;
+        }
+
+        case 26:
+        {
+            // K = ((d/r0)^(r1+0.5))
+            // dK = 1/r0 * (r1+0.5) * (d/r0)^(r1-0.5)
+            //    = 1/r0 * (r1+0.5) * K/d
+            // d2K = 1/r0^2 * (r1+0.5) * (r1-0.5) * (d/r0)^(r1-1.5)
+            //     = 1/r0 * (r1-0.5) * dK/d
+
+            res  = diffis;
+            scaldiv(res,r(0));
+            res  = pow(res,((T) r(1))+0.5);
+
+            if ( (double) abs2(diffis) > BADZEROTOL )
+            {
+                diffgrad = 0.5;
+                scaladd(diffgrad,r(1));
+                scaldiv(diffgrad,r(0));
+                diffgrad *= res;
+                diffgrad /= diffis;
+
+                diffdiffgrad = -0.5;
+                scaladd(diffdiffgrad,r(1));
+                scaldiv(diffdiffgrad,r(0));
+                diffdiffgrad *= diffgrad;
+                diffdiffgrad /= diffis;
+            }
+
+            break;
+        }
+
+        case 27:
+        {
+            // K = ((d/r0)^r1).ln(sqrt(d/r0))
+            // dK = (r1/r0).((d/r0)^(r1-1)).ln(sqrt(d/r0)) + ((d/r0)^r1) 1/(sqrt(d/r0)) 1/2 1/sqrt(d*r0)
+            //    = (r1/r0).((d/r0)^r1).ln(sqrt(d/r0)).(r0/d) + ((d/r0)^r1)/(2d)
+            //    = 2.r1.((d/r0)^r1).ln(sqrt(d/r0))/(2d) + ((d/r0)^r1)/(2d)
+            //    = ( 2.r1.ln(sqrt(d/r0)) + 1 ).((d/r0)^r1)/(2d)
+            //    = ( ln(sqrt(d/r0)) + 1/(2.r1) ).((d/r0)^r1).(2.r1)/(2d)
+            //    = ( ((d/r0)^r1).ln(sqrt(d/r0)) + ((d/r0)^r1)/(2.r1) ).(2.r1)/(2d)
+            //    = ( K + ((d/r0)^r1)/(2.r1) ).(2.r1)/(2d)
+            // d2K = ( dK + r1/d ((d/r0)^r1)/(2.r1) ).(2.r1)/(2d)  -  ( K + ((d/r0)^r1)/(2.r1) ).(2.r1)/(2d^2) 
+            // d2K = ( dK + r1/d ((d/r0)^r1)/(2.r1) ).(2.r1)/(2d)  - 2*( K + ((d/r0)^r1)/(2.r1) ).(2.r1)/((2d)*(2d)) 
+            // d2K = ( dK + r1/d ((d/r0)^r1)/(2.r1) ).(2.r1)/(2d)  - (2*dK/(2.r1)).(2.r1)/(2d) 
+            // d2K = ( dK + r1/d ((d/r0)^r1)/(2.r1) - 2*dK/(2.r1) ).(2.r1)/(2d) 
+            // d2K = ( ( 1 - 1/r1 ).dK + r1/d ((d/r0)^r1)/(2.r1) ).(2.r1)/(2d) 
+            // d2K = ( dK + r1*((d/r0)^r1)/(2*(r1-1)*d) )*(2*(r1-1))/(2d) 
+
+            T scalres(diffis);
+
+            scaldiv(scalres,r(0));
+            OP_sqrt(scalres);
+
+            T tempres(scalres);
+
+            OP_log(tempres);
+
+            scalres = pow(scalres,(T) r(1));
+
+            res  = scalres;
+            res *= tempres;
+
+            if ( (double) abs2(diffis) > BADZEROTOL )
+            {
+                diffgrad  = scalres;
+                diffgrad *= 0.5;
+                scaldiv(diffgrad,r(1));
+                diffgrad += res;
+                diffgrad *= 2;
+                scalmul(diffgrad,r(1));
+                diffgrad *= 0.5;
+                diffgrad /= diffis;
+
+                diffdiffgrad = scalres;
+                scalmul(diffdiffgrad,r(1));
+                diffdiffgrad *= 0.5;
+                diffdiffgrad /= diffis;
+                scaldiv(diffdiffgrad,r(1)-1.0);
+                diffdiffgrad += diffgrad;
+                scalmul(diffdiffgrad,r(1)-1.0);
+                diffdiffgrad /= diffis;
+            }
+
+            break;
+        }
+
+        case 32:
+        {
+            // K = r1 if i == j >= 0, 0 otherwise
+            // dK = 0.0
+            // d2K = 0.0
+
+            if ( ( i == j ) && ( i >= 0 ) )
+            {
+                res = r(1);
+            }
+
+            break;
+        }
+
+        case 33:
+        {
+            // K = 1/(2.r0) ( 1 if real(sqrt(d)) < r0, 0 otherwise )
+            // dK = 0
+            // d2K = 0
+
+            //if ( real(sqrt(diffis)-r(0)) < zerogentype() )
+            if ( real(sqrt(diffis)-r(0)) < 0.0_gent )
+            {
+                res = 0.5/r(0);
+            }
+
+            break;
+        }
+
+        case 34:
+        {
+            // K = (1-sqrt(d)/r0)/r0 if real(sqrt(d)) < r0, 0 otherwise )
+            // dK = 1/r0 1/(2*sqrt(d)*r0)
+            //    = 1/r0 1/2 1/r0^2 r0/sqrt(d)
+            //    = 1/r0^3 1/2 r0/sqrt(d)
+            // d2k = 1/r0 1/2 1/r0^2 -1/2 r0/sqrt(d) 1/d
+            //     = -1/r0^3 1/4 r0/sqrt(d) 1/d
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+
+            if ( (double) real(tempres-1.0) < 0.0 )
+            {
+                res  = 1.0;
+                res -= tempres;
+                scaldiv(res,r(0));
+
+                diffgrad = tempres;
+                OP_einv(diffgrad);
+                diffgrad /= 2.0;
+                scaldiv(diffgrad,r(0));
+                scaldiv(diffgrad,r(0));
+                scaldiv(diffgrad,r(0));
+
+                diffdiffgrad = tempres;
+                OP_einv(diffdiffgrad);
+                diffdiffgrad /= diffis;
+                diffdiffgrad /= -4.0;
+                scaldiv(diffdiffgrad,r(0));
+                scaldiv(diffdiffgrad,r(0));
+                scaldiv(diffdiffgrad,r(0));
+            }
+
+            break;
+        }
+
+        case 38:
+        {
+            // K = exp(-sqrt(d)/r0)
+            // dK = 1/r0^2 -r0/sqrt(d) exp(-sqrt(d)/r0)
+            //    = 1/r0^2 -r0/sqrt(d) K
+            // d2K = 1/r0 1/2 1/d 1/sqrt(d) exp(-sqrt(d)/r0) + 1/r0^2 1/d exp(-sqrt(d)/r0)
+            //     = 1/r0^4 1/2 r0^2/d r0/sqrt(d) exp(-sqrt(d)/r0) + 1/r0^4 ro^2/d exp(-sqrt(d)/r0)
+            //     = 1/r0^4 r0^2/d exp(-sqrt(d)/r0) ( 1/2 r0/sqrt(d) + 1 )
+            //     = 1/2 1/r0^2 -r0/sqrt(d) dK ( 2 - r0/sqrt(d) )
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+            tempres *= -1.0;
+
+            res = tempres;
+            OP_exp(res);
+
+            diffgrad  = res;
+            diffgrad *= tempres;
+            scaldiv(diffgrad,r(0));
+            scaldiv(diffgrad,r(0));
+
+            diffdiffgrad  = tempres;
+            diffdiffgrad += 2.0;
+            diffdiffgrad *= diffgrad;
+            diffdiffgrad *= tempres;
+            scaldiv(diffdiffgrad,r(0));
+            scaldiv(diffdiffgrad,r(0));
+            diffdiffgrad *= 0.5;
+
+            break;
+        }
+
+        case 39:
+        {
+            // K = (1+((sqrt(3)/r0).sqrt(d))) . exp(-(sqrt(3)/r0).sqrt(d))
+            // dK = ( exp( -sqrt(3)/r0 sqrt(d) ) - ( 1 + sqrt(3)/r0 sqrt(d) ) exp( -sqrt(3)/r0 sqrt(d) ) ) sqrt(3)/r0 1/2 1/sqrt(d)
+            //    = -((sqrt(3)/r0).sqrt(d)) exp(-((sqrt(3)/r0).sqrt(d))) sqrt(3)/r0 1/2 1/sqrt(d)
+            //    = -1/2 3/r0^2 exp(-((sqrt(3)/r0).sqrt(d)))
+            //    = -3/2 1/r0^2 exp(-((sqrt(3)/r0).sqrt(d)))
+            // d2K = -3/2 1/r0^2 -sqrt(3)/r0 1/sqrt(d) exp(-((sqrt(3)/r0).sqrt(d)))
+            //     = (3.sqrt(3))/2 1/r0^3 1/sqrt(d) exp(-((sqrt(3)/r0).sqrt(d)))
+            //     = (3.3)/2 1/r0^4 r0/sqrt(3).sqrt(d) exp(-((sqrt(3)/r0).sqrt(d)))
+            //     = 3/2 1/r0^4 1/((sqrt(3)/r0).sqrt(d)) exp(-((sqrt(3)/r0).sqrt(d)))
+            //     = 1/r0^2 1/((sqrt(3)/r0).sqrt(d)) 3/2 1/r0^2 exp(-((sqrt(3)/r0).sqrt(d)))
+            //     = -1/r0^2 1/((sqrt(3)/r0).sqrt(d)) dK
+
+            T tempres(diffis);
+            OP_sqrt(tempres);
+            scaldiv(tempres,r(0));
+            tempres *= sqrt(3.0);
+
+            T expres(tempres);
+            expres *= -1.0;
+            OP_exp(expres);
+
+            res  = tempres;
+            res += 1;
+            res *= expres;
+
+            diffgrad  = expres;
+            diffgrad *= -1.5;
+            scaldiv(diffgrad,r(0));
+            scaldiv(diffgrad,r(0));
+            
+            diffdiffgrad  = diffgrad;
+            diffdiffgrad /= tempres;
+            scaldiv(diffdiffgrad,r(0));
+            scaldiv(diffdiffgrad,r(0));
+
+            break;
+        }
+
+        case 42:
+        {
+            // K = agd(z/(r0.r0))
+            // dK = (1/(r0.r0)) sec^2(z/(r0.r0)) / ( 1 - tan^2(z/(r0.r0)) )
+            // d2K = (2/(r0.r0.r0.r0)) sec^2(z/(r0.r0)) tan(z/(r0.r0)) / ( 1 - tan^2(z/(r0.r0)) ) + (2/(r0.r0.r0.r0)) sec^4(z/(r0.r0)) tan(z/(r0.r0)) / ( 1 - tan^2(z/(r0.r0)) )^2
+            // d2K = (2/(r0.r0.r0.r0)) tan(z/(r0.r0)) sec^2(z/(r0.r0)) / ( 1 - tan^2(z/(r0.r0)) ) + (2/(r0.r0.r0.r0)) tan(z/(r0.r0)) sec^4(z/(r0.r0)) / ( 1 - tan^2(z/(r0.r0)) )^2
+            // d2K = (2/(r0.r0)) tan(z/(r0.r0)) dK + (2/(r0.r0)) tan(z/(r0.r0)) dK^2
+            // d2K = (2/(r0.r0)) tan(z/(r0.r0)) dK ( 1 + dK )
+
+            T scalres = diffis;
+            scaldiv(scalres,r(0));
+            scaldiv(scalres,r(0));
+
+            T scz = scalres;
+            OP_sec(scz);
+            scz *= scz;
+
+            T taz = scalres;
+            OP_tan(taz);
+
+            res = scalres;
+            OP_agd(res);
+
+            xygrad  = taz;
+            xygrad *= taz;
+            xygrad *= -1.0;
+            xygrad += 1.0;
+            OP_einv(xygrad);
+            xygrad *= scz;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            xyxygrad  = xygrad;
+            xyxygrad += 1.0;
+            xyxygrad *= xygrad;
+            xyxygrad *= taz;
+            xyxygrad *= 2.0;
+            scaldiv(xyxygrad,r(0));
+            scaldiv(xyxygrad,r(0));
+
+            break;
+        }
+
+        case 43:
+        {
+            // K = log((1+r0.z)/(1-r0.z))
+            // dK = r0*(1-r0.z)/(1+r0.z)*( 1/(1-r0.z) + (1+r0.z)/(1-r0.z)^2 )
+            //    = r0*(1-r0.z)/(1+r0.z)*( (1-r0.z) + (1+r0.z) )/(1-r0.z)^2
+            //    = r0*((1-r0.z)/(1+r0.z))/(1-r0.z)^2
+            //    = r0/((1+r0.z)*(1-r0.z))
+            // d2K = -r0*r0*( (1-r0.z) - (1+r0.z) )/((1+r0.z)^2*(1-r0.z)^2)
+            //     = -2*r0*r0*( r0.z )/((1+r0.z)^2*(1-r0.z)^2)
+            //     = -2*r0^3*z/((1+r0.z)^2*(1-r0.z)^2)
+            //     = -2*r0*z*dK^2
+            // ADDENDUM: r0 -> 1/(r0.r0)
+
+            T tempa = xyprod;
+
+            tempa  = xyprod;
+            scaldiv(tempa,r(0));
+            scaldiv(tempa,r(0));
+
+            T tempb = tempa;
+
+            tempa += 1.0;
+            tempb -= 1.0;
+
+            res  = tempa;
+            res /= tempb;
+            OP_log(res);
+
+            xygrad  = tempa;
+            xygrad *= tempb;
+            OP_einv(xygrad);
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            xyxygrad  = -2.0;
+            scaldiv(xyxygrad,r(0));
+            scaldiv(xyxygrad,r(0));
+            xyxygrad  = xyprod;
+            xyxygrad  = xygrad;
+            xyxygrad  = xygrad;
+
+            break;
+        }
+
+        case 44:
+        {
+            // K = exp(z/(r0.r0))
+            // dK = K/(r0.r0)
+            // d2K = dK/(r0.r0)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            scalsub(res,r(1));
+            OP_exp(res);
+
+            xygrad = res;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            xyxygrad = xygrad;
+            scaldiv(xyxygrad,r(0));
+            scaldiv(xyxygrad,r(0));
+
+            break;
+        }
+
+        case 45:
+        {
+            // K = sinh(z/(r0.r0))
+            // dK = cosh(z/(r0.r0))/(r0.r0)
+            // d2K = K/(r0.r0.r0.r0)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            OP_sinh(res);
+
+            xygrad = xyprod;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+            OP_cosh(xygrad);
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            xyxygrad = res;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            break;
+        }
+
+        case 46:
+        {
+            // K = cosh(z/(r0.r0))
+            // dK = sinh(z/(r0.r0))/(r0.r0)
+            // d2K = K/(r0.r0.r0.r0)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            OP_cosh(res);
+
+            xygrad = xyprod;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+            OP_sinh(xygrad);
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            xyxygrad = res;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            break;
+        }
+
+        case 47:
+        {
+            // K = sinc(sqrt(d)/r0).cos(2*pi*sqrt(d)/(r0.r1))
+            //
+            // if d = 0 then dK,d2K = 0
+
+            NiceThrow("bugger that");
+
+            break;
+        }
+
+        case 49:
+        {
+            // K = exp(-d/(2.r0.r0)-r1)
+
+            NiceThrow("When the sky falls...");
+
+            break;
+        }
+
+        case 50:
+        {
+            // K = pi - arccos(z)
+            // dK = 1/(r0.r0.sqrt(1-(z/r0.r0)^2))
+
+            NiceThrow("Listen... to what the flower people say...");
+
+            break;
+        }
+
+        case 51:
+        {
+            // K = pi - arccos(z)
+            // dK = 1/(r0.r0.sqrt(1-(z/r0.r0)^2))
+
+            NiceThrow("Philosoplically speaking I'm very agnostic.  I don't want to have any concrete set of beliefs because beliefs lead you to being sure that you're right and and you can't really know. - Asaf Karagila");
+
+            break;
+        }
+
+        case 100:
+        {
+            // K = z/(r0.r0)
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            xygrad = 1.0;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            xyxygrad = 0.0;
+
+            break;
+        }
+
+        case 103:
+        {
+            // K = 0 if real(z) < 0, 1 otherwise
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = 0.0;
+            }
+
+            else
+            {
+                res = 1.0;
+            }
+
+            xygrad = 0.0;
+
+            xyxygrad = 0.0;
+
+            break;
+        }
+
+        case 104:
+        {
+            // K = 0 if real(z) < 0, z/(r0*r0) otherwise
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = 0.0;
+
+                xygrad = 0.0;
+            }
+
+            else
+            {
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+
+                xygrad = 1.0;
+                scaldiv(xygrad,r(0));
+                scaldiv(xygrad,r(0));
+            }
+
+            xyxygrad = 0.0;
+
+            break;
+        }
+
+        case 106:
+        {
+            // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
+
+            const static T zgt(0.0);
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            xygrad = 1.0;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            if ( xyprod < zgt )
+            {
+                scalmul(res,r(1));
+                scalmul(xygrad,r(1));
+            }
+
+            xyxygrad = 0.0;
+
+            break;
+        }
+
+        case 200:
+        {
+            // K = z/(r0.r0) - 1
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+            res -= 1.0;
+
+            xygrad = 1.0;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            xyxygrad = 0.0;
+
+            break;
+        }
+
+        case 203:
+        {
+            // K = -1 if real(z) < 0, 1 otherwise
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = -1.0;
+            }
+
+            else
+            {
+                res = 1.0;
+            }
+
+            xygrad = 0.0;
+
+            xyxygrad = 0.0;
+
+            break;
+        }
+
+        case 204:
+        {
+            // K = 0 if real(z) < 0, z/(r0*r0) otherwise    - 1
+
+            const static T zgt(0.0);
+
+            if ( xyprod < zgt )
+            {
+                res = -1.0;
+
+                xygrad = 0.0;
+            }
+
+            else
+            {
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+                res -= 1.0;
+
+                xygrad = 1.0;
+                scaldiv(xygrad,r(0));
+                scaldiv(xygrad,r(0));
+            }
+
+            xyxygrad = 0.0;
+
+            break;
+        }
+
+        case 206:
+        {
+            // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
+
+            const static T zgt(0.0);
+
+            res = xyprod;
+            scaldiv(res,r(0));
+            scaldiv(res,r(0));
+
+            xygrad = 1.0;
+            scaldiv(xygrad,r(0));
+            scaldiv(xygrad,r(0));
+
+            if ( xyprod < zgt )
+            {
+                scalmul(res,r(1));
+                scalmul(xygrad,r(1));
+            }
+
+            res -= 1.0;
+
+            xyxygrad = 0.0;
+
+            break;
+        }
+
+        default:
+        {
+            NiceThrow("fe fi fo fum");
+
+            break;
+        }
+    }
+
+    res *= (const T &) weight;
+
+    xygrad   *= (const T &) weight;
+    diffgrad *= (const T &) weight;
+
+    xyxygrad     *= (const T &) weight;
+    diffdiffgrad *= (const T &) weight;
+}
+
+
+
+//KERNELSHERE
+
+// gd(0): x'x derivative count
+// gd(1): y'y derivative count
+// gd(2): <x,y> derivative count
+template <class T>
+void MercerKernel::dnKKpro(T &res, const Vector<int> &gd, const T &xyprod, const T &diffis, int i, int j, int locindstart, int locindend, int xdim, int m, int isfirstcalc, T &scratch) const
+{
+    (void) locindend;
+
+    NiceAssert( locindstart == locindend );
+
+    res = 0.0;
+
+    int ii,jj;
+    int z = 0;
+    int ind = locindstart;
+    {
+        retVector<gentype> tmpva;
+
+        const Vector<gentype> &r = dRealConstants(ind)(1,1,dRealConstants(ind).size()-1,tmpva);
+        const Vector<int> &ic = dIntConstants(ind);
+
+        int ktype = cType(ind);
+
+        if ( ktype == 0 )
+        {
+            // K = r1
+            // dK = 0
+            // d2K = 0
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
+            {
+                res = r(1);
+            }
+        }
+
+        else if ( ktype == 1 )
+        {
+            // K = z/(r0.r0)
+            // dK = 1/(r0.r0)
+            // d2K = 0
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
+            {
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+            }
+
+            else if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == 1 ) )
+            {
+                res = 1.0;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+            }
+        }
+
+        else if ( ktype == 2 )
+        {
+            // K = ( r1 + z/(r0.r0) )^i0
+            // dK = i0/(r0.r0) * ( r1 + z/(r0.r0) )^(i0-1)               if ( i0 >= 1 )
+            // d2K = i0.(i0-1)/(r0.r0.r0.r0) * ( r1 + z/(r0.r0) )^(i0-2) if ( i0 >= 2 )
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) <= ic(z) ) )
+            {
+                ii = ic(z);
+                res = 1.0;
+
+                for ( jj = 0 ; jj < gd(2) ; ++jj )
+                {
+                    res *= ii;
+                    scaldiv(res,r(0));
+                    scaldiv(res,r(0));
+                    --ii;
+                }
+
+                if ( ii )
+                {
+                    T temp(xyprod);
+
+                    scaldiv(temp,r(0));
+                    scaldiv(temp,r(0));
+                    scaladd(temp,r(1));
+                    raiseto(temp,ii);
+
+                    res *= temp;
+                }
+            }
+        }
+
+        else if ( ktype == 3 )
+        {
+            // K = exp(-d/(2.r0.r0))
+            // dK = -K/(2*r0*r0)
+            // d2K = -dK/(2*r0*r0)
+
+            if ( isfirstcalc )
+            {
+                scratch  = diffis;
+                scratch *= -0.5;
+                scaldiv(scratch,r(0));
+                scaldiv(scratch,r(0));
+                scratch += log(AltDiffNormConst(xdim,m,r(0)));
+                scalsub(res,r(1));
+                OP_exp(scratch);
+            }
+
+            res = scratch;
+
+            int n01 = gd(z)+gd(1);
+            int n2  = gd(2);
+
+            for ( jj = 0 ; jj < n01 ; ++jj )
+            {
+                res *= -0.5;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+            }
+
+            for ( jj = 0 ; jj < n2 ; ++jj )
+            {
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+            }
+        }
+
+        else if ( ktype == 32 )
+        {
+            // K = r1 if i == j >= 0, 0 otherwise
+            // dK = 0.0
+            // d2K = 0.0
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) && ( i == j ) && ( i >= 0 ) )
+            {
+                res = r(1);
+            }
+        }
+
+        else if ( ktype == 33 )
+        {
+            // K = 1/(2.r0) ( 1 if real(sqrt(d)) < r0, 0 otherwise )
+            // dK = 0
+            // d2K = 0
+
+            //if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) && ( real(sqrt(diffis)-r(0)) < zerogentype() ) )
+            if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) && ( real(sqrt(diffis)-r(0)) < 0.0_gent ) )
+            {
+                res = 0.5/r(0);
+            }
+        }
+
+        else if ( ktype == 44 )
+        {
+            // K = exp(z/(r0.r0))
+            // dK = K/(r0.r0)
+            // d2K = dK/(r0.r0)
+
+            if ( isfirstcalc )
+            {
+                scratch = xyprod;
+                scaldiv(scratch,r(0));
+                scaldiv(scratch,r(0));
+                scalsub(res,r(1));
+                OP_exp(scratch);
+            }
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) )
+            {
+                res = scratch;
+
+                for ( jj = 0 ; jj < gd(2) ; ++jj )
+                {
+                    scaldiv(res,r(0));
+                    scaldiv(res,r(0));
+                }
+            }
+        }
+
+        else if ( ktype == 45 )
+        {
+            // K = sinh(z/(r0.r0))
+            // dK = cosh(z/(r0.r0))/(r0.r0)
+            // d2K = K/(r0.r0.r0.r0)
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) )
+            {
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+
+                if ( gd(2)%2 )
+                {
+                    OP_cosh(res);
+                }
+
+                else
+                {
+                    OP_sinh(res);
+                }
+
+                for ( jj = 0 ; jj < gd(2) ; ++jj )
+                {
+                    scaldiv(res,r(0));
+                    scaldiv(res,r(0));
+                }
+            }
+        }
+
+        else if ( ktype == 46 )
+        {
+            // K = cosh(z/(r0.r0))
+            // dK = sinh(z/(r0.r0))/(r0.r0)
+            // d2K = K/(r0.r0.r0.r0)
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) )
+            {
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+
+                if ( gd(2)%2 )
+                {
+                    OP_sinh(res);
+                }
+
+                else
+                {
+                    OP_cosh(res);
+                }
+
+                for ( jj = 0 ; jj < gd(2) ; ++jj )
+                {
+                    scaldiv(res,r(0));
+                    scaldiv(res,r(0));
+                }
+            }
+        }
+
+        else if ( ktype == 100 )
+        {
+            // K = z/(r0.r0)
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
+            {
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+            }
+
+            else if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == 1 ) )
+            {
+                res = 1.0;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+            }
+        }
+
+        else if ( ktype == 103 )
+        {
+            // K = 0 if real(z) < 0, 1 otherwise
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
+            {
+                const static T zgt(0.0);
+
+                if ( xyprod < zgt )
+                {
+                    res = 0.0;
+                }
+
+                else
+                {
+                    res = 1.0;
+                }
+            }
+        }
+
+        else if ( ktype == 104 )
+        {
+            // K = 0 if real(z) < 0, z/(r0*r0) otherwise
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
+            {
+                const static T zgt(0.0);
+
+                if ( xyprod < zgt )
+                {
+                    res = 0.0;
+                }
+
+                else
+                {
+                    res = xyprod;
+                    scaldiv(res,r(0));
+                    scaldiv(res,r(0));
+                }
+            }
+
+            else if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == 1 ) )
+            {
+                const static T zgt(0.0);
+
+                if ( xyprod < zgt )
+                {
+                    res = 0.0;
+                }
+
+                else
+                {
+                    res = 1.0;
+                    scaldiv(res,r(0));
+                    scaldiv(res,r(0));
+                }
+            }
+        }
+
+        else if ( ktype == 106 )
+        {
+            // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
+            {
+                const static T zgt(0.0);
+
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+
+                if ( xyprod < zgt )
+                {
+                    scalmul(res,r(1));
+                }
+            }
+
+            else if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == 1 ) )
+            {
+                const static T zgt(0.0);
+
+                res = 1.0;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+
+                if ( xyprod < zgt )
+                {
+                    scalmul(res,r(1));
+                }
+            }
+        }
+
+        else if ( ktype == 200 )
+        {
+            // K = z/(r0.r0) - 1
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
+            {
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+                res -= 1.0;
+            }
+
+            else if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == 1 ) )
+            {
+                res = 1.0;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+            }
+        }
+
+        else if ( ktype == 203 )
+        {
+            // K = -1 if real(z) < 0, 1 otherwise
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
+            {
+                const static T zgt(0.0);
+
+                if ( xyprod < zgt )
+                {
+                    res = -1.0;
+                }
+
+                else
+                {
+                    res = 1.0;
+                }
+            }
+        }
+
+        else if ( ktype == 204 )
+        {
+            // K = 0 if real(z) < 0, z/(r0*r0) otherwise    - 1
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
+            {
+                const static T zgt(0.0);
+
+                if ( xyprod < zgt )
+                {
+                    res = -1.0;
+                }
+
+                else
+                {
+                    res = xyprod;
+                    scaldiv(res,r(0));
+                    scaldiv(res,r(0));
+                    res -= 1.0;
+                }
+            }
+
+            else if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == 1 ) )
+            {
+                const static T zgt(0.0);
+
+                if ( xyprod < zgt )
+                {
+                    res = 0.0;
+                }
+
+                else
+                {
+                    res = 1.0;
+                    scaldiv(res,r(0));
+                    scaldiv(res,r(0));
+                }
+            }
+        }
+
+        else if ( ktype == 206 )
+        {
+            // K = r1*z/(r0*r0) if real(z) < 0, z/(r0*r0) otherwise
+
+            if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) )
+            {
+                const static T zgt(0.0);
+
+                res = xyprod;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+
+                if ( xyprod < zgt )
+                {
+                    scalmul(res,r(1));
+                }
+
+                res -= 1.0;
+            }
+
+            else if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == 1 ) )
+            {
+                const static T zgt(0.0);
+
+                res = 1.0;
+                scaldiv(res,r(0));
+                scaldiv(res,r(0));
+
+                if ( xyprod < zgt )
+                {
+                    scalmul(res,r(1));
+                }
+            }
+        }
+
+        else
+        {
+            NiceThrow("fe fi fo fum");
+        }
+
+        res *= (const T &) cWeight(locindstart);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Pre-process checks
+
+template <class T> 
+void MercerKernel::yyydKK2( T &xygrad, T &xnormgrad, int &minmaxind, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo &xainfo, const vecInfo &xbinfo, const T &bias, const gentype **pxyprod, int ia, int ib, int xdim, int xconsist, int assumreal, int mlid, const double *xy00, const double *xy10, const double *xy11, int deepDeriv) const
+{
+    yyyadKK2(xygrad,xnormgrad,minmaxind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv);
+}
+
+template <class T> 
+void MercerKernel::yyyd2KK2(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T &xyynormgrad, T &xnormxnormgrad, T &xnormynormgrad, T &ynormynormgrad, int &minmaxind, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo &xainfo, const vecInfo &xbinfo, const T &bias, const gentype **pxyprod, int ia, int ib, int xdim, int xconsist, int assumreal, int mlid, const double *xy00, const double *xy10, const double *xy11, int deepDeriv) const
+{
+    yyyad2KK2(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,minmaxind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv);
+}
+
+template <class T> 
+void MercerKernel::yyydnKK2del(Vector<T> &sc, Vector<Vector<int> > &n, int &minmaxind, const Vector<int> &q, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, const T &bias, const gentype **pxyprod, int i, int j, int xdim, int xconsist, int assumreal, int mlid, const double *xy00, const double *xy10, const double *xy11, int deepDeriv) const
+{
+    yyyadnKK2del(sc,n,minmaxind,q,x,y,xinfo,yinfo,bias,pxyprod,i,j,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// How to treat distributions, diagonal override:
+
+template <class T> 
+void MercerKernel::yyyadKK2(T &xygrad, T &xnormgrad, int &minmaxind, 
+                          const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, 
+                          const vecInfo &xainfo, const vecInfo &xbinfo, 
+                          const T &bias, const gentype **pxyprod, 
+                          int ia, int ib, 
+                          int xdim, int xconsist, int assumreal, int mlid, 
+                          const double *xy00, const double *xy10, const double *xy11, int deepDeriv) const
+{
+    int iaset = ( xa.isf4indpresent(8) && !(xa.f4(8).isValNull()) ) ? 1 : 0;
+    int ibset = ( xb.isf4indpresent(8) && !(xb.f4(8).isValNull()) ) ? 1 : 0;
+
+    int xadiagr  = ( xa.isf4indpresent(4) && !(xa.f4(4).isValNull()) ) ? 1 : 0;
+    int xbdiagr  = ( xb.isf4indpresent(4) && !(xb.f4(4).isValNull()) ) ? 1 : 0;
+
+    if ( xadiagr || xbdiagr )
+    {
+        minmaxind = -1;
+
+        xygrad    = 0.0;
+        xnormgrad = 0.0;
+    }
+
+    else
+    {
+        yyybdKK2(xygrad,xnormgrad,minmaxind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
+    }
+}
+
+template <class T> 
+void MercerKernel::yyyad2KK2(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T &xyynormgrad, T &xnormxnormgrad, T &xnormynormgrad, T &ynormynormgrad, int &minmaxind, 
+                           const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, 
+                           const vecInfo &xainfo, const vecInfo &xbinfo, 
+                           const T &bias, const gentype **pxyprod, 
+                           int ia, int ib, 
+                           int xdim, int xconsist, int assumreal, int mlid, 
+                           const double *xy00, const double *xy10, const double *xy11, int deepDeriv) const
+{
+    int iaset = ( xa.isf4indpresent(8) && !(xa.f4(8).isValNull()) ) ? 1 : 0;
+    int ibset = ( xb.isf4indpresent(8) && !(xb.f4(8).isValNull()) ) ? 1 : 0;
+
+    int xadiagr  = ( xa.isf4indpresent(4) && !(xa.f4(4).isValNull()) ) ? 1 : 0;
+    int xbdiagr  = ( xb.isf4indpresent(4) && !(xb.f4(4).isValNull()) ) ? 1 : 0;
+
+    if ( xadiagr || xbdiagr )
+    {
+        minmaxind = -1;
+
+        xygrad         = 0.0;
+        xnormgrad      = 0.0;
+        xyxygrad       = 0.0;
+        xyxnormgrad    = 0.0;
+        xyynormgrad    = 0.0;
+        xnormxnormgrad = 0.0;
+        xnormynormgrad = 0.0;
+        ynormynormgrad = 0.0;
+    }
+
+    else
+    {
+        yyybd2KK2(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,minmaxind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
+    }
+}
+
+template <class T> 
+void MercerKernel::yyyadnKK2del(Vector<T> &sc, Vector<Vector<int> > &n, int &minmaxind, const Vector<int> &q, 
+                                const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, 
+                                const vecInfo &xainfo, const vecInfo &xbinfo, 
+                                const T &bias, const gentype **pxyprod, 
+                                int ia, int ib, 
+                                int xdim, int xconsist, int assumreal, int mlid, const double *xy00, const double *xy10, const double *xy11, int deepDeriv) const
+{
+    int iaset = ( xa.isf4indpresent(8) && !(xa.f4(8).isValNull()) ) ? 1 : 0;
+    int ibset = ( xb.isf4indpresent(8) && !(xb.f4(8).isValNull()) ) ? 1 : 0;
+
+    int xadiagr  = ( xa.isf4indpresent(4) && !(xa.f4(4).isValNull()) ) ? 1 : 0;
+    int xbdiagr  = ( xb.isf4indpresent(4) && !(xb.f4(4).isValNull()) ) ? 1 : 0;
+
+    if ( xadiagr || xbdiagr )
+    {
+        minmaxind = -1;
+
+        sc.resize(0);
+        n.resize(0);
+    }
+
+    else
+    {
+        yyybdnKK2del(sc,n,minmaxind,q,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
+    }
+}
+
+template <class T>
+T &MercerKernel::yyyaK0(T &res,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int xdim, int xconsist, int xresmode, int mlid, int assumreal, int justcalcip) const
+{
+    yyybK0(res,bias,pxyprod,xdim,xconsist,xresmode,mlid,assumreal,justcalcip);
+
+    return res;
+}
+
+template <class T>
+T &MercerKernel::yyyaK1(T &res,
+                    const SparseVector<gentype> &xa,
+                    const vecInfo &xainfo,
+                    int xaignorefarfar,
+                    int xaignorefarfarfar,
+                    int xagradordadd,
+                    int xagradordaddR,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia,
+                    int xdim, int xconsist, int resmode, int mlid,
+                    const double *xy00, int assumreal, int justcalcip) const
+{
+    int iaset = ( xa.isf4indpresent(8) && !(xa.f4(8).isValNull()) ) ? 1 : 0;
+
+    int xadiagr = ( xa.isf4indpresent(4) && !(xa.f4(4).isValNull()) ) ? 1 : 0;
+
+    int xafarpresent = xa.isf1offindpresent() ? 1 : 0;
+
+    int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
+
+    int xafarfarfarpresent = xa.isf3offindpresent() ? 1 : 0;
+
+    int xaind6present = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
+
+    int xaind16present = xa.isf4indpresent(16) && !(xa.f4(16).isValNull());
+
+    int xaind9present = xa.isf4indpresent(9) && !(xa.f4(9).isValNull());
+
+    int xaind10present = xa.isf4indpresent(10) && !(xa.f4(10).isValNull());
+
+    int xaind11present = xa.isf4indpresent(11) && !(xa.f4(11).isValNull());
+
+    int xaind12present = xa.isf4indpresent(12) && !(xa.f4(12).isValNull());
+
+    int xaind13present = xa.isf4indpresent(13) && !(xa.f4(13).isValNull());
+
+    int xaind14present = xa.isf4indpresent(14) && !(xa.f4(14).isValNull());
+
+    int xagradOrder = xaind6present ? ( (int) xa.f4(6) ) : ( xafarfarpresent ? 1 : 0 );
+
+    int xagradOrderR = xaind16present ? ( (int) xa.f4(16) ) : ( xafarfarfarpresent ? 1 : 0 );
+
+    int xagradup = xaind9present ? ( (int) xa.f4(9) ) : 0;
+
+    int xagradupR = xaind10present ? ( (int) xa.f4(10) ) : 0;
+
+    int iaupm = xa.nupsize();
+
+    int adensetype = xaind11present ? 2 : ( xaind12present ? 1 : 0 ); // 1 is dense integration, 2 dense diff, -n deriv -n-1 of dense int
+
+    double xarankw = xaind13present ?  ((double) xa.f4(13)) : 1.0;
+
+    double xArankw = xaind14present ?  ((double) xa.f4(14)) : 1.0;
+
+    if ( adensetype )
+    {
+        NiceThrow("Dense kernel transforms only implemented for K2");
+    }
+
+    xagradOrder += xagradordadd;
+
+    xagradOrderR += xagradordaddR;
+
+    if ( xadiagr )
+    {
+        NiceAssert( !justcalcip );
+
+        res = (T) xa.f4(4);
+
+        if ( xagradOrder || ( ia < 0 ) )
+        {
+            res *= 0.0;
+        }
+    }
+
+    else if ( !xafarpresent && !xagradOrder && !xagradOrderR && ( iaupm == 1 ) )
+    {
+        xKKK1(res,xa.n(),xainfo,0,xa,bias,pxyprod,ia,xdim,xconsist,assumreal,resmode,mlid,xy00,justcalcip,iaset);
+
+        res *= xarankw;
+    }
+
+    else
+    {
+        yyybK1(res,xa,xainfo,xagradOrder,xagradOrderR,iaupm,xafarpresent,xarankw,xArankw,xafarfarpresent,xafarfarfarpresent,xagradup,xagradupR,xaignorefarfar,xaignorefarfarfar,bias,pxyprod,ia,xdim,xconsist,resmode,mlid,xy00,iaset,assumreal,justcalcip);
+    }
+
+    return res;
+}
+
+template <class T>
+T &MercerKernel::yyyaK2(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                    const vecInfo &xainfo, const vecInfo &xbinfo,
+                    int xaignorefarfar, int xbignorefarfar,
+                    int xaignorefarfarfar, int xbignorefarfarfar,
+                    int xagradordadd, int xbgradordadd,
+                    int xagradordaddR, int xbgradordaddR,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib,
+                    int xdim, int xconsist, int resmode, int mlid, 
+                    const double *xy00, const double *xy10, const double *xy11, int assumreal, int justcalcip) const
+{
+    int iaset = ( xa.isf4indpresent(8) && !(xa.f4(8).isValNull()) ) ? 1 : 0;
+    int ibset = ( xb.isf4indpresent(8) && !(xb.f4(8).isValNull()) ) ? 1 : 0;
+
+    int xadiagr = ( xa.isf4indpresent(4) && !(xa.f4(4).isValNull()) ) ? 1 : 0;
+    int xbdiagr = ( xb.isf4indpresent(4) && !(xb.f4(4).isValNull()) ) ? 1 : 0;
+
+    int xafarpresent = xa.isf1offindpresent() ? 1 : 0;
+    int xbfarpresent = xb.isf1offindpresent() ? 1 : 0;
+
+    int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
+    int xbfarfarpresent = xb.isf2offindpresent() ? 1 : 0;
+
+    int xafarfarfarpresent = xa.isf3offindpresent() ? 1 : 0;
+    int xbfarfarfarpresent = xb.isf3offindpresent() ? 1 : 0;
+
+    int xaind6present = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
+    int xbind6present = xb.isf4indpresent(6) && !(xb.f4(6).isValNull());
+
+    int xaind16present = xa.isf4indpresent(16) && !(xa.f4(16).isValNull());
+    int xbind16present = xb.isf4indpresent(16) && !(xb.f4(16).isValNull());
+
+    int xaind9present = xa.isf4indpresent(9) && !(xa.f4(9).isValNull());
+    int xbind9present = xb.isf4indpresent(9) && !(xb.f4(9).isValNull());
+
+    int xaind10present = xa.isf4indpresent(10) && !(xa.f4(10).isValNull());
+    int xbind10present = xb.isf4indpresent(10) && !(xb.f4(10).isValNull());
+
+    int xaind11present = xa.isf4indpresent(11) && !(xa.f4(11).isValNull());
+    int xbind11present = xb.isf4indpresent(11) && !(xb.f4(11).isValNull());
+
+    int xaind12present = xa.isf4indpresent(12) && !(xa.f4(12).isValNull());
+    int xbind12present = xb.isf4indpresent(12) && !(xb.f4(12).isValNull());
+
+    int xaind13present = xa.isf4indpresent(13) && !(xa.f4(13).isValNull());
+    int xbind13present = xb.isf4indpresent(13) && !(xb.f4(13).isValNull());
+
+    int xaind14present = xa.isf4indpresent(14) && !(xa.f4(14).isValNull());
+    int xbind14present = xb.isf4indpresent(14) && !(xb.f4(14).isValNull());
+
+    int xagradOrder = xaind6present ? ( (int) xa.f4(6) ) : ( xafarfarpresent ? 1 : 0 );
+    int xbgradOrder = xbind6present ? ( (int) xb.f4(6) ) : ( xbfarfarpresent ? 1 : 0 );
+
+    int xagradOrderR = xaind16present ? ( (int) xa.f4(16) ) : ( xafarfarfarpresent ? 1 : 0 );
+    int xbgradOrderR = xbind16present ? ( (int) xb.f4(16) ) : ( xbfarfarfarpresent ? 1 : 0 );
+
+    int xagradup = xaind9present ? ( (int) xa.f4(9) ) : 0;
+    int xbgradup = xbind9present ? ( (int) xb.f4(9) ) : 0;
+
+    int xagradupR = xaind10present ? ( (int) xa.f4(10) ) : 0;
+    int xbgradupR = xbind10present ? ( (int) xb.f4(10) ) : 0;
+
+    int iaupm = xa.nupsize();
+    int ibupm = xb.nupsize();
+
+    int adensetype = xaind11present ? 2 : ( xaind12present ? 1 : 0 ); // 1 is dense integration, 2 dense diff
+    int bdensetype = xbind11present ? 2 : ( xbind12present ? 1 : 0 ); // 1 is dense integration, 2 dense diff
+
+    double xarankw = xaind13present ?  ((double) xa.f4(13)) : 1.0;
+    double xbrankw = xbind13present ?  ((double) xb.f4(13)) : 1.0;
+
+    double xArankw = xaind14present ?  ((double) xa.f4(14)) : 1.0;
+    double xBrankw = xbind14present ?  ((double) xb.f4(14)) : 1.0;
+
+    //int densetype = adensetype ? adensetype : -bdensetype;
+
+    xagradOrder += xagradordadd;
+    xbgradOrder += xbgradordadd;
+
+    xagradOrderR += xagradordaddR;
+    xbgradOrderR += xbgradordaddR;
+
+    if ( xadiagr || xbdiagr )
+    {
+        NiceAssert( !justcalcip );
+
+        if ( xadiagr && xbdiagr )
+        {
+            res =  (T) xa.f4(4);
+            res *= (T) xb.f4(4);
+        }
+
+        else if ( xadiagr )
+        {
+            res = (T) xa.f4(4);
+        }
+
+        else if ( xbdiagr )
+        {
+            res = (T) xb.f4(4);
+        }
+
+        if ( xagradOrder || xbgradOrder || xagradOrderR || xbgradOrderR || ( ia < 0 ) || ( ib < 0 ) || ( ia != ib ) || !xadiagr || !xbdiagr )
+        {
+            res *= 0.0;
+        }
+    }
+
+    else if ( !xafarpresent && !xbfarpresent && !xagradOrder && !xbgradOrder && !xagradOrderR && !xbgradOrderR && ( iaupm == 1 ) && ( ibupm == 1 ) )
+    {
+        xKKK2(res,xa.n(),xb.n(),xainfo,xbinfo,0,0,xa,xb,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,justcalcip,iaset,ibset,adensetype,bdensetype);
+
+        res *= xarankw;
+        res *= xbrankw;
+    }
+
+    else
+    {
+        yyybK2(res,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xagradOrderR,xbgradOrderR,iaupm,ibupm,xafarpresent,xbfarpresent,xarankw,xbrankw,xArankw,xBrankw,xafarfarpresent,xbfarfarpresent,xafarfarfarpresent,xbfarfarfarpresent,xagradup,xbgradup,xagradupR,xbgradupR,xaignorefarfar,xbignorefarfar,xaignorefarfarfar,xbignorefarfarfar,bias,pxyprod,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,iaset,ibset,assumreal,justcalcip,adensetype,bdensetype);
+NiceAssert(!testisvnan(res) && !testisinf(res));
+    }
+
+    return res;
+}
+
+template <class T>
+T &MercerKernel::yyyaK2x2(T &res,
+                          const SparseVector<gentype> &x, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                          const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo,
+                          int xignorefarfar, int xaignorefarfar, int xbignorefarfar,
+                          int xignorefarfarfar, int xaignorefarfarfar, int xbignorefarfarfar,
+                          int xgradordadd, int xagradordadd, int xbgradordadd,
+                          int xgradordaddR, int xagradordaddR, int xbgradordaddR,
+                          const T &bias,
+                          int i, int ia, int ib,
+                          int xdim, int xbonsist, int resmode, int mlid,
+                          const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22,
+                          int assumreal, int justcalcip) const
+{
+    int iset  = ( x.isf4indpresent(8)  && !(x.f4(8).isValNull())  ) ? 1 : 0;
+    int iaset = ( xa.isf4indpresent(8) && !(xa.f4(8).isValNull()) ) ? 1 : 0;
+    int ibset = ( xb.isf4indpresent(8) && !(xb.f4(8).isValNull()) ) ? 1 : 0;
+
+    int xdiagr  = ( x.isf4indpresent(4)  && !(x.f4(4).isValNull())  ) ? 1 : 0;
+    int xadiagr = ( xa.isf4indpresent(4) && !(xa.f4(4).isValNull()) ) ? 1 : 0;
+    int xbdiagr = ( xb.isf4indpresent(4) && !(xb.f4(4).isValNull()) ) ? 1 : 0;
+
+    int xfarpresent  = x.isf1offindpresent()  ? 1 : 0;
+    int xafarpresent = xa.isf1offindpresent() ? 1 : 0;
+    int xbfarpresent = xb.isf1offindpresent() ? 1 : 0;
+
+    int xfarfarpresent  = x.isf2offindpresent()  ? 1 : 0;
+    int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
+    int xbfarfarpresent = xb.isf2offindpresent() ? 1 : 0;
+
+    int xfarfarfarpresent  = x.isf3offindpresent()  ? 1 : 0;
+    int xafarfarfarpresent = xa.isf3offindpresent() ? 1 : 0;
+    int xbfarfarfarpresent = xb.isf3offindpresent() ? 1 : 0;
+
+    int xind6present  = x.isf4indpresent(6)  && !(x.f4(6).isValNull());
+    int xaind6present = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
+    int xbind6present = xb.isf4indpresent(6) && !(xb.f4(6).isValNull());
+
+    int xind16present  = x.isf4indpresent(16)  && !(x.f4(16).isValNull());
+    int xaind16present = xa.isf4indpresent(16) && !(xa.f4(16).isValNull());
+    int xbind16present = xb.isf4indpresent(16) && !(xb.f4(16).isValNull());
+
+    int xind9present  = x.isf4indpresent(9)  && !(x.f4(9).isValNull());
+    int xaind9present = xa.isf4indpresent(9) && !(xa.f4(9).isValNull());
+    int xbind9present = xb.isf4indpresent(9) && !(xb.f4(9).isValNull());
+
+    int xind10present  = x.isf4indpresent(10)  && !(x.f4(10).isValNull());
+    int xaind10present = xa.isf4indpresent(10) && !(xa.f4(10).isValNull());
+    int xbind10present = xb.isf4indpresent(10) && !(xb.f4(10).isValNull());
+
+    int xind11present  = x.isf4indpresent(11)  && !(x.f4(11).isValNull());
+    int xaind11present = xa.isf4indpresent(11) && !(xa.f4(11).isValNull());
+    int xbind11present = xb.isf4indpresent(11) && !(xb.f4(11).isValNull());
+
+    int xind12present  = x.isf4indpresent(12)  && !(x.f4(12).isValNull());
+    int xaind12present = xa.isf4indpresent(12) && !(xa.f4(12).isValNull());
+    int xbind12present = xb.isf4indpresent(12) && !(xb.f4(12).isValNull());
+
+    int xind13present  = x.isf4indpresent(13)  && !(x.f4(13).isValNull());
+    int xaind13present = xa.isf4indpresent(13) && !(xa.f4(13).isValNull());
+    int xbind13present = xb.isf4indpresent(13) && !(xb.f4(13).isValNull());
+
+    //int xind14present  = x.isf4indpresent(14)  && !(x.f4(14).isValNull());
+    int xaind14present = xa.isf4indpresent(14) && !(xa.f4(14).isValNull());
+    int xbind14present = xb.isf4indpresent(14) && !(xb.f4(14).isValNull());
+
+    int xgradOrder  = xind6present  ? ( (int) x.f4(6)  ) : ( xfarfarpresent  ? 1 : 0 );
+    int xagradOrder = xaind6present ? ( (int) xa.f4(6) ) : ( xafarfarpresent ? 1 : 0 );
+    int xbgradOrder = xbind6present ? ( (int) xb.f4(6) ) : ( xbfarfarpresent ? 1 : 0 );
+
+    int xgradOrderR  = xind16present  ? ( (int) x.f4(16)  ) : ( xfarfarfarpresent  ? 1 : 0 );
+    int xagradOrderR = xaind16present ? ( (int) xa.f4(16) ) : ( xafarfarfarpresent ? 1 : 0 );
+    int xbgradOrderR = xbind16present ? ( (int) xb.f4(16) ) : ( xbfarfarfarpresent ? 1 : 0 );
+
+    int xgradup  = xind9present  ? ( (int) x.f4(9)  ) : 0;
+    int xagradup = xaind9present ? ( (int) xa.f4(9) ) : 0;
+    int xbgradup = xbind9present ? ( (int) xb.f4(9) ) : 0;
+
+    int xgradupR  = xind10present  ? ( (int) x.f4(10)  ) : 0;
+    int xagradupR = xaind10present ? ( (int) xa.f4(10) ) : 0;
+    int xbgradupR = xbind10present ? ( (int) xb.f4(10) ) : 0;
+
+    int iupm  = x.nupsize();
+    int iaupm = xa.nupsize();
+    int ibupm = xb.nupsize();
+
+    int  densetype =  xind11present ? 2 : (  xind12present ? 1 : 0 ); // 1 is dense integration, 2 dense diff
+    int adensetype = xaind11present ? 2 : ( xaind12present ? 1 : 0 ); // 1 is dense integration, 2 dense diff
+    int bdensetype = xbind11present ? 2 : ( xbind12present ? 1 : 0 ); // 1 is dense integration, 2 dense diff
+
+    double xrankw  = xind13present  ?  ((double) x.f4(13))  : 1.0;
+    double xarankw = xaind13present ?  ((double) xa.f4(13)) : 1.0;
+    double xbrankw = xbind13present ?  ((double) xb.f4(13)) : 1.0;
+
+    //double xrankw  = xind14present  ?  ((double) x.f4(14))  : 1.0;
+    double xArankw = xaind14present ?  ((double) xa.f4(14)) : 1.0;
+    double xBrankw = xbind14present ?  ((double) xb.f4(14)) : 1.0;
+
+    xgradOrder  += xgradordadd;
+    xagradOrder += xagradordadd;
+    xbgradOrder += xbgradordadd;
+
+    xgradOrderR  += xgradordaddR;
+    xagradOrderR += xagradordaddR;
+    xbgradOrderR += xbgradordaddR;
+
+    if ( ( xdiagr && ( !xadiagr || !xbdiagr ) ) || ( !xdiagr && ( xadiagr || xbdiagr ) ) )
+    {
+        NiceAssert( !justcalcip );
+
+        res *= 0.0;
+    }
+
+    else if ( xdiagr && xadiagr && xbdiagr )
+    {
+        NiceAssert( !justcalcip );
+
+        res =  (T) x.f4(4);
+        res *= (T) xa.f4(4);
+        res *= (T) xb.f4(4);
+
+        if ( xgradOrder || xagradOrder || xbgradOrder || xgradOrderR || xagradOrderR || xbgradOrderR || ( i < 0 ) || ( ia < 0 ) || ( ib < 0 ) || ( i != ia ) || ( i != ib ) || ( ia != ib ) )
+        {
+            res *= 0.0;
+        }
+    }
+
+//    else if ( !xfarpresent && !xafarpresent && !xbfarpresent && !xgradOrder && !xagradOrder && !xbgradOrder && ( iupm == 1 ) && ( iaupm == 1 ) && ( ibupm == 1 ) && !densetype && !adensetype && !bdensetype )
+//    {
+//FIXME: at this point go straight to product form!
+//    }
+
+    else
+    {
+//errstream() << "phantomxyzabcabc yyyak2x2\n";
+        yyybK2x2(res,x,xa,xb,xinfo,xainfo,xbinfo,xgradOrder,xagradOrder,xbgradOrder,xgradOrderR,xagradOrderR,xbgradOrderR,iupm,iaupm,ibupm,xfarpresent,xafarpresent,xbfarpresent,xrankw,xarankw,xbrankw,xArankw,xBrankw,xfarfarpresent,xafarfarpresent,xbfarfarpresent,xfarfarfarpresent,xafarfarfarpresent,xbfarfarfarpresent,xgradup,xagradup,xbgradup,xgradupR,xagradupR,xbgradupR,xignorefarfar,xaignorefarfar,xbignorefarfar,xignorefarfarfar,xaignorefarfarfar,xbignorefarfarfar,bias,i,ia,ib,xdim,xbonsist,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,iset,iaset,ibset,assumreal,justcalcip,densetype,adensetype,bdensetype);
+    }
+
+    return res;
+}
+
+
+template <class T>
+T &MercerKernel::yyyaK3(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc,
+                    const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo,
+                    int xaignorefarfar, int xbignorefarfar, int xcignorefarfar,
+                    int xaignorefarfarfar, int xbignorefarfarfar, int xcignorefarfarfar,
+                    int xagradordadd, int xbgradordadd, int xcgradordadd,
+                    int xagradordaddR, int xbgradordaddR, int xcgradordaddR,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib, int ic,
+                    int xdim, int xconsist, int xresmode, int mlid,
+                    const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int assumreal, int justcalcip) const
+{
+    int iaset = ( xa.isf4indpresent(8) && !(xa.f4(8).isValNull()) ) ? 1 : 0;
+    int ibset = ( xb.isf4indpresent(8) && !(xb.f4(8).isValNull()) ) ? 1 : 0;
+    int icset = ( xc.isf4indpresent(8) && !(xc.f4(8).isValNull()) ) ? 1 : 0;
+
+    int xadiagr = ( xa.isf4indpresent(4) && !(xa.f4(4).isValNull()) ) ? 1 : 0;
+    int xbdiagr = ( xb.isf4indpresent(4) && !(xb.f4(4).isValNull()) ) ? 1 : 0;
+    int xcdiagr = ( xc.isf4indpresent(4) && !(xc.f4(4).isValNull()) ) ? 1 : 0;
+
+    int xafarpresent = xa.isf1offindpresent() ? 1 : 0;
+    int xbfarpresent = xb.isf1offindpresent() ? 1 : 0;
+    int xcfarpresent = xc.isf1offindpresent() ? 1 : 0;
+
+    int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
+    int xbfarfarpresent = xb.isf2offindpresent() ? 1 : 0;
+    int xcfarfarpresent = xc.isf2offindpresent() ? 1 : 0;
+
+    int xafarfarfarpresent = xa.isf3offindpresent() ? 1 : 0;
+    int xbfarfarfarpresent = xb.isf3offindpresent() ? 1 : 0;
+    int xcfarfarfarpresent = xc.isf3offindpresent() ? 1 : 0;
+
+    int xaind6present = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
+    int xbind6present = xb.isf4indpresent(6) && !(xb.f4(6).isValNull());
+    int xcind6present = xc.isf4indpresent(6) && !(xc.f4(6).isValNull());
+
+    int xaind16present = xa.isf4indpresent(16) && !(xa.f4(16).isValNull());
+    int xbind16present = xb.isf4indpresent(16) && !(xb.f4(16).isValNull());
+    int xcind16present = xc.isf4indpresent(16) && !(xc.f4(16).isValNull());
+
+    int xaind9present = xa.isf4indpresent(9) && !(xa.f4(9).isValNull());
+    int xbind9present = xb.isf4indpresent(9) && !(xb.f4(9).isValNull());
+    int xcind9present = xc.isf4indpresent(9) && !(xc.f4(9).isValNull());
+
+    int xaind10present = xa.isf4indpresent(10) && !(xa.f4(10).isValNull());
+    int xbind10present = xb.isf4indpresent(10) && !(xb.f4(10).isValNull());
+    int xcind10present = xc.isf4indpresent(10) && !(xc.f4(10).isValNull());
+
+    int xaind11present = xa.isf4indpresent(11) && !(xa.f4(11).isValNull());
+    int xbind11present = xb.isf4indpresent(11) && !(xb.f4(11).isValNull());
+    int xcind11present = xc.isf4indpresent(11) && !(xc.f4(11).isValNull());
+
+    int xaind12present = xa.isf4indpresent(12) && !(xa.f4(12).isValNull());
+    int xbind12present = xb.isf4indpresent(12) && !(xb.f4(12).isValNull());
+    int xcind12present = xc.isf4indpresent(12) && !(xc.f4(12).isValNull());
+
+    int xaind13present = xa.isf4indpresent(13) && !(xa.f4(13).isValNull());
+    int xbind13present = xb.isf4indpresent(13) && !(xb.f4(13).isValNull());
+    int xcind13present = xc.isf4indpresent(13) && !(xc.f4(13).isValNull());
+
+    int xaind14present = xa.isf4indpresent(14) && !(xa.f4(14).isValNull());
+    int xbind14present = xb.isf4indpresent(14) && !(xb.f4(14).isValNull());
+    int xcind14present = xc.isf4indpresent(14) && !(xc.f4(14).isValNull());
+
+    int xagradOrder = xaind6present ? ( (int) xa.f4(6) ) : ( xafarfarpresent ? 1 : 0 );
+    int xbgradOrder = xbind6present ? ( (int) xb.f4(6) ) : ( xbfarfarpresent ? 1 : 0 );
+    int xcgradOrder = xcind6present ? ( (int) xc.f4(6) ) : ( xcfarfarpresent ? 1 : 0 );
+
+    int xagradOrderR = xaind16present ? ( (int) xa.f4(16) ) : ( xafarfarfarpresent ? 1 : 0 );
+    int xbgradOrderR = xbind16present ? ( (int) xb.f4(16) ) : ( xbfarfarfarpresent ? 1 : 0 );
+    int xcgradOrderR = xcind16present ? ( (int) xc.f4(16) ) : ( xcfarfarfarpresent ? 1 : 0 );
+
+    int xagradup = xaind9present ? ( (int) xa.f4(9) ) : 0;
+    int xbgradup = xbind9present ? ( (int) xb.f4(9) ) : 0;
+    int xcgradup = xcind9present ? ( (int) xc.f4(9) ) : 0;
+
+    int xagradupR = xaind10present ? ( (int) xa.f4(10) ) : 0;
+    int xbgradupR = xbind10present ? ( (int) xb.f4(10) ) : 0;
+    int xcgradupR = xcind10present ? ( (int) xc.f4(10) ) : 0;
+
+    int iaupm = xa.nupsize();
+    int ibupm = xb.nupsize();
+    int icupm = xc.nupsize();
+
+    int adensetype = xaind11present ? 2 : ( xaind12present ? 1 : 0 ); // 1 is dense integration, 2 dense diff
+    int bdensetype = xbind11present ? 2 : ( xbind12present ? 1 : 0 ); // 1 is dense integration, 2 dense diff
+    int cdensetype = xcind11present ? 2 : ( xcind12present ? 1 : 0 ); // 1 is dense integration, 2 dense diff
+
+    double xarankw = xaind13present ?  ((double) xa.f4(13)) : 1.0;
+    double xbrankw = xbind13present ?  ((double) xb.f4(13)) : 1.0;
+    double xcrankw = xcind13present ?  ((double) xc.f4(13)) : 1.0;
+
+    double xArankw = xaind14present ?  ((double) xa.f4(14)) : 1.0;
+    double xBrankw = xbind14present ?  ((double) xb.f4(14)) : 1.0;
+    double xCrankw = xcind14present ?  ((double) xc.f4(14)) : 1.0;
+
+    if ( adensetype || bdensetype || cdensetype )
+    {
+        NiceThrow("Dense kernel transforms only implemented for K2");
+    }
+
+    xagradOrder += xagradordadd;
+    xbgradOrder += xbgradordadd;
+    xcgradOrder += xcgradordadd;
+
+    xagradOrderR += xagradordaddR;
+    xbgradOrderR += xbgradordaddR;
+    xcgradOrderR += xcgradordaddR;
+
+    if ( xadiagr || xbdiagr || xcdiagr )
+    {
+        NiceAssert( !justcalcip );
+
+        if ( xadiagr && xbdiagr && xcdiagr )
+        {
+            res =  (T) xa.f4(4);
+            res *= (T) xb.f4(4);
+            res *= (T) xc.f4(4);
+        }
+
+        else if ( xadiagr && xbdiagr )
+        {
+            res =  (T) xa.f4(4);
+            res *= (T) xb.f4(4);
+        }
+
+        else if ( xadiagr && xcdiagr )
+        {
+            res =  (T) xa.f4(4);
+            res *= (T) xc.f4(4);
+        }
+
+        else if ( xbdiagr && xcdiagr )
+        {
+            res =  (T) xb.f4(4);
+            res *= (T) xc.f4(4);
+        }
+
+        else if ( xadiagr )
+        {
+            res = (T) xa.f4(4);
+        }
+
+        else if ( xbdiagr )
+        {
+            res = (T) xb.f4(4);
+        }
+
+        else if ( xcdiagr )
+        {
+            res = (T) xc.f4(4);
+        }
+
+        if ( xagradOrder || xbgradOrder || xcgradOrder || xagradOrderR || xbgradOrderR || xcgradOrderR || ( ia < 0 ) || ( ib < 0 ) || ( ic < 0 ) || ( ia != ib ) || ( ia != ic ) || ( ib != ic ) || !xadiagr || !xbdiagr || !xcdiagr )
+        {
+            res *= 0.0;
+        }
+    }
+
+    else if ( !xafarpresent && !xbfarpresent && !xcfarpresent && !xagradOrder && !xbgradOrder && !xcgradOrder && !xagradOrderR && !xbgradOrderR && !xcgradOrderR && ( iaupm == 1 ) && ( ibupm == 1 ) && ( icupm == 1 ) )
+    {
+        xKKK3(res,xa.n(),xb.n(),xc.n(),xainfo,xbinfo,xcinfo,0,0,0,xa,xb,xc,bias,pxyprod,ia,ib,ic,xdim,xconsist,assumreal,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,justcalcip,iaset,ibset,icset);
+
+        res *= xarankw;
+        res *= xbrankw;
+        res *= xcrankw;
+    }
+
+    else
+    {
+        yyybK3(res,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xagradOrderR,xbgradOrderR,xcgradOrderR,iaupm,ibupm,icupm,xafarpresent,xbfarpresent,xcfarpresent,xarankw,xbrankw,xcrankw,xArankw,xBrankw,xCrankw,xafarfarpresent,xbfarfarpresent,xcfarfarpresent,xafarfarfarpresent,xbfarfarfarpresent,xcfarfarfarpresent,xagradup,xbgradup,xcgradup,xagradupR,xbgradupR,xcgradupR,xaignorefarfar,xbignorefarfar,xcignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,bias,pxyprod,ia,ib,ic,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,iaset,ibset,icset,assumreal,justcalcip);
+    }
+
+    return res;
+}
+
+template <class T>
+T &MercerKernel::yyyaK4(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd,
+                    const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo,
+                    int xaignorefarfar, int xbignorefarfar, int xcignorefarfar, int xdignorefarfar,
+                    int xaignorefarfarfar, int xbignorefarfarfar, int xcignorefarfarfar, int xdignorefarfarfar,
+                    int xagradordadd, int xbgradordadd, int xcgradordadd, int xdgradordadd,
+                    int xagradordaddR, int xbgradordaddR, int xcgradordaddR, int xdgradordaddR,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib, int ic, int id,
+                    int xdim, int xconsist, int xresmode, int mlid,
+                    const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, const double *xy30, const double *xy31, const double *xy32, const double *xy33, int assumreal, int justcalcip) const
+{
+    int iaset = ( xa.isf4indpresent(8) && !(xa.f4(8).isValNull()) ) ? 1 : 0;
+    int ibset = ( xb.isf4indpresent(8) && !(xb.f4(8).isValNull()) ) ? 1 : 0;
+    int icset = ( xc.isf4indpresent(8) && !(xc.f4(8).isValNull()) ) ? 1 : 0;
+    int idset = ( xd.isf4indpresent(8) && !(xd.f4(8).isValNull()) ) ? 1 : 0;
+
+    int xadiagr = ( xa.isf4indpresent(4) && !(xa.f4(4).isValNull()) ) ? 1 : 0;
+    int xbdiagr = ( xb.isf4indpresent(4) && !(xb.f4(4).isValNull()) ) ? 1 : 0;
+    int xcdiagr = ( xc.isf4indpresent(4) && !(xc.f4(4).isValNull()) ) ? 1 : 0;
+    int xddiagr = ( xd.isf4indpresent(4) && !(xd.f4(4).isValNull()) ) ? 1 : 0;
+
+    int xafarpresent = xa.isf1offindpresent() ? 1 : 0;
+    int xbfarpresent = xb.isf1offindpresent() ? 1 : 0;
+    int xcfarpresent = xc.isf1offindpresent() ? 1 : 0;
+    int xdfarpresent = xd.isf1offindpresent() ? 1 : 0;
+
+    int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
+    int xbfarfarpresent = xb.isf2offindpresent() ? 1 : 0;
+    int xcfarfarpresent = xc.isf2offindpresent() ? 1 : 0;
+    int xdfarfarpresent = xd.isf2offindpresent() ? 1 : 0;
+
+    int xafarfarfarpresent = xa.isf3offindpresent() ? 1 : 0;
+    int xbfarfarfarpresent = xb.isf3offindpresent() ? 1 : 0;
+    int xcfarfarfarpresent = xc.isf3offindpresent() ? 1 : 0;
+    int xdfarfarfarpresent = xd.isf3offindpresent() ? 1 : 0;
+
+    int xaind6present = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
+    int xbind6present = xb.isf4indpresent(6) && !(xb.f4(6).isValNull());
+    int xcind6present = xc.isf4indpresent(6) && !(xc.f4(6).isValNull());
+    int xdind6present = xd.isf4indpresent(6) && !(xd.f4(6).isValNull());
+
+    int xaind16present = xa.isf4indpresent(16) && !(xa.f4(16).isValNull());
+    int xbind16present = xb.isf4indpresent(16) && !(xb.f4(16).isValNull());
+    int xcind16present = xc.isf4indpresent(16) && !(xc.f4(16).isValNull());
+    int xdind16present = xd.isf4indpresent(16) && !(xd.f4(16).isValNull());
+
+    int xaind9present = xa.isf4indpresent(9) && !(xa.f4(9).isValNull());
+    int xbind9present = xb.isf4indpresent(9) && !(xb.f4(9).isValNull());
+    int xcind9present = xc.isf4indpresent(9) && !(xc.f4(9).isValNull());
+    int xdind9present = xd.isf4indpresent(9) && !(xd.f4(9).isValNull());
+
+    int xaind10present = xa.isf4indpresent(10) && !(xa.f4(10).isValNull());
+    int xbind10present = xb.isf4indpresent(10) && !(xb.f4(10).isValNull());
+    int xcind10present = xc.isf4indpresent(10) && !(xc.f4(10).isValNull());
+    int xdind10present = xd.isf4indpresent(10) && !(xd.f4(10).isValNull());
+
+    int xaind11present = xa.isf4indpresent(11) && !(xa.f4(11).isValNull());
+    int xbind11present = xb.isf4indpresent(11) && !(xb.f4(11).isValNull());
+    int xcind11present = xc.isf4indpresent(11) && !(xc.f4(11).isValNull());
+    int xdind11present = xd.isf4indpresent(11) && !(xd.f4(11).isValNull());
+
+    int xaind12present = xa.isf4indpresent(12) && !(xa.f4(12).isValNull());
+    int xbind12present = xb.isf4indpresent(12) && !(xb.f4(12).isValNull());
+    int xcind12present = xc.isf4indpresent(12) && !(xc.f4(12).isValNull());
+    int xdind12present = xd.isf4indpresent(12) && !(xd.f4(12).isValNull());
+
+    int xaind13present = xa.isf4indpresent(13) && !(xa.f4(13).isValNull());
+    int xbind13present = xb.isf4indpresent(13) && !(xb.f4(13).isValNull());
+    int xcind13present = xc.isf4indpresent(13) && !(xc.f4(13).isValNull());
+    int xdind13present = xd.isf4indpresent(13) && !(xd.f4(13).isValNull());
+
+    int xaind14present = xa.isf4indpresent(14) && !(xa.f4(14).isValNull());
+    int xbind14present = xb.isf4indpresent(14) && !(xb.f4(14).isValNull());
+    int xcind14present = xc.isf4indpresent(14) && !(xc.f4(14).isValNull());
+    int xdind14present = xd.isf4indpresent(14) && !(xd.f4(14).isValNull());
+
+    int xagradOrder = xaind6present ? ( (int) xa.f4(6) ) : ( xafarfarpresent ? 1 : 0 );
+    int xbgradOrder = xbind6present ? ( (int) xb.f4(6) ) : ( xbfarfarpresent ? 1 : 0 );
+    int xcgradOrder = xcind6present ? ( (int) xc.f4(6) ) : ( xcfarfarpresent ? 1 : 0 );
+    int xdgradOrder = xdind6present ? ( (int) xd.f4(6) ) : ( xdfarfarpresent ? 1 : 0 );
+
+    int xagradOrderR = xaind16present ? ( (int) xa.f4(16) ) : ( xafarfarfarpresent ? 1 : 0 );
+    int xbgradOrderR = xbind16present ? ( (int) xb.f4(16) ) : ( xbfarfarfarpresent ? 1 : 0 );
+    int xcgradOrderR = xcind16present ? ( (int) xc.f4(16) ) : ( xcfarfarfarpresent ? 1 : 0 );
+    int xdgradOrderR = xdind16present ? ( (int) xd.f4(16) ) : ( xdfarfarfarpresent ? 1 : 0 );
+
+    int xagradup = xaind9present ? ( (int) xa.f4(9) ) : 0;
+    int xbgradup = xbind9present ? ( (int) xb.f4(9) ) : 0;
+    int xcgradup = xcind9present ? ( (int) xc.f4(9) ) : 0;
+    int xdgradup = xdind9present ? ( (int) xd.f4(9) ) : 0;
+
+    int xagradupR = xaind10present ? ( (int) xa.f4(10) ) : 0;
+    int xbgradupR = xbind10present ? ( (int) xb.f4(10) ) : 0;
+    int xcgradupR = xcind10present ? ( (int) xc.f4(10) ) : 0;
+    int xdgradupR = xdind10present ? ( (int) xd.f4(10) ) : 0;
+
+    int iaupm = xa.nupsize();
+    int ibupm = xb.nupsize();
+    int icupm = xc.nupsize();
+    int idupm = xd.nupsize();
+
+    int adensetype = xaind11present ? 2 : ( xaind12present ? 1 : 0 ); // 1 is dense integration, 2 dense diff
+    int bdensetype = xbind11present ? 2 : ( xbind12present ? 1 : 0 ); // 1 is dense integration, 2 dense diff
+    int cdensetype = xcind11present ? 2 : ( xcind12present ? 1 : 0 ); // 1 is dense integration, 2 dense diff
+    int ddensetype = xdind11present ? 2 : ( xdind12present ? 1 : 0 ); // 1 is dense integration, 2 dense diff
+
+    double xarankw = xaind13present ?  ((double) xa.f4(13)) : 1.0;
+    double xbrankw = xbind13present ?  ((double) xb.f4(13)) : 1.0;
+    double xcrankw = xcind13present ?  ((double) xc.f4(13)) : 1.0;
+    double xdrankw = xdind13present ?  ((double) xd.f4(13)) : 1.0;
+
+    double xArankw = xaind14present ?  ((double) xa.f4(14)) : 1.0;
+    double xBrankw = xbind14present ?  ((double) xb.f4(14)) : 1.0;
+    double xCrankw = xcind14present ?  ((double) xc.f4(14)) : 1.0;
+    double xDrankw = xdind14present ?  ((double) xd.f4(14)) : 1.0;
+
+    if ( adensetype || bdensetype || cdensetype || ddensetype )
+    {
+        NiceThrow("Dense kernel transforms only implemented for K2");
+    }
+
+    xagradOrder += xagradordadd;
+    xbgradOrder += xbgradordadd;
+    xcgradOrder += xcgradordadd;
+    xdgradOrder += xdgradordadd;
+
+    xagradOrderR += xagradordaddR;
+    xbgradOrderR += xbgradordaddR;
+    xcgradOrderR += xcgradordaddR;
+    xdgradOrderR += xdgradordaddR;
+
+    if ( xadiagr || xbdiagr || xcdiagr || xddiagr )
+    {
+        NiceAssert( !justcalcip );
+
+        if ( xadiagr && xbdiagr && xcdiagr && xddiagr )
+        {
+            res =  (T) xa.f4(4);
+            res *= (T) xb.f4(4);
+            res *= (T) xc.f4(4);
+            res *= (T) xd.f4(4);
+        }
+
+        else if ( xadiagr && xbdiagr && xcdiagr )
+        {
+            res =  (T) xa.f4(4);
+            res *= (T) xb.f4(4);
+            res *= (T) xc.f4(4);
+        }
+
+        else if ( xadiagr && xbdiagr && xddiagr )
+        {
+            res =  (T) xa.f4(4);
+            res *= (T) xb.f4(4);
+            res *= (T) xd.f4(4);
+        }
+
+        else if ( xadiagr && xcdiagr && xddiagr )
+        {
+            res =  (T) xa.f4(4);
+            res *= (T) xc.f4(4);
+            res *= (T) xd.f4(4);
+        }
+
+        else if ( xbdiagr && xcdiagr && xddiagr )
+        {
+            res =  (T) xb.f4(4);
+            res *= (T) xc.f4(4);
+            res *= (T) xd.f4(4);
+        }
+
+        else if ( xadiagr && xbdiagr )
+        {
+            res =  (T) xa.f4(4);
+            res *= (T) xb.f4(4);
+        }
+
+        else if ( xadiagr && xcdiagr )
+        {
+            res =  (T) xa.f4(4);
+            res *= (T) xc.f4(4);
+        }
+
+        else if ( xadiagr && xddiagr )
+        {
+            res =  (T) xa.f4(4);
+            res *= (T) xd.f4(4);
+        }
+
+        else if ( xbdiagr && xcdiagr )
+        {
+            res =  (T) xb.f4(4);
+            res *= (T) xc.f4(4);
+        }
+
+        else if ( xbdiagr && xddiagr )
+        {
+            res =  (T) xb.f4(4);
+            res *= (T) xd.f4(4);
+        }
+
+        else if ( xcdiagr && xddiagr )
+        {
+            res =  (T) xc.f4(4);
+            res *= (T) xd.f4(4);
+        }
+
+        else if ( xadiagr )
+        {
+            res = (T) xa.f4(4);
+        }
+
+        else if ( xbdiagr )
+        {
+            res = (T) xb.f4(4);
+        }
+
+        else if ( xcdiagr )
+        {
+            res = (T) xc.f4(4);
+        }
+
+        else if ( xddiagr )
+        {
+            res = (T) xd.f4(4);
+        }
+
+        if ( xagradOrder || xbgradOrder || xcgradOrder || xdgradOrder || xagradOrderR || xbgradOrderR || xcgradOrderR || xdgradOrderR || ( ia < 0 ) || ( ib < 0 ) || ( ic < 0 ) || ( id <= 0 ) || ( ia != ib ) || ( ia != ic ) || ( ia != id ) || ( ib != ic ) || ( ib != id ) || ( ic != id ) || !xadiagr || !xbdiagr || !xcdiagr || !xddiagr )
+        {
+            res *= 0.0;
+        }
+    }
+
+    else if ( !xafarpresent && !xbfarpresent && !xcfarpresent && !xcfarpresent && !xdfarpresent && !xagradOrder && !xbgradOrder && !xcgradOrder && !xdgradOrder && !xagradOrderR && !xbgradOrderR && !xcgradOrderR && !xdgradOrderR && ( iaupm == 1 ) && ( ibupm == 1 ) && ( icupm == 1 ) && ( idupm == 1 ) )
+    {
+        xKKK4(res,xa.n(),xb.n(),xc.n(),xd.n(),xainfo,xbinfo,xcinfo,xdinfo,0,0,0,0,xa,xb,xc,xd,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,assumreal,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,justcalcip,iaset,ibset,icset,idset);
+
+        res *= xarankw;
+        res *= xbrankw;
+        res *= xcrankw;
+        res *= xdrankw;
+    }
+
+    else
+    {
+        yyybK4(res,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xagradOrderR,xbgradOrderR,xcgradOrderR,xdgradOrderR,iaupm,ibupm,icupm,idupm,xafarpresent,xbfarpresent,xcfarpresent,xdfarpresent,xarankw,xbrankw,xcrankw,xdrankw,xArankw,xBrankw,xCrankw,xDrankw,xafarfarpresent,xbfarfarpresent,xcfarfarpresent,xdfarfarpresent,xafarfarfarpresent,xbfarfarfarpresent,xcfarfarfarpresent,xdfarfarfarpresent,xagradup,xbgradup,xcgradup,xdgradup,xagradupR,xbgradupR,xcgradupR,xdgradupR,xaignorefarfar,xbignorefarfar,xcignorefarfar,xdignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xdignorefarfarfar,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,iaset,ibset,icset,idset,assumreal,justcalcip);
+    }
+
+    return res;
+}
+
+template <class T>
+T &MercerKernel::yyyaKm(int m, T &res,
+                    Vector<const SparseVector<gentype> *> &x,
+                    Vector<const vecInfo *> &xinfo,
+                    Vector<int> &xignorefarfar,
+                    Vector<int> &xignorefarfarfar,
+                    Vector<int> &xgradordadd,
+                    Vector<int> &xgradordaddR,
+                    const T &bias,
+                    Vector<int> &i,
+                    const gentype **pxyprod, int xdim, int xconsist, int resmode, int mlid,
+                    const Matrix<double> *xy, int assumreal, int justcalcip) const
+{
+    Vector<int> iiset(x.size());
+    Vector<int> xdiagr(x.size());
+    Vector<int> xfarpresent(x.size());
+    Vector<int> xfarfarpresent(x.size());
+    Vector<int> xfarfarfarpresent(x.size());
+    Vector<int> xind6present(x.size());
+    Vector<int> xind16present(x.size());
+    Vector<int> xind9present(x.size());
+    Vector<int> xind10present(x.size());
+    Vector<int> xind11present(x.size());
+    Vector<int> xind12present(x.size());
+    Vector<int> xind13present(x.size());
+    Vector<int> xind14present(x.size());
+    Vector<int> xgradOrder(x.size());
+    Vector<int> xgradOrderR(x.size());
+    Vector<int> xgradup(x.size());
+    Vector<int> xgradupR(x.size());
+    Vector<int> iupm(x.size());
+    Vector<int> densetype(x.size());
+    Vector<double> xxrankw(x.size());
+    Vector<double> xXrankw(x.size());
+
+    int ii;
+    int farcnt   = 0;
+    int gradcnt  = 0;
+    int diagcnt  = 0;
+    int iupcntnu = 0;
+    int inecnt   = 0;
+    int inegcnt  = 0;
+    bool firstterm = true;
+    double simplerankprod = 1;
+
+    {
+        for ( ii = 0 ; ii < x.size() ; ++ii )
+        {
+            iiset("&",ii)             = ( (*(x(ii))).isf4indpresent(8) && !((*(x(ii))).f4(8).isValNull()) ) ? 1 : 0;
+            xdiagr("&",ii)            = ( (*(x(ii))).isf4indpresent(4) && !((*(x(ii))).f4(4).isValNull()) ) ? 1 : 0;
+            xfarpresent("&",ii)       = (*(x(ii))).isf1offindpresent() ? 1 : 0;
+            xfarfarpresent("&",ii)    = (*(x(ii))).isf2offindpresent() ? 1 : 0;
+            xfarfarfarpresent("&",ii) = (*(x(ii))).isf3offindpresent() ? 1 : 0;
+            xind6present("&",ii)      = (*(x(ii))).isf4indpresent(6)  && !((*(x(ii))).f4(6).isValNull());
+            xind16present("&",ii)     = (*(x(ii))).isf4indpresent(6)  && !((*(x(ii))).f4(6).isValNull());
+            xind9present("&",ii)      = (*(x(ii))).isf4indpresent(9)  && !((*(x(ii))).f4(9).isValNull());
+            xind10present("&",ii)     = (*(x(ii))).isf4indpresent(10) && !((*(x(ii))).f4(10).isValNull());
+            xind11present("&",ii)     = (*(x(ii))).isf4indpresent(11) && !((*(x(ii))).f4(11).isValNull());
+            xind12present("&",ii)     = (*(x(ii))).isf4indpresent(12) && !((*(x(ii))).f4(12).isValNull());
+            xind13present("&",ii)     = (*(x(ii))).isf4indpresent(13) && !((*(x(ii))).f4(13).isValNull());
+            xind14present("&",ii)     = (*(x(ii))).isf4indpresent(14) && !((*(x(ii))).f4(14).isValNull());
+            xgradOrder("&",ii)        = xind6present(ii)  ? ( (int) (*(x(ii))).f4(6)  ) : ( xfarfarpresent(ii)    ? 1 : 0 );
+            xgradOrderR("&",ii)       = xind16present(ii) ? ( (int) (*(x(ii))).f4(16) ) : ( xfarfarfarpresent(ii) ? 1 : 0 );
+            xgradup("&",ii)           = xind9present(ii)  ? ( (int) (*(x(ii))).f4(9)  ) : 0;
+            xgradupR("&",ii)          = xind10present(ii) ? ( (int) (*(x(ii))).f4(10) ) : 0;
+            iupm("&",ii)              = (*(x(ii))).nupsize();
+            densetype("&",ii)         = xind11present(ii) ? 2 : ( xind12present(ii) ? 1 : 0 );
+            xxrankw("&",ii)           = xind13present(ii) ? ((double) (*(x(ii))).f4(13)) : 1.0;
+            xXrankw("&",ii)           = xind14present(ii) ? ((double) (*(x(ii))).f4(14)) : 1.0;
+
+            simplerankprod *= xxrankw(ii);
+
+            xgradOrder("&",ii)  += xgradordadd(ii);
+            xgradOrderR("&",ii) += xgradordaddR(ii);
+
+            if ( xdiagr(ii) )
+            {
+                if ( firstterm ) { res  = (T) (*(x(ii))).f4(4); }
+                else             { res *= (T) (*(x(ii))).f4(4); }
+
+                firstterm = false;
+                ++diagcnt;
+            }
+
+            farcnt   += xfarpresent(ii);
+            gradcnt  += xgradOrder(ii);
+            gradcnt  += xgradOrderR(ii);
+            iupcntnu += ( ( iupm(ii) != 1    ) ? 1 : 0 );
+            inecnt   += ( ( i(ii)    != i(0) ) ? 1 : 0 );
+            inegcnt  += ( ( i(ii)    <  0    ) ? 1 : 0 );
+        }
+
+        if ( sum(densetype) )
+        {
+            NiceThrow("Dense kernel transforms only implemented for K2");
+        }
+    }
+
+    if ( diagcnt )
+    {
+        NiceAssert( !justcalcip );
+
+        // res already set!
+
+        if ( !gradcnt || inegcnt || inecnt || ( diagcnt != x.size() ) )
+        {
+            res *= 0.0;
+        }
+    }
+
+    else if ( !x.size() || ( !farcnt && !gradcnt && !iupcntnu ) )
+    {
+        Vector<const SparseVector<gentype> *> xn(x);
+
+        for ( ii = 0 ; ii < x.size() ; ++ii )
+        {
+            xn("&",ii) = &((*x(ii)).n());
+        }
+
+        yyyKKm(m,res,xn,xinfo,xgradOrder,xgradup,iupm,x,bias,i,pxyprod,xdim,xconsist,resmode,mlid,xy,&iiset,assumreal,justcalcip);
+
+        res *= simplerankprod;
+    }
+
+    else
+    {
+        yyybKm(m,res,x,xinfo,xgradOrder,xgradOrderR,iupm,xfarpresent,xxrankw,xXrankw,xfarfarpresent,xfarfarfarpresent,xgradup,xgradupR,xignorefarfar,xignorefarfarfar,bias,i,pxyprod,xdim,xconsist,resmode,mlid,xy,&iiset,assumreal,justcalcip);
+    }
+
+    return res;
+}
+
+template <class T>
+int MercerKernel::yyyaphim(int m, Vector<T>  &res, const SparseVector<gentype> &xa, const vecInfo &xainfo, int xaignorefarfar, int xaignorefarfarfar, int xagradordadd, int xagradordaddR, int ia, int allowfinite, int xdim, int xconsist, int assumreal) const
+{
+    int dres = 0;
+
+    int iaset              = ( xa.isf4indpresent(8) && !(xa.f4(8).isValNull()) ) ? 1 : 0;
+    int xadiagr            = ( xa.isf4indpresent(4) && !(xa.f4(4).isValNull()) ) ? 1 : 0;
+    int xafarpresent       = xa.isf1offindpresent() ? 1 : 0;
+    int xafarfarpresent    = xa.isf2offindpresent() ? 1 : 0;
+    int xafarfarfarpresent = xa.isf3offindpresent() ? 1 : 0;
+    int xaind6present      = xa.isf4indpresent(6)  && !(xa.f4(6).isValNull());
+    int xaind16present     = xa.isf4indpresent(16) && !(xa.f4(16).isValNull());
+    int xaind9present      = xa.isf4indpresent(9)  && !(xa.f4(9).isValNull());
+    int xaind10present     = xa.isf4indpresent(10) && !(xa.f4(10).isValNull());
+    int xagradOrder        = xaind6present  ? ( (int) xa.f4(6)  ) : ( xafarfarpresent    ? 1 : 0 );
+    int xagradOrderR       = xaind16present ? ( (int) xa.f4(16) ) : ( xafarfarfarpresent ? 1 : 0 );
+    int xagradup           = xaind9present  ? ( (int) xa.f4(9)  ) : 0;
+    int xagradupR          = xaind10present ? ( (int) xa.f4(10) ) : 0;
+    int iaupm              = xa.nupsize();
+
+    xagradOrder  += xagradordadd;
+    xagradOrderR += xagradordaddR;
+
+    if ( m == -1 )
+    {
+        dres = yyyPphim(m,res,xa,xainfo,ia,allowfinite,xdim,xconsist,assumreal,iaset,xagradOrder,xagradup,iaupm);
+    }
+
+    else if ( xadiagr )
+    {
+        NiceThrow("Can't do diagonal feature maps");
+    }
+
+    else if ( !xafarpresent && !xagradOrder && ( iaupm == 1 ) )
+    {
+        dres = yyyPphim(m,res,xa.n(),xainfo,ia,allowfinite,xdim,xconsist,assumreal,iaset,xagradOrder,xagradup,iaupm);
+    }
+
+    else
+    {
+        dres = yyybphim(m,res,xa,xainfo,xaignorefarfar,xaignorefarfarfar,ia,xagradOrder,xagradOrderR,iaupm,xafarpresent,xafarfarpresent,xafarfarfarpresent,xagradup,xagradupR,allowfinite,xdim,xconsist,assumreal,iaset);
+    }
+
+    return dres;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Pre-process Rank
+//
+// NB: n actually just returns the vector itself, so gradient parts are passed through by this
+
+template <class T>
+void MercerKernel::yyybdKK2(T &xygrad, T &xnormgrad, int &minmaxind,
+                            const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                            const vecInfo &xainfo, const vecInfo &xbinfo,
+                            const T &bias, const gentype **pxyprod,
+                            int ia, int ib,
+                            int xdim, int xconsist, int assumreal, int mlid, const double *xy00, const double *xy10, const double *xy11, int deepDeriv, int iaset, int ibset) const
+{
+#ifndef NDEBUG
+    int xafarpresent = xa.isf1offindpresent() ? 1 : 0;
+    int xbfarpresent = xb.isf1offindpresent() ? 1 : 0;
+
+    NiceAssert( !xafarpresent );
+    NiceAssert( !xbfarpresent );
+#endif
+
+    yyycdKK2(xygrad,xnormgrad,minmaxind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
+}
+
+template <class T>
+void MercerKernel::yyybd2KK2(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T &xyynormgrad, T &xnormxnormgrad, T &xnormynormgrad, T &ynormynormgrad, int &minmaxind,
+                             const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                             const vecInfo &xainfo, const vecInfo &xbinfo,
+                             const T &bias, const gentype **pxyprod,
+                             int ia, int ib, int xdim, int xconsist, int assumreal, int mlid, const double *xy00, const double *xy10, const double *xy11, int deepDeriv, int iaset, int ibset) const
+{
+#ifndef NDEBUG
+    int xafarpresent = xa.isf1offindpresent() ? 1 : 0;
+    int xbfarpresent = xb.isf1offindpresent() ? 1 : 0;
+
+    NiceAssert( !xafarpresent );
+    NiceAssert( !xbfarpresent );
+#endif
+
+    yyycd2KK2(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,minmaxind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
+}
+
+template <class T>
+void MercerKernel::yyybdnKK2del(Vector<T> &sc, Vector<Vector<int> > &n, int &minmaxind, const Vector<int> &q,
+                               const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                               const vecInfo &xainfo, const vecInfo &xbinfo,
+                               const T &bias, const gentype **pxyprod,
+                               int ia, int ib, int xdim, int xconsist, int assumreal, int mlid, const double *xy00, const double *xy10, const double *xy11, int deepDeriv, int iaset, int ibset) const
+{
+#ifndef NDEBUG
+    int xafarpresent = xa.isf1offindpresent() ? 1 : 0;
+    int xbfarpresent = xb.isf1offindpresent() ? 1 : 0;
+
+    NiceAssert( !xafarpresent );
+    NiceAssert( !xbfarpresent );
+#endif
+
+    yyycdnKK2del(sc,n,minmaxind,q,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
+}
+
+
+
+template <class T>
+T &MercerKernel::yyybK0(T &res,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int xdim, int xconsist, int xresmode, int mlid, int assumreal, int justcalcip) const
+{
+    return yyycK0(res,bias,pxyprod,xdim,xconsist,xresmode,mlid,assumreal,justcalcip);
+}
+
+template <class T>
+T &MercerKernel::yyybK1(T &res,
+                    const SparseVector<gentype> &xa,
+                    const vecInfo &xainfo,
+                    int xagradOrder,
+                    int xagradOrderR,
+                    int iaupm,
+                    int xafarpresent,
+                    double xarankw,
+                    double xArankw,
+                    int xafarfarpresent,
+                    int xafarfarfarpresent,
+                    int xagradup,
+                    int xagradupR,
+                    int xaignorefarfar,
+                    int xaignorefarfarfar,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia,
+                    int xdim, int xconsist, int resmode, int mlid,
+                    const double *xy00, int iaset, int assumreal, int justcalcip) const
+{
+    static const SparseVector<gentype> dummy;
+
+    const SparseVector<gentype> &xan = xa.n();
+
+    const SparseVector<gentype> &xaff = ( xafarfarpresent && !xaignorefarfar ) ? xa.f2() : dummy;
+
+    const SparseVector<gentype> &xafff = ( xafarfarfarpresent && !xaignorefarfarfar ) ? xa.f3() : dummy;
+
+    //const SparseVector<gentype> &xan = xafarfarpresent ? xa.n() : xa;
+
+    NiceAssert( !( justcalcip && xafarpresent ) );
+
+    if ( xafarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        T resa; yyycK1(resa,xanear,xanearinfo,xagradOrdernear,xagradupnear,iaupmnear,xaffnear,bias,nullptr,ianear,xdim,xconsist,resmode,mlid,nullptr,iaset,assumreal,justcalcip);
+        T resA; yyycK1(resA,xafar ,xafarinfo ,xagradOrderfar ,xagradupfar ,iaupmfar, xafffar ,bias,nullptr,iafar ,xdim,xconsist,resmode,mlid,nullptr,iaset,assumreal,justcalcip);
+
+        resa *= xarankw;
+        resA *= xArankw;
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resa-resA;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resa+resA;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // varphi(x,x') = varphi(x) \otimes varphi(x') - varphi(x') \otimes varphi(x)
+
+            res =  (resa*resA) - (resA*resa);
+        }
+
+         else
+         {
+            // varphi(x,x') = varphi(x) \otimes varphi(x') + varphi(x') \otimes varphi(x)
+
+            res =  (resa*resA) + (resA*resa);
+        }
+    }
+
+    else
+    {
+        yyycK1(res,xan,xainfo,xagradOrder,xagradup,iaupm,xaff,bias,pxyprod,ia,xdim,xconsist,resmode,mlid,xy00,iaset,assumreal,justcalcip);
+
+        res *= xarankw;
+    }
+
+    return res;
+}
+
+template <class T>
+T &MercerKernel::yyybK2(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                    const vecInfo &xainfo, const vecInfo &xbinfo,
+                    int xagradOrder, int xbgradOrder,
+                    int xagradOrderR, int xbgradOrderR,
+                    int iaupm, int ibupm,
+                    int xafarpresent, int xbfarpresent,
+                    double xarankw, double xbrankw,
+                    double xArankw, double xBrankw,
+                    int xafarfarpresent, int xbfarfarpresent,
+                    int xafarfarfarpresent, int xbfarfarfarpresent,
+                    int xagradup, int xbgradup,
+                    int xagradupR, int xbgradupR,
+                    int xaignorefarfar, int xbignorefarfar,
+                    int xaignorefarfarfar, int xbignorefarfarfar,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib,
+                    int xdim, int xconsist, int resmode, int mlid,
+                    const double *xy00, const double *xy10, const double *xy11, int iaset, int ibset, int assumreal, int justcalcip,
+                    int adensetype, int bdensetype) const
+{
+    static const SparseVector<gentype> dummy;
+
+    const SparseVector<gentype> &xan = xa.n();
+    const SparseVector<gentype> &xbn = xb.n();
+
+    const SparseVector<gentype> &xaff = ( xafarfarpresent && !xaignorefarfar ) ? xa.f2() : dummy;
+    const SparseVector<gentype> &xbff = ( xbfarfarpresent && !xbignorefarfar ) ? xb.f2() : dummy;
+
+    const SparseVector<gentype> &xafff = ( xafarfarfarpresent && !xaignorefarfarfar ) ? xa.f3() : dummy;
+    const SparseVector<gentype> &xbfff = ( xbfarfarfarpresent && !xbignorefarfarfar ) ? xb.f3() : dummy;
+
+    //const SparseVector<gentype> &xan = xafarfarpresent ? xa.n() : xa;
+    //const SparseVector<gentype> &xbn = xbfarfarpresent ? xb.n() : xb;
+
+    NiceAssert( !( justcalcip && ( xafarpresent || xbfarpresent ) ) );
+
+    if ( xafarpresent && xbfarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        T resab; yyycK2(resab,xanear,xbnear,xanearinfo,xbnearinfo,xagradOrdernear,xbgradOrdernear,xagradupnear,xbgradupnear,iaupmnear,ibupmnear,xaffnear,xbffnear,bias,nullptr,ianear,ibnear,xdim,xconsist,resmode,mlid,nullptr,nullptr,nullptr,iaset,ibset,assumreal,justcalcip,adensetype,bdensetype);
+        T resaB; yyycK2(resaB,xanear,xbfar ,xanearinfo,xbfarinfo ,xagradOrdernear,xbgradOrderfar ,xagradupnear,xbgradupfar ,iaupmnear,ibupmfar ,xaffnear,xbfffar ,bias,nullptr,ianear,ibfar ,xdim,xconsist,resmode,mlid,nullptr,nullptr,nullptr,iaset,ibset,assumreal,justcalcip,adensetype,bdensetype);
+        T resAb; yyycK2(resAb,xafar ,xbnear,xafarinfo ,xbnearinfo,xagradOrderfar ,xbgradOrdernear,xagradupfar ,xbgradupnear,iaupmfar ,ibupmnear,xafffar ,xbffnear,bias,nullptr,iafar ,ibnear,xdim,xconsist,resmode,mlid,nullptr,nullptr,nullptr,iaset,ibset,assumreal,justcalcip,adensetype,bdensetype);
+        T resAB; yyycK2(resAB,xafar ,xbfar ,xafarinfo ,xbfarinfo ,xagradOrderfar ,xbgradOrderfar ,xagradupfar ,xbgradupfar ,iaupmfar ,ibupmfar ,xafffar ,xbfffar ,bias,nullptr,iafar ,ibfar ,xdim,xconsist,resmode,mlid,nullptr,nullptr,nullptr,iaset,ibset,assumreal,justcalcip,adensetype,bdensetype);
+
+        resab *= (xarankw*xbrankw);
+        resaB *= (xarankw*xBrankw);
+        resAb *= (xArankw*xbrankw);
+        resAB *= (xArankw*xBrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resab-resaB-resAb+resAB;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resab+resaB+resAb+resAB;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // varphi(x,x') = varphi(x) \otimes varphi(x') - varphi(x') \otimes varphi(x)
+
+            res = (resab*resAB) - (resaB*resAb) - (resAb*resaB) + (resAB*resab);
+        }
+
+        else
+        {
+            // varphi(x,x') = varphi(x) \otimes varphi(x') + varphi(x') \otimes varphi(x)
+
+            res = (resab*resAB) + (resAB*resab) + (resaB*resAb) + (resAb*resaB);
+        }
+    }
+
+    else if ( xafarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        T resab; yyycK2(resab,xanear,xbn,xanearinfo,xbinfo,xagradOrdernear,xbgradOrder,xagradupnear,xbgradup,iaupmnear,ibupm,xaffnear,xbff,bias,nullptr,ianear,ib,xdim,xconsist,resmode,mlid,nullptr,nullptr,nullptr,iaset,ibset,assumreal,justcalcip,adensetype,bdensetype);
+        T resAb; yyycK2(resAb,xafar ,xbn,xafarinfo ,xbinfo,xagradOrderfar ,xbgradOrder,xagradupfar ,xbgradup,iaupmfar ,ibupm,xafffar ,xbff,bias,nullptr,iafar ,ib,xdim,xconsist,resmode,mlid,nullptr,nullptr,nullptr,iaset,ibset,assumreal,justcalcip,adensetype,bdensetype);
+
+        resab *= (xarankw*xbrankw);
+        resAb *= (xArankw*xbrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resab-resAb;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resab+resAb;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 1");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 2");
+        }
+    }
+
+    else if ( xbfarpresent )
+    {
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xa.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        T resab; yyycK2(resab,xan,xbnear,xainfo,xbnearinfo,xagradOrder,xbgradOrdernear,xagradup,xbgradupnear,iaupm,ibupmnear,xaff,xbffnear,bias,nullptr,ia,ibnear,xdim,xconsist,resmode,mlid,nullptr,nullptr,nullptr,iaset,ibset,assumreal,justcalcip,adensetype,bdensetype);
+        T resaB; yyycK2(resaB,xan,xbfar ,xainfo,xbfarinfo ,xagradOrder,xbgradOrderfar ,xagradup,xbgradupfar ,iaupm,ibupmfar ,xaff,xbfffar ,bias,nullptr,ia,ibfar ,xdim,xconsist,resmode,mlid,nullptr,nullptr,nullptr,iaset,ibset,assumreal,justcalcip,adensetype,bdensetype);
+
+        resab *= (xarankw*xbrankw);
+        resaB *= (xarankw*xBrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resab-resaB;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resab+resaB;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 3");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 4");
+        }
+    }
+
+    else
+    {
+        yyycK2(res,xan,xbn,xainfo,xbinfo,xagradOrder,xbgradOrder,xagradup,xbgradup,iaupm,ibupm,xaff,xbff,bias,pxyprod,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,iaset,ibset,assumreal,justcalcip,adensetype,bdensetype);
+
+        res *= (xarankw*xbrankw);
+NiceAssert(!testisvnan(res) && !testisinf(res));
+    }
+
+    return res;
+}
+template <class T>
+T &MercerKernel::yyybK2x2(T &res,
+                          const SparseVector<gentype> &x, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                          const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo,
+                          int xgradOrder, int xagradOrder, int xbgradOrder,
+                          int xgradOrderR, int xagradOrderR, int xbgradOrderR,
+                          int iupm, int iaupm, int ibupm,
+                          int xfarpresent, int xafarpresent, int xbfarpresent,
+                          double xrankw,
+                          double xarankw, double xbrankw,
+                          double xArankw, double xBrankw,
+                          int xfarfarpresent, int xafarfarpresent, int xbfarfarpresent,
+                          int xfarfarfarpresent, int xafarfarfarpresent, int xbfarfarfarpresent,
+                          int xgradup, int xagradup, int xbgradup,
+                          int xgradupR, int xagradupR, int xbgradupR,
+                          int xignorefarfar, int xaignorefarfar, int xbignorefarfar,
+                          int xignorefarfarfar, int xaignorefarfarfar, int xbignorefarfarfar,
+                          const T &bias,
+                          int i, int ia, int ib,
+                          int xdim, int xbonsist, int resmode, int mlid,
+                          const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22,
+                          int iset, int iaset, int ibset,
+                          int assumreal, int justcalcip,
+                          int densetype, int adensetype, int bdensetype) const
+{
+    (void) xgradOrderR;
+    (void) xgradupR;
+    (void) xfarfarfarpresent;
+    (void) xignorefarfarfar;
+
+    static const SparseVector<gentype> dummy;
+
+    const SparseVector<gentype> &xn  = x.n();
+    const SparseVector<gentype> &xan = xa.n();
+    const SparseVector<gentype> &xbn = xb.n();
+
+    const SparseVector<gentype> &xff  = ( xfarfarpresent  && !xignorefarfar  ) ? x.f2()  : dummy;
+    const SparseVector<gentype> &xaff = ( xafarfarpresent && !xaignorefarfar ) ? xa.f2() : dummy;
+    const SparseVector<gentype> &xbff = ( xbfarfarpresent && !xbignorefarfar ) ? xb.f2() : dummy;
+
+//    const SparseVector<gentype> &xfff  = ( xfarfarfarpresent  && !xignorefarfarfar  ) ? x.f3()  : dummy;
+    const SparseVector<gentype> &xafff = ( xafarfarfarpresent && !xaignorefarfarfar ) ? xa.f3() : dummy;
+    const SparseVector<gentype> &xbfff = ( xbfarfarfarpresent && !xbignorefarfarfar ) ? xb.f3() : dummy;
+
+    NiceAssert( !( justcalcip && ( xfarpresent || xafarpresent || xbfarpresent ) ) );
+
+    if ( xfarpresent && xafarpresent && xbfarpresent )
+    {
+        NiceThrow("Ranking not dense not supported 0.");
+
+            // varphi(x,x') = varphi(x) - varphi(x')
+            // K(x,xa) = K(x,xa) - K(x,xa') - K(x',xa) + K(x',xa')
+            // K(x,xb) = K(x,xb) - K(x,xb') - K(x',xb) + K(x',xb')
+            // K(x,xa).K(x,xb) = K(x ,xa ).K(x,xb) - K(x ,xa ).K(x,xb') - K(x ,xa ).K(x',xb) + K(x ,xa ).K(x',xb')
+            //                 - K(x ,xa').K(x,xb) + K(x ,xa').K(x,xb') + K(x ,xa').K(x',xb) - K(x ,xa').K(x',xb')
+            //                 - K(x',xa ).K(x,xb) + K(x',xa ).K(x,xb') + K(x',xa ).K(x',xb) - K(x',xa ).K(x',xb')
+            //                 + K(x',xa').K(x,xb) - K(x',xa').K(x,xb') - K(x',xa').K(x',xb) + K(x',xa').K(x',xb')
+            // .....
+            // See the problem?
+    }
+
+    else if ( xfarpresent && xafarpresent )
+    {
+        NiceThrow("Ranking not dense not supported 1.");
+    }
+
+    else if ( xfarpresent && xbfarpresent )
+    {
+        NiceThrow("Ranking not dense not supported 2.");
+    }
+
+    else if ( xafarpresent && xbfarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        T resab; yyycK2x2(resab,xn,xanear,xbnear,xinfo,xanearinfo,xbnearinfo,xgradOrder,xagradOrdernear,xbgradOrdernear,xgradup,xagradupnear,xbgradupnear,iupm,iaupmnear,ibupmnear,xff,xaffnear,xbffnear,bias,i,ianear,ibnear,xdim,xbonsist,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iset,iaset,ibset,assumreal,justcalcip,densetype,adensetype,bdensetype);
+        T resaB; yyycK2x2(resaB,xn,xanear,xbfar ,xinfo,xanearinfo,xbfarinfo ,xgradOrder,xagradOrdernear,xbgradOrderfar ,xgradup,xagradupnear,xbgradupfar ,iupm,iaupmnear,ibupmfar ,xff,xaffnear,xbfffar ,bias,i,ianear,ibfar ,xdim,xbonsist,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iset,iaset,ibset,assumreal,justcalcip,densetype,adensetype,bdensetype);
+        T resAb; yyycK2x2(resAb,xn,xafar ,xbnear,xinfo,xafarinfo ,xbnearinfo,xgradOrder,xagradOrderfar ,xbgradOrdernear,xgradup,xagradupfar ,xbgradupnear,iupm,iaupmfar ,ibupmnear,xff,xafffar ,xbffnear,bias,i,iafar ,ibnear,xdim,xbonsist,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iset,iaset,ibset,assumreal,justcalcip,densetype,adensetype,bdensetype);
+        T resAB; yyycK2x2(resAB,xn,xafar ,xbfar ,xinfo,xafarinfo ,xbfarinfo ,xgradOrder,xagradOrderfar ,xbgradOrderfar ,xgradup,xagradupfar ,xbgradupfar ,iupm,iaupmfar ,ibupmfar ,xff,xafffar ,xbfffar ,bias,i,iafar ,ibfar ,xdim,xbonsist,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iset,iaset,ibset,assumreal,justcalcip,densetype,adensetype,bdensetype);
+
+        resab *= (xrankw*xarankw*xbrankw);
+        resaB *= (xrankw*xarankw*xBrankw);
+        resAb *= (xrankw*xArankw*xbrankw);
+        resAB *= (xrankw*xArankw*xBrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+            // K(x,xa) = K(x,xa) - K(x,xa')
+            // K(x,xb) = K(x,xb) - K(x,xb')
+            // K(x,xa).K(x,xb) = K(x ,xa ).K(x,xb) - K(x ,xa ).K(x,xb')
+            //                 - K(x ,xa').K(x,xb) + K(x ,xa').K(x,xb')
+
+            res = resab-resaB-resAb+resAB;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resab+resaB+resAb+resAB;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            NiceThrow("No latent function in this case 6 2x2");
+        }
+
+        else
+        {
+            NiceThrow("No latent function in this case 7 2x2");
+        }
+    }
+
+    else if ( xfarpresent )
+    {
+        NiceThrow("Ranking not dense not supported 3.");
+    }
+
+    else if ( xafarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        T resab; yyycK2x2(resab,xn,xanear,xbn,xinfo,xanearinfo,xbinfo,xgradOrder,xagradOrdernear,xbgradOrder,xgradup,xagradupnear,xbgradup,iupm,iaupmnear,ibupm,xff,xaffnear,xbff,bias,i,ianear,ib,xdim,xbonsist,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iset,iaset,ibset,assumreal,justcalcip,densetype,adensetype,bdensetype);
+        T resAb; yyycK2x2(resAb,xn,xafar ,xbn,xinfo,xafarinfo ,xbinfo,xgradOrder,xagradOrderfar ,xbgradOrder,xgradup,xagradupfar ,xbgradup,iupm,iaupmfar ,ibupm,xff,xafffar ,xbff,bias,i,iafar ,ib,xdim,xbonsist,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iset,iaset,ibset,assumreal,justcalcip,densetype,adensetype,bdensetype);
+
+        resab *= (xrankw*xarankw*xbrankw);
+        resAb *= (xrankw*xArankw*xbrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resab-resAb;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resab+resAb;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            NiceThrow("No latent function in this case 10 2x2");
+        }
+
+        else
+        {
+            NiceThrow("No latent function in this case 11 2x2");
+        }
+    }
+
+    else if ( xbfarpresent )
+    {
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        T resab; yyycK2x2(resab,xn,xan,xbnear,xinfo,xainfo,xbnearinfo,xgradOrder,xagradOrder,xbgradOrdernear,xgradup,xagradup,xbgradupnear,iupm,iaupm,ibupmnear,xff,xaff,xbffnear,bias,i,ia,ibnear,xdim,xbonsist,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iset,iaset,ibset,assumreal,justcalcip,densetype,adensetype,bdensetype);
+        T resaB; yyycK2x2(resaB,xn,xan,xbfar ,xinfo,xainfo,xbfarinfo ,xgradOrder,xagradOrder,xbgradOrderfar ,xgradup,xagradup,xbgradupfar ,iupm,iaupm,ibupmfar ,xff,xaff,xbfffar ,bias,i,ia,ibfar ,xdim,xbonsist,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iset,iaset,ibset,assumreal,justcalcip,densetype,adensetype,bdensetype);
+
+        resab *= (xrankw*xarankw*xbrankw);
+        resaB *= (xrankw*xarankw*xBrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resab-resaB;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resab+resaB;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            NiceThrow("No latent function in this case 12 2x2");
+        }
+
+        else
+        {
+            NiceThrow("No latent function in this case 13 2x2");
+        }
+    }
+
+    else
+    {
+//errstream() << "phantomxyzabcabc yyybk2x2\n";
+        yyycK2x2(res,xn,xan,xbn,xinfo,xainfo,xbinfo,xgradOrder,xagradOrder,xbgradOrder,xgradup,xagradup,xbgradup,iupm,iaupm,ibupm,xff,xaff,xbff,bias,i,ia,ib,xdim,xbonsist,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,iset,iaset,ibset,assumreal,justcalcip,densetype,adensetype,bdensetype);
+
+        res *= (xrankw*xarankw*xbrankw);
+    }
+
+    return res;
+}
+
+template <class T>
+T &MercerKernel::yyybK3(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc,
+                    const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo,
+                    int xagradOrder, int xbgradOrder, int xcgradOrder,
+                    int xagradOrderR, int xbgradOrderR, int xcgradOrderR,
+                    int iaupm, int ibupm, int icupm,
+                    int xafarpresent, int xbfarpresent, int xcfarpresent,
+                    double xarankw, double xbrankw, double xcrankw,
+                    double xArankw, double xBrankw, double xCrankw,
+                    int xafarfarpresent, int xbfarfarpresent, int xcfarfarpresent,
+                    int xafarfarfarpresent, int xbfarfarfarpresent, int xcfarfarfarpresent,
+                    int xagradup, int xbgradup, int xcgradup,
+                    int xagradupR, int xbgradupR, int xcgradupR,
+                    int xaignorefarfar, int xbignorefarfar, int xcignorefarfar,
+                    int xaignorefarfarfar, int xbignorefarfarfar, int xcignorefarfarfar,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib, int ic,
+                    int xdim, int xconsist, int xresmode, int mlid,
+                    const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int iaset, int ibset, int icset, int assumreal, int justcalcip) const
+{
+    static const SparseVector<gentype> dummy;
+
+    const SparseVector<gentype> &xan = xa.n();
+    const SparseVector<gentype> &xbn = xb.n();
+    const SparseVector<gentype> &xcn = xc.n();
+
+    const SparseVector<gentype> &xaff = ( xafarfarpresent && !xaignorefarfar ) ? xa.f2() : dummy;
+    const SparseVector<gentype> &xbff = ( xbfarfarpresent && !xbignorefarfar ) ? xb.f2() : dummy;
+    const SparseVector<gentype> &xcff = ( xcfarfarpresent && !xcignorefarfar ) ? xc.f2() : dummy;
+
+    const SparseVector<gentype> &xafff = ( xafarfarfarpresent && !xaignorefarfarfar ) ? xa.f3() : dummy;
+    const SparseVector<gentype> &xbfff = ( xbfarfarfarpresent && !xbignorefarfarfar ) ? xb.f3() : dummy;
+    const SparseVector<gentype> &xcfff = ( xcfarfarfarpresent && !xcignorefarfarfar ) ? xc.f3() : dummy;
+
+    //const SparseVector<gentype> &xan = xafarfarpresent ? xa.n() : xa;
+    //const SparseVector<gentype> &xbn = xbfarfarpresent ? xb.n() : xb;
+    //const SparseVector<gentype> &xcn = xcfarfarpresent ? xc.n() : xc;
+
+    NiceAssert( !( justcalcip && ( xafarpresent || xbfarpresent || xcfarpresent ) ) );
+
+    if ( xafarpresent && xbfarpresent && xcfarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        const SparseVector<gentype> &xcnear = xc.n();
+        const SparseVector<gentype> &xcfar  = xc.f1();
+        const SparseVector<gentype> &xcffnear = xcff;
+        const SparseVector<gentype> &xcfffar  = xcfff;
+        const vecInfo &xcnearinfo = xcinfo(0,-1);
+        const vecInfo &xcfarinfo  = xcinfo(1,-1);
+        int xcgradOrdernear = xcgradOrder;
+        int xcgradOrderfar  = xcgradOrderR;
+        int xcgradupnear = xcgradup;
+        int xcgradupfar  = xcgradupR;
+        int icupmnear = icupm;
+        int icupmfar  = xc.f1upsize();
+        int icnear = ic;
+        int icfar  = -(((ic+1)*100)+1);
+
+        T resabc; yyycK3(resabc,xanear,xbnear,xcnear,xanearinfo,xbnearinfo,xcnearinfo,xagradOrdernear,xbgradOrdernear,xcgradOrdernear,xagradupnear,xbgradupnear,xcgradupnear,iaupmnear,ibupmnear,icupmnear,xaffnear,xbffnear,xcffnear,bias,nullptr,ianear,ibnear,icnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resabC; yyycK3(resabC,xanear,xbnear,xcfar ,xanearinfo,xbnearinfo,xcfarinfo ,xagradOrdernear,xbgradOrdernear,xcgradOrderfar ,xagradupnear,xbgradupnear,xcgradupfar ,iaupmnear,ibupmnear,icupmfar ,xaffnear,xbffnear,xcfffar ,bias,nullptr,ianear,ibnear,icfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resaBc; yyycK3(resaBc,xanear,xbfar ,xcnear,xanearinfo,xbfarinfo ,xcnearinfo,xagradOrdernear,xbgradOrderfar ,xcgradOrdernear,xagradupnear,xbgradupfar ,xcgradupnear,iaupmnear,ibupmfar ,icupmnear,xaffnear,xbfffar ,xcffnear,bias,nullptr,ianear,ibfar ,icnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resaBC; yyycK3(resaBC,xanear,xbfar ,xcfar ,xanearinfo,xbfarinfo ,xcfarinfo ,xagradOrdernear,xbgradOrderfar ,xcgradOrderfar ,xagradupnear,xbgradupfar ,xcgradupfar ,iaupmnear,ibupmfar ,icupmfar ,xaffnear,xbfffar ,xcfffar ,bias,nullptr,ianear,ibfar ,icfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resAbc; yyycK3(resAbc,xafar ,xbnear,xcnear,xafarinfo ,xbnearinfo,xcnearinfo,xagradOrderfar ,xbgradOrdernear,xcgradOrdernear,xagradupfar ,xbgradupnear,xcgradupnear,iaupmfar ,ibupmnear,icupmnear,xafffar ,xbffnear,xcffnear,bias,nullptr,iafar ,ibnear,icnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resAbC; yyycK3(resAbC,xafar ,xbnear,xcfar ,xafarinfo ,xbnearinfo,xcfarinfo ,xagradOrderfar ,xbgradOrdernear,xcgradOrderfar ,xagradupfar ,xbgradupnear,xcgradupfar ,iaupmfar ,ibupmnear,icupmfar ,xafffar ,xbffnear,xcfffar ,bias,nullptr,iafar ,ibnear,icfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resABc; yyycK3(resABc,xafar ,xbfar ,xcnear,xafarinfo ,xbfarinfo ,xcnearinfo,xagradOrderfar ,xbgradOrderfar ,xcgradOrdernear,xagradupfar ,xbgradupfar ,xcgradupnear,iaupmfar ,ibupmfar ,icupmnear,xafffar ,xbfffar ,xcffnear,bias,nullptr,iafar ,ibfar ,icnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resABC; yyycK3(resABC,xafar ,xbfar ,xcfar ,xafarinfo ,xbfarinfo ,xcfarinfo ,xagradOrderfar ,xbgradOrderfar ,xcgradOrderfar ,xagradupfar ,xbgradupfar ,xcgradupfar ,iaupmfar ,ibupmfar ,icupmfar ,xafffar ,xbfffar ,xcfffar ,bias,nullptr,iafar ,ibfar ,icfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+
+        resabc *= (xarankw*xbrankw*xcrankw);
+        resabC *= (xarankw*xbrankw*xCrankw);
+        resaBc *= (xarankw*xBrankw*xcrankw);
+        resaBC *= (xarankw*xBrankw*xCrankw);
+        resAbc *= (xArankw*xbrankw*xcrankw);
+        resAbC *= (xArankw*xbrankw*xCrankw);
+        resABc *= (xArankw*xBrankw*xcrankw);
+        resABC *= (xArankw*xBrankw*xCrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabc-resabC-resaBc+resaBC-resAbc+resAbC+resABc-resABC;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabc+resabC+resaBc+resaBC+resAbc+resAbC+resABc+resABC;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // varphi(x,x') = varphi(x) \otimes varphi(x') - varphi(x') \otimes varphi(x)
+
+            res = (resabc*resABC) - (resabC*resABc) - (resaBc*resAbC) + (resaBC*resAbc) - (resAbc*resaBC) + (resAbC*resaBc) + (resABc*resabC) - (resABC*resabc);
+        }
+
+        else
+        {
+            // varphi(x,x') = varphi(x) \otimes varphi(x') + varphi(x') \otimes varphi(x)
+
+            res = (resabc*resABC) + (resabC*resABc) + (resaBc*resAbC) + (resaBC*resAbc) + (resAbc*resaBC) + (resAbC*resaBc) + (resABc*resabC) + (resABC*resabc);
+        }
+    }
+
+    else if ( xafarpresent && xbfarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        T resabc; yyycK3(resabc,xanear,xbnear,xcn,xanearinfo,xbnearinfo,xcinfo,xagradOrdernear,xbgradOrdernear,xcgradOrder,xagradupnear,xbgradupnear,xcgradup,iaupmnear,ibupmnear,icupm,xaffnear,xbffnear,xcff,bias,nullptr,ianear,ibnear,ic,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resaBc; yyycK3(resaBc,xanear,xbfar ,xcn,xanearinfo,xbfarinfo ,xcinfo,xagradOrdernear,xbgradOrderfar ,xcgradOrder,xagradupnear,xbgradupfar ,xcgradup,iaupmnear,ibupmfar ,icupm,xaffnear,xbfffar ,xcff,bias,nullptr,ianear,ibfar ,ic,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resAbc; yyycK3(resAbc,xafar ,xbnear,xcn,xafarinfo ,xbnearinfo,xcinfo,xagradOrderfar ,xbgradOrdernear,xcgradOrder,xagradupfar ,xbgradupnear,xcgradup,iaupmfar ,ibupmnear,icupm,xafffar ,xbffnear,xcff,bias,nullptr,iafar ,ibnear,ic,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resABc; yyycK3(resABc,xafar ,xbfar ,xcn,xafarinfo ,xbfarinfo ,xcinfo,xagradOrderfar ,xbgradOrderfar ,xcgradOrder,xagradupfar ,xbgradupfar ,xcgradup,iaupmfar ,ibupmfar ,icupm,xafffar ,xbfffar ,xcff,bias,nullptr,iafar ,ibfar ,ic,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+
+        resabc *= (xarankw*xbrankw*xcrankw);
+        resaBc *= (xarankw*xBrankw*xcrankw);
+        resAbc *= (xArankw*xbrankw*xcrankw);
+        resABc *= (xArankw*xBrankw*xcrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabc-resaBc-resAbc+resABc;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabc+resaBc+resAbc+resABc;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 5");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 6");
+        }
+    }
+
+    else if ( xafarpresent && xcfarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        const SparseVector<gentype> &xcnear = xc.n();
+        const SparseVector<gentype> &xcfar  = xc.f1();
+        const SparseVector<gentype> &xcffnear = xcff;
+        const SparseVector<gentype> &xcfffar  = xcfff;
+        const vecInfo &xcnearinfo = xcinfo(0,-1);
+        const vecInfo &xcfarinfo  = xcinfo(1,-1);
+        int xcgradOrdernear = xcgradOrder;
+        int xcgradOrderfar  = xcgradOrderR;
+        int xcgradupnear = xcgradup;
+        int xcgradupfar  = xcgradupR;
+        int icupmnear = icupm;
+        int icupmfar  = xc.f1upsize();
+        int icnear = ic;
+        int icfar  = -(((ic+1)*100)+1);
+
+        T resabc; yyycK3(resabc,xanear,xbn,xcnear,xanearinfo,xbinfo,xcnearinfo,xagradOrdernear,xbgradOrder,xcgradOrdernear,xagradupnear,xbgradup,xcgradupnear,iaupmnear,ibupm,icupmnear,xaffnear,xbff,xcffnear,bias,nullptr,ianear,ib,icnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resabC; yyycK3(resabC,xanear,xbn,xcfar ,xanearinfo,xbinfo,xcfarinfo ,xagradOrdernear,xbgradOrder,xcgradOrderfar ,xagradupnear,xbgradup,xcgradupfar ,iaupmnear,ibupm,icupmfar ,xaffnear,xbff,xcfffar ,bias,nullptr,ianear,ib,icfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resAbc; yyycK3(resAbc,xafar ,xbn,xcnear,xafarinfo ,xbinfo,xcnearinfo,xagradOrderfar ,xbgradOrder,xcgradOrdernear,xagradupfar ,xbgradup,xcgradupnear,iaupmfar ,ibupm,icupmnear,xafffar ,xbff,xcffnear,bias,nullptr,iafar ,ib,icnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resAbC; yyycK3(resAbC,xafar ,xbn,xcfar ,xafarinfo ,xbinfo,xcfarinfo ,xagradOrderfar ,xbgradOrder,xcgradOrderfar ,xagradupfar ,xbgradup,xcgradupfar ,iaupmfar ,ibupm,icupmfar ,xafffar ,xbff,xcfffar ,bias,nullptr,iafar ,ib,icfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+
+        resabc *= (xarankw*xbrankw*xcrankw);
+        resabC *= (xarankw*xbrankw*xCrankw);
+        resAbc *= (xArankw*xbrankw*xcrankw);
+        resAbC *= (xArankw*xbrankw*xCrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabc-resabC-resAbc+resAbC;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabc+resabC+resAbc+resAbC;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 7");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 8");
+        }
+    }
+
+    else if ( xbfarpresent && xcfarpresent )
+    {
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        const SparseVector<gentype> &xcnear = xc.n();
+        const SparseVector<gentype> &xcfar  = xc.f1();
+        const SparseVector<gentype> &xcffnear = xcff;
+        const SparseVector<gentype> &xcfffar  = xcfff;
+        const vecInfo &xcnearinfo = xcinfo(0,-1);
+        const vecInfo &xcfarinfo  = xcinfo(1,-1);
+        int xcgradOrdernear = xcgradOrder;
+        int xcgradOrderfar  = xcgradOrderR;
+        int xcgradupnear = xcgradup;
+        int xcgradupfar  = xcgradupR;
+        int icupmnear = icupm;
+        int icupmfar  = xc.f1upsize();
+        int icnear = ic;
+        int icfar  = -(((ic+1)*100)+1);
+
+        T resabc; yyycK3(resabc,xan,xbnear,xcnear,xainfo,xbnearinfo,xcnearinfo,xagradOrder,xbgradOrdernear,xcgradOrdernear,xagradup,xbgradupnear,xcgradupnear,iaupm,ibupmnear,icupmnear,xaff,xbffnear,xcffnear,bias,nullptr,ia,ibnear,icnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resabC; yyycK3(resabC,xan,xbnear,xcfar ,xainfo,xbnearinfo,xcfarinfo ,xagradOrder,xbgradOrdernear,xcgradOrderfar ,xagradup,xbgradupnear,xcgradupfar ,iaupm,ibupmnear,icupmfar ,xaff,xbffnear,xcfffar ,bias,nullptr,ia,ibnear,icfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resaBc; yyycK3(resaBc,xan,xbfar ,xcnear,xainfo,xbfarinfo ,xcnearinfo,xagradOrder,xbgradOrderfar ,xcgradOrdernear,xagradup,xbgradupfar ,xcgradupnear,iaupm,ibupmfar ,icupmnear,xaff,xbfffar ,xcffnear,bias,nullptr,ia,ibfar ,icnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resaBC; yyycK3(resaBC,xan,xbfar ,xcfar ,xainfo,xbfarinfo ,xcfarinfo ,xagradOrder,xbgradOrderfar ,xcgradOrderfar ,xagradup,xbgradupfar ,xcgradupfar ,iaupm,ibupmfar ,icupmfar ,xaff,xbfffar ,xcfffar ,bias,nullptr,ia,ibfar ,icfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+
+        resabc *= (xarankw*xbrankw*xcrankw);
+        resabC *= (xarankw*xbrankw*xCrankw);
+        resaBc *= (xarankw*xBrankw*xcrankw);
+        resaBC *= (xarankw*xBrankw*xCrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabc-resabC-resaBc+resaBC;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabc+resabC+resaBc+resaBC;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 9");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 10");
+        }
+    }
+
+    else if ( xafarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        T resabc; yyycK3(resabc,xanear,xbn,xcn,xanearinfo,xbinfo,xcinfo,xagradOrdernear,xbgradOrder,xcgradOrder,xagradupnear,xbgradup,xcgradup,iaupmnear,ibupm,icupm,xaffnear,xbff,xcff,bias,nullptr,ianear,ib,ic,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resAbc; yyycK3(resAbc,xafar ,xbn,xcn,xafarinfo ,xbinfo,xcinfo,xagradOrderfar ,xbgradOrder,xcgradOrder,xagradupfar ,xbgradup,xcgradup,iaupmfar ,ibupm,icupm,xafffar ,xbff,xcff,bias,nullptr,iafar ,ib,ic,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+
+        resabc *= (xarankw*xbrankw*xcrankw);
+        resAbc *= (xArankw*xbrankw*xcrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabc-resAbc;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabc+resAbc;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 11");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 12");
+        }
+    }
+
+    else if ( xbfarpresent )
+    {
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        T resabc; yyycK3(resabc,xan,xbnear,xcn,xainfo,xbnearinfo,xcinfo,xagradOrder,xbgradOrdernear,xcgradOrder,xagradup,xbgradupnear,xcgradup,iaupm,ibupmnear,icupm,xaff,xbffnear,xcff,bias,nullptr,ia,ibnear,ic,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resaBc; yyycK3(resaBc,xan,xbfar ,xcn,xainfo,xbfarinfo ,xcinfo,xagradOrder,xbgradOrderfar ,xcgradOrder,xagradup,xbgradupfar ,xcgradup,iaupm,ibupmfar ,icupm,xaff,xbfffar ,xcff,bias,nullptr,ia,ibfar ,ic,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+
+        resabc *= (xarankw*xbrankw*xcrankw);
+        resaBc *= (xarankw*xBrankw*xcrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabc-resaBc;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabc+resaBc;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 13");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 14");
+        }
+    }
+
+    else if ( xcfarpresent )
+    {
+        const SparseVector<gentype> &xcnear = xc.n();
+        const SparseVector<gentype> &xcfar  = xc.f1();
+        const SparseVector<gentype> &xcffnear = xcff;
+        const SparseVector<gentype> &xcfffar  = xcfff;
+        const vecInfo &xcnearinfo = xcinfo(0,-1);
+        const vecInfo &xcfarinfo  = xcinfo(1,-1);
+        int xcgradOrdernear = xcgradOrder;
+        int xcgradOrderfar  = xcgradOrderR;
+        int xcgradupnear = xcgradup;
+        int xcgradupfar  = xcgradupR;
+        int icupmnear = icupm;
+        int icupmfar  = xc.f1upsize();
+        int icnear = ic;
+        int icfar  = -(((ic+1)*100)+1);
+
+        T resabc; yyycK3(resabc,xan,xbn,xcnear,xainfo,xbinfo,xcnearinfo,xagradOrder,xbgradOrder,xcgradOrdernear,xagradup,xbgradup,xcgradupnear,iaupm,ibupm,icupmnear,xaff,xbff,xcffnear,bias,nullptr,ia,ib,icnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+        T resabC; yyycK3(resabC,xan,xbn,xcfar ,xainfo,xbinfo,xcfarinfo ,xagradOrder,xbgradOrder,xcgradOrderfar ,xagradup,xbgradup,xcgradupfar ,iaupm,ibupm,icupmfar ,xaff,xbff,xcfffar ,bias,nullptr,ia,ib,icfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,assumreal,justcalcip);
+
+        resabc *= (xarankw*xbrankw*xcrankw);
+        resabC *= (xarankw*xbrankw*xCrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabc-resabC;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabc+resabC;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 15");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 16");
+        }
+    }
+
+    else
+    {
+        yyycK3(res,xan,xbn,xcn,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xagradup,xbgradup,xcgradup,iaupm,ibupm,icupm,xaff,xbff,xcff,bias,pxyprod,ia,ib,ic,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,iaset,ibset,icset,assumreal,justcalcip);
+
+        res *= (xarankw*xbrankw*xcrankw);
+    }
+
+    return res;
+}
+
+template <class T>
+T &MercerKernel::yyybK4(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd,
+                    const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo,
+                    int xagradOrder, int xbgradOrder, int xcgradOrder, int xdgradOrder,
+                    int xagradOrderR, int xbgradOrderR, int xcgradOrderR, int xdgradOrderR,
+                    int iaupm, int ibupm, int icupm, int idupm,
+                    int xafarpresent, int xbfarpresent, int xcfarpresent, int xdfarpresent,
+                    double xarankw, double xbrankw, double xcrankw, double xdrankw,
+                    double xArankw, double xBrankw, double xCrankw, double xDrankw,
+                    int xafarfarpresent, int xbfarfarpresent, int xcfarfarpresent, int xdfarfarpresent,
+                    int xafarfarfarpresent, int xbfarfarfarpresent, int xcfarfarfarpresent, int xdfarfarfarpresent,
+                    int xagradup, int xbgradup, int xcgradup, int xdgradup,
+                    int xagradupR, int xbgradupR, int xcgradupR, int xdgradupR,
+                    int xaignorefarfar, int xbignorefarfar, int xcignorefarfar, int xdignorefarfar,
+                    int xaignorefarfarfar, int xbignorefarfarfar, int xcignorefarfarfar, int xdignorefarfarfar,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib, int ic, int id,
+                    int xdim, int xconsist, int xresmode, int mlid,
+                    const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, const double *xy30, const double *xy31, const double *xy32, const double *xy33, int iaset, int ibset, int icset, int idset, int assumreal, int justcalcip) const
+{
+    static const SparseVector<gentype> dummy;
+
+    const SparseVector<gentype> &xan = xa.n();
+    const SparseVector<gentype> &xbn = xb.n();
+    const SparseVector<gentype> &xcn = xc.n();
+    const SparseVector<gentype> &xdn = xd.n();
+
+    const SparseVector<gentype> &xaff = ( xafarfarpresent && !xaignorefarfar ) ? xa.f2() : dummy;
+    const SparseVector<gentype> &xbff = ( xbfarfarpresent && !xbignorefarfar ) ? xb.f2() : dummy;
+    const SparseVector<gentype> &xcff = ( xcfarfarpresent && !xcignorefarfar ) ? xc.f2() : dummy;
+    const SparseVector<gentype> &xdff = ( xdfarfarpresent && !xdignorefarfar ) ? xd.f2() : dummy;
+
+    const SparseVector<gentype> &xafff = ( xafarfarfarpresent && !xaignorefarfarfar ) ? xa.f3() : dummy;
+    const SparseVector<gentype> &xbfff = ( xbfarfarfarpresent && !xbignorefarfarfar ) ? xb.f3() : dummy;
+    const SparseVector<gentype> &xcfff = ( xcfarfarfarpresent && !xcignorefarfarfar ) ? xc.f3() : dummy;
+    const SparseVector<gentype> &xdfff = ( xdfarfarfarpresent && !xdignorefarfarfar ) ? xd.f3() : dummy;
+
+    //const SparseVector<gentype> &xan = xafarfarpresent ? xa.n() : xa;
+    //const SparseVector<gentype> &xbn = xbfarfarpresent ? xb.n() : xb;
+    //const SparseVector<gentype> &xcn = xcfarfarpresent ? xc.n() : xc;
+    //const SparseVector<gentype> &xdn = xdfarfarpresent ? xd.n() : xd;
+
+    NiceAssert( !( justcalcip && ( xafarpresent || xbfarpresent || xcfarpresent || xdfarpresent ) ) );
+
+    if ( xafarpresent && xbfarpresent && xcfarpresent && xdfarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        const SparseVector<gentype> &xcnear = xc.n();
+        const SparseVector<gentype> &xcfar  = xc.f1();
+        const SparseVector<gentype> &xcffnear = xcff;
+        const SparseVector<gentype> &xcfffar  = xcfff;
+        const vecInfo &xcnearinfo = xcinfo(0,-1);
+        const vecInfo &xcfarinfo  = xcinfo(1,-1);
+        int xcgradOrdernear = xcgradOrder;
+        int xcgradOrderfar  = xcgradOrderR;
+        int xcgradupnear = xcgradup;
+        int xcgradupfar  = xcgradupR;
+        int icupmnear = icupm;
+        int icupmfar  = xc.f1upsize();
+        int icnear = ic;
+        int icfar  = -(((ic+1)*100)+1);
+
+        const SparseVector<gentype> &xdnear = xd.n();
+        const SparseVector<gentype> &xdfar  = xd.f1();
+        const SparseVector<gentype> &xdffnear = xdff;
+        const SparseVector<gentype> &xdfffar  = xdfff;
+        const vecInfo &xdnearinfo = xdinfo(0,-1);
+        const vecInfo &xdfarinfo  = xdinfo(1,-1);
+        int xdgradOrdernear = xdgradOrder;
+        int xdgradOrderfar  = xdgradOrderR;
+        int xdgradupnear = xdgradup;
+        int xdgradupfar  = xdgradupR;
+        int idupmnear = idupm;
+        int idupmfar  = xd.f1upsize();
+        int idnear = id;
+        int idfar  = -(((id+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xanear,xbnear,xcnear,xdnear,xanearinfo,xbnearinfo,xcnearinfo,xdnearinfo,xagradOrdernear,xbgradOrdernear,xcgradOrdernear,xdgradOrdernear,xagradupnear,xbgradupnear,xcgradupnear,xdgradupnear,iaupmnear,ibupmnear,icupmnear,idupmnear,xaffnear,xbffnear,xcffnear,xdffnear,bias,nullptr,ianear,ibnear,icnear,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabcD; yyycK4(resabcD,xanear,xbnear,xcnear,xdfar ,xanearinfo,xbnearinfo,xcnearinfo,xdfarinfo ,xagradOrdernear,xbgradOrdernear,xcgradOrdernear,xdgradOrderfar ,xagradupnear,xbgradupnear,xcgradupnear,xdgradupfar ,iaupmnear,ibupmnear,icupmnear,idupmfar ,xaffnear,xbffnear,xcffnear,xdfffar ,bias,nullptr,ianear,ibnear,icnear,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabCd; yyycK4(resabCd,xanear,xbnear,xcfar ,xdnear,xanearinfo,xbnearinfo,xcfarinfo ,xdnearinfo,xagradOrdernear,xbgradOrdernear,xcgradOrderfar ,xdgradOrdernear,xagradupnear,xbgradupnear,xcgradupfar ,xdgradupnear,iaupmnear,ibupmnear,icupmfar ,idupmnear,xaffnear,xbffnear,xcfffar ,xdffnear,bias,nullptr,ianear,ibnear,icfar ,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabCD; yyycK4(resabCD,xanear,xbnear,xcfar ,xdfar ,xanearinfo,xbnearinfo,xcfarinfo ,xdfarinfo ,xagradOrdernear,xbgradOrdernear,xcgradOrderfar ,xdgradOrderfar ,xagradupnear,xbgradupnear,xcgradupfar ,xdgradupfar ,iaupmnear,ibupmnear,icupmfar ,idupmfar ,xaffnear,xbffnear,xcfffar ,xdfffar ,bias,nullptr,ianear,ibnear,icfar ,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBcd; yyycK4(resaBcd,xanear,xbfar ,xcnear,xdnear,xanearinfo,xbfarinfo ,xcnearinfo,xdnearinfo,xagradOrdernear,xbgradOrderfar ,xcgradOrdernear,xdgradOrdernear,xagradupnear,xbgradupfar ,xcgradupnear,xdgradupnear,iaupmnear,ibupmfar ,icupmnear,idupmnear,xaffnear,xbfffar ,xcffnear,xdffnear,bias,nullptr,ianear,ibfar ,icnear,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBcD; yyycK4(resaBcD,xanear,xbfar ,xcnear,xdfar ,xanearinfo,xbfarinfo ,xcnearinfo,xdfarinfo ,xagradOrdernear,xbgradOrderfar ,xcgradOrdernear,xdgradOrderfar ,xagradupnear,xbgradupfar ,xcgradupnear,xdgradupfar ,iaupmnear,ibupmfar ,icupmnear,idupmfar ,xaffnear,xbfffar ,xcffnear,xdfffar ,bias,nullptr,ianear,ibfar ,icnear,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBCd; yyycK4(resaBCd,xanear,xbfar ,xcfar ,xdnear,xanearinfo,xbfarinfo ,xcfarinfo ,xdnearinfo,xagradOrdernear,xbgradOrderfar ,xcgradOrderfar ,xdgradOrdernear,xagradupnear,xbgradupfar ,xcgradupfar ,xdgradupnear,iaupmnear,ibupmfar ,icupmfar ,idupmnear,xaffnear,xbfffar ,xcfffar ,xdffnear,bias,nullptr,ianear,ibfar ,icfar ,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBCD; yyycK4(resaBCD,xanear,xbfar ,xcfar ,xdfar ,xanearinfo,xbfarinfo ,xcfarinfo ,xdfarinfo ,xagradOrdernear,xbgradOrderfar ,xcgradOrderfar ,xdgradOrderfar ,xagradupnear,xbgradupfar ,xcgradupfar ,xdgradupfar ,iaupmnear,ibupmfar ,icupmfar ,idupmfar ,xaffnear,xbfffar ,xcfffar ,xdfffar ,bias,nullptr,ianear,ibfar ,icfar ,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbcd; yyycK4(resAbcd,xafar ,xbnear,xcnear,xdnear,xafarinfo ,xbnearinfo,xcnearinfo,xdnearinfo,xagradOrderfar ,xbgradOrdernear,xcgradOrdernear,xdgradOrdernear,xagradupfar ,xbgradupnear,xcgradupnear,xdgradupnear,iaupmfar ,ibupmnear,icupmnear,idupmnear,xafffar ,xbffnear,xcffnear,xdffnear,bias,nullptr,iafar ,ibnear,icnear,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbcD; yyycK4(resAbcD,xafar ,xbnear,xcnear,xdfar ,xafarinfo ,xbnearinfo,xcnearinfo,xdfarinfo ,xagradOrderfar ,xbgradOrdernear,xcgradOrdernear,xdgradOrderfar ,xagradupfar ,xbgradupnear,xcgradupnear,xdgradupfar ,iaupmfar ,ibupmnear,icupmnear,idupmfar ,xafffar ,xbffnear,xcffnear,xdfffar ,bias,nullptr,iafar ,ibnear,icnear,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbCd; yyycK4(resAbCd,xafar ,xbnear,xcfar ,xdnear,xafarinfo ,xbnearinfo,xcfarinfo ,xdnearinfo,xagradOrderfar ,xbgradOrdernear,xcgradOrderfar ,xdgradOrdernear,xagradupfar ,xbgradupnear,xcgradupfar ,xdgradupnear,iaupmfar ,ibupmnear,icupmfar ,idupmnear,xafffar ,xbffnear,xcfffar ,xdffnear,bias,nullptr,iafar ,ibnear,icfar ,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbCD; yyycK4(resAbCD,xafar ,xbnear,xcfar ,xdfar ,xafarinfo ,xbnearinfo,xcfarinfo ,xdfarinfo ,xagradOrderfar ,xbgradOrdernear,xcgradOrderfar ,xdgradOrderfar ,xagradupfar ,xbgradupnear,xcgradupfar ,xdgradupfar ,iaupmfar ,ibupmnear,icupmfar ,idupmfar ,xafffar ,xbffnear,xcfffar ,xdfffar ,bias,nullptr,iafar ,ibnear,icfar ,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resABcd; yyycK4(resABcd,xafar ,xbfar ,xcnear,xdnear,xafarinfo ,xbfarinfo ,xcnearinfo,xdnearinfo,xagradOrderfar ,xbgradOrderfar ,xcgradOrdernear,xdgradOrdernear,xagradupfar ,xbgradupfar ,xcgradupnear,xdgradupnear,iaupmfar ,ibupmfar ,icupmnear,idupmnear,xafffar ,xbfffar ,xcffnear,xdffnear,bias,nullptr,iafar ,ibfar ,icnear,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resABcD; yyycK4(resABcD,xafar ,xbfar ,xcnear,xdfar ,xafarinfo ,xbfarinfo ,xcnearinfo,xdfarinfo ,xagradOrderfar ,xbgradOrderfar ,xcgradOrdernear,xdgradOrderfar ,xagradupfar ,xbgradupfar ,xcgradupnear,xdgradupfar ,iaupmfar ,ibupmfar ,icupmnear,idupmfar ,xafffar ,xbfffar ,xcffnear,xdfffar ,bias,nullptr,iafar ,ibfar ,icnear,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resABCd; yyycK4(resABCd,xafar ,xbfar ,xcfar ,xdnear,xafarinfo ,xbfarinfo ,xcfarinfo ,xdnearinfo,xagradOrderfar ,xbgradOrderfar ,xcgradOrderfar ,xdgradOrdernear,xagradupfar ,xbgradupfar ,xcgradupfar ,xdgradupnear,iaupmfar ,ibupmfar ,icupmfar ,idupmnear,xafffar ,xbfffar ,xcfffar ,xdffnear,bias,nullptr,iafar ,ibfar ,icfar ,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resABCD; yyycK4(resABCD,xafar ,xbfar ,xcfar ,xdfar ,xafarinfo ,xbfarinfo ,xcfarinfo ,xdfarinfo ,xagradOrderfar ,xbgradOrderfar ,xcgradOrderfar ,xdgradOrderfar ,xagradupfar ,xbgradupfar ,xcgradupfar ,xdgradupfar ,iaupmfar ,ibupmfar ,icupmfar ,idupmfar ,xafffar ,xbfffar ,xcfffar ,xdfffar ,bias,nullptr,iafar ,ibfar ,icfar ,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resabcD *= (xarankw*xbrankw*xcrankw*xDrankw);
+        resabCd *= (xarankw*xbrankw*xCrankw*xdrankw);
+        resabCD *= (xarankw*xbrankw*xCrankw*xDrankw);
+        resaBcd *= (xarankw*xBrankw*xcrankw*xdrankw);
+        resaBcD *= (xarankw*xBrankw*xcrankw*xDrankw);
+        resaBCd *= (xarankw*xBrankw*xCrankw*xdrankw);
+        resaBCD *= (xarankw*xBrankw*xCrankw*xDrankw);
+        resAbcd *= (xArankw*xbrankw*xcrankw*xdrankw);
+        resAbcD *= (xArankw*xbrankw*xcrankw*xDrankw);
+        resAbCd *= (xArankw*xbrankw*xCrankw*xdrankw);
+        resAbCD *= (xArankw*xbrankw*xCrankw*xDrankw);
+        resABcd *= (xArankw*xBrankw*xcrankw*xdrankw);
+        resABcD *= (xArankw*xBrankw*xcrankw*xDrankw);
+        resABCd *= (xArankw*xBrankw*xCrankw*xdrankw);
+        resABCD *= (xArankw*xBrankw*xCrankw*xDrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resabcD-resabCd+resabCD-resaBcd+resaBcD+resaBCd-resaBCD-resAbcd+resAbcD+resAbCd-resAbCD+resABcd-resABcD-resABCd+resABCD;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resabcD+resabCd+resabCD+resaBcd+resaBcD+resaBCd+resaBCD+resAbcd+resAbcD+resAbCd+resAbCD+resABcd+resABcD+resABCd+resABCD;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // varphi(x,x') = varphi(x) \otimes varphi(x') - varphi(x') \otimes varphi(x)
+
+            res =  (resabcd*resABCD)-(resabcD*resABCd)-(resabCd*resABcD)+(resabCD*resABcd)-(resaBcd*resAbCD)+(resaBcD*resAbCd)+(resaBCd*resAbcD)-(resaBCD*resAbcd)
+                  -(resAbcd*resaBCD)+(resAbcD*resaBCd)+(resAbCd*resaBcD)-(resAbCD*resaBcd)+(resABcd*resabCD)-(resABcD*resabCd)-(resABCd*resabcD)+(resABCD*resabcd);
+        }
+
+        else
+        {
+            // varphi(x,x') = varphi(x) \otimes varphi(x') + varphi(x') \otimes varphi(x)
+
+            res =  (resabcd*resABCD)+(resabcD*resABCd)+(resabCd*resABcD)+(resabCD*resABcd)+(resaBcd*resAbCD)+(resaBcD*resAbCd)+(resaBCd*resAbcD)+(resaBCD*resAbcd)
+                  +(resAbcd*resaBCD)+(resAbcD*resaBCd)+(resAbCd*resaBcD)+(resAbCD*resaBcd)+(resABcd*resabCD)+(resABcD*resabCd)+(resABCd*resabcD)+(resABCD*resabcd);
+        }
+    }
+
+    else if ( xafarpresent && xbfarpresent && xcfarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        const SparseVector<gentype> &xcnear = xc.n();
+        const SparseVector<gentype> &xcfar  = xc.f1();
+        const SparseVector<gentype> &xcffnear = xcff;
+        const SparseVector<gentype> &xcfffar  = xcfff;
+        const vecInfo &xcnearinfo = xcinfo(0,-1);
+        const vecInfo &xcfarinfo  = xcinfo(1,-1);
+        int xcgradOrdernear = xcgradOrder;
+        int xcgradOrderfar  = xcgradOrderR;
+        int xcgradupnear = xcgradup;
+        int xcgradupfar  = xcgradupR;
+        int icupmnear = icupm;
+        int icupmfar  = xc.f1upsize();
+        int icnear = ic;
+        int icfar  = -(((ic+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xanear,xbnear,xcnear,xdn,xanearinfo,xbnearinfo,xcnearinfo,xdinfo,xagradOrdernear,xbgradOrdernear,xcgradOrdernear,xdgradOrder,xagradupnear,xbgradupnear,xcgradupnear,xdgradup,iaupmnear,ibupmnear,icupmnear,idupm,xaffnear,xbffnear,xcffnear,xdff,bias,nullptr,ianear,ibnear,icnear,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabCd; yyycK4(resabCd,xanear,xbnear,xcfar ,xdn,xanearinfo,xbnearinfo,xcfarinfo ,xdinfo,xagradOrdernear,xbgradOrdernear,xcgradOrderfar ,xdgradOrder,xagradupnear,xbgradupnear,xcgradupfar ,xdgradup,iaupmnear,ibupmnear,icupmfar ,idupm,xaffnear,xbffnear,xcfffar ,xdff,bias,nullptr,ianear,ibnear,icfar ,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBcd; yyycK4(resaBcd,xanear,xbfar ,xcnear,xdn,xanearinfo,xbfarinfo ,xcnearinfo,xdinfo,xagradOrdernear,xbgradOrderfar ,xcgradOrdernear,xdgradOrder,xagradupnear,xbgradupfar ,xcgradupnear,xdgradup,iaupmnear,ibupmfar ,icupmnear,idupm,xaffnear,xbfffar ,xcffnear,xdff,bias,nullptr,ianear,ibfar ,icnear,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBCd; yyycK4(resaBCd,xanear,xbfar ,xcfar ,xdn,xanearinfo,xbfarinfo ,xcfarinfo ,xdinfo,xagradOrdernear,xbgradOrderfar ,xcgradOrderfar ,xdgradOrder,xagradupnear,xbgradupfar ,xcgradupfar ,xdgradup,iaupmnear,ibupmfar ,icupmfar ,idupm,xaffnear,xbfffar ,xcfffar ,xdff,bias,nullptr,ianear,ibfar ,icfar ,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbcd; yyycK4(resAbcd,xafar ,xbnear,xcnear,xdn,xafarinfo ,xbnearinfo,xcnearinfo,xdinfo,xagradOrderfar ,xbgradOrdernear,xcgradOrdernear,xdgradOrder,xagradupfar ,xbgradupnear,xcgradupnear,xdgradup,iaupmfar ,ibupmnear,icupmnear,idupm,xafffar ,xbffnear,xcffnear,xdff,bias,nullptr,iafar ,ibnear,icnear,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbCd; yyycK4(resAbCd,xafar ,xbnear,xcfar ,xdn,xafarinfo ,xbnearinfo,xcfarinfo ,xdinfo,xagradOrderfar ,xbgradOrdernear,xcgradOrderfar ,xdgradOrder,xagradupfar ,xbgradupnear,xcgradupfar ,xdgradup,iaupmfar ,ibupmnear,icupmfar ,idupm,xafffar ,xbffnear,xcfffar ,xdff,bias,nullptr,iafar ,ibnear,icfar ,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resABcd; yyycK4(resABcd,xafar ,xbfar ,xcnear,xdn,xafarinfo ,xbfarinfo ,xcnearinfo,xdinfo,xagradOrderfar ,xbgradOrderfar ,xcgradOrdernear,xdgradOrder,xagradupfar ,xbgradupfar ,xcgradupnear,xdgradup,iaupmfar ,ibupmfar ,icupmnear,idupm,xafffar ,xbfffar ,xcffnear,xdff,bias,nullptr,iafar ,ibfar ,icnear,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resABCd; yyycK4(resABCd,xafar ,xbfar ,xcfar ,xdn,xafarinfo ,xbfarinfo ,xcfarinfo ,xdinfo,xagradOrderfar ,xbgradOrderfar ,xcgradOrderfar ,xdgradOrder,xagradupfar ,xbgradupfar ,xcgradupfar ,xdgradup,iaupmfar ,ibupmfar ,icupmfar ,idupm,xafffar ,xbfffar ,xcfffar ,xdff,bias,nullptr,iafar ,ibfar ,icfar ,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resabCd *= (xarankw*xbrankw*xCrankw*xdrankw);
+        resaBcd *= (xarankw*xBrankw*xcrankw*xdrankw);
+        resaBCd *= (xarankw*xBrankw*xCrankw*xdrankw);
+        resAbcd *= (xArankw*xbrankw*xcrankw*xdrankw);
+        resAbCd *= (xArankw*xbrankw*xCrankw*xdrankw);
+        resABcd *= (xArankw*xBrankw*xcrankw*xdrankw);
+        resABCd *= (xArankw*xBrankw*xCrankw*xdrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resabCd-resaBcd+resaBCd-resAbcd+resAbCd+resABcd-resABCd;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resabCd+resaBcd+resaBCd+resAbcd+resAbCd+resABcd+resABCd;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 17");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 18");
+        }
+    }
+
+    else if ( xafarpresent && xbfarpresent && xdfarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        const SparseVector<gentype> &xdnear = xd.n();
+        const SparseVector<gentype> &xdfar  = xd.f1();
+        const SparseVector<gentype> &xdffnear = xdff;
+        const SparseVector<gentype> &xdfffar  = xdfff;
+        const vecInfo &xdnearinfo = xdinfo(0,-1);
+        const vecInfo &xdfarinfo  = xdinfo(1,-1);
+        int xdgradOrdernear = xdgradOrder;
+        int xdgradOrderfar  = xdgradOrderR;
+        int xdgradupnear = xdgradup;
+        int xdgradupfar  = xdgradupR;
+        int idupmnear = idupm;
+        int idupmfar  = xd.f1upsize();
+        int idnear = id;
+        int idfar  = -(((id+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xanear,xbnear,xcn,xdnear,xanearinfo,xbnearinfo,xcinfo,xdnearinfo,xagradOrdernear,xbgradOrdernear,xcgradOrder,xdgradOrdernear,xagradupnear,xbgradupnear,xcgradup,xdgradupnear,iaupmnear,ibupmnear,icupm,idupmnear,xaffnear,xbffnear,xcff,xdffnear,bias,nullptr,ianear,ibnear,ic,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabcD; yyycK4(resabcD,xanear,xbnear,xcn,xdfar ,xanearinfo,xbnearinfo,xcinfo,xdfarinfo ,xagradOrdernear,xbgradOrdernear,xcgradOrder,xdgradOrderfar ,xagradupnear,xbgradupnear,xcgradup,xdgradupfar ,iaupmnear,ibupmnear,icupm,idupmfar ,xaffnear,xbffnear,xcff,xdfffar ,bias,nullptr,ianear,ibnear,ic,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBcd; yyycK4(resaBcd,xanear,xbfar ,xcn,xdnear,xanearinfo,xbfarinfo ,xcinfo,xdnearinfo,xagradOrdernear,xbgradOrderfar ,xcgradOrder,xdgradOrdernear,xagradupnear,xbgradupfar ,xcgradup,xdgradupnear,iaupmnear,ibupmfar ,icupm,idupmnear,xaffnear,xbfffar ,xcff,xdffnear,bias,nullptr,ianear,ibfar ,ic,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBcD; yyycK4(resaBcD,xanear,xbfar ,xcn,xdfar ,xanearinfo,xbfarinfo ,xcinfo,xdfarinfo ,xagradOrdernear,xbgradOrderfar ,xcgradOrder,xdgradOrderfar ,xagradupnear,xbgradupfar ,xcgradup,xdgradupfar ,iaupmnear,ibupmfar ,icupm,idupmfar ,xaffnear,xbfffar ,xcff,xdfffar ,bias,nullptr,ianear,ibfar ,ic,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbcd; yyycK4(resAbcd,xafar ,xbnear,xcn,xdnear,xafarinfo ,xbnearinfo,xcinfo,xdnearinfo,xagradOrderfar ,xbgradOrdernear,xcgradOrder,xdgradOrdernear,xagradupfar ,xbgradupnear,xcgradup,xdgradupnear,iaupmfar ,ibupmnear,icupm,idupmnear,xafffar ,xbffnear,xcff,xdffnear,bias,nullptr,iafar ,ibnear,ic,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbcD; yyycK4(resAbcD,xafar ,xbnear,xcn,xdfar ,xafarinfo ,xbnearinfo,xcinfo,xdfarinfo ,xagradOrderfar ,xbgradOrdernear,xcgradOrder,xdgradOrderfar ,xagradupfar ,xbgradupnear,xcgradup,xdgradupfar ,iaupmfar ,ibupmnear,icupm,idupmfar ,xafffar ,xbffnear,xcff,xdfffar ,bias,nullptr,iafar ,ibnear,ic,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resABcd; yyycK4(resABcd,xafar ,xbfar ,xcn,xdnear,xafarinfo ,xbfarinfo ,xcinfo,xdnearinfo,xagradOrderfar ,xbgradOrderfar ,xcgradOrder,xdgradOrdernear,xagradupfar ,xbgradupfar ,xcgradup,xdgradupnear,iaupmfar ,ibupmfar ,icupm,idupmnear,xafffar ,xbfffar ,xcff,xdffnear,bias,nullptr,iafar ,ibfar ,ic,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resABcD; yyycK4(resABcD,xafar ,xbfar ,xcn,xdfar ,xafarinfo ,xbfarinfo ,xcinfo,xdfarinfo ,xagradOrderfar ,xbgradOrderfar ,xcgradOrder,xdgradOrderfar ,xagradupfar ,xbgradupfar ,xcgradup,xdgradupfar ,iaupmfar ,ibupmfar ,icupm,idupmfar ,xafffar ,xbfffar ,xcff,xdfffar ,bias,nullptr,iafar ,ibfar ,ic,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resabcD *= (xarankw*xbrankw*xcrankw*xDrankw);
+        resaBcd *= (xarankw*xBrankw*xcrankw*xdrankw);
+        resaBcD *= (xarankw*xBrankw*xcrankw*xDrankw);
+        resAbcd *= (xArankw*xbrankw*xcrankw*xdrankw);
+        resAbcD *= (xArankw*xbrankw*xcrankw*xDrankw);
+        resABcd *= (xArankw*xBrankw*xcrankw*xdrankw);
+        resABcD *= (xArankw*xBrankw*xcrankw*xDrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resabcD-resaBcd+resaBcD-resAbcd+resAbcD+resABcd-resABcD;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resabcD+resaBcd+resaBcD+resAbcd+resAbcD+resABcd+resABcD;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 19");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 20");
+        }
+    }
+
+    else if ( xafarpresent && xcfarpresent && xdfarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        const SparseVector<gentype> &xcnear = xc.n();
+        const SparseVector<gentype> &xcfar  = xc.f1();
+        const SparseVector<gentype> &xcffnear = xcff;
+        const SparseVector<gentype> &xcfffar  = xcfff;
+        const vecInfo &xcnearinfo = xcinfo(0,-1);
+        const vecInfo &xcfarinfo  = xcinfo(1,-1);
+        int xcgradOrdernear = xcgradOrder;
+        int xcgradOrderfar  = xcgradOrderR;
+        int xcgradupnear = xcgradup;
+        int xcgradupfar  = xcgradupR;
+        int icupmnear = icupm;
+        int icupmfar  = xc.f1upsize();
+        int icnear = ic;
+        int icfar  = -(((ic+1)*100)+1);
+
+        const SparseVector<gentype> &xdnear = xd.n();
+        const SparseVector<gentype> &xdfar  = xd.f1();
+        const SparseVector<gentype> &xdffnear = xdff;
+        const SparseVector<gentype> &xdfffar  = xdfff;
+        const vecInfo &xdnearinfo = xdinfo(0,-1);
+        const vecInfo &xdfarinfo  = xdinfo(1,-1);
+        int xdgradOrdernear = xdgradOrder;
+        int xdgradOrderfar  = xdgradOrderR;
+        int xdgradupnear = xdgradup;
+        int xdgradupfar  = xdgradupR;
+        int idupmnear = idupm;
+        int idupmfar  = xd.f1upsize();
+        int idnear = id;
+        int idfar  = -(((id+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xanear,xbn,xcnear,xdnear,xanearinfo,xbinfo,xcnearinfo,xdnearinfo,xagradOrdernear,xbgradOrder,xcgradOrdernear,xdgradOrdernear,xagradupnear,xbgradup,xcgradupnear,xdgradupnear,iaupmnear,ibupm,icupmnear,idupmnear,xaffnear,xbff,xcffnear,xdffnear,bias,nullptr,ianear,ib,icnear,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabcD; yyycK4(resabcD,xanear,xbn,xcnear,xdfar ,xanearinfo,xbinfo,xcnearinfo,xdfarinfo ,xagradOrdernear,xbgradOrder,xcgradOrdernear,xdgradOrderfar ,xagradupnear,xbgradup,xcgradupnear,xdgradupfar ,iaupmnear,ibupm,icupmnear,idupmfar ,xaffnear,xbff,xcffnear,xdfffar ,bias,nullptr,ianear,ib,icnear,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabCd; yyycK4(resabCd,xanear,xbn,xcfar ,xdnear,xanearinfo,xbinfo,xcfarinfo ,xdnearinfo,xagradOrdernear,xbgradOrder,xcgradOrderfar ,xdgradOrdernear,xagradupnear,xbgradup,xcgradupfar ,xdgradupnear,iaupmnear,ibupm,icupmfar ,idupmnear,xaffnear,xbff,xcfffar ,xdffnear,bias,nullptr,ianear,ib,icfar ,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabCD; yyycK4(resabCD,xanear,xbn,xcfar ,xdfar ,xanearinfo,xbinfo,xcfarinfo ,xdfarinfo ,xagradOrdernear,xbgradOrder,xcgradOrderfar ,xdgradOrderfar ,xagradupnear,xbgradup,xcgradupfar ,xdgradupfar ,iaupmnear,ibupm,icupmfar ,idupmfar ,xaffnear,xbff,xcfffar ,xdfffar ,bias,nullptr,ianear,ib,icfar ,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbcd; yyycK4(resAbcd,xafar ,xbn,xcnear,xdnear,xafarinfo ,xbinfo,xcnearinfo,xdnearinfo,xagradOrderfar ,xbgradOrder,xcgradOrdernear,xdgradOrdernear,xagradupfar ,xbgradup,xcgradupnear,xdgradupnear,iaupmfar ,ibupm,icupmnear,idupmnear,xafffar ,xbff,xcffnear,xdffnear,bias,nullptr,iafar ,ib,icnear,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbcD; yyycK4(resAbcD,xafar ,xbn,xcnear,xdfar ,xafarinfo ,xbinfo,xcnearinfo,xdfarinfo ,xagradOrderfar ,xbgradOrder,xcgradOrdernear,xdgradOrderfar ,xagradupfar ,xbgradup,xcgradupnear,xdgradupfar ,iaupmfar ,ibupm,icupmnear,idupmfar ,xafffar ,xbff,xcffnear,xdfffar ,bias,nullptr,iafar ,ib,icnear,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbCd; yyycK4(resAbCd,xafar ,xbn,xcfar ,xdnear,xafarinfo ,xbinfo,xcfarinfo ,xdnearinfo,xagradOrderfar ,xbgradOrder,xcgradOrderfar ,xdgradOrdernear,xagradupfar ,xbgradup,xcgradupfar ,xdgradupnear,iaupmfar ,ibupm,icupmfar ,idupmnear,xafffar ,xbff,xcfffar ,xdffnear,bias,nullptr,iafar ,ib,icfar ,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbCD; yyycK4(resAbCD,xafar ,xbn,xcfar ,xdfar ,xafarinfo ,xbinfo,xcfarinfo ,xdfarinfo ,xagradOrderfar ,xbgradOrder,xcgradOrderfar ,xdgradOrderfar ,xagradupfar ,xbgradup,xcgradupfar ,xdgradupfar ,iaupmfar ,ibupm,icupmfar ,idupmfar ,xafffar ,xbff,xcfffar ,xdfffar ,bias,nullptr,iafar ,ib,icfar ,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resabcD *= (xarankw*xbrankw*xcrankw*xDrankw);
+        resabCd *= (xarankw*xbrankw*xCrankw*xdrankw);
+        resabCD *= (xarankw*xbrankw*xCrankw*xDrankw);
+        resAbcd *= (xArankw*xbrankw*xcrankw*xdrankw);
+        resAbcD *= (xArankw*xbrankw*xcrankw*xDrankw);
+        resAbCd *= (xArankw*xbrankw*xCrankw*xdrankw);
+        resAbCD *= (xArankw*xbrankw*xCrankw*xDrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resabcD-resabCd+resabCD-resAbcd+resAbcD+resAbCd-resAbCD;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resabcD+resabCd+resabCD+resAbcd+resAbcD+resAbCd+resAbCD;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 21");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 22");
+        }
+    }
+
+    else if ( xbfarpresent && xcfarpresent && xdfarpresent )
+    {
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        const SparseVector<gentype> &xcnear = xc.n();
+        const SparseVector<gentype> &xcfar  = xc.f1();
+        const SparseVector<gentype> &xcffnear = xcff;
+        const SparseVector<gentype> &xcfffar  = xcfff;
+        const vecInfo &xcnearinfo = xcinfo(0,-1);
+        const vecInfo &xcfarinfo  = xcinfo(1,-1);
+        int xcgradOrdernear = xcgradOrder;
+        int xcgradOrderfar  = xcgradOrderR;
+        int xcgradupnear = xcgradup;
+        int xcgradupfar  = xcgradupR;
+        int icupmnear = icupm;
+        int icupmfar  = xc.f1upsize();
+        int icnear = ic;
+        int icfar  = -(((ic+1)*100)+1);
+
+        const SparseVector<gentype> &xdnear = xd.n();
+        const SparseVector<gentype> &xdfar  = xd.f1();
+        const SparseVector<gentype> &xdffnear = xdff;
+        const SparseVector<gentype> &xdfffar  = xdfff;
+        const vecInfo &xdnearinfo = xdinfo(0,-1);
+        const vecInfo &xdfarinfo  = xdinfo(1,-1);
+        int xdgradOrdernear = xdgradOrder;
+        int xdgradOrderfar  = xdgradOrderR;
+        int xdgradupnear = xdgradup;
+        int xdgradupfar  = xdgradupR;
+        int idupmnear = idupm;
+        int idupmfar  = xd.f1upsize();
+        int idnear = id;
+        int idfar  = -(((id+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xan,xbnear,xcnear,xdnear,xainfo,xbnearinfo,xcnearinfo,xdnearinfo,xagradOrder,xbgradOrdernear,xcgradOrdernear,xdgradOrdernear,xagradup,xbgradupnear,xcgradupnear,xdgradupnear,iaupm,ibupmnear,icupmnear,idupmnear,xaff,xbffnear,xcffnear,xdffnear,bias,nullptr,ia,ibnear,icnear,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabcD; yyycK4(resabcD,xan,xbnear,xcnear,xdfar ,xainfo,xbnearinfo,xcnearinfo,xdfarinfo ,xagradOrder,xbgradOrdernear,xcgradOrdernear,xdgradOrderfar ,xagradup,xbgradupnear,xcgradupnear,xdgradupfar ,iaupm,ibupmnear,icupmnear,idupmfar ,xaff,xbffnear,xcffnear,xdfffar ,bias,nullptr,ia,ibnear,icnear,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabCd; yyycK4(resabCd,xan,xbnear,xcfar ,xdnear,xainfo,xbnearinfo,xcfarinfo ,xdnearinfo,xagradOrder,xbgradOrdernear,xcgradOrderfar ,xdgradOrdernear,xagradup,xbgradupnear,xcgradupfar ,xdgradupnear,iaupm,ibupmnear,icupmfar ,idupmnear,xaff,xbffnear,xcfffar ,xdffnear,bias,nullptr,ia,ibnear,icfar ,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabCD; yyycK4(resabCD,xan,xbnear,xcfar ,xdfar ,xainfo,xbnearinfo,xcfarinfo ,xdfarinfo ,xagradOrder,xbgradOrdernear,xcgradOrderfar ,xdgradOrderfar ,xagradup,xbgradupnear,xcgradupfar ,xdgradupfar ,iaupm,ibupmnear,icupmfar ,idupmfar ,xaff,xbffnear,xcfffar ,xdfffar ,bias,nullptr,ia,ibnear,icfar ,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBcd; yyycK4(resaBcd,xan,xbfar ,xcnear,xdnear,xainfo,xbfarinfo ,xcnearinfo,xdnearinfo,xagradOrder,xbgradOrderfar ,xcgradOrdernear,xdgradOrdernear,xagradup,xbgradupfar ,xcgradupnear,xdgradupnear,iaupm,ibupmfar ,icupmnear,idupmnear,xaff,xbfffar ,xcffnear,xdffnear,bias,nullptr,ia,ibfar ,icnear,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBcD; yyycK4(resaBcD,xan,xbfar ,xcnear,xdfar ,xainfo,xbfarinfo ,xcnearinfo,xdfarinfo ,xagradOrder,xbgradOrderfar ,xcgradOrdernear,xdgradOrderfar ,xagradup,xbgradupfar ,xcgradupnear,xdgradupfar ,iaupm,ibupmfar ,icupmnear,idupmfar ,xaff,xbfffar ,xcffnear,xdfffar ,bias,nullptr,ia,ibfar ,icnear,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBCd; yyycK4(resaBCd,xan,xbfar ,xcfar ,xdnear,xainfo,xbfarinfo ,xcfarinfo ,xdnearinfo,xagradOrder,xbgradOrderfar ,xcgradOrderfar ,xdgradOrdernear,xagradup,xbgradupfar ,xcgradupfar ,xdgradupnear,iaupm,ibupmfar ,icupmfar ,idupmnear,xaff,xbfffar ,xcfffar ,xdffnear,bias,nullptr,ia,ibfar ,icfar ,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBCD; yyycK4(resaBCD,xan,xbfar ,xcfar ,xdfar ,xainfo,xbfarinfo ,xcfarinfo ,xdfarinfo ,xagradOrder,xbgradOrderfar ,xcgradOrderfar ,xdgradOrderfar ,xagradup,xbgradupfar ,xcgradupfar ,xdgradupfar ,iaupm,ibupmfar ,icupmfar ,idupmfar ,xaff,xbfffar ,xcfffar ,xdfffar ,bias,nullptr,ia,ibfar ,icfar ,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resabcD *= (xarankw*xbrankw*xcrankw*xDrankw);
+        resabCd *= (xarankw*xbrankw*xCrankw*xdrankw);
+        resabCD *= (xarankw*xbrankw*xCrankw*xDrankw);
+        resaBcd *= (xarankw*xBrankw*xcrankw*xdrankw);
+        resaBcD *= (xarankw*xBrankw*xcrankw*xDrankw);
+        resaBCd *= (xarankw*xBrankw*xCrankw*xdrankw);
+        resaBCD *= (xarankw*xBrankw*xCrankw*xDrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resabcD-resabCd+resabCD-resaBcd+resaBcD+resaBCd-resaBCD;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resabcD+resabCd+resabCD+resaBcd+resaBcD+resaBCd+resaBCD;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 23");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 24");
+        }
+    }
+
+    else if ( xafarpresent && xbfarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xanear,xbnear,xcn,xdn,xanearinfo,xbnearinfo,xcinfo,xdinfo,xagradOrdernear,xbgradOrdernear,xcgradOrder,xdgradOrder,xagradupnear,xbgradupnear,xcgradup,xdgradup,iaupmnear,ibupmnear,icupm,idupm,xaffnear,xbffnear,xcff,xdff,bias,nullptr,ianear,ibnear,ic,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBcd; yyycK4(resaBcd,xanear,xbfar ,xcn,xdn,xanearinfo,xbfarinfo ,xcinfo,xdinfo,xagradOrdernear,xbgradOrderfar ,xcgradOrder,xdgradOrder,xagradupnear,xbgradupfar ,xcgradup,xdgradup,iaupmnear,ibupmfar ,icupm,idupm,xaffnear,xbfffar ,xcff,xdff,bias,nullptr,ianear,ibfar ,ic,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbcd; yyycK4(resAbcd,xafar ,xbnear,xcn,xdn,xafarinfo ,xbnearinfo,xcinfo,xdinfo,xagradOrderfar ,xbgradOrdernear,xcgradOrder,xdgradOrder,xagradupfar ,xbgradupnear,xcgradup,xdgradup,iaupmfar ,ibupmnear,icupm,idupm,xafffar ,xbffnear,xcff,xdff,bias,nullptr,iafar ,ibnear,ic,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resABcd; yyycK4(resABcd,xafar ,xbfar ,xcn,xdn,xafarinfo ,xbfarinfo ,xcinfo,xdinfo,xagradOrderfar ,xbgradOrderfar ,xcgradOrder,xdgradOrder,xagradupfar ,xbgradupfar ,xcgradup,xdgradup,iaupmfar ,ibupmfar ,icupm,idupm,xafffar ,xbfffar ,xcff,xdff,bias,nullptr,iafar ,ibfar ,ic,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resaBcd *= (xarankw*xBrankw*xcrankw*xdrankw);
+        resAbcd *= (xArankw*xbrankw*xcrankw*xdrankw);
+        resABcd *= (xArankw*xBrankw*xcrankw*xdrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resaBcd-resAbcd+resABcd;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resaBcd+resAbcd+resABcd;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 25");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 26");
+        }
+    }
+
+    else if ( xafarpresent && xcfarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        const SparseVector<gentype> &xcnear = xc.n();
+        const SparseVector<gentype> &xcfar  = xc.f1();
+        const SparseVector<gentype> &xcffnear = xcff;
+        const SparseVector<gentype> &xcfffar  = xcfff;
+        const vecInfo &xcnearinfo = xcinfo(0,-1);
+        const vecInfo &xcfarinfo  = xcinfo(1,-1);
+        int xcgradOrdernear = xcgradOrder;
+        int xcgradOrderfar  = xcgradOrderR;
+        int xcgradupnear = xcgradup;
+        int xcgradupfar  = xcgradupR;
+        int icupmnear = icupm;
+        int icupmfar  = xc.f1upsize();
+        int icnear = ic;
+        int icfar  = -(((ic+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xanear,xbn,xcnear,xdn,xanearinfo,xbinfo,xcnearinfo,xdinfo,xagradOrdernear,xbgradOrder,xcgradOrdernear,xdgradOrder,xagradupnear,xbgradup,xcgradupnear,xdgradup,iaupmnear,ibupm,icupmnear,idupm,xaffnear,xbff,xcffnear,xdff,bias,nullptr,ianear,ib,icnear,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabCd; yyycK4(resabCd,xanear,xbn,xcfar ,xdn,xanearinfo,xbinfo,xcfarinfo ,xdinfo,xagradOrdernear,xbgradOrder,xcgradOrderfar ,xdgradOrder,xagradupnear,xbgradup,xcgradupfar ,xdgradup,iaupmnear,ibupm,icupmfar ,idupm,xaffnear,xbff,xcfffar ,xdff,bias,nullptr,ianear,ib,icfar ,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbcd; yyycK4(resAbcd,xafar ,xbn,xcnear,xdn,xafarinfo ,xbinfo,xcnearinfo,xdinfo,xagradOrderfar ,xbgradOrder,xcgradOrdernear,xdgradOrder,xagradupfar ,xbgradup,xcgradupnear,xdgradup,iaupmfar ,ibupm,icupmnear,idupm,xafffar ,xbff,xcffnear,xdff,bias,nullptr,iafar ,ib,icnear,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbCd; yyycK4(resAbCd,xafar ,xbn,xcfar ,xdn,xafarinfo ,xbinfo,xcfarinfo ,xdinfo,xagradOrderfar ,xbgradOrder,xcgradOrderfar ,xdgradOrder,xagradupfar ,xbgradup,xcgradupfar ,xdgradup,iaupmfar ,ibupm,icupmfar ,idupm,xafffar ,xbff,xcfffar ,xdff,bias,nullptr,iafar ,ib,icfar ,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resabCd *= (xarankw*xbrankw*xCrankw*xdrankw);
+        resAbcd *= (xArankw*xbrankw*xcrankw*xdrankw);
+        resAbCd *= (xArankw*xbrankw*xCrankw*xdrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resabCd-resAbcd+resAbCd;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resabCd+resAbcd+resAbCd;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 27");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 28");
+        }
+    }
+
+    else if ( xafarpresent && xdfarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        const SparseVector<gentype> &xdnear = xd.n();
+        const SparseVector<gentype> &xdfar  = xd.f1();
+        const SparseVector<gentype> &xdffnear = xdff;
+        const SparseVector<gentype> &xdfffar  = xdfff;
+        const vecInfo &xdnearinfo = xdinfo(0,-1);
+        const vecInfo &xdfarinfo  = xdinfo(1,-1);
+        int xdgradOrdernear = xdgradOrder;
+        int xdgradOrderfar  = xdgradOrderR;
+        int xdgradupnear = xdgradup;
+        int xdgradupfar  = xdgradupR;
+        int idupmnear = idupm;
+        int idupmfar  = xd.f1upsize();
+        int idnear = id;
+        int idfar  = -(((id+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xanear,xbn,xcn,xdnear,xanearinfo,xbinfo,xcinfo,xdnearinfo,xagradOrdernear,xbgradOrder,xcgradOrder,xdgradOrdernear,xagradupnear,xbgradup,xcgradup,xdgradupnear,iaupmnear,ibupm,icupm,idupmnear,xaffnear,xbff,xcff,xdffnear,bias,nullptr,ianear,ib,ic,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabcD; yyycK4(resabcD,xanear,xbn,xcn,xdfar ,xanearinfo,xbinfo,xcinfo,xdfarinfo ,xagradOrdernear,xbgradOrder,xcgradOrder,xdgradOrderfar ,xagradupnear,xbgradup,xcgradup,xdgradupfar ,iaupmnear,ibupm,icupm,idupmfar ,xaffnear,xbff,xcff,xdfffar ,bias,nullptr,ianear,ib,ic,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbcd; yyycK4(resAbcd,xafar ,xbn,xcn,xdnear,xafarinfo ,xbinfo,xcinfo,xdnearinfo,xagradOrderfar ,xbgradOrder,xcgradOrder,xdgradOrdernear,xagradupfar ,xbgradup,xcgradup,xdgradupnear,iaupmfar ,ibupm,icupm,idupmnear,xafffar ,xbff,xcff,xdffnear,bias,nullptr,iafar ,ib,ic,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbcD; yyycK4(resAbcD,xafar ,xbn,xcn,xdfar ,xafarinfo ,xbinfo,xcinfo,xdfarinfo ,xagradOrderfar ,xbgradOrder,xcgradOrder,xdgradOrderfar ,xagradupfar ,xbgradup,xcgradup,xdgradupfar ,iaupmfar ,ibupm,icupm,idupmfar ,xafffar ,xbff,xcff,xdfffar ,bias,nullptr,iafar ,ib,ic,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resabcD *= (xarankw*xbrankw*xcrankw*xDrankw);
+        resAbcd *= (xArankw*xbrankw*xcrankw*xdrankw);
+        resAbcD *= (xArankw*xbrankw*xcrankw*xDrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resabcD-resAbcd+resAbcD;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resabcD+resAbcd+resAbcD;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 29");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 30");
+        }
+    }
+
+    else if ( xbfarpresent && xcfarpresent )
+    {
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        const SparseVector<gentype> &xcnear = xc.n();
+        const SparseVector<gentype> &xcfar  = xc.f1();
+        const SparseVector<gentype> &xcffnear = xcff;
+        const SparseVector<gentype> &xcfffar  = xcfff;
+        const vecInfo &xcnearinfo = xcinfo(0,-1);
+        const vecInfo &xcfarinfo  = xcinfo(1,-1);
+        int xcgradOrdernear = xcgradOrder;
+        int xcgradOrderfar  = xcgradOrderR;
+        int xcgradupnear = xcgradup;
+        int xcgradupfar  = xcgradupR;
+        int icupmnear = icupm;
+        int icupmfar  = xc.f1upsize();
+        int icnear = ic;
+        int icfar  = -(((ic+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xan,xbnear,xcnear,xdn,xainfo,xbnearinfo,xcnearinfo,xdinfo,xagradOrder,xbgradOrdernear,xcgradOrdernear,xdgradOrder,xagradup,xbgradupnear,xcgradupnear,xdgradup,iaupm,ibupmnear,icupmnear,idupm,xaff,xbffnear,xcffnear,xdff,bias,nullptr,ia,ibnear,icnear,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabCd; yyycK4(resabCd,xan,xbnear,xcfar ,xdn,xainfo,xbnearinfo,xcfarinfo ,xdinfo,xagradOrder,xbgradOrdernear,xcgradOrderfar ,xdgradOrder,xagradup,xbgradupnear,xcgradupfar ,xdgradup,iaupm,ibupmnear,icupmfar ,idupm,xaff,xbffnear,xcfffar ,xdff,bias,nullptr,ia,ibnear,icfar ,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBcd; yyycK4(resaBcd,xan,xbfar ,xcnear,xdn,xainfo,xbfarinfo ,xcnearinfo,xdinfo,xagradOrder,xbgradOrderfar ,xcgradOrdernear,xdgradOrder,xagradup,xbgradupfar ,xcgradupnear,xdgradup,iaupm,ibupmfar ,icupmnear,idupm,xaff,xbfffar ,xcffnear,xdff,bias,nullptr,ia,ibfar ,icnear,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBCd; yyycK4(resaBCd,xan,xbfar ,xcfar ,xdn,xainfo,xbfarinfo ,xcfarinfo ,xdinfo,xagradOrder,xbgradOrderfar ,xcgradOrderfar ,xdgradOrder,xagradup,xbgradupfar ,xcgradupfar ,xdgradup,iaupm,ibupmfar ,icupmfar ,idupm,xaff,xbfffar ,xcfffar ,xdff,bias,nullptr,ia,ibfar ,icfar ,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resabCd *= (xarankw*xbrankw*xCrankw*xdrankw);
+        resaBcd *= (xarankw*xBrankw*xcrankw*xdrankw);
+        resaBCd *= (xarankw*xBrankw*xCrankw*xdrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resabCd-resaBcd+resaBCd;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resabCd+resaBcd+resaBCd;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 31");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 32");
+        }
+    }
+
+    else if ( xbfarpresent && xdfarpresent )
+    {
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        const SparseVector<gentype> &xdnear = xd.n();
+        const SparseVector<gentype> &xdfar  = xd.f1();
+        const SparseVector<gentype> &xdffnear = xdff;
+        const SparseVector<gentype> &xdfffar  = xdfff;
+        const vecInfo &xdnearinfo = xdinfo(0,-1);
+        const vecInfo &xdfarinfo  = xdinfo(1,-1);
+        int xdgradOrdernear = xdgradOrder;
+        int xdgradOrderfar  = xdgradOrderR;
+        int xdgradupnear = xdgradup;
+        int xdgradupfar  = xdgradupR;
+        int idupmnear = idupm;
+        int idupmfar  = xd.f1upsize();
+        int idnear = id;
+        int idfar  = -(((id+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xan,xbnear,xcn,xdnear,xainfo,xbnearinfo,xcinfo,xdnearinfo,xagradOrder,xbgradOrdernear,xcgradOrder,xdgradOrdernear,xagradup,xbgradupnear,xcgradup,xdgradupnear,iaupm,ibupmnear,icupm,idupmnear,xaff,xbffnear,xcff,xdffnear,bias,nullptr,ia,ibnear,ic,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabcD; yyycK4(resabcD,xan,xbnear,xcn,xdfar ,xainfo,xbnearinfo,xcinfo,xdfarinfo ,xagradOrder,xbgradOrdernear,xcgradOrder,xdgradOrderfar ,xagradup,xbgradupnear,xcgradup,xdgradupfar ,iaupm,ibupmnear,icupm,idupmfar ,xaff,xbffnear,xcff,xdfffar ,bias,nullptr,ia,ibnear,ic,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBcd; yyycK4(resaBcd,xan,xbfar ,xcn,xdnear,xainfo,xbfarinfo ,xcinfo,xdnearinfo,xagradOrder,xbgradOrderfar ,xcgradOrder,xdgradOrdernear,xagradup,xbgradupfar ,xcgradup,xdgradupnear,iaupm,ibupmfar ,icupm,idupmnear,xaff,xbfffar ,xcff,xdffnear,bias,nullptr,ia,ibfar ,ic,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBcD; yyycK4(resaBcD,xan,xbfar ,xcn,xdfar ,xainfo,xbfarinfo ,xcinfo,xdfarinfo ,xagradOrder,xbgradOrderfar ,xcgradOrder,xdgradOrderfar ,xagradup,xbgradupfar ,xcgradup,xdgradupfar ,iaupm,ibupmfar ,icupm,idupmfar ,xaff,xbfffar ,xcff,xdfffar ,bias,nullptr,ia,ibfar ,ic,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resabcD *= (xarankw*xbrankw*xcrankw*xDrankw);
+        resaBcd *= (xarankw*xBrankw*xcrankw*xdrankw);
+        resaBcD *= (xarankw*xBrankw*xcrankw*xDrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resabcD-resaBcd+resaBcD;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resabcD+resaBcd+resaBcD;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 33");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 34");
+        }
+    }
+
+    else if ( xcfarpresent && xdfarpresent )
+    {
+        const SparseVector<gentype> &xcnear = xc.n();
+        const SparseVector<gentype> &xcfar  = xc.f1();
+        const SparseVector<gentype> &xcffnear = xcff;
+        const SparseVector<gentype> &xcfffar  = xcfff;
+        const vecInfo &xcnearinfo = xcinfo(0,-1);
+        const vecInfo &xcfarinfo  = xcinfo(1,-1);
+        int xcgradOrdernear = xcgradOrder;
+        int xcgradOrderfar  = xcgradOrderR;
+        int xcgradupnear = xcgradup;
+        int xcgradupfar  = xcgradupR;
+        int icupmnear = icupm;
+        int icupmfar  = xc.f1upsize();
+        int icnear = ic;
+        int icfar  = -(((ic+1)*100)+1);
+
+        const SparseVector<gentype> &xdnear = xd.n();
+        const SparseVector<gentype> &xdfar  = xd.f1();
+        const SparseVector<gentype> &xdffnear = xdff;
+        const SparseVector<gentype> &xdfffar  = xdfff;
+        const vecInfo &xdnearinfo = xdinfo(0,-1);
+        const vecInfo &xdfarinfo  = xdinfo(1,-1);
+        int xdgradOrdernear = xdgradOrder;
+        int xdgradOrderfar  = xdgradOrderR;
+        int xdgradupnear = xdgradup;
+        int xdgradupfar  = xdgradupR;
+        int idupmnear = idupm;
+        int idupmfar  = xd.f1upsize();
+        int idnear = id;
+        int idfar  = -(((id+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xan,xbn,xcnear,xdnear,xainfo,xbinfo,xcnearinfo,xdnearinfo,xagradOrder,xbgradOrder,xcgradOrdernear,xdgradOrdernear,xagradup,xbgradup,xcgradupnear,xdgradupnear,iaupm,ibupm,icupmnear,idupmnear,xaff,xbff,xcffnear,xdffnear,bias,nullptr,ia,ib,icnear,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabcD; yyycK4(resabcD,xan,xbn,xcnear,xdfar ,xainfo,xbinfo,xcnearinfo,xdfarinfo ,xagradOrder,xbgradOrder,xcgradOrdernear,xdgradOrderfar ,xagradup,xbgradup,xcgradupnear,xdgradupfar ,iaupm,ibupm,icupmnear,idupmfar ,xaff,xbff,xcffnear,xdfffar ,bias,nullptr,ia,ib,icnear,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabCd; yyycK4(resabCd,xan,xbn,xcfar ,xdnear,xainfo,xbinfo,xcfarinfo ,xdnearinfo,xagradOrder,xbgradOrder,xcgradOrderfar ,xdgradOrdernear,xagradup,xbgradup,xcgradupfar ,xdgradupnear,iaupm,ibupm,icupmfar ,idupmnear,xaff,xbff,xcfffar ,xdffnear,bias,nullptr,ia,ib,icfar ,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabCD; yyycK4(resabCD,xan,xbn,xcfar ,xdfar ,xainfo,xbinfo,xcfarinfo ,xdfarinfo ,xagradOrder,xbgradOrder,xcgradOrderfar ,xdgradOrderfar ,xagradup,xbgradup,xcgradupfar ,xdgradupfar ,iaupm,ibupm,icupmfar ,idupmfar ,xaff,xbff,xcfffar ,xdfffar ,bias,nullptr,ia,ib,icfar ,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resabcD *= (xarankw*xbrankw*xcrankw*xDrankw);
+        resabCd *= (xarankw*xbrankw*xCrankw*xdrankw);
+        resabCD *= (xarankw*xbrankw*xCrankw*xDrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resabcD-resabCd+resabCD;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resabcD+resabCd+resabCD;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 35");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 36");
+        }
+    }
+
+    else if ( xafarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xanear,xbn,xcn,xdn,xanearinfo,xbinfo,xcinfo,xdinfo,xagradOrdernear,xbgradOrder,xcgradOrder,xdgradOrder,xagradupnear,xbgradup,xcgradup,xdgradup,iaupmnear,ibupm,icupm,idupm,xaffnear,xbff,xcff,xdff,bias,nullptr,ianear,ib,ic,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resAbcd; yyycK4(resAbcd,xafar ,xbn,xcn,xdn,xafarinfo ,xbinfo,xcinfo,xdinfo,xagradOrderfar ,xbgradOrder,xcgradOrder,xdgradOrder,xagradupfar ,xbgradup,xcgradup,xdgradup,iaupmfar ,ibupm,icupm,idupm,xafffar ,xbff,xcff,xdff,bias,nullptr,iafar ,ib,ic,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resAbcd *= (xArankw*xbrankw*xcrankw*xdrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resAbcd;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resAbcd;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 37");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 38");
+        }
+    }
+
+    else if ( xbfarpresent )
+    {
+        const SparseVector<gentype> &xbnear = xb.n();
+        const SparseVector<gentype> &xbfar  = xb.f1();
+        const SparseVector<gentype> &xbffnear = xbff;
+        const SparseVector<gentype> &xbfffar  = xbfff;
+        const vecInfo &xbnearinfo = xbinfo(0,-1);
+        const vecInfo &xbfarinfo  = xbinfo(1,-1);
+        int xbgradOrdernear = xbgradOrder;
+        int xbgradOrderfar  = xbgradOrderR;
+        int xbgradupnear = xbgradup;
+        int xbgradupfar  = xbgradupR;
+        int ibupmnear = ibupm;
+        int ibupmfar  = xb.f1upsize();
+        int ibnear = ib;
+        int ibfar  = -(((ib+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xan,xbnear,xcn,xdn,xainfo,xbnearinfo,xcinfo,xdinfo,xagradOrder,xbgradOrdernear,xcgradOrder,xdgradOrder,xagradup,xbgradupnear,xcgradup,xdgradup,iaupm,ibupmnear,icupm,idupm,xaff,xbffnear,xcff,xdff,bias,nullptr,ia,ibnear,ic,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resaBcd; yyycK4(resaBcd,xan,xbfar ,xcn,xdn,xainfo,xbfarinfo ,xcinfo,xdinfo,xagradOrder,xbgradOrderfar ,xcgradOrder,xdgradOrder,xagradup,xbgradupfar ,xcgradup,xdgradup,iaupm,ibupmfar ,icupm,idupm,xaff,xbfffar ,xcff,xdff,bias,nullptr,ia,ibfar ,ic,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resaBcd *= (xarankw*xBrankw*xcrankw*xdrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resaBcd;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resaBcd;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 39");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 40");
+        }
+    }
+
+    else if ( xcfarpresent )
+    {
+        const SparseVector<gentype> &xcnear = xc.n();
+        const SparseVector<gentype> &xcfar  = xc.f1();
+        const SparseVector<gentype> &xcffnear = xcff;
+        const SparseVector<gentype> &xcfffar  = xcfff;
+        const vecInfo &xcnearinfo = xcinfo(0,-1);
+        const vecInfo &xcfarinfo  = xcinfo(1,-1);
+        int xcgradOrdernear = xcgradOrder;
+        int xcgradOrderfar  = xcgradOrderR;
+        int xcgradupnear = xcgradup;
+        int xcgradupfar  = xcgradupR;
+        int icupmnear = icupm;
+        int icupmfar  = xc.f1upsize();
+        int icnear = ic;
+        int icfar  = -(((ic+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xan,xbn,xcnear,xdn,xainfo,xbinfo,xcnearinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrdernear,xdgradOrder,xagradup,xbgradup,xcgradupnear,xdgradup,iaupm,ibupm,icupmnear,idupm,xaff,xbff,xcffnear,xdff,bias,nullptr,ia,ib,icnear,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabCd; yyycK4(resabCd,xan,xbn,xcfar ,xdn,xainfo,xbinfo,xcfarinfo ,xdinfo,xagradOrder,xbgradOrder,xcgradOrderfar ,xdgradOrder,xagradup,xbgradup,xcgradupfar ,xdgradup,iaupm,ibupm,icupmfar ,idupm,xaff,xbff,xcfffar ,xdff,bias,nullptr,ia,ib,icfar ,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resabCd *= (xarankw*xbrankw*xCrankw*xdrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resabCd;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resabCd;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 41");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 42");
+        }
+    }
+
+    else if ( xdfarpresent )
+    {
+        const SparseVector<gentype> &xdnear = xd.n();
+        const SparseVector<gentype> &xdfar  = xd.f1();
+        const SparseVector<gentype> &xdffnear = xdff;
+        const SparseVector<gentype> &xdfffar  = xdfff;
+        const vecInfo &xdnearinfo = xdinfo(0,-1);
+        const vecInfo &xdfarinfo  = xdinfo(1,-1);
+        int xdgradOrdernear = xdgradOrder;
+        int xdgradOrderfar  = xdgradOrderR;
+        int xdgradupnear = xdgradup;
+        int xdgradupfar  = xdgradupR;
+        int idupmnear = idupm;
+        int idupmfar  = xd.f1upsize();
+        int idnear = id;
+        int idfar  = -(((id+1)*100)+1);
+
+        T resabcd; yyycK4(resabcd,xan,xbn,xcn,xdnear,xainfo,xbinfo,xcinfo,xdnearinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrdernear,xagradup,xbgradup,xcgradup,xdgradupnear,iaupm,ibupm,icupm,idupmnear,xaff,xbff,xcff,xdffnear,bias,nullptr,ia,ib,ic,idnear,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+        T resabcD; yyycK4(resabcD,xan,xbn,xcn,xdfar ,xainfo,xbinfo,xcinfo,xdfarinfo ,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrderfar ,xagradup,xbgradup,xcgradup,xdgradupfar ,iaupm,ibupm,icupm,idupmfar ,xaff,xbff,xcff,xdfffar ,bias,nullptr,ia,ib,ic,idfar ,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        resabcd *= (xarankw*xbrankw*xcrankw*xdrankw);
+        resabcD *= (xarankw*xbrankw*xcrankw*xDrankw);
+
+        if ( xranktype == 0 )
+        {
+            // varphi(x,x') = varphi(x) - varphi(x')
+
+            res = resabcd-resabcD;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            // varphi(x,x') = varphi(x) + varphi(x')
+
+            res = resabcd+resabcD;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 43");
+        }
+
+        else
+        {
+            // ill-defined
+
+            NiceThrow("No latent function in this case 44");
+        }
+    }
+
+    else
+    {
+        yyycK4(res,xan,xbn,xcn,xdn,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xagradup,xbgradup,xcgradup,xdgradup,iaupm,ibupm,icupm,idupm,xaff,xbff,xcff,xdff,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,iaset,ibset,icset,idset,assumreal,justcalcip);
+
+        res *= (xarankw*xbrankw*xcrankw*xdrankw);
+    }
+
+    return res;
+}
+
+template <class T>
+T &MercerKernel::yyybKm(int m, T &res,
+                    Vector<const SparseVector<gentype> *> &x,
+                    Vector<const vecInfo *> &xinfo,
+                    Vector<int> &xgradOrder,
+                    Vector<int> &xgradOrderR,
+                    Vector<int> &iupm,
+                    Vector<int> &xfarpresent,
+                    Vector<double> &xxrankw,
+                    Vector<double> &xXrankw,
+                    Vector<int> &xfarfarpresent,
+                    Vector<int> &xfarfarfarpresent,
+                    Vector<int> &xgradup,
+                    Vector<int> &xgradupR,
+                    Vector<int> &xignorefarfar,
+                    Vector<int> &xignorefarfarfar,
+                    const T &bias,
+                    Vector<int> &i,
+                    const gentype **pxyprod, int xdim, int xconsist, int resmode, int mlid,
+                    const Matrix<double> *xy, const Vector<int> *iiset, int assumreal, int justcalcip) const
+{
+    static const SparseVector<gentype> dummy;
+
+    Vector<const SparseVector<gentype> *> xn(x);
+    Vector<const SparseVector<gentype> *> xf(x);
+    Vector<const SparseVector<gentype> *> xff(x);
+    Vector<const SparseVector<gentype> *> xfff(x);
+
+    int ii;
+
+    for ( ii = 0 ; ii < x.size() ; ++ii )
+    {
+        xn("&",ii)   = &((*(x(ii))).n());
+        xf("&",ii)   = &((*(x(ii))).f1());
+        xff("&",ii)  = &( ( xfarfarpresent(ii)    && !xignorefarfar(ii)    ) ? (*(x(ii))).f2() : dummy );
+        xfff("&",ii) = &( ( xfarfarfarpresent(ii) && !xignorefarfarfar(ii) ) ? (*(x(ii))).f3() : dummy );
+    }
+
+    return yyybKmb(m,res,x,xn,xf,xff,xfff,xinfo,xgradOrder,xgradOrderR,iupm,xfarpresent,xxrankw,xXrankw,xgradup,xgradupR,bias,i,pxyprod,xdim,xconsist,resmode,mlid,xy,iiset,assumreal,justcalcip);
+}
+
+template <class T>
+T &MercerKernel::yyybKmb(int m, T &res,
+                    Vector<const SparseVector<gentype> *> &x,
+                    Vector<const SparseVector<gentype> *> &xn,
+                    Vector<const SparseVector<gentype> *> &xf,
+                    Vector<const SparseVector<gentype> *> &xff,
+                    Vector<const SparseVector<gentype> *> &xfff,
+                    Vector<const vecInfo *> &xinfo,
+                    Vector<int> &xgradOrder,
+                    Vector<int> &xgradOrderR,
+                    Vector<int> &iupm,
+                    Vector<int> &xfarpresent,
+                    Vector<double> &xxrankw,
+                    Vector<double> &xXrankw,
+                    Vector<int> &xgradup,
+                    Vector<int> &xgradupR,
+                    const T &bias,
+                    Vector<int> &i,
+                    const gentype **pxyprod, int xdim, int xconsist, int resmode, int mlid,
+                    const Matrix<double> *xy, const Vector<int> *iiset, int assumreal, int justcalcip) const
+{
+    int hasrank = sum(xfarpresent);
+
+    NiceAssert( !( justcalcip && hasrank ) );
+
+    if ( !hasrank )
+    {
+        yyycKm(m,res,xn,xinfo,xgradOrder,xgradup,iupm,xff,bias,i,pxyprod,xdim,xconsist,resmode,mlid,xy,iiset,assumreal,justcalcip);
+
+        res *= prod(xxrankw);
+    }
+
+    else if ( ( xranktype == 0 ) || ( xranktype == 1 ) )
+    {
+        static const SparseVector<gentype> dummy;
+
+        int j = 0;
+        double resscale = 1;
+
+        for ( j = 0 ; j < x.size() ; ++j )
+        {
+            if ( xfarpresent(j) )
+            {
+                break;
+            }
+
+            else
+            {
+                resscale *= xxrankw(j);
+            }
+        }
+
+        double xxrankwj = xxrankw(j);
+        double xXrankwj = xXrankw(j);
+
+        // Recursed calls will always have larger j, so changes we make up to and including j will "stick", allowing us to overwrite arguments
+
+        xfarpresent("&",j) = 0; // This removes this argument from the "still to be computed" set of rank constraints
+
+        xxrankw("&",j) = 1; // "
+        xXrankw("&",j) = 1; // "
+
+        const SparseVector<gentype> *xj    = x(j);
+        const SparseVector<gentype> *xjn   = xn(j);
+        const SparseVector<gentype> *xjf   = xf(j);
+        const SparseVector<gentype> *xjff  = xff(j);
+        const SparseVector<gentype> *xjfff = xfff(j);
+
+        const vecInfo *xjinfo = xinfo(j);
+
+        int xjgradOrder  = xgradOrder(j);
+        int xjgradOrderR = xgradOrderR(j);
+        int ijupm        = iupm(j);
+        int xjgradup     = xgradup(j);
+        int xjgradupR    = xgradupR(j);
+        int ij           = i(j);
+
+        const SparseVector<gentype> &xjnear = *xjn;
+        const SparseVector<gentype> &xjfar  = *xjf;
+
+        const SparseVector<gentype> &xjffnear = *xjff;
+        const SparseVector<gentype> &xjfffar  = *xjfff;
+
+        const vecInfo &xjnearinfo = (*xjinfo)(0,-1);
+        const vecInfo &xjfarinfo  = (*xjinfo)(1,-1);
+
+        int xjgradOrdernear = xjgradOrder;
+        int xjgradOrderfar  = xjgradOrderR;
+
+        int xjgradupnear = xjgradup;
+        int xjgradupfar  = xjgradupR;
+
+        int ijupmnear = ijupm;
+        int ijupmfar  = (*xj).f1upsize();
+
+        int ijnear = ij;
+        int ijfar  = -(((ij+1)*100)+1);
+
+        x("&",j)           = &xjnear;
+        xff("&",j)         = &xjffnear;
+        xinfo("&",j)       = &xjnearinfo;
+        xgradOrder("&",j)  = xjgradOrdernear;
+        iupm("&",j)        = ijupmnear;
+        xgradup("&",j)     = xjgradupnear;
+        i("&",j)           = ijnear;
+
+        yyybKmb(m,res,x,xn,xf,xff,xfff,xinfo,xgradOrder,xgradOrderR,iupm,xfarpresent,xxrankw,xXrankw,xgradup,xgradupR,bias,i,nullptr,xdim,xconsist,resmode,mlid,nullptr,iiset,assumreal,justcalcip);
+
+        x("&",j)           = &xjfar;
+        xff("&",j)         = &xjfffar;
+        xinfo("&",j)       = &xjfarinfo;
+        xgradOrder("&",j)  = xjgradOrderfar;
+        iupm("&",j)        = ijupmfar;
+        xgradup("&",j)     = xjgradupfar;
+        i("&",j)           = ijfar;
+
+        if ( xranktype == 0 )
+        {
+            T tmp;
+
+            res -= yyybKmb(m,tmp,x,xn,xf,xff,xfff,xinfo,xgradOrder,xgradOrderR,iupm,xfarpresent,xxrankw,xXrankw,xgradup,xgradupR,bias,i,nullptr,xdim,xconsist,resmode,mlid,nullptr,iiset,assumreal,justcalcip);
+        }
+
+        else if ( xranktype == 1 )
+        {
+            T tmp;
+
+            res += yyybKmb(m,tmp,x,xn,xf,xff,xfff,xinfo,xgradOrder,xgradOrderR,iupm,xfarpresent,xxrankw,xXrankw,xgradup,xgradupR,bias,i,nullptr,xdim,xconsist,resmode,mlid,nullptr,iiset,assumreal,justcalcip);
+        }
+
+        res *= resscale*xxrankwj*xXrankwj;
+
+        x("&",j)          = xj;
+        xff("&",j)        = xjff;
+        xinfo("&",j)      = xjinfo;
+        xgradOrder("&",j) = xjgradOrder;
+        iupm("&",j)       = ijupm;
+        xgradup("&",j)    = xjgradup;
+        i("&",j)          = ij;
+    }
+
+    else
+    {
+        static const SparseVector<gentype> dummy;
+
+        int j,k,l;
+
+        for ( j = 0 ; j < x.size() ; ++j )
+        {
+            if ( !xfarpresent(j) )
+            {
+                NiceThrow("No latent function in this case 100");
+            }
+        }
+
+        // In this case the result is combinatoric, no recursive solution possible.
+
+        Vector<const SparseVector<gentype> *> nx(x);
+        Vector<const SparseVector<gentype> *> nxff(xff);
+        Vector<const SparseVector<gentype> *> nxfff(xfff);
+        Vector<const vecInfo *> nxinfo(xinfo);
+        Vector<int> nxgradOrder(xgradOrder);
+        Vector<int> nxgradOrderR(xgradOrderR);
+        Vector<int> niupm(iupm);
+        Vector<int> nxgradup(xgradup);
+        Vector<int> nxgradupR(xgradupR);
+        Vector<int> ni(i);
+
+        Vector<const SparseVector<gentype> *> fx(x);
+        Vector<const SparseVector<gentype> *> fxff(xff);
+        Vector<const SparseVector<gentype> *> fxfff(xfff);
+        Vector<const vecInfo *> fxinfo(xinfo);
+        Vector<int> fxgradOrder(xgradOrder);
+        Vector<int> fxgradOrderR(xgradOrderR);
+        Vector<int> fiupm(iupm);
+        Vector<int> fxgradup(xgradup);
+        Vector<int> fxgradupR(xgradupR);
+        Vector<int> fi(i);
+
+        xfarpresent = 0; // no further recurse
+
+        // Outer loop goes through all possible combinations of near/far,
+        // where k is to be interpretted as a binary with 0 for no near/far
+        // flip, 1 otherwise.  k has m bits, so m < 32 or 64 is implied.
+        //
+        // every flip negates the sign in the sum
+        //
+        // inner loop goes over every bit in k and sets up vectors accordingly
+
+        int numcombs = 1<<m;
+
+        for ( k = 0 ; k < numcombs ; ++k )
+        {
+            int ressgn = 1; // will be +1 if an even number of flips happen, -1 otherwise
+
+            for ( j = 0, l = 1 ; j < m ; ++j, l *= 2 )
+            {
+                NiceAssert( xxrankw(j) == 1 );
+                NiceAssert( xXrankw(j) == 1 );
+
+                const SparseVector<gentype> *xj    = x(j);
+                const SparseVector<gentype> *xjn   = xn(j);
+                const SparseVector<gentype> *xjf   = xf(j);
+                const SparseVector<gentype> *xjff  = xff(j);
+                const SparseVector<gentype> *xjfff = xfff(j);
+
+                const vecInfo *xjinfo = xinfo(j);
+
+                int xjgradOrder  = xgradOrder(j);
+                int xjgradOrderR = xgradOrderR(j);
+                int ijupm        = iupm(j);
+                int xjgradup     = xgradup(j);
+                int xjgradupR    = xgradupR(j);
+                int ij           = i(j);
+
+                const SparseVector<gentype> &xjnear = *xjn;
+                const SparseVector<gentype> &xjfar  = *xjf;
+
+                const SparseVector<gentype> &xjffnear = *xjff;
+                const SparseVector<gentype> &xjfffar  = *xjfff;
+
+                const vecInfo &xjnearinfo = (*xjinfo)(0,-1);
+                const vecInfo &xjfarinfo  = (*xjinfo)(1,-1);
+
+                int xjgradOrdernear = xjgradOrder;
+                int xjgradOrderfar  = xjgradOrderR;
+
+                int xjgradupnear = xjgradup;
+                int xjgradupfar  = xjgradupR;
+
+                int ijupmnear = ijupm;
+                int ijupmfar  = (*xj).f1upsize();
+
+                int ijnear = ij;
+                int ijfar  = -(((ij+1)*100)+1);
+
+                if ( !( k & l ) )
+                {
+                    nx("&",j)          = &xjnear;
+                    nxff("&",j)        = &xjffnear;
+                    nxinfo("&",j)      = &xjnearinfo;
+                    nxgradOrder("&",j) = xjgradOrdernear;
+                    niupm("&",j)       = ijupmnear;
+                    nxgradup("&",j)    = xjgradupnear;
+                    ni("&",j)          = ijnear;
+
+                    fx("&",j)          = &xjfar;
+                    fxff("&",j)        = &xjfffar;
+                    fxinfo("&",j)      = &xjfarinfo;
+                    fxgradOrder("&",j) = xjgradOrderfar;
+                    fiupm("&",j)       = ijupmfar;
+                    fxgradup("&",j)    = xjgradupfar;
+                    fi("&",j)          = ijfar;
+                }
+
+                else
+                {
+                    fx("&",j)          = &xjnear;
+                    fxff("&",j)        = &xjffnear;
+                    fxinfo("&",j)      = &xjnearinfo;
+                    fxgradOrder("&",j) = xjgradOrdernear;
+                    fiupm("&",j)       = ijupmnear;
+                    fxgradup("&",j)    = xjgradupnear;
+                    fi("&",j)          = ijnear;
+
+                    nx("&",j)          = &xjfar;
+                    nxff("&",j)        = &xjfffar;
+                    nxinfo("&",j)      = &xjfarinfo;
+                    nxgradOrder("&",j) = xjgradOrderfar;
+                    niupm("&",j)       = ijupmfar;
+                    nxgradup("&",j)    = xjgradupfar;
+                    ni("&",j)          = ijfar;
+
+                    ressgn *= -1;
+                }
+
+                T crs,tmp;
+
+                       yyybKmb(m,crs,nx,xn,xf,nxff,nxfff,nxinfo,nxgradOrder,nxgradOrderR,niupm,xfarpresent,xxrankw,xXrankw,nxgradup,xgradupR,bias,ni,nullptr,xdim,xconsist,resmode,mlid,nullptr,iiset,assumreal,justcalcip);
+                crs *= yyybKmb(m,tmp,fx,xn,xf,fxff,nxfff,fxinfo,fxgradOrder,nxgradOrderR,fiupm,xfarpresent,xxrankw,xXrankw,fxgradup,xgradupR,bias,fi,nullptr,xdim,xconsist,resmode,mlid,nullptr,iiset,assumreal,justcalcip);
+
+                if ( !k )
+                {
+                    res = crs;
+                }
+
+                else if ( ( xranktype == 2 ) && ( ressgn == -1 ) )
+                {
+                    res -= crs;
+                }
+
+                else
+                {
+                    res += crs;
+                }
+            }
+        }
+    }
+
+    return res;
+}
+
+
+
+template <class T>
+int MercerKernel::yyybphim(int m, Vector<T>  &res,
+                           const SparseVector<gentype> &xa,
+                           const vecInfo &xainfo,
+                           int xaignorefarfar,
+                           int xaignorefarfarfar,
+                           int ia,
+                           int xagradOrder,
+                           int xagradOrderR,
+                           int iaupm,
+                           int xafarpresent,
+                           int xafarfarpresent,
+                           int xafarfarfarpresent,
+                           int xagradup,
+                           int xagradupR,
+                           int allowfinite, int xdim, int xconsist, int assumreal, int iaset) const
+{
+    int dres = 0;
+
+    static const SparseVector<gentype> dummy;
+
+    const SparseVector<gentype> &xaff = ( xafarfarpresent && !xaignorefarfar ) ? xa.f2() : dummy;
+
+    const SparseVector<gentype> &xafff = ( xafarfarfarpresent && !xaignorefarfarfar ) ? xa.f3() : dummy;
+
+//FIXME: up to here
+    if ( xafarpresent )
+    {
+        const SparseVector<gentype> &xanear = xa.n();
+        const SparseVector<gentype> &xafar  = xa.f1();
+
+        const SparseVector<gentype> &xaffnear = xaff;
+        const SparseVector<gentype> &xafffar  = xafff;
+
+        const vecInfo &xanearinfo = xainfo(0,-1);
+        const vecInfo &xafarinfo  = xainfo(1,-1);
+
+        int xagradOrdernear = xagradOrder;
+        int xagradOrderfar  = xagradOrderR;
+
+        int xagradupnear = xagradup;
+        int xagradupfar  = xagradupR;
+
+        int iaupmnear = iaupm;
+        int iaupmfar  = xa.f1upsize();
+
+        int ianear = ia;
+        int iafar  = -(((ia+1)*100)+1);
+
+        Vector<T> tmp;
+
+        yyycphim(m,res,xanear,xanearinfo,ianear,xagradOrdernear,iaupmnear,xagradupnear,xaffnear,allowfinite,xdim,xconsist,assumreal,iaset);
+        yyycphim(m,tmp,xafar ,xafarinfo, iafar ,xagradOrderfar, iaupmfar, xagradupfar, xafffar ,allowfinite,xdim,xconsist,assumreal,iaset);
+
+        if ( xranktype == 0 )
+        {
+            res -= tmp;
+        }
+
+        else if ( xranktype == 1 )
+        {
+            res += tmp;
+        }
+
+        else if ( xranktype == 2 )
+        {
+            Vector<T> parta;
+            Vector<T> partb;
+
+            kronprod(parta,res,tmp);
+            kronprod(partb,tmp,res);
+
+            res  = parta;
+            res -= partb;
+        }
+
+        else
+        {
+            Vector<T> parta;
+            Vector<T> partb;
+
+            kronprod(parta,res,tmp);
+            kronprod(partb,tmp,res);
+
+            res  = parta;
+            res += partb;
+        }
+
+        dres = res.size();
+    }
+
+    else
+    {
+        dres = yyycphim(m,res,xa,xainfo,ia,xagradOrder,iaupm,xagradup,xaff,allowfinite,xdim,xconsist,assumreal,iaset);
+    }
+
+    return dres;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Pre-process Gradients
+
+// Functions to allow different types to be treated "as if" they were matrices or vectors
+
+inline double  &resizeZeroMat(double  &x, int i, int j);
+inline gentype &resizeZeroMat(gentype &x, int i, int j);
+
+inline double  &resizeZeroVec(double  &x, int i);
+inline gentype &resizeZeroVec(gentype &x, int i);
+
+inline double  &getMatElm(double  &x, int i, int j);
+inline gentype &getMatElm(gentype &x, int i, int j);
+
+inline double  &getVecElm(double  &x, int i);
+inline gentype &getVecElm(gentype &x, int i);
+
+inline double &resizeZeroMat(double &x, int i, int j)
+{
+    if ( ( i != 1 ) || ( j != 1 ) )
+    {
+        NiceThrow("Attempt to resize double as matrix");
+    }
+
+    return x = 0.0;
+}
+
+inline gentype &resizeZeroMat(gentype &x, int i, int j)
+{
+    x.force_matrix().resize(i,j);
+    x.dir_matrix().zero();
+
+    return x;
+}
+
+inline double &resizeZeroVec(double &x, int i)
+{
+    if ( i != 1 )
+    {
+        NiceThrow("Attempt to resize double as vector");
+    }
+
+    return x = 0.0;
+}
+
+inline gentype &resizeZeroVec(gentype &x, int i)
+{
+    x.force_vector().resize(i);
+    x.dir_vector().zero();
+
+    return x;
+}
+
+inline double &getMatElm(double &x, int i, int j)
+{
+    if ( ( i != 0 ) || ( j != 0 ) )
+    {
+        NiceThrow("Attempt to dereference double as matrix");
+    }
+
+    return x;
+}
+
+inline gentype &getMatElm(gentype &x, int i, int j)
+{
+    return x("&",i,j);
+}
+
+inline double &getVecElm(double &x, int i)
+{
+    if ( i != 0 )
+    {
+        NiceThrow("Attempt to dereference double as vector");
+    }
+
+    return x;
+}
+
+inline gentype &getVecElm(gentype &x, int i)
+{
+    return x("&",i);
+}
+
+
+
+template <class T> 
+void MercerKernel::yyycdKK2( T &xygrad, T &xnormgrad, int &minmaxind, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo &xainfo, const vecInfo &xbinfo, const T &bias, const gentype **pxyprod, int ia, int ib, int xdim, int xconsist, int assumreal, int mlid, const double *xy00, const double *xy10, const double *xy11, int deepDeriv, int iaset, int ibset) const
+{
+#ifndef NDEBUG
+    int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
+    int xbfarfarpresent = xb.isf2offindpresent() ? 1 : 0;
+
+    int xaind6present = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
+    int xbind6present = xb.isf4indpresent(6) && !(xb.f4(6).isValNull());
+
+    int xagradOrder = xaind6present ? ( (int) xa.f4(6) ) : ( xafarfarpresent ? 1 : 0 );
+    int xbgradOrder = xbind6present ? ( (int) xb.f4(6) ) : ( xbfarfarpresent ? 1 : 0 );
+
+    NiceAssert( !xagradOrder );
+    NiceAssert( !xbgradOrder );
+#endif
+
+    xdKK2(xygrad,xnormgrad,minmaxind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
+}
+
+template <class T> 
+void MercerKernel::yyycd2KK2(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T &xyynormgrad, T &xnormxnormgrad, T &xnormynormgrad, T &ynormynormgrad, int &minmaxind, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo &xainfo, const vecInfo &xbinfo, const T &bias, const gentype **pxyprod, int ia, int ib, int xdim, int xconsist, int assumreal, int mlid, const double *xy00, const double *xy10, const double *xy11, int deepDeriv, int iaset, int ibset) const
+{
+#ifndef NDEBUG
+    int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
+    int xbfarfarpresent = xb.isf2offindpresent() ? 1 : 0;
+
+    int xaind6present = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
+    int xbind6present = xb.isf4indpresent(6) && !(xb.f4(6).isValNull());
+
+    int xagradOrder = xaind6present ? ( (int) xa.f4(6) ) : ( xafarfarpresent ? 1 : 0 );
+    int xbgradOrder = xbind6present ? ( (int) xb.f4(6) ) : ( xbfarfarpresent ? 1 : 0 );
+
+    NiceAssert( !xagradOrder );
+    NiceAssert( !xbgradOrder );
+#endif
+
+    xd2KK2(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,minmaxind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
+}
+
+template <class T> 
+void MercerKernel::yyycdnKK2del(Vector<T> &sc, Vector<Vector<int> > &n, int &minmaxind, const Vector<int> &q, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo &xainfo, const vecInfo &xbinfo, const T &bias, const gentype **pxyprod, int ia, int ib, int xdim, int xconsist, int assumreal, int mlid, const double *xy00, const double *xy10, const double *xy11, int deepDeriv, int iaset, int ibset) const
+{
+#ifndef NDEBUG
+    int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
+    int xbfarfarpresent = xb.isf2offindpresent() ? 1 : 0;
+
+    int xaind6present = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
+    int xbind6present = xb.isf4indpresent(6) && !(xb.f4(6).isValNull());
+
+    int xagradOrder = xaind6present ? ( (int) xa.f4(6) ) : ( xafarfarpresent ? 1 : 0 );
+    int xbgradOrder = xbind6present ? ( (int) xb.f4(6) ) : ( xbfarfarpresent ? 1 : 0 );
+
+    NiceAssert( !xagradOrder );
+    NiceAssert( !xbgradOrder );
+#endif
+
+    xdnKK2del(sc,n,minmaxind,q,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
+}
+
+
+
+
+
+template <class T>
+void MercerKernel::qqqdK2delx(T &xscaleres, T &yscaleres,  int &minmaxind,
+                          const SparseVector<gentype> &x, const SparseVector<gentype> &y, 
+                          const vecInfo &xinfo, const vecInfo &yinfo, 
+                          const T &bias, 
+                          const gentype **pxyprod,
+                          int i, int j, 
+                          int xdim, int xconsist, int mlid, 
+                          const double *xy00, const double *xy10, const double *xy11, int iaset, int ibset, int assumreal) const
+{
+    T xygrad;
+    T xnormgrad;
+
+    xdKK2(xygrad,xnormgrad,minmaxind,x,y,xinfo,yinfo,bias,pxyprod,i,j,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,1,iaset,ibset);
+
+    xscaleres  = xnormgrad;
+    xscaleres *= 2.0;
+    yscaleres  = xygrad;
+}
+
+template <class T>
+void MercerKernel::qqqdnK2del(Vector<T> &sc, Vector<Vector<int> > &n, int &minmaxind,
+                          const Vector<int> &q,
+                          const SparseVector<gentype> &x, const SparseVector<gentype> &y,
+                          const vecInfo &xinfo, const vecInfo &yinfo,
+                          const T &bias,
+                          const gentype **pxyprod,
+                          int i, int j,
+                          int xdim, int xconsist, int mlid,
+                          const double *xy00, const double *xy10, const double *xy11, int deepDerive, int iaset, int ibset, int assumreal) const
+{
+    int z = 0;
+
+    if ( q.size() == 0 )
+    {
+        // "no gradient" case
+
+        minmaxind = -1;
+
+        sc.resize(1);
+        n.resize(1);
+
+        n("&",z).resize(z);
+
+        yyyKK2(sc("&",z),x,y,xinfo,yinfo,0,0,0,0,x.nupsize(),y.nupsize(),x,y,bias,pxyprod,i,j,xdim,xconsist,0,mlid,xy00,xy10,xy11,iaset,ibset,assumreal,0,0,0);
+    }
+
+    else if ( q.size() == 1 )
+    {
+        if ( q(z) == 0 )
+        {
+            // d/dx case - result is sc(0).x + sc(1).y
+
+            sc.resize(2);
+            n.resize(2);
+
+            n("&",z).resize(1);
+            n("&",1).resize(1);
+
+            n("&",z)("&",z) = z;
+            n("&",1)("&",z) = 1;
+
+            qqqdK2delx(sc("&",z),sc("&",1),minmaxind,x,y,xinfo,yinfo,bias,pxyprod,i,j,xdim,xconsist,mlid,xy00,xy10,xy11,iaset,ibset,assumreal);
+        }
+
+        else
+        {
+            // d/dy case - result is sc(0).x + sc(1).y
+            // We assume symmetry to evaluate this
+
+            sc.resize(2);
+            n.resize(2);
+
+            n("&",z).resize(1);
+            n("&",1).resize(1);
+
+            n("&",z)("&",z) = z;
+            n("&",1)("&",z) = 1;
+
+            qqqdK2delx(sc("&",1),sc("&",z),minmaxind,y,x,yinfo,xinfo,bias,nullptr,j,i,xdim,xconsist,mlid,nullptr,nullptr,nullptr,iaset,ibset,assumreal);
+        }
+    }
+
+    else if ( q.size() == 2 )
+    {
+        if ( ( q(z) == 0 ) && ( q(1) == 0 ) )
+        {
+            // d^2/dx^2 case - result is sc(0).x.x' + sc(1).y.y' + sc(2).x.y' + sc(3).y.x' + sc(4).I
+
+            sc.resize(5);
+            n.resize(5);
+
+            n("&",z).resize(2);
+            n("&",1).resize(2);
+            n("&",2).resize(2);
+            n("&",3).resize(2);
+            n("&",4).resize(2);
+
+            n("&",z)("&",z) = z;  n("&",z)("&",1) = z;
+            n("&",1)("&",z) = 1;  n("&",1)("&",1) = 1;
+            n("&",2)("&",z) = z;  n("&",2)("&",1) = 1;
+            n("&",3)("&",z) = 1;  n("&",3)("&",1) = z;
+            n("&",4)("&",z) = -1; n("&",4)("&",1) = -1;
+
+            qqqd2K2delxdelx(sc("&",z),sc("&",1),sc("&",2),sc("&",3),sc("&",4),minmaxind,x,y,xinfo,yinfo,bias,pxyprod,i,j,xdim,xconsist,mlid,xy00,xy10,xy11,deepDerive,iaset,ibset,assumreal);
+        }
+
+        else if ( ( q(z) == 0 ) && ( q(1) == 1 ) )
+        {
+            // d/dx d/dy case - result is sc(0).x.x' + sc(1).y.y' + sc(2).x.y' + sc(3).y.x' + sc(4).I
+
+            sc.resize(5);
+            n.resize(5);
+
+            n("&",z).resize(2);
+            n("&",1).resize(2);
+            n("&",2).resize(2);
+            n("&",3).resize(2);
+            n("&",4).resize(2);
+
+            n("&",z)("&",z) = z;  n("&",z)("&",1) = z;
+            n("&",1)("&",z) = 1;  n("&",1)("&",1) = 1;
+            n("&",2)("&",z) = z;  n("&",2)("&",1) = 1;
+            n("&",3)("&",z) = 1;  n("&",3)("&",1) = z;
+            n("&",4)("&",z) = -1; n("&",4)("&",1) = -1;
+
+            qqqd2K2delxdely(sc("&",z),sc("&",1),sc("&",2),sc("&",3),sc("&",4),minmaxind,x,y,xinfo,yinfo,bias,pxyprod,i,j,xdim,xconsist,mlid,xy00,xy10,xy11,deepDerive,iaset,ibset,assumreal);
+        }
+
+        else if ( ( q(z) == 1 ) && ( q(1) == 0 ) )
+        {
+            // d/dy d/dx case - result is sc(0).x.x' + sc(1).y.y' + sc(2).x.y' + sc(3).y.x' + sc(4).I
+            // We assume symmetry to evaluate this
+
+            sc.resize(5);
+            n.resize(5);
+
+            n("&",z).resize(2);
+            n("&",1).resize(2);
+            n("&",2).resize(2);
+            n("&",3).resize(2);
+            n("&",4).resize(2);
+
+            n("&",z)("&",z) = z;  n("&",z)("&",1) = z;
+            n("&",1)("&",z) = 1;  n("&",1)("&",1) = 1;
+            n("&",2)("&",z) = z;  n("&",2)("&",1) = 1;
+            n("&",3)("&",z) = 1;  n("&",3)("&",1) = z;
+            n("&",4)("&",z) = -1; n("&",4)("&",1) = -1;
+
+            qqqd2K2delxdely(sc("&",1),sc("&",z),sc("&",3),sc("&",2),sc("&",4),minmaxind,y,x,yinfo,xinfo,bias,nullptr,j,i,xdim,xconsist,mlid,nullptr,nullptr,nullptr,deepDerive,iaset,ibset,assumreal);
+        }
+
+        else
+        {
+            // d/dy d/dy case - result is sc(0).x.x' + sc(1).y.y' + sc(2).x.y' + sc(3).y.x' + sc(4).I
+            // We assume symmetry to evaluate this
+
+            sc.resize(5);
+            n.resize(5);
+
+            n("&",z).resize(2);
+            n("&",1).resize(2);
+            n("&",2).resize(2);
+            n("&",3).resize(2);
+            n("&",4).resize(2);
+
+            n("&",z)("&",z) = z;  n("&",z)("&",1) = z;
+            n("&",1)("&",z) = 1;  n("&",1)("&",1) = 1;
+            n("&",2)("&",z) = z;  n("&",2)("&",1) = 1;
+            n("&",3)("&",z) = 1;  n("&",3)("&",1) = z;
+            n("&",4)("&",z) = -1; n("&",4)("&",1) = -1;
+
+            qqqd2K2delxdelx(sc("&",1),sc("&",z),sc("&",3),sc("&",2),sc("&",4),minmaxind,y,x,yinfo,xinfo,bias,nullptr,j,i,xdim,xconsist,mlid,nullptr,nullptr,nullptr,deepDerive,iaset,ibset,assumreal);
+        }
+    }
+
+    else
+    {
+        xdnKK2del(sc,n,minmaxind,q,x,y,xinfo,yinfo,bias,pxyprod,i,j,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDerive,iaset,ibset);
+    }
+}
+
+template <class T>
+void MercerKernel::qqqd2K2delxdelx(T &xxscaleres, T &yyscaleres, T &xyscaleres, T &yxscaleres, T &constres, int &minmaxind, 
+                 const SparseVector<gentype> &x, const SparseVector<gentype> &y, 
+                 const vecInfo &xinfo, const vecInfo &yinfo, 
+                 const T &bias, 
+                 const gentype **pxyprod, 
+                 int i, int j, 
+                 int xdim, int xconsist, int mlid, 
+                 const double *xy00, const double *xy10, const double *xy11, int deepDeriv, int iaset, int ibset, int assumreal) const
+{
+    // Assume any kernel can be written as:
+    //
+    // K(x,y) = K(a,z,b)
+    //
+    // where a = ||x||^2
+    //       b = ||y||^2
+    //       z = x'y
+    //
+    // dK/dx_j = dK/da da/dx_j + dK/dz dz/dx_j
+    //         = dK/da 2x_j + dK/dz y_j
+    //
+    // d2K/dx_idx_j = d2K/dada da/dx_i 2x_j + d2K/dzda dz/dx_i 2x_j + dK/da 2 delta_{ij} + d2K/dadz da/dx_i y_j + d2K/dzdz dz/dx_i y_j
+    //              = d2K/dada 2x_i 2x_j + d2K/dzda y_i 2x_j + dK/da 2 delta_{ij} + d2K/dadz 2x_i y_j + d2K/dzdz y_i y_j
+    //
+    // d2K/dxdx = 4 d2K/dada x.x' + 2 d2K/dzda y.x' + 2 d2K/dadz x.y' + d2K/dzdz y.y' + 2 dK/da I
+
+    T xygrad;
+    T xnormgrad;
+    T xyxygrad;
+    T xyxnormgrad;
+    T xyynormgrad;
+    T xnormxnormgrad;
+    T xnormynormgrad;
+    T ynormynormgrad;
+
+    xd2KK2(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,minmaxind,x,y,xinfo,yinfo,bias,pxyprod,i,j,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
+
+    xxscaleres = 4.0*xnormxnormgrad;
+    xyscaleres = 2.0*xyxnormgrad;
+    yxscaleres = xyscaleres;
+    yyscaleres = xyxygrad;
+    constres   = 2.0*xnormgrad;
+}
+
+template <class T>
+void MercerKernel::qqqd2K2delxdely(T &xxscaleres, T &yyscaleres, T &xyscaleres, T &yxscaleres, T &constres, int &minmaxind, 
+                 const SparseVector<gentype> &x, const SparseVector<gentype> &y, 
+                 const vecInfo &xinfo, const vecInfo &yinfo, 
+                 const T &bias, 
+                 const gentype **pxyprod, 
+                 int i, int j, 
+                 int xdim, int xconsist, int mlid, 
+                 const double *xy00, const double *xy10, const double *xy11, int deepDeriv, int iaset, int ibset, int assumreal) const
+{
+    // Assume any kernel can be written as:
+    //
+    // K(x,y) = K(a,z,b)
+    //
+    // where a = ||x||^2
+    //       b = ||y||^2
+    //       z = x'y
+    //
+    // dK/dx_j = dK/da da/dx_j + dK/dz dz/dx_j
+    //         = dK/da 2x_j + dK/dz y_j
+    //
+    // d2K/dy_idx_j = d2K/dzda dz/dy_i 2x_j + d2K/dbda db/dy_i 2x_j + d2K/dzdz dz/dy_i y_j + d2K/dbdz db/dy_i y_j + dK/dz delta_{ij}
+    //              = d2K/dzda x_i     2x_j + d2K/dbda 2y_i    2x_j + d2K/dzdz x_i     y_j + d2K/dbdz 2y_i    y_j + dK/dz delta_{ij}
+    //              = 2 d2K/dzda x_i x_j + 4 d2K/dbda y_i x_j + d2K/dzdz x_i y_j + 2 d2K/dbdz y_i y_j + dK/dz delta_{ij}
+    //
+    // d2K/dx_idy_j = 2 d2K/dzda x_i x_j + 4 d2K/dbda x_i y_j + d2K/dzdz y_i x_j + 2 d2K/dbdz y_i y_j + dK/dz delta_{ij}
+    //
+    // d2K/dxdy = 2 d2K/dzda x.x' + 4 d2K/dbda x.y' + d2K/dzdz y.x' + 2 d2K/dbdz y.y' + dK/dz I
+
+    T xygrad;
+    T xnormgrad;
+    T xyxygrad;
+    T xyxnormgrad;
+    T xyynormgrad;
+    T xnormxnormgrad;
+    T xnormynormgrad;
+    T ynormynormgrad;
+
+    xd2KK2(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,minmaxind,x,y,xinfo,yinfo,bias,pxyprod,i,j,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
+
+    xxscaleres = 2.0*xyxnormgrad;
+    xyscaleres = 4.0*xnormynormgrad;
+    yxscaleres = xyxygrad;
+    yyscaleres = 2.0*xyynormgrad;
+    constres   = xygrad;
+}
+
+
+
+
+
+
+
+template <class T>
+T &MercerKernel::yyycK0(T &res,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int xdim, int xconsist, int xresmode, int mlid, int assumreal, int justcalcip) const
+{
+    return yyyKK0(res,bias,pxyprod,xdim,xconsist,xresmode,mlid,assumreal,justcalcip);
+}
+
+template <class T>
+T &MercerKernel::yyycK1(T &res,
+                    const SparseVector<gentype> &xa,
+                    const vecInfo &xainfo,
+                    int xagradOrder,
+                    int xagradup,
+                    int iaupm,
+                    const SparseVector<gentype> &xaff,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia,
+                    int xdim, int xconsist, int resmode, int mlid,
+                    const double *xy00, int iaset, int assumreal, int justcalcip) const
+{
+    return yyyKK1(res,xa,xainfo,xagradOrder,xagradup,iaupm,xaff,bias,pxyprod,ia,xdim,xconsist,resmode,mlid,xy00,iaset,assumreal,justcalcip);
+}
+
+template <class T>
+T &MercerKernel::yyycK2(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                    const vecInfo &xainfo, const vecInfo &xbinfo,
+                    int xagradOrder, int xbgradOrder,
+                    int xagradup, int xbgradup,
+                    int iaupm, int ibupm,
+                    const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib,
+                    int xdim, int xconsist, int resmode, int mlid,
+                    const double *xy00, const double *xy10, const double *xy11, int iaset, int ibset, int assumreal, int justcalcip,
+                    int adensetype, int bdensetype) const
+{
+    return yyyKK2(res,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xagradup,xbgradup,iaupm,ibupm,xaff,xbff,bias,pxyprod,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,iaset,ibset,assumreal,justcalcip,adensetype,bdensetype);
+}
+
+template <class T>
+T &MercerKernel::yyycK2x2(T &res,
+                          const SparseVector<gentype> &x, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                          const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo,
+                          int xgradOrder, int xagradOrder, int xbgradOrder,
+                          int xgradup, int xagradup, int xbgradup,
+                          int iupm, int iaupm, int ibupm,
+                          const SparseVector<gentype> &xff, const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff,
+                          const T &bias,
+                          int i, int ia, int ib,
+                          int xdim, int xconsist, int resmode, int mlid,
+                          const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22,
+                          int iset, int iaset, int ibset,
+                          int assumreal, int justcalcip,
+                          int densetype, int adensetype, int bdensetype) const
+{
+//errstream() << "phantomxyzabcabc yyyck2x2\n";
+    return yyyKK2x2(res,x,xa,xb,xinfo,xainfo,xbinfo,xgradOrder,xagradOrder,xbgradOrder,xgradup,xagradup,xbgradup,iupm,iaupm,ibupm,xff,xaff,xbff,bias,i,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,iset,iaset,ibset,assumreal,justcalcip,densetype,adensetype,bdensetype);
+}
+
+template <class T>
+T &MercerKernel::yyycK3(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc,
+                    const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo,
+                    int xagradOrder, int xbgradOrder, int xcgradOrder,
+                    int xagradup, int xbgradup, int xcgradup,
+                    int iaupm, int ibupm, int icupm,
+                    const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff, const SparseVector<gentype> &xcff,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib, int ic,
+                    int xdim, int xconsist, int xresmode, int mlid,
+                    const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int iaset, int ibset, int icset, int assumreal, int justcalcip) const
+{
+    return yyyKK3(res,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xagradup,xbgradup,xcgradup,iaupm,ibupm,icupm,xaff,xbff,xcff,bias,pxyprod,ia,ib,ic,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,iaset,ibset,icset,assumreal,justcalcip);
+}
+
+template <class T>
+T &MercerKernel::yyycK4(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd,
+                    const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo,
+                    int xagradOrder, int xbgradOrder, int xcgradOrder, int xdgradOrder,
+                    int xagradup, int xbgradup, int xcgradup, int xdgradup,
+                    int iaupm, int ibupm, int icupm, int idupm,
+                    const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff, const SparseVector<gentype> &xcff, const SparseVector<gentype> &xdff,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib, int ic, int id,
+                    int xdim, int xconsist, int xresmode, int mlid,
+                    const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, const double *xy30, const double *xy31, const double *xy32, const double *xy33, int iaset, int ibset, int icset, int idset, int assumreal, int justcalcip) const
+{
+    return yyyKK4(res,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xagradup,xbgradup,xcgradup,xdgradup,iaupm,ibupm,icupm,idupm,xaff,xbff,xcff,xdff,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,iaset,ibset,icset,idset,assumreal,justcalcip);
+}
+
+template <class T>
+T &MercerKernel::yyycKm(int m, T &res,
+                    Vector<const SparseVector<gentype> *> &x,
+                    Vector<const vecInfo *> &xinfo,
+                    Vector<int> &xgradOrder,
+                    Vector<int> &xgradup,
+                    Vector<int> &xupm,
+                    Vector<const SparseVector<gentype> *> &xff,
+                    const T &bias,
+                    Vector<int> &i,
+                    const gentype **pxyprod, int xdim, int xconsist, int resmode, int mlid,
+                    const Matrix<double> *xy, const Vector<int> *iiset, int assumreal, int justcalcip) const
+{
+    return yyyKKm(m,res,x,xinfo,xgradOrder,xgradup,xupm,xff,bias,i,pxyprod,xdim,xconsist,resmode,mlid,xy,iiset,assumreal,justcalcip);
+}
+
+template <class T>
+int MercerKernel::yyycphim(int m, Vector<T> &res,
+                           const SparseVector<gentype> &xa,
+                           const vecInfo &xainfo,
+                           int ia,
+                           int xagradOrder,
+                           int iaupm,
+                           int xagradup,
+                           const SparseVector<gentype> &xaff,
+                           int allowfinite, int xdim, int xconsist, int assumreal, int iaset) const
+{
+    (void) xaff;
+
+    return yyyPphim(m,res,xa,xainfo,ia,allowfinite,xdim,xconsist,assumreal,iaset,xagradOrder,xagradup,iaupm);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Pre-process [ xa ~ xb ~ ... ] forms
+
+inline int UPNTVI(int i, int off);
+inline int UPNTVI(int i, int off)
+{
+//    static size_t ind = 0;
+//
+//    return -(((ind++)%81)+10);
+    return -((10*off)+i);
+}
+
+
+
+template <class T>
+T &MercerKernel::yyyKK0(T &res,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int xdim, int xconsist, int xresmode, int mlid, int assumreal, int justcalcip) const
+{
+    return xKKK0(res,bias,pxyprod,xdim,xconsist,assumreal,xresmode,mlid,justcalcip);
+}
+
+template <class T>
+T &MercerKernel::yyyKK1(T &res,
+                    const SparseVector<gentype> &xa,
+                    const vecInfo &xainfo,
+                    int xagradOrder,
+                    int xagradup,
+                    int aupm,
+                    const SparseVector<gentype> &xaff,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia,
+                    int xdim, int xconsist, int resmode, int mlid,
+                    const double *xy, int iaset, int assumreal, int justcalcip) const
+{
+//    return xKKK1(res,xa,xainfo,bias,pxyprod,i,xdim,xconsist,resmode,assumreal,mlid,xy,justcalcip,iset);
+
+        NiceAssert( !isSymmSet() );
+
+        if ( aupm == 1 )
+        {
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+
+            xKKK1(res,xa.n(),xainfo,rxagradOrder,xaff,bias,pxyprod,ia,xdim,xconsist,assumreal,resmode,mlid,xy,justcalcip,iaset);
+        }
+
+        else if ( aupm == 2 )
+        {
+            const SparseVector<gentype> &rxa = xa.nup(0);
+            const SparseVector<gentype> &rxb = xa.nup(1);
+
+            const vecInfo &rxainfo = xainfo(-1,0);
+            const vecInfo &rxbinfo = xainfo(-1,1);
+
+            int ixa = ia;
+            int ixb = UPNTVI(ia,1);
+
+            int ixaset = iaset;
+            int ixbset = iaset;
+
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+            int rxbgradOrder = ( 1 == xagradup ) ? xagradOrder : 0;
+
+            const SparseVector<gentype> &rxaff = xaff.nup(0);
+            const SparseVector<gentype> &rxbff = xaff.nup( ( xaff.nupsize() <= 1 ) ? (xaff.nupsize()-1) : 1 );
+
+            xKKK2(res,rxa,rxb,rxainfo,rxbinfo,rxagradOrder,rxbgradOrder,rxaff,rxbff,bias,nullptr,ixa,ixb,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,ixaset,ixbset,0,0);
+        }
+
+        else if ( aupm == 3 )
+        {
+            const SparseVector<gentype> &rxa = xa.nup(0);
+            const SparseVector<gentype> &rxb = xa.nup(1);
+            const SparseVector<gentype> &rxc = xa.nup(2);
+
+            const vecInfo &rxainfo = xainfo(-1,0);
+            const vecInfo &rxbinfo = xainfo(-1,1);
+            const vecInfo &rxcinfo = xainfo(-1,2);
+
+            int ixa = ia;
+            int ixb = UPNTVI(ia,1);
+            int ixc = UPNTVI(ia,2);
+
+            int ixaset = iaset;
+            int ixbset = iaset;
+            int ixcset = iaset;
+
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+            int rxbgradOrder = ( 1 == xagradup ) ? xagradOrder : 0;
+            int rxcgradOrder = ( 2 == xagradup ) ? xagradOrder : 0;
+
+            const SparseVector<gentype> &rxaff = xaff.nup(0);
+            const SparseVector<gentype> &rxbff = xaff.nup( ( xaff.nupsize() <= 1 ) ? (xaff.nupsize()-1) : 1 );
+            const SparseVector<gentype> &rxcff = xaff.nup( ( xaff.nupsize() <= 2 ) ? (xaff.nupsize()-1) : 2 );
+
+            xKKK3(res,rxa,rxb,rxc,rxainfo,rxbinfo,rxcinfo,rxagradOrder,rxbgradOrder,rxcgradOrder,rxaff,rxbff,rxcff,bias,nullptr,ixa,ixb,ixc,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,ixaset,ixbset,ixcset);
+        }
+
+        else if ( aupm == 4 )
+        {
+            const SparseVector<gentype> &rxa = xa.nup(0);
+            const SparseVector<gentype> &rxb = xa.nup(1);
+            const SparseVector<gentype> &rxc = xa.nup(2);
+            const SparseVector<gentype> &rxd = xa.nup(3);
+
+            const vecInfo &rxainfo = xainfo(-1,0);
+            const vecInfo &rxbinfo = xainfo(-1,1);
+            const vecInfo &rxcinfo = xainfo(-1,2);
+            const vecInfo &rxdinfo = xainfo(-1,3);
+
+            int ixa = ia;
+            int ixb = UPNTVI(ia,1);
+            int ixc = UPNTVI(ia,2);
+            int ixd = UPNTVI(ia,3);
+
+            int ixaset = iaset;
+            int ixbset = iaset;
+            int ixcset = iaset;
+            int ixdset = iaset;
+
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+            int rxbgradOrder = ( 1 == xagradup ) ? xagradOrder : 0;
+            int rxcgradOrder = ( 2 == xagradup ) ? xagradOrder : 0;
+            int rxdgradOrder = ( 3 == xagradup ) ? xagradOrder : 0;
+
+            const SparseVector<gentype> &rxaff = xaff.nup(0);
+            const SparseVector<gentype> &rxbff = xaff.nup( ( xaff.nupsize() <= 1 ) ? (xaff.nupsize()-1) : 1 );
+            const SparseVector<gentype> &rxcff = xaff.nup( ( xaff.nupsize() <= 2 ) ? (xaff.nupsize()-1) : 2 );
+            const SparseVector<gentype> &rxdff = xaff.nup( ( xaff.nupsize() <= 3 ) ? (xaff.nupsize()-1) : 3 );
+
+            xKKK4(res,rxa,rxb,rxc,rxd,rxainfo,rxbinfo,rxcinfo,rxdinfo,rxagradOrder,rxbgradOrder,rxcgradOrder,rxdgradOrder,rxaff,rxbff,rxcff,rxdff,bias,nullptr,ixa,ixb,ixc,ixd,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,ixaset,ixbset,ixcset,ixdset);
+        }
+
+        else
+        {
+            int ii;
+
+            Vector<int> iv(aupm);
+            Vector<const SparseVector<gentype> *> xv(aupm);
+            Vector<const vecInfo *> xvinfo(aupm);
+            Vector<int> ivset(aupm);
+            Vector<int> rvgradOrder(aupm);
+            Vector<const SparseVector<gentype> *> xvff(aupm);
+
+            if ( aupm )
+            {
+                for ( ii = 0 ; ii < aupm ; ++ii )
+                {
+                    iv("&",ii) = ii ? UPNTVI(ia,ii) : ia;
+                    xv("&",ii) = &(xa.nup(ii));
+                    xvinfo("&",ii) = &(xainfo(-1,ii));
+                    ivset("&",ii) = iaset;
+                    rvgradOrder("&",ii) = ( ii == xagradup ) ? xagradOrder : 0;
+                    xvff("&",ii) = &(xaff.nup( ( xaff.nupsize() <= ii ) ? (xaff.nupsize()-1) : ii ));
+                }
+            }
+
+            xKKKm(aupm,res,xv,xvinfo,rvgradOrder,xvff,bias,iv,nullptr,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,&ivset);
+        }
+
+    return res;
+}
+
+inline double calcKRBFSymmKern(double dvaris, int xdim,
+                        double r0, double r1,
+                        int adensetype, int bdensetype,
+                        int rxagradOrder, int rxbgradOrder,
+                        double *xdiff, double *xalb, double *xblb, double *xadir, double *xbdir);
+
+template <class T>
+T &MercerKernel::yyyKK2(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                    const vecInfo &xainfo, const vecInfo &xbinfo,
+                    int xagradOrder, int xbgradOrder,
+                    int xagradup, int xbgradup,
+                    int aupm, int bupm,
+                    const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib,
+                    int xdim, int xconsist, int resmode, int mlid,
+                    const double *xy00, const double *xy10, const double *xy11, int iaset, int ibset, int assumreal, int justcalcip,
+                    int adensetype,int bdensetype) const
+{
+//    return xKKK2(res,x,y,xinfo,yinfo,bias,pxyprod,i,j,xdim,xconsist,assumreal,resmode,mlid,xy,0,iset,jset);
+
+//errstream() << "phantomxyzabc 0: xa = " << xa << "\n";
+//errstream() << "phantomxyzabc 0: xb = " << xb << "\n";
+//errstream() << "phantomxyzabc 0: aupm = " << aupm << "\n";
+//errstream() << "phantomxyzabc 0: bupm = " << bupm << "\n";
+//errstream() << "phantomxyzabc 0: xagradup = " << xagradup << "\n";
+//errstream() << "phantomxyzabc 0: xbgradup = " << xbgradup << "\n";
+        if ( ( aupm == 1 ) && ( bupm == 1 ) )
+        {
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+            int rxbgradOrder = ( 0 == xbgradup ) ? xbgradOrder : 0;
+
+            if ( isSymmSet() )
+            {
+                int modxconsist = xconsist || ( ( xa.size() == xa.indsize() ) &&
+                                                ( xb.size() == xb.indsize() ) &&
+                                                ( xaff.size() == xaff.indsize() ) &&
+                                                ( xbff.size() == xbff.indsize() ) &&
+                                                ( xa.size() == xb.size() ) );
+
+                if ( modxconsist && assumreal && ( xdim <= 128 ) && unadornedRBFKernel(1) && ( 1 != adensetype ) && ( 1 != bdensetype ) && ( ( rxagradOrder == 0 ) || ( ( rxagradOrder == 1 ) && xaff.size() ) ) && ( ( rxbgradOrder == 0 ) || ( ( rxbgradOrder == 1 ) && xbff.size() ) ) )
+                {
+                    // K(xa,xb) = K((xa,xa),(xb,xb))
+
+                    int i;
+
+                    double r0 = (double) dRealConstants(0)(1+0);
+                    double r1 = (double) dRealConstants(0)(1+1);
+
+                    double dvaris = AltDiffNormConst(xdim,2,r0)*exp(-r1);
+
+                    double xdiff[128];
+                    double xalb[128];
+                    double xblb[128];
+                    double xadir[128];
+                    double xbdir[128];
+
+                    for ( i = 0 ; i < xdim ; i++ )
+                    {
+                        xdiff[i] = (((double) xa.direcref(i))-((double) xb.direcref(i)))/r0;
+                    }
+
+                    if ( adensetype )
+                    {
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            xalb[i] = xdenseZeroPoint-(((double) xb.direcref(i))/r0);
+                        }
+                    }
+
+                    if ( bdensetype )
+                    {
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            xblb[i] = (((double) xa.direcref(i))/r0)-xdenseZeroPoint;
+                        }
+                    }
+
+                    if ( xagradOrder )
+                    {
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            xadir[i] = ((double) xaff.direcref(i));
+                        }
+                    }
+
+                    if ( xbgradOrder )
+                    {
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            xbdir[i] = ((double) xbff.direcref(i));
+                        }
+                    }
+
+                    res = calcKRBFSymmKern(dvaris,xdim,r0,r1,adensetype,bdensetype,rxagradOrder,rxbgradOrder,xdiff,xalb,xblb,xadir,xbdir);
+NiceAssert(!testisvnan(res) && !testisinf(res));
+                }
+
+                else
+                {
+                    NiceAssert( !adensetype );
+                    NiceAssert( !bdensetype );
+                    NiceAssert( !xagradOrder );
+                    NiceAssert( !xbgradOrder );
+
+                    xKKK2(res,xa,xb,xainfo,xbinfo,rxagradOrder,rxbgradOrder,xaff,xbff,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,justcalcip,iaset,ibset,adensetype,bdensetype);
+
+                    res *= res;
+NiceAssert(!testisvnan(res) && !testisinf(res));
+                }
+            }
+
+            else
+            {
+                xKKK2(res,xa,xb,xainfo,xbinfo,rxagradOrder,rxbgradOrder,xaff,xbff,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,justcalcip,iaset,ibset,adensetype,bdensetype);
+NiceAssert(!testisvnan(res) && !testisinf(res));
+            }
+        }
+
+        else if ( ( aupm == 1 ) && ( bupm == 2 ) )
+        {
+//NB: order of vectors is very important here (see splits, ns, below)
+            const SparseVector<gentype> &rxa = xa.nup(0);
+            const SparseVector<gentype> &rxb = xb.nup(0);
+            const SparseVector<gentype> &rxc = xb.nup(1);
+
+            const vecInfo &rxainfo = xainfo(-1,0);
+            const vecInfo &rxbinfo = xbinfo(-1,0);
+            const vecInfo &rxcinfo = xbinfo(-1,1);
+
+            int ixa = ia;
+            int ixb = ib;
+            int ixc = UPNTVI(ib,1);
+
+            int ixaset = iaset;
+            int ixbset = ibset;
+            int ixcset = ibset;
+
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+            int rxbgradOrder = ( 0 == xbgradup ) ? xbgradOrder : 0;
+            int rxcgradOrder = ( 1 == xbgradup ) ? xbgradOrder : 0;
+
+            const SparseVector<gentype> &rxaff = xaff.nup(0);
+            const SparseVector<gentype> &rxbff = xbff.nup(0);
+            const SparseVector<gentype> &rxcff = xbff.nup( ( xbff.nupsize() <= 1 ) ? (xbff.nupsize()-1) : 1 );
+
+            if ( xbff.nupsize() == 2 )
+            {
+                if ( ( rxbff.size() > 0 ) && ( rxcff.size() == 0 ) )
+                {
+                    rxcgradOrder = 0;
+                }
+
+                else if ( ( rxbff.size() == 0 ) && ( rxcff.size() > 0 ) )
+                {
+                    rxbgradOrder = 0;
+                }
+            }
+
+//errstream() << "phantomxyzabc 1: rxa = " << rxa << "\n";
+//errstream() << "phantomxyzabc 1: rxb = " << rxb << "\n";
+//errstream() << "phantomxyzabc 1: rxc = " << rxc << "\n";
+
+//errstream() << "phantomxyzabc 1: ixa = " << ixa << "\n";
+//errstream() << "phantomxyzabc 1: ixb = " << ixb << "\n";
+//errstream() << "phantomxyzabc 1: ixc = " << ixc << "\n";
+
+//errstream() << "phantomxyzabc 1: rxagradOrder = " << rxagradOrder << "\n";
+//errstream() << "phantomxyzabc 1: rxbgradOrder = " << rxbgradOrder << "\n";
+//errstream() << "phantomxyzabc 1: rxcgradOrder = " << rxcgradOrder << "\n";
+
+//errstream() << "phantomxyzabc 1: rxaff = " << rxaff << "\n";
+//errstream() << "phantomxyzabc 1: rxbff = " << rxbff << "\n";
+//errstream() << "phantomxyzabc 1: rxcff = " << rxcff << "\n";
+
+            if ( isSymmSet() )
+            {
+                int modxconsist = xconsist || ( ( rxa.size() == rxa.indsize() ) &&
+                                                ( rxb.size() == rxb.indsize() ) &&
+                                                ( rxc.size() == rxc.indsize() ) &&
+                                                ( rxaff.size() == rxaff.indsize() ) &&
+                                                ( rxbff.size() == rxbff.indsize() ) &&
+                                                ( rxcff.size() == rxcff.indsize() ) &&
+                                                ( rxa.size() == rxb.size() ) &&
+                                                ( rxa.size() == rxc.size() ) );
+
+                if ( modxconsist && assumreal && ( xdim <= 128 ) && unadornedRBFKernel(1) && ( 1 != adensetype ) && ( 1 != bdensetype ) &&
+                     ( ( rxagradOrder == 0 ) || ( ( rxagradOrder == 1 ) && xaff.size() ) ) &&
+                     ( ( rxbgradOrder == 0 ) || ( ( rxbgradOrder == 1 ) && xbff.size() ) )    )
+                {
+                    // K(xa,xb) = K((rxa,rxa),(rxb,rxc))
+                    //          = sqrt(K(rxa,rxb)).sqrt(K(rxa,rxb)).sqrt(K(rxa,rxc)).sqrt(K(rxa,rxc))
+                    //          = K(rxa,rxb).K(rxa,rxc)
+
+                    int i;
+
+                    double r0 = (double) dRealConstants(0)(1+0);
+                    double r1 = (double) dRealConstants(0)(1+1);
+
+                    double dvaris = AltDiffNormConst(xdim,2,r0)*exp(-r1/2);
+
+                    double xdiff[128];
+                    double xalb[128];
+                    double xblb[128];
+                    double xadir[128];
+                    double xbdir[128];
+
+                    for ( i = 0 ; i < xdim ; i++ )
+                    {
+                        xdiff[i] = (((double) rxa.direcref(i))-((((double) rxb.direcref(i))+((double) rxc.direcref(i)))/2))/r0;
+                    }
+
+                    if ( adensetype )
+                    {
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            xalb[i] = xdenseZeroPoint-(((((double) rxb.direcref(i))+((double) rxc.direcref(i)))/2)/r0);
+                        }
+                    }
+
+                    if ( bdensetype )
+                    {
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            xblb[i] = (((double) rxa.direcref(i))/r0)-xdenseZeroPoint;
+                        }
+                    }
+
+                    if ( xagradOrder ) // intentionally *not* rxagradOrder
+                    {
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            xadir[i] = ((double) rxaff.direcref(i));
+                        }
+                    }
+
+                    NiceAssert( !xbgradOrder );
+
+//                    if ( xbgradOrder ) // intentionally *not* rxbgradOrder
+//                    {
+//                        for ( i = 0 ; i < xdim ; i++ )
+//                        {
+//                            xbdir[i] = rxbgradOrder ? ((double) rxbff.direcref(i)) : ((double) rxcff.direcref(i));
+//                        }
+//                    }
+
+                    xKKK2(res,rxb,rxc,rxbinfo,rxcinfo,0,0,rxbff,rxcff,bias,nullptr,ixb,ixc,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,ixbset,ixcset,0,0);
+
+                    OP_sqrt(res);
+
+                    res *= calcKRBFSymmKern(dvaris,xdim,r0,r1,adensetype,bdensetype,rxagradOrder,rxbgradOrder,xdiff,xalb,xblb,xadir,xbdir);
+NiceAssert(!testisvnan(res) && !testisinf(res));
+                }
+
+                else
+                {
+                    NiceAssert( !adensetype );
+                    NiceAssert( !bdensetype );
+                    NiceAssert( !xagradOrder );
+                    NiceAssert( !xbgradOrder );
+
+                    T tmpresb;
+
+                    xKKK2(res    ,rxa,rxb,rxainfo,rxbinfo,rxagradOrder,rxbgradOrder,rxaff,rxbff,bias,nullptr,ixa,ixb,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,ixaset,ixbset,adensetype,bdensetype);
+                    xKKK2(tmpresb,rxa,rxc,rxainfo,rxcinfo,rxagradOrder,rxcgradOrder,rxaff,rxcff,bias,nullptr,ixa,ixc,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,ixaset,ixcset,adensetype,bdensetype);
+
+                    res *= tmpresb;
+                }
+            }
+
+            else
+            {
+                NiceAssert( !adensetype );
+
+                xKKK3(res,rxa,rxb,rxc,rxainfo,rxbinfo,rxcinfo,rxagradOrder,rxbgradOrder,rxcgradOrder,rxaff,rxbff,rxcff,bias,nullptr,ixa,ixb,ixc,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,ixaset,ixbset,ixcset);
+            }
+        }
+
+        else if ( ( aupm == 2 ) && ( bupm == 1 ) )
+        {
+            const SparseVector<gentype> &rxa = xa.nup(0);
+            const SparseVector<gentype> &rxb = xa.nup(1);
+            const SparseVector<gentype> &rxc = xb.nup(0);
+
+            const vecInfo &rxainfo = xainfo(-1,0);
+            const vecInfo &rxbinfo = xainfo(-1,1);
+            const vecInfo &rxcinfo = xbinfo(-1,0);
+
+            int ixa = ia;
+            int ixb = UPNTVI(ia,1);
+            int ixc = ib;
+
+            int ixaset = iaset;
+            int ixbset = iaset;
+            int ixcset = ibset;
+
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+            int rxbgradOrder = ( 1 == xagradup ) ? xagradOrder : 0;
+            int rxcgradOrder = ( 0 == xbgradup ) ? xbgradOrder : 0;
+
+            const SparseVector<gentype> &rxaff = xaff.nup(0);
+            const SparseVector<gentype> &rxbff = xaff.nup( ( xaff.nupsize() <= 1 ) ? (xaff.nupsize()-1) : 1 );
+            const SparseVector<gentype> &rxcff = xbff.nup(0);
+
+            if ( xaff.nupsize() == 2 )
+            {
+                if ( ( rxaff.size() > 0 ) && ( rxbff.size() == 0 ) )
+                {
+                    rxbgradOrder = 0;
+                }
+
+                else if ( ( rxaff.size() == 0 ) && ( rxbff.size() > 0 ) )
+                {
+                    rxagradOrder = 0;
+                }
+            }
+
+            if ( isSymmSet() )
+            {
+                int modxconsist = xconsist || ( ( rxa.size() == rxa.indsize() ) &&
+                                                ( rxb.size() == rxb.indsize() ) &&
+                                                ( rxc.size() == rxc.indsize() ) &&
+                                                ( rxaff.size() == rxaff.indsize() ) &&
+                                                ( rxbff.size() == rxbff.indsize() ) &&
+                                                ( rxcff.size() == rxcff.indsize() ) &&
+                                                ( rxa.size() == rxb.size() ) &&
+                                                ( rxa.size() == rxc.size() ) );
+
+                if ( modxconsist && assumreal && ( xdim <= 128 ) && unadornedRBFKernel(1) && ( 1 != adensetype ) && ( 1 != bdensetype ) &&
+                     ( ( rxagradOrder == 0 ) || ( ( rxagradOrder == 1 ) && xaff.size() ) ) &&
+                     ( ( rxbgradOrder == 0 ) || ( ( rxbgradOrder == 1 ) && xbff.size() ) )    )
+                {
+                    // K(xa,xb) = K((rxa,rxb),(rxc,rxc))
+
+                    int i;
+
+                    double r0 = (double) dRealConstants(0)(1+0);
+                    double r1 = (double) dRealConstants(0)(1+1);
+
+                    double dvaris = AltDiffNormConst(xdim,2,r0)*exp(-r1/2);
+
+                    double xdiff[128];
+                    double xalb[128];
+                    double xblb[128];
+                    double xadir[128];
+                    double xbdir[128];
+
+                    for ( i = 0 ; i < xdim ; i++ )
+                    {
+                        xdiff[i] = (((((double) rxa.direcref(i))+((double) rxb.direcref(i)))/2)-((double) rxc.direcref(i)))/r0;
+                    }
+
+                    if ( adensetype )
+                    {
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            xalb[i] = xdenseZeroPoint-((((double) rxc.direcref(i)))/r0);
+                        }
+                    }
+
+                    if ( bdensetype )
+                    {
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            xblb[i] = (((((double) rxa.direcref(i))+((double) rxb.direcref(i)))/2)/r0)-xdenseZeroPoint;
+                        }
+                    }
+
+                    NiceAssert( !xagradOrder );
+
+//                    if ( xagradOrder ) // intentionally *not* rxagradOrder
+//                    {
+//                        for ( i = 0 ; i < xdim ; i++ )
+//                        {
+//                            xadir[i] = raxgradOrder ? ((double) rxaff.direcref(i)) : ((double) rxbff.direcref(i));
+//                        }
+//                    }
+
+                    if ( xbgradOrder ) // intentionally *not* rxbgradOrder
+                    {
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            xbdir[i] = ((double) rxcff.direcref(i));
+                        }
+                    }
+
+                    xKKK2(res,rxa,rxb,rxainfo,rxbinfo,0,0,rxaff,rxbff,bias,nullptr,ixa,ixb,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,ixaset,ixbset,0,0);
+
+                    OP_sqrt(res);
+
+                    res *= calcKRBFSymmKern(dvaris,xdim,r0,r1,adensetype,bdensetype,rxagradOrder,rxbgradOrder,xdiff,xalb,xblb,xadir,xbdir);
+NiceAssert(!testisvnan(res) && !testisinf(res));
+                }
+
+                else
+                {
+                    NiceAssert( !adensetype );
+                    NiceAssert( !bdensetype );
+                    NiceAssert( !xagradOrder );
+                    NiceAssert( !xbgradOrder );
+
+                    T tmpresb;
+
+                    xKKK2(res    ,rxa,rxc,rxainfo,rxcinfo,rxagradOrder,rxcgradOrder,rxaff,rxcff,bias,nullptr,ixa,ixc,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,ixaset,ixcset,adensetype,bdensetype);
+                    xKKK2(tmpresb,rxb,rxc,rxbinfo,rxcinfo,rxbgradOrder,rxcgradOrder,rxbff,rxcff,bias,nullptr,ixb,ixc,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,ixbset,ixcset,adensetype,bdensetype);
+
+                    res *= tmpresb;
+                }
+            }
+
+            else
+            {
+                NiceAssert( !bdensetype );
+
+                xKKK3(res,rxa,rxb,rxc,rxainfo,rxbinfo,rxcinfo,rxagradOrder,rxbgradOrder,rxcgradOrder,rxaff,rxbff,rxcff,bias,nullptr,ixa,ixb,ixc,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,ixaset,ixbset,ixcset);
+            }
+        }
+
+        else if ( ( aupm == 2 ) && ( bupm == 2 ) )
+        {
+            const SparseVector<gentype> &rxa = xa.nup(0);
+            const SparseVector<gentype> &rxb = xa.nup(1);
+            const SparseVector<gentype> &rxc = xb.nup(0);
+            const SparseVector<gentype> &rxd = xb.nup(1);
+
+            const vecInfo &rxainfo = xainfo(-1,0);
+            const vecInfo &rxbinfo = xainfo(-1,1);
+            const vecInfo &rxcinfo = xbinfo(-1,0);
+            const vecInfo &rxdinfo = xbinfo(-1,1);
+
+            int ixa = ia;
+            int ixb = UPNTVI(ia,1);
+            int ixc = ib;
+            int ixd = UPNTVI(ib,1);
+
+            int ixaset = iaset;
+            int ixbset = iaset;
+            int ixcset = ibset;
+            int ixdset = ibset;
+
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+            int rxbgradOrder = ( 1 == xagradup ) ? xagradOrder : 0;
+            int rxcgradOrder = ( 0 == xbgradup ) ? xbgradOrder : 0;
+            int rxdgradOrder = ( 1 == xbgradup ) ? xbgradOrder : 0;
+
+            const SparseVector<gentype> &rxaff = xaff.nup(0);
+            const SparseVector<gentype> &rxbff = xaff.nup( ( xaff.nupsize() <= 1 ) ? (xaff.nupsize()-1) : 1 );
+            const SparseVector<gentype> &rxcff = xbff.nup(0);
+            const SparseVector<gentype> &rxdff = xbff.nup( ( xbff.nupsize() <= 1 ) ? (xbff.nupsize()-1) : 1 );
+
+            if ( xaff.nupsize() == 2 )
+            {
+                if ( ( rxaff.size() > 0 ) && ( rxbff.size() == 0 ) )
+                {
+                    rxbgradOrder = 0;
+                }
+
+                else if ( ( rxaff.size() == 0 ) && ( rxbff.size() > 0 ) )
+                {
+                    rxagradOrder = 0;
+                }
+            }
+
+            if ( xbff.nupsize() == 2 )
+            {
+                if ( ( rxcff.size() > 0 ) && ( rxdff.size() == 0 ) )
+                {
+                    rxdgradOrder = 0;
+                }
+
+                else if ( ( rxcff.size() == 0 ) && ( rxdff.size() > 0 ) )
+                {
+                    rxcgradOrder = 0;
+                }
+            }
+
+//errstream() << "phantomxyzabc 1: rxa = " << rxa << "\n";
+//errstream() << "phantomxyzabc 1: rxb = " << rxb << "\n";
+//errstream() << "phantomxyzabc 1: rxc = " << rxc << "\n";
+//errstream() << "phantomxyzabc 1: rxd = " << rxd << "\n";
+
+//errstream() << "phantomxyzabc 1: ixa = " << ixa << "\n";
+//errstream() << "phantomxyzabc 1: ixb = " << ixb << "\n";
+//errstream() << "phantomxyzabc 1: ixc = " << ixc << "\n";
+//errstream() << "phantomxyzabc 1: ixd = " << ixd << "\n";
+
+//errstream() << "phantomxyzabc 1: rxagradOrder = " << rxagradOrder << "\n";
+//errstream() << "phantomxyzabc 1: rxbgradOrder = " << rxbgradOrder << "\n";
+//errstream() << "phantomxyzabc 1: rxcgradOrder = " << rxcgradOrder << "\n";
+//errstream() << "phantomxyzabc 1: rxdgradOrder = " << rxdgradOrder << "\n";
+
+//errstream() << "phantomxyzabc 1: rxaff = " << rxaff << "\n";
+//errstream() << "phantomxyzabc 1: rxbff = " << rxbff << "\n";
+//errstream() << "phantomxyzabc 1: rxcff = " << rxcff << "\n";
+//errstream() << "phantomxyzabc 1: rxdff = " << rxdff << "\n";
+
+            NiceAssert( !adensetype && !bdensetype );
+
+            if ( isSymmSet() )
+            {
+                int modxconsist = xconsist || ( ( rxa.size() == rxa.indsize() ) &&
+                                                ( rxb.size() == rxb.indsize() ) &&
+                                                ( rxc.size() == rxc.indsize() ) &&
+                                                ( rxd.size() == rxd.indsize() ) &&
+                                                ( rxaff.size() == rxaff.indsize() ) &&
+                                                ( rxbff.size() == rxbff.indsize() ) &&
+                                                ( rxcff.size() == rxcff.indsize() ) &&
+                                                ( rxdff.size() == rxdff.indsize() ) &&
+                                                ( rxa.size() == rxb.size() ) &&
+                                                ( rxa.size() == rxc.size() ) &&
+                                                ( rxa.size() == rxd.size() ) );
+
+                if ( modxconsist && assumreal && ( xdim <= 128 ) && unadornedRBFKernel(1) && ( 1 != adensetype ) && ( 1 != bdensetype ) &&
+                     ( ( rxagradOrder == 0 ) || ( ( rxagradOrder == 1 ) && xaff.size() ) ) &&
+                     ( ( rxbgradOrder == 0 ) || ( ( rxbgradOrder == 1 ) && xbff.size() ) )    )
+                {
+                    // K(xa,xb) = K((rxa,rxb),(rxc,rxd))
+
+                    int i;
+
+                    double r0 = (double) dRealConstants(0)(1+0);
+                    double r1 = (double) dRealConstants(0)(1+1);
+
+                    double dvaris = AltDiffNormConst(xdim,2,r0);
+
+                    double xdiff[128];
+                    double xalb[128];
+                    double xblb[128];
+                    double xadir[128];
+                    double xbdir[128];
+
+                    for ( i = 0 ; i < xdim ; i++ )
+                    {
+                        xdiff[i] = (((((double) rxa.direcref(i))+((double) rxb.direcref(i)))/2)-((((double) rxc.direcref(i))+((double) rxd.direcref(i)))/2))/r0;
+                    }
+
+                    if ( adensetype )
+                    {
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            xalb[i] = xdenseZeroPoint-((((((double) rxc.direcref(i))+((double) rxd.direcref(i)))/2))/r0);
+                        }
+                    }
+
+                    if ( bdensetype )
+                    {
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            xblb[i] = ((((((double) rxa.direcref(i))+((double) rxb.direcref(i)))/2))/r0)-xdenseZeroPoint;
+                        }
+                    }
+
+                    NiceAssert( !xagradOrder );
+
+//                    if ( xagradOrder ) // intentionally *not* rxagradOrder
+//                    {
+//                        for ( i = 0 ; i < xdim ; i++ )
+//                        {
+//                            xadir[i] = raxgradOrder ? ((double) rxaff.direcref(i)) : ((double) rxbff.direcref(i));
+//                        }
+//                    }
+
+                    NiceAssert( !xbgradOrder );
+
+//                    if ( xbgradOrder ) // intentionally *not* rxbgradOrder
+//                    {
+//                        for ( i = 0 ; i < xdim ; i++ )
+//                        {
+//                            xbdir[i] = rxbgradOrder ? ((double) rxcff.direcref(i)) : ((double) rxdff.direcref(i));
+//                        }
+//                    }
+
+                    T resb;
+
+                    xKKK2(res ,rxa,rxb,rxainfo,rxbinfo,0,0,rxaff,rxbff,bias,nullptr,ixa,ixb,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,ixaset,ixbset,0,0);
+                    xKKK2(resb,rxc,rxd,rxcinfo,rxdinfo,0,0,rxcff,rxdff,bias,nullptr,ixc,ixd,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,ixcset,ixdset,0,0);
+
+                    res *= resb;
+                    OP_sqrt(res);
+
+                    res *= calcKRBFSymmKern(dvaris,xdim,r0,r1,adensetype,bdensetype,rxagradOrder,rxbgradOrder,xdiff,xalb,xblb,xadir,xbdir);
+NiceAssert(!testisvnan(res) && !testisinf(res));
+                }
+
+                else
+                {
+                    NiceAssert( !adensetype );
+                    NiceAssert( !bdensetype );
+                    NiceAssert( !xagradOrder );
+                    NiceAssert( !xbgradOrder );
+
+                    T tmpresb;
+                    T tmpresc;
+                    T tmpresd;
+
+                    xKKK2(res    ,rxa,rxc,rxainfo,rxcinfo,rxagradOrder,rxcgradOrder,rxaff,rxcff,bias,nullptr,ixa,ixc,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,ixaset,ixcset,adensetype,bdensetype);
+                    xKKK2(tmpresb,rxa,rxd,rxainfo,rxdinfo,rxagradOrder,rxdgradOrder,rxaff,rxdff,bias,nullptr,ixa,ixd,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,ixaset,ixdset,adensetype,bdensetype);
+                    xKKK2(tmpresc,rxb,rxc,rxbinfo,rxcinfo,rxbgradOrder,rxcgradOrder,rxbff,rxcff,bias,nullptr,ixb,ixc,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,ixbset,ixcset,adensetype,bdensetype);
+                    xKKK2(tmpresd,rxb,rxd,rxbinfo,rxdinfo,rxbgradOrder,rxdgradOrder,rxbff,rxdff,bias,nullptr,ixb,ixd,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,ixbset,ixdset,adensetype,bdensetype);
+
+                    res *= tmpresb;
+                    res *= tmpresc;
+                    res *= tmpresd;
+
+                    OP_sqrt(res);
+                }
+            }
+
+            else
+            {
+                xKKK4(res,rxa,rxb,rxc,rxd,rxainfo,rxbinfo,rxcinfo,rxdinfo,rxagradOrder,rxbgradOrder,rxcgradOrder,rxdgradOrder,rxaff,rxbff,rxcff,rxdff,bias,nullptr,ixa,ixb,ixc,ixd,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,ixaset,ixbset,ixcset,ixdset);
+            }
+        }
+
+        else if ( ( aupm == 1 ) && ( bupm == 3 ) )
+        {
+            NiceAssert( !isSymmSet() );
+
+            const SparseVector<gentype> &rxa = xa.nup(0);
+            const SparseVector<gentype> &rxb = xb.nup(0);
+            const SparseVector<gentype> &rxc = xb.nup(1);
+            const SparseVector<gentype> &rxd = xb.nup(2);
+
+            const vecInfo &rxainfo = xainfo(-1,0);
+            const vecInfo &rxbinfo = xbinfo(-1,0);
+            const vecInfo &rxcinfo = xbinfo(-1,1);
+            const vecInfo &rxdinfo = xbinfo(-1,2);
+
+            int ixa = ia;
+            int ixb = ib;
+            int ixc = UPNTVI(ib,1);
+            int ixd = UPNTVI(ib,2);
+
+            int ixaset = iaset;
+            int ixbset = ibset;
+            int ixcset = ibset;
+            int ixdset = ibset;
+
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+            int rxbgradOrder = ( 0 == xbgradup ) ? xbgradOrder : 0;
+            int rxcgradOrder = ( 1 == xbgradup ) ? xbgradOrder : 0;
+            int rxdgradOrder = ( 2 == xbgradup ) ? xbgradOrder : 0;
+
+            const SparseVector<gentype> &rxaff = xaff.nup(0);
+            const SparseVector<gentype> &rxbff = xbff.nup(0);
+            const SparseVector<gentype> &rxcff = xbff.nup( ( xbff.nupsize() <= 1 ) ? (xbff.nupsize()-1) : 1 );
+            const SparseVector<gentype> &rxdff = xbff.nup( ( xbff.nupsize() <= 2 ) ? (xbff.nupsize()-1) : 2 );
+
+            NiceAssert( !adensetype && !bdensetype );
+
+            {
+                xKKK4(res,rxa,rxb,rxc,rxd,rxainfo,rxbinfo,rxcinfo,rxdinfo,rxagradOrder,rxbgradOrder,rxcgradOrder,rxdgradOrder,rxaff,rxbff,rxcff,rxdff,bias,nullptr,ixa,ixb,ixc,ixd,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,ixaset,ixbset,ixcset,ixdset);
+            }
+        }
+
+        else if ( ( aupm == 3 ) && ( bupm == 1 ) )
+        {
+            NiceAssert( !isSymmSet() );
+
+            const SparseVector<gentype> &rxa = xa.nup(0);
+            const SparseVector<gentype> &rxb = xa.nup(1);
+            const SparseVector<gentype> &rxc = xa.nup(2);
+            const SparseVector<gentype> &rxd = xb.nup(0);
+
+            const vecInfo &rxainfo = xainfo(-1,0);
+            const vecInfo &rxbinfo = xainfo(-1,1);
+            const vecInfo &rxcinfo = xainfo(-1,2);
+            const vecInfo &rxdinfo = xbinfo(-1,0);
+
+            int ixa = ia;
+            int ixb = UPNTVI(ia,1);
+            int ixc = UPNTVI(ia,2);
+            int ixd = ib;
+
+            int ixaset = iaset;
+            int ixbset = iaset;
+            int ixcset = iaset;
+            int ixdset = ibset;
+
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+            int rxbgradOrder = ( 1 == xagradup ) ? xagradOrder : 0;
+            int rxcgradOrder = ( 2 == xagradup ) ? xagradOrder : 0;
+            int rxdgradOrder = ( 0 == xbgradup ) ? xbgradOrder : 0;
+
+            const SparseVector<gentype> &rxaff = xaff.nup(0);
+            const SparseVector<gentype> &rxbff = xaff.nup( ( xaff.nupsize() <= 1 ) ? (xaff.nupsize()-1) : 1 );
+            const SparseVector<gentype> &rxcff = xaff.nup( ( xaff.nupsize() <= 2 ) ? (xaff.nupsize()-1) : 2 );
+            const SparseVector<gentype> &rxdff = xbff.nup(0);
+
+            NiceAssert( !adensetype && !bdensetype );
+
+            {
+                xKKK4(res,rxa,rxb,rxc,rxd,rxainfo,rxbinfo,rxcinfo,rxdinfo,rxagradOrder,rxbgradOrder,rxcgradOrder,rxdgradOrder,rxaff,rxbff,rxcff,rxdff,bias,nullptr,ixa,ixb,ixc,ixd,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,ixaset,ixbset,ixcset,ixdset);
+            }
+        }
+
+        else
+        {
+            NiceAssert( !isSymmSet() );
+
+            int ii;
+
+            Vector<int> iv(aupm+bupm);
+            Vector<const SparseVector<gentype> *> xv(aupm+bupm);
+            Vector<const vecInfo *> xvinfo(aupm+bupm);
+            Vector<int> ivset(aupm+bupm);
+            Vector<int> rvgradOrder(aupm+bupm);
+            Vector<const SparseVector<gentype> *> xvff(aupm+bupm);
+
+            if ( aupm )
+            {
+                for ( ii = 0 ; ii < aupm ; ++ii )
+                {
+                    iv("&",ii) = ii ? UPNTVI(ia,ii) : ia;
+                    xv("&",ii) = &(xa.nup(ii));
+                    xvinfo("&",ii) = &(xainfo(-1,ii));
+                    ivset("&",ii) = iaset;
+                    rvgradOrder("&",ii) = ( ii == xagradup ) ? xagradOrder : 0;
+                    xvff("&",ii) = &(xaff.nup( ( xaff.nupsize() <= ii ) ? (xaff.nupsize()-1) : ii ));
+                }
+            }
+
+            if ( bupm )
+            {
+                for ( ii = 0 ; ii < bupm ; ++ii )
+                {
+                    iv("&",ii+aupm) = ii ? UPNTVI(ib,ii) : ib;
+                    xv("&",ii+aupm) = &(xb.nup(ii));
+                    xvinfo("&",ii+aupm) = &(xbinfo(-1,ii));
+                    ivset("&",ii+aupm) = ibset;
+                    rvgradOrder("&",ii+aupm) = ( ii == xbgradup ) ? xbgradOrder : 0;
+                    xvff("&",ii+aupm) = &(xbff.nup( ( xbff.nupsize() <= ii ) ? (xbff.nupsize()-1) : ii ));
+                }
+            }
+
+            NiceAssert( !adensetype && !bdensetype );
+
+            {
+                xKKKm(aupm+bupm,res,xv,xvinfo,rvgradOrder,xvff,bias,iv,nullptr,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,&ivset);
+            }
+        }
+
+
+    return res;
+}
+
+
+
+inline double calcKRBFSymmKern(double dvaris, int xdim,
+                        double r0, double,
+                        int adensetype, int bdensetype,
+                        int rxagradOrder, int rxbgradOrder,
+                        double *xdiff, double *xalb, double *xblb, double *xadir, double *xbdir)
+{
+                    int i,j,k;
+
+                    double dres = dvaris;
+
+                    if ( !adensetype && !bdensetype && !rxagradOrder && !rxbgradOrder )
+                    {
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            dres *= exp(-xdiff[i]*xdiff[i]);
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                        }
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                    }
+
+                    else if ( !adensetype && !bdensetype && rxagradOrder && !rxbgradOrder )
+                    {
+                        double scalefactor = 0.0;
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            dres *= exp(-xdiff[i]*xdiff[i]);
+                            scalefactor += (xdiff[i]*xadir[i]);
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+                        }
+
+                        dres *= -2*scalefactor/r0;
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                    }
+
+                    else if ( !adensetype && !bdensetype && !rxagradOrder && rxbgradOrder )
+                    {
+                        double scalefactor = 0.0;
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            dres *= exp(-xdiff[i]*xdiff[i]);
+                            scalefactor += (xdiff[i]*xbdir[i]);
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+                        }
+
+                        dres *= 2*scalefactor/r0;
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                    }
+
+                    else if ( !adensetype && !bdensetype && rxagradOrder && rxbgradOrder )
+                    {
+                        double scalefactor = 0.0;
+
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            dres *= exp(-xdiff[i]*xdiff[i]);
+                            scalefactor += (0.5-((xdiff[i]*xdiff[i])*(xadir[i]*xbdir[i])));
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+
+                            for ( j = 0 ; j < xdim ; j++ )
+                            {
+                                if ( j != i )
+                                {
+                                    scalefactor -= ((xdiff[i]*xdiff[j])*(xadir[i]*xbdir[j]));
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+                                }
+                            }
+                        }
+
+                        dres *= 4*scalefactor/(r0*r0);
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                    }
+
+// =================
+
+                    else if ( adensetype && !bdensetype && !rxagradOrder && !rxbgradOrder )
+                    {
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            dres *= (NUMBASE_SQRTPI/2)*r0*(erf(xdiff[i])-erf(xalb[i]));
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                        }
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                    }
+
+                    else if ( adensetype && !bdensetype && rxagradOrder && !rxbgradOrder )
+                    {
+                        double deval[128];
+                        double scalefactor = 0.0;
+                        double tmpres = 0;
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            deval[i] = (NUMBASE_SQRTPI/2)*r0*(erf(xdiff[i])-erf(xalb[i]));
+                        }
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            scalefactor = exp(-xdiff[i]*xdiff[i])*xadir[i];
+
+                            for ( j = 0 ; j < xdim ; j++ )
+                            {
+                                if ( j != i )
+                                {
+                                    scalefactor *= deval[j];
+                                }
+                            }
+
+                            tmpres += scalefactor;
+
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+                        }
+
+                        dres *= tmpres;
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                    }
+
+                    else if ( adensetype && !bdensetype && !rxagradOrder && rxbgradOrder )
+                    {
+                        double deval[128];
+                        double scalefactor = 0.0;
+                        double tmpres = 0;
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            deval[i] = (NUMBASE_SQRTPI/2)*r0*(erf(xdiff[i])-erf(xalb[i]));
+                        }
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            scalefactor = (exp(-xalb[i]*xalb[i])-exp(-xdiff[i]*xdiff[i]))*xbdir[i];
+
+                            for ( j = 0 ; j < xdim ; j++ )
+                            {
+                                if ( j != i )
+                                {
+                                    scalefactor *= deval[j];
+                                }
+                            }
+
+                            tmpres += scalefactor;
+
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+                        }
+
+                        dres *= tmpres;
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                    }
+
+                    else if ( adensetype && !bdensetype && rxagradOrder && rxbgradOrder )
+                    {
+                        double partfactora[128];
+                        double partfactorb[128];
+                        double deval[128];
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            deval[i] = (NUMBASE_SQRTPI/2)*r0*(erf(xdiff[i])-erf(xalb[i]));
+
+                            partfactora[i] = (exp(-xalb[i]*xalb[i])-exp(-xdiff[i]*xdiff[i]));
+                            partfactorb[i] = exp(-xdiff[i]*xdiff[i]);
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                        }
+
+                        double scalefactor = 0.0;
+                        double tmpres = 0;
+
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            scalefactor = 2*xdiff[i]*partfactorb[i]*xadir[i]*xbdir[i]/r0;
+
+                            for ( j = 0 ; j < xdim ; j++ )
+                            {
+                                if ( j != i )
+                                {
+                                    scalefactor *= deval[j];
+                                }
+                            }
+
+                            tmpres += scalefactor;
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+                        }
+
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            for ( j = 0 ; j < xdim ; j++ )
+                            {
+                                if ( j != i )
+                                {
+                                    scalefactor = partfactora[i]*partfactorb[j]*xadir[i]*xbdir[j];
+
+                                    for ( k = 0 ; k < xdim ; k++ )
+                                    {
+                                        if ( ( k != i ) && ( k != j ) )
+                                        {
+                                            scalefactor *= deval[k];
+                                        }
+                                    }
+
+                                    tmpres += scalefactor;
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+                                }
+                            }
+                        }
+
+                        dres *= tmpres;
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                    }
+
+// =================
+
+                    else if ( !adensetype && bdensetype && !rxagradOrder && !rxbgradOrder )
+                    {
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            dres *= (NUMBASE_SQRTPI/2)*r0*(erf(xblb[i])-erf(xdiff[i]));
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                        }
+                    }
+
+                    else if ( !adensetype && bdensetype && rxagradOrder && !rxbgradOrder )
+                    {
+                        double deval[128];
+                        double scalefactor = 0.0;
+                        double tmpres = 0;
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            deval[i] = (NUMBASE_SQRTPI/2)*r0*(erf(xblb[i])-erf(xdiff[i]));
+                        }
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            scalefactor = (exp(-xblb[i]*xblb[i])-exp(-xdiff[i]*xdiff[i]))*xadir[i];
+
+                            for ( j = 0 ; j < xdim ; j++ )
+                            {
+                                if ( j != i )
+                                {
+                                    scalefactor *= deval[j];
+                                }
+                            }
+
+                            tmpres += scalefactor;
+
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+                        }
+
+                        dres *= tmpres;
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                    }
+
+                    else if ( !adensetype && bdensetype && !rxagradOrder && rxbgradOrder )
+                    {
+                        double deval[128];
+                        double scalefactor = 0.0;
+                        double tmpres = 0;
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            deval[i] = (NUMBASE_SQRTPI/2)*r0*(erf(xblb[i])-erf(xdiff[i]));
+                        }
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            scalefactor = exp(-xdiff[i]*xdiff[i])*xbdir[i];
+
+                            for ( j = 0 ; j < xdim ; j++ )
+                            {
+                                if ( j != i )
+                                {
+                                    scalefactor *= deval[j];
+                                }
+                            }
+
+                            tmpres += scalefactor;
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+                        }
+
+                        dres *= tmpres;
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                    }
+
+                    else if ( !adensetype && bdensetype && rxagradOrder && rxbgradOrder )
+                    {
+                        double partfactora[128];
+                        double partfactorb[128];
+                        double deval[128];
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            deval[i] = (NUMBASE_SQRTPI/2)*r0*(erf(xblb[i])-erf(xdiff[i]));
+
+                            partfactora[i] = (exp(-xblb[i]*xblb[i])-exp(-xdiff[i]*xdiff[i]));
+                            partfactorb[i] = exp(-xdiff[i]*xdiff[i]);
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                        }
+
+                        double scalefactor = 0.0;
+                        double tmpres = 0;
+
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            scalefactor = -2*xdiff[i]*partfactorb[i]*xadir[i]*xbdir[i]/r0;
+
+                            for ( j = 0 ; j < xdim ; j++ )
+                            {
+                                if ( j != i )
+                                {
+                                    scalefactor *= deval[j];
+                                }
+                            }
+
+                            tmpres += scalefactor;
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+                        }
+
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            for ( j = 0 ; j < xdim ; j++ )
+                            {
+                                if ( j != i )
+                                {
+                                    scalefactor = partfactora[i]*partfactorb[j]*xadir[i]*xbdir[j];
+
+                                    for ( k = 0 ; k < xdim ; k++ )
+                                    {
+                                        if ( ( k != i ) && ( k != j ) )
+                                        {
+                                            scalefactor *= deval[k];
+                                        }
+                                    }
+
+                                    tmpres += scalefactor;
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+                                }
+                            }
+                        }
+
+                        dres *= tmpres;
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                    }
+
+// =================
+
+                    else if ( adensetype && bdensetype && !rxagradOrder && !rxbgradOrder )
+                    {
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            dres *= (NUMBASE_SQRTPI/2)*r0*r0*((xblb[i]*erf(xblb[i]))+(xalb[i]*erf(xalb[i]))-(xdiff[i]*erf(xdiff[i]))+((exp(-xalb[i]*xalb[i])+exp(-xblb[i]*xblb[i])-exp(-xdiff[i]*xdiff[i])-1)/NUMBASE_SQRTPI));
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                        }
+                    }
+
+                    else if ( adensetype && bdensetype && rxagradOrder && !rxbgradOrder )
+                    {
+                        double deval[128];
+                        double scalefactor = 0.0;
+                        double tmpres = 0;
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            deval[i] = (NUMBASE_SQRTPI/2)*r0*r0*((xblb[i]*erf(xblb[i]))+(xalb[i]*erf(xalb[i]))-(xdiff[i]*erf(xdiff[i]))+((exp(-xalb[i]*xalb[i])+exp(-xblb[i]*xblb[i])-exp(-xdiff[i]*xdiff[i])-1)/NUMBASE_SQRTPI));
+                        }
+
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            scalefactor = (NUMBASE_SQRTPI/2)*r0*(erf(xblb[i])-erf(xdiff[i]));
+
+                            for ( j = 0 ; j < xdim ; j++ )
+                            {
+                                if ( j != i )
+                                {
+                                    scalefactor *= deval[j];
+                                }
+                            }
+
+                            tmpres += scalefactor;
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                        }
+
+                        dres *= tmpres;
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                    }
+
+                    else if ( adensetype && bdensetype && !rxagradOrder && rxbgradOrder )
+                    {
+                        double deval[128];
+                        double scalefactor = 0.0;
+                        double tmpres = 0;
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            deval[i] = (NUMBASE_SQRTPI/2)*r0*r0*((xblb[i]*erf(xblb[i]))+(xalb[i]*erf(xalb[i]))-(xdiff[i]*erf(xdiff[i]))+((exp(-xalb[i]*xalb[i])+exp(-xblb[i]*xblb[i])-exp(-xdiff[i]*xdiff[i])-1)/NUMBASE_SQRTPI));
+                        }
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            scalefactor = (NUMBASE_SQRTPI/2)*r0*(erf(xdiff[i])-erf(xalb[i]));
+
+                            for ( j = 0 ; j < xdim ; j++ )
+                            {
+                                if ( j != i )
+                                {
+                                    scalefactor *= deval[j];
+                                }
+                            }
+
+                            tmpres += scalefactor;
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                        }
+
+                        dres *= tmpres;
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                    }
+
+                    else if ( adensetype && bdensetype && rxagradOrder && rxbgradOrder )
+                    {
+                        double partfactora[128];
+                        double partfactorb[128];
+                        double deval[128];
+
+                        for ( i = 0 ; i < xdim ; ++i )
+                        {
+                            deval[i] = (NUMBASE_SQRTPI/2)*r0*r0*((xblb[i]*erf(xblb[i]))+(xalb[i]*erf(xalb[i]))-(xdiff[i]*erf(xdiff[i]))+((exp(-xalb[i]*xalb[i])+exp(-xblb[i]*xblb[i])-exp(-xdiff[i]*xdiff[i])-1)/NUMBASE_SQRTPI));
+                            dres *= deval[i];
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+
+                            partfactora[i] = ((NUMBASE_SQRTPI/2)*r0*(erf(xblb[i])-erf(xdiff[i])));
+                            partfactorb[i] = ((NUMBASE_SQRTPI/2)*r0*(erf(xdiff[i])-erf(xalb[i])));
+                        }
+
+                        double scalefactor = 0.0;
+                        double tmpres = 0;
+
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            scalefactor = exp(-xdiff[i]*xdiff[i])*xadir[i]*xbdir[i];
+
+                            for ( j = 0 ; j < xdim ; j++ )
+                            {
+                                if ( j != i )
+                                {
+                                    scalefactor *= deval[j];
+                                }
+                            }
+
+                            tmpres += scalefactor;
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                        }
+
+                        for ( i = 0 ; i < xdim ; i++ )
+                        {
+                            for ( j = 0 ; j < xdim ; j++ )
+                            {
+                                if ( j != i )
+                                {
+                                    scalefactor = partfactora[i]*partfactorb[j]*xadir[i]*xbdir[j];
+
+                                    for ( k = 0 ; k < xdim ; k++ )
+                                    {
+                                        if ( ( k != i ) && ( k != j ) )
+                                        {
+                                            scalefactor *= deval[k];
+                                        }
+                                    }
+
+                                    tmpres += tmpres;
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                                }
+                            }
+                        }
+
+                        dres *= tmpres;
+NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres) && !testisinf(dres));
+                    }
+
+                    return dres;
+}
+
+
+
+
+
+template <class T>
+T &MercerKernel::yyyKK2x2(T &res,
+                          const SparseVector<gentype> &x, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                          const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo,
+                          int xgradOrder, int xagradOrder, int xbgradOrder,
+                          int xgradup, int xagradup, int xbgradup,
+                          int iupm, int iaupm, int ibupm,
+                          const SparseVector<gentype> &xff, const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff,
+                          const T &bias,
+                          int i, int ia, int ib,
+                          int xdim, int xconsist, int resmode, int mlid,
+                          const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22,
+                          int iset, int iaset, int ibset,
+                          int assumreal, int justcalcip,
+                          int densetype, int adensetype, int bdensetype) const
+{
+    (void) xy21;
+
+    NiceAssert( !isSymmSet() );
+    NiceAssert( densetype >= 0 );
+    NiceAssert( adensetype >= 0 );
+    NiceAssert( bdensetype >= 0 );
+
+//errstream() << "phantomxyzabcabc " << densetype << ", " << adensetype << ", " << bdensetype << ", " << iupm << ", " << iaupm << ", " << ibupm << "\n";
+    if ( !densetype )
+    {
+        T resa;
+        T resb;
+
+        yyyKK2(resa,x,xa,xinfo,xainfo,xgradOrder,xagradOrder,xgradup,xagradup,iupm,iaupm,xff,xaff,bias,nullptr,i,ia,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,iset,iaset,assumreal,justcalcip,densetype,adensetype);
+        yyyKK2(resb,x,xb,xinfo,xbinfo,xgradOrder,xbgradOrder,xgradup,xbgradup,iupm,ibupm,xff,xbff,bias,nullptr,i,ib,xdim,xconsist,resmode,mlid,xy00,xy20,xy22,iset,ibset,assumreal,justcalcip,densetype,bdensetype);
+
+        res = resa*resb;
+//errstream() << "phantomxyzabcabc " << res << " = " << resa << " * " << resb << "\n";
+    }
+
+    else if ( ( densetype == 2 ) && !adensetype && !bdensetype && !resmode && !justcalcip && ( iupm == 1 ) && ( iaupm == 1 ) && ( ibupm == 1 ) )
+    {
+//errstream() << "phantomxyzabcabc " << densetype << ", " << adensetype << ", " << bdensetype << "\n";
+        if ( unadornedRBFKernel() && !xgradOrder && !xagradOrder && !xbgradOrder )
+        {
+            const SparseVector<gentype> &xA = x;
+            SparseVector<gentype> xB(xa); xB += xb; xB /= 2.0_gent;
+            SparseVector<gentype> xD(xa); xD -= xb; xD /= 2.0_gent;
+
+            double xaxbdiff = 0.0;
+
+            innerProductDiverted(xaxbdiff,xD,xD,xconsist,assumreal);
+
+            retVector<gentype> tmpva;
+            const Vector<gentype> &r = dRealConstants(0)(1,1,dRealConstants(0).size()-1,tmpva);
+
+            double r0 = (double) r(0);
+            double r1 = (double) r(1);
+
+            // For speed we skip the call stack and go straight to the kernel
+
+            double dres = AltDiffNormConst(xdim,2,r(0))*exp(-(xaxbdiff/(r0*r0))-(2*r1));
+
+            for ( int ii = 0 ; ii < xdim ; ++ii )
+            {
+                dres *= (1+erf((((double) xA(ii))-((double) xB(ii)))/r0))*NUMBASE_SQRTPI*r0/2;
+            }
+
+            res = dres;
+        }
+
+        if ( ( size() == 1 ) && ( cType() == 3 ) && xgradOrder && !xagradOrder && !xbgradOrder )
+        {
+            int j;
+
+            Vector<double> vecres(xdim);
+
+            const SparseVector<gentype> &xA = x;
+            SparseVector<gentype> xB(xa); xB += xb; xB /= 2.0_gent;
+            SparseVector<gentype> xD(xa); xD -= xb; xD /= 2.0_gent;
+
+            double xaxbdiff = 0.0;
+
+            innerProductDiverted(xaxbdiff,xD,xD,xconsist,assumreal);
+
+            retVector<gentype> tmpva;
+            const Vector<gentype> &r = dRealConstants(0)(1,1,dRealConstants(0).size()-1,tmpva);
+
+            double r0 = (double) r(0);
+            double r1 = (double) r(1);
+
+            double ddddres = AltDiffNormConst(xdim,2,r(0))*exp(-(xaxbdiff/(r0*r0))-(2*r1));
+
+            double xres = 0.0;
+
+            for ( j = 0 ; j < xdim ; j++ )
+            {
+                // For speed we skip the call stack and go straight to the kernel
+
+                double dres = ddddres;
+
+                for ( int ii = 0 ; ii < xdim ; ++ii )
+                {
+                    if ( j != ii )
+                    {
+                        dres *= (1+erf((((double) xA(ii))-((double) xB(ii)))/r0))*NUMBASE_SQRTPI*r0/2;
+                    }
+
+                    else
+                    {
+                        dres *= exp(-((((double) xA(ii))-((double) xB(ii)))/r0)*((((double) xA(ii))-((double) xB(ii)))/r0));
+                    }
+                }
+
+                xres += (dres*((double) xff(j))); // we just assume a directed derivative here!
+            }
+
+            res = xres;
+//errstream() << "phantomxyzabcabc K(" << xA << "," << xB << ") = " << res << "\n";
+        }
+
+        else
+        {
+            NiceThrow("Kernel product dense not supported for this kernel.");
+        }
+    }
+
+    else
+    {
+        NiceThrow("Kernel product dense not supported for this kernel b.");
+    }
+
+    return res;
+}
+
+template <class T>
+T &MercerKernel::yyyKK3(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc,
+                    const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo,
+                    int xagradOrder, int xbgradOrder, int xcgradOrder,
+                    int xagradup, int xbgradup, int xcgradup,
+                    int aupm, int bupm, int cupm,
+                    const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff, const SparseVector<gentype> &xcff,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib, int ic,
+                    int xdim, int xconsist, int xresmode, int mlid,
+                    const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int iaset, int ibset, int icset, int assumreal, int justcalcip) const
+{
+//    return xKKK3(res,xa,xb,xc,xainfo,xbinfo,xcinfo,bias,pxyprod,ia,ib,ic,xdim,xconsist,assumreal,xresmode,mlid,xy,0,iaset,ibset,icset);
+
+        NiceAssert( !isSymmSet() );
+
+        if ( ( aupm == 1 ) && ( bupm == 1 ) && ( cupm == 1 ) )
+        {
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+            int rxbgradOrder = ( 0 == xbgradup ) ? xbgradOrder : 0;
+            int rxcgradOrder = ( 0 == xcgradup ) ? xcgradOrder : 0;
+
+            xKKK3(res,xa,xb,xc,xainfo,xbinfo,xcinfo,rxagradOrder,rxbgradOrder,rxcgradOrder,xaff,xbff,xcff,bias,pxyprod,ia,ib,ic,xdim,xconsist,assumreal,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,justcalcip,iaset,ibset,icset);
+        }
+
+        else if ( ( aupm == 1 ) && ( bupm == 1 ) && ( cupm == 2 ) )
+        {
+            const SparseVector<gentype> &rxa = xa.nup(0);
+            const SparseVector<gentype> &rxb = xb.nup(0);
+            const SparseVector<gentype> &rxc = xc.nup(0);
+            const SparseVector<gentype> &rxd = xc.nup(1);
+
+            const vecInfo &rxainfo = xainfo(-1,0);
+            const vecInfo &rxbinfo = xbinfo(-1,0);
+            const vecInfo &rxcinfo = xcinfo(-1,0);
+            const vecInfo &rxdinfo = xcinfo(-1,1);
+
+            int ixa = ia;
+            int ixb = ib;
+            int ixc = ic;
+            int ixd = UPNTVI(ic,1);
+
+            int ixaset = iaset;
+            int ixbset = ibset;
+            int ixcset = icset;
+            int ixdset = icset;
+
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+            int rxbgradOrder = ( 0 == xbgradup ) ? xbgradOrder : 0;
+            int rxcgradOrder = ( 0 == xcgradup ) ? xcgradOrder : 0;
+            int rxdgradOrder = ( 1 == xcgradup ) ? xcgradOrder : 0;
+
+            const SparseVector<gentype> &rxaff = xaff.nup(0);
+            const SparseVector<gentype> &rxbff = xbff.nup(0);
+            const SparseVector<gentype> &rxcff = xcff.nup(0);
+            const SparseVector<gentype> &rxdff = xcff.nup( ( xcff.nupsize() <= 1 ) ? (xcff.nupsize()-1) : 1 );
+
+            {
+                xKKK4(res,rxa,rxb,rxc,rxd,rxainfo,rxbinfo,rxcinfo,rxdinfo,rxagradOrder,rxbgradOrder,rxcgradOrder,rxdgradOrder,rxaff,rxbff,rxcff,rxdff,bias,nullptr,ixa,ixb,ixc,ixd,xdim,xconsist,assumreal,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,ixaset,ixbset,ixcset,ixdset);
+            }
+        }
+
+        else if ( ( aupm == 1 ) && ( bupm == 2 ) && ( cupm == 1 ) )
+        {
+            const SparseVector<gentype> &rxa = xa.nup(0);
+            const SparseVector<gentype> &rxb = xb.nup(0);
+            const SparseVector<gentype> &rxc = xb.nup(1);
+            const SparseVector<gentype> &rxd = xc.nup(0);
+
+            const vecInfo &rxainfo = xainfo(-1,0);
+            const vecInfo &rxbinfo = xbinfo(-1,0);
+            const vecInfo &rxcinfo = xbinfo(-1,1);
+            const vecInfo &rxdinfo = xcinfo(-1,0);
+
+            int ixa = ia;
+            int ixb = ib;
+            int ixc = UPNTVI(ib,1);
+            int ixd = ic;
+
+            int ixaset = iaset;
+            int ixbset = ibset;
+            int ixcset = ibset;
+            int ixdset = icset;
+
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+            int rxbgradOrder = ( 0 == xbgradup ) ? xbgradOrder : 0;
+            int rxcgradOrder = ( 1 == xbgradup ) ? xbgradOrder : 0;
+            int rxdgradOrder = ( 0 == xcgradup ) ? xcgradOrder : 0;
+
+            const SparseVector<gentype> &rxaff = xaff.nup(0);
+            const SparseVector<gentype> &rxbff = xbff.nup(0);
+            const SparseVector<gentype> &rxcff = xbff.nup( ( xbff.nupsize() <= 1 ) ? (xbff.nupsize()-1) : 1 );
+            const SparseVector<gentype> &rxdff = xcff.nup(0);
+
+            {
+                xKKK4(res,rxa,rxb,rxc,rxd,rxainfo,rxbinfo,rxcinfo,rxdinfo,rxagradOrder,rxbgradOrder,rxcgradOrder,rxdgradOrder,rxaff,rxbff,rxcff,rxdff,bias,nullptr,ixa,ixb,ixc,ixd,xdim,xconsist,assumreal,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,ixaset,ixbset,ixcset,ixdset);
+            }
+        }
+
+        else if ( ( aupm == 2 ) && ( bupm == 1 ) && ( cupm == 1 ) )
+        {
+            const SparseVector<gentype> &rxa = xa.nup(0);
+            const SparseVector<gentype> &rxb = xa.nup(1);
+            const SparseVector<gentype> &rxc = xb.nup(0);
+            const SparseVector<gentype> &rxd = xc.nup(0);
+
+            const vecInfo &rxainfo = xainfo(-1,0);
+            const vecInfo &rxbinfo = xainfo(-1,1);
+            const vecInfo &rxcinfo = xbinfo(-1,0);
+            const vecInfo &rxdinfo = xcinfo(-1,0);
+
+            int ixa = ia;
+            int ixb = UPNTVI(ia,1);
+            int ixc = ib;
+            int ixd = ic;
+
+            int ixaset = iaset;
+            int ixbset = iaset;
+            int ixcset = ibset;
+            int ixdset = icset;
+
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+            int rxbgradOrder = ( 1 == xagradup ) ? xagradOrder : 0;
+            int rxcgradOrder = ( 0 == xbgradup ) ? xbgradOrder : 0;
+            int rxdgradOrder = ( 0 == xcgradup ) ? xcgradOrder : 0;
+
+            const SparseVector<gentype> &rxaff = xaff.nup(0);
+            const SparseVector<gentype> &rxbff = xaff.nup( ( xaff.nupsize() <= 1 ) ? (xaff.nupsize()-1) : 1 );
+            const SparseVector<gentype> &rxcff = xbff.nup(0);
+            const SparseVector<gentype> &rxdff = xcff.nup(0);
+
+            {
+                xKKK4(res,rxa,rxb,rxc,rxd,rxainfo,rxbinfo,rxcinfo,rxdinfo,rxagradOrder,rxbgradOrder,rxcgradOrder,rxdgradOrder,rxaff,rxbff,rxcff,rxdff,bias,nullptr,ixa,ixb,ixc,ixd,xdim,xconsist,assumreal,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,ixaset,ixbset,ixcset,ixdset);
+            }
+        }
+
+        else
+        {
+            int ii;
+
+            Vector<int> iv(aupm+bupm+cupm);
+            Vector<const SparseVector<gentype> *> xv(aupm+bupm+cupm);
+            Vector<const vecInfo *> xvinfo(aupm+bupm+cupm);
+            Vector<int> ivset(aupm+bupm+cupm);
+            Vector<int> rvgradOrder(aupm+bupm+cupm);
+            Vector<const SparseVector<gentype> *> xvff(aupm+bupm+cupm);
+
+            if ( aupm )
+            {
+                for ( ii = 0 ; ii < aupm ; ++ii )
+                {
+                    iv("&",ii) = ii ? UPNTVI(ia,ii) : ia;
+                    xv("&",ii) = &(xa.nup(ii));
+                    xvinfo("&",ii) = &(xainfo(-1,ii));
+                    ivset("&",ii) = iaset;
+                    rvgradOrder("&",ii) = ( ii == xagradup ) ? xagradOrder : 0;
+                    xvff("&",ii) = &(xaff.nup( ( xaff.nupsize() <= ii ) ? (xaff.nupsize()-1) : ii ));
+                }
+            }
+
+            if ( bupm )
+            {
+                for ( ii = 0 ; ii < bupm ; ++ii )
+                {
+                    iv("&",ii+aupm) = ii ? UPNTVI(ib,ii) : ib;
+                    xv("&",ii+aupm) = &(xb.nup(ii));
+                    xvinfo("&",ii+aupm) = &(xbinfo(-1,ii));
+                    ivset("&",ii+aupm) = ibset;
+                    rvgradOrder("&",ii+aupm) = ( ii == xbgradup ) ? xbgradOrder : 0;
+                    xvff("&",ii+aupm) = &(xbff.nup( ( xbff.nupsize() <= ii ) ? (xbff.nupsize()-1) : ii ));
+                }
+            }
+
+            if ( cupm )
+            {
+                for ( ii = 0 ; ii < cupm ; ++ii )
+                {
+                    iv("&",ii+aupm+bupm) = ii ? UPNTVI(ic,ii) : ic;
+                    xv("&",ii+aupm+bupm) = &(xc.nup(ii));
+                    xvinfo("&",ii+aupm+bupm) = &(xcinfo(-1,ii));
+                    ivset("&",ii+aupm+bupm) = icset;
+                    rvgradOrder("&",ii+aupm+bupm) = ( ii == xcgradup ) ? xcgradOrder : 0;
+                    xvff("&",ii+aupm+cupm) = &(xcff.nup( ( xcff.nupsize() <= ii ) ? (xcff.nupsize()-1) : ii ));
+                }
+            }
+
+            else
+            {
+                xKKKm(aupm+bupm+cupm,res,xv,xvinfo,rvgradOrder,xvff,bias,iv,nullptr,xdim,xconsist,assumreal,xresmode,mlid,nullptr,justcalcip,&ivset);
+            }
+        }
+
+    return res;
+}
+
+template <class T>
+T &MercerKernel::yyyKK4(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd,
+                    const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo,
+                    int xagradOrder, int xbgradOrder, int xcgradOrder, int xdgradOrder,
+                    int xagradup, int xbgradup, int xcgradup, int xdgradup,
+                    int aupm, int bupm, int cupm, int dupm,
+                    const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff, const SparseVector<gentype> &xcff, const SparseVector<gentype> &xdff,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib, int ic, int id,
+                    int xdim, int xconsist, int xresmode, int mlid,
+                    const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, const double *xy30, const double *xy31, const double *xy32, const double *xy33, int iaset, int ibset, int icset, int idset, int assumreal, int justcalcip) const
+{
+//    return xKKK4(res,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,assumreal,xresmode,mlid,0,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,iaset,ibset,icset,idset);
+
+    NiceAssert( !isSymmSet() );
+
+        if ( ( aupm == 1 ) && ( bupm == 1 ) && ( cupm == 1 ) && ( dupm == 1 ) )
+        {
+            int rxagradOrder = ( 0 == xagradup ) ? xagradOrder : 0;
+            int rxbgradOrder = ( 0 == xbgradup ) ? xbgradOrder : 0;
+            int rxcgradOrder = ( 0 == xcgradup ) ? xcgradOrder : 0;
+            int rxdgradOrder = ( 0 == xdgradup ) ? xdgradOrder : 0;
+
+            xKKK4(res,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,rxagradOrder,rxbgradOrder,rxcgradOrder,rxdgradOrder,xaff,xbff,xcff,xdff,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,assumreal,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,justcalcip,iaset,ibset,icset,idset);
+        }
+
+        else
+        {
+            int ii;
+
+            Vector<int> iv(aupm+bupm+cupm+dupm);
+            Vector<const SparseVector<gentype> *> xv(aupm+bupm+cupm+dupm);
+            Vector<const vecInfo *> xvinfo(aupm+bupm+cupm+dupm);
+            Vector<int> ivset(aupm+bupm+cupm+dupm);
+            Vector<int> rvgradOrder(aupm+bupm+cupm+dupm);
+            Vector<const SparseVector<gentype> *> xvff(aupm+bupm+cupm+dupm);
+
+            if ( aupm )
+            {
+                for ( ii = 0 ; ii < aupm ; ++ii )
+                {
+                    iv("&",ii) = ii ? UPNTVI(ia,ii) : ia;
+                    xv("&",ii) = &(xa.nup(ii));
+                    xvinfo("&",ii) = &(xainfo(-1,ii));
+                    ivset("&",ii) = iaset;
+                    rvgradOrder("&",ii) = ( ii == xagradup ) ? xagradOrder : 0;
+                    xvff("&",ii) = &(xaff.nup( ( xaff.nupsize() <= ii ) ? (xaff.nupsize()-1) : ii ));
+                }
+            }
+
+            if ( bupm )
+            {
+                for ( ii = 0 ; ii < bupm ; ++ii )
+                {
+                    iv("&",ii+aupm) = ii ? UPNTVI(ib,ii) : ib;
+                    xv("&",ii+aupm) = &(xb.nup(ii));
+                    xvinfo("&",ii+aupm) = &(xbinfo(-1,ii));
+                    ivset("&",ii+aupm) = ibset;
+                    rvgradOrder("&",ii+aupm) = ( ii == xbgradup ) ? xbgradOrder : 0;
+                    xvff("&",ii+aupm) = &(xbff.nup( ( xbff.nupsize() <= ii ) ? (xbff.nupsize()-1) : ii ));
+                }
+            }
+
+            if ( cupm )
+            {
+                for ( ii = 0 ; ii < cupm ; ++ii )
+                {
+                    iv("&",ii+aupm+bupm) = ii ? UPNTVI(ic,ii) : ic;
+                    xv("&",ii+aupm+bupm) = &(xc.nup(ii));
+                    xvinfo("&",ii+aupm+bupm) = &(xcinfo(-1,ii));
+                    ivset("&",ii+aupm+bupm) = icset;
+                    rvgradOrder("&",ii+aupm+bupm) = ( ii == xcgradup ) ? xcgradOrder : 0;
+                    xvff("&",ii+aupm+bupm) = &(xcff.nup( ( xcff.nupsize() <= ii ) ? (xcff.nupsize()-1) : ii ));
+                }
+            }
+
+            if ( dupm )
+            {
+                for ( ii = 0 ; ii < dupm ; ++ii )
+                {
+                    iv("&",ii+aupm+bupm+cupm) = ii ? UPNTVI(id,ii) : id;
+                    xv("&",ii+aupm+bupm+cupm) = &(xd.nup(ii));
+                    xvinfo("&",ii+aupm+bupm+cupm) = &(xdinfo(-1,ii));
+                    ivset("&",ii+aupm+bupm+cupm) = idset;
+                    rvgradOrder("&",ii+aupm+bupm+cupm) = ( ii == xdgradup ) ? xdgradOrder : 0;
+                    xvff("&",ii+aupm+bupm+cupm) = &(xdff.nup( ( xdff.nupsize() <= ii ) ? (xdff.nupsize()-1) : ii ));
+                }
+            }
+
+            else
+            {
+                xKKKm(aupm+bupm+cupm+dupm,res,xv,xvinfo,rvgradOrder,xvff,bias,iv,nullptr,xdim,xconsist,assumreal,xresmode,mlid,nullptr,justcalcip,&ivset);
+            }
+        }
+
+    return res;
+}
+
+
+template <class T>
+T &MercerKernel::yyyKKm(int m, T &res,
+                    Vector<const SparseVector<gentype> *> &x,
+                    Vector<const vecInfo *> &xinfo,
+                    const Vector<int> &xgradOrder,
+                    const Vector<int> &xgradup,
+                    const Vector<int> &xupm,
+                    Vector<const SparseVector<gentype> *> &xff,
+                    const T &bias,
+                    Vector<int> &i,
+                    const gentype **pxyprod, int xdim, int xconsist, int resmode, int mlid,
+                    const Matrix<double> *xy, const Vector<int> *iset, int assumreal, int justcalcip) const
+{
+//    return xKKKm(m,res,x,xinfo,bias,i,pxyprod,xdim,xconsist,assumreal,resmode,mlid,xy,0,iset);
+    NiceAssert( !isSymmSet() );
+
+    int needpreproc = 0;
+    int ii;
+
+    Vector<int> altiset;
+
+    if ( !iset )
+    {
+        altiset.resize(m);
+        altiset = 0;
+
+        iset = &altiset;
+    }
+
+    if ( m )
+    {
+        for ( ii = 0 ; ii < m ; ++ii )
+        {
+            if ( xupm(ii) > 1 )
+            {
+                needpreproc = 1;
+
+                break;
+            }
+        }
+    }
+
+    if ( !needpreproc )
+    {
+        xKKKm(m,res,x,xinfo,xgradOrder,xff,bias,i,pxyprod,xdim,xconsist,assumreal,resmode,mlid,xy,justcalcip,iset);
+    }
+
+    else
+    {
+        Vector<int> iv(i);
+        Vector<const SparseVector<gentype> *> xv(x);
+        Vector<const vecInfo *> xvinfo(xinfo);
+        Vector<int> ivset(*iset);
+        Vector<int> rvgradOrder(xgradOrder);
+        Vector<const SparseVector<gentype> *> xvff(xff);
+
+        // Fill in any missing data vectors
+
+        int ii,jj,u;
+
+        for ( ii = 0 ; ii < m ; ++ii )
+        {
+            if ( ( u = xupm(ii) ) > 1 )
+            {
+                for ( jj = 0 ; jj < u ; ++jj )
+                {
+                    if ( jj )
+                    {
+                        ++m;
+
+                        iv.add(ii+jj);
+                        xv.add(ii+jj);
+                        xvinfo.add(ii+jj);
+                        ivset.add(ii+jj);
+                        rvgradOrder.add(ii+jj);
+                        xvff.add(ii+jj);
+                    }
+
+                    iv("&",ii+jj) = jj ? UPNTVI(ii,jj) : ii;
+                    xv("&",ii+jj) =  &((*(x(ii))).nup(jj));
+                    xvinfo("&",ii+jj) = &((*(xinfo(ii)))(-1,jj));
+                    ivset("&",ii+jj) = (*iset)(jj);
+                    rvgradOrder("&",ii+jj) = ( jj == xgradup(ii) ) ? xgradOrder(ii) : 0;
+                    xvff("&",ii+jj) = &((*(xvff(ii))).nup( ( (*(xvff(ii))).nupsize() <= jj ) ? ((*(xvff(ii))).nupsize()-1) : jj ));
+                }
+            }
+        }
+
+        //else
+        {
+            xKKKm(x.size(),res,xv,xvinfo,rvgradOrder,xvff,bias,iv,nullptr,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,&ivset);
+        }
+    }
+
+    return res;
+}
+
+
+template <class T>
+int MercerKernel::yyyPphim(int m, Vector<T>  &res,
+                           const SparseVector<gentype> &xa,
+                           const vecInfo &xainfo,
+                           int ia,
+                           int allowfinite, int xdim, int xconsist, int assumreal,
+                           int iaset,
+                           int gradOrder,
+                           int xagradup,
+                           int iupm) const
+{
+    int dres = 0;
+    int ns = numMulSplits();
+    int q,r = 0;
+
+    Vector<int> splitPoint(numMulSplits());
+    Vector<int> splitType(numMulSplits());
+
+    if ( numMulSplits() )
+    {
+        for ( q = 0 ; q < size() ; ++q )
+        {
+            if ( isMulSplit(q) )
+            {
+                NiceAssert( isMulSplit(q) != 2 ); // Not sure how to deal with this yet!
+
+                splitPoint("&",r) = q;
+                splitType("&",r) = isMulSplit(q);
+                ++r;
+            }
+        }
+    }
+
+    for ( q = 0 ; q <= ns ; ++q )
+    {
+        int indstart = q ? (splitPoint(q-1)+1) : 0;
+        int indend   = ( q < ns ) ? splitPoint(q) : size()-1;
+
+        int tdres = 0;
+
+        Vector<T> tempres;
+        Vector<T> &resa = ( ( ns == 0 ) ? res : tempres );
+
+        if ( iupm == 1 )
+        {
+            tdres = Pphim(m,resa,xa,xainfo,ia,allowfinite,xdim,xconsist,assumreal,iaset,gradOrder,xagradup,indstart,indend);
+        }
+
+        else if ( iupm == 2 )
+        {
+            const SparseVector<gentype> &rxa = xa.nup(0);
+            const SparseVector<gentype> &rxb = xa.nup(1);
+
+            int ixa = ia;
+            int ixb = UPNTVI(ia,1);
+
+            const vecInfo &rxainfo = xainfo(-1,0);
+            const vecInfo &rxbinfo = xainfo(-1,1);
+
+            Vector<T> resb;
+
+            int ixaset = iaset;
+            int ixbset = iaset;
+
+            tdres = Pphim(2*m,resa,rxa,rxainfo,ixa,allowfinite,xdim,xconsist,assumreal,ixaset,gradOrder,xagradup,indstart,indend);
+
+            if ( m >= 0 )
+            {
+                tdres = Pphim(2*m,resb,rxb,rxbinfo,ixb,allowfinite,xdim,xconsist,assumreal,ixbset,gradOrder,xagradup,indstart,indend);
+
+                resa *= resb; // elementwise product (same for rest)
+            }
+        }
+
+        else if ( iupm == 3 )
+        {
+            const SparseVector<gentype> &rxa = xa.nup(0);
+            const SparseVector<gentype> &rxb = xa.nup(1);
+            const SparseVector<gentype> &rxc = xa.nup(2);
+
+            int ixa = ia;
+            int ixb = UPNTVI(ia,1);
+            int ixc = UPNTVI(ia,2);
+
+            const vecInfo &rxainfo = xainfo(-1,0);
+            const vecInfo &rxbinfo = xainfo(-1,1);
+            const vecInfo &rxcinfo = xainfo(-1,2);
+
+            Vector<T> resb;
+            Vector<T> resc;
+
+            int ixaset = iaset;
+            int ixbset = iaset;
+            int ixcset = iaset;
+
+            tdres = Pphim(3*m,resa,rxa,rxainfo,ixa,allowfinite,xdim,xconsist,assumreal,ixaset,gradOrder,xagradup,indstart,indend);
+
+            if ( m >= 0 )
+            {
+                tdres = Pphim(3*m,resb,rxb,rxbinfo,ixb,allowfinite,xdim,xconsist,assumreal,ixbset,gradOrder,xagradup,indstart,indend);
+                tdres = Pphim(3*m,resc,rxc,rxcinfo,ixc,allowfinite,xdim,xconsist,assumreal,ixcset,gradOrder,xagradup,indstart,indend);
+
+                resa *= resb;
+                resa *= resc;
+            }
+        }
+
+        else if ( iupm == 4 )
+        {
+            const SparseVector<gentype> &rxa = xa.nup(0);
+            const SparseVector<gentype> &rxb = xa.nup(1);
+            const SparseVector<gentype> &rxc = xa.nup(2);
+            const SparseVector<gentype> &rxd = xa.nup(3);
+
+            int ixa = ia;
+            int ixb = UPNTVI(ia,1);
+            int ixc = UPNTVI(ia,2);
+            int ixd = UPNTVI(ia,3);
+
+            const vecInfo &rxainfo = xainfo(-1,0);
+            const vecInfo &rxbinfo = xainfo(-1,1);
+            const vecInfo &rxcinfo = xainfo(-1,2);
+            const vecInfo &rxdinfo = xainfo(-1,3);
+
+            Vector<T> resb;
+            Vector<T> resc;
+            Vector<T> resd;
+
+            int ixaset = iaset;
+            int ixbset = iaset;
+            int ixcset = iaset;
+            int ixdset = iaset;
+
+            tdres = Pphim(4*m,resa,rxa,rxainfo,ixa,allowfinite,xdim,xconsist,assumreal,ixaset,gradOrder,xagradup,indstart,indend);
+
+            if ( m >= 0 )
+            {
+                tdres = Pphim(4*m,resb,rxb,rxbinfo,ixb,allowfinite,xdim,xconsist,assumreal,ixbset,gradOrder,xagradup,indstart,indend);
+                tdres = Pphim(4*m,resc,rxc,rxcinfo,ixc,allowfinite,xdim,xconsist,assumreal,ixcset,gradOrder,xagradup,indstart,indend);
+                tdres = Pphim(4*m,resd,rxd,rxdinfo,ixd,allowfinite,xdim,xconsist,assumreal,ixdset,gradOrder,xagradup,indstart,indend);
+
+                resa *= resb;
+                resa *= resc;
+                resa *= resd;
+            }
+        }
+
+        else
+        {
+            int ii;
+
+            Vector<int> iv(iupm);
+            Vector<const SparseVector<gentype> *> xxv(iupm);
+
+            dres = 0;
+
+            if ( iupm )
+            {
+                for ( ii = 0 ; ii < iupm ; ++ii )
+                {
+                    int ixa = ii ? UPNTVI(ia,ii) : ia;
+                    const SparseVector<gentype> &rxa = xa.nup(ii);
+                    const vecInfo &rxainfo = xainfo(-1,ii);
+                    int ixaset = iaset;
+
+                    Vector<T> tmpa;
+
+                    tdres = Pphim(iupm*m,tmpa,rxa,rxainfo,ixa,allowfinite,xdim,xconsist,assumreal,ixaset,gradOrder,xagradup,indstart,indend);
+
+                    if ( m >= 0 )
+                    {
+                        if ( !ii )
+                        {
+                            resa = tmpa;
+                        }
+
+                        else
+                        {
+                            resa *= tmpa;
+                        }
+                    }
+
+                    if ( m == -1 )
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        if ( ns )
+        {
+            if ( !q )
+            {
+                if ( m >= 0 )
+                {
+                    res = tempres;
+                }
+
+                dres = tdres;
+            }
+
+            else
+            {
+                if ( m >= 0 )
+                {
+                    kronprod(res,res,tempres); // Kronecker product!
+                }
+
+                if ( ( dres == -1 ) || ( tdres == -1 ) )
+                {
+                    dres = -1;
+                }
+
+                else
+                {
+                    dres *= tdres;
+                }
+            }
+        }
+
+        else
+        {
+            dres = tdres;
+        }
+    }
+
+    if ( isfullnorm && ( m >= 0 ) )
+    {
+        double resnorm = res.absp(m);
+
+        if ( resnorm == 0.0 )
+        {
+            res = (T) std::pow((double) res.size(),-1.0/m);
+        }
+
+        else
+        {
+            res.scale(1.0/resnorm);
+        }
+    }
+
+    return dres;
+}
+
+
+
+
+
+
+// When normalising kernels we need to take care that the result isn't 0/0 = nan.
+// Hack: waves wand... 0/0 = 1.  Take that, maths.
+// As an aside, this means we need to do normalisation as a *single* division, not
+// multiple divisions - so K(x,y)/sqrt((K(x,x).K(y,y)) rather than 
+// (K(x,y)/sqrt(K(x,x)))/sqrt(K(y,y)), because, by the above magic, in the worst 
+// case scenario:
+//
+// K(x,y)/sqrt((K(x,x).K(y,y)) = 0/sqrt(0*0) = 0/0 = 1
+// (K(x,y)/sqrt(K(x,x)))/sqrt(K(y,y)) = (0/sqrt(0))/sqrt(0) = (0/0)/0 = 1/0 = inf
+//
+// The former makes sense (up to sign) as a limit, the latter is just plain wrong.
+
+template <class T>
+T &safedivby(T &a, const T &b);
+template <class T>
+T &safedivby(T &a, const T &b)
+{
+    a /= b;
+
+    if ( testisvnan(a) )
+    {
+        setident(a);
+    }
+
+    return a;
+}
+
+
+
+
+
+
+
+
+
+// FIXME: Design decision: it actually isn't particularly hard to calculate the gradients
+// for the mulSplit case, at least in principle.  We can just apply the product
+// rule and go from there.  However in terms of code it is a royal pita, so until
+// I find time or actually *need* it I'm leaving this incomplete!
+
+template <class T> T &MercerKernel::xKKK0(T &res,
+                                          const T &bias, const gentype **pxyprod,
+                                          int xdim, int xconsist, int assumreal, int xresmode, int mlid,
+                                          int justcalcip) const
+{
+    if ( numMulSplits() )
+    {
+        int q,r = 0;
+
+        Vector<int> splitPoint(numMulSplits());
+        Vector<int> splitType(numMulSplits());
+
+        if ( numMulSplits() )
+        {
+            for ( q = 0 ; q < size() ; ++q )
+            {
+                if ( isMulSplit(q) )
+                {
+                    splitPoint("&",r) = q;
+                    splitType("&",r) = isMulSplit(q);
+                    ++r;
+                }
+            }
+        }
+
+        for ( q = 0 ; q <= numMulSplits() ; ++q )
+        {
+            int indstart = q ? splitPoint(q-1)+1 : 0;
+            int indend   = ( q < numMulSplits() ) ? splitPoint(q) : size()-1;
+
+            if ( !q )
+            {
+                xKK0(res,bias,pxyprod,xdim,xconsist,assumreal,xresmode,mlid,justcalcip,indstart,indend,calcnumSplits(indstart,indend));
+            }
+
+            else
+            {
+                T tempres;
+
+                xKK0(tempres,bias,pxyprod,xdim,xconsist,assumreal,xresmode,mlid,justcalcip,indstart,indend,calcnumSplits(indstart,indend));
+
+                if ( splitType(q-1) == 1 )
+                {
+                    res *= tempres;
+                }
+
+                else
+                {
+                    res += tempres;
+                }
+            }
+        }
+    }
+
+    else
+    {
+        xKK0(res,bias,pxyprod,xdim,xconsist,assumreal,xresmode,mlid,justcalcip,0,size()-1,numSplits());
+    }
+
+    return res;
+}
+
+template <class T> T &MercerKernel::xKKK1(T &res,
+                                          const SparseVector<gentype> &xa,
+                                          const vecInfo &xainfo,
+                                          int xagradOrder,
+                                          const SparseVector<gentype> &xaff,
+                                          const T &bias, const gentype **pxyprod,
+                                          int ia,
+                                          int xdim, int xconsist, int assumreal, int resmode, int mlid,
+                                          const double *xy,
+                                          int justcalcip, int iaset) const
+{
+    if ( numMulSplits() )
+    {
+        NiceAssert( !xagradOrder );
+
+        int q,r = 0;
+
+        Vector<int> splitPoint(numMulSplits());
+        Vector<int> splitType(numMulSplits());
+
+        if ( numMulSplits() )
+        {
+            for ( q = 0 ; q < size() ; ++q )
+            {
+                if ( isMulSplit(q) )
+                {
+                    splitPoint("&",r) = q;
+                    splitType("&",r) = isMulSplit(q);
+                    ++r;
+                }
+            }
+        }
+
+        for ( q = 0 ; q <= numMulSplits() ; ++q )
+        {
+            int indstart = q ? splitPoint(q-1)+1 : 0;
+            int indend   = ( q < numMulSplits() ) ? splitPoint(q) : size()-1;
+
+            if ( !q )
+            {
+                xKK1(res,xa,xainfo,xagradOrder,xaff,bias,pxyprod,ia,xdim,xconsist,assumreal,resmode,mlid,xy,justcalcip,iaset,indstart,indend,calcnumSplits(indstart,indend));
+            }
+
+            else
+            {
+                T tempres;
+
+                xKK1(tempres,xa,xainfo,xagradOrder,xaff,bias,pxyprod,ia,xdim,xconsist,assumreal,resmode,mlid,xy,justcalcip,iaset,indstart,indend,calcnumSplits(indstart,indend));
+
+                if ( splitType(q-1) == 1 )
+                {
+                    res *= tempres;
+                }
+
+                else
+                {
+                    res += tempres;
+                }
+            }
+        }
+    }
+
+    else
+    {
+        xKK1(res,xa,xainfo,xagradOrder,xaff,bias,pxyprod,ia,xdim,xconsist,assumreal,resmode,mlid,xy,justcalcip,iaset,0,size()-1,numSplits());
+    }
+
+    return res;
+}
+
+template <class T> T &MercerKernel::xKKK2(T &res,
+                                          const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                                          const vecInfo &xainfo, const vecInfo &xbinfo,
+                                          int xagradOrder, int xbgradOrder,
+                                          const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff,
+                                          const T &bias, const gentype **pxyprod,
+                                          int ia, int ib,
+                                          int xdim, int xconsist, int assumreal, int resmode, int mlid,
+                                          const double *xy00, const double *xy10, const double *xy11,
+                                          int justcalcip, int iset, int jset,
+                                          int adensetype, int bdensetype) const
+{
+    NiceAssert( adensetype >= 0 );
+    NiceAssert( bdensetype >= 0 );
+
+    if ( numMulSplits() )
+    {
+        NiceAssert( !xagradOrder && !xbgradOrder );
+
+        int q,r = 0;
+
+        Vector<int> splitPoint(numMulSplits());
+        Vector<int> splitType(numMulSplits());
+
+        if ( numMulSplits() )
+        {
+            for ( q = 0 ; q < size() ; ++q )
+            {
+                if ( isMulSplit(q) )
+                {
+                    splitPoint("&",r) = q;
+                    splitType("&",r) = isMulSplit(q);
+                    ++r;
+                }
+            }
+        }
+
+        for ( q = 0 ; q <= numMulSplits() ; ++q )
+        {
+            int indstart = q ? splitPoint(q-1)+1 : 0;
+            int indend   = ( q < numMulSplits() ) ? splitPoint(q) : size()-1;
+
+            if ( !q )
+            {
+                xKK2(res,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,justcalcip,iset,jset,indstart,indend,calcnumSplits(indstart,indend),adensetype,bdensetype);
+            }
+
+            else
+            {
+                T tempres;
+
+                xKK2(tempres,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,justcalcip,iset,jset,indstart,indend,calcnumSplits(indstart,indend),adensetype,bdensetype);
+
+                if ( splitType(q-1) == 1 )
+                {
+                    res *= tempres;
+                }
+
+                else
+                {
+                    res += tempres;
+                }
+            }
+        }
+    }
+
+    else
+    {
+        xKK2(res,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,justcalcip,iset,jset,0,size()-1,numSplits(),adensetype,bdensetype);
+    }
+
+    return res;
+}
+
+
+
+template <class T> T &MercerKernel::xKKK3(T &res,
+                                          const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc,
+                                          const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo,
+                                          int xagradOrder, int xbgradOrder, int xcgradOrder,
+                                          const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff, const SparseVector<gentype> &xcff,
+                                          const T &bias, const gentype **pxyprod,
+                                          int ia, int ib, int ic,
+                                          int xdim, int xconsist, int assumreal, int xresmode, int mlid,
+                                          const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22,
+                                          int justcalcip, int iaset, int ibset, int icset) const
+{
+    if ( numMulSplits() )
+    {
+        NiceAssert( !xagradOrder && !xbgradOrder && !xcgradOrder );
+
+        int q,r = 0;
+
+        Vector<int> splitPoint(numMulSplits());
+        Vector<int> splitType(numMulSplits());
+
+        if ( numMulSplits() )
+        {
+            for ( q = 0 ; q < size() ; ++q )
+            {
+                if ( isMulSplit(q) )
+                {
+                    splitPoint("&",r) = q;
+                    splitType("&",r) = isMulSplit(q);
+                    ++r;
+                }
+            }
+        }
+
+        for ( q = 0 ; q <= numMulSplits() ; ++q )
+        {
+            int indstart = q ? splitPoint(q-1)+1 : 0;
+            int indend   = ( q < numMulSplits() ) ? splitPoint(q) : size()-1;
+
+            if ( !q )
+            {
+                xKK3(res,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,pxyprod,ia,ib,ic,xdim,xconsist,assumreal,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,justcalcip,iaset,ibset,icset,indstart,indend,calcnumSplits(indstart,indend));
+            }
+
+            else
+            {
+                T tempres;
+
+                xKK3(tempres,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,pxyprod,ia,ib,ic,xdim,xconsist,assumreal,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,justcalcip,iaset,ibset,icset,indstart,indend,calcnumSplits(indstart,indend));
+
+                if ( splitType(q-1) == 1 )
+                {
+                    res *= tempres;
+                }
+
+                else
+                {
+                    res += tempres;
+                }
+            }
+        }
+    }
+
+    else
+    {
+        xKK3(res,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,pxyprod,ia,ib,ic,xdim,xconsist,assumreal,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,justcalcip,iaset,ibset,icset,0,size()-1,numSplits());
+    }
+
+    return res;
+}
+
+template <class T> T &MercerKernel::xKKK4(T &res,
+                                          const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd,
+                                          const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo,
+                                          int xagradOrder, int xbgradOrder, int xcgradOrder, int xdgradOrder,
+                                          const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff, const SparseVector<gentype> &xcff, const SparseVector<gentype> &xdff,
+                                          const T &bias, const gentype **pxyprod,
+                                          int ia, int ib, int ic, int id,
+                                          int xdim, int xconsist, int assumreal, int xresmode, int mlid,
+                                          const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, const double *xy30, const double *xy31, const double *xy32, const double *xy33,
+                                          int justcalcip, int iaset, int ibset, int icset, int idset) const
+{
+    if ( numMulSplits() )
+    {
+        NiceAssert( !xagradOrder && !xbgradOrder && !xcgradOrder && !xdgradOrder );
+
+        int q,r = 0;
+
+        Vector<int> splitPoint(numMulSplits()+1);
+        Vector<int> splitType(numMulSplits()+1);
+
+        if ( numMulSplits() )
+        {
+            for ( q = 0 ; q < size() ; ++q )
+            {
+                if ( isMulSplit(q) )
+                {
+                    splitPoint("&",r) = q;
+                    splitType("&",r) = isMulSplit(q);
+                    ++r;
+                }
+            }
+        }
+
+        for ( q = 0 ; q <= numMulSplits() ; ++q )
+        {
+            int indstart = q ? splitPoint(q-1)+1 : 0;
+            int indend   = ( q < numMulSplits() ) ? splitPoint(q) : size()-1;
+
+            if ( !q )
+            {
+                xKK4(res,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,assumreal,xresmode,mlid,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,iaset,ibset,icset,idset,indstart,indend,calcnumSplits(indstart,indend));
+            }
+
+            else
+            {
+                T tempres;
+
+                xKK4(tempres,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,assumreal,xresmode,mlid,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,iaset,ibset,icset,idset,indstart,indend,calcnumSplits(indstart,indend));
+
+                if ( splitType(q-1) == 1 )
+                {
+                    res *= tempres;
+                }
+
+                else
+                {
+                    res += tempres;
+                }
+            }
+        }
+    }
+
+    else
+    {
+        xKK4(res,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,assumreal,xresmode,mlid,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,iaset,ibset,icset,idset,0,size()-1,numSplits());
+    }
+
+    return res;
+}
+
+template <class T> T &MercerKernel::xKKKm(int m, T &res,
+                                          Vector<const SparseVector<gentype> *> &x,
+                                          Vector<const vecInfo *> &xinfo,
+                                          const Vector<int> &xgradOrder,
+                                          Vector<const SparseVector<gentype> *> &xff,
+                                          const T &bias,
+                                          Vector<int> &i,
+                                          const gentype **pxyprod,
+                                          int xdim, int xconsist, int assumreal, int resmode, int mlid,
+                                          const Matrix<double> *xy,
+                                          int justcalcip, const Vector<int> *iset) const
+{
+    if ( numMulSplits() )
+    {
+        NiceAssert( xgradOrder == 0 );
+
+        int q,r = 0;
+
+        Vector<int> splitPoint(numMulSplits());
+        Vector<int> splitType(numMulSplits());
+
+        if ( numMulSplits() )
+        {
+            for ( q = 0 ; q < size() ; ++q )
+            {
+                if ( isMulSplit(q) )
+                {
+                    splitPoint("&",r) = q;
+                    splitType("&",r) = isMulSplit(q);
+                    ++r;
+                }
+            }
+        }
+
+        for ( q = 0 ; q <= numMulSplits() ; ++q )
+        {
+            int indstart = q ? splitPoint(q-1)+1 : 0;
+            int indend   = ( q < numMulSplits() ) ? splitPoint(q) : size()-1;
+
+            if ( !q )
+            {
+                xKKm(m,res,x,xinfo,xgradOrder,xff,bias,i,pxyprod,xdim,xconsist,assumreal,resmode,mlid,xy,justcalcip,iset,indstart,indend,calcnumSplits(indstart,indend));
+            }
+
+            else
+            {
+                T tempres;
+
+                xKKm(m,tempres,x,xinfo,xgradOrder,xff,bias,i,pxyprod,xdim,xconsist,assumreal,resmode,mlid,xy,justcalcip,iset,indstart,indend,calcnumSplits(indstart,indend));
+
+                if ( splitType(q-1) == 1 )
+                {
+                    res *= tempres;
+                }
+
+                else
+                {
+                    res += tempres;
+                }
+            }
+        }
+    }
+
+    else
+    {
+        xKKm(m,res,x,xinfo,xgradOrder,xff,bias,i,pxyprod,xdim,xconsist,assumreal,resmode,mlid,xy,justcalcip,iset,0,size()-1,numSplits());
+    }
+
+    return res;
+}
+
+
+
+
+
+
+
+
+
+//phantomx
+template <class T>
+T &MercerKernel::xKK0(T &res,
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid, int justcalcip, int indstart, int indend, int ns) const
+{
+    T logres; logres = 0.0;
+    int logresvalid = 0;
+    //int ns = numSplits();
+
+    if ( isfullnorm && !ns && !justcalcip )
+    {
+        res = 1.0;
+    }
+
+    else if ( isfullnorm && ns && !justcalcip )
+    {
+        res = 1.0; // Design decision: empty product evaluates to 1
+    }
+
+    else if ( !isfullnorm && ns && !justcalcip )
+    {
+        res = 1.0; // Design decision: empty product evaluates to 1
+    }
+
+    else
+    {
+        KK0(res,logres,logresvalid,bias,pxyprod,xdim,xconsist,assumreal,resmode,mlid,justcalcip,indstart,indend);
+    }
+
+    return res;
+}
+
+//phantomx
+template <class T>
+T &MercerKernel::xKK1(T &res,
+                     const SparseVector<gentype> &xa,
+                     const vecInfo &xainfo,
+                     int xagradOrder,
+                     const SparseVector<gentype> &xaff,
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int ia,
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid,
+                     const double *xy, int justcalcip, int iset, int indstart, int indend, int ns) const
+{
+    T logres; logres = 0.0;
+    int logresvalid = 0;
+    //int ns = numSplits();
+
+    if ( isfullnorm && !ns && !justcalcip )
+    {
+        res = xagradOrder ? 0.0 : 1.0;
+    }
+
+    else if ( isfullnorm && ns && !justcalcip )
+    {
+        res = xagradOrder ? 0.0 : 1.0;
+    }
+
+    else if ( !isfullnorm && ns && !justcalcip )
+    {
+        int indstarta = indstart;
+        int indenda   = indend;
+
+        if ( ns )
+        {
+            int q;
+
+            for ( q = indstart ; q < indend ; ++q )
+            {
+                if ( isSplit(q) )
+                {
+                    indenda = q;
+                    break;
+                }
+            }
+        }
+
+        KK1(res,logres,logresvalid,xa,xainfo,xagradOrder,xaff,bias,nullptr,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstarta,indenda,iset);
+    }
+
+    else
+    {
+        KK1(res,logres,logresvalid,xa,xainfo,xagradOrder,xaff,bias,pxyprod,ia,xdim,xconsist,assumreal,resmode,mlid,xy,justcalcip,indstart,indend,iset);
+    }
+
+    return res;
+}
+
+//phantomx
+template <class T>
+T &MercerKernel::xKK2(T &res,
+                     const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                     const vecInfo &xainfo, const vecInfo &xbinfo,
+                     int xagradOrder, int xbgradOrder,
+                     const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff,
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int ia, int ib,
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid,
+                     const double *xy00, const double *xy10, const double *xy11, int justcalcip, int iset, int jset, int indstart, int indend, int ns,
+                     int adensetype, int bdensetype) const
+{
+    // the ns stuff is designed to reflect splitting that occured in yyykk2() level functions
+
+    NiceAssert( adensetype >= 0 );
+    NiceAssert( bdensetype >= 0 );
+
+    T logres; logres = 0.0;
+    int logresvalid = 0;
+    //int ns = numSplits();
+    int q,r = 0;
+    int z = 0;
+
+    NiceAssert( !isfullnorm || ( !xagradOrder && !xbgradOrder ) );
+
+    if ( isfullnorm && !ns && !justcalcip )
+    {
+        // 1:1, 2:2
+
+        if ( xainfo.xusize() == 1 )
+        {
+            T tma;
+            T tmb;
+
+            T logtma;
+            T logtmb;
+
+            int logtmavalid = 0;
+            int logtmbvalid = 0;
+
+//            KK2(res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,justcalcip,indstart,indend,iset,jset);
+
+            KK2(adensetype,adensetype,tma,logtma,logtmavalid,xa,xa,xainfo,xainfo,xagradOrder,xagradOrder,xaff,xaff,bias,nullptr,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iset,iset);
+            KK2(bdensetype,bdensetype,tmb,logtmb,logtmbvalid,xb,xb,xbinfo,xbinfo,xbgradOrder,xbgradOrder,xbff,xbff,bias,nullptr,ib,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,jset,jset);
+
+            if ( ( (double) abs2(tma) <= BADZEROTOL ) || ( (double) abs2(tmb) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else
+            {
+                KK2(adensetype,bdensetype,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,justcalcip,indstart,indend,iset,jset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); // res /= tma;
+                }
+            }
+        }
+
+        else
+        {
+            res = 1.0;
+        }
+    }
+
+    else if ( !isfullnorm && ns && !justcalcip )
+    {
+        T tempres; tempres = 0.0;
+
+        Vector<int> splitPoint(ns);
+        Vector<int> splitType(ns);
+
+        if ( ns )
+        {
+            for ( q = indstart ; q < indend ; ++q )
+            {
+                if ( isSplit(q) )
+                {
+                    splitPoint("&",r) = q;
+                    splitType("&",r) = isSplit(q);
+                    ++r;
+                }
+            }
+        }
+
+        int indstarta = indstart;
+        int indenda   = indend;
+
+        int indstartb = indstart;
+        int indendb   = indend;
+
+        if ( ns == 1 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+
+            indstartb = splitPoint(z)+1;
+            indendb   = indend;
+        }
+
+        else if ( ns >= 2 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+
+            indstartb = splitPoint(z)+1;
+            indendb   = splitPoint(1);
+        }
+
+        // 1:1, 2:2
+
+        if ( xainfo.xusize() == 1 )
+        {
+            KK2(adensetype,bdensetype,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iset,jset);
+        }
+
+        else
+        {
+            // xainfo.xusize() == 2
+
+            NiceAssert( !adensetype && !bdensetype );
+
+            KK1(    res,logres,logresvalid,xa,xainfo,xagradOrder,xaff,bias,nullptr,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstarta,indenda,iset);
+            KK1(tempres,logres,logresvalid,xb,xbinfo,xbgradOrder,xbff,bias,nullptr,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartb,indendb,jset);
+
+            if ( splitType(0) == 1 )
+            {
+                res *= tempres;
+            }
+
+            else
+            {
+                res += tempres;
+            }
+        }
+    }
+
+    else if ( isfullnorm && ns && !justcalcip )
+    {
+        Vector<int> splitPoint(ns);
+
+        if ( ns )
+        {
+            for ( q = indstart ; q < indend ; ++q )
+            {
+                if ( isSplit(q) )
+                {
+                    splitPoint("&",r) = q;
+                    ++r;
+
+                    NiceAssert( isSplit(q) == 1 );
+                }
+            }
+        }
+
+        int indstarta = indstart;
+        int indenda   = indend;
+//
+//        int indstartb = indstart;
+//        int indendb   = indend;
+//
+        if ( ns == 1 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+//
+//            indstartb = splitPoint(z)+1;
+//            indendb   = indend;
+        }
+
+        else if ( ns >= 2 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+//
+//            indstartb = splitPoint(z)+1;
+//            indendb   = splitPoint(1);
+        }
+
+        // 1:1, 2:2
+
+        if ( xainfo.xusize() == 1 )
+        {
+            T tma;
+            T tmb;
+
+            T logtma;
+            T logtmb;
+
+            int logtmavalid = 0;
+            int logtmbvalid = 0;
+
+//            KK2(res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iset,jset);
+
+            KK2(adensetype,adensetype,tma,logtma,logtmavalid,xa,xa,xainfo,xainfo,xagradOrder,xagradOrder,xaff,xaff,bias,nullptr,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iset,iset);
+            KK2(bdensetype,bdensetype,tmb,logtmb,logtmbvalid,xb,xb,xbinfo,xbinfo,xbgradOrder,xbgradOrder,xbff,xbff,bias,nullptr,ib,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,jset,jset);
+
+            if ( ( (double) abs2(tma) <= BADZEROTOL ) || ( (double) abs2(tmb) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else
+            {
+                KK2(adensetype,bdensetype,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iset,jset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); // res /= tma;
+                }
+            }
+        }
+
+        else
+        {
+            res = 1.0;
+        }
+    }
+
+    else
+    {
+        KK2(adensetype,bdensetype,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,justcalcip,indstart,indend,iset,jset);
+    }
+
+    NiceAssert( !testisvnan(res) );
+    NiceAssert( !testisinf(res) );
+
+    return res;
+}
+
+//phantomx
+template <class T>
+T &MercerKernel::xKK3(T &res,
+                     const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc,
+                     const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo,
+                     int xagradOrder, int xbgradOrder, int xcgradOrder,
+                     const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff, const SparseVector<gentype> &xcff,
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int ia, int ib, int ic,
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid,
+                     const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int justcalcip, int iaset, int ibset, int icset, int indstart, int indend, int ns) const
+{
+    T logres; logres = 0.0;
+    T tempres; tempres = 0.0;
+    T xtempres; xtempres = 0.0;
+    int logresvalid = 0;
+    //int ns = numSplits();
+    int q,r = 0;
+    int z = 0;
+
+    NiceAssert( !isfullnorm || ( !xagradOrder && !xbgradOrder && !xcgradOrder ) );
+
+    if ( isfullnorm && !ns && !justcalcip )
+    {
+        // 1:1:1, 
+        // 2:2:1, 1:2:2
+        // 3:3:3
+
+        if ( ( xainfo.xusize() == 1 ) && ( xbinfo.xusize() == 1 ) )
+        {
+            // So xcinfo.xusize() == 1 by assumption
+
+            T tma;
+            T tmb;
+            T tmc;
+
+            T logtma;
+            T logtmb;
+            T logtmc;
+
+            int logtmavalid;
+            int logtmbvalid;
+            int logtmcvalid;
+
+//            KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,nullptr,justcalcip,indstart,indend,iaset,ibset,icset);
+
+            KK3(tma,logtma,logtmavalid,xa,xa,xa,xainfo,xainfo,xainfo,xagradOrder,xagradOrder,xagradOrder,xaff,xaff,xaff,bias,nullptr,ia,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,iaset,iaset);
+            KK3(tmb,logtmb,logtmbvalid,xb,xb,xb,xbinfo,xbinfo,xbinfo,xbgradOrder,xbgradOrder,xbgradOrder,xbff,xbff,xbff,bias,nullptr,ib,ib,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,ibset,ibset,ibset);
+            KK3(tmc,logtmc,logtmcvalid,xc,xc,xc,xcinfo,xcinfo,xcinfo,xcgradOrder,xcgradOrder,xcgradOrder,xcff,xcff,xcff,bias,nullptr,ic,ic,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,icset,icset,icset);
+
+            if ( ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) )    )
+            {
+                res = 1.0;
+            }
+
+            else if ( (double) abs2(tma) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xb,xc,xbinfo,xcinfo,xbgradOrder,xcgradOrder,xbff,xcff,bias,nullptr,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,ibset,icset);
+
+                if ( logresvalid && logtmbvalid && logtmcvalid )
+                {
+                    logtmb /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmb *= tmc;
+                    OP_sqrt(tmb);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( (double) abs2(tmb) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,icset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid )
+                {
+                    logtma /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tmc) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else
+            {
+                KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,nullptr,justcalcip,indstart,indend,iaset,ibset,icset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid && logtmcvalid )
+                {
+                    logtma /= 3.0;
+                    logtmb /= 3.0;
+                    logtmc /= 3.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    T oneonm; oneonm = 1.0/3.0;
+
+                    tma *= tmb;
+                    tma *= tmc;
+                    tma = pow(tma,oneonm);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+        }
+
+        else if ( xainfo.xusize() == 2 )
+        {
+            // This is actually a 2-kernel evaluation in disguise!
+            // K2([xa~xb],xc)
+
+            T tma;
+            T tmc;
+
+            T logtma;
+            T logtmc;
+
+            int logtmavalid;
+            int logtmcvalid;
+
+//            KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,nullptr,justcalcip,indstart,indend,iaset,ibset,icset);
+
+            KK4(tma,logtma,logtmavalid,xa,xb,xa,xb,xainfo,xbinfo,xainfo,xbinfo,xagradOrder,xbgradOrder,xagradOrder,xbgradOrder,xaff,xbff,xaff,xbff,bias,nullptr,ia,ib,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend,iaset,ibset,iaset,ibset);
+            KK2(0,0,tmc,logtmc,logtmcvalid,xc,xc,xcinfo,xcinfo,xcgradOrder,xcgradOrder,xcff,xcff,bias,nullptr,ic,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,icset,icset);
+
+            if ( ( (double) abs2(tma) <= BADZEROTOL ) || ( (double) abs2(tmc) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else
+            {
+                KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,nullptr,justcalcip,indstart,indend,iaset,ibset,icset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid )
+                {
+                    logtma /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+        }
+
+        else if ( xbinfo.xusize() == 2 )
+        {
+            // This is actually a 2-kernel evaluation in disguise!
+            // K2(xa,[xb~xc])
+
+            T tma;
+            T tmb;
+
+            T logtma;
+            T logtmb;
+
+            int logtmavalid;
+            int logtmbvalid;
+
+//            KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,nullptr,justcalcip,indstart,indend,iaset,ibset,icset);
+
+            KK2(0,0,tma,logtma,logtmavalid,xa,xa,xainfo,xainfo,xagradOrder,xagradOrder,xaff,xaff,bias,nullptr,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,iaset);
+            KK4(tmb,logtmb,logtmbvalid,xb,xc,xb,xc,xbinfo,xcinfo,xbinfo,xcinfo,xbgradOrder,xcgradOrder,xbgradOrder,xcgradOrder,xbff,xcff,xbff,xcff,bias,nullptr,ib,ic,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend,ibset,icset,ibset,icset);
+
+            if ( ( (double) abs2(tma) <= BADZEROTOL ) || ( (double) abs2(tmb) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else
+            {
+                KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,nullptr,justcalcip,indstart,indend,iaset,ibset,icset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+        }
+
+        else
+        {
+            // K1([xa~xb~xc])
+
+            res = 1.0;
+        }
+    }
+
+    else if ( !isfullnorm && ns && !justcalcip )
+    {
+        Vector<int> splitPoint(ns);
+        Vector<int> splitType(ns);
+
+        if ( ns )
+        {
+            for ( q = indstart ; q < indend ; ++q )
+            {
+                if ( isSplit(q) )
+                {
+                    splitPoint("&",r) = q;
+                    splitType("&",r) = isSplit(q);
+                    ++r;
+                }
+            }
+        }
+
+        int indstarta = indstart;
+        int indenda   = indend;
+
+        int indstartb = indstart;
+        int indendb   = indend;
+
+        int indstartc = indstart;
+        int indendc   = indend;
+
+        if ( ns == 1 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+
+            indstartb = splitPoint(z)+1;
+            indendb   = indend;
+
+            indstartc = indstart;
+            indendc   = splitPoint(z);
+        }
+
+        else if ( ns == 2 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+
+            indstartb = splitPoint(z)+1;
+            indendb   = splitPoint(1);
+
+            indstartc = splitPoint(1)+1;
+            indendc   = indend;
+        }
+
+        else if ( ns >= 3 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+
+            indstartb = splitPoint(z)+1;
+            indendb   = splitPoint(1);
+
+            indstartc = splitPoint(1)+1;
+            indendc   = splitPoint(2);
+        }
+
+        // 1:1:1, 
+        // 2:2:1, 1:2:2
+        // 3:3:3
+
+        if ( ( xainfo.xusize() == 1 ) && ( xbinfo.xusize() == 1 ) )
+        {
+            KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset,icset);
+        }
+
+        else if ( xainfo.xusize() == 2 )
+        {
+            KK2(0,0,res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,icset);
+            KK1(tempres,logres,logresvalid,xb,xbinfo,xbgradOrder,xbff,bias,nullptr,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartb,indendb,ibset);
+
+            if ( splitType(0) == 1 )
+            {
+                res *= tempres;
+            }
+
+            else
+            {
+                res += tempres;
+            }
+        }
+
+        else if ( xbinfo.xusize() == 2 )
+        {
+            KK2(0,0,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset);
+            KK1(tempres,logres,logresvalid,xc,xcinfo,xcgradOrder,xcff,bias,nullptr,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartb,indendb,icset);
+
+            if ( splitType(0) == 1 )
+            {
+                res *= tempres;
+            }
+
+            else
+            {
+                res += tempres;
+            }
+        }
+
+        else
+        {
+            // xainfo.usize() == 3
+
+            KK1(     res,logres,logresvalid,xa,xainfo,xagradOrder,xaff,bias,nullptr,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstarta,indenda,iaset);
+            KK1( tempres,logres,logresvalid,xb,xbinfo,xbgradOrder,xbff,bias,nullptr,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartb,indendb,ibset);
+            KK1(xtempres,logres,logresvalid,xc,xcinfo,xcgradOrder,xcff,bias,nullptr,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartc,indendc,icset);
+
+            if ( splitType(0) == 1 )
+            {
+                res *=  tempres;
+            }
+
+            else
+            {
+                res +=  tempres;
+            }
+
+            if ( splitType(1) == 1 )
+            {
+                res *= xtempres;
+            }
+
+            else
+            {
+                res += xtempres;
+            }
+        }
+    }
+
+    else if ( isfullnorm && ns && !justcalcip )
+    {
+        Vector<int> splitPoint(ns);
+
+        if ( ns )
+        {
+            for ( q = indstart ; q < indend ; ++q )
+            {
+                if ( isSplit(q) )
+                {
+                    splitPoint("&",r) = q;
+                    NiceAssert( isSplit(q) == 1 );
+                    ++r;
+                }
+            }
+        }
+
+
+        int indstarta = indstart;
+        int indenda   = indend;
+
+//        int indstartb = indstart;
+//        int indendb   = indend;
+//
+//        int indstartc = indstart;
+//        int indendc   = indend;
+//
+        if ( ns == 1 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+//
+//            indstartb = splitPoint(z)+1;
+//            indendb   = indend;
+//
+//            indstartc = indstart;
+//            indendc   = splitPoint(z);
+        }
+
+        else if ( ns == 2 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+//
+//            indstartb = splitPoint(z)+1;
+//            indendb   = splitPoint(1);
+//
+//            indstartc = splitPoint(1)+1;
+//            indendc   = indend;
+        }
+
+        else if ( ns >= 3 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+//
+//            indstartb = splitPoint(z)+1;
+//            indendb   = splitPoint(1);
+//
+//            indstartc = splitPoint(1)+1;
+//            indendc   = splitPoint(2);
+        }
+
+        // 1:1:1, 
+        // 2:2:1, 1:2:2
+        // 3:3:3
+
+        if ( ( xainfo.xusize() == 1 ) && ( xbinfo.xusize() == 1 ) )
+        {
+            T tma;
+            T tmb;
+            T tmc;
+
+            T logtma;
+            T logtmb;
+            T logtmc;
+
+            int logtmavalid = 0;
+            int logtmbvalid = 0;
+            int logtmcvalid = 0;
+
+//            KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset,icset);
+
+            KK3(tma,logtma,logtmavalid,xa,xa,xa,xainfo,xainfo,xainfo,xagradOrder,xagradOrder,xagradOrder,xaff,xaff,xaff,bias,nullptr,ia,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,iaset,iaset);
+            KK3(tmb,logtmb,logtmbvalid,xb,xb,xb,xbinfo,xbinfo,xbinfo,xbgradOrder,xbgradOrder,xbgradOrder,xbff,xbff,xbff,bias,nullptr,ib,ib,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,ibset,ibset,ibset);
+            KK3(tmc,logtmc,logtmcvalid,xc,xc,xc,xcinfo,xcinfo,xcinfo,xcgradOrder,xcgradOrder,xcgradOrder,xcff,xcff,xcff,bias,nullptr,ic,ic,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,icset,icset,icset);
+
+            if ( ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) )    )
+            {
+                res = 1.0;
+            }
+
+            else if ( (double) abs2(tma) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xb,xc,xbinfo,xcinfo,xbgradOrder,xcgradOrder,xbff,xcff,bias,nullptr,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,ibset,icset);
+
+                if ( logresvalid && logtmbvalid && logtmcvalid )
+                {
+                    logtmb /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmb *= tmc;
+                    OP_sqrt(tmb);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( (double) abs2(tmb) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,icset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid )
+                {
+                    logtma /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tmc) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else
+            {
+                KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset,icset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid && logtmcvalid )
+                {
+                    logtma /= 3.0;
+                    logtmb /= 3.0;
+                    logtmc /= 3.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    tma *= tmc;
+
+                    T sf; sf = 1.0/3.0;
+
+                    safedivby(res,pow(tma,sf)); //res /= pow(tma,sf);
+                }
+            }
+        }
+
+        else if ( xainfo.xusize() == 2 )
+        {
+            T tma;
+            T tmc;
+
+            T logtma;
+            T logtmc;
+
+            int logtmavalid = 0;
+            int logtmcvalid = 0;
+
+//            KK2(res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,icset);
+
+            KK2(0,0,tma,logtma,logtmavalid,xa,xa,xainfo,xainfo,xagradOrder,xagradOrder,xaff,xaff,bias,nullptr,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,iaset);
+            KK2(0,0,tmc,logtmc,logtmcvalid,xc,xc,xcinfo,xcinfo,xcgradOrder,xcgradOrder,xcff,xcff,bias,nullptr,ic,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,icset,icset);
+
+            if ( ( (double) abs2(tma) <= BADZEROTOL ) || ( (double) abs2(tmc) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,icset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid )
+                {
+                    logtma /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+        }
+
+        else if ( xbinfo.xusize() == 2 )
+        {
+            T tma;
+            T tmb;
+
+            T logtma;
+            T logtmb;
+
+            int logtmavalid = 0;
+            int logtmbvalid = 0;
+
+//            KK2(res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset);
+
+            KK2(0,0,tma,logtma,logtmavalid,xa,xa,xainfo,xainfo,xagradOrder,xagradOrder,xaff,xaff,bias,nullptr,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,iaset);
+            KK2(0,0,tmb,logtmb,logtmbvalid,xb,xb,xbinfo,xbinfo,xbgradOrder,xbgradOrder,xbff,xbff,bias,nullptr,ib,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,ibset,ibset);
+
+            if ( ( (double) abs2(tma) <= BADZEROTOL ) || ( (double) abs2(tmb) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+        }
+
+        else
+        {
+            res = 1.0;
+        }
+    }
+
+    else
+    {
+        KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,pxyprod,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,nullptr,justcalcip,indstart,indend,iaset,ibset,icset);
+    }
+
+
+
+
+    return res;
+}
+
+//phantomx
+template <class T>
+T &MercerKernel::xKK4(T &res,
+                     const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd,
+                     const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo,
+                     int xagradOrder, int xbgradOrder, int xcgradOrder, int xdgradOrder,
+                     const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff, const SparseVector<gentype> &xcff, const SparseVector<gentype> &xdff,
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int ia, int ib, int ic, int id,
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid, int justcalcip,
+                     const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, const double *xy30, const double *xy31, const double *xy32, const double *xy33, int iaset, int ibset, int icset, int idset, int indstart, int indend, int ns) const
+{
+    T logres; logres = 0.0;
+    T atempres; atempres = 0.0;
+    T btempres; btempres = 0.0;
+    T ctempres; ctempres = 0.0;
+    int logresvalid = 0;
+    //int ns = numSplits();
+    int q,r = 0;
+    int z = 0;
+
+    NiceAssert( !isfullnorm || ( !xagradOrder && !xbgradOrder && !xcgradOrder && !xdgradOrder ) );
+
+    if ( isfullnorm && !ns && !justcalcip )
+    {
+        // 1:1:1:1
+        // 2:2:1:1, 1:2:2:1, 1:1:2:2
+        // 2:2:2:2
+        // 3:3:3:1, 1:3:3:3
+        // 4:4:4:4
+
+        if ( ( xainfo.xusize() == 1 ) && ( xbinfo.xusize() == 1 ) && ( xcinfo.xusize() == 1 ) )
+        {
+            T tma;
+            T tmb;
+            T tmc;
+            T tmd;
+
+            T logtma;
+            T logtmb;
+            T logtmc;
+            T logtmd;
+
+            int logtmavalid;
+            int logtmbvalid;
+            int logtmcvalid;
+            int logtmdvalid;
+
+//            KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+
+            KK4(tma,logtma,logtmavalid,xa,xa,xa,xa,xainfo,xainfo,xainfo,xainfo,xagradOrder,xagradOrder,xagradOrder,xagradOrder,xaff,xaff,xaff,xaff,bias,nullptr,ia,ia,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy00,xy00,xy00,xy00,xy00,xy00,xy00,xy00,xy00,indstart,indend,iaset,iaset,iaset,iaset);
+            KK4(tmb,logtmb,logtmbvalid,xb,xb,xb,xb,xbinfo,xbinfo,xbinfo,xbinfo,xbgradOrder,xbgradOrder,xbgradOrder,xbgradOrder,xbff,xbff,xbff,xbff,bias,nullptr,ib,ib,ib,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy11,xy11,xy11,xy11,xy11,xy11,xy11,xy11,xy11,xy11,indstart,indend,ibset,ibset,ibset,ibset);
+            KK4(tmc,logtmc,logtmcvalid,xc,xc,xc,xc,xcinfo,xcinfo,xcinfo,xcinfo,xcgradOrder,xcgradOrder,xcgradOrder,xcgradOrder,xcff,xcff,xcff,xcff,bias,nullptr,ic,ic,ic,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy22,xy22,xy22,xy22,xy22,xy22,xy22,xy22,xy22,xy22,indstart,indend,icset,icset,icset,icset);
+            KK4(tmd,logtmd,logtmdvalid,xd,xd,xd,xd,xdinfo,xdinfo,xdinfo,xdinfo,xdgradOrder,xdgradOrder,xdgradOrder,xdgradOrder,xdff,xdff,xdff,xdff,bias,nullptr,id,id,id,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy33,xy33,xy33,xy33,xy33,xy33,xy33,xy33,xy33,xy33,indstart,indend,idset,idset,idset,idset);
+
+            if ( ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )    )
+            {
+                res = 1.0;
+            }
+
+            else if ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) )
+            {
+                KK2(0,0,res,logres,logresvalid,xc,xd,xcinfo,xdinfo,xcgradOrder,xdgradOrder,xcff,xdff,bias,nullptr,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,icset,idset);
+
+                if ( logresvalid && logtmcvalid && logtmdvalid )
+                {
+                    logtmc /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmc;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmc *= tmd;
+                    OP_sqrt(tmc);
+                    safedivby(res,tmc); //res /= tmc;
+                }
+            }
+
+            else if ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) )
+            {
+                KK2(0,0,res,logres,logresvalid,xb,xd,xbinfo,xdinfo,xbgradOrder,xdgradOrder,xbff,xdff,bias,nullptr,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,ibset,idset);
+
+                if ( logresvalid && logtmbvalid && logtmdvalid )
+                {
+                    logtmb /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmb *= tmd;
+                    OP_sqrt(tmb);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )
+            {
+                KK2(0,0,res,logres,logresvalid,xb,xc,xbinfo,xcinfo,xbgradOrder,xcgradOrder,xbff,xcff,bias,nullptr,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,ibset,icset);
+
+                if ( logresvalid && logtmbvalid && logtmcvalid )
+                {
+                    logtmb /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmb *= tmc;
+                    OP_sqrt(tmb);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xd,xainfo,xdinfo,xagradOrder,xdgradOrder,xaff,xdff,bias,nullptr,ia,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,idset);
+
+                if ( logresvalid && logtmavalid && logtmdvalid )
+                {
+                    logtma /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmd;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,icset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid )
+                {
+                    logtma /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( ( (double) abs2(tmc) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tma) <= BADZEROTOL )
+            {
+                KK3(res,logres,logresvalid,xb,xc,xd,xbinfo,xcinfo,xdinfo,xbgradOrder,xcgradOrder,xdgradOrder,xbff,xcff,xdff,bias,nullptr,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,ibset,icset,idset);
+
+                if ( logresvalid && logtmbvalid && logtmcvalid && logtmdvalid )
+                {
+                    logtmb /= 3.0;
+                    logtmc /= 3.0;
+                    logtmd /= 3.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmc;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    T oneonm; oneonm = 1.0/3.0;
+
+                    tmb *= tmc;
+                    tmb *= tmd;
+                    tmb = pow(tmb,oneonm);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( (double) abs2(tmb) <= BADZEROTOL )
+            {
+                KK3(res,logres,logresvalid,xa,xc,xd,xainfo,xcinfo,xdinfo,xagradOrder,xcgradOrder,xdgradOrder,xaff,xcff,xdff,bias,nullptr,ia,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,icset,idset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid && logtmdvalid )
+                {
+                    logtma /= 3.0;
+                    logtmc /= 3.0;
+                    logtmd /= 3.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    T oneonm; oneonm = 1.0/3.0;
+
+                    tma *= tmc;
+                    tma *= tmd;
+                    tma = pow(tma,oneonm);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tmc) <= BADZEROTOL )
+            {
+                KK3(res,logres,logresvalid,xa,xb,xd,xainfo,xbinfo,xdinfo,xagradOrder,xbgradOrder,xdgradOrder,xaff,xbff,xdff,bias,nullptr,ia,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset,idset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid && logtmdvalid )
+                {
+                    logtma /= 3.0;
+                    logtmb /= 3.0;
+                    logtmd /= 3.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    T oneonm; oneonm = 1.0/3.0;
+
+                    tma *= tmb;
+                    tma *= tmd;
+                    tma = pow(tma,oneonm);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tmd) <= BADZEROTOL )
+            {
+                KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset,icset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid && logtmcvalid )
+                {
+                    logtma /= 3.0;
+                    logtmb /= 3.0;
+                    logtmc /= 3.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    T oneonm; oneonm = 1.0/3.0;
+
+                    tma *= tmb;
+                    tma *= tmc;
+                    tma = pow(tma,oneonm);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else
+            {
+                KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid && logtmcvalid && logtmdvalid )
+                {
+                    logtma /= 4.0;
+                    logtmb /= 4.0;
+                    logtmc /= 4.0;
+                    logtmd /= 4.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+                    res -= logtmc;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    tma *= tmc;
+                    tma *= tmd;
+                    OP_sqrt(tma);
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+        }
+
+        else if ( ( xainfo.xusize() == 2 ) && ( xcinfo.xusize() == 1 ) )
+        {
+            T tma;
+            T tmc;
+            T tmd;
+
+            T logtma;
+            T logtmc;
+            T logtmd;
+
+            int logtmavalid;
+            int logtmcvalid;
+            int logtmdvalid;
+
+//            KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+
+            KK6(tma,logtma,logtmavalid,xa,xb,xa,xb,xa,xb,xainfo,xbinfo,xainfo,xbinfo,xainfo,xbinfo,xagradOrder,xbgradOrder,xagradOrder,xbgradOrder,xagradOrder,xbgradOrder,xaff,xbff,xaff,xbff,xaff,xbff,bias,nullptr,ia,ib,ia,ib,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset,iaset,ibset,iaset,ibset);
+            KK3(tmc,logtmc,logtmcvalid,xc,xc,xc,xcinfo,xcinfo,xcinfo,xcgradOrder,xcgradOrder,xcgradOrder,xcff,xcff,xcff,bias,nullptr,ic,ic,ic,xdim,xconsist,assumreal,mlid,resmode,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,icset,icset,icset);
+            KK3(tmd,logtmd,logtmdvalid,xd,xd,xd,xdinfo,xdinfo,xdinfo,xdgradOrder,xdgradOrder,xdgradOrder,xdff,xdff,xdff,bias,nullptr,id,id,id,xdim,xconsist,assumreal,mlid,resmode,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,idset,idset,idset);
+
+            if ( ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tmc) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )    )
+            {
+                res = 1.0;
+            }
+
+            else if ( (double) abs2(tma) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xc,xd,xcinfo,xdinfo,xcgradOrder,xdgradOrder,xcff,xdff,bias,nullptr,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,icset,idset);
+
+                if ( logresvalid && logtmcvalid && logtmdvalid )
+                {
+                    logtmc /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmc;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmc *= tmd;
+                    OP_sqrt(tmc);
+                    safedivby(res,tmc); //res /= tmc;
+                }
+            }
+
+            else if ( (double) abs2(tmc) <= BADZEROTOL )
+            {
+                KK3(res,logres,logresvalid,xa,xb,xd,xainfo,xbinfo,xdinfo,xagradOrder,xbgradOrder,xdgradOrder,xaff,xbff,xdff,bias,nullptr,ia,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset,idset);
+
+                if ( logresvalid && logtmavalid && logtmdvalid )
+                {
+                    logtma /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmd;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tmd) <= BADZEROTOL )
+            {
+                KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset,icset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid )
+                {
+                    logtma /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else
+            {
+                KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid && logtmdvalid )
+                {
+                    logtma /= 3.0;
+                    logtmc /= 3.0;
+                    logtmd /= 3.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    T oneonm; oneonm = 1.0/3.0;
+
+                    tma *= tmc;
+                    tma *= tmd;
+                    tma = pow(tma,oneonm);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+        }
+
+        else if ( ( xainfo.xusize() == 1 ) && ( xbinfo.xusize() == 2 ) )
+        {
+            T tma;
+            T tmb;
+            T tmd;
+
+            T logtma;
+            T logtmb;
+            T logtmd;
+
+            int logtmavalid;
+            int logtmbvalid;
+            int logtmdvalid;
+
+//            KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+
+            KK3(tma,logtma,logtmavalid,xa,xa,xa,xainfo,xainfo,xainfo,xagradOrder,xagradOrder,xagradOrder,xaff,xaff,xaff,bias,nullptr,ia,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,iaset,iaset);
+            KK6(tmb,logtmb,logtmbvalid,xb,xc,xb,xc,xb,xc,xbinfo,xcinfo,xbinfo,xcinfo,xbinfo,xcinfo,xbgradOrder,xcgradOrder,xbgradOrder,xcgradOrder,xbgradOrder,xcgradOrder,xbff,xcff,xbff,xcff,xbff,xcff,bias,nullptr,ib,ic,ib,ic,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,justcalcip,indstart,indend,ibset,icset,ibset,icset,ibset,icset);
+            KK3(tmd,logtmd,logtmdvalid,xd,xd,xd,xdinfo,xdinfo,xdinfo,xdgradOrder,xdgradOrder,xdgradOrder,xdff,xdff,xdff,bias,nullptr,id,id,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,idset,idset,idset);
+
+            if ( ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )    )
+            {
+                res = 1.0;
+            }
+
+            else if ( (double) abs2(tma) <= BADZEROTOL )
+            {
+                KK3(res,logres,logresvalid,xb,xc,xd,xbinfo,xcinfo,xdinfo,xbgradOrder,xcgradOrder,xdgradOrder,xbff,xcff,xdff,bias,nullptr,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,ibset,icset,idset);
+
+                if ( logresvalid && logtmbvalid && logtmdvalid )
+                {
+                    logtmb /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmb *= tmd;
+                    OP_sqrt(tmb);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( (double) abs2(tmb) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xd,xainfo,xdinfo,xagradOrder,xdgradOrder,xaff,xdff,bias,nullptr,ia,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,idset);
+
+                if ( logresvalid && logtmavalid && logtmdvalid )
+                {
+                    logtma /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmd;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tmd) <= BADZEROTOL )
+            {
+                KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset,icset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else
+            {
+                KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid && logtmdvalid )
+                {
+                    logtma /= 3.0;
+                    logtmb /= 3.0;
+                    logtmd /= 3.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    T oneonm; oneonm = 1.0/3.0;
+
+                    tma *= tmb;
+                    tma *= tmd;
+                    tma = pow(tma,oneonm);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+        }
+
+        else if ( ( xainfo.xusize() == 1 ) && ( xcinfo.xusize() == 2 ) )
+        {
+            T tma;
+            T tmb;
+            T tmc;
+
+            T logtma;
+            T logtmb;
+            T logtmc;
+
+            int logtmavalid;
+            int logtmbvalid;
+            int logtmcvalid;
+
+//            KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+
+            KK3(tma,logtma,logtmavalid,xa,xa,xa,xainfo,xainfo,xainfo,xagradOrder,xagradOrder,xagradOrder,xaff,xaff,xaff,bias,nullptr,ia,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,iaset,iaset);
+            KK3(tmb,logtmb,logtmbvalid,xb,xb,xb,xbinfo,xbinfo,xbinfo,xbgradOrder,xbgradOrder,xbgradOrder,xbff,xbff,xbff,bias,nullptr,ib,ib,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,ibset,ibset,ibset);
+            KK6(tmc,logtmc,logtmcvalid,xc,xd,xc,xd,xc,xd,xcinfo,xdinfo,xcinfo,xdinfo,xcinfo,xdinfo,xcgradOrder,xdgradOrder,xcgradOrder,xdgradOrder,xcgradOrder,xdgradOrder,xcff,xdff,xcff,xdff,xcff,xdff,bias,nullptr,ic,id,ic,id,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,justcalcip,indstart,indend,icset,idset,icset,idset,icset,idset);
+
+            if ( ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) )    )
+            {
+                res = 1.0;
+            }
+
+            else if ( (double) abs2(tma) <= BADZEROTOL )
+            {
+                KK3(res,logres,logresvalid,xb,xc,xd,xbinfo,xcinfo,xdinfo,xbgradOrder,xcgradOrder,xdgradOrder,xbff,xcff,xdff,bias,nullptr,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,ibset,icset,idset);
+
+                if ( logresvalid && logtmbvalid && logtmcvalid )
+                {
+                    logtmb /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmb *= tmc;
+                    OP_sqrt(tmb);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( (double) abs2(tmb) <= BADZEROTOL )
+            {
+                KK3(res,logres,logresvalid,xa,xc,xd,xainfo,xcinfo,xdinfo,xagradOrder,xcgradOrder,xdgradOrder,xaff,xcff,xdff,bias,nullptr,ia,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,icset,idset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid )
+                {
+                    logtma /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tmc) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else
+            {
+                KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid && logtmcvalid )
+                {
+                    logtma /= 3.0;
+                    logtmb /= 3.0;
+                    logtmc /= 3.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    T oneonm; oneonm = 1.0/3.0;
+
+                    tma *= tmb;
+                    tma *= tmc;
+                    tma = pow(tma,oneonm);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+        }
+
+        else if ( ( xainfo.xusize() == 2 ) && ( xcinfo.xusize() == 2 ) )
+        {
+            T tma;
+            T tmc;
+
+            T logtma;
+            T logtmc;
+
+            int logtmavalid;
+            int logtmcvalid;
+
+//            KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+
+            KK4(tma,logtma,logtmavalid,xa,xb,xa,xb,xainfo,xbinfo,xainfo,xbinfo,xagradOrder,xbgradOrder,xagradOrder,xbgradOrder,xaff,xbff,xaff,xbff,bias,nullptr,ia,ib,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy00,xy10,xy00,xy10,xy11,xy10,xy11,indstart,indend,iaset,ibset,iaset,ibset);
+            KK4(tmc,logtmc,logtmcvalid,xc,xd,xc,xd,xcinfo,xdinfo,xcinfo,xdinfo,xcgradOrder,xdgradOrder,xcgradOrder,xdgradOrder,xcff,xdff,xcff,xdff,bias,nullptr,ic,id,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy22,xy32,xy33,xy22,xy32,xy22,xy32,xy33,xy32,xy33,indstart,indend,icset,idset,icset,idset);
+
+            if ( ( (double) abs2(tma) <= BADZEROTOL ) || ( (double) abs2(tmc) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else
+            {
+                KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid )
+                {
+                    logtma /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+        }
+
+        else if ( xainfo.xusize() == 3 )
+        {
+            T tma;
+            T tmd;
+
+            T logtma;
+            T logtmd;
+
+            int logtmavalid;
+            int logtmdvalid;
+
+//            KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+
+            KK6(tma,logtma,logtmavalid,xa,xb,xc,xa,xb,xc,xainfo,xbinfo,xcinfo,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset,icset,iaset,ibset,icset);
+            KK2(0,0,tmd,logtmd,logtmdvalid,xd,xd,xdinfo,xdinfo,xdgradOrder,xdgradOrder,xdff,xdff,bias,nullptr,id,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,idset,idset);
+
+            if ( ( (double) abs2(tma) <= BADZEROTOL ) || ( (double) abs2(tmd) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else
+            {
+                KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+
+                if ( logresvalid && logtmavalid && logtmdvalid )
+                {
+                    logtma /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmd;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+        }
+
+        else if ( xbinfo.xusize() == 3 )
+        {
+            T tma;
+            T tmb;
+
+            T logtma;
+            T logtmb;
+
+            int logtmavalid;
+            int logtmbvalid;
+
+//            KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+
+            KK2(0,0,tmb,logtma,logtmavalid,xa,xa,xainfo,xainfo,xagradOrder,xagradOrder,xaff,xaff,bias,nullptr,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,iaset);
+            KK6(tma,logtmb,logtmbvalid,xb,xc,xd,xb,xc,xd,xbinfo,xcinfo,xdinfo,xbinfo,xcinfo,xdinfo,xbgradOrder,xcgradOrder,xdgradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xbff,xcff,xdff,xbff,xcff,xdff,bias,nullptr,ib,ic,id,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,justcalcip,indstart,indend,ibset,icset,idset,ibset,icset,idset);
+
+            if ( ( (double) abs2(tma) <= BADZEROTOL ) || ( (double) abs2(tmb) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else
+            {
+                KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+        }
+
+        else
+        {
+            res = 1.0;
+        }
+    }
+
+    else if ( !isfullnorm && ns && !justcalcip )
+    {
+        Vector<int> splitPoint(ns);
+        Vector<int> splitType(ns);
+
+        if ( ns )
+        {
+            for ( q = indstart ; q < indend ; ++q )
+            {
+                if ( isSplit(q) )
+                {
+                    splitPoint("&",r) = q;
+                    splitType("&",r) = isSplit(q);
+                    ++r;
+                }
+            }
+        }
+
+        int indstarta = indstart;
+        int indenda   = indend;
+
+        int indstartb = indstart;
+        int indendb   = indend;
+
+        int indstartc = indstart;
+        int indendc   = indend;
+
+        int indstartd = indstart;
+        int indendd   = indend;
+
+        if ( ns == 1 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+
+            indstartb = splitPoint(z)+1;
+            indendb   = indend;
+
+            indstartc = indstart;
+            indendc   = splitPoint(z);
+
+            indstartd = splitPoint(z)+1;
+            indendd   = indend;
+        }
+
+        else if ( ns == 2 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+
+            indstartb = splitPoint(z)+1;
+            indendb   = splitPoint(1);
+
+            indstartc = splitPoint(1)+1;
+            indendc   = indend;
+
+            indstartd = indstart;
+            indendd   = splitPoint(z);
+        }
+
+        else if ( ns == 3 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+
+            indstartb = splitPoint(z)+1;
+            indendb   = splitPoint(1);
+
+            indstartc = splitPoint(1)+1;
+            indendc   = splitPoint(2);
+
+            indstartd = splitPoint(2)+1;
+            indendd   = indend;
+        }
+
+        else if ( ns >= 4 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+
+            indstartb = splitPoint(z)+1;
+            indendb   = splitPoint(1);
+
+            indstartc = splitPoint(1)+1;
+            indendc   = splitPoint(2);
+
+            indstartd = splitPoint(2)+1;
+            indendd   = splitPoint(3);
+        }
+
+        // 1:1:1:1
+        // 2:2:1:1, 1:2:2:1, 1:1:2:2
+        // 2:2:2:2
+        // 3:3:3:1, 1:3:3:3
+        // 4:4:4:4
+
+        if ( ( xainfo.xusize() == 1 ) && ( xbinfo.xusize() == 1 ) && ( xcinfo.xusize() == 1 ) )
+        {
+            KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstarta,indenda,iaset,ibset,icset,idset);
+        }
+
+        else if ( ( xainfo.xusize() == 2 ) && ( xcinfo.xusize() == 1 ) )
+        {
+            KK3(     res,logres,logresvalid,xa,xc,xd,xainfo,xcinfo,xdinfo,xagradOrder,xcgradOrder,xdgradOrder,xaff,xcff,xdff,bias,nullptr,ia,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,icset,idset);
+            KK1(atempres,logres,logresvalid,xb,xbinfo,xbgradOrder,xbff,bias,nullptr,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartb,indendb,ibset);
+
+            if ( splitType(0) == 1 )
+            {
+                res *= atempres;
+            }
+
+            else
+            {
+                res += atempres;
+            }
+        }
+
+        else if ( ( xainfo.xusize() == 1 ) && ( xbinfo.xusize() == 2 ) )
+        {
+            KK3(     res,logres,logresvalid,xa,xb,xd,xainfo,xbinfo,xdinfo,xagradOrder,xbgradOrder,xdgradOrder,xaff,xbff,xdff,bias,nullptr,ia,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset,idset);
+            KK1(atempres,logres,logresvalid,xc,xcinfo,xcgradOrder,xcff,bias,nullptr,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartb,indendb,icset);
+
+            if ( splitType(0) == 1 )
+            {
+                res *= atempres;
+            }
+
+            else
+            {
+                res += atempres;
+            }
+        }
+
+        else if ( ( xainfo.xusize() == 1 ) && ( xcinfo.xusize() == 2 ) )
+        {
+            KK3(     res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset,icset);
+            KK1(atempres,logres,logresvalid,xd,xdinfo,xdgradOrder,xdff,bias,nullptr,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartb,indendb,idset);
+
+            if ( splitType(0) == 1 )
+            {
+                res *= atempres;
+            }
+
+            else
+            {
+                res += atempres;
+            }
+        }
+
+        else if ( ( xainfo.xusize() == 2 ) && ( xcinfo.xusize() == 2 ) )
+        {
+            KK2(0,0,     res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,icset);
+            KK2(0,0,atempres,logres,logresvalid,xb,xd,xbinfo,xdinfo,xbgradOrder,xdgradOrder,xbff,xdff,bias,nullptr,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstartb,indendb,ibset,idset);
+
+            if ( splitType(0) == 1 )
+            {
+                res *= atempres;
+            }
+
+            else
+            {
+                res += atempres;
+            }
+        }
+
+        else if ( xainfo.xusize() == 3 )
+        {
+            KK2(0,0,res,logres,logresvalid,xa,xd,xainfo,xdinfo,xagradOrder,xdgradOrder,xaff,xdff,bias,nullptr,ia,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,idset);
+            KK1(atempres,logres,logresvalid,xb,xbinfo,xbgradOrder,xbff,bias,nullptr,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartb,indendb,ibset);
+            KK1(btempres,logres,logresvalid,xc,xcinfo,xcgradOrder,xcff,bias,nullptr,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartc,indendc,icset);
+
+            if ( splitType(0) == 1 )
+            {
+                res *= atempres;
+            }
+
+            else
+            {
+                res += atempres;
+            }
+
+            if ( splitType(1) == 1 )
+            {
+                res *= btempres;
+            }
+
+            else
+            {
+                res += btempres;
+            }
+        }
+
+        else if ( xbinfo.xusize() == 3 )
+        {
+            KK2(0,0,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset);
+            KK1(atempres,logres,logresvalid,xc,xcinfo,xcgradOrder,xcff,bias,nullptr,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartb,indendb,icset);
+            KK1(btempres,logres,logresvalid,xd,xdinfo,xdgradOrder,xdff,bias,nullptr,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartc,indendc,idset);
+
+            if ( splitType(0) == 1 )
+            {
+                res *= atempres;
+            }
+
+            else
+            {
+                res += atempres;
+            }
+
+            if ( splitType(1) == 1 )
+            {
+                res *= btempres;
+            }
+
+            else
+            {
+                res += btempres;
+            }
+        }
+
+        else
+        {
+            KK1(     res,logres,logresvalid,xa,xainfo,xagradOrder,xaff,bias,nullptr,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstarta,indenda,iaset);
+            KK1(atempres,logres,logresvalid,xb,xbinfo,xbgradOrder,xbff,bias,nullptr,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartb,indendb,ibset);
+            KK1(btempres,logres,logresvalid,xc,xcinfo,xcgradOrder,xcff,bias,nullptr,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartc,indendc,icset);
+            KK1(ctempres,logres,logresvalid,xd,xdinfo,xdgradOrder,xdff,bias,nullptr,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstartd,indendd,idset);
+
+            if ( splitType(0) == 1 )
+            {
+                res *= atempres;
+            }
+
+            else
+            {
+                res += atempres;
+            }
+
+            if ( splitType(1) == 1 )
+            {
+                res *= btempres;
+            }
+
+            else
+            {
+                res += btempres;
+            }
+
+            if ( splitType(2) == 1 )
+            {
+                res *= ctempres;
+            }
+
+            else
+            {
+                res += ctempres;
+            }
+        }
+    }
+
+    else if ( isfullnorm && ns && !justcalcip )
+    {
+        Vector<int> splitPoint(ns);
+
+        if ( ns )
+        {
+            for ( q = indstart ; q < indend ; ++q )
+            {
+                if ( isSplit(q) )
+                {
+                    splitPoint("&",r) = q;
+                    NiceAssert( isSplit(q) == 1 );
+                    ++r;
+                }
+            }
+        }
+
+        int indstarta = indstart;
+        int indenda   = indend;
+
+        int indstartb = indstart;
+        int indendb   = indend;
+
+//        int indstartc = indstart;
+//        int indendc   = indend;
+//
+//        int indstartd = indstart;
+//        int indendd   = indend;
+
+        if ( ns == 1 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+
+            indstartb = splitPoint(z)+1;
+            indendb   = indend;
+
+//            indstartc = indstart;
+//            indendc   = splitPoint(z);
+//
+//            indstartd = splitPoint(z)+1;
+//            indendd   = indend;
+        }
+
+        else if ( ns == 2 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+
+            indstartb = splitPoint(z)+1;
+            indendb   = splitPoint(1);
+
+//            indstartc = splitPoint(1)+1;
+//            indendc   = indend;
+//
+//            indstartd = indstart;
+//            indendd   = splitPoint(z);
+        }
+
+        else if ( ns == 3 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+
+            indstartb = splitPoint(z)+1;
+            indendb   = splitPoint(1);
+
+//            indstartc = splitPoint(1)+1;
+//            indendc   = splitPoint(2);
+//
+//            indstartd = splitPoint(2)+1;
+//            indendd   = indend;
+        }
+
+        else if ( ns >= 4 )
+        {
+            indstarta = indstart;
+            indenda   = splitPoint(z);
+
+            indstartb = splitPoint(z)+1;
+            indendb   = splitPoint(1);
+
+//            indstartc = splitPoint(1)+1;
+//            indendc   = splitPoint(2);
+//
+//            indstartd = splitPoint(2)+1;
+//            indendd   = splitPoint(3);
+        }
+
+        // 1:1:1:1
+        // 2:2:1:1, 1:2:2:1, 1:1:2:2
+        // 2:2:2:2
+        // 3:3:3:1, 1:3:3:3
+        // 4:4:4:4
+
+        if ( ( xainfo.xusize() == 1 ) && ( xbinfo.xusize() == 1 ) && ( xcinfo.xusize() == 1 ) )
+        {
+            T tma;
+            T tmb;
+            T tmc;
+            T tmd;
+
+            T logtma;
+            T logtmb;
+            T logtmc;
+            T logtmd;
+
+            int logtmavalid = 0;
+            int logtmbvalid = 0;
+            int logtmcvalid = 0;
+            int logtmdvalid = 0;
+
+//            KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstarta,indenda,iaset,ibset,icset,idset);
+
+            KK4(tma,logtma,logtmavalid,xa,xa,xa,xa,xainfo,xainfo,xainfo,xainfo,xagradOrder,xagradOrder,xagradOrder,xagradOrder,xaff,xaff,xaff,xaff,bias,nullptr,ia,ia,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstarta,indenda,iaset,iaset,iaset,iaset);
+            KK4(tmb,logtmb,logtmbvalid,xb,xb,xb,xb,xbinfo,xbinfo,xbinfo,xbinfo,xbgradOrder,xbgradOrder,xbgradOrder,xbgradOrder,xbff,xbff,xbff,xbff,bias,nullptr,ib,ib,ib,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstarta,indenda,ibset,ibset,ibset,ibset);
+            KK4(tmc,logtmc,logtmcvalid,xc,xc,xc,xc,xcinfo,xcinfo,xcinfo,xcinfo,xcgradOrder,xcgradOrder,xcgradOrder,xcgradOrder,xcff,xcff,xcff,xcff,bias,nullptr,ic,ic,ic,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstarta,indenda,icset,icset,icset,icset);
+            KK4(tmd,logtmd,logtmdvalid,xd,xd,xd,xd,xdinfo,xdinfo,xdinfo,xdinfo,xdgradOrder,xdgradOrder,xdgradOrder,xdgradOrder,xdff,xdff,xdff,xdff,bias,nullptr,id,id,id,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstarta,indenda,idset,idset,idset,idset);
+
+            if ( ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )    )
+            {
+                res = 1.0;
+            }
+
+            else if ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) )
+            {
+                KK2(0,0,res,logres,logresvalid,xc,xd,xcinfo,xdinfo,xcgradOrder,xdgradOrder,xcff,xdff,bias,nullptr,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,icset,idset);
+
+                if ( logresvalid && logtmcvalid && logtmdvalid )
+                {
+                    logtmc /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmc;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmc *= tmd;
+                    OP_sqrt(tmc);
+                    safedivby(res,tmc); //res /= tmc;
+                }
+            }
+
+            else if ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) )
+            {
+                KK2(0,0,res,logres,logresvalid,xb,xd,xbinfo,xdinfo,xbgradOrder,xdgradOrder,xbff,xdff,bias,nullptr,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,ibset,idset);
+
+                if ( logresvalid && logtmbvalid && logtmdvalid )
+                {
+                    logtmb /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmb *= tmd;
+                    OP_sqrt(tmb);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )
+            {
+                KK2(0,0,res,logres,logresvalid,xb,xc,xbinfo,xcinfo,xbgradOrder,xcgradOrder,xbff,xcff,bias,nullptr,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,ibset,icset);
+
+                if ( logresvalid && logtmbvalid && logtmcvalid )
+                {
+                    logtmb /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmb *= tmc;
+                    OP_sqrt(tmb);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xd,xainfo,xdinfo,xagradOrder,xdgradOrder,xaff,xdff,bias,nullptr,ia,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,idset);
+
+                if ( logresvalid && logtmavalid && logtmdvalid )
+                {
+                    logtma /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmd;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,icset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid )
+                {
+                    logtma /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( ( (double) abs2(tmc) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tma) <= BADZEROTOL )
+            {
+                KK3(res,logres,logresvalid,xb,xc,xd,xbinfo,xcinfo,xdinfo,xbgradOrder,xcgradOrder,xdgradOrder,xbff,xcff,xdff,bias,nullptr,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,ibset,icset,idset);
+
+                if ( logresvalid && logtmbvalid && logtmcvalid && logtmcvalid )
+                {
+                    logtmb /= 3.0;
+                    logtmc /= 3.0;
+                    logtmd /= 3.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmc;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    T oneonm; oneonm = 1.0/3.0;
+
+                    tmb *= tmc;
+                    tmb *= tmd;
+                    tmb = pow(tmb,oneonm);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( (double) abs2(tmb) <= BADZEROTOL )
+            {
+                KK3(res,logres,logresvalid,xa,xc,xd,xainfo,xcinfo,xdinfo,xagradOrder,xcgradOrder,xdgradOrder,xaff,xcff,xdff,bias,nullptr,ia,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,icset,idset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid && logtmdvalid )
+                {
+                    logtma /= 3.0;
+                    logtmc /= 3.0;
+                    logtmd /= 3.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    T oneonm; oneonm = 1.0/3.0;
+
+                    tma *= tmc;
+                    tma *= tmd;
+                    tma = pow(tma,oneonm);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tmc) <= BADZEROTOL )
+            {
+                KK3(res,logres,logresvalid,xa,xb,xd,xainfo,xbinfo,xdinfo,xagradOrder,xbgradOrder,xdgradOrder,xaff,xbff,xdff,bias,nullptr,ia,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset,idset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid && logtmdvalid )
+                {
+                    logtma /= 3.0;
+                    logtmb /= 3.0;
+                    logtmd /= 3.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    T oneonm; oneonm = 1.0/3.0;
+
+                    tma *= tmb;
+                    tma *= tmd;
+                    tma = pow(tma,oneonm);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tmd) <= BADZEROTOL )
+            {
+                KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset,icset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid && logtmcvalid )
+                {
+                    logtma /= 3.0;
+                    logtmb /= 3.0;
+                    logtmc /= 3.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    T oneonm; oneonm = 1.0/3.0;
+
+                    tma *= tmb;
+                    tma *= tmc;
+                    tma = pow(tma,oneonm);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else
+            {
+                KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstarta,indenda,iaset,ibset,icset,idset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid && logtmcvalid && logtmdvalid )
+                {
+                    logtma /= 4.0;
+                    logtmb /= 4.0;
+                    logtmc /= 4.0;
+                    logtmd /= 4.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+                    res -= logtmc;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    tma *= tmc;
+                    tma *= tmd;
+
+                    T sf; sf = 1.0/4.0;
+
+                    safedivby(res,pow(tma,sf)); //res /= pow(tma,sf);
+                }
+            }
+        }
+
+        else if ( ( xainfo.xusize() == 2 ) && ( xcinfo.xusize() == 1 ) )
+        {
+            T tma;
+            T tmc;
+            T tmd;
+
+            T logtma;
+            T logtmc;
+            T logtmd;
+
+            int logtmavalid = 0;
+            int logtmcvalid = 0;
+            int logtmdvalid = 0;
+
+            KK3(res,logres,logresvalid,xa,xc,xd,xainfo,xcinfo,xdinfo,xagradOrder,xcgradOrder,xdgradOrder,xaff,xcff,xdff,bias,nullptr,ia,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,icset,idset);
+
+            KK3(tma,logtma,logtmavalid,xa,xa,xa,xainfo,xainfo,xainfo,xagradOrder,xagradOrder,xagradOrder,xaff,xaff,xaff,bias,nullptr,ia,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,iaset,iaset);
+            KK3(tmc,logtmc,logtmcvalid,xc,xc,xc,xcinfo,xcinfo,xcinfo,xcgradOrder,xcgradOrder,xcgradOrder,xcff,xcff,xcff,bias,nullptr,ic,ic,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,icset,icset,icset);
+            KK3(tmd,logtmd,logtmdvalid,xd,xd,xd,xdinfo,xdinfo,xdinfo,xdgradOrder,xdgradOrder,xdgradOrder,xdff,xdff,xdff,bias,nullptr,id,id,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,idset,idset,idset);
+
+            if ( ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tmc) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )    )
+            {
+                res = 1.0;
+            }
+
+            else if ( (double) abs2(tma) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xc,xd,xcinfo,xdinfo,xcgradOrder,xdgradOrder,xcff,xdff,bias,nullptr,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,icset,idset);
+
+                if ( logresvalid && logtmcvalid && logtmdvalid )
+                {
+                    logtmc /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmc;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmc *= tmd;
+                    OP_sqrt(tmc);
+                    safedivby(res,tmc); //res /= tmc;
+                }
+            }
+
+            else if ( (double) abs2(tmc) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xd,xainfo,xdinfo,xagradOrder,xdgradOrder,xaff,xdff,bias,nullptr,ia,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,idset);
+
+                if ( logresvalid && logtmavalid && logtmdvalid )
+                {
+                    logtma /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmd;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tmd) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,icset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid )
+                {
+                    logtma /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else
+            {
+                KK3(res,logres,logresvalid,xa,xc,xd,xainfo,xcinfo,xdinfo,xagradOrder,xcgradOrder,xdgradOrder,xaff,xcff,xdff,bias,nullptr,ia,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,icset,idset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid && logtmdvalid )
+                {
+                    logtma /= 3.0;
+                    logtmc /= 3.0;
+                    logtmd /= 3.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    tma *= tmd;
+
+                    T sf; sf = 1.0/3.0;
+
+                    safedivby(res,pow(tma,sf)); //res /= pow(tma,sf);
+                }
+            }
+        }
+
+        else if ( ( xainfo.xusize() == 1 ) && ( xbinfo.xusize() == 2 ) )
+        {
+            T tma;
+            T tmb;
+            T tmd;
+
+            T logtma;
+            T logtmb;
+            T logtmd;
+
+            int logtmavalid = 0;
+            int logtmbvalid = 0;
+            int logtmdvalid = 0;
+
+//            KK3(res,logres,logresvalid,xa,xb,xd,xainfo,xbinfo,xdinfo,xagradOrder,xbgradOrder,xdgradOrder,xaff,xbff,xdff,bias,nullptr,ia,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset,idset);
+
+            KK3(tma,logtma,logtmavalid,xa,xa,xa,xainfo,xainfo,xainfo,xagradOrder,xagradOrder,xagradOrder,xaff,xaff,xaff,bias,nullptr,ia,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,iaset,iaset);
+            KK3(tmb,logtmb,logtmbvalid,xb,xb,xb,xbinfo,xbinfo,xbinfo,xbgradOrder,xbgradOrder,xbgradOrder,xbff,xbff,xbff,bias,nullptr,ib,ib,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,ibset,ibset,ibset);
+            KK3(tmd,logtmd,logtmdvalid,xd,xd,xd,xdinfo,xdinfo,xdinfo,xdgradOrder,xdgradOrder,xdgradOrder,xdff,xdff,xdff,bias,nullptr,id,id,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,idset,idset,idset);
+
+            if ( ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )    )
+            {
+                res = 1.0;
+            }
+
+            else if ( (double) abs2(tma) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xb,xd,xbinfo,xdinfo,xbgradOrder,xdgradOrder,xbff,xdff,bias,nullptr,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,ibset,idset);
+
+                if ( logresvalid && logtmbvalid && logtmdvalid )
+                {
+                    logtmb /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmb *= tmd;
+                    OP_sqrt(tmb);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( (double) abs2(tmb) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xd,xainfo,xdinfo,xagradOrder,xdgradOrder,xaff,xdff,bias,nullptr,ia,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,idset);
+
+                if ( logresvalid && logtmavalid && logtmdvalid )
+                {
+                    logtma /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmd;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tmd) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else
+            {
+                KK3(res,logres,logresvalid,xa,xb,xd,xainfo,xbinfo,xdinfo,xagradOrder,xbgradOrder,xdgradOrder,xaff,xbff,xdff,bias,nullptr,ia,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset,idset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid && logtmdvalid )
+                {
+                    logtma /= 3.0;
+                    logtmb /= 3.0;
+                    logtmd /= 3.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    tma *= tmd;
+
+                    T sf; sf = 1.0/3.0;
+
+                    safedivby(res,pow(tma,sf)); //res /= pow(tma,sf);
+                }
+            }
+        }
+
+        else if ( ( xainfo.xusize() == 1 ) && ( xcinfo.xusize() == 2 ) )
+        {
+            T tma;
+            T tmb;
+            T tmc;
+
+            T logtma;
+            T logtmb;
+            T logtmc;
+
+            int logtmavalid = 0;
+            int logtmbvalid = 0;
+            int logtmcvalid = 0;
+
+            KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset,icset);
+
+            KK3(tma,logtma,logtmavalid,xa,xa,xa,xainfo,xainfo,xainfo,xagradOrder,xagradOrder,xagradOrder,xaff,xaff,xaff,bias,nullptr,ia,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,iaset,iaset);
+            KK3(tmb,logtmb,logtmbvalid,xb,xb,xb,xbinfo,xbinfo,xbinfo,xbgradOrder,xbgradOrder,xbgradOrder,xbff,xbff,xbff,bias,nullptr,ib,ib,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,ibset,ibset,ibset);
+            KK3(tmc,logtmc,logtmcvalid,xc,xc,xc,xcinfo,xcinfo,xcinfo,xcgradOrder,xcgradOrder,xcgradOrder,xcff,xcff,xcff,bias,nullptr,ic,ic,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,icset,icset,icset);
+
+            if ( ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) )    )
+            {
+                res = 1.0;
+            }
+
+            else if ( (double) abs2(tma) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xb,xc,xbinfo,xcinfo,xbgradOrder,xcgradOrder,xbff,xcff,bias,nullptr,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,ibset,icset);
+
+                if ( logresvalid && logtmbvalid && logtmcvalid )
+                {
+                    logtmb /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmb *= tmc;
+                    OP_sqrt(tmb);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( (double) abs2(tmb) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,icset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid )
+                {
+                    logtma /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tmc) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else
+            {
+                KK3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset,icset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid && logtmcvalid )
+                {
+                    logtma /= 3.0;
+                    logtmb /= 3.0;
+                    logtmc /= 3.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    tma *= tmc;
+
+                    T sf; sf = 1.0/3.0;
+
+                    safedivby(res,pow(tma,sf)); //res /= pow(tma,sf);
+                }
+            }
+        }
+
+        else if ( ( xainfo.xusize() == 2 ) && ( xcinfo.xusize() == 2 ) )
+        {
+            T tma;
+            T tmb;
+            T tmc;
+            T tmd;
+
+            T logtma;
+            T logtmb;
+            T logtmc;
+            T logtmd;
+
+            int logtmavalid = 0;
+            int logtmbvalid = 0;
+            int logtmcvalid = 0;
+            int logtmdvalid = 0;
+
+//            KK2(     res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,icset);
+//            KK2(atempres,logres,logresvalid,xb,xd,xbinfo,xdinfo,xbgradOrder,xdgradOrder,xbff,xdff,bias,nullptr,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstartb,indendb,ibset,idset);
+
+//            res *= atempres;
+
+            KK2(0,0,tma,logtma,logtmavalid,xa,xa,xainfo,xainfo,xagradOrder,xagradOrder,xaff,xaff,bias,nullptr,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,iaset);
+            KK2(0,0,tmc,logtmc,logtmcvalid,xc,xc,xcinfo,xcinfo,xbgradOrder,xbgradOrder,xbff,xbff,bias,nullptr,ic,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,ibset,ibset);
+            KK2(0,0,tmb,logtmb,logtmbvalid,xb,xb,xbinfo,xbinfo,xcgradOrder,xcgradOrder,xcff,xcff,bias,nullptr,ib,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstartb,indendb,icset,icset);
+            KK2(0,0,tmd,logtmd,logtmdvalid,xd,xd,xdinfo,xdinfo,xdgradOrder,xdgradOrder,xdff,xdff,bias,nullptr,id,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstartb,indendb,idset,idset);
+
+            if ( ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) ) ||
+                 ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )    )
+            {
+                res = 1.0;
+            }
+
+            else if ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmb) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else if ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) )
+            {
+                KK2(0,0,res,logres,logresvalid,xb,xd,xbinfo,xdinfo,xbgradOrder,xdgradOrder,xbff,xdff,bias,nullptr,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstartb,indendb,ibset,idset);
+
+                if ( logresvalid && logtmbvalid && logtmdvalid )
+                {
+                    logtmb /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmb *= tmd;
+                    OP_sqrt(tmb);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( ( (double) abs2(tma) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else if ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmc) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else if ( ( (double) abs2(tmb) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,icset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid )
+                {
+                    logtma /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( ( (double) abs2(tmc) <= BADZEROTOL ) && ( (double) abs2(tmd) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else if ( (double) abs2(tma) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xb,xd,xbinfo,xdinfo,xbgradOrder,xdgradOrder,xbff,xdff,bias,nullptr,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstartb,indendb,ibset,idset);
+
+                if ( logresvalid && logtmbvalid && logtmdvalid )
+                {
+                    logtmb /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tmb *= tmd;
+                    OP_sqrt(tmb);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( (double) abs2(tmb) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,icset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid )
+                {
+                    logtma /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else if ( (double) abs2(tmc) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xb,xd,xbinfo,xdinfo,xbgradOrder,xdgradOrder,xbff,xdff,bias,nullptr,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstartb,indendb,ibset,idset);
+
+                if ( logresvalid && logtmbvalid && logtmdvalid )
+                {
+                    logtmb /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtmb;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    T oneonm; oneonm = 1.0/3.0;
+
+                    tmb *= tmd;
+                    tmb = pow(tmb,oneonm);
+                    safedivby(res,tmb); //res /= tmb;
+                }
+            }
+
+            else if ( (double) abs2(tmd) <= BADZEROTOL )
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,icset);
+
+                if ( logresvalid && logtmavalid && logtmcvalid )
+                {
+                    logtma /= 2.0;
+                    logtmc /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmc;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmc;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+
+            else
+            {
+                KK2(0,0,     res,logres,logresvalid,xa,xc,xainfo,xcinfo,xagradOrder,xcgradOrder,xaff,xcff,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,icset);
+                KK2(0,0,atempres,logres,logresvalid,xb,xd,xbinfo,xdinfo,xbgradOrder,xdgradOrder,xbff,xdff,bias,nullptr,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstartb,indendb,ibset,idset);
+
+                res *= atempres;
+
+                if ( logresvalid && logtmavalid && logtmbvalid && logtmcvalid && logtmdvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+                    logtmc /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+                    res -= logtmc;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    tma *= tmc;
+                    tma *= tmd;
+
+                    T sf; sf = 1.0/2.0;
+
+                    safedivby(res,pow(tma,sf)); //res /= pow(tma,sf);
+                }
+            }
+        }
+
+        else if ( xainfo.xusize() == 3 )
+        {
+            T tma;
+            T tmd;
+
+            T logtma;
+            T logtmd;
+
+            int logtmavalid = 0;
+            int logtmdvalid = 0;
+
+//            KK2(res,logres,logresvalid,xa,xd,xainfo,xdinfo,xagradOrder,xdgradOrder,xaff,xdff,bias,nullptr,ia,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,idset);
+
+            KK2(0,0,tma,logtma,logtmavalid,xa,xa,xainfo,xainfo,xagradOrder,xagradOrder,xaff,xaff,bias,nullptr,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,iaset);
+            KK2(0,0,tmd,logtmd,logtmdvalid,xd,xd,xdinfo,xdinfo,xdgradOrder,xdgradOrder,xdff,xdff,bias,nullptr,id,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,idset,idset);
+
+            if ( ( (double) abs2(tma) <= BADZEROTOL ) || ( (double) abs2(tmd) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xd,xainfo,xdinfo,xagradOrder,xdgradOrder,xaff,xdff,bias,nullptr,ia,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,idset);
+
+                if ( logresvalid && logtmavalid && logtmdvalid )
+                {
+                    logtma /= 2.0;
+                    logtmd /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmd;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmd;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+        }
+
+        else if ( xbinfo.xusize() == 3 )
+        {
+            T tma;
+            T tmb;
+
+            T logtma;
+            T logtmb;
+
+            int logtmavalid = 0;
+            int logtmbvalid = 0;
+
+//            KK2(res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset);
+
+            KK2(0,0,tma,logtma,logtmavalid,xa,xa,xainfo,xainfo,xagradOrder,xagradOrder,xaff,xaff,bias,nullptr,ia,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,iaset);
+            KK2(0,0,tmb,logtmb,logtmbvalid,xb,xb,xbinfo,xbinfo,xbgradOrder,xbgradOrder,xbff,xbff,bias,nullptr,ib,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,ibset,ibset);
+
+            if ( ( (double) abs2(tma) <= BADZEROTOL ) || ( (double) abs2(tmb) <= BADZEROTOL ) )
+            {
+                res = 1.0;
+            }
+
+            else
+            {
+                KK2(0,0,res,logres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstarta,indenda,iaset,ibset);
+
+                if ( logresvalid && logtmavalid && logtmbvalid )
+                {
+                    logtma /= 2.0;
+                    logtmb /= 2.0;
+
+                    res = logres;
+
+                    res -= logtma;
+                    res -= logtmb;
+
+                    OP_exp(res);
+                }
+
+                else
+                {
+                    tma *= tmb;
+                    OP_sqrt(tma);
+                    safedivby(res,tma); //res /= tma;
+                }
+            }
+        }
+
+        else
+        {
+            res = 1.0;
+        }
+    }
+
+    else
+    {
+        KK4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend,iaset,ibset,icset,idset);
+    }
+
+    return res;
+}
+
+//phantomx
+template <class T>
+T &MercerKernel::xKKm(int m, T &res,
+                     Vector<const SparseVector<gentype> *> &x,
+                     Vector<const vecInfo *> &xinfo,
+                     const Vector<int> &xgradOrder,
+                     Vector<const SparseVector<gentype> *> &xff,
+                     const T &bias,
+                     Vector<int> &i,
+                     const gentype **pxyprod, int xdim, int xconsist, int assumreal, int resmode, int mlid,
+                     const Matrix<double> *xy, int justcalcip, const Vector<int> *xiset, int indstart, int indend, int ns) const
+{
+    T logres; logres = 0.0;
+    T tempres; tempres = 0.0;
+    int logresvalid = 0;
+    //int ns = numSplits();
+    int q,s,r = 0;
+
+    NiceAssert( !isfullnorm || ( xgradOrder == 0 ) );
+
+    if ( isfullnorm && !ns && !justcalcip )
+    {
+        int effm = 0;
+        int ii,jj,kk=0;
+
+        for ( ii = 0 ; ii < m ; ii += (*(xinfo(ii))).xusize() )
+        {
+            ++effm;
+        }
+
+        NiceAssert( ii == m );
+
+        T tma; tma = 1.0;
+        T tmb;
+
+        KKm(m,res,logres,logresvalid,x,xinfo,xgradOrder,xff,bias,i,pxyprod,xdim,xconsist,assumreal,resmode,mlid,xy,nullptr,justcalcip,indstart,indend,xiset);
+
+        T logtma; logtma = 0.0; // must be zero
+        T logtmb; logtmb = 0.0;
+
+        int logtmavalid = 1; // deliberately 1
+        int logtmbvalid = 0;
+
+        int effeffm = 0;
+
+        for ( ii = 0 ; ii < m ; ii += (*(xinfo(ii))).xusize() )
+        {
+            int usize = (*(xinfo(ii))).xusize();
+            int mcsize = usize*effm;
+
+            Vector<const SparseVector<gentype> *> xa(mcsize);
+            Vector<const vecInfo *> xainfo(mcsize);
+            Vector<int> ia(mcsize);
+            Vector<int> iaset(mcsize);
+            Vector<int> xagradOrder(mcsize);
+            Vector<const SparseVector<gentype> *>xaff(xff);
+
+            retVector<const SparseVector<gentype> *> tmpva;
+            retVector<const vecInfo *>               tmpvb;
+            retVector<int>                           tmpvc;
+            retVector<int>                           tmpvd;
+            retVector<int>                           tmpve;
+            retVector<const SparseVector<gentype> *> tmpvf;
+
+            for ( jj = 0 ; jj < usize ; ++jj )
+            {
+                xa("&",jj*effm,1,((jj+1)*effm)-1,tmpva)          = x(ii+jj);
+                xainfo("&",jj*effm,1,((jj+1)*effm)-1,tmpvb)      = xinfo(ii+jj);
+                ia("&",jj*effm,1,((jj+1)*effm)-1,tmpvc)          = i(ii+jj);
+                iaset("&",jj*effm,1,((jj+1)*effm)-1,tmpvd)       = (*xiset)(ii+jj);
+                xagradOrder("&",jj*effm,1,((jj+1)*effm)-1,tmpve) = xagradOrder(ii+jj);
+                xaff("&",jj*effm,1,((jj+1)*effm)-1,tmpvf)        = xaff(ii+jj);
+            }
+
+            logtmbvalid = 0;
+
+            KKm(mcsize,tmb,logtmb,logtmbvalid,xa,xainfo,xagradOrder,xaff,bias,ia,pxyprod,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,justcalcip,indstart,indend,&iaset);
+
+            if ( (double) abs2(tmb) > BADZEROTOL )
+            {
+                effeffm++;
+                tma *= tmb;
+                logtma += logtmb;
+                logtmavalid *= logtmbvalid;
+            }
+
+            else
+            {
+                NiceThrow("xkkm not defined for normalised zeros");
+            }
+
+            ++kk;
+        }
+
+        if ( ( effeffm == 0 ) || ( effeffm == 1 ) )
+        {
+            res = 1.0;
+        }
+
+        else
+        {
+            if ( logresvalid && logtmavalid )
+            {
+                logtma /= effeffm;
+
+                res  = logres;
+                res -= logtma;
+
+                OP_exp(res);
+            }
+
+            else
+            {
+                T oneonm; oneonm = 1.0/effeffm;
+
+                tma = pow(tma,oneonm);
+                safedivby(res,tma); //res /= tma;
+            }
+        }
+    }
+
+    else if ( !isfullnorm && ns && !justcalcip )
+    {
+        Vector<int> splitPoint(ns);
+        Vector<int> splitType(ns);
+
+        if ( ns )
+        {
+            for ( q = indstart ; q < indend ; ++q )
+            {
+                if ( isSplit(q) )
+                {
+                    splitPoint("&",r) = q;
+                    splitType("&",r) = isSplit(q);
+                    ++r;
+                }
+            }
+        }
+
+        int maxusize = 1;
+
+        for ( q = 0 ; q < m ; ++q )
+        {
+            if ( (*(xinfo(q))).xusize() > maxusize )
+            {
+                maxusize = (*(xinfo(q))).xusize();
+            }
+        }
+
+        Vector<Vector<const SparseVector<gentype> *> > xx(maxusize);
+        Vector<Vector<const vecInfo *> > xxinfo(maxusize);
+        Vector<Vector<int> > ii(maxusize);
+        Vector<Vector<int> > iiset(maxusize);
+        Vector<Vector<int> > xxgradOrder(maxusize);
+        Vector<Vector<const SparseVector<gentype> *> > xxaff(maxusize);
+
+        for ( q = 0 ; q < m ; )
+        {
+            int usize = (*(xinfo(q))).xusize();
+
+            for ( r = 0 ; r < usize ; ++q,++r )
+            {
+                s = xx(r).size();
+
+                xx("&",r).add(s);          xx("&",r)("&",s)          = x(q);
+                xxinfo("&",r).add(s);      xxinfo("&",r)("&",s)      = xinfo(q);
+                ii("&",r).add(s);          ii("&",r)("&",s)          = i(q);
+                iiset("&",r).add(s);       iiset("&",r)("&",s)       = xiset ? (*xiset)(q) : 0;
+                xxgradOrder("&",r).add(s); xxgradOrder("&",r)("&",s) = xgradOrder(q);
+                xxaff("&",r).add(s);       xxaff("&",r)("&",s)       = xff(q);
+            }
+        }
+
+        for ( r = 0 ; r < maxusize ; ++r )
+        {
+            int indstartq = indstart;
+            int indendq   = indend;
+
+            if ( r%(ns+1) == 0 )
+            {
+                indstartq = indstart;
+                indendq   = splitPoint(r%(ns+1));
+            }
+
+            else if ( r%(ns+1) < ns )
+            {
+                indstartq = splitPoint((r-1)%(ns+1))+1;
+                indendq   = splitPoint(r%(ns+1));
+            }
+
+            else
+            {
+                indstartq = splitPoint((r-1)%(ns+1))+1;
+                indendq   = indend;
+            }
+
+            if ( r == 0 )
+            {
+                KKm(xx(r).size(),res,logres,logresvalid,xx("&",r),xxinfo("&",r),xxgradOrder("&",r),xxaff("&",r),bias,ii("&",r),nullptr,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,justcalcip,indstartq,indendq,&(iiset("&",r)));
+            }
+
+            else
+            {
+                KKm(xx(r).size(),tempres,logres,logresvalid,xx("&",r),xxinfo("&",r),xxgradOrder("&",r),xxaff("&",r),bias,ii("&",r),nullptr,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,justcalcip,indstartq,indendq,&(iiset("&",r)));
+
+                if ( splitType(r-1) == 1 )
+                {
+                    res *= tempres;
+                }
+
+                else
+                {
+                    res += tempres;
+                }
+            }
+        }
+    }
+
+    else if ( isfullnorm && ns && !justcalcip )
+    {
+        Vector<int> splitPoint(ns);
+
+        if ( ns )
+        {
+            for ( q = indstart ; q < indend ; ++q )
+            {
+                if ( isSplit(q) )
+                {
+                    splitPoint("&",r) = q;
+                    NiceAssert( isSplit(q) == 1 );
+                    ++r;
+                }
+            }
+        }
+
+        int maxusize = 1;
+
+        for ( q = 0 ; q < m ; ++q )
+        {
+            if ( (*(xinfo(q))).xusize() > maxusize )
+            {
+                maxusize = (*(xinfo(q))).xusize();
+            }
+        }
+
+        Vector<Vector<const SparseVector<gentype> *> > xx(maxusize);
+        Vector<Vector<const vecInfo *> > xxinfo(maxusize);
+        Vector<Vector<int> > ii(maxusize);
+        Vector<Vector<int> > iiset(maxusize);
+        Vector<Vector<int> > xxgradOrder(maxusize);
+        Vector<Vector<const SparseVector<gentype> *> > xxaff(maxusize);
+
+        for ( q = 0 ; q < m ; )
+        {
+            int usize = (*(xinfo(q))).xusize();
+
+            for ( r = 0 ; r < usize ; ++q,++r )
+            {
+                s = xx(r).size();
+
+                xx("&",r).add(s);          xx("&",r)("&",s)          = x(q);
+                xxinfo("&",r).add(s);      xxinfo("&",r)("&",s)      = xinfo(q);
+                ii("&",r).add(s);          ii("&",r)("&",s)          = i(q);
+                iiset("&",r).add(s);       iiset("&",r)("&",s)       = xiset ? (*xiset)(q) : 0;
+                xxgradOrder("&",r).add(s); xxgradOrder("&",r)("&",s) = xgradOrder(q);
+                xxaff("&",r).add(s);       xxaff("&",r)("&",s)       = xff(q);
+            }
+        }
+
+        res = 1.0;
+
+        for ( r = 0 ; r < maxusize ; ++r )
+        {
+            int indstartq = indstart;
+            int indendq   = indend;
+
+            if ( r%(ns+1) == 0 )
+            {
+                indstartq = indstart;
+                indendq   = splitPoint(r%(ns+1));
+            }
+
+            else if ( r%(ns+1) < ns )
+            {
+                indstartq = splitPoint((r-1)%(ns+1))+1;
+                indendq   = splitPoint(r%(ns+1));
+            }
+
+            else
+            {
+                indstartq = splitPoint((r-1)%(ns+1))+1;
+                indendq   = indend;
+            }
+
+            int locm = xx(r).size();
+
+            if ( locm > 1 )
+            {
+                KKm(locm,tempres,logres,logresvalid,xx("&",r),xxinfo("&",r),xxgradOrder("&",r),xxaff("&",r),bias,ii("&",r),nullptr,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,justcalcip,indstartq,indendq,&(iiset("&",r)));
+
+                T logtma; logtma = 0.0; // must be zero
+                T logtmb; logtmb = 0.0;
+                T tma; tma = 1.0;
+                T tmb;
+                int logtmavalid = 1;
+                int logtmbvalid = 0;
+                Vector<int> repind(locm);
+                int jj;
+                int effeffm = 0;
+
+                retVector<const SparseVector<gentype> *> tmpva;
+                retVector<const vecInfo *>               tmpvb;
+                retVector<int>                           tmpvc;
+                retVector<int>                           tmpvd;
+                retVector<const SparseVector<gentype> *> tmpve;
+
+                for ( jj = 0 ; jj < locm ; ++jj )
+                {
+                    repind = jj;
+
+                    KKm(locm,tmb,logtmb,logtmbvalid,xx("&",r)("&",repind,tmpva),xxinfo("&",r)("&",repind,tmpvb),xxgradOrder("&",r)("&",repind,tmpvd),xxaff("&",r)("&",repind,tmpve),bias,ii("&",r)("&",repind,tmpvc),nullptr,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,justcalcip,indstartq,indendq,&(iiset("&",r)));
+
+                    if ( (double) abs2(tmb) > BADZEROTOL )
+                    {
+                        effeffm++;
+                        tma *= tmb;
+                        logtma += logtmb;
+                        logtmavalid *= logtmbvalid;
+                    }
+
+                    else
+                    {
+                        NiceThrow("m-kernel normalisation with zeros not implemented yet.");
+                    }
+                }
+
+                if ( ( effeffm == 0 ) || ( effeffm == 1 ) )
+                {
+                    tempres = 1.0;
+                }
+
+                else
+                {
+                    if ( logresvalid && logtmavalid )
+                    {
+                        logtma /= effeffm;
+
+                        tempres  = logres;
+                        tempres -= logtma;
+
+                        OP_exp(tempres);
+                    }
+
+                    else
+                    {
+                        T oneonm; oneonm = 1.0/effeffm;
+
+                        tma = pow(tma,oneonm);
+                        safedivby(tempres,tma); //res /= tma;
+                    }
+                }
+
+                res *= tempres;
+            }
+        }
+    }
+
+    else
+    {
+        KKm(m,res,logres,logresvalid,x,xinfo,xgradOrder,xff,bias,i,pxyprod,xdim,xconsist,assumreal,resmode,mlid,xy,nullptr,justcalcip,indstart,indend,xiset);
+    }
+
+    return res;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+inline int isgentype(const gentype &ind);
+inline int isgentype(const double  &ind);
+
+inline int isgentype(const gentype &ind)
+{
+    (void) ind;
+
+    return 1;
+}
+
+inline int isgentype(const double &ind)
+{
+    (void) ind;
+
+    return 0;
+}
+
+inline int isiteqn(const gentype &ind);
+inline int isiteqn(const double  &ind);
+
+inline int isiteqn(const gentype &ind)
+{
+    return ind.isValEqn();
+}
+
+inline int isiteqn(const double &ind)
+{
+    (void) ind;
+
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//phantomx
+template <class T>
+T &MercerKernel::KK0(T &res, T &logres, int &logresvalid,
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid,
+                     int justcalcip, int indstart, int indend, int skipbias) const
+{
+    if ( !skipbias && isiteqn(bias) )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int q;
+        int maxq = numSamples();
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( q = 0 ; q < maxq ; ++q )
+        {
+            gentype gbias(bias);
+            gentype gres,glogres;
+
+            if ( !subSample(subval,gbias) && !q )
+            {
+                goto postbias;
+            }
+
+            KK0(gres,glogres,logresvalid,gbias,nullptr,xdim,xconsist,assumreal,resmode,mlid,justcalcip,indstart,indend,1);
+
+            if ( !q ) { res =  (T) gres; }
+            else      { res += (T) gres; }
+        }
+
+        res /= maxq;
+
+        logresvalid = 0;
+
+        return res;
+    }
+
+postbias:
+
+    LL0(res,logres,logresvalid,bias,pxyprod,xdim,xconsist,assumreal,resmode,mlid,justcalcip,indstart,indend);
+
+    return res;
+}
+
+//phantomx
+template <class T>
+T &MercerKernel::KK1(T &res, T &logres, int &logresvalid,
+                     const SparseVector<gentype> &xa,
+                     const vecInfo &xainfo,
+                     int xagradOrder,
+                     const SparseVector<gentype> &xaff,
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int ia,
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid,
+                     const double *xy, int justcalcip, int indstart, int indend,
+                     int iaset,
+                     int skipbias,
+                     int skipxa) const
+{
+    (void) xaff;
+
+    if ( xagradOrder )
+    {
+        if ( isFastKernelSum() && !isNormalised(indend) && !needsDiff() && !needsNorm() && !justcalcip )
+        {
+            // In this case we have a simple inner product kernel, no normalisation,
+            // nothing complicating.  In this case:
+            //
+            // K1(xa) = k(<<xa>>_1) = k(<xa,1>>_2) = K2(xa,1)
+            //
+            // allowing us to "borrow" the gradient calculation from K2
+
+            SparseVector<gentype> xx(xa);
+            vecInfo xxinfo;
+
+            xx = 1.0_gent;
+            getvecInfo(xxinfo,xx);
+
+            return KK2(0,0,res,logres,logresvalid,
+                       xa,xx,
+                       xainfo,xxinfo,
+                       xagradOrder,0,
+                       xaff,xx,
+                       bias,
+                       pxyprod,
+                       ia,-1,
+                       xdim,xconsist,assumreal,resmode,mlid,
+                       nullptr,nullptr,nullptr,justcalcip,indstart,indend,
+                       iaset,0);
+        }
+    }
+
+    NiceAssert( !xagradOrder );
+
+    if ( !skipbias && isiteqn(bias) )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qb;
+        int maxq = numSamples();
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qb = 0 ; qb < maxq ; ++qb )
+        {
+            gentype gbias(bias);
+
+            if ( !subSample(subval,gbias) && !qb )
+            {
+                goto postbias;
+            }
+
+            gentype gres,glogres;
+
+            KK1(gres,glogres,logresvalid,xa,xainfo,xagradOrder,xaff,gbias,nullptr,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstart,indend,iaset,1,skipxa);
+
+            if ( !qb ) { res =  (T) gres; }
+            else       { res += (T) gres; }
+        }
+
+        res /= maxq;
+
+        logresvalid = 0;
+
+        return res;
+    }
+
+postbias:
+
+    if ( !skipxa && xainfo.xiseqn() )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxa(xa);
+            vecInfo xxainfo;
+
+            if ( !subSample(subval,xxa,xxainfo) && !qxa )
+            {
+                goto postxa;
+            }
+
+            gentype gres,glogres;
+
+            KK1(gres,glogres,logresvalid,xxa,xxainfo,xagradOrder,xaff,gbias,nullptr,ia,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstart,indend,iaset,skipbias,1);
+
+            if ( !qxa )        { res =  (T) gres; }
+            else if ( !iaset ) { res += (T) gres; }
+            else               { res =  ( ( (T) gres ) > ( (T) res ) ) ? ( (T) gres ) : ( (T) res ); }
+        }
+
+        if ( !iaset )
+        {
+            res /= maxq;
+        }
+
+        logresvalid = 0;
+
+        return res;
+    }
+
+postxa:
+
+    LL1(res,logres,logresvalid,xa,xainfo,bias,pxyprod,ia,xdim,xconsist,assumreal,resmode,mlid,xy,justcalcip,indstart,indend);
+
+    return res;
+}
+
+//phantomx
+template <class T>
+T &MercerKernel::KK2(int adensetype, int bdensetype, T &res, T &logres, int &logresvalid,
+                     const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                     const vecInfo &xainfo, const vecInfo &xbinfo,
+                     int xagradOrder, int xbgradOrder,
+                     const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff,
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int ia, int ib,
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid,
+                     const double *xy00, const double *xy10, const double *xy11, int justcalcip, int indstart, int indend,
+                     int iaset, int ibset,
+                     int skipbias,
+                     int skipxa, int skipxb) const
+{
+    NiceAssert( adensetype >= 0 );
+    NiceAssert( bdensetype >= 0 );
+
+    int dummyind = 0;
+
+    if ( xagradOrder && xbgradOrder )
+    {
+        if ( xaff.size() && xbff.size() )
+        {
+            // case 22
+
+            if ( ( xagradOrder == 1 ) && ( xbgradOrder == 1 ) )
+            {
+                // <ex,d2K/dxdy,ey>
+
+                T xascaleres; // xxscaleres
+                T xyscaleres; // xyscaleres
+                T yxscaleres; // yxscaleres
+                T xbscaleres; // yyscaleres
+
+                T constres;
+
+                qqqd2K2delxdely(xascaleres,xbscaleres,xyscaleres,yxscaleres,constres,dummyind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,mlid,xy00,xy10,xy11,0,iaset,ibset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                gentype exa;
+                gentype exy;
+                gentype xey;
+                gentype yey;
+
+                gentype exey;
+
+                innerProduct(exa,xaff,xa);
+                innerProduct(exy,xaff,xb);
+                innerProduct(xey,xa,xbff);
+                innerProduct(yey,xb,xbff);
+
+                innerProduct(exey,xaff,xbff);
+
+                res = (((T) exa)*xascaleres*((T) xey))
+                    + (((T) exa)*xyscaleres*((T) yey))
+                    + (((T) exy)*yxscaleres*((T) xey))
+                    + (((T) exy)*xbscaleres*((T) yey))
+                    + (constres*((T) exey));
+            }
+
+            else
+            {
+                // <(ex d/dx)^n (ey d/dy)^n,K>
+
+                int resxadim = (int) pow(xdim,xagradOrder);
+                int resxbdim = (int) pow(xdim,xbgradOrder);
+
+                res = 0.0;
+
+                Vector<T> sc;
+                Vector<Vector<int> > nn;
+
+                Vector<int> q(xagradOrder+xagradOrder);
+
+                retVector<int> tmpva;
+
+                q("&",0          ,1,xagradOrder-1            ,tmpva) = 0;
+                q("&",xagradOrder,1,xagradOrder+xbgradOrder-1,tmpva) = 1;
+
+                // Here we use the result: vec(ABC) = vec(C' \otimes A).vec(B), so if
+                // we let a = xifarfar, c = xjfarfar, then:
+                // a'.B.c = vec(c' \otimes a').vec(B)
+                //        = vec(c \otimes a)'.vec(B)
+                // where vec(B) is the vectorised *transpose* gradient we usually calculate, so, getting rid of the transpose,
+                // we need to take the inner product with vec(ex \otimes ey)
+                // ORIGINAL INCORRECT VERSION: where vec(B) is precisely the vectorised gradient we usually calculate
+                //
+                // CLARIFICATION: see pdf in stable bayesian optimisation paper
+
+                int iqa,jqa;
+                gentype tmp;
+
+                SparseVector<gentype> kres;
+                SparseVector<gentype> farfarprod;
+                Vector<const SparseVector<gentype> *> bord;
+
+                // first calculate c \otimes a
+
+                int dimmy = 0;
+
+                //kronprod(farfarprod,*xjfarfar,*xifarfar,pow(xdim,xbgradOrder),pow(xdim,xagradOrder)); //- NB order wrong here, have tested and confirmed, following line is correct.
+                kronprod(farfarprod,dimmy,xaff,xbff,resxadim,resxbdim);
+
+                // Gradient
+
+                qqqdnK2del(sc,nn,dummyind,q,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,mlid,xy00,xy10,xy11,0,iaset,ibset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                // Then proceed in fully vectorised form
+
+                for ( iqa = 0 ; iqa < sc.size() ; ++iqa )
+                {
+                    bord.resize(nn(iqa).size());
+
+                    for ( jqa = 0 ; jqa < nn(iqa).size() ; ++jqa )
+                    {
+                        bord("&",jqa) = ( nn(iqa)(jqa) == 0 ) ? &xa : ( ( nn(iqa)(jqa) == 1 ) ? &xb : nullptr );
+                    }
+
+                    kronprod(kres,bord,nn(iqa),xdim);
+
+                    innerProduct(tmp,farfarprod,kres);
+
+                    res += ((T) tmp)*((T) sc(iqa));
+                }
+            }
+        }
+
+        else if ( xaff.size() && !xbff.size() )
+        {
+            // case 42
+
+            if ( ( xagradOrder == 1 ) && ( xbgradOrder == 1 ) )
+            {
+                // <ex,d2K/dxdy,ey>
+
+                resizeZeroVec(res,xdim);
+
+                T xascaleres;
+                T xyscaleres;
+                T yxscaleres;
+                T xbscaleres;
+
+                T constres;
+
+                int jqa;
+
+                qqqd2K2delxdely(xascaleres,xbscaleres,xyscaleres,yxscaleres,constres,dummyind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,mlid,xy00,xy10,xy11,0,iaset,ibset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                gentype exa;
+                gentype exy;
+
+                innerProduct(exa,xaff,xa);
+                innerProduct(exy,xaff,xb);
+
+                for ( jqa = 0 ; jqa < xdim ; ++jqa )
+                {
+                    getVecElm(res,jqa) += ((T) exa)*((T) xascaleres)*((T) (xa(jqa)));
+                    getVecElm(res,jqa) += ((T) exa)*((T) xyscaleres)*((T) (xb(jqa)));
+                    getVecElm(res,jqa) += ((T) exy)*((T) yxscaleres)*((T) (xa(jqa)));
+                    getVecElm(res,jqa) += ((T) exy)*((T) xbscaleres)*((T) (xb(jqa)));
+
+                    getVecElm(res,jqa) += ((T) constres)*((T) (xaff(jqa)));
+                }
+            }
+
+            else
+            {
+                // <(ex d/dx)^n (ey d/dy)^n,K>
+
+                int resxadim = (int) pow(xdim,xagradOrder);
+                int resxbdim = (int) pow(xdim,xbgradOrder);
+
+                resizeZeroVec(res,resxbdim);
+
+                Vector<T> sc;
+                Vector<Vector<int> > nn;
+
+                Vector<int> q(xagradOrder+xbgradOrder);
+
+                retVector<int> tmpva;
+
+                q("&",0          ,1,xagradOrder-1            ,tmpva) = 0;
+                q("&",xagradOrder,1,xagradOrder+xbgradOrder-1,tmpva) = 1;
+
+                // Here we use the result: vec(ABC) = vec(C' \otimes A).vec(B), so if
+                // we let a = xifarfar, c = xjfarfar, then:
+                // a'.B.c = vec(c' \otimes a').vec(B)
+                //        = vec(c \otimes a)'.vec(B)
+                // where vec(B) is the vectorised *transpose* gradient we usually calculate, so, getting rid of the transpose,
+                // we need to take the inner product with vec(ex \otimes ey)
+                // ORIGINAL INCORRECT VERSION: where vec(B) is precisely the vectorised gradient we usually calculate
+                //
+                // CLARIFICATION: see pdf in stable bayesian optimisation paper
+
+                int iqa,jqa,kqa;
+                gentype tmp;
+
+                SparseVector<gentype> kres;
+                Vector<const SparseVector<gentype> *> bord;
+
+                // Gradient
+
+                qqqdnK2del(sc,nn,dummyind,q,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,mlid,xy00,xy10,xy11,0,iaset,ibset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                // Then proceed in fully vectorised form
+
+                for ( iqa = 0 ; iqa < sc.size() ; ++iqa )
+                {
+                    bord.resize(nn(iqa).size());
+
+                    for ( jqa = 0 ; jqa < nn(iqa).size() ; ++jqa )
+                    {
+                        bord("&",jqa) = ( nn(iqa)(jqa) == 0 ) ? &xa : ( ( nn(iqa)(jqa) == 1 ) ? &xb : nullptr );
+                    }
+
+                    kronprod(kres,bord,nn(iqa),xdim);
+
+                    for ( jqa = 0 ; jqa < resxadim ; ++jqa )
+                    {
+                        for ( kqa = 0 ; kqa < resxbdim ; ++kqa )
+                        {
+                            getVecElm(res,kqa) += ((T) sc(iqa))*((T) (kres((jqa*resxbdim)+kqa)))*((T) (xaff)(jqa));
+                        }
+                    }
+                }
+            }
+        }
+
+        else if ( !xaff.size() && xbff.size() )
+        {
+            // case 24
+
+            if ( ( xagradOrder == 1 ) && ( xbgradOrder == 1 ) )
+            {
+                // <ex,d2K/dxdy,ey>
+
+                resizeZeroVec(res,xdim);
+
+                T xascaleres;
+                T xyscaleres;
+                T yxscaleres;
+                T xbscaleres;
+
+                T constres;
+
+                int jqa;
+
+                qqqd2K2delxdely(xascaleres,xbscaleres,xyscaleres,yxscaleres,constres,dummyind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,mlid,xy00,xy10,xy11,0,iaset,ibset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                gentype xey;
+                gentype yey;
+
+                innerProduct(xey,xa,xbff);
+                innerProduct(yey,xb,xbff);
+
+                for ( jqa = 0 ; jqa < xdim ; ++jqa )
+                {
+                    getVecElm(res,jqa) += ((T) ((xa)(jqa)))*((T) xascaleres)*((T) xey);
+                    getVecElm(res,jqa) += ((T) ((xa)(jqa)))*((T) xyscaleres)*((T) yey);
+                    getVecElm(res,jqa) += ((T) ((xb)(jqa)))*((T) yxscaleres)*((T) xey);
+                    getVecElm(res,jqa) += ((T) ((xb)(jqa)))*((T) xbscaleres)*((T) yey);
+
+                    getVecElm(res,jqa) += ((T) constres)*((T) ((xbff)(jqa)));
+                }
+            }
+
+            else
+            {
+                // <(ex d/dx)^n (ey d/dy)^n,K>
+
+                int resxadim = (int) pow(xdim,xagradOrder);
+                int resxbdim = (int) pow(xdim,xbgradOrder);
+
+                resizeZeroVec(res,resxadim);
+
+                Vector<T> sc;
+                Vector<Vector<int> > nn;
+
+                Vector<int> q(xagradOrder+xbgradOrder);
+
+                retVector<int> tmpva;
+
+                q("&",0          ,1,xagradOrder-1            ,tmpva) = 0;
+                q("&",xagradOrder,1,xagradOrder+xbgradOrder-1,tmpva) = 1;
+
+                // Here we use the result: vec(ABC) = vec(C' \otimes A).vec(B), so if
+                // we let a = xifarfar, c = xjfarfar, then:
+                // a'.B.c = vec(c' \otimes a').vec(B)
+                //        = vec(c \otimes a)'.vec(B)
+                // where vec(B) is the vectorised *transpose* gradient we usually calculate, so, getting rid of the transpose,
+                // we need to take the inner product with vec(ex \otimes ey)
+                // ORIGINAL INCORRECT VERSION: where vec(B) is precisely the vectorised gradient we usually calculate
+                //
+                // CLARIFICATION: see pdf in stable bayesian optimisation paper
+
+                int iqa,jqa,kqa;
+                gentype tmp;
+
+                SparseVector<gentype> kres;
+                Vector<const SparseVector<gentype> *> bord;
+
+                // Gradient
+
+                qqqdnK2del(sc,nn,dummyind,q,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,mlid,xy00,xy10,xy11,0,iaset,ibset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                // Then proceed in fully vectorised form
+
+                for ( iqa = 0 ; iqa < sc.size() ; ++iqa )
+                {
+                    bord.resize(nn(iqa).size());
+
+                    for ( jqa = 0 ; jqa < nn(iqa).size() ; ++jqa )
+                    {
+                        bord("&",jqa) = ( nn(iqa)(jqa) == 0 ) ? &xa : ( ( nn(iqa)(jqa) == 1 ) ? &xb : nullptr );
+                    }
+
+                    kronprod(kres,bord,nn(iqa),xdim);
+
+                    for ( jqa = 0 ; jqa < resxadim ; ++jqa )
+                    {
+                        for ( kqa = 0 ; kqa < resxbdim ; ++kqa )
+                        {
+                            getVecElm(res,jqa) += ((T) sc(iqa))*((T) (kres((jqa*resxbdim)+kqa)))*((T) (xbff)(kqa));
+                        }
+                    }
+                }
+            }
+        }
+
+        else
+        {
+            // case 44
+
+            if ( ( xagradOrder == 1 ) && ( xbgradOrder == 1 ) )
+            {
+                // <ex,d2K/dxdy,ey>
+
+                resizeZeroMat(res,xdim,xdim);
+
+                T xascaleres;
+                T xyscaleres;
+                T yxscaleres;
+                T xbscaleres;
+
+                T constres;
+
+                int jqa,kqa;
+
+                qqqd2K2delxdely(xascaleres,xbscaleres,xyscaleres,yxscaleres,constres,dummyind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,mlid,xy00,xy10,xy11,0,iaset,ibset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                for ( jqa = 0 ; jqa < xdim ; ++jqa )
+                {
+                    for ( kqa = 0 ; kqa < xdim ; ++kqa )
+                    {
+                        getMatElm(res,jqa,kqa) += ((T) xascaleres)*((T) ((xa)(jqa)))*((T) ((xa)(kqa)));
+                        getMatElm(res,jqa,kqa) += ((T) xbscaleres)*((T) ((xb)(jqa)))*((T) ((xb)(kqa)));
+                        getMatElm(res,jqa,kqa) += ((T) xyscaleres)*((T) ((xa)(jqa)))*((T) ((xb)(kqa)));
+                        getMatElm(res,jqa,kqa) += ((T) yxscaleres)*((T) ((xb)(jqa)))*((T) ((xa)(kqa)));
+                    }
+
+                    getMatElm(res,jqa,jqa) += ((T) constres);
+                }
+            }
+
+            else
+            {
+                // <(ex d/dx)^n (ey d/dy)^n,K>
+
+                int resxadim = (int) pow(xdim,xagradOrder);
+                int resxbdim = (int) pow(xdim,xbgradOrder);
+
+                resizeZeroMat(res,resxadim,resxbdim);
+
+                Vector<T> sc;
+                Vector<Vector<int> > nn;
+
+                Vector<int> q(xagradOrder+xbgradOrder);
+
+                retVector<int> tmpva;
+
+                q("&",0          ,1,xagradOrder-1            ,tmpva) = 0;
+                q("&",xagradOrder,1,xagradOrder+xbgradOrder-1,tmpva) = 1;
+
+                // Here we use the result: vec(ABC) = vec(C' \otimes A).vec(B), so if
+                // we let a = xifarfar, c = xjfarfar, then:
+                // a'.B.c = vec(c' \otimes a').vec(B)
+                //        = vec(c \otimes a)'.vec(B)
+                // where vec(B) is the vectorised *transpose* gradient we usually calculate, so, getting rid of the transpose,
+                // we need to take the inner product with vec(ex \otimes ey)
+                // ORIGINAL INCORRECT VERSION: where vec(B) is precisely the vectorised gradient we usually calculate
+                //
+                // CLARIFICATION: see pdf in stable bayesian optimisation paper
+
+                int iqa,jqa,kqa;
+
+                SparseVector<gentype> kres;
+                SparseVector<gentype> farfarprod;
+                Vector<const SparseVector<gentype> *> bord;
+
+                // Gradient
+
+                qqqdnK2del(sc,nn,dummyind,q,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,mlid,xy00,xy10,xy11,0,iaset,ibset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                // Then proceed in fully vectorised form
+
+                for ( iqa = 0 ; iqa < sc.size() ; ++iqa )
+                {
+                    bord.resize(nn(iqa).size());
+
+                    for ( jqa = 0 ; jqa < nn(iqa).size() ; ++jqa )
+                    {
+                        bord("&",jqa) = ( nn(iqa)(jqa) == 0 ) ? &xa : ( ( nn(iqa)(jqa) == 1 ) ? &xb : nullptr );
+                    }
+
+                    kronprod(kres,bord,nn(iqa),xdim);
+
+                    for ( jqa = 0 ; jqa < resxadim ; ++jqa )
+                    {
+                        for ( kqa = 0 ; kqa < resxbdim ; ++kqa )
+                        {
+                            getMatElm(res,jqa,kqa) += ((T) sc(iqa))*((T) (kres((jqa*resxbdim)+kqa)));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    else if ( xagradOrder && !xbgradOrder )
+    {
+        NiceAssert( !justcalcip );
+
+        if ( xaff.size() )
+        {
+            // case 2
+
+            if ( xagradOrder == 1 )
+            {
+                // <ex,dK/dx> = <ex,x.ax + y.ay>
+                //            = <ex,x>.ax + <ex,y>.ay
+
+                T xascaleres;
+                T xbscaleres;
+
+                qqqdK2delx(xascaleres,xbscaleres,dummyind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,mlid,xy00,xy10,xy11,iaset,ibset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                gentype exa;
+                gentype exy;
+
+                innerProduct(exa,xaff,xa);
+                innerProduct(exy,xaff,xb);
+
+                res = (((T) exa)*xascaleres)+(((T) exy)*xbscaleres);
+            }
+
+            else
+            {
+                // <(ex d/dx)^n,K>
+
+                res = 0.0;
+
+                Vector<T> sc;
+                Vector<Vector<int> > nn;
+
+                Vector<int> q(xagradOrder);
+
+                q = 0;
+
+                int iqa,jqa;
+                gentype tmp;
+
+                SparseVector<gentype> kres;
+                Vector<const SparseVector<gentype> *> bord;
+
+                qqqdnK2del(sc,nn,dummyind,q,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,mlid,xy00,xy10,xy11,0,iaset,ibset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                for ( iqa = 0 ; iqa < sc.size() ; ++iqa )
+                {
+                    bord.resize(nn(iqa).size());
+
+                    for ( jqa = 0 ; jqa < nn(iqa).size() ; ++jqa )
+                    {
+                        bord("&",jqa) = ( nn(iqa)(jqa) == 0 ) ? &xa : ( ( nn(iqa)(jqa) == 1 ) ? &xb : nullptr );
+                    }
+
+                    kronprod(kres,bord,nn(iqa),xdim);
+
+                    innerProduct(tmp,xaff,kres);
+
+                    res += ((T) tmp)*((T) sc(iqa));
+                }
+            }
+        }
+
+        else
+        {
+            // case 4
+
+            if ( xagradOrder == 1 )
+            {
+                // <ex,dK/dx> = <ex,x.ax + y.ay>
+                //            = <ex,x>.ax + <ex,y>.ay
+
+                resizeZeroVec(res,xdim);
+
+                T xascaleres;
+                T xbscaleres;
+
+                int jqa;
+
+                qqqdK2delx(xascaleres,xbscaleres,dummyind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,mlid,xy00,xy10,xy11,iaset,ibset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                for ( jqa = 0 ; jqa < xdim ; ++jqa )
+                {
+                    getVecElm(res,jqa) += ((T) xascaleres)*((T) ((xa)(jqa)));
+                    getVecElm(res,jqa) += ((T) xbscaleres)*((T) ((xb)(jqa)));
+                }
+            }
+
+            else
+            {
+                // <(ex d/dx)^n,K>
+
+                int resdim = (int) pow(xdim,xagradOrder);
+
+                resizeZeroVec(res,resdim);
+
+                Vector<T> sc;
+                Vector<Vector<int> > nn;
+
+                Vector<int> q(xagradOrder);
+
+                q = 0;
+
+                int iqa,jqa;
+
+                SparseVector<gentype> kres;
+                Vector<const SparseVector<gentype> *> bord;
+
+                qqqdnK2del(sc,nn,dummyind,q,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,mlid,xy00,xy10,xy11,0,iaset,ibset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                for ( iqa = 0 ; iqa < sc.size() ; ++iqa )
+                {
+                    bord.resize(nn(iqa).size());
+
+                    for ( jqa = 0 ; jqa < nn(iqa).size() ; ++jqa )
+                    {
+                        bord("&",jqa) = ( nn(iqa)(jqa) == 0 ) ? &xa : ( ( nn(iqa)(jqa) == 1 ) ? &xb : nullptr );
+                    }
+
+                    kronprod(kres,bord,nn(iqa),xdim);
+
+                    for ( jqa = 0 ; jqa < resdim ; ++jqa )
+                    {
+                        getVecElm(res,jqa) += ((T) sc(iqa))*((T) kres(jqa));
+                    }
+                }
+            }
+        }
+    }
+
+    else if ( !xagradOrder && xbgradOrder )
+    {
+        NiceAssert( !justcalcip );
+
+        if ( xbff.size() )
+        {
+            // case 20
+
+            if ( xbgradOrder == 1 )
+            {
+                // <dK/dy,ey> = <xa.x + ya.y,ey>
+                //            = xa.<x,ey> + ya.<y,ey>
+
+                T xascaleres;
+                T xbscaleres;
+
+                // MOD: do by reversing x and y, assuming symmetry.
+                //dK2dely(xascaleres,xbscaleres,dummyind,ia,ib,bias,altK,nullptr,xanear,xbnear,xanearinfo,xbnearinfo,iaset,ibset);
+                qqqdK2delx(xbscaleres,xascaleres,dummyind,xb,xa,xbinfo,xainfo,bias,pxyprod,ib,ia,xdim,xconsist,mlid,xy11,xy10,xy00,ibset,iaset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                gentype xey;
+                gentype yey;
+
+                innerProduct(xey,xa,xbff);
+                innerProduct(yey,xb,xbff);
+
+                res = (xascaleres*((T) xey))+(xbscaleres*((T) yey));
+            }
+
+            else
+            {
+                // <(ex d/dy)^n,K>
+
+                res = 0.0;
+
+                Vector<T> sc;
+                Vector<Vector<int> > nn;
+
+                Vector<int> q(xbgradOrder);
+
+                q = 1;
+
+                qqqdnK2del(sc,nn,dummyind,q,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,mlid,xy00,xy10,xy11,0,iaset,ibset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                int iqa,jqa;
+                gentype tmp;
+
+                SparseVector<gentype> kres;
+                Vector<const SparseVector<gentype> *> bord;
+
+                for ( iqa = 0 ; iqa < sc.size() ; ++iqa )
+                {
+                    bord.resize(nn(iqa).size());
+
+                    for ( jqa = 0 ; jqa < nn(iqa).size() ; ++jqa )
+                    {
+                        bord("&",jqa) = ( nn(iqa)(jqa) == 0 ) ? &xa : ( ( nn(iqa)(jqa) == 1 ) ? &xb : nullptr );
+                    }
+
+                    kronprod(kres,bord,nn(iqa),xdim);
+
+                    innerProduct(tmp,xbff,kres);
+
+                    res += ((T) tmp)*((T) sc(iqa));
+                }
+            }
+        }
+
+        else
+        {
+            // case 40
+
+            if ( xbgradOrder == 1 )
+            {
+                // <dK/dy,ey> = <xa.x + ya.y,ey>
+                //            = xa.<x,ey> + ya.<y,ey>
+
+                resizeZeroVec(res,xdim);
+
+                T xascaleres;
+                T xbscaleres;
+
+                int jqa;
+
+                // MOD: do by reversing x and y, assuming symmetry.
+                //dK2dely(xscaleres,yscaleres,dummyind,i, j, bias,altK,nullptr,xinear,xjnear,xinearinfo,xjnearinfo,iaset,ibset);
+                qqqdK2delx(xbscaleres,xascaleres,dummyind,xb,xa,xbinfo,xainfo,bias,pxyprod,ib,ia,xdim,xconsist,mlid,xy11,xy10,xy00,ibset,iaset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                for ( jqa = 0 ; jqa < xdim ; ++jqa )
+                {
+                    getVecElm(res,jqa) += ((T) xascaleres)*((T) ((xa)(jqa)));
+                    getVecElm(res,jqa) += ((T) xbscaleres)*((T) ((xb)(jqa)));
+                }
+            }
+
+            else
+            {
+                // <(ex d/dy)^n,K>
+
+                int resdim = (int) pow(xdim,xbgradOrder);
+
+                resizeZeroVec(res,resdim);
+
+                Vector<T> sc;
+                Vector<Vector<int> > nn;
+
+                Vector<int> q(xbgradOrder);
+
+                q = 1;
+
+                qqqdnK2del(sc,nn,dummyind,q,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,mlid,xy00,xy10,xy11,0,iaset,ibset,assumreal);
+
+                NiceAssert( dummyind < 0 );
+
+                int iqa,jqa;
+
+                SparseVector<gentype> kres;
+                Vector<const SparseVector<gentype> *> bord;
+
+                for ( iqa = 0 ; iqa < sc.size() ; ++iqa )
+                {
+                    bord.resize(nn(iqa).size());
+
+                    for ( jqa = 0 ; jqa < nn(iqa).size() ; ++jqa )
+                    {
+                        bord("&",jqa) = ( nn(iqa)(jqa) == 0 ) ? &xa : ( ( nn(iqa)(jqa) == 1 ) ? &xb : nullptr );
+                    }
+
+                    kronprod(kres,bord,nn(iqa),xdim);
+
+                    for ( jqa = 0 ; jqa < resdim ; ++jqa )
+                    {
+                        getVecElm(res,jqa) += ((T) sc(iqa))*((T) kres(jqa));
+                    }
+                }
+            }
+        }
+    }
+
+    else
+    {
+        if ( !skipbias && isiteqn(bias) )
+        {
+            // We are dealing with distributions, so need to delay finalisation 
+            // of random parts of the function and then average *outside* the loop
+            //
+            // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+            int qb;
+            int maxq = numSamples();
+
+            SparseVector<SparseVector<gentype> > subval;
+
+            // Take maxq samples from output distribution
+
+            for ( qb = 0 ; qb < maxq ; ++qb )
+            {
+                gentype gbias(bias);
+
+                if ( !subSample(subval,gbias) && !qb )
+                {
+                    goto postbias;
+                }
+
+                gentype gres,glogres;
+
+                KK2(adensetype,bdensetype,gres,glogres,logresvalid,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,gbias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset,1,skipxa,skipxb);
+
+                if ( !qb ) { res =  (T) gres; }
+                else       { res += (T) gres; }
+            }
+
+            res /= maxq;
+
+            logresvalid = 0;
+
+            return res;
+        }
+
+postbias:
+
+        if ( !skipxa && xainfo.xiseqn() )
+        {
+            // We are dealing with distributions, so need to delay finalisation 
+            // of random parts of the function and then average *outside* the loop
+            //
+            // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+            int qxa;
+            int maxq = numSamples();
+
+            gentype gbias(bias);
+
+            SparseVector<SparseVector<gentype> > subval;
+
+            // Take maxq samples from output distribution
+
+            for ( qxa = 0 ; qxa < maxq ; ++qxa )
+            {
+                SparseVector<gentype> xxa(xa);
+                vecInfo xxainfo;
+
+                if ( !subSample(subval,xxa,xxainfo) && !qxa )
+                {
+                    goto postxa;
+                }
+
+                gentype gres,glogres;
+
+                KK2(adensetype,bdensetype,gres,glogres,logresvalid,xxa,xb,xxainfo,xbinfo,xagradOrder,xbgradOrder,xaff,xbff,gbias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset,skipbias,1,skipxb);
+
+                if ( !qxa )        { res =  (T) gres; }
+                else if ( !iaset ) { res += (T) gres; }
+                else               { res =  ( ( (T) gres ) > ( (T) res ) ) ? ( (T) gres ) : ( (T) res ); }
+            }
+
+            if ( !iaset )
+            {
+                res /= maxq;
+            }
+
+            logresvalid = 0;
+
+            return res;
+        }
+
+postxa:
+
+        if ( !skipxb && xbinfo.xiseqn() )
+        {
+            // We are dealing with distributions, so need to delay finalisation 
+            // of random parts of the function and then average *outside* the loop
+            //
+            // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+            int qxa;
+            int maxq = numSamples();
+
+            gentype gbias(bias);
+
+            SparseVector<SparseVector<gentype> > subval;
+
+            // Take maxq samples from output distribution
+
+            for ( qxa = 0 ; qxa < maxq ; ++qxa )
+            {
+                SparseVector<gentype> xxb(xb);
+                vecInfo xxbinfo;
+
+                if ( !subSample(subval,xxb,xxbinfo) && !qxa )
+                {
+                    goto postxb;
+                }
+
+                gentype gres,glogres;
+
+                KK2(adensetype,bdensetype,gres,glogres,logresvalid,xa,xxb,xainfo,xxbinfo,xagradOrder,xbgradOrder,xaff,xbff,gbias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset,skipbias,skipxa,1);
+
+                if ( !qxa )        { res =  (T) gres; }
+                else if ( !ibset ) { res += (T) gres; }
+                else               { res =  ( ( (T) gres ) > ( (T) res ) ) ? ( (T) gres ) : ( (T) res ); }
+            }
+
+            if ( !ibset )
+            {
+                res /= maxq;
+            }
+
+            logresvalid = 0;
+
+            return res;
+        }
+
+postxb:
+
+        LL2(adensetype,bdensetype,res,logres,logresvalid,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,justcalcip,indstart,indend);
+    }
+
+    return res;
+}
+
+//phantomx
+template <class T>
+T &MercerKernel::KK3(T &res, T &logres, int &logresvalid,
+                     const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc,
+                     const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo,
+                     int xagradOrder, int xbgradOrder, int xcgradOrder,
+                     const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff, const SparseVector<gentype> &xcff,
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int ia, int ib, int ic,
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid,
+                     const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, const Vector<int> *s, int justcalcip, int indstart, int indend,
+                     int iaset, int ibset, int icset,
+                     int skipbias,
+                     int skipxa, int skipxb, int skipxc) const
+{
+//errstream() << "phantomxyzabc 10: " << xa << "\t" << xb << "\t" << xc << "\n";
+//errstream() << "phantomxyzabc 11: " << xagradOrder << "\t" << xbgradOrder << "\t" << xcgradOrder << "\n";
+//errstream() << "phantomxyzabc 12: " << ia << "\t" << ib << "\t" << ic << "\n";
+//errstream() << "phantomxyzabc 12: " << isFastKernelSum() << "\n";
+//errstream() << "phantomxyzabc 12: " << isNormalised() << "\n";
+//errstream() << "phantomxyzabc 12: " << needsDiff() << "\n";
+//errstream() << "phantomxyzabc 12: " << needsNorm() << "\n";
+//errstream() << "phantomxyzabc 12: " << justcalcip << "\n";
+    if ( xagradOrder && !xbgradOrder && !xcgradOrder )
+    {
+        if ( isFastKernelSum() && !isNormalised(indend) && !needsDiff() && !needsNorm() && !justcalcip )
+        {
+            // In this case we have a simple inner product kernel, no normalisation,
+            // nothing complicating.  In this case:
+            //
+            // K1(xa) = k(<<xa>>_1) = k(<xa,1>>_2) = K2(xa,1)
+            //
+            // allowing us to "borrow" the gradient calculation from K2
+
+            SparseVector<gentype> xx(xb);
+            vecInfo xxinfo;
+
+            xx *= xc;
+
+            getvecInfo(xxinfo,xx);
+
+            return KK2(0,0,res,logres,logresvalid,
+                       xa,xx,
+                       xainfo,xxinfo,
+                       xagradOrder,0,
+                       xaff,xx,
+                       bias,
+                       pxyprod,
+                       ia,-1,
+                       xdim,xconsist,assumreal,resmode,mlid,
+                       nullptr,nullptr,nullptr,justcalcip,indstart,indend,
+                       iaset,0);
+//errstream() << "phantomxyzabc 121: " << res << "\n";
+        }
+    }
+
+    if ( !xagradOrder && xbgradOrder && !xcgradOrder )
+    {
+        if ( isFastKernelSum() && !isNormalised(indend) && !needsDiff() && !needsNorm() && !justcalcip )
+        {
+            // In this case we have a simple inner product kernel, no normalisation,
+            // nothing complicating.  In this case:
+            //
+            // K1(xa) = k(<<xa>>_1) = k(<xa,1>>_2) = K2(xa,1)
+            //
+            // allowing us to "borrow" the gradient calculation from K2
+
+            SparseVector<gentype> xx(xa);
+            vecInfo xxinfo;
+
+            xx *= xc;
+
+            getvecInfo(xxinfo,xx);
+
+            return KK2(0,0,res,logres,logresvalid,
+                       xb,xx,
+                       xbinfo,xxinfo,
+                       xbgradOrder,0,
+                       xbff,xx,
+                       bias,
+                       pxyprod,
+                       ib,-1,
+                       xdim,xconsist,assumreal,resmode,mlid,
+                       nullptr,nullptr,nullptr,justcalcip,indstart,indend,
+                       ibset,0);
+//errstream() << "phantomxyzabc 122: " << res << "\n";
+        }
+    }
+
+    if ( !xagradOrder && !xbgradOrder && xcgradOrder )
+    {
+        if ( isFastKernelSum() && !isNormalised(indend) && !needsDiff() && !needsNorm() && !justcalcip )
+        {
+            // In this case we have a simple inner product kernel, no normalisation,
+            // nothing complicating.  In this case:
+            //
+            // K1(xa) = k(<<xa>>_1) = k(<xa,1>>_2) = K2(xa,1)
+            //
+            // allowing us to "borrow" the gradient calculation from K2
+
+            SparseVector<gentype> xx(xa);
+            vecInfo xxinfo;
+
+            xx *= xb;
+
+            getvecInfo(xxinfo,xx);
+
+            return KK2(0,0,res,logres,logresvalid,
+                       xc,xx,
+                       xcinfo,xxinfo,
+                       xcgradOrder,0,
+                       xcff,xx,
+                       bias,
+                       pxyprod,
+                       ic,-1,
+                       xdim,xconsist,assumreal,resmode,mlid,
+                       nullptr,nullptr,nullptr,justcalcip,indstart,indend,
+                       icset,0);
+//errstream() << "phantomxyzabc 123: " << res << "\n";
+        }
+    }
+
+    NiceAssert( !xagradOrder && !xbgradOrder && !xcgradOrder );
+
+    if ( !skipbias && isiteqn(bias) )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qb;
+        int maxq = numSamples();
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qb = 0 ; qb < maxq ; ++qb )
+        {
+            gentype gbias(bias);
+
+            if ( !subSample(subval,gbias) && !qb )
+            {
+                goto postbias;
+            }
+
+            gentype gres,glogres;
+
+            KK3(gres,glogres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,gbias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset,icset,1,skipxa,skipxb,skipxc);
+
+            if ( !qb ) { res =  (T) gres; }
+            else       { res += (T) gres; }
+        }
+
+        res /= maxq;
+
+        logresvalid = 0;
+
+        return res;
+    }
+
+postbias:
+
+    if ( !skipxa && xainfo.xiseqn() )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxa(xa);
+            vecInfo xxainfo;
+
+            if ( !subSample(subval,xxa,xxainfo) && !qxa )
+            {
+                goto postxa;
+            }
+
+            gentype gres,glogres;
+
+            KK3(gres,glogres,logresvalid,xxa,xb,xc,xxainfo,xbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,gbias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset,icset,skipbias,1,skipxb,skipxc);
+
+            if ( !qxa )        { res =  (T) gres; }
+            else if ( !iaset ) { res += (T) gres; }
+            else               { res =  ( ( (T) gres ) > ( (T) res ) ) ? ( (T) gres ) : ( (T) res ); }
+        }
+
+        if ( !iaset )
+        {
+            res /= maxq;
+        }
+
+        logresvalid = 0;
+
+        return res;
+    }
+
+postxa:
+
+    if ( !skipxb && xbinfo.xiseqn() )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxb(xb);
+            vecInfo xxbinfo;
+
+            if ( !subSample(subval,xxb,xxbinfo) && !qxa )
+            {
+                goto postxb;
+            }
+
+            gentype gres,glogres;
+
+            KK3(gres,glogres,logresvalid,xa,xxb,xc,xainfo,xxbinfo,xcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,gbias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset,icset,skipbias,skipxa,1,skipxc);
+
+            if ( !qxa )        { res =  (T) gres; }
+            else if ( !ibset ) { res += (T) gres; }
+            else               { res =  ( ( (T) gres ) > ( (T) res ) ) ? ( (T) gres ) : ( (T) res ); }
+        }
+
+        if ( !ibset )
+        {
+            res /= maxq;
+        }
+
+        logresvalid = 0;
+
+        return res;
+    }
+
+postxb:
+
+    if ( !skipxc && xcinfo.xiseqn() )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxc(xc);
+            vecInfo xxcinfo;
+
+            if ( !subSample(subval,xxc,xxcinfo) && !qxa )
+            {
+                goto postxc;
+            }
+
+            gentype gres,glogres;
+
+            KK3(gres,glogres,logresvalid,xa,xb,xxc,xainfo,xbinfo,xxcinfo,xagradOrder,xbgradOrder,xcgradOrder,xaff,xbff,xcff,gbias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,iaset,ibset,icset,skipbias,skipxa,skipxb,1);
+
+            if ( !qxa )        { res =  (T) gres; }
+            else if ( !icset ) { res += (T) gres; }
+            else               { res =  ( ( (T) gres ) > ( (T) res ) ) ? ( (T) gres ) : ( (T) res ); }
+        }
+
+        if ( !icset )
+        {
+            res /= maxq;
+        }
+
+        logresvalid = 0;
+
+        return res;
+    }
+
+postxc:
+
+    LL3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,bias,pxyprod,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,s,justcalcip,indstart,indend);
+
+    return res;
+}
+
+//phantomx
+template <class T>
+T &MercerKernel::KK4(T &res, T &logres, int &logresvalid,
+                     const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd,
+                     const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo,
+                     int xagradOrder, int xbgradOrder, int xcgradOrder, int xdgradOrder,
+                     const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff, const SparseVector<gentype> &xcff, const SparseVector<gentype> &xdff,
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int ia, int ib, int ic, int id,
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid,
+                     const Vector<int> *s, int justcalcip,
+                     const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, const double *xy30, const double *xy31, const double *xy32, const double *xy33, int indstart, int indend,
+                     int iaset, int ibset, int icset, int idset,
+                     int skipbias,
+                     int skipxa, int skipxb, int skipxc, int skipxd) const
+{
+    if ( xagradOrder && !xbgradOrder && !xcgradOrder && !xdgradOrder )
+    {
+        if ( isFastKernelSum() && !isNormalised(indend) && !needsDiff() && !needsNorm() && !justcalcip )
+        {
+            // In this case we have a simple inner product kernel, no normalisation,
+            // nothing complicating.  In this case:
+            //
+            // K1(xa) = k(<<xa>>_1) = k(<xa,1>>_2) = K2(xa,1)
+            //
+            // allowing us to "borrow" the gradient calculation from K2
+
+            SparseVector<gentype> xx(xb);
+            vecInfo xxinfo;
+
+            xx *= xc;
+            xx *= xd;
+
+            getvecInfo(xxinfo,xx);
+
+            return KK2(0,0,res,logres,logresvalid,
+                       xa,xx,
+                       xainfo,xxinfo,
+                       xagradOrder,0,
+                       xaff,xx,
+                       bias,
+                       pxyprod,
+                       ia,-1,
+                       xdim,xconsist,assumreal,resmode,mlid,
+                       nullptr,nullptr,nullptr,justcalcip,indstart,indend,
+                       iaset,0);
+        }
+    }
+
+    if ( !xagradOrder && xbgradOrder && !xcgradOrder && !xdgradOrder )
+    {
+        if ( isFastKernelSum() && !isNormalised(indend) && !needsDiff() && !needsNorm() && !justcalcip )
+        {
+            // In this case we have a simple inner product kernel, no normalisation,
+            // nothing complicating.  In this case:
+            //
+            // K1(xa) = k(<<xa>>_1) = k(<xa,1>>_2) = K2(xa,1)
+            //
+            // allowing us to "borrow" the gradient calculation from K2
+
+            SparseVector<gentype> xx(xa);
+            vecInfo xxinfo;
+
+            xx *= xc;
+            xx *= xd;
+
+            getvecInfo(xxinfo,xx);
+
+            return KK2(0,0,res,logres,logresvalid,
+                       xb,xx,
+                       xbinfo,xxinfo,
+                       xbgradOrder,0,
+                       xbff,xx,
+                       bias,
+                       pxyprod,
+                       ib,-1,
+                       xdim,xconsist,assumreal,resmode,mlid,
+                       nullptr,nullptr,nullptr,justcalcip,indstart,indend,
+                       ibset,0);
+        }
+    }
+
+    if ( !xagradOrder && !xbgradOrder && xcgradOrder && !xdgradOrder )
+    {
+        if ( isFastKernelSum() && !isNormalised(indend) && !needsDiff() && !needsNorm() && !justcalcip )
+        {
+            // In this case we have a simple inner product kernel, no normalisation,
+            // nothing complicating.  In this case:
+            //
+            // K1(xa) = k(<<xa>>_1) = k(<xa,1>>_2) = K2(xa,1)
+            //
+            // allowing us to "borrow" the gradient calculation from K2
+
+            SparseVector<gentype> xx(xa);
+            vecInfo xxinfo;
+
+            xx *= xb;
+            xx *= xd;
+
+            getvecInfo(xxinfo,xx);
+
+            return KK2(0,0,res,logres,logresvalid,
+                       xc,xx,
+                       xcinfo,xxinfo,
+                       xcgradOrder,0,
+                       xcff,xx,
+                       bias,
+                       pxyprod,
+                       ic,-1,
+                       xdim,xconsist,assumreal,resmode,mlid,
+                       nullptr,nullptr,nullptr,justcalcip,indstart,indend,
+                       icset,0);
+        }
+    }
+
+    if ( !xagradOrder && !xbgradOrder && !xcgradOrder && xdgradOrder )
+    {
+        if ( isFastKernelSum() && !isNormalised(indend) && !needsDiff() && !needsNorm() && !justcalcip )
+        {
+            // In this case we have a simple inner product kernel, no normalisation,
+            // nothing complicating.  In this case:
+            //
+            // K1(xa) = k(<<xa>>_1) = k(<xa,1>>_2) = K2(xa,1)
+            //
+            // allowing us to "borrow" the gradient calculation from K2
+
+            SparseVector<gentype> xx(xa);
+            vecInfo xxinfo;
+
+            xx *= xb;
+            xx *= xc;
+
+            getvecInfo(xxinfo,xx);
+
+            return KK2(0,0,res,logres,logresvalid,
+                       xd,xx,
+                       xdinfo,xxinfo,
+                       xdgradOrder,0,
+                       xdff,xx,
+                       bias,
+                       pxyprod,
+                       id,-1,
+                       xdim,xconsist,assumreal,resmode,mlid,
+                       nullptr,nullptr,nullptr,justcalcip,indstart,indend,
+                       idset,0);
+        }
+    }
+
+    NiceAssert( !xagradOrder && !xbgradOrder && !xcgradOrder && !xdgradOrder );
+
+    (void) xbff;
+    (void) xcff;
+    (void) xdff;
+
+    if ( !skipbias && isiteqn(bias) )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qb;
+        int maxq = numSamples();
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qb = 0 ; qb < maxq ; ++qb )
+        {
+            gentype gbias(bias);
+
+            if ( !subSample(subval,gbias) && !qb )
+            {
+                goto postbias;
+            }
+
+            gentype gres,glogres;
+
+            KK4(gres,glogres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,gbias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend,iaset,ibset,icset,idset,1,skipxa,skipxb,skipxc,skipxd);
+
+            if ( !qb ) { res =  (T) gres; }
+            else       { res += (T) gres; }
+        }
+
+        res /= maxq;
+
+        logresvalid = 0;
+
+        return res;
+    }
+
+postbias:
+
+    if ( !skipxa && xainfo.xiseqn() )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxa(xa);
+            vecInfo xxainfo;
+
+            if ( !subSample(subval,xxa,xxainfo) && !qxa )
+            {
+                goto postxa;
+            }
+
+            gentype gres,glogres;
+
+            KK4(gres,glogres,logresvalid,xxa,xb,xc,xd,xxainfo,xbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,gbias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend,iaset,ibset,icset,idset,skipbias,1,skipxb,skipxc,skipxd);
+
+            if ( !qxa )        { res =  (T) gres; }
+            else if ( !iaset ) { res += (T) gres; }
+            else               { res =  ( ( (T) gres ) > ( (T) res ) ) ? ( (T) gres ) : ( (T) res ); }
+        }
+
+        if ( !iaset )
+        {
+            res /= maxq;
+        }
+
+        logresvalid = 0;
+
+        return res;
+    }
+
+postxa:
+
+    if ( !skipxb && xbinfo.xiseqn() )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxb(xb);
+            vecInfo xxbinfo;
+
+            if ( !subSample(subval,xxb,xxbinfo) && !qxa )
+            {
+                goto postxb;
+            }
+
+            gentype gres,glogres;
+
+            KK4(gres,glogres,logresvalid,xa,xxb,xc,xd,xainfo,xxbinfo,xcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,gbias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend,iaset,ibset,icset,idset,skipbias,skipxa,1,skipxc,skipxd);
+
+            if ( !qxa )        { res =  (T) gres; }
+            else if ( !ibset ) { res += (T) gres; }
+            else               { res =  ( ( (T) gres ) > ( (T) res ) ) ? ( (T) gres ) : ( (T) res ); }
+        }
+
+        if ( !ibset )
+        {
+            res /= maxq;
+        }
+
+        logresvalid = 0;
+
+        return res;
+    }
+
+postxb:
+
+    if ( !skipxc && xcinfo.xiseqn() )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxc(xc);
+            vecInfo xxcinfo;
+
+            if ( !subSample(subval,xxc,xxcinfo) && !qxa )
+            {
+                goto postxc;
+            }
+
+            gentype gres,glogres;
+
+            KK4(gres,glogres,logresvalid,xa,xb,xxc,xd,xainfo,xbinfo,xxcinfo,xdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,gbias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend,iaset,ibset,icset,idset,skipbias,skipxa,skipxb,1,skipxd);
+
+            if ( !qxa )        { res =  (T) gres; }
+            else if ( !icset ) { res += (T) gres; }
+            else               { res =  ( ( (T) gres ) > ( (T) res ) ) ? ( (T) gres ) : ( (T) res ); }
+        }
+
+        if ( !icset )
+        {
+            res /= maxq;
+        }
+
+        logresvalid = 0;
+
+        return res;
+    }
+
+postxc:
+
+    if ( !skipxd && xdinfo.xiseqn() )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxd(xd);
+            vecInfo xxdinfo;
+
+            if ( !subSample(subval,xxd,xxdinfo) && !qxa )
+            {
+                goto postxd;
+            }
+
+            gentype gres,glogres;
+
+            KK4(gres,glogres,logresvalid,xa,xb,xc,xxd,xainfo,xbinfo,xcinfo,xxdinfo,xagradOrder,xbgradOrder,xcgradOrder,xdgradOrder,xaff,xbff,xcff,xdff,gbias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend,iaset,ibset,icset,idset,skipbias,skipxa,skipxb,skipxc,1);
+
+            if ( !qxa )        { res =  (T) gres; }
+            else if ( !idset ) { res += (T) gres; }
+            else               { res =  ( ( (T) gres ) > ( (T) res ) ) ? ( (T) gres ) : ( (T) res ); }
+        }
+
+        if ( !idset )
+        {
+            res /= maxq;
+        }
+
+        logresvalid = 0;
+
+        return res;
+    }
+
+postxd:
+
+    LL4(res,logres,logresvalid,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,s,justcalcip,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,indstart,indend);
+
+    return res;
+}
+
+template <class T>
+T &MercerKernel::KK6(T &res, T &logres, int &logresvalid,
+                     const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const SparseVector<gentype> &xe, const SparseVector<gentype> &xf,
+                     const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo, const vecInfo &xeinfo, const vecInfo &xfinfo,
+                     int xagradOrder, int xbgradOrder, int xcgradOrder, int xdgradOrder, int xegradOrder, int xfgradOrder,
+                     const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff, const SparseVector<gentype> &xcff, const SparseVector<gentype> &xdff, const SparseVector<gentype> &xeff, const SparseVector<gentype> &xf4,
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int ia, int ib, int ic, int id, int ie, int jf,
+                     int xdim, int xconsist, int assumreal, int xresmode, int mlid,
+                     const Matrix<double> *xy, const Vector<int> *s, int justcalcip, int indstart, int indend,
+                     int iaset, int ibset, int icset, int idset, int ieset, int ifset) const
+{
+    (void) pxyprod;
+    (void) s;
+    (void) xy;
+    (void) justcalcip;
+
+    Vector<const SparseVector<gentype> *> x(6);
+    Vector<const vecInfo *> xinfo(6);
+    Vector<int> i(6);
+    Vector<int> iset(6);
+    Vector<int> xgradOrder(6);
+    Vector<const SparseVector<gentype> *> xff(6);
+
+    int z = 0;
+
+    x("&",z)          = &xa;
+    xinfo("&",z)      = &xainfo;
+    i("&",z)          = ia;
+    iset("&",z)       = iaset;
+    xgradOrder("&",z) = xagradOrder;
+    xff("&",z)        = &xaff;
+
+    x("&",1)          = &xb;
+    xinfo("&",1)      = &xbinfo;
+    i("&",1)          = ib;
+    iset("&",1)       = ibset;
+    xgradOrder("&",1) = xbgradOrder;
+    xff("&",1)        = &xbff;
+
+    x("&",2)          = &xc;
+    xinfo("&",2)      = &xcinfo;
+    i("&",2)          = ic;
+    iset("&",2)       = icset;
+    xgradOrder("&",2) = xcgradOrder;
+    xff("&",2)        = &xcff;
+
+    x("&",3)          = &xd;
+    xinfo("&",3)      = &xdinfo;
+    i("&",3)          = id;
+    iset("&",3)       = idset;
+    xgradOrder("&",3) = xdgradOrder;
+    xff("&",3)        = &xdff;
+
+    x("&",4)          = &xe;
+    xinfo("&",4)      = &xeinfo;
+    i("&",4)          = ie;
+    iset("&",4)       = ieset;
+    xgradOrder("&",4) = xegradOrder;
+    xff("&",4)        = &xeff;
+
+    x("&",5)          = &xf;
+    xinfo("&",5)      = &xfinfo;
+    i("&",5)          = jf;
+    iset("&",5)       = ifset;
+    xgradOrder("&",5) = xfgradOrder;
+    xff("&",5)        = &xf4;
+
+    return KKm(6,res,logres,logresvalid,x,xinfo,xgradOrder,xff,bias,i,nullptr,xdim,xconsist,assumreal,xresmode,mlid,nullptr,nullptr,justcalcip,indstart,indend,&iset);
+}
+
+//phantomx
+template <class T>
+T &MercerKernel::KKm(int m, T &res, T &logres, int &logresvalid,
+                     Vector<const SparseVector<gentype> *> &x,
+                     Vector<const vecInfo *> &xinfo,
+                     const Vector<int> &xgradOrder,
+                     Vector<const SparseVector<gentype> *> &xff,
+                     const T &bias,
+                     Vector<int> &i,
+                     const gentype **pxyprod, int xdim, int xconsist, int assumreal, int resmode, int mlid,
+                     const Matrix<double> *xy, const Vector<int> *s, int justcalcip, int indstart, int indend,
+                     const Vector<int> *iset,
+                     int skipbias,
+                     int skipx) const
+{
+    if ( 0 == m )
+    {
+        return KK0(res,logres,logresvalid,bias,pxyprod,xdim,xconsist,assumreal,resmode,mlid,justcalcip,indstart,indend);
+    }
+
+    else if ( 1 == m )
+    {
+        return KK1(res,logres,logresvalid,*(x(0)),*(xinfo(0)),xgradOrder(0),*(xff(0)),bias,pxyprod,i(0),xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,indstart,indend,(*iset)(0));
+    }
+
+    else if ( 2 == m )
+    {
+        return KK2(0,0,res,logres,logresvalid,*(x(0)),*(x(1)),*(xinfo(0)),*(xinfo(1)),xgradOrder(0),xgradOrder(1),*(xff(0)),*(xff(1)),bias,pxyprod,i(0),i(1),xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend,(*iset)(0),(*iset)(1));
+    }
+
+    else if ( 3 == m )
+    {
+        return KK3(res,logres,logresvalid,*(x(0)),*(x(1)),*(x(2)),*(xinfo(0)),*(xinfo(1)),*(xinfo(2)),xgradOrder(0),xgradOrder(1),xgradOrder(2),*(xff(0)),*(xff(1)),*(xff(2)),bias,pxyprod,i(0),i(1),i(2),xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend,(*iset)(0),(*iset)(1),(*iset)(2));
+    }
+
+    else if ( 4 == m )
+    {
+        return KK4(res,logres,logresvalid,*(x(0)),*(x(1)),*(x(2)),*(x(3)),*(xinfo(0)),*(xinfo(1)),*(xinfo(2)),*(xinfo(3)),xgradOrder(0),xgradOrder(1),xgradOrder(2),xgradOrder(3),*(xff(0)),*(xff(1)),*(xff(2)),*(xff(3)),bias,pxyprod,i(0),i(1),i(2),i(3),xdim,xconsist,assumreal,resmode,mlid,nullptr,justcalcip,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend,(*iset)(0),(*iset)(1),(*iset)(2),(*iset)(3));
+    }
+
+    if ( sum(xgradOrder) == 1 )
+    {
+        if ( isFastKernelSum() && !isNormalised(indend) && !needsDiff() && !needsNorm() && !justcalcip )
+        {
+            // In this case we have a simple inner product kernel, no normalisation,
+            // nothing complicating.  In this case:
+            //
+            // K1(xa) = k(<<xa>>_1) = k(<xa,1>>_2) = K2(xa,1)
+            //
+            // allowing us to "borrow" the gradient calculation from K2
+
+            retVector<int> tmpva;
+            Vector<int> notj(cntintvec(m,tmpva));
+            int j,k;
+
+            max(xgradOrder,j);
+
+            notj.remove(j);
+
+            SparseVector<gentype> xx;
+            vecInfo xxinfo;
+
+            for ( k = 0 ; k < m-1 ; ++k )
+            {
+                if ( !k )
+                {
+                    xx = (*(x(notj(k))));
+                }
+
+                else
+                {
+                    xx *= (*(x(notj(k))));
+                }
+            }
+
+            getvecInfo(xxinfo,xx);
+
+            return KK2(0,0,res,logres,logresvalid,
+                       *(x(j)),xx,
+                       *(xinfo(j)),xxinfo,
+                       xgradOrder(j),0,
+                       *(xff(j)),xx,
+                       bias,
+                       pxyprod,
+                       i(j),-1,
+                       xdim,xconsist,assumreal,resmode,mlid,
+                       nullptr,nullptr,nullptr,justcalcip,indstart,indend,
+                       (*iset)(j),0);
+        }
+    }
+
+    NiceAssert( xgradOrder == 0 );
+
+    (void) xff;
+
+    if ( !skipbias && isiteqn(bias) )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qb;
+        int maxq = numSamples();
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qb = 0 ; qb < maxq ; ++qb )
+        {
+            gentype gbias(bias);
+
+            if ( !subSample(subval,gbias) && !qb )
+            {
+                goto postbias;
+            }
+
+            gentype gres,glogres;
+
+            KKm(m,gres,glogres,logresvalid,x,xinfo,xgradOrder,xff,gbias,i,pxyprod,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,justcalcip,indstart,indend,iset,1,skipx);
+
+            if ( !qb ) { res =  (T) gres; }
+            else       { res += (T) gres; }
+        }
+
+        res /= maxq;
+
+        logresvalid = 0;
+
+        return res;
+    }
+
+postbias:
+
+    Vector<int> isValEqn;
+
+    if ( !skipx )
+    {
+        int qr;
+
+        for ( qr = 0 ; qr < m ; ++qr )
+        {
+            if ( (*(xinfo(qr))).xiseqn() )
+            {
+                isValEqn.add(isValEqn.size());
+                isValEqn("&",isValEqn.size()-1) = qr;
+            }
+        }
+    }
+
+    if ( !skipx && isValEqn.size() )
+    {
+        int q;
+
+        Vector<SparseVector<gentype> *> yy(x.size());
+        Vector<vecInfo *> yyinfo(xinfo.size());
+
+        Vector<const SparseVector<gentype> *> xx(x);
+        Vector<const vecInfo *> xxinfo(xinfo);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        int haschanged = 0;
+
+        for ( q = 0 ; q < isValEqn.size() ; ++q )
+        {
+            MEMNEW(yy("&",isValEqn(q)),SparseVector<gentype>(*(x(isValEqn(q)))));
+            MEMNEW(yyinfo("&",isValEqn(q)),vecInfo(*(xinfo(isValEqn(q)))));
+
+            haschanged += subSample(subval,*(yy("&",isValEqn(q))),*(yyinfo("&",isValEqn(q))));
+
+            xx("&",isValEqn(q))     = yy("&",isValEqn(q));
+            xxinfo("&",isValEqn(q)) = yyinfo("&",isValEqn(q));
+
+            //FIXME: need to implement setwise m-kernels
+            NiceAssert( !iset || !(*iset)(q) );
+        }
+
+        if ( !haschanged )
+        {
+            for ( q = 0 ; q < isValEqn.size() ; ++q )
+            {
+                MEMDEL(yy("&",isValEqn(q)));
+                MEMDEL(yyinfo("&",isValEqn(q)));
+            }
+
+            goto postx;
+        }
+
+        int isdone  = 0;
+        int isfirst = 1;
+
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        Vector<int> qx(isValEqn.size());
+
+        qx = 0;
+
+        while ( !isdone )
+        {
+            gentype gres,glogres;
+
+            KKm(m,gres,glogres,logresvalid,xx,xxinfo,xgradOrder,xff,gbias,i,pxyprod,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,justcalcip,indstart,indend,iset,skipbias,1);
+
+            if ( isfirst ) { res =  (T) gres; }
+            else           { res += (T) gres; }
+
+            for ( q = 0 ; q < qx.size() ; ++q )
+            {
+                *(yy("&",isValEqn(q)))     = *(x(isValEqn(q)));
+                *(yyinfo("&",isValEqn(q))) = *(xinfo(isValEqn(q)));
+
+                subSample(subval,*(yy("&",isValEqn(q))),*(yyinfo("&",isValEqn(q))));
+
+                xx("&",isValEqn(q))     = yy("&",isValEqn(q));
+                xxinfo("&",isValEqn(q)) = yyinfo("&",isValEqn(q));
+
+                ++(qx("&",q));
+
+                if ( qx(q) < maxq )
+                {
+                    break;
+                }
+
+                else
+                {
+                    qx("&",q) = 0;
+                }
+            }
+
+            isdone  = ( q < qx.size() ) ? 0 : 1;
+            isfirst = 0;
+        }
+
+        res /= pow(maxq,isValEqn.size());
+
+        for ( q = 0 ; q < isValEqn.size() ; ++q )
+        {
+            MEMDEL(yy("&",isValEqn(q)));
+            MEMDEL(yyinfo("&",isValEqn(q)));
+        }
+
+        return res;
+    }
+
+postx:
+
+    LLm(m,res,logres,logresvalid,x,xinfo,bias,i,pxyprod,xdim,xconsist,assumreal,resmode,mlid,xy,s,justcalcip,indstart,indend);
+
+    return res;
+}
+
+template <class T>
+int MercerKernel::Pphim(int m, Vector<T> &res, const SparseVector<gentype> &xa, const vecInfo &xainfo, int ia, int allowfinite, int xdim, int xconsist, int assumreal, int iaset, int gradOrder, int xagradup, int indstart, int indend, int xaskip) const
+{
+    int dres = 0;
+
+    if ( !xaskip && xainfo.xiseqn() && ( m != -1 ) )
+    {
+        // We are dealing with distributions, so need to delay finalisation
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxa(xa);
+            vecInfo xxainfo;
+
+            if ( !subSample(subval,xxa,xxainfo) && !qxa )
+            {
+                goto postxa;
+            }
+
+            Vector<T> tmpres;
+
+            dres = Pphim(m,tmpres,xxa,xxainfo,ia,allowfinite,xdim,xconsist,assumreal,iaset,gradOrder,xagradup,indstart,indend,1);
+
+            if ( !qxa )        { res =  tmpres; }
+            else if ( !iaset ) { res += tmpres; }
+            else               { NiceThrow("Set-based evaluation of feature maps doesn't work yet."); }
+        }
+
+        if ( !iaset )
+        {
+            res.scale(1.0/maxq);
+        }
+
+        return dres;
+    }
+
+postxa:
+
+    dres = Qqhim(m,res,xa,xainfo,ia,allowfinite,xdim,xconsist,assumreal,gradOrder,xagradup,indstart,indend);
+
+    return dres;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//phantomx
+template <class T>
+T &MercerKernel::LL0(T &res, T &logres, int &logresvalid,
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid, int justcalcip, int indstart, int indend) const
+{
+    NiceAssert( ! ( isFastKernelSum() && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) );
+
+    logresvalid = 0;
+
+    if ( !size() )
+    {
+        return res = 0.0;
+    }
+
+    if ( ( ( isAltDiff() >= 100 ) && ( isAltDiff() <= 199 ) ) && !justcalcip )
+    {
+        res = 0;
+    }
+
+    else if ( ( resmode & 0x01 ) )
+    {
+        NiceAssert( !isfullnorm );
+        NiceAssert( !justcalcip );
+        NiceAssert( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) );
+        NiceAssert( !( isprod ) );
+
+        gentype tempres;
+        gentype dummyval(0);
+
+        K0i(tempres,dummyval,xdim,resmode,mlid,indstart,indend);
+
+        res = (T) tempres;
+    }
+
+    else if ( isprod )
+    {
+        NiceAssert( !( resmode & 0x80 ) );
+
+        // Should probably replace this with a proper fast version
+
+        Vector<const SparseVector<gentype> *> xx(0);
+        Vector<const vecInfo *> xxinfo(0);
+        Vector<int> ii(0);
+
+        LLm(0,res,logres,logresvalid,xx,xxinfo,bias,ii,pxyprod,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,0,indstart,indend);
+    }
+
+    else if ( ( isFastKernelSum() || isFastKernelChain() ) && ( resmode & 0x80 ) && !justcalcip )
+    {
+        res = 0;
+    }
+
+    else if ( isFastKernelSum() || isFastKernelChain() || ( isFastKernelXfer() && !resmode ) || justcalcip )
+    {
+        int locindstart = (isFastKernelXfer()?1:indstart); // NB: isFastKernelXfer() implies indstart == 0
+        int locindend   = indend; //size()-1;
+
+        T prod;   prod   = 0.0;
+        T diffis; diffis = 0.0;
+
+        // Calculate inner products and differences if required
+
+        if ( justcalcip )
+        {
+            prod = 0.0;
+        }
+
+        else
+        {
+            prod = bias;
+        }
+
+        if ( !( isFastKernelSum() || isFastKernelChain() || justcalcip ) )
+        {
+            int dummyind = 0;
+
+            T zzz; zzz = 0.0;
+
+            kernel8xx(0,prod,dummyind,cType(0),zzz,zzz,zzz,xdim,0,mlid);
+
+            if ( !justcalcip )
+            {
+                prod *= (const T &) cWeight(0);
+            }
+        }
+
+        if ( justcalcip )
+        {
+            res = prod;
+        }
+
+        else
+        {
+            if ( isNormalised(locindend) )
+            {
+                res = 1.0;
+            }
+
+            else
+            {
+                T dummy;
+
+                logresvalid = KKpro(res,prod,diffis,nullptr,locindstart,locindend,xdim,0,logres,&dummy);
+            }
+        }
+    }
+
+    else
+    {
+        NiceAssert( ismagterm == 0 );
+        NiceAssert( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) );
+
+        gentype xyprod(0.0);
+
+        if ( pxyprod && pxyprod[0] )
+        {
+            xyprod = *pxyprod[0];
+        }
+
+        else
+        {
+            xyprod += bias;
+        }
+
+        gentype tempres;
+
+        K0i(tempres,xyprod,xdim,resmode,mlid,indstart,indend);
+
+        res = (T) tempres;
+    }
+
+    return res;
+}
+
+//phantomx
+template <class T>
+T &MercerKernel::LL1(T &res, T &logres, int &logresvalid,
+                     const SparseVector<gentype> &xa, 
+                     const vecInfo &xainfo, 
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int ia,  
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid, const double *xy, int justcalcip, int indstart, int indend) const
+{
+    NiceAssert( ! ( isFastKernelSum() && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) );
+
+    (void) xy;
+
+    logresvalid = 0;
+
+    if ( !size() )
+    {
+        return res = 0.0;
+    }
+
+    if ( ( isAltDiff() == 300 ) && !justcalcip )
+    {
+        goto badout;
+    }
+
+    else if ( ( isAltDiff() >= 100 ) && ( isAltDiff() <= 199 ) && !justcalcip )
+    {
+        goto badout;
+    }
+
+    else if ( ( resmode & 0x01 ) )
+    {
+        goto badout;
+    }
+
+    else if ( isprod )
+    {
+        NiceAssert( !justcalcip );
+        NiceAssert( !( resmode & 0x80 ) );
+
+        // Should probably replace this with a proper fast version
+
+        Vector<const SparseVector<gentype> *> xx(1);
+        Vector<const vecInfo *> xxinfo(1);
+        Vector<int> ii(1);
+
+        xx("[]",0) = &xa;
+        xxinfo("[]",0) = &xainfo;
+        ii("[]",0) = ia;
+
+        LLm(1,res,logres,logresvalid,xx,xxinfo,bias,ii,pxyprod,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,0,indstart,indend);
+    }
+
+    else if ( ( isFastKernelSum() || isFastKernelChain() ) && ( resmode & 0x80 ) && !justcalcip )
+    {
+        res = 0;
+    }
+
+    else if ( isFastKernelSum() || isFastKernelChain() || ( isFastKernelXfer() && !resmode ) || justcalcip )
+    {
+        int locindstart = (isFastKernelXfer()?1:indstart); // NB: isFastKernelXfer() implies indstart == 0
+        int locindend   = indend; //size()-1;
+
+        int needxxprod = isNormalised(locindend);
+
+        T xyprod; xyprod = 0.0;
+        T diffis; diffis = 0.0;
+        T xaprod; xaprod = 0.0;
+
+        // Calculate inner products and differences if required
+
+        if ( isFastKernelSum() || isFastKernelChain() || justcalcip )
+        {
+            int havexyprod = 0;
+
+            if ( pxyprod && pxyprod[0] )
+            {
+                xyprod = *pxyprod[0];
+
+                havexyprod = 1;
+            }
+
+            else if ( needsInner(0,1) || ( isFastKernelSum() && needsInner(-1,1) ) || justcalcip )
+            {
+                oneProductDiverted(xyprod,xa,xconsist,assumreal);
+
+                if ( !justcalcip )
+                {
+                    xyprod += bias;
+                }
+
+                havexyprod = 1;
+            }
+
+            if ( needxxprod && !justcalcip && havexyprod )
+            {
+                xaprod = xyprod;
+            }
+
+            else if ( needxxprod && !justcalcip )
+            {
+                oneProductDiverted(xaprod,xa,xconsist,assumreal);
+
+                xaprod += bias;
+            }
+
+            if ( pxyprod && pxyprod[1] )
+            {
+                diffis = *pxyprod[1];
+            }
+
+            else if ( ( ( needsDiff(0) || ( isFastKernelSum() && needsDiff() ) ) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) ) && !justcalcip )
+            {
+                // Calculate ||x-y||^2 only as required
+
+                diff1norm(diffis,xyprod,getmnorm(xainfo,xa,1,xconsist,assumreal));
+            }
+
+            else if ( ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
+            {
+                goto badout;
+            }
+        }
+
+        else
+        {
+            // ( isFastKernelXfer() && !resmode )
+            // isSimpleFastKernelChain
+
+            int havexyprod = 0;
+
+            if ( pxyprod && pxyprod[0] )
+            {
+                xyprod = *pxyprod[0];
+
+                havexyprod = 1;
+            }
+
+            else
+            {
+                int dummyind = 0;
+
+                T zzz; zzz = 0.0;
+
+                kernel8xx(0,xyprod,dummyind,cType(0),zzz,zzz,zzz,xa,xainfo,ia,xdim,0,mlid);
+
+                havexyprod = 1;
+            }
+
+            if ( needxxprod && !justcalcip && havexyprod )
+            {
+                xaprod = xyprod;
+            }
+
+            else if ( needxxprod && !justcalcip )
+            {
+                int dummyind = 0;
+
+                T zzz; zzz = 0.0;
+
+                kernel8xx(0,xaprod,dummyind,cType(0),zzz,zzz,zzz,xa,xainfo,ia,xdim,0,mlid);
+            }
+
+            if ( pxyprod && pxyprod[1] )
+            {
+                diffis = *pxyprod[1];
+            }
+
+            else if ( ( size() >= 2 ) && needsDiff(1) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) && !justcalcip )
+            {
+                int dummyind = 0;
+
+                T xanorm;
+
+                if ( isAltDiff() == 0 )
+                {
+                    T zzz; zzz = 0.0;
+
+                    kernel8xx(0,xanorm,dummyind,cType(0),zzz,zzz,zzz,xa,xainfo,ia,xdim,0,mlid);
+                }
+
+                else
+                {
+                    T zzz; zzz = 0.0;
+
+                    kernel8xx(0,xanorm,dummyind,cType(0),zzz,zzz,zzz,xa,xa,xainfo,xainfo,ia,ia,xdim,0,mlid);
+                }
+
+                diff1norm(diffis,xyprod,xanorm);
+
+                if ( !justcalcip )
+                {
+                    xyprod *= (const T &) cWeight(0);
+                    xaprod *= (const T &) cWeight(0);
+                    diffis *= (const T &) cWeight(0);
+                }
+            }
+
+            else if ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) && !justcalcip )
+            {
+                goto badout;
+            }
+        }
+
+        if ( justcalcip )
+        {
+            res = xyprod;
+        }
+
+        else
+        {
+            if ( isNormalised(locindend) )
+            {
+                T dummy;
+
+                KKpro(res,xyprod,diffis,&ia,locindstart,locindend,xdim,1,dummy,&dummy);
+
+                T xares;
+                T zerodiff; zerodiff = 0.0;
+
+                KKpro(xares,xaprod,zerodiff,&ia,locindstart,locindend,xdim,1,dummy,&dummy);
+
+                if ( (double) abs2(xares) <= BADZEROTOL )
+                {
+                    res = angle(res);
+                    res = ( (double) abs2(res) <= BADZEROTOL ) ? 1.0 : res;
+                }
+
+                else
+                {
+                    // We normalise in log-space to improve numerical stability
+
+                    T sgnres = angle(res);
+
+                    res = abs2(res);
+                    OP_log(res);
+                    //res *= 1.0;
+                    res -= log(xares);
+                    //res *= 1.0;
+                    OP_exp(res);
+                    res *= sgnres;
+                }
+            }
+
+            else
+            {
+                T dummy;
+
+                logresvalid = KKpro(res,xyprod,diffis,&ia,locindstart,locindend,xdim,1,logres,&dummy);
+            }
+        }
+    }
+
+    else
+    {
+        goto badout;
+    }
+
+    return res;
+
+badout:
+    // Design decision: in ml_base.cc, if d = 0 for one of the vectors
+    // referenced here then this element will never be used.  Moreover there
+    // are cases (eg isAltDiff set >1 with back-referenced data) where the
+    // element is not properly defined but will never be used, so what we 
+    // need to do is set it 0.  However having a "d = 0" catch will fail when
+    // d starts non-zero, is set zero, then set non-zero, as will happen for
+    // example when calculating LOO, n-fold error etc.  In such cases you need
+    // to call a reset on that row/column, but you can't do that because (a) the
+    // reset often calls setd (hence infinite recursion) or (b) there is an 
+    // implicit assumption that Gp is independent of d (eg in semicopy functions
+    // that retain the caches for speed in LOO, n-fold calculation).  Hence I've 
+    // made the decision to return 0 here to avoid a whole stack of potential
+    // coding complications at the price of possible silent failure if you set
+    // somthing incorrectly.
+
+    errstream() << "!!!1!!!";
+
+    res = 0.0;
+
+    return res;
+}
+
+inline int isCastableToRealWithoutLoss(const double &x)
+{
+    (void) x;
+
+    return 1;
+}
+
+inline int isCastableToRealWithoutLoss(const gentype &x)
+{
+    return x.isCastableToRealWithoutLoss();
+}
+
+template <class T>
+T &MercerKernel::LL2(int adensetype, int bdensetype, T &res, T &logres, int &logresvalid,
+                     const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                     const vecInfo &xainfo, const vecInfo &xbinfo,
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int i, int j,
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid, const double *xy00, const double *xy10, const double *xy11, int justcalcip, int indstart, int indend) const
+{
+    NiceAssert( ! ( isFastKernelSum() && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) );
+    NiceAssert( ( !xy00 && !xy10 && !xy11 ) || !justcalcip );
+
+    logresvalid = 0;
+
+    if ( !size() )
+    {
+        return res = 0.0;
+    }
+
+    if ( ( resmode & 0x01 ) )
+    {
+        // Return equation form
+
+        NiceAssert( !justcalcip );
+        NiceAssert( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) );
+        NiceAssert( !( isprod && !arexysimple(xa,xb) ) );
+
+        gentype dummyres;
+
+//        K2i(dummyres,defaultgentype(),defaultgentype(),xainfo,xbinfo,getmnorm(xainfo,xa,2,xconsist,assumreal),getmnorm(xbinfo,xb,2,xconsist,assumreal),xa,xb,i,j,xdim,adensetype,bdensetype,resmode,mlid,indstart,indend,assumreal);
+        K2i(dummyres,0_gent,0_gent,xainfo,xbinfo,getmnorm(xainfo,xa,2,xconsist,assumreal),getmnorm(xbinfo,xb,2,xconsist,assumreal),xa,xb,i,j,xdim,adensetype,bdensetype,resmode,mlid,indstart,indend,assumreal);
+
+        res = (T) dummyres;
+    }
+
+    else if ( isprod && !arexysimple(xa,xb) )
+    {
+        NiceAssert( !justcalcip );
+        NiceAssert( !( resmode & 0x80 ) );
+
+        // Kernel is of the form prod_i K(x_i,y_i)
+        // x and y are not simple
+
+        if ( xconsist && ( size() == 1 ) && isSimpleKernel() )
+        {
+            NiceAssert( xa.nindsize() == xb.nindsize() );
+
+            SparseVector<gentype> xxa;
+            SparseVector<gentype> xxb;
+
+            vecInfo xxainfo;
+            vecInfo xxbinfo;
+
+            int ii;
+
+            T tempres;
+
+            if ( xa.nindsize() )
+            {
+                for ( ii = 0 ; ii < xa.nindsize() ; ++ii )
+                {
+                    xxa("&",0) = xa.direcref(ii);
+                    xxb("&",0) = xb.direcref(ii);
+
+                    getvecInfo(xxainfo,xxa,nullptr,xconsist,assumreal);
+                    getvecInfo(xxbinfo,xxb,nullptr,xconsist,assumreal);
+
+                    T dummya;
+                    int dummyb;
+
+                    LL2(adensetype,bdensetype,tempres,dummya,dummyb,xxa,xxb,xxainfo,xxbinfo,bias,nullptr,i,j,1,1,assumreal,0,mlid,nullptr,nullptr,nullptr,0,indstart,indend);
+
+                    tempres /= (const T &) cWeight(0);
+
+                    if ( !ii ) { res =  tempres; }
+                    else       { res *= tempres; }
+                }
+            }
+
+            else
+            {
+                res = 1;
+            }
+        }
+
+        else
+        {
+            SparseVector<gentype> indres;
+
+            combind(indres,xa,xb);
+
+            SparseVector<gentype> xxa;
+            SparseVector<gentype> xxb;
+
+            vecInfo xxainfo;
+            vecInfo xxbinfo;
+
+            int ii;
+
+            T tempres;
+
+            if ( indres.nindsize() )
+            {
+                for ( ii = 0 ; ii < indres.nindsize() ; ++ii )
+                {
+                    xxa("&",0) = xa(indres.ind(ii));
+                    xxb("&",0) = xb(indres.ind(ii));
+
+                    getvecInfo(xxainfo,xxa,nullptr,xconsist,assumreal);
+                    getvecInfo(xxbinfo,xxb,nullptr,xconsist,assumreal);
+
+                    T dummya;
+                    int dummyb;
+
+                    LL2(adensetype,bdensetype,tempres,dummya,dummyb,xxa,xxb,xxainfo,xxbinfo,bias,nullptr,i,j,1,1,assumreal,0,mlid,nullptr,nullptr,nullptr,0,indstart,indend);
+
+                    tempres /= (const T &) cWeight(0);
+
+                    if ( !ii ) { res =  tempres; }
+                    else       { res *= tempres; }
+                }
+            }
+
+            else
+            {
+                res = 1;
+            }
+        }
+
+        res *= (const T &) cWeight(0);
+    }
+
+    else if ( ( isFastKernelSum() || isFastKernelChain() ) && ( resmode & 0x80 ) && !justcalcip )
+    {
+        res = 0;
+    }
+
+    else if ( ( isFastKernelSum() || isFastKernelChain() || ( isFastKernelXfer() && !resmode ) || justcalcip ) && !adensetype && !bdensetype )
+    {
+// SEE ALSO LL2FAST
+        int locindstart = (isFastKernelXfer()?1:indstart); // NB: isFastKernelXfer() implies indstart == 0
+        int locindend   = indend; //size()-1;
+
+        int needaaprod = isNormalised(locindend) || needsNorm(locindend);
+
+        T xyprod; xyprod = 0.0;
+
+        T yxprod; yxprod = 0.0;
+        T aaprod; aaprod = 0.0;
+        T bbprod; bbprod = 0.0;
+
+        T diffis; diffis = 0.0;
+
+        if ( isFastKernelSum() || isFastKernelChain() || justcalcip )
+        {
+            if ( xy10 && !justcalcip )
+            {
+                xyprod = *xy10;
+                yxprod = *xy10;
+
+                xyprod += bias;
+                yxprod += bias;
+            }
+
+            else if ( pxyprod && pxyprod[0] )
+            {
+                xyprod = *pxyprod[0];
+                yxprod = xyprod;
+            }
+
+            else if ( needsInner(0,2) || ( isFastKernelSum() && needsInner(-1,2) ) || justcalcip )
+            {
+                innerProductDiverted(xyprod,xa,xb,xconsist,assumreal);
+                innerProductDivertedRevConj(yxprod,xyprod,xa,xb,xconsist,assumreal);
+
+                if ( !justcalcip )
+                {
+                    xyprod += bias;
+                    yxprod += bias;
+                }
+            }
+
+            if ( needaaprod && !justcalcip )
+            {
+                if ( xy00 && xy11 )
+                {
+                    aaprod = (*xy00);
+                    bbprod = (*xy11);
+
+                    aaprod += bias;
+                    bbprod += bias;
+                }
+
+                else if ( assumreal )
+                {
+                    aaprod = getmnorm(xainfo,xa,2,xconsist,assumreal);
+                    bbprod = getmnorm(xbinfo,xb,2,xconsist,assumreal);
+
+                    aaprod += bias;
+                    bbprod += bias;
+                }
+
+                else
+                {
+                    aaprod = getmnorm(xainfo,xa,2,xconsist,assumreal);
+                    bbprod = getmnorm(xbinfo,xb,2,xconsist,assumreal);
+
+                    if ( !isCastableToRealWithoutLoss(aaprod) || !isCastableToRealWithoutLoss(bbprod) )
+                    {
+                        innerProductDiverted(aaprod,xa,xa,xconsist,assumreal);
+                        innerProductDiverted(bbprod,xb,xb,xconsist,assumreal);
+                    }
+
+                    aaprod += bias;
+                    bbprod += bias;
+                }
+            }
+
+            if ( ( needsDiff(0) || ( isFastKernelSum() && needsDiff() ) ) && !justcalcip )
+            {
+                if ( pxyprod && pxyprod[1] )
+                {
+                    diffis = *pxyprod[1];
+                }
+
+                else
+                {
+                    // Calculate ||x-y||^2 only as required
+
+                    if ( assumreal )
+                    {
+                        diff2norm(diffis,(double) xyprod,(double) getmnorm(xainfo,xa,2,xconsist,assumreal),(double) getmnorm(xbinfo,xb,2,xconsist,assumreal));
+                    }
+
+                    else
+                    {
+                        diff2norm(diffis,(xyprod+yxprod)/2.0,getmnorm(xainfo,xa,2,xconsist,assumreal),getmnorm(xbinfo,xb,2,xconsist,assumreal));
+                    }
+                }
+            }
+
+            xyprod += yxprod;
+            xyprod *= 0.5;
+        }
+
+        else
+        {
+            // ( isFastKernelXfer() && !resmode )
+            NiceAssert( !( resmode & 0x80 ) );
+
+            if ( xy10 && !justcalcip )
+            {
+                xyprod = (*xy10);
+            }
+
+            else if ( pxyprod && pxyprod[0] )
+            {
+                xyprod = *pxyprod[0];
+            }
+
+            else
+            {
+                int dummyind = 0;
+
+                T zzz; zzz = 0.0;
+
+                kernel8xx(0,xyprod,dummyind,cType(0),zzz,zzz,zzz,xa,xb,xainfo,xbinfo,i,j,xdim,0,mlid);
+            }
+
+            if ( needaaprod && !justcalcip )
+            {
+                if ( xy00 && xy11 )
+                {
+                    aaprod = (*xy00);
+                    bbprod = (*xy11);
+                }
+
+                else
+                {
+                    int dummyind = 0;
+
+                    T zzz; zzz = 0.0;
+
+//errstream() << "phantomxyz mer 1\n";
+                    kernel8xx(0,aaprod,dummyind,cType(0),zzz,zzz,zzz,xa,xa,xainfo,xainfo,i,i,xdim,0,mlid);
+//errstream() << "phantomxyz mer 1b " << xxprod << "\n";
+                    kernel8xx(0,bbprod,dummyind,cType(0),zzz,zzz,zzz,xb,xb,xbinfo,xbinfo,j,j,xdim,0,mlid);
+//errstream() << "phantomxyz mer 1c " << yyprod << "\n";
+                }
+            }
+
+            if ( ( size() >= 2 ) && needsDiff(1) && !justcalcip )
+            {
+                if ( pxyprod && pxyprod[1] )
+                {
+                    diffis = *pxyprod[1];
+                }
+
+                else
+                {
+                    T xanorm;
+                    T xbnorm;
+
+                    int dummyind = 0;
+
+                    T zzz; zzz = 0.0;
+
+//errstream() << "phantomxyz mer 2\n";
+                    kernel8xx(0,xanorm,dummyind,cType(0),zzz,zzz,zzz,xa,xa,xainfo,xainfo,i,i,xdim,0,mlid);
+//errstream() << "phantomxyz mer 2b" << xanorm << "\n";
+                    kernel8xx(0,xbnorm,dummyind,cType(0),zzz,zzz,zzz,xb,xb,xbinfo,xbinfo,j,j,xdim,0,mlid);
+//errstream() << "phantomxyz mer 2c" << ynorm << "\n";
+
+                    diff2norm(diffis,xyprod,xanorm,xbnorm);
+                }
+            }
+
+            if ( !justcalcip )
+            {
+                xyprod *= (const T &) cWeight(0);
+                yxprod *= (const T &) cWeight(0);
+                aaprod *= (const T &) cWeight(0);
+                bbprod *= (const T &) cWeight(0);
+
+                diffis *= (const T &) cWeight(0);
+            }
+        }
+
+        if ( justcalcip )
+        {
+            res = xyprod;
+        }
+
+        else
+        {
+            if ( isNormalised(locindend) )
+            {
+//errstream() << "phantomxyz mer 3 cType = " << cType(0) << "\n";
+//errstream() << "phantomxyz mer 3 xyprod = " << xyprod << "\n";
+//errstream() << "phantomxyz mer 3 aaprod = " << aaprod << "\n";
+//errstream() << "phantomxyz mer 3 bbprod = " << bbprod << "\n";
+//errstream() << "phantomxyz mer 3 diffis = " << diffis << "\n";
+                T dummy;
+
+                T xyvals[2] = { aaprod,bbprod };
+                T aavals[2] = { aaprod,aaprod };
+                T bbvals[2] = { bbprod,bbprod };
+
+                int ixy[2] = { i,j };
+                int iaa[2] = { i,i };
+                int ibb[2] = { j,j };
+
+                KKpro(res,xyprod,diffis,ixy,locindstart,locindend,xdim,2,dummy,xyvals);
+
+                T xares;
+                T xbres;
+
+                const static T zerodiff(0.0);
+
+                KKpro(xares,aaprod,zerodiff,iaa,locindstart,locindend,xdim,2,dummy,aavals);
+                KKpro(xbres,bbprod,zerodiff,ibb,locindstart,locindend,xdim,2,dummy,bbvals);
+
+                NiceAssert( !testisvnan(xares) );
+                NiceAssert( !testisvnan(xbres) );
+
+                NiceAssert( !testisinf(xares) );
+                NiceAssert( !testisinf(xbres) );
+
+                if ( ( (double) abs2(xares) <= BADZEROTOL ) || ( (double) abs2(xbres) <= BADZEROTOL ) )
+                {
+                    res = angle(res);
+                    res = ( (double) abs2(res) <= BADZEROTOL ) ? 1.0 : res;
+                }
+
+                else
+                {
+                    // We normalise in log-space to improve numerical stability
+
+                    T sgnres = angle(res);
+
+                    res = abs2(res);
+                    OP_log(res);
+                    res *= 2.0;
+                    res -= log(xares);
+                    res -= log(xbres);
+                    res *= 0.5;
+                    OP_exp(res);
+                    res *= sgnres;
+                }
+
+//T xressave = xres;
+//                xres *= yres;
+//                OP_sqrt(xres);
+//
+//                NiceAssert( !testisvnan(xres) );
+//                NiceAssert( !testisinf(xres) );
+//
+//T ressave = res;
+//                safedivby(res,xres); //res /= xres;
+//
+//if ( testisinf(res) )
+//{
+//errstream() << "phantomx 0: res = " << ressave << "\n";
+//errstream() << "phantomx 1: xres = " << xressave << "\n";
+//errstream() << "phantomx 2: yres = " << yres << "\n";
+//errstream() << "phantomx 3: sqrt(xres*yres) = " << xres << "\n";
+//errstream() << "phantomx 4: res/sqrt(xres*yres) = " << res << "\n";
+//}
+//
+
+// The above code tends to under/overflow with wild abandon.  So
+// let's attack this with maths.  If xres or yres = 0 then, assuming
+// a vaguely sane kernel, res must also be zero, so:
+//
+// res/sqrt(xres.yres) = exp(log(res)-(log(xres)-log(yres))/2)
+// res/sqrt(xres.yres) = exp((2*log(res)-log(xres)-log(yres))/2)
+
+/*
+const static T zerores(0.0); // zerores = 0.0;
+
+if ( ( xres == zerores ) || ( yres == zerores ) )
+{
+    res = 1.0; // Correct up to unavoidable sign ambiguity
+}
+
+else
+{
+    T sgnres = angle(res);
+
+    res = abs2(res);
+    OP_log(res);
+    res *= 2.0;
+    res -= log(xres);
+    res -= log(yres);
+    res *= 0.5;
+    OP_exp(res);
+    res *= sgnres;
+}
+*/
+
+                NiceAssert( !testisvnan(res) );
+                NiceAssert( !testisinf(res) );
+            }
+
+            else
+            {
+//errstream() << "phantomxyz mer 4 cType = " << cType(0) << "\n";
+//errstream() << "phantomxyz mer 4 xyprod = " << xyprod << "\n";
+//errstream() << "phantomxyz mer 4 diffis = " << diffis << "\n";
+                T xyvals[2] = { aaprod,bbprod };
+                int ixy[2] = { i,j };
+
+                logresvalid = KKpro(res,xyprod,diffis,ixy,locindstart,locindend,xdim,2,logres,xyvals);
+            }
+        }
+    }
+
+    else
+    {
+        NiceAssert( ismagterm == 0 );
+        NiceAssert( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) );
+
+        gentype xyprod(0.0);
+        gentype yxprod(0.0);
+
+        gentype xanorm(0.0);
+        gentype xbnorm(0.0);
+
+        if ( xy10 && xy00 && xy11)
+        {
+            xyprod = (*xy10);
+            yxprod = (*xy10);
+
+            xyprod += bias;
+            yxprod += bias;
+
+            xanorm = (*xy00);
+            xbnorm = (*xy11);
+        }
+
+        else if ( pxyprod && pxyprod[0] )
+        {
+            xyprod = *pxyprod[0];
+            yxprod = xyprod;
+
+            xanorm = getmnorm(xainfo,xa,2,xconsist,assumreal);
+            xbnorm = getmnorm(xbinfo,xb,2,xconsist,assumreal);
+        }
+
+        else if ( needsInner(-1,2) )
+        {
+            // This may be used by some kernels and not others, so calculate anyhow
+
+            innerProductDiverted(xyprod,xa,xb,xconsist,assumreal);
+            innerProductDivertedRevConj(yxprod,xyprod,xa,xb,xconsist,assumreal);
+
+            xyprod += bias;
+            yxprod += bias;
+
+            xanorm = getmnorm(xainfo,xa,2,xconsist,assumreal);
+            xbnorm = getmnorm(xbinfo,xb,2,xconsist,assumreal);
+        }
+
+        else
+        {
+            xanorm = getmnorm(xainfo,xa,2,xconsist,assumreal);
+            xbnorm = getmnorm(xbinfo,xb,2,xconsist,assumreal);
+        }
+
+        gentype tempres;
+
+        K2i(tempres,xyprod,yxprod,xainfo,xbinfo,xanorm,xbnorm,xa,xb,i,j,xdim,adensetype,bdensetype,0,mlid,indstart,indend,assumreal);
+
+        res = (T) tempres;
+    }
+
+    return res;
+}
+
+//phantomx
+template <class T>
+T &MercerKernel::LL3(T &res, T &logres, int &logresvalid,
+                     const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, 
+                     const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, 
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int ia, int ib, int ic, 
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid, 
+                     const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, const Vector<int> *s, int justcalcip, int indstart, int indend) const
+{
+    NiceAssert( ! ( isFastKernelSum() && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) );
+
+    logresvalid = 0;
+
+    if ( !size() )
+    {
+        return res = 0.0;
+    }
+
+    if ( ( isAltDiff() == 300 ) && !justcalcip )
+    {
+        goto badout;
+    }
+
+    else if ( !s && ( isAltDiff() >= 100 ) && ( isAltDiff() <= 199 ) && !justcalcip )
+    {
+        goto badout;
+    }
+
+    else if ( ( resmode & 0x01 ) )
+    {
+        goto badout;
+    }
+
+    else if ( isprod && !arexysimple(xa,xb,xc) )
+    {
+        NiceAssert( !justcalcip );
+        NiceAssert( !( resmode & 0x80 ) );
+
+        // Should probably replace this with a proper fast version
+
+        Vector<const SparseVector<gentype> *> xx(3);
+        Vector<const vecInfo *> xxinfo(3);
+        Vector<int> ii(3);
+
+        xx("[]",0) = &xa;
+        xx("[]",1) = &xb;
+        xx("[]",2) = &xc;
+
+        xxinfo("[]",0) = &xainfo;
+        xxinfo("[]",1) = &xbinfo;
+        xxinfo("[]",2) = &xcinfo;
+
+        ii("[]",0) = ia;
+        ii("[]",1) = ib;
+        ii("[]",2) = ic;
+
+        LLm(3,res,logres,logresvalid,xx,xxinfo,bias,ii,pxyprod,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,0,indstart,indend);
+    }
+
+    else if ( ( isFastKernelSum() || isFastKernelChain() ) && ( resmode & 0x80 ) && !justcalcip )
+    {
+        res = 0;
+    }
+
+    else if ( isFastKernelSum() || isFastKernelChain() || ( isFastKernelXfer() && !resmode ) || justcalcip )
+    {
+        int locindstart = (isFastKernelXfer()?1:indstart); // NB: isFastKernelXfer() implies indstart == 0
+        int locindend   = indend; //size()-1;
+
+        int needxxprod = isNormalised(locindend);
+
+        T xyprod; xyprod = 0.0;
+        T diffis; diffis = 0.0;
+        T xaprod; xaprod = 0.0;
+        T xbprod; xbprod = 0.0;
+        T xcprod; xcprod = 0.0;
+
+        // Calculate inner products and differences if required
+
+        if ( isFastKernelSum() || isFastKernelChain() || justcalcip )
+        {
+            if ( pxyprod && pxyprod[0] )
+            {
+                xyprod = *pxyprod[0];
+            }
+
+            else if ( needsInner(0,3) || ( isFastKernelSum() && needsInner(-1,3) ) || justcalcip )
+            {
+                threeProductDiverted(xyprod,xa,xb,xc,xconsist,assumreal);
+
+                if ( !justcalcip )
+                {
+                    xyprod += bias;
+                }
+            }
+
+            if ( needxxprod && !justcalcip )
+            {
+                threeProductDiverted(xaprod,xa,xa,xa,xconsist,assumreal);
+                threeProductDiverted(xbprod,xb,xb,xb,xconsist,assumreal);
+                threeProductDiverted(xcprod,xc,xc,xc,xconsist,assumreal);
+
+                xaprod += bias;
+                xbprod += bias;
+                xcprod += bias;
+            }
+
+            if ( pxyprod && pxyprod[1] )
+            {
+                diffis = *pxyprod[1];
+            }
+
+            else if ( ( ( needsDiff(0) || ( isFastKernelSum() && needsDiff() ) ) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) ) && !justcalcip )
+            {
+                // Calculate ||x-y||^2 only as required
+
+                double altxyr00 = 0;
+                double altxyr10 = 0;
+                double altxyr11 = 0;
+                double altxyr20 = 0;
+                double altxyr21 = 0;
+                double altxyr22 = 0;
+
+                fillXYMatrix(altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,xa,xb,xc,xainfo,xbinfo,xcinfo,xy00,xy10,xy11,xy20,xy21,xy22,0,assumreal);
+
+                diff3norm(diffis,xyprod,getmnorm(xainfo,xa,3,xconsist,assumreal),getmnorm(xbinfo,xb,3,xconsist,assumreal),getmnorm(xcinfo,xc,3,xconsist,assumreal),altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,s);
+            }
+
+            else if ( ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
+            {
+                goto badout;
+            }
+        }
+
+        else
+        {
+            // ( isFastKernelXfer() && !resmode )
+            // isSimpleFastKernelChain
+
+            if ( pxyprod && pxyprod[0] )
+            {
+                xyprod = *pxyprod[0];
+            }
+
+            else
+            {
+                int dummyind = 0;
+
+                T zzz; zzz = 0.0;
+
+                kernel8xx(0,xyprod,dummyind,cType(0),zzz,zzz,zzz,xa,xb,xc,xainfo,xbinfo,xcinfo,ia,ib,ic,xdim,0,mlid);
+            }
+
+            if ( needxxprod && !justcalcip )
+            {
+                int dummyind = 0;
+
+                T zzz; zzz = 0.0;
+
+                kernel8xx(0,xaprod,dummyind,cType(0),zzz,zzz,zzz,xa,xa,xa,xainfo,xainfo,xainfo,ia,ia,ia,xdim,0,mlid);
+                kernel8xx(0,xbprod,dummyind,cType(0),zzz,zzz,zzz,xb,xb,xb,xbinfo,xbinfo,xbinfo,ib,ib,ib,xdim,0,mlid);
+                kernel8xx(0,xcprod,dummyind,cType(0),zzz,zzz,zzz,xc,xc,xc,xcinfo,xcinfo,xcinfo,ic,ic,ic,xdim,0,mlid);
+            }
+
+            if ( pxyprod && pxyprod[1] )
+            {
+                diffis = *pxyprod[1];
+            }
+
+            else if ( ( size() >= 2 ) && needsDiff(1) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) && !justcalcip )
+            {
+                int dummyind = 0;
+
+                T xanorm;
+                T xbnorm;
+                T xcnorm;
+
+                double altxyr00 = 0;
+                double altxyr10 = 0;
+                double altxyr11 = 0;
+                double altxyr20 = 0;
+                double altxyr21 = 0;
+                double altxyr22 = 0;
+
+                if ( isAltDiff() == 0 )
+                {
+                    T zzz; zzz = 0.0;
+
+                    kernel8xx(0,xanorm,dummyind,cType(0),zzz,zzz,zzz,xa,xa,xa,xainfo,xainfo,xainfo,ia,ia,ia,xdim,0,mlid);
+                    kernel8xx(0,xbnorm,dummyind,cType(0),zzz,zzz,zzz,xb,xb,xb,xbinfo,xbinfo,xbinfo,ib,ib,ib,xdim,0,mlid);
+                    kernel8xx(0,xcnorm,dummyind,cType(0),zzz,zzz,zzz,xc,xc,xc,xcinfo,xcinfo,xcinfo,ic,ic,ic,xdim,0,mlid);
+
+                    // needsMatDiff() == 0 here by definition
+                }
+
+                else
+                {
+                    T zzz; zzz = 0.0;
+
+                    kernel8xx(0,xanorm,dummyind,cType(0),zzz,zzz,zzz,xa,xa,xainfo,xainfo,ia,ia,xdim,0,mlid);
+                    kernel8xx(0,xbnorm,dummyind,cType(0),zzz,zzz,zzz,xb,xb,xbinfo,xbinfo,ib,ib,xdim,0,mlid);
+                    kernel8xx(0,xcnorm,dummyind,cType(0),zzz,zzz,zzz,xc,xc,xcinfo,xcinfo,ic,ic,xdim,0,mlid);
+
+                    if ( needsMatDiff() )
+                    {
+                        // needsMatDiff() == +1 by definition here
+
+                        kernel8xx(0,altxyr10,dummyind,cType(0),zzz,zzz,zzz,xb,xa,xbinfo,xainfo,ib,ia,xdim,0,mlid);
+                        kernel8xx(0,altxyr20,dummyind,cType(0),zzz,zzz,zzz,xc,xa,xcinfo,xainfo,ic,ia,xdim,0,mlid);
+                        kernel8xx(0,altxyr21,dummyind,cType(0),zzz,zzz,zzz,xc,xb,xcinfo,xbinfo,ic,ib,xdim,0,mlid);
+
+                        altxyr00 = xanorm;
+                        altxyr11 = xbnorm;
+                        altxyr22 = xcnorm;
+                    }
+                }
+
+                diff3norm(diffis,xyprod,xanorm,xbnorm,xcnorm,altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,s);
+
+                if ( !justcalcip )
+                {
+                    xyprod *= (const T &) cWeight(0);
+
+                    xaprod *= (const T &) cWeight(0);
+                    xbprod *= (const T &) cWeight(0);
+                    xcprod *= (const T &) cWeight(0);
+
+                    diffis *= (const T &) cWeight(0);
+                }
+            }
+
+            else if ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) && !justcalcip )
+            {
+                goto badout;
+            }
+        }
+
+        if ( justcalcip )
+        {
+            res = xyprod;
+        }
+
+        else
+        {
+            if ( isNormalised(locindend) )
+            {
+                T dummy;
+
+                int ixyz[3] = { ia,ib,ic };
+                int ixxx[3] = { ia,ia,ia };
+                int iyyy[3] = { ib,ib,ib };
+                int izzz[3] = { ic,ic,ic };
+
+                KKpro(res,xyprod,diffis,ixyz,locindstart,locindend,xdim,3,dummy,&dummy);
+
+                T xares;
+                T xbres;
+                T xcres;
+
+                T zerodiff; zerodiff = 0.0;
+
+                KKpro(xares,xaprod,zerodiff,ixxx,locindstart,locindend,xdim,3,dummy,&dummy);
+                KKpro(xbres,xbprod,zerodiff,iyyy,locindstart,locindend,xdim,3,dummy,&dummy);
+                KKpro(xcres,xcprod,zerodiff,izzz,locindstart,locindend,xdim,3,dummy,&dummy);
+
+                if ( ( ( (double) abs2(xares) <= BADZEROTOL ) && ( (double) abs2(xbres) <= BADZEROTOL ) ) ||
+                     ( ( (double) abs2(xares) <= BADZEROTOL ) && ( (double) abs2(xcres) <= BADZEROTOL ) ) ||
+                     ( ( (double) abs2(xbres) <= BADZEROTOL ) && ( (double) abs2(xcres) <= BADZEROTOL ) )    )
+                {
+                    res = angle(res);
+                    res = ( (double) abs2(res) <= BADZEROTOL ) ? 1.0 : res;
+                }
+
+                else if ( (double) abs2(xares) <= BADZEROTOL )
+                {
+                    // Fallback to LL2
+
+                    LL2(0,0,res,logres,logresvalid,xb,xc,xbinfo,xcinfo,bias,nullptr,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend);
+                }
+
+                else if ( (double) abs2(xbres) <= BADZEROTOL )
+                {
+                    // Fallback to LL2
+
+                    LL2(0,0,res,logres,logresvalid,xa,xc,xainfo,xcinfo,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend);
+                }
+
+                else if ( (double) abs2(xcres) <= BADZEROTOL )
+                {
+                    // Fallback to LL2
+
+                    LL2(0,0,res,logres,logresvalid,xa,xb,xainfo,xbinfo,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend);
+                }
+
+                else
+                {
+                    // We normalise in log-space to improve numerical stability
+
+                    T sgnres = angle(res);
+
+                    res = abs2(res);
+                    OP_log(res);
+                    res *= 3.0;
+                    res -= log(xares);
+                    res -= log(xbres);
+                    res -= log(xcres);
+                    res *= (1.0/3.0);
+                    OP_exp(res);
+                    res *= sgnres;
+                }
+            }
+
+            else
+            {
+                T dummy;
+
+                int ixyz[3] = { ia,ib,ic };
+
+                logresvalid = KKpro(res,xyprod,diffis,ixyz,locindstart,locindend,xdim,3,logres,&dummy);
+            }
+        }
+    }
+
+    else
+    {
+        goto badout;
+    }
+
+    return res;
+
+badout:
+    // Design decision: in ml_base.cc, if d = 0 for one of the vectors
+    // referenced here then this element will never be used.  Moreover there
+    // are cases (eg isAltDiff set >1 with back-referenced data) where the
+    // element is not properly defined but will never be used, so what we 
+    // need to do is set it 0.  However having a "d = 0" catch will fail when
+    // d starts non-zero, is set zero, then set non-zero, as will happen for
+    // example when calculating LOO, n-fold error etc.  In such cases you need
+    // to call a reset on that row/column, but you can't do that because (a) the
+    // reset often calls setd (hence infinite recursion) or (b) there is an 
+    // implicit assumption that Gp is independent of d (eg in semicopy functions
+    // that retain the caches for speed in LOO, n-fold calculation).  Hence I've 
+    // made the decision to return 0 here to avoid a whole stack of potential
+    // coding complications at the price of possible silent failure if you set
+    // somthing incorrectly.
+
+    errstream() << "!!!3!!!";
+
+    res = 0.0;
+
+    return res;
+}
+
+//phantomx
+template <class T>
+T &MercerKernel::LL4(T &res, T &logres, int &logresvalid,
+                     const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd,
+                     const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo,
+                     const T &bias,
+                     const gentype **pxyprod,
+                     int ia, int ib, int ic, int id, 
+                     int xdim, int xconsist, int assumreal, int resmode, int mlid, 
+                     const Vector<int> *s, int justcalcip,
+                     const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, const double *xy30, const double *xy31, const double *xy32, const double *xy33, int indstart, int indend) const
+{
+    NiceAssert( ! ( isFastKernelSum() && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) );
+    NiceAssert( ( xy00 && xy10 && xy11 && xy20 && xy21 && xy22 && xy30 && xy31 && xy32 && xy33 ) || ( !xy00 && !xy10 && !xy11 && !xy20 && !xy21 && !xy22 && !xy30 && !xy31 && !xy32 && !xy33 ) );
+
+    logresvalid = 0;
+
+    T dummya;
+    int dummyb = 0;
+
+    if ( !size() )
+    {
+        return res = 0.0;
+    }
+
+    if ( ( isAltDiff() == 300 ) && !justcalcip )
+    {
+        NiceAssert( !s );
+
+        T tempresa; tempresa = 0.0;
+        T tempresb; tempresb = 0.0;
+
+        res = 0.0;
+
+        LL2(0,0,tempresa,dummya,dummyb,xa,xb,xainfo,xbinfo,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,justcalcip,indstart,indend); 
+        LL2(0,0,tempresb,dummya,dummyb,xc,xd,xcinfo,xdinfo,bias,nullptr,ic,id,xdim,xconsist,assumreal,resmode,mlid,xy22,xy32,xy33,justcalcip,indstart,indend); 
+
+        tempresa *= tempresb; 
+        res += tempresa;
+
+        LL2(0,0,tempresa,dummya,dummyb,xa,xc,xainfo,xcinfo,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,xy00,xy20,xy22,justcalcip,indstart,indend); 
+        LL2(0,0,tempresb,dummya,dummyb,xb,xd,xcinfo,xdinfo,bias,nullptr,ib,id,xdim,xconsist,assumreal,resmode,mlid,xy11,xy31,xy33,justcalcip,indstart,indend); 
+
+        tempresa *= tempresb; 
+        res += tempresa;
+
+        LL2(0,0,tempresa,dummya,dummyb,xa,xd,xainfo,xdinfo,bias,nullptr,ia,id,xdim,xconsist,assumreal,resmode,mlid,xy00,xy30,xy33,justcalcip,indstart,indend); 
+        LL2(0,0,tempresb,dummya,dummyb,xb,xc,xbinfo,xcinfo,bias,nullptr,ib,ic,xdim,xconsist,assumreal,resmode,mlid,xy11,xy21,xy22,justcalcip,indstart,indend); 
+
+        tempresa *= tempresb; 
+        res += tempresa;
+
+        res /= 3;
+    }
+
+    else if ( !s && ( isAltDiff() >= 100 ) && ( isAltDiff() <= 199 ) && !justcalcip )
+    {
+        Vector<int> ss(4);
+        T tempres; tempres = 0.0;
+        int z = 0;
+
+        res = 0.0;
+
+        if ( isAltDiff() == 103 )
+        {
+            ss("&",z) = +1; ss("&",1) = +1; ss("&",2) = +1; ss("&",3) = +1; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = +1; ss("&",1) = +1; ss("&",2) = -1; ss("&",3) = -1; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = +1; ss("&",1) = -1; ss("&",2) = +1; ss("&",3) = -1; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = +1; ss("&",1) = -1; ss("&",2) = -1; ss("&",3) = +1; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+
+            ss("&",z) = -1; ss("&",1) = -1; ss("&",2) = -1; ss("&",3) = -1; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = -1; ss("&",1) = -1; ss("&",2) = +1; ss("&",3) = +1; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = -1; ss("&",1) = +1; ss("&",2) = -1; ss("&",3) = +1; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = -1; ss("&",1) = +1; ss("&",2) = +1; ss("&",3) = -1; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+
+            res /= 8;
+        }
+
+        else if ( isAltDiff() == 104 )
+        {
+            ss("&",z) = 0; ss("&",1) = 1; ss("&",2) = 2; ss("&",3) = 3; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 0; ss("&",1) = 1; ss("&",2) = 3; ss("&",3) = 2; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 0; ss("&",1) = 2; ss("&",2) = 1; ss("&",3) = 3; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 0; ss("&",1) = 2; ss("&",2) = 3; ss("&",3) = 1; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 0; ss("&",1) = 3; ss("&",2) = 1; ss("&",3) = 2; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 0; ss("&",1) = 3; ss("&",2) = 2; ss("&",3) = 1; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+
+            ss("&",z) = 1; ss("&",1) = 0; ss("&",2) = 2; ss("&",3) = 3; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 1; ss("&",1) = 0; ss("&",2) = 3; ss("&",3) = 2; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 1; ss("&",1) = 2; ss("&",2) = 0; ss("&",3) = 3; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 1; ss("&",1) = 2; ss("&",2) = 3; ss("&",3) = 0; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 1; ss("&",1) = 3; ss("&",2) = 0; ss("&",3) = 2; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 1; ss("&",1) = 3; ss("&",2) = 2; ss("&",3) = 0; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+
+            ss("&",z) = 2; ss("&",1) = 1; ss("&",2) = 0; ss("&",3) = 3; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 2; ss("&",1) = 1; ss("&",2) = 3; ss("&",3) = 0; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 2; ss("&",1) = 0; ss("&",2) = 1; ss("&",3) = 3; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 2; ss("&",1) = 0; ss("&",2) = 3; ss("&",3) = 1; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 2; ss("&",1) = 3; ss("&",2) = 1; ss("&",3) = 0; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 2; ss("&",1) = 3; ss("&",2) = 0; ss("&",3) = 1; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+
+            ss("&",z) = 3; ss("&",1) = 1; ss("&",2) = 2; ss("&",3) = 0; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 3; ss("&",1) = 1; ss("&",2) = 0; ss("&",3) = 2; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 3; ss("&",1) = 2; ss("&",2) = 1; ss("&",3) = 0; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 3; ss("&",1) = 2; ss("&",2) = 0; ss("&",3) = 1; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 3; ss("&",1) = 0; ss("&",2) = 1; ss("&",3) = 2; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+            ss("&",z) = 3; ss("&",1) = 0; ss("&",2) = 2; ss("&",3) = 1; LL4(tempres,dummya,dummyb,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,nullptr,ia,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,&ss,0,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,indstart,indend); res += tempres;
+
+            res /= 24;
+        }
+    }
+
+    else if ( ( resmode & 0x01 ) )
+    {
+        NiceAssert( !justcalcip );
+        NiceAssert( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) );
+        NiceAssert( !( isprod && !arexysimple(xa,xb) && !arexysimple(xa,xc) && !arexysimple(xa,xd) ) );
+
+        double altxyr00 = 0;
+        double altxyr10 = 0;
+        double altxyr11 = 0;
+        double altxyr20 = 0;
+        double altxyr21 = 0;
+        double altxyr22 = 0;
+        double altxyr30 = 0;
+        double altxyr31 = 0;
+        double altxyr32 = 0;
+        double altxyr33 = 0;
+
+        fillXYMatrix(altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,altxyr30,altxyr31,altxyr32,altxyr33,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,0,assumreal);
+
+        gentype tempres;
+
+        //K4i(tempres,defaultgentype(),xainfo,xbinfo,xcinfo,xdinfo,getmnorm(xainfo,xa,4,xconsist,assumreal),getmnorm(xbinfo,xb,4,xconsist,assumreal),getmnorm(xcinfo,xc,4,xconsist,assumreal),getmnorm(xdinfo,xd,4,xconsist,assumreal),xa,xb,xc,xd,ia,ib,ic,id,xdim,resmode,mlid,altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,altxyr30,altxyr31,altxyr32,altxyr33,s,indstart,indend,assumreal);
+        K4i(tempres,0_gent,xainfo,xbinfo,xcinfo,xdinfo,getmnorm(xainfo,xa,4,xconsist,assumreal),getmnorm(xbinfo,xb,4,xconsist,assumreal),getmnorm(xcinfo,xc,4,xconsist,assumreal),getmnorm(xdinfo,xd,4,xconsist,assumreal),xa,xb,xc,xd,ia,ib,ic,id,xdim,resmode,mlid,altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,altxyr30,altxyr31,altxyr32,altxyr33,s,indstart,indend,assumreal);
+
+        res = (T) tempres;
+    }
+
+    else if ( isprod && !arexysimple(xa,xb,xc,xd) )
+    {
+        NiceAssert( !justcalcip );
+        NiceAssert( !( resmode & 0x80 ) );
+
+        // Should probably replace this with a proper fast version
+
+        Vector<const SparseVector<gentype> *> xx(4);
+        Vector<const vecInfo *> xxinfo(4);
+        Vector<int> ii(4);
+
+        xx("[]",0) = &xa;
+        xx("[]",1)         = &xb;
+        xx("[]",2)         = &xc;
+        xx("[]",3)         = &xd;
+
+        xxinfo("[]",0) = &xainfo;
+        xxinfo("[]",1)         = &xbinfo;
+        xxinfo("[]",2)         = &xcinfo;
+        xxinfo("[]",3)         = &xdinfo;
+
+        ii("[]",0) = ia;
+        ii("[]",1)         = ib;
+        ii("[]",2)         = ic;
+        ii("[]",3)         = id;
+
+        LLm(4,res,logres,logresvalid,xx,xxinfo,bias,ii,pxyprod,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,0,indstart,indend);
+    }
+
+    else if ( ( isFastKernelSum() || isFastKernelChain() ) && ( resmode & 0x80 ) && !justcalcip )
+    {
+        res = 0;
+    }
+
+    else if ( isFastKernelSum() || isFastKernelChain() || ( isFastKernelXfer() && !resmode ) || justcalcip )
+    {
+        int locindstart = (isFastKernelXfer()?1:indstart); // NB: isFastKernelXfer() implies indstart == 0
+        int locindend   = indend; //size()-1;
+
+        int needxxprod = isNormalised(locindend);
+
+        T xyprod; xyprod = 0.0;
+        T diffis; diffis = 0.0;
+        T xaprod; xaprod = 0.0;
+        T xbprod; xbprod = 0.0;
+        T xcprod; xcprod = 0.0;
+        T xdprod; xdprod = 0.0;
+
+        // Calculate inner products and differences if required
+
+        if ( isFastKernelSum() || isFastKernelChain() || justcalcip )
+        {
+            if ( pxyprod && pxyprod[0] )
+            {
+                xyprod = *pxyprod[0];
+            }
+
+            else if ( needsInner(0,4) || ( isFastKernelSum() && needsInner(-1,4) ) || justcalcip )
+            {
+                fourProductDiverted(xyprod,xa,xb,xc,xd,xconsist,assumreal);
+
+                if ( !justcalcip )
+                {
+                    xyprod += bias;
+                }
+            }
+
+            if ( needxxprod && !justcalcip )
+            {
+                fourProductDiverted(xaprod,xa,xa,xa,xa,xconsist,assumreal);
+                fourProductDiverted(xbprod,xb,xb,xb,xb,xconsist,assumreal);
+                fourProductDiverted(xcprod,xc,xc,xc,xc,xconsist,assumreal);
+                fourProductDiverted(xdprod,xd,xd,xd,xd,xconsist,assumreal);
+
+                xaprod += bias;
+                xbprod += bias;
+                xcprod += bias;
+                xdprod += bias;
+            }
+
+            if ( pxyprod && pxyprod[1] )
+            {
+                diffis = *pxyprod[1];
+            }
+
+            else if ( ( ( needsDiff(0) || ( isFastKernelSum() && needsDiff() ) ) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) ) && !justcalcip )
+            {
+                // Calculate ||x-y||^2 only as required
+
+                double altxyr00 = 0;
+                double altxyr10 = 0;
+                double altxyr11 = 0;
+                double altxyr20 = 0;
+                double altxyr21 = 0;
+                double altxyr22 = 0;
+                double altxyr30 = 0;
+                double altxyr31 = 0;
+                double altxyr32 = 0;
+                double altxyr33 = 0;
+
+                fillXYMatrix(altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,altxyr30,altxyr31,altxyr32,altxyr33,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,0,assumreal);
+
+                diff4norm(diffis,xyprod,getmnorm(xainfo,xa,4,xconsist,assumreal),getmnorm(xbinfo,xb,4,xconsist,assumreal),getmnorm(xcinfo,xc,4,xconsist,assumreal),getmnorm(xdinfo,xd,4,xconsist,assumreal),altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,altxyr30,altxyr31,altxyr32,altxyr33,s);
+            }
+
+            else if ( ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
+            {
+                NiceAssert( !needxxprod );
+
+                // At this point we need to calculate diffis using altdiffis method 2xx
+                // xyprod is not used by kernel, but need to fill it in for use by rest of chain
+                // we only need to cycle through diffis for relevant s vectors
+                // We need the xy matrix to do this
+
+                int z = 0;
+                T tempres;
+
+                double ssxyzz = 0;
+                double ssxy1z = 0;
+                double ssxy11 = 0;
+                double ssxy2z = 0;
+                double ssxy21 = 0;
+                double ssxy22 = 0;
+                double ssxy3z = 0;
+                double ssxy31 = 0;
+                double ssxy32 = 0;
+                double ssxy33 = 0;
+
+                double &ssxyz1 = ssxy1z;
+                double &ssxyz2 = ssxy2z;
+                double &ssxyz3 = ssxy3z;
+                double &ssxy12 = ssxy21;
+                double &ssxy13 = ssxy31;
+                double &ssxy23 = ssxy32;
+
+                fillXYMatrix(ssxyzz,ssxy1z,ssxy11,ssxy2z,ssxy21,ssxy22,ssxy3z,ssxy31,ssxy32,ssxy33,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,1,assumreal);
+
+                xyprod = 0.0;
+
+                if ( isAltDiff() == 203 )
+                {
+                    T dummy;
+
+                    int ii[4] = { ia,ib,ic,id };
+
+                    // ++--
+
+                    diffis  =  ssxyzz + ssxyz1 - ssxyz2 - ssxyz3; 
+                    diffis +=  ssxy1z + ssxy11 - ssxy12 - ssxy13; 
+                    diffis += -ssxy2z - ssxy21 + ssxy22 + ssxy23; 
+                    diffis += -ssxy3z - ssxy31 + ssxy32 + ssxy33; 
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    // +-+-
+
+                    diffis  =  ssxyzz - ssxyz1 + ssxyz2 - ssxyz3;
+                    diffis += -ssxy1z + ssxy11 - ssxy12 + ssxy13;
+                    diffis +=  ssxy2z - ssxy21 + ssxy22 - ssxy23;
+                    diffis += -ssxy3z + ssxy31 - ssxy32 + ssxy33;
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    // +--+
+
+                    diffis  =  ssxyzz - ssxyz1 - ssxyz2 + ssxyz3;
+                    diffis += -ssxy1z + ssxy11 + ssxy12 - ssxy13;
+                    diffis += -ssxy2z + ssxy21 + ssxy22 - ssxy23;
+                    diffis +=  ssxy3z - ssxy31 - ssxy32 + ssxy33;
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    // --++
+
+                    diffis  =  ssxyzz + ssxyz1 - ssxyz2 - ssxyz3;
+                    diffis +=  ssxy1z + ssxy11 - ssxy12 - ssxy13;
+                    diffis += -ssxy2z - ssxy21 + ssxy22 + ssxy23;
+                    diffis += -ssxy3z - ssxy31 + ssxy32 + ssxy33;
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    // -+-+
+
+                    diffis  =  ssxyzz - ssxyz1 + ssxyz2 - ssxyz3;
+                    diffis += -ssxy1z + ssxy11 - ssxy12 + ssxy13;
+                    diffis +=  ssxy2z - ssxy21 + ssxy22 - ssxy23;
+                    diffis += -ssxy3z + ssxy31 - ssxy32 + ssxy33;
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    // -++-
+
+                    diffis  =  ssxyzz - ssxyz1 - ssxyz2 + ssxyz3;
+                    diffis += -ssxy1z + ssxy11 + ssxy12 - ssxy13;
+                    diffis += -ssxy2z + ssxy21 + ssxy22 - ssxy23;
+                    diffis +=  ssxy3z - ssxy31 - ssxy32 + ssxy33;
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    // ++++
+
+                    diffis  =  ssxyzz + ssxyz1 + ssxyz2 + ssxyz3;
+                    diffis +=  ssxy1z + ssxy11 + ssxy12 + ssxy13;
+                    diffis +=  ssxy2z + ssxy21 + ssxy22 + ssxy23;
+                    diffis +=  ssxy3z + ssxy31 + ssxy32 + ssxy33;
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    // ----
+
+                    diffis  =  ssxyzz + ssxyz1 + ssxyz2 + ssxyz3;
+                    diffis +=  ssxy1z + ssxy11 + ssxy12 + ssxy13;
+                    diffis +=  ssxy2z + ssxy21 + ssxy22 + ssxy23;
+                    diffis +=  ssxy3z + ssxy31 + ssxy32 + ssxy33;
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    xyprod /= 8;
+                }
+
+                else if ( isAltDiff() == 204 )
+                {
+                    Matrix<double> ssxy;
+
+                    ssxy.resize(4,4);
+
+                    ssxy("&",z,z) = ssxyzz; ssxy("&",z,1) = ssxyz1; ssxy("&",z,2) = ssxyz2; ssxy("&",z,3) = ssxyz3;
+                    ssxy("&",1,z) = ssxy1z; ssxy("&",1,1) = ssxy11; ssxy("&",1,2) = ssxy12; ssxy("&",1,3) = ssxy13;
+                    ssxy("&",2,z) = ssxy2z; ssxy("&",2,1) = ssxy21; ssxy("&",2,2) = ssxy22; ssxy("&",2,3) = ssxy23;
+                    ssxy("&",3,z) = ssxy3z; ssxy("&",3,1) = ssxy31; ssxy("&",3,2) = ssxy32; ssxy("&",3,3) = ssxy33;
+
+                    T dummy;
+
+                    int ii[4] = { ia,ib,ic,id };
+
+                    Vector<int> ss(4);
+
+                    ss("&",z) = 0; ss("&",1) = 1; ss("&",2) = 2; ss("&",3) = 3;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 0; ss("&",1) = 1; ss("&",2) = 3; ss("&",3) = 2;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 0; ss("&",1) = 2; ss("&",2) = 1; ss("&",3) = 3;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 0; ss("&",1) = 2; ss("&",2) = 3; ss("&",3) = 1;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 0; ss("&",1) = 3; ss("&",2) = 1; ss("&",3) = 2;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 0; ss("&",1) = 3; ss("&",2) = 2; ss("&",3) = 1;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+
+                    ss("&",z) = 1; ss("&",1) = 0; ss("&",2) = 2; ss("&",3) = 3;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 1; ss("&",1) = 0; ss("&",2) = 3; ss("&",3) = 2;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 1; ss("&",1) = 2; ss("&",2) = 0; ss("&",3) = 3;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 1; ss("&",1) = 2; ss("&",2) = 3; ss("&",3) = 0;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 1; ss("&",1) = 3; ss("&",2) = 0; ss("&",3) = 2;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 1; ss("&",1) = 3; ss("&",2) = 2; ss("&",3) = 0;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+
+                    ss("&",z) = 2; ss("&",1) = 1; ss("&",2) = 0; ss("&",3) = 3;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 2; ss("&",1) = 1; ss("&",2) = 3; ss("&",3) = 0;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 2; ss("&",1) = 0; ss("&",2) = 1; ss("&",3) = 3;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 2; ss("&",1) = 0; ss("&",2) = 3; ss("&",3) = 1;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 2; ss("&",1) = 3; ss("&",2) = 1; ss("&",3) = 0;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 2; ss("&",1) = 3; ss("&",2) = 0; ss("&",3) = 1;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+
+                    ss("&",z) = 3; ss("&",1) = 1; ss("&",2) = 2; ss("&",3) = 0;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 3; ss("&",1) = 1; ss("&",2) = 0; ss("&",3) = 2;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 3; ss("&",1) = 2; ss("&",2) = 1; ss("&",3) = 0;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 3; ss("&",1) = 2; ss("&",2) = 0; ss("&",3) = 1;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 3; ss("&",1) = 0; ss("&",2) = 1; ss("&",3) = 2;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 3; ss("&",1) = 0; ss("&",2) = 2; ss("&",3) = 1;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+
+                    xyprod /= 24;
+                }
+
+                ++locindstart;
+            }
+        }
+
+        else
+        {
+            // ( isFastKernelXfer() && !resmode )
+            // isSimpleFastKernelChain
+
+            if ( pxyprod && pxyprod[0] )
+            {
+                xyprod = *pxyprod[0];
+            }
+
+            else
+            {
+                int dummyind = 0;
+
+                T zzz; zzz = 0.0;
+
+                kernel8xx(0,xyprod,dummyind,cType(0),zzz,zzz,zzz,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,ia,ib,ic,id,xdim,0,mlid);
+            }
+
+            if ( needxxprod && !justcalcip )
+            {
+                int dummyind = 0;
+
+                T zzz; zzz = 0.0;
+
+                kernel8xx(0,xaprod,dummyind,cType(0),zzz,zzz,zzz,xa,xa,xa,xa,xainfo,xainfo,xainfo,xainfo,ia,ia,ia,ia,xdim,0,mlid);
+                kernel8xx(0,xbprod,dummyind,cType(0),zzz,zzz,zzz,xb,xb,xb,xb,xbinfo,xbinfo,xbinfo,xbinfo,ib,ib,ib,ib,xdim,0,mlid);
+                kernel8xx(0,xcprod,dummyind,cType(0),zzz,zzz,zzz,xc,xc,xc,xc,xcinfo,xcinfo,xcinfo,xcinfo,ic,ic,ic,ic,xdim,0,mlid);
+                kernel8xx(0,xdprod,dummyind,cType(0),zzz,zzz,zzz,xd,xd,xd,xd,xdinfo,xdinfo,xdinfo,xdinfo,id,id,id,id,xdim,0,mlid);
+            }
+
+            if ( pxyprod && pxyprod[1] )
+            {
+                diffis = *pxyprod[1];
+            }
+
+            else if ( ( size() >= 2 ) && needsDiff(1) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) && !justcalcip )
+            {
+                int dummyind = 0;
+
+                T xanorm;
+                T xbnorm;
+                T xcnorm;
+                T xdnorm;
+
+                double altxyr00 = 0;
+                double altxyr10 = 0;
+                double altxyr11 = 0;
+                double altxyr20 = 0;
+                double altxyr21 = 0;
+                double altxyr22 = 0;
+                double altxyr30 = 0;
+                double altxyr31 = 0;
+                double altxyr32 = 0;
+                double altxyr33 = 0;
+
+                if ( isAltDiff() == 0 )
+                {
+                    T zzz; zzz = 0.0;
+
+                    kernel8xx(0,xanorm,dummyind,cType(0),zzz,zzz,zzz,xa,xa,xa,xa,xainfo,xainfo,xainfo,xainfo,ia,ia,ia,ia,xdim,0,mlid);
+                    kernel8xx(0,xbnorm,dummyind,cType(0),zzz,zzz,zzz,xb,xb,xb,xb,xbinfo,xbinfo,xbinfo,xbinfo,ib,ib,ib,ib,xdim,0,mlid);
+                    kernel8xx(0,xcnorm,dummyind,cType(0),zzz,zzz,zzz,xc,xc,xc,xc,xcinfo,xcinfo,xcinfo,xcinfo,ic,ic,ic,ic,xdim,0,mlid);
+                    kernel8xx(0,xdnorm,dummyind,cType(0),zzz,zzz,zzz,xd,xd,xd,xd,xdinfo,xdinfo,xdinfo,xdinfo,id,id,id,id,xdim,0,mlid);
+
+                    // needsMatDiff() == 0 here by definition
+                }
+
+                else
+                {
+                    T zzz; zzz = 0.0;
+
+                    kernel8xx(0,xanorm,dummyind,cType(0),zzz,zzz,zzz,xa,xa,xainfo,xainfo,ia,ia,xdim,0,mlid);
+                    kernel8xx(0,xbnorm,dummyind,cType(0),zzz,zzz,zzz,xb,xb,xbinfo,xbinfo,ib,ib,xdim,0,mlid);
+                    kernel8xx(0,xcnorm,dummyind,cType(0),zzz,zzz,zzz,xc,xc,xcinfo,xcinfo,ic,ic,xdim,0,mlid);
+                    kernel8xx(0,xdnorm,dummyind,cType(0),zzz,zzz,zzz,xd,xd,xdinfo,xdinfo,id,id,xdim,0,mlid);
+
+                    if ( needsMatDiff() == +1 )
+                    {
+                        kernel8xx(0,altxyr10,dummyind,cType(0),zzz,zzz,zzz,xb,xa,xbinfo,xainfo,ib,ia,xdim,0,mlid);
+                        kernel8xx(0,altxyr20,dummyind,cType(0),zzz,zzz,zzz,xc,xa,xcinfo,xainfo,ic,ia,xdim,0,mlid);
+                        kernel8xx(0,altxyr21,dummyind,cType(0),zzz,zzz,zzz,xc,xb,xcinfo,xbinfo,ic,ib,xdim,0,mlid);
+                        kernel8xx(0,altxyr30,dummyind,cType(0),zzz,zzz,zzz,xd,xa,xdinfo,xainfo,id,ia,xdim,0,mlid);
+                        kernel8xx(0,altxyr31,dummyind,cType(0),zzz,zzz,zzz,xd,xb,xdinfo,xbinfo,id,ib,xdim,0,mlid);
+                        kernel8xx(0,altxyr32,dummyind,cType(0),zzz,zzz,zzz,xd,xc,xdinfo,xcinfo,id,ic,xdim,0,mlid);
+
+                        altxyr00 = xanorm;
+                        altxyr11 = xbnorm;
+                        altxyr22 = xcnorm;
+                        altxyr33 = xdnorm;
+                    }
+
+                    else if ( needsMatDiff() == -1 )
+                    {
+                        kernel8xx(0,altxyr10,dummyind,cType(0),zzz,zzz,zzz,xb,xa,xbinfo,xainfo,ib,ia,xdim,0,mlid);
+                        //kernel8xx(0,altxyr20,dummyind,cType(0),zzz,zzz,zzz,xc,xa,xcinfo,xainfo,ic,ia,xdim,0,mlid);
+                        //kernel8xx(0,altxyr21,dummyind,cType(0),zzz,zzz,zzz,xc,xb,xcinfo,xbinfo,ic,ib,xdim,0,mlid);
+                        //kernel8xx(0,altxyr30,dummyind,cType(0),zzz,zzz,zzz,xd,xa,xdinfo,xainfo,id,ia,xdim,0,mlid);
+                        //kernel8xx(0,altxyr31,dummyind,cType(0),zzz,zzz,zzz,xd,xb,xdinfo,xbinfo,id,ib,xdim,0,mlid);
+                        kernel8xx(0,altxyr32,dummyind,cType(0),zzz,zzz,zzz,xd,xc,xdinfo,xcinfo,id,ic,xdim,0,mlid);
+
+                        altxyr00 = xanorm;
+                        altxyr11 = xbnorm;
+                        altxyr22 = xcnorm;
+                        altxyr33 = xdnorm;
+                    }
+                }
+
+                diff4norm(diffis,xyprod,xanorm,xbnorm,xcnorm,xdnorm,altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,altxyr30,altxyr31,altxyr32,altxyr33,s);
+
+                if ( !justcalcip )
+                {
+                    xyprod *= (const T &) cWeight(0);
+
+                    xaprod *= (const T &) cWeight(0);
+                    xbprod *= (const T &) cWeight(0);
+                    xcprod *= (const T &) cWeight(0);
+                    xdprod *= (const T &) cWeight(0);
+
+                    diffis *= (const T &) cWeight(0);
+                }
+            }
+
+            else if ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) && !justcalcip )
+            {
+                // At this point we need to calculate diffis using altdiffis method 2xx
+                // xyprod is not used by kernel
+                // we only need to cycle through diffis for relevant s vectors
+                // We need the xy matrix to do this
+
+                int z = 0;
+                T tempres; tempres = 0.0;
+                int dummyind = 0;
+
+                Matrix<double> altxy(4,4);
+                const Matrix<double> &ssxy = altxy;
+
+                T zzz; zzz = 0.0;
+
+                kernel8xx(0,altxy("&",z,z),dummyind,cType(0),zzz,zzz,zzz,xa,xa,xainfo,xainfo,ia,ia,xdim,0,mlid);
+                kernel8xx(0,altxy("&",z,1),dummyind,cType(0),zzz,zzz,zzz,xa,xb,xainfo,xbinfo,ia,ib,xdim,0,mlid);
+                kernel8xx(0,altxy("&",z,2),dummyind,cType(0),zzz,zzz,zzz,xa,xc,xainfo,xcinfo,ia,ic,xdim,0,mlid);
+                kernel8xx(0,altxy("&",z,3),dummyind,cType(0),zzz,zzz,zzz,xa,xd,xainfo,xdinfo,ia,id,xdim,0,mlid);
+                kernel8xx(0,altxy("&",1,1),dummyind,cType(0),zzz,zzz,zzz,xb,xb,xbinfo,xbinfo,ib,ib,xdim,0,mlid);
+                kernel8xx(0,altxy("&",1,2),dummyind,cType(0),zzz,zzz,zzz,xb,xc,xbinfo,xcinfo,ib,ic,xdim,0,mlid);
+                kernel8xx(0,altxy("&",1,3),dummyind,cType(0),zzz,zzz,zzz,xb,xd,xbinfo,xdinfo,ib,id,xdim,0,mlid);
+                kernel8xx(0,altxy("&",2,2),dummyind,cType(0),zzz,zzz,zzz,xc,xc,xcinfo,xcinfo,ic,ic,xdim,0,mlid);
+                kernel8xx(0,altxy("&",2,3),dummyind,cType(0),zzz,zzz,zzz,xc,xd,xcinfo,xdinfo,ic,id,xdim,0,mlid);
+                kernel8xx(0,altxy("&",3,3),dummyind,cType(0),zzz,zzz,zzz,xd,xd,xdinfo,xdinfo,id,id,xdim,0,mlid);
+
+                altxy("&",1,z) = altxy(z,1);
+                altxy("&",2,z) = altxy(z,2);
+                altxy("&",2,1) = altxy(1,2);
+                altxy("&",3,z) = altxy(z,3);
+                altxy("&",3,1) = altxy(1,3);
+                altxy("&",3,2) = altxy(2,3);
+
+                xyprod = 0.0;
+
+                if ( isAltDiff() == 203 )
+                {
+                    T dummy;
+
+                    int ii[4] = { ia,ib,ic,id };
+
+                    // ++--
+
+                    diffis  =  ssxy(z,z) + ssxy(z,1) - ssxy(z,2) - ssxy(z,3); 
+                    diffis +=  ssxy(1,z) + ssxy(1,1) - ssxy(1,2) - ssxy(1,3); 
+                    diffis += -ssxy(2,z) - ssxy(2,1) + ssxy(2,2) + ssxy(2,3); 
+                    diffis += -ssxy(3,z) - ssxy(3,1) + ssxy(3,2) + ssxy(3,3); 
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    // +-+-
+
+                    diffis  =  ssxy(z,z) - ssxy(z,1) + ssxy(z,2) - ssxy(z,3);
+                    diffis += -ssxy(1,z) + ssxy(1,1) - ssxy(1,2) + ssxy(1,3);
+                    diffis +=  ssxy(2,z) - ssxy(2,1) + ssxy(2,2) - ssxy(2,3);
+                    diffis += -ssxy(3,z) + ssxy(3,1) - ssxy(3,2) + ssxy(3,3);
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    // +--+
+
+                    diffis  =  ssxy(z,z) - ssxy(z,1) - ssxy(z,2) + ssxy(z,3);
+                    diffis += -ssxy(1,z) + ssxy(1,1) + ssxy(1,2) - ssxy(1,3);
+                    diffis += -ssxy(2,z) + ssxy(2,1) + ssxy(2,2) - ssxy(2,3);
+                    diffis +=  ssxy(3,z) - ssxy(3,1) - ssxy(3,2) + ssxy(3,3);
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    // --++
+
+                    diffis  =  ssxy(z,z) + ssxy(z,1) - ssxy(z,2) - ssxy(z,3);
+                    diffis +=  ssxy(1,z) + ssxy(1,1) - ssxy(1,2) - ssxy(1,3);
+                    diffis += -ssxy(2,z) - ssxy(2,1) + ssxy(2,2) + ssxy(2,3);
+                    diffis += -ssxy(3,z) - ssxy(3,1) + ssxy(3,2) + ssxy(3,3);
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    // -+-+
+
+                    diffis  =  ssxy(z,z) - ssxy(z,1) + ssxy(z,2) - ssxy(z,3);
+                    diffis += -ssxy(1,z) + ssxy(1,1) - ssxy(1,2) + ssxy(1,3);
+                    diffis +=  ssxy(2,z) - ssxy(2,1) + ssxy(2,2) - ssxy(2,3);
+                    diffis += -ssxy(3,z) + ssxy(3,1) - ssxy(3,2) + ssxy(3,3);
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    // -++-
+
+                    diffis  =  ssxy(z,z) - ssxy(z,1) - ssxy(z,2) + ssxy(z,3);
+                    diffis += -ssxy(1,z) + ssxy(1,1) + ssxy(1,2) - ssxy(1,3);
+                    diffis += -ssxy(2,z) + ssxy(2,1) + ssxy(2,2) - ssxy(2,3);
+                    diffis +=  ssxy(3,z) - ssxy(3,1) - ssxy(3,2) + ssxy(3,3);
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    // ++++
+
+                    diffis  =  ssxy(z,z) + ssxy(z,1) + ssxy(z,2) + ssxy(z,3);
+                    diffis +=  ssxy(1,z) + ssxy(1,1) + ssxy(1,2) + ssxy(1,3);
+                    diffis +=  ssxy(2,z) + ssxy(2,1) + ssxy(2,2) + ssxy(2,3);
+                    diffis +=  ssxy(3,z) + ssxy(3,1) + ssxy(3,2) + ssxy(3,3);
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+	
+                    // ----
+
+                    diffis  =  ssxy(z,z) + ssxy(z,1) + ssxy(z,2) + ssxy(z,3);
+                    diffis +=  ssxy(1,z) + ssxy(1,1) + ssxy(1,2) + ssxy(1,3);
+                    diffis +=  ssxy(2,z) + ssxy(2,1) + ssxy(2,2) + ssxy(2,3);
+                    diffis +=  ssxy(3,z) + ssxy(3,1) + ssxy(3,2) + ssxy(3,3);
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    xyprod /= 8;
+                }
+
+                else if ( isAltDiff() == 204 )
+                {
+                    T dummy;
+
+                    int ii[4] = { ia,ib,ic,id };
+
+                    Vector<int> ss(4);
+
+                    ss("&",z) = 0; ss("&",1) = 1; ss("&",2) = 2; ss("&",3) = 3;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 0; ss("&",1) = 1; ss("&",2) = 3; ss("&",3) = 2;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 0; ss("&",1) = 2; ss("&",2) = 1; ss("&",3) = 3;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 0; ss("&",1) = 2; ss("&",2) = 3; ss("&",3) = 1;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 0; ss("&",1) = 3; ss("&",2) = 1; ss("&",3) = 2;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 0; ss("&",1) = 3; ss("&",2) = 2; ss("&",3) = 1;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+
+                    ss("&",z) = 1; ss("&",1) = 0; ss("&",2) = 2; ss("&",3) = 3;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 1; ss("&",1) = 0; ss("&",2) = 3; ss("&",3) = 2;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 1; ss("&",1) = 2; ss("&",2) = 0; ss("&",3) = 3;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 1; ss("&",1) = 2; ss("&",2) = 3; ss("&",3) = 0;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 1; ss("&",1) = 3; ss("&",2) = 0; ss("&",3) = 2;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 1; ss("&",1) = 3; ss("&",2) = 2; ss("&",3) = 0;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+
+                    ss("&",z) = 2; ss("&",1) = 1; ss("&",2) = 0; ss("&",3) = 3;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 2; ss("&",1) = 1; ss("&",2) = 3; ss("&",3) = 0;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 2; ss("&",1) = 0; ss("&",2) = 1; ss("&",3) = 3;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 2; ss("&",1) = 0; ss("&",2) = 3; ss("&",3) = 1;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 2; ss("&",1) = 3; ss("&",2) = 1; ss("&",3) = 0;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 2; ss("&",1) = 3; ss("&",2) = 0; ss("&",3) = 1;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+
+                    ss("&",z) = 3; ss("&",1) = 1; ss("&",2) = 2; ss("&",3) = 0;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 3; ss("&",1) = 1; ss("&",2) = 0; ss("&",3) = 2;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 3; ss("&",1) = 2; ss("&",2) = 1; ss("&",3) = 0;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 3; ss("&",1) = 2; ss("&",2) = 0; ss("&",3) = 1;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 3; ss("&",1) = 0; ss("&",2) = 1; ss("&",3) = 2;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+                    ss("&",z) = 3; ss("&",1) = 0; ss("&",2) = 2; ss("&",3) = 1;
+
+                    diffis =  ssxy(ss(z),ss(z)) - ssxy(ss(z),ss(1));
+                    diffis = -ssxy(ss(1),ss(z)) - ssxy(ss(1),ss(1));
+
+                    diffis =  ssxy(ss(2),ss(2)) - ssxy(ss(2),ss(3));
+                    diffis = -ssxy(ss(3),ss(2)) - ssxy(ss(3),ss(3));
+
+                    KKpro(tempres,xyprod,diffis,ii,locindstart,locindstart,xdim,4,dummy,&dummy);
+                    xyprod += tempres;
+
+
+                    xyprod /= 24;
+                }
+
+                diffis *= (const T &) cWeight(0);
+
+                ++locindstart;
+            }
+        }
+
+        if ( justcalcip )
+        {
+            res = xyprod;
+        }
+
+        else
+        {
+            if ( isNormalised(locindend) )
+            {
+                T dummy;
+
+                int iabcd[4] = { ia,ib,ic,id };
+                int iaaaa[4] = { ia,ia,ia,ia };
+                int ibbbb[4] = { ib,ib,ib,ib };
+                int icccc[4] = { ic,ic,ic,ic };
+                int idddd[4] = { id,id,id,id };
+
+                KKpro(res,xyprod,diffis,iabcd,locindstart,locindend,xdim,4,dummy,&dummy);
+
+                T xares;
+                T xbres;
+                T xcres;
+                T xdres;
+
+                T zerodiff; zerodiff = 0.0;
+
+                KKpro(xares,xaprod,zerodiff,iaaaa,locindstart,locindend,xdim,4,dummy,&dummy);
+                KKpro(xbres,xbprod,zerodiff,ibbbb,locindstart,locindend,xdim,4,dummy,&dummy);
+                KKpro(xcres,xcprod,zerodiff,icccc,locindstart,locindend,xdim,4,dummy,&dummy);
+                KKpro(xdres,xdprod,zerodiff,idddd,locindstart,locindend,xdim,4,dummy,&dummy);
+
+                if ( ( ( (double) abs2(xares) <= BADZEROTOL ) && ( (double) abs2(xbres) <= BADZEROTOL ) && ( (double) abs2(xcres) <= BADZEROTOL ) ) ||
+                     ( ( (double) abs2(xares) <= BADZEROTOL ) && ( (double) abs2(xbres) <= BADZEROTOL ) && ( (double) abs2(xdres) <= BADZEROTOL ) ) ||
+                     ( ( (double) abs2(xares) <= BADZEROTOL ) && ( (double) abs2(xcres) <= BADZEROTOL ) && ( (double) abs2(xdres) <= BADZEROTOL ) ) ||
+                     ( ( (double) abs2(xbres) <= BADZEROTOL ) && ( (double) abs2(xcres) <= BADZEROTOL ) && ( (double) abs2(xdres) <= BADZEROTOL ) )    )
+                {
+                    res = angle(res);
+                    res = ( (double) abs2(res) <= BADZEROTOL ) ? 1.0 : res;
+                }
+
+                else if ( ( (double) abs2(xares) <= BADZEROTOL ) && ( (double) abs2(xbres) <= BADZEROTOL ) )
+                {
+                    // Fallback to LL2
+
+                    LL2(0,0,res,logres,logresvalid,xc,xd,xcinfo,xdinfo,bias,nullptr,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend);
+                }
+
+                else if ( ( (double) abs2(xares) <= BADZEROTOL ) && ( (double) abs2(xcres) <= BADZEROTOL ) )
+                {
+                    // Fallback to LL2
+
+                    LL2(0,0,res,logres,logresvalid,xb,xd,xbinfo,xdinfo,bias,nullptr,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend);
+                }
+
+                else if ( ( (double) abs2(xares) <= BADZEROTOL ) && ( (double) abs2(xdres) <= BADZEROTOL ) )
+                {
+                    // Fallback to LL2
+
+                    LL2(0,0,res,logres,logresvalid,xb,xc,xbinfo,xcinfo,bias,nullptr,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend);
+                }
+
+                else if ( ( (double) abs2(xbres) <= BADZEROTOL ) && ( (double) abs2(xcres) <= BADZEROTOL ) )
+                {
+                    // Fallback to LL2
+
+                    LL2(0,0,res,logres,logresvalid,xa,xd,xainfo,xdinfo,bias,nullptr,ia,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend);
+                }
+
+                else if ( ( (double) abs2(xbres) <= BADZEROTOL ) && ( (double) abs2(xdres) <= BADZEROTOL ) )
+                {
+                    // Fallback to LL2
+
+                    LL2(0,0,res,logres,logresvalid,xa,xc,xainfo,xcinfo,bias,nullptr,ia,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend);
+                }
+
+                else if ( ( (double) abs2(xcres) <= BADZEROTOL ) && ( (double) abs2(xdres) <= BADZEROTOL ) )
+                {
+                    // Fallback to LL2
+
+                    LL2(0,0,res,logres,logresvalid,xa,xb,xainfo,xbinfo,bias,nullptr,ia,ib,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,justcalcip,indstart,indend);
+                }
+
+                else if ( (double) abs2(xares) <= BADZEROTOL )
+                {
+                    // Fallback to LL3
+
+                    LL3(res,logres,logresvalid,xb,xc,xd,xbinfo,xcinfo,xdinfo,bias,nullptr,ib,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend);
+                }
+
+                else if ( (double) abs2(xbres) <= BADZEROTOL )
+                {
+                    // Fallback to LL3
+
+                    LL3(res,logres,logresvalid,xa,xc,xd,xainfo,xcinfo,xdinfo,bias,nullptr,ia,ic,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend);
+                }
+
+                else if ( (double) abs2(xcres) <= BADZEROTOL )
+                {
+                    // Fallback to LL3
+
+                    LL3(res,logres,logresvalid,xa,xb,xd,xainfo,xbinfo,xdinfo,bias,nullptr,ia,ib,id,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend);
+                }
+
+                else if ( (double) abs2(xdres) <= BADZEROTOL )
+                {
+                    // Fallback to LL3
+
+                    LL3(res,logres,logresvalid,xa,xb,xc,xainfo,xbinfo,xcinfo,bias,nullptr,ia,ib,ic,xdim,xconsist,assumreal,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,justcalcip,indstart,indend);
+                }
+
+                else
+                {
+                    // We normalise in log-space to improve numerical stability
+
+                    T sgnres = angle(res);
+
+                    res = abs2(res);
+                    OP_log(res);
+                    res *= 4.0;
+                    res -= log(xares);
+                    res -= log(xbres);
+                    res -= log(xcres);
+                    res -= log(xdres);
+                    res *= 0.25;
+                    OP_exp(res);
+                    res *= sgnres;
+                }
+            }
+
+            else
+            {
+                T dummy;
+
+                int iabcd[4] = { ia,ib,ic,id };
+
+                logresvalid = KKpro(res,xyprod,diffis,iabcd,locindstart,locindend,xdim,4,logres,&dummy);
+            }
+        }
+    }
+
+    else
+    {
+        NiceAssert( ismagterm == 0 );
+        NiceAssert( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) );
+
+        gentype xyprod(0.0);
+
+        if ( pxyprod && pxyprod[0] )
+        {
+            xyprod = (const T &) *pxyprod[0];
+        }
+
+        else if ( needsInner(-1,4) )
+        {
+            // This may be used by some kernels and not others, so calculate anyhow
+
+            fourProductDiverted(xyprod,xa,xb,xc,xd,xconsist,assumreal);
+
+            xyprod += bias;
+        }
+
+        double altxyr00 = 0;
+        double altxyr10 = 0;
+        double altxyr11 = 0;
+        double altxyr20 = 0;
+        double altxyr21 = 0;
+        double altxyr22 = 0;
+        double altxyr30 = 0;
+        double altxyr31 = 0;
+        double altxyr32 = 0;
+        double altxyr33 = 0;
+
+        fillXYMatrix(altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,altxyr30,altxyr31,altxyr32,altxyr33,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,0,assumreal);
+
+        gentype tempres;
+
+        K4i(tempres,xyprod,xainfo,xbinfo,xcinfo,xdinfo,getmnorm(xainfo,xa,4,xconsist,assumreal),getmnorm(xbinfo,xb,4,xconsist,assumreal),getmnorm(xcinfo,xc,4,xconsist,assumreal),getmnorm(xdinfo,xd,4,xconsist,assumreal),xa,xb,xc,xd,ia,ib,ic,id,xdim,resmode,mlid,altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,altxyr30,altxyr31,altxyr32,altxyr33,s,indstart,indend,assumreal);
+
+        res = (T) tempres;
+    }
+
+    return res;
+}
+
+//phantomx
+template <class T>
+T &MercerKernel::LLm(int m, T &res, T &logres, int &logresvalid,
+                     Vector<const SparseVector<gentype> *> &x,
+                     Vector<const vecInfo *> &xinfo,
+                     const T &bias,
+                     Vector<int> &iv,
+                     const gentype **pxyprod, int xdim, int xconsist, int assumreal, int resmode, int mlid, 
+                     const Matrix<double> *xy, const Vector<int> *s, int justcalcip, int indstart, int indend) const
+{
+    Vector<int> i(iv);
+
+    NiceAssert( ! ( isFastKernelSum() && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 300 ) ) );
+
+    logresvalid = 0;
+
+    T dummya;
+    int dummyb = 0;
+
+    if ( (m%2) && ( isAltDiff() >= 100 ) )
+    {
+        goto badout;
+    }
+
+    if ( !size() )
+    {
+        return res = 0.0;
+    }
+
+    if ( isAltDiff() == 300 )
+    {
+        NiceThrow("I should probably implement this someday");
+    }
+
+    else if ( !s && ( isAltDiff() >= 100 ) && ( isAltDiff() <= 199 ) && !justcalcip )
+    {
+        Vector<int> ss(m);
+        T tempres; tempres = 0.0;
+        int ii,jj;
+
+        res = 0.0;
+
+        if ( isAltDiff() == 103 )
+        {
+            int isdone = 0;
+
+            ss = 1;
+
+            while ( !isdone )
+            {
+                if ( sum(ss)%4 == 0 )
+                {
+                    LLm(m,tempres,dummya,dummyb,x,xinfo,bias,i,nullptr,xdim,xconsist,assumreal,resmode,mlid,xy,&ss,0,indstart,indend);
+                    res += tempres;
+                }
+
+                isdone = 1;
+                ii = 0;
+
+                while ( ( ii < m ) && isdone )
+                {
+                    if ( ss(ii) == 1 )
+                    {
+                        ss("&",ii) = -1;
+                        isdone = 0;
+                    }
+
+                    else
+                    {
+                        ss("&",ii) = +1;
+                        ++ii;
+                    }
+                }
+            }
+
+            res /= (1<<(m-1));
+        }
+
+        else if ( isAltDiff() == 104 )
+        {
+            Vector<int> ss(m);
+            int isdone = 0;
+            int cnt = 0;
+            int z = 0;
+
+            ss = z;
+
+            while ( !isdone )
+            {
+                int noreps = 1;
+
+                for ( ii = 0 ; ( ii < m ) && noreps ; ++ii )
+                {
+                    for ( jj = ii+1 ; ( jj < m ) && noreps ; ++jj )
+                    {
+                        if ( ss(ii) == ss(jj) )
+                        {
+                            noreps = 0;
+                        }
+                    }
+                }
+
+                if ( noreps )
+                {
+                    ++cnt;
+                    LLm(m,tempres,dummya,dummyb,x,xinfo,bias,i,nullptr,xdim,xconsist,assumreal,resmode,mlid,xy,&ss,0,indstart,indend);
+                    res += tempres;
+                }
+
+                isdone = 1;
+                ii = 0;
+
+                while ( ( ii < m ) && isdone )
+                {
+                    ++(ss("&",ii));
+
+                    if ( ss(ii) < m )
+                    {
+                        isdone = 0;
+                    }
+
+                    else
+                    {
+                        ss("&",ii) = z;
+                        ++ii;
+                    }
+                }
+            }
+
+            res /= cnt;
+        }
+    }
+
+    else if ( ( resmode & 0x01 ) )
+    {
+        NiceAssert( !justcalcip );
+        NiceAssert( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) );
+        NiceAssert( !( isprod && !arexysimple(m,x) ) );
+
+        Vector<const gentype *> xnormde(x.size());
+
+        if ( m )
+        {
+            int ii;
+
+            retVector<const gentype *> tmpva;
+
+            for ( ii = 0 ; ii < m ; ++ii )
+            {
+                xnormde("&",i,tmpva) = &getmnorm(*(xinfo(ii)),*(x(ii)),m,xconsist,assumreal);
+            }
+        }
+
+        Matrix<double> altxy;
+
+        gentype tempres;
+
+        //Kmi(tempres,defaultgentype(),xinfo,xnormde,x,i,xdim,x.size(),resmode,mlid,fillXYMatrix(m,altxy,x,xinfo,xy,0,assumreal),s,indstart,indend,assumreal);
+        Kmi(tempres,0_gent,xinfo,xnormde,x,i,xdim,x.size(),resmode,mlid,fillXYMatrix(m,altxy,x,xinfo,xy,0,assumreal),s,indstart,indend,assumreal);
+
+        res = (T) tempres;
+    }
+
+    else if ( isprod && !arexysimple(m,x) )
+    {
+        NiceAssert( !justcalcip );
+        NiceAssert( !( resmode & 0x80 ) );
+
+        // Kernel is of the form prod_i K(x_i,y_i)
+        // x and y are not simple
+
+        if ( xconsist && ( size() == 1 ) && isSimpleKernel() )
+        {
+            //NiceAssert( x.nindsize() == y.nindsize() );
+
+            Vector<SparseVector<gentype> > xx(x.size());
+            Vector<const SparseVector<gentype> *> xxx(x.size());
+
+            Vector<vecInfo> xxinfo(x.size());
+            Vector<const vecInfo *> xxxinfo(x.size());
+
+            if ( m && (*(x(0))).nindsize() )
+            {
+                int ii,jj;
+                T tempres;
+
+                for ( jj = 0 ; jj < m ; ++jj )
+                {
+                    xxx    ("&",jj) = &(xx    (jj));
+                    xxxinfo("&",jj) = &(xxinfo(jj));
+                }
+
+                for ( ii = 0 ; ii < (*(x(0))).nindsize() ; ++ii )
+                {
+                    for ( jj = 0 ; jj < m ; ++jj )
+                    {
+                        xx("&",jj)("&",0) = (*(x(jj))).direcref(ii);
+                        getvecInfo(xxinfo("&",jj),xx(jj),nullptr,xconsist,assumreal);
+                    }
+
+                    LLm(m,tempres,dummya,dummyb,xxx,xxxinfo,bias,i,nullptr,1,1,resmode,assumreal,mlid,nullptr,nullptr,0,indstart,indend);
+
+                    tempres /= (const T &) cWeight(0);
+
+                    if ( !ii ) { res =  tempres; }
+                    else       { res *= tempres; }
+                }
+            }
+
+            else
+            {
+                res = 1;
+            }
+        }
+
+        else
+        {
+            SparseVector<gentype> indres;
+
+            combind(m,indres,x);
+
+            Vector<SparseVector<gentype> > xx(x.size());
+            Vector<const SparseVector<gentype> *> xxx(x.size());
+
+            Vector<vecInfo> xxinfo(x.size());
+            Vector<const vecInfo *> xxxinfo(x.size());
+
+            if ( m && indres.size() )
+            {
+                int ii,jj;
+                T tempres;
+
+                for ( jj = 0 ; jj < m ; ++jj )
+                {
+                    xxx    ("&",jj) = &(xx    (jj));
+                    xxxinfo("&",jj) = &(xxinfo(jj));
+                }
+
+                for ( ii = 0 ; ii < indres.nindsize() ; ++ii )
+                {
+                    for ( jj = 0 ; jj < m ; ++jj )
+                    {
+                        xx("&",jj)("&",0) = (*(x(jj))).direcref(indres.ind(ii));
+                        getvecInfo(xxinfo("&",jj),xx(jj),nullptr,xconsist,assumreal);
+                    }
+
+                    LLm(m,tempres,dummya,dummyb,xxx,xxxinfo,bias,i,nullptr,1,1,assumreal,resmode,mlid,nullptr,nullptr,0,indstart,indend);
+
+                    tempres /= (const T &) cWeight(0);
+
+                    if ( !ii ) { res =  tempres; }
+                    else       { res *= tempres; }
+                }
+            }
+
+            else
+            {
+                res = 1;
+            }
+        }
+
+        res *= (const T &) cWeight(0);
+    }
+
+    else if ( ( isFastKernelSum() || isFastKernelChain() ) && ( resmode & 0x80 ) && !justcalcip )
+    {
+        res = 0;
+    }
+
+    else if ( isFastKernelSum() || isFastKernelChain() || ( isFastKernelXfer() && !resmode ) || justcalcip )
+    {
+        int locindstart = (isFastKernelXfer()?1:indstart); // NB: isFastKernelXfer() implies indstart == 0
+        int locindend   = indend; //size()-1;
+
+        int needxxprod = isNormalised(locindend);
+
+        T xyprod; xyprod = 0.0;
+        Vector<T> xxprod(x.size());
+        T diffis; diffis = 0.0;
+
+        xxprod = diffis; // diffis = 0.0
+
+        if ( isFastKernelSum() || isFastKernelChain() || justcalcip )
+        {
+            if ( pxyprod && pxyprod[0] )
+            {
+                xyprod = *pxyprod[0];
+            }
+
+            else if ( needsInner(0,m) || ( isFastKernelSum() && needsInner(-1,m) ) || justcalcip )
+            {
+                mProductDiverted(m,xyprod,x,xconsist,assumreal);
+
+                if ( !justcalcip )
+                {
+                    xyprod += bias;
+                }
+            }
+
+            if ( needxxprod && !justcalcip )
+            {
+                int ii;
+                Vector<int> iii(x.size());
+
+                retVector<const SparseVector<gentype> *> tmpva;
+                retVector<const vecInfo *>               tmpvb;
+
+                for ( ii = 0 ; ii < m ; ++ii )
+                {
+                    iii = ii;
+
+                    mProductDiverted(m,xxprod("&",ii),x(iii,tmpva),xconsist,assumreal);
+
+                    if ( !justcalcip )
+                    {
+                        xxprod("&",ii) += bias;
+                    }
+                }
+            }
+
+            if ( pxyprod && pxyprod[1] )
+            {
+                diffis = *pxyprod[1];
+            }
+
+            else if ( ( ( needsDiff(0) || ( isFastKernelSum() && needsDiff() ) ) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) ) && !justcalcip )
+            {
+                Vector<T> xnormrr(x.size());
+                Vector<const T *> xnormde(x.size());
+
+                if ( m )
+                {
+                    int ii;
+
+                    for ( ii = 0 ; ii < m ; ++ii )
+                    {
+                        xnormrr("&",ii) = getmnorm(*(xinfo(ii)),*(x(ii)),m,xconsist,assumreal);
+                        xnormde("&",ii) = &xnormrr(ii); //&getmnorm(*(xinfo(ii)),*(x(ii)),m,xconsist,assumreal);
+                    }
+                }
+
+                Matrix<double> altxy;
+
+                diffmnorm(m,diffis,xyprod,xnormde,fillXYMatrix(m,altxy,x,xinfo,xy,0,assumreal),s);
+            }
+
+            else if ( ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
+            {
+                // At this point we need to calculate diffis using altdiffis method 2xx
+                // xyprod is not used by kernel, but need to fill it in for use by rest of chain
+                // we only need to cycle through diffis for relevant s vectors
+                // We need the xy matrix to do this
+
+                T tempres;
+                int ii,jj;
+
+                Matrix<double> altxy(m,m);
+                const Matrix<double> *sxy = &fillXYMatrix(m,altxy,x,xinfo,xy,1,assumreal);
+                const Matrix<double> &ssxy = *sxy;
+
+                xyprod = 0.0;
+
+                if ( isAltDiff() == 203 )
+                {
+                    T dummy;
+
+                    Vector<int> ss(m);
+
+                    int isdone = 0;
+
+                    ss = 1;
+
+                    while ( !isdone )
+                    {
+                        if ( sum(ss)%4 == 0 )
+                        {
+                            diffis = 0.0;
+
+                            for ( ii = 0 ; ii < m ; ++ii )
+                            {
+                                for ( jj = 0 ; jj < m ; ++jj )
+                                {
+                                    diffis += ss(ii)*ss(jj)*ssxy(ii,jj);
+                                }
+                            }
+
+                            KKpro(tempres,xyprod,diffis,&(i("&",0)),locindstart,locindstart,xdim,m,dummy,&dummy);
+                            xyprod += tempres;
+                        }
+
+                        isdone = 1;
+                        ii = 0;
+
+                        while ( ( ii < m ) && isdone )
+                        {
+                            if ( ss(ii) == 1 )
+                            {
+                                ss("&",ii) = -1;
+                                isdone = 0;
+                            }
+
+                            else
+                            {
+                                ss("&",ii) = +1;
+                                ++ii;
+                            }
+                        }
+                    }
+
+                    xyprod /= (1<<(m-1));
+                }
+
+                else if ( isAltDiff() == 204 )
+                {
+                    Vector<int> ss(m);
+
+                    int isdone = 0;
+                    int cnt = 0;
+                    int z = 0;
+
+                    ss = z;
+
+                    while ( !isdone )
+                    {
+                        T dummy;
+
+                        int noreps = 1;
+
+                        for ( ii = 0 ; ( ii < m ) && noreps ; ++ii )
+                        {
+                            for ( jj = ii+1 ; ( jj < m ) && noreps ; ++jj )
+                            {
+                                if ( ss(ii) == ss(jj) )
+                                {
+                                    noreps = 0;
+                                }
+                            }
+                        }
+
+                        if ( noreps )
+                        {
+                            diffis = 0.0;
+
+                            for ( ii = 0 ; ii < m ; ii += 2 )
+                            {
+                                diffis +=  ssxy(ss(ii  ),ss(ii  )) - ssxy(ss(ii  ),ss(ii+1));
+                                diffis += -ssxy(ss(ii+1),ss(ii  )) + ssxy(ss(ii+1),ss(ii+1));
+                            }
+
+                            KKpro(tempres,xyprod,diffis,&(i("&",0)),locindstart,locindstart,xdim,m,dummy,&dummy);
+                            xyprod += tempres;
+
+                            ++cnt;
+                        }
+
+                        isdone = 1;
+                        ii = 0;
+
+                        while ( ( ii < m ) && isdone )
+                        {
+                            ++(ss("&",ii));
+
+                            if ( ss(ii) < m )
+                            {
+                                isdone = 0;
+                            }
+
+                            else
+                            {
+                                ss("&",ii) = z;
+                                ++ii;
+                            }
+                        }
+                    }
+
+                    xyprod /= cnt;
+                }
+
+                ++locindstart;
+            }
+        }
+
+        else
+        {
+            // ( isFastKernelXfer() && !resmode )
+            NiceAssert( !( resmode & 0x80 ) );
+
+            int dummyind = 0;
+
+            if ( pxyprod && pxyprod[0] )
+            {
+                xyprod = *pxyprod[0];
+            }
+
+            else
+            {
+                T zzz; zzz = 0.0;
+
+                Vector<const T *> zq(m);
+
+                kernel8xx(0,xyprod,dummyind,cType(0),zzz,zzz,zzz,x,xinfo,i,xdim,m,0,mlid);
+            }
+
+            if ( needxxprod && !justcalcip )
+            {
+                int ii;
+                Vector<int> iii(x.size());
+
+                retVector<const SparseVector<gentype> *> tmpva;
+                retVector<const vecInfo *>               tmpvb;
+                retVector<int>                           tmpvc;
+
+                for ( ii = 0 ; ii < m ; ++ii )
+                {
+                    iii = ii;
+
+                    T zzz; zzz = 0.0;
+
+                    kernel8xx(0,xxprod("&",ii),dummyind,cType(0),zzz,zzz,zzz,x("&",iii,tmpva),xinfo("&",iii,tmpvb),i("&",iii,tmpvc),xdim,m,0,mlid);
+                }
+            }
+
+            if ( pxyprod && pxyprod[1] )
+            {
+                diffis = *pxyprod[1];
+            }
+
+            else if ( ( size() >= 2 ) && needsDiff(1) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) && !justcalcip )
+            {
+                Matrix<double> altxy;
+
+                Vector<T> xnormdex(x.size());
+                Vector<const T *> xnormde(x.size());
+
+                Vector<const SparseVector<gentype> *> xx(x.size());
+                Vector<const vecInfo *> xxinfo(xinfo.size());
+                Vector<int> iii(i.size());
+
+                if ( needsMatDiff() )
+                {
+                    altxy.resize(m,m);
+                }
+
+                if ( m )
+                {
+                    int ii,jj;
+
+                    for ( ii = 0 ; ii < m ; ++ii )
+                    {
+                        xx = x(ii);
+                        xxinfo = xinfo(ii);
+                        iii = i(ii);
+
+                        if ( isAltDiff() == 0 )
+                        {
+                            T zzz; zzz = 0.0;
+
+                            kernel8xx(0,xnormdex("&",ii),dummyind,cType(0),zzz,zzz,zzz,xx,xxinfo,iii,xdim,m,0,mlid);
+                        }
+
+                        else
+                        {
+                            T zzz; zzz = 0.0;
+
+                            kernel8xx(0,xnormdex("&",ii),dummyind,cType(0),zzz,zzz,zzz,*x(ii),*x(ii),*xinfo(ii),*xinfo(ii),i(ii),i(ii),xdim,0,mlid);
+
+                            if ( needsMatDiff() )
+                            {
+                                altxy("&",ii,ii) = xnormdex("&",ii);
+
+                                if ( ii )
+                                {
+                                    for ( jj = 0 ; jj < ii ; ++jj )
+                                    {
+                                        if ( ii != jj )
+                                        {
+                                            if ( ( needsMatDiff() == +1 ) || ( ( jj == ii-1 ) && ( !(ii%2) ) ) )
+                                            {
+                                                kernel8xx(0,altxy("&",ii,jj),dummyind,cType(0),zzz,zzz,zzz,*x(ii),*x(jj),*xinfo(ii),*xinfo(jj),i(ii),i(jj),xdim,0,mlid);
+                                                    altxy("&",jj,ii) = altxy("&",ii,jj);
+                                                    setconj(altxy("&",jj,ii));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        xnormde("&",ii) = &(xnormdex(ii));
+                    }
+                }
+
+                diffmnorm(m,diffis,xyprod,xnormde,altxy,s);
+
+                diffis *= (const T &) cWeight(0);
+            }
+
+            else if ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) && !justcalcip )
+            {
+                // At this point we need to calculate diffis using altdiffis method 2xx
+                // xyprod is not used by kernel
+                // we only need to cycle through diffis for relevant s vectors
+                // We need the xy matrix to do this
+
+                T tempres; tempres = 0.0;
+
+                Matrix<double> altxy(m,m);
+                Matrix<double> &ssxy = altxy;
+
+                Vector<T> xnormdex(x.size());
+                Vector<const T *> xnormde(x.size());
+
+                Vector<const SparseVector<gentype> *> xx(x.size());
+                Vector<const vecInfo *> xxinfo(xinfo.size());
+                Vector<int> iii(i.size());
+
+                if ( m )
+                {
+                    int ii,jj;
+                    int dummyind = 0;
+
+                    for ( ii = 0 ; ii < m ; ++ii )
+                    {
+                        xx = x(ii);
+                        xxinfo = xinfo(ii);
+                        iii = i(ii);
+
+                        T zzz; zzz = 0.0;
+
+                        kernel8xx(0,xnormdex("&",ii),dummyind,cType(0),zzz,zzz,zzz,*x(ii),*x(ii),*xinfo(ii),*xinfo(ii),i(ii),i(ii),xdim,0,mlid);
+
+                        if ( needsMatDiff() )
+                        {
+                            altxy("&",ii,ii) = xnormdex("&",ii);
+
+                            if ( ii )
+                            {
+                                for ( jj = 0 ; jj < ii ; ++jj )
+                                {
+                                    if ( ii != jj )
+                                    {
+                                        if ( ( needsMatDiff() == +1 ) || ( ( jj == ii-1 ) && ( !(ii%2) ) ) )
+                                        {
+                                            T zzz; zzz = 0.0;
+
+                                            kernel8xx(0,altxy("&",ii,jj),dummyind,cType(0),zzz,zzz,zzz,*x(ii),*x(jj),*xinfo(ii),*xinfo(jj),i(ii),i(jj),xdim,0,mlid);
+                                                altxy("&",jj,ii) = altxy("&",ii,jj);
+                                                setconj(altxy("&",jj,ii));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                xyprod = 0.0;
+
+                if ( isAltDiff() == 203 )
+                {
+                    T dummy;
+
+                    Vector<int> ss(m);
+                    int isdone = 0;
+                    int ii,jj;
+
+                    ss = 1;
+
+                    while ( !isdone )
+                    {
+                        if ( sum(ss)%4 == 0 )
+                        {
+                            diffis = 0.0;
+
+                            for ( ii = 0 ; ii < m ; ++ii )
+                            {
+                                for ( jj = 0 ; jj < m ; ++jj )
+                                {
+                                    diffis += ss(ii)*ss(jj)*ssxy(ii,jj);
+                                }
+                            }
+
+                            KKpro(tempres,xyprod,diffis,&(i("&",0)),locindstart,locindstart,xdim,m,dummy,&dummy);
+                            xyprod += tempres;
+                        }
+
+                        isdone = 1;
+                        ii = 0;
+
+                        while ( ( ii < m ) && isdone )
+                        {
+                            if ( ss(ii) == 1 )
+                            {
+                                ss("&",ii) = -1;
+                                isdone = 0;
+                            }
+
+                            else
+                            {
+                                ss("&",ii) = +1;
+                                ++ii;
+                            }
+                        }
+                    }
+
+                    xyprod /= (1<<(m-1));
+                }
+
+                else if ( isAltDiff() == 204 )
+                {
+                    Vector<int> ss(m);
+                    int isdone = 0;
+                    int cnt = 0;
+                    int z = 0;
+                    int ii,jj;
+
+                    ss = z;
+
+                    while ( !isdone )
+                    {
+                        T dummy;
+
+                        int noreps = 1;
+
+                        for ( ii = 0 ; ( ii < m ) && noreps ; ++ii )
+                        {
+                            for ( jj = ii+1 ; ( jj < m ) && noreps ; ++jj )
+                            {
+                                if ( ss(ii) == ss(jj) )
+                                {
+                                    noreps = 0;
+                                }
+                            }
+                        }
+
+                        if ( noreps )
+                        {
+                            diffis = 0.0;
+
+                            for ( ii = 0 ; ii < m ; ii += 2 )
+                            {
+                                diffis +=  ssxy(ss(ii  ),ss(ii  )) - ssxy(ss(ii  ),ss(ii+1));
+                                diffis += -ssxy(ss(ii+1),ss(ii  )) + ssxy(ss(ii+1),ss(ii+1));
+                            }
+
+                            KKpro(tempres,xyprod,diffis,&(i("&",0)),locindstart,locindstart,xdim,m,dummy,&dummy);
+                            xyprod += tempres;
+
+                            ++cnt;
+                        }
+
+                        isdone = 1;
+                        ii = 0;
+
+                        while ( ( ii < m ) && isdone )
+                        {
+                            ++(ss("&",ii));
+
+                            if ( ss(ii) < m )
+                            {
+                                isdone = 0;
+                            }
+
+                            else
+                            {
+                                ss("&",ii) = z;
+                                ++ii;
+                            }
+                        }
+                    }
+
+                    xyprod /= cnt;
+                }
+
+                ++locindstart;
+            }
+
+            diffis *= (const T &) cWeight(0);
+        }
+
+        if ( justcalcip )
+        {
+            res = xyprod;
+        }
+
+        else
+        {
+            if ( isNormalised(locindend) )
+            {
+                T dummy;
+
+                KKpro(res,xyprod,diffis,&(i("&",0)),locindstart,locindend,xdim,m,dummy,&dummy);
+
+                T zerodiff; zerodiff = 0.0;
+                int ii;
+                Vector<int> iii(x.size());
+                T xxres;
+                T xxxres;
+
+                int effeffm = 0;
+
+                xxxres = 1.0;
+
+                Vector<int> iw(m);
+
+                for ( ii = 0 ; ii < m ; ++ii )
+                {
+                    iw = i(ii);
+
+                    iii = ii;
+
+                    KKpro(xxres,xxprod(ii),zerodiff,&(iw("&",0)),locindstart,locindend,xdim,m,dummy,&dummy);
+
+                    if ( (double) abs2(xxres) > BADZEROTOL )
+                    {
+                        effeffm++;
+                        xxxres *= xxres;
+                    }
+
+                    else
+                    {
+                        NiceThrow("LLm not defined for normalised zeros");
+                    }
+                }
+
+                if ( ( effeffm == 0 ) || ( effeffm == 1 ) )
+                {
+                    res = angle(res);
+                    res = ( (double) abs2(res) <= BADZEROTOL ) ? 1.0 : res;
+                }
+
+                else
+                {
+                    // We normalise in log-space to improve numerical stability
+
+                    T sgnres = angle(res);
+
+                    res = abs2(res);
+                    OP_log(res);
+                    res *= ((double) effeffm);
+                    res -= log(xxxres);
+                    res *= 1.0/((double) effeffm);
+                    OP_exp(res);
+                    res *= sgnres;
+                }
+            }
+
+            else
+            {
+                T dummy;
+
+                logresvalid = KKpro(res,xyprod,diffis,&(i("&",0)),locindstart,locindend,xdim,m,logres,&dummy);
+            }
+        }
+    }
+
+    else
+    {
+        NiceAssert( ismagterm == 0 );
+        NiceAssert( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) );
+
+        gentype xyprod(0.0);
+
+        if ( pxyprod && pxyprod[0] )
+        {
+            xyprod = *pxyprod[0];
+        }
+
+        else if ( needsInner(-1,m) )
+        {
+            // This may be used by some kernels and not others, so calculate anyhow
+
+            mProductDiverted(m,xyprod,x,xconsist,assumreal);
+
+            xyprod += bias;
+        }
+
+        Vector<const gentype *> xnormde(x.size());
+
+        if ( m )
+        {
+            int ii;
+
+            for ( ii = 0 ; ii < m ; ++ii )
+            {
+                xnormde("&",ii) = &getmnorm(*(xinfo(ii)),*(x(ii)),m,xconsist,assumreal);
+            }
+        }
+
+        Matrix<double> altxy;
+
+        gentype tempres;
+
+        Kmi(tempres,xyprod,xinfo,xnormde,x,i,xdim,m,0,mlid,fillXYMatrix(m,altxy,x,xinfo,xy,0,assumreal),s,indstart,indend,assumreal);
+
+        res = (T) tempres;
+    }
+
+    return res;
+
+badout:
+    // Design decision: in ml_base.cc, if d = 0 for one of the vectors
+    // referenced here then this element will never be used.  Moreover there
+    // are cases (eg isAltDiff set >1 with back-referenced data) where the
+    // element is not properly defined but will never be used, so what we 
+    // need to do is set it 0.  However having a "d = 0" catch will fail when
+    // d starts non-zero, is set zero, then set non-zero, as will happen for
+    // example when calculating LOO, n-fold error etc.  In such cases you need
+    // to call a reset on that row/column, but you can't do that because (a) the
+    // reset often calls setd (hence infinite recursion) or (b) there is an 
+    // implicit assumption that Gp is independent of d (eg in semicopy functions
+    // that retain the caches for speed in LOO, n-fold calculation).  Hence I've 
+    // made the decision to return 0 here to avoid a whole stack of potential
+    // coding complications at the price of possible silent failure if you set
+    // somthing incorrectly.
+
+    errstream() << "!!!modd!!!";
+
+    res = 0.0;
+
+    return res;
+}
+
+
+
+//int MercerKernel::Qqhim(int m, Vector<T> &res, const SparseVector<gentype> &xa, const vecInfo &xainfo, int ia, int allowfinite, int xdim, int xconsist, int assumreal, int gradOrder, int xagradup, int indstart, int indend) const
+template <class T>
+int MercerKernel::Qqhim(int m, Vector<T> &res, const SparseVector<gentype> &xa, const vecInfo &xainfo, int ia, int allowfinite, int xdim, int xconsist, int assumreal, int gradOrder, int xagradup, int indstart, int indend) const
+{
+    NiceAssert( ! ( isFastKernelSum() && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) );
+    NiceAssert( !isprod );
+    NiceAssert( size() );
+    NiceAssert( isFastKernelSum() );
+
+    int dres = QQpro(m,res,xa,xainfo,ia,allowfinite,xdim,xconsist,assumreal,gradOrder,xagradup,indstart,indend);
+
+    if ( isNormalised(indend) && ( m != -1 ) )
+    {
+        double resnorm = res.absp(m);
+
+        if ( resnorm == 0.0 )
+        {
+            res = (T) std::pow((double) res.size(),-1.0/m);
+        }
+
+        else
+        {
+            res.scale(1.0/resnorm);
+        }
+    }
+
+    return dres;
+}
+
+
+
+
+
+
+
+
+
+
+
+template <class T>
+void MercerKernel::xdKK2(T &xygrad, T &xnormgrad, int &minmaxind, 
+                         const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, 
+                         const vecInfo &xainfo, const vecInfo &xbinfo, 
+                         const T &bias, 
+                         const gentype **pxyprod, 
+                         int ia, int ib, 
+                         int xdim, int xconsist, int assumreal, int mlid, 
+                         const double *xy00, const double *xy10, const double *xy11, int deepDeriv, int iaset, int ibset) const
+{
+    // isfullnorm should happen here, but doesn't
+    NiceAssert( !isfullnorm );
+
+    dKK2(xygrad,xnormgrad,minmaxind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
+}
+
+template <class T>
+void MercerKernel::xd2KK2(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T &xyynormgrad, T &xnormxnormgrad, T &xnormynormgrad, T &ynormynormgrad, int &minmaxind, 
+                          const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, 
+                          const vecInfo &xainfo, const vecInfo &xbinfo, 
+                          const T &bias, 
+                          const gentype **pxyprod, 
+                          int ia, int ib, 
+                          int xdim, int xconsist, int assumreal, int mlid, 
+                          const double *xy00, const double *xy10, const double *xy11, int deepDeriv, int iaset, int ibset) const
+{
+    // isfullnorm should happen here, but doesn't
+    NiceAssert( !isfullnorm );
+
+    d2KK2(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,minmaxind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
+}
+
+template <class T>
+void MercerKernel::xdnKK2del(Vector<T> &sc, Vector<Vector<int> > &n, int &minmaxind, const Vector<int> &q, 
+                             const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, 
+                             const vecInfo &xainfo, const vecInfo &xbinfo, 
+                             const T &bias, 
+                             const gentype **pxyprod, 
+                             int ia, int ib, 
+                             int xdim, int xconsist, int assumreal, int mlid, 
+                             const double *xy00, const double *xy10, const double *xy11, int deepDeriv, int iaset, int ibset) const
+{
+    // isfullnorm should happen here, but doesn't
+    NiceAssert( !isfullnorm );
+
+    dnKK2del(sc,n,minmaxind,q,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
+}
+
+
+
+
+
+
+
+//phantomx
+template <class T>
+void MercerKernel::dKK2(T &xygrad, T &xnormgrad, int &minmaxind,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                    const vecInfo &xainfo, const vecInfo &xbinfo,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib,
+                    int xdim, int xconsist, int assumreal, int mlid, 
+                    const double *xy00, const double *xy10, const double *xy11, int deepDeriv, 
+                    int iaset, int ibset,
+                    int skipbias,
+                    int skipxa, int skipxb) const
+{
+    if ( !skipbias && isiteqn(bias) )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qb;
+        int maxq = numSamples();
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qb = 0 ; qb < maxq ; ++qb )
+        {
+            gentype gbias(bias);
+
+            if ( !subSample(subval,gbias) && !qb )
+            {
+                goto postbias;
+            }
+
+            gentype gxygrad,gxnormgrad;
+
+            dKK2(gxygrad,gxnormgrad,minmaxind,xa,xb,xainfo,xbinfo,gbias,nullptr,ia,ib,xdim,xconsist,assumreal,mlid,nullptr,nullptr,nullptr,deepDeriv,iaset,ibset,1,skipxa,skipxb);
+
+            if ( !qb ) { xygrad =  (T) gxygrad; xnormgrad =  (T) gxnormgrad; }
+            else       { xygrad += (T) gxygrad; xnormgrad += (T) gxnormgrad; }
+        }
+
+        xygrad    /= maxq;
+        xnormgrad /= maxq;
+
+        return;
+    }
+
+postbias:
+
+    if ( !skipxa && xainfo.xiseqn() )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        T res; res = 0.0;
+        int logresvalid = 1;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxa(xa);
+            vecInfo xxainfo;
+
+            if ( !subSample(subval,xxa,xxainfo) && !qxa )
+            {
+                goto postxa;
+            }
+
+            gentype gres,glogres;
+
+            KK2(0,0,gres,glogres,logresvalid,xxa,xb,xxainfo,xbinfo,0,0,xxa,xb,gbias,nullptr,ia,ib,xdim,xconsist,assumreal,0,mlid,nullptr,nullptr,nullptr,0,0,size()-1,iaset,ibset);
+
+            gentype gxygrad,gxnormgrad;
+
+            dKK2(gxygrad,gxnormgrad,minmaxind,xxa,xb,xxainfo,xbinfo,gbias,nullptr,ia,ib,xdim,xconsist,assumreal,mlid,nullptr,nullptr,nullptr,deepDeriv,iaset,ibset,skipbias,1,skipxb);
+
+            if ( !qxa )                    { res =  (T) gres; xygrad =  (T) gxygrad; xnormgrad =  (T) gxnormgrad; }
+            else if ( !iaset )             { res += (T) gres; xygrad += (T) gxygrad; xnormgrad += (T) gxnormgrad; }
+            else if ( (T) gres > (T) res ) { res =  (T) gres; xygrad =  (T) gxygrad; xnormgrad =  (T) gxnormgrad; }
+        }
+
+        if ( !iaset )
+        {
+            xygrad    /= maxq;
+            xnormgrad /= maxq;
+        }
+
+        return;
+    }
+
+postxa:
+
+    if ( !skipxb && xbinfo.xiseqn() )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        T res; res = 0.0;
+        int logresvalid = 1;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxb(xb);
+            vecInfo xxbinfo;
+
+            if ( !subSample(subval,xxb,xxbinfo) && !qxa )
+            {
+                goto postxb;
+            }
+
+            gentype gres,glogres;
+
+            KK2(0,0,gres,glogres,logresvalid,xa,xxb,xainfo,xxbinfo,0,0,xa,xxb,gbias,nullptr,ia,ib,xdim,xconsist,assumreal,0,mlid,nullptr,nullptr,nullptr,0,0,size()-1,iaset,ibset);
+
+            gentype gxygrad,gxnormgrad;
+
+            dKK2(gxygrad,gxnormgrad,minmaxind,xa,xxb,xainfo,xxbinfo,gbias,nullptr,ia,ib,xdim,xconsist,assumreal,mlid,nullptr,nullptr,nullptr,deepDeriv,iaset,ibset,skipbias,skipxa,1);
+
+            if ( !qxa )                    { res =  (T) gres; xygrad =  (T) gxygrad; xnormgrad =  (T) gxnormgrad; }
+            else if ( !ibset )             { res += (T) gres; xygrad += (T) gxygrad; xnormgrad += (T) gxnormgrad; }
+            else if ( (T) gres > (T) res ) { res =  (T) gres; xygrad =  (T) gxygrad; xnormgrad =  (T) gxnormgrad; }
+        }
+
+        if ( !ibset )
+        {
+            xygrad    /= maxq;
+            xnormgrad /= maxq;
+        }
+
+        return;
+    }
+
+postxb:
+
+    dLL2(xygrad,xnormgrad,minmaxind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv);
+}
+
+//phantomx
+template <class T>
+void MercerKernel::d2KK2(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T &xyynormgrad, T &xnormxnormgrad, T &xnormynormgrad, T &ynormynormgrad, int &minmaxind, 
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                    const vecInfo &xainfo, const vecInfo &xbinfo,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib,
+                    int xdim, int xconsist, int assumreal, int mlid, 
+                    const double *xy00, const double *xy10, const double *xy11, int deepDeriv, 
+                    int iaset, int ibset,
+                    int skipbias,
+                    int skipxa, int skipxb) const
+{
+    if ( !skipbias && isiteqn(bias) )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qb;
+        int maxq = numSamples();
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qb = 0 ; qb < maxq ; ++qb )
+        {
+            gentype gbias(bias);
+
+            if ( !subSample(subval,gbias) && !qb )
+            {
+                goto postbias;
+            }
+
+            gentype tempxygrad;
+            gentype tempxnormgrad;
+            gentype tempxyxygrad;
+            gentype tempxyxnormgrad;
+            gentype tempxyynormgrad;
+            gentype tempxnormxnormgrad;
+            gentype tempxnormynormgrad;
+            gentype tempynormynormgrad;
+
+            d2KK2(tempxygrad,tempxnormgrad,tempxyxygrad,tempxyxnormgrad,tempxyynormgrad,tempxnormxnormgrad,tempxnormynormgrad,tempynormynormgrad,minmaxind,xa,xb,xainfo,xbinfo,gbias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,nullptr,nullptr,nullptr,deepDeriv,iaset,ibset,1,skipxa,skipxb);
+
+            if ( !qb )
+            {
+                xygrad         = (T) tempxygrad;
+                xnormgrad      = (T) tempxnormgrad;
+                xyxygrad       = (T) tempxyxygrad;
+                xyxnormgrad    = (T) tempxyxnormgrad;
+                xyynormgrad    = (T) tempxyynormgrad;
+                xnormxnormgrad = (T) tempxnormxnormgrad;
+                xnormynormgrad = (T) tempxnormynormgrad;
+                ynormynormgrad = (T) tempynormynormgrad;
+            }
+
+            else
+            {
+                xygrad         += (T) tempxygrad;
+                xnormgrad      += (T) tempxnormgrad;
+                xyxygrad       += (T) tempxyxygrad;
+                xyxnormgrad    += (T) tempxyxnormgrad;
+                xyynormgrad    += (T) tempxyynormgrad;
+                xnormxnormgrad += (T) tempxnormxnormgrad;
+                xnormynormgrad += (T) tempxnormynormgrad;
+                ynormynormgrad += (T) tempynormynormgrad;
+            }
+        }
+
+        xygrad         /= maxq;
+        xnormgrad      /= maxq;
+        xyxygrad       /= maxq;
+        xyxnormgrad    /= maxq;
+        xyynormgrad    /= maxq;
+        xnormxnormgrad /= maxq;
+        xnormynormgrad /= maxq;
+        ynormynormgrad /= maxq;
+
+        return;
+    }
+
+postbias:
+
+    if ( !skipxa && xainfo.xiseqn() )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        T res; res = 0.0;
+        int logresvalid = 1;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxa(xa);
+            vecInfo xxainfo;
+
+            if ( !subSample(subval,xxa,xxainfo) && !qxa )
+            {
+                goto postxa;
+            }
+
+            gentype gres,glogres;
+
+            KK2(0,0,gres,glogres,logresvalid,xxa,xb,xxainfo,xbinfo,0,0,xxa,xb,gbias,nullptr,ia,ib,xdim,xconsist,assumreal,0,mlid,nullptr,nullptr,nullptr,0,0,size()-1,iaset,ibset);
+
+            gentype tempxygrad;
+            gentype tempxnormgrad;
+            gentype tempxyxygrad;
+            gentype tempxyxnormgrad;
+            gentype tempxyynormgrad;
+            gentype tempxnormxnormgrad;
+            gentype tempxnormynormgrad;
+            gentype tempynormynormgrad;
+
+            d2KK2(tempxygrad,tempxnormgrad,tempxyxygrad,tempxyxnormgrad,tempxyynormgrad,tempxnormxnormgrad,tempxnormynormgrad,tempynormynormgrad,minmaxind,xxa,xb,xxainfo,xbinfo,gbias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,nullptr,nullptr,nullptr,deepDeriv,iaset,ibset,skipbias,1,skipxb);
+
+            if ( !qxa )
+            {
+                res            = (T) gres;
+                xygrad         = (T) tempxygrad;
+                xnormgrad      = (T) tempxnormgrad;
+                xyxygrad       = (T) tempxyxygrad;
+                xyxnormgrad    = (T) tempxyxnormgrad;
+                xyynormgrad    = (T) tempxyynormgrad;
+                xnormxnormgrad = (T) tempxnormxnormgrad;
+                xnormynormgrad = (T) tempxnormynormgrad;
+                ynormynormgrad = (T) tempynormynormgrad;
+            }
+
+            else if ( !iaset )
+            {
+                res            += (T) gres;
+                xygrad         += (T) tempxygrad;
+                xnormgrad      += (T) tempxnormgrad;
+                xyxygrad       += (T) tempxyxygrad;
+                xyxnormgrad    += (T) tempxyxnormgrad;
+                xyynormgrad    += (T) tempxyynormgrad;
+                xnormxnormgrad += (T) tempxnormxnormgrad;
+                xnormynormgrad += (T) tempxnormynormgrad;
+                ynormynormgrad += (T) tempynormynormgrad;
+            }
+
+            else if ( (T) gres > (T) res )
+            {
+                res            = (T) gres;
+                xygrad         = (T) tempxygrad;
+                xnormgrad      = (T) tempxnormgrad;
+                xyxygrad       = (T) tempxyxygrad;
+                xyxnormgrad    = (T) tempxyxnormgrad;
+                xyynormgrad    = (T) tempxyynormgrad;
+                xnormxnormgrad = (T) tempxnormxnormgrad;
+                xnormynormgrad = (T) tempxnormynormgrad;
+                ynormynormgrad = (T) tempynormynormgrad;
+            }
+        }
+
+        if ( !iaset )
+        {
+            xygrad         /= maxq;
+            xnormgrad      /= maxq;
+            xyxygrad       /= maxq;
+            xyxnormgrad    /= maxq;
+            xyynormgrad    /= maxq;
+            xnormxnormgrad /= maxq;
+            xnormynormgrad /= maxq;
+            ynormynormgrad /= maxq;
+        }
+
+        return;
+    }
+
+postxa:
+
+    if ( !skipxb && xbinfo.xiseqn() )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        T res; res = 0.0;
+        int logresvalid = 1;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxb(xb);
+            vecInfo xxbinfo;
+
+            if ( !subSample(subval,xxb,xxbinfo) && !qxa )
+            {
+                goto postxb;
+            }
+
+            gentype gres,glogres;
+
+            KK2(0,0,gres,glogres,logresvalid,xa,xxb,xainfo,xxbinfo,0,0,xa,xxb,gbias,nullptr,ia,ib,xdim,xconsist,assumreal,0,mlid,nullptr,nullptr,nullptr,0,0,size()-1,iaset,ibset);
+
+            gentype tempxygrad;
+            gentype tempxnormgrad;
+            gentype tempxyxygrad;
+            gentype tempxyxnormgrad;
+            gentype tempxyynormgrad;
+            gentype tempxnormxnormgrad;
+            gentype tempxnormynormgrad;
+            gentype tempynormynormgrad;
+
+            d2KK2(tempxygrad,tempxnormgrad,tempxyxygrad,tempxyxnormgrad,tempxyynormgrad,tempxnormxnormgrad,tempxnormynormgrad,tempynormynormgrad,minmaxind,xa,xxb,xainfo,xxbinfo,gbias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,nullptr,nullptr,nullptr,deepDeriv,iaset,ibset,skipbias,skipxa,1);
+
+            if ( !qxa )
+            {
+                res            = (T) gres;
+                xygrad         = (T) tempxygrad;
+                xnormgrad      = (T) tempxnormgrad;
+                xyxygrad       = (T) tempxyxygrad;
+                xyxnormgrad    = (T) tempxyxnormgrad;
+                xyynormgrad    = (T) tempxyynormgrad;
+                xnormxnormgrad = (T) tempxnormxnormgrad;
+                xnormynormgrad = (T) tempxnormynormgrad;
+                ynormynormgrad = (T) tempynormynormgrad;
+            }
+
+            else if ( !ibset )
+            {
+                res            += (T) gres;
+                xygrad         += (T) tempxygrad;
+                xnormgrad      += (T) tempxnormgrad;
+                xyxygrad       += (T) tempxyxygrad;
+                xyxnormgrad    += (T) tempxyxnormgrad;
+                xyynormgrad    += (T) tempxyynormgrad;
+                xnormxnormgrad += (T) tempxnormxnormgrad;
+                xnormynormgrad += (T) tempxnormynormgrad;
+                ynormynormgrad += (T) tempynormynormgrad;
+            }
+
+            else if ( (T) gres > (T) res )
+            {
+                res            = (T) gres;
+                xygrad         = (T) tempxygrad;
+                xnormgrad      = (T) tempxnormgrad;
+                xyxygrad       = (T) tempxyxygrad;
+                xyxnormgrad    = (T) tempxyxnormgrad;
+                xyynormgrad    = (T) tempxyynormgrad;
+                xnormxnormgrad = (T) tempxnormxnormgrad;
+                xnormynormgrad = (T) tempxnormynormgrad;
+                ynormynormgrad = (T) tempynormynormgrad;
+            }
+        }
+
+        if ( !ibset )
+        {
+            xygrad         /= maxq;
+            xnormgrad      /= maxq;
+            xyxygrad       /= maxq;
+            xyxnormgrad    /= maxq;
+            xyynormgrad    /= maxq;
+            xnormxnormgrad /= maxq;
+            xnormynormgrad /= maxq;
+            ynormynormgrad /= maxq;
+        }
+
+        return;
+    }
+
+postxb:
+
+    d2LL2(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,minmaxind,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv);
+}
+
+template <class T>
+void MercerKernel::dnKK2del(Vector<T> &sc, Vector<Vector<int> > &nn, int &minmaxind, 
+                           const Vector<int> &qq, 
+                           const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, 
+                           const vecInfo &xainfo, const vecInfo &xbinfo, 
+                           const T &bias, const gentype **pxyprod, 
+                           int ia, int ib, 
+                           int xdim, int xconsist, int assumreal, int mlid, 
+                           const double *xy00, const double *xy10, const double *xy11, int deepDeriv,
+                           int iaset, int ibset,
+                           int skipbias,
+                           int skipxa, int skipxb) const
+{
+    int t;
+
+    if ( !skipbias && isiteqn(bias) )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qb;
+        int maxq = numSamples();
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        // Take maxq samples from output distribution
+
+        for ( qb = 0 ; qb < maxq ; ++qb )
+        {
+            gentype gbias(bias);
+
+            if ( !subSample(subval,gbias) && !qb )
+            {
+                goto postbias;
+            }
+
+            Vector<gentype> tempsc(sc.size());
+
+            dnKK2del(tempsc,nn,minmaxind,qq,xa,xb,xainfo,xbinfo,gbias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset,1,skipxa,skipxb);
+
+            if ( !qb )
+            {
+                sc.resize(tempsc.size());
+
+                for ( t = 0 ; t < sc.size() ; ++t )
+                {
+                    sc("&",t) = (T) tempsc(t);
+                }
+            }
+
+            else
+            {
+                for ( t = 0 ; t < sc.size() ; ++t )
+                {
+                    sc("&",t) += (T) tempsc(t);
+                }
+            }
+        }
+
+        for ( t = 0 ; t < sc.size() ; ++t )
+        {
+            sc("&",t) /= maxq;
+        }
+
+        return;
+    }
+
+postbias:
+
+    if ( !skipxa && xainfo.xiseqn() )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        T res; res = 0.0;
+        int logresvalid = 1;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxa(xa);
+            vecInfo xxainfo;
+
+            if ( !subSample(subval,xxa,xxainfo) && !qxa )
+            {
+                goto postxa;
+            }
+
+            gentype gres,glogres;
+
+            KK2(0,0,gres,glogres,logresvalid,xxa,xb,xxainfo,xbinfo,0,0,xxa,xb,gbias,nullptr,ia,ib,xdim,xconsist,assumreal,0,mlid,nullptr,nullptr,nullptr,0,0,size()-1,iaset,ibset);
+
+            Vector<gentype> tempsc(sc.size());
+
+            dnKK2del(tempsc,nn,minmaxind,qq,xxa,xb,xxainfo,xbinfo,gbias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset,skipbias,1,skipxb);
+
+            if ( !qxa )
+            {
+                res = (T) gres;
+
+                sc.resize(tempsc.size());
+
+                for ( t = 0 ; t < sc.size() ; ++t )
+                {
+                    sc("&",t) = (T) tempsc(t);
+                }
+            }
+
+            else if ( !iaset )
+            {
+                res += (T) gres;
+
+                for ( t = 0 ; t < sc.size() ; ++t )
+                {
+                    sc("&",t) += (T) tempsc(t);
+                }
+            }
+
+            else if ( (T) gres > (T) res )
+            {
+                res = (T) gres;
+
+                for ( t = 0 ; t < sc.size() ; ++t )
+                {
+                    sc("&",t) = (T) tempsc(t);
+                }
+            }
+        }
+
+        if ( !iaset )
+        {
+            for ( t = 0 ; t < sc.size() ; ++t )
+            {
+                sc("&",t) /= maxq;
+            }
+        }
+
+        return;
+    }
+
+postxa:
+
+    if ( !skipxb && xbinfo.xiseqn() )
+    {
+        // We are dealing with distributions, so need to delay finalisation 
+        // of random parts of the function and then average *outside* the loop
+        //
+        // See Muandet et al, Learning from Distributions via Support Measure Machines
+
+        int qxa;
+        int maxq = numSamples();
+
+        gentype gbias(bias);
+
+        SparseVector<SparseVector<gentype> > subval;
+
+        T res; res = 0.0;
+        int logresvalid = 1;
+
+        // Take maxq samples from output distribution
+
+        for ( qxa = 0 ; qxa < maxq ; ++qxa )
+        {
+            SparseVector<gentype> xxb(xb);
+            vecInfo xxbinfo;
+
+            if ( !subSample(subval,xxb,xxbinfo) && !qxa )
+            {
+                goto postxb;
+            }
+
+            gentype gres,glogres;
+
+            KK2(0,0,gres,glogres,logresvalid,xa,xxb,xainfo,xxbinfo,0,0,xa,xxb,gbias,nullptr,ia,ib,xdim,xconsist,assumreal,0,mlid,nullptr,nullptr,nullptr,0,0,size()-1,iaset,ibset);
+
+            Vector<gentype> tempsc(sc.size());
+
+            dnKK2del(tempsc,nn,minmaxind,qq,xa,xxb,xainfo,xxbinfo,gbias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset,skipbias,skipxa,1);
+
+            if ( !qxa )
+            {
+                res = (T) gres;
+
+                sc.resize(tempsc.size());
+
+                for ( t = 0 ; t < sc.size() ; ++t )
+                {
+                    sc("&",t) = (T) tempsc(t);
+                }
+            }
+
+            else if ( !ibset )
+            {
+                res += (T) gres;
+ 
+                for ( t = 0 ; t < sc.size() ; ++t )
+                {
+                    sc("&",t) += (T) tempsc(t);
+                }
+            }
+
+            else if ( (T) gres > (T) res )
+            {
+                res = (T) gres;
+
+                for ( t = 0 ; t < sc.size() ; ++t )
+                {
+                    sc("&",t) = (T) tempsc(t);
+                }
+            }
+        }
+
+        if ( !ibset )
+        {
+            for ( t = 0 ; t < sc.size() ; ++t )
+            {
+                sc("&",t) /= maxq;
+            }
+        }
+
+        return;
+    }
+
+postxb:
+
+    dnLL2del(sc,nn,minmaxind,qq,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//phantomx
+template <class T>
+void MercerKernel::dLL2(T &xygrad, T &xnormgrad, int &minmaxind,
+                    const SparseVector<gentype> &x, const SparseVector<gentype> &y,
+                    const vecInfo &xinfo, const vecInfo &yinfo,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int i, int j,
+                    int xdim, int xconsist, int assumreal, int mlid, 
+                    const double *xy00, const double *xy10, const double *xy11, int deepDeriv) const
+{
+    T res;
+
+    NiceAssert( !( isFastKernelSum() && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) );
+    NiceAssert( !( isprod && !arexysimple(x,y) ) );
+
+    minmaxind = -1;
+
+    if ( isFastKernelSum() || isFastKernelChain() )
+    {
+        int needxxprod = isNormalised() || needsNorm();
+
+        T xyprod; xyprod = 0.0;
+        T yxprod; yxprod = 0.0;
+
+        T xxprod; xxprod = 0.0;
+        T yyprod; yyprod = 0.0;
+
+        T diffis; diffis = 0.0;
+
+        if ( xy10 )
+        {
+            xyprod = (*xy10);
+            yxprod = (*xy10);
+
+            xyprod += bias;
+            yxprod += bias;
+        }
+
+        else if ( pxyprod && pxyprod[0] )
+        {
+            xyprod = *pxyprod[0];
+            yxprod = xyprod;
+        }
+
+        else if ( needsInner(0,2) || ( isFastKernelSum() && needsInner(-1,2) ) )
+        {
+            innerProductDiverted(xyprod,x,y,xconsist,assumreal);
+            innerProductDivertedRevConj(yxprod,xyprod,x,y,xconsist,assumreal);
+
+            xyprod += bias;
+            yxprod += bias;
+        }
+
+        xyprod += yxprod;
+        xyprod *= 0.5;
+
+        if ( needxxprod )
+        {
+            if ( xy00 && xy11 )
+            {
+                xxprod = (*xy00);
+                yyprod = (*xy11);
+
+                xxprod += bias;
+                yyprod += bias;
+            }
+
+            else
+            {
+                innerProductDiverted(xxprod,x,x,xconsist,assumreal);
+                innerProductDiverted(yyprod,y,y,xconsist,assumreal);
+
+                xxprod += bias;
+                yyprod += bias;
+            }
+        }
+
+        if ( ( needsDiff(0) || ( isFastKernelSum() && needsDiff() ) ) )
+        {
+            if ( xy00 && xy11 )
+            {
+                diff2norm(diffis,(double) xyprod,(*xy00),(*xy11));
+            }
+
+            else if ( pxyprod && pxyprod[1] )
+            {
+                diffis = *pxyprod[1];
+            }
+
+            else
+            {
+                // Calculate ||x-y||^2 only as required
+
+                if ( assumreal )
+                {
+                    diff2norm(diffis,(double) xyprod,(double) getmnorm(xinfo,x,2,xconsist,assumreal),(double) getmnorm(yinfo,y,2,xconsist,assumreal));
+                }
+
+                else
+                {
+                    diff2norm(diffis,(xyprod+yxprod)/2.0,getmnorm(xinfo,x,2,xconsist,assumreal),getmnorm(yinfo,y,2,xconsist,assumreal));
+                }
+            }
+        }
+
+        dKKpro(xygrad,xnormgrad,res,xyprod,diffis,i,j,0,size()-1,xdim,2,xxprod,yyprod);
+    }
+
+    else if ( isFastKernelXfer() )
+    {
+        NiceAssert( ismagterm == 0 );
+
+        T xyprod; xyprod = 0.0;
+        T yxprod; yxprod = 0.0;
+        T diffis; diffis = 0.0;
+
+        if ( ( !( size() >= 2 ) || !needsDiff(1) ) && deepDeriv )
+        {
+            T zzz; zzz = 0.0;
+
+            dkernel8xx(0,xygrad,xnormgrad,xyprod,minmaxind,cType(0),zzz,zzz,zzz,x,y,xinfo,yinfo,i,j,xdim,48,mlid);
+
+            xyprod *= (const T &) cWeight(0);
+
+            xygrad    *= (const T &) cWeight(0);
+            xnormgrad *= (const T &) cWeight(0);
+
+            T dxyprod; dxyprod = 0.0;
+            T dxnorm;  dxnorm  = 0.0;
+
+            T dummy;
+
+            dKKpro(dxyprod,dxnorm,res,xyprod,diffis,i,j,1,size()-1,xdim,2,dummy,dummy);
+
+            xygrad    *= dxyprod;
+            xnormgrad *= dxyprod;
+        }
+
+        else if ( ( !( size() >= 2 ) || !needsDiff(1) ) && !deepDeriv )
+        {
+            int dummyind = 0;
+
+            if ( xy10 )
+            {
+                xyprod = (*xy10);
+                yxprod = (*xy10);
+
+                xyprod += bias;
+                yxprod += bias;
+            }
+
+            else if ( pxyprod && pxyprod[0] )
+            {
+                xyprod = *pxyprod[0];
+                yxprod = xyprod;
+            }
+
+            else
+            {
+                T zzz; zzz = 0.0;
+
+                kernel8xx(0,xyprod,dummyind,cType(0),zzz,zzz,zzz,x,y,xinfo,yinfo,i,j,xdim,0,mlid);
+
+                xyprod += bias;
+                yxprod  = xyprod;
+            }
+
+            xyprod += yxprod;
+            xyprod *= 0.5;
+
+            xyprod *= (const T &) cWeight(0);
+
+            T dummy;
+
+            dKKpro(xygrad,xnormgrad,res,xyprod,diffis,i,j,1,size()-1,xdim,2,dummy,dummy);
+        }
+
+        else if ( ( size() >= 2 ) && needsDiff(1) && deepDeriv )
+        {
+            T sxygrad;    sxygrad    = 0.0;
+            T sxnormgrad; sxnormgrad = 0.0;
+
+            T zzz; zzz = 0.0;
+
+            dkernel8xx(0,sxygrad,sxnormgrad,xyprod,minmaxind,cType(0),zzz,zzz,zzz,x,y,xinfo,yinfo,i,j,xdim,48,mlid);
+
+            xyprod *= (const T &) cWeight(0);
+
+            xygrad    *= (const T &) cWeight(0);
+            xnormgrad *= (const T &) cWeight(0);
+
+            T xnorm;
+            T ynorm;
+
+            T dxxgrad; dxxgrad = 0.0;
+            T dyygrad; dyygrad = 0.0;
+
+            T dxnormgrad; dxnormgrad = 0.0;
+            T dynormgrad; dynormgrad = 0.0;
+
+            dkernel8xx(0,dxxgrad,dxnormgrad,xnorm,minmaxind,cType(0),zzz,zzz,zzz,x,x,xinfo,xinfo,i,i,xdim,48,mlid);
+            dkernel8xx(0,dyygrad,dynormgrad,ynorm,minmaxind,cType(0),zzz,zzz,zzz,y,y,yinfo,yinfo,j,j,xdim,48,mlid);
+
+            diff2norm(diffis,xyprod,xnorm,ynorm);
+
+            diffis *= (const T &) cWeight(0);
+
+            dxxgrad *= (const T &) cWeight(0);
+            dyygrad *= (const T &) cWeight(0);
+
+            dxnormgrad *= (const T &) cWeight(0);
+            dynormgrad *= (const T &) cWeight(0);
+
+            T dxyprod; dxyprod = 0.0;
+            T dxnorm;  dxnorm  = 0.0;
+
+            T dummy;
+
+            dKKpro(dxyprod,dxnorm,res,xyprod,diffis,i,j,1,size()-1,xdim,2,dummy,dummy);
+
+            xygrad = dxyprod*sxygrad;
+
+            xnormgrad  = dxyprod*sxnormgrad;
+            xnormgrad += dxnorm*dxxgrad;
+            xnormgrad += dxnorm*dxnormgrad;
+            xnormgrad += dxnorm*dxnormgrad;
+        }
+
+        else
+        {
+            int dummyind = 0;
+
+            if ( xy10 )
+            {
+                xyprod = (*xy10);
+                yxprod = (*xy10);
+
+                xyprod += bias;
+                yxprod += bias;
+            }
+
+            else if ( pxyprod && pxyprod[0] )
+            {
+                xyprod = *pxyprod[0];
+                yxprod = xyprod;
+            }
+
+            else
+            {
+                T zzz; zzz = 0.0;
+
+                kernel8xx(0,xyprod,dummyind,cType(0),zzz,zzz,zzz,x,y,xinfo,yinfo,i,j,xdim,0,mlid);
+
+                xyprod += bias;
+                yxprod  = xyprod;
+            }
+
+            xyprod += yxprod;
+            xyprod *= 0.5;
+
+            if ( xy00 && xy11 )
+            {
+                diff2norm(diffis,(double) xyprod,(*xy00),(*xy11));
+            }
+
+            else if ( pxyprod && pxyprod[1] )
+            {
+                diffis = *pxyprod[1];
+            }
+
+            else
+            {
+                T xnorm; xnorm = 0.0;
+                T ynorm; ynorm = 0.0;
+
+                int dummyind;
+
+                T zzz; zzz = 0.0;
+
+                kernel8xx(0,xnorm,dummyind,cType(0),zzz,zzz,zzz,x,x,xinfo,xinfo,i,i,xdim,0,mlid);
+                kernel8xx(0,ynorm,dummyind,cType(0),zzz,zzz,zzz,y,y,yinfo,yinfo,j,j,xdim,0,mlid);
+
+                if ( assumreal )
+                {
+                    diff2norm(diffis,(double) xyprod,(double) xnorm,(double) ynorm);
+                }
+
+                else
+                {
+                    diff2norm(diffis,(xyprod+yxprod)/2.0,xnorm,ynorm);
+                }
+            }
+
+            xyprod *= (const T &) cWeight(0);
+            diffis *= (const T &) cWeight(0);
+
+            T dummy;
+
+            dKKpro(xygrad,xnormgrad,res,xyprod,diffis,i,j,1,size()-1,xdim,2,dummy,dummy);
+        }
+    }
+
+    else
+    {
+        NiceAssert( ismagterm == 0 );
+
+        NiceAssert( deepDeriv );
+        NiceAssert( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) );
+
+        gentype xyprod; xyprod = 0.0;
+        gentype yxprod; yxprod = 0.0;
+
+        gentype xnorm; xnorm = 0.0;
+        gentype ynorm; ynorm = 0.0;
+
+        if ( xy10 && xy00 && xy11 )
+        {
+            xyprod = (*xy10);
+            yxprod = (*xy10);
+
+            xyprod += bias;
+            yxprod += bias;
+
+            xnorm = (*xy00);
+            ynorm = (*xy11);
+        }
+
+        else if ( pxyprod && pxyprod[0] )
+        {
+            xyprod = *pxyprod[0];
+            yxprod = xyprod;
+
+            xnorm = getmnorm(xinfo,x,2,xconsist,assumreal);
+            ynorm = getmnorm(yinfo,y,2,xconsist,assumreal);
+        }
+
+        else if ( needsInner(-1,2) )
+        {
+            // This may be used by some kernels and not others, so calculate anyhow
+
+            innerProductDiverted(xyprod,x,y,xconsist,assumreal);
+            innerProductDivertedRevConj(yxprod,xyprod,x,y,xconsist,assumreal);
+
+            xyprod += bias;
+            yxprod += bias;
+
+            xnorm = getmnorm(xinfo,x,2,xconsist,assumreal);
+            ynorm = getmnorm(yinfo,y,2,xconsist,assumreal);
+        }
+
+        else
+        {
+            xnorm = getmnorm(xinfo,x,2,xconsist,assumreal);
+            ynorm = getmnorm(yinfo,y,2,xconsist,assumreal);
+        }
+
+        gentype tempres;
+        gentype tempxygrad;
+        gentype tempxnormgrad;
+
+        dKdaz(tempxnormgrad,tempxygrad,minmaxind,xyprod,yxprod,xinfo,yinfo,xnorm,ynorm,x,y,i,j,xdim,mlid,assumreal);
+
+        xygrad    = (T) tempxygrad;
+        xnormgrad = (T) tempxnormgrad;
+    }
+}
+
+
+
+
+
+
+//phantomx
+template <class T>
+void MercerKernel::d2LL2(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T &xyynormgrad, T &xnormxnormgrad, T &xnormynormgrad, T &ynormynormgrad, int &minmaxind, 
+                    const SparseVector<gentype> &x, const SparseVector<gentype> &y,
+                    const vecInfo &xinfo, const vecInfo &yinfo,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int i, int j,
+                    int xdim, int xconsist, int assumreal, int mlid, 
+                    const double *xy00, const double *xy10, const double *xy11, int deepDeriv) const
+{
+    T res;
+
+    NiceAssert( !( isFastKernelSum() && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) );
+    NiceAssert( !( isprod && !arexysimple(x,y) ) );
+
+    minmaxind = -1;
+
+    if ( isFastKernelSum() || isFastKernelChain() )
+    {
+        int needxxprod = isNormalised() || needsNorm();
+
+        T xyprod; xyprod = 0.0;
+        T yxprod; yxprod = 0.0;
+
+        T xxprod; xxprod = 0.0;
+        T yyprod; yyprod = 0.0;
+
+        T diffis; diffis = 0.0;
+
+        if ( xy10 )
+        {
+            xyprod = (*xy10);
+            yxprod = (*xy10);
+
+            xyprod += bias;
+            yxprod += bias;
+        }
+
+        else if ( pxyprod && pxyprod[0] )
+        {
+            xyprod = *pxyprod[0];
+            yxprod = xyprod;
+        }
+
+        else if ( needsInner(0,2) || ( isFastKernelSum() && needsInner(-1,2) ) )
+        {
+            innerProductDiverted(xyprod,x,y,xconsist,assumreal);
+            innerProductDivertedRevConj(yxprod,xyprod,x,y,xconsist,assumreal);
+
+            xyprod += bias;
+            yxprod += bias;
+        }
+
+        xyprod += yxprod;
+        xyprod *= 0.5;
+
+        if ( needxxprod )
+        {
+            if ( xy00 && xy11 )
+            {
+                xxprod = (*xy00);
+                yyprod = (*xy11);
+
+                xxprod += bias;
+                yyprod += bias;
+            }
+
+            else
+            {
+                innerProductDiverted(xxprod,x,x,xconsist,assumreal);
+                innerProductDiverted(yyprod,y,y,xconsist,assumreal);
+
+                xxprod += bias;
+                yyprod += bias;
+            }
+        }
+
+        if ( ( needsDiff(0) || ( isFastKernelSum() && needsDiff() ) ) )
+        {
+            if ( xy00 && xy11 )
+            {
+                diff2norm(diffis,(double) xyprod,(*xy00),(*xy11));
+            }
+
+            else if ( pxyprod && pxyprod[1] )
+            {
+                diffis = *pxyprod[1];
+            }
+
+            else
+            {
+                // Calculate ||x-y||^2 only as required
+
+                if ( assumreal )
+                {
+                    diff2norm(diffis,(double) xyprod,(double) getmnorm(xinfo,x,2,xconsist,assumreal),(double) getmnorm(yinfo,y,2,xconsist,assumreal));
+                }
+
+                else
+                {
+                    diff2norm(diffis,(xyprod+yxprod)/2.0,getmnorm(xinfo,x,2,xconsist,assumreal),getmnorm(yinfo,y,2,xconsist,assumreal));
+                }
+            }
+        }
+
+        d2KKpro(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,res,xyprod,diffis,i,j,0,size()-1,xdim,2,xxprod,yyprod);
+    }
+
+    else if ( isFastKernelXfer() && !deepDeriv )
+    {
+        NiceAssert( ismagterm == 0 );
+
+        T xyprod; xyprod = 0.0;
+        T yxprod; yxprod = 0.0;
+        T diffis; diffis = 0.0;
+
+        if ( !( size() >= 2 ) || !needsDiff(1) )
+        {
+            int dummyind = 0;
+
+            if ( xy10 )
+            {
+                xyprod = (*xy10);
+                yxprod = (*xy10);
+
+                xyprod += bias;
+                yxprod += bias;
+            }
+
+            else if ( pxyprod && pxyprod[0] )
+            {
+                xyprod = *pxyprod[0];
+                yxprod = xyprod;
+            }
+
+            else
+            {
+                T zzz; zzz = 0.0;
+
+                kernel8xx(0,xyprod,dummyind,cType(0),zzz,zzz,zzz,x,y,xinfo,yinfo,i,j,xdim,0,mlid);
+
+                xyprod += bias;
+                yxprod  = xyprod;
+            }
+
+            xyprod += yxprod;
+            xyprod *= 0.5;
+
+            xyprod *= (const T &) cWeight(0);
+
+            T dummy; dummy = 0.0;
+
+            d2KKpro(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,res,xyprod,diffis,i,j,1,size()-1,xdim,2,dummy,dummy);
+        }
+
+        else
+        {
+            int dummyind = 0;
+
+            if ( xy10 )
+            {
+                xyprod = (*xy10);
+                yxprod = (*xy10);
+
+                xyprod += bias;
+                yxprod += bias;
+            }
+
+            else if ( pxyprod && pxyprod[0] )
+            {
+                xyprod = *pxyprod[0];
+                yxprod = xyprod;
+            }
+
+            else
+            {
+                T zzz; zzz = 0.0;
+
+                kernel8xx(0,xyprod,dummyind,cType(0),zzz,zzz,zzz,x,y,xinfo,yinfo,i,j,xdim,0,mlid);
+
+                xyprod += bias;
+                yxprod  = xyprod;
+            }
+
+            xyprod += yxprod;
+            xyprod *= 0.5;
+
+            if ( xy00 && xy11 )
+            {
+                diff2norm(diffis,(double) xyprod,(*xy00),(*xy11));
+            }
+
+            else if ( pxyprod && pxyprod[1] )
+            {
+                diffis = *pxyprod[1];
+            }
+
+            else
+            {
+                T xnorm; xnorm = 0.0;
+                T ynorm; ynorm = 0.0;
+
+                int dummyind;
+
+                T zzz; zzz = 0.0;
+
+                kernel8xx(0,xnorm,dummyind,cType(0),zzz,zzz,zzz,x,x,xinfo,xinfo,i,i,xdim,0,mlid);
+                kernel8xx(0,ynorm,dummyind,cType(0),zzz,zzz,zzz,y,y,yinfo,yinfo,j,j,xdim,0,mlid);
+
+                if ( assumreal )
+                {
+                    diff2norm(diffis,(double) xyprod,(double) xnorm,(double) ynorm);
+                }
+
+                else
+                {
+                    diff2norm(diffis,(xyprod+yxprod)/2.0,xnorm,ynorm);
+                }
+            }
+
+            xyprod *= (const T &) cWeight(0);
+            diffis *= (const T &) cWeight(0);
+
+            T dummy;
+
+            d2KKpro(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,res,xyprod,diffis,i,j,1,size()-1,xdim,2,dummy,dummy);
+        }
+    }
+
+    else
+    {
+        NiceThrow("Second-order derivatives only implemented for simple cases");
+    }
+}
+
+
+
+
+
+template <class T>
+void MercerKernel::dnLL2del(Vector<T> &sc, Vector<Vector<int> > &nn, int &minmaxind, 
+                           const Vector<int> &q, 
+                           const SparseVector<gentype> &x, const SparseVector<gentype> &y, 
+                           const vecInfo &xinfo, const vecInfo &yinfo, 
+                           const T &bias, const gentype **pxyprod, 
+                           int i, int j, 
+                           int xdim, int xconsist, int assumreal, int mlid, 
+                           const double *xy00, const double *xy10, const double *xy11, int deepDeriv) const
+{
+    (void) mlid;
+
+    NiceAssert( ismagterm == 0 );
+
+    NiceAssert( !( isFastKernelSum() && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) );
+    NiceAssert( !( isprod && !arexysimple(x,y) ) );
+
+    minmaxind = -1;
+
+    if ( isFastKernelSum() || isFastKernelChain() )
+    {
+//errstream() << "phantomzyza 0\n";
+        // Evaluate all requires inner products
+
+        T xyprod; xyprod = 0.0;
+        T yxprod; yxprod = 0.0;
+        T diffis; diffis = 0.0;
+
+        if ( xy10 )
+        {
+            xyprod = (*xy10);
+            yxprod = (*xy10);
+
+            xyprod += bias;
+            yxprod += bias;
+        }
+
+        else if ( pxyprod && pxyprod[0] )
+        {
+            xyprod = *pxyprod[0];
+            yxprod = xyprod;
+        }
+
+        else if ( needsInner(0,2) || ( isFastKernelSum() && needsInner(-1,2) ) )
+        {
+            innerProductDiverted(xyprod,x,y,xconsist,assumreal);
+            innerProductDivertedRevConj(yxprod,xyprod,x,y,xconsist,assumreal);
+
+            xyprod += bias;
+            yxprod += bias;
+        }
+
+        xyprod += yxprod;
+        xyprod *= 0.5;
+
+        // Evaluate ||x-y||^2 if needed
+
+        if ( ( needsDiff(0) || ( isFastKernelSum() && needsDiff() ) ) )
+        {
+            if ( xy00 && xy11 )
+            {
+                diff2norm(diffis,(double) xyprod,(*xy00),(*xy11));
+            }
+
+            else if ( pxyprod && pxyprod[1] )
+            {
+                diffis = *pxyprod[1];
+            }
+
+            else
+            {
+                // Calculate ||x-y||^2 only as required
+
+                if ( assumreal )
+                {
+                    diff2norm(diffis,(double) xyprod,(double) getmnorm(xinfo,x,2,xconsist,assumreal),(double) getmnorm(yinfo,y,2,xconsist,assumreal));
+                }
+
+                else
+                {
+                    diff2norm(diffis,(xyprod+yxprod)/2.0,getmnorm(xinfo,x,2,xconsist,assumreal),getmnorm(yinfo,y,2,xconsist,assumreal));
+                }
+            }
+        }
+
+
+
+
+        // Gradient evaluate begins here
+
+        int n = q.size();
+        int z = 0;
+        int ii,jj,k,l;
+
+        // dnK/dx{q0}.dx{q1}... K(x,y) =  sum_i sc_i kronProd_{j=0,1,...} [ x{nn_ij}   if nn_ij = 0,1
+        //                                                                [ kd{nn_ij}  if nn_ij < 0
+        //
+        // where: x{0} = x
+        //        x{1} = y
+        //        kd{a} kd{a} = kronecker-delta
+        //
+        // Method: initially compute nn,gd, where:
+        //
+        // gd(i) = [ g0 g1 g3 ]
+        //
+        // defines:
+        //
+        // sc(i) = K_{0,0,...,0,1,1,...,1,2,2,...,3}  (0 repeated g0 times, 1 g1 times, 2 g2 times)
+        //
+        // is a gradient of K wrt ||x||^2 (rn = 0), ||y||^2 (rn = 1), <x,y> (rn = 2)
+
+//errstream() << "phantomzyza 1\n";
+        Vector<Vector<int> > gd;
+
+        sc.resize(1);
+        nn.resize(1);
+        gd.resize(1);
+
+        sc("&",z) = 1.0;
+        nn("&",z).resize(z);
+        gd("&",z).resize(3);
+
+        gd("&",z) = z;
+
+        retVector<T>            tmpva;
+        retVector<Vector<int> > tmpvb;
+        
+        for ( ii = n-1 ; ii >= 0 ; --ii )
+        {
+//errstream() << "phantomzyza 1x: ii = " << ii << "\n";
+            for ( jj = sc.size()-1 ; jj >= 0 ; --jj )
+            {
+//errstream() << "phantomzyza 2: jj = " << jj << "\n";
+                l = nn(jj).size();
+                
+//errstream() << "phantomzyza 2a: sc = " << sc << "\n";
+//errstream() << "phantomzyza 2a: jj+1 = " << jj+1 << "\n";
+//errstream() << "phantomzyza 2a: l+2 = " << l+2 << "\n";
+                sc.addpad(jj+1,l+2);
+//errstream() << "phantomzyza 2a: nn = " << nn << "\n";
+//errstream() << "phantomzyza 2a: jj+1 = " << jj+1 << "\n";
+//errstream() << "phantomzyza 2a: l+2 = " << l+2 << "\n";
+                nn.addpad(jj+1,l+2);
+//errstream() << "phantomzyza 2a: gd = " << gd << "\n";
+//errstream() << "phantomzyza 2a: jj+1 = " << jj+1 << "\n";
+//errstream() << "phantomzyza 2a: l+2 = " << l+2 << "\n";
+                gd.addpad(jj+1,l+2);
+                
+//errstream() << "phantomzyza 2b\n";
+                sc("&",jj+1,1,jj+l+2,tmpva) = sc(jj);
+                nn("&",jj+1,1,jj+l+2,tmpvb) = nn(jj);
+                gd("&",jj+1,1,jj+l+2,tmpvb) = gd(jj);
+                
+//errstream() << "phantomzyza 2c\n";
+                for ( k = jj+l+2 ; k >= jj ; --k )
+                {
+//errstream() << "phantomzyza 3: k = " << k << "\n";
+//errstream() << "phantomzyza 3a: q = " << q << "\n";
+//errstream() << "phantomzyza 3a: ii = " << ii << "\n";
+//errstream() << "phantomzyza 3a: q(ii) = " << q(ii) << "\n";
+//errstream() << "phantomzyza 3: k = " << k << "\n";
+//errstream() << "phantomzyza 3: k-jj-3 = " << k-jj-3 << "\n";
+//errstream() << "phantomzyza 3: nn = " << nn << "\n";
+//errstream() << "phantomzyza 3: nn(k) = " << nn(k) << "\n";
+                    if ( ( q(ii) == z ) && ( k == jj ) )
+                    {
+                        // d/dx, d/d||x||^2
+                            
+//errstream() << "phantomzyza 3b\n";
+                        //gd("&",k).add(gd(k).size());
+                        //gd("&",k)("&",gd(k).size()-1) = z;
+                        //
+                        //nn("&",k).add(nn(k).size());
+                        //nn("&",k)("&",nn(k).size()-1) = z;
+
+                        ++(gd("&",k)("&",z));
+                        
+                        nn("&",k).add(z);
+                        nn("&",k)("&",z) = z;
+
+                        sc("&",k) *= 2.0;
+                    }
+                        
+                    else if ( ( q(ii) == 1 ) && ( k == jj+1 ) )
+                    {
+                        // d/dy, d/d||y||^2
+                            
+//errstream() << "phantomzyza 3d\n";
+                        //gd("&",k).add(gd(k).size());
+                        //gd("&",k)("&",gd(k).size()-1) = 1;
+                        //
+                        //nn("&",k).add(nn(k).size());
+                        //nn("&",k)("&",nn(k).size()-1) = 1;
+
+                        ++(gd("&",k)("&",1));
+                        
+                        nn("&",k).add(z);
+                        nn("&",k)("&",z) = 1;
+                        
+                        sc("&",k) *= 2.0;
+                    }
+                        
+                    else if ( ( q(ii) == z ) && ( k == jj+2 ) )
+                    {
+                        // d/dx, d/d<x,y>
+                            
+//errstream() << "phantomzyza 3c\n";
+                        //gd("&",k).add(gd(k).size());
+                        //gd("&",k)("&",gd(k).size()-1) = 2;
+                        //
+                        //nn("&",k).add(nn(k).size());
+                        //nn("&",k)("&",nn(k).size()-1) = 1;
+
+                        ++(gd("&",k)("&",2));
+                        
+                        nn("&",k).add(z);
+                        nn("&",k)("&",z) = 1;
+                            
+                        //sc("&",k) *= 1.0;
+                    }
+                        
+                    else if ( ( q(ii) == 1 ) && ( k == jj+2 ) )
+                    {
+                        // d/dy, d/d<x,y>
+                            
+//errstream() << "phantomzyza 3e\n";
+                        //gd("&",k).add(gd(k).size());
+                        //gd("&",k)("&",gd(k).size()-1) = 2;
+                        //
+                        //nn("&",k).add(nn(k).size());
+                        //nn("&",k)("&",nn(k).size()-1) = z;
+
+                        ++(gd("&",k)("&",2));
+                        
+                        nn("&",k).add(z);
+                        nn("&",k)("&",z) = z;
+                            
+                        //sc("&",k) *= 1.0;
+                    }
+                    
+                    else if ( ( k-jj-3 >= 0 ) && ( q(ii) == nn(k)(k-jj-3) ) )
+                    {
+//errstream() << "phantomzyza 3f\n";
+                        //nn("&",k)("&",k-jj-3) = -ii;
+                        //nn("&",k).add(k-jj-3);
+                        //nn("&",k)("&",k-jj-3) = -ii;
+
+                        nn("&",k)("&",k-jj-3) = -(ii+1);
+                        nn("&",k).add(z);
+                        nn("&",k)("&",z) = -(ii+1);
+                            
+                        //sc("&",k) *= 1.0;
+                    }
+                    
+                    else
+                    {
+//errstream() << "phantomzyza 3g\n";
+                        sc.remove(k);
+                        nn.remove(k);
+                        gd.remove(k);
+                    }
+//errstream() << "phantomzyza 3f\n";
+                }
+            }
+        }
+        
+//errstream() << "phantomzyza 4\n";
+//errstream() << "phantomzyza 4: sc = " << sc << "\n";
+//errstream() << "phantomzyza 4: nn = " << nn << "\n";
+//errstream() << "phantomzyza 4: gd = " << gd << "\n";
+
+        // scratch-pad may be used by dnKKpro to pre-calculate on first call and re-use results later
+        // (for example the RBF kernel calculates K(x,y) and stores it here as the derivatives are
+        // simply scaled versions of this).
+
+        T scratch;
+        int isfirstcalc = 1;
+
+        // gradpad keeps results for different kernel gradients to avoid later re-calculation
+
+        SparseVector<SparseVector<SparseVector<T> > > gradpad;
+
+        for ( k = nn.size()-1 ; k >= 0 ; --k )
+        {
+//errstream() << "phantomzyza 5: k = " << k << "\n";
+            if ( !(gradpad.isindpresent(gd(k)(z))) || !((gradpad(gd(k)(z))).isindpresent(gd(k)(1))) || !(((gradpad(gd(k)(z)))(gd(k)(1))).isindpresent(gd(k)(2))) )
+            {
+                dnKKpro(((gradpad("&",gd(k)(z)))("&",gd(k)(1)))("&",gd(k)(2)),gd(k),xyprod,diffis,i,j,0,size()-1,xdim,2,isfirstcalc,scratch);
+                isfirstcalc = 0;
+            }
+
+//errstream() << "phantomzyza 6\n";
+            
+            sc("&",k) *= ((gradpad(gd(k)(z)))(gd(k)(1)))(gd(k)(2));
+
+            if ( (double) abs2(sc(k)) == 0 )
+            {
+                sc.remove(k);
+                nn.remove(k);
+                gd.remove(k);
+            }
+//errstream() << "phantomzyza 7\n";
+        }
+
+        // Finally we do a quick, non-exhaustive scan of adjacent terms to see if
+        // any can be combined.  gd is no longer relevant, so ignore that.  This
+        // should actually catch most repeats due to the ordering applied previously.
+
+        for ( k = nn.size()-1 ; k >= 1 ; --k )
+        {
+            if ( nn(k) == nn(k-1) )
+            {
+                sc("&",k-1) += sc(k);
+
+                sc.remove(k);
+                nn.remove(k);
+            }
+        }
+    }
+
+    else if ( isFastKernelXfer() && !deepDeriv )
+    {
+        NiceThrow("High-order kernel transfer only implemented for simple cases");
+    }
+
+    else
+    {
+        NiceThrow("High-order derivative only implemented for simple cases");
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

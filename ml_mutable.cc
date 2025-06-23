@@ -262,6 +262,478 @@ void ML_Mutable::setMLTypeClean(int newmlType)
     return;
 }
 
+int ML_Mutable::ssetMLTypeMorph(const std::string &xtype)
+{
+         if ( xtype == "r"   ) { setMLTypeMorph(0);   return 0; }
+    else if ( xtype == "c"   ) { setMLTypeMorph(1);   return 0; }
+    else if ( xtype == "s"   ) { setMLTypeMorph(2);   return 0; }
+    else if ( xtype == "m"   ) { setMLTypeMorph(3);   return 0; }
+    else if ( xtype == "v"   ) { setMLTypeMorph(4);   return 0; }
+    else if ( xtype == "a"   ) { setMLTypeMorph(5);   return 0; }
+    else if ( xtype == "p"   ) { setMLTypeMorph(7);   return 0; }
+    else if ( xtype == "t"   ) { setMLTypeMorph(8);   return 0; }
+    else if ( xtype == "l"   ) { setMLTypeMorph(12);  return 0; }
+    else if ( xtype == "o"   ) { setMLTypeMorph(13);  return 0; }
+    else if ( xtype == "g"   ) { setMLTypeMorph(15);  return 0; }
+    else if ( xtype == "i"   ) { setMLTypeMorph(16);  return 0; }
+    else if ( xtype == "h"   ) { setMLTypeMorph(17);  return 0; }
+    else if ( xtype == "j"   ) { setMLTypeMorph(18);  return 0; }
+    else if ( xtype == "b"   ) { setMLTypeMorph(19);  return 0; }
+    else if ( xtype == "u"   ) { setMLTypeMorph(20);  return 0; }
+    else if ( xtype == "d"   ) { setMLTypeMorph(21);  return 0; }
+    else if ( xtype == "R"   ) { setMLTypeMorph(22);  return 0; }
+    else if ( xtype == "B"   ) { setMLTypeMorph(23);  return 0; }
+
+    else if ( xtype == "knp" ) { setMLTypeMorph(300); return 0; }
+    else if ( xtype == "knc" ) { setMLTypeMorph(301); return 0; }
+    else if ( xtype == "kng" ) { setMLTypeMorph(302); return 0; }
+    else if ( xtype == "knr" ) { setMLTypeMorph(303); return 0; }
+    else if ( xtype == "knv" ) { setMLTypeMorph(304); return 0; }
+    else if ( xtype == "kna" ) { setMLTypeMorph(305); return 0; }
+    else if ( xtype == "knm" ) { setMLTypeMorph(307); return 0; }
+
+    else if ( xtype == "gpr" ) { setMLTypeMorph(400); return 0; }
+    else if ( xtype == "gpv" ) { setMLTypeMorph(401); return 0; }
+    else if ( xtype == "gpa" ) { setMLTypeMorph(402); return 0; }
+    else if ( xtype == "gpg" ) { setMLTypeMorph(408); return 0; }
+    else if ( xtype == "gpc" ) { setMLTypeMorph(409); return 0; }
+    else if ( xtype == "gpR" ) { setMLTypeMorph(410); return 0; }
+    else if ( xtype == "gpC" ) { setMLTypeMorph(411); return 0; }
+
+    else if ( xtype == "mlr" ) { setMLTypeMorph(800); return 0; }
+    else if ( xtype == "mlc" ) { setMLTypeMorph(801); return 0; }
+    else if ( xtype == "mlv" ) { setMLTypeMorph(802); return 0; }
+
+    else if ( xtype == "lsr" ) { setMLTypeMorph(500); return 0; }
+    else if ( xtype == "lsv" ) { setMLTypeMorph(501); return 0; }
+    else if ( xtype == "lsa" ) { setMLTypeMorph(502); return 0; }
+    else if ( xtype == "lso" ) { setMLTypeMorph(505); return 0; }
+    else if ( xtype == "lsg" ) { setMLTypeMorph(508); return 0; }
+    else if ( xtype == "lsi" ) { setMLTypeMorph(509); return 0; }
+    else if ( xtype == "lsh" ) { setMLTypeMorph(510); return 0; }
+    else if ( xtype == "lsc" ) { setMLTypeMorph(511); return 0; }
+    else if ( xtype == "lsR" ) { setMLTypeMorph(512); return 0; }
+
+    else if ( xtype == "nop" ) { setMLTypeMorph(200); return 0; }
+    else if ( xtype == "con" ) { setMLTypeMorph(201); return 0; }
+    else if ( xtype == "fna" ) { setMLTypeMorph(203); return 0; }
+    else if ( xtype == "io"  ) { setMLTypeMorph(204); return 0; }
+    else if ( xtype == "avr" ) { setMLTypeMorph(202); return 0; }
+    else if ( xtype == "avv" ) { setMLTypeMorph(205); return 0; }
+    else if ( xtype == "ava" ) { setMLTypeMorph(206); return 0; }
+    else if ( xtype == "fnb" ) { setMLTypeMorph(207); return 0; }
+    else if ( xtype == "fcb" ) { setMLTypeMorph(208); return 0; }
+    else if ( xtype == "mxa" ) { setMLTypeMorph(209); return 0; }
+    else if ( xtype == "mxb" ) { setMLTypeMorph(210); return 0; }
+    else if ( xtype == "mer" ) { setMLTypeMorph(211); return 0; }
+    else if ( xtype == "mba" ) { setMLTypeMorph(212); return 0; }
+    else if ( xtype == "sys" ) { setMLTypeMorph(213); return 0; }
+    else if ( xtype == "ker" ) { setMLTypeMorph(214); return 0; }
+    else if ( xtype == "ber" ) { setMLTypeMorph(215); return 0; }
+    else if ( xtype == "bat" ) { setMLTypeMorph(216); return 0; }
+
+    else if ( xtype == "ei"  ) { setMLTypeMorph(600); return 0; }
+    else if ( xtype == "svm" ) { setMLTypeMorph(601); return 0; }
+    else if ( xtype == "rls" ) { setMLTypeMorph(602); return 0; }
+    else if ( xtype == "rns" ) { setMLTypeMorph(603); return 0; }
+
+    return 1;
+}
+
+int ML_Mutable::ssetMLTypeClean(const std::string &xtype)
+{
+         if ( xtype == "r"   ) { setMLTypeClean(0);   return 0; }
+    else if ( xtype == "c"   ) { setMLTypeClean(1);   return 0; }
+    else if ( xtype == "s"   ) { setMLTypeClean(2);   return 0; }
+    else if ( xtype == "m"   ) { setMLTypeClean(3);   return 0; }
+    else if ( xtype == "v"   ) { setMLTypeClean(4);   return 0; }
+    else if ( xtype == "a"   ) { setMLTypeClean(5);   return 0; }
+    else if ( xtype == "p"   ) { setMLTypeClean(7);   return 0; }
+    else if ( xtype == "t"   ) { setMLTypeClean(8);   return 0; }
+    else if ( xtype == "l"   ) { setMLTypeClean(12);  return 0; }
+    else if ( xtype == "o"   ) { setMLTypeClean(13);  return 0; }
+    else if ( xtype == "g"   ) { setMLTypeClean(15);  return 0; }
+    else if ( xtype == "i"   ) { setMLTypeClean(16);  return 0; }
+    else if ( xtype == "h"   ) { setMLTypeClean(17);  return 0; }
+    else if ( xtype == "j"   ) { setMLTypeClean(18);  return 0; }
+    else if ( xtype == "b"   ) { setMLTypeClean(19);  return 0; }
+    else if ( xtype == "u"   ) { setMLTypeClean(20);  return 0; }
+    else if ( xtype == "d"   ) { setMLTypeClean(21);  return 0; }
+    else if ( xtype == "R"   ) { setMLTypeClean(22);  return 0; }
+    else if ( xtype == "B"   ) { setMLTypeClean(23);  return 0; }
+
+    else if ( xtype == "knp" ) { setMLTypeClean(300); return 0; }
+    else if ( xtype == "knc" ) { setMLTypeClean(301); return 0; }
+    else if ( xtype == "kng" ) { setMLTypeClean(302); return 0; }
+    else if ( xtype == "knr" ) { setMLTypeClean(303); return 0; }
+    else if ( xtype == "knv" ) { setMLTypeClean(304); return 0; }
+    else if ( xtype == "kna" ) { setMLTypeClean(305); return 0; }
+    else if ( xtype == "knm" ) { setMLTypeClean(307); return 0; }
+
+    else if ( xtype == "gpr" ) { setMLTypeClean(400); return 0; }
+    else if ( xtype == "gpv" ) { setMLTypeClean(401); return 0; }
+    else if ( xtype == "gpa" ) { setMLTypeClean(402); return 0; }
+    else if ( xtype == "gpg" ) { setMLTypeClean(408); return 0; }
+    else if ( xtype == "gpc" ) { setMLTypeClean(409); return 0; }
+    else if ( xtype == "gpR" ) { setMLTypeClean(410); return 0; }
+    else if ( xtype == "gpC" ) { setMLTypeClean(411); return 0; }
+
+    else if ( xtype == "mlr" ) { setMLTypeClean(800); return 0; }
+    else if ( xtype == "mlc" ) { setMLTypeClean(801); return 0; }
+    else if ( xtype == "mlv" ) { setMLTypeClean(802); return 0; }
+
+    else if ( xtype == "lsr" ) { setMLTypeClean(500); return 0; }
+    else if ( xtype == "lsv" ) { setMLTypeClean(501); return 0; }
+    else if ( xtype == "lsa" ) { setMLTypeClean(502); return 0; }
+    else if ( xtype == "lso" ) { setMLTypeClean(505); return 0; }
+    else if ( xtype == "lsg" ) { setMLTypeClean(508); return 0; }
+    else if ( xtype == "lsi" ) { setMLTypeClean(509); return 0; }
+    else if ( xtype == "lsh" ) { setMLTypeClean(510); return 0; }
+    else if ( xtype == "lsc" ) { setMLTypeClean(511); return 0; }
+    else if ( xtype == "lsR" ) { setMLTypeClean(512); return 0; }
+
+    else if ( xtype == "nop" ) { setMLTypeClean(200); return 0; }
+    else if ( xtype == "con" ) { setMLTypeClean(201); return 0; }
+    else if ( xtype == "fna" ) { setMLTypeClean(203); return 0; }
+    else if ( xtype == "io"  ) { setMLTypeClean(204); return 0; }
+    else if ( xtype == "avr" ) { setMLTypeClean(202); return 0; }
+    else if ( xtype == "avv" ) { setMLTypeClean(205); return 0; }
+    else if ( xtype == "ava" ) { setMLTypeClean(206); return 0; }
+    else if ( xtype == "fnb" ) { setMLTypeClean(207); return 0; }
+    else if ( xtype == "fcb" ) { setMLTypeClean(208); return 0; }
+    else if ( xtype == "mxa" ) { setMLTypeClean(209); return 0; }
+    else if ( xtype == "mxb" ) { setMLTypeClean(210); return 0; }
+    else if ( xtype == "mer" ) { setMLTypeClean(211); return 0; }
+    else if ( xtype == "mba" ) { setMLTypeClean(212); return 0; }
+    else if ( xtype == "sys" ) { setMLTypeClean(213); return 0; }
+    else if ( xtype == "ker" ) { setMLTypeClean(214); return 0; }
+    else if ( xtype == "ber" ) { setMLTypeClean(215); return 0; }
+    else if ( xtype == "bat" ) { setMLTypeClean(216); return 0; }
+
+    else if ( xtype == "ei"  ) { setMLTypeClean(600); return 0; }
+    else if ( xtype == "svm" ) { setMLTypeClean(601); return 0; }
+    else if ( xtype == "rls" ) { setMLTypeClean(602); return 0; }
+    else if ( xtype == "rns" ) { setMLTypeClean(603); return 0; }
+
+    else if ( xtype == "ser" ) { setMLTypeClean(-2);  return 0; }
+    else if ( xtype == "par" ) { setMLTypeClean(-3);  return 0; }
+
+    return 1;
+}
+
+const std::string &ML_Mutable::getMLType(void) const
+{
+         if ( type() == 0   ) { static std::string res("r");   return res; }
+    else if ( type() == 1   ) { static std::string res("c");   return res; }
+    else if ( type() == 2   ) { static std::string res("s");   return res; }
+    else if ( type() == 3   ) { static std::string res("m");   return res; }
+    else if ( type() == 4   ) { static std::string res("v");   return res; }
+    else if ( type() == 5   ) { static std::string res("a");   return res; }
+    else if ( type() == 7   ) { static std::string res("p");   return res; }
+    else if ( type() == 8   ) { static std::string res("t");   return res; }
+    else if ( type() == 12  ) { static std::string res("l");   return res; }
+    else if ( type() == 13  ) { static std::string res("o");   return res; }
+    else if ( type() == 15  ) { static std::string res("g");   return res; }
+    else if ( type() == 16  ) { static std::string res("i");   return res; }
+    else if ( type() == 17  ) { static std::string res("h");   return res; }
+    else if ( type() == 18  ) { static std::string res("j");   return res; }
+    else if ( type() == 19  ) { static std::string res("b");   return res; }
+    else if ( type() == 20  ) { static std::string res("u");   return res; }
+    else if ( type() == 21  ) { static std::string res("d");   return res; }
+    else if ( type() == 22  ) { static std::string res("R");   return res; }
+    else if ( type() == 23  ) { static std::string res("N");   return res; }
+
+    else if ( type() == 300 ) { static std::string res("knp"); return res; }
+    else if ( type() == 301 ) { static std::string res("knc"); return res; }
+    else if ( type() == 302 ) { static std::string res("kng"); return res; }
+    else if ( type() == 303 ) { static std::string res("knr"); return res; }
+    else if ( type() == 304 ) { static std::string res("knv"); return res; }
+    else if ( type() == 305 ) { static std::string res("kna"); return res; }
+    else if ( type() == 307 ) { static std::string res("knm"); return res; }
+
+    else if ( type() == 400 ) { static std::string res("gpr"); return res; }
+    else if ( type() == 401 ) { static std::string res("gpv"); return res; }
+    else if ( type() == 402 ) { static std::string res("gpa"); return res; }
+    else if ( type() == 408 ) { static std::string res("gpg"); return res; }
+    else if ( type() == 409 ) { static std::string res("gpc"); return res; }
+    else if ( type() == 410 ) { static std::string res("gpR"); return res; }
+    else if ( type() == 411 ) { static std::string res("gpC"); return res; }
+
+    else if ( type() == 800 ) { static std::string res("mlr"); return res; }
+    else if ( type() == 801 ) { static std::string res("mlc"); return res; }
+    else if ( type() == 802 ) { static std::string res("mlv"); return res; }
+
+    else if ( type() == 500 ) { static std::string res("lsr"); return res; }
+    else if ( type() == 501 ) { static std::string res("lsv"); return res; }
+    else if ( type() == 502 ) { static std::string res("lsa"); return res; }
+    else if ( type() == 505 ) { static std::string res("lso"); return res; }
+    else if ( type() == 508 ) { static std::string res("lsg"); return res; }
+    else if ( type() == 509 ) { static std::string res("lsi"); return res; }
+    else if ( type() == 510 ) { static std::string res("lsh"); return res; }
+    else if ( type() == 511 ) { static std::string res("lsc"); return res; }
+    else if ( type() == 512 ) { static std::string res("lsR"); return res; }
+
+    else if ( type() == 200 ) { static std::string res("nop"); return res; }
+    else if ( type() == 201 ) { static std::string res("con"); return res; }
+    else if ( type() == 202 ) { static std::string res("avr"); return res; }
+    else if ( type() == 203 ) { static std::string res("fna"); return res; }
+    else if ( type() == 204 ) { static std::string res("io");  return res; }
+    else if ( type() == 205 ) { static std::string res("avv"); return res; }
+    else if ( type() == 206 ) { static std::string res("ava"); return res; }
+    else if ( type() == 207 ) { static std::string res("fnb"); return res; }
+    else if ( type() == 208 ) { static std::string res("fcb"); return res; }
+    else if ( type() == 209 ) { static std::string res("mxa"); return res; }
+    else if ( type() == 210 ) { static std::string res("mxb"); return res; }
+    else if ( type() == 211 ) { static std::string res("mer"); return res; }
+    else if ( type() == 212 ) { static std::string res("mba"); return res; }
+    else if ( type() == 213 ) { static std::string res("sys"); return res; }
+    else if ( type() == 214 ) { static std::string res("ker"); return res; }
+    else if ( type() == 215 ) { static std::string res("ber"); return res; }
+    else if ( type() == 216 ) { static std::string res("bat"); return res; }
+
+    else if ( type() == 600 ) { static std::string res("ei");  return res; }
+    else if ( type() == 601 ) { static std::string res("svm"); return res; }
+    else if ( type() == 602 ) { static std::string res("rls"); return res; }
+    else if ( type() == 603 ) { static std::string res("rns"); return res; }
+
+    else if ( type() == -2  ) { static std::string res("ser"); return res; }
+    else if ( type() == -3  ) { static std::string res("par"); return res; }
+
+    static std::string res("?");
+    return res;
+}
+
+int ML_Mutable::setVmethod(const std::string &method)
+{
+    if ( isSVM(*this) )
+    {
+             if ( method == "once" ) { setatonce(); return 0; }
+        else if ( method == "red"  ) { setredbin(); return 0; }
+    }
+
+    return 1;
+}
+
+int ML_Mutable::setCmethod(const std::string &method)
+{
+    if ( isSVM(*this) )
+    {
+             if ( method == "1vsA"   ) { set1vsA();    return 0; }
+        else if ( method == "1vs1"   ) { set1vs1();    return 0; }
+        else if ( method == "DAG"    ) { setDAGSVM();  return 0; }
+        else if ( method == "MOC"    ) { setMOC();     return 0; }
+        else if ( method == "maxwin" ) { setmaxwins(); return 0; }
+        else if ( method == "recdiv" ) { setrecdiv();  return 0; }
+    }
+
+    return 1;
+}
+
+int ML_Mutable::setOmethod(const std::string &method)
+{
+    if ( isSVM(*this) )
+    {
+             if ( method == "sch" ) { setsingmethod(0); return 0; }
+        else if ( method == "tax" ) { setsingmethod(1); return 0; }
+    }
+
+    return 1;
+}
+
+int ML_Mutable::setAmethod(const std::string &method)
+{
+    if ( isSVM(*this) )
+    {
+             if ( method == "svc" ) { setClassifyViaSVM(); return 0; }
+        else if ( method == "svr" ) { setClassifyViaSVR(); return 0; }
+    }
+
+    return 1;
+}
+
+int ML_Mutable::setRmethod(const std::string &method)
+{
+    if ( isSVM(*this) )
+    {
+             if ( method == "l" ) { setLinearCost();    setusefuzzt(0); return 0; }
+        else if ( method == "q" ) { setQuadraticCost(); setusefuzzt(0); return 0; }
+        else if ( method == "o" ) { set1NormCost();     setusefuzzt(0); return 0; }
+        else if ( method == "g" ) { setLinearCost();    setusefuzzt(1); return 0; }
+        else if ( method == "G" ) { setQuadraticCost(); setusefuzzt(1); return 0; }
+    }
+
+    return 1;
+}
+
+int ML_Mutable::setTmethod(const std::string &method)
+{
+    if ( isSVM(*this) )
+    {
+             if ( method == "f" ) { setFixedTube();  return 0; }
+        else if ( method == "s" ) { setShrinkTube(); return 0; }
+    }
+
+    return 1;
+}
+
+int ML_Mutable::setBmethod(const std::string &method)
+{
+    if ( isSVM(*this) )
+    {
+             if ( method == "var" ) { setVarBias();    return 0; }
+        else if ( method == "pos" ) { setPosBias();    return 0; }
+        else if ( method == "neg" ) { setNegBias();    return 0; }
+        else if ( method == "fix" ) { setFixedBias(0); return 0; }
+    }
+
+    else if ( isGPR(*this) )
+    {
+             if ( method == "var" ) { setVarmuBias();  return 0; }
+        else if ( method == "fix" ) { setZeromuBias(); return 0; }
+    }
+
+    else if ( isLSV(*this) )
+    {
+             if ( method == "var" ) { setVardelta();  return 0; }
+        else if ( method == "fix" ) { setZerodelta(); return 0; }
+    }
+
+    return 1;
+}
+
+int ML_Mutable::setMmethod(const std::string &method)
+{
+    if ( isSVM(*this) )
+    {
+             if ( method == "n" ) { setNoMonotonicConstraints();    return 0; }
+        else if ( method == "i" ) { setForcedMonotonicIncreasing(); return 0; }
+        else if ( method == "d" ) { setForcedMonotonicDecreasing(); return 0; }
+    }
+
+    return 1;
+}
+
+
+
+const std::string &ML_Mutable::getVmethod(void) const
+{
+    if ( isSVM(*this) )
+    {
+             if ( isatonce() ) { static std::string res("once"); return res; }
+        else if ( isredbin() ) { static std::string res("red");  return res; }
+    }
+
+    static std::string res("?");
+    return res;
+}
+
+const std::string &ML_Mutable::getCmethod(void) const
+{
+    if ( isSVM(*this) )
+    {
+             if ( is1vsA()    ) { static std::string res("1vsA");   return res; }
+        else if ( is1vs1()    ) { static std::string res("1vs1");   return res; }
+        else if ( isDAGSVM()  ) { static std::string res("DAG");    return res; }
+        else if ( isMOC()     ) { static std::string res("MOC");    return res; }
+        else if ( ismaxwins() ) { static std::string res("maxwin"); return res; }
+        else if ( isrecdiv()  ) { static std::string res("recdiv"); return res; }
+    }
+
+    static std::string res("?");
+    return res;
+}
+
+const std::string &ML_Mutable::getOmethod(void) const
+{
+    if ( isSVM(*this) )
+    {
+             if ( singmethod() == 0 ) { static std::string res("sch"); return res; }
+        else if ( singmethod() == 1 ) { static std::string res("tax"); return res; }
+    }
+
+    static std::string res("?");
+    return res;
+}
+
+const std::string &ML_Mutable::getAmethod(void) const
+{
+    if ( isSVM(*this) )
+    {
+             if ( isClassifyViaSVM() ) { static std::string res("svc"); return res; }
+        else if ( isClassifyViaSVR() ) { static std::string res("svr"); return res; }
+    }
+
+    static std::string res("?");
+    return res;
+}
+
+const std::string &ML_Mutable::getRmethod(void) const
+{
+    if ( isSVM(*this) )
+    {
+             if ( isLinearCost()    && ( usefuzzt() == 0 ) ) { static std::string res("l"); return res; }
+        else if ( isQuadraticCost() && ( usefuzzt() == 0 ) ) { static std::string res("q"); return res; }
+        else if ( is1NormCost()     && ( usefuzzt() == 0 ) ) { static std::string res("o"); return res; }
+        else if ( isLinearCost()    && ( usefuzzt() == 1 ) ) { static std::string res("g"); return res; }
+        else if ( isQuadraticCost() && ( usefuzzt() == 1 ) ) { static std::string res("G"); return res; }
+    }
+
+    static std::string res("?");
+    return res;
+}
+
+const std::string &ML_Mutable::getTmethod(void) const
+{
+    if ( isSVM(*this) )
+    {
+             if ( isFixedTube()  ) { static std::string res("f"); return res; }
+        else if ( isShrinkTube() ) { static std::string res("s"); return res; }
+    }
+
+    static std::string res("?");
+    return res;
+}
+
+const std::string &ML_Mutable::getBmethod(void) const
+{
+    if ( isSVM(*this) )
+    {
+             if ( isVarBias()   ) { static std::string res("var"); return res; }
+        else if ( isPosBias()   ) { static std::string res("pos"); return res; }
+        else if ( isNegBias()   ) { static std::string res("neg"); return res; }
+        else if ( isFixedBias() ) { static std::string res("fix"); return res; }
+    }
+
+    else if ( isGPR(*this) )
+    {
+             if ( isVarmuBias()  ) { static std::string res("var"); return res; }
+        else if ( isZeromuBias() ) { static std::string res("fix"); return res; }
+    }
+
+    else if ( isLSV(*this) )
+    {
+             if ( isVardelta()  ) { static std::string res("var"); return res; }
+        else if ( isZerodelta() ) { static std::string res("fix"); return res; }
+    }
+
+    static std::string res("?");
+    return res;
+}
+
+const std::string &ML_Mutable::getMmethod(void) const
+{
+    if ( isSVM(*this) )
+    {
+             if ( isNoMonotonicConstraints()    ) { static std::string res("n"); return res; }
+        else if ( isForcedMonotonicIncreasing() ) { static std::string res("i"); return res; }
+        else if ( isForcedMonotonicDecreasing() ) { static std::string res("d"); return res; }
+    }
+
+    static std::string res("?");
+    return res;
+}
+
+
 
 std::istream &ML_Mutable::inputstream(std::istream &input)
 {

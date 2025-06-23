@@ -107,11 +107,6 @@ public:
     virtual const int *ClassLabelsInt     (void)  const override { return ML_Base::ClassLabelsInt();       }
     virtual       int  getInternalClassInt(int y) const override { return ML_Base::getInternalClassInt(y); }
 
-    virtual void npCweight    (double **res, int *dim) const override { ML_Base::npCweight    (res,dim); return; }
-    virtual void npCweightfuzz(double **res, int *dim) const override { ML_Base::npCweightfuzz(res,dim); return; }
-    virtual void npsigmaweight(double **res, int *dim) const override { ML_Base::npsigmaweight(res,dim); return; }
-    virtual void npepsweight  (double **res, int *dim) const override { ML_Base::npepsweight  (res,dim); return; }
-
     // Kernel Modification
 
     virtual const MercerKernel &getKernel       (void) const override { return getKnumMLconst().getKernel();   }

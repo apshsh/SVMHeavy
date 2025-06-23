@@ -1,19 +1,70 @@
+/*
+FOR PYHEAVY:
+
+- add data from a file
+- -tx etc
+- kernels!
+
+SVM:
+** done?
+. to do as per others (M,E,X)
+
+    virtual const Matrix<double> &Gp(void) const { return getSVMconst().Gp(); }
+
+
+can be set
+    virtual int isanomalyOn(void)  const { return getSVMconst().isanomalyOn();  }
+    virtual int isanomalyOff(void) const { return getSVMconst().isanomalyOff(); }
+    virtual double anomalyNu(void)    const { return getSVMconst().anomalyNu();    }
+    virtual int    anomalyClass(void) const { return getSVMconst().anomalyClass(); }
+
+                    else if ( currcommand(0) == "-Ac"   ) { getMLref(svmbase,svmInd).addclass(safeatoi(currcommand(1),argvariables));          }
+                    else if ( currcommand(0) == "-Acz"  ) { getMLref(svmbase,svmInd).addclass(safeatoi(currcommand(1),argvariables),1);        }
+                    else if ( currcommand(0) == "-Aca"  ) { getMLref(svmbase,svmInd).anomalyOn(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Acd"  ) { getMLref(svmbase,svmInd).anomalyOff();                                             }
+                    else if ( currcommand(0) == "-As"   ) { getMLref(svmbase,svmInd).setanomalyclass(safeatoi(currcommand(1),argvariables));   }
+
+    output << ( ( basic || advanced ) ? "         -Ac  d          - add class to SVM  (multiclass only)  without adding\n" : "" );
+    output << ( ( basic || advanced ) ? "                           any vectors from that class.                       \n" : "" );
+    output << ( (          advanced ) ? "         -Acz d          - like -Ac d, but sets epsilon = 0 for this component\n" : "" );
+    output << ( (          advanced ) ? "                           if recursive division or max wins multiclass used. \n" : "" );
+    output << ( (          advanced ) ? "         -Aca d nu       - add anomaly detector to multiclass SVM with label d\n" : "" );
+    output << ( (          advanced ) ? "                           and anomaly detection parameter nu.                \n" : "" );
+    output << ( (          advanced ) ? "         -Acd            - remove anomaly detector.                           \n" : "" );
+    output << ( (          advanced ) ? "         -As  n          - set single-class  SVM non-anomaly  label (+1 or -1,\n" : "" );
+    output << ( (          advanced ) ? "                           +1 by defaulg).                                    \n" : "" );
+
+can be set
+    virtual       int      maxiterfuzzt(void) const { return getSVMconst().maxiterfuzzt(); }
+**    virtual       int      usefuzzt(void)     const { return getSVMconst().usefuzzt();     }
+    virtual       double   lrfuzzt(void)      const { return getSVMconst().lrfuzzt();      }
+    virtual       double   ztfuzzt(void)      const { return getSVMconst().ztfuzzt();      }
+    virtual const gentype &costfnfuzzt(void)  const { return getSVMconst().costfnfuzzt();  }
+
+can be set
+    virtual int anomclass(void)          const { return getSVMconst().anomclass();       }
+    virtual int singmethod(void)         const { return getSVMconst().singmethod();      }
+    virtual double rejectThreshold(void) const { return getSVMconst().rejectThreshold(); }
+
+can be set
+    virtual int kconstWeights(void) const { return getSVMconst().kconstWeights(); }
+*/
+
+
+
+
+
+
 //FIXME: document the fullgrid stuff! In particular, the gridsource file format and the various special cases
-
 //FIXME: deal with case where some isfullgrid have nulls and others dont
-
 //FIXME: isfullgrid override: suppose the model is linear and the data is not: you might want to enforce linearity (approx), so you need the model.
-
 //FIXME: make fidelity part of the testlog plot
-
 //FIXME: if lower fidelity falls outside of range then never do higher fidelity (assumed surrogate accuracty bounds)
-//FIXME: clean up multi-threaded mess!
 
 /*
 TO DO:
 - have -mu 3 mode where training data is added to prior ML and training goes to prior ML (like the BLK, but done right)
 - extend prior to non-scalar types
-
 
 FIXME: TEST NEW FIDELITY CODE WITH FIDELITY FEEDBACK!
 FIXME: IS FIDELITY FEEDBACK BEING CORRECTLY ACCOUNTED FOR?
@@ -23,7 +74,7 @@ FIXME: IS FIDELITY COST BEING CORECTLY CALCULATED AND USED FOR TERMINATION?
 //in sparsevector.hpp:
 //sv/set should work in the sparse case as well (altcontentsp)
 
-//For some reason, when plotml evaluates [0] for blk_usrfnb with 4*(x_0-0.5)^2 it gives 10???	
+//For some reason, when plotml evaluates [0] for blk_usrfnb with 4*(x_0-0.5)^2 it gives 10??
 
 
 
@@ -95,9 +146,6 @@ Consider integrating into xferml.h
 #include "plotml.hpp"
 #include "matrix.hpp"
 #include "randfun.hpp"
-#ifdef ENABLE_THREADS
-#include <mutex>
-#endif
 
 // uncomment to process underscores in input as spaces
 //#define MANGLE_UNDERSCORES
@@ -189,8 +237,14 @@ void stripquotes(std::string &evalargs);
 // std::string trainfile - filename
 // Vector<int> linesread - numbers to be used if data taken from open file.
 
-void xlateDataSourceSuffixes(int isANtype, int fileargpos, int setibase, const Vector<std::string> &currcommand, const std::string &subcom, SparseVector<SparseVector<gentype> > &argvariables, SparseVector<ofiletype> &filevariables,
-     int &reverse, int &ignoreStart, int &imax, int &ibase, int &uselinesvector, int &israw, int &startpoint, int &coercetosingle, int &coercefromsingle, gentype &fromsingletarget, std::string &trainfile, Vector<int> &linesread);
+void xlateDataSourceSuffixes(int isANtype, int fileargpos, int setibase,
+                             const Vector<std::string> &currcommand,
+                             const std::string &subcom,
+                             SparseVector<SparseVector<gentype> > &argvariables,
+                             SparseVector<ofiletype> &filevariables,
+                             int &reverse, int &ignoreStart, int &imax, int &ibase, int &uselinesvector,
+                             int &israw, int &startpoint, int &coercetosingle, int &coercefromsingle,
+                             gentype &fromsingletarget, std::string &trainfile, Vector<int> &linesread);
 
 // Data File Line Selection
 // ========================
@@ -227,8 +281,9 @@ void preExtractLinesFromFile(ofiletype &filelines, gentype &linesleft, std::stri
 //        3 - RFF feature kernel
 // currcommandis overwrites currcomand(0)
 
-void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &currcommandis, const Vector<std::string> &currcomand, int ktype, SparseVector<SparseVector<gentype> > &argvariables, int &kernnum, int firstcall,
-                   SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmbase, int threadInd, int svmInd, SparseVector<SVMThreadContext *> &svmContext);
+void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &currcommandis, const Vector<std::string> &currcomand, int ktype,
+                   SparseVector<SparseVector<gentype> > &argvariables, int &kernnum, int firstcall,
+                   SparseVector<ML_Mutable *> &svmbase, int svmInd);
 
 
 // SVM testing functions
@@ -281,38 +336,22 @@ int gridelmMLreg(int ind, ML_Mutable *MLreg, void *arg);
 
 // Global gentype ML_Base access function
 
-const ML_Mutable &getMLrefconst(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmbase, int threadInd, int svmInd, SparseVector<SVMThreadContext *> &svmContext);
 
 int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib,
-              SparseVector<int> *svmThreadOwner = nullptr,
-              SparseVector<ML_Mutable *> *svmbase = nullptr,
-              int *threadInd = nullptr,
-              SparseVector<SVMThreadContext *> *svmContext = nullptr);
+              SparseVector<ML_Mutable *> *svmbase = nullptr);
 int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib,
-              SparseVector<int> *xsvmThreadOwner,
-              SparseVector<ML_Mutable *> *xsvmbase,
-              int *xthreadInd,
-              SparseVector<SVMThreadContext *> *xsvmContext)
+              SparseVector<ML_Mutable *> *xsvmbase)
 {
-    static SparseVector<int> *svmThreadOwner = nullptr;
     static SparseVector<ML_Mutable *> *svmbase = nullptr;
-    static int *threadInd = nullptr;
-    static SparseVector<SVMThreadContext *> *svmContext = nullptr;
 
-    svmThreadOwner = xsvmThreadOwner ? xsvmThreadOwner : svmThreadOwner;
-    svmbase        = xsvmbase        ? xsvmbase        : svmbase;
-    threadInd      = xthreadInd      ? xthreadInd      : threadInd;
-    svmContext     = xsvmContext     ? xsvmContext     : svmContext;
+    svmbase = xsvmbase ? xsvmbase : svmbase;
 
-    NiceAssert( svmThreadOwner );
     NiceAssert( svmbase );
-    NiceAssert( threadInd );
-    NiceAssert( svmContext );
 
     if ( svmInd >= 0 )
     {
         const char *dummy = "";
-        return getMLrefconst(*svmThreadOwner,*svmbase,*threadInd,svmInd,*svmContext).getparam(fnind,val,xa,ia,xb,ib,dummy);
+        return getMLrefconst(*svmbase,svmInd).getparam(fnind,val,xa,ia,xb,ib,dummy);
     }
 
     else if ( ( svmInd == -1 ) && ( ia == 0 ) )
@@ -353,35 +392,20 @@ int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia,
     return 1;
 }
 
-int egetparamfull(int svmInd, int fnind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib, 
-              SparseVector<int> *svmThreadOwner = nullptr,
-              SparseVector<ML_Mutable *> *svmbase = nullptr,
-              int *threadInd = nullptr,
-              SparseVector<SVMThreadContext *> *svmContext = nullptr);
-int egetparamfull(int svmInd, int fnind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib, 
-              SparseVector<int> *xsvmThreadOwner,
-              SparseVector<ML_Mutable *> *xsvmbase,
-              int *xthreadInd,
-              SparseVector<SVMThreadContext *> *xsvmContext)
+int egetparamfull(int svmInd, int fnind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib,
+              SparseVector<ML_Mutable *> *svmbase = nullptr);
+int egetparamfull(int svmInd, int fnind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib,
+              SparseVector<ML_Mutable *> *xsvmbase)
 {
-    static SparseVector<int> *svmThreadOwner = nullptr;
     static SparseVector<ML_Mutable *> *svmbase = nullptr;
-    static int *threadInd = nullptr;
-    static SparseVector<SVMThreadContext *> *svmContext = nullptr;
 
-    svmThreadOwner = xsvmThreadOwner ? xsvmThreadOwner : svmThreadOwner;
-    svmbase        = xsvmbase        ? xsvmbase        : svmbase;
-    threadInd      = xthreadInd      ? xthreadInd      : threadInd;
-    svmContext     = xsvmContext     ? xsvmContext     : svmContext;
+    svmbase = xsvmbase ? xsvmbase : svmbase;
 
-    NiceAssert( svmThreadOwner );
     NiceAssert( svmbase );
-    NiceAssert( threadInd );
-    NiceAssert( svmContext );
 
     if ( svmInd >= 0 )
     {
-        return getMLrefconst(*svmThreadOwner,*svmbase,*threadInd,svmInd,*svmContext).egetparam(fnind,val,xa,ia,xb,ib);
+        return getMLrefconst(*svmbase,svmInd).egetparam(fnind,val,xa,ia,xb,ib);
     }
 
     else if ( ( svmInd == -1 ) && ( ia == 0 ) )
@@ -517,19 +541,15 @@ void egetparam(int svmind, int fnind, Vector<gentype> &val, const Vector<gentype
     return;
 }
 
-int runsvmint(int threadInd,
-           SparseVector<SVMThreadContext *> &svmContext,
-           SparseVector<ML_Mutable *> &svmbase,
-           SparseVector<int> &svmThreadOwner,
-           Stack<awarestream *> *xxxcommstack,
-           svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
-           int (*getsetExtVar)(gentype &res, const gentype &src, int num),
-           SparseVector<SparseVector<int> > &returntag);
+int runsvmint(SVMThreadContext *svmContext,
+              SparseVector<ML_Mutable *> &svmbase,
+              Stack<awarestream *> *xxxcommstack,
+              svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
+              int (*getsetExtVar)(gentype &res, const gentype &src, int num),
+              SparseVector<SparseVector<int> > &returntag);
 
-int runsvm(int threadInd,
-           SparseVector<SVMThreadContext *> &svmContext,
+int runsvm(SVMThreadContext *svmContext,
            SparseVector<ML_Mutable *> &svmbase,
-           SparseVector<int> &svmThreadOwner,
            Stack<awarestream *> *xxxcommstack,
            svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
            int (*getsetExtVar)(gentype &res, const gentype &src, int num),
@@ -540,14 +560,14 @@ int runsvm(int threadInd,
     gentype temp;
     Vector<gentype> etemp;
 
-    getparamfull(0,0,temp,temp,0,temp,0,&svmThreadOwner,&svmbase,&threadInd,&svmContext);
-    egetparamfull(0,0,etemp,etemp,0,etemp,0,&svmThreadOwner,&svmbase,&threadInd,&svmContext);
+    getparamfull(0,0,temp,temp,0,temp,0,&svmbase);
+    egetparamfull(0,0,etemp,etemp,0,etemp,0,&svmbase);
 
     setGenFunc(getparam);
     seteGenFunc(egetparam);
 
 //FIXME
-    return runsvmint(threadInd,svmContext,svmbase,svmThreadOwner,xxxcommstack,globargvariables,getsetExtVar,returntag);
+    return runsvmint(svmContext,svmbase,xxxcommstack,globargvariables,getsetExtVar,returntag);
 }
 
 
@@ -579,16 +599,11 @@ void theRoundFile(char c)
 
 #define LOGVARPREFIX "svmh_"
 
-template <class T>
-int writeLog(const Vector<T> &resy, const Vector<Vector<T> > &resx, const std::string &resfilename); // just to file for this one
-template <class T>
-int writeLog(const Vector<T> &resy, const Vector<T> &rest, const Vector<Vector<T> > &resx, const std::string &resfilename); // just to file for this one
-template <class T>
-int writeLog(const Vector<T> &res, const std::string &resfilename, int (*getsetExtVar)(gentype &res, const gentype &src, int num));
-template <>
-int writeLog(const Vector<Vector<gentype> > &res, const std::string &resfilename, int (*getsetExtVar)(gentype &res, const gentype &src, int num));
-template <class T>
-int writeLog(const Matrix<T> &res, const std::string &resfilename, int (*getsetExtVar)(gentype &res, const gentype &src, int num));
+template <class T> int writeLog(const Vector<T> &resy, const Vector<Vector<T> > &resx, const std::string &resfilename); // just to file for this one
+template <class T> int writeLog(const Vector<T> &resy, const Vector<T> &rest, const Vector<Vector<T> > &resx, const std::string &resfilename); // just to file for this one
+template <class T> int writeLog(const Vector<T> &res, const std::string &resfilename, int (*getsetExtVar)(gentype &res, const gentype &src, int num));
+template <>        int writeLog(const Vector<Vector<gentype> > &res, const std::string &resfilename, int (*getsetExtVar)(gentype &res, const gentype &src, int num));
+template <class T> int writeLog(const Matrix<T> &res, const std::string &resfilename, int (*getsetExtVar)(gentype &res, const gentype &src, int num));
 
 template <class T>
 int writeLog(const Vector<T> &res, const std::string &resfilename, int (*getsetExtVar)(gentype &res, const gentype &src, int num))
@@ -902,67 +917,18 @@ int writeLog(const Matrix<T> &res, const std::string &resfilename, int (*getsetE
 
 
 
-// Background training functionality
-
-class bgTrainData;
-class bgTrainData
-{
-public:
-    ML_Mutable &svmbase;
-    svmvolatile int &trainKillSwitch;
-    svmvolatile int &traincontrolThreadInd;
-};
-
-void *brTrainRun(void *svmBGContext);
-void *brTrainRun(void *svmBGContext)
-{
-    // Function called while waiting for input to train the SVM in a
-    // background thread.
-
-    ML_Mutable &svmbase = ((*((bgTrainData *) svmBGContext)).svmbase);
-    svmvolatile int &trainKillSwitch = (*((bgTrainData *) svmBGContext)).trainKillSwitch;
-    svmvolatile int &traincontrolThreadInd = (*((bgTrainData *) svmBGContext)).traincontrolThreadInd;
-
-    // Train the SVM, with killswitch referred back to other thread.
-
-    errstream() << "\n\n*** Background training commenced in sub-thread " << traincontrolThreadInd << ".\n\n";
-
-    int resdummy = 0;
-    svmbase.train(resdummy,trainKillSwitch);
-
-    if ( svmbase.isTrained() )
-    {
-        errstream() << "\n\n~~~ Background training successful in sub-thread " << traincontrolThreadInd << ".\n\n";
-    }
-
-    else
-    {
-        errstream() << "\n\n### Background training interrupted in sub-thread " << traincontrolThreadInd << ".\n\n";
-    }
-
-    // Signal training complete
-
-    traincontrolThreadInd = -1;
-
-    return nullptr;
-}
-
-// grabsvm: get SVM with relevant index and *own* it in thread etc
+// grabsvm: make SVM svmInd exist
 // regsvm: register SVM whattoreg at first available index >= svmInd
 //         returns index where registered
+// getMLref: get reference to requested ML
 
-void grabsvm(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmbase, int threadInd, int svmInd, SparseVector<SVMThreadContext *> &svmContext);
-int regsvm(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmbase, int threadInd, int svmInd, SparseVector<SVMThreadContext *> &svmContext, ML_Mutable &whattoreg);
-//const ML_Mutable &getMLrefconst(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmbase, int threadInd, int svmInd, SparseVector<SVMThreadContext *> &svmContext);
-ML_Mutable &getMLref(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmbase, int threadInd, int svmInd, SparseVector<SVMThreadContext *> &svmContext);
+//void grabsvm(SparseVector<ML_Mutable *> &svmbase, int svmInd);
+//int regsvm(SparseVector<ML_Mutable *> &svmbase, int svmInd, ML_Mutable &whattoreg);
+//ML_Mutable &getMLref(SparseVector<ML_Mutable *> &svmbase, int svmInd);
+//const ML_Mutable &getMLrefconst(SparseVector<ML_Mutable *> &svmbase, int svmInd);
 
-void killallthreads(SparseVector<SVMThreadContext *> &svmContext, int killmain)
+void killallthreads(SVMThreadContext *svmContext)
 {
-#ifdef ENABLE_THREADS
-    static std::mutex eyelock;
-    eyelock.lock();
-#endif
-
     // First need to set killswitch on potentially blocking shared stack
     // inter-thread comms
 
@@ -972,46 +938,16 @@ void killallthreads(SparseVector<SVMThreadContext *> &svmContext, int killmain)
 
     // Now continue with thread destruction
 
-    if ( svmContext.indsize() )
+    if ( svmContext )
     {
-        int i,threadInd;
-
-        for ( i = svmContext.indsize()-1 ; i >= 0 ; --i )
-        {
-            threadInd = svmContext.ind(i);
-
-            svmvolatile int &killswitch       = (*(svmContext.direref(i))).killswitch;
-            svmvolatile int &controlThreadInd = (*(svmContext.direref(i))).controlThreadInd;
-
-            killswitch = 1;
-
-            while ( controlThreadInd != -1 )
-            {
-                svm_msleep(10);
-            }
-
-            if ( threadInd || killmain )
-            {
-                MEMDEL(svmContext.direref(i));
-                svmContext.zero(threadInd);
-            }
-        }
+        MEMDEL(svmContext);
     }
-
-#ifdef ENABLE_THREADS
-    eyelock.unlock();
-#endif
 
     return;
 }
 
 void deleteMLs(SparseVector<ML_Mutable *> &svmbase)
 {
-#ifdef ENABLE_THREADS
-    static std::mutex eyelock;
-    eyelock.lock();
-#endif
-
     if ( svmbase.indsize() )
     {
         int i,svmInd;
@@ -1025,20 +961,11 @@ void deleteMLs(SparseVector<ML_Mutable *> &svmbase)
         }
     }
 
-#ifdef ENABLE_THREADS
-    eyelock.unlock();
-#endif
-
     return;
 }
 
-void grabsvm(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmbase, int threadInd, int svmInd, SparseVector<SVMThreadContext *> &svmContext)
+void grabsvm(SparseVector<ML_Mutable *> &svmbase, int svmInd)
 {
-#ifdef ENABLE_THREADS
-    static std::mutex eyelock;
-    eyelock.lock();
-#endif
-
     // If svmInd does not exist we need to make it and own it
 
     if ( svmbase(svmInd) == nullptr )
@@ -1046,70 +973,11 @@ void grabsvm(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmb
         MEMNEW(const_cast<svmvolatile ML_Mutable *&>(svmbase("&",svmInd)),ML_Mutable);
     }
 
-    if ( !svmThreadOwner.isindpresent(svmInd) )
-    {
-        const_cast<svmvolatile int &>(svmThreadOwner("&",svmInd)) = threadInd;
-    }
-
-    int threadOwner = svmThreadOwner("&",svmInd);
-
-    // If svmInd is owned be a dead thread we need to claim it
-
-    if ( ( threadOwner == -1 ) || !svmContext.isindpresent(threadOwner) )
-    {
-        const_cast<svmvolatile int &>(svmThreadOwner("&",svmInd)) = threadInd;
-        threadOwner = threadInd;
-    }
-
-    // If another thread owns svmInd we need to kill that thread (or wait for it to die) and claim it
-
-    if ( threadOwner != threadInd )
-    {
-        svmvolatile int &killswitch       = (*(svmContext("&",threadOwner))).killswitch;
-        svmvolatile int &controlThreadInd = (*(svmContext("&",threadOwner))).controlThreadInd;
-
-        int killmethod = (*(svmContext("&",threadInd))).killmethod;
-
-        // Cannot proceed until we own this thread.
-
-        int oldkillswitch = killswitch;
-
-//FIXME add option to just wait
-        killswitch = killmethod;
-
-        while ( controlThreadInd != -1 )
-        {
-            svm_msleep(10);
-        }
-
-        killswitch = oldkillswitch;
-
-        if ( threadOwner )
-        {
-            // Kill all but the main thread
-
-            MEMDEL(svmContext("&",threadOwner));
-            svmContext.zero(threadOwner);
-        }
-
-        const_cast<svmvolatile int &>(svmThreadOwner("&",svmInd)) = threadInd;
-        threadOwner = threadInd;
-    }
-
-#ifdef ENABLE_THREADS
-    eyelock.unlock();
-#endif
-
     return;
 }
 
-int regsvm(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmbase, int threadInd, int svmInd, SparseVector<SVMThreadContext *> &svmContext, ML_Mutable *whattoreg)
+int regsvm(SparseVector<ML_Mutable *> &svmbase, int svmInd, ML_Mutable *whattoreg)
 {
-#ifdef ENABLE_THREADS
-    static std::mutex eyelock;
-    eyelock.lock();
-#endif
-
     // Put whattoreg at nearest available ind
 
     while ( svmbase(svmInd) != nullptr )
@@ -1119,77 +987,21 @@ int regsvm(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmbas
 
     const_cast<svmvolatile ML_Mutable *&>(svmbase("&",svmInd)) = whattoreg;
 
-    // The rest is basically the same as grabsvm
-
-    if ( !svmThreadOwner.isindpresent(svmInd) )
-    {
-        const_cast<svmvolatile int &>(svmThreadOwner("&",svmInd)) = threadInd;
-    }
-
-    int threadOwner = svmThreadOwner("&",svmInd);
-
-    // If svmInd is owned be a dead thread we need to claim it
-
-    if ( ( threadOwner == -1 ) || !svmContext.isindpresent(threadOwner) )
-    {
-        const_cast<svmvolatile int &>(svmThreadOwner("&",svmInd)) = threadInd;
-        threadOwner = threadInd;
-    }
-
-    // If another thread owns svmInd we need to kill that thread (or wait for it to die) and claim it
-
-    if ( threadOwner != threadInd )
-    {
-        svmvolatile int &killswitch       = (*(svmContext("&",threadOwner))).killswitch;
-        svmvolatile int &controlThreadInd = (*(svmContext("&",threadOwner))).controlThreadInd;
-
-        int killmethod = (*(svmContext("&",threadInd))).killmethod;
-    
-        // Cannot proceed until we own this thread.
-
-        int oldkillswitch = killswitch;
-
-//FIXME add option to just wait
-        killswitch = killmethod;
-
-        while ( controlThreadInd != -1 )
-        {
-            svm_msleep(10);
-        }
-
-        killswitch = oldkillswitch;
-
-        if ( threadOwner )
-        {
-            // Kill all but the main thread
-
-            MEMDEL(svmContext("&",threadOwner));
-            svmContext.zero(threadOwner);
-        }
-
-        const_cast<svmvolatile int &>(svmThreadOwner("&",svmInd)) = threadInd;
-        threadOwner = threadInd;
-    }
-
-#ifdef ENABLE_THREADS
-    eyelock.unlock();
-#endif
-
     return svmInd;
 }
 
-const ML_Mutable &getMLrefconst(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmbase, int threadInd, int svmInd, SparseVector<SVMThreadContext *> &svmContext)
+const ML_Mutable &getMLrefconst(SparseVector<ML_Mutable *> &svmbase, int svmInd)
 {
-    grabsvm(svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+    grabsvm(svmbase,svmInd);
 
     const ML_Mutable &res = *((svmbase)(svmInd));
 
     return res;
 }
 
-ML_Mutable &getMLref(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmbase, int threadInd, int svmInd, SparseVector<SVMThreadContext *> &svmContext)
+ML_Mutable &getMLref(SparseVector<ML_Mutable *> &svmbase, int svmInd)
 {
-    grabsvm(svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+    grabsvm(svmbase,svmInd);
 
     return *((svmbase)("&",svmInd));
 }
@@ -1250,51 +1062,35 @@ ML_Mutable &getMLref(SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable 
 // callsvm: gridargvars should be a copy of argvariables with any additional
 // variables only required for the call written over.
 
-int callsvm(int threadInd,
-           SparseVector<SVMThreadContext *> &svmContext,
-           SparseVector<ML_Mutable *> &svmbase,
-           SparseVector<int> &svmThreadOwner,
-           Stack<awarestream *> *xxxgridcommstack,
-           svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
-           int (*getsetExtVar)(gentype &res, const gentype &src, int num),
-           SparseVector<SparseVector<gentype> > &gridargvars,
-           int locverblevel,
-           gentype &locfinalresult,
-           std::string &loclogfile);
+int callsvm(SVMThreadContext *svmContext,
+            SparseVector<ML_Mutable *> &svmbase,
+            Stack<awarestream *> *xxxgridcommstack,
+            svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
+            int (*getsetExtVar)(gentype &res, const gentype &src, int num),
+            SparseVector<SparseVector<gentype> > &gridargvars,
+            int locverblevel,
+            gentype &locfinalresult,
+            std::string &loclogfile);
 
-int callsvm(int threadInd,
-           SparseVector<SVMThreadContext *> &svmContext,
-           SparseVector<ML_Mutable *> &svmbase,
-           SparseVector<int> &svmThreadOwner,
-           Stack<awarestream *> *xxxgridcommstack,
-           svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
-           int (*getsetExtVar)(gentype &res, const gentype &src, int num),
-           SparseVector<SparseVector<gentype> > &gridargvars,
-           int locverblevel,
-           gentype &locfinalresult,
-           std::string &loclogfile)
+int callsvm(SVMThreadContext *svmContext,
+            SparseVector<ML_Mutable *> &svmbase,
+            Stack<awarestream *> *xxxgridcommstack,
+            svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
+            int (*getsetExtVar)(gentype &res, const gentype &src, int num),
+            SparseVector<SparseVector<gentype> > &gridargvars,
+            int locverblevel,
+            gentype &locfinalresult,
+            std::string &loclogfile)
 {
     // Get variables
 
     Stack<awarestream *> &gridcommstack = *xxxgridcommstack;
 
-    int                                  &verblevel         = (*(svmContext("&",threadInd))).verblevel;
-    gentype                              &finalresult       = (*(svmContext("&",threadInd))).finalresult;
-  //int                                  &svmInd            = (*(svmContext("&",threadInd))).svmInd;
-  //gentype                              &biasdefault       = (*(svmContext("&",threadInd))).biasdefault;
-  //SparseVector<gentype>                &xtemplate         = (*(svmContext("&",threadInd))).xtemplate;
-    SparseVector<SparseVector<gentype> > &argvariables      = (*(svmContext("&",threadInd))).argvariables;
-  //SparseVector<ofiletype>              &filevariables     = (*(svmContext("&",threadInd))).filevariables;
-    int                                  &depthin           = (*(svmContext("&",threadInd))).depthin;
-  //int                                  &bgTrainOn         = (*(svmContext("&",threadInd))).bgTrainOn;
-    std::string                          &logfile           = (*(svmContext("&",threadInd))).logfile;
-  //int                                  &binaryRelabel     = (*(svmContext("&",threadInd))).binaryRelabel;
-  //int                                  &singleDrop        = (*(svmContext("&",threadInd))).singleDrop;
-  //int                                  &updateargvars     = (*(svmContext("&",threadInd))).updateargvars;
-  //int                                  &killmethod        = (*(svmContext("&",threadInd))).killmethod;
-  //Stack<int>                           &MLindstack        = (*(svmContext("&",threadInd))).MLindstack;
-  //svmvolatile int                      &thread_killswitch = (*(svmContext("&",threadInd))).killswitch;
-  //svmvolatile int                      &controlThreadInd  = (*(svmContext("&",threadInd))).controlThreadInd;
+    int                                  &verblevel         = svmContext->verblevel;
+    gentype                              &finalresult       = svmContext->finalresult;
+    SparseVector<SparseVector<gentype> > &argvariables      = svmContext->argvariables;
+    int                                  &depthin           = svmContext->depthin;
+    std::string                          &logfile           = svmContext->logfile;
 
     // Save copy of variables
 
@@ -1311,7 +1107,7 @@ int callsvm(int threadInd,
 
     SparseVector<SparseVector<int> > returntag;
 
-    int res = runsvmint(threadInd,svmContext,svmbase,svmThreadOwner,&gridcommstack,globargvariables,getsetExtVar,returntag);
+    int res = runsvmint(svmContext,svmbase,&gridcommstack,globargvariables,getsetExtVar,returntag);
 
     locfinalresult = finalresult;
 
@@ -1350,14 +1146,12 @@ int callsvm(int threadInd,
 #define WAIT_BASESLEEP         100000
 #define WAIT_ADDSLEEP_RAND     10000
 
-int runsvmint(int threadInd,
-           SparseVector<SVMThreadContext *> &svmContext,
-           SparseVector<ML_Mutable *> &svmbase,
-           SparseVector<int> &svmThreadOwner,
-           Stack<awarestream *> *xxxcommstack,
-           svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
-           int (*getsetExtVar)(gentype &res, const gentype &src, int num),
-           SparseVector<SparseVector<int> > &returntag)
+int runsvmint(SVMThreadContext *svmContext,
+              SparseVector<ML_Mutable *> &svmbase,
+              Stack<awarestream *> *xxxcommstack,
+              svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
+              int (*getsetExtVar)(gentype &res, const gentype &src, int num),
+              SparseVector<SparseVector<int> > &returntag)
 {
     BLK_Generic::getsetExtVar = getsetExtVar;
 
@@ -1367,31 +1161,20 @@ int runsvmint(int threadInd,
 
     Stack<awarestream *> &commstack = *xxxcommstack;
 
-    int                                  &verblevel         = (*(svmContext("&",threadInd))).verblevel;
-    gentype                              &finalresult       = (*(svmContext("&",threadInd))).finalresult;
-    int                                  &svmInd            = (*(svmContext("&",threadInd))).svmInd;
-    gentype                              &biasdefault       = (*(svmContext("&",threadInd))).biasdefault;
-    SparseVector<gentype>                &xtemplate         = (*(svmContext("&",threadInd))).xtemplate;
-    SparseVector<SparseVector<gentype> > &argvariables      = (*(svmContext("&",threadInd))).argvariables;
-    SparseVector<ofiletype>              &filevariables     = (*(svmContext("&",threadInd))).filevariables;
-    int                                  &depthin           = (*(svmContext("&",threadInd))).depthin;
-    int                                  &bgTrainOn         = (*(svmContext("&",threadInd))).bgTrainOn;
-    std::string                          &logfile           = (*(svmContext("&",threadInd))).logfile;
-    int                                  &binaryRelabel     = (*(svmContext("&",threadInd))).binaryRelabel;
-    int                                  &singleDrop        = (*(svmContext("&",threadInd))).singleDrop;
-    int                                  &updateargvars     = (*(svmContext("&",threadInd))).updateargvars;
-    int                                  &killmethod        = (*(svmContext("&",threadInd))).killmethod;
-    Stack<int>                           &MLindstack        = (*(svmContext("&",threadInd))).MLindstack;
-    svmvolatile int                      &thread_killswitch = (*(svmContext("&",threadInd))).killswitch;
-    svmvolatile int                      &controlThreadInd  = (*(svmContext("&",threadInd))).controlThreadInd;
-
-#ifdef ENABLE_THREADS
-    static std::mutex globargvariableslock;
-#endif
-
-    // Take control of this thread
-
-    controlThreadInd = threadInd;
+    int                                  &verblevel         = svmContext->verblevel;
+    gentype                              &finalresult       = svmContext->finalresult;
+    int                                  &svmInd            = svmContext->svmInd;
+    gentype                              &biasdefault       = svmContext->biasdefault;
+    SparseVector<gentype>                &xtemplate         = svmContext->xtemplate;
+    SparseVector<SparseVector<gentype> > &argvariables      = svmContext->argvariables;
+    SparseVector<ofiletype>              &filevariables     = svmContext->filevariables;
+    int                                  &depthin           = svmContext->depthin;
+    std::string                          &logfile           = svmContext->logfile;
+    int                                  &binaryRelabel     = svmContext->binaryRelabel;
+    int                                  &singleDrop        = svmContext->singleDrop;
+    int                                  &updateargvars     = svmContext->updateargvars;
+    Stack<int>                           &MLindstack        = svmContext->MLindstack;
+    svmvolatile int                      &thread_killswitch = svmContext->killswitch;
 
     // ...and go
 
@@ -1464,64 +1247,6 @@ int runsvmint(int threadInd,
             updateargvars = 0;
         }
 
-        // Train the ML in the background if background training is on, no arguments have
-        // yet been processed in this block, this is a top-level function, and ML isn't
-        // trained already
-
-        if ( !argbatchsize && ( depthin == 1 ) && !(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).isTrained()) && bgTrainOn )
-        {
-            int newThreadInd = 10000; // default offset for non-user threads
-
-            // Enter locked segment to prevent clashes in background thread assignment
-
-#ifdef ENABLE_THREADS
-            static std::mutex eyelock;
-            eyelock.lock();
-#endif
-
-            // Find first free index to create new thread
-
-            while ( svmContext.isindpresent(newThreadInd) )
-            {
-                ++newThreadInd;
-            }
-
-            // Create thread data
-
-            MEMNEW(const_cast<svmvolatile SVMThreadContext *&>((svmContext)("&",newThreadInd)),SVMThreadContext(*svmContext(threadInd),newThreadInd));
-
-            // Have claimed thread handle, so can leave locked segment safely
-
-#ifdef ENABLE_THREADS
-            eyelock.unlock();
-#endif
-
-            // Save some typing
-
-            svmvolatile SVMThreadContext &locContext = (*(const_cast<svmvolatile SVMThreadContext *>((svmContext)("&",newThreadInd))));
-
-            // Set up background training structure, lock the SVM to the new thread
-
-            bgTrainData svmTrainOn = { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),locContext.killswitch,locContext.controlThreadInd};
-            svmThreadOwner("&",svmInd) = newThreadInd;
-
-            // Start thread running training function.  When completed controlThreadInd will
-            // be set to -1.  To exit early use killswitch.
-
-            svm_pthread_t optthread;
-
-            if ( svm_pthread_create(&optthread,&brTrainRun,(void *) &svmTrainOn) )
-            {
-                errstream() << "ERROR: Thread creation failed, background training not available\n";
-                retval  = 101;
-                stopnow = 1;
-            }
-
-            // May now continue as per usual.  Any attempt to regrab
-            // the SVM will result in appropriate action to terminate
-            // the new thread.
-        }
-
         // Get next command
 
         stopnow = grabnextarg(commstack,currentarg);
@@ -1567,9 +1292,6 @@ int runsvmint(int threadInd,
             else if ( currentarg == "end"        ) { preelse = 1; stopnow = 1; skipon = 1; goto processnow; }
             else if ( currentarg == "-ZZZZ"      ) { preelse = 1; ZZZZeval: errstream() << "Halt encountered: exitting now.\n"; stopnow = 1; retval = -1; }
             else if ( currentarg == "exit"       ) { preelse = 1; errstream() << "Halt encountered: exitting now.\n"; stopnow = 1; retval = -1; }
-            else if ( currentarg == "-Zob"       ) { preelse = 1; bgTrainOn = 0; }
-            else if ( currentarg == "-ZoB"       ) { preelse = 1; bgTrainOn = 1; killmethod = 1; }
-            else if ( currentarg == "-ZoBB"      ) { preelse = 1; bgTrainOn = 1; killmethod = 0; }
             else if ( currentarg == "-Zmute"     ) { preelse = 1;   suppresserrstreamcout();  }
             else if ( currentarg == "-Zunmute"   ) { preelse = 1; unsuppresserrstreamcout();  }
             else if ( currentarg == "-ZMute"     ) { preelse = 1;   suppressoutstreamcout();  }
@@ -1670,7 +1392,7 @@ int runsvmint(int threadInd,
                         MEMNEW(gridcommstack,Stack<awarestream *>);
                         gridcommstack->push(gridbox);
 
-                        runsvmint(threadInd,svmContext,svmbase,svmThreadOwner,gridcommstack,globargvariables,getsetExtVar,returntag);
+                        runsvmint(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,returntag);
 
                         errstream() << "Finished running command " << evalarg << "\n";
                     }
@@ -1816,7 +1538,7 @@ int runsvmint(int threadInd,
                         MEMNEW(gridcommstack,Stack<awarestream *>);
                         gridcommstack->push(gridbox);
 
-                        runsvmint(threadInd,svmContext,svmbase,svmThreadOwner,gridcommstack,globargvariables,getsetExtVar,returntag);
+                        runsvmint(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,returntag);
 
                         errstream() << "Finished running command " << evalargtrue << "\n";
                     }
@@ -1835,7 +1557,7 @@ int runsvmint(int threadInd,
                         MEMNEW(gridcommstack,Stack<awarestream *>);
                         gridcommstack->push(gridbox);
 
-                        runsvmint(threadInd,svmContext,svmbase,svmThreadOwner,gridcommstack,globargvariables,getsetExtVar,returntag);
+                        runsvmint(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,returntag);
 
                         errstream() << "Finished running command " << evalargfalse << "\n";
                     }
@@ -1885,7 +1607,7 @@ int runsvmint(int threadInd,
                         MEMNEW(gridcommstack,Stack<awarestream *>);
                         gridcommstack->push(gridbox);
 
-                        runsvmint(threadInd,svmContext,svmbase,svmThreadOwner,gridcommstack,globargvariables,getsetExtVar,returntag);
+                        runsvmint(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,returntag);
                     }
 
                     errstream() << "Finished while loop... " << evalarg << "\n";
@@ -1894,45 +1616,6 @@ int runsvmint(int threadInd,
                   catch ( ... )
                   {
                     errstream() << "Syntax error: -Zwhile argument 1 must evaluate to logical (integer)\n";
-                    retval  = 25;
-                    stopnow = 1;
-                  }
-                }
-            }
-
-            else if ( currentarg == "-Zwait" )
-            {
-                preelse = 1;
-
-                // Reached wait command
-
-                Vector<Vector<std::string> > zifargs;
-
-                if ( grabargs(2,zifargs,commstack,currentarg) )
-                {
-                    errstream() << "Syntax error: -Zwait requires 1 argument\n";
-                    retval  = 24;
-                    stopnow = 1;
-                }
-
-                else
-                {
-                  try
-                  {
-                    errstream() << "Wait loop...";
-
-                    while ( !stopnow && !safeatoi(zifargs(0)(1),argvariables) )
-                    {
-                        //svm_usleep(WAIT_BASESLEEP+(svm_rand()%WAIT_ADDSLEEP_RAND));
-                        svm_usleep(WAIT_BASESLEEP+(rand()%WAIT_ADDSLEEP_RAND));
-                    }
-
-                    errstream() << "Finished wait loop...\n";
-                  }
-
-                  catch ( ... )
-                  {
-                    errstream() << "Syntax error: -Zwait argument 1 must evaluate to logical (integer)\n";
                     retval  = 25;
                     stopnow = 1;
                   }
@@ -2091,48 +1774,6 @@ int runsvmint(int threadInd,
                 commstack.push(stdcinbox);
             }
 
-            else if ( ( currentarg == "-Zc" ) || ( currentarg == "-Zac" ) )
-            {
-                preelse = 1;
-
-                // Switch to shared stream without feedback
-
-                int popflag = 0;
-
-                if ( currentarg == "-Zac" )
-                {
-                    // Pop element of command stack
-
-                    popflag = 1;
-                }
-
-                stopnow = grabnextarg(commstack,currentarg);
-
-                if ( !stopnow )
-                {
-                    if ( popflag )
-                    {
-                        // Pop element of command stack
-
-                        MEMDEL(commstack.accessTop());
-                        commstack.pop();
-                    }
-
-                    awarestream *newsharestream;
-
-                    MEMNEW(newsharestream,awarestream("&","&",safeatoi(currentarg,argvariables)));
-
-                    commstack.push(newsharestream);
-                }
-
-                else
-                {
-                    errstream() << "Syntax error: -Zc, -Zu, -Zuf, -Zau and -Zauf require 1 argument\n";
-                    retval  = 29;
-                    stopnow = 1;
-                }
-            }
-
             else if ( ( currentarg == "-Zwf" ) || ( currentarg == "-Zawf" ) )
             {
                 preelse = 1;
@@ -2273,61 +1914,6 @@ int runsvmint(int threadInd,
                 {
                     // No more input streams, exiting
 
-                    stopnow = 1;
-                }
-            }
-
-            else if ( currentarg == "-Zcw" )
-            {
-                preelse = 1;
-
-                // push string onto shared stack
-
-                Vector<Vector<std::string> > pushonopt;
-
-                if ( grabargs(3,pushonopt,commstack,currentarg) )
-                {
-                    retval  = 39;
-                    stopnow = 1;
-                }
-
-                int stacknum = safeatoi(pushonopt(0)(1),argvariables);
-
-                static awarestream streamdummy("&","&",stacknum);
-
-                streamdummy.vogon(pushonopt(0)(2));
-            }
-
-            else if ( currentarg == "-ZcW" )
-            {
-                preelse = 1;
-
-                // push string onto shared stack
-
-                int stacknum = 0;
-
-                stopnow = grabnextarg(commstack,currentarg);
-
-                if ( !stopnow )
-                {
-                    stacknum = safeatoi(currentarg,argvariables);
-
-                    stopnow = grabnextarg(commstack,currentarg);
-                }
-
-                if ( !stopnow )
-                {
-                    static awarestream streamdummy("&","&",stacknum);
-
-                    gentype tmpg;
-
-                    streamdummy.vogon(safeatowhatever(tmpg,currentarg,argvariables).cast_string(1));
-                }
-
-                else
-                {
-                    errstream() << "Syntax error: -Zcw and -ZcW require 2 argument\n";
-                    retval  = 28;
                     stopnow = 1;
                 }
             }
@@ -2714,6 +2300,7 @@ int runsvmint(int threadInd,
             }
 
             else if ( ( currentarg == "-bv"   ) ||
+                      ( currentarg == "-B"    ) ||
                       ( currentarg == "-bz"   ) ||
                       ( currentarg == "-bgv"  ) ||
                       ( currentarg == "-bgep" ) ||
@@ -2734,11 +2321,11 @@ int runsvmint(int threadInd,
             }
 
             else if ( ( currentarg == "-ac"  ) ||
-                      ( currentarg == "-B"   ) ||
                       ( currentarg == "-R"   ) ||
-                      ( currentarg == "-mls" ) ||
+                      ( currentarg == "-mlR" ) ||
                       ( currentarg == "-T"   ) ||
                       ( currentarg == "-TT"  ) ||
+                      ( currentarg == "-mls" ) ||
                       ( currentarg == "-N"   ) ||
                       ( currentarg == "-br"  ) ||
                       ( currentarg == "-bd"  ) ||
@@ -2792,7 +2379,6 @@ int runsvmint(int threadInd,
             else if ( ( currentarg == "-fo"   ) ||
                       ( currentarg == "-foe"  ) ||
                       ( currentarg == "-fV"   ) ||
-                      ( currentarg == "-mlR"  ) ||
                       ( currentarg == "-fW"   ) ||
                       ( currentarg == "-fWW"  ) ||
                       ( currentarg == "-fret" ) ||
@@ -4171,6 +3757,7 @@ int runsvmint(int threadInd,
                       ( currentarg == "-gmsgg"       ) ||
                       ( currentarg == "-gmsmd"       ) ||
                       ( currentarg == "-gmgtc"       ) ||
+                      ( currentarg == "-gmgtcv"      ) ||
                       ( currentarg == "-gmgtn"       ) ||
                       ( currentarg == "-gmgty"       ) ||
                       ( currentarg == "-gmgtw"       ) ||
@@ -5862,7 +5449,7 @@ int runsvmint(int threadInd,
 
                         // First claim the ML in question for the current thread...
 
-                        grabsvm(svmThreadOwner,svmbase,threadInd,nInd,svmContext);
+                        grabsvm(svmbase,nInd);
 
                         // ...delete it...
 
@@ -5871,7 +5458,6 @@ int runsvmint(int threadInd,
                         // ...and remove all traces
 
                         svmbase.zero(nInd);
-                        svmThreadOwner.zero(nInd);
 
                         // NB: if nInd = svmInd then the SVM will be automatically
                         // re-created in restarted state on first dereference
@@ -5904,17 +5490,12 @@ int runsvmint(int threadInd,
                         {
                             // Claim both SVMs for current thread...
 
-                            grabsvm(svmThreadOwner,svmbase,threadInd,nInd,svmContext);
-                            grabsvm(svmThreadOwner,svmbase,threadInd,mInd,svmContext);
+                            grabsvm(svmbase,nInd);
+                            grabsvm(svmbase,mInd);
 
                             // ...overwrite...
 
-                            getMLref(svmThreadOwner,svmbase,threadInd,nInd,svmContext) = getMLrefconst(svmThreadOwner,svmbase,threadInd,mInd,svmContext);
-
-                            // ...and disowm both as/if required.
-
-                            svmThreadOwner("&",nInd) = ( svmInd == nInd ) ? threadInd : -1;
-                            svmThreadOwner("&",mInd) = ( svmInd == mInd ) ? threadInd : -1;
+                            getMLref(svmbase,nInd) = getMLrefconst(svmbase,mInd);
 
                             if ( nInd == svmInd )
                             {
@@ -5931,7 +5512,7 @@ int runsvmint(int threadInd,
 
                         std::ofstream savefile(currcommand(2).c_str());
 
-                        savefile << getMLrefconst(svmThreadOwner,svmbase,threadInd,mInd,svmContext);
+                        savefile << getMLrefconst(svmbase,mInd);
 
                         savefile.close();
                     }
@@ -5957,17 +5538,12 @@ int runsvmint(int threadInd,
                         {
                             // Claim both SVMs for current thread...
 
-                            grabsvm(svmThreadOwner,svmbase,threadInd,nInd,svmContext);
-                            grabsvm(svmThreadOwner,svmbase,threadInd,mInd,svmContext);
+                            grabsvm(svmbase,nInd);
+                            grabsvm(svmbase,mInd);
 
                             // ...swap...
 
                             svmbase.squareswap(nInd,mInd);
-
-                            // ...and disowm both as/if required.
-
-                            svmThreadOwner("&",nInd) = ( svmInd == nInd ) ? threadInd : -1;
-                            svmThreadOwner("&",mInd) = ( svmInd == mInd ) ? threadInd : -1;
 
                             if ( ( nInd == svmInd ) || ( mInd == svmInd ) )
                             {
@@ -5989,13 +5565,9 @@ int runsvmint(int threadInd,
 
                         if ( nInd != svmInd )
                         {
-                            // Disown current ML...
-
-                            svmThreadOwner("&",svmInd) = -1;
-
                             // ...claim new ML...
 
-                            grabsvm(svmThreadOwner,svmbase,threadInd,nInd,svmContext);
+                            grabsvm(svmbase,nInd);
 
                             // ...and update indexes
 
@@ -6020,13 +5592,9 @@ int runsvmint(int threadInd,
 
                         if ( nInd != svmInd )
                         {
-                            // Disown current ML...
-
-                            svmThreadOwner("&",svmInd) = -1;
-
                             // ...claim new ML...
 
-                            grabsvm(svmThreadOwner,svmbase,threadInd,nInd,svmContext);
+                            grabsvm(svmbase,nInd);
 
                             // ...and update indexes
 
@@ -6051,13 +5619,9 @@ int runsvmint(int threadInd,
 
                         if ( nInd != svmInd )
                         {
-                            // Disown current ML...
-
-                            svmThreadOwner("&",svmInd) = -1;
-
                             // ...claim new ML...
 
-                            grabsvm(svmThreadOwner,svmbase,threadInd,nInd,svmContext);
+                            grabsvm(svmbase,nInd);
 
                             // ...and update indexes
 
@@ -6090,7 +5654,27 @@ int runsvmint(int threadInd,
                     currcommand = svmpresetupopt(0);
                     svmpresetupopt.remove(0);
 
-                    if ( currcommand(0) == "-zl" )
+                         if ( currcommand(0) == "-z"  ) { if ( getMLref(svmbase,svmInd).ssetMLTypeClean(currcommand(1)) ) { STRTHROW("Syntax error: -z  options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-zd" ) { if ( getMLref(svmbase,svmInd).ssetMLTypeMorph(currcommand(1)) ) { STRTHROW("Syntax error: -zd options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-zv" ) { if ( getMLref(svmbase,svmInd).setVmethod(currcommand(1)) ) { STRTHROW("Syntax error: -zv options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-zc" ) { if ( getMLref(svmbase,svmInd).setCmethod(currcommand(1)) ) { STRTHROW("Syntax error: -zc options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-zo" ) { if ( getMLref(svmbase,svmInd).setOmethod(currcommand(1)) ) { STRTHROW("Syntax error: -zo options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-ac" ) { if ( getMLref(svmbase,svmInd).setAmethod(currcommand(1)) ) { STRTHROW("Syntax error: -ac options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-R"  ) { if ( getMLref(svmbase,svmInd).setRmethod(currcommand(1)) ) { STRTHROW("Syntax error: -R options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-T"  ) { if ( getMLref(svmbase,svmInd).setTmethod(currcommand(1)) ) { STRTHROW("Syntax error: -T options are many, but this is not one of them"); } }
+
+                    else if ( currcommand(0) == "-TT" ) { getMLref(svmbase,svmInd).setkconstWeights(safeatoi(currcommand(1),argvariables)); }
+
+                    else if ( currcommand(0) == "-mlR" )
+                    {
+                        // Set empirical risk type
+
+                        if      ( currcommand(2) == "l" ) { getMLref(svmbase,svmInd).setregtype(safeatoi(currcommand(1),argvariables),1); }
+                        else if ( currcommand(2) == "q" ) { getMLref(svmbase,svmInd).setregtype(safeatoi(currcommand(1),argvariables),2); }
+                        else { STRTHROW("Error: "+currentarg+" is not a valid -mlR mode."); }
+                    }
+
+                    else if ( currcommand(0) == "-zl" )
                     {
                         // Load SVM from file
 
@@ -6103,206 +5687,9 @@ int runsvmint(int threadInd,
                             STRTHROW("Unable to open SVM file "+currcommand(1));
                         }
 
-                        loadfile >> getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        loadfile >> getMLref(svmbase,svmInd);
 
                         loadfile.close();
-                    }
-
-                    else if ( currcommand(0) == "-z" )
-                    {
-                        // Set SVM type, and reset SVM
-
-                             if ( currcommand(1) == "r"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(0);   }
-                        else if ( currcommand(1) == "c"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(1);   }
-                        else if ( currcommand(1) == "s"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(2);   }
-                        else if ( currcommand(1) == "m"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(3);   }
-                        else if ( currcommand(1) == "v"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(4);   }
-                        else if ( currcommand(1) == "a"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(5);   }
-                        else if ( currcommand(1) == "p"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(7);   }
-                        else if ( currcommand(1) == "t"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(8);   }
-                        else if ( currcommand(1) == "l"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(12);  }
-                        else if ( currcommand(1) == "o"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(13);  }
-                        else if ( currcommand(1) == "g"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(15);  }
-                        else if ( currcommand(1) == "i"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(16);  }
-                        else if ( currcommand(1) == "h"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(17);  }
-                        else if ( currcommand(1) == "j"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(18);  }
-                        else if ( currcommand(1) == "b"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(19);  }
-                        else if ( currcommand(1) == "u"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(20);  }
-                        else if ( currcommand(1) == "d"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(21);  }
-                        else if ( currcommand(1) == "R"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(22);  }
-                        else if ( currcommand(1) == "B"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(23);  }
-
-                        else if ( currcommand(1) == "knp" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(300); }
-                        else if ( currcommand(1) == "knc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(301); }
-                        else if ( currcommand(1) == "kng" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(302); }
-                        else if ( currcommand(1) == "knr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(303); }
-                        else if ( currcommand(1) == "knv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(304); }
-                        else if ( currcommand(1) == "kna" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(305); }
-                        else if ( currcommand(1) == "knm" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(307); }
-
-                        else if ( currcommand(1) == "gpr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(400); }
-                        else if ( currcommand(1) == "gpv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(401); }
-                        else if ( currcommand(1) == "gpa" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(402); }
-                        else if ( currcommand(1) == "gpg" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(408); }
-                        else if ( currcommand(1) == "gpc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(409); }
-                        else if ( currcommand(1) == "gpR" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(410); }
-                        else if ( currcommand(1) == "gpC" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(411); }
-
-                        else if ( currcommand(1) == "mlr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(800); }
-                        else if ( currcommand(1) == "mlc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(801); }
-                        else if ( currcommand(1) == "mlv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(802); }
-
-                        else if ( currcommand(1) == "lsr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(500); }
-                        else if ( currcommand(1) == "lsv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(501); }
-                        else if ( currcommand(1) == "lsa" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(502); }
-                        else if ( currcommand(1) == "lso" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(505); }
-                        else if ( currcommand(1) == "lsg" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(508); }
-                        else if ( currcommand(1) == "lsi" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(509); }
-                        else if ( currcommand(1) == "lsh" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(510); }
-                        else if ( currcommand(1) == "lsc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(511); }
-                        else if ( currcommand(1) == "lsR" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(512); }
-
-                        else if ( currcommand(1) == "nop" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(200); }
-                        else if ( currcommand(1) == "con" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(201); }
-                        else if ( currcommand(1) == "fna" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(203); }
-                        else if ( currcommand(1) == "io"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(204); }
-                        else if ( currcommand(1) == "avr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(202); }
-                        else if ( currcommand(1) == "avv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(205); }
-                        else if ( currcommand(1) == "ava" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(206); }
-                        else if ( currcommand(1) == "fnb" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(207); }
-                        else if ( currcommand(1) == "fcb" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(208); }
-                        else if ( currcommand(1) == "mxa" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(209); }
-                        else if ( currcommand(1) == "mxb" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(210); }
-                        else if ( currcommand(1) == "mer" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(211); }
-                        else if ( currcommand(1) == "mba" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(212); }
-                        else if ( currcommand(1) == "sys" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(213); }
-                        else if ( currcommand(1) == "ker" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(214); }
-                        else if ( currcommand(1) == "ber" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(215); }
-                        else if ( currcommand(1) == "bat" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(216); }
-
-                        else if ( currcommand(1) == "ei"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(600); }
-                        else if ( currcommand(1) == "svm" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(601); }
-                        else if ( currcommand(1) == "rls" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(602); }
-                        else if ( currcommand(1) == "rns" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(603); }
-
-                        else if ( currcommand(1) == "ser" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(-2);  }
-                        else if ( currcommand(1) == "par" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeClean(-3);  }
-
-                        else { STRTHROW("Syntax error: -z options are many, but this is not one of them"); }
-                    }
-
-                    else if ( currcommand(0) == "-zd" )
-                    {
-                        // Set SVM type, try to transition data
-
-                             if ( currcommand(1) == "r"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(0);   }
-                        else if ( currcommand(1) == "c"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(1);   }
-                        else if ( currcommand(1) == "s"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(2);   }
-                        else if ( currcommand(1) == "m"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(3);   }
-                        else if ( currcommand(1) == "v"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(4);   }
-                        else if ( currcommand(1) == "a"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(5);   }
-                        else if ( currcommand(1) == "p"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(7);   }
-                        else if ( currcommand(1) == "t"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(8);   }
-                        else if ( currcommand(1) == "l"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(12);  }
-                        else if ( currcommand(1) == "o"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(13);  }
-                        else if ( currcommand(1) == "g"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(15);  }
-                        else if ( currcommand(1) == "i"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(16);  }
-                        else if ( currcommand(1) == "h"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(17);  }
-                        else if ( currcommand(1) == "j"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(18);  }
-                        else if ( currcommand(1) == "b"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(19);  }
-                        else if ( currcommand(1) == "u"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(20);  }
-                        else if ( currcommand(1) == "d"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(21);  }
-                        else if ( currcommand(1) == "R"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(22);  }
-                        else if ( currcommand(1) == "B"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(23);  }
-
-                        else if ( currcommand(1) == "knp" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(300); }
-                        else if ( currcommand(1) == "knc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(301); }
-                        else if ( currcommand(1) == "kng" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(302); }
-                        else if ( currcommand(1) == "knr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(303); }
-                        else if ( currcommand(1) == "knv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(304); }
-                        else if ( currcommand(1) == "kna" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(305); }
-                        else if ( currcommand(1) == "knm" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(307); }
-
-                        else if ( currcommand(1) == "gpr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(400); }
-                        else if ( currcommand(1) == "gpv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(401); }
-                        else if ( currcommand(1) == "gpa" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(402); }
-                        else if ( currcommand(1) == "gpg" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(408); }
-                        else if ( currcommand(1) == "gpc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(409); }
-                        else if ( currcommand(1) == "gpR" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(410); }
-                        else if ( currcommand(1) == "gpC" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(411); }
-
-                        else if ( currcommand(1) == "mlr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(800); }
-                        else if ( currcommand(1) == "mlc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(801); }
-                        else if ( currcommand(1) == "mlv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(802); }
-
-                        else if ( currcommand(1) == "lsr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(500); }
-                        else if ( currcommand(1) == "lsv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(501); }
-                        else if ( currcommand(1) == "lsa" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(502); }
-                        else if ( currcommand(1) == "lso" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(505); }
-                        else if ( currcommand(1) == "lsg" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(508); }
-                        else if ( currcommand(1) == "lsi" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(509); }
-                        else if ( currcommand(1) == "lsh" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(510); }
-                        else if ( currcommand(1) == "lsc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(511); }
-                        else if ( currcommand(1) == "lsR" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(512); }
-
-                        else if ( currcommand(1) == "nop" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(200); }
-                        else if ( currcommand(1) == "con" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(201); }
-                        else if ( currcommand(1) == "fna" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(203); }
-                        else if ( currcommand(1) == "io"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(204); }
-                        else if ( currcommand(1) == "avr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(202); }
-                        else if ( currcommand(1) == "avv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(205); }
-                        else if ( currcommand(1) == "ava" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(206); }
-                        else if ( currcommand(1) == "fnb" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(207); }
-                        else if ( currcommand(1) == "fcb" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(208); }
-                        else if ( currcommand(1) == "mxa" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(209); }
-                        else if ( currcommand(1) == "mxb" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(210); }
-                        else if ( currcommand(1) == "mer" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(211); }
-                        else if ( currcommand(1) == "mba" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(212); }
-                        else if ( currcommand(1) == "sys" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(213); }
-                        else if ( currcommand(1) == "ker" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(214); }
-                        else if ( currcommand(1) == "ber" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(215); }
-                        else if ( currcommand(1) == "bat" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(216); }
-
-                        else if ( currcommand(1) == "ei"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(600); }
-                        else if ( currcommand(1) == "svm" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(601); }
-                        else if ( currcommand(1) == "rls" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(602); }
-                        else if ( currcommand(1) == "rns" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(603); }
-
-                        else if ( currcommand(1) == "ser" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(-2);  }
-                        else if ( currcommand(1) == "par" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMLTypeMorph(-3);  }
-
-                        else { STRTHROW("Syntax error: -zd options are a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z"); }
-                    }
-
-                    else if ( currcommand(0) == "-zv" )
-                    {
-                        // Set SVM type, try to transition data
-
-                        if      ( currcommand(1) == "once" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setatonce(); }
-                        else if ( currcommand(1) == "red"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setredbin(); }
-                        else { STRTHROW("Syntax error: -zv options are atonce (once) and redbin (red)"); }
-                    }
-
-                    else if ( currcommand(0) == "-zc" )
-                    {
-                        // Set multiclsas SVM type
-
-                        if      ( currcommand(1) == "1vsA"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).set1vsA();    }
-                        else if ( currcommand(1) == "1vs1"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).set1vs1();    }
-                        else if ( currcommand(1) == "DAG"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setDAGSVM();  }
-                        else if ( currcommand(1) == "MOC"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setMOC();     }
-                        else if ( currcommand(1) == "maxwin" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmaxwins(); }
-                        else if ( currcommand(1) == "recdiv" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setrecdiv();  }
-                        else { STRTHROW("Syntax error: -zc options are 1vsA,1vs1,DAG,MOC,maxwin,recdiv"); }
-                    }
-
-                    else if ( currcommand(0) == "-zo" )
-                    {
-                        // Set 1-class SVM type
-
-                        if      ( currcommand(1) == "sch" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsingmethod(0); }
-                        else if ( currcommand(1) == "tax" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsingmethod(1); }
-                        else { STRTHROW("Syntax error: -zo options are sch,tax"); }
                     }
                 }
 
@@ -6330,40 +5717,63 @@ int runsvmint(int threadInd,
                     currcommand = svmsetupopt(0);
                     svmsetupopt.remove(0);
 
-                         if ( currcommand(0) == "-fV"   ) { argvariables("&",0)("&",safeatoi(currcommand(1),argvariables)) = currcommand(2); }
+                    gentype tmpg;
+                    Vector<gentype> tmpv;
+
+                         if ( currcommand(0) == "-mc"   ) { getMLref(svmbase,svmInd).setmercachesize(safeatoi(currcommand(1),argvariables));           }
+                    else if ( currcommand(0) == "-mcn"  ) { getMLref(svmbase,svmInd).setmercachenorm(safeatoi(currcommand(1),argvariables));           }
+                    else if ( currcommand(0) == "-mba"  ) { getMLref(svmbase,svmInd).setmlqlist(safeatoi(currcommand(1),argvariables),getMLref(svmbase,safeatoi(currcommand(2),argvariables))); }
+                    else if ( currcommand(0) == "-mbw"  ) { getMLref(svmbase,svmInd).setmlqweight(safeatoi(currcommand(1),argvariables),safeatowhatever(tmpg,currcommand(2),argvariables));     }
+                    else if ( currcommand(0) == "-mbm"  ) { getMLref(svmbase,svmInd).setmlqmode(safeatoi(currcommand(1),argvariables));                }
+                    else if ( currcommand(0) == "-mbA"  ) { getMLref(svmbase,svmInd).removemlqlist(safeatoi(currcommand(1),argvariables));             }
+                    else if ( currcommand(0) == "-mbI"  ) { getMLref(svmbase,svmInd).addmlqlist(safeatoi(currcommand(1),argvariables),getMLref(svmbase,safeatoi(currcommand(2),argvariables))); }
+                    else if ( currcommand(0) == "-msn"  ) { getMLref(svmbase,svmInd).setBernDegree(safeatowhatever(tmpg,currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-msw"  ) { getMLref(svmbase,svmInd).setBernIndex(safeatowhatever(tmpg,currcommand(1),argvariables));  }
+                    else if ( currcommand(0) == "-bat"  ) { getMLref(svmbase,svmInd).setbattparam(safeatowhatever(tmpv,currcommand(1),argvariables));  }
+                    else if ( currcommand(0) == "-bam"  ) { getMLref(svmbase,svmInd).setbatttmax(safeatof(currcommand(1),argvariables));               }
+                    else if ( currcommand(0) == "-bac"  ) { getMLref(svmbase,svmInd).setbattImax(safeatof(currcommand(1),argvariables));               }
+                    else if ( currcommand(0) == "-bad"  ) { getMLref(svmbase,svmInd).setbatttdelta(safeatof(currcommand(1),argvariables));             }
+                    else if ( currcommand(0) == "-bav"  ) { getMLref(svmbase,svmInd).setbattVstart(safeatof(currcommand(1),argvariables));             }
+                    else if ( currcommand(0) == "-baT"  ) { getMLref(svmbase,svmInd).setbattthetaStart(safeatof(currcommand(1),argvariables));         }
+                    else if ( currcommand(0) == "-bv"   ) { getMLref(svmbase,svmInd).setVardelta();                                                    }
+                    else if ( currcommand(0) == "-bz"   ) { getMLref(svmbase,svmInd).setZerodelta();                                                   }
+                    else if ( currcommand(0) == "-bn"   ) { getMLref(svmbase,svmInd).setvarApprox(safeatoi(currcommand(1),argvariables));              }
+                    else if ( currcommand(0) == "-bgn"  ) { getMLref(svmbase,svmInd).setvarApproxim(safeatoi(currcommand(1),argvariables));            }
+                    else if ( currcommand(0) == "-bgv"  ) { getMLref(svmbase,svmInd).setVarmuBias();                                                   }
+                    else if ( currcommand(0) == "-bgz"  ) { getMLref(svmbase,svmInd).setZeromuBias();                                                  }
+                    else if ( currcommand(0) == "-bgep" ) { getMLref(svmbase,svmInd).setEPConst();                                                     }
+                    else if ( currcommand(0) == "-bgnc" ) { getMLref(svmbase,svmInd).setNaiveConst();                                                  }
+                    else if ( currcommand(0) == "-mls"  ) { getMLref(svmbase,svmInd).settsize(safeatoi(currcommand(1),argvariables));                  }
+
+                    else if ( currcommand(0) == "-fV"   ) { argvariables("&",0)("&",safeatoi(currcommand(1),argvariables)) = currcommand(2); }
                     else if ( currcommand(0) == "-fW"   ) { safeatowhatever(argvariables("&",0)("&",safeatoi(currcommand(1),argvariables)),currcommand(2),argvariables); argvariables("&",0)("&",safeatoi(currcommand(1),argvariables)).finalise(); }
                     else if ( currcommand(0) == "-fWW"  ) { safeatowhatever(argvariables("&",0)("&",safeatoi(currcommand(1),argvariables)),currcommand(2),argvariables); }
                     else if ( currcommand(0) == "-fret" ) { returntag("&",safeatoi(currcommand(1),argvariables))("&",safeatoi(currcommand(2),argvariables)) = 1; }
                     else if ( currcommand(0) == "-fru"  ) { randufill(argvariables("&",0)("&",safeatoi(currcommand(1),argvariables))); }
                     else if ( currcommand(0) == "-frn"  ) { randnfill(argvariables("&",0)("&",safeatoi(currcommand(1),argvariables))); }
                     else if ( currcommand(0) == "-fri"  ) { (argvariables("&",0)("&",safeatoi(currcommand(1),argvariables))).force_int() = rand(); } //svm_rand(); }
-                    else if ( currcommand(0) == "-mc"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmercachesize(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-mcn"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmercachenorm(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-mba"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmlqlist(safeatoi(currcommand(1),argvariables),getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(2),argvariables),svmContext)); }
-                    else if ( currcommand(0) == "-mbw"  ) { gentype tmpg; getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmlqweight(safeatoi(currcommand(1),argvariables),safeatowhatever(tmpg,currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-mbm"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmlqmode(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-mbA"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).removemlqlist(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-mbI"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).addmlqlist(safeatoi(currcommand(1),argvariables),getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(2),argvariables),svmContext)); }
-                    else if ( currcommand(0) == "-msn"  ) { gentype tmpg; getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setBernDegree(safeatowhatever(tmpg,currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-msw"  ) { gentype tmpg; getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setBernIndex(safeatowhatever(tmpg,currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-bat"  ) { Vector<gentype> tmp; getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setbattparam(safeatowhatever(tmp,currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-bam"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setbatttmax(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-bac"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setbattImax(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-bad"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setbatttdelta(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-bav"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setbattVstart(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-baT"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setbattthetaStart(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-TT"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setkconstWeights(safeatoi(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-br"   ) { binaryRelabel = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-bd"   ) { singleDrop = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-XT"   ) { std::stringstream xstr(currcommand(1)); SparseVector<gentype> xt; streamItIn(xstr,xt,0); xtemplate = xt; }
 
-                    else if ( currcommand(0) == "-N"    )
+                    else if ( currcommand(0) == "-B" )
+                    {
+                        // Set bias type
+
+                        if      ( currcommand(1) == "f" ) { getMLref(svmbase,svmInd).setFixedBias(biasdefault); }
+                        else if ( currcommand(1) == "v" ) { getMLref(svmbase,svmInd).setVarBias(); }
+                        else if ( currcommand(1) == "p" ) { getMLref(svmbase,svmInd).setPosBias(); }
+                        else if ( currcommand(1) == "n" ) { getMLref(svmbase,svmInd).setNegBias(); }
+                        else { STRTHROW("Error: "+currentarg+" is not a valid -B mode."); }
+                    }
+
+                    else if ( currcommand(0) == "-N" )
                     {
                         int pssize = safeatoi(currcommand(1),argvariables);
 
                         pssize = ( pssize >= 0 ) ? pssize : INT_MAX-1;
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).prealloc(pssize);
+                        getMLref(svmbase,svmInd).prealloc(pssize);
 
                         if ( pssize > ((int) (1.5*LARGE_TRAIN_BOUNDARY)) )
                         {
@@ -6499,13 +5909,7 @@ int runsvmint(int threadInd,
 
                         int nn = safeatoi(currcommand(1),argvariables);
 
-#ifdef ENABLE_THREADS
-                        globargvariableslock.lock();
-#endif
                         argvariables("&",0)("&",nn) = currcommand(2);
-#ifdef ENABLE_THREADS
-                        globargvariableslock.unlock();
-#endif
                     }
 
                     else if ( currcommand(0) == "-fWg" )
@@ -6514,14 +5918,8 @@ int runsvmint(int threadInd,
 
                         int nn = safeatoi(currcommand(1),argvariables);
 
-#ifdef ENABLE_THREADS
-                        globargvariableslock.lock();
-#endif
                         safeatowhatever(argvariables("&",0)("&",nn),currcommand(2),const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables));
                         argvariables("&",0)("&",nn).finalise();
-#ifdef ENABLE_THREADS
-                        globargvariableslock.unlock();
-#endif
                     }
 
                     else if ( currcommand(0) == "-fVG" )
@@ -6530,13 +5928,7 @@ int runsvmint(int threadInd,
 
                         int nn = safeatoi(currcommand(1),argvariables);
 
-#ifdef ENABLE_THREADS
-                        globargvariableslock.lock();
-#endif
                         const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn) = currcommand(2);
-#ifdef ENABLE_THREADS
-                        globargvariableslock.unlock();
-#endif
                     }
 
                     else if ( currcommand(0) == "-fWG" )
@@ -6545,14 +5937,8 @@ int runsvmint(int threadInd,
 
                         int nn = safeatoi(currcommand(1),argvariables);
 
-#ifdef ENABLE_THREADS
-                        globargvariableslock.lock();
-#endif
                         safeatowhatever(const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn),currcommand(2),argvariables);
                         const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn).finalise();
-#ifdef ENABLE_THREADS
-                        globargvariableslock.unlock();
-#endif
                     }
 
                     else if ( currcommand(0) == "-fuG" )
@@ -6570,13 +5956,7 @@ int runsvmint(int threadInd,
 
                         evalTestFn(fnnum,rrr,xxx);
 
-#ifdef ENABLE_THREADS
-                        globargvariableslock.lock();
-#endif
                         const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn) = rrr;
-#ifdef ENABLE_THREADS
-                        globargvariableslock.unlock();
-#endif
                     }
 
                     else if ( currcommand(0) == "-fuuG" )
@@ -6596,13 +5976,7 @@ int runsvmint(int threadInd,
 
                         evalTestFn(fnnum,rrr,xxx,&aaa);
 
-#ifdef ENABLE_THREADS
-                        globargvariableslock.lock();
-#endif
                         const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn) = rrr;
-#ifdef ENABLE_THREADS
-                        globargvariableslock.unlock();
-#endif
                     }
 
                     else if ( currcommand(0) == "-ftG" )
@@ -6621,13 +5995,7 @@ int runsvmint(int threadInd,
 
                         evalTestFn(fnnum,xxx.size(),MM,rrr,xxx,mooalpha);
 
-#ifdef ENABLE_THREADS
-                        globargvariableslock.lock();
-#endif
                         const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn) = rrr;
-#ifdef ENABLE_THREADS
-                        globargvariableslock.unlock();
-#endif
                     }
 
                     else if ( currcommand(0) == "-fM" )
@@ -6640,70 +6008,6 @@ int runsvmint(int threadInd,
 
                         // Curly brackets already stripped at this point
                         argvariables("&",130)("&",nn).makeString(newmacro);
-                    }
-
-                    else if ( currcommand(0) == "-ac" )
-                    {
-                        // Set classifier SVM type
-
-                        if      ( currcommand(1) == "svc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setClassifyViaSVM(); }
-                        else if ( currcommand(1) == "svr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setClassifyViaSVR(); }
-                        else { STRTHROW("Error: "+currentarg+" is not a valid -ac mode."); }
-                    }
-
-                    else if ( currcommand(0) == "-bv"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setVardelta(); }
-                    else if ( currcommand(0) == "-bz"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setZerodelta(); }
-                    else if ( currcommand(0) == "-bn"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setvarApprox(safeatoi(currcommand(1),argvariables));}
-                    else if ( currcommand(0) == "-bgn"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setvarApproxim(safeatoi(currcommand(1),argvariables));}
-                    else if ( currcommand(0) == "-bgv"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setVarmuBias(); }
-                    else if ( currcommand(0) == "-bgz"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setZeromuBias(); }
-                    else if ( currcommand(0) == "-bgep" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setEPConst(); }
-                    else if ( currcommand(0) == "-bgnc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setNaiveConst(); }
-
-                    else if ( currcommand(0) == "-B" )
-                    {
-                        // Set bias type
-
-                        if      ( currcommand(1) == "f" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setFixedBias(biasdefault); }
-                        else if ( currcommand(1) == "v" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setVarBias(); }
-                        else if ( currcommand(1) == "p" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setPosBias(); }
-                        else if ( currcommand(1) == "n" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setNegBias(); }
-                        else { STRTHROW("Error: "+currentarg+" is not a valid -B mode."); }
-                    }
-
-                    else if ( currcommand(0) == "-R" )
-                    {
-                        // Set empirical risk type
-
-                        if      ( currcommand(1) == "l" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setLinearCost();    getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setusefuzzt(0); }
-                        else if ( currcommand(1) == "q" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setQuadraticCost(); getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setusefuzzt(0); }
-                        else if ( currcommand(1) == "o" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).set1NormCost();     getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setusefuzzt(0); }
-                        else if ( currcommand(1) == "g" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setLinearCost();    getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setusefuzzt(1); }
-                        else if ( currcommand(1) == "G" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setQuadraticCost(); getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setusefuzzt(1); }
-                        else { STRTHROW("Error: "+currentarg+" is not a valid -R mode."); }
-                    }
-
-                    else if ( currcommand(0) == "-mls" )
-                    {
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).settsize(safeatoi(currcommand(1),argvariables));
-                    }
-
-                    else if ( currcommand(0) == "-mlR" )
-                    {
-                        // Set empirical risk type
-
-                        if      ( currcommand(2) == "l" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setregtype(safeatoi(currcommand(1),argvariables),1); }
-                        else if ( currcommand(2) == "q" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setregtype(safeatoi(currcommand(1),argvariables),2); }
-                        else { STRTHROW("Error: "+currentarg+" is not a valid -mlR mode."); }
-                    }
-
-                    else if ( currcommand(0) == "-T" )
-                    {
-                        // Set tube type
-
-                        if      ( currcommand(1) == "f" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setFixedTube();  }
-                        else if ( currcommand(1) == "s" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setShrinkTube(); }
-                        else { STRTHROW("Error: "+currentarg+" is not a valid -T mode."); }
                     }
                 }
 
@@ -6730,29 +6034,30 @@ int runsvmint(int threadInd,
                         currcommand = optimopt(0);
                         optimopt.remove(0);
 
-                             if ( currcommand(0) == "-oo"   ) { doopt = 0;                                                                                                            }
-                        else if ( currcommand(0) == "-oO"   ) { doopt = 1;                                                                                                            }
-                        else if ( currcommand(0) == "-oz"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setzerotol(safeatof(currcommand(1),argvariables));       }
-                        else if ( currcommand(0) == "-ot"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmaxitcnt(safeatoi(currcommand(1),argvariables));      }
-                        else if ( currcommand(0) == "-oy"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmaxtraintime(safeatof(currcommand(1),argvariables));  }
-                        else if ( currcommand(0) == "-oY"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).settraintimeend(safeatof(currcommand(1),argvariables));  }
-                        else if ( currcommand(0) == "-olr"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setlr(safeatof(currcommand(1),argvariables));            }
-                        else if ( currcommand(0) == "-olrb" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setlrb(safeatof(currcommand(1),argvariables));           }
-                        else if ( currcommand(0) == "-olrc" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setlrc(safeatof(currcommand(1),argvariables));           }
-                        else if ( currcommand(0) == "-olrd" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setlrd(safeatof(currcommand(1),argvariables));           }
-                        else if ( currcommand(0) == "-oM"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmemsize(safeatoi(currcommand(1),argvariables));       }
-                        else if ( currcommand(0) == "-ofa"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setoutermethod(safeatoi(currcommand(1),argvariables));   }
-                        else if ( currcommand(0) == "-ofe"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setoutertol(safeatof(currcommand(1),argvariables));      }
-                        else if ( currcommand(0) == "-ofm"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setoutermom(safeatof(currcommand(1),argvariables));      }
-                        else if ( currcommand(0) == "-ofr"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setouterlr(safeatof(currcommand(1),argvariables));       }
-                        else if ( currcommand(0) == "-ofs"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setouterovsc(safeatof(currcommand(1),argvariables));     }
-                        else if ( currcommand(0) == "-oft"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setoutermaxitcnt(safeatoi(currcommand(1),argvariables)); }
-                        else if ( currcommand(0) == "-ofM"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setoutermaxcache(safeatoi(currcommand(1),argvariables)); }
-                        else if ( currcommand(0) == "-ofy"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).fudgeOn();                                               }
-                        else if ( currcommand(0) == "-ofn"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).fudgeOff();                                              }
-                        else if ( currcommand(0) == "-omr"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmlmlr(safeatof(currcommand(1),argvariables));         }
-                        else if ( currcommand(0) == "-ome"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setdiffstop(safeatof(currcommand(1),argvariables));      }
-                        else if ( currcommand(0) == "-oms"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setlsparse(safeatof(currcommand(1),argvariables));       }
+                             if ( currcommand(0) == "-oo"   ) { doopt = 0; }
+                        else if ( currcommand(0) == "-oO"   ) { doopt = 1; }
+
+                        else if ( currcommand(0) == "-oz"   ) { getMLref(svmbase,svmInd).setzerotol(safeatof(currcommand(1),argvariables));       }
+                        else if ( currcommand(0) == "-ot"   ) { getMLref(svmbase,svmInd).setmaxitcnt(safeatoi(currcommand(1),argvariables));      }
+                        else if ( currcommand(0) == "-oy"   ) { getMLref(svmbase,svmInd).setmaxtraintime(safeatof(currcommand(1),argvariables));  }
+                        else if ( currcommand(0) == "-oY"   ) { getMLref(svmbase,svmInd).settraintimeend(safeatof(currcommand(1),argvariables));  }
+                        else if ( currcommand(0) == "-olr"  ) { getMLref(svmbase,svmInd).setlr(safeatof(currcommand(1),argvariables));            }
+                        else if ( currcommand(0) == "-olrb" ) { getMLref(svmbase,svmInd).setlrb(safeatof(currcommand(1),argvariables));           }
+                        else if ( currcommand(0) == "-olrc" ) { getMLref(svmbase,svmInd).setlrc(safeatof(currcommand(1),argvariables));           }
+                        else if ( currcommand(0) == "-olrd" ) { getMLref(svmbase,svmInd).setlrd(safeatof(currcommand(1),argvariables));           }
+                        else if ( currcommand(0) == "-oM"   ) { getMLref(svmbase,svmInd).setmemsize(safeatoi(currcommand(1),argvariables));       }
+                        else if ( currcommand(0) == "-ofa"  ) { getMLref(svmbase,svmInd).setoutermethod(safeatoi(currcommand(1),argvariables));   }
+                        else if ( currcommand(0) == "-ofe"  ) { getMLref(svmbase,svmInd).setoutertol(safeatof(currcommand(1),argvariables));      }
+                        else if ( currcommand(0) == "-ofm"  ) { getMLref(svmbase,svmInd).setoutermom(safeatof(currcommand(1),argvariables));      }
+                        else if ( currcommand(0) == "-ofr"  ) { getMLref(svmbase,svmInd).setouterlr(safeatof(currcommand(1),argvariables));       }
+                        else if ( currcommand(0) == "-ofs"  ) { getMLref(svmbase,svmInd).setouterovsc(safeatof(currcommand(1),argvariables));     }
+                        else if ( currcommand(0) == "-oft"  ) { getMLref(svmbase,svmInd).setoutermaxitcnt(safeatoi(currcommand(1),argvariables)); }
+                        else if ( currcommand(0) == "-ofM"  ) { getMLref(svmbase,svmInd).setoutermaxcache(safeatoi(currcommand(1),argvariables)); }
+                        else if ( currcommand(0) == "-ofy"  ) { getMLref(svmbase,svmInd).fudgeOn();                                               }
+                        else if ( currcommand(0) == "-ofn"  ) { getMLref(svmbase,svmInd).fudgeOff();                                              }
+                        else if ( currcommand(0) == "-omr"  ) { getMLref(svmbase,svmInd).setmlmlr(safeatof(currcommand(1),argvariables));         }
+                        else if ( currcommand(0) == "-ome"  ) { getMLref(svmbase,svmInd).setdiffstop(safeatof(currcommand(1),argvariables));      }
+                        else if ( currcommand(0) == "-oms"  ) { getMLref(svmbase,svmInd).setlsparse(safeatof(currcommand(1),argvariables));       }
 
                         else if ( currcommand(0) == "-oe" )
                         {
@@ -6760,15 +6065,15 @@ int runsvmint(int threadInd,
 
                             if ( currcommand(1) == "A" )
                             {
-                                if ( isSVM(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext)) )
+                                if ( isSVM(getMLrefconst(svmbase,svmInd)) )
                                 {
-                                    etol = ( 0.01*(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).eps()) > 100*(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).zerotol()) ) ? 0.01*(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).eps()) : 100*(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).zerotol());
+                                    etol = ( 0.01*(getMLrefconst(svmbase,svmInd).eps()) > 100*(getMLrefconst(svmbase,svmInd).zerotol()) ) ? 0.01*(getMLrefconst(svmbase,svmInd).eps()) : 100*(getMLrefconst(svmbase,svmInd).zerotol());
                                 }
 
 
                                 else
                                 {
-                                    etol = 100*getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).zerotol();
+                                    etol = 100*getMLrefconst(svmbase,svmInd).zerotol();
                                 }
                             }
 
@@ -6777,8 +6082,8 @@ int runsvmint(int threadInd,
                                 etol = safeatof(currcommand(1),argvariables);
                             }
 
-                            getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setOpttol(etol);
-                            getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setOpttolb(etol);
+                            getMLref(svmbase,svmInd).setOpttol(etol);
+                            getMLref(svmbase,svmInd).setOpttolb(etol);
                         }
 
                         else if ( currcommand(0) == "-oea" )
@@ -6787,15 +6092,15 @@ int runsvmint(int threadInd,
 
                             if ( currcommand(1) == "A" )
                             {
-                                if ( isSVM(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext)) )
+                                if ( isSVM(getMLrefconst(svmbase,svmInd)) )
                                 {
-                                    etol = ( 0.01*(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).eps()) > 100*(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).zerotol()) ) ? 0.01*(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).eps()) : 100*(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).zerotol());
+                                    etol = ( 0.01*(getMLrefconst(svmbase,svmInd).eps()) > 100*(getMLrefconst(svmbase,svmInd).zerotol()) ) ? 0.01*(getMLrefconst(svmbase,svmInd).eps()) : 100*(getMLrefconst(svmbase,svmInd).zerotol());
                                 }
 
 
                                 else
                                 {
-                                    etol = 100*getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).zerotol();
+                                    etol = 100*getMLrefconst(svmbase,svmInd).zerotol();
                                 }
                             }
 
@@ -6804,7 +6109,7 @@ int runsvmint(int threadInd,
                                 etol = safeatof(currcommand(1),argvariables);
                             }
 
-                            getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setOpttol(etol);
+                            getMLref(svmbase,svmInd).setOpttol(etol);
                         }
 
                         else if ( currcommand(0) == "-oeb" )
@@ -6813,15 +6118,15 @@ int runsvmint(int threadInd,
 
                             if ( currcommand(1) == "A" )
                             {
-                                if ( isSVM(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext)) )
+                                if ( isSVM(getMLrefconst(svmbase,svmInd)) )
                                 {
-                                    etol = ( 0.01*(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).eps()) > 100*(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).zerotol()) ) ? 0.01*(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).eps()) : 100*(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).zerotol());
+                                    etol = ( 0.01*(getMLrefconst(svmbase,svmInd).eps()) > 100*(getMLrefconst(svmbase,svmInd).zerotol()) ) ? 0.01*(getMLrefconst(svmbase,svmInd).eps()) : 100*(getMLrefconst(svmbase,svmInd).zerotol());
                                 }
 
 
                                 else
                                 {
-                                    etol = 100*getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).zerotol();
+                                    etol = 100*getMLrefconst(svmbase,svmInd).zerotol();
                                 }
                             }
 
@@ -6830,15 +6135,15 @@ int runsvmint(int threadInd,
                                 etol = safeatof(currcommand(1),argvariables);
                             }
 
-                            getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setOpttolb(etol);
+                            getMLref(svmbase,svmInd).setOpttolb(etol);
                         }
 
                         else if ( currcommand(0) == "-om" )
                         {
-                            if      ( currcommand(1) == "a" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setOptActive(); }
-                            else if ( currcommand(1) == "s" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setOptSMO();    }
-                            else if ( currcommand(1) == "d" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setOptD2C();    }
-                            else if ( currcommand(1) == "g" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setOptGrad();   }
+                            if      ( currcommand(1) == "a" ) { getMLref(svmbase,svmInd).setOptActive(); }
+                            else if ( currcommand(1) == "s" ) { getMLref(svmbase,svmInd).setOptSMO();    }
+                            else if ( currcommand(1) == "d" ) { getMLref(svmbase,svmInd).setOptD2C();    }
+                            else if ( currcommand(1) == "g" ) { getMLref(svmbase,svmInd).setOptGrad();   }
 
                             else
                             {
@@ -6871,23 +6176,25 @@ int runsvmint(int threadInd,
                     currcommand = preloadopt(0);
                     preloadopt.remove(0);
 
-                    if      ( currcommand(0) == "-pr"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).removeTrainingVector(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-pcw" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setCweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-pcs" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).scaleCweight(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-pww" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setepsweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-pws" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).scaleepsweight(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-pS"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).scale(1/abs2(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).alpha())); }
-                    else if ( currcommand(0) == "-ps"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).scale(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-psz" ) { gentype tmpg; getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).sety(safeatoi(currcommand(1),argvariables),safeatowhatever(tmpg,currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-pR"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).reset(); }
-                    else if ( currcommand(0) == "-pRR" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).restart(); }
-                    else if ( currcommand(0) == "-pro" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).removeTrainingVector(0,safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-fic" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).fillCache(); }
-                    else if ( currcommand(0) == "-pdw" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsigmaweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-pds" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).scalesigmaweight(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-prz" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).removeNonSupports(); }
-                    else if ( currcommand(0) == "-prm" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).trimTrainingSet(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-psd" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setd(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
+                    gentype tmpg;
+
+                    if      ( currcommand(0) == "-pr"  ) { getMLref(svmbase,svmInd).removeTrainingVector(safeatoi(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-pcw" ) { getMLref(svmbase,svmInd).setCweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-pcs" ) { getMLref(svmbase,svmInd).scaleCweight(safeatof(currcommand(1),argvariables));                               }
+                    else if ( currcommand(0) == "-pww" ) { getMLref(svmbase,svmInd).setepsweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-pws" ) { getMLref(svmbase,svmInd).scaleepsweight(safeatof(currcommand(1),argvariables));                             }
+                    else if ( currcommand(0) == "-pS"  ) { getMLref(svmbase,svmInd).scale(1/abs2(getMLref(svmbase,svmInd).alpha()));                                   }
+                    else if ( currcommand(0) == "-ps"  ) { getMLref(svmbase,svmInd).scale(safeatof(currcommand(1),argvariables));                                      }
+                    else if ( currcommand(0) == "-psz" ) { getMLref(svmbase,svmInd).sety(safeatoi(currcommand(1),argvariables),safeatowhatever(tmpg,currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-pR"  ) { getMLref(svmbase,svmInd).reset();                                                                           }
+                    else if ( currcommand(0) == "-pRR" ) { getMLref(svmbase,svmInd).restart();                                                                         }
+                    else if ( currcommand(0) == "-pro" ) { getMLref(svmbase,svmInd).removeTrainingVector(0,safeatoi(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-fic" ) { getMLref(svmbase,svmInd).fillCache();                                                                       }
+                    else if ( currcommand(0) == "-pdw" ) { getMLref(svmbase,svmInd).setsigmaweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-pds" ) { getMLref(svmbase,svmInd).scalesigmaweight(safeatof(currcommand(1),argvariables));                           }
+                    else if ( currcommand(0) == "-prz" ) { getMLref(svmbase,svmInd).removeNonSupports();                                                               }
+                    else if ( currcommand(0) == "-prm" ) { getMLref(svmbase,svmInd).trimTrainingSet(safeatoi(currcommand(1),argvariables));                            }
+                    else if ( currcommand(0) == "-psd" ) { getMLref(svmbase,svmInd).setd(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
 
                     else if ( currcommand(0) == "-pk" )
                     {
@@ -6904,7 +6211,7 @@ int runsvmint(int threadInd,
 
                         datfile.close();
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).K2bypass(kernmat);
+                        getMLref(svmbase,svmInd).K2bypass(kernmat);
                     }
                 }
 
@@ -6938,30 +6245,33 @@ int runsvmint(int threadInd,
                     currcommand = loadopt(0);
                     loadopt.remove(0);
 
+                    gentype tmpg;
+
                          if ( currcommand(0) == "-ATa"  ) { adist        = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-ATb"  ) { nadist       = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-ATn"  ) { Nantrig      = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-ATx"  ) { daclass      = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-ATy"  ) { addVectsToML = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-Ad"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).settspaceDim(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-AD"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setorder(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-Ac"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).addclass(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-As"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setanomalyclass(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-Acz"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).addclass(safeatoi(currcommand(1),argvariables),1); }
-                    else if ( currcommand(0) == "-Aca"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).anomalyOn(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-Acd"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).anomalyOff(); }
-                    else if ( currcommand(0) == "-Aby"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setBasisYUU(); }
-                    else if ( currcommand(0) == "-Abu"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setBasisUUU(); }
-                    else if ( currcommand(0) == "-AeU"  ) { gentype tmpg; getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).addToBasisUU(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).NbasisUU(),safeatowhatever(tmpg,currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-AeR"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setBasisUU(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-Ar"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).removeFromBasisUU(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-ABy"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setBasisYVV(); }
-                    else if ( currcommand(0) == "-ABu"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setBasisUVV(); }
-                    else if ( currcommand(0) == "-AEU"  ) { gentype tmpg; getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).addToBasisVV(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).NbasisVV(),safeatowhatever(tmpg,currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-AER"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setBasisVV(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-AR"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).removeFromBasisVV(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-AGl"  ) { safeatowhatever(AGlb,currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-AGu"  ) { safeatowhatever(AGub,currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-AGl"  ) { safeatowhatever(AGlb,currcommand(1),argvariables);    }
+                    else if ( currcommand(0) == "-AGu"  ) { safeatowhatever(AGub,currcommand(1),argvariables);    }
+
+                    else if ( currcommand(0) == "-Ad"   ) { getMLref(svmbase,svmInd).settspaceDim(safeatoi(currcommand(1),argvariables));      }
+                    else if ( currcommand(0) == "-AD"   ) { getMLref(svmbase,svmInd).setorder(safeatoi(currcommand(1),argvariables));          }
+                    else if ( currcommand(0) == "-Ac"   ) { getMLref(svmbase,svmInd).addclass(safeatoi(currcommand(1),argvariables));          }
+                    else if ( currcommand(0) == "-As"   ) { getMLref(svmbase,svmInd).setanomalyclass(safeatoi(currcommand(1),argvariables));   }
+                    else if ( currcommand(0) == "-Acz"  ) { getMLref(svmbase,svmInd).addclass(safeatoi(currcommand(1),argvariables),1);        }
+                    else if ( currcommand(0) == "-Aca"  ) { getMLref(svmbase,svmInd).anomalyOn(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Acd"  ) { getMLref(svmbase,svmInd).anomalyOff();                                             }
+                    else if ( currcommand(0) == "-Aby"  ) { getMLref(svmbase,svmInd).setBasisYUU();                                            }
+                    else if ( currcommand(0) == "-Abu"  ) { getMLref(svmbase,svmInd).setBasisUUU();                                            }
+                    else if ( currcommand(0) == "-AeU"  ) { getMLref(svmbase,svmInd).addToBasisUU(getMLrefconst(svmbase,svmInd).NbasisUU(),safeatowhatever(tmpg,currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-AeR"  ) { getMLref(svmbase,svmInd).setBasisUU(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Ar"   ) { getMLref(svmbase,svmInd).removeFromBasisUU(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-ABy"  ) { getMLref(svmbase,svmInd).setBasisYVV();                                            }
+                    else if ( currcommand(0) == "-ABu"  ) { getMLref(svmbase,svmInd).setBasisUVV();                                            }
+                    else if ( currcommand(0) == "-AEU"  ) { getMLref(svmbase,svmInd).addToBasisVV(getMLrefconst(svmbase,svmInd).NbasisVV(),safeatowhatever(tmpg,currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-AER"  ) { getMLref(svmbase,svmInd).setBasisVV(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-AR"   ) { getMLref(svmbase,svmInd).removeFromBasisVV(safeatoi(currcommand(1),argvariables)); }
 
                     else if ( ( currcommand(0) == "-Ag" ) || ( currcommand(0) == "-AG" ) || ( currcommand(0) == "-Agc" ) || ( currcommand(0) == "-AGc" ) )
                     {
@@ -7046,7 +6356,7 @@ int runsvmint(int threadInd,
 
                         addtemptox(xdata,xtemplate);
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).addTrainingVector(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N(),ydata,xdata,Qweight,Qweight);
+                        getMLref(svmbase,svmInd).addTrainingVector(getMLref(svmbase,svmInd).N(),ydata,xdata,Qweight,Qweight);
                     }
 
                     else if ( currcommand(0) == "-Aq" )
@@ -7059,11 +6369,11 @@ int runsvmint(int threadInd,
                         double nvadd;
 
                         int jj,kk;
-                        int xdim = (getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).indKey())(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).indKey().size()-1)+1;
+                        int xdim = (getMLref(svmbase,svmInd).indKey())(getMLref(svmbase,svmInd).indKey().size()-1)+1;
 
-                        for ( jj = 0 ; jj < getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N() ; ++jj )
+                        for ( jj = 0 ; jj < getMLref(svmbase,svmInd).N() ; ++jj )
                         {
-                            SparseVector<gentype> xj = (getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).x(jj));
+                            SparseVector<gentype> xj = (getMLref(svmbase,svmInd).x(jj));
 
                             for ( kk = 0 ; kk < nbad ; ++kk )
                             {
@@ -7072,7 +6382,7 @@ int runsvmint(int threadInd,
                                 xj("[]",xdim+kk) = nmean+(nvadd*nvar);
                             }
 
-                            getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setx(jj,xj);
+                            getMLref(svmbase,svmInd).setx(jj,xj);
                         }
                     }
 
@@ -7115,7 +6425,7 @@ int runsvmint(int threadInd,
 
                         std::string savefiledummy("");
 
-                        int pointsadded = addtrainingdata(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),xtemplate,trainfile,reverse,ignoreStart,imax,ibase,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,savefiledummy);
+                        int pointsadded = addtrainingdata(getMLref(svmbase,svmInd),xtemplate,trainfile,reverse,ignoreStart,imax,ibase,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,savefiledummy);
 
                         errstream() << "Added " << pointsadded << " training vectors/";
                     }
@@ -7167,8 +6477,8 @@ int runsvmint(int threadInd,
                         Vector<int> anomVect;
                         Vector<int> addVect;
 
-                        loadFileForHillClimb(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),xtemplate,trainfile,reverse,ignoreStart,imax,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,xxx,yyy);
-                        anomaliesRelabelled = anAnomalyCreate(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getSVM(),xxx,zassign,trigVect,anomVect,addVect,Nantrig,adist,nadist,daclass,addVectsToML,0);
+                        loadFileForHillClimb(getMLref(svmbase,svmInd),xtemplate,trainfile,reverse,ignoreStart,imax,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,xxx,yyy);
+                        anomaliesRelabelled = anAnomalyCreate(getMLref(svmbase,svmInd).getSVM(),xxx,zassign,trigVect,anomVect,addVect,Nantrig,adist,nadist,daclass,addVectsToML,0);
 
                         errstream() << "Added " << addVect.size() << " out of " << xxx.size() << " training vectors (" << anomaliesRelabelled << " relabels, " << anomVect.size() << " ignored)/";
                     }
@@ -7185,7 +6495,7 @@ int runsvmint(int threadInd,
                         streamItIn(xstr,x("&",0),0);
                         safeatowhatever(dz("&",0),currcommand(1),argvariables);
 
-                        addtrainingdata(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(svmbase,svmInd),xtemplate,x,dz,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AY" )
@@ -7197,7 +6507,7 @@ int runsvmint(int threadInd,
                         safeatowhatever(dz("&",0),currcommand(1),argvariables);
                         x("&",0) = safeatowhatever(tmpg,currcommand(2),argvariables).cast_vector(1);
 
-                        addtrainingdata(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(svmbase,svmInd),xtemplate,x,dz,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AZ" )
@@ -7215,7 +6525,7 @@ int runsvmint(int threadInd,
                         safeatowhatever(dz("&",0),currcommand(1),argvariables);
                         x("&",0) = safeatowhatever(tmpg,currcommand(2),argvariables).cast_vector(1);
 
-                        addtrainingdata(getMLref(svmThreadOwner,svmbase,threadInd,nInd,svmContext),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(svmbase,nInd),xtemplate,x,dz,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AV" )
@@ -7230,7 +6540,7 @@ int runsvmint(int threadInd,
                         dstr >> dz;
                         streamItIn(xstr,x,0);
 
-                        addtrainingdata(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(svmbase,svmInd),xtemplate,x,dz,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AVv" )
@@ -7253,7 +6563,7 @@ int runsvmint(int threadInd,
                              x("&",ij) = ghgh(ij);
                         }
 
-                        addtrainingdata(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),xtemplate,x,(const Vector<gentype> &) dd,-1,0,0,temp);
+                        addtrainingdata(getMLref(svmbase,svmInd),xtemplate,x,(const Vector<gentype> &) dd,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AVV" )
@@ -7278,7 +6588,7 @@ int runsvmint(int threadInd,
                              x("&",ij) = (const Vector<gentype> &) ghgh(ij);
                         }
 
-                        addtrainingdata(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),xtemplate,x,(const Vector<gentype> &) dd,(const Vector<gentype> &) ss,-1,0,0,temp);
+                        addtrainingdata(getMLref(svmbase,svmInd),xtemplate,x,(const Vector<gentype> &) dd,(const Vector<gentype> &) ss,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AW" )
@@ -7287,23 +6597,23 @@ int runsvmint(int threadInd,
                         Vector<SparseVector<gentype> > x;
                         gentype temp;
 
-                        int pointsadded = loadDataFromMatlab(currcommand(2),currcommand(1),x,dz,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).targType(),getsetExtVar);
+                        int pointsadded = loadDataFromMatlab(currcommand(2),currcommand(1),x,dz,getMLrefconst(svmbase,svmInd).targType(),getsetExtVar);
 
-                        addtrainingdata(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(svmbase,svmInd),xtemplate,x,dz,-1,0,0,temp);
 
                         errstream() << "Added " << pointsadded << " vectors from Matlab/";
                     }
 
                     else if ( currcommand(0) == "-AeA" ) 
                     {
-                        int pointsadded = addbasisdataUU(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),currcommand(1));
+                        int pointsadded = addbasisdataUU(getMLref(svmbase,svmInd),currcommand(1));
 
                         errstream() << "Added " << pointsadded << " U basis vectors/";
                     }
 
                     else if ( currcommand(0) == "-AEA" ) 
                     {
-                        int pointsadded = addbasisdataVV(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),currcommand(1));
+                        int pointsadded = addbasisdataVV(getMLref(svmbase,svmInd),currcommand(1));
 
                         errstream() << "Added " << pointsadded << " V basis vectors/";
                     }
@@ -7343,21 +6653,7 @@ int runsvmint(int threadInd,
                     currcommand = postloadopt(0);
                     postloadopt.remove(0);
 
-                         if ( currcommand(0) == "-Snx"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).normKernelNone(); }
-                    else if ( currcommand(0) == "-Sna"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).normKernelZeroMeanUnitVariance(); }
-                    else if ( currcommand(0) == "-Snb"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).normKernelZeroMedianUnitVariance(); }
-                    else if ( currcommand(0) == "-Snc"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).normKernelUnitRange(); }
-                    else if ( currcommand(0) == "-SNa"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).normKernelZeroMeanUnitVariance(0,1); }
-                    else if ( currcommand(0) == "-SNb"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).normKernelZeroMedianUnitVariance(0,1); }
-                    else if ( currcommand(0) == "-SNc"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).normKernelUnitRange(0,1); }
-                    else if ( currcommand(0) == "-SnA"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).normKernelZeroMeanUnitVariance(1,0); }
-                    else if ( currcommand(0) == "-SnB"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).normKernelZeroMedianUnitVariance(1,0); }
-                    else if ( currcommand(0) == "-SnC"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).normKernelUnitRange(1,0); }
-                    else if ( currcommand(0) == "-SNA"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).normKernelZeroMeanUnitVariance(1,1); }
-                    else if ( currcommand(0) == "-SNB"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).normKernelZeroMedianUnitVariance(1,1); }
-                    else if ( currcommand(0) == "-SNC"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).normKernelUnitRange(1,1); }
-                    else if ( currcommand(0) == "-Sra"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).randomise(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-Stl"  ) { safeatowhatever(xmin,currcommand(1),argvariables); }
+                         if ( currcommand(0) == "-Stl"  ) { safeatowhatever(xmin,currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-Stu"  ) { safeatowhatever(xmax,currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-StN"  ) { Nsamp     = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-Sts"  ) { samSplit  = safeatoi(currcommand(1),argvariables); }
@@ -7365,18 +6661,29 @@ int runsvmint(int threadInd,
                     else if ( currcommand(0) == "-Stt"  ) { samType   = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-Stc"  ) { samScale  = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-Stq"  ) { samSlack  = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-Snt"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setSampleMode(0,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-St"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setSampleMode(1,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Spt"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setSampleMode(2,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Sjt"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setSampleMode(3,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Sjt+" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setSampleMode(4,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Sjt-" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setSampleMode(5,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Svc"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsigma_cut(safeatof(currcommand(1),argvariables)); }
 
-                    else if ( currcommand(0) == "-Sdi"  )
-                    {
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).disable(-safeatoi(currcommand(1),argvariables)-1);
-                    }
+                    else if ( currcommand(0) == "-Snx"  ) { getMLref(svmbase,svmInd).normKernelNone();                                                             }
+                    else if ( currcommand(0) == "-Sna"  ) { getMLref(svmbase,svmInd).normKernelZeroMeanUnitVariance();                                             }
+                    else if ( currcommand(0) == "-Snb"  ) { getMLref(svmbase,svmInd).normKernelZeroMedianUnitVariance();                                           }
+                    else if ( currcommand(0) == "-Snc"  ) { getMLref(svmbase,svmInd).normKernelUnitRange();                                                        }
+                    else if ( currcommand(0) == "-SNa"  ) { getMLref(svmbase,svmInd).normKernelZeroMeanUnitVariance(0,1);                                          }
+                    else if ( currcommand(0) == "-SNb"  ) { getMLref(svmbase,svmInd).normKernelZeroMedianUnitVariance(0,1);                                        }
+                    else if ( currcommand(0) == "-SNc"  ) { getMLref(svmbase,svmInd).normKernelUnitRange(0,1);                                                     }
+                    else if ( currcommand(0) == "-SnA"  ) { getMLref(svmbase,svmInd).normKernelZeroMeanUnitVariance(1,0);                                          }
+                    else if ( currcommand(0) == "-SnB"  ) { getMLref(svmbase,svmInd).normKernelZeroMedianUnitVariance(1,0);                                        }
+                    else if ( currcommand(0) == "-SnC"  ) { getMLref(svmbase,svmInd).normKernelUnitRange(1,0);                                                     }
+                    else if ( currcommand(0) == "-SNA"  ) { getMLref(svmbase,svmInd).normKernelZeroMeanUnitVariance(1,1);                                          }
+                    else if ( currcommand(0) == "-SNB"  ) { getMLref(svmbase,svmInd).normKernelZeroMedianUnitVariance(1,1);                                        }
+                    else if ( currcommand(0) == "-SNC"  ) { getMLref(svmbase,svmInd).normKernelUnitRange(1,1);                                                     }
+                    else if ( currcommand(0) == "-Sra"  ) { getMLref(svmbase,svmInd).randomise(safeatof(currcommand(1),argvariables));                             }
+                    else if ( currcommand(0) == "-Snt"  ) { getMLref(svmbase,svmInd).setSampleMode(0,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-St"   ) { getMLref(svmbase,svmInd).setSampleMode(1,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Spt"  ) { getMLref(svmbase,svmInd).setSampleMode(2,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Sjt"  ) { getMLref(svmbase,svmInd).setSampleMode(3,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Sjt+" ) { getMLref(svmbase,svmInd).setSampleMode(4,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Sjt-" ) { getMLref(svmbase,svmInd).setSampleMode(5,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Svc"  ) { getMLref(svmbase,svmInd).setsigma_cut(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-Sdi"  ) { getMLref(svmbase,svmInd).disable(-safeatoi(currcommand(1),argvariables)-1);                            }
 
                     else if ( currcommand(0) == "-SdI"  )
                     {
@@ -7390,7 +6697,7 @@ int runsvmint(int threadInd,
                         iii *= -1;
                         iii -= -1;
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).disable(iii);
+                        getMLref(svmbase,svmInd).disable(iii);
                     }
 
                     if ( currcommand(0) == "-Sa" )
@@ -7404,32 +6711,32 @@ int runsvmint(int threadInd,
                             STRTHROW("Unable to open file -Sa "+currcommand(1));
                         }
 
-                        Vector<gentype> alpha(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).alpha());
+                        Vector<gentype> alpha(getMLref(svmbase,svmInd).alpha());
 
                         datfile >> alpha;
                         datfile.close();
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setAlpha(alpha);
+                        getMLref(svmbase,svmInd).setAlpha(alpha);
                     }
 
                     else if ( currcommand(0) == "-Sai" )
                     {
-                        Vector<gentype> alpha(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).alpha());
+                        Vector<gentype> alpha(getMLref(svmbase,svmInd).alpha());
 
                         safeatowhatever(alpha("&",safeatoi(currcommand(1),argvariables)),currcommand(2),argvariables);
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setAlpha(alpha);
+                        getMLref(svmbase,svmInd).setAlpha(alpha);
                     }
 
                     else if ( currcommand(0) == "-Saa" )
                     {
                         std::stringstream xstr(currcommand(1));
 
-                        Vector<gentype> alpha(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).alpha());
+                        Vector<gentype> alpha(getMLref(svmbase,svmInd).alpha());
 
                         streamItIn(xstr,alpha,0);
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setAlpha(alpha);
+                        getMLref(svmbase,svmInd).setAlpha(alpha);
                     }
 
                     else if ( currcommand(0) == "-Sb" )
@@ -7446,14 +6753,14 @@ int runsvmint(int threadInd,
                         gentype bias;
                         datfile >> bias;
                         datfile.close();
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setBias(bias);
+                        getMLref(svmbase,svmInd).setBias(bias);
                     }
 
                     else if ( currcommand(0) == "-Sbb" )
                     {
                         gentype tmpg;
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setBias(safeatowhatever(tmpg,currcommand(1),argvariables));
+                        getMLref(svmbase,svmInd).setBias(safeatowhatever(tmpg,currcommand(1),argvariables));
                     }
 
                     else if ( currcommand(0) == "-SA" )
@@ -7467,37 +6774,37 @@ int runsvmint(int threadInd,
                             STRTHROW("Unable to open file -SA "+currcommand(1));
                         }
 
-                        Matrix<double> lambda(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).lambdaKB());
+                        Matrix<double> lambda(getMLref(svmbase,svmInd).lambdaKB());
 
                         datfile >> lambda;
                         datfile.close();
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setlambdaKB(lambda);
+                        getMLref(svmbase,svmInd).setlambdaKB(lambda);
                     }
 
                     else if ( currcommand(0) == "-SAi" )
                     {
-                        Matrix<double> lambda(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).lambdaKB());
+                        Matrix<double> lambda(getMLref(svmbase,svmInd).lambdaKB());
 
                         safeatowhatever(lambda("&",safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)),currcommand(3),argvariables);
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setlambdaKB(lambda);
+                        getMLref(svmbase,svmInd).setlambdaKB(lambda);
                     }
 
                     else if ( currcommand(0) == "-SAA" )
                     {
                         std::stringstream xstr(currcommand(1));
 
-                        Matrix<double> lambda(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).lambdaKB());
+                        Matrix<double> lambda(getMLref(svmbase,svmInd).lambdaKB());
 
                         streamItIn(xstr,lambda,0);
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setlambdaKB(lambda);
+                        getMLref(svmbase,svmInd).setlambdaKB(lambda);
                     }
 
                     else if ( currcommand(0) == "-Sx"  )
                     {
-                        ML_Base &model = getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        ML_Base &model = getMLref(svmbase,svmInd);
 
                         gentype f;
 
@@ -7539,101 +6846,101 @@ int runsvmint(int threadInd,
                     currcommand = learningopt(0);
                     learningopt.remove(0);
 
-                         if ( currcommand(0) == "-c"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setC(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-dc"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setD(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-ec"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setE(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-fc"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setF(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-Gc"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setG(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-dcs"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsigmaD(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-ecs"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsigmaE(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-fcs"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsigmaF(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-Gcs"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsigmaG(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-trf"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).settunev(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-trk"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setpegk(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-tmv"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setminv(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-rfs"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setReOnly(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-dia"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setinAdam(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-dog"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setoutGrad(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-nN"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setNRff(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-mtl"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setNRffRep(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-th"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).settheta(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-thn"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsimnorm(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-c+"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setCclass(+1,safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-c-"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setCclass(-1,safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-c="   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setCclass(2,safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-cd"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setCclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-cs"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setC(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).C()*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-c+s"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setCclass(+1,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).Cclass(+1)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-c-s"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setCclass(-1,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).Cclass(-1)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-c=s"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setCclass(2,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).Cclass(2)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-cds"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setCclass(safeatoi(currcommand(1),argvariables),getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).Cclass(safeatoi(currcommand(1),argvariables))*safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-j"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setCclass(+1,safeatof(currcommand(1),argvariables)); getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setCclass(-1,1); }
-                    else if ( currcommand(0) == "-jc"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setCclass(+1,safeatof(currcommand(1),argvariables)); getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setCclass(-1,1); }
-                    else if ( currcommand(0) == "-dd"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setRejectThreshold(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-w"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).seteps(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-w+"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setepsclass(+1,safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-w-"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setepsclass(-1,safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-w="   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setepsclass(2,safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-wd"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setepsclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-ws"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).seteps(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).eps()*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-w+s"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setepsclass(+1,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).epsclass(+1)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-w-s"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setepsclass(-1,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).epsclass(-1)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-w=s"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setepsclass(2,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).epsclass(2)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-wds"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setepsclass(safeatoi(currcommand(1),argvariables),getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).Cclass(safeatoi(currcommand(1),argvariables))*safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-jw"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setepsclass(+1,safeatof(currcommand(1),argvariables)); getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setepsclass(-1,1); }
-                    else if ( currcommand(0) == "-cw"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setCweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-ww"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setepsweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-mvb"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setbetarank(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-ds"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsigma(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).sigma()*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-dw"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsigmaweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-mlc"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setregC(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-Mn"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setNoMonotonicConstraints(); }
-                    else if ( currcommand(0) == "-Mi"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setForcedMonotonicIncreasing(); }
-                    else if ( currcommand(0) == "-Md"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setForcedMonotonicDecreasing(); }
-                    else if ( currcommand(0) == "-nm"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setm(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-Tl"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setnu(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-Tq"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setnuQuad(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-Nl"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setLinBiasForce(-2,safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-Nq"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setQuadBiasForce(-2,safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-Nld"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setLinBiasForce(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-Nqd"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setQuadBiasForce(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-mvi"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmaxitermvrank(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-mvlr" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setlrmvrank(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-mvzt" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setztmvrank(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-Fi"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmaxiterfuzzt(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-Flr"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setlrfuzzt(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-Fzt"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setztfuzzt(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-Fc"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setcostfnfuzzt(currcommand(1)); }
-                    else if ( currcommand(0) == "-blx"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setoutfn(currcommand(1)); }
-                    else if ( currcommand(0) == "-bly"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmexcall(currcommand(1)); }
-                    else if ( currcommand(0) == "-blz"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmexcallid(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-bls"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsyscall(currcommand(1)); }
-                    else if ( currcommand(0) == "-bfx"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setxfilename(currcommand(1)); }
-                    else if ( currcommand(0) == "-bfy"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setyfilename(currcommand(1)); }
-                    else if ( currcommand(0) == "-bfxy" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setxyfilename(currcommand(1)); }
-                    else if ( currcommand(0) == "-bfyx" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setyxfilename(currcommand(1)); }
-                    else if ( currcommand(0) == "-bfr"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setrfilename(currcommand(1)); }
-                    else if ( currcommand(0) == "-k"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setk(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-K"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setktp(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-d"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsigma(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-ccs"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsigma(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-iz"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setzref(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-ie"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setehimethod(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-is"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setscaltype (safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-ia"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setscalalpha(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-in"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setNsamp    (safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-il"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setsampSlack(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-mu"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setmpri(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-mugt" ) { gentype mudef(currcommand(1)); getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setprival(mudef); }
-                    else if ( currcommand(0) == "-muml" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setpriml(&(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext))); }
+                         if ( currcommand(0) == "-c"    ) { getMLref(svmbase,svmInd).setC(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-dc"   ) { getMLref(svmbase,svmInd).setD(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-ec"   ) { getMLref(svmbase,svmInd).setE(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-fc"   ) { getMLref(svmbase,svmInd).setF(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-Gc"   ) { getMLref(svmbase,svmInd).setG(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-dcs"  ) { getMLref(svmbase,svmInd).setsigmaD(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-ecs"  ) { getMLref(svmbase,svmInd).setsigmaE(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-fcs"  ) { getMLref(svmbase,svmInd).setsigmaF(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-Gcs"  ) { getMLref(svmbase,svmInd).setsigmaG(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-trf"  ) { getMLref(svmbase,svmInd).settunev(safeatoi(currcommand(1),argvariables));                      }
+                    else if ( currcommand(0) == "-trk"  ) { getMLref(svmbase,svmInd).setpegk(safeatoi(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-tmv"  ) { getMLref(svmbase,svmInd).setminv(safeatof(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-rfs"  ) { getMLref(svmbase,svmInd).setReOnly(safeatoi(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-dia"  ) { getMLref(svmbase,svmInd).setinAdam(safeatoi(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-dog"  ) { getMLref(svmbase,svmInd).setoutGrad(safeatoi(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-nN"   ) { getMLref(svmbase,svmInd).setNRff(safeatoi(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-mtl"  ) { getMLref(svmbase,svmInd).setNRffRep(safeatoi(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-th"   ) { getMLref(svmbase,svmInd).settheta(safeatof(currcommand(1),argvariables));                      }
+                    else if ( currcommand(0) == "-thn"  ) { getMLref(svmbase,svmInd).setsimnorm(safeatoi(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-c+"   ) { getMLref(svmbase,svmInd).setCclass(+1,safeatof(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-c-"   ) { getMLref(svmbase,svmInd).setCclass(-1,safeatof(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-c="   ) { getMLref(svmbase,svmInd).setCclass(2,safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-cd"   ) { getMLref(svmbase,svmInd).setCclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-cs"   ) { getMLref(svmbase,svmInd).setC(getMLrefconst(svmbase,svmInd).C()*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-c+s"  ) { getMLref(svmbase,svmInd).setCclass(+1,getMLrefconst(svmbase,svmInd).Cclass(+1)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-c-s"  ) { getMLref(svmbase,svmInd).setCclass(-1,getMLrefconst(svmbase,svmInd).Cclass(-1)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-c=s"  ) { getMLref(svmbase,svmInd).setCclass(2,getMLrefconst(svmbase,svmInd).Cclass(2)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-cds"  ) { getMLref(svmbase,svmInd).setCclass(safeatoi(currcommand(1),argvariables),getMLrefconst(svmbase,svmInd).Cclass(safeatoi(currcommand(1),argvariables))*safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-j"    ) { getMLref(svmbase,svmInd).setCclass(+1,safeatof(currcommand(1),argvariables)); getMLref(svmbase,svmInd).setCclass(-1,1); }
+                    else if ( currcommand(0) == "-jc"   ) { getMLref(svmbase,svmInd).setCclass(+1,safeatof(currcommand(1),argvariables)); getMLref(svmbase,svmInd).setCclass(-1,1); }
+                    else if ( currcommand(0) == "-dd"   ) { getMLref(svmbase,svmInd).setRejectThreshold(safeatof(currcommand(1),argvariables));            }
+                    else if ( currcommand(0) == "-w"    ) { getMLref(svmbase,svmInd).seteps(safeatof(currcommand(1),argvariables));                        }
+                    else if ( currcommand(0) == "-w+"   ) { getMLref(svmbase,svmInd).setepsclass(+1,safeatof(currcommand(1),argvariables));                }
+                    else if ( currcommand(0) == "-w-"   ) { getMLref(svmbase,svmInd).setepsclass(-1,safeatof(currcommand(1),argvariables));                }
+                    else if ( currcommand(0) == "-w="   ) { getMLref(svmbase,svmInd).setepsclass(2,safeatof(currcommand(1),argvariables));                 }
+                    else if ( currcommand(0) == "-wd"   ) { getMLref(svmbase,svmInd).setepsclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-ws"   ) { getMLref(svmbase,svmInd).seteps(getMLrefconst(svmbase,svmInd).eps()*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-w+s"  ) { getMLref(svmbase,svmInd).setepsclass(+1,getMLrefconst(svmbase,svmInd).epsclass(+1)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-w-s"  ) { getMLref(svmbase,svmInd).setepsclass(-1,getMLrefconst(svmbase,svmInd).epsclass(-1)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-w=s"  ) { getMLref(svmbase,svmInd).setepsclass(2,getMLrefconst(svmbase,svmInd).epsclass(2)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-wds"  ) { getMLref(svmbase,svmInd).setepsclass(safeatoi(currcommand(1),argvariables),getMLrefconst(svmbase,svmInd).Cclass(safeatoi(currcommand(1),argvariables))*safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-jw"   ) { getMLref(svmbase,svmInd).setepsclass(+1,safeatof(currcommand(1),argvariables)); getMLref(svmbase,svmInd).setepsclass(-1,1); }
+                    else if ( currcommand(0) == "-cw"   ) { getMLref(svmbase,svmInd).setCweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-ww"   ) { getMLref(svmbase,svmInd).setepsweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-mvb"  ) { getMLref(svmbase,svmInd).setbetarank(safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-ds"   ) { getMLref(svmbase,svmInd).setsigma(getMLrefconst(svmbase,svmInd).sigma()*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-dw"   ) { getMLref(svmbase,svmInd).setsigmaweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-mlc"  ) { getMLref(svmbase,svmInd).setregC(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Mn"   ) { getMLref(svmbase,svmInd).setNoMonotonicConstraints();                                          }
+                    else if ( currcommand(0) == "-Mi"   ) { getMLref(svmbase,svmInd).setForcedMonotonicIncreasing();                                       }
+                    else if ( currcommand(0) == "-Md"   ) { getMLref(svmbase,svmInd).setForcedMonotonicDecreasing();                                       }
+                    else if ( currcommand(0) == "-nm"   ) { getMLref(svmbase,svmInd).setm(safeatoi(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-Tl"   ) { getMLref(svmbase,svmInd).setnu(safeatof(currcommand(1),argvariables));                         }
+                    else if ( currcommand(0) == "-Tq"   ) { getMLref(svmbase,svmInd).setnuQuad(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-Nl"   ) { getMLref(svmbase,svmInd).setLinBiasForceclass(-2,safeatof(currcommand(1),argvariables));       }
+                    else if ( currcommand(0) == "-Nq"   ) { getMLref(svmbase,svmInd).setQuadBiasForceclass(-2,safeatof(currcommand(1),argvariables));      }
+                    else if ( currcommand(0) == "-Nld"  ) { getMLref(svmbase,svmInd).setLinBiasForceclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Nqd"  ) { getMLref(svmbase,svmInd).setQuadBiasForceclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-mvi"  ) { getMLref(svmbase,svmInd).setmaxitermvrank(safeatoi(currcommand(1),argvariables));              }
+                    else if ( currcommand(0) == "-mvlr" ) { getMLref(svmbase,svmInd).setlrmvrank(safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-mvzt" ) { getMLref(svmbase,svmInd).setztmvrank(safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-Fi"   ) { getMLref(svmbase,svmInd).setmaxiterfuzzt(safeatoi(currcommand(1),argvariables));               }
+                    else if ( currcommand(0) == "-Flr"  ) { getMLref(svmbase,svmInd).setlrfuzzt(safeatof(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-Fzt"  ) { getMLref(svmbase,svmInd).setztfuzzt(safeatof(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-Fc"   ) { getMLref(svmbase,svmInd).setcostfnfuzzt(currcommand(1));                                       }
+                    else if ( currcommand(0) == "-blx"  ) { getMLref(svmbase,svmInd).setoutfn(currcommand(1));                                             }
+                    else if ( currcommand(0) == "-bly"  ) { getMLref(svmbase,svmInd).setmexcall(currcommand(1));                                           }
+                    else if ( currcommand(0) == "-blz"  ) { getMLref(svmbase,svmInd).setmexcallid(safeatoi(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-bls"  ) { getMLref(svmbase,svmInd).setsyscall(currcommand(1));                                           }
+                    else if ( currcommand(0) == "-bfx"  ) { getMLref(svmbase,svmInd).setxfilename(currcommand(1));                                         }
+                    else if ( currcommand(0) == "-bfy"  ) { getMLref(svmbase,svmInd).setyfilename(currcommand(1));                                         }
+                    else if ( currcommand(0) == "-bfxy" ) { getMLref(svmbase,svmInd).setxyfilename(currcommand(1));                                        }
+                    else if ( currcommand(0) == "-bfyx" ) { getMLref(svmbase,svmInd).setyxfilename(currcommand(1));                                        }
+                    else if ( currcommand(0) == "-bfr"  ) { getMLref(svmbase,svmInd).setrfilename(currcommand(1));                                         }
+                    else if ( currcommand(0) == "-k"    ) { getMLref(svmbase,svmInd).setk(safeatoi(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-K"    ) { getMLref(svmbase,svmInd).setktp(safeatoi(currcommand(1),argvariables));                        }
+                    else if ( currcommand(0) == "-d"    ) { getMLref(svmbase,svmInd).setsigma(safeatof(currcommand(1),argvariables));                      }
+                    else if ( currcommand(0) == "-ccs"  ) { getMLref(svmbase,svmInd).setsigma(safeatof(currcommand(1),argvariables));                      }
+                    else if ( currcommand(0) == "-iz"   ) { getMLref(svmbase,svmInd).setzref(safeatof(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-ie"   ) { getMLref(svmbase,svmInd).setehimethod(safeatoi(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-is"   ) { getMLref(svmbase,svmInd).setscaltype (safeatoi(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-ia"   ) { getMLref(svmbase,svmInd).setscalalpha(safeatof(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-in"   ) { getMLref(svmbase,svmInd).setNsamp    (safeatoi(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-il"   ) { getMLref(svmbase,svmInd).setsampSlack(safeatof(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-mu"   ) { getMLref(svmbase,svmInd).setprim(safeatoi(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-mugt" ) { gentype mudef(currcommand(1)); getMLref(svmbase,svmInd).setprival(mudef);                      }
+                    else if ( currcommand(0) == "-muml" ) { getMLref(svmbase,svmInd).setpriml(&(getMLref(svmbase,safeatoi(currcommand(1),argvariables)))); }
 
                     else if ( currcommand(0) == "-Bf"   )
                     {
                         safeatowhatever(biasdefault,currcommand(1),argvariables);
 
-                        if ( getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).isFixedBias() )
+                        if ( getMLrefconst(svmbase,svmInd).isFixedBias() )
                         {
-                            getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setFixedBias(biasdefault);
+                            getMLref(svmbase,svmInd).setFixedBias(biasdefault);
                         }
                     }
 
@@ -7641,12 +6948,12 @@ int runsvmint(int threadInd,
                     {
                         if ( currcommand(1) == "r" )
                         {
-                            getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setKreal();
+                            getMLref(svmbase,svmInd).setKreal();
                         }
 
                         else if ( currcommand(1) == "m" )
                         {
-                            getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).setKunreal();
+                            getMLref(svmbase,svmInd).setKunreal();
                         }
 
                         else
@@ -7693,10 +7000,10 @@ int runsvmint(int threadInd,
 
                         std::string currcommandis = "-" + ((currcommand(0)).substr(2));
 
-                        ML_Base &kernML = getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        ML_Base &kernML = getMLref(svmbase,svmInd);
                         MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,ekernnum,efirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,ekernnum,efirstcall,svmbase,svmInd);
 
                         efirstcall = 0;
                     }
@@ -7707,10 +7014,10 @@ int runsvmint(int threadInd,
 
                         std::string currcommandis = "-" + ((currcommand(0)).substr(2));
 
-                        ML_Base &kernML = getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        ML_Base &kernML = getMLref(svmbase,svmInd);
                         MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,rkernnum,rfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,rkernnum,rfirstcall,svmbase,svmInd);
 
                         rfirstcall = 0;
                     }
@@ -7721,10 +7028,10 @@ int runsvmint(int threadInd,
 
                         std::string currcommandis = currcommand(0);
 
-                        ML_Base &kernML = getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        ML_Base &kernML = getMLref(svmbase,svmInd);
                         MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,kernnum,firstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,kernnum,firstcall,svmbase,svmInd);
 
                         firstcall = 0;
                     }
@@ -7754,35 +7061,36 @@ int runsvmint(int threadInd,
                     currcommand = tuningopt(0);
                     tuningopt.remove(0);
 
-                    if      ( currcommand(0) == "-cA"      ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCNKmean();                                                                                 }
-                    else if ( currcommand(0) == "-bal"     ) { balc(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext));                                                                                            }
-                    else if ( currcommand(0) == "-cB"      ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCNKmedian();                                                                               }
-                    else if ( currcommand(0) == "-cAN"     ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCKmean();                                                                                  }
-                    else if ( currcommand(0) == "-cBN"     ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCKmedian();                                                                                }
-                    else if ( currcommand(0) == "-cX"      ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetCscaled(safeatof(currcommand(1),argvariables));                                            }
-                    else if ( currcommand(0) == "-cua"     ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetOff();                                                                                     }
-                    else if ( currcommand(0) == "-tkL"     ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,0,nullptr); }
-                    else if ( currcommand(0) == "-tkloo"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,0,nullptr); }
-                    else if ( currcommand(0) == "-tkrec"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,0,nullptr); }
-                    else if ( currcommand(0) == "-tcL"     ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,1,nullptr); }
-                    else if ( currcommand(0) == "-tcloo"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,1,nullptr); }
-                    else if ( currcommand(0) == "-tcrec"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,1,nullptr); }
-                    else if ( currcommand(0) == "-teL"     ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,2,nullptr); }
-                    else if ( currcommand(0) == "-teloo"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,2,nullptr); }
-                    else if ( currcommand(0) == "-terec"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,2,nullptr); }
-                    else if ( currcommand(0) == "-tceL"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,3,nullptr); }
-                    else if ( currcommand(0) == "-tceloo"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,3,nullptr); }
-                    else if ( currcommand(0) == "-tcerec"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,3,nullptr); }
-                    else if ( currcommand(0) == "-tkcL"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,1,nullptr); }
-                    else if ( currcommand(0) == "-tkcloo"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,1,nullptr); }
-                    else if ( currcommand(0) == "-tkcrec"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,1,nullptr); }
-                    else if ( currcommand(0) == "-tkeL"    ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,2,nullptr); }
-                    else if ( currcommand(0) == "-tkeloo"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,2,nullptr); }
-                    else if ( currcommand(0) == "-tkerec"  ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,2,nullptr); }
-                    else if ( currcommand(0) == "-tkceL"   ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,3,nullptr); }
-                    else if ( currcommand(0) == "-tkceloo" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,3,nullptr); }
-                    else if ( currcommand(0) == "-tkcerec" ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,3,nullptr); }
-                    else if ( currcommand(0) == "-NlA"     ) { getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).autosetLinBiasForce(safeatof(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                         if ( currcommand(0) == "-bal"     ) { balc(getMLref(svmbase,svmInd));                                                                                            }
+
+                    else if ( currcommand(0) == "-NlA"     ) { getMLref(svmbase,svmInd).autosetLinBiasForce(safeatof(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-cA"      ) { getMLref(svmbase,svmInd).autosetCNKmean();                                                        }
+                    else if ( currcommand(0) == "-cB"      ) { getMLref(svmbase,svmInd).autosetCNKmedian();                                                      }
+                    else if ( currcommand(0) == "-cAN"     ) { getMLref(svmbase,svmInd).autosetCKmean();                                                         }
+                    else if ( currcommand(0) == "-cBN"     ) { getMLref(svmbase,svmInd).autosetCKmedian();                                                       }
+                    else if ( currcommand(0) == "-cX"      ) { getMLref(svmbase,svmInd).autosetCscaled(safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-cua"     ) { getMLref(svmbase,svmInd).autosetOff();                                                            }
+                    else if ( currcommand(0) == "-tkL"     ) { getMLref(svmbase,svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,0,nullptr); }
+                    else if ( currcommand(0) == "-tkloo"   ) { getMLref(svmbase,svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,0,nullptr); }
+                    else if ( currcommand(0) == "-tkrec"   ) { getMLref(svmbase,svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,0,nullptr); }
+                    else if ( currcommand(0) == "-tcL"     ) { getMLref(svmbase,svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,1,nullptr); }
+                    else if ( currcommand(0) == "-tcloo"   ) { getMLref(svmbase,svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,1,nullptr); }
+                    else if ( currcommand(0) == "-tcrec"   ) { getMLref(svmbase,svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,1,nullptr); }
+                    else if ( currcommand(0) == "-teL"     ) { getMLref(svmbase,svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,2,nullptr); }
+                    else if ( currcommand(0) == "-teloo"   ) { getMLref(svmbase,svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,2,nullptr); }
+                    else if ( currcommand(0) == "-terec"   ) { getMLref(svmbase,svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,2,nullptr); }
+                    else if ( currcommand(0) == "-tceL"    ) { getMLref(svmbase,svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,3,nullptr); }
+                    else if ( currcommand(0) == "-tceloo"  ) { getMLref(svmbase,svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,3,nullptr); }
+                    else if ( currcommand(0) == "-tcerec"  ) { getMLref(svmbase,svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,3,nullptr); }
+                    else if ( currcommand(0) == "-tkcL"    ) { getMLref(svmbase,svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,1,nullptr); }
+                    else if ( currcommand(0) == "-tkcloo"  ) { getMLref(svmbase,svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,1,nullptr); }
+                    else if ( currcommand(0) == "-tkcrec"  ) { getMLref(svmbase,svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,1,nullptr); }
+                    else if ( currcommand(0) == "-tkeL"    ) { getMLref(svmbase,svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,2,nullptr); }
+                    else if ( currcommand(0) == "-tkeloo"  ) { getMLref(svmbase,svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,2,nullptr); }
+                    else if ( currcommand(0) == "-tkerec"  ) { getMLref(svmbase,svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,2,nullptr); }
+                    else if ( currcommand(0) == "-tkceL"   ) { getMLref(svmbase,svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,3,nullptr); }
+                    else if ( currcommand(0) == "-tkceloo" ) { getMLref(svmbase,svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,3,nullptr); }
+                    else if ( currcommand(0) == "-tkcerec" ) { getMLref(svmbase,svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,3,nullptr); }
                 }
 
                 time_used endtime = TIMECALL;
@@ -7994,7 +7302,7 @@ int runsvmint(int threadInd,
                         ML_Base &kernML = (*xbopts).defrandDirtemplateFnGP;
                         MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gPkernnum,gPfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gPkernnum,gPfirstcall,svmbase,svmInd);
 
                         (*xnopts).defrandDirtemplateFnGP.getKernel_unsafe() = theKern;
                         (*xgopts).defrandDirtemplateFnGP.getKernel_unsafe() = theKern;
@@ -8011,7 +7319,7 @@ int runsvmint(int threadInd,
 
                         ML_Base dummyML;
 
-                        processKernel(dummyML,(*xbopts).defrandDirtemplateFnRKHS.kern("&"),currcommandis,currcommand,2,argvariables,gphkernnum,gphfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        processKernel(dummyML,(*xbopts).defrandDirtemplateFnRKHS.kern("&"),currcommandis,currcommand,2,argvariables,gphkernnum,gphfirstcall,svmbase,svmInd);
 
                         (*xnopts).defrandDirtemplateFnRKHS.kern("&") = (*xbopts).defrandDirtemplateFnRKHS.kern();
                         (*xgopts).defrandDirtemplateFnRKHS.kern("&") = (*xbopts).defrandDirtemplateFnRKHS.kern();
@@ -8090,7 +7398,7 @@ int runsvmint(int threadInd,
                     else if ( currcommand(0) == "-gmt"      ) { (*xbopts).modeltype     = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmrff"    ) { (*xbopts).modelrff      = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmq"      ) { (*xbopts).oracleMode    = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmw"      ) { ((*xbopts).extmuapprox).resize(1)   = &(getMLref(svmThreadOwner,svmbase,threadInd,( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) ),svmContext)); }
+                    else if ( currcommand(0) == "-gmw"      ) { ((*xbopts).extmuapprox).resize(1)   = &(getMLref(svmbase,( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) ))); }
                     else if ( currcommand(0) == "-gmo"      ) { (*xbopts).ismoo         = 1; }
                     else if ( currcommand(0) == "-gms"      ) { (*xbopts).ismoo         = 0; }
                     else if ( currcommand(0) == "-gmr"      ) { (*xbopts).makenoise     = 1; }
@@ -8110,7 +7418,7 @@ int runsvmint(int threadInd,
                     else if ( currcommand(0) == "-gmx"      ) { (*xbopts).tranmeth      = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmxa"     ) { (*xbopts).alpha0        = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmxb"     ) { (*xbopts).beta0         = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmy"      ) { (*xbopts).kernapprox    = &(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext)); }
+                    else if ( currcommand(0) == "-gmy"      ) { (*xbopts).kernapprox    = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables))); }
                     else if ( currcommand(0) == "-gmya"     ) { (*xbopts).kxfnum        = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmyb"     ) { (*xbopts).kxfnorm       = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmsc"     ) { (*xbopts).usemodelaugx  = safeatoi(currcommand(1),argvariables); }
@@ -8121,7 +7429,8 @@ int runsvmint(int threadInd,
                     else if ( currcommand(0) == "-gmsg"     ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_modelaugx_setkernelg(temp); }
                     else if ( currcommand(0) == "-gmsgg"    ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_modelaugx_setkernelgg(xscale); }
                     else if ( currcommand(0) == "-gmsmd"    ) { (*xbopts).tuneaugxmod   = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmgtc"    ) { (*xbopts).numcgt  = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmgtc"    ) { (*xbopts).numcgt    = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmgtcv"   ) { (*xbopts).cgtmethod = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmgtd"    ) { (*xbopts).default_modelcgt_setsigma(safeatof(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-gmgtg"    ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_modelcgt_setkernelg(temp); }
                     else if ( currcommand(0) == "-gmgtgg"   ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_modelcgt_setkernelgg(xscale); }
@@ -8130,15 +7439,15 @@ int runsvmint(int threadInd,
                     else if ( currcommand(0) == "-gmLF"     ) { (*xbopts).modeloutformat= safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmLn"     ) { (*xbopts).modelname     = currcommand(1); }
                     else if ( currcommand(0) == "-gmhplb"   ) { (*xbopts).modelbaseline = currcommand(1); }
-                    else if ( currcommand(0) == "-gmmu"     ) { ((*xbopts).altmuapprox).setmpri(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmmu"     ) { ((*xbopts).altmuapprox).setprim(safeatoi(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-gmmugt"   ) { gentype mudef(currcommand(1)); ((*xbopts).altmuapprox).setprival(mudef); }
-                    else if ( currcommand(0) == "-gmmuml"   ) { ((*xbopts).altmuapprox).setpriml(&(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext))); }
-                    else if ( currcommand(0) == "-gmsmu"    ) { ((*xbopts).altfxapprox).setmpri(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmmuml"   ) { ((*xbopts).altmuapprox).setpriml(&(getMLref(svmbase,safeatoi(currcommand(1),argvariables)))); }
+                    else if ( currcommand(0) == "-gmsmu"    ) { ((*xbopts).altfxapprox).setprim(safeatoi(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-gmsmugt"  ) { gentype mudef(currcommand(1)); ((*xbopts).altfxapprox).setprival(mudef); }
-                    else if ( currcommand(0) == "-gmsmuml"  ) { ((*xbopts).altfxapprox).setpriml(&(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext))); }
-                    else if ( currcommand(0) == "-gmgtmu"   ) { ((*xbopts).altcgtapprox).setmpri(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmsmuml"  ) { ((*xbopts).altfxapprox).setpriml(&(getMLref(svmbase,safeatoi(currcommand(1),argvariables)))); }
+                    else if ( currcommand(0) == "-gmgtmu"   ) { ((*xbopts).altcgtapprox).setprim(safeatoi(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-gmgtmugt" ) { gentype mudef(currcommand(1)); ((*xbopts).altcgtapprox).setprival(mudef); }
-                    else if ( currcommand(0) == "-gmgtmuml" ) { ((*xbopts).altcgtapprox).setpriml(&(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext))); }
+                    else if ( currcommand(0) == "-gmgtmuml" ) { ((*xbopts).altcgtapprox).setpriml(&(getMLref(svmbase,safeatoi(currcommand(1),argvariables)))); }
 
                     else if ( currcommand(0) == "-gmsw" )
                     {
@@ -8150,7 +7459,7 @@ int runsvmint(int threadInd,
 
                         for ( ifr = 0 ; ifr < fxapproxInd.size() ; ++ifr )
                         {
-                            (*xbopts).extfxapprox = &(getMLref(svmThreadOwner,svmbase,threadInd,fxapproxInd(ifr),svmContext));
+                            (*xbopts).extfxapprox = &(getMLref(svmbase,fxapproxInd(ifr)));
                         }
                     }
 
@@ -8164,7 +7473,7 @@ int runsvmint(int threadInd,
                             ML_Base &kernML = (*xbopts).altmuapprox;
                             MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gekkernnum,gekfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                            processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gekkernnum,gekfirstcall,svmbase,svmInd);
 
                             gekfirstcall = 0;
                         }
@@ -8173,7 +7482,7 @@ int runsvmint(int threadInd,
                             ML_Base &kernML = (*xbopts).altmuapprox_rff;
                             MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gekkernnum_rff,gekfirstcall_rff,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                            processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gekkernnum_rff,gekfirstcall_rff,svmbase,svmInd);
 
                             gekfirstcall_rff = 0;
                         }
@@ -8189,7 +7498,7 @@ int runsvmint(int threadInd,
                             ML_Base &kernML = (*xbopts).altmuapprox;
                             MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,grkkernnum,grkfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                            processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,grkkernnum,grkfirstcall,svmbase,svmInd);
 
                             grkfirstcall = 0;
                         }
@@ -8198,7 +7507,7 @@ int runsvmint(int threadInd,
                             ML_Base &kernML = (*xbopts).altmuapprox_rff;
                             MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,grkkernnum_rff,grkfirstcall_rff,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                            processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,grkkernnum_rff,grkfirstcall_rff,svmbase,svmInd);
 
                             grkfirstcall_rff = 0;
                         }
@@ -8212,7 +7521,7 @@ int runsvmint(int threadInd,
                             ML_Base &kernML = (*xbopts).altmuapprox;
                             MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gkkernnum,gkfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                            processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gkkernnum,gkfirstcall,svmbase,svmInd);
 
                             gkfirstcall = 0;
                         }
@@ -8221,7 +7530,7 @@ int runsvmint(int threadInd,
                             ML_Base &kernML = (*xbopts).altmuapprox_rff;
                             MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gkkernnum_rff,gkfirstcall_rff,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                            processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gkkernnum_rff,gkfirstcall_rff,svmbase,svmInd);
 
                             gkfirstcall_rff = 0;
                         }
@@ -8236,7 +7545,7 @@ int runsvmint(int threadInd,
                         ML_Base &kernML = (*xbopts).altfxapprox;
                         MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gsekkernnum,gsekfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gsekkernnum,gsekfirstcall,svmbase,svmInd);
 
                         gsekfirstcall = 0;
                     }
@@ -8250,7 +7559,7 @@ int runsvmint(int threadInd,
                         ML_Base &kernML = (*xbopts).altfxapprox;
                         MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,gsrkkernnum,gsrkfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,gsrkkernnum,gsrkfirstcall,svmbase,svmInd);
 
                         gsrkfirstcall = 0;
                     }
@@ -8262,7 +7571,7 @@ int runsvmint(int threadInd,
                         ML_Base &kernML = (*xbopts).altfxapprox;
                         MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmbase,svmInd);
 
 //errstream() << "phantomxyznlp " << theKern << "\n";
                         gskfirstcall = 0;
@@ -8277,7 +7586,7 @@ int runsvmint(int threadInd,
                         ML_Base &kernML = (*xbopts).altcgtapprox;
                         MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gsekkernnum,gsekfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gsekkernnum,gsekfirstcall,svmbase,svmInd);
 
                         gsekfirstcall = 0;
                     }
@@ -8291,7 +7600,7 @@ int runsvmint(int threadInd,
                         ML_Base &kernML = (*xbopts).altcgtapprox;
                         MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,gsrkkernnum,gsrkfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,gsrkkernnum,gsrkfirstcall,svmbase,svmInd);
 
                         gsrkfirstcall = 0;
                     }
@@ -8303,30 +7612,30 @@ int runsvmint(int threadInd,
                         ML_Base &kernML = (*xbopts).altcgtapprox;
                         MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmbase,svmInd);
 
 //errstream() << "phantomxyznlp " << theKern << "\n";
                         gskfirstcall = 0;
                     }
 
-                    else if ( currcommand(0) == "-gbH"   ) { (*xbopts).method              = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbs"   ) { (*xbopts).intrinbatch         = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbm"   ) { (*xbopts).intrinbatchmethod   = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbj"   ) { (*xbopts).startpoints         = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbTv"  ) { (*xbopts).sigma_cut           = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbeu"  ) { (*xbopts).evaluse             = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbTs"  ) { (*xbopts).TSsampType          = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbTx"  ) { (*xbopts).TSxsampType         = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbTm"  ) { (*xbopts).TSmode              = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbTn"  ) { (*xbopts).TSNsamp             = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gba"   ) { (*xbopts).startseed           = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbb"   ) { (*xbopts).algseed             = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbt"   ) { (*xbopts).totiters            = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbe"   ) { (*xbopts).err                 = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbz"   ) { (*xbopts).ztol                = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbZ"   ) { (*xbopts).minstdev            = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbD"   ) { (*xbopts).delta               = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbzz"  ) { (*xbopts).zeta                = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbH"    ) { (*xbopts).method              = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbs"    ) { (*xbopts).intrinbatch         = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbm"    ) { (*xbopts).intrinbatchmethod   = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbj"    ) { (*xbopts).startpoints         = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbTv"   ) { (*xbopts).sigma_cut           = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbeu"   ) { (*xbopts).evaluse             = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbTs"   ) { (*xbopts).TSsampType          = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbTx"   ) { (*xbopts).TSxsampType         = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbTm"   ) { (*xbopts).TSmode              = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbTn"   ) { (*xbopts).TSNsamp             = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gba"    ) { (*xbopts).startseed           = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbb"    ) { (*xbopts).algseed             = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbt"    ) { (*xbopts).totiters            = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbe"    ) { (*xbopts).err                 = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbz"    ) { (*xbopts).ztol                = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbZ"    ) { (*xbopts).minstdev            = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbD"    ) { (*xbopts).delta               = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbzz"   ) { (*xbopts).zeta                = safeatof(currcommand(1),argvariables); }
 
                     if      ( currcommand(0) == "-gbk"   ) { (*xbopts).nu                  = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbx"   ) { (*xbopts).modD                = safeatof(currcommand(1),argvariables); }
@@ -8339,10 +7648,10 @@ int runsvmint(int threadInd,
                     else if ( currcommand(0) == "-gbv"   ) { (*xbopts).betafn              = currcommand(1); }
                     else if ( currcommand(0) == "-gbim"  ) { (*xbopts).itcntmethod         = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbpd"  ) { (*xbopts).direcdim            = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbq"   ) { (*xbopts).impmeasu            = &(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext).getIMP()); }
-                    else if ( currcommand(0) == "-gbpp"  ) { (*xbopts).direcpre            = &(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext).getML()); }
-                    else if ( currcommand(0) == "-gbmm"  ) { (*xbopts).direcsubseqpre      = &(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext).getML()); }
-                    else if ( currcommand(0) == "-gbG"   ) { (*xbopts).gridsource          = &(getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext)); }
+                    else if ( currcommand(0) == "-gbq"   ) { (*xbopts).impmeasu            = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables)).getIMP()); }
+                    else if ( currcommand(0) == "-gbpp"  ) { (*xbopts).direcpre            = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables)).getML()); }
+                    else if ( currcommand(0) == "-gbmm"  ) { (*xbopts).direcsubseqpre      = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables)).getML()); }
+                    else if ( currcommand(0) == "-gbG"   ) { (*xbopts).gridsource          = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables))); }
                     else if ( currcommand(0) == "-gbsp"  ) { (*xbopts).stabpmax            = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbsP"  ) { (*xbopts).stabpmin            = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbsA"  ) { (*xbopts).stabA               = safeatof(currcommand(1),argvariables); }
@@ -8381,7 +7690,7 @@ int runsvmint(int threadInd,
 
                             for ( ij = 0 ; ij < penaltyrefs.size() ; ++ij )
                             {
-                                ((*xbopts).penalty)("&",ij) = &(getMLref(svmThreadOwner,svmbase,threadInd,penaltyrefs(ij),svmContext));
+                                ((*xbopts).penalty)("&",ij) = &(getMLref(svmbase,penaltyrefs(ij)));
                             }
                         }
                     }
@@ -8674,12 +7983,10 @@ int runsvmint(int threadInd,
                                 fnarg[4]  = (void *) &logfile;
                                 fnarg[5]  = (void *) &depthin;
                                 fnarg[6]  = (void *) &argvariables;
-                                fnarg[7]  = (void *) &threadInd;
                                 fnarg[8]  = (void *) &globargvariables;
                                 fnarg[9]  = (void *) &argnums;
                                 fnarg[10] = (void *) getsetExtVar;
                                 fnarg[11] = (void *) &svmbase;
-                                fnarg[12] = (void *) &svmThreadOwner;
                                 fnarg[13] = (void *) &interstring;
                                 fnarg[14] = (void *) &xfnis;
                                 fnarg[15] = (void *) &MLnumbers; // IMPORTANT: this number must be fixed!
@@ -8949,7 +8256,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                                         gentype dummyres;
 
-                                        callsvm(threadInd,svmContext,svmbase,svmThreadOwner,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,dummyres,loclogfile);
+                                        callsvm(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,dummyres,loclogfile);
 
                                         MEMDEL(gridcommstack);
                                     }
@@ -9179,17 +8486,17 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         NiceAssert( mln.size() == caseweight.size() );
 
-                        SVM_Generic &core = dynamic_cast<SVM_Generic &>(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getSVM());
+                        SVM_Generic &core = dynamic_cast<SVM_Generic &>(getMLref(svmbase,svmInd).getSVM());
                         Vector<ML_Base *> cases(mln.size());
 
                         for ( i = 0 ; i < mln.size() ; ++i )
                         {
-                            cases("&",i) = &(getMLref(svmThreadOwner,svmbase,threadInd,( mln(i) < 0 ) ? -mln(i) : mln(i),svmContext).getML());
+                            cases("&",i) = &(getMLref(svmbase,( mln(i) < 0 ) ? -mln(i) : mln(i)).getML());
                         }
 
                         xferMLtrain(thread_killswitch,core,cases,n,maxiter,maxtime,soltol,caseweight,( llrr < 0 ) ? 1 : 0,( llrr < 0 ) ? 0 : llrr,randtype,method,mlCval,regtype,randvari,alphaRange,useH01);
 //errstream() << "phantomxyz -42: " << core << "\n";
-//errstream() << "phantomxyz -43: " << getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext) << "\n";
+//errstream() << "phantomxyz -43: " << getMLref(svmbase,svmInd) << "\n";
 //for ( i = 0 ; i < mln.size() ; ++i ) { errstream() << "phantomxyz -43b: " << *(cases(i)) << "\n"; }
                     }
                 }
@@ -9270,14 +8577,14 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         if ( (currcommand(0)).substr(0,4) == "-fsx" )
                         {
-                            bestres = optFeatHillClimb(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),-1,0,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
+                            bestres = optFeatHillClimb(getMLref(svmbase,svmInd),-1,0,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
 
                             errstream() << "Hill climbing best error: " << bestres << "\n";
                         }
 
                         else if ( (currcommand(0)).substr(0,4) == "-fsr" )
                         {
-                            bestres = optFeatHillClimb(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),-2,0,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
+                            bestres = optFeatHillClimb(getMLref(svmbase,svmInd),-2,0,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
 
                             errstream() << "Hill climbing best error: " << bestres << "\n";
                         }
@@ -9288,7 +8595,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                             randcross  = ( (currcommand(0)).substr(0,4) == "-fsC" ) ? 1 : 0;
                             numfolds   = ( (currcommand(0)).substr(0,4) == "-fsC" ) ? safeatoi(currcommand(2),argvariables) : safeatoi(currcommand(1),argvariables);
 
-                            bestres = optFeatHillClimb(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),numfolds,numreps,randcross,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
+                            bestres = optFeatHillClimb(getMLref(svmbase,svmInd),numfolds,numreps,randcross,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
 
                             errstream() << "Hill climbing best error: " << bestres << "\n";
                         }
@@ -9297,9 +8604,9 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         {
                             trainfile = currcommand(1);
 
-                            loadFileForHillClimb(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),xtemplate,trainfile,reverse,ignoreStart,imax,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,xtest,ytest);
+                            loadFileForHillClimb(getMLrefconst(svmbase,svmInd),xtemplate,trainfile,reverse,ignoreStart,imax,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,xtest,ytest);
 
-                            bestres = optFeatHillClimb(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),-3,1,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
+                            bestres = optFeatHillClimb(getMLref(svmbase,svmInd),-3,1,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
 
                             errstream() << "Hill climbing best error: " << bestres << "\n";
                         }
@@ -9363,7 +8670,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         if ( !tdistkernstarted )
                         {
                             tdistkernstarted = 1;
-                            tdistkern = getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getKernel();
+                            tdistkern = getMLrefconst(svmbase,svmInd).getKernel();
                         }
 
                         dotfuzz = 1;
@@ -9376,7 +8683,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         if ( !sdistkernstarted )
                         {
                             sdistkernstarted = 1;
-                            sdistkern = getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getKernel();
+                            sdistkern = getMLrefconst(svmbase,svmInd).getKernel();
                         }
 
                         dosfuzz = 1;
@@ -9404,12 +8711,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         if ( !tdistkernstarted )
                         {
                             tdistkernstarted = 1;
-                            tdistkern = getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getKernel();
+                            tdistkern = getMLrefconst(svmbase,svmInd).getKernel();
                         }
 
                         ML_Base dummyML;
 
-                        processKernel(dummyML,tdistkern,currcommandis,currcommand,2,argvariables,tkernnum,tkernfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        processKernel(dummyML,tdistkern,currcommandis,currcommand,2,argvariables,tkernnum,tkernfirstcall,svmbase,svmInd);
 
                         tkernfirstcall = 0;
                     }
@@ -9436,12 +8743,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         if ( !sdistkernstarted )
                         {
                             sdistkernstarted = 1;
-                            sdistkern = getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getKernel();
+                            sdistkern = getMLrefconst(svmbase,svmInd).getKernel();
                         }
 
                         ML_Base dummyML;
 
-                        processKernel(dummyML,sdistkern,currcommandis,currcommand,2,argvariables,skernnum,skernfirstcall,svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        processKernel(dummyML,sdistkern,currcommandis,currcommand,2,argvariables,skernnum,skernfirstcall,svmbase,svmInd);
 
                         skernfirstcall = 0;
                     }
@@ -9449,7 +8756,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                 if ( dotfuzz )
                 {
-                    if ( calcFuzzML(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),tfuzzfn,argvariables,tdistkern,tfuzzf,tfuzzm,tfuzznu,1) )
+                    if ( calcFuzzML(getMLref(svmbase,svmInd),tfuzzfn,argvariables,tdistkern,tfuzzf,tfuzzm,tfuzznu,1) )
                     {
                         STRTHROW("Unknown error during "+currcommand(0)+" operation.");
                     }
@@ -9457,7 +8764,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                 if ( dosfuzz )
                 {
-                    if ( calcFuzzML(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),sfuzzfn,argvariables,sdistkern,sfuzzf,sfuzzm,sfuzznu,0) )
+                    if ( calcFuzzML(getMLref(svmbase,svmInd),sfuzzfn,argvariables,sdistkern,sfuzzf,sfuzzm,sfuzznu,0) )
                     {
                         STRTHROW("Unknown error during "+currcommand(0)+" operation.");
                     }
@@ -9487,7 +8794,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                     if ( currcommand(0) == "-boot" )
                     {
-                         bootstrapML(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext));
+                         bootstrapML(getMLref(svmbase,svmInd));
                     }
                 }
 
@@ -9511,19 +8818,19 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                 int res = 0;
 
-                if ( isSVM(getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext)) )
+                if ( isSVM(getMLref(svmbase,svmInd)) )
                 {
                     errstream() << "Start pretraining...";
-                    getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).pretrain();
+                    getMLref(svmbase,svmInd).pretrain();
                     errstream() << " done, proceed with training if required....";
                 }
 
-                if ( doopt && !bgTrainOn )
+                if ( doopt )
                 {
                     errstream() << "Training SVM... ";
 
                     res = 0;
-                    getMLref(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).train(res,thread_killswitch);
+                    getMLref(svmbase,svmInd).train(res,thread_killswitch);
                 }
 
                 time_used endtime = TIMECALL;
@@ -9776,7 +9083,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        testTest(logfile,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),x,dz,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
+                        testTest(logfile,getMLrefconst(svmbase,svmInd),x,dz,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
 
                         argvariables("&",1)("&",1) = finalresult;
                     }
@@ -9788,11 +9095,11 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         Vector<SparseVector<gentype> > x;
                         gentype temp;
 
-                        loadDataFromMatlab(currcommand(2),currcommand(1),x,dz,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).targType(),getsetExtVar);
+                        loadDataFromMatlab(currcommand(2),currcommand(1),x,dz,getMLrefconst(svmbase,svmInd).targType(),getsetExtVar);
 
                         addtemptox(x,xtemplate);
 
-                        testTest(logfile,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),x,dz,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
+                        testTest(logfile,getMLrefconst(svmbase,svmInd),x,dz,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
 
                         argvariables("&",1)("&",1) = finalresult;
                     }
@@ -9806,7 +9113,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double nmean = safeatof(currcommand(3),argvariables);
                         double nvar  = safeatof(currcommand(4),argvariables);
 
-                        testSparSens(logfile,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),firstsum,minbad,maxbad,nmean,nvar,0,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
+                        testSparSens(logfile,getMLrefconst(svmbase,svmInd),firstsum,minbad,maxbad,nmean,nvar,0,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
                     }
 
                     else if ( ( currcommand(0) == "-tg" ) || ( currcommand(0) == "-tG" ) || ( currcommand(0) == "-tgc" ) || ( currcommand(0) == "-tGc" ) )
@@ -9871,7 +9178,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(xdata,xtemplate);
 
-                        testTest(logfile,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),xdata,ydata,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
+                        testTest(logfile,getMLrefconst(svmbase,svmInd),xdata,ydata,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
 
                         argvariables("&",1)("&",1) = finalresult;
                     }
@@ -9912,27 +9219,27 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         if ( (currcommand(0)).substr(0,3) == "-tx" )
                         {
-                            testLOO(logfile,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),firstsum,startpoint,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
+                            testLOO(logfile,getMLrefconst(svmbase,svmInd),firstsum,startpoint,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
                         }
 
                         else if ( (currcommand(0)).substr(0,3) == "-tl" )
                         {
-                            testnegloglike(logfile,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
+                            testnegloglike(logfile,getMLrefconst(svmbase,svmInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
                         }
 
                         else if ( (currcommand(0)).substr(0,4) == "-tmg" )
                         {
-                            testmaxinfogain(logfile,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
+                            testmaxinfogain(logfile,getMLrefconst(svmbase,svmInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
                         }
 
                         else if ( (currcommand(0)).substr(0,6) == "-ta" )
                         {
-                            testRKHSnorm(logfile,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
+                            testRKHSnorm(logfile,getMLrefconst(svmbase,svmInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
                         }
 
                         else if ( (currcommand(0)).substr(0,3) == "-tr" )
                         {
-                            testRecall(logfile,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
+                            testRecall(logfile,getMLrefconst(svmbase,svmInd),firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
                         }
 
                         else if ( ( (currcommand(0)).substr(0,3) == "-tc" ) || ( (currcommand(0)).substr(0,3) == "-tC" ) )
@@ -9941,12 +9248,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
                             randcross  = ( (currcommand(0)).substr(0,3) == "-tC" ) ? 1 : 0;
                             numfolds   = ( (currcommand(0)).substr(0,3) == "-tC" ) ? safeatoi(currcommand(2),argvariables) : safeatoi(currcommand(1),argvariables);
 
-                            testCross(logfile,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),firstsum,numreps,startpoint,randcross,numfolds,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
+                            testCross(logfile,getMLrefconst(svmbase,svmInd),firstsum,numreps,startpoint,randcross,numfolds,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
                         }
 
                         else if ( ( (currcommand(0)).substr(0,3) == "-tf" ) || ( (currcommand(0)).substr(0,3) == "-tF" ) )
                         {
-                            testFileVectors(binaryRelabel,singleDrop,logfile,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),trainfile,reverse,ignoreStart,imax,firstsum,coercetosingle,coercefromsingle,fromsingletarget,finalresult,uselinesvector,linesread,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,xtemplate);
+                            testFileVectors(binaryRelabel,singleDrop,logfile,getMLrefconst(svmbase,svmInd),trainfile,reverse,ignoreStart,imax,firstsum,coercetosingle,coercefromsingle,fromsingletarget,finalresult,uselinesvector,linesread,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,xtemplate);
                         }
                     }
 
@@ -10021,13 +9328,13 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         gentype sumtot(0.0);
 
-                        for ( ii = 0 ; ii < getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N() ; ii++ )
+                        for ( ii = 0 ; ii < getMLrefconst(svmbase,svmInd).N() ; ii++ )
                         {
                             gentype Kxx,Kii,Kxi;
 
-                            getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).K2(Kxx,xa,xa);
-                            getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).K2(Kii,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).x(ii),getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).x(ii));
-                            getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).K2(Kxi,xa,getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).x(ii));
+                            getMLrefconst(svmbase,svmInd).K2(Kxx,xa,xa);
+                            getMLrefconst(svmbase,svmInd).K2(Kii,getMLrefconst(svmbase,svmInd).x(ii),getMLrefconst(svmbase,svmInd).x(ii));
+                            getMLrefconst(svmbase,svmInd).K2(Kxi,xa,getMLrefconst(svmbase,svmInd).x(ii));
 
                             sumtot += ((Kxx*Kii)-(Kxi*Kxi));
 
@@ -10049,7 +9356,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).gh(resh,resg,x);
+                        getMLrefconst(svmbase,svmInd).gh(resh,resg,x);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -10072,7 +9379,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).gh(resh,resg,x,2);
+                        getMLrefconst(svmbase,svmInd).gh(resh,resg,x,2);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -10092,7 +9399,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        double res = getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).e(y,x);
+                        double res = getMLrefconst(svmbase,svmInd).e(y,x);
 
                         errstream() << "error(x) = " << res << "\n";
                     }
@@ -10110,7 +9417,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         gentype res;
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).dedg(res,y,x);
+                        getMLrefconst(svmbase,svmInd).dedg(res,y,x);
 
                         errstream() << "error gradient(x) = " << res << "\n";
                     }
@@ -10131,7 +9438,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).stabProb(res,x,p,pnrm,rot,mu,B);
+                        getMLrefconst(svmbase,svmInd).stabProb(res,x,p,pnrm,rot,mu,B);
 
                         errstream() << "Pr(x) = " << res << "\n";
                     }
@@ -10152,7 +9459,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).stabProb(res,x,p,pnrm,rot,mu,B);
+                        getMLrefconst(svmbase,svmInd).stabProb(res,x,p,pnrm,rot,mu,B);
 
                         errstream() << "Pr(x) = " << res << "\n";
                     }
@@ -10168,7 +9475,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double pnrm = safeatof(currcommand(5),argvariables);
                         int rot = 0;
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B);
+                        getMLrefconst(svmbase,svmInd).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B);
 
                         errstream() << "Pr(x) = " << res << "\n";
                     }
@@ -10184,7 +9491,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double pnrm = 1;
                         int rot = 1;
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B);
+                        getMLrefconst(svmbase,svmInd).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B);
 
                         errstream() << "Pr(x) = " << res << "\n";
                     }
@@ -10226,7 +9533,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     {
                         gentype res;
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).K0(res);
+                        getMLrefconst(svmbase,svmInd).K0(res);
 
                         errstream() << "K0() = " << res << "\n";
                     }
@@ -10243,7 +9550,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(xa,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).K1(res,xa);
+                        getMLrefconst(svmbase,svmInd).K1(res,xa);
 
                         errstream() << "K1(x) = " << res << "\n";
                     }
@@ -10260,7 +9567,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(xa,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).phi2(res,xa);
+                        getMLrefconst(svmbase,svmInd).phi2(res,xa);
 
                         errstream() << "phi2(x) = " << res << "\n";
                     }
@@ -10281,7 +9588,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xa,xtemplate);
                         addtemptox(xb,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).K2(res,xa,xb);
+                        getMLrefconst(svmbase,svmInd).K2(res,xa,xb);
 
                         errstream() << "K2(x,y) = " << res << "\n";
                     }
@@ -10306,7 +9613,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xb,xtemplate);
                         addtemptox(xc,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).K3(res,xa,xb,xc);
+                        getMLrefconst(svmbase,svmInd).K3(res,xa,xb,xc);
 
                         errstream() << "K3(x,y,u) = " << res << "\n";
                     }
@@ -10335,7 +9642,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xc,xtemplate);
                         addtemptox(xd,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).K4(res,xa,xb,xc,xd);
+                        getMLrefconst(svmbase,svmInd).K4(res,xa,xb,xc,xd);
 
                         errstream() << "K4(x,y,u,v) = " << res << "\n";
                     }
@@ -10356,7 +9663,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(xx,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).Km(res,xx);
+                        getMLrefconst(svmbase,svmInd).Km(res,xx);
 
                         errstream() << "Km(...) = " << res << "\n";
                     }
@@ -10376,7 +9683,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).gh(resh,resg,x);
+                        getMLrefconst(svmbase,svmInd).gh(resh,resg,x);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -10400,7 +9707,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).gh(resh,resg,x,2);
+                        getMLrefconst(svmbase,svmInd).gh(resh,resg,x,2);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -10420,7 +9727,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                          addtemptox(x,xtemplate);
 
-                         double res = getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).e(y,x);
+                         double res = getMLrefconst(svmbase,svmInd).e(y,x);
 
                          errstream() << "error(x) = " << res << "\n";
                     }
@@ -10438,7 +9745,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                          gentype res;
 
-                         getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).dedg(res,y,x);
+                         getMLrefconst(svmbase,svmInd).dedg(res,y,x);
 
                          errstream() << "error gradient(x) = " << res << "\n";
                     }
@@ -10464,7 +9771,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,nInd,svmContext).gh(resh,resg,x);
+                        getMLref(svmbase,nInd).gh(resh,resg,x);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -10494,7 +9801,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,nInd,svmContext).gh(resh,resg,x,2);
+                        getMLref(svmbase,nInd).gh(resh,resg,x,2);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -10522,7 +9829,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         {
                             for ( i = 0 ; i < x.size() ; ++i )
                             {
-                                getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).gh(resh("&",i),resg("&",i),x("&",i));
+                                getMLrefconst(svmbase,svmInd).gh(resh("&",i),resg("&",i),x("&",i));
                             }
 
                             argvariables("&",1)("&",8) = resh;
@@ -10552,7 +9859,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         {
                             for ( i = 0 ; i < x.size() ; ++i )
                             {
-                                getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).gh(resh("&",i),resg("&",i),x("&",i),2);
+                                getMLrefconst(svmbase,svmInd).gh(resh("&",i),resg("&",i),x("&",i),2);
                             }
 
                             argvariables("&",1)("&",8) = resh;
@@ -10572,7 +9879,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).ghTrainingVector(resh,resg,i);
+                        getMLrefconst(svmbase,svmInd).ghTrainingVector(resh,resg,i);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -10590,7 +9897,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).ghTrainingVector(resh,resg,i,2);
+                        getMLrefconst(svmbase,svmInd).ghTrainingVector(resh,resg,i,2);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -10603,7 +9910,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     {
                         int i = safeatoi(currcommand(1),argvariables);
 
-                        double res = getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).eTrainingVector(i);
+                        double res = getMLrefconst(svmbase,svmInd).eTrainingVector(i);
 
                         errstream() << "error(x) = " << res << "\n";
                     }
@@ -10614,7 +9921,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         gentype res;
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).dedgTrainingVector(res,i);
+                        getMLrefconst(svmbase,svmInd).dedgTrainingVector(res,i);
 
                         errstream() << "error gradient(x) = " << res << "\n";
                     }
@@ -10622,17 +9929,17 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     else if ( currcommand(0) == "-hX" )
                     {
                         int i;
-                        Vector<gentype> resh(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N());
-                        Vector<gentype> resg(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N());
+                        Vector<gentype> resh(getMLrefconst(svmbase,svmInd).N());
+                        Vector<gentype> resg(getMLrefconst(svmbase,svmInd).N());
 
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
 
-                        if ( getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N() )
+                        if ( getMLrefconst(svmbase,svmInd).N() )
                         {
-                            for ( i = 0 ; i < getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N() ; ++i )
+                            for ( i = 0 ; i < getMLrefconst(svmbase,svmInd).N() ; ++i )
                             {
-                                getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).ghTrainingVector(resh("&",i),resg("&",i),i);
+                                getMLrefconst(svmbase,svmInd).ghTrainingVector(resh("&",i),resg("&",i),i);
                             }
                         }
 
@@ -10646,17 +9953,17 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     else if ( currcommand(0) == "-hhX" )
                     {
                         int i;
-                        Vector<gentype> resh(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N());
-                        Vector<gentype> resg(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N());
+                        Vector<gentype> resh(getMLrefconst(svmbase,svmInd).N());
+                        Vector<gentype> resg(getMLrefconst(svmbase,svmInd).N());
 
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
 
-                        if ( getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N() )
+                        if ( getMLrefconst(svmbase,svmInd).N() )
                         {
-                            for ( i = 0 ; i < getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N() ; ++i )
+                            for ( i = 0 ; i < getMLrefconst(svmbase,svmInd).N() ; ++i )
                             {
-                                getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).ghTrainingVector(resh("&",i),resg("&",i),i,2);
+                                getMLrefconst(svmbase,svmInd).ghTrainingVector(resh("&",i),resg("&",i),i,2);
                             }
                         }
 
@@ -10681,7 +9988,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xa,xtemplate);
                         addtemptox(xb,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).cov(resh,dummy,xa,xb);
+                        getMLrefconst(svmbase,svmInd).cov(resh,dummy,xa,xb);
 
                         errstream() << "cov(x,y) = " << resh << "\n";
                     }
@@ -10700,7 +10007,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xa,xtemplate);
                         addtemptox(xb,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).cov(resh,dummy,xa,xb);
+                        getMLrefconst(svmbase,svmInd).cov(resh,dummy,xa,xb);
 
                         errstream() << "cov(x,y) = " << resh << "\n";
                     }
@@ -10716,7 +10023,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         if ( nInd < 0 )
                         {
-                            STRTHROW("Negative SVM index "+currcommand(2)+" in -hZv");
+                            STRTHROW("Negative SVM index "+currcommand(2)+" in -hZc");
                         }
 
                         xa = safeatowhatever(tmpga,currcommand(1),argvariables).cast_vector(1);
@@ -10725,7 +10032,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xa,xtemplate);
                         addtemptox(xb,xtemplate);
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,nInd,svmContext).cov(resh,dummy,xa,xb);
+                        getMLref(svmbase,nInd).cov(resh,dummy,xa,xb);
 
                         errstream() << "cov(x,y) = " << resh << "\n";
                     }
@@ -10736,7 +10043,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         int ib = safeatoi(currcommand(2),argvariables);
                         gentype resh,dummy;
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).covTrainingVector(resh,dummy,ia,ib);
+                        getMLrefconst(svmbase,svmInd).covTrainingVector(resh,dummy,ia,ib);
 
                         errstream() << "cov(x,y) = " << resh << "\n";
                     }
@@ -10751,7 +10058,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).var(resh,dummy,x);
+                        getMLrefconst(svmbase,svmInd).var(resh,dummy,x);
 
                         errstream() << "var(x) = " << resh << "\n";
                     }
@@ -10766,7 +10073,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).var(resh,dummy,x);
+                        getMLrefconst(svmbase,svmInd).var(resh,dummy,x);
 
                         errstream() << "var(x) = " << resh << "\n";
                     }
@@ -10786,7 +10093,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         xv = safeatowhatever(tmpga,currcommand(2),argvariables).cast_vector(1);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).noisevar(resh,dummy,x,xv);
+                        getMLrefconst(svmbase,svmInd).noisevar(resh,dummy,x,xv);
 
                         errstream() << "noisevar(x) = " << resh << "\n";
                     }
@@ -10807,7 +10114,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLref(svmThreadOwner,svmbase,threadInd,nInd,svmContext).var(resh,dummy,x);
+                        getMLref(svmbase,nInd).var(resh,dummy,x);
 
                         errstream() << "var(x) = " << resh << "\n";
                     }
@@ -10817,7 +10124,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         int i = safeatoi(currcommand(1),argvariables);
                         gentype resh,dummy;
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).varTrainingVector(resh,dummy,i);
+                        getMLrefconst(svmbase,svmInd).varTrainingVector(resh,dummy,i);
 
                         errstream() << "var(x) = " << resh << "\n";
                     }
@@ -10838,7 +10145,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         {
                             for ( i = 0 ; i < x.size() ; ++i )
                             {
-                                getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).var(resh("&",i),dummy,x("&",i));
+                                getMLrefconst(svmbase,svmInd).var(resh("&",i),dummy,x("&",i));
                             }
 
                             errstream() << "var(x) = " << resh(i) << "\n";
@@ -10855,7 +10162,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).covar(resh,x);
+                        getMLrefconst(svmbase,svmInd).covar(resh,x);
 
                         errstream() << "covar(x) = " << resh << "\n";
                     }
@@ -10864,13 +10171,13 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     {
                         int i;
                         gentype dummy;
-                        Vector<gentype> resh(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N());
+                        Vector<gentype> resh(getMLrefconst(svmbase,svmInd).N());
 
-                        if ( getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N() )
+                        if ( getMLrefconst(svmbase,svmInd).N() )
                         {
-                            for ( i = 0 ; i < getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N() ; ++i )
+                            for ( i = 0 ; i < getMLrefconst(svmbase,svmInd).N() ; ++i )
                             {
-                                getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).varTrainingVector(resh("&",i),dummy,i);
+                                getMLrefconst(svmbase,svmInd).varTrainingVector(resh("&",i),dummy,i);
                             }
                         }
 
@@ -10905,22 +10212,22 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                     else if ( currcommand(0) == "-a" )
                     {
-                        NiceAssert( isSVM(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext)) );
+                        NiceAssert( isSVM(getMLrefconst(svmbase,svmInd)) );
 
                         argvariables("&",1)("&",18).makeString(currcommand(1));
 
-                        writeLog(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).alpha(),currcommand(1),getsetExtVar);
+                        writeLog(getMLrefconst(svmbase,svmInd).alpha(),currcommand(1),getsetExtVar);
                     }
 
                     else if ( currcommand(0) == "-b" )
                     {
-                        NiceAssert( isSVM(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext)) );
+                        NiceAssert( isSVM(getMLrefconst(svmbase,svmInd)) );
 
                         argvariables("&",1)("&",19).makeString(currcommand(1));
 
                         Vector<gentype> biasfill(1);
 
-                        biasfill("&",0) = getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).bias();
+                        biasfill("&",0) = getMLrefconst(svmbase,svmInd).bias();
 
                         writeLog(biasfill,currcommand(1),getsetExtVar);
                     }
@@ -10939,7 +10246,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                             STRTHROW("Unable to open svm file "+currcommand(0)+" "+svmfile);
                         }
 
-                        sfile << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext);
+                        sfile << getMLrefconst(svmbase,svmInd);
                         sfile.close();
                     }
 
@@ -10961,7 +10268,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double xmin = safeatof(currcommand(2),argvariables);
                         double xmax = safeatof(currcommand(3),argvariables);
 
-                        plotml(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),index,xmin,xmax,plotymin,plotymax,plotname,plotdataname,plotoutformat,plotincdata,plotbaseline,plotincvar,0,plotxtemplate,plotoutsquare);
+                        plotml(getMLrefconst(svmbase,svmInd),index,xmin,xmax,plotymin,plotymax,plotname,plotdataname,plotoutformat,plotincdata,plotbaseline,plotincvar,0,plotxtemplate,plotoutsquare);
                     }
 
                     else if ( currcommand(0) == "-surf" )
@@ -10976,7 +10283,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double ymin = safeatof(currcommand(5),argvariables);
                         double ymax = safeatof(currcommand(6),argvariables);
 
-                        plotml(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext),xindex,yindex,xmin,xmax,ymin,ymax,plotymin,plotymax,plotname,plotdataname,plotoutformat,plotincdata,plotbaseline,plotincvar,0,1,plotxtemplate,plotoutsquare);
+                        plotml(getMLrefconst(svmbase,svmInd),xindex,yindex,xmin,xmax,ymin,ymax,plotymin,plotymax,plotname,plotdataname,plotoutformat,plotincdata,plotbaseline,plotincvar,0,1,plotxtemplate,plotoutsquare);
                     }
                 }
 
@@ -11029,47 +10336,47 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     loggerfile << "Performance evaluation time (sec): " << performtime     << "\n";
                     loggerfile << "Report time (sec):                 " << reporttime      << "\n\n";
 
-                    loggerfile << "Trained: " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).isTrained() << "\n\n";
+                    loggerfile << "Trained: " << getMLrefconst(svmbase,svmInd).isTrained() << "\n\n";
 
-                    loggerfile << "N:       " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).N()     << "\n";
-                    loggerfile << "NNC(0):  " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).NNC(0)  << "\n\n";
+                    loggerfile << "N:       " << getMLrefconst(svmbase,svmInd).N()     << "\n";
+                    loggerfile << "NNC(0):  " << getMLrefconst(svmbase,svmInd).NNC(0)  << "\n\n";
 
-                    loggerfile << "Target space dimension: " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).tspaceDim()  << "\n";
-                    loggerfile << "Classes:                " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).numClasses() << "\n";
-                    loggerfile << "SVM type:               " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).type()       << "\n\n";
+                    loggerfile << "Target space dimension: " << getMLrefconst(svmbase,svmInd).tspaceDim()  << "\n";
+                    loggerfile << "Classes:                " << getMLrefconst(svmbase,svmInd).numClasses() << "\n";
+                    loggerfile << "SVM type:               " << getMLrefconst(svmbase,svmInd).type()       << "\n\n";
 
-                    loggerfile << "Class labels:         " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).ClassLabels() << "\n";
+                    loggerfile << "Class labels:         " << getMLrefconst(svmbase,svmInd).ClassLabels() << "\n";
 
-                    loggerfile << "Zero tolerance:      " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).zerotol()      << "\n";
-                    loggerfile << "Optimal tolerance:   " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).Opttol()       << "\n";
-                    loggerfile << "Max iterations:      " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).maxitcnt()     << "\n";
-                    loggerfile << "Max training time:   " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).maxtraintime() << "\n\n";
+                    loggerfile << "Zero tolerance:      " << getMLrefconst(svmbase,svmInd).zerotol()      << "\n";
+                    loggerfile << "Optimal tolerance:   " << getMLrefconst(svmbase,svmInd).Opttol()       << "\n";
+                    loggerfile << "Max iterations:      " << getMLrefconst(svmbase,svmInd).maxitcnt()     << "\n";
+                    loggerfile << "Max training time:   " << getMLrefconst(svmbase,svmInd).maxtraintime() << "\n\n";
 
-                    loggerfile << "Underlying scalar:    " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).isUnderlyingScalar() << "\n";
-                    loggerfile << "Underlying vectorial: " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).isUnderlyingVector() << "\n\n";
-                    loggerfile << "Underlying anionic:   " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).isUnderlyingAnions() << "\n\n";
+                    loggerfile << "Underlying scalar:    " << getMLrefconst(svmbase,svmInd).isUnderlyingScalar() << "\n";
+                    loggerfile << "Underlying vectorial: " << getMLrefconst(svmbase,svmInd).isUnderlyingVector() << "\n\n";
+                    loggerfile << "Underlying anionic:   " << getMLrefconst(svmbase,svmInd).isUnderlyingAnions() << "\n\n";
 
-                    loggerfile << "Kernel dictionary size: " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getKernel().size()      << "\n";
-                    loggerfile << "Kernel indexed:         " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getKernel().isIndex()   << "\n";
-                    loggerfile << "Kernel indices:         " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getKernel().cIndexes()  << "\n\n";
+                    loggerfile << "Kernel dictionary size: " << getMLrefconst(svmbase,svmInd).getKernel().size()      << "\n";
+                    loggerfile << "Kernel indexed:         " << getMLrefconst(svmbase,svmInd).getKernel().isIndex()   << "\n";
+                    loggerfile << "Kernel indices:         " << getMLrefconst(svmbase,svmInd).getKernel().cIndexes()  << "\n\n";
 
-                    if ( getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getKernel().size() )
+                    if ( getMLrefconst(svmbase,svmInd).getKernel().size() )
                     {
-                        for ( i = 0 ; i < getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getKernel().size() ; ++i )
+                        for ( i = 0 ; i < getMLrefconst(svmbase,svmInd).getKernel().size() ; ++i )
                         {
-                            loggerfile << "Kernel type       (" << i << "): " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getKernel().cType(i)          << "\n";
-                            loggerfile << "Kernel weight     (" << i << "): " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getKernel().cWeight(i)        << "\n";
-                            loggerfile << "Normalised        (" << i << "): " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getKernel().isNormalised(i)   << "\n";
-                            loggerfile << "Integer constants (" << i << "): " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getKernel().cIntConstants(i)  << "\n";
-                            loggerfile << "Real constants    (" << i << "): " << getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getKernel().cRealConstants(i) << "\n\n";
+                            loggerfile << "Kernel type       (" << i << "): " << getMLrefconst(svmbase,svmInd).getKernel().cType(i)          << "\n";
+                            loggerfile << "Kernel weight     (" << i << "): " << getMLrefconst(svmbase,svmInd).getKernel().cWeight(i)        << "\n";
+                            loggerfile << "Normalised        (" << i << "): " << getMLrefconst(svmbase,svmInd).getKernel().isNormalised(i)   << "\n";
+                            loggerfile << "Integer constants (" << i << "): " << getMLrefconst(svmbase,svmInd).getKernel().cIntConstants(i)  << "\n";
+                            loggerfile << "Real constants    (" << i << "): " << getMLrefconst(svmbase,svmInd).getKernel().cRealConstants(i) << "\n\n";
                         }
 
                         loggerfile << "\n";
                     }
 
-                    if ( isSVM(getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext)) )
+                    if ( isSVM(getMLrefconst(svmbase,svmInd)) )
                     {
-                        const SVM_Generic &locsvmref = getMLrefconst(svmThreadOwner,svmbase,threadInd,svmInd,svmContext).getSVMconst();
+                        const SVM_Generic &locsvmref = getMLrefconst(svmbase,svmInd).getSVMconst();
 
                         loggerfile << "SVM specifics:\n\n";
 
@@ -11159,12 +10466,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                     loggerfile << "NUF (" << qd << ") = " << locsvmref.NUF(qd) << "\n";
                                     loggerfile << "NUB (" << qd << ") = " << locsvmref.NUB(qd) << "\n\n";
 
-                                    loggerfile << "Variable bias (" << qd << "):               " << locsvmref.isVarBias(qd)        << "\n";
-                                    loggerfile << "Positive bias (" << qd << "):               " << locsvmref.isPosBias(qd)        << "\n";
-                                    loggerfile << "Negative bias (" << qd << "):               " << locsvmref.isNegBias(qd)        << "\n";
-                                    loggerfile << "Fixed bias (" << qd << "):                  " << locsvmref.isFixedBias(qd)      << "\n";
-                                    loggerfile << "Linear bias forcing term (" << qd << "):    " << locsvmref.LinBiasForce(qd)  << "\n";
-                                    loggerfile << "Quadratic bias forcing term (" << qd << "): " << locsvmref.QuadBiasForce(qd) << "\n\n";
+                                    loggerfile << "Variable bias (" << qd << "):               " << locsvmref.isVarBias(qd)          << "\n";
+                                    loggerfile << "Positive bias (" << qd << "):               " << locsvmref.isPosBias(qd)          << "\n";
+                                    loggerfile << "Negative bias (" << qd << "):               " << locsvmref.isNegBias(qd)          << "\n";
+                                    loggerfile << "Fixed bias (" << qd << "):                  " << locsvmref.isFixedBias(qd)        << "\n";
+                                    loggerfile << "Linear bias forcing term (" << qd << "):    " << locsvmref.LinBiasForceclass(qd)  << "\n";
+                                    loggerfile << "Quadratic bias forcing term (" << qd << "): " << locsvmref.QuadBiasForceclass(qd) << "\n\n";
                                 }
                             }
 
@@ -11190,10 +10497,10 @@ errstream() << "phantomabc ires = " << ires << "\n";
                             loggerfile << "NUF:     " << locsvmref.NUF()   << "\n";
                             loggerfile << "NUB:     " << locsvmref.NUB()   << "\n\n";
 
-                            loggerfile << "Bias variable:               " << locsvmref.isVarBias()        << "\n";
-                            loggerfile << "Bias positive:               " << locsvmref.isPosBias()        << "\n";
-                            loggerfile << "Bias negative:               " << locsvmref.isNegBias()        << "\n";
-                            loggerfile << "Bias fixed:                  " << locsvmref.isFixedBias()      << "\n";
+                            loggerfile << "Bias variable:               " << locsvmref.isVarBias()     << "\n";
+                            loggerfile << "Bias positive:               " << locsvmref.isPosBias()     << "\n";
+                            loggerfile << "Bias negative:               " << locsvmref.isNegBias()     << "\n";
+                            loggerfile << "Bias fixed:                  " << locsvmref.isFixedBias()   << "\n";
                             loggerfile << "Linear bias forcing term:    " << locsvmref.LinBiasForce()  << "\n";
                             loggerfile << "Quadratic bias forcing term: " << locsvmref.QuadBiasForce() << "\n\n";
 
@@ -11270,11 +10577,6 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
     --depthin;
 
-    if ( !depthin )
-    {
-        controlThreadInd = -1; // This signals that the thread is no longer operating
-    }
-
     return retval;
 }
 
@@ -11326,43 +10628,24 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
 int gridelmMLreg(int ind, ML_Mutable *MLreg, void *arg)
 {
-//    std::string &commandstr                                            = *((std::string                           *) ((void **) arg)[0] );
-    SparseVector<SVMThreadContext *> &svmContext                       = *((SparseVector<SVMThreadContext *>      *) ((void **) arg)[1] );
-//    int &verblevel                                                     = *((int                                   *) ((void **) arg)[2] );
-//    gentype &finalresult                                               = *((gentype                               *) ((void **) arg)[3] );
-//    std::string &logfile                                               = *((std::string                           *) ((void **) arg)[4] );
-//    int &depthin                                                       = *((int                                   *) ((void **) arg)[5] );
-//    SparseVector<SparseVector<gentype> > &argvariables                 = *((SparseVector<SparseVector<gentype> >  *) ((void **) arg)[6] );
-    int &threadInd                                                     = *((int                                   *) ((void **) arg)[7] );
-//    svmvolatile SparseVector<SparseVector<gentype> > &globargvariables = *((SparseVector<SparseVector<gentype> >  *) ((void **) arg)[8] );
-//    Vector<int> &argnums                                               = *((Vector<int>                           *) ((void **) arg)[9] );
-//    int (*getsetExtVar)(gentype &, const gentype &, int)               = ((int (*)(gentype &, const gentype &, int)) ((void **) arg)[10]);
-    SparseVector<ML_Mutable *> &svmbase                                = *((SparseVector<ML_Mutable *>            *) ((void **) arg)[11]);
-    SparseVector<int> &svmThreadOwner                                  = *((SparseVector<int>                     *) ((void **) arg)[12]);
-//    std::string &interstring                                           = *((std::string                           *) ((void **) arg)[13]);
-//    gentype &xfnis                                                     = *((gentype                               *) ((void **) arg)[14]);
-//    Vector<int> &MLnumbers                                             = *((Vector<int>                           *) ((void **) arg)[15]);
-//    std::string &prestring                                             = *((std::string                           *) ((void **) arg)[16]);
-//    std::string &midstring                                             = *((std::string                           *) ((void **) arg)[17]);
+    SparseVector<ML_Mutable *> &svmbase = *((SparseVector<ML_Mutable *> *) ((void **) arg)[11]);
 
-    return regsvm(svmThreadOwner,svmbase,threadInd,ind,svmContext,MLreg);
+    return regsvm(svmbase,ind,MLreg);
 }
 
 void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
 {
     std::string &commandstr                                            = *((std::string                           *) ((void **) arg)[0] );
-    SparseVector<SVMThreadContext *> &svmContext                       = *((SparseVector<SVMThreadContext *>      *) ((void **) arg)[1] );
+    SVMThreadContext *svmContext                                       = *((SVMThreadContext                     **) ((void **) arg)[1] );
     int &verblevel                                                     = *((int                                   *) ((void **) arg)[2] );
     gentype &finalresult                                               = *((gentype                               *) ((void **) arg)[3] );
     std::string &logfile                                               = *((std::string                           *) ((void **) arg)[4] );
     int &depthin                                                       = *((int                                   *) ((void **) arg)[5] );
     SparseVector<SparseVector<gentype> > &argvariables                 = *((SparseVector<SparseVector<gentype> >  *) ((void **) arg)[6] );
-    int &threadInd                                                     = *((int                                   *) ((void **) arg)[7] );
     svmvolatile SparseVector<SparseVector<gentype> > &globargvariables = *((SparseVector<SparseVector<gentype> >  *) ((void **) arg)[8] );
     Vector<int> &argnums                                               = *((Vector<int>                           *) ((void **) arg)[9] );
     int (*getsetExtVar)(gentype &, const gentype &, int)               = ((int (*)(gentype &, const gentype &, int)) ((void **) arg)[10]);
     SparseVector<ML_Mutable *> &svmbase                                = *((SparseVector<ML_Mutable *>            *) ((void **) arg)[11]);
-    SparseVector<int> &svmThreadOwner                                  = *((SparseVector<int>                     *) ((void **) arg)[12]);
     std::string &interstring                                           = *((std::string                           *) ((void **) arg)[13]);
     gentype &xfnis                                                     = *((gentype                               *) ((void **) arg)[14]);
     Vector<int> &MLnumbers                                             = *((Vector<int>                           *) ((void **) arg)[15]);
@@ -11453,7 +10736,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
         gridcommstack->push(gridbox);
         std::string loclogfile = logfile+"_gridlog";
 
-        callsvm(threadInd,svmContext,svmbase,svmThreadOwner,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
+        callsvm(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
 
         MEMDEL(gridcommstack);
     }
@@ -11478,7 +10761,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
 
         // Call runsvm to get test result and save result
 
-        callsvm(threadInd,svmContext,svmbase,svmThreadOwner,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
+        callsvm(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
 
         MEMDEL(gridcommstack);
     }
@@ -11503,7 +10786,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
 
         // Call runsvm to get test result and save result
 
-        callsvm(threadInd,svmContext,svmbase,svmThreadOwner,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
+        callsvm(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
 
         MEMDEL(gridcommstack);
     }
@@ -11528,7 +10811,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
 
         // Call runsvm to get test result and save result
 
-        callsvm(threadInd,svmContext,svmbase,svmThreadOwner,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
+        callsvm(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
 
         MEMDEL(gridcommstack);
     }
@@ -12258,7 +11541,7 @@ void preExtractLinesFromFile(ofiletype &filelines, gentype &linesleft, std::stri
 
 
 
-void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &currcommandis, const Vector<std::string> &currcommand, int ktype, SparseVector<SparseVector<gentype> > &argvariables, int &kernnum, int firstcall, SparseVector<int> &svmThreadOwner, SparseVector<ML_Mutable *> &svmbase, int threadInd, int svmInd, SparseVector<SVMThreadContext *> &svmContext)
+void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &currcommandis, const Vector<std::string> &currcommand, int ktype, SparseVector<SparseVector<gentype> > &argvariables, int &kernnum, int firstcall, SparseVector<ML_Mutable *> &svmbase, int svmInd)
 {
     (void) svmInd;
 
@@ -12390,15 +11673,15 @@ void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &cu
                         else if ( currcommandis == "-kum"  ) { theKern.setUnMagTerm(kernnum); }
                         else if ( currcommandis == "-kU"   ) { theKern.setUnIndex(); }
                         else if ( currcommandis == "-kw"   ) { gentype tmpg; safeatowhatever(tmpg,currcommand(1),argvariables); theKern.setWeight(tmpg,kernnum); }
-                        else if ( currcommandis == "-kwlb"   ) { gentype tmpg; safeatowhatever(tmpg,currcommand(1),argvariables); theKern.setWeightLB(tmpg,kernnum); }
-                        else if ( currcommandis == "-kwub"   ) { gentype tmpg; safeatowhatever(tmpg,currcommand(1),argvariables); theKern.setWeightUB(tmpg,kernnum); }
+                        else if ( currcommandis == "-kwlb" ) { gentype tmpg; safeatowhatever(tmpg,currcommand(1),argvariables); theKern.setWeightLB(tmpg,kernnum); }
+                        else if ( currcommandis == "-kwub" ) { gentype tmpg; safeatowhatever(tmpg,currcommand(1),argvariables); theKern.setWeightUB(tmpg,kernnum); }
                         else if ( currcommandis == "-kt"   ) { theKern.setType(safeatoi(currcommand(1),argvariables),kernnum); }
                         else if ( currcommandis == "-mtb"  ) { theKern.setsuggestXYcache(1); }
                         else if ( currcommandis == "-bmx"  ) { theKern.setsuggestXYcache(0); }
 //                        else if ( currcommandis == "-kcy " ) { theKern.setChurnInner(1); }
 //                        else if ( currcommandis == "-kcn"  ) { theKern.setChurnInner(0); }
                         else if ( currcommandis == "-kan"  ) { theKern.setAltDiff(safeatoi(currcommand(1),argvariables)); }
-                        else if ( currcommandis == "-ktx"  ) { theKern.setAltCall((getMLref(svmThreadOwner,svmbase,threadInd,safeatoi(currcommand(1),argvariables),svmContext)).MLid(),kernnum); }
+                        else if ( currcommandis == "-ktx"  ) { theKern.setAltCall((getMLref(svmbase,safeatoi(currcommand(1),argvariables))).MLid(),kernnum); }
 
                         else if ( currcommandis == "-kI" ) 
                         { 
@@ -14555,6 +13838,43 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                                    Description\" (SVDD), Machine Learning, 54,\n" : "" );
     output << ( ( basic || advanced ) ? "                                    2004.                                     \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "                  -- SVM specific options                          --         \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "         -ac  {svc,svr}  - classification method:                             \n" : "" );
+    output << ( ( basic || advanced ) ? "                           svc: normal SVM classifier (default).              \n" : "" );
+    output << ( ( basic || advanced ) ? "                           svr: classify via regression.                      \n" : "" );
+    output << ( ( basic || advanced ) ? "         -R   {l,q,o,g,G}- empirical risk type.                               \n" : "" );
+    output << ( ( basic || advanced ) ? "                           l - linear (default).                              \n" : "" );
+    output << ( ( basic || advanced ) ? "                           q - quadratic.                                     \n" : "" );
+    output << ( ( basic || advanced ) ? "                           o - linear cost, but with  1-norm regularisation on\n" : "" );
+    output << ( ( basic || advanced ) ? "                               alpha  (not feature  space:  use -m  for that).\n" : "" );
+    output << ( ( basic || advanced ) ? "                               (to  enforce 1-norm  regularisation  with hard-\n" : "" );
+    output << ( ( basic || advanced ) ? "                               margin use this in combination with -c 1e20).  \n" : "" );
+    output << ( ( basic || advanced ) ? "                           g - generalised linear cost (iterative fuzzy).     \n" : "" );
+    output << ( ( basic || advanced ) ? "                           G - generalised quadratic cost (iterative fuzzy).  \n" : "" );
+    output << ( ( basic || advanced ) ? "                           Note  that  quadratic  quadratic empirical  ignores\n" : "" );
+    output << ( ( basic || advanced ) ? "                           values set by -c+, -c-, -c=, -cc and -jc. Note also\n" : "" );
+    output << ( ( basic || advanced ) ? "                           that epsilon insensitivity  is used for both linear\n" : "" );
+    output << ( ( basic || advanced ) ? "                           and quadratic cases, so  to construct an LS-SVR you\n" : "" );
+    output << ( ( basic || advanced ) ? "                           need to set -R q -w 0.                             \n" : "" );
+    output << ( ( basic || advanced ) ? "         -T   {f,s}      - tube type:                                         \n" : "" );
+    output << ( ( basic || advanced ) ? "                           f - fixed tube (default).                          \n" : "" );
+    output << ( ( basic || advanced ) ? "                           s - tube shrinking on.                             \n" : "" );
+    output << ( ( basic || advanced ) ? "         -TT  {0,1}      - svm_kconst alpha usage:                            \n" : "" );
+    output << ( ( basic || advanced ) ? "                           0 - alphas define kernel through standard method.  \n" : "" );
+    output << ( ( basic || advanced ) ? "                           1 - alpha^2 also written as kernel weights.        \n" : "" );
+    output << ( ( basic || advanced ) ? "                           Default is 0, so alpha defines a kernel through eg.\n" : "" );
+    output << ( ( basic || advanced ) ? "                           kernel type 801 inheritance,  but if you set this 1\n" : "" );
+    output << ( ( basic || advanced ) ? "                           alpha defines  weights in a kernel  sum with kernel\n" : "" );
+    output << ( ( basic || advanced ) ? "                           kernel type 800 inheritance. This is made easy with\n" : "" );
+    output << ( ( basic || advanced ) ? "                           the -x commands later.                             \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "                  -- MLM specific options                          --         \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "         -mlR n {l,q}    - MLM regularisation type at layer n:                \n" : "" );
+    output << ( ( basic || advanced ) ? "                           l - 1-norm.                                        \n" : "" );
+    output << ( ( basic || advanced ) ? "                           q - 2-norm.                                        \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "Setup options (after pre-setup options):                                      \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         -N   n          - hint of expected training  set size (this will help\n" : "" );
@@ -14570,7 +13890,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -foe n $file    - target-at-end version of -fo.                      \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -fret n m       - tag variable  var(n,m) to be retained  after return\n" : "" );
-    output << ( (          advanced ) ? "                           from for example -MF or -g, -gb etc.               \n" : "" );
+    output << ( (          advanced ) ? "                           from for example -g, -gb etc.                      \n" : "" );
     output << ( (          advanced ) ? "         -fV  n $fn      - set argument var(0,n) = $fn (not evaluated).       \n" : "" );
     output << ( (          advanced ) ? "         -fW  n v        - set argument var(0,n) = v (evaluated).             \n" : "" );
     output << ( (          advanced ) ? "         -fWW n v        - set argument var(0,n) = v   (evaluated   but    not\n" : "" );
@@ -14798,12 +14118,8 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -fat alpha      - sets alpha value used by DTLZ4 in -ft evaluation.  \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                  ** There are two  types of variable:  global and **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** local.  Local  variables are  specific to and **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** available everywhere  within a single thread. **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** Global  variables  are  accessible  from  all **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** current running threads,  allowing for inter- **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** thread  communications.    Use  local  unless **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** strictly necessary.                           **         \n" : "" );
+    output << ( (          advanced ) ? "                  ** local.  Local variables act like variables on **         \n" : "" );
+    output << ( (          advanced ) ? "                  ** the stack, globals like vars on the heap.     **         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -fVg  n $fn     - like -fV  but reads from global variables.         \n" : "" );
     output << ( (          advanced ) ? "         -fWg  n v       - like -fW  but reads from global variables.         \n" : "" );
@@ -14834,6 +14150,14 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           setup and r1 is  the similarity (scalar  or matrix)\n" : "" );
     output << ( (          advanced ) ? "                           between tasks.                                     \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "                  -- SVM specific options                          --         \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "         -B   {f,v,p,n}  - bias type:                                         \n" : "" );
+    output << ( ( basic || advanced ) ? "                           f - fixed bias (bias value defaults to 0).         \n" : "" );
+    output << ( ( basic || advanced ) ? "                           v - variable bias (default).                       \n" : "" );
+    output << ( ( basic || advanced ) ? "                           p - positive bias.                                 \n" : "" );
+    output << ( ( basic || advanced ) ? "                           n - negative bias.                                 \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                  -- MEX (Matlab) only options                     --         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -fWm n $fn v    - set argument var(0,n) = fn(v), where fn is a MATLAB\n" : "" );
@@ -14843,42 +14167,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           fni is a MATLAB function  handle specified when you\n" : "" );
     output << ( (          advanced ) ? "                           called svmmatlab.   If fni if a  variable and not a\n" : "" );
     output << ( (          advanced ) ? "                           handle then result is value of variable.           \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                  -- SVM specific options                          --         \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -ac  {svc,svr}  - classification method:                             \n" : "" );
-    output << ( ( basic || advanced ) ? "                           svc: normal SVM classifier (default).              \n" : "" );
-    output << ( ( basic || advanced ) ? "                           svr: classify via regression.                      \n" : "" );
-    output << ( ( basic || advanced ) ? "         -B   {f,v,p,n}  - bias type:                                         \n" : "" );
-    output << ( ( basic || advanced ) ? "                           f - fixed bias (bias value defaults to 0).         \n" : "" );
-    output << ( ( basic || advanced ) ? "                           v - variable bias (default).                       \n" : "" );
-    output << ( ( basic || advanced ) ? "                           p - positive bias.                                 \n" : "" );
-    output << ( ( basic || advanced ) ? "                           n - negative bias.                                 \n" : "" );
-    output << ( ( basic || advanced ) ? "         -R   {l,q,o,g,G}- empirical risk type.                               \n" : "" );
-    output << ( ( basic || advanced ) ? "                           l - linear (default).                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                           q - quadratic.                                     \n" : "" );
-    output << ( ( basic || advanced ) ? "                           o - linear cost, but with  1-norm regularisation on\n" : "" );
-    output << ( ( basic || advanced ) ? "                               alpha  (not feature  space:  use -m  for that).\n" : "" );
-    output << ( ( basic || advanced ) ? "                               (to  enforce 1-norm  regularisation  with hard-\n" : "" );
-    output << ( ( basic || advanced ) ? "                               margin use this in combination with -c 1e20).  \n" : "" );
-    output << ( ( basic || advanced ) ? "                           g - generalised linear cost (iterative fuzzy).     \n" : "" );
-    output << ( ( basic || advanced ) ? "                           G - generalised quadratic cost (iterative fuzzy).  \n" : "" );
-    output << ( ( basic || advanced ) ? "                           Note  that  quadratic  quadratic empirical  ignores\n" : "" );
-    output << ( ( basic || advanced ) ? "                           values set by -c+, -c-, -c=, -cc and -jc. Note also\n" : "" );
-    output << ( ( basic || advanced ) ? "                           that epsilon insensitivity  is used for both linear\n" : "" );
-    output << ( ( basic || advanced ) ? "                           and quadratic cases, so  to construct an LS-SVR you\n" : "" );
-    output << ( ( basic || advanced ) ? "                           need to set -R q -w 0.                             \n" : "" );
-    output << ( ( basic || advanced ) ? "         -T   {f,s}      - tube type:                                         \n" : "" );
-    output << ( ( basic || advanced ) ? "                           f - fixed tube (default).                          \n" : "" );
-    output << ( ( basic || advanced ) ? "                           s - tube shrinking on.                             \n" : "" );
-    output << ( ( basic || advanced ) ? "         -TT  {0,1}      - svm_kconst alpha usage:                            \n" : "" );
-    output << ( ( basic || advanced ) ? "                           0 - alphas define kernel through standard method.  \n" : "" );
-    output << ( ( basic || advanced ) ? "                           1 - alpha^2 also written as kernel weights.        \n" : "" );
-    output << ( ( basic || advanced ) ? "                           Default is 0, so alpha defines a kernel through eg.\n" : "" );
-    output << ( ( basic || advanced ) ? "                           kernel type 801 inheritance,  but if you set this 1\n" : "" );
-    output << ( ( basic || advanced ) ? "                           alpha defines  weights in a kernel  sum with kernel\n" : "" );
-    output << ( ( basic || advanced ) ? "                           kernel type 800 inheritance. This is made easy with\n" : "" );
-    output << ( ( basic || advanced ) ? "                           the -x commands later.                             \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                  -- LSV specific options                          --         \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
@@ -14906,9 +14194,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                  -- MLM specific options                          --         \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -mlR n {l,q}    - MLM regularisation type at layer n:                \n" : "" );
-    output << ( ( basic || advanced ) ? "                           l - 1-norm.                                        \n" : "" );
-    output << ( ( basic || advanced ) ? "                           q - 2-norm.                                        \n" : "" );
     output << ( ( basic || advanced ) ? "         -mls n          - Set number of layers (not including output, dft 0).\n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                  -- BLK specific options                          --         \n" : "" );
@@ -15426,7 +14711,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                           0 - prior mean 0 (default).                        \n" : "" );
     output << ( ( basic || advanced ) ? "                           1 - prior mean mu(x) specified directly.           \n" : "" );
     output << ( ( basic || advanced ) ? "                           2 - prior mean g(x) inherited from ML.             \n" : "" );
-    output << ( ( basic || advanced ) ? "         -mugt mu        - Prior mean function of var(0,i), i=0,1,... (-mu 1).\n" : "" );
+    output << ( ( basic || advanced ) ? "         -mugt mu        - Prior mean function of x (as vector) (-mu 1).      \n" : "" );
     output << ( ( basic || advanced ) ? "         -muml ml        - Prior mean ML number (-mu 2).                      \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                  -- SVM specific options                          --         \n" : "" );
@@ -15655,11 +14940,11 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                           where x is replaced with xx(0).  In this example we\n" : "" );
     output << ( ( basic || advanced ) ? "                           use the shortcut where a vector is converted to the\n" : "" );
     output << ( ( basic || advanced ) ? "                           elements concatenated with spaces between them.    \n" : "" );
-    output << ( ( basic || advanced ) ? "         -bfx $fn        - save x data to file $fn on sys g(x) if defined.    \n" : "" );
-    output << ( ( basic || advanced ) ? "         -bfy $fn        - save y data to file $fn on sys g(x) if defined.    \n" : "" );
+    output << ( ( basic || advanced ) ? "         -bfx  $fn       - save x data to file $fn on sys g(x) if defined.    \n" : "" );
+    output << ( ( basic || advanced ) ? "         -bfy  $fn       - save y data to file $fn on sys g(x) if defined.    \n" : "" );
     output << ( ( basic || advanced ) ? "         -bfxy $fn       - save x,y data to file $fn on sys g(x) if defined.  \n" : "" );
     output << ( ( basic || advanced ) ? "         -bfyx $fn       - save y,x data to file $fn on sys g(x) if defined.  \n" : "" );
-    output << ( ( basic || advanced ) ? "         -bfr $fn        - get result from file $fn on sys g(x) if defined.   \n" : "" );
+    output << ( ( basic || advanced ) ? "         -bfr  $fn       - get result from file $fn on sys g(x) if defined.   \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                  -- MLM specific options                          --         \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
@@ -16158,27 +15443,27 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                               use eg  -kd 1.2c. The  c here  makes the  value\n" : "" );
     output << ( (          advanced ) ? "                               nominally consant, so it will be left alone.   \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -tcL   m        - Like -tkL but for C praameter.                     \n" : "" );
+    output << ( (          advanced ) ? "         -tcL   m        - Like -tkL   but for C praameter.                   \n" : "" );
     output << ( (          advanced ) ? "         -tcloo m        - Like -tkloo but for C parameter.                   \n" : "" );
     output << ( (          advanced ) ? "         -tcrec m        - Like -tkrec but for C parameter.                   \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -teL   m        - Like -tkL but for eps parameter.                   \n" : "" );
+    output << ( (          advanced ) ? "         -teL   m        - Like -tkL   but for eps parameter.                 \n" : "" );
     output << ( (          advanced ) ? "         -teloo m        - Like -tkloo but for eps parameter.                 \n" : "" );
     output << ( (          advanced ) ? "         -terec m        - Like -tkrec but for eps parameter.                 \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -tceL   m       - Like -tkL but for C and eps parameter.             \n" : "" );
+    output << ( (          advanced ) ? "         -tceL   m       - Like -tkL   but for C and eps parameter.           \n" : "" );
     output << ( (          advanced ) ? "         -tceloo m       - Like -tkloo but for C and eps parameter.           \n" : "" );
     output << ( (          advanced ) ? "         -tcerec m       - Like -tkrec but for C and eps parameter.           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -tkeL   m       - Like -tkL but for K and eps parameters.            \n" : "" );
+    output << ( (          advanced ) ? "         -tkeL   m       - Like -tkL   but for K and eps parameters.          \n" : "" );
     output << ( (          advanced ) ? "         -tkeloo m       - Like -tkloo but for K and eps parameters.          \n" : "" );
     output << ( (          advanced ) ? "         -tkerec m       - Like -tkrec but for K and eps parameters.          \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -tkcL   m       - Like -tkL but for K and C parameters.              \n" : "" );
+    output << ( (          advanced ) ? "         -tkcL   m       - Like -tkL   but for K and C parameters.            \n" : "" );
     output << ( (          advanced ) ? "         -tkcloo m       - Like -tkloo but for K and C parameters.            \n" : "" );
     output << ( (          advanced ) ? "         -tkcrec m       - Like -tkrec but for K and C parameters.            \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -tkceL   m      - Like -tkL but for K, C and eps parameters.         \n" : "" );
+    output << ( (          advanced ) ? "         -tkceL   m      - Like -tkL   but for K, C and eps parameters.       \n" : "" );
     output << ( (          advanced ) ? "         -tkceloo m      - Like -tkloo but for K, C and eps parameters.       \n" : "" );
     output << ( (          advanced ) ? "         -tkcerec m      - Like -tkrec but for K, C and eps parameters.       \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
@@ -16832,6 +16117,9 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           multiplying   the   acquisition  function   by  the\n" : "" );
     output << ( (          advanced ) ? "                           posterior probability  that the  constraint is met.\n" : "" );
     output << ( (          advanced ) ? "                           For EI, this is exactly cEI.                       \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtcv n       - constraint incorporation method:                   \n" : "" );
+    output << ( (          advanced ) ? "                           0  - multiple a(x) by prob(c(x)>=0) (default).     \n" : "" );
+    output << ( (          advanced ) ? "                           1  - correct mean/variance before calculating a(x).\n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmsc n         - enable/disable side-channel learning:              \n" : "" );
     output << ( (          advanced ) ? "                           0 - normal operation.                              \n" : "" );
@@ -17697,16 +16985,14 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "Feature selection options (after parameter tuning):                           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -fsx            - feature selection via hill climbing, min LOO error.\n" : "" );
-    output << ( (          advanced ) ? "         -fsr            - feature selection via hill climbing, min recal err.\n" : "" );
-    output << ( (          advanced ) ? "         -fsc n          - feature  selection via  hill  climbing, min  n-fold\n" : "" );
-    output << ( (          advanced ) ? "                           cross validation error.                            \n" : "" );
-    output << ( (          advanced ) ? "         -fsC m n        - feature  selection via  hill  climbing, min  n-fold\n" : "" );
-    output << ( (          advanced ) ? "                           cross-validation error, randomised, m repetitions. \n" : "" );
-    output << ( (          advanced ) ? "         -fsf $file      - feature selection via hill climbing, min test err. \n" : "" );
-    output << ( (          advanced ) ? "         -fsF i j $file  - feature selection via hill  climbing, min test err,\n" : "" );
-    output << ( (          advanced ) ? "                           ignoring i  vectors  at start,  testing  at most  j\n" : "" );
-    output << ( (          advanced ) ? "                           vectors (-1 if all).                               \n" : "" );
+    output << ( (          advanced ) ? "         -fsx            - feature select via hill climbing, min LOO error.   \n" : "" );
+    output << ( (          advanced ) ? "         -fsr            - feature select via hill climbing, min recal error. \n" : "" );
+    output << ( (          advanced ) ? "         -fsc n          - feature select via hill climbing, min n-fold error.\n" : "" );
+    output << ( (          advanced ) ? "         -fsC m n        - feature select via hill climbing, min n-fold error,\n" : "" );
+    output << ( (          advanced ) ? "                           m randomised repetitions.                          \n" : "" );
+    output << ( (          advanced ) ? "         -fsf $file      - feature select via hill climbing, min test error.  \n" : "" );
+    output << ( (          advanced ) ? "         -fsF i j $file  - feature select via hill climbing, min test error...\n" : "" );
+    output << ( (          advanced ) ? "                           ignoring i at start, test at most j (-1 for all).  \n" : "" );
     output << ( (          advanced ) ? "         -fss n          - set number  of sweeps (0  default) for  this set of\n" : "" );
     output << ( (          advanced ) ? "                           feature  selection.  If  >1 then,  after the  first\n" : "" );
     output << ( (          advanced ) ? "                           hill-climb(descent) the  algorithm will follow with\n" : "" );
@@ -17819,15 +17105,11 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -tQ             - Store the actual outputs in var(1,5), var(1,6).    \n" : "" );
     output << ( (          advanced ) ? "         -tnQ            - Don't store the actual output (default).           \n" : "" );
     output << ( (          advanced ) ? "         -tQx            - Log actual outputs to file (default).              \n" : "" );
-    output << ( (          advanced ) ? "         -tnQx           - Don't log actual outputs.                          \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                  ** MEX: in mex you want to use -tnQx or it will be slow **  \n" : "" );
+    output << ( (          advanced ) ? "         -tnQx           - Don't log actual output (use this in mex or it will\n" : "" );
+    output << ( (          advanced ) ? "                           be be quite slow).                                 \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -tvar           - Save x variance to .var file when testing.         \n" : "" );
-    output << ( (          advanced ) ? "         -tT  {0,1}      - Enable threads when cross-validating (default 0):  \n" : "" );
-    output << ( (          advanced ) ? "                           0: disable.                                        \n" : "" );
-    output << ( (          advanced ) ? "                           1: enable.                                         \n" : "" );
-    output << ( (          advanced ) ? "                           Note that threads usually don't help here!         \n" : "" );
+    output << ( (          advanced ) ? "         -tT  {0,1}      - Enable threads when cross-validating (default 0).  \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -tn  n          - Sets performance measure:                          \n" : "" );
     output << ( (          advanced ) ? "                           0: error (default)                                 \n" : "" );
@@ -17869,7 +17151,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           after the result is evaluated (eg after -tM).  Note\n" : "" );
     output << ( (          advanced ) ? "                           that -tC stores variance in var(1,46).             \n" : "" );
     output << ( (          advanced ) ? "         -tMx x          - Appends side-channel vect. x to result (see -gmsc).\n" : "" );
-    output << ( (          advanced ) ? "                           Rhe result r to a set { r 0 x }. x must be a vector\n" : "" );
+    output << ( (          advanced ) ? "                           The result r to a set { r 0 x }. x must be a vector\n" : "" );
     output << ( (          advanced ) ? "                           for this to work.                                  \n" : "" );
     output << ( (          advanced ) ? "         -tMvx v x       - combine above, so result is { r v x }.             \n" : "" );
     output << ( (          advanced ) ? "                           Rhe result r to a set { r 0 x }. x must be a vector\n" : "" );
@@ -17989,37 +17271,17 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "Reporting options (after performance estimation):                             \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         -s   $file      - write ML to $file.                                 \n" : "" );
-    output << ( ( basic || advanced ) ? "         -a   $file      - write alpha vector to $file.                       \n" : "" );
-    output << ( ( basic || advanced ) ? "         -b   $file      - write bias value to $file.                         \n" : "" );
+    output << ( ( basic || advanced ) ? "         -a   $file      - write alpha vector to $file (and mex if present).  \n" : "" );
+    output << ( ( basic || advanced ) ? "         -b   $file      - write bias value to $file (and mex if present).    \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                  ** -a and -b also write to mex if present        **         \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -echo $fn       - echoes $fn to cerr and summary file.               \n" : "" );
-    output << ( (          advanced ) ? "         -ECHO $fn       - echoes  $fn (evaluated and  finalised) to cerr  and\n" : "" );
-    output << ( (          advanced ) ? "                           summary file.                                      \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -plotfn xmin xmax ymin ymax fn xvar file format - plot fn  over range\n" : "" );
-    output << ( (          advanced ) ? "                           and put in file with desired format:               \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                           xvar: 0,1,2,3,4,5,6 for x,y,z,v,w,g,h respectively.\n" : "" );
-    output << ( (          advanced ) ? "                           file: filename                                     \n" : "" );
-    output << ( (          advanced ) ? "                           format: 0 for text, 1 ps, 2 pdf, 3 mex.            \n" : "" );
-    output << ( (          advanced ) ? "                           ymin>ymax: select auto y range                     \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -surffn xmin xmax ymin ymax zmin zmax fn xvar yvar file format - surf\n" : "" );
-    output << ( (          advanced ) ? "                           plot fn  over range  and put  in file  with desired\n" : "" );
-    output << ( (          advanced ) ? "                           format:                                            \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                           xvar: 0,1,2,3,4,5,6 for x,y,z,v,w,g,h respectively.\n" : "" );
-    output << ( (          advanced ) ? "                           file: filename                                     \n" : "" );
-    output << ( (          advanced ) ? "                           format: 0 for text, 1 ps, 2 pdf, 3 mex.            \n" : "" );
-    output << ( (          advanced ) ? "                           ymin>ymax: select auto y range                     \n" : "" );
+    output << ( (          advanced ) ? "         -echo $fn       - echo $fn to cerr and summary file.                 \n" : "" );
+    output << ( (          advanced ) ? "         -ECHO $fn       - echo $fn (evaled/finalised) to cerr, summary file. \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -K0             - evaluate K0().                                     \n" : "" );
     output << ( (          advanced ) ? "         -K1  [x]        - evaluate K1(x).                                    \n" : "" );
     output << ( (          advanced ) ? "         -K2  [x] [y]    - evaluate K2(x,y).                                  \n" : "" );
     output << ( (          advanced ) ? "         -K3  [x] [y] [u]- evaluate K3(x,y,u).                                \n" : "" );
-    output << ( (          advanced ) ? "      -K4 [x] [y] [u] [v]- evaluate K4(x,y,u,v).                              \n" : "" );
+    output << ( (          advanced ) ? "         -K4  [x] [y] [u] [v]- eval K4(x,y,u,v).                              \n" : "" );
     output << ( (          advanced ) ? "         -Km  m [x0] ... - evaluate Km(x0,...).                               \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -ak  [x]        - return [ K(x,x).K(xi,xi) - K(x,xi)^2 ]_i.          \n" : "" );
@@ -18078,12 +17340,10 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                  ** g(x), and -hUv [ x :::: 6:2 ] the variance of **         \n" : "" );
     output << ( (          advanced ) ? "                  ** d^2/dx^2 g(x).                                **         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -plot i l u     - graph g(x) for x(i) in [ l u ]. Note this works via\n" : "" );
-    output << ( (          advanced ) ? "                           a system call to run  gnuplot (and eps2pdf, pdfcrop\n" : "" );
-    output << ( (          advanced ) ? "                           if plot type is pdf).                              \n" : "" );
-    output << ( (          advanced ) ? "         -surf i lx ux j ly uy - graph  g(x)  for  x(i) in [ lx ux ],  x(j) in\n" : "" );
-    output << ( (          advanced ) ? "                           [ ly uy ].                                         \n" : "" );
-    output << ( (          advanced ) ? "                           if plot type is pdf).                              \n" : "" );
+    output << ( (          advanced ) ? "         -plot i l u     - graph g(x), x(i) in [ l u ].  Works via system call\n" : "" );
+    output << ( (          advanced ) ? "                           to gnuplot (eps2pdf, pdfcrop if plot type is pdf). \n" : "" );
+    output << ( (          advanced ) ? "         -surf i lx ux j ly uy - garph g(x), x(i) in [lx ux], x(j) in [ly uy].\n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -hpln name      - name of output of plot (default logfile.ps/pdf).   \n" : "" );
     output << ( (          advanced ) ? "         -hpld name      - name of datafile of plot (default logfile.pdat).   \n" : "" );
     output << ( (          advanced ) ? "         -hpls t         - version of g(x) plotted:                           \n" : "" );
@@ -18107,6 +17367,22 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -hplM M         - set upper end of y range (dflt 0, auto if m>M).    \n" : "" );
     output << ( (          advanced ) ? "         -hplx xt        - set sparse vector template for x.                  \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -plotfn xmin xmax ymin ymax fn xvar file format - plot fn  over range\n" : "" );
+    output << ( (          advanced ) ? "                           and put in file with desired format:               \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                           xvar: 0,1,2,3,4,5,6 for x,y,z,v,w,g,h respectively.\n" : "" );
+    output << ( (          advanced ) ? "                           file: filename                                     \n" : "" );
+    output << ( (          advanced ) ? "                           format: 0 for text, 1 ps, 2 pdf, 3 mex.            \n" : "" );
+    output << ( (          advanced ) ? "                           ymin>ymax: select auto y range                     \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -surffn xmin xmax ymin ymax zmin zmax fn xvar yvar file format - surf\n" : "" );
+    output << ( (          advanced ) ? "                           plot fn over range and put in file with format:    \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                           xvar: 0,1,2,3,4,5,6 for x,y,z,v,w,g,h respectively.\n" : "" );
+    output << ( (          advanced ) ? "                           file: filename                                     \n" : "" );
+    output << ( (          advanced ) ? "                           format: 0 for text, 1 ps, 2 pdf, 3 mex.            \n" : "" );
+    output << ( (          advanced ) ? "                           ymin>ymax: select auto y range                     \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                  -- MEX (Matlab) only options                     --         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -hM  $dst v     - Set MATLAB variable $dst = v (evaluated).          \n" : "" );
@@ -18123,46 +17399,30 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                           -Zx  flag.  Note  that a  separate logfile  will be\n" : "" );
     output << ( ( basic || advanced ) ? "                           written for each block and may overwrite.          \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -Zmute          - mute standard error.                               \n" : "" );
-    output << ( ( basic || advanced ) ? "         -ZMute          - mute standard out.                                 \n" : "" );
-    output << ( ( basic || advanced ) ? "         -ZMUTE          - mute standard error and standard out.              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -Zunmute        - un-mute standard error.                            \n" : "" );
-    output << ( ( basic || advanced ) ? "         -ZunMute        - un-mute standard out.                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -ZunMUTE        - un-mute standard error and standard out.           \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -Zs  s          - seed random number generator  with seed s.  To seed\n" : "" );
-    output << ( (          advanced ) ? "                           with time use -Zs time.                            \n" : "" );
+    output << ( (          advanced ) ? "         -Zs  s          - seed RNG (-Zs time to seed with time()).           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -Zinteract      - start interactive (god) mode operation.            \n" : "" );
-    output << ( (          advanced ) ? "         -Zgod           - enable entry to god-mode during optimisation if key\n" : "" );
-    output << ( (          advanced ) ? "                           pressed (default).                                 \n" : "" );
+    output << ( (          advanced ) ? "         -Zgod           - enable god-mode if key during optimisation (dflt). \n" : "" );
     output << ( (          advanced ) ? "         -Zdawkins       - disable god-mode during optimisation.              \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -Zif b args     - if condition b is true (non-zero) then process args\n" : "" );
-    output << ( (          advanced ) ? "                           args should be enclosed in {}.                     \n" : "" );
-    output << ( (          advanced ) ? "         -Zifelse b t f  - if condition b is true (non-zero) then process args\n" : "" );
-    output << ( (          advanced ) ? "                           t, otherwise process args f.                       \n" : "" );
-    output << ( (          advanced ) ? "         -Zwhile b args  - while condition b is true (non-zero), process args \n" : "" );
+    output << ( (          advanced ) ? "         -Zif b args     - if b true (nz) process args (args enclosed in {}). \n" : "" );
+    output << ( (          advanced ) ? "         -Zifelse b t f  - if b true (nz) process args t, otherwise process f.\n" : "" );
+    output << ( (          advanced ) ? "         -Zwhile b args  - while b is true (nz), process args.                \n" : "" );
     output << ( (          advanced ) ? "         -Zrep i args    - process args i times (count var(0,1000)=0,1,...).  \n" : "" );
-    output << ( (          advanced ) ? "         -Zwait b        - pause until conditions b become true (non-zero).   \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -Zusleep n      - Sleep for n usec (accuracy is system dependent).   \n" : "" );
     output << ( (          advanced ) ? "         -Zmsleep n      - Sleep for n msec (accuracy is system dependent).   \n" : "" );
     output << ( (          advanced ) ? "         -Zsleep  n      - Sleep for n sec  (accuracy is system dependent).   \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -Zw  $file      - process args from $file (push).                    \n" : "" );
     output << ( (          advanced ) ? "         -Zk             - process args from cin (push).                      \n" : "" );
-    output << ( (          advanced ) ? "         -Zc  n          - process args from shared stream n.                 \n" : "" );
     output << ( (          advanced ) ? "         -Zwf $file $of  - process args from $file, feedback to $of (push).   \n" : "" );
     output << ( (          advanced ) ? "         -Zkf            - process args from cin, feedback cout (\").          \n" : "" );
     output << ( (          advanced ) ? "         -Zaw $file      - pop first, then -Zw $file.                         \n" : "" );
     output << ( (          advanced ) ? "         -Zak            - pop first, then -Zk.                               \n" : "" );
-    output << ( (          advanced ) ? "         -Zac n          - pop first, then -Zc.                               \n" : "" );
     output << ( (          advanced ) ? "         -Zawf $file $of - pop first, then -Zwf $file $of.                    \n" : "" );
     output << ( (          advanced ) ? "         -Zakf           - pop first, then -Zkf.                              \n" : "" );
     output << ( (          advanced ) ? "         -Za             - abandom input stream and return to previous (pop). \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -Zcw n $pstring - push string onto shared stream n.                  \n" : "" );
-    output << ( (          advanced ) ? "         -ZcW n arg      - push evaluated arg onto shared stream n.           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                  ** When svmheavy is  run, the command  line args **         \n" : "" );
     output << ( (          advanced ) ? "                  ** are placed in an istream  and the buffer gets **         \n" : "" );
@@ -18174,61 +17434,19 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                  ** and moves  to the  next one  down.  Once  the **         \n" : "" );
     output << ( (          advanced ) ? "                  ** last  istream is  popped  off  the stack  the **         \n" : "" );
     output << ( (          advanced ) ? "                  ** program will exit.                            **         \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                  ** Feedback is a method  of passing results back **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** when  using UDP/TCP  streaming.  If selected, **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** some results/output  (eg -echo)  will be sent **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** back up  the stream.  These results  can also **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** be sent to files or cout.                     **         \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                  ** Shared  streams  (-Zc and  -Zac above)  allow **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** commands  to be  passed between  threads.  To **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** write a string  to a shared stream  that will **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** appear  as  input  to   whichever  thread  is **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** accessing this stream (ie has -Zc or -Zac for **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** relevant  stream  number)  use -Zcw  (put raw **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** string into stream) or  -ZcW (evaluated).  To **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** pass variables use either -ZcW (note possible **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** loss  of  precision)  or   global  variables. **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** Notes:                                        **         \n" : "" );
     output << ( (          advanced ) ? "                  **                                               **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** - if stream  is empty  then thread  will wait **         \n" : "" );
-    output << ( (          advanced ) ? "                  **   indefinitely  for something to  be put into **         \n" : "" );
-    output << ( (          advanced ) ? "                  **   it.  Thus  to terminate  a stream  you must **         \n" : "" );
-    output << ( (          advanced ) ? "                  **   end the stream with eg.:                    **         \n" : "" );
-    output << ( (          advanced ) ? "                  **                                               **         \n" : "" );
-    output << ( (          advanced ) ? "                  **     -Zcw n \"-Zx -Za\"                          **         \n" : "" );
-    output << ( (          advanced ) ? "                  **                                               **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** - The operations -Zcw and -ZcW are atomic, so **         \n" : "" );
-    output << ( (          advanced ) ? "                  **   you  can  have  multiple   threads  passing **         \n" : "" );
-    output << ( (          advanced ) ? "                  **   commands (preferably  ending with -Zx) to a **         \n" : "" );
-    output << ( (          advanced ) ? "                  **   single stream.                              **         \n" : "" );
+    output << ( (          advanced ) ? "                  ** Feedback defines where eg -echo is sent.      **         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -Zf  $file      - create an empty file of given name.                \n" : "" );
     output << ( (          advanced ) ? "         -Zp  $file      - pause until $file exists.                          \n" : "" );
     output << ( (          advanced ) ? "         -Zff $file v    - create file and write v to it.                     \n" : "" );
     output << ( (          advanced ) ? "         -Zpp $file n    - pause until $file exists and read var(0,n) to it.  \n" : "" );
-#ifdef ENABLE_THREADS
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                  ** Background  training  will  optimise  the  ML **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** while waiting for input  from the user.  Note **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** that  there is  no guarantee  that the  ML is **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** optimal  at  any given  time when  background **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** training is enabled - use fnA(h,14) to **         \n" : "" );
-    output << ( (          advanced ) ? "                  ** see this information at any time.             **         \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -Zob            - turn background training off (default).            \n" : "" );
-    output << ( (          advanced ) ? "         -ZoB            - turn background training on (stop on interupt).    \n" : "" );
-    output << ( (          advanced ) ? "         -ZoBB           - turn background training on (train to completion). \n" : "" );
-#endif
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         -ZZ             - End command sequence now, even if stream nonempty. \n" : "" );
     output << ( ( basic || advanced ) ? "         -ZZZZ           - Exit now.                                          \n" : "" );
     output << ( (          advanced ) ? "         -ZZif t         - Run -ZZ if t evaluates true (non-zero integer).    \n" : "" );
     output << ( (          advanced ) ? "         -ZZZZif t       - Run -ZZZZ if t evaluates true (non-zero integer).  \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                  ** Shortcuts:                                    **         \n" : "" );
-    output << ( (          advanced ) ? "                  **                                               **         \n" : "" );
     output << ( (          advanced ) ? "                  ** 1. -Zx can be replaced by ;                   **         \n" : "" );
     output << ( (          advanced ) ? "                  ** 2. -ZZ can be replaced by end.                **         \n" : "" );
     output << ( (          advanced ) ? "                  ** 3. -ZZZZ can be replaced by exit.             **         \n" : "" );

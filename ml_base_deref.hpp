@@ -118,7 +118,7 @@ public:
     virtual double Cclass   (int d) const override { return getQconst().Cclass(d);   }
     virtual double epsclass (int d) const override { return getQconst().epsclass(d); }
 
-    virtual       int      mpri  (void) const override { return getQconst().mpri();   }
+    virtual       int      prim  (void) const override { return getQconst().prim();   }
     virtual const gentype &prival(void) const override { return getQconst().prival(); }
     virtual const ML_Base *priml (void) const override { return getQconst().priml();  }
 
@@ -186,11 +186,6 @@ public:
     virtual int xisclass     (int i, int defaultclass, int q = -1) const override { return getQconst().xisclass(i,defaultclass,q); }
 
     virtual int RFFordata(int i) const { return getQconst().RFFordata(i); }
-
-    virtual void npCweight    (double **res, int *dim) const override { getQconst().npCweight    (res,dim); }
-    virtual void npCweightfuzz(double **res, int *dim) const override { getQconst().npCweightfuzz(res,dim); }
-    virtual void npsigmaweight(double **res, int *dim) const override { getQconst().npsigmaweight(res,dim); }
-    virtual void npepsweight  (double **res, int *dim) const override { getQconst().npepsweight  (res,dim); }
 
     virtual int isClassifier(void) const override { return getQconst().isClassifier(); }
     virtual int isRegression(void) const override { return getQconst().isRegression(); }
@@ -516,7 +511,7 @@ public:
     virtual int setCclass   (int d, double xC)   override { return getQ().setCclass(d,xC);          }
     virtual int setepsclass (int d, double xeps) override { return getQ().setepsclass(d,xeps);      }
 
-    virtual int setmpri  (int nv)            override { return getQ().setmpri(nv);   }
+    virtual int setprim  (int nv)            override { return getQ().setprim(nv);   }
     virtual int setprival(const gentype &nv) override { return getQ().setprival(nv); }
     virtual int setpriml (const ML_Base *nv) override { return getQ().setpriml(nv);  }
 

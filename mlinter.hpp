@@ -35,9 +35,7 @@ class SVMThreadContext;
 //         requested.  This is abstracted so that it can be called recursively
 //         (eg in gridsearch).
 //
-// threadInd  - thread index (used during multi-threaded operation)
-// svmContext - running data for all threads.  svmContext(thread) contains
-//              data for this thread.
+// svmContext - running data.
 // commStack  - input (command) stream for this thread.
 // globalvariables - data shared between all threads
 //
@@ -69,10 +67,8 @@ class SVMThreadContext;
 // 201-299: thread error
 // 301-399: unknown throw
 
-int runsvm(int threadInd,
-           SparseVector<SVMThreadContext *> &svmContext,
+int runsvm(SVMThreadContext *svmContext,
            SparseVector<ML_Mutable *> &svmbase,
-           SparseVector<int> &svmThreadOwner,
            Stack<awarestream *> *commstack,
            svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
            int (*getsetExtVar)(gentype &res, const gentype &src, int num),
@@ -80,11 +76,25 @@ int runsvm(int threadInd,
 
 // Kill all threads, including main (0) thread if killmain is set.
 
-void killallthreads(SparseVector<SVMThreadContext *> &svmContext, int killmain = 0);
+void killallthreads(SVMThreadContext *svmContext);
 
 // Delete all MLs
 
 void deleteMLs(SparseVector<ML_Mutable *> &svmbase);
+
+// Direct access to MLs
+//
+// grabsvm:  make SVM svmInd exist
+// regsvm:   register SVM whattoreg at first available index >= svmInd
+//           returns index where registered
+// getMLref: get reference to requested ML
+
+void grabsvm(SparseVector<ML_Mutable *> &svmbase, int svmInd);
+int regsvm(SparseVector<ML_Mutable *> &svmbase, int svmInd, ML_Mutable &whattoreg);
+ML_Mutable &getMLref(SparseVector<ML_Mutable *> &svmbase, int svmInd);
+const ML_Mutable &getMLrefconst(SparseVector<ML_Mutable *> &svmbase, int svmInd);
+
+
 
 
 class SVMThreadContext;
@@ -104,7 +114,7 @@ inline SVMThreadContext *&postProInnerProd(SVMThreadContext *&x);
 class SVMThreadContext
 {
 public:
-    SVMThreadContext(int xsvmInd = 1, int xthreadInd = -1)
+    SVMThreadContext(int xsvmInd = 1)
     {
         verblevel        = 1;
         finalresult      = 0.0;
@@ -113,23 +123,18 @@ public:
         filevariables.zero();
         xtemplate.zero();
         depthin          = 0;
-        bgTrainOn        = 0;
         logfile          = "";
         binaryRelabel    = 0;
         singleDrop       = 0;
         updateargvars    = 1;
-        killmethod       = 1;
         killswitch       = 0;
-        controlThreadInd = xthreadInd;
 
         argvariables("&",1)("&",45) = svmInd;
     }
 
-    SVMThreadContext(const SVMThreadContext &src, int xthreadInd = -1)
+    SVMThreadContext(const SVMThreadContext &src)
     {
         *this = src;
-
-        controlThreadInd = xthreadInd;
     }
 
     SVMThreadContext &operator=(const SVMThreadContext &src)
@@ -142,15 +147,12 @@ public:
         filevariables    = src.filevariables;
         xtemplate        = src.xtemplate;
         depthin          = 0;
-        bgTrainOn        = 0;
         logfile          = "";
         binaryRelabel    = src.binaryRelabel;
         singleDrop       = src.singleDrop;
         updateargvars    = src.updateargvars;
-        killmethod       = 1;
         MLindstack       = src.MLindstack;
         killswitch       = 0;
-        controlThreadInd = -1;
 
         return *this;
     }
@@ -180,18 +182,12 @@ public:
     //                for future extraction).
     // xtemplate:     boilerplate (default) parts of all x vectors
     // depthin:       when recursing (for example) records depth.  1 for top layer
-    // bgTrainOn:     0 for normal, 1 to enable background training.
     // logfile:       name of logfile
     // binaryRelabel: see addData.h
     // singleDrop:    see addData.h
-    // killmethod:    when attempting to capture an ML for this thread:
-    //                0: wait patiently for other thread(s) to finish
-    //                1: set killswitch on other threads to terminate them early
     // MLindstack:    used to keep indices when pushing/popping MLs
     //
     // killswitch:       set this 1 to tell thread to stop.
-    // controlThreadInd: if thread is running then this is set to the threadInd of the
-    //                   controlling thread.  Otherwise it is set -1.
     // updateargvars:    set 1 if argvariables need to be updated, zero otherwise
 
     int verblevel;
@@ -202,15 +198,12 @@ public:
     SparseVector<ofiletype> filevariables;
     SparseVector<gentype> xtemplate;
     int depthin;
-    int bgTrainOn;
     std::string logfile;
     int binaryRelabel;
     int singleDrop;
     int updateargvars;
-    int killmethod;
     Stack<int> MLindstack;
     svmvolatile int killswitch;
-    svmvolatile int controlThreadInd;
 };
 
 inline SVMThreadContext *&setzero(SVMThreadContext *&x)

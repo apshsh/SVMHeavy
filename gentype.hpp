@@ -268,8 +268,8 @@ gentype trans(const gentype &a);
 
 
 
-
-
+template <class T>
+Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &src);
 
 
 
@@ -315,17 +315,22 @@ public:
 
              gentype(const gentype                &src) { fastcopy(src,1);                                                   }
     explicit gentype()                                  { ;                                                                  }
-    explicit gentype(      int                     src) { typeis = 'Z'; intval = src;       doubleval = src;                 }
-    explicit gentype(      double                  src) { typeis = 'R'; intval = (int) src; doubleval = src;                 }
-    explicit gentype(const d_anion                &src) { typeis = 'A'; MEMNEW(anionval,d_anion(src));                       }
-    explicit gentype(const Vector<gentype>        &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>(src));              }
-    explicit gentype(const Matrix<gentype>        &src) { typeis = 'M'; MEMNEW(matrixval,Matrix<gentype>(src));              }
-    explicit gentype(const Set<gentype>           &src) { typeis = 'X'; MEMNEW(setval,Set<gentype>(src));                    }
-    explicit gentype(const Dgraph<gentype,double> &src) { typeis = 'G'; MEMNEW(dgraphval,Dgraph<gentype COMMA double>(src)); }
-    explicit gentype(const std::string            &src) { makeEqn(src);                                                      }
-    explicit gentype(const char                   *src) { makeEqn(src);                                                      }
+    explicit gentype(      int                        src) { typeis = 'Z'; intval = src;       doubleval = src;                 }
+    explicit gentype(      double                     src) { typeis = 'R'; intval = (int) src; doubleval = src;                 }
+    explicit gentype(const d_anion                   &src) { typeis = 'A'; MEMNEW(anionval,d_anion(src));                       }
+    explicit gentype(const Vector<gentype>           &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>(src));              }
+    explicit gentype(const SparseVector<int>         &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>); SparseToNonSparse(*vectorval,src); }
+    explicit gentype(const SparseVector<double>      &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>); SparseToNonSparse(*vectorval,src); }
+    explicit gentype(const SparseVector<std::string> &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>); SparseToNonSparse(*vectorval,src); }
+    explicit gentype(const SparseVector<gentype>     &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>); SparseToNonSparse(*vectorval,src); }
+    explicit gentype(const Matrix<gentype>           &src) { typeis = 'M'; MEMNEW(matrixval,Matrix<gentype>(src));              }
+    explicit gentype(const Set<gentype>              &src) { typeis = 'X'; MEMNEW(setval,Set<gentype>(src));                    }
+    explicit gentype(const Dgraph<gentype,double>    &src) { typeis = 'G'; MEMNEW(dgraphval,Dgraph<gentype COMMA double>(src)); }
+    explicit gentype(const std::string               &src) { makeEqn(src);                                                      }
+    explicit gentype(const char                      *src) { makeEqn(src);                                                      }
 
     template <class T> explicit gentype(const Vector<T>        &src) { *this = src; }
+    template <class T> explicit gentype(const SparseVector<T>  &src) { *this = src; }
     template <class T> explicit gentype(const Matrix<T>        &src) { *this = src; }
     template <class T> explicit gentype(const Set<T>           &src) { *this = src; }
     template <class T> explicit gentype(const Dgraph<T,double> &src) { *this = src; }
@@ -364,6 +369,14 @@ public:
     {
         deleteVectMatMem('V',src.size());
         (*vectorval).castassign(src);
+
+        return *this;
+    }
+
+    template <class T> gentype &operator=(const SparseVector<T> &src)
+    {
+        deleteVectMatMem('V',0);
+        SparseToNonSparse(*vectorval,src);
 
         return *this;
     }
@@ -1769,6 +1782,179 @@ inline const gentype &nullgentype(void)
 
 
 
+
+
+template <class T>
+Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &src)
+{
+    res.zero();
+
+    int size = src.indsize();
+    int prevind = -1;
+    int baseind = 0;
+
+    if ( size )
+    {
+	int i;
+
+	for ( i = 0 ; i < size ; ++i )
+	{
+            if ( src.ind(i) == prevind+1 )
+            {
+                gentype tmp(src.direcref(i));
+
+                res.append(-1,tmp);
+            }
+
+            else if ( ( baseind < INDF1OFFSTART ) && ( src.ind(i) >= INDF1OFFSTART ) && ( src.ind(i) <= INDF1OFFEND ) )
+            {
+                baseind = INDF1OFFSTART;
+
+                {
+                    static gentype tmp(":");
+
+                    res.append(-1,tmp);
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    gentype tmp(src.direcref(i));
+
+                    res.append(-1,tmp);
+                }
+            }
+
+            else if ( ( baseind < INDF2OFFSTART ) && ( src.ind(i) >= INDF2OFFSTART ) && ( src.ind(i) <= INDF2OFFEND ) )
+            {
+                baseind = INDF2OFFSTART;
+
+                {
+                    static gentype tmp("::");
+
+                    res.append(-1,tmp);
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    gentype tmp(src.direcref(i));
+
+                    res.append(-1,tmp);
+                }
+            }
+
+            else if ( ( baseind < INDF3OFFSTART ) && ( src.ind(i) >= INDF3OFFSTART ) && ( src.ind(i) <= INDF3OFFEND ) )
+            {
+                baseind = INDF3OFFSTART;
+
+                {
+                    static gentype tmp(":::");
+
+                    res.append(-1,tmp);
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    gentype tmp(src.direcref(i));
+
+                    res.append(-1,tmp);
+                }
+            }
+
+            else if ( ( baseind < INDF4OFFSTART ) && ( src.ind(i) >= INDF4OFFSTART ) && ( src.ind(i) <= INDF4OFFEND ) )
+            {
+                baseind = INDF4OFFSTART;
+
+                {
+                    static gentype tmp("::::");
+
+                    res.append(-1,tmp);
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    gentype tmp(src.direcref(i));
+
+                    res.append(-1,tmp);
+                }
+            }
+
+            else if ( (src.ind(i)-baseind) >= DEFAULT_TUPLE_INDEX_STEP )
+            {
+                goover:
+
+                baseind += DEFAULT_TUPLE_INDEX_STEP;
+
+                {
+                    static gentype tmp("~");
+
+                    res.append(-1,tmp);
+                }
+
+                if ( (src.ind(i)-baseind) >= DEFAULT_TUPLE_INDEX_STEP )
+                {
+                    goto goover;
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    gentype tmp(src.direcref(i));
+
+                    res.append(-1,tmp);
+                }
+            }
+
+            else
+            {
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    gentype tmp(src.direcref(i));
+
+                    res.append(-1,tmp);
+                }
+            }
+
+            prevind = src.ind(i);
+	}
+    }
+
+    return res;
+}
 
 
 

@@ -115,6 +115,9 @@ public:
     // minstdev: if >0 then we add a penalty to the inner loop if the posterior
     //         variance is below minstdev
     //
+    // cgtmethod: 0 - calculate probability of c(x)>=0, scale acquisition function by this (default)
+    //            1 - build c(x) into mean/variance calculation before calculating acquisition function
+    //
     // ztol:   zero tolerance (used when assessing sigma > 0, sigma = 0)
     // delta:  used by GP-UCB algorithm (0.1 by default)
     // nu:     used by GP-UCB algorithm (almost always 1)
@@ -322,6 +325,7 @@ public:
     double err;
     double minstdev;
     int humanfreq;
+    int cgtmethod;
 
     double ztol;
     double delta;
@@ -402,6 +406,7 @@ public:
         err               = 1e-1;
         minstdev          = 0;
         humanfreq         = 0;
+        cgtmethod         = 0;
 
         ztol   = DEFAULT_BAYES_ZTOL;
         delta  = DEFAULT_BAYES_DELTA;
@@ -484,6 +489,7 @@ public:
         fidvar            = src.fidvar;
         fidover           = src.fidover;
         humanfreq         = src.humanfreq;
+        cgtmethod         = src.cgtmethod;
 
         ztol   = src.ztol;
         delta  = src.delta;

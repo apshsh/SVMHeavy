@@ -475,23 +475,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         awarestream *commlinestringbox = new awarestream(commlinestring,1);
         commstack->push(commlinestringbox);
 
-        // Threaded data.  Each ML is an element in svmContext, with threadInd
-        // specifying which is currently in use.  At this point we only have
-        // a single ML with index 0.
-
-        static int threadInd = 0;
         static int svmInd = 0;
-        static SparseVector<SVMThreadContext *> svmContext;
-        static SparseVector<int> svmThreadOwner;
+        static SVMThreadContext *svmContext;
         static SparseVector<ML_Mutable *> svmbase;
-        svmContext("[]",threadInd) = new SVMThreadContext(svmInd,threadInd);
+        svmContext = new SVMThreadContext(svmInd);
         outstream() << "{";
 
         // Now that everything has been set up so we can run the actual code.
 
         SparseVector<SparseVector<int> > returntag;
 
-        runsvm(threadInd,svmContext,svmbase,svmThreadOwner,commstack,globargvariables,mexgetsetExtVar,returntag);
+        runsvm(svmContext,svmbase,commstack,globargvariables,mexgetsetExtVar,returntag);
 
         // Unlock the thread, signalling that the context can be deleted etc
 
@@ -522,7 +516,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
             // Delete the thread SVM context and remove from vector.
 
-            killallthreads(svmContext,1);
+            killallthreads(svmContext);
 
             deleteMLs(svmbase);
 

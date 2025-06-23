@@ -6086,8 +6086,8 @@ int SVM_Generic::getparam(int ind, gentype &val, const gentype &xa, int ia, cons
         case 9112: { val = isPosBias((int) xa);     desc = "SVM_Scalar::isPosBias";     break; }
         case 9113: { val = isNegBias((int) xa);     desc = "SVM_Scalar::isNegBias";     break; }
         case 9114: { val = isFixedBias((int) xa);   desc = "SVM_Scalar::isFixedBias";   break; }
-        case 9115: { val = LinBiasForce((int) xa);  desc = "SVM_Scalar::LinBiasForce";  break; }
-        case 9116: { val = QuadBiasForce((int) xa); desc = "SVM_Scalar::QuadBiasForce"; break; }
+        case 9115: { val = LinBiasForceclass((int) xa);  desc = "SVM_Scalar::LinBiasForceclass";  break; }
+        case 9116: { val = QuadBiasForceclass((int) xa); desc = "SVM_Scalar::QuadBiasForceclass"; break; }
 
         case 9200: { val = Gp()((int) xa, (int) xb); desc = "SVM_Scalar::Gp"; break; }
         case 9201: { val = XX()((int) xa, (int) xb); desc = "SVM_Scalar::XX"; break; }

@@ -232,10 +232,10 @@ public:
     virtual       double   ztfuzzt(void)      const override { return Q.ztfuzzt();      }
     virtual const gentype &costfnfuzzt(void)  const override { return Q.costfnfuzzt();  }
 
-    virtual double LinBiasForce(void)        const override { return Q.LinBiasForce();   }
-    virtual double QuadBiasForce(void)       const override { return Q.QuadBiasForce();  }
-    virtual double LinBiasForce(int q)       const override { return Q.LinBiasForce(q);  }
-    virtual double QuadBiasForce(int q)      const override { return Q.QuadBiasForce(q); }
+    virtual double LinBiasForce(void)        const override { return Q.LinBiasForce();        }
+    virtual double QuadBiasForce(void)       const override { return Q.QuadBiasForce();       }
+    virtual double LinBiasForceclass(int q)  const override { return Q.LinBiasForceclass(q);  }
+    virtual double QuadBiasForceclass(int q) const override { return Q.QuadBiasForceclass(q); }
 
     virtual int isFixedTube(void)  const override { return Q.isFixedTube();  }
     virtual int isShrinkTube(void) const override { return Q.isShrinkTube(); }

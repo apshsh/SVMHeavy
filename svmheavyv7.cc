@@ -1053,23 +1053,17 @@ int main(int argc, char *argv[])
         MEMNEW(commlinestringbox,awarestream(commlinestring,1));
         commstack->push(commlinestringbox);
 
-        // Threaded data.  Each ML is an element in svmContext, with threadInd
-        // specifying which is currently in use.  At this point we only have
-        // a single ML with index 0.
-
-        int threadInd = 0;
         int svmInd = 1; // not 0 anymore - want to reserve that index for other stuff! 0;
-        SparseVector<SVMThreadContext *> svmContext;
-        SparseVector<int> svmThreadOwner;
+        static thread_local SVMThreadContext *svmContext;
         SparseVector<ML_Mutable *> svmbase;
-        MEMNEW(svmContext("&",threadInd),SVMThreadContext(svmInd,threadInd));
+        MEMNEW(svmContext,SVMThreadContext(svmInd));
         errstream() << "{";
 
         // Now that everything has been set up so we can run the actual code.
 
         SparseVector<SparseVector<int> > returntag;
 
-        runsvm(threadInd,svmContext,svmbase,svmThreadOwner,commstack,globargvariables,cligetsetExtVar,returntag);
+        runsvm(svmContext,svmbase,commstack,globargvariables,cligetsetExtVar,returntag);
 
         // Unlock the thread, signalling that the context can be deleted etc
 
@@ -1081,7 +1075,7 @@ int main(int argc, char *argv[])
 
         errstream() << "Killing dangling threads.\n";
 
-        killallthreads(svmContext,1);
+        killallthreads(svmContext);
 
         errstream() << "Clearing memory.\n";
 

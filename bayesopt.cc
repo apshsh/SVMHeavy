@@ -1114,6 +1114,134 @@ class fninnerinnerArg
 
     // =======================================================================
     // =======================================================================
+    // Incorporate constraints into mean and variance if cgtmethod == 1
+    // =======================================================================
+    // =======================================================================
+
+    if ( (bbopts.cgtapprox).size() && ( bbopts.cgtmethod == 1 ) )
+    {
+        NiceAssert( thisbatchsize == 1 );
+
+        Vector<gentype> mucgt;
+        Vector<gentype> varcgt;
+
+        if ( isgridopt && !iscontopt && ( gridi >= 0 ) )
+        {
+            bbopts.model_muvarTrainingVector_cgt(varcgt,mucgt,Nbasecgt+gridi);
+        }
+
+        else
+        {
+            bbopts.model_muvar_cgt(varcgt,mucgt,x);
+        }
+
+        // Work out mean and variance of delta(c_i(x) >= 0) for all constraints c_i
+
+        Vector<double> cgtmean((bbopts.cgtapprox).size()+1);
+        Vector<double> cgtvar((bbopts.cgtapprox).size()+1);
+
+        for ( i = 0 ; i < (bbopts.cgtapprox).size() ; i++ )
+        {
+            // Sanity check here!
+
+            double ecgt = (double) mucgt(i);
+            double vcgt = (double) varcgt(i);
+
+            if ( testisvnan(vcgt) )
+            {
+                errstream() << "varcgt NaN in Bayesian Optimisation!\n";
+
+                vcgt = 0.0;
+            }
+
+            else if ( testisinf(vcgt) )
+            {
+                errstream() << "varcgt inf in Bayesian Optimisation!\n";
+
+                vcgt = 0.0;
+            }
+
+            else if ( vcgt <= 0 )
+            {
+                errstream() << "varcgt neg in Bayesian Optimisation!\n";
+
+                vcgt = 0.0;
+            }
+
+            // This is basically PI
+
+            if ( vcgt > ztol )
+            {
+                double phihere = normPhi(ecgt/sqrt(vcgt));
+
+                cgtmean("&",i) = phihere; // E[delta(c(x)>=0)]
+                cgtvar("&",i)  = (cgtmean(i)*cgtmean(i)*(1-phihere)) + ((1-cgtmean(i))*(1-cgtmean(i))*phihere);  // var[delta(c(x)>=0)]
+            }
+
+            else if ( ecgt <= 0 )
+            {
+                cgtmean("&",i) = 0;
+                cgtvar("&",i)  = 0;
+            }
+
+            else
+            {
+                cgtmean("&",i) = 1;
+                cgtvar("&",i)  = 0;
+            }
+        }
+
+        cgtmean("&",(bbopts.cgtapprox).size()) = (double) muy;
+        cgtvar("&",(bbopts.cgtapprox).size())  = ((double) sigmay)*((double) sigmay);
+
+        // See Goodman: On the Exact Variance of Products
+
+        double meantot = 1; // product of means
+        double vartot = 0;  // sum of all products of means and variances (one for each contributor), but not all means
+
+        for ( i = 0 ; i < cgtmean.size() ; i++ )
+        {
+            meantot *= cgtmean(i);
+        }
+
+        for ( i = 1 ; i < (1<<(cgtmean.size())) ; ++i )
+        {
+            double varsub = 1;
+
+            // Binary, eg size = 3:
+            //
+            // i = 001b, 010b, 011b, 100b, 101b, 110b, 111b
+
+            for ( int j = 1 ; j < (1<<(cgtmean.size())) ; j *= 2 )
+            {
+                // Binary, eg size = 3:
+                //
+                // j = 001b, 010b, 100b
+
+                if ( ( i & j ) )
+                {
+                    // bit set, posterior variance
+
+                    varsub *= cgtvar(i);
+                }
+
+                else
+                {
+                    // bit not set, posterior mean squared
+
+                    varsub *= cgtmean(i)*cgtmean(i);
+                }
+            }
+
+            vartot += varsub;
+        }
+
+        muy    = meantot;      // corrected mean
+        sigmay = sqrt(vartot); // corrected variance
+    }
+
+    // =======================================================================
+    // =======================================================================
     // Calculate stability scores
     // =======================================================================
     // =======================================================================
@@ -1469,16 +1597,13 @@ locsigmay = stabscore*stabscore*locsigmay;
 
     // =======================================================================
     // =======================================================================
-    // Scale by probability that constraints are met
+    // Scale by probability that constraints are met if cgtmethod == 0
     // (or add variances together for PEc (method 10)
     // =======================================================================
     // =======================================================================
 
-    if ( (bbopts.cgtapprox).size() )
+    if ( (bbopts.cgtapprox).size() && ( bbopts.cgtmethod == 0 ) )
     {
-        double probofvalid = 1;
-        double totalconstraintvariance = 0;
-
         Vector<gentype> mucgt;
         Vector<gentype> varcgt;
 
@@ -1492,10 +1617,36 @@ locsigmay = stabscore*stabscore*locsigmay;
             bbopts.model_muvar_cgt(varcgt,mucgt,x);
         }
 
+        double probofvalid = 1;
+        double totalconstraintvariance = 0;
+
         for ( i = 0 ; i < (bbopts.cgtapprox).size() ; i++ )
         {
             double ecgt = (double) mucgt(i);
             double vcgt = (double) varcgt(i);
+
+            // Sanity check here!
+
+            if ( testisvnan(vcgt) )
+            {
+                errstream() << "varcgt NaN in Bayesian Optimisation!\n";
+
+                vcgt = 0.0;
+            }
+
+            else if ( testisinf(vcgt) )
+            {
+                errstream() << "varcgt inf in Bayesian Optimisation!\n";
+
+                vcgt = 0.0;
+            }
+
+            else if ( vcgt <= 0 )
+            {
+                errstream() << "varcgt neg in Bayesian Optimisation!\n";
+
+                vcgt = 0.0;
+            }
 
             // This is basically PI
 

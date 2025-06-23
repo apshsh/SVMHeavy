@@ -1532,14 +1532,14 @@ int SVM_MultiC_redbin::setdinternal(int i, int d)
     return res;
 }
 
-int SVM_MultiC_redbin::setLinBiasForce(int q, double newval)
+int SVM_MultiC_redbin::setLinBiasForceclass(int q, double newval)
 {
     NiceAssert( q != -3 );
 
     return Q("&",q).setLinBiasForce(newval);
 }
 
-int SVM_MultiC_redbin::setQuadBiasForce(int q, double newval)
+int SVM_MultiC_redbin::setQuadBiasForceclass(int q, double newval)
 {
     NiceAssert( q != -3 );
 

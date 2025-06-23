@@ -160,10 +160,10 @@ public:
     virtual       double   ztfuzzt(void)      const override { return Q.ztfuzzt();      }
     virtual const gentype &costfnfuzzt(void)  const override { return Q.costfnfuzzt();  }
 
-    virtual double LinBiasForce(void)        const override { return LinBiasForce(0);                                                                            }
-    virtual double QuadBiasForce(void)       const override { return QuadBiasForce(0);                                                                           }
-    virtual double LinBiasForce(int d)       const override { if ( ( linbfq >= 0 ) && ( d == linbfd ) ) { return linbiasforceval(linbfq); } else { return 0.0; } }
-    virtual double QuadBiasForce(int d)      const override { (void) d; return 0.0;                                                                              }
+    virtual double LinBiasForce(void)        const override { return LinBiasForceclass(0);                                                                       }
+    virtual double QuadBiasForce(void)       const override { return QuadBiasForceclass(0);                                                                      }
+    virtual double LinBiasForceclass(int d)  const override { if ( ( linbfq >= 0 ) && ( d == linbfd ) ) { return linbiasforceval(linbfq); } else { return 0.0; } }
+    virtual double QuadBiasForceclass(int d) const override { (void) d; return 0.0;                                                                              }
 
     virtual int isFixedTube(void)  const override { return 1; }
     virtual int isShrinkTube(void) const override { return 0; }
@@ -268,8 +268,8 @@ public:
     virtual int setcostfnfuzzt(const gentype &xcostfnfuzzt)     override { return Q.setcostfnfuzzt(xcostfnfuzzt);   }
     virtual int setcostfnfuzzt(const std::string &xcostfnfuzzt) override { return Q.setcostfnfuzzt(xcostfnfuzzt);   }
 
-    virtual int setLinBiasForce(double newval) override { return setLinBiasForce(0,newval); }
-    virtual int setLinBiasForce(int d,  double newval) override;
+    virtual int setLinBiasForce     (        double newval) override { return setLinBiasForceclass(0,newval); }
+    virtual int setLinBiasForceclass(int d,  double newval) override;
 
     virtual int setmaxwins(void) override;
     virtual int setrecdiv(void) override;

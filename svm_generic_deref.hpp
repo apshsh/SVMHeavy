@@ -120,7 +120,7 @@ public:
     virtual double Cclass   (int d) const override { return getQconst().Cclass(d);   }
     virtual double epsclass (int d) const override { return getQconst().epsclass(d); }
 
-    virtual       int      mpri  (void) const override { return getQconst().mpri();   }
+    virtual       int      prim  (void) const override { return getQconst().prim();   }
     virtual const gentype &prival(void) const override { return getQconst().prival(); }
     virtual const ML_Base *priml (void) const override { return getQconst().priml();  }
 
@@ -188,11 +188,6 @@ public:
     virtual int xisclass     (int i, int defaultclass, int q = -1) const override { return getQconst().xisclass(i,defaultclass,q); }
 
     virtual int RFFordata(int i) const { return getQconst().RFFordata(i); }
-
-    virtual void npCweight    (double **res, int *dim) const override { getQconst().npCweight    (res,dim); }
-    virtual void npCweightfuzz(double **res, int *dim) const override { getQconst().npCweightfuzz(res,dim); }
-    virtual void npsigmaweight(double **res, int *dim) const override { getQconst().npsigmaweight(res,dim); }
-    virtual void npepsweight  (double **res, int *dim) const override { getQconst().npepsweight  (res,dim); }
 
     virtual int isClassifier(void) const override { return getQconst().isClassifier(); }
     virtual int isRegression(void) const override { return getQconst().isRegression(); }
@@ -518,7 +513,7 @@ public:
     virtual int setCclass   (int d, double xC)   override { return getQ().setCclass(d,xC);      }
     virtual int setepsclass (int d, double xeps) override { return getQ().setepsclass(d,xeps);  }
 
-    virtual int setmpri  (int nv)            override { return getQ().setmpri(nv);   }
+    virtual int setprim  (int nv)            override { return getQ().setprim(nv);   }
     virtual int setprival(const gentype &nv) override { return getQ().setprival(nv); }
     virtual int setpriml (const ML_Base *nv) override { return getQ().setpriml(nv);  }
 
@@ -870,10 +865,10 @@ public:
 
     virtual int m(void) const override { return getQQconst().m(); }
 
-    virtual double LinBiasForce (void)  const override { return getQQconst().LinBiasForce();   }
-    virtual double QuadBiasForce(void)  const override { return getQQconst().QuadBiasForce();  }
-    virtual double LinBiasForce (int q) const override { return getQQconst().LinBiasForce(q);  }
-    virtual double QuadBiasForce(int q) const override { return getQQconst().QuadBiasForce(q); }
+    virtual double LinBiasForce      (void)  const override { return getQQconst().LinBiasForce();        }
+    virtual double QuadBiasForce     (void)  const override { return getQQconst().QuadBiasForce();       }
+    virtual double LinBiasForceclass (int q) const override { return getQQconst().LinBiasForceclass(q);  }
+    virtual double QuadBiasForceclass(int q) const override { return getQQconst().QuadBiasForceclass(q); }
 
     virtual double nu    (void) const override { return getQQconst().nu();     }
     virtual double nuQuad(void) const override { return getQQconst().nuQuad(); }
@@ -989,10 +984,10 @@ public:
 
     virtual int setm(int xm) override { return getQQ().setm(xm); }
 
-    virtual int setLinBiasForce (double newval)        override { return getQQ().setLinBiasForce(newval);    }
-    virtual int setQuadBiasForce(double newval)        override { return getQQ().setQuadBiasForce(newval);   }
-    virtual int setLinBiasForce (int q, double newval) override { return getQQ().setLinBiasForce(q,newval);  }
-    virtual int setQuadBiasForce(int q, double newval) override { return getQQ().setQuadBiasForce(q,newval); }
+    virtual int setLinBiasForce      (double newval)        override { return getQQ().setLinBiasForce(newval);         }
+    virtual int setQuadBiasForce     (double newval)        override { return getQQ().setQuadBiasForce(newval);        }
+    virtual int setLinBiasForceclass (int q, double newval) override { return getQQ().setLinBiasForceclass(q,newval);  }
+    virtual int setQuadBiasForceclass(int q, double newval) override { return getQQ().setQuadBiasForceclass(q,newval); }
 
     virtual int setnu    (double xnu)     override { return getQQ().setnu(xnu);         }
     virtual int setnuQuad(double xnuQuad) override { return getQQ().setnuQuad(xnuQuad); }
