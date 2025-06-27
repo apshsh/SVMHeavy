@@ -24,11 +24,11 @@
 //
 // d: used by debugging.  Defines level of recursion
 
-double sS(double **X, int M, int n, int *iind, int d = 0);
-double dS(double **X, int M, int n, double *y, int *iind, int d = 0);
-double dS(double **X, int M, int n, double *mu, double *s, int *iind, int d = 0);
+static double sS(double **X, int M, int n, int *iind, int d = 0);
+static double dS(double **X, int M, int n, double *y, int *iind, int d = 0);
+static double dS(double **X, int M, int n, double *mu, double *s, int *iind, int d = 0);
 
-double sS(double **X, double *xmax, int M, int n, int *axisind, int *iind, int d = 0);
+static double sS(double **X, double *xmax, int M, int n, int *axisind, int *iind, int d = 0);
 
 
 
@@ -233,7 +233,7 @@ double h(double **X, double *xmax, int M, int n, int *axisind, int *iind)
 
 
 
-double sS(double **X, int M, int n, int *iind, int d)
+static double sS(double **X, int M, int n, int *iind, int d)
 {
     double res = 0;
 
@@ -323,7 +323,7 @@ double sS(double **X, int M, int n, int *iind, int d)
     return res;
 }
 
-double dS(double **X, int M, int n, double *y, int *iind, int d)
+static double dS(double **X, int M, int n, double *y, int *iind, int d)
 {
     double res = 0;
 
@@ -432,7 +432,7 @@ double dS(double **X, int M, int n, double *y, int *iind, int d)
     return res;
 }
 
-double dS(double **X, int M, int n, double *mu, double *s, int *iind, int d)
+static double dS(double **X, int M, int n, double *mu, double *s, int *iind, int d)
 {
     double res = 0;
     double varadj = sqrt(s[n-1]);
@@ -592,7 +592,7 @@ double dS(double **X, int M, int n, double *mu, double *s, int *iind, int d)
 }
 
 
-double sS(double **X, double *xmax, int M, int n, int *axisind, int *iind, int d)
+static double sS(double **X, double *xmax, int M, int n, int *axisind, int *iind, int d)
 {
     double res = 0;
 

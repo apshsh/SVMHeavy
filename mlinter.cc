@@ -48,6 +48,112 @@ can be set
 
 can be set
     virtual int kconstWeights(void) const { return getSVMconst().kconstWeights(); }
+
+
+
+
+
+
+
+
+
+Kernels:
+
+         -ki  i          - define which kernel elm i  is being set (default 0,
+                           or 1 if this is an MLM non-input layer).
+         -ks  n          - set kernel dictionary size n (default 1).
+         -kn             - set kernel normalised (this element).
+         -ku             - set kernel unnormalised (this element, default).
+         -kss            - set kernel symm set (overall, default).
+         -kus            - unset kernel symm set.
+         -knn            - set kernel normalised (overall).
+         -kuu            - set kernel unnormalised (overall, default).
+         -kp             - set kernel as axis-product type.
+         -knp            - set kernel as not-axis-product type (overall,dflt).
+         -krn v          - set kernel rank constraint kernel construct type:
+
+         -kg  g          - set x scale, non-ARD style ( x:= x/g ).
+         -kgg g          - set x scale, ARD style ( x_i := x_i/g_i for all i).
+
+         -km             - modify so K(x,y) -> K(x,x).K(y,y).
+         -kum            - undo -km (default).
+
+         -kt  t          - type of kernel function.
+
+         -kg  x          - kernel param r0  = x   (default 1).
+         -kr  x          - kernel param r1  = x   (default 0 or 1).
+         -kf  $fn        - kernel param r10 = $fn (dft (var(0,1)+var(0,2))/2).
+         -kv  i x        - kernel param ri  = x   (default 0).
+         -kd  x          - kernel param i0  = x   (default 2).
+         -kG  x          - kernel param i0  = x   (default 1).
+         -kV  i x        - kernel param ii  = x   (default 0).
+
+         -kglb  x        - kernel param r0 nominal lower bound (kernel tune).
+         -krlb  x        - kernel param r1 nominal lower bound (kernel tune).
+         -kvlb  i x      - kernel param ri nominal lower bound (kernel tune).
+         -kdlb  x        - kernel param i0 nominal lower bound (kernel tune).
+         -kGlb  x        - kernel param i0 nominal lower bound (kernel tune).
+         -kVlb  i x      - kernel param ii nominal lower bound (kernel tune).
+
+         -kgub  x        - kernel param r0 nominal upper bound (kernel tune).
+         -krub  x        - kernel param r1 nominal upper bound (kernel tune).
+         -kvub  i x      - kernel param ri nominal upper bound (kernel tune).
+         -kdub  x        - kernel param i0 nominal upper bound (kernel tune).
+         -kGub  x        - kernel param i0 nominal upper bound (kernel tune).
+         -kVub  i x      - kernel param ii nominal upper bound (kernel tune).
+
+         -kI  v          - set kernels  indexing using  given index  vector v,
+                           where  the  argument  is a  vector of  non-negative
+                           integers   (eg [ 0 4 5 ])   in   increasing   order
+                           corresponding to the indexes used.
+         -kU             - set kernel unindexed.
+         -kw  w          - set weight w>=0 of kernel function (default 1). The
+                           weight can be anything (not just double), which may
+                           be useful eg for matrix-valued kernels.
+         -kwlb w         - nominal lower bound on -kw for kernel tuning.
+         -kwub w         - nominal upper bound on -kw for kernel tuning.
+
+         -kx  [ n0 ... ] [ A0 ... ] - set kernel transform, so:
+
+                    K(x,y) = sum_i Ai (d^ni/dx^ni) (d^ni/dy^ni)^T K(x,y) Ai^T
+
+         -ka  n          - number of samples used  when computing distribution
+                           similarity (Muandet et al SMM).
+         -kb  [ i j .. ] - indices of var(0,..) variables sampled.
+         -ke  [ fi fj ..]- distribution useds for var(0,..) ].
+
+         -kc             - set kernel chained.
+         -kuc            - set kernel unchained.
+
+         -kS             - set kernel split.
+         -kA             - additive kernel split.
+         -kuS            - set kernel unsplit (default).
+
+         -kMS            - set kernel multiply point.
+         -kMA            - set kernel addition point.
+         -kMuS           - set kernel non-multiply point.
+
+         -ko  i j        - replace parameter  ri with input  product xj.yj (or
+                           just yj for neural networks).
+         -kO  i j        - replace  parameter ii  with input  (int) xj.yj  (or
+                           just (int) yj for neural networks).
+         -koz            - delete all defined ri parameter replacements.
+         -kOz            - delete all defined ii parameter replacements.
+
+         -kan i          - Set difference definition (default 1).
+
+                  -- Kernel transfer                               --
+
+         -ktx i          - obtain (transfer) this kernel from ML i.
+
+                  -- MLM specific options                          --
+
+         -ktk i          - which layer kernel is set above (-1 output, deflt).
+                           Use -ktk -1 to adjust the inheritance type (must be
+                           a type 8xx kernel, default is 802).
+
+         -e...   sets kernel parameters for output kernels.
+         -r...   sets kernel parameters for output kernels.
 */
 
 
@@ -11624,7 +11730,7 @@ void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &cu
          ( currcommandis == "-ku"  ) || ( currcommandis == "-ka"  ) || ( currcommandis == "-kp"   ) ||
          ( currcommandis == "-knp" ) ||
          ( currcommandis == "-kb"  ) || ( currcommandis == "-ke"  ) || ( currcommandis == "-kc"   ) ||
-         ( currcommandis == "-kuc" ) || ( currcommandis == "-kS"  ) || ( currcommandis == "-kA"   ) || ( currcommandis == "-kuS"  ) || 
+         ( currcommandis == "-kuc" ) || ( currcommandis == "-kS"  ) || ( currcommandis == "-kA"   ) || ( currcommandis == "-kuS"  ) ||
          ( currcommandis == "-kMA" ) || ( currcommandis == "-kMS" ) || ( currcommandis == "-kMuS" ) ||
          ( currcommandis == "-km"  ) || ( currcommandis == "-kum" ) || ( currcommandis == "-kI"   ) ||
          ( currcommandis == "-kw"  ) || ( currcommandis == "-kt"  ) || ( currcommandis == "-kan"  ) ||

@@ -122,8 +122,8 @@ public:
     // These must be wrong size.  Polymorphism will be called by ml_base to access inequalities
     virtual const Vector<gentype>         &y          (void) const override { return locz;           }
     virtual const Vector<double>          &yR         (void) const override { return loczr;          }
-    virtual const Vector<d_anion>         &yA         (void) const override { static thread_local Vector<d_anion>         dummy; NiceThrow("yA not defined in svm_scalar_rff"); return dummy; }
-    virtual const Vector<Vector<double> > &yV         (void) const override { static thread_local Vector<Vector<double> > dummy; NiceThrow("yV not defined in svm_scalar_rff"); return dummy; }
+    virtual const Vector<d_anion>         &yA         (void) const override { NiceThrow("yA not defined in svm_scalar_rff"); const static Vector<d_anion>         dummy; return dummy; }
+    virtual const Vector<Vector<double> > &yV         (void) const override { NiceThrow("yV not defined in svm_scalar_rff"); const static Vector<Vector<double> > dummy; return dummy; }
     virtual const Vector<double>          &Cweight    (void) const override { return locCweight;     }
     virtual const Vector<double>          &epsweight  (void) const override { return locepsweight;   }
     virtual const Vector<double>          &Cweightfuzz(void) const override { return locCweightfuzz; }

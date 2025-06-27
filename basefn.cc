@@ -941,8 +941,8 @@ std::istream &operator>>(std::istream &input, wait_dummy &)
 
 
 
-void dumpmemoryleakinfo(void);
-void dumpmemoryleakinfo(void)
+static void dumpmemoryleakinfo(void);
+static void dumpmemoryleakinfo(void)
 {
     addremoveptr(nullptr,-1,0,0,nullptr);
 
@@ -2201,8 +2201,8 @@ FIXME - has a key been pressed
 }
 
 
-int testforerror(std::istream &input); // clear input
-int testforerror(std::istream &input)
+static int testforerror(std::istream &input); // clear input
+static int testforerror(std::istream &input)
 {
     int res = 0;
 
@@ -2219,9 +2219,9 @@ int testforerror(std::istream &input)
     return res;
 }
 
-void minesweeper(int gamewidth, int gameheight, int nummines);
+static void minesweeper(int gamewidth, int gameheight, int nummines);
 //void snakes(int gamewidth, int gameheight, int numrabbits, int startsnakelen, int addrate, int usleeptime);
-void hyperspin(int gamewidth, int gameheight, int usleeptime);
+static void hyperspin(int gamewidth, int gameheight, int usleeptime);
 
 void keytest(void);
 
@@ -2239,8 +2239,8 @@ void setvar(const std::string &varname, double val, double **uservars, const cha
 // svm_srand: seed random number generator(s)
 //            use -1 for "no seed", -2 for "time seed"
 
-void svm_srand(int sval);
-void svm_srand(int sval)
+static void svm_srand(int sval);
+static void svm_srand(int sval)
 {
     double dummy;
 
@@ -2962,7 +2962,7 @@ void keytest(void)
 // hyperspin
 
 
-void hyperspin(int gameheight, int gamewidth, int usleeptime)
+static void hyperspin(int gameheight, int gamewidth, int usleeptime)
 {
     --gamewidth;
     --gameheight;
@@ -3383,9 +3383,9 @@ exitnow:
 
 // Minesweeper starts here!
 
-int clearnear(int i, int j, int **gamegrid, int gamewidth, int gameheight);
+static int clearnear(int i, int j, int **gamegrid, int gamewidth, int gameheight);
 
-void minesweeper(int gamewidth, int gameheight, int nummines)
+static void minesweeper(int gamewidth, int gameheight, int nummines)
 {
     int **gamegrid;
     int i,j,k;
@@ -3569,7 +3569,7 @@ void minesweeper(int gamewidth, int gameheight, int nummines)
     return;
 }
 
-int clearnear(int i, int j, int **gamegrid, int gamewidth, int gameheight)
+static int clearnear(int i, int j, int **gamegrid, int gamewidth, int gameheight)
 {
     int res = 0;
 

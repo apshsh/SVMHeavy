@@ -1271,10 +1271,10 @@ public:
     //
     // (u=-1 for overall, u>=0 gives only dimension for relevant minor/up type - see sparsevector)
 
-    virtual const Vector<int>          &indKey         (int u = -1) const { if ( indexKey.isindpresent(u+1)      ) { return indexKey(u+1);      } static thread_local Vector<int>          dummy; return dummy; }
-    virtual const Vector<int>          &indKeyCount    (int u = -1) const { if ( indexKeyCount.isindpresent(u+1) ) { return indexKeyCount(u+1); } static thread_local Vector<int>          dummy; return dummy; }
-    virtual const Vector<int>          &dattypeKey     (int u = -1) const { if ( typeKey.isindpresent(u+1)       ) { return typeKey(u+1);       } static thread_local Vector<int>          dummy; return dummy; }
-    virtual const Vector<Vector<int> > &dattypeKeyBreak(int u = -1) const { if ( typeKeyBreak.isindpresent(u+1)  ) { return typeKeyBreak(u+1);  } static thread_local Vector<Vector<int> > dummy; return dummy; }
+    virtual const Vector<int>          &indKey         (int u = -1) const { if ( indexKey.isindpresent(u+1)      ) { return indexKey(u+1);      } const static Vector<int>          dummy; return dummy; }
+    virtual const Vector<int>          &indKeyCount    (int u = -1) const { if ( indexKeyCount.isindpresent(u+1) ) { return indexKeyCount(u+1); } const static Vector<int>          dummy; return dummy; }
+    virtual const Vector<int>          &dattypeKey     (int u = -1) const { if ( typeKey.isindpresent(u+1)       ) { return typeKey(u+1);       } const static Vector<int>          dummy; return dummy; }
+    virtual const Vector<Vector<int> > &dattypeKeyBreak(int u = -1) const { if ( typeKeyBreak.isindpresent(u+1)  ) { return typeKeyBreak(u+1);  } const static Vector<Vector<int> > dummy; return dummy; }
 
     // Other functions
     //

@@ -41,7 +41,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         {
             x *= 5.12;
 
-            resscale = 1.0/80.0;
+            resscale = 2.0/(80*n); // tested //1.0/80.0;
             resshift = 0.0;
         }
         // fall through
@@ -53,12 +53,9 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
 
             res = A*n;
 
-            //if ( n )
+            for ( i = 0 ; i < n ; ++i )
             {
-                for ( i = 0 ; i < n ; ++i )
-                {
-                    res += ((x(i)*x(i))-(A*cos(2*NUMBASE_PI*x(i))));
-                }
+                res += ((x(i)*x(i))-(A*cos(2*NUMBASE_PI*x(i))));
             }
 
             break;
@@ -72,7 +69,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         // fall through
         case 1002:
         {
-            x *= 5.0;
+            x *= 5.12;
 
             resscale = 1.0/15.0;
             resshift = 0.0;
@@ -82,15 +79,16 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         {
             // Ackley's function
 
-            //if ( n )
+            double A = 20;
+            double B = 0.2;
+            double C = 2*NUMBASE_PI;
+
+            for ( i = 0 ; i < n ; ++i )
             {
-                for ( i = 0 ; i < n ; ++i )
-                {
-                    res += cos(2*NUMBASE_PI*x(i));
-                }
+                res += cos(C*x(i));
             }
 
-            res = -(20*exp(-0.2*sqrt(norm2(x)/n)))-exp(res/n)+NUMBASE_E+20;
+            res = -(A*exp(-B*sqrt(norm2(x)/n)))-exp(res/n)+A+NUMBASE_E;
 
             break;
         }
@@ -103,9 +101,9 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         // fall through
         case 1003:
         {
-            x *= 2.0; // arbitrarily put range -2,2 following wikipedia graph
+            x *= 5.12; // arbitrarily put range -2,2 following wikipedia graph
 
-            resscale = 1.0/8.0;
+            resscale = 1.0/(5.12*5.12*n); // tested //1.0/8.0;
             resshift = 0.0;
         }
         // fall through
@@ -128,7 +126,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         {
             x *= 3.0; // see 1003
 
-            resscale = 1.0/2500.0;
+            resscale = 1.0/(2500.0*5.7664*(n-1)); //1.0/2500.0;
             resshift = 0.0;
         }
         // fall through
@@ -138,12 +136,9 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
 
             NiceAssert( n > 1 );
 
-            //if ( n )
+            for ( i = 0 ; i < n-1 ; ++i )
             {
-                for ( i = 0 ; i < n ; ++i )
-                {
-                    res += ((100*(x(i+1)-x(i))*(x(i+1)-x(i)))+((x(i)-1)*(x(i)-1)));
-                }
+                res += ((100*(x(i+1)-(x(i)*x(i)))*(x(i+1)-(x(i)*x(i))))+((x(i)-1)*(x(i)-1)));
             }
 
             break;
@@ -245,9 +240,13 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         // fall through
         case 1008:
         {
-            x *= 3.0;
+            NiceAssert( n == 2 );
 
-            resscale = 1.0/250.0;
+            x("&",0) *= 3.0;
+            x("&",1) *= 10.0;
+            x("&",1) -= 5.0;
+
+            resscale = 1.0/390.0; //1.0/(250*0.704);
             resshift = 0.0;
         }
         // fall through
@@ -333,7 +332,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         {
             x *= 5.0;
 
-            resscale = 1.0/2000.0;
+            resscale = 1.0/890.0; //1.0/2000.0;
             resshift = 0.0;
         }
         // fall through
@@ -346,8 +345,8 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
             double xx = x(0);
             double yy = x(1);
 
-            res  = (((xx*xx)+yy-11)*((xx*xx)+yy-11));
-            res += ((xx+(yy*yy)-7)*(xx+(yy*yy)-7));
+            res  = (((xx*xx)+yy-11)*((xx*xx)+yy-11)); // (30-11)*(30-11) = 361
+            res += ((xx+(yy*yy)-7)*(xx+(yy*yy)-7));   // 23*23 = 529
 
             break;
         }
@@ -418,8 +417,8 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         {
             x *= 10.0;
 
-            resscale = 2.0;
-            resshift = -2.06261;
+            resscale = 1.0/2.0; //2.0;
+            resshift = -2.095222; //-2.06261;
         }
         // fall through
         case 14:
@@ -432,6 +431,8 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
             double yy = x(1);
 
             res  = -0.0001*pow(abs2(sin(xx)*sin(yy)*exp(abs2(100-(abs2(x)/NUMBASE_PI))))+1,0.1);
+            //-0.0001*pow(exp(99.5)+1,0.1) -0.0001*20952.222 = -2.09522222....
+            //-0.0001*1 = -0.0001
 
             break;
         }
@@ -503,7 +504,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         {
             x *= 3.0;
 
-            resscale = 1.0/42.0;
+            resscale = 1.0/(42.0*1.2122214285714286);
             resshift = -1.9133;
         }
         // fall through
@@ -587,23 +588,20 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         {
             x *= 5.0;
 
-            resscale = 1.0/250.0; // this is probably wrong
-            resshift = -39.16616*x.size();
+            resscale = 1.0/((125+39)*n); //2.0/(250*n); //1.0/250.0; // this is probably wrong
+            resshift = -39.16616*n;
         }
         // fall through
         case 20:
         {
             // Styblinski–Tang function
 
-            if ( n )
+            for ( i = 0 ; i < n ; ++i )
             {
-                for ( i = 0 ; i < n ; ++i )
-                {
-                    res += (x(i)*x(i)*x(i)*x(i))-(16*x(i)*x(i))+(5*x(i));
-                }
-
-                res /= 2;
+                res += (x(i)*x(i)*x(i)*x(i))-(16*x(i)*x(i))+(5*x(i)); // max: x=-5,5: y=5^4-16*5^2+5*5 = 625-400+25 = 250   :: min -.39
             }
+
+            res /= 2; //[39n  , 125n]
 
             break;
         }
@@ -724,7 +722,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
             x *= 5.12;
 
             resscale = 1.0;
-            resshift = 0.0;
+            resshift = -1.0;
         }
         // fall through
         case 24:
@@ -746,10 +744,10 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         // fall through
         case 1025:
         {
-            x *= 1.5;
-            x += 1.0;
+            x *= 1.0;
+            x += 1.5;
 
-            resscale = 1.0/6.0;
+            resscale = 1.0/6.0625;
             resshift = -1.0;
         }
         // fall through
@@ -759,7 +757,9 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
 
             NiceAssert( n == 1 );
 
-            res = (sin(10*NUMBASE_PI*x(0))/(2*x(0)))+pow(x(0)-1,4);
+            double xx = x(0);
+
+            res = (sin(10*NUMBASE_PI*xx)/(2*xx))+((xx-1)*(xx-1)*(xx-1)*(xx-1));
 
             break;
         }
@@ -775,19 +775,19 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
             x *= 5.0;
             x += 5.0;
 
-            resscale = 1.0/6.0;
-            resshift = 0.0;
+            resscale = 1.0/(-3.059239022594964+3.1665725749005245); //1.0/(6.161699095651661+3.155052083449994); //1.0/6.0;
+            resshift = -3.1665725749005245; //-3.155052083449994; //0.0;
         }
         // fall through
         case 26:
         {
             // Langermann function
 
+            NiceAssert( n == 2 );
+
             const static double AA[5][2] = { {3,5}, {5,2}, {2,1}, {1,4}, {7,9} };
             const static double cc[5] = { 1,2,5,2,3 };
             int m = 5;
-
-            NiceAssert( n == 2 );
 
             res = 0;
 
@@ -812,8 +812,8 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         {
             x *= 600.0;
 
-            resscale = 1.0/200;
-            resshift = 0.0;
+            resscale = 1.0/(90*n); //2.0/(100*n); //1.0/200;
+            resshift = -1.0; //0.0;
         }
         // fall through
         case 27:
@@ -833,6 +833,8 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
             {
                 res += (x(i)*x(i)/4000);
             }
+
+            // [-n,360000n/4000] = [-1,90]n
 
             break;
         }
@@ -890,7 +892,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         {
             x *= 500.0;
 
-            resscale = 1.0/1800;
+            resscale = 2.0/(1800*n); //1.0/1800;
             resshift = 0.0;
         }
         // fall through
@@ -918,8 +920,8 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         {
             x *= 10.0;
 
-            resscale = 1.0/500;
-            resshift = 200.0;
+            resscale = 1.0/(210.48178038742196+186.72187591482512); //1.0/500;
+            resshift = -186.72187591482512; //200.0;
         }
         // fall through
         case 30:
@@ -952,7 +954,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         {
             x *= 100.0;
 
-            resscale = 1.0/300.7;
+            resscale = 1.0/30070; //1.0/300.7;
             resshift = 0.0;
         }
         // fall through
@@ -977,7 +979,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         {
             x *= 100.0;
 
-            resscale = 1.0/300.7;
+            resscale = 1.0/30070; //1.0/300.7;
             resshift = 0.0;
         }
         // fall through
@@ -1002,7 +1004,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         {
             x *= 100.0;
 
-            resscale = 1.0/300.7;
+            resscale = 1.0/30070; //1.0/300.7;
             resshift = 0.0;
         }
         // fall through
@@ -1025,7 +1027,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         // fall through
         case 1034:
         {
-            x *= 2.0;
+            x *= (double) n;
 
             resscale = 1.0/12000.0;
             resshift = 0.0;
@@ -1035,7 +1037,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
         {
             // Perm function 0,D,1
 
-            double beta = 1;
+            double beta = 0.5;
 
             res = 0.0;
 
@@ -1045,7 +1047,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<do
 
                 for ( int j = 0 ; j < n ; j++ )
                 {
-                    tmpres += (j+1+beta)*(pow(x(j),i+1)-pow((1.0/((double) j+1)),i+1));
+                    tmpres += ( pow(j+1.0,i+1.0) + beta )*( pow(x(j)/(j+1.0),i+1.0) - 1);
                 }
 
                 res += (tmpres*tmpres);

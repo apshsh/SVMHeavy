@@ -2607,6 +2607,28 @@ public:
     const kernInfo &kinf(int q) const { return kernflags(q); }
     const kernInfo  kinf(void)  const { return sum(kernflags); }
 
+    // Vector forms
+    //
+    // getHyper: return weights and hyper-parameters: [ [ w_0 rp_{0,0} rp_{0,1} ... ] ; [ w_1 rp_{1,0} rp_{1,1} ... ] ; ... ]
+
+    const Vector<int>               &getTypes         (void) const { return dtype;          }
+    const Vector<Vector<gentype>>   &getHyper         (void) const { return dRealConstants; }
+    const Vector<Vector<int>>       &getIntConstants  (void) const { return dIntConstants;  }
+    const Vector<SparseVector<int>> &getRealOverwrites(void) const { return dRealOverwrite; }
+    const Vector<SparseVector<int>> &getIntOverwrites (void) const { return dIntOverwrite;  }
+    const Vector<int>               &getIsNormalised  (void) const { return isnorm;         }
+    const Vector<int>               &getIsMagTerm     (void) const { return ismagterm;      }
+
+    const Vector<int> &getChained (void) const { return ischain;  }
+    const Vector<int> &getSplit   (void) const { return issplit;  }
+    const Vector<int> &getMulSplit(void) const { return mulsplit; }
+
+    const Vector<Vector<gentype>> &getHyperLB(void) const { return dRealConstantsLB; }
+    const Vector<Vector<gentype>> &getHyperUB(void) const { return dRealConstantsUB; }
+
+    const Vector<Vector<int>> &getIntConstantsLB(void) const { return dIntConstantsLB; }
+    const Vector<Vector<int>> &getIntConstantsUB(void) const { return dIntConstantsUB; }
+
     // Modifiers:
 
     MercerKernel &add   (int q);
@@ -2615,25 +2637,30 @@ public:
 
     MercerKernel &setdefindKey(const Vector<int> &nv) { xdefindKey = nv; recalcRandFeats(-1); return *this; }
 
-    MercerKernel &setSymmSet        (void) {                                                                                                      issymmset        = 1;                                  recalcRandFeats(-1); return *this; }
-    MercerKernel &setNoSymmSet      (void) {                                                                                                      issymmset        = 0;                                  recalcRandFeats(-1); return *this; }
-    MercerKernel &setFullNorm       (void) {                                                                                                      isfullnorm       = 1;                                  recalcRandFeats(-1); return *this; }
-    MercerKernel &setNoFullNorm     (void) {                                                                                                      isfullnorm       = 0;                                  recalcRandFeats(-1); return *this; }
-    MercerKernel &setProd           (void) {                    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isprod           = 1;                                  recalcRandFeats(-1); return *this; }
-    MercerKernel &setnonProd        (void) {                    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isprod           = 0;                                  recalcRandFeats(-1); return *this; }
-    MercerKernel &setLeftPlain      (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; leftplain        = 1;                  fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setRightPlain     (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; rightplain       = 1;                  fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setLeftRightPlain (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; leftplain        = 1;  rightplain = 1; fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setLeftNormal     (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; leftplain        = 0;                  fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setRightNormal    (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; rightplain       = 0;                  fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setLeftRightNormal(void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; leftplain        = 0;  rightplain = 0; fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setrankType       (int nv) {                  xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; xranktype        = nv;                                                      return *this; }
+    MercerKernel &setSymmSet        (void) {                                                                                                      issymmset  = 1;                                  recalcRandFeats(-1); return *this; }
+    MercerKernel &setNoSymmSet      (void) {                                                                                                      issymmset  = 0;                                  recalcRandFeats(-1); return *this; }
+    MercerKernel &setFullNorm       (void) {                                                                                                      isfullnorm = 1;                                  recalcRandFeats(-1); return *this; }
+    MercerKernel &setNoFullNorm     (void) {                                                                                                      isfullnorm = 0;                                  recalcRandFeats(-1); return *this; }
+    MercerKernel &setProd           (void) {                    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isprod     = 1;                                  recalcRandFeats(-1); return *this; }
+    MercerKernel &setnonProd        (void) {                    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isprod     = 0;                                  recalcRandFeats(-1); return *this; }
+    MercerKernel &setLeftPlain      (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; leftplain  = 1;                  fixShiftProd(); recalcRandFeats(-1); return *this; }
+    MercerKernel &setRightPlain     (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; rightplain = 1;                  fixShiftProd(); recalcRandFeats(-1); return *this; }
+    MercerKernel &setLeftRightPlain (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; leftplain  = 1;  rightplain = 1; fixShiftProd(); recalcRandFeats(-1); return *this; }
+    MercerKernel &setLeftNormal     (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; leftplain  = 0;                  fixShiftProd(); recalcRandFeats(-1); return *this; }
+    MercerKernel &setRightNormal    (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; rightplain = 0;                  fixShiftProd(); recalcRandFeats(-1); return *this; }
+    MercerKernel &setLeftRightNormal(void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; leftplain  = 0;  rightplain = 0; fixShiftProd(); recalcRandFeats(-1); return *this; }
 
     MercerKernel &setdenseZeroPoint(double nv) { xdenseZeroPoint = nv; return *this; }
 
-    MercerKernel &setAltDiff       (int nv) { xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isdiffalt        = nv; recalcRandFeats(-1); return *this; }
-    MercerKernel &setsuggestXYcache(int nv) {                                                                                   xsuggestXYcache  = nv; recalcRandFeats(-1); return *this; }
-    MercerKernel &setIPdiffered    (int nv) {                                                                                   xisIPdiffered    = nv; recalcRandFeats(-1); return *this; }
+    MercerKernel &setSymmSet        (int nv) {                                                                                                      issymmset       = nv;                 recalcRandFeats(-1); return *this; }
+    MercerKernel &setFullNorm       (int nv) {                                                                                                      isfullnorm      = nv;                 recalcRandFeats(-1); return *this; }
+    MercerKernel &setProd           (int nv) {                    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isprod          = nv;                 recalcRandFeats(-1); return *this; }
+    MercerKernel &setLeftPlain      (int nv) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; leftplain       = nv; fixShiftProd(); recalcRandFeats(-1); return *this; }
+    MercerKernel &setRightPlain     (int nv) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; rightplain      = nv; fixShiftProd(); recalcRandFeats(-1); return *this; }
+    MercerKernel &setAltDiff        (int nv) {                    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isdiffalt       = nv;                 recalcRandFeats(-1); return *this; }
+    MercerKernel &setsuggestXYcache (int nv) {                                                                                                      xsuggestXYcache = nv;                 recalcRandFeats(-1); return *this; }
+    MercerKernel &setIPdiffered     (int nv) {                                                                                                      xisIPdiffered   = nv;                 recalcRandFeats(-1); return *this; }
+    MercerKernel &setrankType       (int nv) {                    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; xranktype       = nv;                                      return *this; }
 
     MercerKernel &setnumSamples        (int                    nv) { xnumsamples = nv; return *this; }
     MercerKernel &setSampleDistribution(const Vector<gentype> &nv) { xsampdist   = nv; return *this; }
@@ -2660,9 +2687,16 @@ public:
     MercerKernel &setUnMulSplit  (int q = 0) { xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; mulsplit ("&",q) = 0; xnumMulSplits = calcnumMulSplits(); recalcRandFeats(q); return *this; }
     MercerKernel &setUnMagTerm   (int q = 0) { xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; ismagterm("&",q) = 0;                                     recalcRandFeats(q); return *this; }
 
+    MercerKernel &setisNormalised(int nv, int q = 0) { xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isnorm("&",q)    = nv; recalcRandFeats(q); return *this; }
+    MercerKernel &setisMagTerm   (int nv, int q = 0) { xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; ismagterm("&",q) = nv; recalcRandFeats(q); return *this; }
+
     MercerKernel &setWeight (const gentype &nw, int q = 0) { dRealConstants("&",q)("&",0) = nw; recalcRandFeats(q); return *this; }
     MercerKernel &setType   (int ndtype,        int q = 0);
     MercerKernel &setAltCall(int newMLid,       int q = 0) { xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; altcallback("&",q) = newMLid; recalcRandFeats(q); return *this; }
+
+    MercerKernel &setisChained (int nv, int q = 0) { xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; ischain ("&",q) = nv;                                     recalcRandFeats(q); return *this; }
+    MercerKernel &setisSplit   (int nv, int q = 0) { xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; issplit ("&",q) = nv; xnumSplits    = calcnumSplits();    recalcRandFeats(q); return *this; }
+    MercerKernel &setisMulSplit(int nv, int q = 0) { xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; mulsplit("&",q) = nv; xnumMulSplits = calcnumMulSplits(); recalcRandFeats(q); return *this; }
 
     MercerKernel &setRealConstants(const Vector<gentype>   &ndRealConstants, int q = 0) { NiceAssert( dRealConstants(q).size()-1 == ndRealConstants.size() ); retVector<gentype> tmpva; dRealConstants("&",q)("&",1,1,dRealConstants(q).size()-1,tmpva) = ndRealConstants; recalcRandFeats(q); return *this; }
     MercerKernel &setIntConstants (const Vector<int>       &ndIntConstants,  int q = 0) { NiceAssert( dIntConstants(q).size()    == ndIntConstants.size()  );                           dIntConstants("&",q)                                            = ndIntConstants;  recalcRandFeats(q); return *this; }
@@ -2704,6 +2738,28 @@ public:
 
     MercerKernel &setlinGradOrd (int i,       int             nv) { linGradOrd("&",i)  = nv; fixhaslinconstr();    return *this; }
     MercerKernel &setlinGradScal(int i, const Matrix<double> &nv) { linGradScal("&",i) = nv; fixlingradscaltsp(i); return *this; }
+
+    // Vector forms
+    //
+    // getHyper: return weights and hyper-parameters: [ [ w_0 rp_{0,0} rp_{0,1} ... ] ; [ w_1 rp_{1,0} rp_{1,1} ... ] ; ... ]
+
+    MercerKernel &setTypes         (const Vector<int>               &nv) { resize(nv.size()); dtype          = nv; return *this; }
+    MercerKernel &setHyper         (const Vector<Vector<gentype>>   &nv) { resize(nv.size()); dRealConstants = nv; return *this; }
+    MercerKernel &setIntConstantss (const Vector<Vector<int>>       &nv) { resize(nv.size()); dIntConstants  = nv; return *this; }
+    MercerKernel &setRealOverwrites(const Vector<SparseVector<int>> &nv) { resize(nv.size()); dRealOverwrite = nv; return *this; }
+    MercerKernel &setIntOverwrites (const Vector<SparseVector<int>> &nv) { resize(nv.size()); dIntOverwrite  = nv; return *this; }
+    MercerKernel &setIsNormalised  (const Vector<int>               &nv) { resize(nv.size()); isnorm         = nv; return *this; }
+    MercerKernel &setIsMagTerm     (const Vector<int>               &nv) { resize(nv.size()); ismagterm      = nv; return *this; }
+
+    MercerKernel &setChained (const Vector<int> &nv) { resize(nv.size()); ischain  = nv; return *this; }
+    MercerKernel &setSplit   (const Vector<int> &nv) { resize(nv.size()); issplit  = nv; return *this; }
+    MercerKernel &setMulSplit(const Vector<int> &nv) { resize(nv.size()); mulsplit = nv; return *this; }
+
+    MercerKernel &setHyperLB(const Vector<Vector<gentype>> &nv) { resize(nv.size()); dRealConstantsLB = nv; return *this; }
+    MercerKernel &setHyperUB(const Vector<Vector<gentype>> &nv) { resize(nv.size()); dRealConstantsUB = nv; return *this; }
+
+    MercerKernel &setIntConstantssLB(const Vector<Vector<int>> &nv) { resize(nv.size()); dIntConstantsLB = nv; return *this; }
+    MercerKernel &setIntConstantssUB(const Vector<Vector<int>> &nv) { resize(nv.size()); dIntConstantsUB = nv; return *this; }
 
     // Element retrieval
     //

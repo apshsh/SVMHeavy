@@ -237,8 +237,8 @@ int epsilon(int order, int q, int r, int s, int t)
 }
 
 
-int getsetanioneyes(int val);
-int getsetanioneyes(int val)
+static int getsetanioneyes(int val);
+static int getsetanioneyes(int val)
 {
     static thread_local int setval = 1; // 0 is eyes left, 1 is eyes right
 

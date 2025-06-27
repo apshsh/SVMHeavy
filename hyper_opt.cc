@@ -19,10 +19,10 @@
 #include <iostream>
 
 
-hyper_cache *make_cache_int(double **X, int *kappa, int M, int n, double **E, int **Estat, int ecnt, int *iind, int d);
-double calcE(int i, int j, double **X, double *mu, double *s, double **E, int **Estat, int ecnt);
-double dS(double **X, double *mu, double *s, hyper_cache *hc, int ecnt);
-double dS(double **X, int *kappa, int M, int n, double *mu, double *s, double **E, int **Estat, int ecnt, int *iind, int d = 0);
+static hyper_cache *make_cache_int(double **X, int *kappa, int M, int n, double **E, int **Estat, int ecnt, int *iind, int d);
+static double calcE(int i, int j, double **X, double *mu, double *s, double **E, int **Estat, int ecnt);
+static double dS(double **X, double *mu, double *s, hyper_cache *hc, int ecnt);
+static double dS(double **X, int *kappa, int M, int n, double *mu, double *s, double **E, int **Estat, int ecnt, int *iind, int d = 0);
 
 
 
@@ -249,7 +249,7 @@ void ehi(double *res, int Nres, double **X, int M, int n, double **mu, double **
 
 
 
-double dS(double **X, double *mu, double *s, hyper_cache *hc, int ecnt)
+static double dS(double **X, double *mu, double *s, hyper_cache *hc, int ecnt)
 {
     double res = 0;
     double V,L;
@@ -287,7 +287,7 @@ double dS(double **X, double *mu, double *s, hyper_cache *hc, int ecnt)
     return res;
 }
 
-double dS(double **X, int *kappa, int M, int n, double *mu, double *s, double **E, int **Estat, int ecnt, int *iind, int d)
+static double dS(double **X, int *kappa, int M, int n, double *mu, double *s, double **E, int **Estat, int ecnt, int *iind, int d)
 {
     double res = 0;
 
@@ -386,7 +386,7 @@ double dS(double **X, int *kappa, int M, int n, double *mu, double *s, double **
     return res;
 }
 
-hyper_cache *make_cache_int(double **X, int *kappa, int M, int n, double **E, int **Estat, int ecnt, int *iind, int d)
+static hyper_cache *make_cache_int(double **X, int *kappa, int M, int n, double **E, int **Estat, int ecnt, int *iind, int d)
 {
     hyper_cache *res;
 
@@ -484,7 +484,7 @@ hyper_cache *make_cache_int(double **X, int *kappa, int M, int n, double **E, in
     return res;
 }
 
-double calcE(int i, int j, double **X, double *mu, double *s, double **E, int **Estat, int ecnt)
+static double calcE(int i, int j, double **X, double *mu, double *s, double **E, int **Estat, int ecnt)
 {
     if ( Estat[i+1][j] < ecnt )
     {

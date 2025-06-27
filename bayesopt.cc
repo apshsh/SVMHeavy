@@ -105,8 +105,8 @@ int BayesOptions::optim(int dim,
 
 
 
-void calcsscore(Vector<double> &sscore, const BayesOptions &bopts, const Vector<int> &xdatind, int stabp, double stabpnrm, int stabrot, double stabmu, double stabB);
-void calcsscore(Vector<double> &sscore, const BayesOptions &bopts, const Vector<int> &xdatind, int stabp, double stabpnrm, int stabrot, double stabmu, double stabB)
+static void calcsscore(Vector<double> &sscore, const BayesOptions &bopts, const Vector<int> &xdatind, int stabp, double stabpnrm, int stabrot, double stabmu, double stabB);
+static void calcsscore(Vector<double> &sscore, const BayesOptions &bopts, const Vector<int> &xdatind, int stabp, double stabpnrm, int stabrot, double stabmu, double stabB)
 {
     NiceAssert( sscore.size() == xdatind.size() );
 
@@ -786,7 +786,7 @@ class fninnerinnerArg
 
     bool xsimple = ( !xappend.size() && !anyindirect ) ? true : false;
 
-    if ( !(bbopts.getdimfid()) || ( mode != 2 ) )
+    if ( !(bbopts.getdimfid()) || ( mode != 2 ) ) // The first point is required to setup nup points on x. The second form can be used thereafter
     {
         for ( i = 0 ; i < n-bbopts.getdimfid() ; ++i )
         {
@@ -1212,7 +1212,9 @@ class fninnerinnerArg
             //
             // i = 001b, 010b, 011b, 100b, 101b, 110b, 111b
 
-            for ( int j = 1 ; j < (1<<(cgtmean.size())) ; j *= 2 )
+            int k = 0;
+
+            for ( int j = 1 ; j < (1<<(cgtmean.size())) ; j *= 2, ++k )
             {
                 // Binary, eg size = 3:
                 //
@@ -1222,14 +1224,14 @@ class fninnerinnerArg
                 {
                     // bit set, posterior variance
 
-                    varsub *= cgtvar(i);
+                    varsub *= cgtvar(k);
                 }
 
                 else
                 {
                     // bit not set, posterior mean squared
 
-                    varsub *= cgtmean(i)*cgtmean(i);
+                    varsub *= cgtmean(k)*cgtmean(k);
                 }
             }
 
@@ -1940,8 +1942,8 @@ int dogridOpt(int dim,
 // quadrant, so we need to negative sigma.
 // ===========================================================================
 
-void multiObjectiveCombine(gentype &res, Vector<gentype> &x, void *arg);
-void multiObjectiveCombine(gentype &res, Vector<gentype> &x, void *arg)
+static void multiObjectiveCombine(gentype &res, Vector<gentype> &x, void *arg);
+static void multiObjectiveCombine(gentype &res, Vector<gentype> &x, void *arg)
 {
     BayesOptions &bopts = *((BayesOptions *) ((void **) arg)[0]);
 
@@ -1979,7 +1981,7 @@ void multiObjectiveCombine(gentype &res, Vector<gentype> &x, void *arg)
 // use of NULL: if a variable is NULL or absent then the corresponding vector is not set
 // replacex: this is set if xreplace is set
 
-void readres(gentype &res, double &addvar,
+static void readres(gentype &res, double &addvar,
                            Vector<gentype> &ycgt,
                            SparseVector<gentype> &xreplace,
                            int &replacex,
@@ -1993,7 +1995,7 @@ void readres(gentype &res, double &addvar,
                            Vector<int> &xobstype_cgt);
 
 
-void readres(gentype &res, double &addvar,
+static void readres(gentype &res, double &addvar,
                            Vector<gentype> &ycgt,
                            SparseVector<gentype> &xreplace,
                            int &replacex,
@@ -2306,6 +2308,11 @@ int bayesOpt(int dim,
             isfullgrid = true;
             int allfullobs = 1;
 
+            if ( presource )
+            {
+                isfullgrid = false;
+            }
+
             for ( i = 0 ; i < (*gridsource).N() ; ++i )
             {
                 gentype yyval = ((*gridsource).y())(i); // y value as defined in the model (not processed yet)
@@ -2335,6 +2342,8 @@ int bayesOpt(int dim,
                     {
                         gridHasNulls = true;
                         xhasnulls("&",i) = 1;
+//phantomabcabcabc
+//FIXME: fidelity here?
                     }
                 }
 
@@ -2440,10 +2449,8 @@ int bayesOpt(int dim,
     int Npreadd_sigma = 0;
     int Npreadd_cgt = 0;
 
-    if ( presource && !isfullgrid )
+    if ( presource )
     {
-        NiceAssert( !isfullgrid );
-
         for ( i = 0 ; i < (*presource).N() ; ++i )
         {
             gentype yyval = (*presource).y()(i); // y value as defined in the model (not processed yet)
@@ -2500,13 +2507,9 @@ int bayesOpt(int dim,
     // Pure continuous: !isgridopt &&  iscontopt
     // Mixed integer:    isgridopt &&  iscontopt
 
-    int isgridopt = Ngrid ? 1 : 0;
-    int iscontopt = ( gridHasNulls || !isgridopt ) ? 1 : 0;
-
-    if ( !isgridopt )
-    {
-        isfullgrid = false;
-    }
+    int isgridopt = Ngrid ? 1 : 0;                          // is this optimisation on a grid. Note isfullgrid is false if Ngrid > 0
+    int iscontopt = ( gridHasNulls || !isgridopt ) ? 1 : 0; // is this continuous optimization (with or without a grid)
+    int ismultfid = bopts.getdimfid() ? 1 : 0;              // is multi-fidelity optimization
 
     NiceAssert( !isgridopt || !(bopts.isXconvertNonTrivial()) );
 
@@ -2567,7 +2570,7 @@ int bayesOpt(int dim,
     //          is standard practice.
     // =======================================================================
 
-    bool usefidbudget = ( bopts.getdimfid() ) && ( bopts.fidbudget > 0 ) && ( bopts.startpoints < 0 ) && ( bopts.totiters < 0 ); // multi-fidelity as per Kandasamy with budget and no over-rides
+    bool usefidbudget = ismultfid && ( bopts.fidbudget > 0 ) && ( bopts.startpoints < 0 ) && ( bopts.totiters < 0 ); // multi-fidelity as per Kandasamy with budget and no over-rides
     int startpoints   = usefidbudget ? 0 : ( ( bopts.startpoints == -1 ) ? (effdim+1+(bopts.getdimfid())) : bopts.startpoints ); //( bopts.startpoints == -1 ) ? dim+1 : bopts.startpoints; - note use of effdim here!
     int &startseed    = bopts.startseed; // reference because we need to *persistently* update it!
     int &algseed      = bopts.algseed; // reference because we need to *persistently* update it!
@@ -2588,7 +2591,6 @@ int bayesOpt(int dim,
     {
         startpoints = 0;
     }
-
 
 
 
@@ -2716,7 +2718,7 @@ int bayesOpt(int dim,
 
                 // Work out cost at this fidelity
 
-                if ( bopts.getdimfid() )
+                if ( ismultfid )
                 {
                     SparseVector<SparseVector<gentype> > actfidel;
 
@@ -2760,13 +2762,13 @@ int bayesOpt(int dim,
                 // ===========================================================
 
 //phantomabc                if ( isgridopt && !iscontopt && ( bopts.model_d()(Nbasemu+gridi) == 2 ) )
-                if ( isgridopt && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
+                if ( isgridopt && isfullfid && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
                 {
                     mupred("&",k) = bopts.model_y()(Nbasemu+gridi);
                     sigmapred("&",k) = bopts.model_sigma(0);
                 }
 
-                else if ( isgridopt && !iscontopt )
+                else if ( isgridopt && isfullfid && !iscontopt )
                 {
                     bopts.model_muvarTrainingVector(sigmapred("&",k),mupred("&",k),Nbasesigma+gridi,Nbasemu+gridi);
                 }
@@ -2814,18 +2816,15 @@ int bayesOpt(int dim,
                 Vector<gentype> ycgtis(bopts.numcgt,nullgentype());
 
 //phantomabc                if ( isgridopt && !iscontopt )
-                if ( isgridopt )
+                if ( isgridopt && isfullfid && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
                 {
                     // Grid may have defined solutions already loaded.
 
-                    if ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) )
-                    {
-                        gridresis = bopts.model_y()(Nbasemu+gridi);
-                        gridresis.negate();
-                    }
+                    gridresis = bopts.model_y()(Nbasemu+gridi);
+                    gridresis.negate();
                 }
 
-                if ( isgridopt && !iscontopt )
+                if ( isgridopt && isfullfid && !iscontopt )
                 {
                     for ( int iy = 0 ; iy < bopts.numcgt ; ++iy )
                     {
@@ -2872,7 +2871,7 @@ int bayesOpt(int dim,
                 // ===========================================================
                 // ===========================================================
 
-                if ( isgridopt && !iscontopt )
+                if ( isgridopt && isfullfid && !iscontopt && !replacex )
                 {
                     // Remove the index from grid for full experiment, update model appropriately
 
@@ -2938,7 +2937,7 @@ int bayesOpt(int dim,
                 else
                 {
 //phantomabc                    if ( xobstype )
-                    if ( !isfullgrid )
+                    if ( !isfullgrid || !isfullfid || replacex )
                     {
                         bopts.model_addTrainingVector_musigma(((fnapproxout.isValNull()) ? 0.0_gent : fnapproxout),mupred(k),xxb(k),xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,varscale);
 
@@ -3754,6 +3753,8 @@ int bayesOpt(int dim,
                     //errstream() << "Unfiltered result x before fidelity selection: " << xa       << "\n";
                     //errstream() << "Unfiltered result y before fidelity selection: " << dummyres << "\n";
 
+//phantomabcabcabc
+//phantomabcabcabc FIXME MOVE THIS TO OUTSIDE OF GRID/NO_GRID LOOP
                     // ===============================================================
                     // ===============================================================
                     // Fidelity evaluation section
@@ -4042,6 +4043,20 @@ int bayesOpt(int dim,
                     int itorem   = -1;
                     int gridires = -1;
 
+                    if ( ( bopts.getdimfid() > 0 ) && ( locmethod != 18 ) )
+                    {
+                        // variabls xa[n-1] is a fidelity variable, 1 is the max fidelity, so set it 1 and compress the range
+                        // when choosing x as per Kandasamy.
+
+                        for ( int jij = 0 ; jij < bopts.getdimfid() ; jij++ )
+                        {
+                            xmin("&",n-bopts.getdimfid()+jij) = 1;
+                            xmax("&",n-bopts.getdimfid()+jij) = 1;
+
+                            xa("&",n-bopts.getdimfid()+jij) = 1;
+                        }
+                    }
+
                     retVector<double> tmpva;
 
                     if ( ( locmethod == 12 ) || ( locmethod == 16 ) )
@@ -4077,6 +4092,9 @@ int bayesOpt(int dim,
                         fnarginner.mode = 0;
                     }
 
+//phantomabcabcabc
+//FIXME: phantomabcabcabc - multi-fidelity here, or outside of loop?
+//FIXME: phantomabcabcabc - also put bounds back as they should be!
                     if ( ( locmethod == 12 ) || ( locmethod == 16 ) )
                     {
                         bopts.model_unsample();
@@ -4391,6 +4409,8 @@ int bayesOpt(int dim,
                 // ===========================================================
                 // ===========================================================
 
+//phantomabcabcabc
+//phantomabcabcabc - see initial random tests code here! isfullfid?
 //phantomabc                if ( isgridopt && !iscontopt && ( bopts.model_d()(Nbasemu+gridi) == 2 ) )
                 if ( isgridopt && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
                 {
@@ -4701,6 +4721,8 @@ inneroptions:
 
             bool fullobs = true;
 
+//phantomabcabcabc
+//phantomabcabcabc - FIXME fidelity stuff here
             if ( doeval )
             {
                 gentype gridresis = nullgentype();
@@ -5545,8 +5567,8 @@ class fninnerArg
 // and saves things like timing, beta etc.
 // ===========================================================================
 
-void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt);
-void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt)
+static void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt);
+static void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt)
 {
     (*((fninnerArg *) arg))(dim,res,x,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,gridres,muapproxsize,gridres_cgt);
     return;

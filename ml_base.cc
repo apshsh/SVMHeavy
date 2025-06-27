@@ -2072,7 +2072,7 @@ int ML_Base::addTrainingVector(int i, const gentype &y, const SparseVector<genty
     alltraintargA.add(i);  alltraintargA("&",i)  = (const d_anion &) y;
     alltraintargV.add(i);  alltraintargV("&",i)  = (const Vector<double> &) y;
 
-    static thread_local Vector<double> empvec;
+    const static Vector<double> empvec;
 
     alltraintargp.add(i);  calcprior(alltraintargp("&",i),allxdatagent(i));
     alltraintargpR.add(i); alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
@@ -2159,7 +2159,7 @@ int ML_Base::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &
     alltraintargA.add(i);  alltraintargA("&",i)  = (const d_anion &) y;
     alltraintargV.add(i);  alltraintargV("&",i)  = (const Vector<double> &) y;
 
-    static thread_local Vector<double> empvec;
+    const static Vector<double> empvec;
 
     alltraintargp.add(i);  calcprior(alltraintargp("&",i),allxdatagent(i));
     alltraintargpR.add(i); alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
@@ -2259,7 +2259,7 @@ int ML_Base::addTrainingVector(int i, const Vector<gentype> &y, const Vector<Spa
         alltraintargA.add(i+j);  alltraintargA("&",i+j)  = (const d_anion &) y(j);
         alltraintargV.add(i+j);  alltraintargV("&",i+j)  = (const Vector<double> &) y(j);
 
-        static thread_local Vector<double> empvec;
+        const static Vector<double> empvec;
 
         alltraintargp.add(i+j);  calcprior(alltraintargp("&",i+j),allxdatagent(i+j));;
         alltraintargpR.add(i+j); alltraintargpR("&",i+j) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i+j) ) : 0.0;
@@ -2360,7 +2360,7 @@ int ML_Base::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVe
         alltraintargA.add(i+j);  alltraintargA("&",i+j)  = (const d_anion &) y(j);
         alltraintargV.add(i+j);  alltraintargV("&",i+j)  = (const Vector<double> &) y(j);
 
-        static thread_local Vector<double> empvec;
+        const static Vector<double> empvec;
 
         alltraintargp.add(i+j);  calcprior(alltraintargp("&",i+j),allxdatagent(i+j));;
         alltraintargpR.add(i+j); alltraintargpR("&",i+j) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i+j) ) : 0.0;
@@ -2561,7 +2561,7 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
     {
         int i = onlyChangeRowI;
 
-        static thread_local Vector<double> empvec;
+        const static Vector<double> empvec;
 
         calcprior(alltraintargp("&",i),allxdatagent(i));
         alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
@@ -2571,7 +2571,7 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 
     else
     {
-        static thread_local Vector<double> empvec;
+        const static Vector<double> empvec;
 
         for ( int i = 0 ; i < ML_Base::N() ; i++ )
         {
@@ -8344,7 +8344,7 @@ void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vec
 
 void ML_Base::calcallprior(void)
 {
-    static thread_local Vector<double> empvec;
+    const static Vector<double> empvec;
 
     for ( int i = 0 ; i < ML_Base::N() ; i++ )
     {

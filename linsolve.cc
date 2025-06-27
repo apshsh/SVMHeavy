@@ -55,11 +55,11 @@ const char *Dtoeconv(char *flrep);
 const char *makeVarName(char *dest, const char *basename, int i);
 const char *makeCostString(char *dest, double costval);
 
-int linsolvebase(svmvolatile int &killSwitch, optLinState &x,
+static int linsolvebase(svmvolatile int &killSwitch, optLinState &x,
                  const Matrix<double> &G, const Vector<double> &c, const Vector<double> &g,
                  stopCond sc); //int maxitcntint, double xmtrtime, double xmtrtimeend);
 
-int linsolvetrans(svmvolatile int &killSwitch, Vector<double> &alphabchi, const Vector<int> &contype,
+static int linsolvetrans(svmvolatile int &killSwitch, Vector<double> &alphabchi, const Vector<int> &contype,
                   const Matrix<double> &G, const Vector<double> &c, const Vector<double> &g,
                   const stopCond &sc); //int maxitcntint, double xmtrtime, double xmtrtimeend);
 
@@ -1321,7 +1321,7 @@ const char *makeVarName(char *dest, const char *basename, int i)
 
 
 
-int linsolvetrans(svmvolatile int &killSwitch, Vector<double> &alphabchi, const Vector<int> &contype,
+static int linsolvetrans(svmvolatile int &killSwitch, Vector<double> &alphabchi, const Vector<int> &contype,
                   const Matrix<double> &G, const Vector<double> &c, const Vector<double> &g,
                   const stopCond &sc) //int maxitcntint, double xmtrtime, double xmtrtimeend)
 {
@@ -1382,7 +1382,7 @@ errstream() << "Result retrieval...";
 
 
 
-int linsolvebase(svmvolatile int &killSwitch, optLinState &x,
+static int linsolvebase(svmvolatile int &killSwitch, optLinState &x,
                  const Matrix<double> &G, const Vector<double> &c, const Vector<double> &g,
                  stopCond sc) //int maxitcntint, double xmtrtime, double xmtrtimeend)
 {

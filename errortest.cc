@@ -18,15 +18,15 @@
 
 double calcLOORecall(const ML_Base &baseML, Vector<int> &cnt, Matrix<int> &cfm, Vector<gentype> &resh, Vector<gentype> &resg, Vector<gentype> &gvarres, int startpoint, int isLOO, int calcgvarres, int suppressfb = 0, int useThreads = 0);
 
-void disableVector(int i, ML_Base *activeML);
-void disableVector(const Vector<int> &i, ML_Base *activeML);
-void resetGlobal(ML_Base *activeML);
-void semicopyML(ML_Base *activeML, const ML_Base *srcML);
-void copyML(ML_Base *activeML, const ML_Base *srcML);
-int trainGlobal(ML_Base *activeML, int islastopt);
-int isVectorActive(int i, ML_Base *activeML);
-int isVectorEnabled(int i, ML_Base *activeML);
-int isTrainedML(ML_Base *activeML);
+static void disableVector(int i, ML_Base *activeML);
+static void disableVector(const Vector<int> &i, ML_Base *activeML);
+static void resetGlobal(ML_Base *activeML);
+static void semicopyML(ML_Base *activeML, const ML_Base *srcML);
+static void copyML(ML_Base *activeML, const ML_Base *srcML);
+static int trainGlobal(ML_Base *activeML, int islastopt);
+static int isVectorActive(int i, ML_Base *activeML);
+static int isVectorEnabled(int i, ML_Base *activeML);
+static int isTrainedML(ML_Base *activeML);
 
 double calcnegloglikelihood(const ML_Base &baseML, int suppressfb)
 {
@@ -1563,28 +1563,28 @@ double assessResult(const ML_Base &baseML, Vector<int> &cnt, Matrix<int> &cfm, c
 
 
 
-void disableVector(int i, ML_Base *activeML)
+static void disableVector(int i, ML_Base *activeML)
 {
     activeML->disable(i);
 
     return;
 }
 
-void disableVector(const Vector<int> &i, ML_Base *activeML)
+static void disableVector(const Vector<int> &i, ML_Base *activeML)
 {
     activeML->disable(i);
 
     return;
 }
 
-void resetGlobal(ML_Base *activeML)
+static void resetGlobal(ML_Base *activeML)
 {
     activeML->reset();
 
     return;
 }
 
-int trainGlobal(ML_Base *activeML, int islastopt)
+static int trainGlobal(ML_Base *activeML, int islastopt)
 {
     int dummyres = 0; // FIXME: should check return value
 
@@ -1607,31 +1607,31 @@ int trainGlobal(ML_Base *activeML, int islastopt)
     return activeML->train(dummyres);
 }
 
-void semicopyML(ML_Base *activeML, const ML_Base *srcML)
+static void semicopyML(ML_Base *activeML, const ML_Base *srcML)
 {
     activeML->semicopy(*srcML);
 
     return;
 }
 
-void copyML(ML_Base *activeML, const ML_Base *srcML)
+static void copyML(ML_Base *activeML, const ML_Base *srcML)
 {
     *activeML = *srcML;
 
     return;
 }
 
-int isVectorActive(int i, ML_Base *activeML)
+static int isVectorActive(int i, ML_Base *activeML)
 {
     return (*activeML).alphaState()(i);
 }
 
-int isVectorEnabled(int i, ML_Base *activeML)
+static int isVectorEnabled(int i, ML_Base *activeML)
 {
     return (*activeML).isenabled(i);
 }
 
-int isTrainedML(ML_Base *activeML)
+static int isTrainedML(ML_Base *activeML)
 {
     return (*activeML).isTrained();
 }

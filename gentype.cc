@@ -50,7 +50,7 @@
 //typedef Dgraph<gentype,double> xDgraph;
 
 
-void evalgenFunc(int i, int j, const gentype &xa, int ia, const gentype &xb, int ib, gentype &res);
+static void evalgenFunc(int i, int j, const gentype &xa, int ia, const gentype &xb, int ib, gentype &res);
 
 /* - commented out here, but KEEP FOR DOCUMENTATION
 // Function information block.  This class contains all relevant information
@@ -247,9 +247,9 @@ inline eqninfoblock &postProInnerProd(eqninfoblock &a) { return a; }
 
 
 
-int pairBrackets(int start, int &end, const std::string &src, int LRorRL);
-int processNumLtoR(int start, int &end, const std::string &src, bool &isconst);
-int processExprLtoR(int start, int &end, int &isitastring, const std::string &src, std::string &exprname, Vector<int> &commapos);
+static int pairBrackets(int start, int &end, const std::string &src, int LRorRL);
+static int processNumLtoR(int start, int &end, const std::string &src, bool &isconst);
+static int processExprLtoR(int start, int &end, int &isitastring, const std::string &src, std::string &exprname, Vector<int> &commapos);
 std::ostream &operator<<(std::ostream &output, const eqninfoblock &src );
 void qswap(eqninfoblock &a, eqninfoblock &b);
 int operatorToFunction(int LtoRRtoL, int UnaryBinary, const Vector<std::string> &opSymb, const Vector<std::string> &opFuncEquiv, const Vector<int> &opRevBinOrder, Vector<eqninfoblock> &srcxblock);
@@ -2752,7 +2752,7 @@ void gentype::cast_null(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            const static SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype> > tempargs;
 
             // This will throw if finalisation doesn't result in a null
             temp.fastevaluate(tempargs,finalise);
@@ -2781,7 +2781,7 @@ int gentype::cast_int(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            const static SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype> > tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             intval = temp.cast_int(0);
@@ -2809,7 +2809,7 @@ double gentype::cast_double(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            const static SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype> > tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             doubleval = temp.cast_double(0);
@@ -2844,7 +2844,7 @@ const d_anion &gentype::cast_anion(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            const static SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype> > tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             *anionval = temp.cast_anion(0);
@@ -2877,7 +2877,7 @@ const Vector<gentype> &gentype::cast_vector(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            const static SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype> > tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             *vectorval = temp.cast_vector(0);
@@ -3078,7 +3078,7 @@ const Matrix<gentype> &gentype::cast_matrix(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            const static SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype> > tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             *matrixval = temp.cast_matrix(0);
@@ -3147,7 +3147,7 @@ const Set<gentype> &gentype::cast_set(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            const static SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype> > tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             *setval = temp.cast_set(0);
@@ -3180,7 +3180,7 @@ const Dgraph<gentype,double> &gentype::cast_dgraph(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            const static SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype> > tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             *dgraphval = temp.cast_dgraph(0);
@@ -3204,7 +3204,7 @@ const std::string  &gentype::cast_string(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            const static SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype> > tempargs;
 
             temp.fastevaluate(tempargs,finalise);
 
@@ -7099,7 +7099,7 @@ void setGenFunc(const GenFunc fnaddr)
     return;
 }
 
-void evalgenFunc(int i, int j, const gentype &xa, int ia, const gentype &xb, int ib, gentype &res)
+static void evalgenFunc(int i, int j, const gentype &xa, int ia, const gentype &xb, int ib, gentype &res)
 {
     int ires = 0;
 
@@ -7415,7 +7415,7 @@ int gentype::OP_var(const SparseVector<SparseVector<gentype> > &evalargs)
 // and set end to relevant position.  LRorRL is 0 for left to right,
 // 1 for right to left.  Returns 0 on success, 1 on failure.
 
-int pairBrackets(int start, int &end, const std::string &src, int LRorRL)
+static int pairBrackets(int start, int &end, const std::string &src, int LRorRL)
 {
     NiceAssert( start >= 0 );
     NiceAssert( start < (int) src.length() );
@@ -7534,7 +7534,7 @@ int pairBrackets(int start, int &end, const std::string &src, int LRorRL)
 // Note that we don't include any preceeding -, as this unary operator
 // must be dealt with in correct order, for example to ensure that -3! = -6
 
-int processNumLtoR(int start, int &end, const std::string &src, bool &isconst)
+static int processNumLtoR(int start, int &end, const std::string &src, bool &isconst)
 {
     isconst = false;
 
@@ -8077,7 +8077,7 @@ int processNumLtoR(int start, int &end, const std::string &src, bool &isconst)
 // - i,I,J,K,l,m,n,o,p,q,r, when not followed by a (, are numbers
 //   and not syntax errors
 
-int processExprLtoR(int start, int &end, int &isitastring, const std::string &src, std::string &exprname, Vector<int> &commapos)
+static int processExprLtoR(int start, int &end, int &isitastring, const std::string &src, std::string &exprname, Vector<int> &commapos)
 {
     int res = 0;
     int isexpr = 0;

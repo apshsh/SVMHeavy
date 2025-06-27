@@ -22,8 +22,8 @@
 
 //#define DEBUG 1
 
-double sS(double **X, double *xmax, int M, int n, int *axisind, int *iind = nullptr);
-double sS(double **X, double *xmax, int M, int n, int *axisind, int *iind)
+static double sS(double **X, double *xmax, int M, int n, int *axisind, int *iind = nullptr);
+static double sS(double **X, double *xmax, int M, int n, int *axisind, int *iind)
 {
     return h(X,xmax,M,n,axisind,iind);
 }

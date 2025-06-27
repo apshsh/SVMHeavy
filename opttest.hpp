@@ -14,7 +14,7 @@
 #include "vector.hpp"
 #include "matrix.hpp"
 
-#define NUMOPTTESTFNS 30
+#define NUMOPTTESTFNS 34
 
 
 // fnnum values (acronyms as per DTLZ)

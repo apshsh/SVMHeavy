@@ -17,22 +17,22 @@
 #define MAJOR_FEEDBACK_CYCLE 1000
 
 
-int solve_SMO(svmvolatile int &killSwitch, optState<double,double> &probdef,
+static int solve_SMO(svmvolatile int &killSwitch, optState<double,double> &probdef,
                        const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn,
                        const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp, const Vector<double> &lb, const Vector<double> &ub,
                        stopCond sc, //size_t maxitcnt, double maxtraintime, double traintimeend,
                        int just_zero_f, double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *htArg = nullptr, double stepscalefactor = 1.0);
-int solve_SMO_fixed_bias(svmvolatile int &killSwitch, optState<double,double> &probdef,
+static int solve_SMO_fixed_bias(svmvolatile int &killSwitch, optState<double,double> &probdef,
                        const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn,
                        const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp, const Vector<double> &lb, const Vector<double> &ub,
                        stopCond sc, //size_t maxitcnt, double maxtraintime, double traintimeend,
                        double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *htArg = nullptr, double stepscalefactor = 1.0);
 
-int secondChoice_SMO(int &i1, double &E1, double &E2, optState<double,double> &probdef, const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gpn, const Vector<double> &gp, const Vector<double> &hp, double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *htArg = nullptr, double stepscalefactor = 1.0);
-int takeStep_SMO_f_nonzero(int i2, int tau2, double &e2, int &f_zero, optState<double,double> &probdef, const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp, const Vector<double> &lb, const Vector<double> &ub, double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *htArg = nullptr, double stepscalefactor = 1.0);
-int trial_step_SMO_f_nonzero(int &f_zero_next, int i2, int tau2, double &e2, double &d_alpha2, double &d_b, optState<double,double> &probdef, const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gpn, const Vector<double> &lb, const Vector<double> &ub, double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *htArg = nullptr, double stepscalefactor = 1.0);
-int actually_take_step_SMO_f_nonzero(int &f_zero, int f_zero_next, int i2, int tau2, double &d_alpha2, double &d_b, optState<double,double> &probdef, const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp, const Vector<double> &lb, const Vector<double> &ub, double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *htArg = nullptr, double stepscalefactor = 1.0);
-int takeStep_SMO_fixed_bias(int i, int tau, optState<double,double> &probdef, const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp, const Vector<double> &lb, const Vector<double> &ub, double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *htArg = nullptr, double stepscalefactor = 1.0);
+static int secondChoice_SMO(int &i1, double &E1, double &E2, optState<double,double> &probdef, const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gpn, const Vector<double> &gp, const Vector<double> &hp, double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *htArg = nullptr, double stepscalefactor = 1.0);
+static int takeStep_SMO_f_nonzero(int i2, int tau2, double &e2, int &f_zero, optState<double,double> &probdef, const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp, const Vector<double> &lb, const Vector<double> &ub, double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *htArg = nullptr, double stepscalefactor = 1.0);
+static int trial_step_SMO_f_nonzero(int &f_zero_next, int i2, int tau2, double &e2, double &d_alpha2, double &d_b, optState<double,double> &probdef, const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gpn, const Vector<double> &lb, const Vector<double> &ub, double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *htArg = nullptr, double stepscalefactor = 1.0);
+static int actually_take_step_SMO_f_nonzero(int &f_zero, int f_zero_next, int i2, int tau2, double &d_alpha2, double &d_b, optState<double,double> &probdef, const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp, const Vector<double> &lb, const Vector<double> &ub, double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *htArg = nullptr, double stepscalefactor = 1.0);
+static int takeStep_SMO_fixed_bias(int i, int tau, optState<double,double> &probdef, const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp, const Vector<double> &lb, const Vector<double> &ub, double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *htArg = nullptr, double stepscalefactor = 1.0);
 //int examineExample_SMO(int i2, int tau2, int &f_zero, optState<double,double> &probdef, const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> &gp, const Vector$
 //int takeStep_SMO(int i1, int i2, int tau1, int tau2, double &E1, double &E2, optState<double,double> &probdef, const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<do$
 //int trial_step_SMO(double &d_J_epart, int i1, int i2, int tau1, int tau2, double &e1, double &e2, double &d_alpha1, double &d_alpha2, double &d_b, optState<double,double> &probdef, const Matrix<double> &Gp, const Matrix<double> &Gpsigma$
@@ -75,7 +75,7 @@ int fullOptStateSMO::solve(svmvolatile int &killSwitch)
 }
 
 
-int solve_SMO(svmvolatile int &killSwitch, optState<double,double> &probdef,
+static int solve_SMO(svmvolatile int &killSwitch, optState<double,double> &probdef,
                        const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn,
                        const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp,
                        const Vector<double> &lb, const Vector<double> &ub,
@@ -274,7 +274,7 @@ int solve_SMO(svmvolatile int &killSwitch, optState<double,double> &probdef,
     return res;
 }
 
-int solve_SMO_fixed_bias(svmvolatile int &killSwitch, optState<double,double> &probdef,
+static int solve_SMO_fixed_bias(svmvolatile int &killSwitch, optState<double,double> &probdef,
                                   const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn,
                                   const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp,
                                   const Vector<double> &lb, const Vector<double> &ub,
@@ -648,7 +648,7 @@ const Vector<double> &lb, const Vector<double> &ub, double (*fixHigherOrderTerms
     return 0;
 }
 
-int secondChoice_SMO(int &i1, double &E1, double &E2, optState<double,double> &probdef, 
+static int secondChoice_SMO(int &i1, double &E1, double &E2, optState<double,double> &probdef, 
 const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gpn, 
 const Vector<double> &gp, const Vector<double> &hp, 
 double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &), void *htArg, double stepscalefactor)
@@ -1298,7 +1298,7 @@ double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<d
     return 1;
 }
 
-int takeStep_SMO_f_nonzero(int i2, int tau2, double &e2, int &f_zero, optState<double,double> &probdef, 
+static int takeStep_SMO_f_nonzero(int i2, int tau2, double &e2, int &f_zero, optState<double,double> &probdef, 
 const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, 
 const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp, 
 const Vector<double> &lb, const Vector<double> &ub, 
@@ -1316,7 +1316,7 @@ double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<d
     return actually_take_step_SMO_f_nonzero(f_zero,f_zero_next,i2,tau2,d_alpha2,d_b,probdef,Gp,Gpsigma,Gn,Gpn,gp,gn,hp,lb,ub,fixHigherOrderTerms,htArg,stepscalefactor);
 }
 
-int trial_step_SMO_f_nonzero(int &f_zero_next, int i2, int tau2, double &e2, double &d_alpha2, double &d_b, optState<double,double> &probdef, 
+static int trial_step_SMO_f_nonzero(int &f_zero_next, int i2, int tau2, double &e2, double &d_alpha2, double &d_b, optState<double,double> &probdef, 
 const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gpn, 
 const Vector<double> &lb, const Vector<double> &ub, 
 double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &), void *htArg, double stepscalefactor)
@@ -1439,7 +1439,7 @@ double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<d
     return 1;
 }
 
-int actually_take_step_SMO_f_nonzero(int &f_zero, int f_zero_next, int i2, int tau2, double &d_alpha2, double &d_b, optState<double,double> &probdef, 
+static int actually_take_step_SMO_f_nonzero(int &f_zero, int f_zero_next, int i2, int tau2, double &d_alpha2, double &d_b, optState<double,double> &probdef, 
 const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, 
 const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp, 
 const Vector<double> &lb, const Vector<double> &ub, 
@@ -1525,7 +1525,7 @@ double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<d
     return 1;
 }
 
-int takeStep_SMO_fixed_bias(int i, int tau, optState<double,double> &probdef, 
+static int takeStep_SMO_fixed_bias(int i, int tau, optState<double,double> &probdef, 
 const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, 
 const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp, 
 const Vector<double> &lb, const Vector<double> &ub, 

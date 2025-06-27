@@ -9,7 +9,7 @@
 //
 
 //
-// Usage: svmpython('commands'), where commands are just like the regular CLI
+// Usage: pyheavy('commands'), where commands are just like the regular CLI
 //
 
 #include <string>
@@ -47,6 +47,7 @@ inline void qswap(std::string *&a, std::string *&b)
 #include "memdebug.hpp"
 #include "niceassert.hpp"
 #include "vecfifo.hpp"
+#include "opttest.hpp"
 
 int glob_svmInd(int i = -1)
 {
@@ -60,7 +61,41 @@ int glob_svmInd(int i = -1)
     return iii;
 }
 
+// Do this once only
+
+py::object &get_builtins(void)
+{
+    static py::object builtins = py::module_::import("builtins");
+
+    return builtins;
+}
+
 SparseVector<ML_Mutable *> &getMLmodels(void);
+
+int isCallable(py::object src)
+{
+    static py::object callable_function = get_builtins().attr("callable");
+
+    // if not bool let exception be thrown
+    return py::cast<py::bool_>(callable_function(src));
+}
+
+int isComplex(py::object src)
+{
+    static py::object isinstance_function = get_builtins().attr("isinstance");
+    static py::object complex_class = get_builtins().attr("complex");
+
+    // if not bool let exception be thrown
+    return py::cast<py::bool_>(isinstance_function(src,complex_class));
+}
+
+
+
+
+
+
+
+
 
 
 // unconvertable objects converted to nan
@@ -100,8 +135,8 @@ template <class T> int convFromPy(SparseVector<T> &res, py::object src);
 #define QGETSETCLAD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), setname "(i,d,t) - " desc "\n\n" "for ML i (i=-1 for current ML)."); \
                                                             modis.def(getname, &(mod_ ## getfn), getname "(i,d) - get setting for " setname "(i,d,...) " "for ML i (i=-1 for current ML).");
 
-#define        DODEF(dofn)          py::object mod_ ## dofn(int i)                       { i = glob_svmInd(i); return convToPy(getMLref(getMLmodels(),i). dofn ());   }
-#define     DOARGDEF(dofn,T)        int        mod_ ## dofn(int i,         py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); return getMLref(getMLmodels(),i). dofn (altp);   }
+#define        DODEF(dofn)          py::object mod_ ##  dofn(int i)                      { i = glob_svmInd(i); return convToPy(getMLref(getMLmodels(),i). dofn ());   }
+#define     DOARGDEF(dofn,T)        int        mod_ ##  dofn(int i,        py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); return getMLref(getMLmodels(),i). dofn (altp);   }
 #define       GETDEF(getfn)         py::object mod_ ## getfn(int i)                      { i = glob_svmInd(i); return convToPy(getMLrefconst(getMLmodels(),i). getfn ());  }
 #define    GETDEFCLA(getfn)         py::object mod_ ## getfn(int i, int d)               { i = glob_svmInd(i); return convToPy(getMLrefconst(getMLmodels(),i). getfn (d)); }
 #define       SETDEF(setfn,T)       int        mod_ ## setfn(int i,        py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); return getMLref(getMLmodels(),i). setfn (altp);   }
@@ -110,6 +145,35 @@ template <class T> int convFromPy(SparseVector<T> &res, py::object src);
                                     int        mod_ ## setfn(int i,        py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); return getMLref(getMLmodels(),i). setfn (altp);   }
 #define GETSETDEFCLA(getfn,setfn,T) py::object mod_ ## getfn(int i, int d)               { i = glob_svmInd(i); return convToPy(getMLrefconst(getMLmodels(),i). getfn (d)); } \
                                     int        mod_ ## setfn(int i, int d, py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); return getMLref(getMLmodels(),i). setfn (d,altp); }
+
+
+
+#define QGETSETKER(modis,getfn,setfn,desc)  modis.def(#setfn, &(mod_ ## setfn), #setfn "(i,p) - set "   desc " kernel parameter " #getfn " for ML i (i=-1 for current ML)."); \
+                                            modis.def(#getfn, &(mod_ ## getfn), #getfn "(i) - get "     desc " kernel parameter " #getfn " for ML i (i=-1 for current ML).");
+#define QGETSETKERQ(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), #setfn "(i,q,p) - set "   desc " kernel[q] parameter " #getfn " for ML i (i=-1 for current ML)."); \
+                                            modis.def(#getfn, &(mod_ ## getfn), #getfn "(i,q) - get "     desc " kernel[q] parameter " #getfn " for ML i (i=-1 for current ML).");
+
+#define GETSETDEFKERAP(getfn,setfn,T) py::object mod_ ## getfn(int i)               { i = glob_svmInd(i); return convToPy(getMLrefconst(getMLmodels(),i).getKernel(). getfn ());  } \
+                                      void       mod_ ## setfn(int i, py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); getMLref(getMLmodels(),i).prepareKernel(); getMLref(getMLmodels(),i).getKernel_unsafe(). setfn (altp); getMLref(getMLmodels(),i).resetKernel(0,-1,0); }
+#define GETSETDEFKERBP(getfn,setfn,T) py::object mod_ ## getfn(int i)               { i = glob_svmInd(i); return convToPy(getMLrefconst(getMLmodels(),i).getKernel(). getfn ());  } \
+                                      void       mod_ ## setfn(int i, py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); getMLref(getMLmodels(),i).prepareKernel(); getMLref(getMLmodels(),i).getKernel_unsafe(). setfn (altp); getMLref(getMLmodels(),i).resetKernel(0); }
+#define GETSETDEFKERAN(getfn,setfn,T) py::object mod_ ## getfn(int i)               { i = glob_svmInd(i); return convToPy(getMLrefconst(getMLmodels(),i).getKernel(). getfn ());  } \
+                                      void       mod_ ## setfn(int i, py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); getMLref(getMLmodels(),i).getKernel_unsafe(). setfn (altp); getMLref(getMLmodels(),i).resetKernel(0,-1,0); }
+#define GETSETDEFKERBN(getfn,setfn,T) py::object mod_ ## getfn(int i)               { i = glob_svmInd(i); return convToPy(getMLrefconst(getMLmodels(),i).getKernel(). getfn ());  } \
+                                      void       mod_ ## setfn(int i, py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); getMLref(getMLmodels(),i).getKernel_unsafe(). setfn (altp); getMLref(getMLmodels(),i).resetKernel(0); }
+#define GETSETDEFKERCN(getfn,setfn,T) py::object mod_ ## getfn(int i)               { i = glob_svmInd(i); return convToPy(getMLrefconst(getMLmodels(),i).getKernel(). getfn ());  } \
+                                      void       mod_ ## setfn(int i, py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); getMLref(getMLmodels(),i).getKernel_unsafe(). setfn (altp); }
+
+#define GETSETDEFKERAPQ(getfn,setfn,T) py::object mod_ ## getfn(int i, int q)               { i = glob_svmInd(i); return convToPy(getMLrefconst(getMLmodels(),i).getKernel(). getfn (q));  } \
+                                       void       mod_ ## setfn(int i, int q, py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); getMLref(getMLmodels(),i).prepareKernel(); getMLref(getMLmodels(),i).getKernel_unsafe(). setfn (altp,q); getMLref(getMLmodels(),i).resetKernel(0,-1,0); }
+#define GETSETDEFKERBPQ(getfn,setfn,T) py::object mod_ ## getfn(int i, int q)               { i = glob_svmInd(i); return convToPy(getMLrefconst(getMLmodels(),i).getKernel(). getfn (q));  } \
+                                       void       mod_ ## setfn(int i, int q, py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); getMLref(getMLmodels(),i).prepareKernel(); getMLref(getMLmodels(),i).getKernel_unsafe(). setfn (altp,q); getMLref(getMLmodels(),i).resetKernel(0); }
+#define GETSETDEFKERANQ(getfn,setfn,T) py::object mod_ ## getfn(int i, int q)               { i = glob_svmInd(i); return convToPy(getMLrefconst(getMLmodels(),i).getKernel(). getfn (q));  } \
+                                       void       mod_ ## setfn(int i, int q, py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); getMLref(getMLmodels(),i).getKernel_unsafe(). setfn (altp,q); getMLref(getMLmodels(),i).resetKernel(0,-1,0); }
+#define GETSETDEFKERBNQ(getfn,setfn,T) py::object mod_ ## getfn(int i, int q)               { i = glob_svmInd(i); return convToPy(getMLrefconst(getMLmodels(),i).getKernel(). getfn (q));  } \
+                                       void       mod_ ## setfn(int i, int q, py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); getMLref(getMLmodels(),i).getKernel_unsafe(). setfn (altp,q); getMLref(getMLmodels(),i).resetKernel(0); }
+#define GETSETDEFKERCNQ(getfn,setfn,T) py::object mod_ ## getfn(int i, int q)               { i = glob_svmInd(i); return convToPy(getMLrefconst(getMLmodels(),i).getKernel(). getfn (q));  } \
+                                       void       mod_ ## setfn(int i, int q, py::object p) { i = glob_svmInd(i); T altp; convFromPy(altp,p); getMLref(getMLmodels(),i).getKernel_unsafe(). setfn (altp,q); }
 
 
 py::object pyogetsrc(int i);
@@ -241,6 +305,74 @@ GETSETDEF(delta,setdelta,gentype);
 GETSETDEF(muWeight,setmuWeight,Vector<gentype>);
 GETSETDEF(muBias,  setmuBias,  gentype);
 
+GETSETDEFKERAP(isSymmSet,setSymmSet,int);
+GETSETDEFKERAP(isFullNorm,setFullNorm,int);
+GETSETDEFKERAP(isProd,setProd,int);
+GETSETDEFKERBP(isAltDiff,setAltDiff,int);
+GETSETDEFKERAP(rankType,setrankType,int);
+
+GETSETDEFKERAN(denseZeroPoint,setdenseZeroPoint,double);
+
+//GETSETDEFKERAP(getlinGradOrd,setlinGradOrd,Vector<int>);
+//GETSETDEFKERAP(getlinGradScal,setlinGradScal,Vector<Matrix<double>>);
+
+GETSETDEFKERAP(numSamples,setnumSamples,int);
+GETSETDEFKERAP(sampleDistribution,setSampleDistribution,Vector<gentype>);
+GETSETDEFKERAP(sampleIndices,setSampleIndices,Vector<int>);
+
+GETSETDEFKERAP(getTypes,setTypes,Vector<int>);
+GETSETDEFKERAP(getHyper,setHyper,Vector<Vector<gentype>>);
+GETSETDEFKERAP(getIntConstants,setIntConstantss,Vector<Vector<int>>);
+GETSETDEFKERBN(getRealOverwrites,setRealOverwrites,Vector<SparseVector<int>>);
+GETSETDEFKERBN(getIntOverwrites,setIntOverwrites,Vector<SparseVector<int>>);
+GETSETDEFKERAP(getIsNormalised,setIsNormalised,Vector<int>);
+GETSETDEFKERAP(getIsMagTerm,setIsMagTerm,Vector<int>);
+
+GETSETDEFKERAP(getChained,setChained,Vector<int>);
+GETSETDEFKERAP(getSplit,setSplit,Vector<int>);
+GETSETDEFKERAP(getMulSplit,setMulSplit,Vector<int>);
+
+GETSETDEFKERAP(getHyperLB,setHyperLB,Vector<Vector<gentype>>);
+GETSETDEFKERAP(getHyperUB,setHyperUB,Vector<Vector<gentype>>);
+
+GETSETDEFKERAP(getIntConstantsLB,setIntConstantssLB,Vector<Vector<int>>);
+GETSETDEFKERAP(getIntConstantsUB,setIntConstantssUB,Vector<Vector<int>>);
+
+
+
+GETSETDEFKERAPQ(cWeight,setWeight,gentype);
+GETSETDEFKERAPQ(cType,setType,int);
+GETSETDEFKERAPQ(isNormalised,setisNormalised,int);
+GETSETDEFKERAPQ(isMagTerm,setisMagTerm,int);
+
+GETSETDEFKERAPQ(cRealConstants,setRealConstants,Vector<gentype>);
+GETSETDEFKERAPQ(cIntConstants,setIntConstants,Vector<int>);
+GETSETDEFKERBNQ(cRealOverwrite,setRealOverwrite,SparseVector<int>);
+GETSETDEFKERBNQ(cIntOverwrite,setIntOverwrite,SparseVector<int>);
+
+GETSETDEFKERAPQ(getRealConstZero,setRealConstZero,double);
+GETSETDEFKERAPQ(getIntConstZero,setIntConstZero,int);
+
+GETSETDEFKERAPQ(isChained,setisChained,int);
+GETSETDEFKERAPQ(isSplit,setisSplit,int);
+GETSETDEFKERAPQ(isMulSplit,setisMulSplit,int);
+
+GETSETDEFKERCNQ(cWeightLB,setWeightLB,gentype);
+
+GETSETDEFKERCNQ(cRealConstantsLB,setRealConstantsLB,Vector<gentype>);
+GETSETDEFKERCNQ(cIntConstantsLB,setIntConstantsLB,Vector<int>);
+
+GETSETDEFKERCNQ(getRealConstZeroLB,setRealConstZeroLB,double);
+GETSETDEFKERCNQ(getIntConstZeroLB,setIntConstZeroLB,int);
+
+GETSETDEFKERCNQ(cWeightUB,setWeightUB,gentype);
+
+GETSETDEFKERCNQ(cRealConstantsUB,setRealConstantsUB,Vector<gentype>);
+GETSETDEFKERCNQ(cIntConstantsUB,setIntConstantsUB,Vector<int>);
+
+GETSETDEFKERCNQ(getRealConstZeroUB,setRealConstZeroUB,double);
+GETSETDEFKERCNQ(getIntConstZeroUB,setIntConstZeroUB,int);
+
 int addTrainingVectorml    (int i, int j, py::object z, py::object x);
 int maddTrainingVectorml   (int i, int j, py::object z, py::object x);
 int detaddTrainingVectorml (int i, int j, py::object z, py::object x, py::object Cweigh, py::object epsweigh, py::object d);
@@ -259,6 +391,50 @@ py::object mlbias (int i);
 int mlsetalpha(int i, py::object src);
 int mlsetbias (int i, py::object src);
 
+py::object svmtest(int i);
+py::object svmtestraw(int i);
+
+py::object svmtest(int i)
+{
+    static bool firstrun = true;
+    static SparseVector<gentype> gentestfn;
+
+    if ( firstrun )
+    {
+        for ( int j = 1 ; j <= NUMOPTTESTFNS ; j++ )
+        {
+            gentype jj(2000+j); // 2000 forces normalization
+            gentype x("x");
+
+            gentestfn("&",j) = testfn(jj,x); // this is a function of x
+        }
+
+        firstrun = false;
+    }
+
+    return convToPy(gentestfn(i));
+}
+
+py::object svmtestraw(int i)
+{
+    static bool firstrun = true;
+    static SparseVector<gentype> gentestfn;
+
+    if ( firstrun )
+    {
+        for ( int j = 1 ; j <= NUMOPTTESTFNS ; j++ )
+        {
+            gentype jj(j); // raw version
+            gentype x("x");
+
+            gentestfn("&",j) = testfn(jj,x); // this is a function of x
+        }
+
+        firstrun = false;
+    }
+
+    return convToPy(gentestfn(i));
+}
 
 
 PYBIND11_MODULE(pyheavy, m) {
@@ -279,6 +455,42 @@ PYBIND11_MODULE(pyheavy, m) {
 
     auto m_maths = m.def_submodule("maths", "Mathematics related.");
     m_maths.def("eval", &svmeval, "eval(fn,x) - gentype mirror of pythons eval function fn (specified as a string with explicit x, eg sin(x)) using arguments given.");
+    m_maths.def("test", &svmtest, "test(i) - return normalised (inputs and outputs in range [0,1]) test function i. Available test functions are:\n"
+                                  " 1: Rastrigin function        (n-dimensional).\n"
+                                  " 2: Ackley's function         (n-dimensional).\n"
+                                  " 3: Sphere function           (n-dimensional).\n"
+                                  " 4: Rosenbrock function       (>1 dimensional).\n"
+                                  " 5: Beale's function          (2-dimensional).\n"
+                                  " 6: Goldstein–Price function  (2-dimensional).\n"
+                                  " 7: Booth's function          (2-dimensional).\n"
+                                  " 8: Bukin function N.6        (2-dimensional).\n"
+                                  " 9: Matyas function           (2-dimensional).\n"
+                                  "10: Levi function N.13        (2-dimensional).\n"
+                                  "11: Himmelblau's function     (2-dimensional).\n"
+                                  "12: Three-hump camel function (2-dimensional).\n"
+                                  "13: Easom function            (2-dimensional).\n"
+                                  "14: Cross-in-tray function    (2-dimensional).\n"
+                                  "15: Eggholder function        (2-dimensional).\n"
+                                  "16: Holder table function     (2-dimensional).\n"
+                                  "17: McCormick function        (2-dimensional).\n"
+                                  "18: Schaffer function N. 2    (2-dimensional).\n"
+                                  "19: Schaffer function N. 4    (2-dimensional).\n"
+                                  "20: Styblinski–Tang function  (n-dimensional).\n"
+                                  "21: Stability test function 1 (1-dimensional).\n"
+                                  "22: Stability test function 2 (1-dimensional).\n"
+                                  "23: Test function 3           (currently not working).\n"
+                                  "24: Drop-wave                 (n-dimensional).\n"
+                                  "25: Gramancy and Lee          (1-dimensional).\n"
+                                  "26: Langermann function       (2-dimensional).\n"
+                                  "27: Griewank function         (n-dimensional).\n"
+                                  "28: Levy function             (n-dimensional).\n"
+                                  "29: Schwefel function         (n-dimensional).\n"
+                                  "30: Shubert function          (2-dimensional).\n"
+                                  "31: Bohachevsky Function 1    (2-dimensional).\n"
+                                  "32: Bohachevsky Function 2    (2-dimensional).\n"
+                                  "33: Bohachevsky Function 3    (2-dimensional).\n"
+                                  "34: Perm function 0,D,1       (-dimensional).");
+    m_maths.def("testraw", &svmtestraw, "test(i) - return un-normalised test function i.");
     m_maths.def("calc", &callintercalc, "Calculator (explore functions are available in svmheavy maths).");
 
     // ---------------------------
@@ -403,7 +615,6 @@ PYBIND11_MODULE(pyheavy, m) {
     m_ml.def("setalpha",&mlsetalpha,"setalpha(i): set alpha for ML i");
     m_ml.def("setbias", &mlsetbias, "setbias(i): set bias for ML i" );
 
-
     m_ml.def("add",  &addTrainingVectorml,     "add(i,j,z,x): add training vector pair (z,x) to ML i at position j (i=-1 for current ML).");
     m_ml.def("addm", &maddTrainingVectorml,    "add(i,j,z,x): add multiple training vector pairs (z[k],x[k]) to ML i at position j (i=-1 for current ML).");
     m_ml.def("add",  &detaddTrainingVectorml,  "add(i,j,z,x,cw,ew,d): add training vector pair (z,x:cw,ew) (where cw and ew are the C and eps weight) in class d to ML i at position j (i=-1 for current ML).");
@@ -418,7 +629,79 @@ PYBIND11_MODULE(pyheavy, m) {
 
     // ---------------------------
 
-    auto m_ml_svm = m_ml.def_submodule("svm", "Support Vector Machines models.");
+    auto m_ml_kern = m_ml.def_submodule("kern", "Kernel Options for Model.");
+    QGETSETKER(m_ml_kern,isFullNorm,setFullNorm,"kernel normalization (0 normal, 1 K(x,y) = K(x,y)/sqrt(K(x,x).K(y,y)))");
+
+    QGETSETKER(m_ml_kern,getTypes,setTypes,"kernel types vector [ t0, t1, ... ] (by default the overall kernel is the weighted sum of these, but you can change this)");
+    QGETSETKER(m_ml_kern,getHyper,setHyper,"kernel weights and hyper-parameters vector [ [ w0, p_00, p_01, ...], [ w1, p_10, p_11, ...], ...]");
+    QGETSETKER(m_ml_kern,getIntConstants,setIntConstantss,"kernel integer hyper-parameters vector [ [ z_00, z_01, ... ], [ z_10, z_11, ... ], ... ]");
+
+    QGETSETKERQ(m_ml_kern,cWeight,setWeight,"kernel weight");
+    QGETSETKERQ(m_ml_kern,cType,setType,"kernel type");
+
+    QGETSETKERQ(m_ml_kern,cRealConstants,setRealConstants,"kernel hyper-parameters");
+    QGETSETKERQ(m_ml_kern,cIntConstants,setIntConstants,"kernel integer hyper-parameters");
+
+    QGETSETKERQ(m_ml_kern,getRealConstZero,setRealConstZero,"kernel lengthscale");
+    QGETSETKERQ(m_ml_kern,getIntConstZero,setIntConstZero,"kernel order");
+
+    // ---------------------------
+
+    auto m_ml_kern_obscure = m_ml_kern.def_submodule("obscure", "More Obscure Kernel Options for Model.");
+    QGETSETKER(m_ml_kern_obscure,isSymmSet,setSymmSet,"similarity 2-kernel symmetrization (0 normal, 1 K([x1~x2],[x3~x4]) = sqrt(K(x1,x3).K(x1,x4).K(x2,x3).K(x2.x4)))");
+    QGETSETKER(m_ml_kern_obscure,isProd,setProd,"product-wise kernel (0 normal, 1 K(x,y) = prod_i K(x_i,y_i))");
+    QGETSETKER(m_ml_kern_obscure,isAltDiff,setAltDiff,"kernel metric:\n""0:   ||x-y||_2^2    -> ||x||_m^m + ||x'||_m^m + ... - m.<<x,x',...>>_m\n""1:   ||x-y||_2^2    -> ||x||_2^2 + ||x'||_2^2 + ... - 2.<<x,x',...>>_m (default)\n""2:   2*(||x-y||_2^2 -> ||x||_2^2 + ||x'||_2^2 + ... - (1/m).(sum_{ij} <xi,xj>))\n""     (the RBF has additional scaling as per paper - see Kbase)\n""5:   ||x-y||_2^2    -> ||x-x'||_2^2 + ||x''-x'''||_2^2 + ...\n""                     = ||x||_2^2 + ||x'||_x^2 + ... - 2<x,x'> - 2<x'',x'''> - ...\n""                     = ||x||_2^2 + ||x'||_x^2 + ... - 2 sum_{i=0,2,...} <x_i,x_{i+1}>\n""103: K(...) -> 1/2^{m-1} sum_{s = [ +-1 +-1 ... ] in R^m : |i:si=+1| + |i:si=-1| in 4Z_+} K(||sum_i s_i x_i ||_2^2)\n""104: K(...) -> 1/m!      sum_{s = [ +-1 +-1 ... ] in R^m : |i:si=+1| = |i:si=-1|         } K(||sum_i s_i x_i ||_2^2)\n""203: like 103, but kernel expansion occurs over first kernel in chain only\n""204: like 104, but kernel expansion occurs over first kernel in chain only\n""300: true moment-kernel expension to 2-kernels\n");
+    QGETSETKER(m_ml_kern_obscure,rankType,setrankType,"kernel rank type (0: normal phi(x,x') = phi(x)-phi(x'), 1: phi(x,x') = phi(x)+phi(x'), 2: phi(x,x') = phi(x) otimes phi(x') - phi(x') otimes phi(x), 3: phi(x,x') = phi(x) otimes phi(x') - phi(x') otimes phi(x))");
+
+    QGETSETKER(m_ml_kern_obscure,denseZeroPoint,setdenseZeroPoint,"zero point for dense integration");
+
+//    QGETSETKER(m_ml_kern_obscure,getlinGradOrd,setlinGradOrd,"Order of linear gradient constraints (see Jidling)");
+//    QGETSETKER(m_ml_kern_obscure,getlinGradScal,setlinGradScal,"Matrix part of linear gradient constraints (see Jidling)");
+
+    QGETSETKER(m_ml_kern_obscure,numSamples,setnumSamples,"Number of samples if interpretting functions as distributions");
+    QGETSETKER(m_ml_kern_obscure,sampleDistribution,setSampleDistribution,"distribution type if interpretting functions as distributions");
+    QGETSETKER(m_ml_kern_obscure,sampleIndices,setSampleIndices,"indices on which to interpret functions as distributions");
+
+    QGETSETKER(m_ml_kern_obscure,getRealOverwrites,setRealOverwrites,"kernel hyper-parameters substitution vector");
+    QGETSETKER(m_ml_kern_obscure,getIntOverwrites,setIntOverwrites,"kernel integer hyper-parameters substitution vector");
+    QGETSETKER(m_ml_kern_obscure,getIsNormalised,setIsNormalised,"individual kernel normalizations (termwise 0 normal, 1 K_q(x,y) = K_q(x,y)/sqrt(K_q(x,x).K_q(y,y)))");
+    QGETSETKER(m_ml_kern_obscure,getIsMagTerm,setIsMagTerm,"individual kernel magnitudization (termwise 0 normal, 1 K_q(x,y) = K_q(x,x).K_q(y,y))");
+
+    QGETSETKER(m_ml_kern_obscure,getChained,setChained,"controls kernel chaining ([0, 0, ...] normal, e.g. [ 0, 1, 1, 0, ... ] K(...) = K_0(...) + K_3(K_2(K_1(...))) + K_4(...) + ...)");
+    QGETSETKER(m_ml_kern_obscure,getSplit,setSplit,"controls kernel splitting (termwise 0,1,2... see code)");
+    QGETSETKER(m_ml_kern_obscure,getMulSplit,setMulSplit,"controls kernel multiplicative splitting (termwise 0,1,2... see code)");
+
+    QGETSETKERQ(m_ml_kern_obscure,isNormalised,setisNormalised,"kernel normalization (0 normal, 1 K(x,y) = K(x,y)/sqrt(K(x,x).K(y,y)))");
+    QGETSETKERQ(m_ml_kern_obscure,isMagTerm,setisMagTerm,"kernel magnitudization (termwise 0 normal, 1 K_q(x,y) = K_q(x,x).K_q(y,y))");
+
+    QGETSETKERQ(m_ml_kern_obscure,cRealOverwrite,setRealOverwrite,"kernel hyper-parameters substitution vector");
+    QGETSETKERQ(m_ml_kern_obscure,cIntOverwrite,setIntOverwrite,"kernel integer hyper-parameters substitution vector");
+
+    QGETSETKER(m_ml_kern_obscure,getHyperLB,setHyperLB,"nominal lower bound for kernel weights and hyper-parameters");
+    QGETSETKER(m_ml_kern_obscure,getHyperUB,setHyperUB,"nominal upper bound for kernel weights and hyper-parameters");
+
+    QGETSETKER(m_ml_kern_obscure,getIntConstantsLB,setIntConstantssLB,"nominal lower bound for kernel integer hyper-parameters");
+    QGETSETKER(m_ml_kern_obscure,getIntConstantsUB,setIntConstantssUB,"nominal upper bound for kernel integer hyper-parameters");
+
+    QGETSETKERQ(m_ml_kern_obscure,cWeightLB,setWeightLB,"kernel weight nominal lower bound");
+
+    QGETSETKERQ(m_ml_kern_obscure,cRealConstantsLB,setRealConstantsLB,"kernel hyper-parameters nominal lower bound");
+    QGETSETKERQ(m_ml_kern_obscure,cIntConstantsLB,setIntConstantsLB,"kernel integer hyper-parameters nominal lower bound");
+
+    QGETSETKERQ(m_ml_kern_obscure,getRealConstZeroLB,setRealConstZeroLB,"kernel lengthscale nominal lower bound");
+    QGETSETKERQ(m_ml_kern_obscure,getIntConstZeroLB,setIntConstZeroLB,"kernel order nominal lower bound");
+
+    QGETSETKERQ(m_ml_kern_obscure,cWeightUB,setWeightUB,"kernel weight nominal upper bound");
+
+    QGETSETKERQ(m_ml_kern_obscure,cRealConstantsUB,setRealConstantsUB,"kernel hyper-parameters nominal upper bound");
+    QGETSETKERQ(m_ml_kern_obscure,cIntConstantsUB,setIntConstantsUB,"kernel integer hyper-parameters nominal upper bound");
+
+    QGETSETKERQ(m_ml_kern_obscure,getRealConstZeroUB,setRealConstZeroUB,"kernel lengthscale nominal upper bound");
+    QGETSETKERQ(m_ml_kern_obscure,getIntConstZeroUB,setIntConstZeroUB,"kernel order nominal upper bound");
+
+    // ---------------------------
+
+    auto m_ml_svm = m_ml.def_submodule("svm", "Support Vector Machines specific options.");
     QGETSETD(m_ml_svm,getMLType,ssetMLTypeClean,"type","settype", "set SVM i type. Types are:\n"
                                              "\n"
                                              " r - SVM: Scalar regression.\n"
@@ -528,7 +811,7 @@ PYBIND11_MODULE(pyheavy, m) {
 
     // ---------------------------
 
-    auto m_ml_lsv = m_ml.def_submodule("lsv", "Least-Squares Support Vector Machines models.");
+    auto m_ml_lsv = m_ml.def_submodule("lsv", "Least-Squares Support Vector Machines specific options.");
     QGETSETD(m_ml_lsv,getMLType,ssetMLTypeClean,"type","settype", "set LSV i type. Types are:\n"
                                              "\n"
                                              " lsr - LS-SVM: scalar regression.\n"
@@ -564,7 +847,7 @@ PYBIND11_MODULE(pyheavy, m) {
 
     // ---------------------------
 
-    auto m_ml_gp = m_ml.def_submodule("gp", "Gaussian Process models.");
+    auto m_ml_gp = m_ml.def_submodule("gp", "Gaussian Process specific options.");
     QGETSETD(m_ml_gp,getMLType,ssetMLTypeClean,"type","settype", "set GP i type. Types are:\n"
                                              "\n"
                                              " gpr - GPR: gaussian process scalar regression.\n"
@@ -594,7 +877,7 @@ PYBIND11_MODULE(pyheavy, m) {
 
     // ---------------------------
 
-    auto m_ml_knn = m_ml.def_submodule("knn", "Kernel nearest neighbours models.");
+    auto m_ml_knn = m_ml.def_submodule("knn", "Kernel nearest neighbours specific options.");
     QGETSETD(m_ml_knn,getMLType,ssetMLTypeClean,"type","settype", "set KNN i type. Types are:\n"
                                              "\n"
                                              " knc - KNN: binary classification.\n"
@@ -612,7 +895,7 @@ PYBIND11_MODULE(pyheavy, m) {
 
     // ---------------------------
 
-    auto m_ml_imp = m_ml.def_submodule("imp", "Impulse models.");
+    auto m_ml_imp = m_ml.def_submodule("imp", "Impulse model specific options.");
     QGETSETD(m_ml_imp,getMLType,ssetMLTypeClean,"type","settype", "set IMP i type. Types are:\n"
                                              "\n"
                                              " ei  - IMP: expected (hypervolume) improvement.\n"
@@ -622,7 +905,7 @@ PYBIND11_MODULE(pyheavy, m) {
 
     // ---------------------------
 
-    auto m_ml_blk = m_ml.def_submodule("blk", "Miscellaneous models.");
+    auto m_ml_blk = m_ml.def_submodule("blk", "Miscellaneous model specific options.");
     QGETSETD(m_ml_blk,getMLType,ssetMLTypeClean,"type","settype", "set BLK i type. Types are:\n"
                                              "\n"
                                              " nop - BLK: NOP machine.\n"
@@ -1027,25 +1310,104 @@ int mlsetbias(int i, py::object src)
 
 
 
-int isCallable(py::object src)
-{
-    static py::object builtins = py::module_::import("builtins");
-    static py::object isinstance_function = builtins.attr("isinstance");
-    static py::object callable_function = builtins.attr("callable");
 
-    // if not bool let exception be thrown
-    return py::cast<py::bool_>(callable_function(src));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+template <class T>
+const T &setgetsrc(int &i, int doset, T *val = nullptr)
+{
+    static thread_local SparseVector<T *> xval;
+    static thread_local SparseVector<int> useind;
+
+    if ( doset == 2 )
+    {
+        if ( i == -1 )
+        {
+            while ( xval.size() )
+            {
+                i = xval.ind(0);
+                setgetsrc(i,doset,val);
+            }
+
+            i = 0;
+        }
+
+        else
+        {
+            MEMDEL(xval("&",i));
+            xval.zero(i);
+            useind.zero(i);
+        }
+    }
+
+    else if ( doset )
+    {
+        if ( i == -1 )
+        {
+            i = 0;
+
+            while ( useind.isindpresent(i) ) { ++i; } // This is shared between all stores, so indices are unique.
+        }
+
+        MEMNEW(xval("&",i),T);
+
+        *(xval("&",i)) = *val;
+        useind("&",i) = 1;
+    }
+
+    return *(xval(i));
 }
 
-int isComplex(py::object src)
-{
-    static py::object builtins = py::module_::import("builtins");
-    static py::object isinstance_function = builtins.attr("isinstance");
-    static py::object complex_class = builtins.attr("complex");
+py::object pyogetsrc(int i) { return setgetsrc<py::object>(i,0); }
+gentype    gengetsrc(int i) { return setgetsrc<gentype>(i,0); }
 
-    // if not bool let exception be thrown
-    return py::cast<py::bool_>(isinstance_function(src,complex_class));
-}
+int pyosetsrc(int i, py::object src) { setgetsrc(i,1,&src); return i; }
+int gensetsrc(int i, gentype    src) { setgetsrc(i,1,&src); return i; }
+
+void pyosrcreset(void) { int i = -1; setgetsrc<py::object>(i,2); }
+void gensrcreset(void) { int i = -1; setgetsrc<gentype>(i,2); }
+
+void pyosrcreset(int i) { setgetsrc<py::object>(i,2); }
+void gensrcreset(int i) { setgetsrc<gentype>(i,2); }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 py::object convToPy(const int &src)
 {
@@ -1155,8 +1517,7 @@ py::object convToPy(const gentype &src)
 
         // Evaluated command to create function pointer
 
-        static py::object builtins = py::module_::import("builtins");
-        static py::object eval_function = builtins.attr("eval");
+        static py::object eval_function = get_builtins().attr("eval");
 
         return eval_function(fn);
     }
@@ -1312,7 +1673,14 @@ int convFromPy(SparseVector<T> &res, py::object src)
     {
         if ( altsrc.isCastableToVectorWithoutLoss() )
         {
-            res = (const SparseVector<gentype> &) altsrc;
+            SparseVector<gentype> tmpres = (const SparseVector<gentype> &) altsrc;
+
+            res.zero();
+
+            for ( int i = 0 ; i < tmpres.indsize() ; ++i )
+            {
+                res("&",tmpres.ind(i)) = (T) tmpres.direcref(i);
+            }
         }
 
         else
@@ -1402,6 +1770,143 @@ int convFromPy(T &res, py::handle h)
 {
     return convFromPy(res,py::reinterpret_borrow<py::object>(h));
 }
+
+// evaluate gentype function with x and evaluate result
+
+py::object genevalsrc(int i, py::object xx)
+{
+    // Grab function f from heap
+
+    gentype f = gengetsrc(i);
+
+    // Cleanup
+
+//    gensrcreset(i); - function may be used repeatedly
+
+    // Convert xx to gentype
+
+    gentype x;
+
+    if ( convFromPy(x,xx) )
+    {
+        return convToPy(nan(""));
+    }
+
+    // Evaluate f(x)
+
+    gentype res = f(x);
+
+    // Convert and return
+
+    return convToPy(res);
+}
+
+// evaluate py::object function with x and evaluate result
+
+gentype pyoevalsrc(int i, gentype xx)
+{
+    // Convert xx to py::object
+
+    py::object x = convToPy(xx);
+
+    // Put x onto stack
+
+    int j = -1;
+
+    j = pyosetsrc(j,x);
+
+    // Evaluate f(x) via call
+
+    gentype res;
+
+    std::string evalfn;
+
+    evalfn =  "(pyogetsrc(";
+    evalfn += std::to_string(i);
+    evalfn += "))(pyogetsrc(";
+    evalfn += std::to_string(j);
+    evalfn += "))";
+
+    // Evaluated run command
+
+    static py::object eval_function = get_builtins().attr("eval");
+
+    py::object resultobj = eval_function(evalfn);
+
+    // Cleanup
+
+    gensrcreset(j); // leave i so function can be called repeatedly
+
+    // Retrieve results of operation
+
+    if ( convFromPy(res,resultobj) )
+    {
+        res.force_double() = nan("");
+    }
+
+    // Return
+
+    return res;
+}
+
+// drop-in replacement for pycall function in gentype.cc
+// (the gentype version, which uses a system call, is disabled by the macro PYLOCAL)
+
+void pycall(const std::string &fn, gentype &res, const gentype &x)
+{
+    std::string xstr;
+
+    // Store arguments for python function and create reconstruction string
+
+    Vector<int> indused;
+
+    // Convert to string and store in transfer indices.
+
+    py::object xx = convToPy(x);
+    int i = pyosetsrc(-1,xx);
+
+    // Construct run command
+
+    std::string evalfn;
+
+    evalfn =  fn;
+    evalfn += "(pyheavy.internal.pyogetsrc(";
+    evalfn += std::to_string(i);
+    evalfn += "))";
+
+    // Evaluated run command
+
+    static py::object eval_function = get_builtins().attr("eval");
+
+    py::object resultobj = eval_function(evalfn);
+
+    // Clear used indices
+
+    pyosrcreset(i);
+
+    // Retrieve results of operation
+
+    convFromPy(res,resultobj);
+
+    return;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1914,193 +2419,4 @@ SparseVector<ML_Mutable *> &getMLmodels(void)
 
 
 
-
-// To prevent truncation, arguments sent to pycall are stored in a series of
-// arrays. These functions maintain static arrays that the c++ code can store
-// values in and python can then access.
-
-template <class T>
-const T &setgetsrc(int &i, int doset, T *val = nullptr)
-{
-    static thread_local SparseVector<T *> xval;
-    static SparseVector<int> useind;
-
-    if ( doset == 2 )
-    {
-        if ( i == -1 )
-        {
-            while ( xval.size() )
-            {
-                i = xval.ind(0);
-                setgetsrc(i,doset,val);
-            }
-
-            i = 0;
-        }
-
-        else
-        {
-            MEMDEL(xval("&",i));
-            xval.zero(i);
-            useind.zero(i);
-        }
-    }
-
-    else if ( doset )
-    {
-        if ( i == -1 )
-        {
-            i = 0;
-
-            while ( useind.isindpresent(i) ) { ++i; } // This is shared between all stores, so indices are unique.
-        }
-
-        MEMNEW(xval("&",i),T);
-
-        *(xval("&",i)) = *val;
-        useind("&",i) = 1;
-    }
-
-    return *(xval(i));
-}
-
-py::object pyogetsrc(int i) { return setgetsrc<py::object>(i,0); }
-gentype    gengetsrc(int i) { return setgetsrc<gentype>(i,0); }
-
-int pyosetsrc(int i, py::object src) { setgetsrc(i,1,&src); return i; }
-int gensetsrc(int i, gentype    src) { setgetsrc(i,1,&src); return 1; }
-
-void pyosrcreset(void) { int i = -1; setgetsrc<py::object>(i,2); }
-void gensrcreset(void) { int i = -1; setgetsrc<gentype>(i,2); }
-
-void pyosrcreset(int i) { setgetsrc<py::object>(i,2); }
-void gensrcreset(int i) { setgetsrc<gentype>(i,2); }
-
-// evaluate gentype function with x and evaluate result
-
-py::object genevalsrc(int i, py::object xx)
-{
-    // Grab function f from heap
-
-    gentype f = gengetsrc(i);
-
-    // Cleanup
-
-    gensrcreset(i);
-
-    // Convert xx to gentype
-
-    gentype x;
-
-    if ( convFromPy(x,xx) )
-    {
-        return convToPy(nan(""));
-    }
-
-    // Evaluate f(x)
-
-    gentype res = f(x);
-
-    // Convert and return
-
-    return convToPy(res);
-}
-
-// evaluate py::object function with x and evaluate result
-
-gentype pyoevalsrc(int i, gentype xx)
-{
-    // Convert xx to py::object
-
-    py::object x = convToPy(xx);
-
-    // Put x onto stack
-
-    int j = -1;
-
-    j = pyosetsrc(j,x);
-
-    // Evaluate f(x) via call
-    //
-    // res = pyogetsrc(i)(pyogetsrc(j))
-
-    gentype res;
-
-    std::string evalfn;
-
-    evalfn =  "pyogetsrc(";
-    evalfn += std::to_string(i);
-    evalfn += ")(pyogetsrc(";
-    evalfn += std::to_string(j);
-    evalfn += "))";
-
-    // Evaluated run command
-
-    static py::object builtins = py::module_::import("builtins");
-    static py::object eval_function = builtins.attr("eval");
-
-    py::object resultobj = eval_function(evalfn);
-
-    // Cleanup
-
-    gensrcreset(i);
-    gensrcreset(j);
-
-    // Retrieve results of operation
-
-    if ( convFromPy(res,resultobj) )
-    {
-        res.force_double() = nan("");
-    }
-
-    // Return
-
-    return res;
-}
-
-// drop-in replacement for pycall function in gentype.cc
-// (the gentype version, which uses a system call, is disabled by the macro PYLOCAL)
-
-void pycall(const std::string &fn, gentype &res, const gentype &x)
-{
-    std::string xstr;
-
-    // Store arguments for python function and create reconstruction string
-
-    Vector<int> indused;
-
-    // Convert to string and store in transfer indices.
-
-    py::object xx = convToPy(x);
-    int i = pyosetsrc(-1,xx);
-    xstr =  "pyheavy.internal.pyogetsrc(";
-    xstr += std::to_string(i);
-    xstr += ")";
-
-    // Construct run command
-
-    std::string evalfn;
-
-    evalfn += fn;
-    evalfn += "(";
-    evalfn += xstr;
-    evalfn += ")";
-
-    // Evaluated run command
-
-    static py::object builtins = py::module_::import("builtins");
-    static py::object eval_function = builtins.attr("eval");
-
-    py::object resultobj = eval_function(evalfn);
-
-    // Retrieve results of operation
-
-    convFromPy(res,resultobj);
-
-    // Clear used indices
-
-    pyosrcreset(i);
-
-    return;
-}
 

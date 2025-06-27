@@ -51,15 +51,15 @@
 #define MUEND 1.0e5
 #define MUDIV 2.0
 
-void recentreBias(int aN, int bN, optState<double,double> &x, Vector<double> &beta, 
+static void recentreBias(int aN, int bN, optState<double,double> &x, Vector<double> &beta, 
                   const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp);
 
-double calc_diagoff(Vector<double> &gradoff, Vector<double> &diagoff, const Vector<double> &efflb, const Vector<double> &effub, const Vector<double> &alpha, double mu, const Vector<int> &alphaRestrict);
+static double calc_diagoff(Vector<double> &gradoff, Vector<double> &diagoff, const Vector<double> &efflb, const Vector<double> &effub, const Vector<double> &alpha, double mu, const Vector<int> &alphaRestrict);
 
-void updateOffsets(Vector<double> &locgp, Vector<double> &lochp, Vector<double> &locgn, Matrix<double> &locGp, Matrix<double> &locGpsigma, const optState<double,double> &x, 
+static void updateOffsets(Vector<double> &locgp, Vector<double> &lochp, Vector<double> &locgn, Matrix<double> &locGp, Matrix<double> &locGpsigma, const optState<double,double> &x, 
                   const Matrix<double> *locGpBase, const Matrix<double> *locGpsigmaBase, int useGpBase, double gphpgnGpnGnscalefact, const Vector<double> &diagoff, int aN);
 
-int calcStep(int aN, int bN, int hpzero, double outertol, int useactive,
+static int calcStep(int aN, int bN, int hpzero, double outertol, int useactive,
              stopCond sc, //int maxitcnt, double maxtraintime, double traintimeend,
              optState<double,double> &x, optState<double,double> &xxx, double &gphpgnGpnGnscalefact,
              const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn,
@@ -839,7 +839,7 @@ int fullOptStateGradDesc::solve(svmvolatile int &killSwitch)
 
 
 
-void recentreBias(int aN, int bN, optState<double,double> &x, Vector<double> &beta, const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp)
+static void recentreBias(int aN, int bN, optState<double,double> &x, Vector<double> &beta, const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> &gp, const Vector<double> &gn, const Vector<double> &hp)
 {
     int i,j,k;
 
@@ -907,7 +907,7 @@ void recentreBias(int aN, int bN, optState<double,double> &x, Vector<double> &be
 
 
 
-double calc_diagoff(Vector<double> &gradoff, Vector<double> &diagoff, const Vector<double> &efflb, const Vector<double> &effub, const Vector<double> &alpha, double mu, const Vector<int> &alphaRestrict)
+static double calc_diagoff(Vector<double> &gradoff, Vector<double> &diagoff, const Vector<double> &efflb, const Vector<double> &effub, const Vector<double> &alpha, double mu, const Vector<int> &alphaRestrict)
 {
     NiceAssert( diagoff.size() == efflb.size() );
     NiceAssert( diagoff.size() == effub.size() );
@@ -962,7 +962,7 @@ double calc_diagoff(Vector<double> &gradoff, Vector<double> &diagoff, const Vect
     return res;
 }
 
-void updateOffsets(Vector<double> &locgp, Vector<double> &lochp, Vector<double> &locgn, Matrix<double> &locGp, Matrix<double> &locGpsigma, 
+static void updateOffsets(Vector<double> &locgp, Vector<double> &lochp, Vector<double> &locgn, Matrix<double> &locGp, Matrix<double> &locGpsigma, 
                   const optState<double,double> &x, 
                   const Matrix<double> *locGpBase, const Matrix<double> *locGpsigmaBase, int useGpBase, double gphpgnGpnGnscalefact, const Vector<double> &diagoff, int aN)
 {
@@ -995,7 +995,7 @@ void updateOffsets(Vector<double> &locgp, Vector<double> &lochp, Vector<double> 
 
 
 
-int calcStep(int aN, int bN, int hpzero, double outertol, int useactive,
+static int calcStep(int aN, int bN, int hpzero, double outertol, int useactive,
              stopCond sc, //int maxitcnt, double maxtraintime, double traintimeend,
              optState<double,double> &x, optState<double,double> &xxx, double &gphpgnGpnGnscalefact,
              const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn,

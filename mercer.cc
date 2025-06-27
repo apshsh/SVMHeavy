@@ -1501,8 +1501,8 @@ double MercerKernel::Kmip(int m,
 
 
 
-void castvectoreal(Vector<double> &dest, const Vector<gentype> &src);
-void castvectoreal(Vector<double> &dest, const Vector<gentype> &src)
+static void castvectoreal(Vector<double> &dest, const Vector<gentype> &src);
+static void castvectoreal(Vector<double> &dest, const Vector<gentype> &src)
 {
     int dim = src.size();
 

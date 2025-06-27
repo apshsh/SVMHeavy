@@ -103,13 +103,13 @@ public:
     // are stored past the locN boundary
 
     virtual const Vector<gentype>         &y  (void) const override { return locz; }
-    virtual const Vector<double>          &yR (void) const override { static thread_local Vector<double>          dummy; NiceThrow("yR not defined in svm_biscor"); return dummy; }
-    virtual const Vector<d_anion>         &yA (void) const override { static thread_local Vector<d_anion>         dummy; NiceThrow("yA not defined in svm_biscor"); return dummy; }
-    virtual const Vector<Vector<double> > &yV (void) const override { static thread_local Vector<Vector<double> > dummy; NiceThrow("yV not defined in svm_biscor"); return dummy; }
-    virtual const Vector<gentype>         &yp (void) const override { static thread_local Vector<gentype>         dummy; NiceThrow("yp  not defined in svm_biscor"); return dummy; }
-    virtual const Vector<double>          &ypR(void) const override { static thread_local Vector<double>          dummy; NiceThrow("ypR not defined in svm_biscor"); return dummy; }
-    virtual const Vector<d_anion>         &ypA(void) const override { static thread_local Vector<d_anion>         dummy; NiceThrow("ypA not defined in svm_biscor"); return dummy; }
-    virtual const Vector<Vector<double> > &ypV(void) const override { static thread_local Vector<Vector<double> > dummy; NiceThrow("ypV not defined in svm_biscor"); return dummy; }
+    virtual const Vector<double>          &yR (void) const override { NiceThrow("yR not defined in svm_biscor");  const static Vector<double>          dummy; return dummy; }
+    virtual const Vector<d_anion>         &yA (void) const override { NiceThrow("yA not defined in svm_biscor");  const static Vector<d_anion>         dummy; return dummy; }
+    virtual const Vector<Vector<double> > &yV (void) const override { NiceThrow("yV not defined in svm_biscor");  const static Vector<Vector<double> > dummy; return dummy; }
+    virtual const Vector<gentype>         &yp (void) const override { NiceThrow("yp  not defined in svm_biscor"); const static Vector<gentype>         dummy; return dummy; }
+    virtual const Vector<double>          &ypR(void) const override { NiceThrow("ypR not defined in svm_biscor"); const static Vector<double>          dummy; return dummy; }
+    virtual const Vector<d_anion>         &ypA(void) const override { NiceThrow("ypA not defined in svm_biscor"); const static Vector<d_anion>         dummy; return dummy; }
+    virtual const Vector<Vector<double> > &ypV(void) const override { NiceThrow("ypV not defined in svm_biscor"); const static Vector<Vector<double> > dummy; return dummy; }
 
     // Training set modification:
     //

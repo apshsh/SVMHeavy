@@ -2281,7 +2281,7 @@ void Matrix<T>::sv(int i, int j, T x) const
 
     if ( iscover )
     {
-        static thread_local retVector<T> tmpva;
+        retVector<T> tmpva;
 
         NiceAssert( elmfn );
 

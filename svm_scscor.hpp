@@ -76,9 +76,9 @@ public:
     // are stored past the locN boundary
 
     virtual const Vector<gentype>         &y (void) const override { return locz; }
-    virtual const Vector<double>          &yR(void) const override { static thread_local Vector<double>          dummy; NiceThrow("yR not defined in svm_scscor"); return dummy; }
-    virtual const Vector<d_anion>         &yA(void) const override { static thread_local Vector<d_anion>         dummy; NiceThrow("yA not defined in svm_scscor"); return dummy; }
-    virtual const Vector<Vector<double> > &yV(void) const override { static thread_local Vector<Vector<double> > dummy; NiceThrow("yV not defined in svm_scscor"); return dummy; }
+    virtual const Vector<double>          &yR(void) const override { NiceThrow("yR not defined in svm_scscor"); const static Vector<double>          dummy; return dummy; }
+    virtual const Vector<d_anion>         &yA(void) const override { NiceThrow("yA not defined in svm_scscor"); const static Vector<d_anion>         dummy; return dummy; }
+    virtual const Vector<Vector<double> > &yV(void) const override { NiceThrow("yV not defined in svm_scscor"); const static Vector<Vector<double> > dummy; return dummy; }
 
     // Training set modification:
     //

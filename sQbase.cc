@@ -14,20 +14,20 @@
 #include "smatrix.hpp"
 #include "optstate.hpp"
 
-void makeeye(double &x, double diagval);
-void makeeye(Matrix<double> &x, double diagval);
+static void makeeye(double &x, double diagval);
+static void makeeye(Matrix<double> &x, double diagval);
 
-double getdiagelm(double x);
-double getdiagelm(const Matrix<double> &x);
+static double getdiagelm(double x);
+static double getdiagelm(const Matrix<double> &x);
 
-void makeeye(double &x, double diagval)
+static void makeeye(double &x, double diagval)
 {
     x = diagval;
 
     return;
 }
 
-void makeeye(Matrix<double> &x, double diagval)
+static void makeeye(Matrix<double> &x, double diagval)
 {
     NiceAssert( x.numRows() == x.numCols() );
 
@@ -44,18 +44,18 @@ void makeeye(Matrix<double> &x, double diagval)
     return;
 }
 
-double getdiagelm(double x)
+static double getdiagelm(double x)
 {
     return x;
 }
 
-double getdiagelm(const Matrix<double> &x)
+static double getdiagelm(const Matrix<double> &x)
 {
     return x(0,0);
 }
 
-const double &celmcalc(int i, int j, const void *Gphid, retVector<double> &);
-const double &celmcalc(int i, int j, const void *Gphid, retVector<double> &)
+static const double &celmcalc(int i, int j, const void *Gphid, retVector<double> &);
+static const double &celmcalc(int i, int j, const void *Gphid, retVector<double> &)
 {
     //Matrix<double> &Gp = *((Matrix<double> *) ((void **) Gphid)[0]);
     //Vector<double> &res = *((Vector<double> *) ((void **) Gphid)[1]);
@@ -69,8 +69,8 @@ const double &celmcalc(int i, int j, const void *Gphid, retVector<double> &)
     return ( i < j ) ? newGpsigma(j,i) : newGpsigma(i,j);
 }
 
-double &elmcalc(int i, int j, void *Gphid, retVector<double> &);
-double &elmcalc(int i, int j, void *Gphid, retVector<double> &)
+static double &elmcalc(int i, int j, void *Gphid, retVector<double> &);
+static double &elmcalc(int i, int j, void *Gphid, retVector<double> &)
 {
     //Matrix<double> &Gp = *((Matrix<double> *) ((void **) Gphid)[0]);
     //Vector<double> &res = *((Vector<double> *) ((void **) Gphid)[1]);
@@ -84,8 +84,8 @@ double &elmcalc(int i, int j, void *Gphid, retVector<double> &)
     return ( i < j ) ? newGpsigma("&",j,i) : newGpsigma("&",i,j);
 }
 
-const Vector<double> &crowcalc(int i, const void *Gphid, retVector<double> &tmp);
-const Vector<double> &crowcalc(int i, const void *Gphid, retVector<double> &tmp)
+static const Vector<double> &crowcalc(int i, const void *Gphid, retVector<double> &tmp);
+static const Vector<double> &crowcalc(int i, const void *Gphid, retVector<double> &tmp)
 {
     //Matrix<double> &Gp = *((Matrix<double> *) ((void **) Gphid)[0]);
     Vector<double> &res = *((Vector<double> *) ((void **) Gphid)[1]);
@@ -109,8 +109,8 @@ const Vector<double> &crowcalc(int i, const void *Gphid, retVector<double> &tmp)
     return res;
 }
 
-Vector<double> &rowcalc(int i, void *Gphid, retVector<double> &tmp);
-Vector<double> &rowcalc(int i, void *Gphid, retVector<double> &tmp)
+static Vector<double> &rowcalc(int i, void *Gphid, retVector<double> &tmp);
+static Vector<double> &rowcalc(int i, void *Gphid, retVector<double> &tmp)
 {
     //Matrix<double> &Gp = *((Matrix<double> *) ((void **) Gphid)[0]);
     Vector<double> &res = *((Vector<double> *) ((void **) Gphid)[1]);

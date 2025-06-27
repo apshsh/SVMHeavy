@@ -241,7 +241,7 @@ void ML_Mutable::setMLTypeMorph(int newmlType)
 
 void ML_Mutable::setMLTypeClean(int newmlType)
 {
-    if ( mlType != newmlType )
+//    if ( mlType != newmlType ) - we *want* to trigger reset in this case!
     {
         // Assume a simple ML, must deal with general case elsewhere
 
@@ -254,10 +254,10 @@ void ML_Mutable::setMLTypeClean(int newmlType)
         theML("&",mlind) = makeNewML(mlType);
     }
 
-    else
-    {
-        restart();
-    }
+//    else
+//    {
+//        restart();
+//    }
 
     return;
 }
@@ -423,83 +423,83 @@ int ML_Mutable::ssetMLTypeClean(const std::string &xtype)
 
 const std::string &ML_Mutable::getMLType(void) const
 {
-         if ( type() == 0   ) { static std::string res("r");   return res; }
-    else if ( type() == 1   ) { static std::string res("c");   return res; }
-    else if ( type() == 2   ) { static std::string res("s");   return res; }
-    else if ( type() == 3   ) { static std::string res("m");   return res; }
-    else if ( type() == 4   ) { static std::string res("v");   return res; }
-    else if ( type() == 5   ) { static std::string res("a");   return res; }
-    else if ( type() == 7   ) { static std::string res("p");   return res; }
-    else if ( type() == 8   ) { static std::string res("t");   return res; }
-    else if ( type() == 12  ) { static std::string res("l");   return res; }
-    else if ( type() == 13  ) { static std::string res("o");   return res; }
-    else if ( type() == 15  ) { static std::string res("g");   return res; }
-    else if ( type() == 16  ) { static std::string res("i");   return res; }
-    else if ( type() == 17  ) { static std::string res("h");   return res; }
-    else if ( type() == 18  ) { static std::string res("j");   return res; }
-    else if ( type() == 19  ) { static std::string res("b");   return res; }
-    else if ( type() == 20  ) { static std::string res("u");   return res; }
-    else if ( type() == 21  ) { static std::string res("d");   return res; }
-    else if ( type() == 22  ) { static std::string res("R");   return res; }
-    else if ( type() == 23  ) { static std::string res("N");   return res; }
+         if ( type() == 0   ) { const static std::string res("r");   return res; }
+    else if ( type() == 1   ) { const static std::string res("c");   return res; }
+    else if ( type() == 2   ) { const static std::string res("s");   return res; }
+    else if ( type() == 3   ) { const static std::string res("m");   return res; }
+    else if ( type() == 4   ) { const static std::string res("v");   return res; }
+    else if ( type() == 5   ) { const static std::string res("a");   return res; }
+    else if ( type() == 7   ) { const static std::string res("p");   return res; }
+    else if ( type() == 8   ) { const static std::string res("t");   return res; }
+    else if ( type() == 12  ) { const static std::string res("l");   return res; }
+    else if ( type() == 13  ) { const static std::string res("o");   return res; }
+    else if ( type() == 15  ) { const static std::string res("g");   return res; }
+    else if ( type() == 16  ) { const static std::string res("i");   return res; }
+    else if ( type() == 17  ) { const static std::string res("h");   return res; }
+    else if ( type() == 18  ) { const static std::string res("j");   return res; }
+    else if ( type() == 19  ) { const static std::string res("b");   return res; }
+    else if ( type() == 20  ) { const static std::string res("u");   return res; }
+    else if ( type() == 21  ) { const static std::string res("d");   return res; }
+    else if ( type() == 22  ) { const static std::string res("R");   return res; }
+    else if ( type() == 23  ) { const static std::string res("N");   return res; }
 
-    else if ( type() == 300 ) { static std::string res("knp"); return res; }
-    else if ( type() == 301 ) { static std::string res("knc"); return res; }
-    else if ( type() == 302 ) { static std::string res("kng"); return res; }
-    else if ( type() == 303 ) { static std::string res("knr"); return res; }
-    else if ( type() == 304 ) { static std::string res("knv"); return res; }
-    else if ( type() == 305 ) { static std::string res("kna"); return res; }
-    else if ( type() == 307 ) { static std::string res("knm"); return res; }
+    else if ( type() == 300 ) { const static std::string res("knp"); return res; }
+    else if ( type() == 301 ) { const static std::string res("knc"); return res; }
+    else if ( type() == 302 ) { const static std::string res("kng"); return res; }
+    else if ( type() == 303 ) { const static std::string res("knr"); return res; }
+    else if ( type() == 304 ) { const static std::string res("knv"); return res; }
+    else if ( type() == 305 ) { const static std::string res("kna"); return res; }
+    else if ( type() == 307 ) { const static std::string res("knm"); return res; }
 
-    else if ( type() == 400 ) { static std::string res("gpr"); return res; }
-    else if ( type() == 401 ) { static std::string res("gpv"); return res; }
-    else if ( type() == 402 ) { static std::string res("gpa"); return res; }
-    else if ( type() == 408 ) { static std::string res("gpg"); return res; }
-    else if ( type() == 409 ) { static std::string res("gpc"); return res; }
-    else if ( type() == 410 ) { static std::string res("gpR"); return res; }
-    else if ( type() == 411 ) { static std::string res("gpC"); return res; }
+    else if ( type() == 400 ) { const static std::string res("gpr"); return res; }
+    else if ( type() == 401 ) { const static std::string res("gpv"); return res; }
+    else if ( type() == 402 ) { const static std::string res("gpa"); return res; }
+    else if ( type() == 408 ) { const static std::string res("gpg"); return res; }
+    else if ( type() == 409 ) { const static std::string res("gpc"); return res; }
+    else if ( type() == 410 ) { const static std::string res("gpR"); return res; }
+    else if ( type() == 411 ) { const static std::string res("gpC"); return res; }
 
-    else if ( type() == 800 ) { static std::string res("mlr"); return res; }
-    else if ( type() == 801 ) { static std::string res("mlc"); return res; }
-    else if ( type() == 802 ) { static std::string res("mlv"); return res; }
+    else if ( type() == 800 ) { const static std::string res("mlr"); return res; }
+    else if ( type() == 801 ) { const static std::string res("mlc"); return res; }
+    else if ( type() == 802 ) { const static std::string res("mlv"); return res; }
 
-    else if ( type() == 500 ) { static std::string res("lsr"); return res; }
-    else if ( type() == 501 ) { static std::string res("lsv"); return res; }
-    else if ( type() == 502 ) { static std::string res("lsa"); return res; }
-    else if ( type() == 505 ) { static std::string res("lso"); return res; }
-    else if ( type() == 508 ) { static std::string res("lsg"); return res; }
-    else if ( type() == 509 ) { static std::string res("lsi"); return res; }
-    else if ( type() == 510 ) { static std::string res("lsh"); return res; }
-    else if ( type() == 511 ) { static std::string res("lsc"); return res; }
-    else if ( type() == 512 ) { static std::string res("lsR"); return res; }
+    else if ( type() == 500 ) { const static std::string res("lsr"); return res; }
+    else if ( type() == 501 ) { const static std::string res("lsv"); return res; }
+    else if ( type() == 502 ) { const static std::string res("lsa"); return res; }
+    else if ( type() == 505 ) { const static std::string res("lso"); return res; }
+    else if ( type() == 508 ) { const static std::string res("lsg"); return res; }
+    else if ( type() == 509 ) { const static std::string res("lsi"); return res; }
+    else if ( type() == 510 ) { const static std::string res("lsh"); return res; }
+    else if ( type() == 511 ) { const static std::string res("lsc"); return res; }
+    else if ( type() == 512 ) { const static std::string res("lsR"); return res; }
 
-    else if ( type() == 200 ) { static std::string res("nop"); return res; }
-    else if ( type() == 201 ) { static std::string res("con"); return res; }
-    else if ( type() == 202 ) { static std::string res("avr"); return res; }
-    else if ( type() == 203 ) { static std::string res("fna"); return res; }
-    else if ( type() == 204 ) { static std::string res("io");  return res; }
-    else if ( type() == 205 ) { static std::string res("avv"); return res; }
-    else if ( type() == 206 ) { static std::string res("ava"); return res; }
-    else if ( type() == 207 ) { static std::string res("fnb"); return res; }
-    else if ( type() == 208 ) { static std::string res("fcb"); return res; }
-    else if ( type() == 209 ) { static std::string res("mxa"); return res; }
-    else if ( type() == 210 ) { static std::string res("mxb"); return res; }
-    else if ( type() == 211 ) { static std::string res("mer"); return res; }
-    else if ( type() == 212 ) { static std::string res("mba"); return res; }
-    else if ( type() == 213 ) { static std::string res("sys"); return res; }
-    else if ( type() == 214 ) { static std::string res("ker"); return res; }
-    else if ( type() == 215 ) { static std::string res("ber"); return res; }
-    else if ( type() == 216 ) { static std::string res("bat"); return res; }
+    else if ( type() == 200 ) { const static std::string res("nop"); return res; }
+    else if ( type() == 201 ) { const static std::string res("con"); return res; }
+    else if ( type() == 202 ) { const static std::string res("avr"); return res; }
+    else if ( type() == 203 ) { const static std::string res("fna"); return res; }
+    else if ( type() == 204 ) { const static std::string res("io");  return res; }
+    else if ( type() == 205 ) { const static std::string res("avv"); return res; }
+    else if ( type() == 206 ) { const static std::string res("ava"); return res; }
+    else if ( type() == 207 ) { const static std::string res("fnb"); return res; }
+    else if ( type() == 208 ) { const static std::string res("fcb"); return res; }
+    else if ( type() == 209 ) { const static std::string res("mxa"); return res; }
+    else if ( type() == 210 ) { const static std::string res("mxb"); return res; }
+    else if ( type() == 211 ) { const static std::string res("mer"); return res; }
+    else if ( type() == 212 ) { const static std::string res("mba"); return res; }
+    else if ( type() == 213 ) { const static std::string res("sys"); return res; }
+    else if ( type() == 214 ) { const static std::string res("ker"); return res; }
+    else if ( type() == 215 ) { const static std::string res("ber"); return res; }
+    else if ( type() == 216 ) { const static std::string res("bat"); return res; }
 
-    else if ( type() == 600 ) { static std::string res("ei");  return res; }
-    else if ( type() == 601 ) { static std::string res("svm"); return res; }
-    else if ( type() == 602 ) { static std::string res("rls"); return res; }
-    else if ( type() == 603 ) { static std::string res("rns"); return res; }
+    else if ( type() == 600 ) { const static std::string res("ei");  return res; }
+    else if ( type() == 601 ) { const static std::string res("svm"); return res; }
+    else if ( type() == 602 ) { const static std::string res("rls"); return res; }
+    else if ( type() == 603 ) { const static std::string res("rns"); return res; }
 
-    else if ( type() == -2  ) { static std::string res("ser"); return res; }
-    else if ( type() == -3  ) { static std::string res("par"); return res; }
+    else if ( type() == -2  ) { const static std::string res("ser"); return res; }
+    else if ( type() == -3  ) { const static std::string res("par"); return res; }
 
-    static std::string res("?");
+    const static std::string res("?");
     return res;
 }
 
@@ -619,11 +619,11 @@ const std::string &ML_Mutable::getVmethod(void) const
 {
     if ( isSVM(*this) )
     {
-             if ( isatonce() ) { static std::string res("once"); return res; }
-        else if ( isredbin() ) { static std::string res("red");  return res; }
+             if ( isatonce() ) { const static std::string res("once"); return res; }
+        else if ( isredbin() ) { const static std::string res("red");  return res; }
     }
 
-    static std::string res("?");
+    const static std::string res("?");
     return res;
 }
 
@@ -631,15 +631,15 @@ const std::string &ML_Mutable::getCmethod(void) const
 {
     if ( isSVM(*this) )
     {
-             if ( is1vsA()    ) { static std::string res("1vsA");   return res; }
-        else if ( is1vs1()    ) { static std::string res("1vs1");   return res; }
-        else if ( isDAGSVM()  ) { static std::string res("DAG");    return res; }
-        else if ( isMOC()     ) { static std::string res("MOC");    return res; }
-        else if ( ismaxwins() ) { static std::string res("maxwin"); return res; }
-        else if ( isrecdiv()  ) { static std::string res("recdiv"); return res; }
+             if ( is1vsA()    ) { const static std::string res("1vsA");   return res; }
+        else if ( is1vs1()    ) { const static std::string res("1vs1");   return res; }
+        else if ( isDAGSVM()  ) { const static std::string res("DAG");    return res; }
+        else if ( isMOC()     ) { const static std::string res("MOC");    return res; }
+        else if ( ismaxwins() ) { const static std::string res("maxwin"); return res; }
+        else if ( isrecdiv()  ) { const static std::string res("recdiv"); return res; }
     }
 
-    static std::string res("?");
+    const static std::string res("?");
     return res;
 }
 
@@ -647,11 +647,11 @@ const std::string &ML_Mutable::getOmethod(void) const
 {
     if ( isSVM(*this) )
     {
-             if ( singmethod() == 0 ) { static std::string res("sch"); return res; }
-        else if ( singmethod() == 1 ) { static std::string res("tax"); return res; }
+             if ( singmethod() == 0 ) { const static std::string res("sch"); return res; }
+        else if ( singmethod() == 1 ) { const static std::string res("tax"); return res; }
     }
 
-    static std::string res("?");
+    const static std::string res("?");
     return res;
 }
 
@@ -659,11 +659,11 @@ const std::string &ML_Mutable::getAmethod(void) const
 {
     if ( isSVM(*this) )
     {
-             if ( isClassifyViaSVM() ) { static std::string res("svc"); return res; }
-        else if ( isClassifyViaSVR() ) { static std::string res("svr"); return res; }
+             if ( isClassifyViaSVM() ) { const static std::string res("svc"); return res; }
+        else if ( isClassifyViaSVR() ) { const static std::string res("svr"); return res; }
     }
 
-    static std::string res("?");
+    const static std::string res("?");
     return res;
 }
 
@@ -671,14 +671,14 @@ const std::string &ML_Mutable::getRmethod(void) const
 {
     if ( isSVM(*this) )
     {
-             if ( isLinearCost()    && ( usefuzzt() == 0 ) ) { static std::string res("l"); return res; }
-        else if ( isQuadraticCost() && ( usefuzzt() == 0 ) ) { static std::string res("q"); return res; }
-        else if ( is1NormCost()     && ( usefuzzt() == 0 ) ) { static std::string res("o"); return res; }
-        else if ( isLinearCost()    && ( usefuzzt() == 1 ) ) { static std::string res("g"); return res; }
-        else if ( isQuadraticCost() && ( usefuzzt() == 1 ) ) { static std::string res("G"); return res; }
+             if ( isLinearCost()    && ( usefuzzt() == 0 ) ) { const static std::string res("l"); return res; }
+        else if ( isQuadraticCost() && ( usefuzzt() == 0 ) ) { const static std::string res("q"); return res; }
+        else if ( is1NormCost()     && ( usefuzzt() == 0 ) ) { const static std::string res("o"); return res; }
+        else if ( isLinearCost()    && ( usefuzzt() == 1 ) ) { const static std::string res("g"); return res; }
+        else if ( isQuadraticCost() && ( usefuzzt() == 1 ) ) { const static std::string res("G"); return res; }
     }
 
-    static std::string res("?");
+    const static std::string res("?");
     return res;
 }
 
@@ -686,11 +686,11 @@ const std::string &ML_Mutable::getTmethod(void) const
 {
     if ( isSVM(*this) )
     {
-             if ( isFixedTube()  ) { static std::string res("f"); return res; }
-        else if ( isShrinkTube() ) { static std::string res("s"); return res; }
+             if ( isFixedTube()  ) { const static std::string res("f"); return res; }
+        else if ( isShrinkTube() ) { const static std::string res("s"); return res; }
     }
 
-    static std::string res("?");
+    const static std::string res("?");
     return res;
 }
 
@@ -698,25 +698,25 @@ const std::string &ML_Mutable::getBmethod(void) const
 {
     if ( isSVM(*this) )
     {
-             if ( isVarBias()   ) { static std::string res("var"); return res; }
-        else if ( isPosBias()   ) { static std::string res("pos"); return res; }
-        else if ( isNegBias()   ) { static std::string res("neg"); return res; }
-        else if ( isFixedBias() ) { static std::string res("fix"); return res; }
+             if ( isVarBias()   ) { const static std::string res("var"); return res; }
+        else if ( isPosBias()   ) { const static std::string res("pos"); return res; }
+        else if ( isNegBias()   ) { const static std::string res("neg"); return res; }
+        else if ( isFixedBias() ) { const static std::string res("fix"); return res; }
     }
 
     else if ( isGPR(*this) )
     {
-             if ( isVarmuBias()  ) { static std::string res("var"); return res; }
-        else if ( isZeromuBias() ) { static std::string res("fix"); return res; }
+             if ( isVarmuBias()  ) { const static std::string res("var"); return res; }
+        else if ( isZeromuBias() ) { const static std::string res("fix"); return res; }
     }
 
     else if ( isLSV(*this) )
     {
-             if ( isVardelta()  ) { static std::string res("var"); return res; }
-        else if ( isZerodelta() ) { static std::string res("fix"); return res; }
+             if ( isVardelta()  ) { const static std::string res("var"); return res; }
+        else if ( isZerodelta() ) { const static std::string res("fix"); return res; }
     }
 
-    static std::string res("?");
+    const static std::string res("?");
     return res;
 }
 
@@ -724,12 +724,12 @@ const std::string &ML_Mutable::getMmethod(void) const
 {
     if ( isSVM(*this) )
     {
-             if ( isNoMonotonicConstraints()    ) { static std::string res("n"); return res; }
-        else if ( isForcedMonotonicIncreasing() ) { static std::string res("i"); return res; }
-        else if ( isForcedMonotonicDecreasing() ) { static std::string res("d"); return res; }
+             if ( isNoMonotonicConstraints()    ) { const static std::string res("n"); return res; }
+        else if ( isForcedMonotonicIncreasing() ) { const static std::string res("i"); return res; }
+        else if ( isForcedMonotonicDecreasing() ) { const static std::string res("d"); return res; }
     }
 
-    static std::string res("?");
+    const static std::string res("?");
     return res;
 }
 
