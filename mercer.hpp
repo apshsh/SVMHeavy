@@ -2491,6 +2491,8 @@ public:
 
     // Nominal bounds on constants (used in tuneKernel)
 
+    int isNomConst(int q = 0) const { return disNomConst(q); }
+
     const gentype &cWeightLB(int q = 0) const { return dRealConstantsLB(q)(0); }
 
     const Vector<gentype> &cRealConstantsLB(int q = 0) const { return dRealConstantsLB(q)(1,1,dRealConstantsLB(q).size()-1,cRealConstantsTmp); }
@@ -2618,6 +2620,7 @@ public:
     const Vector<SparseVector<int>> &getIntOverwrites (void) const { return dIntOverwrite;  }
     const Vector<int>               &getIsNormalised  (void) const { return isnorm;         }
     const Vector<int>               &getIsMagTerm     (void) const { return ismagterm;      }
+    const Vector<int>               &getIsNomConst    (void) const { return disNomConst;    }
 
     const Vector<int> &getChained (void) const { return ischain;  }
     const Vector<int> &getSplit   (void) const { return issplit;  }
@@ -2708,6 +2711,8 @@ public:
 
     // Nominal bounds on constants (used in tuneKernel)
 
+    MercerKernel &setisNomConst(int nv, int q = 0) { disNomConst("&",q) = nv; return *this; }
+
     MercerKernel &setWeightLB(const gentype &nwLB, int q = 0) { dRealConstantsLB("&",q)("&",0) = nwLB; return *this; }
 
     MercerKernel &setRealConstantsLB(const Vector<gentype> &ndRealConstantsLB, int q = 0) { NiceAssert( dRealConstantsLB(q).size()-1 == ndRealConstantsLB.size() ); retVector<gentype> tmpva; dRealConstantsLB("&",q)("&",1,1,dRealConstantsLB(q).size()-1,tmpva) = ndRealConstantsLB; return *this; }
@@ -2750,6 +2755,7 @@ public:
     MercerKernel &setIntOverwrites (const Vector<SparseVector<int>> &nv) { resize(nv.size()); dIntOverwrite  = nv; return *this; }
     MercerKernel &setIsNormalised  (const Vector<int>               &nv) { resize(nv.size()); isnorm         = nv; return *this; }
     MercerKernel &setIsMagTerm     (const Vector<int>               &nv) { resize(nv.size()); ismagterm      = nv; return *this; }
+    MercerKernel &setIsNomConst    (const Vector<int>               &nv) { resize(nv.size()); disNomConst    = nv; return *this; }
 
     MercerKernel &setChained (const Vector<int> &nv) { resize(nv.size()); ischain  = nv; return *this; }
     MercerKernel &setSplit   (const Vector<int> &nv) { resize(nv.size()); issplit  = nv; return *this; }
@@ -3279,6 +3285,7 @@ private:
     Vector<kernInfo> kernflags;
     mutable Vector<Vector<gentype> > dRealConstants;
     mutable Vector<Vector<int> > dIntConstants;
+    mutable Vector<int> disNomConst;
     mutable Vector<Vector<gentype> > dRealConstantsLB;
     mutable Vector<Vector<int> > dIntConstantsLB;
     mutable Vector<Vector<gentype> > dRealConstantsUB;
@@ -4621,6 +4628,7 @@ inline void qswap(MercerKernel &a, MercerKernel &b)
     qswap(a.kernflags           ,b.kernflags           );
     qswap(a.dRealConstants      ,b.dRealConstants      );
     qswap(a.dIntConstants       ,b.dIntConstants       );
+    qswap(a.disNomConst         ,b.disNomConst         );
     qswap(a.dRealConstantsLB    ,b.dRealConstantsLB    );
     qswap(a.dIntConstantsLB     ,b.dIntConstantsLB     );
     qswap(a.dRealConstantsUB    ,b.dRealConstantsUB    );

@@ -1,6 +1,4 @@
-//FIXME: BEFORE ANYTHING ELSE JUST GET FUCKING MATLAB WORKING AND RUN SOME FUCKING SIMS
-//FIXME: IN FACT, JUST RUN SOME FUCKING BEHCHMARKS!
-//
+
 //FIXME: need to add a further function to the final (squared) result to enforce constraints on the derivative on the dense integral!
 //This may violate the increasing property required?
 //Funciton must have integral form, N^2 points hidden in rank constraints a_17,18
@@ -387,8 +385,8 @@ int GPR_Generic::setd(int i, int nd)
     return getQ().setd(i,nd ? 2 : 0);
 }
 
-int GPR_Generic::setd(const Vector<int> &i, const Vector<int> &nd) 
-{ 
+int GPR_Generic::setd(const Vector<int> &i, const Vector<int> &nd)
+{
     NiceAssert( i.size() == nd.size() );
 
     int res = 0;
@@ -397,7 +395,7 @@ int GPR_Generic::setd(const Vector<int> &i, const Vector<int> &nd)
     {
         int ii;
 
-        for ( ii = 0 ; ii < i.size() ; ++ii ) 
+        for ( ii = 0 ; ii < i.size() ; ++ii )
         {
             res |= setd(i(ii),nd(ii));
         }
@@ -412,7 +410,7 @@ int GPR_Generic::setd(const Vector<int> &i, const Vector<int> &nd)
 }
 
 int GPR_Generic::setd(const Vector<int> &nd)
-{ 
+{
     NiceAssert( N() == nd.size() );
 
     int res = 0;
@@ -421,7 +419,7 @@ int GPR_Generic::setd(const Vector<int> &nd)
     {
         int i;
 
-        for ( i = 0 ; i < N() ; ++i ) 
+        for ( i = 0 ; i < N() ; ++i )
         {
             res |= setd(i,nd(i));
         }

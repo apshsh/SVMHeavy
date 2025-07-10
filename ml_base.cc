@@ -7627,7 +7627,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 
     double xscale = 1;
 
-    if ( !tuneK && !tuneP )
+    if ( ( !tuneK && !tuneP ) || ( type() == 200 ) )
     {
         return 0;
     }
@@ -7725,15 +7725,100 @@ tryagain:
         {
             constVecs("&",i) = kernel.cRealConstants(i);
 
-            if ( constVecs(i).size() )
+            if ( constVecs(i).size() && !(kernel.isNomConst(i)) )
             {
                 for ( j = -1 ; j < constVecs(i).size() ; ++j )
                 {
-                         if ( ( kdim > 1 ) && ( j == -1 ) && !(kernel.cWeight(i).isNomConst) ) { ddim++; adim *= ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); }
-                    else if ( j == -1 ) { ; }
-                    else if ( ( kernel.cType(i) == 5 ) && ( j == 1 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) { ddim++; adim *= 6; }
-                    else if ( ( kernel.cType(i) == 48 ) && ( j == 1 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) { ddim++; adim *= ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); }
-                    else if ( ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 48 ) && ( j == 0 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) { ddim++; adim *= ( ( ((int) (50/trycount)) > 5 ) ? ((int) (50/trycount)) : 5 ); }
+                    double lb;
+                    double ub;
+                    int steps;
+
+                    if ( ( j == -1 ) && ( kdim > 1 ) && !(kernel.cWeight(i).isNomConst) )
+                    {
+                        lb    = 0.1;
+                        ub    = 3;
+                        steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 );
+
+                        lb = kernel.cWeightLB(i).isValNull() ? lb : ( (double) kernel.cWeightLB(i) );
+                        ub = kernel.cWeightUB(i).isValNull() ? ub : ( (double) kernel.cWeightUB(i) );
+
+                        lb = ( !tuneBounds || ( (((*tuneBounds).wlb)(i)) < lb ) ) ? lb : (((*tuneBounds).wlb)(i));
+                        ub = ( !tuneBounds || ( (((*tuneBounds).wub)(i)) > ub ) ) ? ub : (((*tuneBounds).wub)(i));
+
+                        if ( lb < ub )
+                        {
+                            ddim++;
+                            adim *= steps;
+                        }
+                    }
+
+                    else if ( j == -1 )
+                    {
+                        ;
+                    }
+
+                    else if ( ( j == 1 ) && ( kernel.cType(i) ==  5 ) && !(kernel.cRealConstants(i)(j).isNomConst) )
+                    {
+                        lb    = 1;
+                        ub    = 5;
+                        steps = 6;
+
+                        lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
+                        ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
+
+                        lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
+                        ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
+
+                        if ( lb < ub )
+                        {
+                            ddim++;
+                            adim *= steps;
+                        }
+                    }
+
+                    else if ( ( j == 1 ) && ( kernel.cType(i) == 48 ) && !(kernel.cRealConstants(i)(j).isNomConst) )
+                    {
+                        lb    = 0;
+                        ub    = 1;
+                        steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 );
+
+                        lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
+                        ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
+
+                        lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
+                        ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
+
+                        if ( lb < ub )
+                        {
+                            ddim++;
+                            adim *= steps;
+                        }
+                    }
+
+                    else if ( ( j == 0 ) && ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 48 ) && !(kernel.cRealConstants(i)(j).isNomConst) )
+                    {
+                        int xdim = xspaceDim(uu(i));
+
+                        double lencorrect = std::sqrt((double) xdim)/std::pow( (double) N(),(double) xdim );
+
+                        lencorrect = ( lencorrect < 0.05 ) ? 0.05 : lencorrect;
+
+                        lb    = ( ( uu(i) == -1 ) ? xscale : 1.0 )*lencorrect*0.1*xwidth;
+                        ub    = ( ( uu(i) == -1 ) ? xscale : 1.0 )*1.5*sqrt((double) xdim)*xwidth;
+                        steps = ( ( ((int) (50/trycount)) > 5 ) ? ((int) (50/trycount)) : 5 );
+
+                        lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
+                        ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
+
+                        lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
+                        ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
+
+                        if ( lb < ub )
+                        {
+                            ddim++;
+                            adim *= steps;
+                        }
+                    }
                 }
             }
         }
@@ -7770,7 +7855,7 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
         {
             constVecs("&",i) = kernel.cRealConstants(i);
 
-            if ( constVecs(i).size() )
+            if ( constVecs(i).size() && !(kernel.isNomConst(i)) )
             {
                 // Element -1 is the weight of the kernel in the sum
 
@@ -7784,16 +7869,13 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
                     // Fixme: currently basically do lengthscale (r0) for "normal" kernels, need to extend
                     // NB: we only want to tune one "weight" per multiplicative kernel group
 
-                    if ( ( kdim > 1 ) && ( j == -1 ) && !(kernel.cWeight(i).isNomConst) ) // && kernel.isAdjWeight(i) )
-//                    if ( ( kdim > 1 ) && ( j == -1 ) && ( !i || ( ( kernel.isSplit(i-1) != 1 ) && ( kernel.isMulSplit(i-1) != 1 ) ) ) )
-////                    if ( ( j == -1 ) && ( !i || ( ( kernel.isSplit(i-1) != 1 ) && ( kernel.isMulSplit(i-1) != 1 ) ) ) )
+                    if ( ( kdim > 1 ) && ( j == -1 ) && !(kernel.cWeight(i).isNomConst) )
                     {
                         // This is weight (linear)
 
                         lb    = 0.1;
                         ub    = 3;
-                        steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); //15/trycount; //10;
-                        addit = 1;
+                        steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 );
 
                         // Bound bounding
 
@@ -7802,6 +7884,11 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
 
                         lb = ( !tuneBounds || ( (((*tuneBounds).wlb)(i)) < lb ) ) ? lb : (((*tuneBounds).wlb)(i));
                         ub = ( !tuneBounds || ( (((*tuneBounds).wub)(i)) > ub ) ) ? ub : (((*tuneBounds).wub)(i));
+
+                        if ( lb < ub )
+                        {
+                            addit = 1;
+                        }
                     }
 
                     else if ( j == -1 )
@@ -7809,36 +7896,44 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
                         ;
                     }
 
-                    else if ( ( kernel.cType(i) == 5 ) && ( j == 1 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) //&& kernel.isAdjRealConstants(j,i) )
+                    else if ( ( kernel.cType(i) == 5 ) && ( j == 1 ) && !(kernel.cRealConstants(i)(j).isNomConst) )
                     {
                         // This is norm order (linear)
 
                         lb    = 1;
                         ub    = 5;
                         steps = 6;
-                        addit = 1;
 
                         lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
                         ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
 
                         lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
                         ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
+
+                        if ( lb < ub )
+                        {
+                            addit = 1;
+                        }
                     }
 
-                    else if ( ( kernel.cType(i) == 48 ) && ( j == 1 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) //&& kernel.isAdjRealConstants(j,i) )
+                    else if ( ( kernel.cType(i) == 48 ) && ( j == 1 ) && !(kernel.cRealConstants(i)(j).isNomConst) )
                     {
                         // This is inter-task relatedness (linear)
 
                         lb    = 0;
                         ub    = 1;
                         steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); //15;
-                        addit = 1;
 
                         lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
                         ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
 
                         lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
                         ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
+
+                        if ( lb < ub )
+                        {
+                            addit = 1;
+                        }
                     }
 
                     else if ( ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 48 ) && ( j == 0 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) //&& kernel.isAdjRealConstants(j,i) )
@@ -7850,25 +7945,25 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
 
                         int xdim = xspaceDim(uu(i));
 
-//errstream() << "phantomxyztune xdim(" << i << ") = " << xdim << "\n";
                         double lencorrect = std::sqrt((double) xdim)/std::pow( (double) N(),(double) xdim );
 
                         lencorrect = ( lencorrect < 0.05 ) ? 0.05 : lencorrect;
-//errstream() << "phantomxyztune lencorrect(" << i << ") = " << lencorrect << "\n";
 
                         lb    = ( ( uu(i) == -1 ) ? xscale : 1.0 )*lencorrect*0.1*xwidth; //0.3*xwidth; // 0.01*xwidth; //1e-2*xwidth;
-//errstream() << "phantomxyztune lb(" << i << ") = " << lb << "\n";
-//FIXME: consider increasing ub
                         ub    = ( ( uu(i) == -1 ) ? xscale : 1.0 )*1.5*sqrt((double) xdim)*xwidth; //sqrt((double) xdim)*xwidth; // 3*xwidth; //15*xwidth;
-//errstream() << "phantomxyztune ub(" << i << ") = " << ub << "\n";
+                        //FIXME: consider increasing ub
                         steps = ( ( ((int) (50/trycount)) > 5 ) ? ((int) (50/trycount)) : 5 ); //50/trycount; //30; //20; // 15; //20;
-                        addit = 1;
 
                         lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
                         ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
 
                         lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
                         ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
+
+                        if ( lb < ub )
+                        {
+                            addit = 1;
+                        }
                     }
 
                     if ( addit )

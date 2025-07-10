@@ -11,9 +11,17 @@
 #include "plotml.hpp"
 #include "ml_mutable.hpp"
 
+
 SMBOOptions::SMBOOptions() : GlobalOptions()
     {
         locdim = 0;
+
+        PIscale = 0;
+
+        altmuapprox.ssetMLTypeClean("gpr");
+        altcgtapprox.ssetMLTypeClean("gpr");
+        altaugxapprox.ssetMLTypeClean("gpr");
+        altmuapprox_rff.ssetMLTypeClean("gpR");
 
         optname = "SMBO Optimisation";
 
@@ -23,7 +31,6 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
         locyres.useTightAllocation();
 
         //muapproxInd = -1;
-        //fxapproxInd = -1;
 
         sigmuseparate = 0;
         ismoo         = 0;
@@ -72,26 +79,27 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
         makenoise    = 0;
         ennornaive   = 0;
 
-        srcmodel            = nullptr;
-        diffmodel           = nullptr;
+        srcmodel  = nullptr;
+        diffmodel = nullptr;
 
         srcmodelInd  = -1;
         diffmodelInd = -1;
 
-        //fxapprox = nullptr;
+        //augxapprox = nullptr;
 
         //extmuapprox = nullptr;
-        //extfxapprox = nullptr;
+        //extaugxapprox = nullptr;
 
         //muapprox        = nullptr;
         //sigmaapprox     = nullptr;
         //muapprox_sample = nullptr;
         //augxapprox      = nullptr;
 
-        (modelErrOptim)   = nullptr;
-        (ismodelErrLocal) = 1;
+        modelErrOptim   = nullptr;
+        ismodelErrLocal = 1;
 
-        sigmaapprox = nullptr;
+        sigmaapprox    = nullptr;
+        sigmaapproxRaw = nullptr;
 
         Nbasemu    = 0;
         firsttrain = 0;
@@ -101,8 +109,8 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
 
 SMBOOptions::SMBOOptions(const SMBOOptions &src) : GlobalOptions(src)
     {
-        (modelErrOptim)   = nullptr;
-        (ismodelErrLocal) = 1;
+        modelErrOptim   = nullptr;
+        ismodelErrLocal = 1;
 
         locires.useTightAllocation();
         locxres.useTightAllocation();
@@ -120,13 +128,15 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
 
         locdim = src.locdim;
 
-        fxapprox = src.fxapprox;
+        PIscale = src.PIscale;
 
-        muapproxInd = src.muapproxInd;
-        fxapproxInd = src.fxapproxInd;
+        augxapprox = src.augxapprox;
 
-        extmuapprox = src.extmuapprox;
-        extfxapprox = src.extfxapprox;
+        muapproxInd   = src.muapproxInd;
+
+        extmuapprox   = src.extmuapprox;
+        extaugxapprox = src.extaugxapprox;
+        extcgtapprox  = src.extcgtapprox;
 
         sigmuseparate = src.sigmuseparate;
         ismoo         = src.ismoo;
@@ -184,8 +194,8 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
         alpha = src.alpha;
         beta  = src.beta;
 
-        srcmodel            = src.srcmodel;
-        diffmodel           = src.diffmodel;
+        srcmodel  = src.srcmodel;
+        diffmodel = src.diffmodel;
 
         srcmodelInd  = src.srcmodelInd;
         diffmodelInd = src.diffmodelInd;
@@ -207,7 +217,7 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
 
         altmuapprox         = src.altmuapprox;
         altmuapprox_rff     = src.altmuapprox_rff;
-        altfxapprox         = src.altfxapprox;
+        altaugxapprox       = src.altaugxapprox;
         altcgtapprox        = src.altcgtapprox;
 
         locires       = src.locires;
@@ -215,10 +225,10 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
         locxresunconv = src.locxresunconv;
         locyres       = src.locyres;
 
-        if ( (src.modelErrOptim) )
+        if ( src.modelErrOptim )
         {
-            (modelErrOptim)   = (*((src.modelErrOptim))).makeDup();
-            (ismodelErrLocal) = 1;
+            modelErrOptim   = (*((src.modelErrOptim))).makeDup();
+            ismodelErrLocal = 1;
         }
 
         return *this;
@@ -250,7 +260,7 @@ void SMBOOptions::consultTheOracle(ML_Mutable &randDir, int dim, const SparseVec
             gentype mvec;
             gentype vmat;
 
-            (*(muapprox(0))).var(vmat,mvec,czm);
+            getmuapprox(0).var(vmat,mvec,czm);
 
             // Sample gradient GP to get direction
 
@@ -293,7 +303,7 @@ void SMBOOptions::consultTheOracle(ML_Mutable &randDir, int dim, const SparseVec
 
             gentype mvec;
 
-            (*(muapprox(0))).gg(mvec,czm);
+            getmuapprox(0).gg(mvec,czm);
 
             // We don't sample here, just take the direction
 
@@ -372,35 +382,37 @@ int SMBOOptions::realOptim(int dim,
 
         if ( !ismoo )
         {
+            muapproxRaw.resize(1);
             muapprox.resize(1);
             muapproxInd.resize(1);
             muInd.resize(1);
 
+            muapproxRaw = nullptr;
+            muapprox    = nullptr;
+            muapproxInd = -1;
+            muInd       = -1;
+
             if ( extmuapprox.size() && extmuapprox(0) )
             {
-                ML_Mutable *muapproxRaw;
+                MEMNEW(muapproxRaw("&",0),ML_Mutable);
+                (*(muapproxRaw("&",0))).setMLTypeClean((*(extmuapprox(0))).type());
 
-                MEMNEW(muapproxRaw,ML_Mutable);
-                (*muapproxRaw).setMLTypeClean((*(extmuapprox(0))).type());
+                (*(muapproxRaw("&",0))).getML() = *(extmuapprox(0));
+                muapproxInd("&",0) = regML(muapproxRaw("&",0),fnarg,5);
 
-                (*muapproxRaw).getML() = *(extmuapprox(0));
-                muapproxInd("&",0) = regML(muapproxRaw,fnarg,5);
-
-                muapprox("&",0) = &((*muapproxRaw).getML());
+                muapprox("&",0) = &((*(muapproxRaw("&",0))).getML());
             }
 
             else if ( ( isProjection != 2 ) && !modelrff )
             {
 //RKHSFIXME
-                ML_Mutable *muapproxRaw;
+                MEMNEW(muapproxRaw("&",0),ML_Mutable);
+                (*(muapproxRaw("&",0))).setMLTypeClean(altmuapprox.type());
 
-                MEMNEW(muapproxRaw,ML_Mutable);
-                (*muapproxRaw).setMLTypeClean(altmuapprox.type());
+                (*(muapproxRaw("&",0))).getML() = altmuapprox;
+                muapproxInd("&",0) = regML(muapproxRaw("&",0),fnarg,5);
 
-                (*muapproxRaw).getML() = altmuapprox;
-                muapproxInd("&",0) = regML(muapproxRaw,fnarg,5);
-
-                muapprox("&",0) = &((*muapproxRaw).getML());
+                muapprox("&",0) = &((*(muapproxRaw("&",0))).getML());
 //RKHSFIXME
                 //(*muapprox).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
             }
@@ -408,15 +420,14 @@ int SMBOOptions::realOptim(int dim,
             else if ( isProjection != 2 )
             {
 //RKHSFIXME
-                ML_Mutable *muapproxRaw;
+                MEMNEW(muapproxRaw("&",0),ML_Mutable);
+                (*(muapproxRaw("&",0))).setMLTypeClean(altmuapprox_rff.type());
 
-                MEMNEW(muapproxRaw,ML_Mutable);
-                (*muapproxRaw).setMLTypeClean(altmuapprox_rff.type());
+                (*(muapproxRaw("&",0))).getML() = altmuapprox_rff;
+                muapproxInd("&",0) = regML(muapproxRaw("&",0),fnarg,5);
 
-                (*muapproxRaw).getML() = altmuapprox_rff;
-                muapproxInd("&",0) = regML(muapproxRaw,fnarg,5);
+                muapprox("&",0) = &((*(muapproxRaw("&",0))).getML());
 
-                muapprox("&",0) = &((*muapproxRaw).getML());
                 if ( ( modelrff != (*(muapprox(0))).NRff() ) && (*(muapprox(0))).xspaceDim() )
                 {
                     (*(muapprox("&",0))).setNRff(modelrff); // needs to be delayed until there are training vectors or RFF will have dim 0, which is wrong)
@@ -427,27 +438,31 @@ int SMBOOptions::realOptim(int dim,
 
             else
             {
-                ML_Mutable *muapproxRaw;
+                MEMNEW(muapproxRaw("&",0),ML_Mutable);
+                (*(muapproxRaw("&",0))).setMLTypeClean(altmuapprox.type());
 
-                MEMNEW(muapproxRaw,ML_Mutable);
-                (*muapproxRaw).setMLTypeClean(altmuapprox.type());
+                (*(muapproxRaw("&",0))).getML() = altmuapprox;
+                muapproxInd("&",0) = regML(muapproxRaw("&",0),fnarg,5);
 
-                (*muapproxRaw).getML() = altmuapprox;
-                muapproxInd("&",0) = regML(muapproxRaw,fnarg,5);
-
-                muapprox("&",0) = &((*muapproxRaw).getML());
+                muapprox("&",0) = &((*(muapproxRaw("&",0))).getML());
             }
 
-            muInd    = muapproxInd;
+            muInd = muapproxInd;
 
             MLnumbers("&",0) = muapproxInd("&",0);
         }
 
         else
         {
+            muapproxRaw.resize(moodim);
             muapprox.resize(moodim);
             muapproxInd.resize(moodim);
             muInd.resize(moodim);
+
+            muapproxRaw = nullptr;
+            muapprox    = nullptr;
+            muapproxInd = -1;
+            muInd       = -1;
 
             int ii;
 
@@ -455,69 +470,66 @@ int SMBOOptions::realOptim(int dim,
             {
                 if ( ( extmuapprox.size() > ii ) && extmuapprox(ii) )
                 {
-                    ML_Mutable *muapproxRaw;
+                    MEMNEW(muapproxRaw("&",ii),ML_Mutable);
+                    (*(muapproxRaw("&",ii))).setMLTypeClean((*(extmuapprox(ii))).type());
 
-                    MEMNEW(muapproxRaw,ML_Mutable);
-                    (*muapproxRaw).setMLTypeClean((*(extmuapprox(ii))).type());
+                    (*(muapproxRaw("&",ii))).getML() = *(extmuapprox(ii));
+                    muapproxInd("&",ii) = regML(muapproxRaw("&",ii),fnarg,6);
 
-                    (*muapproxRaw).getML() = *(extmuapprox(ii));
-                    muapproxInd("&",ii) = regML(muapproxRaw,fnarg,6);
-
-                    muapprox("&",ii) = &((*muapproxRaw).getML());
+                    muapprox("&",ii) = &((*(muapproxRaw("&",ii))).getML());
                 }
 
                 else
                 {
-                    ML_Mutable *muapproxRaw;
+                    MEMNEW(muapproxRaw("&",ii),ML_Mutable);
+                    (*(muapproxRaw("&",ii))).setMLTypeClean(altmuapprox.type());
 
-                    MEMNEW(muapproxRaw,ML_Mutable);
-                    (*muapproxRaw).setMLTypeClean(altmuapprox.type());
+                    (*(muapproxRaw("&",ii))).getML() = altmuapprox;
+                    muapproxInd("&",ii) = regML(muapproxRaw("&",ii),fnarg,6);
 
-                    (*muapproxRaw).getML() = altmuapprox;
-                    muapproxInd("&",ii) = regML(muapproxRaw,fnarg,6);
-
-                    muapprox("&",ii) = &((*muapproxRaw).getML());
+                    muapprox("&",ii) = &((*(muapproxRaw("&",ii))).getML());
 //RKHSFIXME
                     //(*muapprox).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
                 }
             }
 
-            muInd    = muapproxInd;
+            muInd = muapproxInd;
 
             MLnumbers("&",0) = muapproxInd(0); //FIXME
         }
 
         if ( numcgt )
         {
+            cgtapproxRaw.resize(numcgt);
             cgtapprox.resize(numcgt);
             cgtInd.resize(numcgt);
+
+            cgtapproxRaw = nullptr;
+            cgtapprox    = nullptr;
+            cgtInd       = -1;
 
             for ( int ii = 0 ; ii < numcgt ; ii++ )
             {
                 if ( ( extcgtapprox.size() > ii ) && extcgtapprox(ii) )
                 {
-                    ML_Mutable *cgtapproxRaw;
+                    MEMNEW(cgtapproxRaw("&",ii),ML_Mutable);
+                    (*(cgtapproxRaw("&",ii))).setMLTypeClean((*(extcgtapprox(ii))).type());
 
-                    MEMNEW(cgtapproxRaw,ML_Mutable);
-                    (*cgtapproxRaw).setMLTypeClean((*(extcgtapprox(ii))).type());
+                    (*(cgtapproxRaw("&",ii))).getML() = *(extcgtapprox(ii));
+                    cgtInd("&",ii) = regML(cgtapproxRaw("&",ii),fnarg,14);
 
-                    (*cgtapproxRaw).getML() = *(extcgtapprox(ii));
-                    cgtInd("&",ii) = regML(cgtapproxRaw,fnarg,14);
-
-                    cgtapprox("&",ii) = &((*cgtapproxRaw).getML());
+                    cgtapprox("&",ii) = &((*(cgtapproxRaw("&",ii))).getML());
                 }
 
                 else
                 {
-                    ML_Mutable *cgtapproxRaw;
+                    MEMNEW(cgtapproxRaw("&",ii),ML_Mutable);
+                    (*(cgtapproxRaw("&",ii))).setMLTypeClean(altcgtapprox.type());
 
-                    MEMNEW(cgtapproxRaw,ML_Mutable);
-                    (*cgtapproxRaw).setMLTypeClean(altcgtapprox.type());
+                    (*(cgtapproxRaw("&",ii))).getML() = altcgtapprox;
+                    cgtInd("&",ii) = regML(cgtapproxRaw("&",ii),fnarg,14);
 
-                    (*cgtapproxRaw).getML() = altcgtapprox;
-                    cgtInd("&",ii) = regML(cgtapproxRaw,fnarg,14);
-
-                    cgtapprox("&",ii) = &((*cgtapproxRaw).getML());
+                    cgtapprox("&",ii) = &((*(cgtapproxRaw("&",ii))).getML());
                 }
 
                 MLnumbers("&",7) = cgtInd(0);
@@ -526,60 +538,57 @@ int SMBOOptions::realOptim(int dim,
 
 
         {
-            NiceAssert( !extfxapprox.size() || ( extfxapprox.size() == usemodelaugx ) );
+            NiceAssert( !extaugxapprox.size() || ( extaugxapprox.size() == usemodelaugx ) );
 
-            fxapprox.resize(usemodelaugx);
-            fxapproxInd.resize(usemodelaugx);
+            augxapproxRaw.resize(usemodelaugx);
             augxapprox.resize(usemodelaugx);
+            augxInd.resize(usemodelaugx);
+
+            augxapproxRaw = nullptr;
+            augxapprox    = nullptr;
+            augxInd       = -1;
 
             int i;
 
             for ( i = 0 ; i < usemodelaugx ; ++i )
             {
-                if ( extfxapprox.size() && extfxapprox(i) )
+                if ( extaugxapprox.size() && extaugxapprox(i) )
                 {
-                    ML_Mutable *fxapproxRaw;
+                    MEMNEW(augxapproxRaw("&",i),ML_Mutable);
+                    (*(augxapproxRaw("&",i))).setMLTypeClean((*(extaugxapprox(i))).type());
 
-                    MEMNEW(fxapproxRaw,ML_Mutable);
-                    (*fxapproxRaw).setMLTypeClean((*(extfxapprox(i))).type());
+                    (*(augxapproxRaw("&",i))).getML() = *(extaugxapprox(i));
+                    augxInd("&",i) = regML(augxapproxRaw("&",i),fnarg,12);
 
-                    (*fxapproxRaw).getML() = *(extfxapprox(i));
-                    fxapproxInd("&",i) = regML(fxapproxRaw,fnarg,12);
-
-                    fxapprox("&",i) = &((*fxapproxRaw).getML());
+                    augxapprox("&",i) = &((*(augxapproxRaw("&",i))).getML());
                 }
 
                 else
                 {
-                    ML_Mutable *fxapproxRaw;
+                    MEMNEW(augxapproxRaw("&",i),ML_Mutable);
+                    (*(augxapproxRaw("&",i))).setMLTypeClean(altaugxapprox.type());
 
-                    MEMNEW(fxapproxRaw,ML_Mutable);
-                    (*fxapproxRaw).setMLTypeClean(altfxapprox.type());
+                    (*(augxapproxRaw("&",i))).getML() = altaugxapprox;
+                    augxInd("&",i) = regML(augxapproxRaw("&",i),fnarg,12);
 
-                    (*fxapproxRaw).getML() = altfxapprox;
-                    fxapproxInd("&",i) = regML(fxapproxRaw,fnarg,12);
-
-                    fxapprox("&",i) = &((*fxapproxRaw).getML());
+                    augxapprox("&",i) = &((*(augxapproxRaw("&",i))).getML());
                 }
 
-                MLnumbers("&",6) = fxapproxInd(0);
+                MLnumbers("&",6) = augxInd(0);
             }
-
-            augxapprox = fxapprox;
-            augxInd    = fxapproxInd;
         }
 
 //RKHSFIXME
         //(*muapprox).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
 
+        sigmaapproxRaw = nullptr;
+
         if ( sigmuseparate )
         {
-            ML_Mutable *sigmaapproxRaw;
-
             MEMNEW(sigmaapproxRaw ,ML_Mutable);
-            (*sigmaapproxRaw).setMLTypeClean((*(muapprox(0))).type());
+            (*sigmaapproxRaw).setMLTypeClean(getmuapprox(0).type());
 
-            (*sigmaapproxRaw).getML() = *(muapprox(0));
+            (*sigmaapproxRaw).getML() = getmuapprox(0);
             sigInd = regML(sigmaapproxRaw,fnarg,7);
 
             sigmaapprox = &((*sigmaapproxRaw).getML());
@@ -618,12 +627,13 @@ int SMBOOptions::realOptim(int dim,
 
             for ( int i = 0 ; i < muapprox.size() ; i++ )
             {
-                (*(muapprox("&",i))).setKernel(newkern);
+                getmuapprox("&",i).setKernel(newkern);
+                getcgtapprox("&",i).setKernel(newkern);
             }
 
             if ( sigmuseparate )
             {
-                (*sigmaapprox).setKernel(newkern);
+                getsigmaapprox("&").setKernel(newkern);
             }
         }
 
@@ -635,6 +645,9 @@ int SMBOOptions::realOptim(int dim,
         MLnumbers("&",5) = -1;
 
         // Setup helper variables for env-GP transfer learning
+
+        srcmodel  = nullptr;
+        diffmodel = nullptr;
 
         if ( ( tranmeth == 1 ) && Nbasemu )
         {
@@ -649,8 +662,8 @@ int SMBOOptions::realOptim(int dim,
             beta  = beta0;
 
             MEMNEW(srcmodel,ML_Mutable);
-            (*srcmodel).setMLTypeClean((*(muapprox(0))).type());
-            (*srcmodel).getML() = (*(muapprox(0)));
+            (*srcmodel).setMLTypeClean(getmuapprox(0).type());
+            (*srcmodel).getML() = getmuapprox(0);
             srcmodelInd = regML(srcmodel ,fnarg,10);
 
 //RKHSFIXME
@@ -668,10 +681,10 @@ int SMBOOptions::realOptim(int dim,
             MEMNEW(srcmodel ,ML_Mutable);
             MEMNEW(diffmodel,ML_Mutable);
 
-            (*srcmodel ).setMLTypeClean((*(muapprox(0))).type());
-            (*diffmodel).setMLTypeClean((*(muapprox(0))).type());
+            (*srcmodel ).setMLTypeClean(getmuapprox(0).type());
+            (*diffmodel).setMLTypeClean(getmuapprox(0).type());
 
-            (*srcmodel).getML() = (*(muapprox(0)));
+            (*srcmodel).getML() = getmuapprox(0);
 
 //RKHSFIXME
             //(*srcmodel).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
@@ -792,12 +805,12 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
         {
             if ( muapprox(i) )
             {
-                errstream() << ", " << calcnegloglikelihood(*muapprox(i),1) << " (mu " << i << "): ";
+                errstream() << ", " << calcnegloglikelihood(getmuapprox(i),1) << " (mu " << i << "): ";
 
-                for ( int iii = 0 ; iii < ((*muapprox(i)).getKernel()).size() ; iii++ )
+                for ( int iii = 0 ; iii < (getmuapprox(i).getKernel()).size() ; iii++ )
                 {
-                    errstream() << ((*muapprox(i)).getKernel()).cWeight(iii) << ", ";
-                    errstream() << ((*muapprox(i)).getKernel()).cRealConstants(iii) << "\t";
+                    errstream() << (getmuapprox(i).getKernel()).cWeight(iii) << ", ";
+                    errstream() << (getmuapprox(i).getKernel()).cRealConstants(iii) << "\t";
                 }
 
                 errstream() << "\n";
@@ -841,12 +854,12 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
         {
             if ( cgtapprox(i) )
             {
-                errstream() << ", " << calcnegloglikelihood(*cgtapprox(i),1) << " (cgt " << i << "): ";
+                errstream() << ", " << calcnegloglikelihood(getcgtapprox(i),1) << " (cgt " << i << "): ";
 
-                for ( int iii = 0 ; iii < ((*cgtapprox(i)).getKernel()).size() ; iii++ )
+                for ( int iii = 0 ; iii < (getcgtapprox(i).getKernel()).size() ; iii++ )
                 {
-                    errstream() << ((*cgtapprox(i)).getKernel()).cWeight(iii) << ", ";
-                    errstream() << ((*cgtapprox(i)).getKernel()).cRealConstants(iii) << "\t";
+                    errstream() << (getcgtapprox(i).getKernel()).cWeight(iii) << ", ";
+                    errstream() << (getcgtapprox(i).getKernel()).cRealConstants(iii) << "\t";
                 }
 
                 errstream() << "\n";
@@ -891,7 +904,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
             gentype baseline(modelbaseline);
             int incbaseline = ( ( modelbaseline == "null" ) ? 0 : 1 );
 
-            model_sublog((*(muapprox(j))),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"model",xind,yind,stagestr,-1);
+            model_sublog(getmuapprox(j),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"model",xind,yind,stagestr,-1);
         }
 
         if ( usemodelaugx )
@@ -901,7 +914,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
                 gentype baseline = nullgentype();
                 int incbaseline = 0;
 
-                model_sublog((*(augxapprox(j))),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"aug",xind,yind,stagestr,+1);
+                model_sublog(getaugxapprox(j),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"aug",xind,yind,stagestr,+1);
             }
         }
 
@@ -913,7 +926,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
                 gentype baseline = nullgentype();
                 int incbaseline = 0;
 
-                model_sublog((*(cgtapprox(j))),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"cgt",xind,yind,stagestr,+1);
+                model_sublog(getcgtapprox(j),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"cgt",xind,yind,stagestr,+1);
             }
         }
     }
@@ -1418,19 +1431,19 @@ void SMBOOptions::model_clear(void)
 
         for ( i = 0 ; i < muapprox.size() ; ++i )
         {
-            (*(muapprox("&",i))).removeTrainingVector(0,(*(muapprox(i))).N());
-        }
-
-        (*sigmaapprox).removeTrainingVector(0,(*sigmaapprox).N());
-
-        for ( i = 0 ; i < augxapprox.size() ; ++i )
-        {
-            (*(augxapprox("&",i))).removeTrainingVector(0,(*(augxapprox(i))).N());
+            getmuapprox("&",i).removeTrainingVector(0,getmuapprox(i).N());
         }
 
         for ( i = 0 ; i < cgtapprox.size() ; ++i )
         {
-            (*(cgtapprox("&",i))).removeTrainingVector(0,(*(cgtapprox(i))).N());
+            getcgtapprox("&",i).removeTrainingVector(0,getcgtapprox(i).N());
+        }
+
+        getsigmaapprox("&").removeTrainingVector(0,getsigmaapprox().N());
+
+        for ( i = 0 ; i < augxapprox.size() ; ++i )
+        {
+            getaugxapprox("&",i).removeTrainingVector(0,getaugxapprox(i).N());
         }
     }
 }
@@ -1442,7 +1455,7 @@ void SMBOOptions::model_update(void)
     {
         NiceAssert( muapprox == sigmaapprox );
 
-        int N = (*(muapprox(0))).N();
+        int N = getmuapprox(0).N();
         int m = getxbasis().size();
 
         (xmodprod).resize(N,m);
@@ -1453,7 +1466,7 @@ void SMBOOptions::model_update(void)
         {
             for ( j = 0 ; j < m ; ++j )
             {
-                innerProduct((xmodprod)("&",i,j),(*(muapprox(0))).x(i),getxbasis()(j));
+                innerProduct((xmodprod)("&",i,j),getmuapprox(0).x(i),getxbasis()(j));
             }
         }
 
@@ -1473,13 +1486,14 @@ void SMBOOptions::model_sample(const Vector<double> &qmin, const Vector<double> 
         SparseVector<gentype> xmax; xmax.castassign(qqmax);
 
         muapprox_sample.resize(muapprox.size());
+        muapprox_sample = nullptr;
 
         int i;
 
 errstream() << "Sample objective model\n";
         for ( i = 0 ; i < muapprox_sample.size() ; i++ )
         {
-            muapprox_sample("&",i) = makeDupML(*(muapprox(i)));
+            muapprox_sample("&",i) = makeDupML(getmuapprox(i));
         }
 
         SparseVector<gentype> xxmin;
@@ -1498,9 +1512,9 @@ errstream() << "Sample objective model\n";
 
             int sampSplit = 0; // We want true random samples here!
 
-            (*(muapprox_sample("&",i))).setsigma(SIGMA_ADD); // effectively noiseless samples for practical purposes
-            (*(muapprox_sample("&",i))).setsigma_cut(sigma_cut); // scale factor may be set
-            (*(muapprox_sample("&",i))).setSampleMode(TSmode,xxmin(xminrettmp),xxmax(xmaxrettmp),TSNsamp,sampSplit,TSsampType,TSxsampType,sampScale);
+            getmuapprox_sample("&",i).setsigma(SIGMA_ADD); // effectively noiseless samples for practical purposes
+            getmuapprox_sample("&",i).setsigma_cut(sigma_cut); // scale factor may be set
+            getmuapprox_sample("&",i).setSampleMode(TSmode,xxmin(xminrettmp),xxmax(xmaxrettmp),TSNsamp,sampSplit,TSsampType,TSxsampType,sampScale);
         }
     }
 
@@ -1540,17 +1554,29 @@ int SMBOOptions::initModelDistr(const Vector<int> &sampleInd, const Vector<genty
 
         for ( i = 0 ; i < muapprox.size() ; i++ )
         {
-            (*(muapprox("&",i))).getKernel_unsafe().setSampleDistribution(sampleDist);
-            (*(muapprox("&",i))).getKernel_unsafe().setSampleIndices(sampleInd);
-            (*(muapprox("&",i))).resetKernel();
+            getmuapprox("&",i).getKernel_unsafe().setSampleDistribution(sampleDist);
+            getmuapprox("&",i).getKernel_unsafe().setSampleIndices(sampleInd);
+            getmuapprox("&",i).resetKernel();
+        }
+    }
+
+    if ( cgtapprox.size() )
+    {
+        int i;
+
+        for ( i = 0 ; i < cgtapprox.size() ; i++ )
+        {
+            getcgtapprox("&",i).getKernel_unsafe().setSampleDistribution(sampleDist);
+            getcgtapprox("&",i).getKernel_unsafe().setSampleIndices(sampleInd);
+            getcgtapprox("&",i).resetKernel();
         }
     }
 
     if ( sigmuseparate )
     {
-        (*sigmaapprox).getKernel_unsafe().setSampleDistribution(sampleDist);
-        (*sigmaapprox).getKernel_unsafe().setSampleIndices(sampleInd);
-        (*sigmaapprox).resetKernel();
+        getsigmaapprox("&").getKernel_unsafe().setSampleDistribution(sampleDist);
+        getsigmaapprox("&").getKernel_unsafe().setSampleIndices(sampleInd);
+        getsigmaapprox("&").resetKernel();
     }
 
     return 1;
@@ -1567,7 +1593,7 @@ int SMBOOptions::model_muTrainingVector(gentype &resmu, int imu) const
 
     else if ( muapprox.size() == 1 )
     {
-        res |= (*(muapprox(0))).ggTrainingVector(resmu,imu);
+        res |= getmuapprox(0).ggTrainingVector(resmu,imu);
     }
 
     else
@@ -1576,7 +1602,7 @@ int SMBOOptions::model_muTrainingVector(gentype &resmu, int imu) const
 
         for ( int i = 0 ; i < muapprox.size() ; ++i )
         {
-            res |= (*(muapprox(i))).ggTrainingVector(resmuvec("&",i),imu);
+            res |= getmuapprox(i).ggTrainingVector(resmuvec("&",i),imu);
         }
     }
 
@@ -1608,15 +1634,15 @@ int SMBOOptions::model_muvarTrainingVector(gentype &resvar, gentype &resmu, int 
     {
         if ( !sigmuseparate )
         {
-            resi |= (*getmuapprox(0)).varTrainingVector(resvar,resmu,imu);
+            resi |= getmuapprox_sample(0).varTrainingVector(resvar,resmu,imu);
         }
 
         else
         {
             gentype dummy;
 
-            resi |= (*getmuapprox(0)).ggTrainingVector(resmu,imu);
-            resi |= (*sigmaapprox).varTrainingVector(resvar,dummy,ivar);
+            resi |= getmuapprox_sample(0).ggTrainingVector(resmu,imu);
+            resi |= getsigmaapprox().varTrainingVector(resvar,dummy,ivar);
         }
     }
 
@@ -1629,15 +1655,15 @@ int SMBOOptions::model_muvarTrainingVector(gentype &resvar, gentype &resmu, int 
         {
             if ( !sigmuseparate )
             {
-                resi |= (*getmuapprox(i)).varTrainingVector(resvarvec("&",i),resmuvec("&",i),imu);
+                resi |= getmuapprox_sample(i).varTrainingVector(resvarvec("&",i),resmuvec("&",i),imu);
             }
 
             else
             {
                 gentype dummy;
 
-                resi |= (*getmuapprox(i)).ggTrainingVector(resmuvec("&",i),imu);
-                resi |= (*sigmaapprox).varTrainingVector(resvarvec("&",i),dummy,ivar);
+                resi |= getmuapprox_sample(i).ggTrainingVector(resmuvec("&",i),imu);
+                resi |= getsigmaapprox().varTrainingVector(resvarvec("&",i),dummy,ivar);
             }
         }
     }
@@ -1660,14 +1686,14 @@ int SMBOOptions::model_varTrainingVector(gentype &resv, int imu) const
         {
             gentype dummy;
 
-            resi |= (*getmuapprox(0)).varTrainingVector(resv,dummy,imu);
+            resi |= getmuapprox_sample(0).varTrainingVector(resv,dummy,imu);
         }
 
         else
         {
             gentype dummy;
 
-            resi |= (*sigmaapprox).varTrainingVector(resv,dummy,imu);
+            resi |= getsigmaapprox().varTrainingVector(resv,dummy,imu);
         }
     }
 
@@ -1681,14 +1707,14 @@ int SMBOOptions::model_varTrainingVector(gentype &resv, int imu) const
             {
                 gentype dummy;
 
-                resi |= (*getmuapprox(i)).varTrainingVector(resvarvec("&",i),dummy,imu);
+                resi |= getmuapprox_sample(i).varTrainingVector(resvarvec("&",i),dummy,imu);
             }
 
             else
             {
                 gentype dummy;
 
-                resi |= (*sigmaapprox).varTrainingVector(resvarvec("&",i),dummy,imu);
+                resi |= getsigmaapprox().varTrainingVector(resvarvec("&",i),dummy,imu);
             }
         }
     }
@@ -1704,7 +1730,7 @@ int SMBOOptions::model_muTrainingVector_cgt(Vector<gentype> &resmu, int imu) con
 
     for ( int i = 0 ; i < cgtapprox.size() ; ++i )
     {
-        res |= (*cgtapprox(i)).ggTrainingVector(resmu("&",i),imu);
+        res |= getcgtapprox(i).ggTrainingVector(resmu("&",i),imu);
     }
 
     return res;
@@ -1719,7 +1745,7 @@ int SMBOOptions::model_muvarTrainingVector_cgt(Vector<gentype> &resv, Vector<gen
 
     for ( int i = 0 ; i < cgtapprox.size() ; ++i )
     {
-        resi |= (*cgtapprox(i)).varTrainingVector(resv("&",i),resmu("&",i),imu);
+        resi |= getcgtapprox(i).varTrainingVector(resv("&",i),resmu("&",i),imu);
     }
 
     return resi;
@@ -1744,7 +1770,7 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
             for ( i = 0 ; i < augxapprox.size() ; ++i )
             {
 //errstrean() << "phantomxyziii augx " << i << "\n";
-                (*(augxapprox("&",i))).getML().tuneKernel(tuneaugxmod,getxwidth(),1,0,nullptr);
+                getaugxapprox("&",i).getML().tuneKernel(tuneaugxmod,getxwidth(),1,0,nullptr);
             }
         }
 
@@ -1756,13 +1782,13 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
 //errstrean() << "phantomxyziii muapprox\n";
             for ( i = 0 ; i < muapprox.size() ; ++i )
             {
-                tkBounds tuneBounds((*(muapprox("&",i))).getML().getKernel());
+                tkBounds tuneBounds(getmuapprox("&",i).getML().getKernel());
 
                 // It is possible for BOCA to get "stuck" with bad parameters:
                 // - too little connection between different different fidelities (no connection)
                 // - posterior variance over-shrunk (too confindent)
 
-                if ( (*(muapprox("&",i))).getML().N() < 40 )
+                if ( getmuapprox(i).getMLconst().N() < 40 )
                 {
                     tuneBounds.wlb = 0.5;
 
@@ -1773,9 +1799,9 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
 // original heuristic: 0.5 if N <= 40, unchange otherwise
                 }
 
-                else if ( (*(muapprox("&",i))).getML().N() < 50 )
+                else if ( getmuapprox(i).getMLconst().N() < 50 )
                 {
-                    double scale = (50.0-(*(muapprox("&",i))).getML().N())/10.0;
+                    double scale = (50.0-getmuapprox("&",i).getML().N())/10.0;
 
                     tuneBounds.wlb = 0.1+(0.4*scale);
 
@@ -1785,7 +1811,7 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
                     }
                 }
 
-                (*(muapprox("&",i))).getML().tuneKernel(tunemu,getxwidth(),1,0,&tuneBounds);
+                getmuapprox("&",i).getML().tuneKernel(tunemu,getxwidth(),1,0,&tuneBounds);
             }
         }
 
@@ -1793,9 +1819,9 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
         {
             for ( i = 0 ; i < cgtapprox.size() ; ++i )
             {
-                tkBounds tuneBounds((*(cgtapprox("&",i))).getML().getKernel());
+                tkBounds tuneBounds(getcgtapprox(i).getMLconst().getKernel());
 
-                if ( (*(cgtapprox("&",i))).getML().N() < 40 )
+                if ( getcgtapprox(i).getMLconst().N() < 40 )
                 {
                     tuneBounds.wlb = 0.5;
 
@@ -1805,9 +1831,9 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
                     }
                 }
 
-                else if ( (*(cgtapprox("&",i))).getML().N() < 50 )
+                else if ( getcgtapprox(i).getMLconst().N() < 50 )
                 {
-                    double scale = (50.0-(*(cgtapprox("&",i))).getML().N())/10.0;
+                    double scale = (50.0-getcgtapprox(i).getMLconst().N())/10.0;
 
                     tuneBounds.wlb = 0.1+(0.4*scale);
 
@@ -1817,7 +1843,7 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
                     }
                 }
 
-                (*(cgtapprox("&",i))).getML().tuneKernel(tunecgt,getxwidth(),1,0,&tuneBounds);
+                getcgtapprox("&",i).getML().tuneKernel(tunecgt,getxwidth(),1,0,&tuneBounds);
             }
         }
 
@@ -1826,7 +1852,7 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
         if ( tunesigma && sigmuseparate )
         {
 //errstrean() << "phantomxyziii sigapprox\n";
-            (*sigmaapprox).getML().tuneKernel(tunesigma,getxwidth(),1,0,nullptr);
+            getsigmaapprox("&").getML().tuneKernel(tunesigma,getxwidth(),1,0,nullptr);
         }
 
         return ires;
@@ -1844,15 +1870,15 @@ int SMBOOptions::model_setd(int imu, int isigma, int nd)
 
     for ( i = 0 ; i < muapprox.size() ; i++ )
     {
-        int iimu = ( ( (*(muapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+        int iimu = ( ( getmuapprox(i).type() == 212 ) ? (-imu-1) : imu );
         int nnd = ( nd == -2 ) ? 2 : nd;
 
-        res += (*(muapprox("&",i))).setd(iimu,nnd);
+        res += getmuapprox("&",i).setd(iimu,nnd);
     }
 
     if ( sigmuseparate )
     {
-        res += (*sigmaapprox).setd(isigma,nd);
+        res += getsigmaapprox("&").setd(isigma,nd);
     }
 
     return res;
@@ -1865,10 +1891,10 @@ int SMBOOptions::model_setd_mu(int imu, int nd)
 
     for ( i = 0 ; i < muapprox.size() ; i++ )
     {
-        int iimu = ( ( (*(muapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+        int iimu = ( ( getmuapprox(i).type() == 212 ) ? (-imu-1) : imu );
         int nnd = ( nd == -2 ) ? 2 : nd;
 
-        res += (*(muapprox("&",i))).setd(iimu,nnd);
+        res += getmuapprox("&",i).setd(iimu,nnd);
     }
 
     return res;
@@ -1881,10 +1907,10 @@ int SMBOOptions::model_setd_cgt(int imu, const Vector<int> &nd)
 
     for ( i = 0 ; i < cgtapprox.size() ; i++ )
     {
-        int iimu = ( ( (*(cgtapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+        int iimu = ( ( getcgtapprox(i).type() == 212 ) ? (-imu-1) : imu );
         int nnd = ( nd(i) == -2 ) ? 2 : nd(i);
 
-        res += (*(cgtapprox("&",i))).setd(iimu,nnd);
+        res += getcgtapprox("&",i).setd(iimu,nnd);
     }
 
     return res;
@@ -1896,7 +1922,7 @@ int SMBOOptions::model_setd_sigma(int isigma, int nd)
 
     if ( sigmuseparate )
     {
-        res += (*sigmaapprox).setd(isigma,nd);
+        res += getsigmaapprox("&").setd(isigma,nd);
     }
 
     return res;
@@ -1909,26 +1935,26 @@ int SMBOOptions::model_setyd(int imu, int isigma, int nd, const gentype &ny, dou
 
     for ( i = 0 ; i < muapprox.size() ; i++ )
     {
-        int iimu = ( ( (*(muapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+        int iimu = ( ( getmuapprox(i).type() == 212 ) ? (-imu-1) : imu );
         int nnd = ( nd == -2 ) ? 2 : nd;
 
-        res += (*(muapprox("&",i))).sety(iimu,ny);
-        res += (*(muapprox("&",i))).setd(iimu,nnd);
+        res += getmuapprox("&",i).sety(iimu,ny);
+        res += getmuapprox("&",i).setd(iimu,nnd);
 
         if ( varadd )
         {
-            res |= (*(muapprox("&",i))).setsigmaweight((*(muapprox(i))).N()-1,1+(varadd/((*(muapprox("&",i))).sigma())));
+            res |= getmuapprox("&",i).setsigmaweight(getmuapprox(i).N()-1,1+(varadd/(getmuapprox(i).sigma())));
         }
     }
 
     if ( sigmuseparate )
     {
-        res += (*sigmaapprox).sety(isigma,ny);
-        res += (*sigmaapprox).setd(isigma,nd);
+        res += getsigmaapprox("&").sety(isigma,ny);
+        res += getsigmaapprox("&").setd(isigma,nd);
 
         if ( varadd )
         {
-            res |= (*sigmaapprox).setsigmaweight((*sigmaapprox).N()-1,1+(varadd/((*sigmaapprox).sigma())));
+            res |= getsigmaapprox("&").setsigmaweight(getsigmaapprox().N()-1,1+(varadd/(getsigmaapprox().sigma())));
         }
     }
 
@@ -1942,15 +1968,15 @@ int SMBOOptions::model_setyd_mu(int imu, int nd, const gentype &ny, double varad
 
     for ( i = 0 ; i < muapprox.size() ; i++ )
     {
-        int iimu = ( ( (*(muapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+        int iimu = ( ( getmuapprox(i).type() == 212 ) ? (-imu-1) : imu );
         int nnd = ( nd == -2 ) ? 2 : nd;
 
-        res += (*(muapprox("&",i))).sety(iimu,ny);
-        res += (*(muapprox("&",i))).setd(iimu,nnd);
+        res += getmuapprox("&",i).sety(iimu,ny);
+        res += getmuapprox("&",i).setd(iimu,nnd);
 
         if ( varadd )
         {
-            res |= (*(muapprox("&",i))).setsigmaweight((*(muapprox(i))).N()-1,1+(varadd/((*(muapprox("&",i))).sigma())));
+            res |= getmuapprox("&",i).setsigmaweight(getmuapprox(i).N()-1,1+(varadd/(getmuapprox(i).sigma())));
         }
     }
 
@@ -1964,15 +1990,15 @@ int SMBOOptions::model_setyd_cgt(int imu, const Vector<int> &nd, const Vector<ge
 
     for ( i = 0 ; i < cgtapprox.size() ; i++ )
     {
-        int iimu = ( ( (*(cgtapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+        int iimu = ( ( getcgtapprox(i).type() == 212 ) ? (-imu-1) : imu );
         int nnd = ( nd(i) == -2 ) ? 2 : nd(i);
 
-        res += (*(cgtapprox("&",i))).sety(iimu,ny(i));
-        res += (*(cgtapprox("&",i))).setd(iimu,nnd);
+        res += getcgtapprox("&",i).sety(iimu,ny(i));
+        res += getcgtapprox("&",i).setd(iimu,nnd);
 
         if ( varadd )
         {
-            res |= (*(cgtapprox("&",i))).setsigmaweight((*(cgtapprox(i))).N()-1,1+(varadd/((*(cgtapprox("&",i))).sigma())));
+            res |= getcgtapprox("&",i).setsigmaweight(getcgtapprox(i).N()-1,1+(varadd/(getcgtapprox(i).sigma())));
         }
     }
 
@@ -1985,12 +2011,12 @@ int SMBOOptions::model_setyd_sigma(int isigma, int nd, const gentype &ny, double
 
     if ( sigmuseparate )
     {
-        res += (*sigmaapprox).sety(isigma,ny);
-        res += (*sigmaapprox).setd(isigma,nd);
+        res += getsigmaapprox("&").sety(isigma,ny);
+        res += getsigmaapprox("&").setd(isigma,nd);
 
         if ( varadd )
         {
-            res |= (*sigmaapprox).setsigmaweight((*sigmaapprox).N()-1,1+(varadd/((*sigmaapprox).sigma())));
+            res |= getsigmaapprox("&").setsigmaweight(getsigmaapprox().N()-1,1+(varadd/(getsigmaapprox().sigma())));
         }
     }
 
@@ -2004,7 +2030,7 @@ int SMBOOptions::modelmu_int_train(int &res, svmvolatile int &killSwitch)
 
     for ( i = 0 ; i < muapprox.size() ; i++ )
     {
-        ires += (*(muapprox("&",i))).train(res,killSwitch);
+        ires += getmuapprox("&",i).train(res,killSwitch);
     }
 
     return ires;
@@ -2017,7 +2043,7 @@ int SMBOOptions::modelcgt_int_train(int &res, svmvolatile int &killSwitch)
 
     for ( i = 0 ; i < cgtapprox.size() ; i++ )
     {
-        ires += (*(cgtapprox("&",i))).train(res,killSwitch);
+        ires += getcgtapprox("&",i).train(res,killSwitch);
     }
 
     return ires;
@@ -2029,7 +2055,7 @@ int SMBOOptions::modelsigma_int_train(int &res, svmvolatile int &killSwitch)
 
     if ( sigmuseparate )
     {
-        ires += (*sigmaapprox).train(res,killSwitch);
+        ires += getsigmaapprox("&").train(res,killSwitch);
     }
 
     return ires;
@@ -2041,12 +2067,12 @@ int SMBOOptions::model_setsigmaweight_addvar(int imu, int isigma, double addvar)
 
     for ( i = 0 ; i < muapprox.size() ; i++ )
     {
-        res += (*(muapprox("&",i))).setsigmaweight(imu,((*(muapprox("&",i))).sigma()+addvar)/(*(muapprox("&",i))).sigma());
+        res += getmuapprox("&",i).setsigmaweight(imu,(getmuapprox(i).sigma()+addvar)/getmuapprox(i).sigma());
     }
 
     if ( sigmuseparate )
     {
-        res += (*sigmaapprox).setsigmaweight(isigma,((*sigmaapprox).sigma()+addvar)/(*sigmaapprox).sigma());
+        res += getsigmaapprox("&").setsigmaweight(isigma,(getsigmaapprox().sigma()+addvar)/getsigmaapprox().sigma());
     }
 
     return res;
@@ -2235,7 +2261,7 @@ const Vector<double> &SMBOOptions::model_xcopy(Vector<double> &resx, int i) cons
         //return backconvertx(resx,((*muapprox).x())(i));
         NiceAssert( !isXconvertNonTrivial() );
 
-        const SparseVector<gentype> &tempresx = ((*(muapprox(0))).x(i));
+        const SparseVector<gentype> &tempresx = (getmuapprox(0).x(i));
 
         resx.resize(tempresx.indsize());
 
@@ -2350,14 +2376,14 @@ int SMBOOptions::default_modelaugx_setkernelg(const gentype &nv)
     int res = 0;
     int lockernnum = 0;
 
-    Vector<gentype> kernRealConstsa(altfxapprox.getKernel().cRealConstants(lockernnum));
+    Vector<gentype> kernRealConstsa(altaugxapprox.getKernel().cRealConstants(lockernnum));
 
     if ( kernRealConstsa(0) != nv )
     {
         kernRealConstsa("&",0) = nv;
 
-        altfxapprox.getKernel_unsafe().setRealConstants(kernRealConstsa,lockernnum);
-        altfxapprox.resetKernel(0);
+        altaugxapprox.getKernel_unsafe().setRealConstants(kernRealConstsa,lockernnum);
+        altaugxapprox.resetKernel(0);
     }
 
     return res;
@@ -2367,8 +2393,8 @@ int SMBOOptions::default_modelaugx_setkernelgg (const SparseVector<gentype> &nv)
 {
     int res = 0;
 
-    altfxapprox.getKernel_unsafe().setScale(nv);
-    altfxapprox.resetKernel(0);
+    altaugxapprox.getKernel_unsafe().setScale(nv);
+    altaugxapprox.resetKernel(0);
 
     return res;
 }
@@ -2418,7 +2444,7 @@ int SMBOOptions::default_modelaugx_setkernelgg (const SparseVector<gentype> &nv)
 
 int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVector<gentype> &x, const SparseVector<gentype> &xx, int xobstype, double varadd)
 {
-        locires.add(locires.size()); locires("&",locires.size()-1) = (*(muapprox(0))).N();
+        locires.add(locires.size()); locires("&",locires.size()-1) = getmuapprox(0).N();
         locxres.add(locxres.size()); locxres("&",locxres.size()-1) = x;
         locyres.add(locyres.size()); locyres("&",locyres.size()-1) = y;
 //errstream() << "phantomxyzxyzxyz bayesopt addvec int: " << x << "\n";
@@ -2443,45 +2469,45 @@ int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVec
 
             for ( i = 0 ; i < muapprox.size() ; ++i )
             {
-                int locdval = ( (*(muapprox(i))).type() == 212 ) ? 2 : dval;
+                int locdval = ( getmuapprox(i).type() == 212 ) ? 2 : dval;
 
                 if ( y.isValVector() )
                 {
                     const gentype &yi = ((const Vector<gentype> &) y)(i);
 
-                    ires |= (*(muapprox("&",i))).addTrainingVector((*(muapprox(i))).N(),yi,convnearuptonaive(tempx,xxx),1.0,1.0,locdval);
+                    ires |= getmuapprox("&",i).addTrainingVector(getmuapprox(i).N(),yi,convnearuptonaive(tempx,xxx),1.0,1.0,locdval);
 
                     if ( varadd )
                     {
-                        ires |= (*(muapprox("&",i))).setsigmaweight((*(muapprox(i))).N()-1,1+(varadd/((*(muapprox("&",i))).sigma())));
+                        ires |= getmuapprox("&",i).setsigmaweight(getmuapprox(i).N()-1,1+(varadd/(getmuapprox(i).sigma())));
                     }
 
                     if ( dval != locdval )
                     {
-                        int imu = (*(muapprox(i))).N()-1;
-                        int iimu = ( ( (*(muapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+                        int imu = getmuapprox(i).N()-1;
+                        int iimu = ( ( getmuapprox(i).type() == 212 ) ? (-imu-1) : imu );
                         int ddval = ( dval == -2 ) ? 2 : dval;
 
-                        ires |= (*(muapprox("&",i))).setd(iimu,ddval);
+                        ires |= getmuapprox("&",i).setd(iimu,ddval);
                     }
                 }
 
                 else
                 {
-                    ires |= (*(muapprox("&",i))).addTrainingVector((*(muapprox(i))).N(),y,convnearuptonaive(tempx,xxx),1.0,1.0,locdval);
+                    ires |= getmuapprox("&",i).addTrainingVector(getmuapprox(i).N(),y,convnearuptonaive(tempx,xxx),1.0,1.0,locdval);
 
                     if ( varadd )
                     {
-                        ires |= (*(muapprox("&",i))).setsigmaweight((*(muapprox(i))).N()-1,1+(varadd/((*(muapprox("&",i))).sigma())));
+                        ires |= getmuapprox("&",i).setsigmaweight(getmuapprox(i).N()-1,1+(varadd/(getmuapprox(i).sigma())));
                     }
 
                     if ( dval != locdval )
                     {
-                        int imu = (*(muapprox(i))).N()-1;
-                        int iimu = ( ( (*(muapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+                        int imu = getmuapprox(i).N()-1;
+                        int iimu = ( ( getmuapprox(i).type() == 212 ) ? (-imu-1) : imu );
                         int ddval = ( dval == -2 ) ? 2 : dval;
 
-                        ires |= (*(muapprox("&",i))).setd(iimu,ddval);
+                        ires |= getmuapprox("&",i).setd(iimu,ddval);
                     }
                 }
             }
@@ -2496,45 +2522,45 @@ int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVec
 
             for ( i = 0 ; i < muapprox.size() ; ++i )
             {
-                int locdval = ( (*(muapprox(i))).type() == 212 ) ? 2 : dval;
+                int locdval = ( getmuapprox(i).type() == 212 ) ? 2 : dval;
 
                 if ( y.isValVector() )
                 {
                     const gentype &yi = ((const Vector<gentype> &) y)(i);
 
-                    ires |= (*(muapprox("&",i))).addTrainingVector((*(muapprox(i))).N(),yi,xxx,1.0,1.0,locdval);
+                    ires |= getmuapprox("&",i).addTrainingVector(getmuapprox(i).N(),yi,xxx,1.0,1.0,locdval);
 
                     if ( varadd )
                     {
-                        ires |= (*(muapprox("&",i))).setsigmaweight((*(muapprox(i))).N()-1,1+(varadd/((*(muapprox("&",i))).sigma())));
+                        ires |= getmuapprox("&",i).setsigmaweight(getmuapprox(i).N()-1,1+(varadd/(getmuapprox(i).sigma())));
                     }
 
                     if ( dval != locdval )
                     {
-                        int imu = (*(muapprox(i))).N()-1;
-                        int iimu = ( ( (*(muapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+                        int imu = getmuapprox(i).N()-1;
+                        int iimu = ( ( getmuapprox(i).type() == 212 ) ? (-imu-1) : imu );
                         int ddval = ( dval == -2 ) ? 2 : dval;
 
-                        ires |= (*(muapprox("&",i))).setd(iimu,ddval);
+                        ires |= getmuapprox("&",i).setd(iimu,ddval);
                     }
                 }
 
                 else
                 {
-                    ires |= (*(muapprox("&",i))).qaddTrainingVector((*(muapprox(i))).N(),y,xxx,1.0,1.0,locdval);
+                    ires |= getmuapprox("&",i).qaddTrainingVector(getmuapprox(i).N(),y,xxx,1.0,1.0,locdval);
 
                     if ( varadd )
                     {
-                        ires |= (*(muapprox("&",i))).setsigmaweight((*(muapprox(i))).N()-1,1+(varadd/((*(muapprox("&",i))).sigma())));
+                        ires |= getmuapprox("&",i).setsigmaweight(getmuapprox(i).N()-1,1+(varadd/(getmuapprox(i).sigma())));
                     }
 
                     if ( dval != locdval )
                     {
-                        int imu = (*(muapprox(i))).N()-1;
-                        int iimu = ( ( (*(muapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+                        int imu = getmuapprox(i).N()-1;
+                        int iimu = ( ( getmuapprox(i).type() == 212 ) ? (-imu-1) : imu );
                         int ddval = ( dval == -2 ) ? 2 : dval;
 
-                        ires |= (*(muapprox("&",i))).setd(iimu,ddval);
+                        ires |= getmuapprox("&",i).setd(iimu,ddval);
                     }
                 }
             }
@@ -2555,9 +2581,9 @@ int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVec
 
         for ( i = 0 ; i < muapprox.size() ; ++i )
         {
-            if ( modelrff && ( modelrff != (*(muapprox(i))).NRff() ) )
+            if ( modelrff && ( modelrff != getmuapprox(i).NRff() ) )
             {
-                ires |= (*(muapprox(i))).setNRff(modelrff); // needs to be delayed until there are training vectors or RFF will have dim 0, which is wrong)
+                ires |= getmuapprox("&",i).setNRff(modelrff); // needs to be delayed until there are training vectors or RFF will have dim 0, which is wrong)
             }
         }
 
@@ -2585,22 +2611,22 @@ int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const 
             gentype yval = y(i).isValNull() ? 0.0_gent : y(i);
 
             {
-                ires |= (*(cgtapprox("&",i))).addTrainingVector((*(cgtapprox(i))).N(),yval,convnearuptonaive(tempx,xxx));
+                ires |= getcgtapprox("&",i).addTrainingVector(getcgtapprox(i).N(),yval,convnearuptonaive(tempx,xxx));
 
                 if ( varadd )
                 {
-                    ires |= (*(cgtapprox("&",i))).setsigmaweight((*(cgtapprox(i))).N()-1,1+(varadd/((*(cgtapprox("&",i))).sigma())));
+                    ires |= getcgtapprox("&",i).setsigmaweight(getcgtapprox(i).N()-1,1+(varadd/(getcgtapprox(i).sigma())));
                 }
 
                 int dval = xobstype.size() ? xobstype(i) : 2;
 
                 if ( dval != 2 )
                 {
-                    int imu = (*(cgtapprox(i))).N()-1;
-                    int iimu = ( ( (*(cgtapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+                    int imu = getcgtapprox(i).N()-1;
+                    int iimu = ( ( getcgtapprox(i).type() == 212 ) ? (-imu-1) : imu );
                     int ddval = ( dval == -2 ) ? 2 : dval;
 
-                    ires |= (*(cgtapprox("&",i))).setd(iimu,ddval);
+                    ires |= getcgtapprox("&",i).setd(iimu,ddval);
                 }
             }
         }
@@ -2616,22 +2642,22 @@ int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const 
 
             //if ( !y(i).isValNull() )
             {
-                ires |= (*(cgtapprox("&",i))).addTrainingVector((*(cgtapprox(i))).N(),yval,xxx);
+                ires |= getcgtapprox("&",i).addTrainingVector(getcgtapprox(i).N(),yval,xxx);
 
                 if ( varadd )
                 {
-                    ires |= (*(cgtapprox("&",i))).setsigmaweight((*(cgtapprox(i))).N()-1,1+(varadd/((*(cgtapprox("&",i))).sigma())));
+                    ires |= getcgtapprox("&",i).setsigmaweight(getcgtapprox(i).N()-1,1+(varadd/(getcgtapprox(i).sigma())));
                 }
 
                 int dval = xobstype.size() ? xobstype(i) : 2;
 
                 if ( dval != 2 )
                 {
-                    int imu = (*(cgtapprox(i))).N()-1;
-                    int iimu = ( ( (*(cgtapprox(i))).type() == 212 ) ? (-imu-1) : imu );
+                    int imu = getcgtapprox(i).N()-1;
+                    int iimu = ( ( getcgtapprox(i).type() == 212 ) ? (-imu-1) : imu );
                     int ddval = ( dval == -2 ) ? 2 : dval;
 
-                    ires |= (*(cgtapprox("&",i))).setd(iimu,ddval);
+                    ires |= getcgtapprox("&",i).setd(iimu,ddval);
                 }
             }
         }
@@ -2650,16 +2676,16 @@ int SMBOOptions::modelsigma_int_addTrainingVector(const gentype &y, const Sparse
 
     SparseVector<gentype> tempx;
 
-    int ires = (*sigmaapprox).addTrainingVector((*sigmaapprox).N(),y,convnearuptonaive(tempx,xxx));
+    int ires = getsigmaapprox("&").addTrainingVector(getsigmaapprox().N(),y,convnearuptonaive(tempx,xxx));
 
     if ( varadd )
     {
-        ires |= (*sigmaapprox).setsigmaweight((*sigmaapprox).N()-1,1+(varadd/((*sigmaapprox).sigma())));
+        ires |= getsigmaapprox("&").setsigmaweight(getsigmaapprox().N()-1,1+(varadd/(getsigmaapprox().sigma())));
     }
 
     if ( xobstype != 2 )
     {
-        ires |= (*sigmaapprox).setd((*sigmaapprox).N()-1,xobstype);
+        ires |= getsigmaapprox("&").setd(getsigmaapprox().N()-1,xobstype);
     }
 
     return ires;
@@ -2729,7 +2755,7 @@ int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype
 
             double sigmaval;
 
-            sigmaval =  ((*(muapprox(0))).sigma()); // variance of observation
+            sigmaval =  getmuapprox(0).sigma(); // variance of observation
             sigmaval += (double) storevar; // variance from source model
 
             // Add to difference model
@@ -2770,12 +2796,12 @@ int SMBOOptions::modeldiff_int_train(int &res, svmvolatile int &killSwitch)
                 (*srcmodel).train(dummy);
             }
 
-            int Nmodel = (*(muapprox(0))).N();
+            int Nmodel = getmuapprox(0).N();
 
             alpha = alpha0 + ((Nmodel-Nbasemu)/2.0);
             //beta updated incrementally
 
-            (*(muapprox("&",0))).setsigmaweight(indpremu,( presigweightmu = beta/(alpha+1) ));
+            getmuapprox("&",0).setsigmaweight(indpremu,( presigweightmu = beta/(alpha+1) ));
 //outstream() << "sigma = (" << beta << "/(" << alpha << "+1)) = " << beta/(alpha+1) << "\n";
         }
 
@@ -2819,8 +2845,8 @@ int SMBOOptions::modeldiff_int_train(int &res, svmvolatile int &killSwitch)
 
                 // Set bias corrected source y and variance in muapprox
 
-                (*(muapprox("&",0))).sety(i,predval);
-                (*(muapprox("&",0))).setsigmaweight(i,(sigmaval/((*(muapprox(0))).sigma())));
+                getmuapprox("&",0).sety(i,predval);
+                getmuapprox("&",0).setsigmaweight(i,(sigmaval/(getmuapprox(0).sigma())));
             }
         }
 
@@ -2860,23 +2886,23 @@ GlobalOptions &SMBOOptions::getModelErrOptim(GlobalOptions *src) const
         killModelErrOptim();
     }
 
-    if ( !(modelErrOptim) )
+    if ( !modelErrOptim )
     {
         if ( !src )
         {
             (ismodelErrLocal) = 1;
 
-            MEMNEW((modelErrOptim),DIRectOptions);
+            MEMNEW(modelErrOptim,DIRectOptions);
 
-            NiceAssert( (modelErrOptim) );
+            NiceAssert( modelErrOptim );
 
-            *((modelErrOptim)) = static_cast<const GlobalOptions &>(*this);
+            *(modelErrOptim) = static_cast<const GlobalOptions &>(*this);
         }
 
         else
         {
-            (ismodelErrLocal) = 0;
-            (modelErrOptim)   = src;
+            ismodelErrLocal = 0;
+            modelErrOptim   = src;
         }
     }
 
@@ -2885,15 +2911,15 @@ GlobalOptions &SMBOOptions::getModelErrOptim(GlobalOptions *src) const
 
 void SMBOOptions::killModelErrOptim(void) const
 {
-    if ( (modelErrOptim) )
+    if ( modelErrOptim )
     {
-        if ( (ismodelErrLocal) )
+        if ( ismodelErrLocal )
         {
-            MEMDEL((modelErrOptim));
+            MEMDEL(modelErrOptim);
         }
 
-        (modelErrOptim)   = nullptr;
-        (ismodelErrLocal) = 1;
+        modelErrOptim   = nullptr;
+        ismodelErrLocal = 1;
     }
 }
 
@@ -2958,7 +2984,7 @@ int SMBOOptions::modelaugx_int_addTrainingVector(const Vector<gentype> &y, const
 
     for ( i = 0 ; i < y.size() ; ++i )
     {
-        ires |= (*(augxapprox("&",i))).addTrainingVector((*(augxapprox("&",i))).N(),y(i),xx,1,(*(augxapprox("&",i))).eps()+varadd);
+        ires |= getaugxapprox("&",i).addTrainingVector(getaugxapprox(i).N(),y(i),xx,1,getaugxapprox(i).eps()+varadd);
     }
 
     return ires;
@@ -2971,7 +2997,7 @@ int SMBOOptions::modelaugx_int_train (int &res, svmvolatile int &killSwitch)
 
     for ( i = 0 ; i < augxapprox.size() ; ++i )
     {
-        ires |= (*(augxapprox("&",i))).train(res,killSwitch);
+        ires |= getaugxapprox("&",i).train(res,killSwitch);
     }
 
     return ires;

@@ -101,7 +101,7 @@ class SVMThreadContext;
 
 inline SVMThreadContext *&setzero(SVMThreadContext *&x);
 inline void qswap(SVMThreadContext *&a, SVMThreadContext *&b);
-inline ML_Mutable *&setzero(ML_Mutable *&x);
+//inline ML_Mutable *&setzero(ML_Mutable *&x);
 
 inline SVMThreadContext *&setident (SVMThreadContext *&a) { NiceThrow("SVMThreadContext setident not defined"); return a; }
 inline SVMThreadContext *&setposate(SVMThreadContext *&a) { return a; }
@@ -218,11 +218,11 @@ inline void qswap(SVMThreadContext *&a, SVMThreadContext *&b)
     c = a; a = b; b = c;
 }
 
-inline ML_Mutable *&setzero(ML_Mutable *&x)
-{
-    x = nullptr;
-
-    return x;
-}
+//inline ML_Mutable *&setzero(ML_Mutable *&x)
+//{
+//    x = nullptr;
+//
+//    return x;
+//}
 
 #endif

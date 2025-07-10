@@ -182,7 +182,7 @@ public:
 
     GlobalOptions()
     {
-        altallxres = NULL;
+        altallxres = nullptr;
 
         optname = "Global Optimisation";
 
@@ -191,6 +191,7 @@ public:
         randDirtemplate    = nullptr;
         randDirtemplateInd = -1;
         projOp             = nullptr;
+        projOpRaw          = nullptr;
         projOpInd          = -1;
 
         MLregind = DEFAULT_MLREGIND;
@@ -321,7 +322,7 @@ public:
 
     virtual void reset(void)
     {
-        altallxres = NULL;
+        altallxres = nullptr;
 
         xwidth = 0;
 
@@ -354,9 +355,8 @@ public:
         randDirtemplate    = nullptr;
         randDirtemplateInd = -1;
         projOp             = nullptr;
+        projOpRaw          = nullptr;
         projOpInd          = -1;
-
-        projOpRaw = nullptr;
 
         subDef = nullptr;
         subDef.resize(0);

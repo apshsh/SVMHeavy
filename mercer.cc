@@ -66,12 +66,15 @@ MercerKernel::MercerKernel()
     issplit.resize(1);
     mulsplit.resize(1);
     ismagterm.resize(1);
+    disNomConst.resize(1);
     kernflags.resize(1);
     altcallback.resize(1);
     randFeats.resize(1);
     randFeatAngle.resize(1);
     randFeatReOnly.resize(1);
     randFeatNoAngle.resize(1);
+
+    disNomConst("&",0) = 0;
 
     randFeats("&",0).resize(0);
     randFeatAngle("&",0).resize(0);
@@ -149,6 +152,7 @@ MercerKernel &MercerKernel::operator=(const MercerKernel &src)
     issplit              = src.issplit;
     mulsplit             = src.mulsplit;
     ismagterm            = src.ismagterm;
+    disNomConst          = src.disNomConst;
     xranktype            = src.xranktype;
     dIndexes             = src.dIndexes;
     kernflags            = src.kernflags;
@@ -611,12 +615,15 @@ MercerKernel &MercerKernel::add(int q)
     issplit.add(q);
     mulsplit.add(q);
     ismagterm.add(q);
+    disNomConst.add(q);
     kernflags.add(q);
     altcallback.add(q);
     randFeats.add(q);
     randFeatAngle.add(q);
     randFeatReOnly.add(q);
     randFeatNoAngle.add(q);
+
+    disNomConst("&",q) = 0;
 
     randFeats("&",q).resize(0);
     randFeatAngle("&",q).resize(0);
@@ -663,6 +670,7 @@ MercerKernel &MercerKernel::remove(int q)
     issplit.remove(q);
     mulsplit.remove(q);
     ismagterm.remove(q);
+    disNomConst.remove(q);
     kernflags.remove(q);
     altcallback.remove(q);
     randFeats.remove(q);
@@ -703,6 +711,7 @@ MercerKernel &MercerKernel::resize(int nsize)
     issplit.resize(nsize);
     mulsplit.resize(nsize);
     ismagterm.resize(nsize);
+    disNomConst.resize(nsize);
     kernflags.resize(nsize);
     altcallback.resize(nsize);
     randFeats.resize(nsize);
@@ -726,6 +735,8 @@ MercerKernel &MercerKernel::resize(int nsize)
             altcallback("&",q) = MLid();
 
             dtype("&",q) = 0;
+
+            disNomConst("&",q) = 0;
 
             setType(0,q);          // constant kernel, default parameters
 	    setUnNormalised(q);    // not normalised
@@ -11935,7 +11946,8 @@ void MercerKernel::Kbase(gentype &res, int q, int typeis,
 
         case 32:
         {
-            res = ( ( iiii(0) == iiii(1) ) && ( iiii(0) >= 0 ) ) ? r(1) : 0.0_gent; //zerogentype();
+//            res = ( ( iiii(0) == iiii(1) ) && ( iiii(0) >= 0 ) ) ? r(1) : 0.0_gent; //zerogentype();
+            res = ( iiii(0) == iiii(1) ) ? r(1) : 0.0_gent; //zerogentype();
             break;
         }
 
@@ -13276,7 +13288,8 @@ void MercerKernel::Kbase(gentype &res, int q, int typeis,
         case 32:
 	{
             vres("&",0) = 0.0;
-            vres("&",1) = ( ( iiii(0) == iiii(1) ) && ( iiii(0) >= 0 ) ) ? 1.0 : 0.0;
+//            vres("&",1) = ( ( iiii(0) == iiii(1) ) && ( iiii(0) >= 0 ) ) ? 1.0 : 0.0;
+            vres("&",1) = ( iiii(0) == iiii(1) ) ? 1.0 : 0.0;
 
             break;
 	}
@@ -16218,6 +16231,7 @@ std::ostream &MercerKernel::printstream(std::ostream &output, int dep) const
         output << "Split:                 " << src.issplit             << "\n";
         output << "Multiplicative Split:  " << src.mulsplit            << "\n";
         output << "Magnitude Terms:       " << src.ismagterm           << "\n";
+        output << "Nominal constness:     " << src.disNomConst         << "\n";
         output << "Rank Type Terms:       " << src.xranktype           << "\n";
         output << "Real constants:        " << src.dRealConstants      << "\n";
         output << "Integer constants:     " << src.dIntConstants       << "\n";
@@ -16290,6 +16304,7 @@ std::istream &MercerKernel::inputstream(std::istream &input)
         dest.issplit     = 0;
         dest.mulsplit    = 0;
         dest.ismagterm   = 0;
+        dest.disNomConst = 0;
         dest.xranktype   = 0;
         dest.enchurn     = 0;
         dest.altcallback = dest.MLid();
@@ -16475,6 +16490,7 @@ std::istream &MercerKernel::inputstream(std::istream &input)
         input >> dummy; input >> dest.issplit;
         input >> dummy; input >> dest.mulsplit;
         input >> dummy; input >> dest.ismagterm;
+        input >> dummy; input >> dest.disNomConst;
         input >> dummy; input >> dest.xranktype;
         input >> dummy; input >> dest.dRealConstants;
         input >> dummy; input >> dest.dIntConstants;
@@ -16607,6 +16623,7 @@ int operator==(const MercerKernel &leftop, const MercerKernel &rightop)
     if ( !( leftop.issplit              == rightop.issplit              ) ) { return 0; }
     if ( !( leftop.mulsplit             == rightop.mulsplit             ) ) { return 0; }
     if ( !( leftop.ismagterm            == rightop.ismagterm            ) ) { return 0; }
+//    if ( !( leftop.disNomConst          == rightop.disNomConst          ) ) { return 0; }
     if ( !( leftop.xranktype            == rightop.xranktype            ) ) { return 0; }
     if ( !( leftop.xnumSplits           == rightop.xnumSplits           ) ) { return 0; }
     if ( !( leftop.xnumMulSplits        == rightop.xnumMulSplits        ) ) { return 0; }

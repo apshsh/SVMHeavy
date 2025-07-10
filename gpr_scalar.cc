@@ -132,6 +132,7 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
 
     if ( !Nineq || isNaiveConst() )
     {
+//FIXME: tune eps based on sigma here if required (method between naive and full EP)
         locres = getQ().train(res,killSwitch);
     }
 

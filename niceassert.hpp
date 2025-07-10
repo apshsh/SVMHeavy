@@ -19,7 +19,8 @@
 #endif
 
 // NiceAssert:  "Nice" assert macro.  This one will throw an exception that can be caught.
-// QuiteAssert: Like NiceAssert, but exits by regular throw.
+// StrucAssert: "Nice, structural" assert macro.  Like NiceAssert, but persists even when NDEBUG is defined
+// QuietAssert: Like NiceAssert, but exits by recursing the assert.
 // NiceThrow:   Like throw for printables, but prints before throwing
 // STRTHROW:    Construct std::string and throw this.
 //
@@ -29,6 +30,10 @@
 #define xS_(x) xS(x)
 #define xS__LINE__ xS_(__LINE__)
 #define PLACEMARK "Line " xS__LINE__ " in file " __FILE__
+#define S(x) #x
+#define S_(x) S(x)
+#define S__LINE__ S_(__LINE__)
+#define THROWSTRINGDEF(cond) "Assertion " #cond " failed at line " S__LINE__ " in file " __FILE__
 
 
 #ifdef NDEBUG
@@ -41,11 +46,8 @@
 #define NiceThrow( what ) throw(what)
 #endif
 
+
 #ifndef NDEBUG
-#define S(x) #x
-#define S_(x) S(x)
-#define S__LINE__ S_(__LINE__)
-#define THROWSTRINGDEF(cond) "Assertion " #cond " failed at line " S__LINE__ " in file " __FILE__
 #define NiceAssert( cond ) \
 if ( !(cond) ) \
 { \
@@ -69,6 +71,13 @@ if ( !(cond) ) \
 std::string _x_errstring_x_ = _x_errstr_x_; \
 throw _x_errstring_x_;
 
+
+#define StrucAssert( cond ) \
+if ( !(cond) ) \
+{ \
+    errstream() << THROWSTRINGDEF(cond) << "\n"; \
+    throw(THROWSTRINGDEF(cond)); \
+}
 
 
 

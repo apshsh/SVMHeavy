@@ -9134,11 +9134,11 @@ static fninfoblock qqqfninfo[NUMFNDEF] = {
           "System call to evaluate, eg syscall(\"command\",x)" },
 #ifndef PYLOCAL
         { "pycall"          ,2,0 ,3 ,3 ,0,1,nullptr ,nullptr            ,pycall       ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
-          "System (python3) call to evaluate, eg pycall(\"sin\",x)" }
+          "System (python3) call to evaluate, eg pycall(\"math.sin\",x)" }
 #endif
 #ifdef PYLOCAL
         { "pycall"          ,2,0 ,3 ,3 ,0,0,nullptr ,nullptr            ,pycall       ,nullptr         ,nullptr    ,nullptr      ,nullptr,nullptr    ,nullptr        ,nullptr   ,nullptr,nullptr,nullptr,nullptr,0 ,"~"             ,-1,0 ,0 ,nullptr ,"0", 
-          "System (python3) call to evaluate, eg pycall(\"sin\",x)" }
+          "System (python3) call to evaluate, eg pycall(\"math.sin\",x)" }
 #endif
 };
 
@@ -18371,6 +18371,12 @@ gentype pycall(const gentype &c, const gentype &x)
 
 #ifndef PYLOCAL
 // If not local python then we use a system call
+void pycall(const std::string &fn, gentype &res,       int               x) { gentype xx(x);      pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res,       double            x) { gentype xx(x);      pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res, const d_anion          &x) { gentype xx(x);      pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res, const std::string      &x) { gentype xx(x);      pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res, int size, const double *x) { gentype xx(size,x); pycall(fn,res,xx); }
+
 void pycall(const std::string &evalstr, gentype &res, const gentype &x)
 {
         std::string resstr;
@@ -24713,7 +24719,7 @@ Vector<double> &Vector<double>::castassign(const Vector<gentype> &src)
 	    {
 	        for ( i = 0 ; i < dsize ; ++i )
 	        {
-                    (*this)("&",i) = (double) src(i);
+                    (*this).sv(i,(double) src(i));
                 }
 	    }
 	}
@@ -24773,6 +24779,64 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<int> &src)
 	        for ( i = 0 ; i < dsize ; ++i )
 	        {
                     (*this)("&",i) = src.v(i);
+                }
+	    }
+	}
+    }
+
+    return *this;
+}
+
+template <>
+template <>
+Vector<double> &Vector<double>::castassign(const Vector<int> &src)
+{
+    NiceAssert( !infsize() );
+
+    if ( imoverhere )
+    {
+        MEMDEL(imoverhere);
+        imoverhere = nullptr;
+    }
+
+    if ( src.imoverhere )
+    {
+        NiceThrow("No");
+    }
+
+    else if ( src.infsize() )
+    {
+        NiceThrow("No");
+    }
+
+    else
+    {
+        {
+	    int srcsize = src.size();
+	    int i;
+
+            if ( !nbase )
+	    {
+	        resize(srcsize);
+
+                if ( !(src.base()) && content && src.contentalloced() )
+                {
+                    if ( src.contentarray_hold() )
+                    {
+                        // Design decision: preallocation is duplicated
+
+                        content->prealloc(src.contentarray_alloc());
+                    }
+                }
+	    }
+
+            NiceAssert( dsize == srcsize );
+
+    	    //if ( dsize )
+	    {
+	        for ( i = 0 ; i < dsize ; ++i )
+	        {
+                    (*this).sv(i,(double) src.v(i));
                 }
 	    }
 	}
@@ -24973,6 +25037,379 @@ template <>
 Vector<SparseVector<gentype> >& Vector<SparseVector<gentype> >::castassign(const Vector<SparseVector<gentype> > &src)
 {
     return assign(src);
+}
+
+
+
+
+
+
+
+
+
+
+template <>
+Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gentype> &src)
+{
+    res.zero();
+
+    int size = src.indsize();
+    int nns = src.nearnonsparse();
+    int prevind = -1;
+    int baseind = 0;
+
+    if ( size && nns && src.altcontent )
+    {
+        res.resize(size);
+
+	for ( int i = 0 ; i < size ; ++i )
+	{
+            res("&",i).force_double() = src.altcontent[i];
+        }
+    }
+
+    else if ( size && nns )
+    {
+        res.resize(size);
+
+	for ( int i = 0 ; i < size ; ++i )
+	{
+            res.sv(i,src.direcref(i));
+        }
+    }
+
+    else if ( size )
+    {
+	int i;
+
+	for ( i = 0 ; i < size ; ++i )
+	{
+            if ( src.ind(i) == prevind+1 )
+            {
+                res.append(-1,src.direcref(i));
+            }
+
+            else if ( ( baseind < INDF1OFFSTART ) && ( src.ind(i) >= INDF1OFFSTART ) && ( src.ind(i) <= INDF1OFFEND ) )
+            {
+                baseind = INDF1OFFSTART;
+
+                {
+                    const static gentype tmp(":");
+
+                    res.append(-1,tmp);
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    const static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    res.append(-1,src.direcref(i));
+                }
+            }
+
+            else if ( ( baseind < INDF2OFFSTART ) && ( src.ind(i) >= INDF2OFFSTART ) && ( src.ind(i) <= INDF2OFFEND ) )
+            {
+                baseind = INDF2OFFSTART;
+
+                {
+                    const static gentype tmp("::");
+
+                    res.append(-1,tmp);
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    const static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    res.append(-1,src.direcref(i));
+                }
+            }
+
+            else if ( ( baseind < INDF3OFFSTART ) && ( src.ind(i) >= INDF3OFFSTART ) && ( src.ind(i) <= INDF3OFFEND ) )
+            {
+                baseind = INDF3OFFSTART;
+
+                {
+                    const static gentype tmp(":::");
+
+                    res.append(-1,tmp);
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    const static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    res.append(-1,src.direcref(i));
+                }
+            }
+
+            else if ( ( baseind < INDF4OFFSTART ) && ( src.ind(i) >= INDF4OFFSTART ) && ( src.ind(i) <= INDF4OFFEND ) )
+            {
+                baseind = INDF4OFFSTART;
+
+                {
+                    const static gentype tmp("::::");
+
+                    res.append(-1,tmp);
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    const static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    res.append(-1,src.direcref(i));
+                }
+            }
+
+            else if ( (src.ind(i)-baseind) >= DEFAULT_TUPLE_INDEX_STEP )
+            {
+                goover:
+
+                baseind += DEFAULT_TUPLE_INDEX_STEP;
+
+                {
+                    const static gentype tmp("~");
+
+                    res.append(-1,tmp);
+                }
+
+                if ( (src.ind(i)-baseind) >= DEFAULT_TUPLE_INDEX_STEP )
+                {
+                    goto goover;
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    const static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    res.append(-1,src.direcref(i));
+                }
+            }
+
+            else
+            {
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    const static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    res.append(-1,src.direcref(i));
+                }
+            }
+
+            prevind = src.ind(i);
+	}
+    }
+
+    return res;
+}
+
+
+
+template <>
+Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<double> &src)
+{
+    res.zero();
+
+    int size = src.indsize();
+    int nns = src.nearnonsparse();
+    int prevind = -1;
+    int baseind = 0;
+
+    if ( size && nns )
+    {
+        res.resize(size);
+
+	for ( int i = 0 ; i < size ; ++i )
+	{
+            res("&",i).force_double() = src.direval(i);
+        }
+    }
+
+    else if ( size )
+    {
+	int i;
+
+	for ( i = 0 ; i < size ; ++i )
+	{
+            if ( src.ind(i) == prevind+1 )
+            {
+                gentype tmp(src.direval(i));
+
+                res.append(-1,tmp);
+            }
+
+            else if ( ( baseind < INDF1OFFSTART ) && ( src.ind(i) >= INDF1OFFSTART ) && ( src.ind(i) <= INDF1OFFEND ) )
+            {
+                baseind = INDF1OFFSTART;
+
+                {
+                    const static gentype tmp(":");
+
+                    res.append(-1,tmp);
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    const static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    gentype tmp(src.direval(i));
+
+                    res.append(-1,tmp);
+                }
+            }
+
+            else if ( ( baseind < INDF2OFFSTART ) && ( src.ind(i) >= INDF2OFFSTART ) && ( src.ind(i) <= INDF2OFFEND ) )
+            {
+                baseind = INDF2OFFSTART;
+
+                {
+                    const static gentype tmp("::");
+
+                    res.append(-1,tmp);
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    const static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    gentype tmp(src.direval(i));
+
+                    res.append(-1,tmp);
+                }
+            }
+
+            else if ( ( baseind < INDF3OFFSTART ) && ( src.ind(i) >= INDF3OFFSTART ) && ( src.ind(i) <= INDF3OFFEND ) )
+            {
+                baseind = INDF3OFFSTART;
+
+                {
+                    const static gentype tmp(":::");
+
+                    res.append(-1,tmp);
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    const static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    gentype tmp(src.direval(i));
+
+                    res.append(-1,tmp);
+                }
+            }
+
+            else if ( ( baseind < INDF4OFFSTART ) && ( src.ind(i) >= INDF4OFFSTART ) && ( src.ind(i) <= INDF4OFFEND ) )
+            {
+                baseind = INDF4OFFSTART;
+
+                {
+                    const static gentype tmp("::::");
+
+                    res.append(-1,tmp);
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    const static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    gentype tmp(src.direval(i));
+
+                    res.append(-1,tmp);
+                }
+            }
+
+            else if ( (src.ind(i)-baseind) >= DEFAULT_TUPLE_INDEX_STEP )
+            {
+                goover:
+
+                baseind += DEFAULT_TUPLE_INDEX_STEP;
+
+                {
+                    const static gentype tmp("~");
+
+                    res.append(-1,tmp);
+                }
+
+                if ( (src.ind(i)-baseind) >= DEFAULT_TUPLE_INDEX_STEP )
+                {
+                    goto goover;
+                }
+
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    const static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    gentype tmp(src.direval(i));
+
+                    res.append(-1,tmp);
+                }
+            }
+
+            else
+            {
+                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                {
+                    const static gentype tmp('N');
+
+                    res.append(-1,tmp);
+                }
+
+                {
+                    gentype tmp(src.direval(i));
+
+                    res.append(-1,tmp);
+                }
+            }
+
+            prevind = src.ind(i);
+	}
+    }
+
+    return res;
 }
 
 

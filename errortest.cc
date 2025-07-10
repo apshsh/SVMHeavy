@@ -334,7 +334,7 @@ inline foldargs *&setrand  (foldargs *&a);
 //inline int *&setrand  (int *&a) { return a; }
 
 inline foldargs *&setident (foldargs *&a) { return a; }
-inline foldargs *&setzero  (foldargs *&a) { return a; }
+inline foldargs *&setzero  (foldargs *&a) { return a = nullptr; }
 inline foldargs *&setposate(foldargs *&a) { return a; }
 inline foldargs *&setnegate(foldargs *&a) { return a; }
 inline foldargs *&setconj  (foldargs *&a) { return a; }

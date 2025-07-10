@@ -1006,9 +1006,11 @@ void overfn(gentype &res, Vector<gentype> &x, void *arg)
 //        gopts.model_log(1);
     }
 
+errstream() << "what is xmod " << xmod << "\n";
     if ( !usealtoptfn || !actualtest )
     {
         suppressallstreamcout();
+errstream() << "and we call " << xmod << "\n";
         (*fn)(res,xmod,fnarg);
         unsuppressallstreamcout();
     }

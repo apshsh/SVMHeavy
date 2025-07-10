@@ -321,7 +321,7 @@ inline int getThreadID(void);
 
 
 inline std::string *&setident (std::string *&a) { throw("something"); return a; }
-inline std::string *&setzero  (std::string *&a) { return a; }
+inline std::string *&setzero  (std::string *&a) { return a = nullptr; }
 inline std::string *&setposate(std::string *&a) { return a; }
 inline std::string *&setnegate(std::string *&a) { throw("something"); return a; }
 inline std::string *&setconj  (std::string *&a) { throw("something"); return a; }
@@ -335,7 +335,7 @@ inline void qswap(std::complex<double> *&a, std::complex<double> *&b)
 }
 
 inline std::complex<double> *&setident (std::complex<double> *&a) { throw("something"); return a; }
-inline std::complex<double> *&setzero  (std::complex<double> *&a) { return a; }
+inline std::complex<double> *&setzero  (std::complex<double> *&a) { return a = nullptr; }
 inline std::complex<double> *&setposate(std::complex<double> *&a) { return a; }
 inline std::complex<double> *&setnegate(std::complex<double> *&a) { throw("something"); return a; }
 inline std::complex<double> *&setconj  (std::complex<double> *&a) { throw("something"); return a; }
@@ -869,7 +869,7 @@ inline void qswap(svm_pthread_t *&a, svm_pthread_t *&b)
 }
 
 inline svm_pthread_t *&setident (svm_pthread_t *&a) { throw("something"); return a; }
-inline svm_pthread_t *&setzero  (svm_pthread_t *&a) { return a; }
+inline svm_pthread_t *&setzero  (svm_pthread_t *&a) { return a = nullptr; }
 inline svm_pthread_t *&setposate(svm_pthread_t *&a) { return a; }
 inline svm_pthread_t *&setnegate(svm_pthread_t *&a) { throw("something"); return a; }
 inline svm_pthread_t *&setconj  (svm_pthread_t *&a) { throw("something"); return a; }
@@ -1030,7 +1030,7 @@ inline void qswap(svm_pthread_t *&a, svm_pthread_t *&b)
 }
 
 inline svm_pthread_t *&setident (svm_pthread_t *&a) { throw("something"); return a; }
-inline svm_pthread_t *&setzero  (svm_pthread_t *&a) { return a; }
+inline svm_pthread_t *&setzero  (svm_pthread_t *&a) { return a = nullptr; }
 inline svm_pthread_t *&setposate(svm_pthread_t *&a) { return a; }
 inline svm_pthread_t *&setnegate(svm_pthread_t *&a) { throw("something"); return a; }
 inline svm_pthread_t *&setconj  (svm_pthread_t *&a) { throw("something"); return a; }

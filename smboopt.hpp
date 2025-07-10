@@ -29,15 +29,25 @@ class SMBOOptions : public GlobalOptions
 public:
     // Default models
 
-    GPR_Scalar altmuapprox;            // Default model(s) for objective (objectives for MOO)
-    GPR_Scalar altfxapprox;            // Default model(s) for augmented channel(s)
-    GPR_Scalar_rff altmuapprox_rff;    // Default model for RFFs
-    GPR_Scalar altcgtapprox;           // Default model(s) for >= constraints (objectives for MOO)
+    ML_Mutable altmuapprox;        // Default (GPR_Scalar) model(s) for objective (objectives for MOO)
+    ML_Mutable altcgtapprox;       // Default (GPR_Scalar) model(s) for >= constraints (objectives for MOO)
+    ML_Mutable altaugxapprox;      // Default (GPR_Scalar) model(s) for augmented channel(s)
+    ML_Mutable altmuapprox_rff;    // Default (GPR_Scalar_rff) model for RFFs
+
+    // Actual models. These are set up by the optimiser for later inspection by the user, so don't set them directly!
+
+    Vector<ML_Mutable *> muapproxRaw;
+    Vector<ML_Mutable *> cgtapproxRaw;
+    Vector<ML_Mutable *> augxapproxRaw;
+
+    ML_Mutable *sigmaapproxRaw;
+    ML_Mutable *srcmodel;
+    ML_Mutable *diffmodel;
 
     // External models (moo == multi-objective), fx = model for q (see below), if used
 
     Vector<ML_Base *> extmuapprox;      // Use this to give alternative model(s) for objective(s).
-    Vector<ML_Base *> extfxapprox;      // Use this to give alternative models for augmented channels.
+    Vector<ML_Base *> extaugxapprox;    // Use this to give alternative models for augmented channels.
     Vector<ML_Base *> extcgtapprox;     // Use this to give alternative model(s) for >= constraints.
 
     // sigmuseparate: for multi-recommendation by default both sigma and mu
@@ -135,6 +145,8 @@ public:
     //           on exit.
     //           -1 means log only on exit
     // modelbaseline: baseline (function) to plot, null() if not used
+    //
+    // PIscale: if 0 then nothing, if 1 then scale acquisition function by PI
 
     std::string modelname;
     int modeloutformat;
@@ -176,6 +188,8 @@ public:
     int modelnaive;
     int makenoise;
     int ennornaive;
+
+    int PIscale;
 
     virtual int getdimfid(void) const { return 0; } // This will be overridden in BayesOpt.  If >0 we need to converts [ x z ] to [ x~z ] in model_convertx, where z is getdimfid() dimensional
 
@@ -239,9 +253,17 @@ public:
             }
         }
 
+        for ( i = 0 ; i < cgtapprox.size() ; i++ )
+        {
+            if ( cgtapprox(i) )
+            {
+                (*(cgtapprox("&",i))).restart();
+            }
+        }
+
         if ( sigmaapprox )
         {
-            (*sigmaapprox).restart();
+            getsigmaapprox("&").restart();
         }
 
         for ( i = 0 ; i < augxapprox.size() ; ++i )
@@ -249,14 +271,6 @@ public:
             if ( augxapprox(i) )
             {
                 (*(augxapprox("&",i))).restart();
-            }
-        }
-
-        for ( i = 0 ; i < cgtapprox.size() ; i++ )
-        {
-            if ( cgtapprox(i) )
-            {
-                (*(cgtapprox("&",i))).restart();
             }
         }
 
@@ -273,27 +287,18 @@ public:
         xx.zero();
         xxvar.zero();
 
-        for ( i = 0 ; i < muapprox.size() ; ++i )
+        for ( i = 0 ; i < augxapprox.size() ; ++i )
         {
-            if ( muapprox(i) )
+            if ( augxapprox(i) )
             {
-                (*(muapprox("&",i))).restart();
-            }
-        }
-
-        for ( i = 0 ; i < fxapprox.size() ; ++i )
-        {
-            if ( fxapprox(i) )
-            {
-                (*(fxapprox("&",i))).restart();
+                getaugxapprox("&",i).restart();
             }
         }
 
         //muapprox.resize(0);
-        //fxapprox.resize(0);
+        //augxapprox.resize(0);
 
         //muapproxInd.resize(0);
-        //fxapproxInd.resize(0);
 
         return;
     }
@@ -440,7 +445,7 @@ public:
 
     double getfnnoise(void)
     {
-        return makenoise ? (*sigmaapprox).sigma() : 0.0;
+        return ( makenoise && sigmaapprox ) ? getsigmaapprox().sigma() : 0.0;
     }
 
     const Vector<double> &getfxnoise(Vector<double> &res)
@@ -449,9 +454,9 @@ public:
 
         int i;
 
-        for ( i = 0 ; i < fxapprox.size() ; ++i )
+        for ( i = 0 ; i < augxapprox.size() ; ++i )
         {
-            res("&",i) = makenoise ? (*(augxapprox(i))).sigma() : 0.0;
+            res("&",i) = makenoise ? getaugxapprox(i).sigma() : 0.0;
         }
 
         return res;
@@ -504,32 +509,33 @@ public:
     template <class S> int  model_covar(Matrix<gentype> &rescov, const Vector<SparseVector<S> > &x) const;
     template <class S> void model_stabProb(double &res, const SparseVector<S> &x, int p, double pnrm, int rot, double mu, double B) const;
 
-    int  model_covarTrainingVector(Matrix<gentype> &rescov, const Vector<int> &i) const { return (*sigmaapprox).covarTrainingVector(rescov,i); }
-    void model_stabProbTrainingVector(double &res, int i, int p, double pnrm, int rot, double mu, double B, int q = 0) const { (*(muapprox(q))).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B); }
+    int  model_covarTrainingVector(Matrix<gentype> &rescov, const Vector<int> &i) const { return getsigmaapprox().covarTrainingVector(rescov,i); }
+    void model_stabProbTrainingVector(double &res, int i, int p, double pnrm, int rot, double mu, double B, int q = 0) const { (getmuapprox(q)).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B); }
 
     int model_addTrainingVector_sigmaifsep    (const gentype &y,                       const SparseVector<gentype> &x,                                                                                                                                                                                               double varadd = 0);
     int model_addTrainingVector_mu_sigmaifsame(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype = 2, double varadd = 0);
 
-    int model_N_mu   (int q = 0) const { return (*(muapprox(q))).N();  }
-    int model_N_sigma(void)      const { return (*sigmaapprox).N();    }
-    int model_N_cgt  (int q = 0) const { return numcgt ? (*(cgtapprox(q))).N() : 0; }
+    int model_N_mu   (int q = 0) const { return getmuapprox(q).N();  }
+    int model_N_sigma(void)      const { return getsigmaapprox().N();    }
+    int model_N_cgt  (int q = 0) const { return numcgt ? getcgtapprox(q).N() : 0; }
 
-    int model_NNCz_mu   (int q) const { return (*(muapprox(q))).NNC(0); }
-    int model_NNCz_sigma(void)  const { return (*sigmaapprox).NNC(0);   }
+    int model_NNCz_mu   (int q) const { return getmuapprox(q).NNC(0); }
+    int model_NNCz_sigma(void)  const { return getsigmaapprox().NNC(0);   }
+    int model_NNCz_cgt  (int q) const { return numcgt ? getcgtapprox(q).NNC(0) : 0; }
 
     template <class S> double inf_dist(const SparseVector<S> &xz) const;
 
-    double model_sigma(int q) const { return (*(muapprox(q))).sigma(); }
+    double model_sigma(int q) const { return getmuapprox(q).sigma(); }
 
-    const MercerKernel &model_getKernel(int q) const { return (*(muapprox(q))).getKernel(); }
+    const MercerKernel &model_getKernel(int q) const { return getmuapprox(q).getKernel(); }
 
-    const SparseVector<gentype> &model_x(int i, int q = 0) const { return (*(muapprox(q))).x(i); }
-    const Vector<gentype>       &model_y(int q = -1)       const { return ( q == -1 ) ? ( ismoo ? locyres : (*(muapprox(0))).y() ) : (*(muapprox(q))).y();  }
-    const Vector<int>           &model_d(int q = 0)        const { return (*(muapprox(q))).d();  }
+    const SparseVector<gentype> &model_x(int i, int q = 0) const { return getmuapprox(q).x(i); }
+    const Vector<gentype>       &model_y(int q = -1)       const { return ( q == -1 ) ? ( ismoo ? locyres : getmuapprox(0).y() ) : getmuapprox(q).y();  }
+    const Vector<int>           &model_d(int q = 0)        const { return getmuapprox(q).d();  }
 
-    const SparseVector<gentype> &model_x_cgt(int i, int q = 0) const { return (*(cgtapprox(q))).x(i); }
-    const Vector<gentype>       &model_y_cgt(int q = 0)        const { return (*(cgtapprox(q))).y();  }
-    const Vector<int>           &model_d_cgt(int q = 0)        const { return (*(cgtapprox(q))).d();  }
+    const SparseVector<gentype> &model_x_cgt(int i, int q = 0) const { return getcgtapprox(q).x(i); }
+    const Vector<gentype>       &model_y_cgt(int q = 0)        const { return getcgtapprox(q).y();  }
+    const Vector<int>           &model_d_cgt(int q = 0)        const { return getcgtapprox(q).d();  }
 
     int model_train      (int &res, svmvolatile int &killSwitch);
     int model_train_sigma(int &res, svmvolatile int &killSwitch);
@@ -548,11 +554,11 @@ public:
 
     const Vector<double> &model_xcopy(Vector<double> &resx, int i) const;
 
-    double model_negloglikelihood(int q)            const { return calcnegloglikelihood(*(muapprox(q))); }
-    double model_maxinfogain     (int q)            const { return calcmaxinfogain     (*(muapprox(q))); }
-    double model_RKHSnorm        (int q)            const { return calcRKHSnorm        (*(muapprox(q))); }
-    double model_lenscale        (int q, int i = 0) const { return (double) ((*(getmuapprox(q))).getKernel().cRealConstants(i%((*(getmuapprox(q))).getKernel().size())))(0); }
-    double model_kappa0          (int q)            const { return (double) (*(getmuapprox(q))).getKernel().effweight(q); }
+    double model_negloglikelihood(int q)            const { return calcnegloglikelihood(getmuapprox(q)); }
+    double model_maxinfogain     (int q)            const { return calcmaxinfogain     (getmuapprox(q)); }
+    double model_RKHSnorm        (int q)            const { return calcRKHSnorm        (getmuapprox(q)); }
+    double model_lenscale        (int q, int i = 0) const { return (double) getmuapprox_sample(q).getKernel().cRealConstants(i%(getmuapprox(q).getKernel().size()))(0); }
+    double model_kappa0          (int q)            const { return (double) getmuapprox_sample(q).getKernel().effweight(q); }
 
     // Work out frequentist certainty - see "Adaptive and Safe Bayesian Optimization in High Dimensions via One-Dimentional Subspaces"
 
@@ -571,9 +577,9 @@ public:
     int default_model_setkernelg    (const gentype               &nv);
     int default_model_setkernelgg   (const SparseVector<gentype> &nv);
 
-    int default_modelaugx_settspaceDim  (int                          nv) { return altfxapprox.settspaceDim(nv); }
-    int default_modelaugx_setsigma      (double                       nv) { return altfxapprox.setsigma(nv);     }
-    int default_modelaugx_setvarApproxim(int                          nv) { return altfxapprox.setvarApproxim(nv); }
+    int default_modelaugx_settspaceDim  (int                          nv) { return altaugxapprox.settspaceDim(nv); }
+    int default_modelaugx_setsigma      (double                       nv) { return altaugxapprox.setsigma(nv);     }
+    int default_modelaugx_setvarApproxim(int                          nv) { return altaugxapprox.setvarApproxim(nv); }
     int default_modelaugx_setkernelg    (const gentype               &nv);
     int default_modelaugx_setkernelgg   (const SparseVector<gentype> &nv);
 
@@ -646,8 +652,8 @@ public:
     double alpha;
     double beta;
 
-    ML_Mutable *srcmodel;
-    ML_Mutable *diffmodel;
+//    ML_Mutable *srcmodel;
+//    ML_Mutable *diffmodel;
 
     int srcmodelInd;
     int diffmodelInd;
@@ -667,15 +673,28 @@ public:
 
     // Models in use
 
+    Vector<ML_Base *> muapprox;
+    Vector<ML_Base *> muapprox_sample;
     ML_Base *sigmaapprox;
     Vector<ML_Base *> augxapprox;
     Vector<ML_Base *> cgtapprox;
 
-    // Sampled mu approximation
+    const ML_Base &getmuapprox_sample(                   int q) const { return ( muapprox_sample.size() && muapprox_sample(q) ) ? *muapprox_sample(      q) : getmuapprox(      q); }
+          ML_Base &getmuapprox_sample(const char *dummy, int q)       { return ( muapprox_sample.size() && muapprox_sample(q) ) ? *muapprox_sample(dummy,q) : getmuapprox(dummy,q); }
 
-    Vector<ML_Base *> muapprox_sample;
+    const ML_Base &getaugxapprox(                   int i) const { NiceAssert( i >= 0 ); NiceAssert( i < augxapprox.size() ); NiceAssert( augxapprox(      i) ); return *augxapprox(      i); }
+          ML_Base &getaugxapprox(const char *dummy, int i)       { NiceAssert( i >= 0 ); NiceAssert( i < augxapprox.size() ); NiceAssert( augxapprox(dummy,i) ); return *augxapprox(dummy,i); }
 
-    const ML_Base *getmuapprox(int q) const { return ( muapprox_sample.size() && muapprox_sample(q) ) ? muapprox_sample(q) : muapprox(q); }
+    const ML_Base &getcgtapprox(                   int i) const { NiceAssert( i >= 0 ); NiceAssert( i < cgtapprox.size() ); NiceAssert( cgtapprox(      i) ); return *cgtapprox(      i); }
+          ML_Base &getcgtapprox(const char *dummy, int i)       { NiceAssert( i >= 0 ); NiceAssert( i < cgtapprox.size() ); NiceAssert( cgtapprox(dummy,i) ); return *cgtapprox(dummy,i); }
+
+    const ML_Base &getsigmaapprox(                 ) const {               NiceAssert( sigmaapprox ); return *sigmaapprox; }
+          ML_Base &getsigmaapprox(const char *dummy)       { (void) dummy; NiceAssert( sigmaapprox ); return *sigmaapprox; }
+
+    const ML_Base &getmuapprox(                   int i) const { NiceAssert( i >= 0 ); NiceAssert( i < muapprox.size() ); NiceAssert( muapprox(      i) ); return *muapprox(      i); }
+          ML_Base &getmuapprox(const char *dummy, int i)       { NiceAssert( i >= 0 ); NiceAssert( i < muapprox.size() ); NiceAssert( muapprox(dummy,i) ); return *muapprox(dummy,i); }
+
+    Vector<int> muapproxInd;
 
     // Local store for x vectors
 
@@ -699,14 +718,6 @@ public:
     mutable SparseVector<gentype> xx1;   // just use a global here rather than constant calls to constructors and destructors
     mutable SparseVector<gentype> xx;    // just use a global here rather than constant calls to constructors and destructors
     mutable SparseVector<gentype> xxvar; // just use a global here rather than constant calls to constructors and destructors
-
-    // Models (moo == multi-objective), fx = model for q (see below), if used
-
-    Vector<ML_Base *> muapprox;
-    Vector<ML_Base *> fxapprox;
-
-    Vector<int> muapproxInd;
-    Vector<int> fxapproxInd;
 
     // Logging subsiduary (pdf production)
 
@@ -1199,8 +1210,8 @@ double SMBOOptions::inf_dist(const SparseVector<S> &xz) const
     gentype Kxzx1;
     gentype Kxx;
 
-    (*getmuapprox(0)).K2(Kxzx1,locxz,locx1); // kappa0.phi_z(||z-1||).phi_x(0) = kappa0.phi_z(||z-1||)
-    (*getmuapprox(0)).K2(Kxx,  locxz,locxz); // kappa0.phi_z(0).phi_x(0) = kappa0
+    getmuapprox_sample(0).K2(Kxzx1,locxz,locx1); // kappa0.phi_z(||z-1||).phi_x(0) = kappa0.phi_z(||z-1||)
+    getmuapprox_sample(0).K2(Kxx,  locxz,locxz); // kappa0.phi_z(0).phi_x(0) = kappa0
 //errstream() << "phantomxyz inf_dist calc: Kxzx1 " << Kxzx1 << "\n";
 //errstream() << "phantomxyz inf_dist calc: Kxx " << Kxx << "\n";
 
@@ -1237,7 +1248,7 @@ int SMBOOptions::model_mu(gentype &resg, const SparseVector<S> &x, const vecInfo
 
             NiceAssert( getxpweight().size() == getxbasis().size() );
 
-            int N = (*(muapprox(0))).N();
+            int N = getmuapprox(0).N();
 
             xsp.resize(N);
 
@@ -1251,7 +1262,7 @@ int SMBOOptions::model_mu(gentype &resg, const SparseVector<S> &x, const vecInfo
 
                 for ( j = 0 ; j < getxbasis().size() ; ++j )
                 {
-                    innerProduct(xmodprod("&",i,j),(*(muapprox(0))).x(i),getxbasis()(j));
+                    innerProduct(xmodprod("&",i,j),getmuapprox(0).x(i),getxbasis()(j));
                 }
             }
 
@@ -1267,7 +1278,11 @@ int SMBOOptions::model_mu(gentype &resg, const SparseVector<S> &x, const vecInfo
             {
                 i = xspp.size()-1;
 
-                MEMDELARRAY(xspp("&",i));
+                if ( xspp(i) )
+                {
+                    MEMDELARRAY(xspp("&",i));
+                }
+
                 xspp.remove(i);
             }
 
@@ -1295,7 +1310,7 @@ int SMBOOptions::model_mu(gentype &resg, const SparseVector<S> &x, const vecInfo
                 }
             }
 
-            xinf = &((*(muapprox(0))).getKernel().getvecInfo(xinfloc,*xxx,&xxp)); // Can't calculate the inner-product of vectors that aren't actually formed!
+            xinf = &(getmuapprox(0).getKernel().getvecInfo(xinfloc,*xxx,&xxp)); // Can't calculate the inner-product of vectors that aren't actually formed!
         }
 
         else
@@ -1324,12 +1339,12 @@ bailout:
                 {
                     SparseVector<gentype> tempx;
 
-                    ires += (*getmuapprox(0)).gg(resg,convnearuptonaive(tempx,*xxx));
+                    ires += getmuapprox_sample(0).gg(resg,convnearuptonaive(tempx,*xxx));
                 }
 
                 else
                 {
-                    ires += (*getmuapprox(0)).gg(resg,*xxx,xinf,pxyprodx);
+                    ires += getmuapprox_sample(0).gg(resg,*xxx,xinf,pxyprodx);
                 }
             }
 
@@ -1343,12 +1358,12 @@ bailout:
                     {
                         SparseVector<gentype> tempx;
 
-                        ires += (*getmuapprox(i)).gg(resgvec("&",i),convnearuptonaive(tempx,*xxx));
+                        ires += getmuapprox_sample(i).gg(resgvec("&",i),convnearuptonaive(tempx,*xxx));
                     }
 
                     else
                     {
-                        ires += (*getmuapprox(i)).gg(resgvec("&",i),*xxx,xinf,pxyprodx);
+                        ires += getmuapprox_sample(i).gg(resgvec("&",i),*xxx,xinf,pxyprodx);
                     }
                 }
             }
@@ -1379,7 +1394,7 @@ int SMBOOptions::model_mu(Vector<double> &resg, const SparseVector<S> &x, const 
 
             NiceAssert( getxpweight().size() == getxbasis().size() );
 
-            int N = (*(muapprox(0))).N();
+            int N = getmuapprox(0).N();
 
             xsp.resize(N);
 
@@ -1393,7 +1408,7 @@ int SMBOOptions::model_mu(Vector<double> &resg, const SparseVector<S> &x, const 
 
                 for ( j = 0 ; j < getxbasis().size() ; ++j )
                 {
-                    innerProduct(xmodprod("&",i,j),(*(muapprox(0))).x(i),getxbasis()(j));
+                    innerProduct(xmodprod("&",i,j),getmuapprox(0).x(i),getxbasis()(j));
                 }
             }
 
@@ -1409,7 +1424,11 @@ int SMBOOptions::model_mu(Vector<double> &resg, const SparseVector<S> &x, const 
             {
                 i = xspp.size()-1;
 
-                MEMDELARRAY(xspp("&",i));
+                if ( xspp(i) )
+                {
+                    MEMDELARRAY(xspp("&",i));
+                }
+
                 xspp.remove(i);
             }
 
@@ -1437,7 +1456,7 @@ int SMBOOptions::model_mu(Vector<double> &resg, const SparseVector<S> &x, const 
                 }
             }
 
-            xinf = &((*(muapprox(0))).getKernel().getvecInfo(xinfloc,*xxx,&xxp)); // Can't calculate the inner-product of vectors that aren't actually formed!
+            xinf = &(getmuapprox(0).getKernel().getvecInfo(xinfloc,*xxx,&xxp)); // Can't calculate the inner-product of vectors that aren't actually formed!
         }
 
         else
@@ -1468,12 +1487,12 @@ bailout:
                 {
                     SparseVector<gentype> tempx;
 
-                    ires += (*getmuapprox(0)).gg(resg("&",0),convnearuptonaive(tempx,*xxx));
+                    ires += getmuapprox_sample(0).gg(resg("&",0),convnearuptonaive(tempx,*xxx));
                 }
 
                 else
                 {
-                    ires += (*getmuapprox(0)).gg(resg("&",0),*xxx,0,xinf,pxyprodx);
+                    ires += getmuapprox_sample(0).gg(resg("&",0),*xxx,0,xinf,pxyprodx);
                 }
             }
 
@@ -1487,12 +1506,12 @@ bailout:
                     {
                         SparseVector<gentype> tempx;
 
-                        ires += (*getmuapprox(i)).gg(resg,convnearuptonaive(tempx,*xxx));
+                        ires += getmuapprox_sample(i).gg(resg,convnearuptonaive(tempx,*xxx));
                     }
 
                     else
                     {
-                        ires += (*getmuapprox(i)).gg(resg,*xxx,0,xinf,pxyprodx);
+                        ires += getmuapprox_sample(i).gg(resg,*xxx,0,xinf,pxyprodx);
                     }
                 }
             }
@@ -1531,7 +1550,7 @@ int SMBOOptions::model_muvar(gentype &resv, gentype &resmu, const SparseVector<S
 
             NiceAssert( getxpweight().size() == getxbasis().size() );
 
-            int N = (*(muapprox(0))).N();
+            int N = getmuapprox(0).N();
 
             xsp.resize(N);
 
@@ -1545,7 +1564,7 @@ int SMBOOptions::model_muvar(gentype &resv, gentype &resmu, const SparseVector<S
 
                 for ( j = 0 ; j < getxbasis().size() ; ++j )
                 {
-                    innerProduct(xmodprod("&",i,j),(*(muapprox(0))).x(i),getxbasis()(j));
+                    innerProduct(xmodprod("&",i,j),getmuapprox(0).x(i),getxbasis()(j));
                 }
             }
 
@@ -1561,7 +1580,11 @@ int SMBOOptions::model_muvar(gentype &resv, gentype &resmu, const SparseVector<S
             {
                 i = xspp.size()-1;
 
-                MEMDELARRAY(xspp("&",i));
+                if ( xspp(i) )
+                {
+                    MEMDELARRAY(xspp("&",i));
+                }
+
                 xspp.remove(i);
             }
 
@@ -1589,7 +1612,7 @@ int SMBOOptions::model_muvar(gentype &resv, gentype &resmu, const SparseVector<S
                 }
             }
 
-            xinf = &((*(muapprox(0))).getKernel().getvecInfo(xinfloc,*xxx,&xxp)); // Can't calculate the inner-product of vectors that aren't actually formed!
+            xinf = &(getmuapprox(0).getKernel().getvecInfo(xinfloc,*xxx,&xxp)); // Can't calculate the inner-product of vectors that aren't actually formed!
 
             MEMNEWARRAY(pxyprodxx,gentype *,2);
             pxyprodxx[0] = &xxp;
@@ -1653,12 +1676,12 @@ bailout:
                             {
                                 SparseVector<gentype> tempx;
 
-                                ires += (*getmuapprox(0)).var(resv,resmu,convnearuptonaive(tempx,*xxx));
+                                ires += getmuapprox_sample(0).var(resv,resmu,convnearuptonaive(tempx,*xxx));
                             }
 
                             else
                             {
-                                ires += (*getmuapprox(0)).var(resv,resmu,*xxx,xinf,pxyprodx,pxyprodxx);
+                                ires += getmuapprox_sample(0).var(resv,resmu,*xxx,xinf,pxyprodx,pxyprodxx);
                             }
                         }
 
@@ -1673,12 +1696,12 @@ bailout:
                                 {
                                     SparseVector<gentype> tempx;
 
-                                    ires += (*getmuapprox(i)).var(resvvec("&",i),resmuvec("&",i),convnearuptonaive(tempx,*xxx));
+                                    ires += getmuapprox_sample(i).var(resvvec("&",i),resmuvec("&",i),convnearuptonaive(tempx,*xxx));
                                 }
 
                                 else
                                 {
-                                    ires += (*getmuapprox(i)).var(resvvec("&",i),resmuvec("&",i),*xxx,xinf,pxyprodx,pxyprodxx);
+                                    ires += getmuapprox_sample(i).var(resvvec("&",i),resmuvec("&",i),*xxx,xinf,pxyprodx,pxyprodxx);
                                 }
                             }
                         }
@@ -1701,12 +1724,12 @@ bailout:
                         {
                             SparseVector<gentype> tempx,tempv;
 
-                            ires += (*getmuapprox(0)).noisevar(resv,resmu,convnearuptonaive(tempx,*xxx),convnearuptonaive(xxvar,tempv),-1);
+                            ires += getmuapprox_sample(0).noisevar(resv,resmu,convnearuptonaive(tempx,*xxx),convnearuptonaive(xxvar,tempv),-1);
                         }
 
                         else
                         {
-                            ires += (*getmuapprox(0)).noisevar(resv,resmu,*xxx,xxvar,-2,xinf,pxyprodx,pxyprodxx);
+                            ires += getmuapprox_sample(0).noisevar(resv,resmu,*xxx,xxvar,-2,xinf,pxyprodx,pxyprodxx);
                         }
                     }
 
@@ -1721,12 +1744,12 @@ bailout:
                             {
                                 SparseVector<gentype> tempx,tempv;
 
-                                ires += (*getmuapprox(i)).noisevar(resvvec("&",i),resmuvec("&",i),convnearuptonaive(tempx,*xxx),convnearuptonaive(xxvar,tempv),-1);
+                                ires += getmuapprox_sample(i).noisevar(resvvec("&",i),resmuvec("&",i),convnearuptonaive(tempx,*xxx),convnearuptonaive(xxvar,tempv),-1);
                             }
 
                             else
                             {
-                                ires += (*getmuapprox(i)).noisevar(resvvec("&",i),resmuvec("&",i),*xxx,xxvar,02,xinf,pxyprodx,pxyprodxx);
+                                ires += getmuapprox_sample(i).noisevar(resvvec("&",i),resmuvec("&",i),*xxx,xxvar,02,xinf,pxyprodx,pxyprodxx);
                             }
                         }
                     }
@@ -1753,12 +1776,12 @@ bailout:
                         {
                             SparseVector<gentype> tempx;
 
-                            ires += (*getmuapprox(0)).var(resv,resmu,convnearuptonaive(tempx,*xxx));
+                            ires += getmuapprox_sample(0).var(resv,resmu,convnearuptonaive(tempx,*xxx));
                         }
 
                         else
                         {
-                            ires += (*getmuapprox(0)).var(resv,resmu,*xxx,xinf,pxyprodx,pxyprodxx);
+                            ires += getmuapprox_sample(0).var(resv,resmu,*xxx,xinf,pxyprodx,pxyprodxx);
                         }
                     }
 
@@ -1773,12 +1796,12 @@ bailout:
                             {
                                 SparseVector<gentype> tempx;
 
-                                ires += (*getmuapprox(i)).var(resvvec("&",i),resmuvec("&",i),convnearuptonaive(tempx,*xxx));
+                                ires += getmuapprox_sample(i).var(resvvec("&",i),resmuvec("&",i),convnearuptonaive(tempx,*xxx));
                             }
 
                             else
                             {
-                                ires += (*getmuapprox(i)).var(resvvec("&",i),resmuvec("&",i),*xxx,xinf,pxyprodx,pxyprodxx);
+                                ires += getmuapprox_sample(i).var(resvvec("&",i),resmuvec("&",i),*xxx,xinf,pxyprodx,pxyprodxx);
                             }
                         }
                     }
@@ -1817,12 +1840,12 @@ bailout:
                     {
                         SparseVector<gentype> tempx;
 
-                        ires += (*getmuapprox(0)).gg(resmu,convnearuptonaive(tempx,*xxx));
+                        ires += getmuapprox_sample(0).gg(resmu,convnearuptonaive(tempx,*xxx));
                     }
 
                     else
                     {
-                        ires += (*getmuapprox(0)).gg(resmu,*xxx,xinf,pxyprodx);
+                        ires += getmuapprox_sample(0).gg(resmu,*xxx,xinf,pxyprodx);
                     }
                 }
 
@@ -1837,12 +1860,12 @@ bailout:
                         {
                             SparseVector<gentype> tempx;
 
-                            ires += (*getmuapprox(i)).gg(resmuvec("&",i),convnearuptonaive(tempx,*xxx));
+                            ires += getmuapprox_sample(i).gg(resmuvec("&",i),convnearuptonaive(tempx,*xxx));
                         }
 
                         else
                         {
-                            ires += (*getmuapprox(i)).gg(resmuvec("&",i),*xxx,xinf,pxyprodx);
+                            ires += getmuapprox_sample(i).gg(resmuvec("&",i),*xxx,xinf,pxyprodx);
                         }
                     }
                 }
@@ -1858,12 +1881,12 @@ bailout:
                 {
                     SparseVector<gentype> tempx,tempv;
 
-                    ires |= (*sigmaapprox).noisevar(resscalarv,dummy,convnearuptonaive(tempx,*xxx),convnearuptonaive(tempv,xxvar),-1);
+                    ires |= getsigmaapprox().noisevar(resscalarv,dummy,convnearuptonaive(tempx,*xxx),convnearuptonaive(tempv,xxvar),-1);
                 }
 
                 else
                 {
-                    ires |= (*sigmaapprox).noisevar(resscalarv,dummy,*xxx,xxvar,-2,xinf,pxyprodx,pxyprodxx);
+                    ires |= getsigmaapprox().noisevar(resscalarv,dummy,*xxx,xxvar,-2,xinf,pxyprodx,pxyprodxx);
                 }
 
                 if ( !muapprox.size() )
@@ -1890,12 +1913,12 @@ bailout:
                 {
                     SparseVector<gentype> tempx;
 
-                    ires |= (*sigmaapprox).var(resscalarv,dummy,convnearuptonaive(tempx,*xxx));
+                    ires |= getsigmaapprox().var(resscalarv,dummy,convnearuptonaive(tempx,*xxx));
                 }
 
                 else
                 {
-                    ires |= (*sigmaapprox).var(resscalarv,dummy,*xxx,xinf,pxyprodx,pxyprodxx);
+                    ires |= getsigmaapprox().var(resscalarv,dummy,*xxx,xinf,pxyprodx,pxyprodxx);
                 }
 
                 if ( !muapprox.size() )
@@ -1930,7 +1953,7 @@ int SMBOOptions::model_covar(Matrix<gentype> &resv, const Vector<SparseVector<S>
 
     model_convertx(xxx,x);
 
-    return (*sigmaapprox).covar(resv,xxx);
+    return getsigmaapprox().covar(resv,xxx);
 }
 
 template <class S>
@@ -1938,7 +1961,7 @@ void SMBOOptions::model_stabProb(double &res, const SparseVector<S> &x, int p, d
 {
     SparseVector<gentype> tempx;
 
-    (*(muapprox(0))).stabProb(res,convnearuptonaive(tempx,model_convertx(xx,x)),p,pnrm,rot,mu,B);
+    getmuapprox(0).stabProb(res,convnearuptonaive(tempx,model_convertx(xx,x)),p,pnrm,rot,mu,B);
 }
 
 
@@ -1977,12 +2000,12 @@ int SMBOOptions::model_mu_cgt(Vector<gentype> &resmu, const SparseVector<S> &x, 
         {
             SparseVector<gentype> tempx;
 
-            ires += (*cgtapprox(i)).gg(resmu("&",i),convnearuptonaive(tempx,*xxx));
+            ires += getcgtapprox(i).gg(resmu("&",i),convnearuptonaive(tempx,*xxx));
         }
 
         else
         {
-            ires += (*cgtapprox(i)).gg(resmu("&",i),*xxx,nullptr,nullptr);
+            ires += getcgtapprox(i).gg(resmu("&",i),*xxx,nullptr,nullptr);
         }
     }
 
@@ -2028,12 +2051,12 @@ int SMBOOptions::model_muvar_cgt(Vector<gentype> &resv, Vector<gentype> &resmu, 
             {
                 SparseVector<gentype> tempx,tempv;
 
-                ires += (*cgtapprox(i)).noisevar(resv("&",i),resmu("&",i),convnearuptonaive(tempx,*xxx),convnearuptonaive(xxvar,tempv),-1);
+                ires += getcgtapprox(i).noisevar(resv("&",i),resmu("&",i),convnearuptonaive(tempx,*xxx),convnearuptonaive(xxvar,tempv),-1);
             }
 
             else
             {
-                ires += (*cgtapprox(i)).noisevar(resv("&",i),resmu("&",i),*xxx,xxvar,02,nullptr,nullptr,nullptr);
+                ires += getcgtapprox(i).noisevar(resv("&",i),resmu("&",i),*xxx,xxvar,02,nullptr,nullptr,nullptr);
             }
         }
     }
@@ -2046,19 +2069,18 @@ int SMBOOptions::model_muvar_cgt(Vector<gentype> &resv, Vector<gentype> &resmu, 
             {
                 SparseVector<gentype> tempx;
 
-                ires += (*cgtapprox(i)).var(resv("&",i),resmu("&",i),convnearuptonaive(tempx,*xxx));
+                ires += getcgtapprox(i).var(resv("&",i),resmu("&",i),convnearuptonaive(tempx,*xxx));
             }
 
             else
             {
-                ires += (*cgtapprox(i)).var(resv("&",i),resmu("&",i),*xxx,nullptr,nullptr,nullptr);
+                ires += getcgtapprox(i).var(resv("&",i),resmu("&",i),*xxx,nullptr,nullptr,nullptr);
             }
         }
     }
 
     return ires;
 }
-
 
 
 
@@ -2078,7 +2100,7 @@ int SMBOOptions::modelaugx_int_mu(Vector<gentype> &resmu, const SparseVector<S> 
 
     for ( i = 0 ; i < augxapprox.size() ; ++i )
     {
-        ires |= (*(augxapprox(i))).gg(resmu("&",i),x);
+        ires |= getaugxapprox(i).gg(resmu("&",i),x);
     }
 
     return ires;
@@ -2095,7 +2117,7 @@ int SMBOOptions::modelaugx_int_muvar(Vector<gentype> &resvar, Vector<gentype> &r
 
     for ( i = 0 ; i < augxapprox.size() ; ++i )
     {
-        ires |= (*(augxapprox(i))).var(resvar("&",i),resmu("&",i),x);
+        ires |= getaugxapprox(i).var(resvar("&",i),resmu("&",i),x);
     }
 
     return ires;

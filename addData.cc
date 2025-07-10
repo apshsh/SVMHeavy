@@ -30,7 +30,7 @@
 int addtrainingdata(ML_Base &mlbase, const char *trainfile, int reverse, int ignoreStart, int imax, int ibase, const char *savefile)
 {
     std::string tfile(trainfile);
-    std::string sfile(savefile ? "" : savefile);
+    std::string sfile(savefile ? savefile : "");
     SparseVector<gentype> xtemp;
 
     return addtrainingdata(mlbase,xtemp,tfile,reverse,ignoreStart,imax,ibase,sfile);

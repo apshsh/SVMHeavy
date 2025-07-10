@@ -119,6 +119,7 @@ public:
 
     // Constructors and Destructors
 
+             SparseVector(const T               &src);
              SparseVector(const SparseVector<T> &src);
     explicit SparseVector(const Vector<T>       &src);
     explicit SparseVector();
@@ -2262,6 +2263,26 @@ SparseVector<T>::SparseVector(const SparseVector<T> &src) : indices(nullptr), co
     setzero((*content)("&",0));
 
     *this = src;
+}
+
+template <class T>
+SparseVector<T>::SparseVector(const T &src) : indices(nullptr), content(nullptr),
+                                  npointer(nullptr), f1pointer(nullptr), f2pointer(nullptr), f3pointer(nullptr), f4pointer(nullptr),
+                                  xnupsize(-1), xf1upsize(-1), xf2upsize(-1), xf3upsize(-1), xf4upsize(-1),
+                                  altcontent(nullptr), altcontentsp(nullptr), xvecID(0)
+{
+    MEMNEW(indices,Vector<int>(1));
+    MEMNEW(content,Vector<T>(2));
+
+    resetvecID();
+
+    NiceAssert(indices);
+    NiceAssert(content);
+
+    setzero((*content)("&",0));
+    (*content)("&",1) = src;
+
+    (*indices)("&",0) = 0;
 }
 
 template <class T>

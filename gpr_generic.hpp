@@ -16,7 +16,7 @@
 //
 // Currently this is basically a wrap-around for a LS-SVR with C mapped to
 // 1/sigma for noise regularisation.  This is equivalent to the standard
-// GP regressor assuming Gaussian measurement noise.  By default the zero 
+// GP regressor assuming Gaussian measurement noise.  By default the zero
 // mean case is assumed (translates to fixed bias), but you can change this
 // and it will work for the general case (variance adjusted as per:
 //
@@ -80,9 +80,9 @@ public:
 
     // Information functions (training data):
 
-    virtual int NNC(int d)    const override { return Nnc(d+1);           }
-    virtual int type(void)    const override { return -1;                 }
-    virtual int subtype(void) const override { return -1;                 }
+    virtual int NNC(int d)    const override { return Nnc(d+1); }
+    virtual int type(void)    const override { return -1;       }
+    virtual int subtype(void) const override { return -1;       }
 
     virtual int isSolGlob(void) const override { return 1; }
 
@@ -91,15 +91,15 @@ public:
     virtual double calcDistInt(int    ha, int    hb, int ia = -1, int db = 2) const override { return ML_Base::calcDistInt(ha,hb,ia,db); }
     virtual double calcDistDbl(double ha, double hb, int ia = -1, int db = 2) const override { return ML_Base::calcDistDbl(ha,hb,ia,db); }
 
-    virtual double C(void)         const override { return 1/dsigma;                }
-    virtual double sigma(void)     const override { return dsigma;                  }
-    virtual double sigma_cut(void) const override { return dsigma_cut;              }
-    virtual double Cclass(int d)   const override { (void) d; return 1.0;           }
+    virtual double C(void)         const override { return 1/dsigma;      }
+    virtual double sigma(void)     const override { return dsigma;        }
+    virtual double sigma_cut(void) const override { return dsigma_cut;    }
+    virtual double Cclass(int d)   const override { (void) d; return 1.0; }
 
-    virtual const Vector<gentype>                &y          (void) const override { return dy;                        }
-    virtual const Vector<int>                    &d          (void) const override { return xd;                        }
-    virtual const Vector<double>                 &Cweight    (void) const override { return dCweight;                  }
-    virtual const Vector<double>                 &sigmaweight(void) const override { return dsigmaweight;              }
+    virtual const Vector<gentype> &y          (void) const override { return dy;           }
+    virtual const Vector<int>     &d          (void) const override { return xd;           }
+    virtual const Vector<double>  &Cweight    (void) const override { return dCweight;     }
+    virtual const Vector<double>  &sigmaweight(void) const override { return dsigmaweight; }
 
     // Training set modification:
 

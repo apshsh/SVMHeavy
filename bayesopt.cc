@@ -1,3 +1,10 @@
+/*
+FIXME: this line:
+    muy += 1.0; // DESIGN DECISION: typically mu will range between -1,0 here, but this scaling is bad for the constrained case. Thus we
+                // add 1 to "fix" the problem and make mu range from 0,1 (somewhat arbitrarily).
+should be muy += yymin, provided yymin >= (value set externally, default 1)
+*/
+
 //FIXME: can we plot slides on request
 //FIXME: press key to turn feedback on (but suppressed for next layer in).
 //       Plus feedback option to turn feedback off. That way the operator
@@ -391,6 +398,7 @@ class fninnerinnerArg
     const Matrix<double> &unscentSqrtSigma;
     const int &stabUseSig;
     const double &stabThresh;
+    int PIscale = bbopts.PIscale;
 
     int mode; // 0 for normal, set 1 when entering DirECT, which will calc beta and zero x precisely once then set to 2, set 2 for no beta calc/x zero
     double storebeta;
@@ -891,7 +899,7 @@ class fninnerinnerArg
 
         else if ( isgridopt && !iscontopt && ( gridi >= 0 ) )
         {
-            if ( ( ( method != 0 ) && ( method != 12 ) && ( method != 16 ) ) || bbopts.isimphere() )
+            if ( ( ( method != 0 ) && ( method != 12 ) && ( method != 16 ) ) || bbopts.isimphere() || PIscale )
             {
                 // Model requires sigma
 
@@ -913,7 +921,7 @@ class fninnerinnerArg
 
         else
         {
-            if ( ( ( method != 0 ) && ( method != 12 ) && ( method != 16 ) ) || bbopts.isimphere() )
+            if ( ( ( method != 0 ) && ( method != 12 ) && ( method != 16 ) ) || bbopts.isimphere() || PIscale )
             {
                 // Model requires sigma.
 
@@ -1068,6 +1076,16 @@ class fninnerinnerArg
         }
     }
 
+    double yymax = ( ymax.isValVector() ) ? 0.0 : ((double) ymax);
+    double yymaxcorrect = yymax;
+
+    if ( !ymax.isValVector() && !muy.isValVector() )
+    {
+        muy += 1.0; // DESIGN DECISION: typically mu will range between -1,0 here, but this scaling is bad for the constrained case. Thus we
+                    // add 1 to "fix" the problem and make mu range from 0,1 (somewhat arbitrarily).
+        yymaxcorrect += 1.0; // NEED TO CORRECT THIS AS WELL FOR EI
+    }
+
     // Sanity check here!
 
     if ( testisvnan(sigmay) )
@@ -1112,6 +1130,35 @@ class fninnerinnerArg
 
     double stabscore = 1.0;
 
+    // =======================================================================
+    // =======================================================================
+    // Work out PI scale (on the objective, but not including cgt)
+    // =======================================================================
+    // =======================================================================
+
+    double resscale = 1.0;
+
+    if ( PIscale )
+    {
+        NiceAssert( !ymax.isValVector() && !muy.isValVector() );
+
+        if ( (double) sigmay > ztol )
+        {
+            double z = ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay );
+            double Phiz = 0;
+
+            Phiz = normPhi(z);
+
+            resscale = Phiz;
+        }
+
+        else if ( (double) muy < yymaxcorrect )
+        {
+            resscale = 0;
+        }
+    }
+
+//errstream() << "phantomxyz muy(" << x << ") = " << muy << " and sigmay = " << sigmay << "\n";
     // =======================================================================
     // =======================================================================
     // Incorporate constraints into mean and variance if cgtmethod == 1
@@ -1240,6 +1287,7 @@ class fninnerinnerArg
 
         muy    = meantot;      // corrected mean
         sigmay = sqrt(vartot); // corrected variance
+//errstream() << "phantomxyz corrected muy = " << muy << " and sigmay = " << sigmay << "\n";
     }
 
     // =======================================================================
@@ -1313,7 +1361,8 @@ class fninnerinnerArg
     // =======================================================================
 
     double res = 0;
-    double yymax = ( ymax.isValVector() ) ? 0.0 : ((double) ymax);
+//    double yymax = ( ymax.isValVector() ) ? 0.0 : ((double) ymax);
+//    double yymaxcorrect = yymax + correction factor
 
     if ( bbopts.isimphere() )
     {
@@ -1451,7 +1500,7 @@ class fninnerinnerArg
                 {
                     if ( (double) sigmay > ztol )
                     {
-                        double z = ( ( (double) muy ) - yymax ) / ( (double) sigmay );
+                        double z = ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay );
 
                         //double Phiz = Phifn(z);
                         //double phiz = phifn(z);
@@ -1465,7 +1514,7 @@ class fninnerinnerArg
                         Phiz = normPhi(z-zeta);
                         phiz = normphi(z-zeta);
 
-                        res = ( ( ( (double) muy ) - yymax - zeta ) * Phiz )
+                        res = ( ( ( (double) muy ) - yymaxcorrect - zeta ) * Phiz )
                             + ( ( (double) sigmay ) * phiz );
                     }
 
@@ -1475,9 +1524,9 @@ class fninnerinnerArg
                         // if muy < ymax then z = -infty, so Phiz = 0,  phiz = infty
                         // assume lim_{z->-infty} sigmay.phiz = 0
 
-                        if ( (double) muy > yymax-zeta )
+                        if ( (double) muy > yymaxcorrect-zeta )
                         {
-                            res = ( (double) muy ) - yymax - zeta;
+                            res = ( (double) muy ) - yymaxcorrect - zeta;
                         }
 
                         else
@@ -1498,7 +1547,7 @@ class fninnerinnerArg
 
                 if ( (double) sigmay > ztol )
                 {
-                    double z = ( ( (double) muy ) - yymax ) / ( (double) sigmay );
+                    double z = ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay );
 
                     //double Phiz = Phifn(z);
 
@@ -1513,7 +1562,7 @@ class fninnerinnerArg
 
                 else
                 {
-                    if ( (double) muy > yymax )
+                    if ( (double) muy > yymaxcorrect )
                     {
                         res = 1;
                     }
@@ -1535,9 +1584,6 @@ class fninnerinnerArg
 
                 double locsigmay = (double) sigmay;
                 double locmuy = (double) muy;
-
-                locmuy += 1.0; // DESIGN DECISION: typically mu will range between -1,0 here, but this scaling is bad for the constrained case. Thus we
-                               // add 1 to "fix" the problem and make mu range from 0,1 (somewhat arbitrarily).
 
                 //FIXME: assuming binomial distribution here, may not be valid
 
@@ -1619,6 +1665,7 @@ locsigmay = stabscore*stabscore*locsigmay;
             bbopts.model_muvar_cgt(varcgt,mucgt,x);
         }
 
+//errstream() << "phantomxyz mucgt(" << x << ") = " << mucgt << " and varcgt = " << varcgt << "\n";
         double probofvalid = 1;
         double totalconstraintvariance = 0;
 
@@ -1664,6 +1711,7 @@ locsigmay = stabscore*stabscore*locsigmay;
             }
         }
 
+//errstream() << "phantomxyz probofvalid = " << probofvalid << "\n";
         if ( method == 10 )
         {
             // Method 10 aims for exploration in constraints and objective
@@ -1673,7 +1721,9 @@ locsigmay = stabscore*stabscore*locsigmay;
 
         else
         {
+//errstream() << "phantomxyz res = " << res << "*" << probofvalid;
             res *= probofvalid;
+//errstream() << "= " << res << "\n";
         }
     }
 
@@ -1686,7 +1736,7 @@ locsigmay = stabscore*stabscore*locsigmay;
 
     res = -res; // Set up for minimiser
 
-    return res;
+    return res*resscale;
   }
 };
 
@@ -2419,6 +2469,7 @@ int bayesOpt(int dim,
                 {
                     fres = (double) ytoadd;
                     ires = Nbasemu+i;
+errstream() << "New fres (a) = " << fres << "\n";
                 }
             }
 
@@ -2475,6 +2526,7 @@ int bayesOpt(int dim,
                 {
                     fres = (double) ytoadd;
                     ires = Nbasemu+i;
+errstream() << "New fres (b) = " << fres << "\n";
                 }
             }
 
@@ -3010,6 +3062,7 @@ int bayesOpt(int dim,
                 {
                     fres = (double) fnapproxout;
                     ires = Ninmu;
+errstream() << "New fres (c) = " << fres << "\n";
                 }
 
 //phantomabc                else if ( isfullfid && isgridopt && !iscontopt && isfullgrid && ( ( ires == -1 ) || ( bopts.model_y()(Nbasemu+gridi) > fres ) ) && ( ycgt >= 0.0_gent ) )
@@ -3017,6 +3070,7 @@ int bayesOpt(int dim,
                 {
                     fres = bopts.model_y()(Nbasemu+gridi);
                     ires = ( isgridopt && !iscontopt ) ? Nbasemu+gridi : (bopts.model_N_mu())-1;
+errstream() << "New fres (d) = " << fres << "\n";
                 }
 
                 // ===========================================================
@@ -3776,7 +3830,7 @@ int bayesOpt(int dim,
                             xmax("&",n-dimfid+jij) = 1;
                         }
 
-                        //errstream() << "phantomxyz fidelity model Gp " << dynamic_cast<const GPR_Generic &>(*(bopts.getmuapprox(0))).gprGp() << "\n";
+                        //errstream() << "phantomxyz fidelity model Gp " << dynamic_cast<const GPR_Generic &>(bopts.getmuapprox_sample(0)).gprGp() << "\n";
                         //errstream() << "phantomxyz fidelity model " << *(bopts.getmuapprox(0)) << "\n";
 
                         Vector<int> zindex(dimfid);
@@ -5044,6 +5098,7 @@ inneroptions:
             {
                 fres = fnapproxout;
                 ires = ( isgridopt && !iscontopt ) ? Nbasemu+gridi : (bopts.model_N_mu())-1;
+errstream() << "New fres (e) = " << fres << "\n";
             }
 
 //phantomabc            else if ( doeval && isfullfid && isgridopt && !iscontopt && isfullgrid && ( ( ires == -1 ) || ( bopts.model_y()(Nbasemu+gridi) > fres ) ) && ( ycgt >= 0.0_gent ) )
@@ -5051,6 +5106,7 @@ inneroptions:
             {
                 fres = bopts.model_y()(Nbasemu+gridi);
                 ires = ( isgridopt && !iscontopt ) ? Nbasemu+gridi : (bopts.model_N_mu())-1;
+errstream() << "New fres (f) = " << fres << "\n";
             }
         }
 

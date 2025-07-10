@@ -1,166 +1,3 @@
-/*
-FOR PYHEAVY:
-
-- add data from a file
-- -tx etc
-- kernels!
-
-SVM:
-** done?
-. to do as per others (M,E,X)
-
-    virtual const Matrix<double> &Gp(void) const { return getSVMconst().Gp(); }
-
-
-can be set
-    virtual int isanomalyOn(void)  const { return getSVMconst().isanomalyOn();  }
-    virtual int isanomalyOff(void) const { return getSVMconst().isanomalyOff(); }
-    virtual double anomalyNu(void)    const { return getSVMconst().anomalyNu();    }
-    virtual int    anomalyClass(void) const { return getSVMconst().anomalyClass(); }
-
-                    else if ( currcommand(0) == "-Ac"   ) { getMLref(svmbase,svmInd).addclass(safeatoi(currcommand(1),argvariables));          }
-                    else if ( currcommand(0) == "-Acz"  ) { getMLref(svmbase,svmInd).addclass(safeatoi(currcommand(1),argvariables),1);        }
-                    else if ( currcommand(0) == "-Aca"  ) { getMLref(svmbase,svmInd).anomalyOn(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-Acd"  ) { getMLref(svmbase,svmInd).anomalyOff();                                             }
-                    else if ( currcommand(0) == "-As"   ) { getMLref(svmbase,svmInd).setanomalyclass(safeatoi(currcommand(1),argvariables));   }
-
-    output << ( ( basic || advanced ) ? "         -Ac  d          - add class to SVM  (multiclass only)  without adding\n" : "" );
-    output << ( ( basic || advanced ) ? "                           any vectors from that class.                       \n" : "" );
-    output << ( (          advanced ) ? "         -Acz d          - like -Ac d, but sets epsilon = 0 for this component\n" : "" );
-    output << ( (          advanced ) ? "                           if recursive division or max wins multiclass used. \n" : "" );
-    output << ( (          advanced ) ? "         -Aca d nu       - add anomaly detector to multiclass SVM with label d\n" : "" );
-    output << ( (          advanced ) ? "                           and anomaly detection parameter nu.                \n" : "" );
-    output << ( (          advanced ) ? "         -Acd            - remove anomaly detector.                           \n" : "" );
-    output << ( (          advanced ) ? "         -As  n          - set single-class  SVM non-anomaly  label (+1 or -1,\n" : "" );
-    output << ( (          advanced ) ? "                           +1 by defaulg).                                    \n" : "" );
-
-can be set
-    virtual       int      maxiterfuzzt(void) const { return getSVMconst().maxiterfuzzt(); }
-**    virtual       int      usefuzzt(void)     const { return getSVMconst().usefuzzt();     }
-    virtual       double   lrfuzzt(void)      const { return getSVMconst().lrfuzzt();      }
-    virtual       double   ztfuzzt(void)      const { return getSVMconst().ztfuzzt();      }
-    virtual const gentype &costfnfuzzt(void)  const { return getSVMconst().costfnfuzzt();  }
-
-can be set
-    virtual int anomclass(void)          const { return getSVMconst().anomclass();       }
-    virtual int singmethod(void)         const { return getSVMconst().singmethod();      }
-    virtual double rejectThreshold(void) const { return getSVMconst().rejectThreshold(); }
-
-can be set
-    virtual int kconstWeights(void) const { return getSVMconst().kconstWeights(); }
-
-
-
-
-
-
-
-
-
-Kernels:
-
-         -ki  i          - define which kernel elm i  is being set (default 0,
-                           or 1 if this is an MLM non-input layer).
-         -ks  n          - set kernel dictionary size n (default 1).
-         -kn             - set kernel normalised (this element).
-         -ku             - set kernel unnormalised (this element, default).
-         -kss            - set kernel symm set (overall, default).
-         -kus            - unset kernel symm set.
-         -knn            - set kernel normalised (overall).
-         -kuu            - set kernel unnormalised (overall, default).
-         -kp             - set kernel as axis-product type.
-         -knp            - set kernel as not-axis-product type (overall,dflt).
-         -krn v          - set kernel rank constraint kernel construct type:
-
-         -kg  g          - set x scale, non-ARD style ( x:= x/g ).
-         -kgg g          - set x scale, ARD style ( x_i := x_i/g_i for all i).
-
-         -km             - modify so K(x,y) -> K(x,x).K(y,y).
-         -kum            - undo -km (default).
-
-         -kt  t          - type of kernel function.
-
-         -kg  x          - kernel param r0  = x   (default 1).
-         -kr  x          - kernel param r1  = x   (default 0 or 1).
-         -kf  $fn        - kernel param r10 = $fn (dft (var(0,1)+var(0,2))/2).
-         -kv  i x        - kernel param ri  = x   (default 0).
-         -kd  x          - kernel param i0  = x   (default 2).
-         -kG  x          - kernel param i0  = x   (default 1).
-         -kV  i x        - kernel param ii  = x   (default 0).
-
-         -kglb  x        - kernel param r0 nominal lower bound (kernel tune).
-         -krlb  x        - kernel param r1 nominal lower bound (kernel tune).
-         -kvlb  i x      - kernel param ri nominal lower bound (kernel tune).
-         -kdlb  x        - kernel param i0 nominal lower bound (kernel tune).
-         -kGlb  x        - kernel param i0 nominal lower bound (kernel tune).
-         -kVlb  i x      - kernel param ii nominal lower bound (kernel tune).
-
-         -kgub  x        - kernel param r0 nominal upper bound (kernel tune).
-         -krub  x        - kernel param r1 nominal upper bound (kernel tune).
-         -kvub  i x      - kernel param ri nominal upper bound (kernel tune).
-         -kdub  x        - kernel param i0 nominal upper bound (kernel tune).
-         -kGub  x        - kernel param i0 nominal upper bound (kernel tune).
-         -kVub  i x      - kernel param ii nominal upper bound (kernel tune).
-
-         -kI  v          - set kernels  indexing using  given index  vector v,
-                           where  the  argument  is a  vector of  non-negative
-                           integers   (eg [ 0 4 5 ])   in   increasing   order
-                           corresponding to the indexes used.
-         -kU             - set kernel unindexed.
-         -kw  w          - set weight w>=0 of kernel function (default 1). The
-                           weight can be anything (not just double), which may
-                           be useful eg for matrix-valued kernels.
-         -kwlb w         - nominal lower bound on -kw for kernel tuning.
-         -kwub w         - nominal upper bound on -kw for kernel tuning.
-
-         -kx  [ n0 ... ] [ A0 ... ] - set kernel transform, so:
-
-                    K(x,y) = sum_i Ai (d^ni/dx^ni) (d^ni/dy^ni)^T K(x,y) Ai^T
-
-         -ka  n          - number of samples used  when computing distribution
-                           similarity (Muandet et al SMM).
-         -kb  [ i j .. ] - indices of var(0,..) variables sampled.
-         -ke  [ fi fj ..]- distribution useds for var(0,..) ].
-
-         -kc             - set kernel chained.
-         -kuc            - set kernel unchained.
-
-         -kS             - set kernel split.
-         -kA             - additive kernel split.
-         -kuS            - set kernel unsplit (default).
-
-         -kMS            - set kernel multiply point.
-         -kMA            - set kernel addition point.
-         -kMuS           - set kernel non-multiply point.
-
-         -ko  i j        - replace parameter  ri with input  product xj.yj (or
-                           just yj for neural networks).
-         -kO  i j        - replace  parameter ii  with input  (int) xj.yj  (or
-                           just (int) yj for neural networks).
-         -koz            - delete all defined ri parameter replacements.
-         -kOz            - delete all defined ii parameter replacements.
-
-         -kan i          - Set difference definition (default 1).
-
-                  -- Kernel transfer                               --
-
-         -ktx i          - obtain (transfer) this kernel from ML i.
-
-                  -- MLM specific options                          --
-
-         -ktk i          - which layer kernel is set above (-1 output, deflt).
-                           Use -ktk -1 to adjust the inheritance type (must be
-                           a type 8xx kernel, default is 802).
-
-         -e...   sets kernel parameters for output kernels.
-         -r...   sets kernel parameters for output kernels.
-*/
-
-
-
-
-
-
 //FIXME: document the fullgrid stuff! In particular, the gridsource file format and the various special cases
 //FIXME: deal with case where some isfullgrid have nulls and others dont
 //FIXME: isfullgrid override: suppose the model is linear and the data is not: you might want to enforce linearity (approx), so you need the model.
@@ -1073,6 +910,8 @@ void deleteMLs(SparseVector<ML_Mutable *> &svmbase)
 void grabsvm(SparseVector<ML_Mutable *> &svmbase, int svmInd)
 {
     // If svmInd does not exist we need to make it and own it
+
+    NiceAssert( svmInd >= 0 );
 
     if ( svmbase(svmInd) == nullptr )
     {
@@ -4231,6 +4070,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmgtrkan"    ) ||
                       ( currentarg == "-gmmu"        ) ||
                       ( currentarg == "-gmmugt"      ) ||
+                      ( currentarg == "-gmft"        ) ||
                       ( currentarg == "-gmmuml"      ) ||
                       ( currentarg == "-gmsmu"       ) ||
                       ( currentarg == "-gmsmugt"     ) ||
@@ -7540,32 +7380,33 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gmgtd"    ) { (*xbopts).default_modelcgt_setsigma(safeatof(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-gmgtg"    ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_modelcgt_setkernelg(temp); }
                     else if ( currcommand(0) == "-gmgtgg"   ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_modelcgt_setkernelgg(xscale); }
-                    else if ( currcommand(0) == "-gmgtmd"   ) { (*xbopts).tunecgt      = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmgtmd"   ) { (*xbopts).tunecgt       = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmLf"     ) { (*xbopts).plotfreq      = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmLF"     ) { (*xbopts).modeloutformat= safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmLn"     ) { (*xbopts).modelname     = currcommand(1); }
                     else if ( currcommand(0) == "-gmhplb"   ) { (*xbopts).modelbaseline = currcommand(1); }
                     else if ( currcommand(0) == "-gmmu"     ) { ((*xbopts).altmuapprox).setprim(safeatoi(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-gmmugt"   ) { gentype mudef(currcommand(1)); ((*xbopts).altmuapprox).setprival(mudef); }
+                    else if ( currcommand(0) == "-gmft"     ) { (*xbopts).PIscale      = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmmuml"   ) { ((*xbopts).altmuapprox).setpriml(&(getMLref(svmbase,safeatoi(currcommand(1),argvariables)))); }
-                    else if ( currcommand(0) == "-gmsmu"    ) { ((*xbopts).altfxapprox).setprim(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-gmsmugt"  ) { gentype mudef(currcommand(1)); ((*xbopts).altfxapprox).setprival(mudef); }
-                    else if ( currcommand(0) == "-gmsmuml"  ) { ((*xbopts).altfxapprox).setpriml(&(getMLref(svmbase,safeatoi(currcommand(1),argvariables)))); }
+                    else if ( currcommand(0) == "-gmsmu"    ) { ((*xbopts).altaugxapprox).setprim(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmsmugt"  ) { gentype mudef(currcommand(1)); ((*xbopts).altaugxapprox).setprival(mudef); }
+                    else if ( currcommand(0) == "-gmsmuml"  ) { ((*xbopts).altaugxapprox).setpriml(&(getMLref(svmbase,safeatoi(currcommand(1),argvariables)))); }
                     else if ( currcommand(0) == "-gmgtmu"   ) { ((*xbopts).altcgtapprox).setprim(safeatoi(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-gmgtmugt" ) { gentype mudef(currcommand(1)); ((*xbopts).altcgtapprox).setprival(mudef); }
                     else if ( currcommand(0) == "-gmgtmuml" ) { ((*xbopts).altcgtapprox).setpriml(&(getMLref(svmbase,safeatoi(currcommand(1),argvariables)))); }
 
                     else if ( currcommand(0) == "-gmsw" )
                     {
-                        Vector<int> fxapproxInd;
+                        Vector<int> augxapproxInd;
 
-                        safeatowhatever(fxapproxInd,currcommand(1),argvariables);
+                        safeatowhatever(augxapproxInd,currcommand(1),argvariables);
 
                         int ifr;
 
-                        for ( ifr = 0 ; ifr < fxapproxInd.size() ; ++ifr )
+                        for ( ifr = 0 ; ifr < augxapproxInd.size() ; ++ifr )
                         {
-                            (*xbopts).extfxapprox = &(getMLref(svmbase,fxapproxInd(ifr)));
+                            (*xbopts).extaugxapprox = &(getMLref(svmbase,augxapproxInd(ifr)));
                         }
                     }
 
@@ -7648,7 +7489,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::string currcommandis = "-" + ((currcommand(0)).substr(5));
 
-                        ML_Base &kernML = (*xbopts).altfxapprox;
+                        ML_Base &kernML = (*xbopts).altaugxapprox;
                         MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
                         processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gsekkernnum,gsekfirstcall,svmbase,svmInd);
@@ -7662,7 +7503,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::string currcommandis = "-" + ((currcommand(0)).substr(5));
 
-                        ML_Base &kernML = (*xbopts).altfxapprox;
+                        ML_Base &kernML = (*xbopts).altaugxapprox;
                         MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
                         processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,gsrkkernnum,gsrkfirstcall,svmbase,svmInd);
@@ -7674,7 +7515,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     {
                         std::string currcommandis = "-" + ((currcommand(0)).substr(4));
 
-                        ML_Base &kernML = (*xbopts).altfxapprox;
+                        ML_Base &kernML = (*xbopts).altaugxapprox;
                         MercerKernel &theKern = kernML.getKernel_unsafe();
 
                         processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmbase,svmInd);
@@ -10843,6 +10684,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
         std::string loclogfile = logfile+"_gridlog";
 
         callsvm(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
+        errstream() << "res = " << res << " ... ";
 
         MEMDEL(gridcommstack);
     }
@@ -16216,6 +16058,8 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -gmr            - add noise to model observations.                   \n" : "" );
     output << ( (          advanced ) ? "         -gmR            - don't add noise to model observations (default).   \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -gmft  {0,1}    - if 1 then we scale the scquisition function by PI. \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmgtc n        - number of inequality constraints c(x) >= 0.        \n" : "" );
     output << ( (          advanced ) ? "                           0 - normal operation (default).                    \n" : "" );
     output << ( (          advanced ) ? "                           n - see above.                                     \n" : "" );
@@ -16456,6 +16300,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           # Chowdhury, On Kernelised Multi-Arm Bandits, Alg 2\n" : "" );
     output << ( (          advanced ) ? "                           ~ Bogunovic, Misspecified GP Bandit Optim., Lemma 1\n" : "" );
     output << ( (          advanced ) ? "                           ^ Intendid to be combined with human prompt.       \n" : "" );
+    output << ( (          advanced ) ? "         -gmft  {0,1}    - if 1 then we scale the scquisition function by PI. \n" : "" );
     output << ( (          advanced ) ? "         -gbj n          - number  of random  start/seed  points  (default  -1\n" : "" );
     output << ( (          advanced ) ? "                           translates to d+1, where d is the dimension).      \n" : "" );
     output << ( (          advanced ) ? "         -gbt m          - max  iteration  count for  search algorithm  (0 for\n" : "" );

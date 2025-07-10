@@ -414,90 +414,6 @@ public:
     virtual const gentype &xelm    (gentype &res, int i, int j) const override { return getMLconst().xelm(res,i,j); }
     virtual       int      xindsize(int i)                      const override { return getMLconst().xindsize(i);   }
 
-//Variants
-    int KisFullNorm       (void) const { return getKernel().isFullNorm();        }
-    int KisProd           (void) const { return getKernel().isProd();            }
-    int KisIndex          (void) const { return getKernel().isIndex();           }
-    int KisShifted        (void) const { return getKernel().isShifted();         }
-    int KisScaled         (void) const { return getKernel().isScaled();          }
-    int KisShiftedScaled  (void) const { return getKernel().isShiftedScaled();   }
-    int KisLeftPlain      (void) const { return getKernel().isLeftPlain();       }
-    int KisRightPlain     (void) const { return getKernel().isRightPlain();      }
-    int KisLeftRightPlain (void) const { return getKernel().isLeftRightPlain();  }
-    int KisLeftNormal     (void) const { return getKernel().isLeftNormal();      }
-    int KisRightNormal    (void) const { return getKernel().isRightNormal();     }
-    int KisLeftRightNormal(void) const { return getKernel().isLeftRightNormal(); }
-    int KisPartNormal     (void) const { return getKernel().isPartNormal();      }
-    int KisAltDiff        (void) const { return getKernel().isAltDiff();         }
-    int KneedsmProd       (void) const { return getKernel().needsmProd();        }
-    int KwantsXYprod      (void) const { return getKernel().wantsXYprod();       }
-    int KsuggestXYcache   (void) const { return getKernel().suggestXYcache();    }
-    int KisIPdiffered     (void) const { return getKernel().isIPdiffered();      }
-
-    int Ksize       (void) const { return getKernel().size();        }
-    int KgetSymmetry(void) const { return getKernel().getSymmetry(); }
-
-    double KcWeight(int q = 0) const { return (double) getKernel().cWeight(q); }
-    int    KcType  (int q = 0) const { return          getKernel().cType(q);   }
-
-    int KisNormalised(int q = 0) const { return getKernel().isNormalised(q); }
-    int KisChained   (int q = 0) const { return getKernel().isChained(q);    }
-    int KisSplit     (int q = 0) const { return getKernel().isSplit(q);      }
-    int KisMulSplit  (int q = 0) const { return getKernel().isMulSplit(q);   }
-    int KisMagTerm   (int q = 0) const { return getKernel().isMagTerm(q);    }
-
-    int KnumSplits   (void) const { return getKernel().numSplits();    }
-    int KnumMulSplits(void) const { return getKernel().numMulSplits(); }
-
-    double KcRealConstants(int q = 0, int i = 0) const { return (double) getKernel().cRealConstants(q)(i); }
-    int    KcIntConstants (int q = 0, int i = 0) const { return          getKernel().cIntConstants(q)(i);  }
-
-    double KgetRealConstZero(int q = 0) const { return (double) getKernel().getRealConstZero(q); }
-    int    KgetIntConstZero (int q = 0) const { return          getKernel().getIntConstZero(q);  }
-
-    int KisKVarianceNZ(void) const { return getKernel().isKVarianceNZ(); }
-
-    void Kadd   (int q)     { prepareKernel(); getKernel_unsafe().add(q);        resetKernel(); }
-    void Kremove(int q)     { prepareKernel(); getKernel_unsafe().remove(q);     resetKernel(); }
-    void Kresize(int nsize) { prepareKernel(); getKernel_unsafe().resize(nsize); resetKernel(); }
-
-    void KsetFullNorm       (void) { prepareKernel(); getKernel_unsafe().setFullNorm();        resetKernel(); }
-    void KsetNoFullNorm     (void) { prepareKernel(); getKernel_unsafe().setNoFullNorm();      resetKernel(); }
-    void KsetProd           (void) { prepareKernel(); getKernel_unsafe().setProd();            resetKernel(); }
-    void KsetnonProd        (void) { prepareKernel(); getKernel_unsafe().setnonProd();         resetKernel(); }
-    void KsetLeftPlain      (void) { prepareKernel(); getKernel_unsafe().setLeftPlain();       resetKernel(); }
-    void KsetRightPlain     (void) { prepareKernel(); getKernel_unsafe().setRightPlain();      resetKernel(); }
-    void KsetLeftRightPlain (void) { prepareKernel(); getKernel_unsafe().setLeftRightPlain();  resetKernel(); }
-    void KsetLeftNormal     (void) { prepareKernel(); getKernel_unsafe().setLeftNormal();      resetKernel(); }
-    void KsetRightNormal    (void) { prepareKernel(); getKernel_unsafe().setRightNormal();     resetKernel(); }
-    void KsetLeftRightNormal(void) { prepareKernel(); getKernel_unsafe().setLeftRightNormal(); resetKernel(); }
-
-    void KsetAltDiff       (int nv) { prepareKernel(); getKernel_unsafe().setAltDiff(nv);        resetKernel(); }
-    void KsetsuggestXYcache(int nv) { prepareKernel(); getKernel_unsafe().setsuggestXYcache(nv); resetKernel(); }
-    void KsetIPdiffered    (int nv) { prepareKernel(); getKernel_unsafe().setIPdiffered(nv);     resetKernel(); }
-
-    void KsetChained   (int q = 0) { prepareKernel(); getKernel_unsafe().setChained(q);    resetKernel(); }
-    void KsetNormalised(int q = 0) { prepareKernel(); getKernel_unsafe().setNormalised(q); resetKernel(); }
-    void KsetSplit     (int q = 0) { prepareKernel(); getKernel_unsafe().setSplit(q);      resetKernel(); }
-    void KsetMulSplit  (int q = 0) { prepareKernel(); getKernel_unsafe().setMulSplit(q);   resetKernel(); }
-    void KsetMagTerm   (int q = 0) { prepareKernel(); getKernel_unsafe().setMagTerm(q);    resetKernel(); }
-
-    void KsetUnChained   (int q = 0) { prepareKernel(); getKernel_unsafe().setUnChained(q);    resetKernel(); }
-    void KsetUnNormalised(int q = 0) { prepareKernel(); getKernel_unsafe().setUnNormalised(q); resetKernel(); }
-    void KsetUnSplit     (int q = 0) { prepareKernel(); getKernel_unsafe().setUnSplit(q);      resetKernel(); }
-    void KsetUnMulSplit  (int q = 0) { prepareKernel(); getKernel_unsafe().setUnMulSplit(q);   resetKernel(); }
-    void KsetUnMagTerm   (int q = 0) { prepareKernel(); getKernel_unsafe().setUnMagTerm(q);    resetKernel(); }
-
-    void KsetWeight (double nwa,  int q = 0) { gentype nw(nwa); prepareKernel(); getKernel_unsafe().setWeight(nw,q);       resetKernel(); }
-    void KsetType   (int ndtype,  int q = 0) {                  prepareKernel(); getKernel_unsafe().setType(ndtype,q);     resetKernel(); }
-    void KsetAltCall(int newMLid, int q = 0) {                  prepareKernel(); getKernel_unsafe().setAltCall(newMLid,q); resetKernel(); }
-
-    void KsetRealConstants(double nv, int q = 0, int i = 0) { Vector<gentype> v(getKernel().cRealConstants(q)); v("&",i) = nv; prepareKernel(); getKernel_unsafe().setRealConstants(v,q); resetKernel(); }
-    void KsetIntConstants (int nv,    int q = 0, int i = 0) { Vector<int> v(getKernel().cIntConstants(q));      v("&",i) = nv; prepareKernel(); getKernel_unsafe().setIntConstants(v,q);  resetKernel(); }
-
-    void KsetRealConstZero(double nv, int q = 0) { prepareKernel(); getKernel_unsafe().setRealConstZero(nv,q); resetKernel(); }
-    void KsetIntConstZero (int nv,    int q = 0) { prepareKernel(); getKernel_unsafe().setIntConstZero(nv,q);  resetKernel(); }
-
     // Training set modification:
 
     virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override { return getML().addTrainingVector (i,z,x,Cweigh,epsweigh,d); }
@@ -895,8 +811,8 @@ public:
     //     Common functions for all SVMs
     // ================================================================
 
-    virtual       SVM_Generic &getSVM     (void)       { NiceAssert( ( type() >=   0 ) && ( type() <=  99 ) ); return (dynamic_cast<      SVM_Generic &>(getML     ().getML     ())).getSVM();      }
-    virtual const SVM_Generic &getSVMconst(void) const { NiceAssert( ( type() >=   0 ) && ( type() <=  99 ) ); return (dynamic_cast<const SVM_Generic &>(getMLconst().getMLconst())).getSVMconst(); }
+    virtual       SVM_Generic &getSVM     (void)       { StrucAssert( ( type() >=   0 ) && ( type() <=  99 ) ); return (dynamic_cast<      SVM_Generic &>(getML     ().getML     ())).getSVM();      }
+    virtual const SVM_Generic &getSVMconst(void) const { StrucAssert( ( type() >=   0 ) && ( type() <=  99 ) ); return (dynamic_cast<const SVM_Generic &>(getMLconst().getMLconst())).getSVMconst(); }
 
     // Constructors, destructors, assignment etc..
 
@@ -1172,8 +1088,8 @@ public:
     //     Common functions for all BLKs
     // ================================================================
 
-    virtual       BLK_Generic &getBLK     (void)       { NiceAssert( ( type() >= 200 ) && ( type() <= 299 ) ); return (dynamic_cast<      BLK_Generic &>(getML     ().getML     ())).getBLK();      }
-    virtual const BLK_Generic &getBLKconst(void) const { NiceAssert( ( type() >= 200 ) && ( type() <= 299 ) ); return (dynamic_cast<const BLK_Generic &>(getMLconst().getMLconst())).getBLKconst(); }
+    virtual       BLK_Generic &getBLK     (void)       { StrucAssert( ( type() >= 200 ) && ( type() <= 299 ) ); return (dynamic_cast<      BLK_Generic &>(getML     ().getML     ())).getBLK();      }
+    virtual const BLK_Generic &getBLKconst(void) const { StrucAssert( ( type() >= 200 ) && ( type() <= 299 ) ); return (dynamic_cast<const BLK_Generic &>(getMLconst().getMLconst())).getBLKconst(); }
 
     // Information functions (training data):
 
@@ -1346,8 +1262,8 @@ public:
     //     Common functions for all KNNs
     // ================================================================
 
-    virtual       KNN_Generic &getKNN     (void)       { NiceAssert( ( type() >= 300 ) && ( type() <= 399 ) ); return (dynamic_cast<      KNN_Generic &>(getML     ().getML     ())).getKNN();      }
-    virtual const KNN_Generic &getKNNconst(void) const { NiceAssert( ( type() >= 300 ) && ( type() <= 399 ) ); return (dynamic_cast<const KNN_Generic &>(getMLconst().getMLconst())).getKNNconst(); }
+    virtual       KNN_Generic &getKNN     (void)       { StrucAssert( ( type() >= 300 ) && ( type() <= 399 ) ); return (dynamic_cast<      KNN_Generic &>(getML     ().getML     ())).getKNN();      }
+    virtual const KNN_Generic &getKNNconst(void) const { StrucAssert( ( type() >= 300 ) && ( type() <= 399 ) ); return (dynamic_cast<const KNN_Generic &>(getMLconst().getMLconst())).getKNNconst(); }
 
     // Information functions (training data):
 
@@ -1371,8 +1287,8 @@ public:
     //     Common functions for all GPs
     // ================================================================
 
-    virtual       GPR_Generic &getGPR     (void)       { NiceAssert( ( type() >= 400 ) && ( type() <= 499 ) ); return (dynamic_cast<      GPR_Generic &>(getML     ().getML     ())).getGPR();      }
-    virtual const GPR_Generic &getGPRconst(void) const { NiceAssert( ( type() >= 400 ) && ( type() <= 499 ) ); return (dynamic_cast<const GPR_Generic &>(getMLconst().getMLconst())).getGPRconst(); }
+    virtual       GPR_Generic &getGPR     (void)       { StrucAssert( ( type() >= 400 ) && ( type() <= 499 ) ); return (dynamic_cast<      GPR_Generic &>(getML     ().getML     ())).getGPR();      }
+    virtual const GPR_Generic &getGPRconst(void) const { StrucAssert( ( type() >= 400 ) && ( type() <= 499 ) ); return (dynamic_cast<const GPR_Generic &>(getMLconst().getMLconst())).getGPRconst(); }
 
     // General modification and autoset functions
 
@@ -1417,8 +1333,8 @@ public:
     //     Common functions for all LS-SVMs
     // ================================================================
 
-    virtual       LSV_Generic &getLSV     (void)       { NiceAssert( ( type() >= 500 ) && ( type() <= 599 ) ); return (dynamic_cast<      LSV_Generic &>(getML     ().getML     ())).getLSV();      }
-    virtual const LSV_Generic &getLSVconst(void) const { NiceAssert( ( type() >= 500 ) && ( type() <= 599 ) ); return (dynamic_cast<const LSV_Generic &>(getMLconst().getMLconst())).getLSVconst(); }
+    virtual       LSV_Generic &getLSV     (void)       { StrucAssert( ( type() >= 500 ) && ( type() <= 599 ) ); return (dynamic_cast<      LSV_Generic &>(getML     ().getML     ())).getLSV();      }
+    virtual const LSV_Generic &getLSVconst(void) const { StrucAssert( ( type() >= 500 ) && ( type() <= 599 ) ); return (dynamic_cast<const LSV_Generic &>(getMLconst().getMLconst())).getLSVconst(); }
 
     virtual int setgamma(const Vector<gentype> &newW) { return getLSV().setgamma(newW); }
     virtual int setdelta(const gentype         &newB) { return getLSV().setdelta(newB); }
@@ -1459,8 +1375,8 @@ public:
     //     Common to all IMPs
     // ================================================================
 
-    virtual       IMP_Generic &getIMP     (void)       { NiceAssert( ( type() >= 600 ) && ( type() <= 699 ) ); return (dynamic_cast<      IMP_Generic &>(getML     ().getML     ())).getIMP();      }
-    virtual const IMP_Generic &getIMPconst(void) const { NiceAssert( ( type() >= 600 ) && ( type() <= 699 ) ); return (dynamic_cast<const IMP_Generic &>(getMLconst().getMLconst())).getIMPconst(); }
+    virtual       IMP_Generic &getIMP     (void)       { StrucAssert( ( type() >= 600 ) && ( type() <= 699 ) ); return (dynamic_cast<      IMP_Generic &>(getML     ().getML     ())).getIMP();      }
+    virtual const IMP_Generic &getIMPconst(void) const { StrucAssert( ( type() >= 600 ) && ( type() <= 699 ) ); return (dynamic_cast<const IMP_Generic &>(getMLconst().getMLconst())).getIMPconst(); }
 
     // Improvement functions.
 
@@ -1508,8 +1424,8 @@ public:
     //     Common functions for all MLMs
     // ================================================================
 
-    virtual       MLM_Generic &getMLM     (void)       { NiceAssert( ( type() >= 800 ) && ( type() <= 899 ) ); return (dynamic_cast<      MLM_Generic &>(getML     ().getML     ())).getMLM();      }
-    virtual const MLM_Generic &getMLMconst(void) const { NiceAssert( ( type() >= 800 ) && ( type() <= 899 ) ); return (dynamic_cast<const MLM_Generic &>(getMLconst().getMLconst())).getMLMconst(); }
+    virtual       MLM_Generic &getMLM     (void)       { StrucAssert( ( type() >= 800 ) && ( type() <= 899 ) ); return (dynamic_cast<      MLM_Generic &>(getML     ().getML     ())).getMLM();      }
+    virtual const MLM_Generic &getMLMconst(void) const { StrucAssert( ( type() >= 800 ) && ( type() <= 899 ) ); return (dynamic_cast<const MLM_Generic &>(getMLconst().getMLconst())).getMLMconst(); }
 
     // Back-propogation control
     //
@@ -1560,6 +1476,7 @@ inline ML_Mutable *&setnegate(ML_Mutable *&a) { NiceThrow("I reject your reality
 inline ML_Mutable *&setconj  (ML_Mutable *&a) { NiceThrow("Have a kipper"); return a; }
 inline ML_Mutable *&setrand  (ML_Mutable *&a) { NiceThrow("Cool...."); return a; }
 inline ML_Mutable *&postProInnerProd(ML_Mutable *&a) { return a; }
+inline ML_Mutable *&setzero  (ML_Mutable *&a) { return a = nullptr; } // see mlinter.hpp
 
 inline double norm2(const ML_Mutable &a);
 inline double abs2 (const ML_Mutable &a);
@@ -1584,7 +1501,7 @@ inline void qswap(ML_Mutable *&a, ML_Mutable *&b)
 
 inline void ML_Mutable::qswapinternal(ML_Base &bb)
 {
-    NiceAssert( isQswapCompat(*this,bb) );
+    StrucAssert( isQswapCompat(*this,bb) );
 
     ML_Mutable &b = dynamic_cast<ML_Mutable &>(bb);
 
@@ -1629,7 +1546,7 @@ ML_Base &assign(ML_Base **dest, const ML_Base *src, int onlySemiCopy = 0);
 
 inline void ML_Mutable::assign(const ML_Base &bb, int onlySemiCopy)
 {
-    NiceAssert( isAssignCompat(*this,bb) );
+    StrucAssert( isAssignCompat(*this,bb) );
 
     if ( bb.isMutable() )
     {

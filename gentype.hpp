@@ -51,8 +51,23 @@ class gentype;
 // temporary file, but in the python-local version you can
 // override this and do something more sensible.
 
-void pycall(const std::string &evalstr, gentype &res, const gentype &x);
+                   void pycall(const std::string &fn, gentype &res,       int               x);
+                   void pycall(const std::string &fn, gentype &res,       double            x);
+                   void pycall(const std::string &fn, gentype &res, const d_anion          &x);
+                   void pycall(const std::string &fn, gentype &res, const std::string      &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>        &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const Matrix<T>        &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>           &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T>  &x);
+                   void pycall(const std::string &fn, gentype &res, const gentype          &x);
+                   void pycall(const std::string &fn, gentype &res, int size, const double *x);
 
+#ifndef PYLOCAL
+template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>       &x) { gentype xx(x); pycall(fn,res,xx); }
+template <class T> void pycall(const std::string &fn, gentype &res, const Matrix<T>       &x) { gentype xx(x); pycall(fn,res,xx); }
+template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>          &x) { gentype xx(x); pycall(fn,res,xx); }
+template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T> &x) { gentype xx(x); pycall(fn,res,xx); }
+#endif
 
 // Optimisation is as follows: scaladd assumes that all values
 // are integer or double and does a += b*c.  scalmul performs a *= b.
@@ -93,6 +108,15 @@ inline void OP_einv (double &a) { a = 1/a;      }
 inline void OP_acos (double &a) { a = acos(a);  }
 
 
+template <> template <> Vector<double>  &Vector<double >::castassign(const Vector<gentype>                &src);
+template <> template <> Vector<double>  &Vector<double >::castassign(const Vector<int>                    &src);
+template <> template <> Vector<gentype> &Vector<gentype>::castassign(const Vector<double>                 &src);
+template <> template <> Vector<gentype> &Vector<gentype>::castassign(const Vector<int>                    &src);
+template <> template <> Vector<gentype> &Vector<gentype>::castassign(const Vector<gentype>                &src);
+template <> template <> Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<int> >           &src);
+template <> template <> Vector<gentype> &Vector<gentype>::castassign(const Vector<SparseVector<gentype> > &src);
+template <> template <> Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<gentype> >       &src);
+template <> template <> Vector<SparseVector<gentype> >& Vector<SparseVector<gentype> >::castassign(const Vector<SparseVector<gentype> > &src);
 
 // Multithreaded initialisation function:
 //
@@ -270,6 +294,10 @@ gentype trans(const gentype &a);
 
 template <class T>
 Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &src);
+template <>
+Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<double> &src);
+template <>
+Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gentype> &src);
 
 
 
@@ -313,21 +341,136 @@ public:
         }
     }
 
-             gentype(const gentype                &src) { fastcopy(src,1);                                                   }
-    explicit gentype()                                  { ;                                                                  }
-    explicit gentype(      int                        src) { typeis = 'Z'; intval = src;       doubleval = src;                 }
-    explicit gentype(      double                     src) { typeis = 'R'; intval = (int) src; doubleval = src;                 }
-    explicit gentype(const d_anion                   &src) { typeis = 'A'; MEMNEW(anionval,d_anion(src));                       }
-    explicit gentype(const Vector<gentype>           &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>(src));              }
-    explicit gentype(const SparseVector<int>         &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>); SparseToNonSparse(*vectorval,src); }
-    explicit gentype(const SparseVector<double>      &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>); SparseToNonSparse(*vectorval,src); }
-    explicit gentype(const SparseVector<std::string> &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>); SparseToNonSparse(*vectorval,src); }
-    explicit gentype(const SparseVector<gentype>     &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>); SparseToNonSparse(*vectorval,src); }
-    explicit gentype(const Matrix<gentype>           &src) { typeis = 'M'; MEMNEW(matrixval,Matrix<gentype>(src));              }
-    explicit gentype(const Set<gentype>              &src) { typeis = 'X'; MEMNEW(setval,Set<gentype>(src));                    }
-    explicit gentype(const Dgraph<gentype,double>    &src) { typeis = 'G'; MEMNEW(dgraphval,Dgraph<gentype COMMA double>(src)); }
-    explicit gentype(const std::string               &src) { makeEqn(src);                                                      }
-    explicit gentype(const char                      *src) { makeEqn(src);                                                      }
+    gentype(const gentype &src)
+    {
+        fastcopy(src,1);
+    }
+
+    explicit gentype()
+    {
+        ;
+    }
+
+    explicit gentype(      int                     src) { typeis = 'Z'; intval = src;       doubleval = src;                 }
+    explicit gentype(      double                  src) { typeis = 'R'; intval = (int) src; doubleval = src;                 }
+    explicit gentype(const d_anion                &src) { typeis = 'A'; MEMNEW(anionval,d_anion(src));                       }
+    explicit gentype(const Vector<gentype>        &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>(src));              }
+    explicit gentype(const Matrix<gentype>        &src) { typeis = 'M'; MEMNEW(matrixval,Matrix<gentype>(src));              }
+    explicit gentype(const Set<gentype>           &src) { typeis = 'X'; MEMNEW(setval,Set<gentype>(src));                    }
+    explicit gentype(const Dgraph<gentype,double> &src) { typeis = 'G'; MEMNEW(dgraphval,Dgraph<gentype COMMA double>(src)); }
+    explicit gentype(const std::string            &src) { makeEqn(src);                                                      }
+    explicit gentype(const char                   *src) { makeEqn(src);                                                      }
+
+    explicit gentype(const SparseVector<std::string> &src)
+    {
+        typeis = 'V';
+        MEMNEW(vectorval,Vector<gentype>);
+        SparseToNonSparse(*vectorval,src);
+    }
+
+    explicit gentype(const SparseVector<int> &src)
+    {
+        typeis = 'V';
+
+        if ( src.nearnonsparse() )
+        {
+            int srcsize = src.indsize();
+
+            MEMNEW(vectorval,Vector<gentype>(srcsize));
+            MEMNEW(vectorvalreal,Vector<double>(srcsize));
+
+            retVector<int> tmpva;
+
+            (*vectorval).castassign(src(tmpva));
+            (*vectorvalreal).castassign(src(tmpva));
+        }
+
+        else
+        {
+            MEMNEW(vectorval,Vector<gentype>);
+            SparseToNonSparse(*vectorval,src);
+        }
+    }
+
+    explicit gentype(const SparseVector<double> &src)
+    {
+        typeis = 'V';
+
+        if ( src.nearnonsparse() )
+        {
+            int srcsize = src.indsize();
+
+            retVector<double> tmpva;
+
+            MEMNEW(vectorval,Vector<gentype>(srcsize));
+            MEMNEW(vectorvalreal,Vector<double>(src(tmpva)));
+
+            (*vectorval).castassign(src(tmpva));
+        }
+
+        else
+        {
+            MEMNEW(vectorval,Vector<gentype>);
+            SparseToNonSparse(*vectorval,src);
+        }
+    }
+
+    explicit gentype(const SparseVector<gentype> &src)
+    {
+        typeis = 'V';
+
+        int srcns = src.nearnonsparse();
+
+        if ( srcns && src.altcontent )
+        {
+            int srcsize = src.indsize();
+
+            retVector<gentype> tmpva;
+
+            MEMNEW(vectorval,Vector<gentype>(src(tmpva)));
+            MEMNEW(vectorvalreal,Vector<double>(srcsize));
+
+            for ( int i = 0 ; i < srcsize ; ++i )
+            {
+                (*vectorvalreal).sv(i,(src.altcontent)[i]);
+            }
+        }
+
+        else if ( srcns )
+        {
+            retVector<gentype> tmpva;
+
+            MEMNEW(vectorval,Vector<gentype>(src(tmpva)));
+        }
+
+        else
+        {
+            MEMNEW(vectorval,Vector<gentype>);
+            SparseToNonSparse(*vectorval,src);
+        }
+    }
+
+    explicit gentype(int srcsize, const double *src)
+    {
+        if ( ( ( srcsize > 0 ) && src ) || ( srcsize == 0 ) )
+        {
+            typeis = 'V';
+
+            MEMNEW(vectorval,Vector<gentype>(srcsize));
+            MEMNEW(vectorvalreal,Vector<double>(srcsize));
+
+            for ( int i = 0 ; i < srcsize ; ++i )
+            {
+                (*vectorval)("&",i).force_double() = src[i];
+                (*vectorvalreal).sv(i,src[i]);
+            }
+        }
+
+        else
+        {
+            typeis = 'N';
+        }
+    }
 
     template <class T> explicit gentype(const Vector<T>        &src) { *this = src; }
     template <class T> explicit gentype(const SparseVector<T>  &src) { *this = src; }
@@ -350,11 +493,6 @@ public:
         }
     }
 
-    gentype &operator=(const gentype &src)
-    {
-        return fastcopy(src,0);
-    }
-
     gentype &operator=(      int                     src) { deleteVectMatMem('Z'                            ); typeis = 'Z'; intval     = src; doubleval = src;    return *this; }
     gentype &operator=(      double                  src) { deleteVectMatMem('R'                            ); typeis = 'R'; doubleval  = src; intval = (int) src; return *this; }
     gentype &operator=(const d_anion                &src) { deleteVectMatMem('A'                            ); typeis = 'A'; *anionval  = src;                     return *this; }
@@ -365,10 +503,87 @@ public:
     gentype &operator=(const std::string            &src) { deleteVectMatMem(); makeEqn(src); return *this; }
     gentype &operator=(const char                   *src) { deleteVectMatMem(); makeEqn(src); return *this; }
 
-    template <class T> gentype &operator=(const Vector<T> &src)
+    gentype &operator=(const gentype &src)
+    {
+        return fastcopy(src,0);
+    }
+
+    gentype &operator=(const Vector<double> &src)
     {
         deleteVectMatMem('V',src.size());
         (*vectorval).castassign(src);
+        MEMNEW(vectorvalreal,Vector<double>(src));
+        typeis = 'V';
+
+        return *this;
+    }
+
+    gentype &operator=(const SparseVector<double> &src)
+    {
+        if ( src.nearnonsparse() )
+        {
+            int srcsize = src.indsize();
+
+            retVector<double> tmpva;
+
+            deleteVectMatMem('V',srcsize);
+            MEMNEW(vectorvalreal,Vector<double>(src(tmpva)));
+
+            (*vectorval).castassign(src(tmpva));
+        }
+
+        else
+        {
+            deleteVectMatMem('V',0);
+            SparseToNonSparse(*vectorval,src);
+        }
+
+        typeis = 'V';
+
+        return *this;
+    }
+
+    gentype &operator=(const SparseVector<gentype> &src)
+    {
+        typeis = 'V';
+
+        int srcns = src.nearnonsparse();
+
+        if ( srcns && src.altcontent )
+        {
+            int srcsize = src.indsize();
+
+            retVector<gentype> tmpva;
+
+            deleteVectMatMem('V',srcsize);
+            MEMNEW(vectorvalreal,Vector<double>(srcsize));
+
+            *vectorval = src(tmpva);
+
+            for ( int i = 0 ; i < srcsize ; ++i )
+            {
+                (*vectorvalreal).sv(i,(src.altcontent)[i]);
+            }
+        }
+
+        else if ( srcns )
+        {
+            int srcsize = src.indsize();
+
+            retVector<gentype> tmpva;
+
+            deleteVectMatMem('V',srcsize);
+
+            *vectorval = src(tmpva);
+        }
+
+        else
+        {
+            deleteVectMatMem('V',0);
+            SparseToNonSparse(*vectorval,src);
+        }
+
+        typeis = 'V';
 
         return *this;
     }
@@ -377,6 +592,16 @@ public:
     {
         deleteVectMatMem('V',0);
         SparseToNonSparse(*vectorval,src);
+        typeis = 'V';
+
+        return *this;
+    }
+
+    template <class T> gentype &operator=(const Vector<T> &src)
+    {
+        deleteVectMatMem('V',src.size());
+        (*vectorval).castassign(src);
+        typeis = 'V';
 
         return *this;
     }
@@ -396,6 +621,8 @@ public:
             }
         }
 
+        typeis = 'M';
+
         return *this;
     }
 
@@ -413,6 +640,8 @@ public:
                 (*setval).add(x = (src.all())(i));
             }
         }
+
+        typeis = 'X';
 
         return *this;
     }
@@ -439,6 +668,8 @@ public:
                 }
             }
         }
+
+        typeis = 'G';
 
         return *this;
     }
@@ -494,6 +725,8 @@ public:
     //          that this (base) node in the structure does.
     // isfasttype: returns true for integers, reals and anions.
     //
+    // ispycallpure: pycall("string",x), where string is just a string, and x is just var(0,0)
+    //
     // Notes: - isValEqnDir return true if this is an equation but not if
     //          this is for example a vector, matrix or set whose components
     //          include equations.
@@ -527,6 +760,8 @@ public:
     int  isValEqn      (void) const { return isValEqnFull(); } //isValEqnDir() | isValEqnFull(); }
     bool isValAnionReal(void) const { return isValAnion() && (*anionval).isreal(); }
 
+    bool isValVectorReal(void) const { return ( typeis == 'V' ) && vectorvalreal; } // is a vector and we have a real-valued short-cut form
+
     bool isCastableToNullWithoutLoss   (void) const { return isValNull(); }
     bool isCastableToIntegerWithoutLoss(void) const { return ( isValNull() || isValInteger() || ( isCastableToRealWithoutLoss() && ( cast_double(0) == ((int) cast_double(0)) ) ) ); }
     bool isCastableToRealWithoutLoss   (void) const { return ( isValNull() || isValInteger() || isValReal() || ( isValAnion() && ( size() == 1 ) ) || ( isValVector() && ( size() == 1 ) && (*vectorval)(0).isCastableToRealWithoutLoss() ) || ( isValMatrix() && ( numRows() == 1 ) && ( numCols() == 1 ) && (*matrixval)(0,0).isCastableToRealWithoutLoss() ) ); }
@@ -554,6 +789,36 @@ public:
     bool isAssociative      (void) const { return isNotImaginary() || ( isValAnion() && ( (*anionval).order() <= 2 ) ); }
 
     bool iseq(const gentype &b) const;
+
+    bool ispycallpure(const std::string *&callstr) const
+    {
+        // eg pycall("some string",x), but not some more complicated variant (eg sin(x) rather than x as the second argument)
+
+        const static int pycallInd = getfnind("pycall");
+        const static int varInd    = getfnind("var");
+
+        bool res = ( typeis == 'F' ) &&
+                   ( fnnameind == pycallInd ) &&
+                   ( ((*eqnargs)(0)).isValString() ) &&
+                   ( ((*eqnargs)(1)).typeis == 'F' ) &&
+                   ( ((*eqnargs)(1)).fnnameind == varInd ) &&
+                   ( ((*(((*eqnargs)(1)).eqnargs))(0)).isValInteger() ) &&
+                   ( ((*(((*eqnargs)(1)).eqnargs))(0)).intval == 0 ) &&
+                   ( ((*(((*eqnargs)(1)).eqnargs))(1)).isValInteger() ) &&
+                   ( ((*(((*eqnargs)(1)).eqnargs))(1)).intval == 0 );
+
+        if ( res )
+        {
+            callstr = &((const std::string &) ((*eqnargs)(0)));
+        }
+
+        else
+        {
+            callstr = nullptr;
+        }
+
+        return res;
+    }
 
     // Size information:
     //
@@ -702,19 +967,19 @@ public:
 
     //operator gentype() const { return *this; }
 
-    operator       int()                      const { if ( isValInteger() ) { return intval;     } else if ( isValReal()    ) { return (int) doubleval; } else if ( isValNull() ) { return 0; } return cast_int(3);    }
-    operator       double()                   const { if ( isValReal()    ) { return doubleval;  } else if ( isValInteger() ) { return intval;          } else if ( isValNull() ) { return 0; } return cast_double(3); }
-    operator const d_anion &()                const { if ( isValAnion()   ) { return *anionval;  } return cast_anion(3);             }
-    operator const Vector<gentype> &()        const { if ( isValVector()  ) { return *vectorval; } return cast_vector(3);            }
-    operator const Vector<double> &()         const {                                              return cast_vector_real(3);       }
-    operator const Vector<int> &()            const {                                              return cast_vector_int(3);        }
-    operator const SparseVector<gentype> &()  const {                                              return cast_sparsevector(3);      }
-    operator const SparseVector<double> &()   const {                                              return cast_sparsevector_real(3); }
-    operator const Matrix<gentype> &()        const { if ( isValMatrix()  ) { return *matrixval; } return cast_matrix(3);            }
-    operator const Matrix<double> &()         const {                                              return cast_matrix_real(3);       }
-    operator const Set<gentype> &()           const { if ( isValSet()     ) { return *setval;    } return cast_set(3);               }
-    operator const Dgraph<gentype,double> &() const { if ( isValDgraph()  ) { return *dgraphval; } return cast_dgraph(3);            }
-    operator const std::string &()            const { if ( isValString()  ) { return *stringval; } return cast_string(3);            }
+    operator       int()                      const { if ( isValInteger()    ) { return intval;         } else if ( isValReal()    ) { return (int) doubleval; } else if ( isValNull() ) { return 0; } return cast_int(3);    }
+    operator       double()                   const { if ( isValReal()       ) { return doubleval;      } else if ( isValInteger() ) { return intval;          } else if ( isValNull() ) { return 0; } return cast_double(3); }
+    operator const d_anion &()                const { if ( isValAnion()      ) { return *anionval;      } return cast_anion(3);             }
+    operator const Vector<gentype> &()        const { if ( isValVector()     ) { return *vectorval;     } return cast_vector(3);            }
+    operator const Vector<double> &()         const { if ( isValVectorReal() ) { return *vectorvalreal; } return cast_vector_real(3);       }
+    operator const Vector<int> &()            const {                                                     return cast_vector_int(3);        }
+    operator const SparseVector<gentype> &()  const {                                                     return cast_sparsevector(3);      }
+    operator const SparseVector<double> &()   const {                                                     return cast_sparsevector_real(3); }
+    operator const Matrix<gentype> &()        const { if ( isValMatrix()     ) { return *matrixval;     } return cast_matrix(3);            }
+    operator const Matrix<double> &()         const {                                                     return cast_matrix_real(3);       }
+    operator const Set<gentype> &()           const { if ( isValSet()        ) { return *setval;        } return cast_set(3);               }
+    operator const Dgraph<gentype,double> &() const { if ( isValDgraph()     ) { return *dgraphval;     } return cast_dgraph(3);            }
+    operator const std::string &()            const { if ( isValString()     ) { return *stringval;     } return cast_string(3);            }
 
           void                    cast_null             (int finalise = 0) const;
           int                     cast_int              (int finalise = 0) const;
@@ -1790,10 +2055,33 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
     res.zero();
 
     int size = src.indsize();
+    int nns = src.nearnonsparse();
     int prevind = -1;
     int baseind = 0;
 
-    if ( size )
+    if ( size && nns && src.altcontent )
+    {
+        res.resize(size);
+
+	for ( int i = 0 ; i < size ; ++i )
+	{
+            res("&",i).force_double() = (src.altcontent)[i];
+        }
+    }
+
+    else if ( size && nns )
+    {
+        res.resize(size);
+
+	for ( int i = 0 ; i < size ; ++i )
+	{
+            gentype tmp(src.direcref(i));
+
+            res.sv(i,tmp);
+        }
+    }
+
+    else if ( size )
     {
 	int i;
 
@@ -4056,38 +4344,6 @@ tryagainb:
 }
 
 
-template <>
-template <>
-Vector<gentype> &Vector<gentype>::castassign(const Vector<double> &src);
-
-template <>
-template <>
-Vector<double> &Vector<double>::castassign(const Vector<gentype> &src);
-
-template <>
-template <>
-Vector<gentype> &Vector<gentype>::castassign(const Vector<int> &src);
-
-
-template <>
-template <>
-Vector<gentype> &Vector<gentype>::castassign(const Vector<gentype> &src);
-
-template <>
-template <>
-Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<int> > &src);
-
-template <>
-template <>
-Vector<gentype> &Vector<gentype>::castassign(const Vector<SparseVector<gentype> > &src);
-
-template <>
-template <>
-Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<gentype> > &src);
-
-template <>
-template <>
-Vector<SparseVector<gentype> >& Vector<SparseVector<gentype> >::castassign(const Vector<SparseVector<gentype> > &src);
 
 
 #endif
