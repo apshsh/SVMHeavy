@@ -508,6 +508,8 @@ void svmheavya(void);                      // just get help screen
 void svmheavyb(int permode);               // set persistence mode
 void svmheavyc(const std::string commstr); // execute with string
 
+void logit(const std::string logstr); // print to errstream
+
 void callintercalc(void);
 void callsnakes   (void);
 
@@ -810,6 +812,8 @@ PYBIND11_MODULE(pyheavy, m) {
     m.def("help",&svmheavya,"Help screen.");
     m.def("mode",&svmheavyb,"Set persistence mode (default 1, persistent).",py::arg("mode"));
     m.def("exec",&svmheavyc,"Run with string given (mimics CLI).",          py::arg("str") );
+
+    m.def("log",&logit,"Print to log.", py::arg("str") );
 
     // ---------------------------
 
@@ -1604,6 +1608,11 @@ PYBIND11_MODULE(pyheavy, m) {
 
     QGETSETKERQD(m_ml_kern,getRealConstZeroUB,setRealConstZeroUB,"lUB","setlUB","nominal upper bound for lengthscale");
     QGETSETKERQD(m_ml_kern,getIntConstZeroUB, setIntConstZeroUB, "dUB","setdUB","nominal upper bounds for order"     );
+};
+
+void logit(const std::string logstr)
+{
+    errstream() << "python: " << logstr << "\n";
 }
 
 py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, const py::object &objfn);

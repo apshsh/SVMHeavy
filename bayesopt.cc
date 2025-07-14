@@ -987,6 +987,9 @@ class fninnerinnerArg
                 }
             }
         }
+errstream() << "phantomxyzxyz 0: " << x << "\n";
+errstream() << "phantomxyzxyz 0: " << muy << "\n";
+errstream() << "phantomxyzxyz 0: " << sigmay << "\n";
     }
 
     else
@@ -1150,13 +1153,20 @@ class fninnerinnerArg
             Phiz = normPhi(z);
 
             resscale = Phiz;
+errstream() << "phantomxyzxyz 1: muy " << muy << "\n";
+errstream() << "phantomxyzxyz 1: yymaxcorrect " << yymaxcorrect << "\n";
+errstream() << "phantomxyzxyz 1: sigmay " << sigmay << "\n";
+errstream() << "phantomxyzxyz 1: Phiz " << Phiz << "\n";
+errstream() << "phantomxyzxyz 1: resscale " << resscale << "\n";
         }
 
         else if ( (double) muy < yymaxcorrect )
         {
             resscale = 0;
+errstream() << "phantomxyzxyz 2: resscale " << resscale << "\n";
         }
     }
+errstream() << "phantomxyzxyz 3: resscale " << resscale << "\n";
 
 //errstream() << "phantomxyz muy(" << x << ") = " << muy << " and sigmay = " << sigmay << "\n";
     // =======================================================================
@@ -1287,7 +1297,7 @@ class fninnerinnerArg
 
         muy    = meantot;      // corrected mean
         sigmay = sqrt(vartot); // corrected variance
-//errstream() << "phantomxyz corrected muy = " << muy << " and sigmay = " << sigmay << "\n";
+errstream() << "phantomxyzxyz corrected muy = " << muy << " and sigmay = " << sigmay << "\n";
     }
 
     // =======================================================================
@@ -2340,7 +2350,12 @@ int bayesOpt(int dim,
     Vector<int> griddone_xobstype;
 
     int ires = -1;
-    fres = 0;
+    //fres = 0;
+    fres = -1; // this is IMPORTANT. PIscale needs to start with a sensible value, and -1 is the (presumed) min if f(x) is [0,1], as the model
+               // is on -f(x) in [-1,0]. We min f(x), so we max -f(x), so we need to start with fres being at the *bottom* of this range.
+               // (it didn't matter much pre PIscale as it only affected the first run, and then a "real" fres took over), but now... what
+               // happens if the first round doesn't fit the constraint, acquisiton function becomes nominally 0 (because PIscale just goes
+               // to zero, DIRect just keeps recommending the first thing it tries, and we repeat ad-infinatum!).
 
     bool isfullgrid   = false; // full grid with unknown constraints if true (so don't actually need a GP model for the objective, just the constraints)
     bool gridHasNulls = false; // true if grid has undefined x's that may trigger inner-inner continuous optimizer
