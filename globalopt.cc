@@ -1006,11 +1006,11 @@ void overfn(gentype &res, Vector<gentype> &x, void *arg)
 //        gopts.model_log(1);
     }
 
-errstream() << "what is xmod " << xmod << "\n";
+//errstream() << "what is xmod " << xmod << "\n";
     if ( !usealtoptfn || !actualtest )
     {
         suppressallstreamcout();
-errstream() << "and we call " << xmod << "\n";
+//errstream() << "and we call " << xmod << "\n";
         (*fn)(res,xmod,fnarg);
         unsuppressallstreamcout();
     }
@@ -1045,13 +1045,22 @@ errstream() << "and we call " << xmod << "\n";
         //errstream() << gopts.optname << ": global optimiser: f(g(.)) + penterm(" << xmodvecform << ") = " << res << "\n";
     }
 
-    // Clip result at softmax
+    // Clip result at softmin/max
 
     if ( ( res.isValInteger() || res.isValReal() ) && ( (double) res > gopts.softmax ) )
     {
         errstream() << gopts.optname << ": result clipped at softmax: " << res << " -> " << gopts.softmax << "\n";
 
         res = gopts.softmax;
+
+        resbuffer << " (clip)";
+    }
+
+    if ( ( res.isValInteger() || res.isValReal() ) && ( (double) res < gopts.softmin ) )
+    {
+        errstream() << gopts.optname << ": result clipped at softmin: " << res << " -> " << gopts.softmin << "\n";
+
+        res = gopts.softmin;
 
         resbuffer << " (clip)";
     }

@@ -3156,6 +3156,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-ko"    ) ||
                       ( currentarg == "-kO"    ) ||
                       ( currentarg == "-kx"    ) ||
+                      ( currentarg == "-kX"    ) ||
                       ( currentarg == "-ekv"   ) ||
                       ( currentarg == "-ekV"   ) ||
                       ( currentarg == "-ekvlb" ) ||
@@ -3165,6 +3166,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-eko"   ) ||
                       ( currentarg == "-ekO"   ) ||
                       ( currentarg == "-ekx"   ) ||
+                      ( currentarg == "-ekX"   ) ||
                       ( currentarg == "-rkv"   ) ||
                       ( currentarg == "-rkV"   ) ||
                       ( currentarg == "-rkvlb" ) ||
@@ -3173,7 +3175,8 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-rkVub" ) ||
                       ( currentarg == "-rko"   ) ||
                       ( currentarg == "-rkO"   ) ||
-                      ( currentarg == "-rkx"   )    )
+                      ( currentarg == "-rkx"   ) ||
+                      ( currentarg == "-rkX"   )    )
             {
                 preelse = 1;
 
@@ -3650,6 +3653,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmsmd"       ) ||
                       ( currentarg == "-gmgtc"       ) ||
                       ( currentarg == "-gmgtcv"      ) ||
+                      ( currentarg == "-gmgtcz"      ) ||
                       ( currentarg == "-gmgtn"       ) ||
                       ( currentarg == "-gmgty"       ) ||
                       ( currentarg == "-gmgtw"       ) ||
@@ -3681,6 +3685,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmmc"        ) ||
                       ( currentarg == "-gmmd"        ) ||
                       ( currentarg == "-gbG"         ) ||
+                      ( currentarg == "-gbP"         ) ||
                       ( currentarg == "-gbmm"        ) ||
                       ( currentarg == "-gbpd"        ) ||
                       ( currentarg == "-gbp"         ) ||
@@ -4046,6 +4051,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gphko"     ) ||
                       ( currentarg == "-gphkO"     ) ||
                       ( currentarg == "-gphkx"     ) ||
+                      ( currentarg == "-gphkX"     ) ||
                       ( currentarg == "-gPkv"      ) ||
                       ( currentarg == "-gPkV"      ) ||
                       ( currentarg == "-gPkvlb"    ) ||
@@ -4055,6 +4061,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gPko"      ) ||
                       ( currentarg == "-gPkO"      ) ||
                       ( currentarg == "-gPkx"      ) ||
+                      ( currentarg == "-gPkX"      ) ||
                       ( currentarg == "-gmkv"      ) ||
                       ( currentarg == "-gmkV"      ) ||
                       ( currentarg == "-gmkvlb"    ) ||
@@ -4064,6 +4071,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmko"      ) ||
                       ( currentarg == "-gmkO"      ) ||
                       ( currentarg == "-gmkx"      ) ||
+                      ( currentarg == "-gmkX"      ) ||
                       ( currentarg == "-gmekv"     ) ||
                       ( currentarg == "-gmekV"     ) ||
                       ( currentarg == "-gmekvlb"   ) ||
@@ -4073,6 +4081,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmeko"     ) ||
                       ( currentarg == "-gmekO"     ) ||
                       ( currentarg == "-gmekx"     ) ||
+                      ( currentarg == "-gmekX"     ) ||
                       ( currentarg == "-gmrkv"     ) ||
                       ( currentarg == "-gmrkV"     ) ||
                       ( currentarg == "-gmrkvlb"   ) ||
@@ -4082,6 +4091,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmrko"     ) ||
                       ( currentarg == "-gmrkO"     ) ||
                       ( currentarg == "-gmrkx"     ) ||
+                      ( currentarg == "-gmrkX"     ) ||
                       ( currentarg == "-gmskv"     ) ||
                       ( currentarg == "-gmskV"     ) ||
                       ( currentarg == "-gmskvlb"   ) ||
@@ -4091,6 +4101,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmsko"     ) ||
                       ( currentarg == "-gmskO"     ) ||
                       ( currentarg == "-gmskx"     ) ||
+                      ( currentarg == "-gmskX"     ) ||
                       ( currentarg == "-gmsekv"    ) ||
                       ( currentarg == "-gmsekV"    ) ||
                       ( currentarg == "-gmsekvlb"  ) ||
@@ -4100,6 +4111,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmseko"    ) ||
                       ( currentarg == "-gmsekO"    ) ||
                       ( currentarg == "-gmsekx"    ) ||
+                      ( currentarg == "-gmsekX"    ) ||
                       ( currentarg == "-gmsrkv"    ) ||
                       ( currentarg == "-gmsrkV"    ) ||
                       ( currentarg == "-gmsrkvlb"  ) ||
@@ -4109,6 +4121,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmsrko"    ) ||
                       ( currentarg == "-gmsrkO"    ) ||
                       ( currentarg == "-gmsrkx"    ) ||
+                      ( currentarg == "-gmsrkX"    ) ||
                       ( currentarg == "-gmgtkv"    ) ||
                       ( currentarg == "-gmgtkV"    ) ||
                       ( currentarg == "-gmgtkvlb"  ) ||
@@ -4118,6 +4131,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmgtko"    ) ||
                       ( currentarg == "-gmgtkO"    ) ||
                       ( currentarg == "-gmgtkx"    ) ||
+                      ( currentarg == "-gmgtkX"    ) ||
                       ( currentarg == "-gmgtekv"   ) ||
                       ( currentarg == "-gmgtekV"   ) ||
                       ( currentarg == "-gmgtekvlb" ) ||
@@ -4127,6 +4141,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmgteko"   ) ||
                       ( currentarg == "-gmgtekO"   ) ||
                       ( currentarg == "-gmgtekx"   ) ||
+                      ( currentarg == "-gmgtekX"   ) ||
                       ( currentarg == "-gmgtrkv"   ) ||
                       ( currentarg == "-gmgtrkV"   ) ||
                       ( currentarg == "-gmgtrkvlb" ) ||
@@ -4135,7 +4150,8 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmgtrkVub" ) ||
                       ( currentarg == "-gmgtrko"   ) ||
                       ( currentarg == "-gmgtrkO"   ) ||
-                      ( currentarg == "-gmgtrkx"   )    )
+                      ( currentarg == "-gmgtrkx"   ) ||
+                      ( currentarg == "-gmgtrkX"   )    )
             {
                 // Learning options
 
@@ -4544,6 +4560,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-fztko"   ) ||
                       ( currentarg == "-fztkO"   ) ||
                       ( currentarg == "-fztkx"   ) ||
+                      ( currentarg == "-fztkX"   ) ||
                       ( currentarg == "-fzskv"   ) ||
                       ( currentarg == "-fzskV"   ) ||
                       ( currentarg == "-fzskvlb" ) ||
@@ -4552,7 +4569,8 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-fzskVub" ) ||
                       ( currentarg == "-fzsko"   ) ||
                       ( currentarg == "-fzskO"   ) ||
-                      ( currentarg == "-fzskx"   )    )
+                      ( currentarg == "-fzskx"   ) ||
+                      ( currentarg == "-fzskX"   )    )
             {
                 // Fuzzy options
 
@@ -7324,6 +7342,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gmsmd"    ) { (*xbopts).tuneaugxmod   = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmgtc"    ) { (*xbopts).numcgt    = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmgtcv"   ) { (*xbopts).cgtmethod = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmgtcz"   ) { (*xbopts).cgtmargin = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmgtd"    ) { (*xbopts).default_modelcgt_setsigma(safeatof(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-gmgtg"    ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_modelcgt_setkernelg(temp); }
                     else if ( currcommand(0) == "-gmgtgg"   ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_modelcgt_setkernelgg(xscale); }
@@ -7545,6 +7564,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gbq"   ) { (*xbopts).impmeasu            = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables)).getIMP()); }
                     else if ( currcommand(0) == "-gbpp"  ) { (*xbopts).direcpre            = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables)).getML()); }
                     else if ( currcommand(0) == "-gbmm"  ) { (*xbopts).direcsubseqpre      = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables)).getML()); }
+                    else if ( currcommand(0) == "-gbP"   ) { (*xbopts).presource           = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables))); }
                     else if ( currcommand(0) == "-gbG"   ) { (*xbopts).gridsource          = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables))); }
                     else if ( currcommand(0) == "-gbsp"  ) { (*xbopts).stabpmax            = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbsP"  ) { (*xbopts).stabpmin            = safeatoi(currcommand(1),argvariables); }
@@ -11525,7 +11545,8 @@ void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &cu
          ( currcommandis == "-kw"  ) || ( currcommandis == "-kt"  ) || ( currcommandis == "-kan"  ) ||
          ( currcommandis == "-kg"  ) || ( currcommandis == "-kr"  ) || ( currcommandis == "-kd"   ) ||
          ( currcommandis == "-kG"  ) || ( currcommandis == "-kf"  ) || ( currcommandis == "-kv"   ) ||
-         ( currcommandis == "-kV"  ) || ( currcommandis == "-kgg" ) || ( currcommandis == "-kx"   )    )
+         ( currcommandis == "-kV"  ) || ( currcommandis == "-kgg" ) || ( currcommandis == "-kx"   ) ||
+         ( currcommandis == "-kX"  )    )
     {
         if ( ktype == 0 )
         {
@@ -11902,6 +11923,21 @@ errstream() << "set xscale: " << xscale << "\n";
                             theKern.setlinGradScal(linGradScal);
                         }
 
+                        else if ( currcommandis == "-kX" )
+                        {
+                            std::stringstream xastr(currcommand(1));
+                            std::stringstream xbstr(currcommand(2));
+
+                            Vector<int> indList;
+                            Vector<gentype> origPt;
+
+                            streamItIn(xastr,indList,0);
+                            streamItIn(xbstr,origPt,0);
+
+                            theKern.setlinParity(indList);
+                            theKern.setlinParityOrig(origPt);
+                        }
+
                         else if ( currcommandis == "-kv" )
                         {
                             Vector<gentype> kernRealConsts(theKern.cRealConstants(kernnum));
@@ -12036,7 +12072,8 @@ errstream() << "set xscale: " << xscale << "\n";
          ( currcommandis == "-km"  ) || ( currcommandis == "-kum" ) || ( currcommandis == "-kw"   ) ||
          ( currcommandis == "-kt"  ) || ( currcommandis == "-kg"  ) || ( currcommandis == "-kr"   ) ||
          ( currcommandis == "-kd"  ) || ( currcommandis == "-kG"  ) || ( currcommandis == "-kf"   ) ||
-         ( currcommandis == "-kv"  ) || ( currcommandis == "-kV"  ) || ( currcommandis == "-kx"   )    )
+         ( currcommandis == "-kv"  ) || ( currcommandis == "-kV"  ) || ( currcommandis == "-kx"   ) ||
+         ( currcommandis == "-kX"  )    )
     {
         if ( ktype == 0 )
         {
@@ -15034,6 +15071,10 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                              -kx [ 1 ] [ [ 1 0 0 ; 0 1 0 ; 0 0 1 ] ]         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -kX  [ i0  i1 ... ] [ o0 o1 ... ] - set parity transform:            \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                  xi0 -> sgn(xi0-o0).(xi0-o0), xi1 -> sgn(xi0-o0).(xi1-o1) ...\n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -ka  n          - number of samples used  when computing distribution\n" : "" );
     output << ( (          advanced ) ? "                           similarity (Muandet et al SMM).                    \n" : "" );
     output << ( (          advanced ) ? "         -kb  [ i j .. ] - indices of var(0,..) variables sampled.            \n" : "" );
@@ -15838,10 +15879,8 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -gxs [...]      - initial value of x vector (default []).            \n" : "" );
     output << ( (          advanced ) ? "         -gfm l          - min value for function, stop if f<=l (deflt -inf). \n" : "" );
     output << ( (          advanced ) ? "         -gfu m          - max value of function, stop if f>=l (deflt +inf).  \n" : "" );
-    output << ( (          advanced ) ? "         -gfM l          - soft minimum value of  function (don't stop, but is\n" : "" );
-    output << ( (          advanced ) ? "                           used by some variants of for example Bayesian opt).\n" : "" );
-    output << ( (          advanced ) ? "         -gfU l          - soft max value  for function.  If  exceeded, result\n" : "" );
-    output << ( (          advanced ) ? "                           clipped (that is, res = max(f(x),l) (deflt +inf).  \n" : "" );
+    output << ( (          advanced ) ? "         -gfM l          - soft (clipping) min value for function (dflt -inf).\n" : "" );
+    output << ( (          advanced ) ? "         -gfU l          - soft (clipping) max value for function (dflt +inf).\n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gr  n          - number of repeats (default 1).  If > 1 then results\n" : "" );
     output << ( (          advanced ) ? "                           for the  final repeat  are  returned,  except fgrid\n" : "" );
@@ -16014,6 +16053,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           multiplying   the   acquisition  function   by  the\n" : "" );
     output << ( (          advanced ) ? "                           posterior probability  that the  constraint is met.\n" : "" );
     output << ( (          advanced ) ? "                           For EI, this is exactly cEI.                       \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtcz tol     - acquisition function inquality tolerance (def 0.1).\n" : "" );
     output << ( (          advanced ) ? "         -gmgtcv n       - constraint incorporation method:                   \n" : "" );
     output << ( (          advanced ) ? "                           0  - multiple a(x) by prob(c(x)>=0) (default).     \n" : "" );
     output << ( (          advanced ) ? "                           1  - correct mean/variance before calculating a(x).\n" : "" );
@@ -16279,11 +16319,15 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -gbb n          - RNG seed right before main optimisation loop if >=0\n" : "" );
     output << ( (          advanced ) ? "                           Default 69.  -2 means seed with time, -1 no seed.  \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -gbP n          - pre-add data from this ML before starting optim.   \n" : "" );
     output << ( (          advanced ) ? "         -gbG n          - do  grid-search,  where ML n  defines grid  data in\n" : "" );
     output << ( (          advanced ) ? "                           terms of x (dimensions  must agree  with definition\n" : "" );
     output << ( (          advanced ) ? "                           in -gb). If y is NULL then it is ignored: otherwise\n" : "" );
     output << ( (          advanced ) ? "                           it will  be treated  as a  prior  observation.  The\n" : "" );
     output << ( (          advanced ) ? "                           y values in source will be filled by BO.           \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                           You can also put nulls in x,  in which case you get\n" : "" );
+    output << ( (          advanced ) ? "                           mixed-integer programming to \"fill in\" the nulls.  \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                           NB: if all data in  the ML has non-null  y then all\n" : "" );
     output << ( (          advanced ) ? "                               data will be treated as  prior observations and\n" : "" );

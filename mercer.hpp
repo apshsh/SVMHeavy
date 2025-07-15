@@ -2406,7 +2406,7 @@ public:
     //            204: like 104, but kernel expansion occurs over first kernel in chain only
     //            300: true moment-kernel expension to 2-kernels
 
-    bool unadornedRBFKernel(int allowsymm = 0) const { return isVeryTrivialKernel(allowsymm) && !sizeLinConstr() && ( cType() == 3 ) && ( ((double) cWeight()) == 1.0 ) && ( ((double) cRealConstants()(1)) == 0.0 ); }
+    bool unadornedRBFKernel(int allowsymm = 0) const { return isVeryTrivialKernel(allowsymm) && !sizeLinConstr() && !sizeLinParity() && ( cType() == 3 ) && ( ((double) cWeight()) == 1.0 ) && ( ((double) cRealConstants()(1)) == 0.0 ); }
 
     const Vector<int> &defindKey(void) const { return xdefindKey; } // on the training set at least
     int basexdim(void) const { return defindKey().size(); }
@@ -2458,6 +2458,15 @@ public:
 
     const Vector<int>             &getlinGradOrd (void) const { return linGradOrd;  } // order of linear gradient constraints (see Jidling)
     const Vector<Matrix<double> > &getlinGradScal(void) const { return linGradScal; } // get matrix part of linear gradient constraints (see Jidling)
+
+    // Linear parity constraint
+    //
+    // Replace x = [ x0 x1 x2 ... ] by multiplying xi0 xi1 xi2 ... by sgn(xi0.xi1.xi2...).
+
+    int sizeLinParity(void) const { return linParity.size(); }
+
+    const Vector<int>     &getlinParity    (void) const { return linParity;     }
+    const Vector<gentype> &getlinParityOrig(void) const { return linParityOrig; }
 
     // Kernel "block" information
     //
@@ -2743,6 +2752,12 @@ public:
 
     MercerKernel &setlinGradOrd (int i,       int             nv) { linGradOrd("&",i)  = nv; fixhaslinconstr();    return *this; }
     MercerKernel &setlinGradScal(int i, const Matrix<double> &nv) { linGradScal("&",i) = nv; fixlingradscaltsp(i); return *this; }
+
+    MercerKernel &setlinParity(const Vector<int> &nv) { linParity        = nv; return *this; }
+    MercerKernel &setlinParity(int i,       int   nv) { linParity("&",i) = nv; return *this; }
+
+    MercerKernel &setlinParityOrig(const Vector<gentype> &nv) { linParityOrig        = nv; return *this; }
+    MercerKernel &setlinParityOrig(int i, const gentype  &nv) { linParityOrig("&",i) = nv; return *this; }
 
     // Vector forms
     //
@@ -3312,6 +3327,9 @@ private:
     Vector<Matrix<double> > linGradScalTsp;
     bool haslinconstr;
 
+    Vector<int> linParity;
+    Vector<gentype> linParityOrig;
+
     // random features calculation stub.  If numFeats = -1 then just
     // fix the features that exist, otherwise start from scratch with
     // the specified number of random features.
@@ -3457,6 +3475,7 @@ private:
     double   yyyK2x2(              const SparseVector<gentype> &x, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo,       double   bias, int i, int ia, int ib, int xdim, int xconsist, int resmode, int mlid, const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int assumreal, int justcalcip) const;
     gentype &yyyK2x2(gentype &res, const SparseVector<gentype> &x, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo, const gentype &bias, int i, int ia, int ib, int xdim, int xconsist, int resmode, int mlid, const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int assumreal, int justcalcip) const;
 
+    template <class T> T &yyyaaK2x2(T &res, const SparseVector<gentype> &x, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo, int xignorefarfar, int xaignorefarfar, int xbignorefarfar, int xignorefarfarfar, int xaignorefarfarfar, int xbignorefarfarfar, int xgradordadd, int xagradordadd, int xbgradordadd, int xgradordaddR, int xagradordaddR, int xbgradordaddR, const T &bias, int i, int ia, int ib, int xdim, int xconsist, int resmode, int mlid, const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int assumreal, int justcalcip) const;
     template <class T> T &yyyaK2x2(T &res, const SparseVector<gentype> &x, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo, int xignorefarfar, int xaignorefarfar, int xbignorefarfar, int xignorefarfarfar, int xaignorefarfarfar, int xbignorefarfarfar, int xgradordadd, int xagradordadd, int xbgradordadd, int xgradordaddR, int xagradordaddR, int xbgradordaddR, const T &bias, int i, int ia, int ib, int xdim, int xconsist, int resmode, int mlid, const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int assumreal, int justcalcip) const;
     template <class T> T &yyybK2x2(T &res, const SparseVector<gentype> &x, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo, int xgradOrder, int xagradOrder, int xbgradOrder, int xgradOrderR, int xagradOrderR, int xbgradOrderR, int iupm, int iaupm, int ibupm, int xfarpresent, int xafarpresent, int xbfarpresent, double xrankw, double xarankw, double xbrankw, double xArankw, double xBrankw, int xfarfarpresent, int xafarfarpresent, int xbfarfarpresent, int xfarfarfarpresent, int xafarfarfarpresent, int xbfarfarfarpresent, int xgradup, int xagradup, int xbgradup, int xgradupR, int xagradupR, int xbgradupR, int xignorefarfar, int xaignorefarfar, int xbignorefarfar, int xignorefarfarfar, int xaignorefarfarfar, int xbignorefarfarfar, const T &bias, int i, int ia, int ib, int xdim, int xbonsist, int resmode, int mlid, const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int iset, int iaset, int ibset, int assumreal, int justcalcip, int densetype, int adensetype, int bdensetype) const;
     template <class T> T &yyycK2x2(T &res, const SparseVector<gentype> &x, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo, int xgradOrder, int xagradOrder, int xbgradOrder, int xgradup, int xagradup, int xbgradup, int iupm, int iaupm, int ibupm, const SparseVector<gentype> &xff, const SparseVector<gentype> &xaff, const SparseVector<gentype> &xbff, const T &bias, int i, int ia, int ib, int xdim, int xconsist, int resmode, int mlid, const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int iset, int iaset, int ibset, int assumreal, int justcalcip, int densetype, int adensetype, int bdensetype) const;
@@ -3475,6 +3494,13 @@ private:
     gentype &yyyK3(       gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const gentype &bias, const gentype **pxyprod, int i, int j, int k, int xdim, int xconsist, int resmode, int mlid, const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int assumreal, int justcalcip) const;
     gentype &yyyK4(       gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo, const gentype &bias, const gentype **pxyprod, int i, int j, int k, int l, int xdim, int xconsist, int resmode, int mlid, const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, const double *xy30, const double *xy31, const double *xy32, const double *xy33, int assumreal, int justcalcip) const;
     gentype &yyyKm(int m, gentype &res, Vector<const SparseVector<gentype> *> &x, Vector<const vecInfo *> &xinfo, const gentype &bias, Vector<int> &i, const gentype **pxyprod, int xdim, int xconsist, int resmode, int mlid, const Matrix<double> *xy, int assumreal, int justcalcip) const;
+
+    template <class T> T &yyyaaK0(T &res, const T &bias, const gentype **pxyprod, int xdim, int xconsist, int resmode, int mlid, int assumreal, int justcalcip) const;
+    template <class T> T &yyyaaK1(T &res, const SparseVector<gentype> &xa, const vecInfo &xainfo, int xaignorefarfar, int xaignorefarfarfar, int xagradordadd, int xagradordaddR, const T &bias, const gentype **pxyprod, int ia, int xdim, int xconsist, int resmode, int mlid, const double *xy, int assumreal, int justcalcip) const;
+    template <class T> T &yyyaaK2(T &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo &xainfo, const vecInfo &xbinfo, int xaignorefarfar, int xbignorefarfar, int xaignorefarfarfar, int xbignorefarfarfar, int xagradordadd, int xbgradordadd, int xagradordaddR, int xbgradordaddR, const T &bias, const gentype **pxyprod, int ia, int ib, int xdim, int xconsist, int resmode, int mlid, const double *xy00, const double *xy10, const double *xy11, int assumreal, int justcalcip) const;
+    template <class T> T &yyyaaK3(T &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, int xaignorefarfar, int xbignorefarfar, int xcignorefarfar, int xaignorefarfarfar, int xbignorefarfarfar, int xcignorefarfarfar, int xagradordadd, int xbgradordadd, int xcgradordadd, int xagradordaddR, int xbgradordaddR, int xcgradordaddR, const T &bias, const gentype **pxyprod, int i, int j, int k, int xdim, int xconsist, int resmode, int mlid, const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int assumreal, int justcalcip) const;
+    template <class T> T &yyyaaK4(T &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo, int xaignorefarfar, int xbignorefarfar, int xcignorefarfar, int xdignorefarfar, int xaignorefarfarfar, int xbignorefarfarfar, int xcignorefarfarfar, int xdignorefarfarfar, int xagradordadd, int xbgradordadd, int xcgradordadd, int xdgradordadd, int xagradordaddR, int xbgradordaddR, int xcgradordaddR, int xdgradordaddR, const T &bias, const gentype **pxyprod, int i, int j, int k, int l, int xdim, int xconsist, int resmode, int mlid, const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, const double *xy30, const double *xy31, const double *xy32, const double *xy33, int assumreal, int justcalcip) const;
+    template <class T> T &yyyaaKm(int m, T &res, Vector<const SparseVector<gentype> *> &x, Vector<const vecInfo *> &xinfo, Vector<int> &ignorefarfar, Vector<int> &ignorefarfarfar, Vector<int> &xgradordadd, Vector<int> &xgradordaddR, const T &bias, Vector<int> &i, const gentype **pxyprod, int xdim, int xconsist, int resmode, int mlid, const Matrix<double> *xy, int assumreal, int justcalcip) const;
 
     template <class T> T &yyyaK0(T &res, const T &bias, const gentype **pxyprod, int xdim, int xconsist, int resmode, int mlid, int assumreal, int justcalcip) const;
     template <class T> T &yyyaK1(T &res, const SparseVector<gentype> &xa, const vecInfo &xainfo, int xaignorefarfar, int xaignorefarfarfar, int xagradordadd, int xagradordaddR, const T &bias, const gentype **pxyprod, int ia, int xdim, int xconsist, int resmode, int mlid, const double *xy, int assumreal, int justcalcip) const;
@@ -3594,6 +3620,7 @@ private:
     int yyyphim(int m, Vector<double>  &res, const SparseVector<gentype> &x, const vecInfo &xinfo, int i, int allowfinite, int xdim, int xconsist, int assumreal) const;
     int yyyphim(int m, Vector<gentype> &res, const SparseVector<gentype> &x, const vecInfo &xinfo, int i, int allowfinite, int xdim, int xconsist, int assumreal) const;
 
+    template <class T> int yyyaaphim(int m, Vector<T> &res, const SparseVector<gentype> &x, const vecInfo &xinfo, int xaignorefarfar, int xaignorefarfarfar, int xagradordadd, int xagradordaddR, int i, int allowfinite, int xdim, int xconsist, int assumreal) const;
     template <class T> int yyyaphim(int m, Vector<T> &res, const SparseVector<gentype> &x, const vecInfo &xinfo, int xaignorefarfar, int xaignorefarfarfar, int xagradordadd, int xagradordaddR, int i, int allowfinite, int xdim, int xconsist, int assumreal) const;
     template <class T> int yyybphim(int m, Vector<T> &res, const SparseVector<gentype> &x, const vecInfo &xinfo, int xaignorefarfar, int xaignorefarfarfar, int i, int xagradOrder, int xagradOrderR, int iaupm, int xafarpresent, int xafarfarpresent, int xafarfarfarpresent, int xagradup, int xagradupR, int allowfinite, int xdim, int xconsist, int assumreal, int iaset) const;
     template <class T> int yyycphim(int m, Vector<T> &res, const SparseVector<gentype> &x, const vecInfo &xinfo, int i, int xagradOrder, int iaupm, int xagradup, const SparseVector<gentype> &xaff, int allowfinite, int xdim, int xconsist, int assumreal, int iaset) const;
@@ -4573,7 +4600,7 @@ public:
                                           !isRightPlain() && ( isAltDiff() == 1 ) && !isNormalised() && !isChained() && !isSplit() && !isMulSplit() && !isMagTerm() &&
                                           ( numSamples() == DEFAULT_NUMKERNSAMP ) && ( sampleDistribution() == tempsampdist ) && ( sampleIndices().size() == 0 ) &&
                                           ( cRealOverwrite().indsize() == 0 ) && ( cIntOverwrite().indsize() == 0 ) ); }
-    int isVeryTrivialKernel(int allowsymm = 0) const { return ( ( !xdefindKey.size() || ( xdefindKey(xdefindKey.size()-1) == xdefindKey.size()-1 ) ) && isTrivialKernel(allowsymm) && ( !sizeLinConstr() ) ); }
+    int isVeryTrivialKernel(int allowsymm = 0) const { return ( ( !xdefindKey.size() || ( xdefindKey(xdefindKey.size()-1) == xdefindKey.size()-1 ) ) && isTrivialKernel(allowsymm) && ( !sizeLinConstr() ) && ( !sizeLinParity() ) ); }
 
     int isFastKernelSum  (void) const { return ( isfast() == 1 ); }
     int isFastKernelChain(void) const { return ( isfast() == 2 ); } // No splits or magnitude terms allowed
@@ -4651,6 +4678,9 @@ inline void qswap(MercerKernel &a, MercerKernel &b)
     qswap(a.linGradScal         ,b.linGradScal         );
     qswap(a.linGradScalTsp      ,b.linGradScalTsp      );
     qswap(a.haslinconstr        ,b.haslinconstr        );
+
+    qswap(a.linParity           ,b.linParity           );
+    qswap(a.linParityOrig       ,b.linParityOrig       );
 
     qswap(a.xnumsamples         ,b.xnumsamples         );
     qswap(a.xindsub             ,b.xindsub             );

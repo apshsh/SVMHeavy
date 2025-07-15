@@ -1180,18 +1180,29 @@ errstream() << "phantomxyzxyz 3: resscale " << resscale << "\n";
         NiceAssert( thisbatchsize == 1 );
 
         Vector<gentype> mucgt;
-        Vector<gentype> varcgt;
+        Vector<gentype> varcgtsq;
 
         if ( isgridopt && !iscontopt && ( gridi >= 0 ) )
         {
-            bbopts.model_muvarTrainingVector_cgt(varcgt,mucgt,Nbasecgt+gridi);
+            bbopts.model_muvarTrainingVector_cgt(varcgtsq,mucgt,Nbasecgt+gridi);
         }
 
         else
         {
-            bbopts.model_muvar_cgt(varcgt,mucgt,x);
+            bbopts.model_muvar_cgt(varcgtsq,mucgt,x);
         }
 
+        for ( i = 0 ; i < mucgt.size() ; ++i )
+        {
+            // mucgt >= cgtmargin
+            // mucgt-cgtmargin >= 0
+
+            //mucgt("&",i) -= ((bbopts.cgtmargin)*2*sqrt(varcgtsq(i)));
+            mucgt("&",i) -= bbopts.cgtmargin;
+        }
+
+errstream() << "mucgt = " << mucgt << " and varcgtsq = " << varcgtsq << "\n";
+errstream() << "cgt.N = " << bbopts.model_N_cgt() << "\n";
         // Work out mean and variance of delta(c_i(x) >= 0) for all constraints c_i
 
         Vector<double> cgtmean((bbopts.cgtapprox).size()+1);
@@ -1201,38 +1212,38 @@ errstream() << "phantomxyzxyz 3: resscale " << resscale << "\n";
         {
             // Sanity check here!
 
-            double ecgt = (double) mucgt(i);
-            double vcgt = (double) varcgt(i);
+            double ecgt   = (double) mucgt(i);
+            double vcgtsq = (double) varcgtsq(i);
 
-            if ( testisvnan(vcgt) )
+            if ( testisvnan(vcgtsq) )
             {
                 errstream() << "varcgt NaN in Bayesian Optimisation!\n";
 
-                vcgt = 0.0;
+                vcgtsq = 0.0;
             }
 
-            else if ( testisinf(vcgt) )
+            else if ( testisinf(vcgtsq) )
             {
                 errstream() << "varcgt inf in Bayesian Optimisation!\n";
 
-                vcgt = 0.0;
+                vcgtsq = 0.0;
             }
 
-            else if ( vcgt <= 0 )
+            else if ( vcgtsq <= 0 )
             {
                 errstream() << "varcgt neg in Bayesian Optimisation!\n";
 
-                vcgt = 0.0;
+                vcgtsq = 0.0;
             }
 
             // This is basically PI
 
-            if ( vcgt > ztol )
+            if ( vcgtsq > ztol )
             {
-                double phihere = normPhi(ecgt/sqrt(vcgt));
+                double phihere = normPhi(ecgt/sqrt(vcgtsq));
 
                 cgtmean("&",i) = phihere; // E[delta(c(x)>=0)]
-                cgtvar("&",i)  = (cgtmean(i)*cgtmean(i)*(1-phihere)) + ((1-cgtmean(i))*(1-cgtmean(i))*phihere);  // var[delta(c(x)>=0)]
+                cgtvar("&",i)  = sqrt((cgtmean(i)*cgtmean(i)*(1-phihere)) + ((1-cgtmean(i))*(1-cgtmean(i))*phihere));  // var[delta(c(x)>=0)]
             }
 
             else if ( ecgt <= 0 )
@@ -1249,7 +1260,8 @@ errstream() << "phantomxyzxyz 3: resscale " << resscale << "\n";
         }
 
         cgtmean("&",(bbopts.cgtapprox).size()) = (double) muy;
-        cgtvar("&",(bbopts.cgtapprox).size())  = ((double) sigmay)*((double) sigmay);
+        cgtvar("&",(bbopts.cgtapprox).size())  = (double) sigmay;
+errstream() << "cgtmean = " << cgtmean << " and cgtvar = " << cgtvar << "\n";
 
         // See Goodman: On the Exact Variance of Products
 
@@ -1281,7 +1293,7 @@ errstream() << "phantomxyzxyz 3: resscale " << resscale << "\n";
                 {
                     // bit set, posterior variance
 
-                    varsub *= cgtvar(k);
+                    varsub *= cgtvar(k)*cgtvar(k);
                 }
 
                 else
@@ -1673,6 +1685,15 @@ locsigmay = stabscore*stabscore*locsigmay;
         else
         {
             bbopts.model_muvar_cgt(varcgt,mucgt,x);
+        }
+
+        for ( i = 0 ; i < mucgt.size() ; ++i )
+        {
+            // mucgt >= cgtmargin
+            // mucgt-cgtmargin >= 0
+
+            //mucgt("&",i) -= ((bbopts.cgtmargin)*2*sqrt(varcgt(i)));
+            mucgt("&",i) -= bbopts.cgtmargin;
         }
 
 //errstream() << "phantomxyz mucgt(" << x << ") = " << mucgt << " and varcgt = " << varcgt << "\n";
@@ -2349,13 +2370,16 @@ int bayesOpt(int dim,
     Vector<int> grid_xobstype;
     Vector<int> griddone_xobstype;
 
+    double softmin = -(bopts.softmax);
+    double softmax = -(bopts.softmin);
+
     int ires = -1;
     //fres = 0;
-    fres = -1; // this is IMPORTANT. PIscale needs to start with a sensible value, and -1 is the (presumed) min if f(x) is [0,1], as the model
-               // is on -f(x) in [-1,0]. We min f(x), so we max -f(x), so we need to start with fres being at the *bottom* of this range.
-               // (it didn't matter much pre PIscale as it only affected the first run, and then a "real" fres took over), but now... what
-               // happens if the first round doesn't fit the constraint, acquisiton function becomes nominally 0 (because PIscale just goes
-               // to zero, DIRect just keeps recommending the first thing it tries, and we repeat ad-infinatum!).
+    fres.force_double() = softmin; // this is IMPORTANT. PIscale needs to start with a sensible value, and -1 is the (presumed) min if f(x) is [0,1], as the model
+                    // is on -f(x) in [-1,0]. We min f(x), so we max -f(x), so we need to start with fres being at the *bottom* of this range.
+                    // (it didn't matter much pre PIscale as it only affected the first run, and then a "real" fres took over), but now... what
+                    // happens if the first round doesn't fit the constraint, acquisiton function becomes nominally 0 (because PIscale just goes
+                    // to zero, DIRect just keeps recommending the first thing it tries, and we repeat ad-infinatum!).
 
     bool isfullgrid   = false; // full grid with unknown constraints if true (so don't actually need a GP model for the objective, just the constraints)
     bool gridHasNulls = false; // true if grid has undefined x's that may trigger inner-inner continuous optimizer
@@ -2607,7 +2631,8 @@ errstream() << "New fres (b) = " << fres << "\n";
     //
     // =======================================================================
 
-    double softmax = -(bopts.softmin);
+    //double softmin = -(bopts.softmax);
+    //double softmax = -(bopts.softmin);
 
     double betaval = 1.0; // for initial batch
     Vector<gentype> mupred(recBatchSize);
@@ -2911,7 +2936,7 @@ errstream() << "New fres (b) = " << fres << "\n";
 
                 bool fullobs = process_obs(fnapproxout,ycgt,xobstype,xobstype_cgt);
 
-                NiceAssert( !isgridopt || !replacex );
+                NiceAssert( !( isgridopt && !iscontopt ) || !replacex );
 
                 if ( replacex )
                 {
@@ -3819,8 +3844,8 @@ errstream() << "New fres (d) = " << fres << "\n";
                         bopts.model_unsample();
                     }
 
-                    //errstream() << "Unfiltered result x before fidelity selection: " << xa       << "\n";
-                    //errstream() << "Unfiltered result y before fidelity selection: " << dummyres << "\n";
+                    errstream() << "Unfiltered result x before fidelity selection: " << xa       << "\n";
+                    errstream() << "Unfiltered result y before fidelity selection: " << dummyres << "\n";
 
 //phantomabcabcabc
 //phantomabcabcabc FIXME MOVE THIS TO OUTSIDE OF GRID/NO_GRID LOOP
@@ -4824,7 +4849,7 @@ inneroptions:
 
                 fullobs = process_obs(fnapproxout,ycgt,xobstype,xobstype_cgt);
 
-                NiceAssert( !isgridopt || !replacex );
+                NiceAssert( !( isgridopt && !iscontopt ) || !replacex );
 
                 if ( replacex )
                 {
@@ -5032,6 +5057,7 @@ inneroptions:
 //phantomabc
                     if ( !isfullgrid )
                     {
+errstream() << "Add to training set: " << ( ((fnapproxout.isValNull()) ? 0.0_gent : fnapproxout) ) << ",\t" << xxb(k) << "\n";
                         bopts.model_addTrainingVector_mu_sigmaifsame(((fnapproxout.isValNull()) ? 0.0_gent : fnapproxout),mupred(k),xxb(k),xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,dval,varscale);
 
                         if ( addvar != 0 )
@@ -5042,6 +5068,7 @@ inneroptions:
 
                     if ( ycgt.size() )
                     {
+errstream() << "Add to training set cgt: " << ycgt << ",\t" << xxb(k) << "\n";
                         bopts.model_addTrainingVector_cgt(ycgt,xxb(k),xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype_cgt,varscale);
                     }
                 }

@@ -676,6 +676,9 @@ GETSETKERANDEF(denseZeroPoint,setdenseZeroPoint,double);
 GETSETKERAPDEF(getlinGradOrd, setlinGradOrd, Vector<int>           );
 GETSETKERAPDEF(getlinGradScal,setlinGradScal,Vector<Matrix<double>>);
 
+GETSETKERAPDEF(getlinParity,    setlinParity,    Vector<int>    );
+GETSETKERAPDEF(getlinParityOrig,setlinParityOrig,Vector<gentype>);
+
 GETSETKERAPDEF(numSamples,        setnumSamples,        int            );
 GETSETKERAPDEF(sampleDistribution,setSampleDistribution,Vector<gentype>);
 GETSETKERAPDEF(sampleIndices,     setSampleIndices,     Vector<int>    );
@@ -771,6 +774,7 @@ OPTGETSETDEF(itcntmethod,Bayesian,int    );
 OPTGETSETDEF(err,        Bayesian,double );
 OPTGETSETDEF(minstdev,   Bayesian,double );
 OPTGETSETDEF(cgtmethod,  Bayesian,int    );
+OPTGETSETDEF(cgtmargin,  Bayesian,double);
 OPTGETSETDEF(ztol,       Bayesian,double );
 OPTGETSETDEF(delta,      Bayesian,double );
 OPTGETSETDEF(zeta,       Bayesian,double );
@@ -1338,12 +1342,12 @@ PYBIND11_MODULE(pyheavy, m) {
 
     // All optimisers
 
-    QGETSETOPTALL(m_opt,optname,     "base-string for logging"                     );
-    QGETSETOPTALL(m_opt,maxtraintime,"maximum training time (default 0, unlimited)");
-    QGETSETOPTALL(m_opt,softmin,     "soft minimum on objective (default -inf)"    );
-    QGETSETOPTALL(m_opt,softmax,     "soft maximum on objective (default +inf)"    );
-    QGETSETOPTALL(m_opt,hardmin,     "hard minimum on objective (default -inf)"    );
-    QGETSETOPTALL(m_opt,hardmax,     "hard maximum on objective (default +inf)"    );
+    QGETSETOPTALL(m_opt,optname,     "base-string for logging"                        );
+    QGETSETOPTALL(m_opt,maxtraintime,"maximum training time (default 0, unlimited)"   );
+    QGETSETOPTALL(m_opt,softmin,     "soft minimum (clip) on objective (default -inf)");
+    QGETSETOPTALL(m_opt,softmax,     "soft maximum (clip) on objective (default +inf)");
+    QGETSETOPTALL(m_opt,hardmin,     "hard minimum (stop) on objective (default -inf)");
+    QGETSETOPTALL(m_opt,hardmax,     "hard maximum (stop) on objective (default +inf)");
 
     // Grid options
 
@@ -1411,6 +1415,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                           "\n"
                                           "0 - calculate probability that c(x)>=0 and scale acquisition function by this (default).\n"
                                           "1 - build c(x) into mean/variance calculation before calculating acquisition function.");
+    QGETSETOPT(m_opt,cgtmargin,  Bayesian,"safety margin for enforcing inequality constraints in the acquisition fn (default 0.1)");
     QGETSETOPT(m_opt,betafn,     Bayesian,"user-defined beta for method 11. You can make this a function with the vars:\n"
                                           "\n"
                                           "- var(0,1) (y) = iteration number.\n"
@@ -1568,6 +1573,9 @@ PYBIND11_MODULE(pyheavy, m) {
 
     QGETSETKERD(m_ml_kern_obscure,getlinGradOrd, setlinGradOrd, "linGradOrd", "setlinGradOrd", "Order of linear gradient constraints (see Jidling)"      );
     QGETSETKERD(m_ml_kern_obscure,getlinGradScal,setlinGradScal,"linGradScal","setlinGradScal","Matrix part of linear gradient constraints (see Jidling)");
+
+    QGETSETKERD(m_ml_kern_obscure,getlinParity,    setlinParity,    "linParity",    "setlinParity",    "Linear parity constraint"       );
+    QGETSETKERD(m_ml_kern_obscure,getlinParityOrig,setlinParityOrig,"linParityOrig","setlinParityOrig","Linear parity constraint origin");
 
     QGETSETKERD(m_ml_kern_obscure,numSamples,        setnumSamples,        "sN","setsN","number of samples if interpretting functions as distributions");
     QGETSETKERD(m_ml_kern_obscure,sampleDistribution,setSampleDistribution,"sD","setsD","distribution type if interpretting functions as distributions");

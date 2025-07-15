@@ -175,6 +175,9 @@ MercerKernel &MercerKernel::operator=(const MercerKernel &src)
     linGradScalTsp       = src.linGradScalTsp;
     haslinconstr         = src.haslinconstr;
 
+    linParity            = src.linParity;
+    linParityOrig        = src.linParityOrig;
+
     dShift               = src.dShift;
     dScale               = src.dScale;
     dShiftProd           = src.dShiftProd;
@@ -1532,261 +1535,6 @@ static void castvectoreal(Vector<double> &dest, const Vector<gentype> &src)
     return;
 }
 
-double  MercerKernel::yyyK0(double bias,
-                            const gentype **pxyprod,
-                            int xdim, int xconsist, int xresmode, int mlid, int assumreal, int justcalcip) const
-{
-    double res = 0;
-
-    return yyyaK0(res,bias,pxyprod,xdim,xconsist,xresmode,mlid,assumreal,justcalcip);
-}
-
-gentype &MercerKernel::yyyK0(gentype &res,
-                             const gentype &bias,
-                             const gentype **pxyprod,
-                             int xdim, int xconsist, int xresmode, int mlid, int assumreal, int justcalcip) const
-{
-    return yyyaK0(res,bias,pxyprod,xdim,xconsist,xresmode,mlid,assumreal,justcalcip);
-}
-
-double  MercerKernel::yyyK1(const SparseVector<gentype> &xa,
-                            const vecInfo &xainfo,
-                            double bias,
-                            const gentype **pxyprod,
-                            int ia,
-                            int xdim, int xconsist, int resmode, int mlid,
-                            const double *xy00, int assumreal, int justcalcip) const
-{
-    double res = 0;
-
-    int xaignorefarfarfar = 0;
-    int xagradordaddR     = 0;
-
-    if ( !sizeLinConstr() )
-    {
-        int xaignorefarfar = 0;
-        int xagradordadd = 0;
-
-        yyyaK1(res,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,bias,pxyprod,ia,xdim,xconsist,resmode,mlid,xy00,assumreal,justcalcip);
-    }
-
-    else
-    {
-        static const SparseVector<gentype> dummy;
-
-        int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
-        int xaind6present   = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
-        int xagradOrder     = xaind6present ? ( (int) xa.f4(6) ) : ( xafarfarpresent ? 1 : 0 );
-
-        const SparseVector<gentype> &xaffg = xafarfarpresent ? xa.f2() : dummy;
-        retVector<gentype> tmpvff;
-        Vector<double> xaff;
-        castvectoreal(xaff,xaffg(tmpvff));
-        int xaffdim = xaff.size() ? xaff.size() : ((int) std::round(pow(xdim,xagradOrder)));
-
-        NiceAssert( !xagradOrder || xafarfarpresent ); // for this case the result must be a double, so require projected gradient
-
-        int q;
-
-        int xaignorefarfar = 1;
-        int xagradordadd   = 0;
-
-        gentype gra;
-        gentype gbias(bias);
-        double tmpr;
-
-        Matrix<double> Aqalt;
-
-        retVector<double> tmpva,tmpvb,tmpvc,tmpvd,tmpve;
-
-        for ( q = 0 ; q < sizeLinConstr() ; ++q )
-        {
-            // Find relevant gradient
-
-            xagradordadd = linGradOrd(q);
-
-            yyyaK1(gra,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,gbias,pxyprod,ia,xdim,xconsist,resmode,mlid,xy00,assumreal,justcalcip);
-
-            // Cast result as vector of double
-
-            const Vector<double> &grav = (const Vector<double> &) gra;
-
-            // Get scaling matrix and record its size
-
-            const Matrix<double> &Aqraw = linGradScal(q);
-
-            const Matrix<double> *Aqptr = &Aqraw;
-
-            // If we are evaluating a gradient we need to convert A to the gradient form!
-
-            if ( xagradOrder && xafarfarpresent )
-            {
-                // Directional gradient, so need to increase gradient order and project down.
-                // e \otimes A -> [ e \otimes A_{0:} ]
-
-                Aqalt.resize(Aqraw.numRows(),xaffdim*(Aqraw.numCols()));
-
-                kronprod(Aqalt("&",0,tmpva,tmpvb),xaff,Aqraw(0,tmpvd,tmpve));
-
-                Aqptr = &Aqalt;
-            }
-
-            const Matrix<double> &Aq = *Aqptr;
-
-            NiceAssert( Aq.numRows() == 1           );
-            NiceAssert( Aq.numCols() == grav.size() );
-
-            // Calculate the result
-
-            if ( !q )
-            {
-                res  = twoProduct(tmpr,Aq(0,tmpva,tmpvb),grav);
-            }
-
-            else
-            {
-                res += twoProduct(tmpr,Aq(0,tmpva,tmpvb),grav);
-            }
-        }
-    }
-
-    return res;
-}
-
-gentype &MercerKernel::yyyK1(gentype &res,
-                             const SparseVector<gentype> &xa,
-                             const vecInfo &xainfo,
-                             const gentype &bias,
-                             const gentype **pxyprod,
-                             int ia,
-                             int xdim, int xconsist, int resmode, int mlid,
-                             const double *xy00, int assumreal, int justcalcip) const
-{
-    int xaignorefarfarfar = 0;
-    int xagradordaddR     = 0;
-
-    if ( !sizeLinConstr() )
-    {
-        int xaignorefarfar = 0;
-        int xagradordadd   = 0;
-
-        yyyaK1(res,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,bias,pxyprod,ia,xdim,xconsist,resmode,mlid,xy00,assumreal,justcalcip);
-    }
-
-    else
-    {
-        static const SparseVector<gentype> dummy;
-
-        int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
-        int xaind6present   = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
-        int xagradOrder     = xaind6present ? ( (int) xa.f4(6) ) : ( xafarfarpresent ? 1 : 0 );
-
-        const SparseVector<gentype> &xaffg = xafarfarpresent ? xa.f2() : dummy;
-        retVector<gentype> tmpvff;
-        Vector<double> xaff;
-        castvectoreal(xaff,xaffg(tmpvff));
-        int xaffdim = xaff.size() ? xaff.size() : ((int) std::round(pow(xdim,xagradOrder)));
-        xaff.resize(xaffdim);
-
-        int j,k,q;
-
-        int xaignorefarfar = 1;
-        int xagradordadd   = 0;
-
-        gentype gra;
-
-        Matrix<double> Aqalt;
-
-        retVector<double> tmpva,tmpvb,tmpvc,tmpvd,tmpve;
-
-        for ( q = 0 ; q < sizeLinConstr() ; ++q )
-        {
-            // Find relevant gradient
-
-            xagradordadd = linGradOrd(q);
-
-            yyyaK1(gra,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,bias,pxyprod,ia,xdim,xconsist,resmode,mlid,xy00,assumreal,justcalcip);
-
-            // Cast result as vector of double
-
-            const Vector<double> &grav = (const Vector<double> &) gra;
-
-            // Get scaling matrix and record its size
-
-            const Matrix<double> &Aqraw = linGradScal(q);
-
-            const Matrix<double> *Aqptr = &Aqraw;
-
-            // If we are evaluating a gradient we need to convert A to the gradient form!
-
-            if ( xagradOrder && xafarfarpresent )
-            {
-                // Directional gradient, so need to increase gradient order and project down.
-                // Like below, then take a weighted sum
-
-                Aqalt.resize(Aqraw.numRows(),xaffdim*(Aqraw.numCols()));
-
-                for ( j = 0 ; j < Aqraw.numRows() ; ++j )
-                {
-                    kronprod(Aqalt("&",j,tmpva,tmpvb),xaff,Aqraw(j,tmpvd,tmpve));
-                }
-
-                Aqptr = &Aqalt;
-            }
-
-            else if ( xagradOrder && !xafarfarpresent )
-            {
-                // Directional gradient, so need to increase gradient order and project down.
-                // E \otimes A -> [ E_{0:} \otimes A_{0:} ]
-                //                [ E_{0:} \otimes A_{1:} ]
-                //                [          ...          ]
-                //                [ E_{1:} \otimes A_{0:} ]
-                //                [ E_{1:} \otimes A_{1:} ]
-                //                [          ...          ]
-                //                [          ...          ]
-                // where E_{0:} = [ 1 0 0 0 ... ]
-                //       E_{1:} = [ 0 1 0 0 ... ]
-                //             ...
-
-                Aqalt.resize(xaffdim*(Aqraw.numRows()),xaffdim*(Aqraw.numCols()));
-
-                for ( k = 0 ; k < xaffdim ; ++k )
-                {
-                    xaff = 0.0;
-                    xaff("&",k) = 1.0;
-
-                    for ( j = 0 ; j < Aqraw.numRows() ; ++j )
-                    {
-                        // We are assuming non-sparse format here for simplicity!
-
-                        kronprod(Aqalt("&",j+(k*(Aqraw.numRows())),tmpva,tmpvb),xaff,Aqraw(j,tmpvd,tmpve));
-                    }
-                }
-
-                Aqptr = &Aqalt;
-            }
-
-            const Matrix<double> &Aq = *Aqptr;
-
-            NiceAssert( Aq.numCols() == grav.size() );
-
-            // Calculate the result
-
-            if ( !q )
-            {
-                res  = (Aq*grav);
-            }
-
-            else
-            {
-                res += (Aq*grav);
-            }
-        }
-    }
-
-    return res;
-}
-
 double MercerKernel::LL2fast(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
                              const vecInfo &xainfo, const vecInfo &xbinfo,
                              double bias,
@@ -1902,6 +1650,261 @@ double MercerKernel::LL2fast(const SparseVector<gentype> &xa, const SparseVector
     return res;
 }
 
+double  MercerKernel::yyyK0(double bias,
+                            const gentype **pxyprod,
+                            int xdim, int xconsist, int xresmode, int mlid, int assumreal, int justcalcip) const
+{
+    double res = 0;
+
+    return yyyaaK0(res,bias,pxyprod,xdim,xconsist,xresmode,mlid,assumreal,justcalcip);
+}
+
+gentype &MercerKernel::yyyK0(gentype &res,
+                             const gentype &bias,
+                             const gentype **pxyprod,
+                             int xdim, int xconsist, int xresmode, int mlid, int assumreal, int justcalcip) const
+{
+    return yyyaaK0(res,bias,pxyprod,xdim,xconsist,xresmode,mlid,assumreal,justcalcip);
+}
+
+double  MercerKernel::yyyK1(const SparseVector<gentype> &xa,
+                            const vecInfo &xainfo,
+                            double bias,
+                            const gentype **pxyprod,
+                            int ia,
+                            int xdim, int xconsist, int resmode, int mlid,
+                            const double *xy00, int assumreal, int justcalcip) const
+{
+    double res = 0;
+
+    int xaignorefarfarfar = 0;
+    int xagradordaddR     = 0;
+
+    if ( !sizeLinConstr() )
+    {
+        int xaignorefarfar = 0;
+        int xagradordadd = 0;
+
+        yyyaaK1(res,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,bias,pxyprod,ia,xdim,xconsist,resmode,mlid,xy00,assumreal,justcalcip);
+    }
+
+    else
+    {
+        static const SparseVector<gentype> dummy;
+
+        int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
+        int xaind6present   = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
+        int xagradOrder     = xaind6present ? ( (int) xa.f4(6) ) : ( xafarfarpresent ? 1 : 0 );
+
+        const SparseVector<gentype> &xaffg = xafarfarpresent ? xa.f2() : dummy;
+        retVector<gentype> tmpvff;
+        Vector<double> xaff;
+        castvectoreal(xaff,xaffg(tmpvff));
+        int xaffdim = xaff.size() ? xaff.size() : ((int) std::round(pow(xdim,xagradOrder)));
+
+        NiceAssert( !xagradOrder || xafarfarpresent ); // for this case the result must be a double, so require projected gradient
+
+        int q;
+
+        int xaignorefarfar = 1;
+        int xagradordadd   = 0;
+
+        gentype gra;
+        gentype gbias(bias);
+        double tmpr;
+
+        Matrix<double> Aqalt;
+
+        retVector<double> tmpva,tmpvb,tmpvc,tmpvd,tmpve;
+
+        for ( q = 0 ; q < sizeLinConstr() ; ++q )
+        {
+            // Find relevant gradient
+
+            xagradordadd = linGradOrd(q);
+
+            yyyaaK1(gra,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,gbias,pxyprod,ia,xdim,xconsist,resmode,mlid,xy00,assumreal,justcalcip);
+
+            // Cast result as vector of double
+
+            const Vector<double> &grav = (const Vector<double> &) gra;
+
+            // Get scaling matrix and record its size
+
+            const Matrix<double> &Aqraw = linGradScal(q);
+
+            const Matrix<double> *Aqptr = &Aqraw;
+
+            // If we are evaluating a gradient we need to convert A to the gradient form!
+
+            if ( xagradOrder && xafarfarpresent )
+            {
+                // Directional gradient, so need to increase gradient order and project down.
+                // e \otimes A -> [ e \otimes A_{0:} ]
+
+                Aqalt.resize(Aqraw.numRows(),xaffdim*(Aqraw.numCols()));
+
+                kronprod(Aqalt("&",0,tmpva,tmpvb),xaff,Aqraw(0,tmpvd,tmpve));
+
+                Aqptr = &Aqalt;
+            }
+
+            const Matrix<double> &Aq = *Aqptr;
+
+            NiceAssert( Aq.numRows() == 1           );
+            NiceAssert( Aq.numCols() == grav.size() );
+
+            // Calculate the result
+
+            if ( !q )
+            {
+                res  = twoProduct(tmpr,Aq(0,tmpva,tmpvb),grav);
+            }
+
+            else
+            {
+                res += twoProduct(tmpr,Aq(0,tmpva,tmpvb),grav);
+            }
+        }
+    }
+
+    return res;
+}
+
+gentype &MercerKernel::yyyK1(gentype &res,
+                             const SparseVector<gentype> &xa,
+                             const vecInfo &xainfo,
+                             const gentype &bias,
+                             const gentype **pxyprod,
+                             int ia,
+                             int xdim, int xconsist, int resmode, int mlid,
+                             const double *xy00, int assumreal, int justcalcip) const
+{
+    int xaignorefarfarfar = 0;
+    int xagradordaddR     = 0;
+
+    if ( !sizeLinConstr() )
+    {
+        int xaignorefarfar = 0;
+        int xagradordadd   = 0;
+
+        yyyaaK1(res,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,bias,pxyprod,ia,xdim,xconsist,resmode,mlid,xy00,assumreal,justcalcip);
+    }
+
+    else
+    {
+        static const SparseVector<gentype> dummy;
+
+        int xafarfarpresent = xa.isf2offindpresent() ? 1 : 0;
+        int xaind6present   = xa.isf4indpresent(6) && !(xa.f4(6).isValNull());
+        int xagradOrder     = xaind6present ? ( (int) xa.f4(6) ) : ( xafarfarpresent ? 1 : 0 );
+
+        const SparseVector<gentype> &xaffg = xafarfarpresent ? xa.f2() : dummy;
+        retVector<gentype> tmpvff;
+        Vector<double> xaff;
+        castvectoreal(xaff,xaffg(tmpvff));
+        int xaffdim = xaff.size() ? xaff.size() : ((int) std::round(pow(xdim,xagradOrder)));
+        xaff.resize(xaffdim);
+
+        int j,k,q;
+
+        int xaignorefarfar = 1;
+        int xagradordadd   = 0;
+
+        gentype gra;
+
+        Matrix<double> Aqalt;
+
+        retVector<double> tmpva,tmpvb,tmpvc,tmpvd,tmpve;
+
+        for ( q = 0 ; q < sizeLinConstr() ; ++q )
+        {
+            // Find relevant gradient
+
+            xagradordadd = linGradOrd(q);
+
+            yyyaaK1(gra,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,bias,pxyprod,ia,xdim,xconsist,resmode,mlid,xy00,assumreal,justcalcip);
+
+            // Cast result as vector of double
+
+            const Vector<double> &grav = (const Vector<double> &) gra;
+
+            // Get scaling matrix and record its size
+
+            const Matrix<double> &Aqraw = linGradScal(q);
+
+            const Matrix<double> *Aqptr = &Aqraw;
+
+            // If we are evaluating a gradient we need to convert A to the gradient form!
+
+            if ( xagradOrder && xafarfarpresent )
+            {
+                // Directional gradient, so need to increase gradient order and project down.
+                // Like below, then take a weighted sum
+
+                Aqalt.resize(Aqraw.numRows(),xaffdim*(Aqraw.numCols()));
+
+                for ( j = 0 ; j < Aqraw.numRows() ; ++j )
+                {
+                    kronprod(Aqalt("&",j,tmpva,tmpvb),xaff,Aqraw(j,tmpvd,tmpve));
+                }
+
+                Aqptr = &Aqalt;
+            }
+
+            else if ( xagradOrder && !xafarfarpresent )
+            {
+                // Directional gradient, so need to increase gradient order and project down.
+                // E \otimes A -> [ E_{0:} \otimes A_{0:} ]
+                //                [ E_{0:} \otimes A_{1:} ]
+                //                [          ...          ]
+                //                [ E_{1:} \otimes A_{0:} ]
+                //                [ E_{1:} \otimes A_{1:} ]
+                //                [          ...          ]
+                //                [          ...          ]
+                // where E_{0:} = [ 1 0 0 0 ... ]
+                //       E_{1:} = [ 0 1 0 0 ... ]
+                //             ...
+
+                Aqalt.resize(xaffdim*(Aqraw.numRows()),xaffdim*(Aqraw.numCols()));
+
+                for ( k = 0 ; k < xaffdim ; ++k )
+                {
+                    xaff = 0.0;
+                    xaff("&",k) = 1.0;
+
+                    for ( j = 0 ; j < Aqraw.numRows() ; ++j )
+                    {
+                        // We are assuming non-sparse format here for simplicity!
+
+                        kronprod(Aqalt("&",j+(k*(Aqraw.numRows())),tmpva,tmpvb),xaff,Aqraw(j,tmpvd,tmpve));
+                    }
+                }
+
+                Aqptr = &Aqalt;
+            }
+
+            const Matrix<double> &Aq = *Aqptr;
+
+            NiceAssert( Aq.numCols() == grav.size() );
+
+            // Calculate the result
+
+            if ( !q )
+            {
+                res  = (Aq*grav);
+            }
+
+            else
+            {
+                res += (Aq*grav);
+            }
+        }
+    }
+
+    return res;
+}
+
 double  MercerKernel::yyyK2(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
                             const vecInfo &xainfo, const vecInfo &xbinfo,
                             double bias,
@@ -1936,7 +1939,8 @@ double  MercerKernel::yyyK2(const SparseVector<gentype> &xa, const SparseVector<
              !xainfo.xiseqn() &&
              !xbinfo.xiseqn() &&
              xa.isnofaroffindpresent() &&
-             xb.isnofaroffindpresent() )
+             xb.isnofaroffindpresent() &&
+             !sizeLinParity() )
         {
             res = LL2fast(xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,xy00,xy10,xy11);
         }
@@ -1949,7 +1953,7 @@ double  MercerKernel::yyyK2(const SparseVector<gentype> &xa, const SparseVector<
             int xbignorefarfar = 0;
             int xbgradordadd   = 0;
 
-            yyyaK2(res,xa,xb,xainfo,xbinfo,xaignorefarfar,xbignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xagradordadd,xbgradordadd,xagradordaddR,xbgradordaddR,bias,pxyprod,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,assumreal,justcalcip);
+            yyyaaK2(res,xa,xb,xainfo,xbinfo,xaignorefarfar,xbignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xagradordadd,xbgradordadd,xagradordaddR,xbgradordaddR,bias,pxyprod,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,assumreal,justcalcip);
         }
     }
 
@@ -2008,7 +2012,7 @@ double  MercerKernel::yyyK2(const SparseVector<gentype> &xa, const SparseVector<
                 xagradordadd = linGradOrd(q);
                 xbgradordadd = linGradOrd(r);
 
-                yyyaK2(gra,xa,xb,xainfo,xbinfo,xaignorefarfar,xbignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xagradordadd,xbgradordadd,xagradordaddR,xbgradordaddR,gbias,pxyprod,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,assumreal,justcalcip);
+                yyyaaK2(gra,xa,xb,xainfo,xbinfo,xaignorefarfar,xbignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xagradordadd,xbgradordadd,xagradordaddR,xbgradordaddR,gbias,pxyprod,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,assumreal,justcalcip);
 
                 // Cast result as vector of double
 
@@ -2098,7 +2102,7 @@ gentype &MercerKernel::yyyK2(gentype &res,
         int xbignorefarfar = 0;
         int xbgradordadd   = 0;
 
-        yyyaK2(res,xa,xb,xainfo,xbinfo,xaignorefarfar,xbignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xagradordadd,xbgradordadd,xagradordaddR,xbgradordaddR,bias,pxyprod,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,assumreal,justcalcip);
+        yyyaaK2(res,xa,xb,xainfo,xbinfo,xaignorefarfar,xbignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xagradordadd,xbgradordadd,xagradordaddR,xbgradordaddR,bias,pxyprod,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,assumreal,justcalcip);
     }
 
     else
@@ -2151,7 +2155,7 @@ gentype &MercerKernel::yyyK2(gentype &res,
                 xagradordadd = linGradOrd(q);
                 xbgradordadd = linGradOrd(r);
 
-                yyyaK2(gra,xa,xb,xainfo,xbinfo,xaignorefarfar,xbignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xagradordadd,xbgradordadd,xagradordaddR,xbgradordaddR,bias,pxyprod,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,assumreal,justcalcip);
+                yyyaaK2(gra,xa,xb,xainfo,xbinfo,xaignorefarfar,xbignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xagradordadd,xbgradordadd,xagradordaddR,xbgradordaddR,bias,pxyprod,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,assumreal,justcalcip);
 
                 // Cast result as matrix of double
 
@@ -2323,7 +2327,7 @@ double  MercerKernel::yyyK2x2(const SparseVector<gentype> &x, const SparseVector
     double res = 0;
 
 //FIXME: implement linear constraint kernels somehow here
-    yyyaK2x2(res,x,xa,xb,xinfo,xainfo,xbinfo,xignorefarfar,xaignorefarfar,xbignorefarfar,xignorefarfarfar,xaignorefarfarfar,xbignorefarfarfar,xgradordadd,xagradordadd,xbgradordadd,xgradordaddR,xagradordaddR,xbgradordaddR,bias,i,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,assumreal,justcalcip);
+    yyyaaK2x2(res,x,xa,xb,xinfo,xainfo,xbinfo,xignorefarfar,xaignorefarfar,xbignorefarfar,xignorefarfarfar,xaignorefarfarfar,xbignorefarfarfar,xgradordadd,xagradordadd,xbgradordadd,xgradordaddR,xagradordaddR,xbgradordaddR,bias,i,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,assumreal,justcalcip);
 
     return res;
 }
@@ -2357,7 +2361,7 @@ gentype &MercerKernel::yyyK2x2(gentype &res,
     int xbignorefarfarfar = 0;
     int xbgradordaddR     = 0;
 
-    yyyaK2x2(res,x,xa,xb,xinfo,xainfo,xbinfo,xignorefarfar,xaignorefarfar,xbignorefarfar,xignorefarfarfar,xaignorefarfarfar,xbignorefarfarfar,xgradordadd,xagradordadd,xbgradordadd,xgradordaddR,xagradordaddR,xbgradordaddR,bias,i,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,assumreal,justcalcip);
+    yyyaaK2x2(res,x,xa,xb,xinfo,xainfo,xbinfo,xignorefarfar,xaignorefarfar,xbignorefarfar,xignorefarfarfar,xaignorefarfarfar,xbignorefarfarfar,xgradordadd,xagradordadd,xbgradordadd,xgradordaddR,xagradordaddR,xbgradordaddR,bias,i,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,assumreal,justcalcip);
 
 //FIXME: implement linear constraint kernels somehow here
     return res;
@@ -2395,7 +2399,7 @@ double  MercerKernel::yyyK3(const SparseVector<gentype> &xa, const SparseVector<
 
     NiceAssert( !sizeLinConstr() );
 
-    yyyaK3(res,xa,xb,xc,xainfo,xbinfo,xcinfo,xaignorefarfar,xbignorefarfar,xcignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xagradordadd,xbgradordadd,xcgradordadd,xagradordaddR,xbgradordaddR,xcgradordaddR,bias,pxyprod,ia,ib,ic,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,assumreal,justcalcip);
+    yyyaaK3(res,xa,xb,xc,xainfo,xbinfo,xcinfo,xaignorefarfar,xbignorefarfar,xcignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xagradordadd,xbgradordadd,xcgradordadd,xagradordaddR,xbgradordaddR,xcgradordaddR,bias,pxyprod,ia,ib,ic,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,assumreal,justcalcip);
 
     return res;
 }
@@ -2427,7 +2431,7 @@ gentype &MercerKernel::yyyK3(gentype &res,
 
     NiceAssert( !sizeLinConstr() );
 
-    yyyaK3(res,xa,xb,xc,xainfo,xbinfo,xcinfo,xaignorefarfar,xbignorefarfar,xcignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xagradordadd,xbgradordadd,xcgradordadd,xagradordaddR,xbgradordaddR,xcgradordaddR,bias,pxyprod,ia,ib,ic,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,assumreal,justcalcip);
+    yyyaaK3(res,xa,xb,xc,xainfo,xbinfo,xcinfo,xaignorefarfar,xbignorefarfar,xcignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xagradordadd,xbgradordadd,xcgradordadd,xagradordaddR,xbgradordaddR,xcgradordaddR,bias,pxyprod,ia,ib,ic,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,assumreal,justcalcip);
 
     return res;
 }
@@ -2464,7 +2468,7 @@ double  MercerKernel::yyyK4(const SparseVector<gentype> &xa, const SparseVector<
 
     NiceAssert( !sizeLinConstr() );
 
-    yyyaK4(res,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xaignorefarfar,xbignorefarfar,xcignorefarfar,xdignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xdignorefarfarfar,xagradordadd,xbgradordadd,xcgradordadd,xdgradordadd,xagradordaddR,xbgradordaddR,xcgradordaddR,xdgradordaddR,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,assumreal,justcalcip);
+    yyyaaK4(res,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xaignorefarfar,xbignorefarfar,xcignorefarfar,xdignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xdignorefarfarfar,xagradordadd,xbgradordadd,xcgradordadd,xdgradordadd,xagradordaddR,xbgradordaddR,xcgradordaddR,xdgradordaddR,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,assumreal,justcalcip);
 
     return res;
 }
@@ -2500,7 +2504,7 @@ gentype &MercerKernel::yyyK4(gentype &res,
 
     NiceAssert( !sizeLinConstr() );
 
-    yyyaK4(res,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xaignorefarfar,xbignorefarfar,xcignorefarfar,xdignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xdignorefarfarfar,xagradordadd,xbgradordadd,xcgradordadd,xdgradordadd,xagradordaddR,xbgradordaddR,xcgradordaddR,xdgradordaddR,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,assumreal,justcalcip);
+    yyyaaK4(res,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xaignorefarfar,xbignorefarfar,xcignorefarfar,xdignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xdignorefarfarfar,xagradordadd,xbgradordadd,xcgradordadd,xdgradordadd,xagradordaddR,xbgradordaddR,xcgradordaddR,xdgradordaddR,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,assumreal,justcalcip);
 
     return res;
 }
@@ -2529,7 +2533,7 @@ double  MercerKernel::yyyKm(int m,
         xignorefarfarfar = 0;
         xgradordaddR = 0;
 
-        yyyaKm(m,res,x,xinfo,xignorefarfar,xignorefarfarfar,xgradordadd,xgradordaddR,bias,i,pxyprod,xdim,xconsist,resmode,mlid,xy,assumreal,justcalcip);
+        yyyaaKm(m,res,x,xinfo,xignorefarfar,xignorefarfarfar,xgradordadd,xgradordaddR,bias,i,pxyprod,xdim,xconsist,resmode,mlid,xy,assumreal,justcalcip);
     }
 
     else
@@ -2577,7 +2581,7 @@ gentype &MercerKernel::yyyKm(int m, gentype &res,
         xignorefarfarfar = 0;
         xgradordaddR = 0;
 
-        yyyaKm(m,res,x,xinfo,xignorefarfar,xignorefarfarfar,xgradordadd,xgradordaddR,bias,i,pxyprod,xdim,xconsist,resmode,mlid,xy,assumreal,justcalcip);
+        yyyaaKm(m,res,x,xinfo,xignorefarfar,xignorefarfarfar,xgradordadd,xgradordaddR,bias,i,pxyprod,xdim,xconsist,resmode,mlid,xy,assumreal,justcalcip);
     }
 
     else
@@ -2613,7 +2617,7 @@ int MercerKernel::yyyphim(int m, Vector<double> &res, const SparseVector<gentype
     int xaignorefarfarfar = 0;
     int xagradordaddR = 0;
 
-    int dres = yyyaphim(m,res,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,ia,allowfinite,xdim,xconsist,assumreal);
+    int dres = yyyaaphim(m,res,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,ia,allowfinite,xdim,xconsist,assumreal);
 
     return dres;
 }
@@ -2628,7 +2632,7 @@ int MercerKernel::yyyphim(int m, Vector<gentype> &res, const SparseVector<gentyp
     int xaignorefarfarfar = 0;
     int xagradordaddR = 0;
 
-    int dres = yyyaphim(m,res,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,ia,allowfinite,xdim,xconsist,assumreal);
+    int dres = yyyaaphim(m,res,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,ia,allowfinite,xdim,xconsist,assumreal);
 
     return dres;
 }
@@ -16163,7 +16167,7 @@ std::ostream &MercerKernel::printstream(std::ostream &output, int dep) const
         output << src.suggestXYcache() << ";" << src.isIPdiffered() << ";" << src.defindKey().size() << ")";
     }
 
-    else if ( src.isTrivialKernel() && !src.sizeLinConstr() )
+    else if ( src.isTrivialKernel() && !src.sizeLinConstr() && !src.sizeLinParity() )
     {
         output << "k" << src.cType() << "(" << src.cWeight() << ";" << src.kinf(0) << ";";
 
@@ -16251,6 +16255,9 @@ std::ostream &MercerKernel::printstream(std::ostream &output, int dep) const
         output << "Linear constraint gradient matrices:     " << src.linGradScal  << "\n";
         output << "Linear constraint gradient matrices tsp: " << src.linGradScalTsp  << "\n";
         output << "Linear constraint has constants:         " << src.haslinconstr << "\n\n";
+
+        output << "Linear Parity:              " << src.linParity     << "\n";
+        output << "Linear Parity Origin Point: " << src.linParityOrig << "\n";
 
         output << "Enable <xy> retrieval: " << src.enchurn         << "\n";
     }
@@ -16511,6 +16518,9 @@ std::istream &MercerKernel::inputstream(std::istream &input)
         input >> dummy; input >> dest.linGradScalTsp;
         input >> dummy; input >> dest.haslinconstr;
 
+        input >> dummy; input >> dest.linParity;
+        input >> dummy; input >> dest.linParityOrig;
+
         input >> dummy; input >> dest.enchurn;
     }
 
@@ -16645,6 +16655,8 @@ int operator==(const MercerKernel &leftop, const MercerKernel &rightop)
     if ( !( leftop.combinedOverwriteSrc == rightop.combinedOverwriteSrc ) ) { return 0; }
     if ( !( leftop.linGradOrd           == rightop.linGradOrd           ) ) { return 0; }
     if ( !( leftop.linGradScal          == rightop.linGradScal          ) ) { return 0; }
+    if ( !( leftop.linParity            == rightop.linParity            ) ) { return 0; }
+    if ( !( leftop.linParityOrig        == rightop.linParityOrig        ) ) { return 0; }
 
     return 1;
 }
@@ -23285,6 +23297,358 @@ void MercerKernel::yyyadnKK2del(Vector<T> &sc, Vector<Vector<int> > &n, int &min
         yyybdnKK2del(sc,n,minmaxind,q,xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,mlid,xy00,xy10,xy11,deepDeriv,iaset,ibset);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Parity constraints here
+
+template <class T>
+T &MercerKernel::yyyaaK0(T &res,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int xdim, int xconsist, int xresmode, int mlid, int assumreal, int justcalcip) const
+{
+    return yyyaK0(res,bias,pxyprod,xdim,xconsist,xresmode,mlid,assumreal,justcalcip);
+}
+
+template <class T>
+T &MercerKernel::yyyaaK1(T &res,
+                    const SparseVector<gentype> &xa,
+                    const vecInfo &xainfo,
+                    int xaignorefarfar,
+                    int xaignorefarfarfar,
+                    int xagradordadd,
+                    int xagradordaddR,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia,
+                    int xdim, int xconsist, int resmode, int mlid,
+                    const double *xy00, int assumreal, int justcalcip) const
+{
+    if ( sizeLinParity() )
+    {
+        SparseVector<gentype> xxa(xa);
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( linParityOrig.size() )
+            {
+                xxa("&",linParity(i)) -= linParityOrig(i);
+            }
+        }
+
+        double sa = ( (double) xxa(linParity(0)) < 0 ) ? -1 : +1;
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( sa < 0 ) { xxa("&",linParity(i)).negate(); }
+        }
+
+        return yyyaK1(res,xxa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,bias,nullptr,ia,xdim,xconsist,resmode,mlid,nullptr,assumreal,justcalcip);
+    }
+
+    return yyyaK1(res,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,bias,pxyprod,ia,xdim,xconsist,resmode,mlid,xy00,assumreal,justcalcip);
+}
+
+template <class T>
+T &MercerKernel::yyyaaK2(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                    const vecInfo &xainfo, const vecInfo &xbinfo,
+                    int xaignorefarfar, int xbignorefarfar,
+                    int xaignorefarfarfar, int xbignorefarfarfar,
+                    int xagradordadd, int xbgradordadd,
+                    int xagradordaddR, int xbgradordaddR,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib,
+                    int xdim, int xconsist, int resmode, int mlid, 
+                    const double *xy00, const double *xy10, const double *xy11, int assumreal, int justcalcip) const
+{
+    if ( sizeLinParity() )
+    {
+        SparseVector<gentype> xxa(xa);
+        SparseVector<gentype> xxb(xb);
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( linParityOrig.size() )
+            {
+                xxa("&",linParity(i)) -= linParityOrig(i);
+                xxb("&",linParity(i)) -= linParityOrig(i);
+            }
+        }
+
+        double sa = ( (double) xxa(linParity(0)) < 0 ) ? -1 : +1;
+        double sb = ( (double) xxb(linParity(0)) < 0 ) ? -1 : +1;
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( sa < 0 ) { xxa("&",linParity(i)).negate(); }
+            if ( sb < 0 ) { xxb("&",linParity(i)).negate(); }
+        }
+
+        return yyyaK2(res,xxa,xxb,xainfo,xbinfo,xaignorefarfar,xbignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xagradordadd,xbgradordadd,xagradordaddR,xbgradordaddR,bias,nullptr,ia,ib,xdim,xconsist,resmode,mlid,nullptr,nullptr,nullptr,assumreal,justcalcip);
+    }
+
+    return yyyaK2(res,xa,xb,xainfo,xbinfo,xaignorefarfar,xbignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xagradordadd,xbgradordadd,xagradordaddR,xbgradordaddR,bias,pxyprod,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,assumreal,justcalcip);
+}
+
+template <class T>
+T &MercerKernel::yyyaaK2x2(T &res,
+                          const SparseVector<gentype> &x, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
+                          const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo,
+                          int xignorefarfar, int xaignorefarfar, int xbignorefarfar,
+                          int xignorefarfarfar, int xaignorefarfarfar, int xbignorefarfarfar,
+                          int xgradordadd, int xagradordadd, int xbgradordadd,
+                          int xgradordaddR, int xagradordaddR, int xbgradordaddR,
+                          const T &bias,
+                          int i, int ia, int ib,
+                          int xdim, int xbonsist, int resmode, int mlid,
+                          const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22,
+                          int assumreal, int justcalcip) const
+{
+    if ( sizeLinParity() )
+    {
+        SparseVector<gentype> xx( x);
+        SparseVector<gentype> xxa(xa);
+        SparseVector<gentype> xxb(xb);
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( linParityOrig.size() )
+            {
+                xx ("&",linParity(i)) -= linParityOrig(i);
+                xxa("&",linParity(i)) -= linParityOrig(i);
+                xxb("&",linParity(i)) -= linParityOrig(i);
+            }
+        }
+
+        double s  = ( (double) xx( linParity(0)) < 0 ) ? -1 : +1;
+        double sa = ( (double) xxa(linParity(0)) < 0 ) ? -1 : +1;
+        double sb = ( (double) xxb(linParity(0)) < 0 ) ? -1 : +1;
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( s  < 0 ) { xx( "&",linParity(i)).negate(); }
+            if ( sa < 0 ) { xxa("&",linParity(i)).negate(); }
+            if ( sb < 0 ) { xxb("&",linParity(i)).negate(); }
+        }
+
+        return yyyaK2x2(res,xx,xxa,xxb,xinfo,xainfo,xbinfo,xignorefarfar,xaignorefarfar,xbignorefarfar,xignorefarfarfar,xaignorefarfarfar,xbignorefarfarfar,xgradordadd,xagradordadd,xbgradordadd,xgradordaddR,xagradordaddR,xbgradordaddR,bias,i,ia,ib,xdim,xbonsist,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,assumreal,justcalcip);
+    }
+
+    return yyyaK2x2(res,x,xa,xb,xinfo,xainfo,xbinfo,xignorefarfar,xaignorefarfar,xbignorefarfar,xignorefarfarfar,xaignorefarfarfar,xbignorefarfarfar,xgradordadd,xagradordadd,xbgradordadd,xgradordaddR,xagradordaddR,xbgradordaddR,bias,i,ia,ib,xdim,xbonsist,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,assumreal,justcalcip);
+}
+
+
+template <class T>
+T &MercerKernel::yyyaaK3(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc,
+                    const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo,
+                    int xaignorefarfar, int xbignorefarfar, int xcignorefarfar,
+                    int xaignorefarfarfar, int xbignorefarfarfar, int xcignorefarfarfar,
+                    int xagradordadd, int xbgradordadd, int xcgradordadd,
+                    int xagradordaddR, int xbgradordaddR, int xcgradordaddR,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib, int ic,
+                    int xdim, int xconsist, int xresmode, int mlid,
+                    const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int assumreal, int justcalcip) const
+{
+    if ( sizeLinParity() )
+    {
+        SparseVector<gentype> xxa(xa);
+        SparseVector<gentype> xxb(xb);
+        SparseVector<gentype> xxc(xc);
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( linParityOrig.size() )
+            {
+                xxa("&",linParity(i)) -= linParityOrig(i);
+                xxb("&",linParity(i)) -= linParityOrig(i);
+                xxc("&",linParity(i)) -= linParityOrig(i);
+            }
+        }
+
+        double sa = ( (double) xxa(linParity(0)) < 0 ) ? -1 : +1;
+        double sb = ( (double) xxb(linParity(0)) < 0 ) ? -1 : +1;
+        double sc = ( (double) xxc(linParity(0)) < 0 ) ? -1 : +1;
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( sa < 0 ) { xxa("&",linParity(i)).negate(); }
+            if ( sb < 0 ) { xxb("&",linParity(i)).negate(); }
+            if ( sc < 0 ) { xxc("&",linParity(i)).negate(); }
+        }
+
+        return yyyaK3(res,xxa,xxb,xxc,xainfo,xbinfo,xcinfo,xaignorefarfar,xbignorefarfar,xcignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xagradordadd,xbgradordadd,xcgradordadd,xagradordaddR,xbgradordaddR,xcgradordaddR,bias,nullptr,ia,ib,ic,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,assumreal,justcalcip);
+    }
+
+    return yyyaK3(res,xa,xb,xc,xainfo,xbinfo,xcinfo,xaignorefarfar,xbignorefarfar,xcignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xagradordadd,xbgradordadd,xcgradordadd,xagradordaddR,xbgradordaddR,xcgradordaddR,bias,pxyprod,ia,ib,ic,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,assumreal,justcalcip);
+}
+
+template <class T>
+T &MercerKernel::yyyaaK4(T &res,
+                    const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd,
+                    const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo,
+                    int xaignorefarfar, int xbignorefarfar, int xcignorefarfar, int xdignorefarfar,
+                    int xaignorefarfarfar, int xbignorefarfarfar, int xcignorefarfarfar, int xdignorefarfarfar,
+                    int xagradordadd, int xbgradordadd, int xcgradordadd, int xdgradordadd,
+                    int xagradordaddR, int xbgradordaddR, int xcgradordaddR, int xdgradordaddR,
+                    const T &bias,
+                    const gentype **pxyprod,
+                    int ia, int ib, int ic, int id,
+                    int xdim, int xconsist, int xresmode, int mlid,
+                    const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, const double *xy30, const double *xy31, const double *xy32, const double *xy33, int assumreal, int justcalcip) const
+{
+    if ( sizeLinParity() )
+    {
+        SparseVector<gentype> xxa(xa);
+        SparseVector<gentype> xxb(xb);
+        SparseVector<gentype> xxc(xc);
+        SparseVector<gentype> xxd(xd);
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( linParityOrig.size() )
+            {
+                xxa("&",linParity(i)) -= linParityOrig(i);
+                xxb("&",linParity(i)) -= linParityOrig(i);
+                xxc("&",linParity(i)) -= linParityOrig(i);
+                xxd("&",linParity(i)) -= linParityOrig(i);
+            }
+        }
+
+        double sa = ( (double) xxa(linParity(0)) < 0 ) ? -1 : +1;
+        double sb = ( (double) xxb(linParity(0)) < 0 ) ? -1 : +1;
+        double sc = ( (double) xxc(linParity(0)) < 0 ) ? -1 : +1;
+        double sd = ( (double) xxd(linParity(0)) < 0 ) ? -1 : +1;
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( sa < 0 ) { xxa("&",linParity(i)).negate(); }
+            if ( sb < 0 ) { xxb("&",linParity(i)).negate(); }
+            if ( sc < 0 ) { xxc("&",linParity(i)).negate(); }
+            if ( sd < 0 ) { xxd("&",linParity(i)).negate(); }
+        }
+
+        return yyyaK4(res,xxa,xxb,xxc,xxd,xainfo,xbinfo,xcinfo,xdinfo,xaignorefarfar,xbignorefarfar,xcignorefarfar,xdignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xdignorefarfarfar,xagradordadd,xbgradordadd,xcgradordadd,xdgradordadd,xagradordaddR,xbgradordaddR,xcgradordaddR,xdgradordaddR,bias,nullptr,ia,ib,ic,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,assumreal,justcalcip);
+    }
+
+    return yyyaK4(res,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xaignorefarfar,xbignorefarfar,xcignorefarfar,xdignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xdignorefarfarfar,xagradordadd,xbgradordadd,xcgradordadd,xdgradordadd,xagradordaddR,xbgradordaddR,xcgradordaddR,xdgradordaddR,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,assumreal,justcalcip);
+}
+
+template <class T>
+T &MercerKernel::yyyaaKm(int m, T &res,
+                    Vector<const SparseVector<gentype> *> &x,
+                    Vector<const vecInfo *> &xinfo,
+                    Vector<int> &xignorefarfar,
+                    Vector<int> &xignorefarfarfar,
+                    Vector<int> &xgradordadd,
+                    Vector<int> &xgradordaddR,
+                    const T &bias,
+                    Vector<int> &i,
+                    const gentype **pxyprod, int xdim, int xconsist, int resmode, int mlid,
+                    const Matrix<double> *xy, int assumreal, int justcalcip) const
+{
+    if ( sizeLinParity() )
+    {
+        Vector<const SparseVector<gentype> *> xx(x.size());
+        Vector<SparseVector<gentype> *> xq(x.size());
+
+        for ( int j = 0 ; j < x.size() ; ++j )
+        {
+            SparseVector<gentype> *altx;
+
+            MEMNEW(altx,SparseVector<gentype>(*x(j)));
+
+            xx("&",j) = altx;
+            xq("&",j) = altx;
+
+            for ( int i = 0 ; i < linParity.size() ; i++ )
+            {
+                if ( linParityOrig.size() )
+                {
+                    (*altx)("&",linParity(i)) -= linParityOrig(i);
+                }
+            }
+
+            double s = ( (double) (*altx)(linParity(0)) < 0 ) ? -1 : +1;
+
+            for ( int i = 0 ; i < linParity.size() ; i++ )
+            {
+                if ( s < 0 ) { (*altx)("&",linParity(i)).negate(); }
+            }
+        }
+
+        return yyyaaKm(m,res,x,xinfo,xignorefarfar,xignorefarfarfar,xgradordadd,xgradordaddR,bias,i,nullptr,xdim,xconsist,resmode,mlid,nullptr,assumreal,justcalcip);
+
+        for ( int j = 0 ; j < x.size() ; ++j )
+        {
+            MEMDEL(xq("&",j));
+        }
+    }
+
+    return yyyaaKm(m,res,x,xinfo,xignorefarfar,xignorefarfarfar,xgradordadd,xgradordaddR,bias,i,pxyprod,xdim,xconsist,resmode,mlid,xy,assumreal,justcalcip);
+}
+
+template <class T>
+int MercerKernel::yyyaaphim(int m, Vector<T>  &res, const SparseVector<gentype> &xa, const vecInfo &xainfo, int xaignorefarfar, int xaignorefarfarfar, int xagradordadd, int xagradordaddR, int ia, int allowfinite, int xdim, int xconsist, int assumreal) const
+{
+    if ( sizeLinParity() )
+    {
+        SparseVector<gentype> xxa(xa);
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( linParityOrig.size() )
+            {
+                xxa("&",linParity(i)) -= linParityOrig(i);
+            }
+        }
+
+        double sa = ( (double) xxa(linParity(0)) < 0 ) ? -1 : +1;
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( sa < 0 ) { xxa("&",linParity(i)).negate(); }
+        }
+
+        return yyyaaphim(m,res,xxa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,ia,allowfinite,xdim,xconsist,assumreal);
+    }
+
+    return yyyaaphim(m,res,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,ia,allowfinite,xdim,xconsist,assumreal);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 template <class T>
 T &MercerKernel::yyyaK0(T &res,

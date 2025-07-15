@@ -103,15 +103,15 @@ public:
     //           this applies to both the inner (DIRect) and outer loops,
     //           so actual upper bound could be >2x this number.
     //
-    // softmin: min value of objective function, used in some GP-UCB variants
-    // softmax: max value of objective function, clip if exceeded (so result is max(f(x),hardmax))
+    // softmin: min value of objective function, used as a reference point
+    // softmax: max value of objective function, used as a reference point
     // hardmin: min value of objective function, terminate if f(x) <= hardmin.
     // hardmax: max value of objective function, terminate if f(x) >= hardmax.
 
     double maxtraintime; // default 0
 
-    double softmin; // default -inf
-    double softmax; // default +inf
+    double softmin; // default -inf // 0
+    double softmax; // default +inf // 1
     double hardmin; // default -inf
     double hardmax; // default +inf
 
@@ -202,8 +202,8 @@ public:
 
         maxtraintime = 0;
 
-        softmin = valninf();
-        softmax = valpinf();
+        softmin = valninf(); // 0;
+        softmax = valpinf(); // 1;
         hardmin = valninf();
         hardmax = valpinf();
 
