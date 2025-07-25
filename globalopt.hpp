@@ -626,7 +626,7 @@ public:
                 Vector<int> &parind,
                 int calchypervol) const; // = 1) const;
 
-    int isFeasible(const Vector<gentype> &cres, const Vector<gentype> &xres) const;
+    int isFeasible(const Vector<gentype> &cres, const Vector<gentype> &Xres) const;
 
     // Internal function to differentiate between the base class and the
     // actual optimisation problem classes.  Will return zero for base

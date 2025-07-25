@@ -12,9 +12,9 @@
 // Usage: pyheavy('commands'), where commands are just like the regular CLI
 //
 
-#ifndef DNDEBUG
-#define DEBUGPY
-#endif
+//#ifndef DNDEBUG
+//#define DEBUGPY
+//#endif
 
 #include <string>
 #include <sstream>
@@ -80,11 +80,11 @@ BOILER_PTR(BayesOptions);
 #define OPTGLOBOFFSET 100000
 #define OPTGRIDSTEP   1000
 
-int glob_MLInd        (int i = 0) { static int iii = 1; if ( i ) { iii = i; } return iii; }
-int glob_gridInd      (int i = 0) { static int iii = 1; if ( i ) { iii = i; } return iii; }
-int glob_DIRectInd    (int i = 0) { static int iii = 1; if ( i ) { iii = i; } return iii; }
-int glob_NelderMeadInd(int i = 0) { static int iii = 1; if ( i ) { iii = i; } return iii; }
-int glob_BayesianInd  (int i = 0) { static int iii = 1; if ( i ) { iii = i; } return iii; }
+int glob_MLInd        (int i = 0, int seti = 0) { static int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
+int glob_gridInd      (int i = 0, int seti = 0) { static int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
+int glob_DIRectInd    (int i = 0, int seti = 0) { static int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
+int glob_NelderMeadInd(int i = 0, int seti = 0) { static int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
+int glob_BayesianInd  (int i = 0, int seti = 0) { static int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
 
 SparseVector<ML_Mutable    *> &getMLmodels       (void) { static SparseVector<ML_Mutable    *> MLbase;         return MLbase;         }
 SparseVector<GridOptions   *> &getgridOptim      (void) { static SparseVector<GridOptions   *> gridbase;       return gridbase;       }
@@ -92,11 +92,11 @@ SparseVector<DIRectOptions *> &getDIRectOptim    (void) { static SparseVector<DI
 SparseVector<NelderOptions *> &getNelderMeadOptim(void) { static SparseVector<NelderOptions *> NelderMeadbase; return NelderMeadbase; }
 SparseVector<BayesOptions  *> &getBayesianOptim  (void) { static SparseVector<BayesOptions  *> Bayesianbase;   return Bayesianbase;   }
 
-//void grabML        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        ) { NiceAssert( MLind         >= 0 ); if ( MLbase        (MLInd)         == nullptr ) { MEMNEW(MLbase        ("&",MLInd        ),ML_Mutable   ); } return; }
-void grabgrid      (SparseVector<GridOptions   *> &gridbase,       int gridInd      ) { NiceAssert( gridInd       >= 0 ); if ( gridbase      (gridInd)       == nullptr ) { MEMNEW(gridbase      ("&",gridInd      ),GridOptions  ); } return; }
-void grabDIRect    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    ) { NiceAssert( DIRectInd     >= 0 ); if ( DIRectbase    (DIRectInd)     == nullptr ) { MEMNEW(DIRectbase    ("&",DIRectInd    ),DIRectOptions); } return; }
-void grabNelderMead(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd) { NiceAssert( NelderMeadInd >= 0 ); if ( NelderMeadbase(NelderMeadInd) == nullptr ) { MEMNEW(NelderMeadbase("&",NelderMeadInd),NelderOptions); } return; }
-void grabBayesian  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  ) { NiceAssert( BayesianInd   >= 0 ); if ( Bayesianbase  (BayesianInd)   == nullptr ) { MEMNEW(Bayesianbase  ("&",BayesianInd  ),BayesOptions ); } return; }
+//void grabML        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        ) { NiceAssert( MLind         > 0 ); if ( MLbase        (MLInd)         == nullptr ) { MEMNEW(MLbase        ("&",MLInd        ),ML_Mutable   ); } return; }
+void grabgrid      (SparseVector<GridOptions   *> &gridbase,       int gridInd      ) { NiceAssert( gridInd       > 0 ); if ( gridbase      (gridInd)       == nullptr ) { MEMNEW(gridbase      ("&",gridInd      ),GridOptions  ); } return; }
+void grabDIRect    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    ) { NiceAssert( DIRectInd     > 0 ); if ( DIRectbase    (DIRectInd)     == nullptr ) { MEMNEW(DIRectbase    ("&",DIRectInd    ),DIRectOptions); } return; }
+void grabNelderMead(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd) { NiceAssert( NelderMeadInd > 0 ); if ( NelderMeadbase(NelderMeadInd) == nullptr ) { MEMNEW(NelderMeadbase("&",NelderMeadInd),NelderOptions); } return; }
+void grabBayesian  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  ) { NiceAssert( BayesianInd   > 0 ); if ( Bayesianbase  (BayesianInd)   == nullptr ) { MEMNEW(Bayesianbase  ("&",BayesianInd  ),BayesOptions ); } return; }
 
 const GridOptions   &getgridrefconst      (SparseVector<GridOptions   *> &gridbase,       int gridInd      ) { grabgrid      (gridbase,      gridInd      ); return *(gridbase      (gridInd      )); }
 const DIRectOptions &getDIRectrefconst    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    ) { grabDIRect    (DIRectbase,    DIRectInd    ); return *(DIRectbase    (DIRectInd    )); }
@@ -118,158 +118,72 @@ DIRectOptions &getDIRectref    (int DIRectInd    ) { return getDIRectref    (get
 NelderOptions &getNelderMeadref(int NelderMeadInd) { return getNelderMeadref(getNelderMeadOptim(),NelderMeadInd); }
 BayesOptions  &getBayesianref  (int BayesianInd  ) { return getBayesianref  (getBayesianOptim(),  BayesianInd  ); }
 
-// For simplicity, we use indices -1,-2,...,-999 for altmuapprox in Bayesian optimizers 1,2,...,999, and similarly -1001,-1002,... for altcgtapprox
+// For simplicity, we use indices -1,-2,...,-999 for altmuapprox in Bayesian optimizers 1,2,...,999, and similarly -1001,-1002,... for altcgtapprox etc
 
 const ML_Mutable &getMLrefconst(int MLInd)
 {
-    if ( MLInd < -9*OPTGLOBOFFSET )
-    {
-        NiceAssert( getBayesianrefconst(-((9*OPTGLOBOFFSET)+MLInd)).srcmodel );
+    StrucAssert( MLInd >= -10*OPTGLOBOFFSET);
 
-        return *(getBayesianrefconst(-((9*OPTGLOBOFFSET)+MLInd)).srcmodel);
-    }
+    if      ( MLInd < -9*OPTGLOBOFFSET ) { StrucAssert(  getBayesianrefconst( -((9*OPTGLOBOFFSET)+MLInd)             ).srcmodel       ); }
+    else if ( MLInd < -8*OPTGLOBOFFSET ) { StrucAssert(  getBayesianrefconst( -((8*OPTGLOBOFFSET)+MLInd)             ).diffmodel      ); }
+    else if ( MLInd < -7*OPTGLOBOFFSET ) { StrucAssert(  getBayesianrefconst( -((7*OPTGLOBOFFSET)+MLInd)             ).sigmaapproxRaw ); }
+    else if ( MLInd < -6*OPTGLOBOFFSET ) { StrucAssert( (getBayesianrefconst((-((6*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).augxapproxRaw  )((-((6*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) ); }
+    else if ( MLInd < -5*OPTGLOBOFFSET ) { StrucAssert( (getBayesianrefconst((-((5*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).muapproxRaw    )((-((5*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) ); }
+    else if ( MLInd < -4*OPTGLOBOFFSET ) { StrucAssert( (getBayesianrefconst((-((4*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).cgtapproxRaw   )((-((4*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) ); }
 
-    else if ( MLInd < -8*OPTGLOBOFFSET )
-    {
-        NiceAssert( getBayesianrefconst(-((8*OPTGLOBOFFSET)+MLInd)).diffmodel );
+    if      ( MLInd < -9*OPTGLOBOFFSET ) { return *( getBayesianrefconst( -((9*OPTGLOBOFFSET)+MLInd)             ).srcmodel       ); }
+    else if ( MLInd < -8*OPTGLOBOFFSET ) { return *( getBayesianrefconst( -((8*OPTGLOBOFFSET)+MLInd)             ).diffmodel      ); }
+    else if ( MLInd < -7*OPTGLOBOFFSET ) { return *( getBayesianrefconst( -((7*OPTGLOBOFFSET)+MLInd)             ).sigmaapproxRaw ); }
+    else if ( MLInd < -6*OPTGLOBOFFSET ) { return *((getBayesianrefconst((-((6*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).augxapproxRaw  )((-((6*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
+    else if ( MLInd < -5*OPTGLOBOFFSET ) { return *((getBayesianrefconst((-((5*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).muapproxRaw    )((-((5*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
+    else if ( MLInd < -4*OPTGLOBOFFSET ) { return *((getBayesianrefconst((-((4*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).cgtapproxRaw   )((-((4*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
+    else if ( MLInd < -3*OPTGLOBOFFSET ) { return  ( getBayesianrefconst( -((3*OPTGLOBOFFSET)+MLInd)             ).altmuapprox_rff); }
+    else if ( MLInd < -2*OPTGLOBOFFSET ) { return  ( getBayesianrefconst( -((2*OPTGLOBOFFSET)+MLInd)             ).altaugxapprox  ); }
+    else if ( MLInd <   -OPTGLOBOFFSET ) { return  ( getBayesianrefconst( -(   OPTGLOBOFFSET +MLInd)             ).altmuapprox    ); }
+    else if ( MLInd < 0                ) { return  ( getBayesianrefconst(                    -MLInd              ).altcgtapprox   ); }
 
-        return *(getBayesianrefconst(-((8*OPTGLOBOFFSET)+MLInd)).diffmodel);
-    }
-
-    else if ( MLInd < -7*OPTGLOBOFFSET )
-    {
-        NiceAssert( getBayesianrefconst(-((7*OPTGLOBOFFSET)+MLInd)).sigmaapproxRaw );
-
-        return *(getBayesianrefconst(-((7*OPTGLOBOFFSET)+MLInd)).sigmaapproxRaw);
-    }
-
-    else if ( MLInd < -6*OPTGLOBOFFSET )
-    {
-        NiceAssert( (getBayesianrefconst((-((6*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).augxapproxRaw)((-((6*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) );
-
-        return *((getBayesianrefconst((-((6*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).augxapproxRaw)((-((6*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP));
-    }
-
-    else if ( MLInd < -5*OPTGLOBOFFSET )
-    {
-        NiceAssert( (getBayesianrefconst((-((5*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).cgtapproxRaw)((-((5*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) );
-
-        return *((getBayesianrefconst((-((5*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).cgtapproxRaw)((-((5*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP));
-    }
-
-    else if ( MLInd < -4*OPTGLOBOFFSET )
-    {
-        NiceAssert( (getBayesianrefconst((-((4*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).muapproxRaw)((-((4*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) );
-
-        return *((getBayesianrefconst((-((4*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).muapproxRaw)((-((4*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP));
-    }
-
-    else if ( MLInd < -3*OPTGLOBOFFSET )
-    {
-        return (getBayesianrefconst(-((3*OPTGLOBOFFSET)+MLInd)).altmuapprox_rff);
-    }
-
-    else if ( MLInd < -2*OPTGLOBOFFSET )
-    {
-        return (getBayesianrefconst(-((2*OPTGLOBOFFSET)+MLInd)).altaugxapprox);
-    }
-
-    else if ( MLInd < -OPTGLOBOFFSET )
-    {
-        return (getBayesianrefconst(-(OPTGLOBOFFSET+MLInd)).altmuapprox);
-    }
-
-    else if ( MLInd < 0 )
-    {
-        return (getBayesianrefconst(-MLInd).altcgtapprox);
-    }
-
-    return (getMLrefconst(getMLmodels(),MLInd));
+    return getMLrefconst(getMLmodels(),MLInd);
 }
 
 ML_Mutable &getMLref(int MLInd)
 {
-    if ( MLInd < -9*OPTGLOBOFFSET )
-    {
-        NiceAssert( getBayesianref(-((9*OPTGLOBOFFSET)+MLInd)).srcmodel );
+    StrucAssert( MLInd >= -10*OPTGLOBOFFSET);
 
-        return *(getBayesianref(-((9*OPTGLOBOFFSET)+MLInd)).srcmodel);
-    }
+    if      ( MLInd < -9*OPTGLOBOFFSET ) { StrucAssert(  getBayesianref( -((9*OPTGLOBOFFSET)+MLInd)             ).srcmodel       ); }
+    else if ( MLInd < -8*OPTGLOBOFFSET ) { StrucAssert(  getBayesianref( -((8*OPTGLOBOFFSET)+MLInd)             ).diffmodel      ); }
+    else if ( MLInd < -7*OPTGLOBOFFSET ) { StrucAssert(  getBayesianref( -((7*OPTGLOBOFFSET)+MLInd)             ).sigmaapproxRaw ); }
+    else if ( MLInd < -6*OPTGLOBOFFSET ) { StrucAssert( (getBayesianref((-((6*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).augxapproxRaw  )((-((6*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) ); }
+    else if ( MLInd < -5*OPTGLOBOFFSET ) { StrucAssert( (getBayesianref((-((5*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).muapproxRaw    )((-((5*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) ); }
+    else if ( MLInd < -4*OPTGLOBOFFSET ) { StrucAssert( (getBayesianref((-((4*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).cgtapproxRaw   )((-((4*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) ); }
 
-    else if ( MLInd < -8*OPTGLOBOFFSET )
-    {
-        NiceAssert( getBayesianref(-((8*OPTGLOBOFFSET)+MLInd)).diffmodel );
+    if      ( MLInd < -9*OPTGLOBOFFSET ) { return *( getBayesianref( -((9*OPTGLOBOFFSET)+MLInd)             ).srcmodel       ); }
+    else if ( MLInd < -8*OPTGLOBOFFSET ) { return *( getBayesianref( -((8*OPTGLOBOFFSET)+MLInd)             ).diffmodel      ); }
+    else if ( MLInd < -7*OPTGLOBOFFSET ) { return *( getBayesianref( -((7*OPTGLOBOFFSET)+MLInd)             ).sigmaapproxRaw ); }
+    else if ( MLInd < -6*OPTGLOBOFFSET ) { return *((getBayesianref((-((6*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).augxapproxRaw  )("&",(-((6*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
+    else if ( MLInd < -5*OPTGLOBOFFSET ) { return *((getBayesianref((-((5*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).muapproxRaw    )("&",(-((5*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
+    else if ( MLInd < -4*OPTGLOBOFFSET ) { return *((getBayesianref((-((4*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).cgtapproxRaw   )("&",(-((4*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
+    else if ( MLInd < -3*OPTGLOBOFFSET ) { return  ( getBayesianref( -((3*OPTGLOBOFFSET)+MLInd)             ).altmuapprox_rff); }
+    else if ( MLInd < -2*OPTGLOBOFFSET ) { return  ( getBayesianref( -((2*OPTGLOBOFFSET)+MLInd)             ).altaugxapprox  ); }
+    else if ( MLInd <   -OPTGLOBOFFSET ) { return  ( getBayesianref( -(   OPTGLOBOFFSET +MLInd)             ).altmuapprox    ); }
+    else if ( MLInd < 0                ) { return  ( getBayesianref(                    -MLInd              ).altcgtapprox   ); }
 
-        return *(getBayesianref(-((8*OPTGLOBOFFSET)+MLInd)).diffmodel);
-    }
-
-    else if ( MLInd < -7*OPTGLOBOFFSET )
-    {
-        NiceAssert( getBayesianref(-((7*OPTGLOBOFFSET)+MLInd)).sigmaapproxRaw );
-
-        return *(getBayesianref(-((7*OPTGLOBOFFSET)+MLInd)).sigmaapproxRaw);
-    }
-
-    else if ( MLInd < -6*OPTGLOBOFFSET )
-    {
-        NiceAssert( (getBayesianref((-((6*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).augxapproxRaw)("&",(-((6*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) );
-
-        return *((getBayesianref((-((6*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).augxapproxRaw)("&",(-((6*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP));
-    }
-
-    else if ( MLInd < -5*OPTGLOBOFFSET )
-    {
-        NiceAssert( (getBayesianref((-((5*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).cgtapproxRaw)("&",(-((5*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) );
-
-        return *((getBayesianref((-((5*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).cgtapproxRaw)("&",(-((5*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP));
-    }
-
-    else if ( MLInd < -4*OPTGLOBOFFSET )
-    {
-        NiceAssert( (getBayesianref((-((4*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).muapproxRaw)("&",(-((4*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) );
-
-        return *((getBayesianref((-((4*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).muapproxRaw)("&",(-((4*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP));
-    }
-
-    else if ( MLInd < -3*OPTGLOBOFFSET )
-    {
-        return (getBayesianref(-((3*OPTGLOBOFFSET)+MLInd)).altmuapprox_rff);
-    }
-
-    else if ( MLInd < -2*OPTGLOBOFFSET )
-    {
-        return (getBayesianref(-((2*OPTGLOBOFFSET)+MLInd)).altaugxapprox);
-    }
-
-    else if ( MLInd < -OPTGLOBOFFSET )
-    {
-        return (getBayesianref(-(OPTGLOBOFFSET+MLInd)).altmuapprox);
-    }
-
-    else if ( MLInd < 0 )
-    {
-        return (getBayesianref(-MLInd).altcgtapprox);
-    }
-
-    return (getMLref(getMLmodels(),MLInd));
+    return getMLref(getMLmodels(),MLInd);
 }
 
 
 
 // Do these once only - python functions and such that you need
+// Note we allow exceptions to be thrown if !bool in return
 
 py::object &get_builtins(void)
 {
     static py::object builtins = py::module_::import("builtins");
-
     return builtins;
 }
 
 bool isCallable(const py::object &src)
 {
     static py::object callable_function = get_builtins().attr("callable");
-
-    // if not bool let exception be thrown
     return py::cast<py::bool_>(callable_function(src));
 }
 
@@ -277,8 +191,6 @@ bool isComplex(const py::object &src)
 {
     static py::object isinstance_function = get_builtins().attr("isinstance");
     static py::object complex_class = get_builtins().attr("complex");
-
-    // if not bool let exception be thrown
     return py::cast<py::bool_>(isinstance_function(src,complex_class));
 }
 
@@ -287,7 +199,6 @@ bool isComplex(const py::object &src)
 //py::object &get_numpy(void)
 //{
 //    static py::object builtins = py::module_::import("numpy");
-//
 //    return builtins;
 //}
 //
@@ -295,7 +206,6 @@ bool isComplex(const py::object &src)
 //{
 //    static py::object isinstance_function = get_builtins().attr("isinstance");
 //    static py::object nparray_class = get_numpy().attr("ndarray");
-//
 //    // if not bool let exception be thrown
 //    return py::cast<py::bool_>(isinstance_function(src,nparray_class));
 //}
@@ -329,6 +239,7 @@ bool isComplex(const py::object &src)
 template <class T> py::object convToPy(const Vector<T>        &src);
 template <class T> py::object convToPy(const Matrix<T>        &src);
 template <class T> py::object convToPy(const Set<T>           &src);
+template <class T> py::object convToPy(const Dict<T,dictkey>  &src);
 template <class T> py::object convToPy(const SparseVector<T>  &src);
                    py::object convToPy(const gentype          &src);
                    py::object convToPy(int size, const double *src);
@@ -344,41 +255,53 @@ template <> py::object convToPy(const Vector<double> &src);
 template <class T> int convFromPy(Vector<T>       &res, const py::object &src);
 template <class T> int convFromPy(Matrix<T>       &res, const py::object &src);
 template <class T> int convFromPy(Set<T>          &res, const py::object &src);
+template <class T> int convFromPy(Dict<T,dictkey> &res, const py::object &src);
 template <class T> int convFromPy(SparseVector<T> &res, const py::object &src);
                    int convFromPy(gentype         &res, const py::object &src);
 
 
 // Helper macros for python module constructions
 
-#define        QDO(modis,dofn,desc)        modis.def(#dofn,  &(mod_ ## dofn),  "For ML i (i=0 for current): "               desc, py::arg("i") = 0);
-#define     QDOARG(modis,dofn,desc,pname)  modis.def(#dofn,  &(mod_ ## dofn),  "For ML i (i=0 for current): "               desc, py::arg("i") = 0, py::arg(pname));
-#define       QGET(modis,getfn,desc)       modis.def(#getfn, &(mod_ ## getfn), "For ML i (i=0 for current), get: "          desc, py::arg("i") = 0);
-#define    QGETCLA(modis,getfn,desc)       modis.def(#getfn, &(mod_ ## getfn), "For ML i (i=0 for current), class d, get: " desc, py::arg("i") = 0, py::arg("d"));
-#define    QGETSET(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), "For ML i (i=0 for current), set: "          desc, py::arg("i") = 0, py::arg(#getfn)); \
-                                           modis.def(#getfn, &(mod_ ## getfn), "For ML i (i=0 for current), get: "          desc, py::arg("i") = 0);
-#define QGETSETCLA(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), "For ML i (i=0 for current), class d, set: " desc, py::arg("i") = 0, py::arg("d"), py::arg(#getfn)); \
-                                           modis.def(#getfn, &(mod_ ## getfn), "For ML i (i=0 for current), class d, get: " desc, py::arg("i") = 0, py::arg("d"));
+#define        QDO(modis,dofn,desc)        modis.def(#dofn,  &(mod_ ## dofn),  "For ML, do: "           desc, py::arg("i") = 0);
+#define     QDOARG(modis,dofn,desc,pname)  modis.def(#dofn,  &(mod_ ## dofn),  "For ML, do: "           desc, py::arg("i") = 0, py::arg(pname));
+#define       QGET(modis,getfn,desc)       modis.def(#getfn, &(mod_ ## getfn), "For ML, get: "          desc, py::arg("i") = 0);
+#define    QGETCLA(modis,getfn,desc)       modis.def(#getfn, &(mod_ ## getfn), "For ML, class d, get: " desc, py::arg("i") = 0, py::arg("d"));
+#define    QGETSET(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), "For ML, set: "          desc, py::arg("i") = 0, py::arg(#getfn)); \
+                                           modis.def(#getfn, &(mod_ ## getfn), "For ML, get: "          desc, py::arg("i") = 0);
+#define QGETSETCLA(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), "For ML, class d, set: " desc, py::arg("i") = 0, py::arg("d"), py::arg(#getfn)); \
+                                           modis.def(#getfn, &(mod_ ## getfn), "For ML, class d, get: " desc, py::arg("i") = 0, py::arg("d"));
 
-#define       QGETD(modis,getfn,getname,desc)               modis.def(getname, &(mod_ ## getfn), "For ML i (i=0 for current), get: "          desc, py::arg("i") = 0);
-#define    QGETSETD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), "For ML i (i=0 for current): "               desc, py::arg("i") = 0, py::arg(getname)); \
-                                                            modis.def(getname, &(mod_ ## getfn), "For ML i (i=0 for current), get: "          desc, py::arg("i") = 0);
-#define QGETSETCLAD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), "For ML i (i=0 for current), class d, set: " desc, py::arg("i") = 0, py::arg("d"), py::arg(getname)); \
-                                                            modis.def(getname, &(mod_ ## getfn), "For ML i (i=0 for current), class d, get: " desc, py::arg("i") = 0, py::arg("d"));
+#define       QGETD(modis,getfn,getname,desc)               modis.def(getname, &(mod_ ## getfn), "For ML, get: "          desc, py::arg("i") = 0);
+#define    QGETSETD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), "For ML, do: "           desc, py::arg("i") = 0, py::arg(getname)); \
+                                                            modis.def(getname, &(mod_ ## getfn), "For ML, get: "          desc, py::arg("i") = 0);
+#define QGETSETCLAD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), "For ML, class d, set: " desc, py::arg("i") = 0, py::arg("d"), py::arg(getname)); \
+                                                            modis.def(getname, &(mod_ ## getfn), "For ML, class d, get: " desc, py::arg("i") = 0, py::arg("d"));
 
-#define QGETSETKERD(modis,getfn,setfn,getname,setname,desc)  modis.def(setname, &(mod_k ## setfn), "For ML i (i=0 for current), set kernel parameter: "                   desc, py::arg("i") = 0, py::arg(getname)); \
-                                                             modis.def(getname, &(mod_k ## getfn), "For ML i (i=0 for current), get kernel parameter: "                   desc, py::arg("i") = 0); \
-                                                   (modis ##  _UU).def(setname, &(mod_e ## setfn), "For ML i (i=0 for current), set output kernel parameter: "            desc, py::arg("i") = 0, py::arg(getname)); \
-                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "For ML i (i=0 for current), get output kernel parameter: "            desc, py::arg("i") = 0); \
-                                                   (modis ## _RFF).def(setname, &(mod_r ## setfn), "For ML i (i=0 for current), set RFF kernel parameter: "               desc, py::arg("i") = 0, py::arg(getname)); \
-                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "For ML i (i=0 for current), get RFF kernel parameter: "               desc, py::arg("i") = 0);
-#define QGETSETKERQD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_k ## setfn), "For ML i (i=0 for current), element q, set kernel parameter: "        desc,        py::arg("i") = 0, py::arg("q") = 0, py::arg(getname)); \
-                                                             modis.def(getname, &(mod_k ## getfn), "For ML i (i=0 for current), element q, set kernel parameter: "        desc,        py::arg("i") = 0, py::arg("q") = 0); \
-                                                   (modis ##  _UU).def(setname, &(mod_e ## setfn), "For ML i (i=0 for current), element q, set output kernel parameter: " desc, py::arg("i") = 0, py::arg("q") = 0, py::arg(getname)); \
-                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "For ML i (i=0 for current), element q, set output kernel parameter: " desc, py::arg("i") = 0, py::arg("q") = 0); \
-                                                   (modis ## _RFF).def(setname, &(mod_r ## setfn), "For ML i (i=0 for current), element q, set RFF kernel parameter: "    desc,    py::arg("i") = 0, py::arg("q") = 0, py::arg(getname)); \
-                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "For ML i (i=0 for current), element q, set RFF kernel parameter: "    desc,    py::arg("i") = 0, py::arg("q") = 0);
+#define QGETSETKERD(modis,getfn,setfn,getname,setname,desc)  modis.def(setname, &(mod_k ## setfn), "For ML, set kernel parameter: "                   desc, py::arg("i") = 0, py::arg(getname)); \
+                                                             modis.def(getname, &(mod_k ## getfn), "For ML, get kernel parameter: "                   desc, py::arg("i") = 0); \
+                                                   (modis ##  _UU).def(setname, &(mod_e ## setfn), "For ML, set output kernel parameter: "            desc, py::arg("i") = 0, py::arg(getname)); \
+                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "For ML, get output kernel parameter: "            desc, py::arg("i") = 0); \
+                                                   (modis ## _RFF).def(setname, &(mod_r ## setfn), "For ML, set RFF kernel parameter: "               desc, py::arg("i") = 0, py::arg(getname)); \
+                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "For ML, get RFF kernel parameter: "               desc, py::arg("i") = 0);
+#define QGETSETKERQD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_k ## setfn), "For ML, element q, set kernel parameter: "        desc, py::arg("i") = 0, py::arg("q") = 0, py::arg(getname)); \
+                                                             modis.def(getname, &(mod_k ## getfn), "For ML, element q, set kernel parameter: "        desc, py::arg("i") = 0, py::arg("q") = 0); \
+                                                   (modis ##  _UU).def(setname, &(mod_e ## setfn), "For ML, element q, set output kernel parameter: " desc, py::arg("i") = 0, py::arg("q") = 0, py::arg(getname)); \
+                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "For ML, element q, set output kernel parameter: " desc, py::arg("i") = 0, py::arg("q") = 0); \
+                                                   (modis ## _RFF).def(setname, &(mod_r ## setfn), "For ML, element q, set RFF kernel parameter: "    desc, py::arg("i") = 0, py::arg("q") = 0, py::arg(getname)); \
+                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "For ML, element q, set RFF kernel parameter: "    desc, py::arg("i") = 0, py::arg("q") = 0);
 
+#define QGETSETOPT(modis,varname,ty,desc) modis ## _ ## ty    .def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                          modis ## _ ## ty    .def("get" #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get: " desc, py::arg("i") = 0);
+#define QGETSETOPTALL(modis,varname,desc) modis ## _grid      .def("set" #varname, &(modoptset_grid_       ## varname), "For " "grid"       " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                          modis ## _DIRect    .def("set" #varname, &(modoptset_DIRect_     ## varname), "For " "DIRect"     " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                          modis ## _NelderMead.def("set" #varname, &(modoptset_NelderMead_ ## varname), "For " "NelderMead" " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                          modis ## _Bayesian  .def("set" #varname, &(modoptset_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                          modis ## _grid      .def("get" #varname, &(modoptget_grid_       ## varname), "For " "grid"       " optimiser, get: " desc, py::arg("i") = 0); \
+                                          modis ## _DIRect    .def("get" #varname, &(modoptget_DIRect_     ## varname), "For " "DIRect"     " optimiser, get: " desc, py::arg("i") = 0); \
+                                          modis ## _NelderMead.def("get" #varname, &(modoptget_NelderMead_ ## varname), "For " "NelderMead" " optimiser, get: " desc, py::arg("i") = 0); \
+                                          modis ## _Bayesian  .def("get" #varname, &(modoptget_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, get: " desc, py::arg("i") = 0);
 
+// Corresponding helper macros to auto-generate function definitions to be used by python module
 
 #define        DODEF(dofn)          py::object mod_ ##  dofn(int i)                      { dostartup(); i = glob_MLInd(i);                             return convToPy(getMLref(i). dofn ());        }
 #define     DOARGDEF(dofn,T)        int        mod_ ##  dofn(int i,        py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); return getMLref(i). dofn (altp);              }
@@ -452,57 +375,38 @@ template <class T> int convFromPy(SparseVector<T> &res, const py::object &src);
                                        py::object mod_r ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getRFFKernel(). getfn (q));  } \
                                        void       mod_r ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp,q); }
 
-
-
-
-
-#define QGETSETOPT(modis,varname,ty,desc) modis ## _ ## ty    .def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser i (i=0 for current), set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                          modis ## _ ## ty    .def("get" #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser i (i=0 for current), get: " desc, py::arg("i") = 0);
-#define QGETSETOPTALL(modis,varname,desc) modis ## _grid      .def("set" #varname, &(modoptset_grid_       ## varname), "For " "grid"       " optimiser i (i=0 for current), set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                          modis ## _DIRect    .def("set" #varname, &(modoptset_DIRect_     ## varname), "For " "DIRect"     " optimiser i (i=0 for current), set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                          modis ## _NelderMead.def("set" #varname, &(modoptset_NelderMead_ ## varname), "For " "NelderMead" " optimiser i (i=0 for current), set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                          modis ## _Bayesian  .def("set" #varname, &(modoptset_Bayesian_   ## varname), "For " "Bayesian"   " optimiser i (i=0 for current), set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                          modis ## _grid      .def("get" #varname, &(modoptget_grid_       ## varname), "For " "grid"       " optimiser i (i=0 for current), get: " desc, py::arg("i") = 0); \
-                                          modis ## _DIRect    .def("get" #varname, &(modoptget_DIRect_     ## varname), "For " "DIRect"     " optimiser i (i=0 for current), get: " desc, py::arg("i") = 0); \
-                                          modis ## _NelderMead.def("get" #varname, &(modoptget_NelderMead_ ## varname), "For " "NelderMead" " optimiser i (i=0 for current), get: " desc, py::arg("i") = 0); \
-                                          modis ## _Bayesian  .def("get" #varname, &(modoptget_Bayesian_   ## varname), "For " "Bayesian"   " optimiser i (i=0 for current), get: " desc, py::arg("i") = 0);
-
-#define OPTGETSETDEF(varname,ty,T) py::object modoptget_ ## ty ## _ ## varname(int i)               { outstream() << "i = " << i << ": "; dostartup(); i = glob_ ## ty ## Ind(i); outstream() << "get optimiser addr (" << i << "): " << &getBayesianrefconst(i) << "\n"; return convToPy((T) get ## ty ## refconst(get ## ty ## Optim(),i).varname); } \
-                                   void       modoptset_ ## ty ## _ ## varname(int i, py::object p) { outstream() << "i = " << i << ": "; dostartup(); i = glob_ ## ty ## Ind(i); outstream() << "set optimiser addr (" << i << "): " << &getBayesianref(i) << "\n"; T altp; convFromPy(altp,p); get ## ty ## ref(get ## ty ## Optim(),i).varname = altp; }
+#define OPTGETSETDEF(varname,ty,T) py::object modoptget_ ## ty ## _ ## varname(int i)               { dostartup(); i = glob_ ## ty ## Ind(i); return convToPy((T) get ## ty ## refconst(get ## ty ## Optim(),i).varname); } \
+                                   void       modoptset_ ## ty ## _ ## varname(int i, py::object p) { dostartup(); i = glob_ ## ty ## Ind(i); T altp; convFromPy(altp,p); get ## ty ## ref(get ## ty ## Optim(),i).varname = altp; }
 #define OPTGETSETALLDEF(varname,T) py::object modoptget_grid_       ## varname(int i)               { dostartup(); i = glob_gridInd      (i); return convToPy(getgridrefconst      (i).varname); } \
                                    py::object modoptget_DIRect_     ## varname(int i)               { dostartup(); i = glob_DIRectInd    (i); return convToPy(getDIRectrefconst    (i).varname); } \
                                    py::object modoptget_NelderMead_ ## varname(int i)               { dostartup(); i = glob_NelderMeadInd(i); return convToPy(getNelderMeadrefconst(i).varname); } \
-                                   py::object modoptget_Bayesian_   ## varname(int i)               { outstream() << "i = " << i << ": "; dostartup(); i = glob_BayesianInd  (i); outstream() << "get optimiser addr (" << i << "): " << &getBayesianrefconst(i) << "\n"; return convToPy(getBayesianrefconst  (i).varname); } \
+                                   py::object modoptget_Bayesian_   ## varname(int i)               { dostartup(); i = glob_BayesianInd  (i); return convToPy(getBayesianrefconst  (i).varname); } \
                                    void       modoptset_grid_       ## varname(int i, py::object p) { dostartup(); i = glob_gridInd      (i); T altp; convFromPy(altp,p); getgridref      (i).varname = altp; } \
                                    void       modoptset_DIRect_     ## varname(int i, py::object p) { dostartup(); i = glob_DIRectInd    (i); T altp; convFromPy(altp,p); getDIRectref    (i).varname = altp; } \
                                    void       modoptset_NelderMead_ ## varname(int i, py::object p) { dostartup(); i = glob_NelderMeadInd(i); T altp; convFromPy(altp,p); getNelderMeadref(i).varname = altp; } \
-                                   void       modoptset_Bayesian_   ## varname(int i, py::object p) { outstream() << "i = " << i << ": "; dostartup(); i = glob_BayesianInd  (i); outstream() << "set optimiser addr (" << i << "): " << &getBayesianref(i) << "\n"; T altp; convFromPy(altp,p); getBayesianref  (i).varname = altp; }
+                                   void       modoptset_Bayesian_   ## varname(int i, py::object p) { dostartup(); i = glob_BayesianInd  (i); T altp; convFromPy(altp,p); getBayesianref  (i).varname = altp; }
 
-
-
-
-
-// Functions used in python module
+// Actual functions (including auto-generation stubs) used in python module
 
 py::object mloptgrid(      int i, int dim, int numreps, py::object objfn);
 py::object mloptDIRect(    int i, int dim, int numreps, py::object objfn);
 py::object mloptNelderMead(int i, int dim, int numreps, py::object objfn);
 py::object mloptBayesian(  int i, int dim, int numreps, py::object objfn);
 
-py::object pyogetsrc(int i);
-gentype    gengetsrc(int i);
+py::object pyogetsrc(int k);
+gentype    gengetsrc(int k);
 
-int pyosetsrc(int i, py::object src);
-int gensetsrc(int i, gentype    src);
+int pyosetsrc(int k, py::object src);
+int gensetsrc(int k, gentype    src);
 
 void pyosrcreset(void);
 void gensrcreset(void);
 
-void pyosrcreset(int i);
-void gensrcreset(int i);
+void pyosrcreset(int k);
+void gensrcreset(int k);
 
-py::object genevalsrc(int i, py::object x); // evaluate gentype    function with argument x
-gentype    pyoevalsrc(int i, gentype    x); // evaluate py::object function with argument x
+py::object genevalsrc(int k, py::object x); // evaluate gentype    function with argument x
+gentype    pyoevalsrc(int k, gentype    x); // evaluate py::object function with argument x
 
 void svmheavya(void);                      // just get help screen
 void svmheavyb(int permode);               // set persistence mode
@@ -513,11 +417,28 @@ void logit(const std::string logstr); // print to errstream
 void callintercalc(void);
 void callsnakes   (void);
 
-void selml(int i = 0);
-void swapml(int i = 0, int j = 0);
-void copyml(int i = 0, int j = 0);
+int selml              (int i = 0);
+int selmlaltcgtapprox  (int i = 0);
+int selmlaltmuapprox   (int i = 0);
+int selmlaltaugxapprox (int i = 0);
+int selmlaltmuapproxrff(int i = 0);
+int selmlcgtapprox     (int i = 0, int k = 0);
+int selmlmuapprox      (int i = 0, int k = 0);
+int selmlaugxapprox    (int i = 0, int k = 0);
+int selmlsigmaapprox   (int i = 0);
+int selmldiffmodel     (int i = 0);
+int selmlsrcmodel      (int i = 0);
 
-int setpriml(int i, int j);
+void swapml  (int i = 0, int j = 0);
+void copyml  (int i = 0, int j = 0);
+void assignml(int i = 0, int j = 0);
+
+int selgridopt      (int i);
+int selDIRectopt    (int i);
+int selNelderMeadopt(int i);
+int selBayesianopt  (int i);
+
+int setpriml(int i = 0, int j = 0);
 
 py::object svmeval(std::string fn, py::object arg);
 
@@ -553,8 +474,6 @@ py::object mlK4(int i, py::object xa, py::object xb, py::object xc, py::object x
 
 void boSetgridsource(int i, int j);
 void boSetpresource (int i, int j);
-
-// Construct functions automatically where possible
 
 GETSETDEF(getMLType,ssetMLTypeClean,std::string);
 
@@ -736,7 +655,6 @@ GETSETKERCNQDEF(cIntConstantsUB, setIntConstantsUB, Vector<int>    );
 GETSETKERCNQDEF(getRealConstZeroUB,setRealConstZeroUB,double);
 GETSETKERCNQDEF(getIntConstZeroUB, setIntConstZeroUB, int   );
 
-
 // Optimisation options
 
 OPTGETSETALLDEF(optname,std::string);
@@ -773,8 +691,9 @@ OPTGETSETDEF(algseed,    Bayesian,int    );
 OPTGETSETDEF(itcntmethod,Bayesian,int    );
 OPTGETSETDEF(err,        Bayesian,double );
 OPTGETSETDEF(minstdev,   Bayesian,double );
+OPTGETSETDEF(numcgt,     Bayesian,int    );
 OPTGETSETDEF(cgtmethod,  Bayesian,int    );
-OPTGETSETDEF(cgtmargin,  Bayesian,double);
+OPTGETSETDEF(cgtmargin,  Bayesian,double );
 OPTGETSETDEF(ztol,       Bayesian,double );
 OPTGETSETDEF(delta,      Bayesian,double );
 OPTGETSETDEF(zeta,       Bayesian,double );
@@ -794,7 +713,6 @@ OPTGETSETDEF(fidpenalty, Bayesian,gentype);
 OPTGETSETDEF(fidvar,     Bayesian,gentype);
 OPTGETSETDEF(PIscale,    Bayesian,int    );
 
-OPTGETSETDEF(numcgt,        Bayesian,int        );
 OPTGETSETDEF(tunemu,        Bayesian,int        );
 OPTGETSETDEF(tunecgt,       Bayesian,int        );
 OPTGETSETDEF(modelname,     Bayesian,std::string);
@@ -813,29 +731,31 @@ OPTGETSETDEF(modelbaseline, Bayesian,std::string);
 PYBIND11_MODULE(pyheavy, m) {
     m.doc() = "SVMHeavy Machine Learning Library.";
 
-    m.def("help",&svmheavya,"Help screen.");
+    m.def("help",&svmheavya,"Display basic help-screen for CLI emulation."                 );
     m.def("mode",&svmheavyb,"Set persistence mode (default 1, persistent).",py::arg("mode"));
     m.def("exec",&svmheavyc,"Run with string given (mimics CLI).",          py::arg("str") );
-
-    m.def("log",&logit,"Print to log.", py::arg("str") );
+    m.def("log", &logit,    "Print to log.",                                py::arg("str") );
 
     // ---------------------------
 
     auto m_int = m.def_submodule("internal","Internal use.");
 
-    m_int.def("pyogetsrc", &pyogetsrc, "Get python object from heap.");
-    m_int.def("pyosetsrc", &pyosetsrc, "Set python object on heap."  );
-    m_int.def("genevalsrc",&genevalsrc,"Function to evaluate gentype arg on heap.");
-    m_int.def("eval",      &svmeval,   "Mirror of python's eval function: evaluate fn (specified as a string with\n"
-                                       "explicit x, eg sin(x)) using arguments x given.",py::arg("fn"),py::arg("x"));
-    m_int.def("snakes",    &callsnakes,"Snakes (test io, streams).");
+    m_int.def("pyogetsrc", &pyogetsrc,    "Get python object y_k from heap."                                                ,py::arg("k")              );
+    m_int.def("pyosetsrc", &pyosetsrc,    "Set python object y_k = x on heap."                                              ,py::arg("k"), py::arg("x"));
+    m_int.def("genevalsrc",&genevalsrc,   "Evaluate gentype arg f_k(x) on heap."                                            ,py::arg("k"), py::arg("x"));
+    m_int.def("eval",      &svmeval,      "Evaluate gentype function fn provided as a string (eg sin(x)) with argument x.\n"
+                                          "x can be: None (mapped to null), int, float, complex, list (mapped to vector),\n"
+                                          "tuple (mapped to set) or dictionary. To explore available functions you can\n"
+                                          "use the inbuilt calculator (see calc function)."                                 ,py::arg("fn"),py::arg("x"));
+    m_int.def("snakes",    &callsnakes,   "Snakes (test io, streams)."                                                                                 );
+    m_int.def("calc",      &callintercalc,"Calculator (explore functions available in gentype expressions)."                                           );
 
     // ---------------------------
 
     auto m_maths = m.def_submodule("maths","Mathematics related.");
 
     m_maths.def("test",&svmtest,"Return normalised (inputs and outputs in range [0,1]) test function (lambda)\n"
-                                "for function i. Available test functions are:\n"
+                                "for evaluating function i. Available test functions are:\n"
                                 "\n"
                                 " 1: Rastrigin function        (n-dimensional).\n"
                                 " 2: Ackley's function         (n-dimensional).\n"
@@ -885,7 +805,6 @@ PYBIND11_MODULE(pyheavy, m) {
 
     QGETSETD(m_ml,getMLType,ssetMLTypeClean,"type","settype", "ML type. Types are (strings):\n"
                                             "\n"
-                                            "  r - SVM: Scalar regression.\n"
                                             "  s - SVM: single class.\n"
                                             "  c - SVM: binary classification (default).\n"
                                             "  m - SVM: multiclass classification.\n"
@@ -904,25 +823,25 @@ PYBIND11_MODULE(pyheavy, m) {
                                             "  j - SVM: multi-expert binary classification.\n"
                                             "  b - SVM: similarity learning.\n"
                                             "  d - SVM: basic SVM for kernel inheritance (-x).\n"
-                                            "  R - SVM: scalar regression using random FF (kernels 3,4,13,19).\n"
                                             "  B - SVM: binary classifier using random FF (kernels 3,4,13,19).\n"
-                                            "lsr - LS-SVM: scalar regression.\n"
+                                            "  R - SVM: scalar regression using random FF (kernels 3,4,13,19).\n"
                                             "lsc - LS-SVM: binary classification.\n"
+                                            "lsr - LS-SVM: scalar regression.\n"
                                             "lsv - LS-SVM: vector regression.\n"
                                             "lsa - LS-SVM: anionic regression.\n"
                                             "lsg - LS-SVM: gentype regression.\n"
-                                            "lsi - LS-SVM: planar regression.\n"
                                             "lso - LS-SVM: scalar regression with scoring.\n"
                                             "lsq - LS-SVM: vector regression with scoring.\n"
+                                            "lsi - LS-SVM: planar regression.\n"
                                             "lsh - LS-SVM: multi-expert ranking.\n"
                                             "lsR - LS-SVM: scalar regression random FF (kernels 3,4,13,19).\n"
-                                            "gpr - GPR: gaussian process scalar regression.\n"
                                             "gpc - GPR: gaussian process binary classification (unreliable).\n"
+                                            "gpr - GPR: gaussian process scalar regression.\n"
                                             "gpv - GPR: gaussian process vector regression.\n"
                                             "gpa - GPR: gaussian process anionic regression.\n"
                                             "gpg - GPR: gaussian process gentype regression.\n"
-                                            "gpR - GPR: gaussian process scalar regression RFF (kernels 3,4,13,19).\n"
                                             "gpC - GPR: gaussian process binary classify RFF (kernels 3,4,13,19).\n"
+                                            "gpR - GPR: gaussian process scalar regression RFF (kernels 3,4,13,19).\n"
                                             "knc - KNN: binary classification.\n"
                                             "knm - KNN: multiclass classification.\n"
                                             "knr - KNN: scalar regression.\n"
@@ -952,24 +871,36 @@ PYBIND11_MODULE(pyheavy, m) {
                                             "ker - BLK: kernel specialisation.***\n"
                                             "mba - BLK: multi-block sum.");
 
-    m_ml.def("sel", &selml,"select ML.",py::arg("i"));
-    m_ml.def("swap", &swapml,"swap ML i and ML j.",py::arg("i")=0,py::arg("j")=0);
-    m_ml.def("copy", &copyml,"let ML i := ML j.",  py::arg("i")=0,py::arg("j")=0);
+    m_ml.def("sel",    &selml,   "Select ML i > 0. If i=0 then return current ML (default 1) without modification.\n"
+                                 "You can have arbitrarily many models at any given time. Notes:\n"
+                                 "\n"
+                                 "- you can also select this per-operation (eg setC(i=2,C=1.5)), but this is non-\n"
+                                 "  persistent (so selml(1), setC(i=2,C=5), settype(\"gpr\") will set C for ML 2\n"
+                                 "  (as specified explicitly) and the type of ML 1 (as per the global setting).\n"
+                                 "- if i is negative then the ML is a member of a BO. See e.g. selaltmu etc. for\n"
+                                 "  more information.\n"
+                                 "\n"
+                                 "See also: selmlaltcgtapprox, selmlaltmuapprox, selmlaltaugxapprox,\n"
+                                 "          selmlaltmuapproxrff, selmlcgtapprox, selmlmuapprox, selmlaugxapprox,\n"
+                                 "          selmlsigmaapprox, selmldiffmodel, selmlsrcmodel", py::arg("i")=0               );
+    m_ml.def("swap",   &swapml,  "Swap ML and ML j.",   py::arg("i")=0,py::arg("j")=0);
+    m_ml.def("copy",   &copyml,  "Let ML := ML j.",     py::arg("i")=0,py::arg("j")=0);
+    m_ml.def("assign", &assignml,"Let ML j := ML.",     py::arg("i")=0,py::arg("j")=0);
 
-    QDO(m_ml,train,  "train the ML (if training required).");
-    QDO(m_ml,reset,  "undo training: alpha,bias = 0."      );
-    QDO(m_ml,restart,"removing training data and reset."   );
+    QDO(m_ml,train,  "training (if required)."                    );
+    QDO(m_ml,reset,  "undo training (alpha,bias = 0, if defined).");
+    QDO(m_ml,restart,"removing training data and reset."          );
 
-    QDOARG(m_ml,scale,    "scale (alpha,bias) by sf."                   ,"sf");
+    QDOARG(m_ml,scale,    "scale training variables (alpha,bias) by sf.","sf");
     QDOARG(m_ml,randomise,"randomise (alpha,bias) with sparsity 0<=s<=1","s" );
 
-    QGETSETD(m_ml,prim,  setprim,  "pritype","setpritype","prior mean type:\n"
+    QGETSETD(m_ml,prim,  setprim,  "pritype","setpritype","set prior mean type:\n"
                                                           "\n"
                                                           "0 - no (0) prior mean (default).\n"
                                                           "1 - primu(x) defined directly.\n"
                                                           "2 - prior is set to posterior mean of ML priML.\n");
     QGETSETD(m_ml,prival,setprival,"primu",  "setprimu",  "explicit prior mean mu (assuming pritype=1)");
-    m_ml.def("setpriML", &setpriml,"set prior mean to posterior mean of ML priML (assuming pritype=2).",py::arg("i")=0,py::arg("priML"));
+    m_ml.def("setpriML", &setpriml,"set prior mean to posterior mean of ML j (assuming pritype=2).",py::arg("i")=0,py::arg("j")=0);
 
     QGETSETD(m_ml,tspaceDim,settspaceDim,"tspaceDim","settspaceDim", "target space dimension");
     QGETSETD(m_ml,order,    setorder,    "order",    "setorder",     "target space order"    );
@@ -1005,26 +936,25 @@ PYBIND11_MODULE(pyheavy, m) {
     QGET(m_ml,alphaState, "training alpha states"                    );
     QGET(m_ml,xtang,      "training class/vector/type specifics"     );
 
-    m_ml.def("alpha",&mlalpha,"training alpha for ML i (i=0 for current ML).",py::arg("i")=0);
-    m_ml.def("bias", &mlbias, "training bias for ML i (i=0 for current ML).", py::arg("i")=0);
+    m_ml.def("alpha",&mlalpha,"For ML, get training alpha.",py::arg("i")=0);
+    m_ml.def("bias", &mlbias, "For ML, get training bias.", py::arg("i")=0);
 
-    m_ml.def("setalpha",&mlsetalpha,"set alpha for ML i (i=0 for current ML).",py::arg("i")=0,py::arg("alpha"));
-    m_ml.def("setbias", &mlsetbias, "set bias for ML i (i=0 for current ML).", py::arg("i")=0,py::arg("bias") );
+    m_ml.def("setalpha",&mlsetalpha,"For ML, get set alpha.",py::arg("i")=0,py::arg("alpha"));
+    m_ml.def("setbias", &mlsetbias, "For ML, get set bias.", py::arg("i")=0,py::arg("bias") );
 
-    m_ml.def("add", &addTrainingVectorml, "Add a single training vector pair [z,x,Cweight,epsweight,d] to the ML i (let\n"
-                                          "i=0 (default) for current ML) at position j (j=-1 (default) to add at end).\n"
+    m_ml.def("add", &addTrainingVectorml, "For ML, add a single training vector pair [z,x,Cweight,epsweight,d] at\n"
+                                          "position j (j=-1 (default) to add at end).\n"
                                           "The arguments Cweight,epsweight,d are optional (None by default).",py::arg("i")=0,
                                           py::arg("j")=-1,py::arg("z"),py::arg("x"),py::arg("Cweight")=py::none(),
                                           py::arg("epsweight")=py::none(),py::arg("d")=py::none());
-    m_ml.def("addm",&maddTrainingVectorml,"Add multiple training vector pairs [z,x,Cweight,epsweight,d] to the ML i (let\n"
-                                          "i=0 (default) for current ML) at position j (j=-1 (default) to add at end).\n"
+    m_ml.def("addm",&maddTrainingVectorml,"For ML, add multiple training vector pairs [z,x,Cweight,epsweight,d] at\n"
+                                          "position j (j=-1 (default) to add at end).\n"
                                           "The arguments Cweight,epsweight are optional (None by default).",py::arg("i")=0,
                                           py::arg("j")=-1,py::arg("z"),py::arg("x"),py::arg("Cweight")=py::none(),
                                           py::arg("epsweight")=py::none());
-    m_ml.def("addf",&faddTrainingVectorml,"Add up to imax (let imax=0 (default) for all) training vector pairs\n"
-                                          "[z,x,Cweight,epsweight,d] from file fname to ML i (let i=0 (default) for"
-                                          "current ML) at position j (j=-1 (default) to add at end), skipping ignoreStart"
-                                          "(default 0) training pairs at the start of the file.\n"
+    m_ml.def("addf",&faddTrainingVectorml,"For ML, add up to imax (let imax=0 (default) for all) training vector pairs\n"
+                                          "[z,x,Cweight,epsweight,d] from file fname at position j (j=-1 (default) to add"
+                                          "at end), skipping ignoreStart (default 0) training pairs at start of file.\n"
                                           "\n"
                                           "By default it is assumed that the file is in target-at-start format, but you\n"
                                           "can use target-at-end format by setting reverse=1 (reverse=0 by default). For\n"
@@ -1032,23 +962,19 @@ PYBIND11_MODULE(pyheavy, m) {
                                           py::arg("ignoreStart")=0,py::arg("imax")=-1,py::arg("reverse")=0,
                                           py::arg("j")=-1,py::arg("fname"));
 
-    m_ml.def("remove",&removeTrainingVectorml,"Remove num training vector pairs from ML i (let i=0 (default) for current\n"
-                                              "ML) at position j (j=-1 (default) to remove from end).",py::arg("i")=0,
-                                              py::arg("j")=-1,py::arg("num")=1);
+    m_ml.def("remove",&removeTrainingVectorml,"For ML, remove num training vector pairs at position j (j=-1 (default) to\n"
+                                              "remove from end).",py::arg("i")=0, py::arg("j")=-1,py::arg("num")=1);
 
-    m_ml.def("mu", &muml, "Calculate the posterior mean (output) of ML i given input x, which is either a\n"
-                          "sparse vector or a training vector number (let i=0 (default) for current ML).",
-                          py::arg("i")=0,py::arg("x"));
-    m_ml.def("g",  &mugml,"Calculate the underlying (ie continuous, even for a classification problem)\n"
-                          "output of ML i (let i=0 (default) for current ML).",py::arg("i")=0,py::arg("x"));
-    m_ml.def("var",&varml,"Calculate the posterior variance of ML i given input x, which is either a\n"
-                          "sparse vector or an integer (training vector number) (let i=0 (default) for\n"
-                          "current ML).",py::arg("i")=0,py::arg("x"));
-    m_ml.def("cov",&covml,"Calculate the posterior covariance of ML i given inputs x,y, which are either\n"
-                          "sparse vectors or integers (training vector numbers) (let i=0 (default) for\n"
-                          "current ML).",py::arg("i")=0,py::arg("x"),py::arg("y"));
+    m_ml.def("mu", &muml, "For ML, calculate the posterior mean (output) given input x, which is either a\n"
+                          "sparse vector or a training vector number.",py::arg("i")=0,py::arg("x"));
+    m_ml.def("g",  &mugml,"For ML, calculate the underlying (ie continuous) output given input x, which is\n"
+                           "either a sparse vector or a training vector number.",py::arg("i")=0,py::arg("x"));
+    m_ml.def("var",&varml,"For ML, calculate the posterior variance given input x, which is either a\n"
+                          "sparse vector or an integer (training vector number).",py::arg("i")=0,py::arg("x"));
+    m_ml.def("cov",&covml,"For ML, Calculate the posterior covariance given inputs x,y, which are either\n"
+                          "sparse vectors or integers (training vector numbers).",py::arg("i")=0,py::arg("x"),py::arg("y"));
 
-    m_ml.def("tuneKernel",&mltuneKernel,"Tune the kernel for ML i to minimise some metric, specified by method:\n"
+    m_ml.def("tuneKernel",&mltuneKernel,"For ML, tune the kernel for ML i to minimise some metric, specified by method:\n"
                                         "1 - max-likelihood (default)\n"
                                         "2 - leave-one-out error\n"
                                         "3 - recall error\n"
@@ -1060,38 +986,37 @@ PYBIND11_MODULE(pyheavy, m) {
                                         "tuneP  - 0 don't tune C parameter (default), 1 tune C\n",py::arg("i")=0,
                                         py::arg("method")=2,py::arg("xwidth")=1,py::arg("tuneK")=1,py::arg("tuneP")=0);
 
-    m_ml.def("K1",&mlK1,"calculate K1(xa) for ML i (let i=0 (default) for current ML).",         py::arg("i")=0,py::arg("xa")                                          );
-    m_ml.def("K2",&mlK2,"calculate K2(xa,xb) for ML i (let i=0 (default) for current ML).",      py::arg("i")=0,py::arg("xa"),py::arg("xb")                            );
-    m_ml.def("K3",&mlK3,"calculate K3(xa,xb,xc) for ML i (let i=0 (default) for current ML).",   py::arg("i")=0,py::arg("xa"),py::arg("xb"),py::arg("xc")              );
-    m_ml.def("K4",&mlK4,"calculate K4(xa,xb,xc,xd) for ML i (let i=0 (default) for current ML).",py::arg("i")=0,py::arg("xa"),py::arg("xb"),py::arg("xc"),py::arg("xd"));
+    m_ml.def("K1",&mlK1,"For ML, calculate K1(xa).",         py::arg("i")=0,py::arg("xa")                                          );
+    m_ml.def("K2",&mlK2,"For ML, calculate K2(xa,xb).",      py::arg("i")=0,py::arg("xa"),py::arg("xb")                            );
+    m_ml.def("K3",&mlK3,"For ML, calculate K3(xa,xb,xc).",   py::arg("i")=0,py::arg("xa"),py::arg("xb"),py::arg("xc")              );
+    m_ml.def("K4",&mlK4,"For ML, calculate K4(xa,xb,xc,xd).",py::arg("i")=0,py::arg("xa"),py::arg("xb"),py::arg("xc"),py::arg("xd"));
 
     // ---------------------------
 
     auto m_ml_svm = m_ml.def_submodule("svm","Support Vector Machines specific options.");
 
     QGETSETD(m_ml_svm,getMLType,ssetMLTypeClean,"type","settype", "SVM type. Types are:\n"
-                                                       "\n"
-                                                       "r - SVM: Scalar regression.\n"
-                                                       "s - SVM: single class.\n"
-                                                       "c - SVM: binary classification (default).\n"
-                                                       "m - SVM: multiclass classification.\n"
-                                                       "r - SVM: scalar regression.\n"
-                                                       "v - SVM: vector regression.\n"
-                                                       "a - SVM: anionic regression.\n"
-                                                       "u - SVM: cyclic regression.\n"
-                                                       "g - SVM: gentype regression (any target).\n"
-                                                       "p - SVM: density estimation (1-norm base, kernel can be non-Mercer.\n"
-                                                       "t - SVM: pareto frontier SVM.\n"
-                                                       "l - SVM: binary scoring (zero bias by default).\n"
-                                                       "o - SVM: scalar regression with scoring.\n"
-                                                       "q - SVM: vector regression with scoring.\n"
-                                                       "i - SVM: planar regression.\n"
-                                                       "h - SVM: multi-expert ranking.\n"
-                                                       "j - SVM: multi-expert binary classification.\n"
-                                                       "b - SVM: similarity learning.\n"
-                                                       "d - SVM: basic SVM for kernel inheritance (-x).\n"
-                                                       "R - SVM: scalar regression using random FF (kernels 3,4,13,19).\n"
-                                                       "B - SVM: binary classifier using random FF (kernels 3,4,13,19).");
+                                                                  "\n"
+                                                                  "  s - SVM: single class.\n"
+                                                                  "  c - SVM: binary classification (default).\n"
+                                                                  "  m - SVM: multiclass classification.\n"
+                                                                  "  r - SVM: scalar regression.\n"
+                                                                  "  v - SVM: vector regression.\n"
+                                                                  "  a - SVM: anionic regression.\n"
+                                                                  "  u - SVM: cyclic regression.\n"
+                                                                  "  g - SVM: gentype regression (any target).\n"
+                                                                  "  p - SVM: density estimation (1-norm base, kernel can be non-Mercer.\n"
+                                                                  "  t - SVM: pareto frontier SVM.\n"
+                                                                  "  l - SVM: binary scoring (zero bias by default).\n"
+                                                                  "  o - SVM: scalar regression with scoring.\n"
+                                                                  "  q - SVM: vector regression with scoring.\n"
+                                                                  "  i - SVM: planar regression.\n"
+                                                                  "  h - SVM: multi-expert ranking.\n"
+                                                                  "  j - SVM: multi-expert binary classification.\n"
+                                                                  "  b - SVM: similarity learning.\n"
+                                                                  "  d - SVM: basic SVM for kernel inheritance (-x).\n"
+                                                                  "  B - SVM: binary classifier using random FF (kernels 3,4,13,19).\n"
+                                                                  "  R - SVM: scalar regression using random FF (kernels 3,4,13,19).\n");
     QGETSETD(m_ml_svm,getVmethod,setVmethod,"typeVR","settypeVR","SVM vector-regression method.  Methods are:\n"
                                                                  "\n"
                                                                  "once - at-once regression.\n"
@@ -1147,40 +1072,40 @@ PYBIND11_MODULE(pyheavy, m) {
     QGET(m_ml_svm,Gp,      "kernel matrix"             );
     QGET(m_ml_svm,kerndiag,"diagonals of kernel matrix");
 
-    QGETSET(m_ml_svm,C,        setC,        "regularization trade-off (empirical risk weight)"                    );
-    QGETSET(m_ml_svm,sigma,    setsigma,    "regularization trade-off (regularization weight, lambda)"            );
+    QGETSET(m_ml_svm,C,        setC,        "regularization trade-off (empirical risk weight, C=1/lambda)"        );
+    QGETSET(m_ml_svm,sigma,    setsigma,    "regularization trade-off (regularization weight, lambda=1/C)"        );
     QGETSET(m_ml_svm,sigma_cut,setsigma_cut,"sigma scale for JIT sampling"                                        );
     QGETSET(m_ml_svm,eps,      seteps,      "epsilon-insensitivity width"                                         );
     QGETSET(m_ml_svm,m,        setm,        "margin-norm (default 2, or 2-kernel SVM)"                            );
     QGETSET(m_ml_svm,theta,    settheta,    "theta (psd regularization) for similarity learning"                  );
     QGETSET(m_ml_svm,simnorm,  setsimnorm,  "set normalized (1, default) or un-normalized (0) similarity learning");
 
-    QGETSETCLA(m_ml_svm,Cclass,  setCclass,  "regularization trade-off (empirical risk weight) C for class d");
-    QGETSETCLA(m_ml_svm,epsclass,setepsclass,"epsilon-insensitivity width eps for class d"                   );
+    QGETSETCLA(m_ml_svm,Cclass,  setCclass,  "regularization trade-off scale (empirical risk weight) C for class d");
+    QGETSETCLA(m_ml_svm,epsclass,setepsclass,"epsilon-insensitivity width eps scale for class d"                   );
 
-    QGETSET(m_ml_svm,LinBiasForce, setLinBiasForce, "linear bias-forcing"              );
-    QGETSET(m_ml_svm,QuadBiasForce,setQuadBiasForce,"quadratic bias-forcing"           );
-    QGETSET(m_ml_svm,nu,           setnu,           "linear tube-shrinking constant"   );
-    QGETSET(m_ml_svm,nuQuad,       setnuQuad,       "quadratic tube-shrinking constant");
+    QGETSET(m_ml_svm,LinBiasForce, setLinBiasForce, "linear bias-forcing (binary, on/off)"   );
+    QGETSET(m_ml_svm,QuadBiasForce,setQuadBiasForce,"quadratic bias-forcing (binary, on/off)");
+    QGETSET(m_ml_svm,nu,           setnu,           "linear tube-shrinking constant"         );
+    QGETSET(m_ml_svm,nuQuad,       setnuQuad,       "quadratic tube-shrinking constant"      );
 
-    QGETSETCLA(m_ml_svm,LinBiasForceclass, setLinBiasForceclass, "linear bias-forcing LinBiasForce for class d"    );
-    QGETSETCLA(m_ml_svm,QuadBiasForceclass,setQuadBiasForceclass,"quadratic bias-forcing QuadBiasForce for class d");
+    QGETSETCLA(m_ml_svm,LinBiasForceclass, setLinBiasForceclass, "linear bias-forcing LinBiasForce scale for class d"    );
+    QGETSETCLA(m_ml_svm,QuadBiasForceclass,setQuadBiasForceclass,"quadratic bias-forcing QuadBiasForce scale for class d");
 
     QGET(m_ml_svm,loglikelihood,"quasi-log-likelihood"      );
     QGET(m_ml_svm,maxinfogain,  "quasi-max-information-gain");
     QGET(m_ml_svm,RKHSnorm,     "RKHS norm ||f||_H^2"       );
     QGET(m_ml_svm,RKHSabs,      "RKHS norm ||f||_H"         );
 
-    m_ml.def("calcLOO",   &mlcalcLOO,   "calculate leave-one-out error for ML i (i=0 for current ML).",py::arg("i")=0);
-    m_ml.def("calcRecall",&mlcalcRecall,"calculate recall error for ML i (i=0 for current ML).",       py::arg("i")=0);
-    m_ml.def("calcCross", &mlcalcCross, "calculate n-fold validation error for ML i (i=0 for current ML).\n"
-                                        "If numreps>1 then does numreps repetitions, randomised in rndit=1.", py::arg("i")=0,
-                                        py::arg("n"),py::arg("rndit")=0,py::arg("numreps")=1);
+    m_ml.def("calcLOO",   &mlcalcLOO,   "For ML, calculate leave-one-out error.",py::arg("i")=0);
+    m_ml.def("calcRecall",&mlcalcRecall,"For ML, calculate recall error.",       py::arg("i")=0);
+    m_ml.def("calcCross", &mlcalcCross, "For ML, calculate n-fold validation error. If numreps>1 then does numreps\n"
+                                        "repetitions, randomised in rndit=1.", py::arg("i")=0,py::arg("n"),
+                                        py::arg("rndit")=0,py::arg("numreps")=1);
 
     QGETSETD(m_ml_svm,alpha,setAlpha,"alpha","setalpha","alpha");
     QGETSETD(m_ml_svm,bias, setBias, "bias", "setbias", "bias" );
 
-       QDO(m_ml_svm,removeNonSupports,"remove all non-support vectors"        );
+       QDO(m_ml_svm,removeNonSupports,"remove all non-support vectors alpha=0");
     QDOARG(m_ml_svm,trimTrainingSet,  "trim training set to target size N","N");
 
     // ---------------------------
@@ -1189,30 +1114,30 @@ PYBIND11_MODULE(pyheavy, m) {
 
     QGETSETD(m_ml_lsv,getMLType,ssetMLTypeClean,"type","settype","LSV type. Types are:\n"
                                                                  "\n"
-                                                                 "lsr - LS-SVM: scalar regression.\n"
                                                                  "lsc - LS-SVM: binary classification.\n"
+                                                                 "lsr - LS-SVM: scalar regression.\n"
                                                                  "lsv - LS-SVM: vector regression.\n"
                                                                  "lsa - LS-SVM: anionic regression.\n"
                                                                  "lsg - LS-SVM: gentype regression.\n"
-                                                                 "lsi - LS-SVM: planar regression.\n"
                                                                  "lso - LS-SVM: scalar regression with scoring.\n"
                                                                  "lsq - LS-SVM: vector regression with scoring.\n"
+                                                                 "lsi - LS-SVM: planar regression.\n"
                                                                  "lsh - LS-SVM: multi-expert ranking.\n"
-                                                                 "lsR - LS-SVM: scalar regression random FF (kernels 3,4,13,19).");
+                                                                 "lsR - LS-SVM: scalar regression random FF (kernels 3,4,13,19).\n");
     QGETSETD(m_ml_lsv,getBmethod,setBmethod,"typeBias","settypeBias","LSV bias method.  Methods are:\n"
                                                                      "\n"
                                                                      "var - variable bias (default).\n"
                                                                      "fix - zero bias.");
 
-    QGETSET(m_ml_lsv,C,        setC,        "regularization trade-off (empirical risk weight)"        );
-    QGETSET(m_ml_lsv,sigma,    setsigma,    "regularization trade-off (regularization weight, lambda)");
-    QGETSET(m_ml_lsv,sigma_cut,setsigma_cut,"sigma scale for JIT sampling"                            );
-    QGETSET(m_ml_lsv,eps,      seteps,      "epsilon-insensitivity width"                             );
+    QGETSET(m_ml_lsv,C,        setC,        "regularization trade-off (empirical risk weight, C=1/lambda)");
+    QGETSET(m_ml_lsv,sigma,    setsigma,    "regularization trade-off (regularization weight, lambda=1/C)");
+    QGETSET(m_ml_lsv,sigma_cut,setsigma_cut,"sigma scale for JIT sampling"                                );
+    QGETSET(m_ml_lsv,eps,      seteps,      "epsilon-insensitivity width"                                 );
 
     QGETD(m_ml_lsv,lsvGp,"Gp","kernel matrix");
 
-    QGETSETCLA(m_ml_lsv,Cclass,  setCclass,  "regularization trade-off (empirical risk weight) C for class d");
-    QGETSETCLA(m_ml_lsv,epsclass,setepsclass,"epsilon-insensitivity width eps for class d"                   );
+    QGETSETCLA(m_ml_lsv,Cclass,  setCclass,  "regularization trade-off scale (empirical risk weight) C for class d");
+    QGETSETCLA(m_ml_lsv,epsclass,setepsclass,"epsilon-insensitivity width eps scale for class d"                   );
 
     QGET(m_ml_lsv,loglikelihood,"quasi-log-likelihood"      );
     QGET(m_ml_lsv,maxinfogain,  "quasi-max-information-gain");
@@ -1228,19 +1153,19 @@ PYBIND11_MODULE(pyheavy, m) {
 
     QGETSETD(m_ml_gp,getMLType,ssetMLTypeClean,"type","settype","GP type. Types are:\n"
                                                                 "\n"
-                                                                "gpr - GPR: gaussian process scalar regression.\n"
                                                                 "gpc - GPR: gaussian process binary classification (unreliable).\n"
+                                                                "gpr - GPR: gaussian process scalar regression.\n"
                                                                 "gpv - GPR: gaussian process vector regression.\n"
                                                                 "gpa - GPR: gaussian process anionic regression.\n"
                                                                 "gpg - GPR: gaussian process gentype regression.\n"
-                                                                "gpR - GPR: gaussian process scalar regression RFF (kernels 3,4,13,19).\n"
-                                                                "gpC - GPR: gaussian process binary classify RFF (kernels 3,4,13,19).");
+                                                                "gpC - GPR: gaussian process binary classify RFF (kernels 3,4,13,19).\n"
+                                                                "gpR - GPR: gaussian process scalar regression RFF (kernels 3,4,13,19).\n");
     QGETSETD(m_ml_gp,getBmethod,setBmethod,"typeBias","settypeBias","set GP i bias method.  Methods are:\n"
                                                                     "\n"
                                                                     "var - variable bias.\n"
                                                                     "fix - zero bias (default).");
 
-    QGETSET(m_ml_gp,sigma,    setsigma,    "measurement noise variance"                       );
+    QGETSET(m_ml_gp,sigma,    setsigma,    "measurement noise variance sigma"                 );
     QGETSET(m_ml_gp,sigma_cut,setsigma_cut,"measurement noise variance scale for JIT sampling");
 
     QGETD(m_ml_gp,gprGp,"Gp","kernel matrix");
@@ -1267,7 +1192,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                                                  "knv - KNN: vector regression.\n"
                                                                  "kna - KNN: anionic regression.\n"
                                                                  "kng - KNN: gentype regression.\n"
-                                                                 "knp - KNN: density estimation.");
+                                                                 "knp - KNN: density estimation.\n");
 
     QGETCLA(m_ml_knn,NNC,"number of active training vectors for class d");
 
@@ -1320,36 +1245,41 @@ PYBIND11_MODULE(pyheavy, m) {
 
     // ---------------------------
 
-    auto m_opt = m.def_submodule("opt","Optimisation Routines.");
+    auto m_opt = m.def_submodule("opt","Built-in Optimisation Methods.");
 
     auto m_opt_grid       = m_opt.def_submodule("grid",      "Grid Optimisation"       );
     auto m_opt_DIRect     = m_opt.def_submodule("DIRect",    "DIRect Optimisation"     );
     auto m_opt_NelderMead = m_opt.def_submodule("NelderMead","Nelder-Mead Optimisation");
     auto m_opt_Bayesian   = m_opt.def_submodule("BO",        "Bayesian Optimisation"   );
 
-    auto m_opt_model_Bayesian = m_opt_Bayesian.def_submodule("model", "Bayesian Optimisation (model options)");
+    auto m_opt_model_Bayesian = m_opt_Bayesian.def_submodule("model", "Bayesian Optimisation (SMBO) Model Options");
 
-    auto m_opt_model_kern_Bayesian         = m_opt_model_Bayesian.     def_submodule("kern",    "Kernel options for objective model"              );
-    auto m_opt_model_kern_obscure_Bayesian = m_opt_model_kern_Bayesian.def_submodule("obscure", "More Obscure Kernel Options for objective model.");
+    auto m_opt_model_kern_Bayesian         = m_opt_model_Bayesian.     def_submodule("kern",    "Kernel options for SMBO objective model"              );
+    auto m_opt_model_kern_obscure_Bayesian = m_opt_model_kern_Bayesian.def_submodule("obscure", "More Obscure Kernel Options for SMBO objective model.");
 
-    auto m_opt_model_kern_c_Bayesian         = m_opt_model_Bayesian.       def_submodule("kern_c",  "Kernel options for constraint model"              );
-    auto m_opt_model_kern_c_obscure_Bayesian = m_opt_model_kern_c_Bayesian.def_submodule("obscure", "More Obscure Kernel Options for constraint model.");
+    auto m_opt_model_kern_c_Bayesian         = m_opt_model_Bayesian.       def_submodule("kern_c",  "Kernel options for SMBO constraint model"              );
+    auto m_opt_model_kern_c_obscure_Bayesian = m_opt_model_kern_c_Bayesian.def_submodule("obscure", "More Obscure Kernel Options for SMBO constraint model.");
 
-    m_opt_grid.def(      "opt", &mloptgrid,       "optimise (minimise) fn : [0,1]^dim to [0,1] using grid optimiser i.",       py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
-    m_opt_DIRect.def(    "opt", &mloptDIRect,     "optimise (minimise) fn : [0,1]^dim to [0,1] using DIRect optimiser i.",     py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
-    m_opt_NelderMead.def("opt", &mloptNelderMead, "optimise (minimise) fn : [0,1]^dim to [0,1] using Nelder-Mead optimiser i.",py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
-    m_opt_Bayesian.def(  "opt", &mloptBayesian,   "optimise (minimise) fn : [0,1]^dim to [0,1] using Bayesian optimiser i.",   py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
+    m_opt_grid.def(      "opt", &mloptgrid,       "Optimise (minimise) fn : [0,1]^dim to [0,1] using grid optimiser i.",       py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
+    m_opt_DIRect.def(    "opt", &mloptDIRect,     "Optimise (minimise) fn : [0,1]^dim to [0,1] using DIRect optimiser i.",     py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
+    m_opt_NelderMead.def("opt", &mloptNelderMead, "Optimise (minimise) fn : [0,1]^dim to [0,1] using Nelder-Mead optimiser i.",py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
+    m_opt_Bayesian.def(  "opt", &mloptBayesian,   "Optimise (minimise) fn : [0,1]^dim to [0,1] using Bayesian optimiser i.",   py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
 
     // All optimisers
 
-    QGETSETOPTALL(m_opt,optname,     "base-string for logging"                        );
-    QGETSETOPTALL(m_opt,maxtraintime,"maximum training time (default 0, unlimited)"   );
-    QGETSETOPTALL(m_opt,softmin,     "soft minimum (clip) on objective (default -inf)");
-    QGETSETOPTALL(m_opt,softmax,     "soft maximum (clip) on objective (default +inf)");
-    QGETSETOPTALL(m_opt,hardmin,     "hard minimum (stop) on objective (default -inf)");
-    QGETSETOPTALL(m_opt,hardmax,     "hard maximum (stop) on objective (default +inf)");
+    QGETSETOPTALL(m_opt,optname,     "base-string from which all logfile names are derived"    );
+    QGETSETOPTALL(m_opt,maxtraintime,"maximum training time in seconds (default 0, unlimited)" );
+    QGETSETOPTALL(m_opt,softmin,     "soft minimum (clip if found) on objective (default -inf)");
+    QGETSETOPTALL(m_opt,softmax,     "soft maximum (clip if found) on objective (default +inf)");
+    QGETSETOPTALL(m_opt,hardmin,     "hard minimum (stop if found) on objective (default -inf)");
+    QGETSETOPTALL(m_opt,hardmax,     "hard maximum (stop if found) on objective (default +inf)");
 
     // Grid options
+
+    m_opt_grid.def("selgridopt",&selgridopt,"Select grid optimiser i > 0. If i=0 then return current grid optimizer\n"
+                                            "(default 1) without modification. You can have arbitrarily many grid\n"
+                                            "optimizers at any given time. Note that you can select per-operation,\n"
+                                            "but like selml this is non-persistent.\n",py::arg("i")=0);
 
     QGETSETOPT(m_opt,numZooms,grid,"number of grid-zooms (default 0)"                                              );
     QGETSETOPT(m_opt,zoomFact,grid,"scaling (zoom) factor for each grid-zoom (default 0.333)"                      );
@@ -1357,11 +1287,21 @@ PYBIND11_MODULE(pyheavy, m) {
 
     // DIRect options
 
+    m_opt_DIRect.def("selDIRectopt",&selDIRectopt,"Select DIRect optimiser i > 0. If i=0 then return current DIRect optimizer\n"
+                                                  "(default 1) without modification. You can have arbitrarily many DIRect\n"
+                                                  "optimizers at any given time. Note that you can select per-operation,\n"
+                                                  "but like selml this is non-persistent.\n",py::arg("i")=0);
+
     QGETSETOPT(m_opt,maxits,  DIRect,"maximum cube divisions (default 1000)."      );
     QGETSETOPT(m_opt,maxevals,DIRect,"maximum function evaluations (default 5000).");
     QGETSETOPT(m_opt,eps,     DIRect,"epsilon factor (default 1e-4)."              );
 
     // Nelder-Mead options
+
+    m_opt_NelderMead.def("selNelderMeadopt",&selNelderMeadopt,"Select NelderMead optimiser i > 0. If i=0 then return current NelderMead optimizer\n"
+                                                              "(default 1) without modification. You can have arbitrarily many NelderMead\n"
+                                                              "optimizers at any given time. Note that you can select per-operation,\n"
+                                                              "but like selml this is non-persistent.\n",py::arg("i")=0);
 
     QGETSETOPT(m_opt,minf_max,NelderMead,"maximum f val (default -HUGE_VAL)."                  );
     QGETSETOPT(m_opt,ftol_rel,NelderMead,"relative tolerance of function value (default 0)."   );
@@ -1373,73 +1313,76 @@ PYBIND11_MODULE(pyheavy, m) {
 
     // Bayesian options
 
-    QGETSETOPT(m_opt,method, Bayesian,"Bayesian optimisation acquisition function:\n"
-                                      "\n"
-                                      " 0 - MO (pure exploitation, mean only minimisation).\n"
-                                      " 1 - EI (expected improvement - default).\n"
-                                      " 2 - PI (probability of improvement).\n"
-                                      " 3 - GP-UCB as per Brochu (recommended GP-UCB).*\n"
-                                      " 4 - GP-UCB |D| finite as per Srinivas.\n"
-                                      " 5 - GP-UCB |D| infinite as per Srinivas.\n"
-                                      " 6 - GP-UCB p based on Brochu.\n"
-                                      " 7 - GP-UCB p |D| finite based on Srinivas.\n"
-                                      " 8 - GP-UCB p |D| infinite based on Srinivas.\n"
-                                      " 9 - PE (variance-only maximisation).\n"
-                                      "10 - PEc (total variance-only, including constraints in variance maximisation).\n"
-                                      "11 - GP-UCB with user-defined beta_t (see -gbv).\n"
-                                      "12 - Thompson sampling.#\n"
-                                      "13 - GP-UCB RKHS as per Srinivas.\n"
-                                      "14 - GP-UCB RKHS as Chowdhury.#\n"
-                                      "15 - GP-UCB RKHS as Bogunovic.~\n"
-                                      "16 - Thompson sampling (unity scaling on variance).\n"
-                                      "17 - GP-UCB as per Kandasamy (multifidelity 2017).\n"
-                                      "18 - Human will be prompted to input x.\n"
-                                      "19 - HE (human-level exploitation beta = 0.01).\n"
-                                      "20 - GP-UCB as per BO-Muse (single AI).  Typically combined with human prompt\n"
-                                      "\n"
-                                      "* beta_n = 2.log((n^{2+dim/2}).(pi^2)/(3.delta))\n"
-                                      "$ variance of model only.\n"
-                                      "@ total variance of model and contraints.\n"
-                                      "# Chowdhury, On Kernelised Multi-Arm Bandits, Algorithm 2.\n"
-                                      "~ Bogunovic, Misspecified GP Bandit Optim., Lemma 1.\n"
-                                      "^ Intendid to be combined with human prompt.");
-    QGETSETOPT(m_opt,PIscale,Bayesian,"PI scaling: set 0 for standard operation, 1 to scale aquisition function by\n"
-                                      "the PI acquisition function.");
+    m_opt_Bayesian.def("selBOopt",&selBayesianopt,"Select BO optimiser i > 0. If i=0 then return current BO optimizer\n"
+                                                  "(default 1) without modification. You can have arbitrarily many BO\n"
+                                                  "optimizers at any given time. Note that you can select per-operation,\n"
+                                                  "but like selml this is non-persistent.\n",py::arg("i")=0);
+
+    QGETSETOPT(m_opt,method,   Bayesian,"Bayesian optimisation acquisition function:\n"
+                                        "\n"
+                                        " 0 - MO (pure exploitation, mean only minimisation).\n"
+                                        " 1 - EI (expected improvement - default).\n"
+                                        " 2 - PI (probability of improvement).\n"
+                                        " 3 - GP-UCB as per Brochu (recommended GP-UCB).*\n"
+                                        " 4 - GP-UCB |D| finite as per Srinivas.\n"
+                                        " 5 - GP-UCB |D| infinite as per Srinivas.\n"
+                                        " 6 - GP-UCB p based on Brochu.\n"
+                                        " 7 - GP-UCB p |D| finite based on Srinivas.\n"
+                                        " 8 - GP-UCB p |D| infinite based on Srinivas.\n"
+                                        " 9 - PE (variance-only maximisation).\n"
+                                        "10 - PEc (total variance-only, including constraints in variance maximisation).\n"
+                                        "11 - GP-UCB with user-defined beta_t (see -gbv).\n"
+                                        "12 - Thompson sampling.#\n"
+                                        "13 - GP-UCB RKHS as per Srinivas.\n"
+                                        "14 - GP-UCB RKHS as Chowdhury.#\n"
+                                        "15 - GP-UCB RKHS as Bogunovic.~\n"
+                                        "16 - Thompson sampling (unity scaling on variance).\n"
+                                        "17 - GP-UCB as per Kandasamy (multifidelity 2017).\n"
+                                        "18 - Human will be prompted to input x.\n"
+                                        "19 - HE (human-level exploitation beta = 0.01).\n"
+                                        "20 - GP-UCB as per BO-Muse (single AI).  Typically combined with human prompt\n"
+                                        "\n"
+                                        "* beta_n = 2.log((n^{2+dim/2}).(pi^2)/(3.delta))\n"
+                                        "$ variance of model only.\n"
+                                        "@ total variance of model and contraints.\n"
+                                        "# Chowdhury, On Kernelised Multi-Arm Bandits, Algorithm 2.\n"
+                                        "~ Bogunovic, Misspecified GP Bandit Optim., Lemma 1.\n"
+                                        "^ Intendid to be combined with human prompt.");
+    QGETSETOPT(m_opt,betafn,  Bayesian, "user-defined beta for method 11. You can make this a function with the vars:\n"
+                                        "\n"
+                                        "- var(0,1) (y) = iteration number.\n"
+                                        "- var(0,2) (z) = x dimension.\n"
+                                        "- var(0,3) (v) = delta.\n"
+                                        "- var(0,4) (w) = |D| specified by -gbx.\n"
+                                        "- var(0,5) (g) = a as specified by -gbo.\n"
+                                        "\n"
+                                        "You can also use [ [ f1 ] [ f2 ] ... ], where f1,f2,... define acquisition\n"
+                                        "function (see method variable). This will generate multiple recommendations\n"
+                                        "in a single iteration, one for each of the methods f1,f2,... given. For\n"
+                                        "other uses see -gbv.\n");
+    QGETSETOPT(m_opt,PIscale,  Bayesian,"PI scaling: set 0 for standard operation, 1 to scale aquisition function by\n"
+                                        "the PI acquisition function. For constrained optimisation with trivial objective\n"
+                                        "with the model specified as prior for a deterministic model (zero posterior\n"
+                                        "variance) this let's you avoid testing solutions that are trivially non-optimal.");
+    QGETSETOPT(m_opt,numcgt,   Bayesian,"number of constraints enforced (default 0).");
+    QGETSETOPT(m_opt,cgtmethod,Bayesian,"constraint method:\n"
+                                        "\n"
+                                        "0 - calculate P(c(x))>=0 and scale acquisition function by this (default).\n"
+                                        "1 - optimise f(x).ind(c(x)>=0), so that the mean/variance of c are built into\n"
+                                        "    the posterior mean/variance before calculating acquisition function.");
 
     QGETSETOPT(m_opt,startpoints,Bayesian,"number of initial (random, uniform) seeds points. Use -1 (default) for d+1.");
-    QGETSETOPT(m_opt,totiters,   Bayesian,"number of iterations. Use 0 for unlimited, -1 (default) for 15d, -2 for"
-                                          "frequentist (stop when min_x err(x) < err).");
+    QGETSETOPT(m_opt,totiters,   Bayesian,"number of iterations. Use 0 for unlimited, -1 (default) for 15d, -2 for\n"
+                                          "frequentist mode (stop when min_x err(x) < err).");
     QGETSETOPT(m_opt,err,        Bayesian,"when totiters=-2, the stopping condition is min_x err(x) < err.");
     QGETSETOPT(m_opt,minstdev,   Bayesian,"added to the posterior variance in acquisition function (default 0).");
-    QGETSETOPT(m_opt,cgtmethod,  Bayesian,"constraint method:\n"
-                                          "\n"
-                                          "0 - calculate probability that c(x)>=0 and scale acquisition function by this (default).\n"
-                                          "1 - build c(x) into mean/variance calculation before calculating acquisition function.");
-    QGETSETOPT(m_opt,cgtmargin,  Bayesian,"safety margin for enforcing inequality constraints in the acquisition fn (default 0.1)");
-    QGETSETOPT(m_opt,betafn,     Bayesian,"user-defined beta for method 11. You can make this a function with the vars:\n"
-                                          "\n"
-                                          "- var(0,1) (y) = iteration number.\n"
-                                          "- var(0,2) (z) = x dimension.\n"
-                                          "- var(0,3) (v) = delta.\n"
-                                          "- var(0,4) (w) = |D| specified by -gbx.\n"
-                                          "- var(0,5) (g) = a as specified by -gbo.\n"
-                                          "\n"
-                                          "You can also use [ [ f1 ] [ f2 ] ... ], where f1,f2,... define acquisition\n"
-                                          "function (see method variable). This will generate multiple recommendations\n"
-                                          "in a single iteration, one for each of the methods f1,f2,... given. For\n"
-                                          "other uses see -gbv.\n");
+    QGETSETOPT(m_opt,cgtmargin,  Bayesian,"safety margin for enforcing inequality constraints in the acq fn (default 0.1)");
     QGETSETOPT(m_opt,ztol,       Bayesian,"zero tolerance factor.");
-
-    QGETSETOPT(m_opt,startseed,Bayesian,"seed for RNG immediately prior to generating random seeds. Use -1 for no"
-                                        "seeding, -2 to seed with time. If >=0 then this is incremented on each use"
-                                        "(default 42)");
-    QGETSETOPT(m_opt,algseed,  Bayesian,"seed for RNG immediately prior to the main algorithm loop. Use -1 for no"
-                                        "seeding, -2 to seed with time. If >=0 then this is incremented on each use"
-                                        "(default 42)");
 
     QGETSETOPT(m_opt,delta,Bayesian,"delta factor used in GP-UCB method (default 0.1).");
     QGETSETOPT(m_opt,nu,   Bayesian,"nu factor Srinivas GP-UCB (default 0.2, see Srivinas)");
-    QGETSETOPT(m_opt,modD, Bayesian,"|D| (size of search space grid) for GP-UCB finite (default -1, which means size of grid if available, 10 if not)");
+    QGETSETOPT(m_opt,modD, Bayesian,"|D| (size of search space grid) for GP-UCB finite (default -1, which means\n"
+                                    "size of grid if available, 10 if not)");
     QGETSETOPT(m_opt,a,    Bayesian,"a constant for Srinivas |D|-infinite gpUCB (default 1)");
     QGETSETOPT(m_opt,b,    Bayesian,"b constant for Srinivas |D|-infinite gpUCB (default 1)");
     QGETSETOPT(m_opt,r,    Bayesian,"r constant for Srinivas |D|-infinite gpUCB (default 1)");
@@ -1448,18 +1391,37 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPT(m_opt,B,    Bayesian,"B constant for acquisition functions 12,13,14 (default 1)");
     QGETSETOPT(m_opt,zeta, Bayesian,"zeta factor in EI method (default 0). 0.01 works ok).");
 
+    QGETSETOPT(m_opt,startseed,Bayesian,"seed for RNG immediately prior to generating random seeds. Use -1 for no"
+                                        "seeding, -2 to seed with time. If >=0 then this is incremented on each use"
+                                        "(default 42)");
+    QGETSETOPT(m_opt,algseed,  Bayesian,"seed for RNG immediately prior to the main algorithm loop. Use -1 for no"
+                                        "seeding, -2 to seed with time. If >=0 then this is incremented on each use"
+                                        "(default 42)");
+
     QGETSETOPT(m_opt,numfids,   Bayesian,"number of fidelity levels per axis (default 0, no fidelity variables).");
-    QGETSETOPT(m_opt,dimfid,    Bayesian,"number of fidelity axis (default 1, but meaninfless unless numfids>0).");
+    QGETSETOPT(m_opt,dimfid,    Bayesian,"number of fidelity axis (default 1, but meaningless unless numfids>0).");
     QGETSETOPT(m_opt,fidbudget, Bayesian,"fidelity budget (default -1, unlimited).");
-    QGETSETOPT(m_opt,fidpenalty,Bayesian,"fidelity penalty function (a function of z, where z is the fidelity vector).");
-    QGETSETOPT(m_opt,fidvar,    Bayesian,"fidelity additive variance function (of z). This is added to measurement variance (default 0).");
+    QGETSETOPT(m_opt,fidpenalty,Bayesian,"fidelity penalty function f(z), where z is the fidelity vector.");
+    QGETSETOPT(m_opt,fidvar,    Bayesian,"fidelity additive variance function n(z), added to measurement vari (dflt 0).");
 
-    m_opt_model_Bayesian.def("setgridsrc",&boSetgridsource,"Set grid source for Bayesian optimiser.",py::arg("i")=0,py::arg("j")=0);
-    m_opt_model_Bayesian.def("setpresrc", &boSetpresource, "Set pre source for Bayesian optimiser.", py::arg("i")=0,py::arg("j")=0);
+    m_opt_model_Bayesian.def("setgridsrc",&boSetgridsource,"For BO, set grid source.",py::arg("i")=0,py::arg("j")=0);
+    m_opt_model_Bayesian.def("setpresrc", &boSetpresource, "For BO, set pre source.", py::arg("i")=0,py::arg("j")=0);
 
-    QGETSETOPT(m_opt_model,numcgt,        Bayesian,"number of constraints enforced (default 0).");
-    QGETSETOPT(m_opt_model,tunemu,        Bayesian,"tuning method for objective model hyper-parameters (0 none, 1 max-log-likelihood (default), 2 leave-one-out, 3 recall).");
-    QGETSETOPT(m_opt_model,tunecgt,       Bayesian,"tuning method for constraint model hyper-parameters (0 none, 1 max-log-likelihood (default), 2 leave-one-out, 3 recall).");
+    m_opt_model_Bayesian.def("selaltmu", &selmlaltmuapprox,   "Select default objective model for BO i to use like any ML (see also selml).",py::arg("i")=0);
+    m_opt_model_Bayesian.def("selaltc",  &selmlaltcgtapprox,  "select default constraint model for BO i to use like any ML (see also selml).",py::arg("i")=0);
+    m_opt_model_Bayesian.def("selaltaug",&selmlaltaugxapprox, "select default x augmentation (side-channel) model for BO i to use like any ML (see also selml).",py::arg("i")=0);
+    m_opt_model_Bayesian.def("selaltmu", &selmlaltmuapproxrff,"select default RFF objective model for BO i to use like any ML (see also selml).",py::arg("i")=0);
+    m_opt_model_Bayesian.def("selmu",    &selmlmuapprox,      "select actual (post-optimization) objective model for BO i (if constructed) to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
+    m_opt_model_Bayesian.def("selc",     &selmlcgtapprox,     "select actual (post-optimization) constraint model for BO i (if constructed) to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
+    m_opt_model_Bayesian.def("selaug",   &selmlaugxapprox,    "select actual (post-optimization) x augmentation (side-channel) model for BO i (if constructed) to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
+    m_opt_model_Bayesian.def("selsigma", &selmlsigmaapprox,   "select actual (post-optimization) noise model (if separate) for BO i (if constructed) to use like any ML (see also selml).",py::arg("i")=0);
+    m_opt_model_Bayesian.def("selsrc",   &selmlsrcmodel,      "select actual (post-optimization) source model (transfer learning) for BO i (if constructed) to use like any ML (see also selml).",py::arg("i")=0);
+    m_opt_model_Bayesian.def("seldiff",  &selmldiffmodel,     "select actual (post-optimization) src->destination difference model (transfer learning) for BO i (if constructed) to use like any ML (see also selml).",py::arg("i")=0);
+
+    QGETSETOPT(m_opt_model,tunemu,        Bayesian,"tuning method for objective model hyper-parameters (0 none, 1 max-log-likely\n"
+                                                   "(default), 2 leave-one-out, 3 recall).");
+    QGETSETOPT(m_opt_model,tunecgt,       Bayesian,"tuning method for constraint model hyper-parameters (0 none, 1 max-log-likely\n"
+                                                   "(default), 2 leave-one-out, 3 recall).");
     QGETSETOPT(m_opt_model,modelname,     Bayesian,"model basename when plotting/logging (default smbomodel).");
     QGETSETOPT(m_opt_model,modeloutformat,Bayesian,"format for plotting (0 terminal, 1 ps, 2 pdf (default)).");
     QGETSETOPT(m_opt_model,plotfreq,      Bayesian,"plotting frequency (0 none (default), -1 only on exit).");
@@ -1628,7 +1590,7 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, const py::objec
 py::object mloptgrid(      int i, int dim, int numreps, py::object objfn) { i = glob_gridInd      (i); return mlopt(getgridref      (i),dim,numreps,objfn); }
 py::object mloptDIRect(    int i, int dim, int numreps, py::object objfn) { i = glob_DIRectInd    (i); return mlopt(getDIRectref    (i),dim,numreps,objfn); }
 py::object mloptNelderMead(int i, int dim, int numreps, py::object objfn) { i = glob_NelderMeadInd(i); return mlopt(getNelderMeadref(i),dim,numreps,objfn); }
-py::object mloptBayesian(  int i, int dim, int numreps, py::object objfn) { outstream() << "i = " << i << ": "; i = glob_BayesianInd  (i); outstream() << "optimiser addr (" << i << "): " << &getBayesianref(i) << "\n"; return mlopt(getBayesianref  (i),dim,numreps,objfn); }
+py::object mloptBayesian(  int i, int dim, int numreps, py::object objfn) { i = glob_BayesianInd  (i); return mlopt(getBayesianref  (i),dim,numreps,objfn); }
 
 void internobjfn(gentype &res, Vector<gentype> &x, void *arg);
 void internobjfn(gentype &res, Vector<gentype> &x, void *arg)
@@ -1646,7 +1608,7 @@ errstream() << "iternobjfn: xx = " << xx << "\n";
 
 py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, const py::object &objfn)
 {
-outstream() << "optimiser addr: " << &optimiser << "\n";
+errstream() << "optimiser addr: " << &optimiser << "\n";
     dostartup();
 
     // Check arguments make sense
@@ -1798,8 +1760,6 @@ void boSetpresource(int i, int j)
     getBayesianref(i).presource = &getMLref(i);
 }
 
-
-
 double mltuneKernel(int i, int method, double xwidth, int tuneK, int tuneP)
 {
     dostartup();
@@ -1808,7 +1768,6 @@ double mltuneKernel(int i, int method, double xwidth, int tuneK, int tuneP)
 
     return getMLref(i).tuneKernel(method,xwidth,tuneK,tuneP);
 }
-
 
 // Non-trivial python module function layer
 
@@ -2416,9 +2375,6 @@ void callintercalc(void)
     intercalc(outstream(),std::cin);
 }
 
-#define snakehigh 24
-#define snakewide 80
-
 py::object svmeval(std::string f, py::object x)
 {
     dostartup();
@@ -2434,6 +2390,9 @@ py::object svmeval(std::string f, py::object x)
     return convToPy(ff(xx)); // evaluate f(x) and convert back to python friendly form
 }
 
+#define snakehigh 24
+#define snakewide 80
+
 void callsnakes(void) { dostartup(); snakes(snakewide,snakehigh,(20*snakehigh)/23,5,20,100000); }
 
 void svmheavy(int method, int permode, const std::string commstr, int wml);
@@ -2442,62 +2401,39 @@ void svmheavya(void)                      { static std::string dummy; svmheavy(1
 void svmheavyb(int permode)               { static std::string dummy; svmheavy(2,permode,dummy,-1); }
 void svmheavyc(const std::string commstr) {                           svmheavy(3,-1,commstr,-1);    }
 
-double mlcalcLOO(int i)
+double mlcalcLOO   (int i)                                { dostartup(); i = glob_MLInd(i); return calcLOO(getMLref(i));                   }
+double mlcalcRecall(int i)                                { dostartup(); i = glob_MLInd(i); return calcRecall(getMLref(i));                }
+double mlcalcCross (int i, int m, int rndit, int numreps) { dostartup(); i = glob_MLInd(i); return calcCross(getMLref(i),m,rndit,numreps); }
+
+int selgridopt      (int i) { dostartup(); return glob_gridInd      (i,1); }
+int selDIRectopt    (int i) { dostartup(); return glob_DIRectInd    (i,1); }
+int selNelderMeadopt(int i) { dostartup(); return glob_NelderMeadInd(i,1); }
+int selBayesianopt  (int i) { dostartup(); return glob_BayesianInd  (i,1); }
+
+int selml              (int i)        { dostartup();                          return glob_MLInd( i,                  1);                 }
+int selmlaltcgtapprox  (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i,                  1);                 }
+int selmlaltmuapprox   (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-   OPTGLOBOFFSET, 1);                 }
+int selmlaltaugxapprox (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(2*OPTGLOBOFFSET),1);                 }
+int selmlaltmuapproxrff(int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(3*OPTGLOBOFFSET),1);                 }
+int selmlcgtapprox     (int i, int k) { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(4*OPTGLOBOFFSET)-(k*OPTGRIDSTEP),1); }
+int selmlmuapprox      (int i, int k) { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(5*OPTGLOBOFFSET)-(k*OPTGRIDSTEP),1); }
+int selmlaugxapprox    (int i, int k) { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(6*OPTGLOBOFFSET)-(k*OPTGRIDSTEP),1); }
+int selmlsigmaapprox   (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(7*OPTGLOBOFFSET),1);                 }
+int selmldiffmodel     (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(8*OPTGLOBOFFSET),1);                 }
+int selmlsrcmodel      (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(9*OPTGLOBOFFSET),1);                 }
+
+void swapml  (int i, int j) { dostartup(); i = glob_MLInd(i); j = glob_MLInd(j); StrucAssert(i != j); qswap(getMLref(i),getMLref(j)); }
+void copyml  (int i, int j) { dostartup(); i = glob_MLInd(i); j = glob_MLInd(j); StrucAssert(i != j); getMLref(i) = getMLrefconst(j); }
+void assignml(int i, int j) { dostartup(); i = glob_MLInd(i); j = glob_MLInd(j); StrucAssert(i != j); getMLref(j) = getMLrefconst(i); }
+
+int setpriml(int i, int j)
 {
     dostartup();
 
     i = glob_MLInd(i);
+    j = glob_MLInd(j);
 
-    return calcLOO(getMLref(i));
-}
-
-double mlcalcRecall(int i)
-{
-    dostartup();
-
-    i = glob_MLInd(i);
-
-    return calcRecall(getMLref(i));
-}
-
-double mlcalcCross(int i, int m, int rndit, int numreps)
-{
-    dostartup();
-
-    i = glob_MLInd(i);
-
-    return calcCross(getMLref(i),m,rndit,numreps);
-}
-
-
-void selml(int i)
-{
-    i = glob_MLInd(i);
-}
-
-void swapml(int i, int j)
-{
-    dostartup();
-
-    i = glob_MLInd(i);
-
-    qswap(getMLref(i),getMLref(j));
-}
-
-void copyml(int i, int j)
-{
-    dostartup();
-
-    i = glob_MLInd(i);
-
-    getMLref(i) = getMLref(j);
-}
-
-int setpriml (int i, int j)
-{
-    dostartup();
-
-    i = glob_MLInd(i);
+    StrucAssert( i != j );
 
     return getMLref(i).setpriml(&(getMLrefconst(j).getMLconst()));
 }
@@ -2775,9 +2711,9 @@ py::object mlbias(int i)
 
     int type = getMLref(i).type();
 
-         if ( ( type >= 0   ) && ( type <= 99  ) ) { res = getMLref(i).bias();   }
+         if ( ( type >= 0   ) && ( type <= 99  ) ) { res = getMLref(i).bias  (); }
     else if ( ( type >= 400 ) && ( type <= 499 ) ) { res = getMLref(i).muBias(); }
-    else if ( ( type >= 500 ) && ( type <= 599 ) ) { res = getMLref(i).delta();  }
+    else if ( ( type >= 500 ) && ( type <= 599 ) ) { res = getMLref(i).delta (); }
 
     return convToPy(res);
 }
@@ -2799,9 +2735,9 @@ int mlsetalpha(int i, py::object src)
 
     int type = getMLref(i).type();
 
-         if ( ( type >= 0   ) && ( type <= 99  ) ) { getMLref(i).setAlpha(altsrc);    }
+         if ( ( type >= 0   ) && ( type <= 99  ) ) { getMLref(i).setAlpha   (altsrc); }
     else if ( ( type >= 400 ) && ( type <= 499 ) ) { getMLref(i).setmuWeight(altsrc); }
-    else if ( ( type >= 500 ) && ( type <= 599 ) ) { getMLref(i).setgamma(altsrc);    }
+    else if ( ( type >= 500 ) && ( type <= 599 ) ) { getMLref(i).setgamma   (altsrc); }
 
     else
     {
@@ -2828,9 +2764,9 @@ int mlsetbias(int i, py::object src)
 
     int type = getMLref(i).type();
 
-         if ( ( type >= 0   ) && ( type <= 99  ) ) { getMLref(i).setBias(altsrc);   }
+         if ( ( type >= 0   ) && ( type <= 99  ) ) { getMLref(i).setBias  (altsrc); }
     else if ( ( type >= 400 ) && ( type <= 499 ) ) { getMLref(i).setmuBias(altsrc); }
-    else if ( ( type >= 500 ) && ( type <= 599 ) ) { getMLref(i).setdelta(altsrc);  }
+    else if ( ( type >= 500 ) && ( type <= 599 ) ) { getMLref(i).setdelta (altsrc); }
 
     else
     {
@@ -2925,17 +2861,17 @@ const T &setgetsrc(int &i, int doset, T *val = nullptr)
     return *(xval(i));
 }
 
-py::object pyogetsrc(int i) { return setgetsrc<py::object>(i,0); }
-gentype    gengetsrc(int i) { return setgetsrc<gentype>(i,0); }
+py::object pyogetsrc(int k) { return setgetsrc<py::object>(k,0); }
+gentype    gengetsrc(int k) { return setgetsrc<gentype   >(k,0); }
 
-int pyosetsrc(int i, py::object src) { setgetsrc(i,1,&src); return i; }
-int gensetsrc(int i, gentype    src) { setgetsrc(i,1,&src); return i; }
+int pyosetsrc(int k, py::object src) { setgetsrc(k,1,&src); return k; }
+int gensetsrc(int k, gentype    src) { setgetsrc(k,1,&src); return k; }
 
 void pyosrcreset(void) { int i = -1; setgetsrc<py::object>(i,2); }
-void gensrcreset(void) { int i = -1; setgetsrc<gentype>(i,2); }
+void gensrcreset(void) { int i = -1; setgetsrc<gentype   >(i,2); }
 
-void pyosrcreset(int i) { setgetsrc<py::object>(i,2); }
-void gensrcreset(int i) { setgetsrc<gentype>(i,2); }
+void pyosrcreset(int k) { setgetsrc<py::object>(k,2); }
+void gensrcreset(int k) { setgetsrc<gentype   >(k,2); }
 
 
 
@@ -3061,6 +2997,21 @@ py::object convToPy(const Set<T> &src)
 }
 
 template <class T>
+py::object convToPy(const Dict<T,dictkey> &src)
+{
+    int vsize = src.size();
+
+    py::dict res;
+
+    for ( int i = 0 ; i < vsize ; ++i )
+    {
+        res[convToPy(src.key(i))] = convToPy(src.val(i));
+    }
+
+    return res;
+}
+
+template <class T>
 py::object convToPy(const SparseVector<T> &src)
 {
     gentype altsrc(src);
@@ -3134,6 +3085,11 @@ py::object convToPy(const gentype &src)
     else if ( src.isValSet() )
     {
         return convToPy((const Set<gentype> &) src);
+    }
+
+    else if ( src.isValDict() )
+    {
+        return convToPy((const Dict<gentype,dictkey> &) src);
     }
 
     return py::cast(nan(""));
@@ -3339,6 +3295,40 @@ int convFromPy(Set<T> &res, const py::object &src)
 }
 
 template <class T>
+int convFromPy(Dict<T,dictkey> &res, const py::object &src)
+{
+    Dict<gentype,dictkey> temp;
+    res = temp;
+
+    if ( py::isinstance<py::dict>(src) )
+    {
+        py::dict altsrc = py::cast<py::dict>(src);
+
+        int errcode = 0;
+
+        for ( auto elm : altsrc )
+        {
+            dictkey ti;
+            T tg;
+
+            errcode |= convFromPy(ti,elm.first);
+            errcode |= convFromPy(tg,elm.second);
+
+            res("&",ti) = tg;
+        }
+
+        if ( errcode )
+        {
+            return errcode+65536;
+        }
+
+        return 0;
+    }
+
+    return 32768;
+}
+
+template <class T>
 int convFromPy(SparseVector<T> &res, const py::object &src)
 {
     gentype altsrc;
@@ -3408,6 +3398,11 @@ int convFromPy(gentype &res, const py::object &src)
     //    errcode = convFromPy(res.force_matrix(),src);
     //}
 
+    else if ( py::isinstance<py::dict>(src) )
+    {
+        errcode = convFromPy(res.force_dict(),src);
+    }
+
     else if ( py::isinstance<py::tuple>(src) )
     {
         errcode = convFromPy(res.force_set(),src);
@@ -3466,13 +3461,13 @@ int convFromPy(T &res, const py::handle &h)
 
 // evaluate gentype function with x and evaluate result
 
-py::object genevalsrc(int i, py::object xx)
+py::object genevalsrc(int k, py::object xx)
 {
     dostartup();
 
     // Grab function f from heap
 
-    gentype f = gengetsrc(i);
+    gentype f = gengetsrc(k);
 
     // Convert xx to gentype
 
@@ -3498,7 +3493,7 @@ py::object genevalsrc(int i, py::object xx)
 
 // evaluate py::object function with x and evaluate result
 
-gentype pyoevalsrc(int i, gentype xx)
+gentype pyoevalsrc(int k, gentype xx)
 {
     dostartup();
 
@@ -3517,7 +3512,7 @@ gentype pyoevalsrc(int i, gentype xx)
     std::string evalfn;
 
     evalfn =  "(pyogetsrc(";
-    evalfn += std::to_string(i);
+    evalfn += std::to_string(k);
     evalfn += "))(pyogetsrc(";
     evalfn += std::to_string(j);
     evalfn += "))";
@@ -3634,6 +3629,7 @@ void pycall(const std::string &fn, gentype &res, int size, const double *x)
 template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>        &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
 template <class T> void pycall(const std::string &fn, gentype &res, const Matrix<T>        &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
 template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>           &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
+template <class T> void pycall(const std::string &fn, gentype &res, const Dict<T,dictkey>  &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
 template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T>  &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
                    void pycall(const std::string &fn, gentype &res, const gentype          &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
 //                   void pycall(const std::string &fn, gentype &res, int size, const double *x) { dostartup(); py::object xx = convToPy(size,x);    pycall_x(fn,res,xx); }

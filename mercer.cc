@@ -23355,6 +23355,14 @@ T &MercerKernel::yyyaaK1(T &res,
             if ( sa < 0 ) { xxa("&",linParity(i)).negate(); }
         }
 
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( linParityOrig.size() )
+            {
+                xxa("&",linParity(i)) += linParityOrig(i);
+            }
+        }
+
         return yyyaK1(res,xxa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,bias,nullptr,ia,xdim,xconsist,resmode,mlid,nullptr,assumreal,justcalcip);
     }
 
@@ -23396,6 +23404,15 @@ T &MercerKernel::yyyaaK2(T &res,
         {
             if ( sa < 0 ) { xxa("&",linParity(i)).negate(); }
             if ( sb < 0 ) { xxb("&",linParity(i)).negate(); }
+        }
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( linParityOrig.size() )
+            {
+                xxa("&",linParity(i)) += linParityOrig(i);
+                xxb("&",linParity(i)) += linParityOrig(i);
+            }
         }
 
         return yyyaK2(res,xxa,xxb,xainfo,xbinfo,xaignorefarfar,xbignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xagradordadd,xbgradordadd,xagradordaddR,xbgradordaddR,bias,nullptr,ia,ib,xdim,xconsist,resmode,mlid,nullptr,nullptr,nullptr,assumreal,justcalcip);
@@ -23445,6 +23462,16 @@ T &MercerKernel::yyyaaK2x2(T &res,
             if ( sb < 0 ) { xxb("&",linParity(i)).negate(); }
         }
 
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( linParityOrig.size() )
+            {
+                xx ("&",linParity(i)) += linParityOrig(i);
+                xxa("&",linParity(i)) += linParityOrig(i);
+                xxb("&",linParity(i)) += linParityOrig(i);
+            }
+        }
+
         return yyyaK2x2(res,xx,xxa,xxb,xinfo,xainfo,xbinfo,xignorefarfar,xaignorefarfar,xbignorefarfar,xignorefarfarfar,xaignorefarfarfar,xbignorefarfarfar,xgradordadd,xagradordadd,xbgradordadd,xgradordaddR,xagradordaddR,xbgradordaddR,bias,i,ia,ib,xdim,xbonsist,resmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,assumreal,justcalcip);
     }
 
@@ -23491,6 +23518,16 @@ T &MercerKernel::yyyaaK3(T &res,
             if ( sa < 0 ) { xxa("&",linParity(i)).negate(); }
             if ( sb < 0 ) { xxb("&",linParity(i)).negate(); }
             if ( sc < 0 ) { xxc("&",linParity(i)).negate(); }
+        }
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( linParityOrig.size() )
+            {
+                xxa("&",linParity(i)) += linParityOrig(i);
+                xxb("&",linParity(i)) += linParityOrig(i);
+                xxc("&",linParity(i)) += linParityOrig(i);
+            }
         }
 
         return yyyaK3(res,xxa,xxb,xxc,xainfo,xbinfo,xcinfo,xaignorefarfar,xbignorefarfar,xcignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xagradordadd,xbgradordadd,xcgradordadd,xagradordaddR,xbgradordaddR,xcgradordaddR,bias,nullptr,ia,ib,ic,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,assumreal,justcalcip);
@@ -23544,6 +23581,17 @@ T &MercerKernel::yyyaaK4(T &res,
             if ( sd < 0 ) { xxd("&",linParity(i)).negate(); }
         }
 
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( linParityOrig.size() )
+            {
+                xxa("&",linParity(i)) += linParityOrig(i);
+                xxb("&",linParity(i)) += linParityOrig(i);
+                xxc("&",linParity(i)) += linParityOrig(i);
+                xxd("&",linParity(i)) += linParityOrig(i);
+            }
+        }
+
         return yyyaK4(res,xxa,xxb,xxc,xxd,xainfo,xbinfo,xcinfo,xdinfo,xaignorefarfar,xbignorefarfar,xcignorefarfar,xdignorefarfar,xaignorefarfarfar,xbignorefarfarfar,xcignorefarfarfar,xdignorefarfarfar,xagradordadd,xbgradordadd,xcgradordadd,xdgradordadd,xagradordaddR,xbgradordaddR,xcgradordaddR,xdgradordaddR,bias,nullptr,ia,ib,ic,id,xdim,xconsist,xresmode,mlid,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,assumreal,justcalcip);
     }
 
@@ -23591,6 +23639,14 @@ T &MercerKernel::yyyaaKm(int m, T &res,
             {
                 if ( s < 0 ) { (*altx)("&",linParity(i)).negate(); }
             }
+
+            for ( int i = 0 ; i < linParity.size() ; i++ )
+            {
+                if ( linParityOrig.size() )
+                {
+                    (*altx)("&",linParity(i)) += linParityOrig(i);
+                }
+            }
         }
 
         return yyyaaKm(m,res,x,xinfo,xignorefarfar,xignorefarfarfar,xgradordadd,xgradordaddR,bias,i,nullptr,xdim,xconsist,resmode,mlid,nullptr,assumreal,justcalcip);
@@ -23624,6 +23680,14 @@ int MercerKernel::yyyaaphim(int m, Vector<T>  &res, const SparseVector<gentype> 
         for ( int i = 0 ; i < linParity.size() ; i++ )
         {
             if ( sa < 0 ) { xxa("&",linParity(i)).negate(); }
+        }
+
+        for ( int i = 0 ; i < linParity.size() ; i++ )
+        {
+            if ( linParityOrig.size() )
+            {
+                xxa("&",linParity(i)) += linParityOrig(i);
+            }
         }
 
         return yyyaaphim(m,res,xxa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,ia,allowfinite,xdim,xconsist,assumreal);

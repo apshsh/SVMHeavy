@@ -14,9 +14,9 @@
 
 //FIXME: polymorph in bayesopt for fidelity
 
-int GlobalOptions::isFeasible(const Vector<gentype> &cres, const Vector<gentype> &xres) const
+int GlobalOptions::isFeasible(const Vector<gentype> &cres, const Vector<gentype> &Xres) const
 {
-    (void) xres;
+    (void) Xres;
 
     return ( cres >= 0.0_gent );
 }
@@ -78,7 +78,7 @@ int GlobalOptions::optim(int dim,
             {
                 if ( !startyet )
                 {
-                    if ( isFeasible(allcres(k),allxres(k)) && allmres(k).isCastableToRealWithoutLoss() )
+                    if ( isFeasible(allcres(k),allXres(k)) && allmres(k).isCastableToRealWithoutLoss() )
                     {
                         for ( int kk = k-1 ; kk >= 0 ; --kk )
                         {
@@ -96,7 +96,7 @@ int GlobalOptions::optim(int dim,
 
                 else
                 {
-                    if ( isFeasible(allcres(k),allxres(k)) && allmres(k).isCastableToRealWithoutLoss() )
+                    if ( isFeasible(allcres(k),allXres(k)) && allmres(k).isCastableToRealWithoutLoss() )
                     {
                         allmres("&",k) = ( allmres(k) < allmres(k-1) ) ? allmres(k) : allmres(k-1);
                     }
@@ -128,7 +128,7 @@ int GlobalOptions::optim(int dim,
 
             Vector<Vector<gentype> > vecallfres(static_cast<int>(numReps));
             Vector<Vector<Vector<gentype> > > vecallcres(static_cast<int>(numReps));
-            Vector<Vector<Vector<gentype> > > vecallxres(static_cast<int>(numReps));
+            Vector<Vector<Vector<gentype> > > vecallXres(static_cast<int>(numReps));
             Vector<Vector<gentype> > vecallmres(static_cast<int>(numReps));
 
             Vector<gentype> vectres(static_cast<int>(numReps));
@@ -145,7 +145,7 @@ int GlobalOptions::optim(int dim,
                 s_score.resize(0);
 
                 //res += (*locopt).realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,vecallfres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
-                res += realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,vecallxres("&",static_cast<int>(j)),allXres,vecallfres("&",static_cast<int>(j)),vecallcres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+                res += realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,vecallXres("&",static_cast<int>(j)),allXres,vecallfres("&",static_cast<int>(j)),vecallcres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
 
                 // Sort vecallmres(j) to be strictly decreasing!
 
@@ -155,7 +155,7 @@ int GlobalOptions::optim(int dim,
                 {
                     if ( !startyet )
                     {
-                        if ( isFeasible(vecallcres(static_cast<int>(j))(k),vecallxres(static_cast<int>(j))(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
+                        if ( isFeasible(vecallcres(static_cast<int>(j))(k),vecallXres(static_cast<int>(j))(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
                         {
                             for ( int kk = k-1 ; kk >= 0 ; --kk )
                             {
@@ -173,7 +173,7 @@ int GlobalOptions::optim(int dim,
 
                     else
                     {
-                        if ( isFeasible(vecallcres(static_cast<int>(j))(k),vecallxres(static_cast<int>(j))(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
+                        if ( isFeasible(vecallcres(static_cast<int>(j))(k),vecallXres(static_cast<int>(j))(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
                         {
                             vecallmres("&",static_cast<int>(j))("&",k) = ( vecallmres(static_cast<int>(j))(k) < vecallmres(static_cast<int>(j))(k-1) ) ? vecallmres(static_cast<int>(j))(k) : vecallmres(static_cast<int>(j))(k-1);
                         }
@@ -192,7 +192,7 @@ int GlobalOptions::optim(int dim,
 
                     allfres = vecallfres(static_cast<int>(j));
                     allcres = vecallcres(static_cast<int>(j));
-                    allxres = vecallxres(static_cast<int>(j));
+                    allXres = vecallXres(static_cast<int>(j));
                     allmres = vecallmres(static_cast<int>(j));
                 }
 
@@ -218,7 +218,7 @@ int GlobalOptions::optim(int dim,
                 {
                     (vecallfres("&",static_cast<int>(j)).resize(maxxlen))("&",k,1,maxxlen-1,tmpva) = vecallfres(static_cast<int>(j))(k-1);
                     (vecallcres("&",static_cast<int>(j)).resize(maxxlen))("&",k,1,maxxlen-1,tmpvu) = vecallcres(static_cast<int>(j))(k-1);
-                    (vecallxres("&",static_cast<int>(j)).resize(maxxlen))("&",k,1,maxxlen-1,tmpvu) = vecallxres(static_cast<int>(j))(k-1);
+                    (vecallXres("&",static_cast<int>(j)).resize(maxxlen))("&",k,1,maxxlen-1,tmpvu) = vecallXres(static_cast<int>(j))(k-1);
                     (vecallmres("&",static_cast<int>(j)).resize(maxxlen))("&",k,1,maxxlen-1,tmpva) = vecallmres(static_cast<int>(j))(k-1);
                 }
             }

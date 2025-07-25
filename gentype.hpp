@@ -30,6 +30,7 @@ class gentype;
 #include "sparsevector.hpp"
 #include "matrix.hpp"
 #include "set.hpp"
+#include "svmdict.hpp"
 #include "dgraph.hpp"
 
 #define DEFAULTVARI 0
@@ -40,6 +41,8 @@ class gentype;
 #define COMMA ,
 
 class gentype;
+
+typedef std::string dictkey;
 
 
 // Python call default (override for python integration)
@@ -58,6 +61,7 @@ class gentype;
 template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>        &x);
 template <class T> void pycall(const std::string &fn, gentype &res, const Matrix<T>        &x);
 template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>           &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const Dict<T,dictkey>  &x);
 template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T>  &x);
                    void pycall(const std::string &fn, gentype &res, const gentype          &x);
                    void pycall(const std::string &fn, gentype &res, int size, const double *x);
@@ -66,6 +70,7 @@ template <class T> void pycall(const std::string &fn, gentype &res, const Sparse
 template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>       &x) { gentype xx(x); pycall(fn,res,xx); }
 template <class T> void pycall(const std::string &fn, gentype &res, const Matrix<T>       &x) { gentype xx(x); pycall(fn,res,xx); }
 template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>          &x) { gentype xx(x); pycall(fn,res,xx); }
+template <class T> void pycall(const std::string &fn, gentype &res, const Dict<T,dictkey> &x) { gentype xx(x); pycall(fn,res,xx); }
 template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T> &x) { gentype xx(x); pycall(fn,res,xx); }
 #endif
 
@@ -280,6 +285,7 @@ void constructError(const gentype &a, const gentype &b, const gentype &c, const 
 // Needed because you can't have commas in macro arguments
 
 typedef Dgraph<gentype,double> xDgraph;
+typedef Dict<gentype,dictkey> xDict;
 
 // Defined early for reasons
 
@@ -333,6 +339,7 @@ public:
             case 'V': { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>);                  break; }
             case 'M': { typeis = 'M'; MEMNEW(matrixval,Matrix<gentype>);                  break; }
             case 'X': { typeis = 'X'; MEMNEW(setval,Set<gentype>);                        break; }
+            case 'D': { typeis = 'D'; MEMNEW(dictval,Dict<gentype REALCOMMA dictkey>);    break; }
             case 'G': { typeis = 'G'; MEMNEW(dgraphval,Dgraph<gentype REALCOMMA double>); break; }
             case 'S': { typeis = 'S'; MEMNEW(stringval,std::string);                      break; }
             case 'E':
@@ -351,15 +358,16 @@ public:
         ;
     }
 
-    explicit gentype(      int                     src) { typeis = 'Z'; intval = src;       doubleval = src;                 }
-    explicit gentype(      double                  src) { typeis = 'R'; intval = (int) src; doubleval = src;                 }
-    explicit gentype(const d_anion                &src) { typeis = 'A'; MEMNEW(anionval,d_anion(src));                       }
-    explicit gentype(const Vector<gentype>        &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>(src));              }
-    explicit gentype(const Matrix<gentype>        &src) { typeis = 'M'; MEMNEW(matrixval,Matrix<gentype>(src));              }
-    explicit gentype(const Set<gentype>           &src) { typeis = 'X'; MEMNEW(setval,Set<gentype>(src));                    }
-    explicit gentype(const Dgraph<gentype,double> &src) { typeis = 'G'; MEMNEW(dgraphval,Dgraph<gentype COMMA double>(src)); }
-    explicit gentype(const std::string            &src) { makeEqn(src);                                                      }
-    explicit gentype(const char                   *src) { makeEqn(src);                                                      }
+    explicit gentype(      int                     src) { typeis = 'Z'; intval = src;       doubleval = src;                  }
+    explicit gentype(      double                  src) { typeis = 'R'; intval = (int) src; doubleval = src;                  }
+    explicit gentype(const d_anion                &src) { typeis = 'A'; MEMNEW(anionval,d_anion(src));                        }
+    explicit gentype(const Vector<gentype>        &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>(src));               }
+    explicit gentype(const Matrix<gentype>        &src) { typeis = 'M'; MEMNEW(matrixval,Matrix<gentype>(src));               }
+    explicit gentype(const Set<gentype>           &src) { typeis = 'X'; MEMNEW(setval,Set<gentype>(src));                     }
+    explicit gentype(const Dict<gentype,dictkey>  &src) { typeis = 'D'; MEMNEW(dictval,Dict<gentype COMMA dictkey>(src));     }
+    explicit gentype(const Dgraph<gentype,double> &src) { typeis = 'G'; MEMNEW(dgraphval,Dgraph<gentype COMMA double>(src));  }
+    explicit gentype(const std::string            &src) { makeEqn(src);                                                       }
+    explicit gentype(const char                   *src) { makeEqn(src);                                                       }
 
     explicit gentype(const SparseVector<std::string> &src)
     {
@@ -472,11 +480,12 @@ public:
         }
     }
 
-    template <class T> explicit gentype(const Vector<T>        &src) { *this = src; }
-    template <class T> explicit gentype(const SparseVector<T>  &src) { *this = src; }
-    template <class T> explicit gentype(const Matrix<T>        &src) { *this = src; }
-    template <class T> explicit gentype(const Set<T>           &src) { *this = src; }
-    template <class T> explicit gentype(const Dgraph<T,double> &src) { *this = src; }
+    template <class T> explicit gentype(const Vector<T>           &src) { *this = src; }
+    template <class T> explicit gentype(const SparseVector<T>     &src) { *this = src; }
+    template <class T> explicit gentype(const Matrix<T>           &src) { *this = src; }
+    template <class T> explicit gentype(const Set<T>              &src) { *this = src; }
+    template <class T> explicit gentype(const Dict<T,dictkey>     &src) { *this = src; }
+    template <class T> explicit gentype(const Dgraph<T,double>    &src) { *this = src; }
 
     ~gentype()
     {
@@ -493,15 +502,16 @@ public:
         }
     }
 
-    gentype &operator=(      int                     src) { deleteVectMatMem('Z'                            ); typeis = 'Z'; intval     = src; doubleval = src;    return *this; }
-    gentype &operator=(      double                  src) { deleteVectMatMem('R'                            ); typeis = 'R'; doubleval  = src; intval = (int) src; return *this; }
-    gentype &operator=(const d_anion                &src) { deleteVectMatMem('A'                            ); typeis = 'A'; *anionval  = src;                     return *this; }
-    gentype &operator=(const Vector<gentype>        &src) { deleteVectMatMem('V',src.size()                 ); typeis = 'V'; *vectorval = src;                     return *this; }
-    gentype &operator=(const Matrix<gentype>        &src) { deleteVectMatMem('M',src.numRows(),src.numCols()); typeis = 'M'; *matrixval = src;                     return *this; }
-    gentype &operator=(const Set<gentype>           &src) { deleteVectMatMem('X'                            ); typeis = 'X'; *setval    = src;                     return *this; }
-    gentype &operator=(const Dgraph<gentype,double> &src) { deleteVectMatMem('G'                            ); typeis = 'G'; *dgraphval = src;                     return *this; }
-    gentype &operator=(const std::string            &src) { deleteVectMatMem(); makeEqn(src); return *this; }
-    gentype &operator=(const char                   *src) { deleteVectMatMem(); makeEqn(src); return *this; }
+    gentype &operator=(      int                        src) { deleteVectMatMem('Z'                            ); typeis = 'Z'; intval     = src; doubleval = src;    return *this; }
+    gentype &operator=(      double                     src) { deleteVectMatMem('R'                            ); typeis = 'R'; doubleval  = src; intval = (int) src; return *this; }
+    gentype &operator=(const d_anion                   &src) { deleteVectMatMem('A'                            ); typeis = 'A'; *anionval  = src;                     return *this; }
+    gentype &operator=(const Vector<gentype>           &src) { deleteVectMatMem('V',src.size()                 ); typeis = 'V'; *vectorval = src;                     return *this; }
+    gentype &operator=(const Matrix<gentype>           &src) { deleteVectMatMem('M',src.numRows(),src.numCols()); typeis = 'M'; *matrixval = src;                     return *this; }
+    gentype &operator=(const Set<gentype>              &src) { deleteVectMatMem('X'                            ); typeis = 'X'; *setval    = src;                     return *this; }
+    gentype &operator=(const Dict<gentype,dictkey>     &src) { deleteVectMatMem('D'                            ); typeis = 'D'; *dictval   = src;                     return *this; }
+    gentype &operator=(const Dgraph<gentype,double>    &src) { deleteVectMatMem('G'                            ); typeis = 'G'; *dgraphval = src;                     return *this; }
+    gentype &operator=(const std::string               &src) { deleteVectMatMem(); makeEqn(src); return *this; }
+    gentype &operator=(const char                      *src) { deleteVectMatMem(); makeEqn(src); return *this; }
 
     gentype &operator=(const gentype &src)
     {
@@ -646,6 +656,26 @@ public:
         return *this;
     }
 
+    template <class T> gentype &operator=(const Dict<T,dictkey> &src)
+    {
+        deleteVectMatMem('D');
+        (*dictval).zero();
+
+        if ( src.size() )
+        {
+            gentype x;
+
+            for ( int pos = 0 ; pos < src.size() ; ++pos )
+            {
+                (*dictval)("&",src.ind(pos)) = src.val(pos);
+            }
+        }
+
+        typeis = 'D';
+
+        return *this;
+    }
+
     template <class T> gentype &operator=(const Dgraph<T,double> &src)
     {
         deleteVectMatMem('G');
@@ -752,6 +782,7 @@ public:
     bool isValVector   (void) const { return typeis == 'V'; }
     bool isValMatrix   (void) const { return typeis == 'M'; }
     bool isValSet      (void) const { return typeis == 'X'; }
+    bool isValDict     (void) const { return typeis == 'D'; }
     bool isValDgraph   (void) const { return typeis == 'G'; }
     bool isValString   (void) const { return typeis == 'S'; }
     bool isValError    (void) const { return typeis == 'E'; }
@@ -768,7 +799,8 @@ public:
     bool isCastableToAnionWithoutLoss  (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion() || ( isValVector() && ( size() == 1 ) && (*vectorval)(0).isCastableToAnionWithoutLoss() ) || ( isValMatrix() && ( numRows() == 1 ) && ( numCols() == 1 ) && (*matrixval)(0,0).isCastableToAnionWithoutLoss() ) ); }
     bool isCastableToVectorWithoutLoss (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion() || isValVector() || ( isValMatrix() && ( ( (*matrixval).numRows() == 1 ) || ( (*matrixval).numCols() == 1 ) || (*matrixval).isEmpty() ) ) ); }
     bool isCastableToMatrixWithoutLoss (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion() || ( isValVector() && !infsize() ) || isValMatrix() ); }
-    bool isCastableToSetWithoutLoss    (void) const { return ( isValNull() || isValSet()    );    }
+    bool isCastableToSetWithoutLoss    (void) const { return ( isValNull() || isValSet()    ); }
+    bool isCastableToDictWithoutLoss   (void) const { return ( isValNull() || isValDict()   ); }
     bool isCastableToDgraphWithoutLoss (void) const { return ( isValNull() || isValDgraph() ); }
     bool isCastableToStringWithoutLoss (void) const { return !isValError();  }
 
@@ -779,6 +811,7 @@ public:
     bool isCastableToVector (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion() || isValVector() || ( isValMatrix() && ( ( (*matrixval).numRows() == 1 ) || ( (*matrixval).numCols() == 1 ) || (*matrixval).isEmpty() ) ) ); }
     bool isCastableToMatrix (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion() || isValVector() || isValMatrix() ); }
     bool isCastableToSet    (void) const { return ( isValNull() || isValSet()    ); }
+    bool isCastableToDict   (void) const { return ( isValNull() || isValDict()   ); }
     bool isCastableToDgraph (void) const { return ( isValNull() || isValDgraph() ); }
     bool isCastableToString (void) const { return !isValError(); }
 
@@ -844,6 +877,7 @@ public:
             case 'V': { return (*vectorval).size();         break; }
             case 'M': { return (*matrixval).size();         break; }
             case 'X': { return (*setval).size();            break; }
+            case 'D': { return (*dictval).size();           break; }
             case 'G': { return (*dgraphval).size();         break; }
             case 'S': { return (int) (*stringval).length(); break; }
             case 'E': { return (int) (*stringval).length(); break; }
@@ -878,6 +912,7 @@ public:
             case 'V': { return ceilintlog2(size()); break; }
             case 'M': { return ceilintlog2(size()); break; }
             case 'X': { return ceilintlog2(size()); break; }
+            case 'D': { return ceilintlog2(size()); break; }
             case 'G': { return ceilintlog2(size()); break; }
             case 'S': { return ceilintlog2(size()); break; }
             case 'E': { return ceilintlog2(size()); break; }
@@ -904,6 +939,7 @@ public:
             case 'V': { return (*vectorval).size();    break; }
             case 'M': { return (*matrixval).numRows(); break; }
             case 'X': { return (*setval).size();       break; }
+            case 'D': { return (*dictval).size();      break; }
             case 'G': { return (*dgraphval).size();    break; }
             default:  { break; }
         }
@@ -967,34 +1003,36 @@ public:
 
     //operator gentype() const { return *this; }
 
-    operator       int()                      const { if ( isValInteger()    ) { return intval;         } else if ( isValReal()    ) { return (int) doubleval; } else if ( isValNull() ) { return 0; } return cast_int(3);    }
-    operator       double()                   const { if ( isValReal()       ) { return doubleval;      } else if ( isValInteger() ) { return intval;          } else if ( isValNull() ) { return 0; } return cast_double(3); }
-    operator const d_anion &()                const { if ( isValAnion()      ) { return *anionval;      } return cast_anion(3);             }
-    operator const Vector<gentype> &()        const { if ( isValVector()     ) { return *vectorval;     } return cast_vector(3);            }
-    operator const Vector<double> &()         const { if ( isValVectorReal() ) { return *vectorvalreal; } return cast_vector_real(3);       }
-    operator const Vector<int> &()            const {                                                     return cast_vector_int(3);        }
-    operator const SparseVector<gentype> &()  const {                                                     return cast_sparsevector(3);      }
-    operator const SparseVector<double> &()   const {                                                     return cast_sparsevector_real(3); }
-    operator const Matrix<gentype> &()        const { if ( isValMatrix()     ) { return *matrixval;     } return cast_matrix(3);            }
-    operator const Matrix<double> &()         const {                                                     return cast_matrix_real(3);       }
-    operator const Set<gentype> &()           const { if ( isValSet()        ) { return *setval;        } return cast_set(3);               }
-    operator const Dgraph<gentype,double> &() const { if ( isValDgraph()     ) { return *dgraphval;     } return cast_dgraph(3);            }
-    operator const std::string &()            const { if ( isValString()     ) { return *stringval;     } return cast_string(3);            }
+    operator       int()                         const { if ( isValInteger()    ) { return intval;         } else if ( isValReal()    ) { return (int) doubleval; } else if ( isValNull() ) { return 0; } return cast_int(3);    }
+    operator       double()                      const { if ( isValReal()       ) { return doubleval;      } else if ( isValInteger() ) { return intval;          } else if ( isValNull() ) { return 0; } return cast_double(3); }
+    operator const d_anion &()                   const { if ( isValAnion()      ) { return *anionval;      } return cast_anion(3);             }
+    operator const Vector<gentype> &()           const { if ( isValVector()     ) { return *vectorval;     } return cast_vector(3);            }
+    operator const Vector<double> &()            const { if ( isValVectorReal() ) { return *vectorvalreal; } return cast_vector_real(3);       }
+    operator const Vector<int> &()               const {                                                     return cast_vector_int(3);        }
+    operator const SparseVector<gentype> &()     const {                                                     return cast_sparsevector(3);      }
+    operator const SparseVector<double> &()      const {                                                     return cast_sparsevector_real(3); }
+    operator const Matrix<gentype> &()           const { if ( isValMatrix()     ) { return *matrixval;     } return cast_matrix(3);            }
+    operator const Matrix<double> &()            const {                                                     return cast_matrix_real(3);       }
+    operator const Set<gentype> &()              const { if ( isValSet()        ) { return *setval;        } return cast_set(3);               }
+    operator const Dict<gentype,dictkey> &()     const { if ( isValDict()       ) { return *dictval;       } return cast_dict(3);              }
+    operator const Dgraph<gentype,double> &()    const { if ( isValDgraph()     ) { return *dgraphval;     } return cast_dgraph(3);            }
+    operator const std::string &()               const { if ( isValString()     ) { return *stringval;     } return cast_string(3);            }
 
-          void                    cast_null             (int finalise = 0) const;
-          int                     cast_int              (int finalise = 0) const;
-          double                  cast_double           (int finalise = 0) const;
-    const d_anion                &cast_anion            (int finalise = 0) const;
-    const Vector<gentype>        &cast_vector           (int finalise = 0) const;
-    const Vector<double>         &cast_vector_real      (int finalise = 0) const;
-    const Vector<int>            &cast_vector_int       (int finalise = 0) const;
-    const SparseVector<gentype>  &cast_sparsevector     (int finalise = 0) const;
-    const SparseVector<double>   &cast_sparsevector_real(int finalise = 0) const;
-    const Matrix<gentype>        &cast_matrix           (int finalise = 0) const;
-    const Matrix<double>         &cast_matrix_real      (int finalise = 0) const;
-    const Set<gentype>           &cast_set              (int finalise = 0) const;
-    const Dgraph<gentype,double> &cast_dgraph           (int finalise = 0) const;
-    const std::string            &cast_string           (int finalise = 0) const;
+          void                       cast_null             (int finalise = 0) const;
+          int                        cast_int              (int finalise = 0) const;
+          double                     cast_double           (int finalise = 0) const;
+    const d_anion                   &cast_anion            (int finalise = 0) const;
+    const Vector<gentype>           &cast_vector           (int finalise = 0) const;
+    const Vector<double>            &cast_vector_real      (int finalise = 0) const;
+    const Vector<int>               &cast_vector_int       (int finalise = 0) const;
+    const SparseVector<gentype>     &cast_sparsevector     (int finalise = 0) const;
+    const SparseVector<double>      &cast_sparsevector_real(int finalise = 0) const;
+    const Matrix<gentype>           &cast_matrix           (int finalise = 0) const;
+    const Matrix<double>            &cast_matrix_real      (int finalise = 0) const;
+    const Set<gentype>              &cast_set              (int finalise = 0) const;
+    const Dict<gentype,dictkey>     &cast_dict             (int finalise = 0) const;
+    const Dgraph<gentype,double>    &cast_dgraph           (int finalise = 0) const;
+    const std::string               &cast_string           (int finalise = 0) const;
 
     gentype &toNull   (gentype &res) const;
     gentype &toInteger(gentype &res) const;
@@ -1003,6 +1041,7 @@ public:
     gentype &toVector (gentype &res) const;
     gentype &toMatrix (gentype &res) const;
     gentype &toSet    (gentype &res) const;
+    gentype &toDict   (gentype &res) const;
     gentype &toDgraph (gentype &res) const;
     gentype &toString (gentype &res) const;
 
@@ -1013,28 +1052,31 @@ public:
     gentype &morph_vector(void);
     gentype &morph_matrix(void);
     gentype &morph_set   (void);
+    gentype &morph_dict  (void);
     gentype &morph_dgraph(void);
     gentype &morph_string(void);
 
-    void                    dir_null  (void) { if ( !isValNull()    ) { morph_null();   } NiceAssert( isValNull()   );                    }
-    int                    &dir_int   (void) { if ( !isValInteger() ) { morph_int();    } NiceAssert( isValInteger()); return  intval;    }
-    double                 &dir_double(void) { if ( !isValReal()    ) { morph_double(); } NiceAssert( isValReal()   ); return  doubleval; }
-    d_anion                &dir_anion (void) { if ( !isValAnion()   ) { morph_anion();  } NiceAssert( isValAnion()  ); return *anionval;  }
-    Vector<gentype>        &dir_vector(void) { if ( !isValVector()  ) { morph_vector(); } NiceAssert( isValVector() ); return *vectorval; }
-    Matrix<gentype>        &dir_matrix(void) { if ( !isValMatrix()  ) { morph_matrix(); } NiceAssert( isValMatrix() ); return *matrixval; }
-    Set<gentype>           &dir_set   (void) { if ( !isValSet()     ) { morph_set();    } NiceAssert( isValSet()    ); return *setval;    }
-    Dgraph<gentype,double> &dir_dgraph(void) { if ( !isValDgraph()  ) { morph_dgraph(); } NiceAssert( isValDgraph() ); return *dgraphval; }
-    std::string            &dir_string(void) { if ( !isValString()  ) { morph_string(); } NiceAssert( isValString() ); return *stringval; }
+    void                       dir_null  (void) { if ( !isValNull()    ) { morph_null();   } NiceAssert( isValNull()   );                                      }
+    int                       &dir_int   (void) { if ( !isValInteger() ) { morph_int();    } NiceAssert( isValInteger());                   return  intval;    }
+    double                    &dir_double(void) { if ( !isValReal()    ) { morph_double(); } NiceAssert( isValReal()   );                   return  doubleval; }
+    d_anion                   &dir_anion (void) { if ( !isValAnion()   ) { morph_anion();  } NiceAssert( isValAnion()  );                   return *anionval;  }
+    Vector<gentype>           &dir_vector(void) { if ( !isValVector()  ) { morph_vector(); } NiceAssert( isValVector() ); clearindirects(); return *vectorval; }
+    Matrix<gentype>           &dir_matrix(void) { if ( !isValMatrix()  ) { morph_matrix(); } NiceAssert( isValMatrix() ); clearindirects(); return *matrixval; }
+    Set<gentype>              &dir_set   (void) { if ( !isValSet()     ) { morph_set();    } NiceAssert( isValSet()    );                   return *setval;    }
+    Dict<gentype,dictkey>     &dir_dict  (void) { if ( !isValDict()    ) { morph_dict();   } NiceAssert( isValDict()   );                   return *dictval;   }
+    Dgraph<gentype,double>    &dir_dgraph(void) { if ( !isValDgraph()  ) { morph_dgraph(); } NiceAssert( isValDgraph() );                   return *dgraphval; }
+    std::string               &dir_string(void) { if ( !isValString()  ) { morph_string(); } NiceAssert( isValString() );                   return *stringval; }
 
-    void                    force_null  (void)                 { makeNull(); }
-    int                    &force_int   (void)                 {                                                 if ( !isValInteger() ) { *this = 0;          }                                                return  intval;    }
-    double                 &force_double(void)                 {                                                 if ( !isValReal()    ) { *this = 0.0;        }                                                return  doubleval; }
-    d_anion                &force_anion (int i = -1)           {                                                 if ( !isValAnion()   ) { *this = 0_anion;    } if ( i   >= 0 ) { (*anionval).setorder(i);  }  return *anionval;  }
-    Vector<gentype>        &force_vector(int i = 0)            { const static Vector<gentype>        defaultval; if ( !isValVector()  ) { *this = defaultval; } if ( i   >= 0 ) { (*vectorval).resize(i);   }  return *vectorval; }
-    Matrix<gentype>        &force_matrix(int i = 0, int j = 0) { const static Matrix<gentype>        defaultval; if ( !isValMatrix()  ) { *this = defaultval; } if ( i+j >= 0 ) { (*matrixval).resize(i,j); }  return *matrixval; }
-    Set<gentype>           &force_set   (void)                 { const static Set<gentype>           defaultval; if ( !isValSet()     ) { *this = defaultval; }                                                return *setval;    }
-    Dgraph<gentype,double> &force_dgraph(void)                 { const static Dgraph<gentype,double> defaultval; if ( !isValDgraph()  ) { *this = defaultval; }                                                return *dgraphval; }
-    std::string            &force_string(void)                 { makeString(""); return *stringval; }
+    void                       force_null  (void)                 { makeNull(); }
+    int                       &force_int   (void)                 {                                                    if ( !isValInteger() ) { *this = 0;          }                                                return  intval;    }
+    double                    &force_double(void)                 {                                                    if ( !isValReal()    ) { *this = 0.0;        }                                                return  doubleval; }
+    d_anion                   &force_anion (int i = -1)           {                                                    if ( !isValAnion()   ) { *this = 0_anion;    } if ( i   >= 0 ) { (*anionval).setorder(i);  }  return *anionval;  }
+    Vector<gentype>           &force_vector(int i = 0)            { const static Vector<gentype>           defaultval; if ( !isValVector()  ) { *this = defaultval; } if ( i   >= 0 ) { (*vectorval).resize(i);   }  clearindirects(); return *vectorval; }
+    Matrix<gentype>           &force_matrix(int i = 0, int j = 0) { const static Matrix<gentype>           defaultval; if ( !isValMatrix()  ) { *this = defaultval; } if ( i+j >= 0 ) { (*matrixval).resize(i,j); }  clearindirects(); return *matrixval; }
+    Set<gentype>              &force_set   (void)                 { const static Set<gentype>              defaultval; if ( !isValSet()     ) { *this = defaultval; }                                                return *setval;    }
+    Dict<gentype,dictkey>     &force_dict  (void)                 { const static Dict<gentype,dictkey>     defaultval; if ( !isValDict()    ) { *this = defaultval; }                                                return *dictval;   }
+    Dgraph<gentype,double>    &force_dgraph(void)                 { const static Dgraph<gentype,double>    defaultval; if ( !isValDgraph()  ) { *this = defaultval; }                                                return *dgraphval; }
+    std::string               &force_string(void)                 { makeString(""); return *stringval; }
 
     // Variables usage information:
     //
@@ -1181,6 +1223,7 @@ public:
         else if ( isValVector()  ) { intval = 0; doubleval = 0; (*vectorval).zero(); }
         else if ( isValMatrix()  ) { intval = 0; doubleval = 0; (*matrixval).zero(); }
         else if ( isValSet()     ) { intval = 0; doubleval = 0; (*setval).zero();    }
+        else if ( isValDict()    ) { intval = 0; doubleval = 0; (*dictval).zero();   }
         else if ( isValDgraph()  ) { intval = 0; doubleval = 0; (*dgraphval).zero(); }
         else if ( isValString()  ) { intval = 0; doubleval = 0; (*stringval) = "";   }
         else if ( isValError()   ) { intval = 0; doubleval = 0; ;                    }
@@ -1200,6 +1243,7 @@ public:
         else if ( isValVector()  ) { (*vectorval).posate(); }
         else if ( isValMatrix()  ) { (*matrixval).posate(); }
         else if ( isValSet()     ) { (*setval).posate();    }
+        else if ( isValDict()    ) { (*dictval).posate();   }
         else if ( isValDgraph()  ) { (*dgraphval).posate(); }
         else if ( isValString()  ) { ;                      }
         else if ( isValError()   ) { ;                      }
@@ -1237,6 +1281,7 @@ public:
         else if ( isValVector()  ) { intval *= -1; doubleval *= -1; (*vectorval).negate(); }
         else if ( isValMatrix()  ) { intval *= -1; doubleval *= -1; (*matrixval).negate(); }
         else if ( isValSet()     ) { intval *= -1; doubleval *= -1; (*setval).negate();    }
+        else if ( isValDict()    ) { intval *= -1; doubleval *= -1; (*dictval).negate();   }
         else if ( isValDgraph()  ) { intval *= -1; doubleval *= -1; (*dgraphval).negate(); }
         else if ( isValString()  ) { intval *= -1; doubleval *= -1; reversestring();       }
         else if ( isValError()   ) { intval *= -1; doubleval *= -1; ;                      }
@@ -1277,6 +1322,7 @@ public:
         else if ( isValVector()  ) { if ( !((*vectorval).infsize()) ) { (*vectorval).applyon(trans); } }
         else if ( isValMatrix()  ) { (*matrixval).applyon(trans); (*matrixval).transpose();            }
         else if ( isValSet()     ) { (*setval).applyon(trans);                                         }
+        else if ( isValDict()    ) { (*dictval).applyon(trans);                                        }
         else if ( isValDgraph()  ) { ;                                                                 }
         else if ( isValString()  ) { ;                                                                 }
         else if ( isValError()   ) { ;                                                                 }
@@ -1312,6 +1358,7 @@ public:
         else if ( isValVector()  ) { (*vectorval).conj(); }
         else if ( isValMatrix()  ) { (*matrixval).conj(); }
         else if ( isValSet()     ) { (*setval).conj();    }
+        else if ( isValDict()    ) { (*dictval).conj();   }
         else if ( isValDgraph()  ) { (*dgraphval).conj(); }
         else if ( isValString()  ) { ;                    }
         else if ( isValError()   ) { ;                    }
@@ -1372,6 +1419,7 @@ public:
         else if ( isValVector()  ) { (*vectorval).rand();                               }
         else if ( isValMatrix()  ) { (*matrixval).rand();                               }
         else if ( isValSet()     ) { (*setval).rand();                                  }
+        else if ( isValDict()    ) { (*dictval).rand();                                 }
         else if ( isValDgraph()  ) { (*dgraphval).rand();                               }
         else if ( isValString()  ) {                      (*stringval) = randomquote(); }
         else if ( isValError()   ) { ;                                                  }
@@ -1399,6 +1447,7 @@ public:
              if ( isValNull()   ) { ;                                                                    }
         else if ( isValStrErr() ) { constructError(*this,*this,"inv ill-defined for string");            }
         else if ( isValSet()    ) { constructError(*this,*this,"inv ill-defined for sets");              }
+        else if ( isValDict()   ) { constructError(*this,*this,"inv ill-defined for dictionaries");      }
         else if ( isValDgraph() ) { constructError(*this,*this,"inv ill-defined for dgraphs");           }
         else if ( isValMatrix() ) { *matrixval = inv(*matrixval);                                        }
         else if ( isValVector() ) { constructError(*this,*this,"inv ill-defined for vector");            }
@@ -1552,6 +1601,7 @@ private:
     //        V == vector
     //        M == matrix
     //        X == set
+    //        D == dictionary
     //        G == dgraph
     //        S == string
     //        E == error string
@@ -1609,12 +1659,13 @@ private:
     Vector<int> *varid_xi = nullptr;
     Vector<int> *varid_xj = nullptr;
 
-    mutable d_anion                 *anionval  = nullptr;
-    mutable Vector<gentype>         *vectorval = nullptr;
-    mutable Matrix<gentype>         *matrixval = nullptr;
-    mutable Set<gentype>            *setval    = nullptr;
-    mutable Dgraph<gentype, double> *dgraphval = nullptr;
-    mutable std::string             *stringval = nullptr;
+    mutable d_anion                   *anionval  = nullptr;
+    mutable Vector<gentype>           *vectorval = nullptr;
+    mutable Matrix<gentype>           *matrixval = nullptr;
+    mutable Set<gentype>              *setval    = nullptr;
+    mutable Dict<gentype,dictkey>     *dictval   = nullptr;
+    mutable Dgraph<gentype, double>   *dgraphval = nullptr;
+    mutable std::string               *stringval = nullptr;
 
     mutable Vector<gentype> *eqnargs = nullptr;
 
@@ -1626,6 +1677,15 @@ private:
 
     mutable SparseVector<gentype> *sparsevectorval     = nullptr;
     mutable SparseVector<double>  *sparsevectorvalreal = nullptr;
+
+    void clearindirects(void)
+    {
+        if ( vectorvalreal       ) { MEMDEL(vectorvalreal);       vectorvalreal       = nullptr; }
+        if ( vectorvalint        ) { MEMDEL(vectorvalint);        vectorvalint        = nullptr; }
+        if ( matrixvalreal       ) { MEMDEL(matrixvalreal);       matrixvalreal       = nullptr; }
+        if ( sparsevectorval     ) { MEMDEL(sparsevectorval);     sparsevectorval     = nullptr; }
+        if ( sparsevectorvalreal ) { MEMDEL(sparsevectorvalreal); sparsevectorvalreal = nullptr; }
+    }
 
     // Is value equation (extended version)
 
@@ -1694,6 +1754,14 @@ private:
             }
         }
 
+        else if ( isValDict() && size() )
+        {
+            for ( int i = 0 ; i < size() ; ++i )
+            {
+                res = res | ((*dictval).val(i)).isValEqn();
+            }
+        }
+
         else if ( isValDgraph() && size() )
         {
             for ( int i = 0 ; i < size() ; ++i )
@@ -1709,15 +1777,16 @@ private:
     // that the cast would cause (so if 1 is returned then the cast is invalid
     // and errstr holds the relevant error message).
 
-    int loctoNull   (                             std::string &errstr) const;
-    int loctoInteger(int                    &res, std::string &errstr) const;
-    int loctoReal   (double                 &res, std::string &errstr) const;
-    int loctoAnion  (d_anion                &res, std::string &errstr) const;
-    int loctoVector (Vector<gentype>        &res, std::string &errstr) const;
-    int loctoMatrix (Matrix<gentype>        &res, std::string &errstr) const;
-    int loctoSet    (Set<gentype>           &res, std::string &errstr) const;
-    int loctoDgraph (Dgraph<gentype,double> &res, std::string &errstr) const;
-    int loctoString (std::string            &res, std::string &errstr) const;
+    int loctoNull   (                                std::string &errstr) const;
+    int loctoInteger(int                       &res, std::string &errstr) const;
+    int loctoReal   (double                    &res, std::string &errstr) const;
+    int loctoAnion  (d_anion                   &res, std::string &errstr) const;
+    int loctoVector (Vector<gentype>           &res, std::string &errstr) const;
+    int loctoMatrix (Matrix<gentype>           &res, std::string &errstr) const;
+    int loctoSet    (Set<gentype>              &res, std::string &errstr) const;
+    int loctoDict   (Dict<gentype,dictkey>     &res, std::string &errstr) const;
+    int loctoDgraph (Dgraph<gentype,double>    &res, std::string &errstr) const;
+    int loctoString (std::string               &res, std::string &errstr) const;
 
     // Internal version of substitute - function evaluation
 
@@ -1750,6 +1819,7 @@ private:
         if ( vectorval != nullptr ) { MEMNEW(res.vectorval,Vector<gentype>(*vectorval)); }
         if ( matrixval != nullptr ) { MEMNEW(res.matrixval,Matrix<gentype>(*matrixval)); }
         if ( setval    != nullptr ) { MEMNEW(res.setval   ,Set<gentype>(*setval));       }
+        if ( dictval   != nullptr ) { MEMNEW(res.dictval  ,xDict(*dictval));             }
         if ( dgraphval != nullptr ) { MEMNEW(res.dgraphval,xDgraph(*dgraphval));         }
         if ( stringval != nullptr ) { MEMNEW(res.stringval,std::string(*stringval));     }
 
@@ -1771,6 +1841,7 @@ private:
         if ( ( matrixval           != nullptr ) && ( ( targtype != 'M' ) )                               ) { MEMDEL(matrixval);           matrixval           = nullptr; }
         if ( ( matrixvalreal       != nullptr )                                                          ) { MEMDEL(matrixvalreal);       matrixvalreal       = nullptr; }
         if ( ( setval              != nullptr ) && ( ( targtype != 'X' ) )                               ) { MEMDEL(setval);              setval              = nullptr; }
+        if ( ( dictval             != nullptr ) && ( ( targtype != 'D' ) )                               ) { MEMDEL(dictval);             dictval             = nullptr; }
         if ( ( dgraphval           != nullptr ) && ( ( targtype != 'G' ) )                               ) { MEMDEL(dgraphval);           dgraphval           = nullptr; }
         if ( ( stringval           != nullptr ) && ( ( targtype != 'S' ) && ( targtype != 'E' ) )        ) { MEMDEL(stringval);           stringval           = nullptr; }
         if ( ( eqnargs             != nullptr )                                                          ) { MEMDEL(eqnargs);             eqnargs             = nullptr; }
@@ -1784,6 +1855,7 @@ private:
         if ( ( vectorval == nullptr ) && ( ( targtype == 'V' )                        ) ) { MEMNEW(vectorval,Vector<gentype>(sizenRows));       }
         if ( ( matrixval == nullptr ) && ( ( targtype == 'M' )                        ) ) { MEMNEW(matrixval,Matrix<gentype>(sizenRows,nCols)); }
         if ( ( setval    == nullptr ) && ( ( targtype == 'X' )                        ) ) { MEMNEW(setval,Set<gentype>);                        }
+        if ( ( dictval   == nullptr ) && ( ( targtype == 'D' )                        ) ) { MEMNEW(dictval,xDict);                              }
         if ( ( dgraphval == nullptr ) && ( ( targtype == 'G' )                        ) ) { MEMNEW(dgraphval,xDgraph);                          }
         if ( ( stringval == nullptr ) && ( ( targtype == 'E' ) || ( targtype == 'S' ) ) ) { MEMNEW(stringval,std::string);                      }
 
@@ -1943,18 +2015,19 @@ inline void qswap(gentype &a, gentype &b)
 
     qswap(a.fnnameind,b.fnnameind);
 
-    d_anion                *anionval;            anionval            = a.anionval;            a.anionval            = b.anionval;            b.anionval            = anionval;
-    Vector<gentype>        *vectorval;           vectorval           = a.vectorval;           a.vectorval           = b.vectorval;           b.vectorval           = vectorval;
-    Vector<double>         *vectorvalreal;       vectorvalreal       = a.vectorvalreal;       a.vectorvalreal       = b.vectorvalreal;       b.vectorvalreal       = vectorvalreal;
-    Vector<int>            *vectorvalint;        vectorvalint        = a.vectorvalint;        a.vectorvalint        = b.vectorvalint;        b.vectorvalint        = vectorvalint;
-    SparseVector<gentype>  *sparsevectorval;     sparsevectorval     = a.sparsevectorval;     a.sparsevectorval     = b.sparsevectorval;     b.sparsevectorval     = sparsevectorval;
-    SparseVector<double>   *sparsevectorvalreal; sparsevectorvalreal = a.sparsevectorvalreal; a.sparsevectorvalreal = b.sparsevectorvalreal; b.sparsevectorvalreal = sparsevectorvalreal;
-    Matrix<gentype>        *matrixval;           matrixval           = a.matrixval;           a.matrixval           = b.matrixval;           b.matrixval           = matrixval;
-    Matrix<double>         *matrixvalreal;       matrixvalreal       = a.matrixvalreal;       a.matrixvalreal       = b.matrixvalreal;       b.matrixvalreal       = matrixvalreal;
-    Set<gentype>           *setval;              setval              = a.setval;              a.setval              = b.setval;              b.setval              = setval;
-    Dgraph<gentype,double> *dgraphval;           dgraphval           = a.dgraphval;           a.dgraphval           = b.dgraphval;           b.dgraphval           = dgraphval;
-    std::string            *stringval;           stringval           = a.stringval;           a.stringval           = b.stringval;           b.stringval           = stringval;
-    Vector<gentype>        *eqnargs;             eqnargs             = a.eqnargs;             a.eqnargs             = b.eqnargs;             b.eqnargs             = eqnargs;
+    d_anion                   *anionval;            anionval            = a.anionval;            a.anionval            = b.anionval;            b.anionval            = anionval;
+    Vector<gentype>           *vectorval;           vectorval           = a.vectorval;           a.vectorval           = b.vectorval;           b.vectorval           = vectorval;
+    Vector<double>            *vectorvalreal;       vectorvalreal       = a.vectorvalreal;       a.vectorvalreal       = b.vectorvalreal;       b.vectorvalreal       = vectorvalreal;
+    Vector<int>               *vectorvalint;        vectorvalint        = a.vectorvalint;        a.vectorvalint        = b.vectorvalint;        b.vectorvalint        = vectorvalint;
+    SparseVector<gentype>     *sparsevectorval;     sparsevectorval     = a.sparsevectorval;     a.sparsevectorval     = b.sparsevectorval;     b.sparsevectorval     = sparsevectorval;
+    SparseVector<double>      *sparsevectorvalreal; sparsevectorvalreal = a.sparsevectorvalreal; a.sparsevectorvalreal = b.sparsevectorvalreal; b.sparsevectorvalreal = sparsevectorvalreal;
+    Matrix<gentype>           *matrixval;           matrixval           = a.matrixval;           a.matrixval           = b.matrixval;           b.matrixval           = matrixval;
+    Matrix<double>            *matrixvalreal;       matrixvalreal       = a.matrixvalreal;       a.matrixvalreal       = b.matrixvalreal;       b.matrixvalreal       = matrixvalreal;
+    Set<gentype>              *setval;              setval              = a.setval;              a.setval              = b.setval;              b.setval              = setval;
+    Dict<gentype,dictkey>     *dictval;             dictval             = a.dictval;             a.dictval             = b.dictval;             b.dictval             = dictval;
+    Dgraph<gentype,double>    *dgraphval;           dgraphval           = a.dgraphval;           a.dgraphval           = b.dgraphval;           b.dgraphval           = dgraphval;
+    std::string               *stringval;           stringval           = a.stringval;           a.stringval           = b.stringval;           b.stringval           = stringval;
+    Vector<gentype>           *eqnargs;             eqnargs             = a.eqnargs;             a.eqnargs             = b.eqnargs;             b.eqnargs             = eqnargs;
 
     const fninfoblock *thisfninfo; thisfninfo = a.thisfninfo; a.thisfninfo = b.thisfninfo; b.thisfninfo = thisfninfo;
 }
@@ -2636,6 +2709,7 @@ gentype isanion (const gentype &a);
 gentype isvector(const gentype &a);
 gentype ismatrix(const gentype &a);
 gentype isset   (const gentype &a);
+gentype isdict  (const gentype &a);
 gentype isdgraph(const gentype &a);
 gentype isstring(const gentype &a);
 gentype iserror (const gentype &a);
@@ -3296,6 +3370,7 @@ gentype &OP_isanion (gentype &a);
 gentype &OP_isvector(gentype &a);
 gentype &OP_ismatrix(gentype &a);
 gentype &OP_isset   (gentype &a);
+gentype &OP_isdict  (gentype &a);
 gentype &OP_isdgraph(gentype &a);
 gentype &OP_isstring(gentype &a);
 gentype &OP_iserror (gentype &a);

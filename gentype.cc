@@ -607,6 +607,7 @@ std::ostream &operator<<(std::ostream &output, const gentype &src )
     else if ( src.isValVector()  ) { printoneline(output,src.cast_vector(0)); }
     else if ( src.isValMatrix()  ) { output << "M:" << src.cast_matrix(0);    }
     else if ( src.isValSet()     ) { output         << src.cast_set(0);       }
+    else if ( src.isValDict()    ) { output         << src.cast_dict(0);      }
     else if ( src.isValDgraph()  ) { output << "G:" << src.cast_dgraph(0);    }
 
     else if ( src.isValReal() )
@@ -2266,6 +2267,13 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
             *setval = *(src.setval);
         }
 
+        else if ( src.isValDict() )
+        {
+            deleteVectMatMem('D');
+
+            *dictval = *(src.dictval);
+        }
+
         else if ( src.isValDgraph() )
         {
             deleteVectMatMem('G');
@@ -2302,18 +2310,20 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
 
     else
     {
-        d_anion                *anistore = nullptr;
-        Vector<gentype>        *vecstore = nullptr;
-        Matrix<gentype>        *matstore = nullptr;
-        Set<gentype>           *setstore = nullptr;
-        Dgraph<gentype,double> *dgrstore = nullptr;
-        Vector<gentype>        *eqnstore = nullptr;
-        std::string            *strstore = nullptr;
+        d_anion                   *anistore = nullptr;
+        Vector<gentype>           *vecstore = nullptr;
+        Matrix<gentype>           *matstore = nullptr;
+        Set<gentype>              *setstore = nullptr;
+        Dict<gentype,dictkey>     *dctstore = nullptr;
+        Dgraph<gentype,double>    *dgrstore = nullptr;
+        Vector<gentype>           *eqnstore = nullptr;
+        std::string               *strstore = nullptr;
 
         int wasValAnion  = src.isValAnion();
         int wasValVector = src.isValVector();
         int wasValMatrix = src.isValMatrix();
         int wasValSet    = src.isValSet();
+        int wasValDict   = src.isValDict();
         int wasValDgraph = src.isValDgraph();
         int wasValEqn    = src.isValEqnDir();
         int wasValStrErr = src.isValStrErr();
@@ -2323,6 +2333,7 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
         if ( wasValVector ) { MEMNEW(vecstore,Vector<gentype       >(*(src.vectorval))); }
         if ( wasValMatrix ) { MEMNEW(matstore,Matrix<gentype       >(*(src.matrixval))); }
         if ( wasValSet    ) { MEMNEW(setstore,Set<   gentype       >(*(src.setval)));    }
+        if ( wasValDict   ) { MEMNEW(dctstore,xDict                 (*(src.dictval)));   }
         if ( wasValDgraph ) { MEMNEW(dgrstore,xDgraph               (*(src.dgraphval))); }
         if ( wasValEqn    ) { MEMNEW(eqnstore,Vector<gentype       >(*(src.eqnargs)));   }
         if ( wasValStrErr ) { MEMNEW(strstore,std::string(*(src.stringval)));            }
@@ -2353,6 +2364,7 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
         if ( wasValVector ) { *this = *vecstore;     MEMDEL(vecstore); }
         if ( wasValMatrix ) { *this = *matstore;     MEMDEL(matstore); }
         if ( wasValSet    ) { *this = *setstore;     MEMDEL(setstore); }
+        if ( wasValDict   ) { *this = *dctstore;     MEMDEL(dctstore); }
         if ( wasValDgraph ) { *this = *dgrstore;     MEMDEL(dgrstore); }
         if ( wasValStrErr ) { makeString(*strstore); MEMDEL(strstore); }
 
@@ -2700,6 +2712,24 @@ gentype &gentype::toSet(gentype &res)  const
     std::string errstr;
 
     if ( loctoSet(*(res.setval),errstr) )
+    {
+        res.makeError(errstr);
+    }
+
+    return res;
+}
+
+gentype &gentype::toDict(gentype &res)  const
+{
+    if ( !(res.isValDict()) )
+    {
+        res.deleteVectMatMem('D');
+        (*(res.dictval)).zero();
+    }
+
+    std::string errstr;
+
+    if ( loctoDict(*(res.dictval),errstr) )
     {
         res.makeError(errstr);
     }
@@ -3164,6 +3194,39 @@ const Set<gentype> &gentype::cast_set(int finalise) const
     return *setval;
 }
 
+const Dict<gentype,dictkey> &gentype::cast_dict(int finalise) const
+{
+    if ( !isValDict() )
+    {
+        isNomConst = false;
+
+        if ( dictval == nullptr )
+        {
+            MEMNEW(dictval,xDict);
+        }
+
+        std::string errstr;
+
+        if ( finalise && isValEqn() )
+        {
+            gentype temp(*this);
+            SparseVector<SparseVector<gentype> > tempargs;
+
+            temp.fastevaluate(tempargs,finalise);
+            *dictval = temp.cast_dict(0);
+        }
+
+        else if ( loctoDict(*dictval,errstr) )
+        {
+            // If this is set then setval is a set containing *this, so we'll go with that
+            //NiceThrow(errstr);
+            ;
+        }
+    }
+
+    return *dictval;
+}
+
 const Dgraph<gentype,double> &gentype::cast_dgraph(int finalise) const
 {
     if ( !isValDgraph() )
@@ -3406,6 +3469,32 @@ gentype &gentype::morph_set(void)
     return *this;
 }
 
+gentype &gentype::morph_dict(void)
+{
+    if ( !isValDict() )
+    {
+        isNomConst = false;
+
+        if ( dictval == nullptr )
+        {
+            MEMNEW(dictval,xDict);
+        }
+
+        std::string errstr;
+
+        if ( loctoDict(*dictval,errstr) )
+        {
+            makeError(errstr);
+
+            return *this;
+        }
+    }
+
+    typeis = 'D';
+
+    return *this;
+}
+
 gentype &gentype::morph_dgraph(void)
 {
     if ( !isValDgraph() )
@@ -3506,6 +3595,12 @@ int gentype::loctoNull(std::string &errstr) const
         else if ( isValSet() )
 	{
             errstr = "Can't cast set to null.";
+	    lociserr = 1;
+	}
+
+        else if ( isValDict() )
+	{
+            errstr = "Can't cast dictionary to null.";
 	    lociserr = 1;
 	}
 
@@ -3633,6 +3728,12 @@ int gentype::loctoInteger(int &res, std::string &errstr) const
 	    lociserr = 1;
 	}
 
+        else if ( isValDict() )
+	{
+            errstr = "Can't cast dictionary to integer.";
+	    lociserr = 1;
+	}
+
         else if ( isValDgraph() )
 	{
             errstr = "Can't cast dgraph to integer.";
@@ -3744,6 +3845,12 @@ int gentype::loctoReal(double &res, std::string &errstr) const
 	    lociserr = 1;
 	}
 
+        else if ( isValDict() )
+	{
+            errstr = "Can't cast dictionary to real.";
+	    lociserr = 1;
+	}
+
         else if ( isValDgraph() )
 	{
             errstr = "Can't cast dgraph to real.";
@@ -3850,6 +3957,12 @@ int gentype::loctoAnion(d_anion &res, std::string &errstr) const
         else if ( isValSet() )
 	{
             errstr = "Can't cast set to anion.";
+	    lociserr = 1;
+	}
+
+        else if ( isValDict() )
+	{
+            errstr = "Can't cast dictionary to anion.";
 	    lociserr = 1;
 	}
 
@@ -3969,6 +4082,12 @@ int gentype::loctoVector(Vector<gentype> &res, std::string &errstr) const
 	    lociserr = 1;
 	}
 
+        else if ( isValDict() )
+	{
+            errstr = "Can't cast dictionary to vector.";
+	    lociserr = 1;
+	}
+
         else if ( isValDgraph() )
 	{
             errstr = "Can't cast dgraph to vector.";
@@ -4059,6 +4178,12 @@ int gentype::loctoMatrix(Matrix<gentype> &res, std::string &errstr) const
         else if ( isValSet() )
 	{
             errstr = "Can't cast set to vector.";
+	    lociserr = 1;
+	}
+
+        else if ( isValDict() )
+	{
+            errstr = "Can't cast dictionary to vector.";
 	    lociserr = 1;
 	}
 
@@ -4157,6 +4282,60 @@ int gentype::loctoSet(Set<gentype> &res, std::string &errstr) const
     return lociserr;
 }
 
+int gentype::loctoDict(Dict<gentype,dictkey> &res, std::string &errstr) const
+{
+    // Very important: don't overwrite res straight away, as it may actually
+    // be a reference to ...val.
+
+    int lociserr = 0;
+    errstr = "";
+
+    if ( !isValError() )
+    {
+        if ( isValNull() )
+	{
+            res.zero();
+	}
+
+        else if ( isValDict() )
+	{
+            // Overwriting a with a would not be sensible
+
+            if ( &res != dictval )
+            {
+                res = *dictval;
+            }
+	}
+
+        else
+        {
+            res.zero();
+            res("&","res") = *this;
+	}
+    }
+
+    else
+    {
+        NiceAssert( stringval );
+
+        errstr = *stringval;
+	errstr += "\n";
+        errstr += "Can't cast error to dictionary.";
+
+        lociserr = 1;
+    }
+
+    if ( lociserr )
+    {
+//        res.zero();
+
+        res.zero();
+        res("&","err") = *this;
+    }
+
+    return lociserr;
+}
+
 int gentype::loctoDgraph(Dgraph<gentype,double> &res, std::string &errstr) const
 {
     int lociserr = 0;
@@ -4202,6 +4381,12 @@ int gentype::loctoDgraph(Dgraph<gentype,double> &res, std::string &errstr) const
         else if ( isValSet() )
 	{
             errstr = "Can't cast set to dgraph.";
+	    lociserr = 1;
+	}
+
+        else if ( isValDict() )
+	{
+            errstr = "Can't cast set to dictionary.";
 	    lociserr = 1;
 	}
 
@@ -4721,6 +4906,20 @@ SparseVector<SparseVector<int> > &gentype::varsUsed(SparseVector<SparseVector<in
         }
     }
 
+    else if ( isValDict()  )
+    {
+        int i;
+        int xsize = size();
+
+        if ( xsize )
+        {
+            for ( i = 0 ; i < xsize ; ++i )
+            {
+                ((*dictval).val("&",i)).varsUsed(res);
+            }
+        }
+    }
+
     else if ( isValDgraph()  )
     {
         int i;
@@ -4806,6 +5005,20 @@ SparseVector<int> &gentype::rowsUsed(SparseVector<int> &res) const
             for ( i = 0 ; i < xsize ; ++i )
             {
                 (((*setval).all())(i)).rowsUsed(res);
+            }
+        }
+    }
+
+    else if ( isValDict()  )
+    {
+        int i;
+        int xsize = size();
+
+        if ( xsize )
+        {
+            for ( i = 0 ; i < xsize ; ++i )
+            {
+                ((*dictval).val(i)).rowsUsed(res);
             }
         }
     }
@@ -4963,6 +5176,17 @@ int gentype::realDeriv(const gentype &ix, const gentype &jx)
                 for ( i = 0 ; i < (*setval).size() ; ++i )
 		{
                     (((*setval).ncall())("&",i)).realDeriv(ix,jx);
+		}
+	    }
+        }
+
+        else if ( isValDict() )
+        {
+            if ( (*dictval).size() )
+	    {
+                for ( i = 0 ; i < (*dictval).size() ; ++i )
+		{
+                    ((*dictval).val("&",i)).realDeriv(ix,jx);
 		}
 	    }
         }
@@ -5230,6 +5454,17 @@ int gentype::fastevaluate(const SparseVector<SparseVector<gentype> > &evalargs, 
 	    for ( i = 0 ; i < size() ; ++i )
 	    {
                 ccnt += (((*setval).ncall())("&",i)).fastevaluate(evalargs,finalise);
+	    }
+	}
+    }
+
+    else if ( isValDict() )
+    {
+	//if ( size() )
+	{
+	    for ( i = 0 ; i < size() ; ++i )
+	    {
+                ccnt += ((*dictval).val("&",i)).fastevaluate(evalargs,finalise);
 	    }
 	}
     }
@@ -5974,8 +6209,8 @@ int gentype::mathsparse(std::string &srcx, const std::string &src)
     // srcxblocktype(i): type, where 0 means opcode block, 1 means number,
     //                   2 means expression
     // srcxblockres(i):  for numbers 1 = int, 2 = real, 3 = anion, 4 = vector,
-    //                   5 = matrix, 6 = string, 7 = error, 8 = set, 9 = dgraph
-    //                   for expressions this is the number of arguments in
+    //                   5 = matrix, 6 = string, 7 = error, 8 = set, 9 = dgraph,
+    //                   10 = dict, for expressions this is the number of arguments in
     //                   the expression
     // srcxblockname(i): for expressions this is the function name of the block
 
@@ -6884,6 +7119,43 @@ int gentype::makeEqnInternal(const std::string &src)
         *this = dgres;
     }
 
+    else if ( res == 10 )
+    {
+        // Type: dict
+
+        Dict<gentype,dictkey> sres;
+	std::stringstream resbuffer;
+
+        NiceAssert( src.length() >= 2 );
+
+        if ( src.length() == 2 )
+        {
+            ; // {}
+        }
+
+        else if ( std::isspace(src[1]) && std::isspace(src[src.length()-2]) )
+        {
+            resbuffer << src;
+            resbuffer >> sres;
+        }
+
+        else
+        {
+            // Need to put in spaces
+
+            std::string altsrc;
+
+            altsrc = "{{ ";
+            altsrc += src.substr(2,(src.length())-3);
+            altsrc += " }}";
+
+            resbuffer << altsrc;
+            resbuffer >> sres;
+        }
+
+        *this = sres;
+    }
+
     else
     {
         // Syntax error
@@ -7529,6 +7801,7 @@ static int pairBrackets(int start, int &end, const std::string &src, int LRorRL)
 // 7 if an error
 // 8 if set
 // 9 if dgraph
+// 10 if dict
 // -1 if a syntax error occurs.
 //
 // Note that we don't include any preceeding -, as this unary operator
@@ -7939,9 +8212,20 @@ static int processNumLtoR(int start, int &end, const std::string &src, bool &isc
 	}
     }
 
-    if ( !res && ( src[start] == '{' ) )
+    if ( !res && ( src[start] == '{' ) && ( src[start+1] != '{' ) )
     {
         res = 8;
+
+	if ( pairBrackets(start,end,src,0) )
+	{
+	    end = start-1;
+            return -1;
+	}
+    }
+
+    if ( !res && ( src[start] == '{' ) && ( src[start+1] == '{' ) )
+    {
+        res = 10;
 
 	if ( pairBrackets(start,end,src,0) )
 	{
@@ -9548,13 +9832,14 @@ void initgentype(void)
 // 8 = yes, result set
 // 9 = yes, result dgraph
 //10 = yes, result null
+//11 = yes, result dict
 //
 // Notes: adding a string to anything gives a string
 //        7 means leave as gentype
 //        isstrict: set for logical operations
 
-int checkAddCompat(const gentype &a, const gentype &b, int &acast, int &bcast, int isstrict = 0);
-int checkAddCompat(const gentype &a, const gentype &b, int &acast, int &bcast, int isstrict)
+static int checkAddCompat(const gentype &a, const gentype &b, int &acast, int &bcast, int isstrict = 0);
+static int checkAddCompat(const gentype &a, const gentype &b, int &acast, int &bcast, int isstrict)
 {
     if ( a.isValNull() )
     {
@@ -9571,41 +9856,41 @@ int checkAddCompat(const gentype &a, const gentype &b, int &acast, int &bcast, i
 
     else if ( a.isValInteger() )
     {
-             if ( b.isValNull()                ) { acast = 1; bcast = 1; return 1; }
-        else if ( b.isValInteger()             ) { acast = 1; bcast = 1; return 1; }
-        else if ( b.isValReal()                ) { acast = 2; bcast = 2; return 2; }
-        else if ( b.isValAnion()               ) { acast = 3; bcast = 3; return 3; }
-        else if ( b.isValVector() && !isstrict ) { acast = 7; bcast = 4; return 4; }
-        else if ( b.isValMatrix() && !isstrict ) { acast = 7; bcast = 5; return 5; }
-        else if ( b.isValSet()    && !isstrict ) { acast = 7; bcast = 8; return 8; }
-        else if ( b.isValString()              ) { acast = 6; bcast = 6; return 6; }
-        else                                     { acast = 0; bcast = 0; return 0; }
+             if ( b.isValNull()                ) { acast = 1; bcast = 1;  return 1;  }
+        else if ( b.isValInteger()             ) { acast = 1; bcast = 1;  return 1;  }
+        else if ( b.isValReal()                ) { acast = 2; bcast = 2;  return 2;  }
+        else if ( b.isValAnion()               ) { acast = 3; bcast = 3;  return 3;  }
+        else if ( b.isValVector() && !isstrict ) { acast = 7; bcast = 4;  return 4;  }
+        else if ( b.isValMatrix() && !isstrict ) { acast = 7; bcast = 5;  return 5;  }
+        else if ( b.isValSet()    && !isstrict ) { acast = 7; bcast = 8;  return 8;  }
+        else if ( b.isValString()              ) { acast = 6; bcast = 6;  return 6;  }
+        else                                     { acast = 0; bcast = 0;  return 0;  }
     }
 
     else if ( a.isValReal() )
     {
-             if ( b.isValNull()                ) { acast = 2; bcast = 2; return 2; }
-        else if ( b.isValInteger()             ) { acast = 2; bcast = 2; return 2; }
-        else if ( b.isValReal()                ) { acast = 2; bcast = 2; return 2; }
-        else if ( b.isValAnion()               ) { acast = 3; bcast = 3; return 3; }
-        else if ( b.isValVector() && !isstrict ) { acast = 7; bcast = 4; return 4; }
-        else if ( b.isValMatrix() && !isstrict ) { acast = 7; bcast = 5; return 5; }
-        else if ( b.isValSet()    && !isstrict ) { acast = 7; bcast = 8; return 8; }
-        else if ( b.isValString()              ) { acast = 6; bcast = 6; return 6; }
-        else                                     { acast = 0; bcast = 0; return 0; }
+             if ( b.isValNull()                ) { acast = 2; bcast = 2;  return 2;  }
+        else if ( b.isValInteger()             ) { acast = 2; bcast = 2;  return 2;  }
+        else if ( b.isValReal()                ) { acast = 2; bcast = 2;  return 2;  }
+        else if ( b.isValAnion()               ) { acast = 3; bcast = 3;  return 3;  }
+        else if ( b.isValVector() && !isstrict ) { acast = 7; bcast = 4;  return 4;  }
+        else if ( b.isValMatrix() && !isstrict ) { acast = 7; bcast = 5;  return 5;  }
+        else if ( b.isValSet()    && !isstrict ) { acast = 7; bcast = 8;  return 8;  }
+        else if ( b.isValString()              ) { acast = 6; bcast = 6;  return 6;  }
+        else                                     { acast = 0; bcast = 0;  return 0;  }
     }
 
     else if ( a.isValAnion() )
     {
-             if ( b.isValNull()                ) { acast = 3; bcast = 3; return 3; }
-        else if ( b.isValInteger()             ) { acast = 3; bcast = 3; return 3; }
-        else if ( b.isValReal()                ) { acast = 3; bcast = 3; return 3; }
-        else if ( b.isValAnion()               ) { acast = 3; bcast = 3; return 3; }
-        else if ( b.isValVector() && !isstrict ) { acast = 7; bcast = 4; return 4; }
-        else if ( b.isValMatrix() && !isstrict ) { acast = 7; bcast = 5; return 5; }
-        else if ( b.isValSet()    && !isstrict ) { acast = 7; bcast = 8; return 8; }
-        else if ( b.isValString()              ) { acast = 6; bcast = 6; return 6; }
-        else                                     { acast = 0; bcast = 0; return 0; }
+             if ( b.isValNull()                ) { acast = 3; bcast = 3;  return 3;  }
+        else if ( b.isValInteger()             ) { acast = 3; bcast = 3;  return 3;  }
+        else if ( b.isValReal()                ) { acast = 3; bcast = 3;  return 3;  }
+        else if ( b.isValAnion()               ) { acast = 3; bcast = 3;  return 3;  }
+        else if ( b.isValVector() && !isstrict ) { acast = 7; bcast = 4;  return 4;  }
+        else if ( b.isValMatrix() && !isstrict ) { acast = 7; bcast = 5;  return 5;  }
+        else if ( b.isValSet()    && !isstrict ) { acast = 7; bcast = 8;  return 8;  }
+        else if ( b.isValString()              ) { acast = 6; bcast = 6;  return 6;  }
+        else                                     { acast = 0; bcast = 0;  return 0;  }
     }
 
     else if ( a.isValVector() )
@@ -9627,9 +9912,9 @@ int checkAddCompat(const gentype &a, const gentype &b, int &acast, int &bcast, i
             else                                                       { acast = 0; bcast = 0; return 0; }
 	}
 
-        else if ( b.isValSet() && !isstrict ) { acast = 7; bcast = 8; return 8; }
-        else if ( b.isValString()           ) { acast = 6; bcast = 6; return 6; }
-        else                                  { acast = 0; bcast = 0; return 0; }
+        else if ( b.isValSet()  && !isstrict ) { acast = 7; bcast = 8;  return 8;  }
+        else if ( b.isValString()            ) { acast = 6; bcast = 6;  return 6;  }
+        else                                   { acast = 0; bcast = 0;  return 0;  }
     }
 
     else if ( a.isValMatrix() )
@@ -9651,9 +9936,9 @@ int checkAddCompat(const gentype &a, const gentype &b, int &acast, int &bcast, i
             else                                                                    { acast = 0; bcast = 0; return 0; }
 	}
 
-        else if ( b.isValSet() && !isstrict ) { acast = 7; bcast = 8; return 8; }
-        else if ( b.isValString()           ) { acast = 6; bcast = 6; return 6; }
-        else                                  { acast = 0; bcast = 0; return 0; }
+        else if ( b.isValSet()  && !isstrict ) { acast = 7; bcast = 8;  return 8;  }
+        else if ( b.isValString()            ) { acast = 6; bcast = 6;  return 6;  }
+        else                                   { acast = 0; bcast = 0;  return 0;  }
     }
 
     else if ( a.isValSet() )
@@ -9676,6 +9961,15 @@ int checkAddCompat(const gentype &a, const gentype &b, int &acast, int &bcast, i
 
         if ( b.isValDgraph() && isstrict ) { acast = 9; bcast = 9; return 9; }
         else                               { acast = 0; bcast = 0; return 0; }
+    }
+
+    else if ( a.isValDict() )
+    {
+        // In this case, we can only "add" in the logical comparison sense,
+        // not in the mathematical sense.  Hence isstrict, not !isstrict.
+
+        if ( b.isValDict() && isstrict ) { acast = 11; bcast = 11; return 11; }
+        else                             { acast = 0;  bcast = 0;  return 0;  }
     }
 
     else if ( a.isValString() )
@@ -10173,6 +10467,7 @@ bool gentype::iseq(const gentype &b) const
         else if ( ( acast == 4  ) && ( bcast == 4  ) ) { res = ( cast_vector(0)    == b.cast_vector(0)    ); }
         else if ( ( acast == 5  ) && ( bcast == 5  ) ) { res = ( cast_matrix(0)    == b.cast_matrix(0)    ); }
         else if ( ( acast == 8  ) && ( bcast == 8  ) ) { res = ( cast_set(0)       == b.cast_set(0)       ); }
+        else if ( ( acast == 11 ) && ( bcast == 11 ) ) { res = ( cast_dict(0)      == b.cast_dict(0)      ); }
         else if ( ( acast == 9  ) && ( bcast == 9  ) ) { res = ( cast_dgraph(0)    == b.cast_dgraph(0)    ); }
         else if ( ( acast == 10 ) && ( bcast == 10 ) ) { res = true;                                         }
         else                                           { res = ( cast_string(0)    == b.cast_string(0)    ); }
@@ -10194,15 +10489,16 @@ int operator!=(const gentype &a, const gentype &b)
 
     if ( ( res = checkAddCompat(a,b,acast,bcast,1) ) )
     {
-             if ( ( acast == 1  ) && ( bcast == 1  ) ) { res = ( a.cast_int(0)       != b.cast_int(0)       ); }
-        else if ( ( acast == 2  ) && ( bcast == 2  ) ) { res = ( a.cast_double(0)    != b.cast_double(0)    ); }
-        else if ( ( acast == 3  ) && ( bcast == 3  ) ) { res = ( a.cast_anion(0)     != b.cast_anion(0)     ); }
-        else if ( ( acast == 4  ) && ( bcast == 4  ) ) { res = ( a.cast_vector(0)    != b.cast_vector(0)    ); }
-        else if ( ( acast == 5  ) && ( bcast == 5  ) ) { res = ( a.cast_matrix(0)    != b.cast_matrix(0)    ); }
-        else if ( ( acast == 8  ) && ( bcast == 8  ) ) { res = ( a.cast_set(0)       != b.cast_set(0)       ); }
-        else if ( ( acast == 9  ) && ( bcast == 9  ) ) { res = ( a.cast_dgraph(0)    != b.cast_dgraph(0)    ); }
+             if ( ( acast == 1  ) && ( bcast == 1  ) ) { res = ( a.cast_int(0)     != b.cast_int(0)       ); }
+        else if ( ( acast == 2  ) && ( bcast == 2  ) ) { res = ( a.cast_double(0)  != b.cast_double(0)    ); }
+        else if ( ( acast == 3  ) && ( bcast == 3  ) ) { res = ( a.cast_anion(0)   != b.cast_anion(0)     ); }
+        else if ( ( acast == 4  ) && ( bcast == 4  ) ) { res = ( a.cast_vector(0)  != b.cast_vector(0)    ); }
+        else if ( ( acast == 5  ) && ( bcast == 5  ) ) { res = ( a.cast_matrix(0)  != b.cast_matrix(0)    ); }
+        else if ( ( acast == 8  ) && ( bcast == 8  ) ) { res = ( a.cast_set(0)     != b.cast_set(0)       ); }
+        else if ( ( acast == 11 ) && ( bcast == 11 ) ) { res = ( a.cast_dict(0)    != b.cast_dict(0)      ); }
+        else if ( ( acast == 9  ) && ( bcast == 9  ) ) { res = ( a.cast_dgraph(0)  != b.cast_dgraph(0)    ); }
         else if ( ( acast == 10 ) && ( bcast == 10 ) ) { res = 0;                                            }
-        else                                           { res = ( a.cast_string(0)    != b.cast_string(0)    ); }
+        else                                           { res = ( a.cast_string(0)  != b.cast_string(0)    ); }
     }
 
     return res;
@@ -10570,6 +10866,7 @@ gentype &gentype::leftmult(const gentype &b)
     else if ( isValVector()  && b.isValNull()    ) { *this = 0; }
     else if ( isValMatrix()  && b.isValNull()    ) { *this = 0; }
     else if ( isValSet()     && b.isValNull()    ) { *this = 0; }
+    else if ( isValDict()    && b.isValNull()    ) { *this = 0; }
     else if ( isValString()  && b.isValNull()    ) { *this = 0; }
     else if ( isValDgraph()  && b.isValNull()    ) { *this = 0; }
     else if ( isValNull()    && b.isValInteger() ) { *this = 0; }
@@ -10578,6 +10875,7 @@ gentype &gentype::leftmult(const gentype &b)
     else if ( isValNull()    && b.isValVector()  ) { *this = 0; }
     else if ( isValNull()    && b.isValMatrix()  ) { *this = 0; }
     else if ( isValNull()    && b.isValSet()     ) { *this = 0; }
+    else if ( isValNull()    && b.isValDict()    ) { *this = 0; }
     else if ( isValNull()    && b.isValString()  ) { *this = 0; }
     else if ( isValNull()    && b.isValDgraph()  ) { *this = 0; }
 
@@ -10789,6 +11087,7 @@ gentype &gentype::rightmult(const gentype &a)
     else if ( a.isValVector()  && isValNull()    ) { *this = 0; }
     else if ( a.isValMatrix()  && isValNull()    ) { *this = 0; }
     else if ( a.isValSet()     && isValNull()    ) { *this = 0; }
+    else if ( a.isValDict()    && isValNull()    ) { *this = 0; }
     else if ( a.isValString()  && isValNull()    ) { *this = 0; }
     else if ( a.isValDgraph()  && isValNull()    ) { *this = 0; }
     else if ( a.isValNull()    && isValInteger() ) { *this = 0; }
@@ -10797,6 +11096,7 @@ gentype &gentype::rightmult(const gentype &a)
     else if ( a.isValNull()    && isValVector()  ) { *this = 0; }
     else if ( a.isValNull()    && isValMatrix()  ) { *this = 0; }
     else if ( a.isValNull()    && isValSet()     ) { *this = 0; }
+    else if ( a.isValNull()    && isValDict()    ) { *this = 0; }
     else if ( a.isValNull()    && isValString()  ) { *this = 0; }
     else if ( a.isValNull()    && isValDgraph()  ) { *this = 0; }
 
@@ -10947,6 +11247,7 @@ gentype &gentype::leftdiv(const gentype &b)
     else if ( isValNull()    && b.isValMatrix()  ) { double temp = cast_int(0); *this = b; inverse(); *this *= temp; }
     else if ( isValNull()    && b.isValString()  ) { goto errcase;                         }
     else if ( isValNull()    && b.isValSet()     ) { goto errcase;                         }
+    else if ( isValNull()    && b.isValDict()    ) { goto errcase;                         }
     else if ( isValNull()    && b.isValDgraph()  ) { goto errcase;                         }
 
     else if ( isValInteger() && b.isValNull()    ) { dir_double() /= b.cast_int(0);        }
@@ -10957,6 +11258,7 @@ gentype &gentype::leftdiv(const gentype &b)
     else if ( isValInteger() && b.isValMatrix()  ) { double temp = cast_int(0); *this = b; inverse(); *this *= temp; }
     else if ( isValInteger() && b.isValString()  ) { goto errcase;                         }
     else if ( isValInteger() && b.isValSet()     ) { goto errcase;                         }
+    else if ( isValInteger() && b.isValDict()    ) { goto errcase;                         }
     else if ( isValInteger() && b.isValDgraph()  ) { goto errcase;                         }
 
     else if ( isValReal()    && b.isValNull()    ) { dir_double() /= b.cast_double(0);     }
@@ -10967,6 +11269,7 @@ gentype &gentype::leftdiv(const gentype &b)
     else if ( isValReal()    && b.isValMatrix()  ) { double temp = cast_double(0);  *this = b; inverse(); *this *= temp; }
     else if ( isValReal()    && b.isValString()  ) { goto errcase;                         }
     else if ( isValReal()    && b.isValSet()     ) { goto errcase;                         }
+    else if ( isValReal()    && b.isValDict()    ) { goto errcase;                         }
     else if ( isValReal()    && b.isValDgraph()  ) { goto errcase;                         }
 
     else if ( isValAnion()   && b.isValNull()    ) { dir_anion()  /= b.cast_double(0);      }
@@ -10977,27 +11280,30 @@ gentype &gentype::leftdiv(const gentype &b)
     else if ( isValAnion()   && b.isValMatrix()  ) { gentype temp(cast_anion(0)); *this = b; inverse(); rightmult(temp); }
     else if ( isValAnion()   && b.isValString()  ) { goto errcase;                          }
     else if ( isValAnion()   && b.isValSet()     ) { goto errcase;                          }
+    else if ( isValAnion()   && b.isValDict()    ) { goto errcase;                          }
     else if ( isValAnion()   && b.isValDgraph()  ) { goto errcase;                          }
 
-    else if ( isValVector()  && b.isValNull()    ) { dir_vector() *= inv(b); }
-    else if ( isValVector()  && b.isValInteger() ) { dir_vector() *= inv(b); }
-    else if ( isValVector()  && b.isValReal()    ) { dir_vector() *= inv(b); }
-    else if ( isValVector()  && b.isValAnion()   ) { dir_vector() *= inv(b); }
-    else if ( isValVector()  && b.isValVector()  ) { goto errcase;           }
+    else if ( isValVector()  && b.isValNull()    ) { dir_vector() *= inv(b);                }
+    else if ( isValVector()  && b.isValInteger() ) { dir_vector() *= inv(b);                }
+    else if ( isValVector()  && b.isValReal()    ) { dir_vector() *= inv(b);                }
+    else if ( isValVector()  && b.isValAnion()   ) { dir_vector() *= inv(b);                }
+    else if ( isValVector()  && b.isValVector()  ) { goto errcase;                          }
     else if ( isValVector()  && b.isValMatrix()  ) { dir_vector() *= inv(b.cast_matrix(0)); }
-    else if ( isValVector()  && b.isValString()  ) { goto errcase;           }
-    else if ( isValVector()  && b.isValSet()     ) { goto errcase;           }
-    else if ( isValVector()  && b.isValDgraph()  ) { goto errcase;           }
+    else if ( isValVector()  && b.isValString()  ) { goto errcase;                          }
+    else if ( isValVector()  && b.isValSet()     ) { goto errcase;                          }
+    else if ( isValVector()  && b.isValDict()    ) { goto errcase;                          }
+    else if ( isValVector()  && b.isValDgraph()  ) { goto errcase;                          }
 
-    else if ( isValMatrix()  && b.isValNull()    ) { dir_matrix() *= inv(b); }
-    else if ( isValMatrix()  && b.isValInteger() ) { dir_matrix() *= inv(b); }
-    else if ( isValMatrix()  && b.isValReal()    ) { dir_matrix() *= inv(b); }
-    else if ( isValMatrix()  && b.isValAnion()   ) { dir_matrix() *= inv(b); }
-    else if ( isValMatrix()  && b.isValVector()  ) { goto errcase;           }
+    else if ( isValMatrix()  && b.isValNull()    ) { dir_matrix() *= inv(b);                }
+    else if ( isValMatrix()  && b.isValInteger() ) { dir_matrix() *= inv(b);                }
+    else if ( isValMatrix()  && b.isValReal()    ) { dir_matrix() *= inv(b);                }
+    else if ( isValMatrix()  && b.isValAnion()   ) { dir_matrix() *= inv(b);                }
+    else if ( isValMatrix()  && b.isValVector()  ) { goto errcase;                          }
     else if ( isValMatrix()  && b.isValMatrix()  ) { dir_matrix() *= inv(b.cast_matrix(0)); }
-    else if ( isValMatrix()  && b.isValString()  ) { goto errcase;           }
-    else if ( isValMatrix()  && b.isValSet()     ) { goto errcase;           }
-    else if ( isValMatrix()  && b.isValDgraph()  ) { goto errcase;           }
+    else if ( isValMatrix()  && b.isValString()  ) { goto errcase;                          }
+    else if ( isValMatrix()  && b.isValSet()     ) { goto errcase;                          }
+    else if ( isValMatrix()  && b.isValDict()    ) { goto errcase;                          }
+    else if ( isValMatrix()  && b.isValDgraph()  ) { goto errcase;                          }
 
     else if ( isValString()  && b.isValNull()    ) { goto errcase; }
     else if ( isValString()  && b.isValInteger() ) { goto errcase; }
@@ -11007,6 +11313,7 @@ gentype &gentype::leftdiv(const gentype &b)
     else if ( isValString()  && b.isValMatrix()  ) { goto errcase; }
     else if ( isValString()  && b.isValString()  ) { goto errcase; }
     else if ( isValString()  && b.isValSet()     ) { goto errcase; }
+    else if ( isValString()  && b.isValDict()    ) { goto errcase; }
     else if ( isValString()  && b.isValDgraph()  ) { goto errcase; }
 
     else if ( isValSet()     && b.isValNull()    ) { dir_set() *= inv(b); }
@@ -11017,6 +11324,7 @@ gentype &gentype::leftdiv(const gentype &b)
     else if ( isValSet()     && b.isValMatrix()  ) { goto errcase;        }
     else if ( isValSet()     && b.isValString()  ) { goto errcase;        }
     else if ( isValSet()     && b.isValSet()     ) { goto errcase;        }
+    else if ( isValSet()     && b.isValDict()    ) { goto errcase;        }
     else if ( isValSet()     && b.isValDgraph()  ) { goto errcase;        }
 
     else if ( isValDgraph()  && b.isValNull()    ) { goto errcase; }
@@ -11027,6 +11335,7 @@ gentype &gentype::leftdiv(const gentype &b)
     else if ( isValDgraph()  && b.isValMatrix()  ) { goto errcase; }
     else if ( isValDgraph()  && b.isValString()  ) { goto errcase; }
     else if ( isValDgraph()  && b.isValSet()     ) { goto errcase; }
+    else if ( isValDgraph()  && b.isValDict()    ) { goto errcase; }
     else if ( isValDgraph()  && b.isValDgraph()  ) { goto errcase; }
 
     else
@@ -12360,15 +12669,17 @@ gentype &operator*=(gentype &a, const d_anion  &bb)
 
 
 
-int trueOR(double dummy);
+int trueOR (double dummy);
 int falseOR(double dummy);
+
 int invertOR(int a);
 int bufferOR(int a);
-int andOR(int a, int b);
-int orOR(int a, int b);
-int norOR(int a, int b);
+
+int andOR (int a, int b);
+int orOR  (int a, int b);
+int norOR (int a, int b);
 int nandOR(int a, int b);
-int xorOR(int a, int b);
+int xorOR (int a, int b);
 int xandOR(int a, int b);
 
 int trueOR(double)
@@ -12450,6 +12761,7 @@ gentype &OP_elementwiseDefaultCallA(gentype &a, const gentype &fnbare, const cha
              if ( a.isValStrErr()                       ) { std::string errstr = fname; errstr += " ill-defined for string"; constructError(a,a,errstr); }
         else if ( a.isValDgraph()                       ) { std::string errstr = fname; errstr += " ill-defined for dgraph"; constructError(a,a,errstr); }
         else if ( a.isValSet()                          ) { (a.dir_set()   ).applyon(elmfn); }
+        else if ( a.isValDict()                         ) { (a.dir_dict()  ).applyon(elmfn); }
         else if ( a.isValMatrix()                       ) { (a.dir_matrix()).applyon(elmfn); }
         else if ( a.isValVector()                       ) { (a.dir_vector()).applyon(elmfn); }
         else if ( a.isValAnion()                        ) { a.dir_anion()  = anionfn( a.cast_anion(0) ); }
@@ -12465,6 +12777,7 @@ gentype &OP_elementwiseDefaultCallA(gentype &a, const gentype &fnbare, const cha
              if ( a.isValStrErr()                       ) { std::string errstr = fname; errstr += " ill-defined for string"; constructError(a,a,errstr); }
         else if ( a.isValDgraph()                       ) { std::string errstr = fname; errstr += " ill-defined for dgraph"; constructError(a,a,errstr); }
         else if ( a.isValSet()                          ) { (a.dir_set()   ).applyon(elmfn); }
+        else if ( a.isValDict()                         ) { (a.dir_dict()  ).applyon(elmfn); }
         else if ( a.isValMatrix()                       ) { (a.dir_matrix()).applyon(elmfn); }
         else if ( a.isValVector()                       ) { (a.dir_vector()).applyon(elmfn); }
         else if ( a.isValAnion()                        ) { a.dir_anion()  = restanionfn(a.cast_anion(0) ); }
@@ -12480,6 +12793,7 @@ gentype &OP_elementwiseDefaultCallA(gentype &a, const gentype &fnbare, const cha
              if ( a.isValStrErr()                       ) { std::string errstr = fname; errstr += " ill-defined for string"; constructError(a,a,errstr); }
         else if ( a.isValDgraph()                       ) { std::string errstr = fname; errstr += " ill-defined for dgraph"; constructError(a,a,errstr); }
         else if ( a.isValSet()                          ) { (a.dir_set()   ).applyon(elmfn); }
+        else if ( a.isValDict()                         ) { (a.dir_dict()  ).applyon(elmfn); }
         else if ( a.isValMatrix()                       ) { (a.dir_matrix()).applyon(elmfn); }
         else if ( a.isValVector()                       ) { (a.dir_vector()).applyon(elmfn); }
         else if ( a.isValAnion()                        ) { std::string errstr = fname; errstr += " ill-defined for anions"; constructError(a,a,errstr); }
@@ -12495,6 +12809,7 @@ gentype &OP_elementwiseDefaultCallA(gentype &a, const gentype &fnbare, const cha
              if ( a.isValStrErr()                       ) { std::string errstr = fname; errstr += " ill-defined for string"; constructError(a,a,errstr); }
         else if ( a.isValDgraph()                       ) { std::string errstr = fname; errstr += " ill-defined for dgraph"; constructError(a,a,errstr); }
         else if ( a.isValSet()                          ) { (a.dir_set()   ).applyon(elmfn); }
+        else if ( a.isValDict()                         ) { (a.dir_dict()  ).applyon(elmfn); }
         else if ( a.isValMatrix()                       ) { (a.dir_matrix()).applyon(elmfn); }
         else if ( a.isValVector()                       ) { (a.dir_vector()).applyon(elmfn); }
         else if ( a.isValAnion()                        ) { std::string errstr = fname; errstr += " ill-defined for anions"; constructError(a,a,errstr); }
@@ -12524,9 +12839,10 @@ gentype &elementwiseDefaultCallB(gentype &res, const gentype &a, const gentype &
     {
 	     if ( a.isValStrErr() ) { std::string errstr = fname; errstr += " ill-defined for string"; constructError(a,res,errstr); }
         else if ( a.isValDgraph() ) { std::string errstr = fname; errstr += " ill-defined for dgraph"; constructError(a,res,errstr); }
-        else if ( a.isValSet()    ) { Set<gentype>    temp(a.cast_set(0));    temp.applyon(elmfn, (const void *) &b); res = temp; }
-	else if ( a.isValMatrix() ) { Matrix<gentype> temp(a.cast_matrix(0)); temp.applyon(elmfn, (const void *) &b); res = temp; }
-	else if ( a.isValVector() ) { Vector<gentype> temp(a.cast_vector(0)); temp.applyon(elmfn, (const void *) &b); res = temp; }
+        else if ( a.isValSet()    ) { Set<gentype>              temp(a.cast_set(0));    temp.applyon(elmfn, (const void *) &b); res = temp; }
+        else if ( a.isValDict()   ) { Dict<gentype,dictkey>     temp(a.cast_dict(0));   temp.applyon(elmfn, (const void *) &b); res = temp; }
+	else if ( a.isValMatrix() ) { Matrix<gentype>           temp(a.cast_matrix(0)); temp.applyon(elmfn, (const void *) &b); res = temp; }
+	else if ( a.isValVector() ) { Vector<gentype>           temp(a.cast_vector(0)); temp.applyon(elmfn, (const void *) &b); res = temp; }
 	else                        { res = specfn(a,b); }
     }
 
@@ -12685,7 +13001,11 @@ gentype &elementwiseDefaultCallC(gentype &res, const gentype &a, const gentype &
     return res;
 }
 
-gentype &maxmincommonform(gentype &res, const gentype &a, const char *fname, gentype (*matfn)(const Matrix<gentype> &, int &, int &), gentype (*vecfn)(const Vector<gentype> &, int &), gentype (*basevecfn)(const Vector<gentype> &), gentype (*setfn)(const Set<gentype> &), int &i, int &j, int getarg, int absres, int allres)
+gentype &maxmincommonform(gentype &res, const gentype &a, const char *fname, gentype (*matfn)(const Matrix<gentype> &, int &, int &),
+                                                                             gentype (*vecfn)(const Vector<gentype> &, int &),
+                                                                             gentype (*basevecfn)(const Vector<gentype> &),
+                                                                             gentype (*setfn)(const Set<gentype> &),
+                          int &i, int &j, int getarg, int absres, int allres)
 {
     i = 0;
     j = 0;
@@ -12780,6 +13100,12 @@ gentype &maxmincommonform(gentype &res, const gentype &a, const char *fname, gen
     else if ( a.isValSet() && ( setfn != nullptr ) )
     {
         res = setfn(a.cast_set(0));
+    }
+
+    else if ( a.isValDict() )
+    {
+        std::string fnname = fname;
+        constructError(a,res,"Dict "+fnname+" not implemented");
     }
 
     else if ( a.isValVector() && ( basevecfn != nullptr ) )
@@ -12907,6 +13233,12 @@ gentype &zaxmincommonform(gentype &res, const gentype &a, const char *fname, con
     else if ( a.isValSet() && ( setfn != nullptr ) )
     {
         res = setfn(a.cast_set(0));
+    }
+
+    else if ( a.isValDict() )
+    {
+        std::string fnname = fname;
+        constructError(a,res,"Dict "+fnname+" not implemented");
     }
 
     else if ( a.isValVector() && ( basevecfn != nullptr ) )
@@ -13335,6 +13667,7 @@ gentype genpowintern(const gentype &a, const gentype &b, const char *powname, d_
 
          if ( a.isValStrErr() ) { constructError(a,b,res,strpowname+" ill-defined for string"); }
     else if ( a.isValSet()    ) { constructError(a,b,res,strpowname+" ill-defined for set"   ); }
+    else if ( a.isValDict()   ) { constructError(a,b,res,strpowname+" ill-defined for dict"  ); }
     else if ( a.isValDgraph() ) { constructError(a,b,res,strpowname+" ill-defined for dgraph"); }
     else if ( a.isValVector() ) { constructError(a,b,res,strpowname+" ill-defined for vector"); }
     else if ( b.isValStrErr() ) { constructError(a,b,res,strpowname+" ill-defined for string exponent"); }
@@ -13921,7 +14254,7 @@ gentype &OP_isset(gentype &x)
 {
     if ( x.isValEqnDir() )
     {
-        const static gentype res("ismatrix(x)");
+        const static gentype res("isset(x)");
         x   = res(x);
     }
 
@@ -13933,11 +14266,27 @@ gentype &OP_isset(gentype &x)
     return x;
 }
 
+gentype &OP_isdict(gentype &x)
+{
+    if ( x.isValEqnDir() )
+    {
+        const static gentype res("isdict(x)");
+        x   = res(x);
+    }
+
+    else
+    {
+        x = x.isValDict();
+    }
+
+    return x;
+}
+
 gentype &OP_isdgraph(gentype &x)
 {
     if ( x.isValEqnDir() )
     {
-        const static gentype res("ismatrix(x)");
+        const static gentype res("isdgraph(x)");
         x   = res(x);
     }
 
@@ -14224,8 +14573,8 @@ gentype im_quat(const gentype &x)
     }
 
          if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,res,"im_quat must have integer arguments"); }
-    else if ( x.cast_int(0) < 0                    ) { constructError(x,res,"im_quat argument must be 0,1,2,3"); }
-    else if ( x.cast_int(0) > 3                    ) { constructError(x,res,"im_quat argument must be 0,1,2,3"); }
+    else if ( x.cast_int(0) < 0                   ) { constructError(x,res,"im_quat argument must be 0,1,2,3"); }
+    else if ( x.cast_int(0) > 3                   ) { constructError(x,res,"im_quat argument must be 0,1,2,3"); }
     else
     {
 	d_anion tres(2);
@@ -14247,8 +14596,8 @@ gentype im_octo(const gentype &x)
     }
 
          if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,res,"im_octo must have integer arguments"); }
-    else if ( x.cast_int(0) < 0                    ) { constructError(x,res,"im_octo argument must be 0,1,2,3,4,5,6,7"); }
-    else if ( x.cast_int(0) > 7                    ) { constructError(x,res,"im_octo argument must be 0,1,2,3,4,5,6,7"); }
+    else if ( x.cast_int(0) < 0                   ) { constructError(x,res,"im_octo argument must be 0,1,2,3,4,5,6,7"); }
+    else if ( x.cast_int(0) > 7                   ) { constructError(x,res,"im_octo argument must be 0,1,2,3,4,5,6,7"); }
     else
     {
 	d_anion tres(3);
@@ -14269,10 +14618,10 @@ gentype im_anion(const gentype &x, const gentype &y)
         return resx(x,y);
     }
 
-         if ( !y.isCastableToIntegerWithoutLoss()              ) { constructError(x,y,res,"im_anion must have integer arguments"); }
-    else if ( !x.isCastableToIntegerWithoutLoss()              ) { constructError(x,y,res,"im_anion must have integer arguments"); }
+         if ( !y.isCastableToIntegerWithoutLoss()               ) { constructError(x,y,res,"im_anion must have integer arguments"); }
+    else if ( !x.isCastableToIntegerWithoutLoss()               ) { constructError(x,y,res,"im_anion must have integer arguments"); }
     else if ( y.cast_int(0) < 0                                 ) { constructError(x,y,res,"im_anion argument must be 0,1,...,2^n-1"); }
-    else if ( y.cast_int(0) > pow(2.0,(double) x.cast_int(0))-1  ) { constructError(x,y,res,"im_anion argument must be 0,1,...,2^n-1"); }
+    else if ( y.cast_int(0) > pow(2.0,(double) x.cast_int(0))-1 ) { constructError(x,y,res,"im_anion argument must be 0,1,...,2^n-1"); }
     else
     {
 	d_anion tres(x.cast_int(0));
@@ -14294,8 +14643,8 @@ gentype Im_complex(const gentype &x)
     }
 
          if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,res,"im_complex must have integer arguments"); }
-    else if ( x.cast_int(0) < 0                    ) { constructError(x,res,"im_complex argument must be 0 or 1"); }
-    else if ( x.cast_int(0) > 1                    ) { constructError(x,res,"im_complex argument must be 0 or 1"); }
+    else if ( x.cast_int(0) < 0                   ) { constructError(x,res,"im_complex argument must be 0 or 1"); }
+    else if ( x.cast_int(0) > 1                   ) { constructError(x,res,"im_complex argument must be 0 or 1"); }
     else
     {
 	d_anion tres(1);
@@ -14317,8 +14666,8 @@ gentype Im_quat(const gentype &x)
     }
 
          if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,res,"im_quat must have integer arguments"); }
-    else if ( x.cast_int(0) < 0                    ) { constructError(x,res,"im_quat argument must be 0,1,2,3"); }
-    else if ( x.cast_int(0) > 3                    ) { constructError(x,res,"im_quat argument must be 0,1,2,3"); }
+    else if ( x.cast_int(0) < 0                   ) { constructError(x,res,"im_quat argument must be 0,1,2,3"); }
+    else if ( x.cast_int(0) > 3                   ) { constructError(x,res,"im_quat argument must be 0,1,2,3"); }
     else
     {
 	d_anion tres(2);
@@ -14340,8 +14689,8 @@ gentype Im_octo(const gentype &x)
     }
 
          if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,res,"im_octo must have integer arguments"); }
-    else if ( x.cast_int(0) < 0                    ) { constructError(x,res,"im_octo argument must be 0,1,2,3,4,5,6,7"); }
-    else if ( x.cast_int(0) > 7                    ) { constructError(x,res,"im_octo argument must be 0,1,2,3,4,5,6,7"); }
+    else if ( x.cast_int(0) < 0                   ) { constructError(x,res,"im_octo argument must be 0,1,2,3,4,5,6,7"); }
+    else if ( x.cast_int(0) > 7                   ) { constructError(x,res,"im_octo argument must be 0,1,2,3,4,5,6,7"); }
     else
     {
 	d_anion tres(3);
@@ -14362,10 +14711,10 @@ gentype Im_anion(const gentype &x, const gentype &y)
         return resx(x,y);
     }
 
-         if ( !y.isCastableToIntegerWithoutLoss()              ) { constructError(x,y,res,"im_anion must have integer arguments"); }
-    else if ( !x.isCastableToIntegerWithoutLoss()              ) { constructError(x,y,res,"im_anion must have integer arguments"); }
+         if ( !y.isCastableToIntegerWithoutLoss()               ) { constructError(x,y,res,"im_anion must have integer arguments"); }
+    else if ( !x.isCastableToIntegerWithoutLoss()               ) { constructError(x,y,res,"im_anion must have integer arguments"); }
     else if ( y.cast_int(0) < 0                                 ) { constructError(x,y,res,"im_anion argument must be 0,1,...,2^n-1"); }
-    else if ( y.cast_int(0) > pow(2.0,(double) x.cast_int(0))-1  ) { constructError(x,y,res,"im_anion argument must be 0,1,...,2^n-1"); }
+    else if ( y.cast_int(0) > pow(2.0,(double) x.cast_int(0))-1 ) { constructError(x,y,res,"im_anion argument must be 0,1,...,2^n-1"); }
     else
     {
 	d_anion tres(x.cast_int(0));
@@ -14388,7 +14737,7 @@ gentype vect_const(const gentype &x, const gentype &y)
     }
 
          if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,y,res,"vect_const must have integer vector size"); }
-    else if ( x.cast_int(0) < 0                    ) { constructError(x,y,res,"vect_const must have non-negative size"); }
+    else if ( x.cast_int(0) < 0                   ) { constructError(x,y,res,"vect_const must have non-negative size"); }
     else
     {
 	Vector<gentype> tres(x.cast_int(0));
@@ -14411,9 +14760,9 @@ gentype vect_unit(const gentype &x, const gentype &y)
 
          if ( !x.isCastableToIntegerWithoutLoss()   ) { constructError(x,y,res,"vect_unit must have integer arguments"); }
     else if ( !y.isCastableToIntegerWithoutLoss()   ) { constructError(x,y,res,"vect_unit must have integer arguments"); }
-    else if ( x.cast_int(0) < 0                      ) { constructError(x,y,res,"vect_unit must have non-negative size"); }
-    else if ( y.cast_int(0) < 0                      ) { constructError(x,y,res,"vect_unit must have non-negative index"); }
-    else if ( y.cast_int(0) >= x.cast_int(0)          ) { constructError(x,y,res,"vect_unit must have index less than vector size"); }
+    else if ( x.cast_int(0) < 0                     ) { constructError(x,y,res,"vect_unit must have non-negative size"); }
+    else if ( y.cast_int(0) < 0                     ) { constructError(x,y,res,"vect_unit must have non-negative index"); }
+    else if ( y.cast_int(0) >= x.cast_int(0)        ) { constructError(x,y,res,"vect_unit must have index less than vector size"); }
     else
     {
 	Vector<gentype> tres(x.cast_int(0));
@@ -14500,6 +14849,7 @@ gentype cayleyDickson(const gentype &x, const gentype &y)
     else if ( x.isValMatrix() || y.isValMatrix() ) { constructError(x,y,res,"CayleyDickson not defined for matrices."); }
     else if ( x.isValVector() || y.isValVector() ) { constructError(x,y,res,"CayleyDickson not defined for vectors."); }
     else if ( x.isValSet()    || y.isValSet()    ) { constructError(x,y,res,"CayleyDickson not defined for sets."); }
+    else if ( x.isValDict()   || y.isValDict()   ) { constructError(x,y,res,"CayleyDickson not defined for dictionary."); }
     else if ( x.isValDgraph() || y.isValDgraph() ) { constructError(x,y,res,"CayleyDickson not defined for dgraphs."); }
     else                                           { d_anion temp(x.cast_anion(0),y.cast_anion(0)); res = temp; }
 
@@ -14533,6 +14883,7 @@ gentype CayleyDickson(const gentype &x, const gentype &y)
     else if ( x.isValMatrix() || y.isValMatrix() ) { constructError(x,y,res,"CayleyDickson not defined for matrices."); }
     else if ( x.isValVector() || y.isValVector() ) { constructError(x,y,res,"CayleyDickson not defined for vectors."); }
     else if ( x.isValSet()    || y.isValSet()    ) { constructError(x,y,res,"CayleyDickson not defined for sets."); }
+    else if ( x.isValDict()   || y.isValDict()   ) { constructError(x,y,res,"CayleyDickson not defined for dict."); }
     else if ( x.isValDgraph() || y.isValDgraph() ) { constructError(x,y,res,"CayleyDickson not defined for dgraphs."); }
     else                                           { d_anion temp(conj(x.cast_anion(0)),-y.cast_anion(0)); res = temp; }
 
@@ -15286,9 +15637,10 @@ gentype multifact(const gentype &i, const gentype &m)
          if ( i.isValStrErr()                     ) { constructError(i,m,res,"multifact not defined for strings."); }
     else if ( i.isValDgraph()                     ) { constructError(i,m,res,"multifact not defined for dgraphs."); }
     else if ( i.isValAnion()                      ) { constructError(i,m,res,"multifact not defined for anions."); }
-    else if ( i.isValSet()                        ) { Set<gentype>    temp(i.cast_set(0));    temp.applyon(dubmultifact,(void *) &m); res = temp; }
-    else if ( i.isValMatrix()                     ) { Matrix<gentype> temp(i.cast_matrix(0)); temp.applyon(dubmultifact,(void *) &m); res = temp; }
-    else if ( i.isValVector()                     ) { Vector<gentype> temp(i.cast_vector(0)); temp.applyon(dubmultifact,(void *) &m); res = temp; }
+    else if ( i.isValSet()                        ) { Set<gentype>              temp(i.cast_set(0));    temp.applyon(dubmultifact,(void *) &m); res = temp; }
+    else if ( i.isValDict()                       ) { Dict<gentype,dictkey>     temp(i.cast_dict(0));   temp.applyon(dubmultifact,(void *) &m); res = temp; }
+    else if ( i.isValMatrix()                     ) { Matrix<gentype>           temp(i.cast_matrix(0)); temp.applyon(dubmultifact,(void *) &m); res = temp; }
+    else if ( i.isValVector()                     ) { Vector<gentype>           temp(i.cast_vector(0)); temp.applyon(dubmultifact,(void *) &m); res = temp; }
     //else if ( !i.isCastableToIntegerWithoutLoss() ) { constructError(i,m,res,"multifact not defined for non-integers."); }
     //else if ( !m.isCastableToIntegerWithoutLoss() ) { constructError(i,m,res,"multifact not defined for non-integer m."); }
 
@@ -15850,6 +16202,7 @@ gentype abs1(const gentype &a)
     }
 
     else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented"); }
+    else if ( a.isValDict()    ) { constructError(a,res,"Dictonary norm not implemented"); }
     else if ( a.isValSet()     ) { res = abs1(a.cast_set(0)); }
     else if ( a.isValDgraph()  ) { res = abs1(a.cast_dgraph(0)); }
     else if ( a.isValMatrix()  ) { res = abs1mat(a.cast_matrix(0)); }
@@ -15878,6 +16231,7 @@ gentype abs2(const gentype &a)
     }
 
     else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented"); }
+    else if ( a.isValDict()    ) { constructError(a,res,"Dictonary norm not implemented"); }
     else if ( a.isValSet()     ) { res = abs2(a.cast_set(0)); }
     else if ( a.isValDgraph()  ) { res = abs2(a.cast_dgraph(0)); }
     else if ( a.isValMatrix()  ) { res = abs2mat(a.cast_matrix(0)); }
@@ -15911,6 +16265,7 @@ gentype absp(const gentype &a, const gentype &q)
     }
 
     else if ( a.isValStrErr()  ) { constructError(a,q,res,"String norm not implemented"); }
+    else if ( a.isValDict()    ) { constructError(a,q,res,"Dictonary norm not implemented"); }
     else if ( a.isValSet()     ) { res = absp(a.cast_set(0),q.cast_double(0)); }
     else if ( a.isValDgraph()  ) { res = absp(a.cast_dgraph(0),q.cast_double(0)); }
     else if ( a.isValMatrix()  ) { res = abspmat(a.cast_matrix(0),q.cast_double(0)); }
@@ -16029,6 +16384,7 @@ gentype absinf(const gentype &a)
     }
 
     else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented"); }
+    else if ( a.isValDict()    ) { constructError(a,res,"Dictonary norm not implemented"); }
     else if ( a.isValMatrix()  ) { res = absinfmat(a.cast_matrix(0)); }
     else if ( a.isValSet()     ) { res = absinf(a.cast_set(0)); }
     else if ( a.isValDgraph()  ) { res = absinf(a.cast_dgraph(0)); }
@@ -16147,6 +16503,7 @@ gentype abs0(const gentype &a)
     }
 
     else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented"); }
+    else if ( a.isValDict()    ) { constructError(a,res,"Dictonary norm not implemented"); }
     else if ( a.isValMatrix()  ) { res = abs0mat(a.cast_matrix(0)); }
     else if ( a.isValSet()     ) { res = abs0(a.cast_set(0)); }
     else if ( a.isValDgraph()  ) { res = abs0(a.cast_dgraph(0)); }
@@ -16201,6 +16558,7 @@ gentype norm1(const gentype &a)
             }
 
             else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented"); }
+            else if ( aa.isValDict()    ) { constructError(aa,bb,"Dictonary norm not implemented"); }
             else if ( aa.isValSet()     ) { bb = norm1(aa.cast_set(0)); }
             else if ( aa.isValDgraph()  ) { bb = norm1(aa.cast_dgraph(0)); }
             else if ( aa.isValMatrix()  ) { bb = norm2mat(aa.cast_matrix(0)); }
@@ -16256,6 +16614,7 @@ gentype norm1(const gentype &a)
             }
 
             else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented"); }
+            else if ( aa.isValDict()    ) { constructError(aa,bb,"Dictonary norm not implemented"); }
             else if ( aa.isValSet()     ) { bb = norm1(aa.cast_set(0)); }
             else if ( aa.isValDgraph()  ) { bb = norm1(aa.cast_dgraph(0)); }
             else if ( aa.isValMatrix()  ) { bb = norm2mat(aa.cast_matrix(0)); }
@@ -16297,6 +16656,7 @@ gentype norm1(const gentype &a)
     }
 
     else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented"); }
+    else if ( a.isValDict()    ) { constructError(a,res,"Dictonary norm not implemented"); }
     else if ( a.isValSet()     ) { res = norm1(a.cast_set(0)); }
     else if ( a.isValDgraph()  ) { res = norm1(a.cast_dgraph(0)); }
     else if ( a.isValMatrix()  ) { res = norm2mat(a.cast_matrix(0)); }
@@ -16358,6 +16718,7 @@ gentype norm2(const gentype &a)
             }
 
             else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented"); }
+            else if ( aa.isValDict()    ) { constructError(aa,bb,"Dictonary norm not implemented"); }
             else if ( aa.isValSet()     ) { bb = norm2(aa.cast_set(0)); }
             else if ( aa.isValDgraph()  ) { bb = norm2(aa.cast_dgraph(0)); }
             else if ( aa.isValMatrix()  ) { bb = norm2mat(aa.cast_matrix(0)); }
@@ -16416,6 +16777,7 @@ gentype norm2(const gentype &a)
             }
 
             else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm2 not implemented"); }
+            else if ( aa.isValDict()    ) { constructError(aa,bb,"Dictonary norm not implemented"); }
             else if ( aa.isValSet()     ) { bb = norm2(aa.cast_set(0)); }
             else if ( aa.isValDgraph()  ) { bb = norm2(aa.cast_dgraph(0)); }
             else if ( aa.isValMatrix()  ) { bb = norm2mat(aa.cast_matrix(0)); }
@@ -16457,6 +16819,7 @@ gentype norm2(const gentype &a)
     }
 
     else if ( a.isValStrErr()  ) { constructError(a,res,"String norm2 not implemented"); }
+    else if ( a.isValDict()    ) { constructError(a,res,"Dictonary norm not implemented"); }
     else if ( a.isValSet()     ) { res = norm2(a.cast_set(0)); }
     else if ( a.isValDgraph()  ) { res = norm2(a.cast_dgraph(0)); }
     else if ( a.isValMatrix()  ) { res = norm2mat(a.cast_matrix(0)); }
@@ -16515,6 +16878,7 @@ gentype normp(const gentype &a, const gentype &q)
             }
 
             else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented"); }
+            else if ( aa.isValDict()    ) { constructError(aa,bb,"Dictonary norm not implemented"); }
             else if ( aa.isValSet()     ) { bb = normp(aa.cast_set(0),p); }
             else if ( aa.isValDgraph()  ) { bb = normp(aa.cast_dgraph(0),p); }
             else if ( aa.isValMatrix()  ) { bb = normpmat(aa.cast_matrix(0),p); }
@@ -16572,6 +16936,7 @@ gentype normp(const gentype &a, const gentype &q)
             }
 
             else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented"); }
+            else if ( aa.isValDict()    ) { constructError(aa,bb,"Dictonary norm not implemented"); }
             else if ( aa.isValSet()     ) { bb = normp(aa.cast_set(0),p); }
             else if ( aa.isValDgraph()  ) { bb = normp(aa.cast_dgraph(0),p); }
             else if ( aa.isValMatrix()  ) { bb = normpmat(aa.cast_matrix(0),p); }
@@ -16618,6 +16983,7 @@ gentype normp(const gentype &a, const gentype &q)
     }
 
     else if ( a.isValStrErr()  ) { constructError(a,q,res,"String norm not implemented"); }
+    else if ( a.isValDict()    ) { constructError(a,q,res,"Dictonary norm not implemented"); }
     else if ( a.isValSet()     ) { res = normp(a.cast_set(0),q.cast_double(0)); }
     else if ( a.isValDgraph()  ) { res = normp(a.cast_dgraph(0),q.cast_double(0)); }
     else if ( a.isValMatrix()  ) { res = normpmat(a.cast_matrix(0),q.cast_double(0)); }
@@ -16641,6 +17007,7 @@ gentype angle(const gentype &a)
     }
 
          if ( a.isValStrErr()  ) { constructError(a,res,"angle ill-defined for string"); }
+    else if ( a.isValDict()    ) { constructError(a,res,"angle ill-defined for dict"); }
     else if ( a.isValSet()     ) { constructError(a,res,"angle ill-defined for sets"); }
     else if ( a.isValDgraph()  ) { constructError(a,res,"angle ill-defined for dgraphs"); }
     else if ( a.isValMatrix()  ) { res = angle(a.cast_matrix(0)); }
@@ -16667,6 +17034,7 @@ gentype inv(const gentype &a)
 
          if ( a.isValStrErr()  ) { constructError(a,res,"inv ill-defined for string"); }
     else if ( a.isValSet()     ) { constructError(a,res,"inv ill-defined for sets"); }
+    else if ( a.isValDict()    ) { constructError(a,res,"inv ill-defined for dict"); }
     else if ( a.isValDgraph()  ) { constructError(a,res,"inv ill-defined for dgraphs"); }
     else if ( a.isValMatrix()  ) { res = inv(a.cast_matrix(0)); }
     else if ( a.isValVector()  ) { constructError(a,res,"inv ill-defined for vector"); }
@@ -16936,9 +17304,10 @@ gentype gamma(const gentype &a)
 
          if ( a.isValStrErr() ) { constructError(a,res,"gamma not defined for strings."); }
     else if ( a.isValDgraph() ) { constructError(a,res,"gamma not defined for dgraphs."); }
-    else if ( a.isValSet()    ) { Set<gentype>    temp(a.cast_set(0));    temp.applyon(gamma); res = temp; }
-    else if ( a.isValMatrix() ) { Matrix<gentype> temp(a.cast_matrix(0)); temp.applyon(gamma); res = temp; }
-    else if ( a.isValVector() ) { Vector<gentype> temp(a.cast_vector(0)); temp.applyon(gamma); res = temp; }
+    else if ( a.isValSet()    ) { Set<gentype>          temp(a.cast_set(0));    temp.applyon(gamma); res = temp; }
+    else if ( a.isValDict()   ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(gamma); res = temp; }
+    else if ( a.isValMatrix() ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(gamma); res = temp; }
+    else if ( a.isValVector() ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(gamma); res = temp; }
     else if ( a.isValAnion()  ) { constructError(a,res,"gamma not defined for anions."); }
 
     else
@@ -16969,9 +17338,10 @@ gentype lngamma(const gentype &a)
 
          if ( a.isValStrErr() ) { constructError(a,res,"lngamma not defined for strings."); }
     else if ( a.isValDgraph() ) { constructError(a,res,"lngamma not defined for dgraphs."); }
-    else if ( a.isValSet()    ) { Set<gentype>    temp(a.cast_set(0));    temp.applyon(lngamma); res = temp; }
-    else if ( a.isValMatrix() ) { Matrix<gentype> temp(a.cast_matrix(0)); temp.applyon(lngamma); res = temp; }
-    else if ( a.isValVector() ) { Vector<gentype> temp(a.cast_vector(0)); temp.applyon(lngamma); res = temp; }
+    else if ( a.isValSet()    ) { Set<gentype>          temp(a.cast_set(0));    temp.applyon(lngamma); res = temp; }
+    else if ( a.isValDict()   ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(lngamma); res = temp; }
+    else if ( a.isValMatrix() ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(lngamma); res = temp; }
+    else if ( a.isValVector() ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(lngamma); res = temp; }
     else if ( a.isValAnion()  ) { constructError(a,res,"lngamma not defined for anions."); }
 
     else
@@ -17002,10 +17372,11 @@ gentype psi(const gentype &x)
     }
 
          if ( x.isValStrErr() ) { constructError(x,res,"psi not defined for strings."); }
-    else if ( x.isValSet()    ) { Set<gentype>    temp(x.cast_set(0));    temp.applyon(psi); res = temp; }
+    else if ( x.isValSet()    ) { Set<gentype>          temp(x.cast_set(0));    temp.applyon(psi); res = temp; }
+    else if ( x.isValDict()   ) { Dict<gentype,dictkey> temp(x.cast_dict(0));   temp.applyon(psi); res = temp; }
+    else if ( x.isValMatrix() ) { Matrix<gentype>       temp(x.cast_matrix(0)); temp.applyon(psi); res = temp; }
+    else if ( x.isValVector() ) { Vector<gentype>       temp(x.cast_vector(0)); temp.applyon(psi); res = temp; }
     else if ( x.isValDgraph() ) { constructError(x,res,"psi not defined for dgraphs."); }
-    else if ( x.isValMatrix() ) { Matrix<gentype> temp(x.cast_matrix(0)); temp.applyon(psi); res = temp; }
-    else if ( x.isValVector() ) { Vector<gentype> temp(x.cast_vector(0)); temp.applyon(psi); res = temp; }
     else if ( x.isValAnion()  ) { constructError(x,res,"psi not defined for anions."); }
 
     else
@@ -17038,10 +17409,11 @@ gentype psi_n(const gentype &i, const gentype &x)
     }
 
          if ( x.isValStrErr()                     ) { constructError(i,x,res,"psi_n not defined for strings."); }
-    else if ( x.isValSet()                        ) { Set<gentype>    temp(x.cast_set(0));    temp.applyon(dubpsi_n,(void *) &i); res = temp; }
+    else if ( x.isValSet()                        ) { Set<gentype>          temp(x.cast_set(0));    temp.applyon(dubpsi_n,(void *) &i); res = temp; }
+    else if ( x.isValDict()                       ) { Dict<gentype,dictkey> temp(x.cast_dict(0));   temp.applyon(dubpsi_n,(void *) &i); res = temp; }
     else if ( x.isValDgraph()                     ) { constructError(i,x,res,"psi_n not defined for dgraphs."); }
-    else if ( x.isValMatrix()                     ) { Matrix<gentype> temp(x.cast_matrix(0)); temp.applyon(dubpsi_n,(void *) &i); res = temp; }
-    else if ( x.isValVector()                     ) { Vector<gentype> temp(x.cast_vector(0)); temp.applyon(dubpsi_n,(void *) &i); res = temp; }
+    else if ( x.isValMatrix()                     ) { Matrix<gentype>       temp(x.cast_matrix(0)); temp.applyon(dubpsi_n,(void *) &i); res = temp; }
+    else if ( x.isValVector()                     ) { Vector<gentype>       temp(x.cast_vector(0)); temp.applyon(dubpsi_n,(void *) &i); res = temp; }
     else if ( x.isValAnion()                      ) { constructError(i,x,res,"psi_n not defined for anions."); }
     else if ( !i.isCastableToIntegerWithoutLoss() ) { constructError(i,x,res,"psi_n not defined for non-integer n."); }
 
@@ -17081,7 +17453,8 @@ gentype gamic(const gentype &a, const gentype &x)
     }
 
          if ( a.isValStrErr() ) { constructError(a,x,res,"gamic not defined for strings."); }
-    else if ( a.isValSet()    ) { Set<gentype>    temp(a.cast_set(0)   ); temp.applyon(dubgamic,(void *) &x); res = temp; }
+    else if ( a.isValSet()    ) { Set<gentype>          temp(a.cast_set(0));  temp.applyon(dubgamic,(void *) &x); res = temp; }
+    else if ( a.isValDict()   ) { Dict<gentype,dictkey> temp(a.cast_dict(0)); temp.applyon(dubgamic,(void *) &x); res = temp; }
     else if ( a.isValDgraph() ) { constructError(a,x,res,"gamic not defined for dgraphs."); }
     else if ( a.isValMatrix() ) { Matrix<gentype> temp(a.cast_matrix(0)); temp.applyon(dubgamic,(void *) &x); res = temp; }
     else if ( a.isValVector() ) { Vector<gentype> temp(a.cast_vector(0)); temp.applyon(dubgamic,(void *) &x); res = temp; }
@@ -17121,9 +17494,10 @@ gentype zeta(const gentype &a)
 
          if ( a.isValStrErr() ) { constructError(a,res,"zeta not defined for strings."); }
     else if ( a.isValDgraph() ) { constructError(a,res,"zeta not defined for dgraphs."); }
-    else if ( a.isValSet()    ) { Set<gentype>    temp(a.cast_set(0));    temp.applyon(zeta); res = temp; }
-    else if ( a.isValMatrix() ) { Matrix<gentype> temp(a.cast_matrix(0)); temp.applyon(zeta); res = temp; }
-    else if ( a.isValVector() ) { Vector<gentype> temp(a.cast_vector(0)); temp.applyon(zeta); res = temp; }
+    else if ( a.isValSet()    ) { Set<gentype>          temp(a.cast_set (0));   temp.applyon(zeta); res = temp; }
+    else if ( a.isValDict()   ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(zeta); res = temp; }
+    else if ( a.isValMatrix() ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(zeta); res = temp; }
+    else if ( a.isValVector() ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(zeta); res = temp; }
     else if ( a.isValAnion()  ) { constructError(a,res,"zeta not defined for anions."); }
 
     else
@@ -17149,9 +17523,10 @@ gentype lambertW(const gentype &a)
 
          if ( a.isValStrErr() ) { constructError(a,res,"lambert W not defined for strings."); }
     else if ( a.isValDgraph() ) { constructError(a,res,"lambert W not defined for dgraphs."); }
-    else if ( a.isValSet()    ) { Set<gentype>    temp(a.cast_set(0));    temp.applyon(lambertW); res = temp; }
-    else if ( a.isValMatrix() ) { Matrix<gentype> temp(a.cast_matrix(0)); temp.applyon(lambertW); res = temp; }
-    else if ( a.isValVector() ) { Vector<gentype> temp(a.cast_vector(0)); temp.applyon(lambertW); res = temp; }
+    else if ( a.isValSet()    ) { Set<gentype>          temp(a.cast_set(0));    temp.applyon(lambertW); res = temp; }
+    else if ( a.isValDict()   ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(lambertW); res = temp; }
+    else if ( a.isValMatrix() ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(lambertW); res = temp; }
+    else if ( a.isValVector() ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(lambertW); res = temp; }
     else if ( a.isValAnion()  ) { constructError(a,res,"lambert W not defined for anions."); }
 
     else
@@ -17182,9 +17557,10 @@ gentype lambertWx(const gentype &a)
 
          if ( a.isValStrErr() ) { constructError(a,res,"lambert W not defined for strings."); }
     else if ( a.isValDgraph() ) { constructError(a,res,"lambert W not defined for dgraphs."); }
-    else if ( a.isValSet()    ) { Set<gentype>    temp(a.cast_set(0));    temp.applyon(lambertWx); res = temp; }
-    else if ( a.isValMatrix() ) { Matrix<gentype> temp(a.cast_matrix(0)); temp.applyon(lambertWx); res = temp; }
-    else if ( a.isValVector() ) { Vector<gentype> temp(a.cast_vector(0)); temp.applyon(lambertWx); res = temp; }
+    else if ( a.isValSet()    ) { Set<gentype>          temp(a.cast_set(0));    temp.applyon(lambertWx); res = temp; }
+    else if ( a.isValDict()   ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(lambertWx); res = temp; }
+    else if ( a.isValMatrix() ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(lambertWx); res = temp; }
+    else if ( a.isValVector() ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(lambertWx); res = temp; }
     else if ( a.isValAnion()  ) { constructError(a,res,"lambert W not defined for anions."); }
 
     else
@@ -17278,9 +17654,10 @@ gentype dawson(const gentype &x)
 
          if ( x.isValStrErr() ) { constructError(x,res,"dawson not defined for strings."); }
     else if ( x.isValDgraph() ) { constructError(x,res,"dawson not defined for dgraphs."); }
-    else if ( x.isValSet()    ) { Set<gentype>    temp(x.cast_set(0));    temp.applyon(dawson); res = temp; }
-    else if ( x.isValMatrix() ) { Matrix<gentype> temp(x.cast_matrix(0)); temp.applyon(dawson); res = temp; }
-    else if ( x.isValVector() ) { Vector<gentype> temp(x.cast_vector(0)); temp.applyon(dawson); res = temp; }
+    else if ( x.isValSet()    ) { Set<gentype>          temp(x.cast_set(0));    temp.applyon(dawson); res = temp; }
+    else if ( x.isValDict()   ) { Dict<gentype,dictkey> temp(x.cast_dict(0));   temp.applyon(dawson); res = temp; }
+    else if ( x.isValMatrix() ) { Matrix<gentype>       temp(x.cast_matrix(0)); temp.applyon(dawson); res = temp; }
+    else if ( x.isValVector() ) { Vector<gentype>       temp(x.cast_vector(0)); temp.applyon(dawson); res = temp; }
     else if ( x.isValAnion()  ) { constructError(x,res,"dawson not defined for anions."); }
 
     else
@@ -18429,9 +18806,10 @@ gentype ceil(const gentype &a)
 
          if ( a.isValStrErr()  ) { constructError(a,res,"ceil not defined for strings."); }
     else if ( a.isValDgraph()  ) { constructError(a,res,"ceil not defined for dgraphs."); }
-    else if ( a.isValSet()     ) { Set<gentype>    temp(a.cast_set(0));    temp.applyon(ceil); res = temp; }
-    else if ( a.isValMatrix()  ) { Matrix<gentype> temp(a.cast_matrix(0)); temp.applyon(ceil); res = temp; }
-    else if ( a.isValVector()  ) { Vector<gentype> temp(a.cast_vector(0)); temp.applyon(ceil); res = temp; }
+    else if ( a.isValSet()     ) { Set<gentype>          temp(a.cast_set(0));    temp.applyon(ceil); res = temp; }
+    else if ( a.isValDict()    ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(ceil); res = temp; }
+    else if ( a.isValMatrix()  ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(ceil); res = temp; }
+    else if ( a.isValVector()  ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(ceil); res = temp; }
     else if ( a.isValAnion()   ) { constructError(a,res,"ceil not defined for anions."); }
     else if ( a.isValInteger() ) { res = a; }
     else if ( a.isCastableToIntegerWithoutLoss() ) { res = a.cast_int(0); }
@@ -18470,9 +18848,10 @@ gentype floor(const gentype &a)
 
          if ( a.isValStrErr()  ) { constructError(a,res,"floor not defined for strings."); }
     else if ( a.isValDgraph()  ) { constructError(a,res,"floor not defined for dgraphs."); }
-    else if ( a.isValSet()     ) { Set<gentype>    temp(a.cast_set(0));    temp.applyon(floor); res = temp; }
-    else if ( a.isValMatrix()  ) { Matrix<gentype> temp(a.cast_matrix(0)); temp.applyon(floor); res = temp; }
-    else if ( a.isValVector()  ) { Vector<gentype> temp(a.cast_vector(0)); temp.applyon(floor); res = temp; }
+    else if ( a.isValSet()     ) { Set<gentype>          temp(a.cast_set(0));    temp.applyon(floor); res = temp; }
+    else if ( a.isValDict()    ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(floor); res = temp; }
+    else if ( a.isValMatrix()  ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(floor); res = temp; }
+    else if ( a.isValVector()  ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(floor); res = temp; }
     else if ( a.isValAnion()   ) { constructError(a,res,"floor not defined for anions."); }
     else if ( a.isValInteger() ) { res = a; }
     else if ( a.isCastableToIntegerWithoutLoss() ) { res = a.cast_int(0); }
@@ -18511,9 +18890,10 @@ gentype rint(const gentype &a)
 
          if ( a.isValStrErr() ) { constructError(a,res,"rint not defined for strings."); }
     else if ( a.isValDgraph() ) { constructError(a,res,"rint not defined for dgraphs."); }
-    else if ( a.isValSet()    ) { Set<gentype>    temp(a.cast_set(0));    temp.applyon(rint); res = temp; }
-    else if ( a.isValMatrix() ) { Matrix<gentype> temp(a.cast_matrix(0)); temp.applyon(rint); res = temp; }
-    else if ( a.isValVector() ) { Vector<gentype> temp(a.cast_vector(0)); temp.applyon(rint); res = temp; }
+    else if ( a.isValSet()    ) { Set<gentype>          temp(a.cast_set(0));    temp.applyon(rint); res = temp; }
+    else if ( a.isValDict()   ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(rint); res = temp; }
+    else if ( a.isValMatrix() ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(rint); res = temp; }
+    else if ( a.isValVector() ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(rint); res = temp; }
     else if ( a.isValAnion()  ) { constructError(a,res,"rint not defined for anions."); }
     else if ( a.isValInteger() ) { res = a; }
     else if ( a.isCastableToIntegerWithoutLoss() ) { res = a.cast_int(0); }
@@ -19147,6 +19527,7 @@ gentype fourProd(const gentype &a, const gentype &b, const gentype &c, const gen
 
          if ( a.isValStrErr() || b.isValStrErr() || c.isValStrErr() || d.isValStrErr() ) { constructError(a,b,c,d,res,"String 4-product not implemented"); }
     else if ( a.isValSet()    || b.isValSet()    || c.isValSet()    || d.isValSet()    ) { constructError(a,b,c,d,res,"Set 4-product not implemented"); }
+    else if ( a.isValDict()   || b.isValDict()   || c.isValDict()   || d.isValDict()   ) { constructError(a,b,c,d,res,"Dict 4-product not implemented"); }
     else if ( a.isValDgraph() || b.isValDgraph() || c.isValDgraph() || d.isValDgraph() ) { constructError(a,b,c,d,res,"Dgraph 4-product not implemented"); }
     else if ( a.isValMatrix() || b.isValMatrix() || c.isValMatrix() || d.isValMatrix() ) { constructError(a,b,c,d,res,"Matrix 4-product not implemented"); }
     else if ( a.isValVector() || b.isValVector() || c.isValVector() || d.isValVector() ) { if ( ( a.size() != b.size() ) || ( b.size() != c.size() ) || ( c.size() != d.size() ) ) { constructError(a,b,c,d,res,"Size mismatch in 4-product"); } else { gentype temp; fourProduct(temp,a.cast_vector(0),b.cast_vector(0),c.cast_vector(0),d.cast_vector(0)); res = temp; } }
@@ -19170,6 +19551,7 @@ gentype outerProd(const gentype &a, const gentype &b)
 
          if ( a.isValStrErr() || b.isValStrErr() ) { constructError(a,b,res,"String outer product not implemented"); }
     else if ( a.isValSet()    || b.isValSet()    ) { constructError(a,b,res,"Set outer product not implemented"); }
+    else if ( a.isValDict()   || b.isValDict()   ) { constructError(a,b,res,"Dict outer product not implemented"); }
     else if ( a.isValDgraph() || b.isValDgraph() ) { constructError(a,b,res,"Dgraph outer product not implemented"); }
     else if ( a.isValMatrix() || b.isValMatrix() ) { constructError(a,b,res,"Matrix outer product not implemented"); }
     else if ( a.isValVector() || b.isValVector() ) { res = outerProduct(a.cast_vector(0),b.cast_vector(0)); }
@@ -19212,6 +19594,7 @@ gentype det(const gentype &a)
 
          if ( a.isValStrErr() ) { constructError(a,res,"String det not implemented"); }
     else if ( a.isValSet()    ) { constructError(a,res,"Set det not implemented"); }
+    else if ( a.isValDict()   ) { constructError(a,res,"Dict det not implemented"); }
     else if ( a.isValDgraph() ) { constructError(a,res,"Dgraph det not implemented"); }
     else if ( a.isValMatrix() ) { if ( a.numRows() != a.numCols() ) { constructError(a,res,"Determinant only defined for square matrices."); } else { res = (a.cast_matrix(0)).det(); } }
     else if ( a.isValVector() ) { constructError(a,res,"Vector det not implemented"); }
@@ -19232,6 +19615,7 @@ gentype trace(const gentype &a)
 
          if ( a.isValStrErr() ) { constructError(a,res,"String trace not implemented"); }
     else if ( a.isValSet()    ) { constructError(a,res,"Set trace not implemented"); }
+    else if ( a.isValDict()   ) { constructError(a,res,"Dict trace not implemented"); }
     else if ( a.isValDgraph() ) { constructError(a,res,"Dgraph trace not implemented"); }
     else if ( a.isValMatrix() ) { if ( a.numRows() != a.numCols() ) { constructError(a,res,"Trace only defined for square matrices."); } else { res = (a.cast_matrix(0)).trace(); } }
     else if ( a.isValVector() ) { constructError(a,res,"Vector trace not implemented"); }
@@ -21928,7 +22312,7 @@ void intercalc(std::ostream &, std::istream &)
           outstreamunlogged() << "|  | " << datadispc <<                                                 " |  | " << helptextc << "\n";
           outstreamunlogged() << "|  | " << modedisp <<                                                  " |  | " << helptextd << "\n";
           outstreamunlogged() << "|  +---------------------------------------------------------------------+  |\n";
-          outstreamunlogged() << "|  Controls: arrows, space select, Q quit, P plot, just type (_ for space)  |\n";
+          outstreamunlogged() << "|  Controls: arrows, space select, Q quit, P plot, just type (~ for space)  |\n";
           outstreamunlogged() << "|                                                                           |\n";
 
           if ( ( page == MYCALCSF_PAGE ) && !isew && !isah && !HYPmode )
@@ -23823,15 +24207,14 @@ void intercalc(std::ostream &, std::istream &)
                 UPDATE_PRE_EDIT;
             }
 
-//            if ( keypress == '_' )
-//            {
-//                // Substitute space
-//
-//                keypress = ' ';
-//            }
-//
-//            else
-if ( keypress == 9 )
+            if ( keypress == '~' )
+            {
+                // Substitute space
+
+                keypress = ' ';
+            }
+
+            else if ( keypress == 9 )
             {
                 // Tab pressed
 

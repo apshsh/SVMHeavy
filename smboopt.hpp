@@ -494,11 +494,11 @@ public:
     int model_muTrainingVector_cgt   (                         Vector<gentype> &resmu, int i) const;
     int model_muvarTrainingVector_cgt(Vector<gentype> &resvar, Vector<gentype> &resmu, int i) const;
 
-    int model_addTrainingVector_musigma(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x,                                                                                                                                                                                               double varadd = 0);
-    int model_addTrainingVector_musigma(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype = 2, double varadd = 0);
+    int model_addTrainingVector_musigma(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x,                                                     double varadd = 0);
+    int model_addTrainingVector_musigma(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, int xobstype = 2, double varadd = 0);
 
-    int model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x,                                                                                                                                                                                                          double varadd = 0);
-    int model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, const Vector<int> &xobstype, double varadd = 0);
+    int model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x,                                                                double varadd = 0);
+    int model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<int> &xobstype, double varadd = 0);
 
     template <class S> int model_mu (Vector<double> &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr) const;
     template <class S> int model_var(gentype &resvar,       const SparseVector<S> &x, const vecInfo *xing = nullptr) const;
@@ -512,8 +512,8 @@ public:
     int  model_covarTrainingVector(Matrix<gentype> &rescov, const Vector<int> &i) const { return getsigmaapprox().covarTrainingVector(rescov,i); }
     void model_stabProbTrainingVector(double &res, int i, int p, double pnrm, int rot, double mu, double B, int q = 0) const { (getmuapprox(q)).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B); }
 
-    int model_addTrainingVector_sigmaifsep    (const gentype &y,                       const SparseVector<gentype> &x,                                                                                                                                                                                               double varadd = 0);
-    int model_addTrainingVector_mu_sigmaifsame(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype = 2, double varadd = 0);
+    int model_addTrainingVector_sigmaifsep    (const gentype &y,                       const SparseVector<gentype> &x,                                                     double varadd = 0);
+    int model_addTrainingVector_mu_sigmaifsame(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, int xobstype = 2, double varadd = 0);
 
     int model_N_mu   (int q = 0) const { return getmuapprox(q).N();  }
     int model_N_sigma(void)      const { return getsigmaapprox().N();    }
@@ -591,7 +591,7 @@ public:
 
 //private:
 
-    void addinxsidechan(SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4);
+    void addinxsidechan(SparseVector<gentype> &x, const Vector<gentype> &xsidechan);
 
     // This version adds to augx if enabled, augments x if required, then adds to mu - use this one by default!
 

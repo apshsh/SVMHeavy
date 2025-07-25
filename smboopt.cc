@@ -2102,7 +2102,7 @@ int SMBOOptions::model_addTrainingVector_musigma(const gentype &y, const gentype
     return ires;
 }
 
-int SMBOOptions::model_addTrainingVector_musigma(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype, double varadd)
+int SMBOOptions::model_addTrainingVector_musigma(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, int xobstype, double varadd)
 {
         int ires = 0;
 
@@ -2125,7 +2125,7 @@ int SMBOOptions::model_addTrainingVector_musigma(const gentype &y, const gentype
 
 //errstream() << "phantomxyzxyzxyz bayesopt addvec x: " << x << "\n";
 //errstream() << "phantomxyzxyzxyz bayesopt addvec xxx: " << xxx << "\n";
-        addinxsidechan(xxx,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4);
+        addinxsidechan(xxx,xsidechan);
 //errstream() << "phantomxyzxyzxyz bayesopt addvec xxx with side: " << xxx << "\n";
 
         {
@@ -2156,11 +2156,11 @@ int SMBOOptions::model_addTrainingVector_cgt(const Vector<gentype> &y, const Spa
     return modelcgt_int_addTrainingVector(y,x,model_convertx(xx,x),xobstype,varadd);
 }
 
-int SMBOOptions::model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, const Vector<int> &xobstype, double varadd)
+int SMBOOptions::model_addTrainingVector_cgt(const Vector<gentype> &y, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<int> &xobstype, double varadd)
 {
     SparseVector<gentype> xxx(x);
 
-    addinxsidechan(xxx,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4);
+    addinxsidechan(xxx,xsidechan);
 
     return modelcgt_int_addTrainingVector(y,x,model_convertx(xx,xxx),xobstype,varadd);
 }
@@ -2177,7 +2177,7 @@ int SMBOOptions::model_addTrainingVector_sigmaifsep(const gentype &y, const Spar
     return ires;
 }
 
-int SMBOOptions::model_addTrainingVector_mu_sigmaifsame(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4, int xobstype, double varadd)
+int SMBOOptions::model_addTrainingVector_mu_sigmaifsame(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, int xobstype, double varadd)
 {
         int ires = 0;
 
@@ -2198,7 +2198,7 @@ int SMBOOptions::model_addTrainingVector_mu_sigmaifsame(const gentype &y, const 
 
         SparseVector<gentype> xxx(x);
 
-        addinxsidechan(xxx,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4);
+        addinxsidechan(xxx,xsidechan);
 
         {
             const SparseVector<gentype> &xxxxxx = model_convertx(xx,xxx);
@@ -3003,7 +3003,7 @@ int SMBOOptions::modelaugx_int_train (int &res, svmvolatile int &killSwitch)
     return ires;
 }
 
-void SMBOOptions::addinxsidechan(SparseVector<gentype> &x, const Vector<gentype> &xsidechan, const Vector<gentype> &xaddrank, const Vector<gentype> &xaddranksidechan, const Vector<gentype> &xaddgrad, const Vector<gentype> &xaddf4)
+void SMBOOptions::addinxsidechan(SparseVector<gentype> &x, const Vector<gentype> &xsidechan)
 {
         if ( xsidechan.size() )
         {
@@ -3028,58 +3028,28 @@ void SMBOOptions::addinxsidechan(SparseVector<gentype> &x, const Vector<gentype>
             }
         }
 
-        if ( xaddrank.size() )
-        {
-            int j;
-
-            for ( j = 0 ; j < xaddrank.size() ; ++j )
-            {
-                x.f1("&",j) = xaddrank(j);
-            }
-        }
-
-        if ( xaddranksidechan.size() )
-        {
-            int i,j;
-
-            for ( i = 0 ; i < xaddranksidechan.size() ; ++i )
-            {
-                if ( !(xaddranksidechan(i).isValVector()) )
-                {
-                    x.f1("&",0,i+1) = xaddranksidechan(i);
-                }
-
-                else
-                {
-                    int jdim = xaddranksidechan(i).size();
-
-                    for ( j = 0 ; j < jdim ; ++j )
-                    {
-                        x.f1("&",j,i+1) = xaddranksidechan(i)(j);
-                    }
-                }
-            }
-        }
-
-        if ( xaddgrad.size() )
-        {
-            int j;
-
-            for ( j = 0 ; j < xaddgrad.size() ; ++j )
-            {
-                x.f2("&",j) = xaddgrad(j);
-            }
-        }
-
-        if ( xaddf4.size() )
-        {
-            int j;
-
-            for ( j = 0 ; j < xaddf4.size() ; ++j )
-            {
-                x.f4("&",j) = xaddf4(j);
-            }
-        }
+//        if ( xaddranksidechan.size() )
+//        {
+//            int i,j;
+//
+//            for ( i = 0 ; i < xaddranksidechan.size() ; ++i )
+//            {
+//                if ( !(xaddranksidechan(i).isValVector()) )
+//                {
+//                    x.f1("&",0,i+1) = xaddranksidechan(i);
+//                }
+//
+//                else
+//                {
+//                    int jdim = xaddranksidechan(i).size();
+//
+//                    for ( j = 0 ; j < jdim ; ++j )
+//                    {
+//                        x.f1("&",j,i+1) = xaddranksidechan(i)(j);
+//                    }
+//                }
+//            }
+//        }
 
         return;
 }

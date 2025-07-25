@@ -1,24 +1,3 @@
-/*
-FIXME: this line:
-    muy += 1.0; // DESIGN DECISION: typically mu will range between -1,0 here, but this scaling is bad for the constrained case. Thus we
-                // add 1 to "fix" the problem and make mu range from 0,1 (somewhat arbitrarily).
-should be muy += yymin, provided yymin >= (value set externally, default 1)
-*/
-
-//FIXME: can we plot slides on request
-//FIXME: press key to turn feedback on (but suppressed for next layer in).
-//       Plus feedback option to turn feedback off. That way the operator
-//       can see how the model is evolving and intervene to suggest points
-//       in real time.
-// FIXME: feedback options to change optimization policy (method) etc.
-// FIXME: have option for human feedback that does disable(-i-1) to disable
-//        in the GP layer of blk_conect but not the prior model(s)
-//        THAT IS: present the experiment.  Human gp say 'go ahead", "give
-//        hard feedback" (ie some sort of observation for all levels of the
-//        model) or "give soft feedback, which uses disable (-i-1) to only
-//        change the prior.  If answer is "give feedback" then you don't do
-//        the experiment, you go back and find another x as the model has
-//        changed!
 
 //
 // Bayesian Optimiser
@@ -144,9 +123,8 @@ class fninnerinnerArg
                     gentype &_muy,
                     gentype &_sigmay,
                     gentype &_ymax,
-                    const size_t &_iters,
+                    const int &_iters,
                     const int &_dim,
-                    const int &_effdim,
                     const double &_ztol,
                     const double &_delta,
                     const double &_zeta,
@@ -206,7 +184,6 @@ class fninnerinnerArg
                                                 ymax(_ymax),
                                                 iters(_iters),
                                                 dim(_dim),
-                                                effdim(_effdim),
                                                 ztol(_ztol),
                                                 _q_delta(_delta),
                                                 _q_zeta(_zeta),
@@ -272,7 +249,6 @@ class fninnerinnerArg
                                                   ymax(src.ymax),
                                                   iters(src.iters),
                                                   dim(src.dim),
-                                                  effdim(src.effdim),
                                                   ztol(src.ztol),
                                                   _q_delta(src._q_delta),
                                                   _q_zeta(src._q_zeta),
@@ -342,9 +318,8 @@ class fninnerinnerArg
     gentype &muy;
     gentype &sigmay;
     gentype &ymax;
-    const size_t &iters;
+    const int &iters;
     const int &dim;
-    const int &effdim;
     const double &ztol;
     double _q_delta;
     double _q_zeta;
@@ -987,9 +962,9 @@ class fninnerinnerArg
                 }
             }
         }
-errstream() << "phantomxyzxyz 0: " << x << "\n";
-errstream() << "phantomxyzxyz 0: " << muy << "\n";
-errstream() << "phantomxyzxyz 0: " << sigmay << "\n";
+//errstream() << "phantomxyzxyz 0: " << x << "\n";
+//errstream() << "phantomxyzxyz 0: " << muy << "\n";
+//errstream() << "phantomxyzxyz 0: " << sigmay << "\n";
     }
 
     else
@@ -1153,20 +1128,20 @@ errstream() << "phantomxyzxyz 0: " << sigmay << "\n";
             Phiz = normPhi(z);
 
             resscale = Phiz;
-errstream() << "phantomxyzxyz 1: muy " << muy << "\n";
-errstream() << "phantomxyzxyz 1: yymaxcorrect " << yymaxcorrect << "\n";
-errstream() << "phantomxyzxyz 1: sigmay " << sigmay << "\n";
-errstream() << "phantomxyzxyz 1: Phiz " << Phiz << "\n";
-errstream() << "phantomxyzxyz 1: resscale " << resscale << "\n";
+//errstream() << "phantomxyzxyz 1: muy " << muy << "\n";
+//errstream() << "phantomxyzxyz 1: yymaxcorrect " << yymaxcorrect << "\n";
+//errstream() << "phantomxyzxyz 1: sigmay " << sigmay << "\n";
+//errstream() << "phantomxyzxyz 1: Phiz " << Phiz << "\n";
+//errstream() << "phantomxyzxyz 1: resscale " << resscale << "\n";
         }
 
         else if ( (double) muy < yymaxcorrect )
         {
             resscale = 0;
-errstream() << "phantomxyzxyz 2: resscale " << resscale << "\n";
+//errstream() << "phantomxyzxyz 2: resscale " << resscale << "\n";
         }
     }
-errstream() << "phantomxyzxyz 3: resscale " << resscale << "\n";
+//errstream() << "phantomxyzxyz 3: resscale " << resscale << "\n";
 
 //errstream() << "phantomxyz muy(" << x << ") = " << muy << " and sigmay = " << sigmay << "\n";
     // =======================================================================
@@ -1201,8 +1176,8 @@ errstream() << "phantomxyzxyz 3: resscale " << resscale << "\n";
             mucgt("&",i) -= bbopts.cgtmargin;
         }
 
-errstream() << "mucgt = " << mucgt << " and varcgtsq = " << varcgtsq << "\n";
-errstream() << "cgt.N = " << bbopts.model_N_cgt() << "\n";
+//errstream() << "mucgt = " << mucgt << " and varcgtsq = " << varcgtsq << "\n";
+//errstream() << "cgt.N = " << bbopts.model_N_cgt() << "\n";
         // Work out mean and variance of delta(c_i(x) >= 0) for all constraints c_i
 
         Vector<double> cgtmean((bbopts.cgtapprox).size()+1);
@@ -1261,7 +1236,7 @@ errstream() << "cgt.N = " << bbopts.model_N_cgt() << "\n";
 
         cgtmean("&",(bbopts.cgtapprox).size()) = (double) muy;
         cgtvar("&",(bbopts.cgtapprox).size())  = (double) sigmay;
-errstream() << "cgtmean = " << cgtmean << " and cgtvar = " << cgtvar << "\n";
+//errstream() << "cgtmean = " << cgtmean << " and cgtvar = " << cgtvar << "\n";
 
         // See Goodman: On the Exact Variance of Products
 
@@ -1309,7 +1284,7 @@ errstream() << "cgtmean = " << cgtmean << " and cgtvar = " << cgtvar << "\n";
 
         muy    = meantot;      // corrected mean
         sigmay = sqrt(vartot); // corrected variance
-errstream() << "phantomxyzxyz corrected muy = " << muy << " and sigmay = " << sigmay << "\n";
+//errstream() << "phantomxyzxyz corrected muy = " << muy << " and sigmay = " << sigmay << "\n";
     }
 
     // =======================================================================
@@ -1607,6 +1582,10 @@ errstream() << "phantomxyzxyz corrected muy = " << muy << " and sigmay = " << si
                 double locsigmay = (double) sigmay;
                 double locmuy = (double) muy;
 
+//errstream() << "phantomxyzxyz GPUCB: locmuy = " << locmuy << "\n";
+//errstream() << "phantomxyzxyz GPUCB: locsigmay = " << locsigmay << "\n";
+//errstream() << "phantomxyzxyz GPUCB: locbeta = " << beta << "\n";
+//errstream() << "phantomxyzxyz GPUCB: locbetasgn = " << betasgn << "\n";
                 //FIXME: assuming binomial distribution here, may not be valid
 
                 if ( isstable && !stabUseSig )
@@ -1639,6 +1618,7 @@ locsigmay = stabscore*stabscore*locsigmay;
                         res -= 100;//(1+(2*fabs(locmuy)));
                     }
                 }
+//errstream() << "phantomxyzxyz GPUCB: res = " << res << "\n";
 
                 if ( isstable && stabUseSig )
                 {
@@ -1766,6 +1746,8 @@ locsigmay = stabscore*stabscore*locsigmay;
     // =======================================================================
 
     res = -res; // Set up for minimiser
+//errstream() << "phantomxyzxyz CONFIRM: res = " << res << "\n";
+//errstream() << "phantomxyzxyz CONFIRM: resscale = " << resscale << "\n";
 
     return res*resscale;
   }
@@ -1807,7 +1789,7 @@ double fnfnapproxNoUnscent(int n, const double *xx, void *arg)
 
 
 // Alternative "grid" minimiser: takes all x indexed by vector in some
-// model, tests them, then returns the index (and evaluation) of the 
+// model, tests them, then returns the index (and evaluation) of the
 // minimum.  This is a drop-in replacement for directOpt when optimising
 // on a grid, except:
 //
@@ -1932,6 +1914,7 @@ int dogridOpt(int dim,
             // x is fully defined by the grid, so we need only evaluate the acquisition function
 
             tempfres = (*fn)(dim,xx,fnarg);
+//errstream() << "phantomxyzxyz GRID: no_cont tempfres = " << tempfres << "\n";
         }
 
         else
@@ -1942,21 +1925,26 @@ int dogridOpt(int dim,
             gentype dummyres;
 
             int directres = directOpt(dim,xxres,dummyres,locxmin,locxmax,fnfnapprox,fnarg,dopts,killSwitch);
-            errstream() << "(" << gridi << "," << directres << "):";
+            errstream() << "direct(" << gridi << "," << directres << "):";
 
             tempfres = (double) dummyres;
+//errstream() << "phantomxyzxyz GRID: cont tempfres = " << tempfres << "\n";
         }
 
         if ( ( locires == -1 ) || ( tempfres < (double) fres ) )
         {
+//errstream() << "phantomxyzxyz GRID: outer xres = [ ";
             for ( j = 0 ; j < dim ; ++j )
             {
                 x[j] = xx[j];
+//errstream() << x[j] << "\t";
             }
+//errstream() << "]\n";
 
             fres        = tempfres;
             locires     = i;
             locgridires = gridi;
+//errstream() << "phantomxyzxyz GRID: outer fres = " << fres << " (gridi = " << locgridires << ", i = " << locires << ")\n";
 
             //xinfopt = *xinf;
 
@@ -1991,6 +1979,7 @@ int dogridOpt(int dim,
     gridires = locgridires;
 
     gridi = oldgridi;
+//errstream() << "phantomxyzxyz GRID: CONFIRM = " << fres << " (gridires = " << gridires << ", ires = " << ires << ")\n";
 
     nullPrint(errstream(),"MLGrid Optimisation Ended");
 
@@ -2043,63 +2032,91 @@ static void multiObjectiveCombine(gentype &res, Vector<gentype> &x, void *arg)
 
 
 
+
+
+static gentype &negateoutery(gentype &res);
+static gentype &negateoutery(gentype &res)
+{
+    // Defaults
+
+    if ( res.isValSet() )
+    {
+        if ( ( res.dir_set().size() >= 1 ) && !res.dir_set().ncall()("&",0).isValNull() )
+        {
+            res.dir_set().ncall()("&",0).negate();
+        }
+    }
+
+    else if ( res.isValDict() )
+    {
+        if ( res.dir_dict().iskeypresent("y") && !(res.dir_dict())("&","y").isValNull() )
+        {
+            (res.dir_dict())("&","y").negate();
+        }
+    }
+
+    else
+    {
+        res.negate();
+    }
+
+    return res;
+}
+
+
+
 // res - either the result, or a set:
 //
-// { res; addvar; ycgt; xreplace; xsidechan; xaddrank; xaddranksidechan; xaddgrad; xaddf4; obstype }
+// { res; addvar; ycgt; xxreplace; xsidechan; obstype }
 //
-// res:              restype:        replacement for res (result of f(x))
-// addvar:           NULL or double: additional variance in f(x)
-// ycgt:             NULL or vector: constraint vector [c1(x);c2(x);...]
-// xreplace:         NULL or vector: replacement for x (the x where the measurement is actually taken)
-// stopnow:          NULL or int:    if nz then requests early termination of optimization
-// xsidechan:        NULL or vector: side-channel data [ xx1 ... xxn ]
-// xaddranksidechan: NULL or vector: side-channel rank observations [ xx1f ... xxnf ]
-// xaddgrad:         NULL or vector: side-channel gradient observations
-// xaddf4:           NULL or vector: side-channel f4 observations
-// obstype:          NULL or int:    observations type: 0 (na), 1 (>=), -1 (<=), 2 (==).
-// obstype_cgt:      NULL or vector: observations type for ycgt
+// res:              restype:         replacement for res (result of f(x))
+// addvar:           NULL or double:  additional variance in f(x)
+// ycgt:             NULL or vector:  constraint vector [c1(x);c2(x);...]
+// xxreplace:        NULL or vector:  replacement for x (the x where the measurement is actually taken)
+// stopflages:       NULL or int:     bitwise flags.
+//                                    1: force early termination
+// xsidechan:        NULL or vector:  side-channel data [ xx1 ... xxn ]
+// xaddranksidechan: NULL or vector:  side-channel rank observations [ xx1f ... xxnf ]
+// obstype:          NULL or int:     observations type: 0 (na), 1 (>=), -1 (<=), 2 (==).
+// obstype_cgt:      NULL or vector:  observations type for ycgt
+// addexp:           NULL or gentype: additional observation of the same form (recursively)
 //
 // use of NULL: if a variable is NULL or absent then the corresponding vector is not set
-// replacex: this is set if xreplace is set
+// replacexx: this is set if xxreplace is set
 
-static void readres(gentype &res, double &addvar,
-                           Vector<gentype> &ycgt,
-                           SparseVector<gentype> &xreplace,
-                           int &replacex,
-                           int &stopnow,
-                           Vector<gentype> &xsidechan,
-                           Vector<gentype> &xaddrank,
-                           Vector<gentype> &xaddranksidechan,
-                           Vector<gentype> &xaddgrad,
-                           Vector<gentype> &xaddf4,
-                           int &xobstype,
-                           Vector<int> &xobstype_cgt);
+static void readres(gentype &res,
+                    double &addvar,
+                    Vector<gentype> &ycgt,
+                    SparseVector<gentype> &xxreplace,
+                    int &replacexx,
+                    gentype &addexp,
+                    int &stopflags,
+                    Vector<gentype> &xsidechan,
+                    int &xobstype,
+                    Vector<int> &xobstype_cgt);
 
 
-static void readres(gentype &res, double &addvar,
-                           Vector<gentype> &ycgt,
-                           SparseVector<gentype> &xreplace,
-                           int &replacex,
-                           int &stopnow,
-                           Vector<gentype> &xsidechan,
-                           Vector<gentype> &xaddrank,
-                           Vector<gentype> &xaddranksidechan,
-                           Vector<gentype> &xaddgrad,
-                           Vector<gentype> &xaddf4,
-                           int &xobstype,
-                           Vector<int> &xobstype_cgt)
+static void readres(gentype &res,
+                    double &addvar,
+                    Vector<gentype> &ycgt,
+                    SparseVector<gentype> &xxreplace,
+                    int &replacexx,
+                    gentype &addexp,
+                    int &stopflags,
+                    Vector<gentype> &xsidechan,
+                    int &xobstype,
+                    Vector<int> &xobstype_cgt)
 {
     // Defaults
 
     //xobstype = 2; // this may be preset in gridsource
-    xobstype_cgt.resize(0);
-    xaddf4.resize(0);
-    xaddgrad.resize(0);
-    xaddranksidechan.resize(0);
-    xaddrank.resize(0);
+    //xobstype_cgt.resize(0); // this is always preset outside, but we leave as an option to pass in
+    //xaddranksidechan.resize(0);
     xsidechan.resize(0);
-    stopnow = 0;
-    xreplace.resize(0); replacex = 0;
+    addexp.force_null();
+    stopflags = 0;
+    xxreplace.resize(0);
+    replacexx = 0;
     ycgt.resize(0);
     addvar = 0;
 
@@ -2107,32 +2124,159 @@ static void readres(gentype &res, double &addvar,
 
     if ( res.isValSet() )
     {
-        if ( ( res.size() >= 11 ) && !(res.all())(10).isValNull() ) { xobstype         = (int)    ((res.all())(10));                                   }
-        if ( ( res.size() >= 10 ) && !(res.all())( 9).isValNull() ) { xaddf4           =          ((res.all())( 9)).cast_vector();                     }
-        if ( ( res.size() >=  9 ) && !(res.all())( 8).isValNull() ) { xaddgrad         =          ((res.all())( 8)).cast_vector();                     }
-        if ( ( res.size() >=  8 ) && !(res.all())( 7).isValNull() ) { xaddranksidechan =          ((res.all())( 7)).cast_vector();                     }
-        if ( ( res.size() >=  7 ) && !(res.all())( 6).isValNull() ) { xaddrank         =          ((res.all())( 6)).cast_vector();                     }
-        if ( ( res.size() >=  6 ) && !(res.all())( 5).isValNull() ) { xsidechan        =          ((res.all())( 5)).cast_vector();                     }
-        if ( ( res.size() >=  5 ) && !(res.all())( 4).isValNull() ) { stopnow          =          ((res.all())( 4));                                   }
-        if ( ( res.size() >=  4 ) && !(res.all())( 3).isValNull() ) { xreplace         =          ((res.all())( 3)).cast_sparsevector(); replacex = 1; }
-        if ( ( res.size() >=  3 ) && !(res.all())( 2).isValNull() ) { ycgt             =          ((res.all())( 2)).cast_vector();                     }
-        if ( ( res.size() >=  2 ) && !(res.all())( 1).isValNull() ) { addvar           = (double) ((res.all())( 1));                                   }
-        if ( ( res.size() >=  1 )                                 ) { res              =          ((res.all())( 0));                                   }
+        const Set<gentype> &z = (const Set<gentype> &) res;
+
+        // constraint observations (order of operation is important here)
+
+        if ( ( z.size() >= 3 ) && !z.all()(2).isValNull() )
+        {
+            ycgt = z.all()(2).cast_vector();
+        }
 
         if ( ycgt.size() && !xobstype_cgt.size() )
         {
             xobstype_cgt.resize(ycgt.size()) = 2;
         }
 
-        // Deliberately last
+        if ( ( z.size() >= 9 ) && !z.all()(8).isValNull() )
+        {
+            xobstype_cgt = z.all()(8).cast_vector_int();
+        }
 
-        if ( ( res.size() >= 12 ) && !(res.all())(11).isValNull() ) { xobstype_cgt     =          ((res.all())(11)).cast_vector_int();                 }
+        // Side-channel observations
+
+//        if ( ( z.size() >= 9 ) && !z.all()(8).isValNull() )
+//        {
+//            xaddranksidechan = z.all()(8).cast_vector();
+//        }
+
+        if ( ( z.size() >= 7 ) && !z.all()(6).isValNull() )
+        {
+            xsidechan = z.all()(6).cast_vector();
+        }
+
+        // Return flags
+
+        if ( ( z.size() >= 6 ) && !z.all()(5).isValNull() )
+        {
+            stopflags = z.all()(5);
+        }
+
+        // Additional variance (noisy observation marker)
+
+        if ( ( z.size() >= 2 ) && !z.all()(1).isValNull() )
+        {
+            addvar = (double) z.all()(1);
+        }
+
+        // Additional observations
+
+        if ( ( z.size() >= 5 ) && !z.all()(4).isValNull() )
+        {
+            addexp = z.all()(4);
+        }
+
+        // Actual observation - result y, optional observation type, optional x
+
+        if ( ( z.size() >= 4 ) && !z.all()(3).isValNull() )
+        {
+            xxreplace = z.all()(3).cast_sparsevector();
+            replacexx = 1;
+        }
+
+        if ( ( z.size() >= 8 ) && !z.all()(7).isValNull() )
+        {
+            xobstype = (int) z.all()(7);
+        }
+
+        if ( ( z.size() >= 1 ) && !z.all()(0).isValNull() )
+        {
+            res = z.all()(0);
+        }
+
+        else
+        {
+            res.force_null();
+        }
     }
 
-//FIXME: between addvar and sidechan, add two new elements:
-//       equality constraint vector (constrain this equal to zero)
-//       inequality constraint vector (constrain this greater than zero)
-//FIXME: have option to specify model for these like you would the GP
+    else if ( res.isValDict() )
+    {
+        const Dict<gentype,dictkey> &z = (const Dict<gentype,dictkey> &) res;
+
+        // constraint observations (order of operation is important here)
+
+        if ( z.iskeypresent("c") && !z("c").isValNull() )
+        {
+            ycgt = z("c").cast_vector();
+        }
+
+        if ( ycgt.size() && !xobstype_cgt.size() )
+        {
+            xobstype_cgt.resize(ycgt.size()) = 2;
+        }
+
+        if ( z.iskeypresent("dc") && !z("dc").isValNull() )
+        {
+            xobstype_cgt = z("dc").cast_vector_int();
+        }
+
+        // Side-channel observations
+
+//        if ( z.iskeypresent("xscrank") && !z("xscrank").isValNull() )
+//        {
+//            xaddranksidechan = z("xscrank").cast_vector();
+//        }
+
+        if ( z.iskeypresent("xsc") && !z("xsc").isValNull() )
+        {
+            xsidechan = z("xsc").cast_vector();
+        }
+
+        // Return flags
+
+        if ( z.iskeypresent("sf") && !z("sf").isValNull() )
+        {
+            stopflags = (int) z("sf");
+        }
+
+        // Additional variance (noisy observation marker)
+
+        if ( z.iskeypresent("addvar") && !z("addvar").isValNull() )
+        {
+            addvar = (double) z("addvar");
+        }
+
+        // Additional observations
+
+        if ( z.iskeypresent("and") && !z("and").isValNull() )
+        {
+            addexp = z("and");
+        }
+
+        // Actual observation - result y, optional observation type, optional x
+
+        if ( z.iskeypresent("x") && !z("x").isValNull() )
+        {
+            xxreplace = z("x").cast_sparsevector();
+            replacexx = 1;
+        }
+
+        if ( z.iskeypresent("d") && !z("d").isValNull() )
+        {
+            xobstype = (int) z("d");
+        }
+
+        if ( z.iskeypresent("y") && !z("y").isValNull() )
+        {
+            res = z("y");
+        }
+
+        else
+        {
+            res.force_null();
+        }
+    }
 }
 
 // Given y, ycgt and observation types, translate nulls in y to non-observations
@@ -2142,12 +2286,30 @@ bool process_obs(gentype &y, Vector<gentype> &ycgt, int &xobstype, Vector<int> &
 {
     bool fullobs = true;
 
-    int isnull = y.isValNull();
-    int isnull_cgt = 0;
-
     if ( ycgt.size() && !xobstype_cgt.size() )
     {
         xobstype_cgt.resize(ycgt.size()) = 2;
+    }
+
+    int isnull = 0;
+    int isnull_cgt = 0;
+
+    if ( y.isValVector() )
+    {
+        const Vector<gentype> &yy = (const Vector<gentype> &) y;
+
+        for ( int iy = 0 ; ( !isnull && ( iy < yy.size() ) ) ; ++iy )
+        {
+            if ( yy(iy).isValNull() )
+            {
+                isnull = 1;
+            }
+        }
+    }
+
+    else
+    {
+        isnull = y.isValNull();
     }
 
     for ( int iy = 0 ; ( !isnull_cgt && ( iy < ycgt.size() ) ) ; ++iy )
@@ -2185,7 +2347,585 @@ bool process_obs(gentype &y, Vector<gentype> &ycgt, int &xobstype, Vector<int> &
     return fullobs;
 }
 
+bool addDataToModel(int &ii,
+                    int &Npreadd,
+                    int &Npreadd_mu,
+                    int &Npreadd_sigma,
+                    int &Npreadd_cgt,
+                    int &stopnow,
+                    BayesOptions &bopts,
+                    int dim,
+                    bool isfullgrid,
+                    bool isgridsource,
+                    gentype &fres,
+                    int &ires,
+                    const SparseVector<gentype> &xx,
+                    double addvar,
+                    gentype yyval,
+                    Vector<gentype> ycgt,
+                    const SparseVector<gentype> &xxreplace,
+                    int replacexx,
+                    const gentype &addexp,
+                    int stopflags,
+                    const Vector<gentype> &xsidechan,
+                    int xobstype,
+                    Vector<int> xobstype_cgt,
+                    bool doaddstep);
 
+bool addDataToModel(int &ii,
+                    int &Npreadd,
+                    int &Npreadd_mu,
+                    int &Npreadd_sigma,
+                    int &Npreadd_cgt,
+                    int &stopnow,
+                    BayesOptions &bopts,
+                    int dim,
+                    bool isfullgrid,
+                    bool isgridsource,
+                    gentype &fres,
+                    int &ires,
+                    const SparseVector<gentype> &xx,
+                    double addvar,
+                    gentype yyval,
+                    Vector<gentype> ycgt,
+                    const SparseVector<gentype> &xxreplace,
+                    int replacexx,
+                    const gentype &addexp,
+                    int stopflags,
+                    const Vector<gentype> &xsidechan,
+                    int xobstype,
+                    Vector<int> xobstype_cgt,
+                    bool doaddstep)
+{
+
+    // First off we need to "read" the result
+
+    gentype ytoadd = yyval.negate(); // by default, negative of model
+    const SparseVector<gentype> &xtoadd = replacexx ? xxreplace : xx; // allow x to be redefined (design choice)
+
+    stopnow |= ( stopflags & 1 );
+
+    bool fullobs = process_obs(ytoadd,ycgt,xobstype,xobstype_cgt);
+
+    if ( !ycgt.size() && bopts.numcgt )
+    {
+        ycgt.resize(bopts.numcgt) = nullgentype();
+        xobstype_cgt.resize(bopts.numcgt) = 0;
+    }
+
+    bool locxhasnulls = false;
+    bool isfullfid = true;
+
+    for ( int aa = 0 ; aa < dim ; ++aa )
+    {
+        if ( aa < dim-bopts.getdimfid() )
+        {
+            if ( xtoadd(aa).isValNull() )
+            {
+                locxhasnulls = true;
+            }
+        }
+
+        else
+        {
+            if ( xtoadd.n(aa-bopts.getdimfid(),1).isValNull() )
+            {
+                locxhasnulls = true;
+                isfullfid = false;
+            }
+
+            else if ( ((int) (xtoadd.n(aa-(dim-bopts.getdimfid()),1)*((double) bopts.numfids))) != bopts.numfids )
+            {
+                isfullfid = false;
+            }
+        }
+    }
+
+    bool fullcgt   = true;
+    bool fullcgteq = true;
+
+    for ( int aa = 0 ; ( fullcgt && bopts.numcgt ) && ( aa < bopts.numcgt ) ; ++aa )
+    {
+        if ( xobstype_cgt(aa) == 0 )
+        {
+            fullcgt = false;
+        }
+
+        if ( xobstype_cgt(aa) != 2 )
+        {
+            fullcgteq = false;
+        }
+    }
+
+    if ( doaddstep )
+    {
+        if ( locxhasnulls )
+        {
+            StrucAssert( isgridsource );
+
+            Vector<int> loczerovec(xobstype_cgt);
+
+            loczerovec = 0;
+
+            bopts.model_addTrainingVector_musigma(ytoadd,yyval,xtoadd,xsidechan,0); // we set d=0 because this is a placeholder
+            bopts.model_addTrainingVector_cgt(ycgt,xtoadd,xsidechan,loczerovec); // we set d=0 because this is a placeholder
+
+            if ( addvar != 0 )
+            {
+                bopts.model_setsigmaweight_addvar(bopts.model_N_mu(),bopts.model_N_sigma(),addvar);
+            }
+        }
+
+        else if ( isfullgrid && isgridsource )
+        {
+            NiceAssert( ( xobstype == 0 ) || ( xobstype == 2 ) );
+
+            bopts.model_addTrainingVector_musigma(ytoadd,yyval,xtoadd,xsidechan,0); // we set d=0 to prevent training and hence time-wasting
+            bopts.model_addTrainingVector_cgt(ycgt,xtoadd,xsidechan,xobstype_cgt);
+
+            if ( addvar != 0 )
+            {
+                bopts.model_setsigmaweight_addvar(bopts.model_N_mu(),bopts.model_N_sigma(),addvar);
+            }
+        }
+
+        else
+        {
+            if ( xobstype || isgridsource )
+            {
+                bopts.model_addTrainingVector_musigma(ytoadd,yyval,xtoadd,xsidechan,xobstype);
+
+                if ( addvar != 0 )
+                {
+                    bopts.model_setsigmaweight_addvar(bopts.model_N_mu(),bopts.model_N_sigma(),addvar);
+                }
+            }
+
+            if ( ( fullcgt && bopts.numcgt ) || isgridsource )
+            {
+                bopts.model_addTrainingVector_cgt(ycgt,xtoadd,xsidechan,xobstype_cgt);
+            }
+        }
+
+        if ( xobstype )
+        {
+            ++Npreadd_mu;
+            ++Npreadd_sigma;
+        }
+
+        if ( fullcgt && bopts.numcgt )
+        {
+            ++Npreadd_cgt;
+        }
+
+        if ( fullobs )
+        {
+            ++Npreadd;
+        }
+    }
+
+    // Record if optimal solution (so far)
+
+    if ( !locxhasnulls && fullcgteq ) // ie is this a true observation (all x known, constraints observed (or no constraints))
+    {
+         if (    isfullfid                                     // full fidelity (or "real system") observation
+              && ( xobstype == 2 )                             // equality observation
+              && ( ( ires == -1 ) || ( ytoadd > fres ) )       // first observation (ires == -1), or better than previous best
+              && ( ycgt >= 0.0_gent )                          // feasible observation (noting that >= evaluates true for empty vectors)
+              && ( xtoadd.indsize() == xtoadd.nindsize() ) )   // and double check for "implicit" rand/gradient/special observations for gridsource and presource!
+        {
+            fres = (double) ytoadd;
+            ires = ii;
+errstream() << "New fres (a) = " << fres << "\n";
+        }
+    }
+
+    if ( fullobs && ( ii >= 0 ) )
+    {
+        ++ii; // this is local!
+    }
+
+    if ( !addexp.isValNull() )
+    {
+        StrucAssert( !isgridsource );
+
+        // Process additional observation pairs. Note that these do NOT count in terms of fullobs
+
+        // setup and read structure
+
+        const SparseVector<gentype> &qxx = xx; // default assume x is x given
+        gentype qres = addexp;
+        double qaddvar = 0;
+        Vector<gentype> qycgt;
+        SparseVector<gentype> qxxreplace;
+        int qreplacexx = 0;
+        gentype qaddexp;
+        int qstopflags = 0;
+        Vector<gentype> qxsidechan;
+        //Vector<gentype> qxaddranksidechan;
+        int qxobstype = 2;
+        Vector<int> qxobstype_cgt;
+
+        readres(qres,qaddvar,qycgt,qxxreplace,qreplacexx,qaddexp,qstopflags,qxsidechan,qxobstype,qxobstype_cgt);
+
+        // add to model, disgarding return
+
+        addDataToModel(ii,Npreadd,Npreadd_mu,Npreadd_sigma,Npreadd_cgt,stopnow,bopts,dim,false,false,fres,ires,
+                       qxx,qaddvar,qres,qycgt,qxxreplace,qreplacexx,qaddexp,qstopflags,qxsidechan,qxobstype,qxobstype_cgt,
+                       doaddstep);
+    }
+
+    return fullobs;
+}
+
+void SparsenearToSparsenonnear(SparseVector<gentype> &dest, const SparseVector<gentype> &src, int dim, int dimfid);
+void SparsenearToSparsenonnear(SparseVector<double > &dest, const SparseVector<gentype> &src, int dim, int dimfid);
+void SparsenearToSparsenonnear(SparseVector<gentype> &dest, const SparseVector<double > &src, int dim, int dimfid);
+void SparsenearToSparsenonnear(SparseVector<double > &dest, const SparseVector<double > &src, int dim, int dimfid);
+
+void SparsenonnearToSparsenear(SparseVector<gentype> &dest, const SparseVector<gentype> &src, int dim, int dimfid);
+void SparsenonnearToSparsenear(SparseVector<double > &dest, const SparseVector<gentype> &src, int dim, int dimfid);
+void SparsenonnearToSparsenear(SparseVector<gentype> &dest, const SparseVector<double > &src, int dim, int dimfid);
+void SparsenonnearToSparsenear(SparseVector<double > &dest, const SparseVector<double > &src, int dim, int dimfid);
+
+void NonsparseToSparsenonnear(SparseVector<gentype> &dest, const Vector<gentype> &src, int dim, int dimfid);
+void NonsparseToSparsenonnear(SparseVector<double > &dest, const Vector<gentype> &src, int dim, int dimfid);
+void NonsparseToSparsenonnear(SparseVector<gentype> &dest, const Vector<double > &src, int dim, int dimfid);
+void NonsparseToSparsenonnear(SparseVector<double > &dest, const Vector<double > &src, int dim, int dimfid);
+
+void NonsparseToSparsenear(SparseVector<gentype> &dest, const Vector<gentype> &src, int dim, int dimfid);
+void NonsparseToSparsenear(SparseVector<double > &dest, const Vector<gentype> &src, int dim, int dimfid);
+void NonsparseToSparsenear(SparseVector<gentype> &dest, const Vector<double > &src, int dim, int dimfid);
+void NonsparseToSparsenear(SparseVector<double > &dest, const Vector<double > &src, int dim, int dimfid);
+
+void SparsenearToNonsparse(Vector<gentype> &dest, const SparseVector<gentype> &src, int dim, int dimfid);
+void SparsenearToNonsparse(Vector<double > &dest, const SparseVector<gentype> &src, int dim, int dimfid);
+void SparsenearToNonsparse(Vector<gentype> &dest, const SparseVector<double > &src, int dim, int dimfid);
+void SparsenearToNonsparse(Vector<double > &dest, const SparseVector<double > &src, int dim, int dimfid);
+
+void SparsenearToSparsenonnear(SparseVector<gentype> &dest, const SparseVector<gentype> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = src(j);
+        }
+
+        else
+        {
+            dest("&",j) = src.n(j-dimfid,1);
+        }
+    }
+}
+
+void SparsenearToSparsenonnear(SparseVector<double> &dest, const SparseVector<gentype> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = (double) src(j);
+        }
+
+        else
+        {
+            dest("&",j) = (double) src.n(j-dimfid,1);
+        }
+    }
+}
+
+void SparsenearToSparsenonnear(SparseVector<gentype> &dest, const SparseVector<double> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j).force_double() = src(j);
+        }
+
+        else
+        {
+            dest("&",j).force_double() = src.n(j-dimfid,1);
+        }
+    }
+}
+
+void SparsenearToSparsenonnear(SparseVector<double> &dest, const SparseVector<double> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = src(j);
+        }
+
+        else
+        {
+            dest("&",j) = src.n(j-dimfid,1);
+        }
+    }
+}
+
+
+void SparsenearToNonsparse(Vector<gentype> &dest, const SparseVector<gentype> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = src(j);
+        }
+
+        else
+        {
+            dest("&",j) = src.n(j-dimfid,1);
+        }
+    }
+}
+
+void SparsenearToNonsparse(Vector<double> &dest, const SparseVector<gentype> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = (double) src(j);
+        }
+
+        else
+        {
+            dest("&",j) = (double) src.n(j-dimfid,1);
+        }
+    }
+}
+
+void SparsenearToNonsparse(Vector<gentype> &dest, const SparseVector<double> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j).force_double() = src(j);
+        }
+
+        else
+        {
+            dest("&",j).force_double() = src.n(j-dimfid,1);
+        }
+    }
+}
+
+void SparsenearToNonsparse(Vector<double> &dest, const SparseVector<double> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = src(j);
+        }
+
+        else
+        {
+            dest("&",j) = src.n(j-dimfid,1);
+        }
+    }
+}
+
+
+void SparsenonnearToSparsenear(SparseVector<gentype> &dest, const SparseVector<gentype> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = src(j);
+        }
+
+        else
+        {
+            dest.n("&",j-dimfid,1) = src(j);
+        }
+    }
+}
+
+void SparsenonnearToSparsenear(SparseVector<double> &dest, const SparseVector<gentype> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = (double) src(j);
+        }
+
+        else
+        {
+            dest.n("&",j-dimfid,1) = (double) src(j);
+        }
+    }
+}
+
+void SparsenonnearToSparsenear(SparseVector<gentype> &dest, const SparseVector<double> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j).force_double() = src(j);
+        }
+
+        else
+        {
+	    dest.n("&",j-dimfid,1).force_double() = src(j);
+        }
+    }
+}
+
+void SparsenonnearToSparsenear(SparseVector<double> &dest, const SparseVector<double> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = src(j);
+        }
+
+        else
+        {
+            dest.n("&",j-dimfid,1) = src(j);
+        }
+    }
+}
+
+
+void NonsparseToSparsenear(SparseVector<gentype> &dest, const Vector<gentype> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = src(j);
+        }
+
+        else
+        {
+            dest.n("&",j-dimfid,1) = src(j);
+        }
+    }
+}
+
+void NonsparseToSparsenear(SparseVector<double> &dest, const Vector<gentype> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = (double) src(j);
+        }
+
+        else
+        {
+            dest.n("&",j-dimfid,1) = (double) src(j);
+        }
+    }
+}
+
+void NonsparseToSparsenear(SparseVector<gentype> &dest, const Vector<double> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j).force_double() = src(j);
+        }
+
+        else
+        {
+	    dest.n("&",j-dimfid,1).force_double() = src(j);
+        }
+    }
+}
+
+void NonsparseToSparsenear(SparseVector<double> &dest, const Vector<double> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = src(j);
+        }
+
+        else
+        {
+            dest.n("&",j-dimfid,1) = src(j);
+        }
+    }
+}
+
+
+void NonsparseToSparsenonnear(SparseVector<gentype> &dest, const Vector<gentype> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = src(j);
+        }
+
+        else
+        {
+            dest("&",j) = src(j);
+        }
+    }
+}
+
+void NonsparseToSparsenonnear(SparseVector<double> &dest, const Vector<gentype> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = (double) src(j);
+        }
+
+        else
+        {
+            dest("&",j) = (double) src(j);
+        }
+    }
+}
+
+void NonsparseToSparsenonnear(SparseVector<gentype> &dest, const Vector<double> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j).force_double() = src(j);
+        }
+
+        else
+        {
+            dest("&",j).force_double() = src(j);
+        }
+    }
+}
+
+void NonsparseToSparsenonnear(SparseVector<double> &dest, const Vector<double> &src, int dim, int dimfid)
+{
+    for ( int j = 0 ; j < dim ; ++j )
+    {
+        if ( j < dim-dimfid )
+        {
+            dest("&",j) = src(j);
+        }
+
+        else
+        {
+            dest("&",j) = src(j);
+        }
+    }
+}
 
 //FIXME: Q: if we observe an inequality in a grid, should that count as a "real" observation?
 
@@ -2209,14 +2949,14 @@ bool process_obs(gentype &y, Vector<gentype> &ycgt, int &xobstype, Vector<int> &
 // ===========================================================================
 // ===========================================================================
 
-#define CONT_TEST ( !stopnow && !stopearly && !killSwitch && !isopt && ( ( itcnt-skipcnt < (size_t) maxitcnt ) || !maxitcnt ) && !timeout && ( !isgridopt || ( gridind.size() > recBatchSize ) ) && ( !usefidbudget || ( fidtotcost < bopts.fidbudget ) ) )
+#define CONT_TEST ( !stopnow && !stopearly && !killSwitch && !isopt && ( ( itcnt-skipcnt < maxitcnt ) || !maxitcnt ) && !timeout && ( !isgridopt || ( gridind.size() > recBatchSize ) ) && ( !usefidbudget || ( fidtotcost < bopts.fidbudget ) ) )
 
 int bayesOpt(int dim,
              Vector<double> &xres,
              gentype &fres,
              const Vector<double> &qmin,
              const Vector<double> &qmax,
-             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt),
+             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd),
              void *fnarg,
              BayesOptions &bopts,
              svmvolatile int &killSwitch,
@@ -2226,16 +2966,16 @@ int bayesOpt(int dim,
 
     int muapproxsize = 0;
     int i,j,k;
+    int stopnow = 0;
+
     double addvar = 0;
     Vector<gentype> ycgt;
-    SparseVector<gentype> xreplace;
-    int replacex = 0;
-    int stopnow = 0;
+    SparseVector<gentype> xxreplace;
+    int replacexx = 0;
+    gentype addexp;
+    int stopflags = 0;
     Vector<gentype> xsidechan;
-    Vector<gentype> xaddrank;
-    Vector<gentype> xaddranksidechan;
-    Vector<gentype> xaddgrad;
-    Vector<gentype> xaddf4;
+    //Vector<gentype> xaddranksidechan;
     int xobstype = 2;
     Vector<int> xobstype_cgt;
 
@@ -2381,23 +3121,28 @@ int bayesOpt(int dim,
                     // happens if the first round doesn't fit the constraint, acquisiton function becomes nominally 0 (because PIscale just goes
                     // to zero, DIRect just keeps recommending the first thing it tries, and we repeat ad-infinatum!).
 
-    bool isfullgrid   = false; // full grid with unknown constraints if true (so don't actually need a GP model for the objective, just the constraints)
+    bool isfullgrid   = false; // full grid with unknown constraints and no multifidelity if true (so don't actually need a GP model for the objective, just the constraints)
     bool gridHasNulls = false; // true if grid has undefined x's that may trigger inner-inner continuous optimizer
-
-    Vector<int> xhasnulls;
 
     if ( gridsource )
     {
         // Work out if this is a full grid with unknown constraints
-
-        xhasnulls.resize((*gridsource).N()) = 0;
 
         if ( bopts.numcgt )
         {
             isfullgrid = true;
             int allfullobs = 1;
 
+            // full-grid not defined if presourc
+
             if ( presource )
+            {
+                isfullgrid = false;
+            }
+
+            // full-grid not defined if multifidelity
+
+            if ( bopts.getdimfid() )
             {
                 isfullgrid = false;
             }
@@ -2409,41 +3154,63 @@ int bayesOpt(int dim,
                 xobstype = ((*gridsource).d())(i); // default value as specified in gridsource
                 xobstype_cgt.resize(0); //bopts.numcgt) = 2; // default value is equality on constraints
 
-                readres(yyval,addvar,ycgt,xreplace,replacex,stopnow,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt);
-                gentype ytoadd = yyval.negate(); // by default, negative of model
-
-                bool fullobs = process_obs(ytoadd,ycgt,xobstype,xobstype_cgt);
-                const SparseVector<gentype> &xtoadd = replacex ? xreplace : (*gridsource).x(i);
-
-                if ( !xobstype )
                 {
-                    isfullgrid = false;
-                }
+                    double addvar = 0;
+                    Vector<gentype> ycgt;
+                    SparseVector<gentype> xxreplace;
+                    int replacexx = 0;
+                    gentype addexp;
+                    int stopflags = 0;
+                    Vector<gentype> xsidechan;
+                    //Vector<gentype> xaddranksidechan;
+                    int xobstype = 2;
+                    Vector<int> xobstype_cgt;
 
-                if ( !fullobs )
-                {
-                    allfullobs = 0;
-                }
+                    readres(yyval,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt);
 
-                for ( int aa = 0 ; aa < effdim ; ++aa )
-                {
-                    if ( xtoadd(aa).isValNull() )
+                    StrucAssert( addexp.isValNull() );
+
+                    bool fullobs = process_obs(yyval,ycgt,xobstype,xobstype_cgt);
+                    const SparseVector<gentype> &xtoadd = replacexx ? xxreplace : (*gridsource).x(i);
+
+                    if ( !xobstype )
                     {
-                        gridHasNulls = true;
-                        xhasnulls("&",i) = 1;
-//phantomabcabcabc
-//FIXME: fidelity here?
+                        isfullgrid = false;
                     }
-                }
+
+                    if ( !fullobs )
+                    {
+                        allfullobs = 0;
+                    }
+
+                    for ( int aa = 0 ; aa < dim ; ++aa )
+                    {
+                        if ( aa < dim-bopts.getdimfid() )
+                        {
+                            if ( xtoadd(aa).isValNull() )
+                            {
+                                gridHasNulls = true; // nulls in fidelity terms are nulls
+                            }
+                        }
+
+                        else
+                        {
+                            if ( xtoadd.n(aa-(dim-bopts.getdimfid()),1).isValNull() )
+                            {
+                                gridHasNulls = true; // nulls in fidelity terms are nulls
+                            }
+                        }
+                    }
 
 // Design decision: if there is a null in the vector but y is defined then this indicates that y is independent of nulled x values
-//phantomabc                for ( int aa = 0 ; aa < effdim ; ++aa )
-//                {
-//                    if ( xtoadd(aa).isValNull() )
-//                    {
-//                        isfullgrid = false;
+//phantomabc                    for ( int aa = 0 ; aa < effdim ; ++aa )
+//                   {
+//                        if ( xtoadd(aa).isValNull() )
+//                        {
+//                            isfullgrid = false;
+//                        }
 //                    }
-//                }
+                }
             }
 
             if ( allfullobs )
@@ -2454,65 +3221,29 @@ int bayesOpt(int dim,
 
         // Pre-add vectors to mu and sigma approximators, then set d = 0 (so pre-add but not yet included in calculations)
 
+        int ii = -3;
+
         for ( i = 0 ; i < (*gridsource).N() ; ++i )
         {
             gentype yyval = (*gridsource).y()(i); // y value as defined in the model (not processed yet)
+            const SparseVector<gentype> &xx = (*gridsource).x(i); // x value as defined in the model (not processed yet)
 
             xobstype = (*gridsource).d()(i); // default value as specified in gridsource
             xobstype_cgt.resize(0); //bopts.numcgt) = 2; // default value is equality on constraints
 
-            readres(yyval,addvar,ycgt,xreplace,replacex,stopnow,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt);
-            gentype ytoadd = yyval.negate(); // by default, negative of model
+            readres(yyval,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt);
 
-            bool fullobs = process_obs(ytoadd,ycgt,xobstype,xobstype_cgt);
-            const SparseVector<gentype> &xtoadd = replacex ? xreplace : (*gridsource).x(i); // allow x to be redefined (design choice)
+            StrucAssert( addexp.isValNull() );
 
-            if ( !ycgt.size() )
-            {
-                ycgt.resize(bopts.numcgt) = nullgentype();
-                xobstype_cgt.resize(bopts.numcgt) = 0;
-            }
+            int dNpreadd_mu    = 0; // dummy
+            int dNpreadd_sigma = 0; // dummy
+            int dNpreadd_cgt   = 0; // dummy
 
-            if ( xhasnulls(i) )
-            {
-                Vector<int> loczerovec(xobstype_cgt);
+            bool fullobs = addDataToModel(ii,Npreadd,dNpreadd_mu,dNpreadd_sigma,dNpreadd_cgt,stopnow,bopts,dim,isfullgrid,true,fres,ires,
+                                          xx,addvar,yyval,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,
+                                          true);
 
-                loczerovec = 0;
-
-                bopts.model_addTrainingVector_musigma(ytoadd,yyval,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,0); // we set d=0 because this is a placeholder
-                bopts.model_addTrainingVector_cgt(ycgt,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,loczerovec); // we set d=0 because this is a placeholder
-            }
-
-            else if ( isfullgrid )
-            {
-                NiceAssert( ( xobstype == 0 ) || ( xobstype == 2 ) );
-
-                bopts.model_addTrainingVector_musigma(ytoadd,yyval,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,0); // we set d=0 to prevent training and hence time-wasting
-                bopts.model_addTrainingVector_cgt(ycgt,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype_cgt);
-            }
-
-            else
-            {
-                bopts.model_addTrainingVector_musigma(ytoadd,yyval,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype);
-                bopts.model_addTrainingVector_cgt(ycgt,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype_cgt);
-            }
-
-            if ( fullobs )
-            {
-                // This is an observation, so we count it as such
-
-                ++Npreadd;
-
-//TODO: is grid full fidelity?                if ( isfullfid && !fnapproxout.isValNull() && ( ( ires == -1 ) || ( fnapproxout > fres ) ) && ( ycgt >= 0.0_gent ) )
-                if ( ( ( ires == -1 ) || ( ytoadd > fres ) ) && ( ycgt >= 0.0_gent ) )
-                {
-                    fres = (double) ytoadd;
-                    ires = Nbasemu+i;
-errstream() << "New fres (a) = " << fres << "\n";
-                }
-            }
-
-            else
+            if ( !fullobs )
             {
                 gridall.add(gridall.size());
                 gridall("&",gridall.size()-1) = i;
@@ -2535,58 +3266,37 @@ errstream() << "New fres (a) = " << fres << "\n";
     Nbasesigma += Npreadd;
     Nbasecgt   += Npreadd;
 
-    int Npreadd_mu = 0;
+    int Npreadd_mu    = 0;
     int Npreadd_sigma = 0;
-    int Npreadd_cgt = 0;
+    int Npreadd_cgt   = 0;
 
     if ( presource )
     {
+        int ii = -2;
+
         for ( i = 0 ; i < (*presource).N() ; ++i )
         {
             gentype yyval = (*presource).y()(i); // y value as defined in the model (not processed yet)
+            const SparseVector<gentype> &xx = (*presource).x(i); // x value as defined in the model (not processed yet)
 
             xobstype = (*presource).d()(i); // default value as specified in presource
             xobstype_cgt.resize(0); //bopts.numcgt) = 2; // default value is equality on constraints
 
-            readres(yyval,addvar,ycgt,xreplace,replacex,stopnow,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt);
-            gentype ytoadd = yyval.negate(); // by default, negative of model
+            readres(yyval,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt);
 
-            process_obs(ytoadd,ycgt,xobstype,xobstype_cgt);
-            const SparseVector<gentype> &xtoadd = replacex ? xreplace : (*presource).x(i); // allow x to be redefined (design choice)
+            StrucAssert( addexp.isValNull() );
 
-            if ( xobstype )
-            {
-                bopts.model_addTrainingVector_musigma(ytoadd,yyval,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype);
+            int dNpreadd = 0;
 
-                ++Npreadd_mu;
-                ++Npreadd_sigma;
+            bool fullobs = addDataToModel(ii,dNpreadd,Npreadd_mu,Npreadd_sigma,Npreadd_cgt,stopnow,bopts,dim,false,false,fres,ires,
+                                          xx,addvar,yyval,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,
+                                          true);
 
-                if ( ( ( ires == -1 ) || ( ytoadd > fres ) ) && ( ycgt >= 0.0_gent ) )
-                {
-                    fres = (double) ytoadd;
-                    ires = Nbasemu+i;
-errstream() << "New fres (b) = " << fres << "\n";
-                }
-            }
-
-            bool fullcgt = true;
-
-            for ( int aa = 0 ; fullcgt && ( aa < bopts.numcgt ) ; ++aa )
-            {
-                if ( xobstype_cgt(aa) == 0 )
-                {
-                    fullcgt = false;
-                }
-            }
-
-            if ( fullcgt )
-            {
-                bopts.model_addTrainingVector_cgt(ycgt,xtoadd,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype_cgt);
-
-                ++Npreadd_cgt;
-            }
+            (void) fullobs;
         }
     }
+
+    stopflags = 0;
 
     Nbasemu    += Npreadd_mu;
     Nbasesigma += Npreadd_sigma;
@@ -2612,7 +3322,6 @@ errstream() << "New fres (b) = " << fres << "\n";
 
     Vector<double> xa(dim);
     Vector<SparseVector<double> > xb(recBatchSize);   // Has fidelity variables in nup(0), and augmented data
-    Vector<gentype> xxa(dim);
     Vector<SparseVector<gentype> > xxb(recBatchSize); // Has fidelity variables in nup(1), and no augmented data
     gentype fnapproxout;
     gentype nothingmuch('N');
@@ -2725,7 +3434,9 @@ errstream() << "New fres (b) = " << fres << "\n";
                 randfill(dodum,'S',(int) time(nullptr));
             }
 
-            for ( i = Nstart ; ( ( ( i < Nstart+startpoints ) || !startpoints ) && !killSwitch && ( !isgridopt || ( gridind.size() > recBatchSize ) ) && ( !usefidbudget || ( fidtotcost < (bopts.fidbudget)/10 ) ) ) ; ++i )
+            int skipcnt = 0;
+
+            for ( i = Nstart ; ( ( ( i-skipcnt < Nstart+startpoints ) || !startpoints ) && !killSwitch && ( !isgridopt || ( gridind.size() > recBatchSize ) ) && ( !usefidbudget || ( fidtotcost < (bopts.fidbudget)/10 ) ) ) ; ++i )
             {
                 double varscale = 0;
 
@@ -2753,11 +3464,13 @@ errstream() << "New fres (b) = " << fres << "\n";
                 // ===========================================================
                 // ===========================================================
 
+                gridi = -1;
+
                 if ( isgridopt )
                 {
-                    gridref = rand()%(gridind.size()); // stored for later when we *may* (or may not) remove from grid if the observation is "full"
-                    gridi   = gridind(gridref);
-                    gridy   = (double) bopts.model_y()(Nbasemu+gridi);
+                    gridref    = rand()%(gridind.size()); // stored for later when we *may* (or may not) remove from grid if the observation is "full"
+                    gridi      = gridind(gridref);
+                    gridy      = (double) bopts.model_y()(Nbasemu+gridi);
                     //xinf    = &(((*gridsource).xinfo(gridi)));
 // TODO: multi-fidelity grid optimization?
                 }
@@ -2766,7 +3479,7 @@ errstream() << "New fres (b) = " << fres << "\n";
 
                 for ( j = 0 ; j < dim ; ++j )
                 {
-                    if ( j < effdim )
+                    if ( j < dim-bopts.getdimfid() )
                     {
                         // Regular variables
 
@@ -2788,39 +3501,19 @@ errstream() << "New fres (b) = " << fres << "\n";
                         }
                     }
 
-                    else if ( j < effdim+(bopts.getdimfid()) )
+                    else
                     {
                         // Fidelity variables
 
                         int qqq = 1+(rand()%(bopts.numfids));
 
-                        xxb("&",k).n("&",j-effdim,1).dir_double() = ((double) qqq)/((double) bopts.numfids);
+                        xxb("&",k).n("&",j-(dim-bopts.getdimfid()),1).dir_double() = ((double) qqq)/((double) bopts.numfids);
 
                         if ( qqq != bopts.numfids )
                         {
                             isfullfid = false;
                         }
                     }
-
-                    else
-                    {
-                        xxb("&",k)("&",j).dir_double() = xmin(j);
-                    }
-                }
-
-                // Work out cost at this fidelity
-
-                if ( ismultfid )
-                {
-                    SparseVector<SparseVector<gentype> > actfidel;
-
-                    for ( int jij = 0 ; jij < (bopts.getdimfid()) ; jij++ )
-                    {
-                        actfidel("&",0)("&",jij) = xxb(k).n(jij,1);
-                    }
-
-                    fidtotcost += (double) bopts.fidpenalty(actfidel);
-                    varscale    = (double) bopts.fidvar(actfidel);
                 }
 
                 // ===========================================================
@@ -2829,23 +3522,7 @@ errstream() << "New fres (b) = " << fres << "\n";
                 // ===========================================================
                 // ===========================================================
 
-                for ( j = 0 ; j < dim ; ++j )
-                {
-                    if ( j < effdim )
-                    {
-                        xb("&",k)("&",j) = xxb(k)(j);
-                    }
-
-                    else if ( j < effdim+(bopts.getdimfid()) )
-                    {
-                        xb("&",k)("&",j) = xxb(k).n(j-effdim,1);
-                    }
-
-                    else
-                    {
-                        xb("&",k)("&",j) = xxb(k)(j);
-                    }
-                }
+                SparsenearToSparsenonnear(xb("&",k),xxb(k),dim,bopts.getdimfid());
 
                 // ===========================================================
                 // ===========================================================
@@ -2853,7 +3530,6 @@ errstream() << "New fres (b) = " << fres << "\n";
                 // ===========================================================
                 // ===========================================================
 
-//phantomabc                if ( isgridopt && !iscontopt && ( bopts.model_d()(Nbasemu+gridi) == 2 ) )
                 if ( isgridopt && isfullfid && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
                 {
                     mupred("&",k) = bopts.model_y()(Nbasemu+gridi);
@@ -2907,7 +3583,6 @@ errstream() << "New fres (b) = " << fres << "\n";
                 gentype gridresis = nullgentype();
                 Vector<gentype> ycgtis(bopts.numcgt,nullgentype());
 
-//phantomabc                if ( isgridopt && !iscontopt )
                 if ( isgridopt && isfullfid && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
                 {
                     // Grid may have defined solutions already loaded.
@@ -2929,205 +3604,275 @@ errstream() << "New fres (b) = " << fres << "\n";
 
                 xobstype = 2;
                 fnapproxout.force_int() = -1;
-                (*fn)(dim,fnapproxout,&xb(k)(0),fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,gridresis,muapproxsize,ycgtis);
-                fnapproxout.negate();
+                (*fn)(dim,fnapproxout,&xb(k)(0),fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridresis,muapproxsize,ycgtis,false);
+                negateoutery(fnapproxout);
 
-                // Work out if this is a full observation, and also zero out nulls
+                bool fullobs = false;
+                bool addobs = true; // remember that multiple results might be packed in fnapproxout
+                bool firstinset = true;
 
-                bool fullobs = process_obs(fnapproxout,ycgt,xobstype,xobstype_cgt);
-
-                NiceAssert( !( isgridopt && !iscontopt ) || !replacex );
-
-                if ( replacex )
+                while ( addobs )
                 {
-                    xxb("&",k) = xreplace;
+                    if ( ( stopflags & 1 )               ) { stopnow = 1; }
+                    if ( ( stopflags & 2 ) && firstinset ) { ++skipcnt;   }
 
-                    int numfids = bopts.numfids;
-                    int dimfid = bopts.getdimfid();
+                    // Work out if this is a full observation, and also zero out nulls
 
-                    if ( numfids )
+                    fullobs = process_obs(fnapproxout,ycgt,xobstype,xobstype_cgt);
+
+                    NiceAssert( !( isgridopt && !iscontopt ) || !replacexx );
+
+                    if ( replacexx )
                     {
-                        // Retrieve fidelity
+                        gridi = -1;
 
-                        for ( int jij = dimfid-1 ; jij >= 0 ; jij-- )
+                        xxb("&",k) = xxreplace;
+
+                        int numfids = bopts.numfids;
+                        int dimfid = bopts.getdimfid();
+
+                        SparsenearToSparsenonnear(xb("&",k),xxb(k),dim,dimfid);
+
+                        isfullfid = true;
+
+                        if ( numfids )
                         {
-                            xxb("&",k).n("&",jij,1) = xxb(k)(dim-dimfid+jij);
-                            xxb("&",k).zero(dim-dimfid+jij);
-                        }
-                    }
-                }
+                            // Retrieve fidelity
 
-                // ===========================================================
-                // ===========================================================
-                // Update models
-                // ===========================================================
-                // ===========================================================
-
-                if ( isgridopt && isfullfid && !iscontopt && !replacex )
-                {
-                    // Remove the index from grid for full experiment, update model appropriately
-
-                    fullobs = true;
-
-                    if ( !isfullgrid )
-                    {
-                        if ( xobstype )
-                        {
-                            bopts.model_setyd(Nbasemu+gridi,Nbasesigma+gridi,xobstype,fnapproxout,varscale);
-                            //gridsource->sety(gridi,fnapproxout);
-
-                            if ( addvar != 0 )
+                            for ( int jij = dimfid-1 ; jij >= 0 ; jij-- )
                             {
-                                bopts.model_setsigmaweight_addvar(Nbasemu+gridi,Nsigma,addvar);
-                            }
-                        }
-
-                        else if ( !bopts.model_d()(Nbasemu+gridi) )
-                        {
-                            fullobs = false;
-                        }
-                    }
-
-                    else
-                    {
-                        ; //grid_xobstype("&",gridi) = xobstype; // so we can update later
-                    }
-
-                    if ( ycgt.size() )
-                    {
-                        for ( int iy = 0 ; iy < ycgt.size() ; ++iy )
-                        {
-                            if ( !xobstype_cgt(iy) ) // ycgt(iy).isValNull() )
-                            {
-                                if ( bopts.model_d_cgt(iy)(Nbasecgt+gridi) )
+                                if ( (int) std::lround(((double) (xxb(k).n(jij,1)))*(bopts.numfids)) != bopts.numfids )
                                 {
-                                    ycgt("&",iy) = bopts.model_y_cgt(iy)(Nbasecgt+gridi);
-                                    xobstype_cgt("&",iy) = bopts.model_d_cgt(iy)(Nbasecgt+gridi);
-                                }
-
-                                else
-                                {
-                                    fullobs = false;
+                                    isfullfid = false;
                                 }
                             }
                         }
-
-                        bopts.model_setyd_cgt(Nbasecgt+gridi,xobstype_cgt,ycgt,varscale);
                     }
 
-                    if ( fullobs )
-                    {
-                        griddone.add(griddone.size());
-                        griddone("&",griddone.size()-1) = gridind(gridref);
-                        griddone_xobstype.add(griddone_xobstype.size());
-                        griddone_xobstype("&",griddone_xobstype.size()-1) = grid_xobstype(gridref);
-                        gridind.remove(gridref);
-                        grid_xobstype.remove(gridref);
-                    }
-                }
+                    // Fidelity budget (only the first call "counts" here - the rest are assumed to be free observations collected along the way)
 
-                else
-                {
-//phantomabc                    if ( xobstype )
-                    if ( !isfullgrid || !isfullfid || replacex )
+                    varscale = 0;
+
+                    if ( firstinset )
                     {
-                        bopts.model_addTrainingVector_musigma(((fnapproxout.isValNull()) ? 0.0_gent : fnapproxout),mupred(k),xxb(k),xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,varscale);
+                        SparseVector<SparseVector<gentype> > actfidel;
+
+                        for ( int jij = 0 ; jij < bopts.getdimfid() ; jij++ )
+                        {
+                            actfidel("&",0)("&",jij) = xxb(k).n(jij,1);
+                        }
+
+                        fidtotcost += (double) bopts.fidpenalty(actfidel);
+                        varscale    = (double) bopts.fidvar(actfidel);
+                        firstinset = false;
+                    }
+
+                    // ===========================================================
+                    // ===========================================================
+                    // Update models
+                    // ===========================================================
+                    // ===========================================================
+
+                    errstream() << "a(" << mupred(k) << ";" << sigmapred(k) << ")";
+
+                    if ( isgridopt && !iscontopt && isfullfid && ( gridi >= 0 ) )
+                    {
+                        // Remove the index from grid for full experiment, update model appropriately
+
+                        fullobs = true;
+
+                        if ( !isfullgrid )
+                        {
+                            if ( xobstype )
+                            {
+                                bopts.model_setyd(Nbasemu+gridi,Nbasesigma+gridi,xobstype,fnapproxout,varscale);
+                                //gridsource->sety(gridi,fnapproxout);
+
+                                if ( addvar != 0 )
+                                {
+                                    bopts.model_setsigmaweight_addvar(Nbasemu+gridi,Nsigma,addvar);
+                                }
+                            }
+
+                            else if ( !bopts.model_d()(Nbasemu+gridi) )
+                            {
+                                fullobs = false;
+                            }
+                        }
+
+                        else
+                        {
+                            ; //grid_xobstype("&",gridi) = xobstype; // so we can update later
+                        }
+
+                        if ( ycgt.size() )
+                        {
+                            for ( int iy = 0 ; iy < ycgt.size() ; ++iy )
+                            {
+                                if ( !xobstype_cgt(iy) ) // ycgt(iy).isValNull() )
+                                {
+                                    if ( bopts.model_d_cgt(iy)(Nbasecgt+gridi) )
+                                    {
+                                        ycgt("&",iy) = bopts.model_y_cgt(iy)(Nbasecgt+gridi);
+                                        xobstype_cgt("&",iy) = bopts.model_d_cgt(iy)(Nbasecgt+gridi);
+                                    }
+
+                                    else
+                                    {
+                                        fullobs = false;
+                                    }
+                                }
+                            }
+
+                            bopts.model_setyd_cgt(Nbasecgt+gridi,xobstype_cgt,ycgt,varscale);
+                        }
+
+                        if ( fullobs )
+                        {
+                            griddone.add(griddone.size());
+                            griddone("&",griddone.size()-1) = gridind(gridref);
+                            griddone_xobstype.add(griddone_xobstype.size());
+                            griddone_xobstype("&",griddone_xobstype.size()-1) = grid_xobstype(gridref);
+                            gridind.remove(gridref);
+                            grid_xobstype.remove(gridref);
+                        }
+                    }
+
+                    else if ( isgridopt && !iscontopt && isfullfid && ( gridi == -1 ) )
+                    {
+                        bopts.model_addTrainingVector_musigma(((fnapproxout.isValNull()) ? 0.0_gent : fnapproxout),mupred(k),xxb(k),xsidechan,xobstype,varscale);
 
                         if ( addvar != 0 )
                         {
                             bopts.model_setsigmaweight_addvar(Nmodel,Nsigma,addvar);
                         }
-                    }
 
-                    if ( ycgt.size() )
-                    {
-                        bopts.model_addTrainingVector_cgt(ycgt,xxb(k),xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype_cgt,varscale);
-                    }
-                }
-
-                // ===========================================================
-                // ===========================================================
-                // Update impulse model (if defined, for multiobjective opt)
-                // ===========================================================
-                // ===========================================================
-
-                int Ninmu = ( isgridopt && !iscontopt ) ? Nbasemu+gridi : Nmodel;
-
-                if ( bopts.isimphere() )
-                {
-                    if ( fnapproxout.isValVector() )
-                    {
-                        const Vector<gentype> &ghgh = (const Vector<gentype> &) fnapproxout;
-
-                        for ( j = 0 ; j < fnapproxout.size() ; ++j )
+                        if ( ycgt.size() )
                         {
-                            xinb("&",j) = ghgh(j);
+                            bopts.model_addTrainingVector_cgt(ycgt,xxb(k),xsidechan,xobstype_cgt,varscale);
                         }
                     }
 
                     else
                     {
-                        xinb("&",0) = fnapproxout;
+                        if ( !isfullgrid || ( gridi == -1 ) || !isfullfid || replacexx )
+                        {
+                            bopts.model_addTrainingVector_musigma(((fnapproxout.isValNull()) ? 0.0_gent : fnapproxout),mupred(k),xxb(k),xsidechan,xobstype,varscale);
+
+                            if ( addvar != 0 )
+                            {
+                                bopts.model_setsigmaweight_addvar(Nmodel,Nsigma,addvar);
+                            }
+                        }
+
+                        if ( ycgt.size() )
+                        {
+                            bopts.model_addTrainingVector_cgt(ycgt,xxb(k),xsidechan,xobstype_cgt,varscale);
+                        }
                     }
 
-                    xinb.negate();
+                    // ===========================================================
+                    // ===========================================================
+                    // Update impulse model (if defined, for multiobjective opt)
+                    // ===========================================================
+                    // ===========================================================
 
-                    bopts.modelimp_addTrainingVector(nothingmuch,xinb);
-                }
+                    if ( bopts.isimphere() )
+                    {
+                        if ( fnapproxout.isValVector() )
+                        {
+                            const Vector<gentype> &ghgh = (const Vector<gentype> &) fnapproxout;
 
-                // ===========================================================
-                // ===========================================================
-                // Feedback
-                // ===========================================================
-                // ===========================================================
+                            for ( j = 0 ; j < fnapproxout.size() ; ++j )
+                            {
+                                xinb("&",j) = ghgh(j);
+                            }
+                        }
 
-                if ( bopts.isimphere() )
-                {
-                    errstream() << "(" << Nmodel << "," << bopts.modelimp_N() << ").";
-                }
+                        else
+                        {
+                            xinb("&",0) = fnapproxout;
+                        }
 
-                else
-                {
-                    errstream() << "(" << Nmodel << ").";
-                }
+                        xinb.negate();
 
-                // ===========================================================
-                // ===========================================================
-                // Fill in fres and ires based on result
-                // ===========================================================
-                // ===========================================================
+                        bopts.modelimp_addTrainingVector(nothingmuch,xinb);
+                    }
+
+                    // ===========================================================
+                    // ===========================================================
+                    // Feedback
+                    // ===========================================================
+                    // ===========================================================
+
+                    if ( bopts.isimphere() )
+                    {
+                        errstream() << "(" << Nmodel << "," << bopts.modelimp_N() << ").";
+                    }
+
+                    else
+                    {
+                        errstream() << "(" << Nmodel << ").";
+                    }
+
+                    // ===========================================================
+                    // ===========================================================
+                    // Fill in fres and ires based on result
+                    // ===========================================================
+                    // ===========================================================
 
 //FIXME TS-MOO
-                if ( isfullfid && ( xobstype == 2 ) && ( ( ires == -1 ) || ( fnapproxout > fres ) ) && ( ycgt >= 0.0_gent ) )
-                {
-                    fres = (double) fnapproxout;
-                    ires = Ninmu;
-errstream() << "New fres (c) = " << fres << "\n";
-                }
-
-//phantomabc                else if ( isfullfid && isgridopt && !iscontopt && isfullgrid && ( ( ires == -1 ) || ( bopts.model_y()(Nbasemu+gridi) > fres ) ) && ( ycgt >= 0.0_gent ) )
-                else if ( isfullfid && isgridopt && isfullgrid && ( ( ires == -1 ) || ( bopts.model_y()(Nbasemu+gridi) > fres ) ) && ( ycgt >= 0.0_gent ) )
-                {
-                    fres = bopts.model_y()(Nbasemu+gridi);
-                    ires = ( isgridopt && !iscontopt ) ? Nbasemu+gridi : (bopts.model_N_mu())-1;
+                    if (    isfullfid
+                         && ( xobstype == 2 )
+                         && ( ( ires == -1 ) || ( fnapproxout > fres ) )
+                         && ( ycgt >= 0.0_gent )
+                         && ( xxb(k).indsize() == xxb(k).nindsize() ) )
+                    {
+                        fres = (double) fnapproxout;
+                        ires = ( isgridopt && !iscontopt && ( gridi >= 0 ) ) ? Nbasemu+gridi : (bopts.model_N_mu())-1;
 errstream() << "New fres (d) = " << fres << "\n";
-                }
+                    }
 
-                // ===========================================================
-                // ===========================================================
-                // Counters
-                // ===========================================================
-                // ===========================================================
+                    // ===========================================================
+                    // ===========================================================
+                    // Counters
+                    // ===========================================================
+                    // ===========================================================
 
-                if ( xobstype || fullobs || ( isgridopt && iscontopt && isfullgrid ) )
-                {
-                    ++Nmodel;
-                    ++Nsigma;
-                }
+                    if ( xobstype || fullobs || ( isgridopt && iscontopt && isfullgrid ) )
+                    {
+                        ++Nmodel;
+                        ++Nsigma;
+                    }
 
-                else
-                {
-                    --i; // We need Nstart non-null results here!
+                    else
+                    {
+                        --i; // We need Nstart non-null results here!
+                    }
+
+                    addobs = addexp.isValNull() ? false : true;
+
+                    gridi = -1;
+
+                    if ( addobs )
+                    {
+                        // recurse to next observation to process
+
+                        fnapproxout = addexp;
+                        addvar = 0;
+                        ycgt.resize(0);
+                        xxreplace.zero();
+                        replacexx = 0;
+                        addexp.force_null();
+                        stopflags = 0;
+                        xsidechan.resize(0);
+                        //xaddranksidechan.resize(0);
+                        xobstype = 2;
+                        xobstype_cgt.resize(0);
+
+                        readres(fnapproxout,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt);
+                        negateoutery(fnapproxout);
+                    }
                 }
 
                 errstream() << "\n";
@@ -3380,10 +4125,10 @@ errstream() << "New fres (d) = " << fres << "\n";
 
     errstream() << "Training setup.\n";
 
-    size_t skipcnt    = 0;
-    size_t itcnt      = 0;
+    int skipcnt       = 0;
+    int itcnt         = 0;
     int itcntmethod   = bopts.itcntmethod;
-    size_t altitcnt   = ( bopts.model_N_mu() / ( itcntmethod ? 1 : recBatchSize ) ) + 1;
+    int altitcnt      = ( bopts.model_N_mu() / ( itcntmethod ? 1 : recBatchSize ) ) + 1;
     double betavalmin = 0.0;
 
     int ismultitargrec      = 0;
@@ -3429,7 +4174,6 @@ errstream() << "New fres (d) = " << fres << "\n";
                                fres,
                                ( itcntmethod != 3 ) ? altitcnt : itcnt,
                                dim,
-                               effdim,
                                ztol,
                                delta,
                                zeta,
@@ -3593,7 +4337,7 @@ errstream() << "New fres (d) = " << fres << "\n";
 
         xobstype = 2;
         dummyyres.force_int() = 0;
-        (*fn)(-1,dummyyres,nullptr,fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,nullgentype(),muapproxsize,dummyyres_cgt);
+        (*fn)(-1,dummyyres,nullptr,fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,nullgentype(),muapproxsize,dummyyres_cgt,false);
 
         // ===================================================================
         // ===================================================================
@@ -3909,15 +4653,7 @@ errstream() << "New fres (d) = " << fres << "\n";
 
                         SparseVector<double> fidxglob;
 
-                        for ( int jij = 0 ; jij < n-dimfid ; jij++ )
-                        {
-                            fidxglob("&",jij) = xa(jij);
-                        }
-
-                        for ( int jij = 0 ; jij < dimfid ; jij++ )
-                        {
-                            fidxglob.n("&",jij,1) = xa(n-dimfid+jij);
-                        }
+                        NonsparseToSparsenear(fidxglob,xa,n,dimfid);
 
                         for ( inumfid = 1 ; !isdone ; )
                         {
@@ -3935,15 +4671,7 @@ errstream() << "New fres (d) = " << fres << "\n";
 
                             SparseVector<double> fidxloc;
 
-                            for ( int jij = 0 ; jij < n-dimfid ; jij++ )
-                            {
-                                fidxloc("&",jij) = xa(jij);
-                            }
-
-                            for ( int jij = 0 ; jij < dimfid ; jij++ )
-                            {
-                                fidxloc.n("&",jij,1) = xa(n-dimfid+jij);
-                            }
+                            NonsparseToSparsenear(fidxloc,xa,n,dimfid);
 
                             // Work out penalty for this z
 
@@ -4164,6 +4892,10 @@ errstream() << "New fres (d) = " << fres << "\n";
                     }
 
                     {
+                        // but first over-ride goptssingleobj with relevant components from *this (assuming non-virtual assignment operators)
+                        static_cast<GlobalOptions &>(bopts.goptssingleobj) = static_cast<GlobalOptions &>(bopts);
+
+errstream() << "phantomxyzaaa: maxevals = " << bopts.goptssingleobj.maxevals << "\n";
                         retVector<double> tmpvb;
                         retVector<double> tmpvc;
 
@@ -4452,21 +5184,20 @@ errstream() << "New fres (d) = " << fres << "\n";
                 // ===========================================================
                 // ===========================================================
 
-                for ( j = 0 ; j < dim ; ++j )
+                SparsenonnearToSparsenear(xxb("&",numRecs),xb(numRecs),dim,bopts.getdimfid());
+
+                isfullfid = true;
+
+                if ( bopts.numfids )
                 {
-                    if ( j < effdim )
-                    {
-                        xxb("&",numRecs)("&",j) = xb(numRecs)(j);
-                    }
+                    // Retrieve fidelity
 
-                    else if ( j >= effdim+bopts.getdimfid() )
+                    for ( int jij = bopts.getdimfid()-1 ; jij >= 0 ; jij-- )
                     {
-                        xxb("&",numRecs)("&",j) = xb(numRecs)(j);
-                    }
-
-                    else
-                    {
-                        xxb("&",numRecs).n("&",j-effdim,1) = xb(numRecs)(j);
+                        if ( (int) std::lround(((double) (xxb(k).n(jij,1)))*(bopts.numfids)) != bopts.numfids )
+                        {
+                            isfullfid = false;
+                        }
                     }
                 }
 
@@ -4478,18 +5209,17 @@ errstream() << "New fres (d) = " << fres << "\n";
 
                 if ( bopts.sigmuseparate )
                 {
-                    if ( isfullgrid )
+                    if ( isgridopt && isfullfid && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
                     {
                         ;
                     }
 
-                    else if ( isgridopt && !iscontopt )
+                    else if ( isgridopt && isfullfid && !iscontopt )
                     {
                         bopts.model_setyd_sigma(Nbasesigma+gridi,2,fnapproxout,varscale);
                     }
 
-//phantomabc                    else
-                    else if ( !isfullgrid )
+                    else
                     {
                         bopts.model_addTrainingVector_sigmaifsep(fnapproxout,xxb(numRecs),varscale);
                     }
@@ -4503,16 +5233,13 @@ errstream() << "New fres (d) = " << fres << "\n";
                 // ===========================================================
                 // ===========================================================
 
-//phantomabcabcabc
-//phantomabcabcabc - see initial random tests code here! isfullfid?
-//phantomabc                if ( isgridopt && !iscontopt && ( bopts.model_d()(Nbasemu+gridi) == 2 ) )
-                if ( isgridopt && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
+                if ( isgridopt && isfullfid && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
                 {
                     mupred("&",numRecs) = bopts.model_y()(Nbasemu+gridi);
                     sigmapred("&",numRecs) = bopts.model_sigma(0);
                 }
 
-                else if ( isgridopt && !iscontopt )
+                else if ( isgridopt && isfullfid && !iscontopt )
                 {
                     bopts.model_muvarTrainingVector(sigmapred("&",numRecs),mupred("&",numRecs),Nbasesigma+gridi,Nbasemu+gridi);
                 }
@@ -4574,7 +5301,6 @@ errstream() << "New fres (d) = " << fres << "\n";
             }
 
             doeval = true;
-            bool recordeval = true;
             int dval = 2;
 
             // ===============================================================
@@ -4611,7 +5337,6 @@ outeroptions:
                 {
                     stopearly  = true;
                     doeval     = false;
-                    recordeval = false;
                 }
 
                 else if ( evaloption == "f" )
@@ -4635,23 +5360,7 @@ midoptions:
 
                         promptstream(outbuff.str()) >> xxb("&",k);
 
-                        for ( j = 0 ; j < dim ; ++j )
-                        {
-                            if ( j < effdim )
-                            {
-                                xb("&",k)("&",j) = (double) xxb(k)(j);
-                            }
-
-                            else if ( j >= effdim+bopts.getdimfid() )
-                            {
-                                xb("&",k)("&",j) = (double) xxb(k)(j);
-                            }
-
-                            else
-                            {
-                                xb("&",k)("&",j) = (double) xxb(k).n(j-effdim,1);
-                            }
-                        }
+                        SparsenearToSparsenonnear(xb("&",k),xxb(k),dim,bopts.getdimfid());
 
                         if ( evaloption == "z" )
                         {
@@ -4673,107 +5382,6 @@ midoptions:
 //FIXME: use safe converseion here!
                         fnapproxout = ystring;
                         doeval = false;
-                    }
-
-                    else if ( evaloption == "a" )
-                    {
-                        outbuff.str("");
-inneroptions:
-                        outbuff << "Options: y: Give prior result for recommended experiment, update prior model, find new recommendation.\n";
-                        outbuff << "         x: Change recommended experiment, update prior model, find new recommendation\n";
-                        outbuff << "         z: Change recommended experiment, give prior result, update prior model, find new recommendation\n";
-                        outbuff << "         c: Cancel\n";
-
-                        std::string evaloption;
-
-                        promptstream(outbuff.str()) >> evaloption;
-
-                        skipcnt++;
-                        recordeval = false;
-
-                        dval = -2; // trigger setting only for priors
-
-                        if ( ( evaloption == "x" ) || ( evaloption == "z" ) )
-                        {
-                            outbuff.str("");
-                            outbuff << "Replacement Experiment: ";
-
-                            promptstream(outbuff.str()) >> xxb("&",k);
-
-                            for ( j = 0 ; j < dim ; ++j )
-                            {
-                                if ( j < effdim )
-                                {
-                                    xb("&",k)("&",j) = (double) xxb(k)(j);
-                                }
-
-                                else if ( j >= effdim+bopts.getdimfid() )
-                                {
-                                    xb("&",k)("&",j) = (double) xxb(k)(j);
-                                }
-
-                                else
-                                {
-                                    xb("&",k)("&",j) = (double) xxb(k).n(j-effdim,1);
-                                }
-                            }
-
-                            if ( evaloption == "z" )
-                            {
-                                goto option_y_inner;
-                            }
-                        }
-
-                        else if ( evaloption == "y" )
-                        {
-                            option_y_inner:
-
-                            std::string ystring;
-
-                            outbuff.str("");
-                            outbuff << "Prior result (you can use > y for \"result greater than y\", or similarly < y): ";
-
-                            promptstream(outbuff.str()) >> ystring;
-
-                            if ( ystring == ">" )
-                            {
-                                dval = +1;
-                                std::string dummy = "";
-                                promptstream(dummy) >> ystring;
-                            }
-
-                            else if ( ystring == "<" )
-                            {
-                                dval = -1;
-                                std::string dummy = "";
-                                promptstream(dummy) >> ystring;
-                            }
-
-                            else if ( ystring == "=" )
-                            {
-                                std::string dummy = "";
-                                promptstream(dummy) >> ystring;
-                            }
-
-//FIXME: use safe converseion here!
-                            fnapproxout = ystring;
-                            doeval = false;
-                        }
-
-                        else if ( evaloption == "c" )
-                        {
-                            outbuff.str("");
-                            goto midoptions;
-                        }
-
-                        else
-                        {
-                            outbuff.str("");
-                            promptoutstream() << "ERROR: " << evaloption << " is not one of the options.";
-
-                            outbuff.str("");
-                            goto inneroptions;
-                        }
                     }
 
                     else if ( evaloption == "c" )
@@ -4815,6 +5423,23 @@ inneroptions:
 
             bool fullobs = true;
 
+            // Need preliminary isfullfid value (assuming x isn't substituted out)
+
+            isfullfid = true;
+
+            if ( bopts.numfids )
+            {
+                // Retrieve fidelity
+
+                for ( int jij = 0 ; jij < bopts.getdimfid() ; jij++ )
+                {
+                    if ( (int) std::lround(((double) (xxb(k).n(jij,1)))*(bopts.numfids)) != bopts.numfids )
+                    {
+                        isfullfid = false;
+                    }
+                }
+            }
+
 //phantomabcabcabc
 //phantomabcabcabc - FIXME fidelity stuff here
             if ( doeval )
@@ -4823,40 +5448,93 @@ inneroptions:
                 Vector<gentype> ycgtis(bopts.numcgt,nullgentype());
 
 //phantomabc                if ( isgridopt && !iscontopt )
-                if ( isgridopt )
+                if ( isgridopt && isfullfid && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
                 {
                     // Grid may have defined solutions already loaded.
 
-                    if ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) )
-                    {
-                        gridresis = bopts.model_y()(Nbasemu+gridi);
-                        gridresis.negate();
-                    }
+                    gridresis = bopts.model_y()(Nbasemu+gridi);
+                    gridresis.negate();
                 }
 
-                if ( isgridopt && !iscontopt )
+                if ( isgridopt && isfullfid && !iscontopt )
                 {
                     for ( int iy = 0 ; iy < bopts.numcgt ; ++iy )
                     {
-                        ycgtis("&",iy) = bopts.model_y_cgt(iy)(Nbasemu+gridi);
+                        if ( bopts.model_d_cgt(iy)(Nbasemu+gridi) == 2 )
+                        {
+                            ycgtis("&",iy) = bopts.model_y_cgt(iy)(Nbasemu+gridi);
+                        }
                     }
                 }
 
                 xobstype = 2;
                 fnapproxout.force_int() = static_cast<int>(itcnt+1);
-                (*fn)(dim,fnapproxout,&(xb(k)(0)),fnarg,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,gridresis,muapproxsize,ycgtis);
-                fnapproxout.negate();
+                (*fn)(dim,fnapproxout,&(xb(k)(0)),fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridresis,muapproxsize,ycgtis,false);
+                negateoutery(fnapproxout);
+            }
+
+            else
+            {
+                fnapproxout = addexp;
+                addvar = 0;
+                ycgt.resize(0);
+                xxreplace.zero();
+                replacexx = 0;
+                addexp.force_null();
+                stopflags = 0;
+                xsidechan.resize(0);
+                //xaddranksidechan.resize(0);
+                xobstype = dval; //2;
+                xobstype_cgt.resize(0);
+
+                readres(fnapproxout,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt);
+                negateoutery(fnapproxout);
+            }
+
+            // Do this outside the loop for simplicity (only needed on first iteration of while)
+
+            gridref = -1;
+
+            if ( isgridopt && ( gridi >= 0 ) )
+            {
+                for ( int iy = 0 ; iy < gridind.size() ; ++iy )
+                {
+                    if ( gridind(iy) == gridi )
+                    {
+                        gridref = iy;
+                        break;
+                    }
+                }
+            }
+
+            bool addobs = true; // remember that multiple results might be packed in fnapproxout
+            bool firstinset = true;
+
+            while ( addobs )
+            {
+                if ( ( stopflags & 1 )               ) { stopnow = 1; }
+                if ( ( stopflags & 2 ) && firstinset ) { ++skipcnt;   }
+
+                // Work out if this is a full observation, and also zero out nulls
 
                 fullobs = process_obs(fnapproxout,ycgt,xobstype,xobstype_cgt);
 
-                NiceAssert( !( isgridopt && !iscontopt ) || !replacex );
+                NiceAssert( !( isgridopt && !iscontopt ) || !replacexx );
 
-                if ( replacex )
+                if ( replacexx )
                 {
-                    xxb("&",k) = xreplace;
+                    gridi = -1;
+
+                    xxb("&",k) = xxreplace;
 
                     int numfids = bopts.numfids;
                     int dimfid = bopts.getdimfid();
+
+                    isfullfid = true;
+
+                    SparsenearToSparsenonnear(xb("&",k),xxb(k),dim,dimfid);
+
+                    isfullfid = true;
 
                     if ( numfids )
                     {
@@ -4864,138 +5542,112 @@ inneroptions:
 
                         for ( int jij = dimfid-1 ; jij >= 0 ; jij-- )
                         {
-                            xxb("&",k).n("&",jij,1) = xxb(k)(dim-dimfid+jij);
-                            xxb("&",k).zero(dim-dimfid+jij);
+                            if ( (int) std::lround(((double) (xxb(k).n(jij,1)))*(bopts.numfids)) != bopts.numfids )
+                            {
+                                isfullfid = false;
+                            }
                         }
                     }
                 }
-            }
 
-            else if ( recordeval )
-            {
-; //FIXME how to record the new x?  *Should* we record the new x (outside of the model) given that this isn't a "real" result?
-            }
+                // Fidelity stuff goes here (we can't do it earlier in case the user over-rides the fidelity
 
-            // Fidelity stuff goes here (we can't do it earlier in case the user over-rides the fidelity
-
-            {
-                int numfids = bopts.numfids;
-                int dimfid = bopts.getdimfid();
-
-                Vector<int> zindex(dimfid);
-                zindex = numfids; // default to highest fidelity if set empty
-
-                // ===============================================================
-                // ===============================================================
-                // Update fidelity information
-                // ===============================================================
-                // ===============================================================
-
-                if ( numfids )
                 {
-                    // Retrieve fidelity
+                    int numfids = bopts.numfids;
+                    int dimfid = bopts.getdimfid();
 
-                    for ( int jij = 0 ; jij < dimfid ; jij++ )
+                    Vector<int> zindex(dimfid);
+                    zindex = numfids; // default to highest fidelity if set empty
+
+                    // ===============================================================
+                    // ===============================================================
+                    // Update fidelity information
+                    // ===============================================================
+                    // ===============================================================
+
+                    if ( numfids )
                     {
-                        zindex("&",jij) = (int) std::lround(((double) (xxb(k).n(jij,1)))*numfids);
-
-                        if ( zindex(jij) != numfids )
-                        {
-                            isfullfid = false;
-                        }
-                    }
-
-                    // Heuristic from Kandasamy supplementary C.1
-
-                    if ( zindex == numfids )
-                    {
-                        ++fidmaxcnt;
-                    }
-
-                    // NB: really don't want to do this on the first iteration!
-                    //if ( !((itcnt+1)%10) )
-                    if ( !((itcnt+1)%20) )
-                    {
-                        //if ( fidmaxcnt > 7 )
-                        if ( fidmaxcnt > 15 )
-                        {
-                            //fidc /= sqrt(2.0);
-                            fidc /= 2;
-                        }
-
-                        //if ( fidmaxcnt < 3 )
-                        if ( fidmaxcnt < 5 )
-                        {
-                            //fidc *= sqrt(2.0);
-                            fidc *= 2;
-                        }
-
-                        fidc = ( fidc < 0.1 ) ? 0.1 : fidc;
-                        fidc = ( fidc > 20 ) ? 20 : fidc;
-
-                        fidmaxcnt = 0;
-                        errstream() << "Fidelity: fidc = " << fidc << "\n";
-                    }
-
-                    // Fidelity budget
-
-                    {
-                        SparseVector<SparseVector<gentype> > actfidel;
+                        // Retrieve fidelity
 
                         for ( int jij = 0 ; jij < dimfid ; jij++ )
                         {
-                            actfidel("&",0)("&",jij) = xa(dim-dimfid+jij);
+                            zindex("&",jij) = (int) std::lround(((double) (xxb(k).n(jij,1)))*numfids);
                         }
 
-                        fidtotcost += (double) bopts.fidpenalty(actfidel);
-                        varscale    = (double) bopts.fidvar(actfidel);
-                    }
-                }
-            }
+                        // Heuristic from Kandasamy supplementary C.1
 
-            // ===============================================================
-            // ===============================================================
-            // Add new point to machine learning block
-            // ===============================================================
-            // ===============================================================
-
-            {
-                //std::stringstream resbuffer;
-                errbuffer << "a(" << mupred(k) << ";" << sigmapred(k) << ")";
-                //resbuffer << "a(" << sigmapred(k) << ")";
-                //errstream() << resbuffer.str();
-            }
-            //errstream() << "a(" << fnapproxout << "," << mupred(k) << ";" << sigmapred(k) << ")";
-
-            int addpointpos = 0;
-
-            if ( doeval )
-            {
-                if ( isgridopt )
-                {
-                    for ( int iy = 0 ; iy < gridind.size() ; ++iy )
-                    {
-                        if ( gridind(iy) == gridi )
+                        if ( zindex == numfids )
                         {
-                            gridref = iy;
-                            break;
+                            ++fidmaxcnt;
+                        }
+
+                        // NB: really don't want to do this on the first iteration!
+                        //if ( !((itcnt+1)%10) )
+                        if ( !((itcnt+1)%20) )
+                        {
+                            //if ( fidmaxcnt > 7 )
+                            if ( fidmaxcnt > 15 )
+                            {
+                                //fidc /= sqrt(2.0);
+                                fidc /= 2;
+                            }
+
+                            //if ( fidmaxcnt < 3 )
+                            if ( fidmaxcnt < 5 )
+                            {
+                                //fidc *= sqrt(2.0);
+                                fidc *= 2;
+                            }
+
+                            fidc = ( fidc < 0.1 ) ? 0.1 : fidc;
+                            fidc = ( fidc > 20 ) ? 20 : fidc;
+
+                            fidmaxcnt = 0;
+                            errstream() << "Fidelity: fidc = " << fidc << "\n";
                         }
                     }
                 }
 
-                if ( isgridopt && !iscontopt )
+                // Fidelity budget (only the first call "counts" here - the rest are assumed to be free observations collected along the way)
+
+                varscale = 0;
+
+                if ( firstinset )
+                {
+                    SparseVector<SparseVector<gentype> > actfidel;
+
+                    for ( int jij = 0 ; jij < bopts.getdimfid() ; jij++ )
+                    {
+                        actfidel("&",0)("&",jij) = xxb(k).n(jij,1);
+                    }
+
+                    fidtotcost += (double) bopts.fidpenalty(actfidel);
+                    varscale    = (double) bopts.fidvar(actfidel);
+                    firstinset = false;
+                }
+
+                // ===========================================================
+                // ===========================================================
+                // Update models
+                // ===========================================================
+                // ===========================================================
+
+                errbuffer << "a(" << mupred(k) << ";" << sigmapred(k) << ")";
+
+                int addpointpos = 0;
+
+                if ( isgridopt && !iscontopt && isfullfid && ( gridi >= 0 ) )
                 {
                     // Remove the index from grid for full experiment, update model appropriately
 
                     fullobs = true;
-
                     addpointpos = Nbasemu+gridi;
 
                     if ( !isfullgrid )
                     {
                         if ( xobstype )
                         {
-                            bopts.model_setyd_mu(Nbasemu+gridi,2,fnapproxout,varscale);
+                            bopts.model_setyd_mu(Nbasemu+gridi,xobstype,fnapproxout,varscale);
                             //gridsource->sety(gridi,fnapproxout);
 
                             if ( addvar != 0 )
@@ -5048,17 +5700,26 @@ inneroptions:
                     }
                 }
 
+                else if ( isgridopt && !iscontopt && isfullfid && ( gridi == -1 ) )
+                {
+                    bopts.model_addTrainingVector_musigma(((fnapproxout.isValNull()) ? 0.0_gent : fnapproxout),mupred(k),xxb(k),xsidechan,xobstype,varscale);
+
+                    if ( addvar != 0 )
+                    {
+                        bopts.model_setsigmaweight_addvar(Nmodel,Nsigma,addvar);
+                    }
+
+                    if ( ycgt.size() )
+                    {
+                        bopts.model_addTrainingVector_cgt(ycgt,xxb(k),xsidechan,xobstype_cgt,varscale);
+                    }
+                }
+
                 else
                 {
-                    // Note that we updated sigma (if it's a separate model) previously,
-                    // so here we update mu (and sigma if model is shared).
-
-                    //if ( !fnapproxout.isValNull() )
-//phantomabc
-                    if ( !isfullgrid )
+                    if ( !isfullgrid || ( gridi == -1 ) || !isfullfid || replacexx )
                     {
-errstream() << "Add to training set: " << ( ((fnapproxout.isValNull()) ? 0.0_gent : fnapproxout) ) << ",\t" << xxb(k) << "\n";
-                        bopts.model_addTrainingVector_mu_sigmaifsame(((fnapproxout.isValNull()) ? 0.0_gent : fnapproxout),mupred(k),xxb(k),xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,dval,varscale);
+                        bopts.model_addTrainingVector_mu_sigmaifsame(((fnapproxout.isValNull()) ? 0.0_gent : fnapproxout),mupred(k),xxb(k),xsidechan,xobstype,varscale);
 
                         if ( addvar != 0 )
                         {
@@ -5068,10 +5729,15 @@ errstream() << "Add to training set: " << ( ((fnapproxout.isValNull()) ? 0.0_gen
 
                     if ( ycgt.size() )
                     {
-errstream() << "Add to training set cgt: " << ycgt << ",\t" << xxb(k) << "\n";
-                        bopts.model_addTrainingVector_cgt(ycgt,xxb(k),xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype_cgt,varscale);
+                        bopts.model_addTrainingVector_cgt(ycgt,xxb(k),xsidechan,xobstype_cgt,varscale);
                     }
                 }
+
+                // ===========================================================
+                // ===========================================================
+                // Update impulse model (if defined, for multiobjective opt)
+                // ===========================================================
+                // ===========================================================
 
                 if ( bopts.isimphere() )
                 {
@@ -5094,61 +5760,82 @@ errstream() << "Add to training set cgt: " << ycgt << ",\t" << xxb(k) << "\n";
 
                     bopts.modelimp_addTrainingVector(nothingmuch,xinb);
                 }
-            }
 
-            // ===============================================================
-            // ===============================================================
-            // Sort into y list if stability constraints active
-            // ===============================================================
-            // ===============================================================
+                // ===================================================================
+                // ===================================================================
+                // Fill in fres and ires based on result
+                // ===================================================================
+                // ===================================================================
 
-            if ( doeval && isstable )
-            {
-                int jj;
-
-                if ( !isgridopt )
+//FIXME TS-MOO
+                if (    isfullfid
+                     && ( xobstype == 2 )
+                     && ( ( ires == -1 ) || ( fnapproxout > fres ) )
+                     && ( ycgt >= 0.0_gent )
+                     && ( xxb(k).indsize() == xxb(k).nindsize() ) )
                 {
-                    for ( jj = 0 ; jj < ysort.size() ; ++jj )
+                    fres = fnapproxout;
+                    ires = ( isgridopt && !iscontopt ) ? Nbasemu+gridi : (bopts.model_N_mu())-1;
+errstream() << "New fres (e) = " << fres << "\n";
+                }
+
+                // ===============================================================
+                // ===============================================================
+                // Sort into y list if stability constraints active
+                // ===============================================================
+                // ===============================================================
+
+                if ( isstable )
+                {
+                    int jj;
+
+                    if ( !isgridopt )
                     {
-                        if ( ysort(jj) >= addpointpos )
+                        for ( jj = 0 ; jj < ysort.size() ; ++jj )
                         {
-                            ++(ysort("&",jj));
+                            if ( ysort(jj) >= addpointpos )
+                            {
+                                ++(ysort("&",jj));
+                            }
                         }
                     }
-                }
 
-                for ( jj = 0 ; jj < ysort.size() ; ++jj )
-                {
-//FIXME TS-MOO
-                    if ( (bopts.model_y())(addpointpos) < (bopts.model_y())(ysort(jj)) )
+                    for ( jj = 0 ; jj < ysort.size() ; ++jj )
                     {
-                        break;
+//FIXME TS-MOO
+                        if ( (bopts.model_y())(addpointpos) < (bopts.model_y())(ysort(jj)) )
+                        {
+                            break;
+                        }
                     }
+
+                    ysort.add(jj);
+                    ysort("&",jj) = addpointpos;
                 }
 
-                ysort.add(jj);
-                ysort("&",jj) = addpointpos;
-            }
+                addobs = ( addexp.isValNull() ? false : true );
 
-            // ===================================================================
-            // ===================================================================
-            // Update fres and ires
-            // ===================================================================
-            // ===================================================================
+                gridi = -1;
 
-            if ( doeval && isfullfid && ( xobstype == 2 ) && ( ( ires == -1 ) || ( fnapproxout > fres ) ) && ( ycgt >= 0.0_gent ) )
-            {
-                fres = fnapproxout;
-                ires = ( isgridopt && !iscontopt ) ? Nbasemu+gridi : (bopts.model_N_mu())-1;
-errstream() << "New fres (e) = " << fres << "\n";
-            }
+                if ( addobs )
+                {
+                    // recurse to next observation to process
 
-//phantomabc            else if ( doeval && isfullfid && isgridopt && !iscontopt && isfullgrid && ( ( ires == -1 ) || ( bopts.model_y()(Nbasemu+gridi) > fres ) ) && ( ycgt >= 0.0_gent ) )
-            else if ( doeval && isfullfid && isgridopt && isfullgrid && ( ( ires == -1 ) || ( bopts.model_y()(Nbasemu+gridi) > fres ) ) && ( ycgt >= 0.0_gent ) )
-            {
-                fres = bopts.model_y()(Nbasemu+gridi);
-                ires = ( isgridopt && !iscontopt ) ? Nbasemu+gridi : (bopts.model_N_mu())-1;
-errstream() << "New fres (f) = " << fres << "\n";
+                    fnapproxout = addexp;
+                    addvar = 0;
+                    ycgt.resize(0);
+                    xxreplace.zero();
+                    replacexx = 0;
+                    addexp.force_null();
+                    stopflags = 0;
+                    xsidechan.resize(0);
+                    //xaddranksidechan.resize(0);
+                    xobstype = 2;
+                    xobstype_cgt.resize(0);
+
+                    readres(fnapproxout,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt);
+                    negateoutery(fnapproxout);
+                }
             }
         }
 
@@ -5267,6 +5954,14 @@ errstream() << "New fres (f) = " << fres << "\n";
         // And log
 
         bopts.model_log(1);
+//errstream() << "phantomxyz: exit !stopnow, stopnow = " << stopnow << "\n";
+//errstream() << "phantomxyz: exit !stopearly, stopearly = " << stopearly << "\n";
+//errstream() << "phantomxyz: exit !killSwitch, killSwitch = " << killSwitch << "\n";
+//errstream() << "phantomxyz: exit !isopt, isopt = " << isopt << "\n";
+//errstream() << "phantomxyz: exit !timeout, timout = " << timeout << "\n";
+//errstream() << "phantomxyz: exit ( ( itcnt-skipcnt < maxitcnt ) || !maxitcnt ) = ( ( " << itcnt << "-" << skipcnt << " < " << maxitcnt << " ) || !" << maxitcnt << " )\n";
+//errstream() << "phantomxyz: exit ( !isgridopt || ( gridind.size() > recBatchSize ) ) = ( !" << isgridopt << " || ( " << gridind.size() << " > " << recBatchSize << " ) )\n";
+//errstream() << "phantomxyz: exit ( !usefidbudget || ( fidtotcost < bopts.fidbudget ) ) = ( !" << usefidbudget << " || ( " << fidtotcost << " < " << bopts.fidbudget << " ) )\n";
     }
 
     errstream() << "\n\n";
@@ -5371,6 +6066,7 @@ class fninnerArg
                double &_hardmax,
                double &_obsnoise,
                int _dimfid,
+               int _numfids,
                Vector<double> &_scnoise) : fn(_fn),
                                    arginner(_arginner),
                                    ires(_ires),
@@ -5386,16 +6082,17 @@ class fninnerArg
                                    hardmax(_hardmax),
                                    obsnoise(_obsnoise),
                                    dimfid(_dimfid),
+                                   numfids(_numfids),
                                    scnoise(_scnoise)
     {
-        xx.prealloc(dim+1);
+        xa.prealloc(dim+1);
         allxres.prealloc(nres);
         allfres.prealloc(nres);
         allcres.prealloc(nres);
         allmres.prealloc(nres);
         supres.prealloc(nres);
 
-        xx.resize(dim);
+        xa.resize(dim);
 
         return;
     }
@@ -5415,6 +6112,7 @@ class fninnerArg
                                    hardmax(src.hardmax),
                                    obsnoise(src.obsnoise),
                                    dimfid(src.dimfid),
+                                   numfids(src.numfids),
                                    scnoise(src.scnoise)
     {
         (void) src;
@@ -5429,7 +6127,9 @@ class fninnerArg
         return *this;
     }
 
-    Vector<gentype> xx;
+    Vector<gentype> xa;
+    SparseVector<gentype> xb;
+    SparseVector<gentype> xxb;
     Vector<gentype> dummyxarg;
     void (*fn)(gentype &, Vector<gentype> &, void *arg);
     void *arginner;
@@ -5446,17 +6146,16 @@ class fninnerArg
     double &hardmax;
     double &obsnoise;
     int dimfid;
+    int numfids;
     Vector<double> &scnoise;
 
-    void operator()(int dim, gentype &res, const double *x, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_ycgt)
+    void operator()(int dim, gentype &res, const double *x, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_ycgt, bool onlyAdd)
     {
         // ===========================================================================
         // Inner loop evaluation function.  This is used as a buffer between the
         // actual Bayesian optimiser (above) and the outside-visible optimiser (below)
         // and saves things like timing, beta etc.
         // ===========================================================================
-
-        addvar = 0;
 
         if ( dim == -1 )
         {
@@ -5473,47 +6172,70 @@ class fninnerArg
 
             for ( i = 0 ; i < dim ; ++i )
             {
-                xx("&",i).force_double() = x[i];
+                xa("&",i).force_double() = x[i];
             }
         }
 
         int gridi = (int) x[dim+12];
 
         // gridi will be -1 if this is not grid optimisation.  Otherwise we need
-        // to extend the size of xx to argnum+1 and load gridy into it.  The +1
+        // to extend the size of xa to argnum+1 and load gridy into it.  The +1
         // will roll around to zero in mlinter, so the result will automatically
         // be loaded into result var which will be evaluated and passed back as
         // result!
 
-        if ( gridi >= 0 )
+        if ( !onlyAdd && ( gridi >= 0 ) )
         {
-            xx.resize(dim+1);
-
-            xx("[]",dim) = gridi;
+            xa.resize(dim+1);
+            xa("[]",dim) = gridi;
         }
 
         // =======================================================================
         // Call function and record times
         // =======================================================================
 
-        time_used starttime = TIMECALL;
-        (*fn)(res,xx,arginner);
-        time_used endtime = TIMECALL;
+        addvar = 0;
 
-        if ( gridi >= 0 )
+        time_used starttime = TIMECALL;
+
+        if ( !onlyAdd )
         {
-            xx.resize(dim);
+            (*fn)(res,xa,arginner);
         }
 
-        // Process results, also fill null-spots
+        if ( onlyAdd || res.isValNull() )
+        {
+            res = gridres;
+        }
+
+        time_used endtime = TIMECALL;
+
+        if ( !onlyAdd && ( gridi >= 0 ) )
+        {
+            xa.resize(dim);
+        }
 
         xobstype_cgt.resize(0);
 
-        readres(res,addvar,ycgt,xreplace,replacex,stopnow,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt);
+        readres(res,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt);
 
-        gentype altres = res.isValNull() ? gridres : res;
+        NonsparseToSparsenear(xxb,xa,dim,dimfid);
+        NonsparseToSparsenonnear(xb,xa,dim,dimfid);
 
+        gentype altres(res);
+        double altaddvar(addvar);
         Vector<gentype> altycgt(ycgt);
+        SparseVector<gentype> altxxreplace(xxreplace);
+        int altreplacexx(replacexx);
+        gentype altaddexp(addexp);
+        int altstopflags(stopflags);
+        Vector<gentype> altxsidechan(xsidechan);
+        //Vector<gentype> altxaddranksidechan(xaddranksidechan);
+        int altxobstype(xobstype);
+        Vector<int> altxobstype_cgt(xobstype_cgt);
+
+        negateoutery(altres);
+        gentype *restree = &res;
 
         if ( altycgt.size() == gridres_ycgt.size() )
         {
@@ -5521,137 +6243,266 @@ class fninnerArg
             {
                 if ( altycgt(iy).isValNull() && !gridres_ycgt(iy).isValNull() )
                 {
-                    altycgt("&",iy) = gridres_ycgt(iy);
+                     altycgt("&",iy) = gridres_ycgt(iy);
                 }
             }
         }
 
-        if ( !(altres.isValVector()) )
-        {
-            //int dimfid = bopts.getdimfid();
-            bool ismaxfid = true;
 
-            if ( dimfid > 0 )
-            {
-                for ( int jij = 0 ; ( ismaxfid && ( jij < dimfid ) ) ; jij++ )
+                bool addobs = true;
+
+//errstream() << "fn() addobs\n";
+                while ( addobs )
                 {
-                    if ( ((double) xx(dim-dimfid+jij)) != 1.0 )
+                    // Work out if this is a full observation, and also zero out nulls
+
+                    bool fullobs = process_obs(altres,altycgt,altxobstype,altxobstype_cgt);
+                    bool isfullfid = true;
+
+                    (void) fullobs;
+
+                    if ( altreplacexx )
                     {
-                        ismaxfid = false;
+                        xxb = altxxreplace;
+
+                        SparsenearToSparsenonnear(xb,xxb,dim,dimfid);
+                        SparsenearToNonsparse(xa,xxb,dim,dimfid);
+//errstream() << "xxb = " << xxb << "\n";
+//errstream() << "xb = " << xb << "\n";
+//errstream() << "xa = " << xa << "\n";
+                    }
+
+                    if ( numfids )
+                    {
+                        // Retrieve fidelity
+
+                        for ( int jij = dimfid-1 ; jij >= 0 ; jij-- )
+                        {
+                            if ( (int) std::lround(((double) (xxb.n(jij,1)))*numfids) != numfids )
+                            {
+                                isfullfid = false;
+                            }
+                        }
+                    }
+
+                    // ===========================================================
+                    // ===========================================================
+                    // Fill in fres and ires based on result
+                    // ===========================================================
+                    // ===========================================================
+
+                    if (    isfullfid
+                         && ( altxobstype == 2 )
+                         && ( ( ires == -1 ) || ( altres > fres ) )
+                         && ( altycgt >= 0.0_gent )
+                         && ( xxb.indsize() == xxb.nindsize() ) )
+                    {
+                        ires = allfres.size();
+                        fres = altres;
+                        xres = xa;
+                    }
+
+                    if ( (double) altres <= hardmin )
+                    {
+                        // Trigger early termination if hardmin reached
+
+                        killSwitch = 1;
+                    }
+
+                    else if ( (double) altres >= hardmax )
+                    {
+                        // Trigger early termination if hardmax reached
+
+                        killSwitch = 1;
+                    }
+
+                    {
+                        muapproxsize++;
+
+                        allxres.append(allxres.size(),xa);
+                        allfres.append(allfres.size(),altres);
+                        allcres.append(allcres.size(),altycgt);
+                        allmres.append(allmres.size(),altres);
+                        supres.add(supres.size());
+
+                        double dstandev = x[dim+6];
+                        double softmax  = x[dim+7];
+
+                        double ucbdist = softmax - ( altres.isCastableToReal() ? ( (double) altres ) : 0.0 );
+                        double sigbnd  = ( ucbdist < dstandev ) ? ucbdist : dstandev;
+
+                        supres("&",supres.size()-1).force_vector().resize(20);
+
+                        supres("&",supres.size()-1)("&",0)  = TIMEABSSEC(starttime);
+                        supres("&",supres.size()-1)("&",1)  = TIMEABSSEC(endtime);
+                        supres("&",supres.size()-1)("&",2)  = x[dim];    // numRecs
+                        supres("&",supres.size()-1)("&",3)  = x[dim+1];  // beta
+                        supres("&",supres.size()-1)("&",4)  = x[dim+2];  // mu
+                        supres("&",supres.size()-1)("&",5)  = x[dim+3];  // sigma
+                        supres("&",supres.size()-1)("&",6)  = x[dim+4];  // UCB
+                        supres("&",supres.size()-1)("&",7)  = x[dim+5];  // LCB
+                        supres("&",supres.size()-1)("&",8)  = dstandev;  // DVAR
+                        supres("&",supres.size()-1)("&",9)  = ucbdist;   // UCBDIST
+                        supres("&",supres.size()-1)("&",10) = sigbnd;    // SIGBND
+                        supres("&",supres.size()-1)("&",11) = x[dim+9];  // DIRect runtime
+                        supres("&",supres.size()-1)("&",12) = x[dim+10]; // mu model training time
+                        supres("&",supres.size()-1)("&",13) = x[dim+11]; // sigma model training time
+                        supres("&",supres.size()-1)("&",14) = TIMEDIFFSEC(endtime,starttime);
+                        supres("&",supres.size()-1)("&",15) = x[dim+12]; // grid index (-1 if none)
+                        supres("&",supres.size()-1)("&",16) = x[dim+13]; // known grid evaluation (0.0 if none)
+                        supres("&",supres.size()-1)("&",17) = x[dim+14]; // B
+                        supres("&",supres.size()-1)("&",18) = x[dim+15]; // max info gain
+                        supres("&",supres.size()-1)("&",19) = x[dim+16]; // fidelity cost
+                    }
+
+                    addobs = ( altaddexp.isValNull() ? false : true );
+
+                    // =======================================================================
+                    // Add noise if required (we do this *after* saving the non-noisy result)
+                    // =======================================================================
+
+                    if ( obsnoise )
+                    {
+                        double tmprand;
+
+                        if ( (*restree).isValSet() )
+                        {
+                            Set<gentype> &z = (*restree).dir_set();
+
+//                            if ( ( z.size() >= 9 ) && !z.all()(8).isValNull() )
+//                            {
+//                                Vector<gentype> &qxaddranksidechan = z.ncall()("&",8).dir_vector();
+//
+//                                if ( qxaddranksidechan.size() )
+//                                {
+//                                    for ( int i = 0 ; i < qxaddranksidechan.size() ; ++i )
+//                                    {
+//                                        if ( scnoise(i) )
+//                                        {
+//                                            qxaddranksidechan("&",i) += randnfill(tmprand,0,scnoise(i));
+//                                        }
+//                                    }
+//                                }
+//                            }
+
+                            if ( ( z.size() >= 7 ) && !z.all()(6).isValNull() )
+                            {
+                                Vector<gentype> &qxsidechan = z.ncall()("&",6).dir_vector();
+
+                                if ( qxsidechan.size() )
+                                {
+                                    for ( int i = 0 ; i < qxsidechan.size() ; ++i )
+                                    {
+                                        if ( scnoise(i) )
+                                        {
+                                            qxsidechan("&",i) += randnfill(tmprand,0,scnoise(i));
+                                        }
+                                    }
+                                }
+                            }
+
+                            if ( ( z.size() >= 1 ) && !z.all()(0).isValNull() )
+                            {
+                                gentype &qres = z.ncall()("&",0);
+
+                                qres += randnfill(tmprand,0,obsnoise);
+                            }
+                        }
+
+                        else if ( res.isValDict() )
+                        {
+                            Dict<gentype,dictkey> &z = (*restree).dir_dict();
+
+//                            if ( z.iskeypresent("xscrank") && !z("xscrank").isValNull() )
+//                            {
+//                                Vector<gentype> &qxaddranksidechan = z("&","xscrank").dir_vector();
+//
+//                                if ( qxaddranksidechan.size() )
+//                                {
+//                                    for ( int i = 0 ; i < qxaddranksidechan.size() ; ++i )
+//                                    {
+//                                        if ( scnoise(i) )
+//                                        {
+//                                            qxaddranksidechan("&",i) += randnfill(tmprand,0,scnoise(i));
+//                                        }
+//                                    }
+//                                }
+//                            }
+
+                            if ( z.iskeypresent("xsc") && !z("xsc").isValNull() )
+                            {
+                                Vector<gentype> &qxsidechan = z("&","xsc").dir_vector();
+
+                                if ( qxsidechan.size() )
+                                {
+                                    for ( int i = 0 ; i < qxsidechan.size() ; ++i )
+                                    {
+                                        if ( scnoise(i) )
+                                        {
+                                            qxsidechan("&",i) += randnfill(tmprand,0,scnoise(i));
+                                        }
+                                    }
+                                }
+                            }
+
+                            if ( z.iskeypresent("y") && !z("&","y").isValNull() )
+                            {
+                                gentype &qres = z("&","y");
+
+                                qres += randnfill(tmprand,0,obsnoise);
+                            }
+                        }
+
+                        else if ( !(*restree).isValNull() )
+                        {
+                            (*restree) += randnfill(tmprand,0,obsnoise);
+                        }
+                    }
+
+                    if ( addobs )
+                    {
+                        // recurse to next observation to process
+
+                        if ( (*restree).isValSet() )
+                        {
+                            Set<gentype> &z = (*restree).dir_set();
+
+                            if ( ( z.size() >= 5 ) && !z.all()(4).isValNull() )
+                            {
+                                restree = &z.ncall()("&",4);
+                            }
+                        }
+
+                        else if ( res.isValDict() )
+                        {
+                            Dict<gentype,dictkey> &z = (*restree).dir_dict();
+
+                            if ( z.iskeypresent("and") && !z("and").isValNull() )
+                            {
+                                restree = &z("&","and");
+                            }
+                        }
+
+                        altres = altaddexp;
+                        altaddvar = 0;
+                        altycgt.resize(0);
+                        altxxreplace.zero();
+                        altreplacexx = 0;
+                        altaddexp.force_null();
+                        altstopflags = 0;
+                        altxsidechan.resize(0);
+                        //altxaddranksidechan.resize(0);
+                        altxobstype = 2;
+                        altxobstype_cgt.resize(0);
+
+                        readres(altres,altaddvar,altycgt,altxxreplace,altreplacexx,altaddexp,altstopflags,altxsidechan,altxobstype,altxobstype_cgt);
+                        negateoutery(altres);
                     }
                 }
-            }
-
-            //if ( ( allfres.size() == 0 ) || ( res < fres ) )
-            if ( ismaxfid && !altres.isValNull() && ( ( ires == -1 ) || ( altres < fres ) ) && ( altycgt >= 0.0_gent ) )
-            {
-                ires = allfres.size();
-                fres = altres;
-                xres = xx;
-            }
-
-            if ( (double) altres <= hardmin )
-            {
-                // Trigger early termination if hardmin reached
-
-                killSwitch = 1;
-            }
-
-            else if ( (double) altres >= hardmax )
-            {
-                // Trigger early termination if hardmax reached
-
-                killSwitch = 1;
-            }
-        }
-
-        // =======================================================================
-        // Store results if required
-        // =======================================================================
-
-        if ( 1 )
-        {
-//            if ( !altres.isValNull() )
-            {
-                muapproxsize++;
-
-                allxres.append(allxres.size(),xx);
-                allfres.append(allfres.size(),altres);
-                allcres.append(allcres.size(),altycgt);
-                allmres.append(allmres.size(),altres);
-                supres.add(supres.size());
-
-                double dstandev = x[dim+6];
-                double softmax  = x[dim+7];
-
-                double ucbdist = softmax - ( fres.isCastableToReal() ? ( (double) fres ) : 0.0 );
-                double sigbnd  = ( ucbdist < dstandev ) ? ucbdist : dstandev;
-
-                supres("&",supres.size()-1).force_vector().resize(20);
-
-                supres("&",supres.size()-1)("&",0)  = TIMEABSSEC(starttime);
-                supres("&",supres.size()-1)("&",1)  = TIMEABSSEC(endtime);
-                supres("&",supres.size()-1)("&",2)  = x[dim];    // numRecs
-                supres("&",supres.size()-1)("&",3)  = x[dim+1];  // beta
-                supres("&",supres.size()-1)("&",4)  = x[dim+2];  // mu
-                supres("&",supres.size()-1)("&",5)  = x[dim+3];  // sigma
-                supres("&",supres.size()-1)("&",6)  = x[dim+4];  // UCB
-                supres("&",supres.size()-1)("&",7)  = x[dim+5];  // LCB
-                supres("&",supres.size()-1)("&",8)  = dstandev;  // DVAR
-                supres("&",supres.size()-1)("&",9)  = ucbdist;   // UCBDIST
-                supres("&",supres.size()-1)("&",10) = sigbnd;    // SIGBND
-                supres("&",supres.size()-1)("&",11) = x[dim+9];  // DIRect runtime
-                supres("&",supres.size()-1)("&",12) = x[dim+10]; // mu model training time
-                supres("&",supres.size()-1)("&",13) = x[dim+11]; // sigma model training time
-                supres("&",supres.size()-1)("&",14) = TIMEDIFFSEC(endtime,starttime);
-                supres("&",supres.size()-1)("&",15) = x[dim+12]; // grid index (-1 if none)
-                supres("&",supres.size()-1)("&",16) = x[dim+13]; // known grid evaluation (0.0 if none)
-                supres("&",supres.size()-1)("&",17) = x[dim+14]; // B
-                supres("&",supres.size()-1)("&",18) = x[dim+15]; // max info gain
-                supres("&",supres.size()-1)("&",19) = x[dim+16]; // fidelity cost
-            }
-
-//            else
-//            {
-//                // Not a true observation, so flush the x record at one level up
-//
-//                gentype tmpnum('N');
-//
-//                (*fn)(tmpnum,dummyxarg,arginner);
-//            }
-        }
-
-        // =======================================================================
-        // Add noise if required (we do this *after* saving the non-noisy result)
-        // =======================================================================
-
-        double tmprand;
-
-        res += randnfill(tmprand,0,obsnoise);
-
-        if ( xsidechan.size() )
-        {
-            int i;
-
-            for ( i = 0 ; i < xsidechan.size() ; ++i )
-            {
-                xsidechan("&",i) += randnfill(tmprand,0,scnoise(i));
-            }
-        }
-
-        if ( xaddranksidechan.size() )
-        {
-            int i;
-
-            for ( i = 0 ; i < xaddranksidechan.size() ; ++i )
-            {
-                xaddranksidechan("&",i) += randnfill(tmprand,0,scnoise(i));
-            }
-        }
 
         // Resize x (it is able to be changed, so this is important)
 
-        xx.resize(dim);
+        xa.resize(dim);
 
         return;
     }
@@ -5665,10 +6516,10 @@ class fninnerArg
 // and saves things like timing, beta etc.
 // ===========================================================================
 
-static void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt);
-static void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, Vector<gentype> &xaddrank, Vector<gentype> &xaddranksidechan, Vector<gentype> &xaddgrad, Vector<gentype> &xaddf4, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xreplace, int &replacex, int &stopnow, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt)
+static void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd);
+static void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd)
 {
-    (*((fninnerArg *) arg))(dim,res,x,addvar,xsidechan,xaddrank,xaddranksidechan,xaddgrad,xaddf4,xobstype,xobstype_cgt,ycgt,xreplace,replacex,stopnow,gridres,muapproxsize,gridres_cgt);
+    (*((fninnerArg *) arg))(dim,res,x,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridres,muapproxsize,gridres_cgt,onlyAdd);
     return;
 }
 
@@ -5763,10 +6614,20 @@ int bayesOpt(int dim,
                        hardmax,
                        obsnoise,
                        dimfid,
+                       bopts.numfids,
                        scnoise);
 
     int res = bayesOpt(dim,locxres,locfres,locxmin,locxmax,fninner,(void *) &optargs,bopts,killSwitch,sscore);
     int isstable = bopts.stabpmax;
+
+//errstream() << "allxres = " << allxres << "\n";
+//errstream() << "allfres = " << allfres << "\n";
+//errstream() << "allcres = " << allcres << "\n";
+//errstream() << "allmres = " << allmres << "\n";
+//errstream() << "ires = " << ires << "\n";
+//errstream() << "fres = " << fres << "\n";
+//errstream() << "xres = " << xres << "\n";
+//errstream() << "supres = " << supres << "\n";
 
     killSwitch = 0; // Need to reset this trigger so that subsequent runs don't get hit (it is tripped by hardmin/hardmax)
 

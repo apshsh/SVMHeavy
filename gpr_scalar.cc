@@ -21,7 +21,7 @@ GPR_Scalar::GPR_Scalar() : GPR_Generic()
 
     setaltx(nullptr);
 
-    xNaiveConst = 0;
+    xNaiveConst = 1; //0; - EP is currently buggy, this works more or less, so whatever
     isLocked = 0;
 
     return;
@@ -38,7 +38,7 @@ GPR_Scalar::GPR_Scalar(const GPR_Scalar &src) : GPR_Generic()
 
     setaltx(nullptr);
 
-    xNaiveConst = 0;
+    xNaiveConst = 1; //0;
     isLocked = 0;
 
     assign(src,0);
@@ -57,7 +57,7 @@ GPR_Scalar::GPR_Scalar(const GPR_Scalar &src, const ML_Base *srcx) : GPR_Generic
 
     setaltx(srcx);
 
-    xNaiveConst = 0;
+    xNaiveConst = 1; //0;
     isLocked = 0;
 
     assign(src,-1);

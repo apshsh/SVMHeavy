@@ -3618,7 +3618,6 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gbfn"        ) ||
                       ( currentarg == "-gbfo"        ) ||
                       ( currentarg == "-gbfp"        ) ||
-                      ( currentarg == "-gbfv"        ) ||
                       ( currentarg == "-gbfb"        ) ||
                       ( currentarg == "-gbfk"        ) ||
                       ( currentarg == "-gbz"         ) ||
@@ -7581,7 +7580,6 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gbfn"  ) { (*xbopts).dimfid              = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbfb"  ) { (*xbopts).fidbudget           = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbfp"  ) { (*xbopts).fidpenalty          = currcommand(1); }
-                    else if ( currcommand(0) == "-gbfv"  ) { (*xbopts).fidvar              = currcommand(1); }
                     else if ( currcommand(0) == "-gbfo"  ) { (*xbopts).fidover             = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gBbj"  ) { (*xbopts).startpointsmultiobj = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gBbt"  ) { (*xbopts).totitersmultiobj    = safeatoi(currcommand(1),argvariables); }
@@ -8019,9 +8017,9 @@ int runsvmint(SVMThreadContext *svmContext,
 
                                 // Secondary analysis.
 
-                                Vector<int> optvarind(allxres.size() ? 1 : 0);
+                                Vector<int> optvarind(allrawxres.size() ? 1 : 0);
 
-                                xopts.analyse(allxres,allmres,allcres,allhres,optvarind,1);
+                                xopts.analyse(allrawxres,allmres,allcres,allhres,optvarind,1);
 
                                 if ( allfres.size() && ( allfres(0).size() > 1 ) )
                                 {
@@ -8035,7 +8033,7 @@ int runsvmint(SVMThreadContext *svmContext,
                                     // arbitrarily chosen to be element
                                     // zero.
 
-                                    xres = allxres(optvarind(0));
+                                    xres = allrawxres(optvarind(0));
                                     fres = allfres(optvarind(0));
                                     cres = allcres(optvarind(0));
                                     ires = allires(optvarind(0));
@@ -8050,7 +8048,7 @@ int runsvmint(SVMThreadContext *svmContext,
 errstream() << "phantomabc ires = " << ires << "\n";
                                     // Still need to retieve supplementary results!
 
-                                    xres = allxres(optvarind(0)); // Important to do this: xres is non-converted, allxres is
+                                    xres = allrawxres(optvarind(0)); // Important to do this: xres is non-converted, allxres is
                                     // fres = allfres(optvarind(0));
                                     // cres = allcres(optvarind(0));
                                     // ires = allires(optvarind(0));
@@ -8110,7 +8108,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                                         for ( i = 0 ; i < optvarind.size() ; ++i )
                                         {
-                                            gridargvars("&",60)("&",i) = allxres(optvarind(i));
+                                            gridargvars("&",60)("&",i) = allrawxres(optvarind(i));
                                             gridargvars("&",61)("&",i) = allfres(optvarind(i));
                                             //FIXME gridargvars("&",61)("&",i) = allcres(optvarind(i));
                                             gridargvars("&",62)("&",i) = allires(optvarind(i));
@@ -8121,9 +8119,9 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                             gridargvars("&",66)("&",i) = meanallmres(optvarind(i)); gridargvars("&",66)("&",65536+i) = varallmres(optvarind(i));
                                         }
 
-                                        for ( i = 0 ; i < allxres.size() ; ++i )
+                                        for ( i = 0 ; i < allrawxres.size() ; ++i )
                                         {
-                                            gridargvars("&",70)("&",i) = allxres(i);
+                                            gridargvars("&",70)("&",i) = allrawxres(i);
                                             gridargvars("&",71)("&",i) = allfres(i);
                                             //FIXME gridargvars("&",71)("&",i) = allcres(i);
                                             gridargvars("&",72)("&",i) = allires(i);
@@ -8134,7 +8132,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                             gridargvars("&",76)("&",i) = meanallmres(i); gridargvars("&",76)("&",65536+i) = varallmres(i);
                                         }
 
-                                        gridargvars("&",80)("&",0) = allxres;
+                                        gridargvars("&",80)("&",0) = allrawxres;
                                         gridargvars("&",81)("&",0) = allfres;
                                         //FIXME gridargvars("&",81)("&",0) = allcres;
                                         gridargvars("&",82)("&",0) = allires;
@@ -8209,7 +8207,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                         std::string xygridfilenamefull  = logfile+"_xygrid";  // y and x ready to train another model
                                         std::string xytgridfilenamefull = logfile+"_xytgrid"; // y and x ready to train another model
 
-                                        writeLog(allxres,xgridfilenamefull,getsetExtVar);
+                                        writeLog(allrawxres,xgridfilenamefull,getsetExtVar);
                                         writeLog(allfres,fgridfilenamefull,getsetExtVar);
                                         writeLog(allcres,cgridfilenamefull,getsetExtVar);
                                         writeLog(allmres,mgridfilenamefull,getsetExtVar);
@@ -8224,8 +8222,8 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                         writeLog(varallfres,varfgridfilenamefull,getsetExtVar);
                                         writeLog(varallmres,varmgridfilenamefull,getsetExtVar);
 
-                                        writeLog(allfres,allxres,xygridfilenamefull);
-                                        writeLog(allfres,allsres,allxres,xytgridfilenamefull);
+                                        writeLog(allfres,allrawxres,xygridfilenamefull);
+                                        writeLog(allfres,allsres,allrawxres,xytgridfilenamefull);
 
                                         errstream() << "Writing paretofile... " << optvarind;
 
@@ -8247,7 +8245,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                         std::string xyparetofilenamefull  = logfile+"_xypareto";
                                         std::string xytparetofilenamefull = logfile+"_xytpareto";
 
-                                        writeLog(allxres(optvarind,tmpva),xparetofilenamefull,getsetExtVar);
+                                        writeLog(allrawxres(optvarind,tmpva),xparetofilenamefull,getsetExtVar);
                                         writeLog(allfres(optvarind,tmpvc),fparetofilenamefull,getsetExtVar);
                                         writeLog(allcres(optvarind,tmpvq),cparetofilenamefull,getsetExtVar);
                                         writeLog(allmres(optvarind,tmpvc),mparetofilenamefull,getsetExtVar);
@@ -8262,8 +8260,8 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                         writeLog(varallfres(optvarind,tmpvc),varfparetofilenamefull,getsetExtVar);
                                         writeLog(varallmres(optvarind,tmpvc),varmparetofilenamefull,getsetExtVar);
 
-                                        writeLog(allfres(optvarind,tmpvc),allxres(optvarind,tmpva),xyparetofilenamefull);
-                                        writeLog(allfres(optvarind,tmpvc),allsres(optvarind,tmpvb),allxres(optvarind,tmpva),xytparetofilenamefull);
+                                        writeLog(allfres(optvarind,tmpvc),allrawxres(optvarind,tmpva),xyparetofilenamefull);
+                                        writeLog(allfres(optvarind,tmpvc),allsres(optvarind,tmpvb),allrawxres(optvarind,tmpva),xytparetofilenamefull);
 
                                         retVector<gentype> tmpvcc;
                                         const Vector<gentype> &paretofres = allfres(optvarind,tmpvcc);
@@ -15073,7 +15071,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -kX  [ i0  i1 ... ] [ o0 o1 ... ] - set parity transform:            \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                  xi0 -> sgn(xi0-o0).(xi0-o0), xi1 -> sgn(xi0-o0).(xi1-o1) ...\n" : "" );
+    output << ( (          advanced ) ? "            xi0 -> sgn(xi0-o0).(xi0-o0)+o0, xi1 -> sgn(xi0-o0).(xi1-o1)+o1 ...\n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -ka  n          - number of samples used  when computing distribution\n" : "" );
     output << ( (          advanced ) ? "                           similarity (Muandet et al SMM).                    \n" : "" );
@@ -15639,7 +15637,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           - non-trivial results are  returned for model based\n" : "" );
     output << ( (          advanced ) ? "                             methods in the following format:                 \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         { y v [cg1..cgm] x' q [xx1..xxn] xf [xf1..xfn] xff xf3 t [tg1..tgm] }\n" : "" );
+    output << ( (          advanced ) ? "                        { y v [cg1..cgm] x' addexp f [xx1..xxn] t [tg1..tgm] }\n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                             where:                                           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
@@ -15650,16 +15648,19 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                             + [ cg1 .. cgn ] for inequality constraints (want\n" : "" );
     output << ( (          advanced ) ? "                               cgi(x) > 0 for i=1,2,...,n.  See -cmgt).       \n" : "" );
     output << ( (          advanced ) ? "                             + x' if non-null, this indicates where the actual\n" : "" );
-    output << ( (          advanced ) ? "                               evaluation happened (if y=f(x'), not y=f(x)).  \n" : "" );
-    output << ( (          advanced ) ? "                             + q if non-null and nz, stop optim immediately.  \n" : "" );
+    output << ( (          advanced ) ? "                               evaluation  happened (if y=f(x'),  not y=f(x)).\n" : "" );
+    output << ( (          advanced ) ? "                               Note that x can use the same format as training\n" : "" );
+    output << ( (          advanced ) ? "                               (and in fact  fidelity must  be [ x ~ f ]), but\n" : "" );
+    output << ( (          advanced ) ? "                               to do so you need the  bounds on x to be simple\n" : "" );
+    output << ( (          advanced ) ? "                               (linear), continuous and normalized [0,1].     \n" : "" );
+    output << ( (          advanced ) ? "                             + addexp if non-null is a set of extra  result to\n" : "" );
+    output << ( (          advanced ) ? "                               include in  the model. This  is a set  of pairs\n" : "" );
+    output << ( (          advanced ) ? "                               { {y0 x0} {y1 x1} {y2 x2} ... }.  y follows the\n" : "" );
+    output << ( (          advanced ) ? "                               same rules, recursively.                       \n" : "" );
+    output << ( (          advanced ) ? "                             + f is flags:                                    \n" : "" );
+    output << ( (          advanced ) ? "                               1: stop immediately if set.                    \n" : "" );
     output << ( (          advanced ) ? "                             + [ xx1 ... xxn ] is side-channel data (see -gmsc\n" : "" );
     output << ( (          advanced ) ? "                               etc for information.                           \n" : "" );
-    output << ( (          advanced ) ? "                             + xf is for  rank observations  (that is,  rather\n" : "" );
-    output << ( (          advanced ) ? "                               than  an  observation   g(x) = y,  this  is  an\n" : "" );
-    output << ( (          advanced ) ? "                               observation g(x) - g(xf) = y.                  \n" : "" );
-    output << ( (          advanced ) ? "                             + [ xf1 ... xfn ] is side-channel data on xf.    \n" : "" );
-    output << ( (          advanced ) ? "                             + xff is for gradient observations.              \n" : "" );
-    output << ( (          advanced ) ? "                             + xf3 is for augmented observations.             \n" : "" );
     output << ( (          advanced ) ? "                             + t observation type (0 n/a, +1 >=, -1 <=, 2 ==).\n" : "" );
     output << ( (          advanced ) ? "                             + tcg like t but for [cg1..cgn].                 \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
@@ -16448,7 +16449,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           ...                (set kernel K(z,z') parameters) \n" : "" );
     output << ( (          advanced ) ? "         -gbfn  d        - number of fidelity variables (last d vars, dflt 1).\n" : "" );
     output << ( (          advanced ) ? "         -gbfp  penfun   - set fidelity cost function c(z).  Dflt 1.          \n" : "" );
-    output << ( (          advanced ) ? "         -gbfv  penvar   - set fidelity variance (added to usual variance).   \n" : "" );
     output << ( (          advanced ) ? "         -gbfb  b        - set  fidelity budget.   If -1  (default) then  this\n" : "" );
     output << ( (          advanced ) ? "                           does nothing.  If >0 (and startpoints, maxitcnt are\n" : "" );
     output << ( (          advanced ) ? "                           also default) then b/10 is  used for initialization\n" : "" );
