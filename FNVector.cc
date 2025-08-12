@@ -1546,7 +1546,8 @@ Vector<gentype> &FuncVector::rmulit(const Vector<gentype> &b)
     return *this; 
 }
 
-Vector<gentype> &FuncVector::divit(const Vector<gentype> &b)
+template <class T>
+Vector<gentype> &FuncVector::divit(const Vector<T> &b)
 { 
     NiceAssert( b.infsize() );
 
@@ -1573,6 +1574,7 @@ Vector<gentype> &FuncVector::divit(const Vector<gentype> &b)
 
     return *this; 
 }
+
 
 Vector<gentype> &FuncVector::rdivit(const Vector<gentype> &b)
 { 

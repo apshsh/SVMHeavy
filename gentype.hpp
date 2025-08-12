@@ -42,7 +42,6 @@ class gentype;
 
 class gentype;
 
-typedef std::string dictkey;
 
 
 // Python call default (override for python integration)
@@ -111,7 +110,6 @@ inline void OP_sinc (double &a) { a = sinc(a);  }
 inline void OP_agd  (double &a) { a = agd(a);   }
 inline void OP_einv (double &a) { a = 1/a;      }
 inline void OP_acos (double &a) { a = acos(a);  }
-
 
 template <> template <> Vector<double>  &Vector<double >::castassign(const Vector<gentype>                &src);
 template <> template <> Vector<double>  &Vector<double >::castassign(const Vector<int>                    &src);
@@ -358,23 +356,17 @@ public:
         ;
     }
 
-    explicit gentype(      int                     src) { typeis = 'Z'; intval = src;       doubleval = src;                  }
-    explicit gentype(      double                  src) { typeis = 'R'; intval = (int) src; doubleval = src;                  }
-    explicit gentype(const d_anion                &src) { typeis = 'A'; MEMNEW(anionval,d_anion(src));                        }
-    explicit gentype(const Vector<gentype>        &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>(src));               }
-    explicit gentype(const Matrix<gentype>        &src) { typeis = 'M'; MEMNEW(matrixval,Matrix<gentype>(src));               }
-    explicit gentype(const Set<gentype>           &src) { typeis = 'X'; MEMNEW(setval,Set<gentype>(src));                     }
-    explicit gentype(const Dict<gentype,dictkey>  &src) { typeis = 'D'; MEMNEW(dictval,Dict<gentype COMMA dictkey>(src));     }
-    explicit gentype(const Dgraph<gentype,double> &src) { typeis = 'G'; MEMNEW(dgraphval,Dgraph<gentype COMMA double>(src));  }
-    explicit gentype(const std::string            &src) { makeEqn(src);                                                       }
-    explicit gentype(const char                   *src) { makeEqn(src);                                                       }
-
-    explicit gentype(const SparseVector<std::string> &src)
-    {
-        typeis = 'V';
-        MEMNEW(vectorval,Vector<gentype>);
-        SparseToNonSparse(*vectorval,src);
-    }
+    explicit gentype(      int                        src) { typeis = 'Z'; intval = src;       doubleval = src;                                  }
+    explicit gentype(      double                     src) { typeis = 'R'; intval = (int) src; doubleval = src;                                  }
+    explicit gentype(const d_anion                   &src) { typeis = 'A'; MEMNEW(anionval,d_anion(src));                                        }
+    explicit gentype(const Vector<gentype>           &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>(src));                               }
+    explicit gentype(const Matrix<gentype>           &src) { typeis = 'M'; MEMNEW(matrixval,Matrix<gentype>(src));                               }
+    explicit gentype(const Set<gentype>              &src) { typeis = 'X'; MEMNEW(setval,Set<gentype>(src));                                     }
+    explicit gentype(const Dict<gentype,dictkey>     &src) { typeis = 'D'; MEMNEW(dictval,Dict<gentype COMMA dictkey>(src));                     }
+    explicit gentype(const Dgraph<gentype,double>    &src) { typeis = 'G'; MEMNEW(dgraphval,Dgraph<gentype COMMA double>(src));                  }
+    explicit gentype(const std::string               &src) { makeEqn(src);                                                                       }
+    explicit gentype(const char                      *src) { makeEqn(src);                                                                       }
+    explicit gentype(const SparseVector<std::string> &src) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>); SparseToNonSparse(*vectorval,src); }
 
     explicit gentype(const SparseVector<int> &src)
     {
@@ -512,11 +504,7 @@ public:
     gentype &operator=(const Dgraph<gentype,double>    &src) { deleteVectMatMem('G'                            ); typeis = 'G'; *dgraphval = src;                     return *this; }
     gentype &operator=(const std::string               &src) { deleteVectMatMem(); makeEqn(src); return *this; }
     gentype &operator=(const char                      *src) { deleteVectMatMem(); makeEqn(src); return *this; }
-
-    gentype &operator=(const gentype &src)
-    {
-        return fastcopy(src,0);
-    }
+    gentype &operator=(const gentype                   &src) { return fastcopy(src,0); }
 
     gentype &operator=(const Vector<double> &src)
     {
@@ -775,22 +763,21 @@ public:
     //          function (randoms, call to global function) without actually
     //          casting.
 
-    bool isValNull     (void) const { return typeis == 'N'; }
-    bool isValInteger  (void) const { return typeis == 'Z'; }
-    bool isValReal     (void) const { return typeis == 'R'; }
-    bool isValAnion    (void) const { return typeis == 'A'; }
-    bool isValVector   (void) const { return typeis == 'V'; }
-    bool isValMatrix   (void) const { return typeis == 'M'; }
-    bool isValSet      (void) const { return typeis == 'X'; }
-    bool isValDict     (void) const { return typeis == 'D'; }
-    bool isValDgraph   (void) const { return typeis == 'G'; }
-    bool isValString   (void) const { return typeis == 'S'; }
-    bool isValError    (void) const { return typeis == 'E'; }
-    bool isValStrErr   (void) const { return isValString() |  isValError(); }
-    int  isValEqnDir   (void) const { return ( typeis == 'F' ) ? ( ( (*thisfninfo).isInDetermin ? 1 : 2 ) | ( ( (*thisfninfo).isInDetermin & 2 ) ? 4 : 0 ) | ( ( (*thisfninfo).isInDetermin & 1 ) ? 8 : 0 ) ) : 0; }
-    int  isValEqn      (void) const { return isValEqnFull(); } //isValEqnDir() | isValEqnFull(); }
-    bool isValAnionReal(void) const { return isValAnion() && (*anionval).isreal(); }
-
+    bool isValNull      (void) const { return typeis == 'N'; }
+    bool isValInteger   (void) const { return typeis == 'Z'; }
+    bool isValReal      (void) const { return typeis == 'R'; }
+    bool isValAnion     (void) const { return typeis == 'A'; }
+    bool isValVector    (void) const { return typeis == 'V'; }
+    bool isValMatrix    (void) const { return typeis == 'M'; }
+    bool isValSet       (void) const { return typeis == 'X'; }
+    bool isValDict      (void) const { return typeis == 'D'; }
+    bool isValDgraph    (void) const { return typeis == 'G'; }
+    bool isValString    (void) const { return typeis == 'S'; }
+    bool isValError     (void) const { return typeis == 'E'; }
+    bool isValStrErr    (void) const { return isValString() |  isValError(); }
+    int  isValEqnDir    (void) const { return ( typeis == 'F' ) ? ( ( (*thisfninfo).isInDetermin ? 1 : 2 ) | ( ( (*thisfninfo).isInDetermin & 2 ) ? 4 : 0 ) | ( ( (*thisfninfo).isInDetermin & 1 ) ? 8 : 0 ) ) : 0; }
+    int  isValEqn       (void) const { return isValEqnFull(); } //isValEqnDir() | isValEqnFull(); }
+    bool isValAnionReal (void) const { return isValAnion() && (*anionval).isreal(); }
     bool isValVectorReal(void) const { return ( typeis == 'V' ) && vectorvalreal; } // is a vector and we have a real-valued short-cut form
 
     bool isCastableToNullWithoutLoss   (void) const { return isValNull(); }
@@ -1167,7 +1154,7 @@ public:
     const Matrix<gentype> &operator()(int ib, int is, int im, int jb, int js, int jm, retMatrix<gentype> &tmp)                                  const { return cast_matrix(0)(ib,is,im,jb,js,jm,tmp); }
 
     const Vector<gentype> &all(void) const { if ( isValSet() ) { return cast_set(0).all();       } return cast_dgraph(0).all();       }
-    int contains(const gentype &x)   const { if ( isValSet() ) { return cast_set(0).contains(x); } return cast_dgraph(0).contains(x); }
+    bool contains(const gentype &x)  const { if ( isValSet() ) { return cast_set(0).contains(x); } return cast_dgraph(0).contains(x); }
 
     const Matrix<double> &edgeWeights(void)                const { return cast_dgraph(0).edgeWeights();    }
     double edgeWeights(const gentype &x, const gentype &y) const { return cast_dgraph(0).edgeWeights(x,y); }
@@ -1204,15 +1191,8 @@ public:
     //        - other cases not defined
     //        - return >0 if anything changed
 
-    gentype &ident(void)
-    {
-        return ( *this = 1 );
-    }
-
-    gentype &zero(void)
-    {
-        return (*this = 0 );
-    }
+    gentype &ident(void) { return ( *this = 1 ); }
+    gentype &zero (void) { return ( *this = 0 ); }
 
     gentype &zeropassive(void)
     {
@@ -1746,7 +1726,7 @@ private:
             }
         }
 
-        else if ( isValSet() && size() )
+        else if ( isValSet() && ( size() > 0 ) )
         {
             for ( int i = 0 ; i < size() ; ++i )
             {
@@ -1777,16 +1757,16 @@ private:
     // that the cast would cause (so if 1 is returned then the cast is invalid
     // and errstr holds the relevant error message).
 
-    int loctoNull   (                                std::string &errstr) const;
-    int loctoInteger(int                       &res, std::string &errstr) const;
-    int loctoReal   (double                    &res, std::string &errstr) const;
-    int loctoAnion  (d_anion                   &res, std::string &errstr) const;
-    int loctoVector (Vector<gentype>           &res, std::string &errstr) const;
-    int loctoMatrix (Matrix<gentype>           &res, std::string &errstr) const;
-    int loctoSet    (Set<gentype>              &res, std::string &errstr) const;
-    int loctoDict   (Dict<gentype,dictkey>     &res, std::string &errstr) const;
-    int loctoDgraph (Dgraph<gentype,double>    &res, std::string &errstr) const;
-    int loctoString (std::string               &res, std::string &errstr) const;
+    int loctoNull   (                             std::string &errstr) const;
+    int loctoInteger(int                    &res, std::string &errstr) const;
+    int loctoReal   (double                 &res, std::string &errstr) const;
+    int loctoAnion  (d_anion                &res, std::string &errstr) const;
+    int loctoVector (Vector<gentype>        &res, std::string &errstr) const;
+    int loctoMatrix (Matrix<gentype>        &res, std::string &errstr) const;
+    int loctoSet    (Set<gentype>           &res, std::string &errstr) const;
+    int loctoDict   (Dict<gentype,dictkey>  &res, std::string &errstr) const;
+    int loctoDgraph (Dgraph<gentype,double> &res, std::string &errstr) const;
+    int loctoString (std::string            &res, std::string &errstr) const;
 
     // Internal version of substitute - function evaluation
 
@@ -3777,10 +3757,57 @@ template <class T> gentype &operator-=(gentype &a, const Dgraph<T,double> &bb) {
 template <class T> gentype &operator*=(gentype &a, const Dgraph<T,double> &bb) { gentype b; b = bb; return a *= b; }
 template <class T> gentype &operator/=(gentype &a, const Dgraph<T,double> &bb) { gentype b; b = bb; return a /= b; }
 
-inline double &scaladd(double &a, const gentype &b)                                                       { return a += ((double) b); }
-inline double &scaladd(double &a, const gentype &b, const gentype &c)                                     { return ( a = std::fma(((double) b),((double) c),a) ); }                           //return a += ((double) b)*((double) c); }
-inline double &scaladd(double &a, const gentype &b, const gentype &c, const gentype &d)                   { return ( a = std::fma(((double) b)*((double) c),((double) d),a) ); }              //return a += ((double) b)*((double) c)*((double) d); }
-inline double &scaladd(double &a, const gentype &b, const gentype &c, const gentype &d, const gentype &e) { return ( a = std::fma(((double) b)*((double) c),((double) d)*((double) e),a) ); } //return a += ((double) b)*((double) c)*((double) d)*((double) e); }
+inline double &scaladd(double &a, const gentype &b)
+{
+    a += ((double) b);
+
+    return a;
+}
+
+inline double &scaladd(double &a, const gentype &b, const gentype &c)
+{
+    if ( b.isCastableToRealWithoutLoss() && c.isCastableToRealWithoutLoss() )
+    {
+        a = std::fma(((double) b),((double) c),a);
+    }
+
+    else
+    {
+        a += (double) (b*c);
+    }
+
+    return a;
+}
+
+inline double &scaladd(double &a, const gentype &b, const gentype &c, const gentype &d)
+{
+    if ( b.isCastableToRealWithoutLoss() && b.isCastableToRealWithoutLoss() && d.isCastableToRealWithoutLoss() )
+    {
+        a = std::fma(((double) b)*((double) c),((double) d),a);
+    }
+
+    else
+    {
+        a += (double) (b*c*d);
+    }
+
+    return a;
+}
+
+inline double &scaladd(double &a, const gentype &b, const gentype &c, const gentype &d, const gentype &e)
+{
+    if ( b.isCastableToRealWithoutLoss() && b.isCastableToRealWithoutLoss() && d.isCastableToRealWithoutLoss() && e.isCastableToRealWithoutLoss() )
+    {
+        a = std::fma(((double) b)*((double) c),((double) d)*((double) e),a);
+    }
+
+    else
+    {
+        a += (double) (b*c*d*e);
+    }
+
+    return a;
+}
 
 inline double &scalsub(double &a, const gentype &b) { return a -= ((double) b); }
 inline double &scalmul(double &a, const gentype &b) { return a *= ((double) b); }
@@ -3928,6 +3955,10 @@ inline gentype OuterProd(const gentype &a, const gentype &b) { return trans(oute
 
 
 
+
+
+
+// Specializations for dictsvm<std::string,gentype>
 
 
 // Specialisation to sparsevector for speed

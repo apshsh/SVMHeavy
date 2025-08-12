@@ -1,5 +1,4 @@
 
-
 //
 // ML (machine learning) base type
 //
@@ -50,6 +49,7 @@ class BLK_AveAni;
 
 #include "errortest.hpp"
 
+#define SIGMA_MIN 1e-30
 #define NUMXTYPES 12
 
 inline std::ostream &operator<<(std::ostream &output, const ML_Base &src );
@@ -985,7 +985,7 @@ public:
     virtual int setbetarank(double nv) { (void) nv; NiceThrow("Function setbetarank not available for this ML type."); return 0; }
 
     virtual int setC        (double xC)          { locsigma = 1/xC;             return 1; }
-    virtual int setsigma    (double xsigma)      { return setC(1/((xsigma<1e12)?1e-12:xsigma));                 }
+    virtual int setsigma    (double xsigma)      { locsigma = (xsigma<SIGMA_MIN)?SIGMA_MIN:xsigma; return setC(1/locsigma); }
     virtual int setsigma_cut(double xsigma_cut)  {           (void) xsigma_cut; return 0; }
     virtual int seteps      (double xeps)        {           (void) xeps;       return 0; }
     virtual int setCclass   (int d, double xC)   { (void) d; (void) xC;         return 0; }

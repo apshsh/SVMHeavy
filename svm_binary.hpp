@@ -55,10 +55,10 @@ public:
 
     virtual int NNC(int d) const override { return binNnc(d+1); }
 
-    virtual int tspaceDim(void)  const override { return 1; }
+    virtual int tspaceDim (void) const override { return 1; }
     virtual int numClasses(void) const override { return 2; }
-    virtual int type(void)       const override { return 1; }
-    virtual int subtype(void)    const override { return 0; }
+    virtual int type      (void) const override { return 1; }
+    virtual int subtype   (void) const override { return 0; }
 
     virtual char gOutType(void) const override { return 'R'; }
     virtual char hOutType(void) const override { return 'Z'; }
@@ -67,9 +67,9 @@ public:
 
     virtual int numInternalClasses(void) const override { return SVM_Generic::numInternalClasses(); }
 
-    virtual double eps(void)          const override { return bineps;           }
-    virtual double Cclass(int d)      const override { return binCclass(d+1);   }
-    virtual double epsclass(int d)    const override { return binepsclass(d+1); }
+    virtual double eps     (void)  const override { return bineps;           }
+    virtual double Cclass  (int d) const override { return binCclass(d+1);   }
+    virtual double epsclass(int d) const override { return binepsclass(d+1); }
 
     virtual double LinBiasForce(void)  const override { return SVM_Scalar::LinBiasForce(); }
 
@@ -78,29 +78,29 @@ public:
     virtual int isClassifyViaSVR(void) const override { return isSVMviaSVR;  }
     virtual int isClassifyViaSVM(void) const override { return !isSVMviaSVR; }
 
-    virtual int is1vsA(void)    const override { return 0; }
-    virtual int is1vs1(void)    const override { return 1; }
-    virtual int isDAGSVM(void)  const override { return 1; }
-    virtual int isMOC(void)     const override { return 1; }
+    virtual int is1vsA   (void) const override { return 0; }
+    virtual int is1vs1   (void) const override { return 1; }
+    virtual int isDAGSVM (void) const override { return 1; }
+    virtual int isMOC    (void) const override { return 1; }
     virtual int ismaxwins(void) const override { return 0; }
-    virtual int isrecdiv(void)  const override { return 1; }
+    virtual int isrecdiv (void) const override { return 1; }
 
-    virtual int isautosetOff(void)          const override { return binautosetLevel == 0; }
-    virtual int isautosetCscaled(void)      const override { return binautosetLevel == 1; }
-    virtual int isautosetCKmean(void)       const override { return binautosetLevel == 2; }
-    virtual int isautosetCKmedian(void)     const override { return binautosetLevel == 3; }
-    virtual int isautosetCNKmean(void)      const override { return binautosetLevel == 4; }
-    virtual int isautosetCNKmedian(void)    const override { return binautosetLevel == 5; }
+    virtual int isautosetOff         (void) const override { return binautosetLevel == 0; }
+    virtual int isautosetCscaled     (void) const override { return binautosetLevel == 1; }
+    virtual int isautosetCKmean      (void) const override { return binautosetLevel == 2; }
+    virtual int isautosetCKmedian    (void) const override { return binautosetLevel == 3; }
+    virtual int isautosetCNKmean     (void) const override { return binautosetLevel == 4; }
+    virtual int isautosetCNKmedian   (void) const override { return binautosetLevel == 5; }
     virtual int isautosetLinBiasForce(void) const override { return binautosetLevel == 6; }
 
-    virtual double autosetCval(void)  const override { return binautosetCval;  }
+    virtual double autosetCval (void) const override { return binautosetCval;  }
     virtual double autosetnuval(void) const override { return binautosetnuval; }
 
-    virtual const Vector<int>    &d(void)           const override { return bintrainclass;  }
-    virtual const Vector<double> &Cweight(void)     const override { return binCweight;     }
+    virtual const Vector<int>    &d          (void) const override { return bintrainclass;  }
+    virtual const Vector<double> &Cweight    (void) const override { return binCweight;     }
     virtual const Vector<double> &Cweightfuzz(void) const override { return binCweightfuzz; }
-    virtual const Vector<double> &epsweight(void)   const override { return binepsweight;   }
-    virtual const Vector<double> &zR(void)          const override { return bintraintarg;   }
+    virtual const Vector<double> &epsweight  (void) const override { return binepsweight;   }
+    virtual const Vector<double> &zR         (void) const override { return bintraintarg;   }
 
     virtual double zR(int i) const override { if ( i >= 0 ) { return zR()(i); } return 0; } // Tests always set zR(-1) = 0, so this is safe
 
@@ -108,9 +108,9 @@ public:
 
     // Modification:
 
-    virtual int setC(double xC) override;
-    virtual int seteps(double xeps) override;
-    virtual int setCclass(int d, double xC) override;
+    virtual int setC       (       double xC  ) override;
+    virtual int seteps     (       double xeps) override;
+    virtual int setCclass  (int d, double xC  ) override;
     virtual int setepsclass(int d, double xeps) override;
 
     virtual int sety(int                i, double                z) override;
@@ -127,18 +127,18 @@ public:
 
     virtual int setLinBiasForce(double newval) override;
 
-    virtual int setFixedTube(void) override;
+    virtual int setFixedTube (void) override;
     virtual int setShrinkTube(void) override;
 
     virtual int setClassifyViaSVR(void) override;
     virtual int setClassifyViaSVM(void) override;
 
-    virtual int autosetOff(void) override;
-    virtual int autosetCscaled(double Cval) override;
-    virtual int autosetCKmean(void) override;
-    virtual int autosetCKmedian(void) override;
-    virtual int autosetCNKmean(void) override;
-    virtual int autosetCNKmedian(void) override;
+    virtual int autosetOff         (void)                            override;
+    virtual int autosetCscaled     (              double Cval      ) override;
+    virtual int autosetCKmean      (void)                            override;
+    virtual int autosetCKmedian    (void)                            override;
+    virtual int autosetCNKmean     (void)                            override;
+    virtual int autosetCNKmedian   (void)                            override;
     virtual int autosetLinBiasForce(double nuval, double Cval = 1.0) override;
 
     // Classify-with-reject:

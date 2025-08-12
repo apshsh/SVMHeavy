@@ -1100,13 +1100,16 @@ double MercerKernel::distK(const SparseVector<gentype> &x, const SparseVector<ge
     double res = 0;
     const gentype bias(0);
 
-    if ( !isSimpleDistKernel() )
+    if ( i != j )
     {
-        res += K2(x,x,xinfo,xinfo,bias,nullptr,i,i,xdim,xconsist,0,mlid,xy00,xy00,xy00,assumreal);
-        res += K2(y,y,yinfo,yinfo,bias,nullptr,j,j,xdim,xconsist,0,mlid,xy11,xy11,xy11,assumreal);
-    }
+        if ( !isSimpleDistKernel() )
+        {
+            res += K2(x,x,xinfo,xinfo,bias,nullptr,i,i,xdim,xconsist,0,mlid,xy00,xy00,xy00,assumreal);
+            res += K2(y,y,yinfo,yinfo,bias,nullptr,j,j,xdim,xconsist,0,mlid,xy11,xy11,xy11,assumreal);
+        }
 
-    res -= 2*K2(x,y,xinfo,yinfo,bias,nullptr,i,j,xdim,xconsist,0,mlid,xy00,xy10,xy11,assumreal);
+        res -= 2*K2(x,y,xinfo,yinfo,bias,nullptr,i,j,xdim,xconsist,0,mlid,xy00,xy10,xy11,assumreal);
+    }
 
     return res;
 }
@@ -1630,7 +1633,7 @@ double MercerKernel::LL2fast(const SparseVector<gentype> &xa, const SparseVector
 
         else if ( needsDiff(0) )
         {
-            diffis = diff2norm(xyprod,aaprod,bbprod);
+            diff2norm(diffis,ia,ib,xyprod,aaprod,bbprod,xa,xb);
         }
 
         //KKpro(res,xyprod,diffis,ixy,0,1,xdim,2,logres,xyvals);
@@ -4754,7 +4757,7 @@ void MercerKernel::K2i(gentype &res,
         {
             // Calculate ||x-y||^2 only as required
 
-            diff2norm(diffis,(xyprod+yxprod)/2.0,xnorm,ynorm);
+            diff2norm(diffis,i,j,(xyprod+yxprod)/2.0,xnorm,ynorm,x,y);
         }
 
         int &q = indstart;
@@ -4897,7 +4900,7 @@ void MercerKernel::K4i(gentype &res,
 
         if ( needsDiff() )
         {
-            diff4norm(diffis,xyprod,xanorm,xbnorm,xcnorm,xdnorm,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,s);
+            diff4norm(diffis,ia,ib,ic,id,xyprod,xanorm,xbnorm,xcnorm,xdnorm,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,s);
         }
 
         int &q = indstart;
@@ -5046,7 +5049,7 @@ void MercerKernel::Kmi(gentype &res,
         {
             // Calculate ||x-y||^2 only as required
 
-            diffmnorm(m,diffis,xyprod,xnorm,xy,s);
+            diffmnorm(m,diffis,i,xyprod,xnorm,xy,s);
         }
 
         int &q = indstart;
@@ -5547,7 +5550,7 @@ void MercerKernel::K2unnorm(gentype &res, int q,
     {
         // Calculate ||x-y||^2 only as required
 
-        diff2norm(diffis,(xyprod+yxprod)/2.0,xnorm,ynorm);
+        diff2norm(diffis,i,j,(xyprod+yxprod)/2.0,xnorm,ynorm,x,y);
     }
 
     Vector<const vecInfo *> xxinfo(2);
@@ -5589,7 +5592,7 @@ void MercerKernel::K4unnorm(gentype &res, int q,
     {
         // Calculate ||x-y||^2 only as required
 
-        diff4norm(diffis,xyprod,xanorm,xbnorm,xcnorm,xdnorm,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,s);
+        diff4norm(diffis,ia,ib,ic,id,xyprod,xanorm,xbnorm,xcnorm,xdnorm,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,s);
     }
 
     Vector<const vecInfo *> xxinfo(4);
@@ -5639,7 +5642,7 @@ void MercerKernel::Kmunnorm(gentype &res, int q,
     {
         // Calculate ||x-y||^2 only as required
 
-        diffmnorm(m,diffis,xyprod,xnorm,xy,s);
+        diffmnorm(m,diffis,ii,xyprod,xnorm,xy,s);
     }
 
     Kbase(res,q,cType(q),
@@ -6062,7 +6065,7 @@ void MercerKernel::dKdaz(gentype &resda, gentype &resdz, int &minmaxind,
             //
             // which implies the following quicker code
 
-            diff2norm(diffis,(xyprod+yxprod)/2.0,xnorm,ynorm);
+            diff2norm(diffis,i,j,(xyprod+yxprod)/2.0,xnorm,ynorm,x,y);
 
             Vector<const SparseVector<gentype> *> xx(2);
             Vector<const vecInfo *> xxinfo(2);
@@ -6219,7 +6222,7 @@ void MercerKernel::dKdaz(gentype &resda, gentype &resdz, int &minmaxind,
         {
             // Calculate ||x-y||^2 only as required
 
-            diff2norm(diffis,(xyprod+yxprod)/2.0,xnorm,ynorm);
+            diff2norm(diffis,i,j,(xyprod+yxprod)/2.0,xnorm,ynorm,x,y);
         }
 
         int q;
@@ -6744,7 +6747,7 @@ void MercerKernel::dKunnormda(gentype &res, int &minmaxind, int q,
     {
 	// Calculate ||x-y||^2 only as required
 
-        diff2norm(diffis,(xyprod+yxprod)/2.0,xnorm,ynorm);
+        diff2norm(diffis,i,j,(xyprod+yxprod)/2.0,xnorm,ynorm,x,y);
     }
 
     Vector<const SparseVector<gentype> *> xx(2);
@@ -6785,7 +6788,7 @@ void MercerKernel::dKunnormdz(gentype &res, int &minmaxind, int q,
     {
 	// Calculate ||x-y||^2 only as required
 
-        diff2norm(diffis,(xyprod+yxprod)/2.0,xnorm,ynorm);
+        diff2norm(diffis,i,j,(xyprod+yxprod)/2.0,xnorm,ynorm,x,y);
     }
 
     Vector<const SparseVector<gentype> *> xx(2);
@@ -9921,16 +9924,45 @@ const Matrix<double> &MercerKernel::fillXYMatrix(int m, Matrix<double> &altres, 
 
     return optionCache ? *optionCache : altres;
 }
+//FIXME: for this diff2 and the next one, take vectors as arguments. On failure revert to manually going through elementwise to work out difference!
+void MercerKernel::diff2norm(gentype &res, int ia, int ib, const gentype &xyprod, const gentype &xanorm, const gentype &xbnorm, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb) const
+{
+    if ( ia != ib )
+    {
+        res = xyprod;
+        res *= -2.0;
+        res += xanorm;
+        setconj(res);
+        res += xbnorm;
+        setconj(res);
 
+        if ( testisvnan(res) || testisinf(res) )
+        {
+            SparseVector<gentype> xxa(xa);
+            xxa -= xb;
+            res.force_double() = norm2(xxa);
+        }
+    }
+
+    else
+    {
+        res = 0.0_gent;
+    }
+}
 
 //void MercerKernel::diff3norm(gentype &res, const gentype &xyprod, const gentype &xanorm, const gentype &xbnorm, const gentype &xcnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, const Vector<int> *s) const
-void MercerKernel::diff3norm(gentype &res, const gentype &xyprod, const gentype &xanorm, const gentype &xbnorm, const gentype &xcnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, const Vector<int> *) const
+void MercerKernel::diff3norm(gentype &res, int ia, int ib, int ic, const gentype &xyprod, const gentype &xanorm, const gentype &xbnorm, const gentype &xcnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, const Vector<int> *) const
 {
     //(void) s;
 
     // xanorm, ... are ||xa||_m^m if isAltDiff == 0, ||xa||_2^2 otherwise
 
-    if ( isAltDiff() == 0 )
+    if ( ( ia == ib ) && ( ia == ic ) )
+    {
+        res = 0.0_gent;
+    }
+
+    else if ( isAltDiff() == 0 )
     {
         res  = xyprod;
         res *= -3.0;
@@ -9965,17 +9997,20 @@ void MercerKernel::diff3norm(gentype &res, const gentype &xyprod, const gentype 
     {
         NiceThrow("diff3norm not defined for altdiff != 0,1,2 (including 5)");
     }
-
-    return;
 }
 
-void MercerKernel::diff4norm(gentype &res, const gentype &xyprod, const gentype &xanorm, const gentype &xbnorm, const gentype &xcnorm, const gentype &xdnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, double xy30, double xy31, double xy32, double xy33, const Vector<int> *s) const
+void MercerKernel::diff4norm(gentype &res, int ia, int ib, int ic, int id, const gentype &xyprod, const gentype &xanorm, const gentype &xbnorm, const gentype &xcnorm, const gentype &xdnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, double xy30, double xy31, double xy32, double xy33, const Vector<int> *s) const
 {
     // xanorm, ... are ||xa||_m^m if isAltDiff == 0, ||xa||_2^2 otherwise
 
     int z = 0;
 
-    if ( isAltDiff() == 0 )
+    if ( ( ia == ib ) && ( ia == ic ) && ( ia == id ) )
+    {
+        res = 0.0_gent;
+    }
+
+    else if ( isAltDiff() == 0 )
     {
         res  = xyprod;
         res *= -4.0;
@@ -10049,17 +10084,20 @@ void MercerKernel::diff4norm(gentype &res, const gentype &xyprod, const gentype 
         res +=  xxyy((*s)(2),(*s)(2)) - xxyy((*s)(2),(*s)(3));
         res += -xxyy((*s)(3),(*s)(2)) + xxyy((*s)(3),(*s)(3));
     }
-
-    return;
 }
 
-void MercerKernel::diffmnorm(int m, gentype &res, const gentype &xyprod, const Vector<const gentype *> &xanorm, const Matrix<double> &xxyy, const Vector<int> *ss) const
+void MercerKernel::diffmnorm(int m, gentype &res, const Vector<int> &ii, const gentype &xyprod, const Vector<const gentype *> &xanorm, const Matrix<double> &xxyy, const Vector<int> *ss) const
 {
     // xanorm, ... are ||xa||_m^m if isAltDiff == 0, ||xa||_2^2 otherwise
 
     int i,j;
 
-    if ( isAltDiff() == 0 )
+    if ( !m || ( ii == ii(0) ) )
+    {
+        res = 0.0_gent;
+    }
+
+    else if ( isAltDiff() == 0 )
     {
         res  = xyprod;
         res *= -m;
@@ -10159,20 +10197,37 @@ void MercerKernel::diffmnorm(int m, gentype &res, const gentype &xyprod, const V
             res += -xxyy((*ss)(i+1),(*ss)(i  )) + xxyy((*ss)(i+1),(*ss)(i+1));
         }
     }
+}
 
-    return;
+void MercerKernel::diff2norm(double &res, int ia, int ib, double xyprod, double xanorm, double xbnorm, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb) const
+{
+    res = ( ia != ib ) ? (xanorm+xbnorm-(2*xyprod)) : 0.0;
+
+    if ( testisvnan(res) || testisinf(res) )
+    {
+        // infinite sets can result in inf-inf, which is nan but *should* be zero (as {*}-{*} = {}), so this is a fallback
+
+        SparseVector<gentype> xxa(xa);
+        xxa -= xb;
+        res = norm2(xxa);
+    }
 }
 
 //void MercerKernel::diff3norm(double &res, const double &xyprod, const double &xanorm, const double &xbnorm, const double &xcnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, const Vector<int> *s) const
-double MercerKernel::diff3norm(double xyprod, double xanorm, double xbnorm, double xcnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, const Vector<int> *) const
+void MercerKernel::diff3norm(double &res, int ia, int ib, int ic, double xyprod, double xanorm, double xbnorm, double xcnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, const Vector<int> *) const
 {
-    double res = 0;
+    res = 0;
 
     //(void) s;
 
     // xanorm, ... are ||xa||_m^m if isAltDiff == 0, ||xa||_2^2 otherwise
 
-    if ( isAltDiff() == 0 )
+    if ( ( ia == ib ) && ( ia == ic ) )
+    {
+        res = 0.0;
+    }
+
+    else if ( isAltDiff() == 0 )
     {
         res = xanorm+xbnorm+xcnorm-(3*xyprod);
     }
@@ -10197,19 +10252,22 @@ double MercerKernel::diff3norm(double xyprod, double xanorm, double xbnorm, doub
     {
         NiceThrow("diff3norm not defined for altdiff != 0,1,2 or 5 (m odd)");
     }
-
-    return res;
 }
 
-double MercerKernel::diff4norm(double xyprod, double xanorm, double xbnorm, double xcnorm, double xdnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, double xy30, double xy31, double xy32, double xy33, const Vector<int> *s) const
+void MercerKernel::diff4norm(double &res, int ia, int ib, int ic, int id, double xyprod, double xanorm, double xbnorm, double xcnorm, double xdnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, double xy30, double xy31, double xy32, double xy33, const Vector<int> *s) const
 {
-    double res = 0;
+    res = 0;
 
     // xanorm, ... are ||xa||_m^m if isAltDiff == 0, ||xa||_2^2 otherwise
 
     int z = 0;
 
-    if ( isAltDiff() == 0 )
+    if ( ( ia == ib ) && ( ia == ic ) && ( ia == id ) )
+    {
+        res = 0.0;
+    }
+
+    else if ( isAltDiff() == 0 )
     {
         res = xanorm+xbnorm+xcnorm+xdnorm-(4*xyprod);
 //errstream() << "phantomxyzmer 0: " << res << " = " << xanorm << "+" << xbnorm << "+" << xcnorm << "+" << xdnorm << "-(4*" << xyprod << ")\n";
@@ -10270,19 +10328,22 @@ double MercerKernel::diff4norm(double xyprod, double xanorm, double xbnorm, doub
         res +=  xxyy((*s)(2),(*s)(2)) - xxyy((*s)(2),(*s)(3));
         res += -xxyy((*s)(3),(*s)(2)) + xxyy((*s)(3),(*s)(3));
     }
-
-    return res;
 }
 
-double MercerKernel::diffmnorm(int m, double xyprod, const Vector<const double *> &xanorm, const Matrix<double> &xxyy, const Vector<int> *ss) const
+void MercerKernel::diffmnorm(int m, double &res, const Vector<int> &ii, double xyprod, const Vector<const double *> &xanorm, const Matrix<double> &xxyy, const Vector<int> *ss) const
 {
-    double res = 0;
+    res = 0;
 
     // xanorm, ... are ||xa||_m^m if isAltDiff == 0, ||xa||_2^2 otherwise
 
     int i,j;
 
-    if ( isAltDiff() == 0 )
+    if ( !m || ( ii == ii(0) ) )
+    {
+        res = 0.0;
+    }
+
+    else if ( isAltDiff() == 0 )
     {
         res = -m*xyprod;
 
@@ -10380,8 +10441,6 @@ double MercerKernel::diffmnorm(int m, double xyprod, const Vector<const double *
             res += -xxyy((*ss)(i+1),(*ss)(i  )) + xxyy((*ss)(i+1),(*ss)(i+1));
         }
     }
-
-    return res;
 }
 
 
@@ -16926,7 +16985,7 @@ void MercerKernel::getTwoProd(gentype &res,
 //errstream() << "phantomxyzmerceraabb 6\n";
     return;
 }
-
+//            xyprod = getTwoProd(xa,xb,0,0,0,xconsist,assumreal)+bias;
 double MercerKernel::getTwoProd(const SparseVector<gentype> &x,
                                 const SparseVector<gentype> &y,
                                 int inding, int conj, int scaling, int xconsist, int assumreal) const
@@ -23939,7 +23998,8 @@ T &MercerKernel::yyyaK2(T &res,
     else
     {
         yyybK2(res,xa,xb,xainfo,xbinfo,xagradOrder,xbgradOrder,xagradOrderR,xbgradOrderR,iaupm,ibupm,xafarpresent,xbfarpresent,xarankw,xbrankw,xArankw,xBrankw,xafarfarpresent,xbfarfarpresent,xafarfarfarpresent,xbfarfarfarpresent,xagradup,xbgradup,xagradupR,xbgradupR,xaignorefarfar,xbignorefarfar,xaignorefarfarfar,xbignorefarfarfar,bias,pxyprod,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,iaset,ibset,assumreal,justcalcip,adensetype,bdensetype);
-NiceAssert(!testisvnan(res) && !testisinf(res));
+
+        NiceAssert(!testisvnan(res)); // && ( !testisinf(res) || justcalcip ) );
     }
 
     return res;
@@ -25096,7 +25156,8 @@ T &MercerKernel::yyybK2(T &res,
         yyycK2(res,xan,xbn,xainfo,xbinfo,xagradOrder,xbgradOrder,xagradup,xbgradup,iaupm,ibupm,xaff,xbff,bias,pxyprod,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,iaset,ibset,assumreal,justcalcip,adensetype,bdensetype);
 
         res *= (xarankw*xbrankw);
-NiceAssert(!testisvnan(res) && !testisinf(res));
+
+        NiceAssert(!testisvnan(res)); // && ( !testisinf(res) || justcalcip ) );
     }
 
     return res;
@@ -28353,7 +28414,8 @@ T &MercerKernel::yyyKK2(T &res,
                     }
 
                     res = calcKRBFSymmKern(dvaris,xdim,r0,r1,adensetype,bdensetype,rxagradOrder,rxbgradOrder,xdiff,xalb,xblb,xadir,xbdir);
-NiceAssert(!testisvnan(res) && !testisinf(res));
+
+                    NiceAssert(!testisvnan(res)); // && ( !testisinf(res) || justcalcip ) );
                 }
 
                 else
@@ -28366,14 +28428,16 @@ NiceAssert(!testisvnan(res) && !testisinf(res));
                     xKKK2(res,xa,xb,xainfo,xbinfo,rxagradOrder,rxbgradOrder,xaff,xbff,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,justcalcip,iaset,ibset,adensetype,bdensetype);
 
                     res *= res;
-NiceAssert(!testisvnan(res) && !testisinf(res));
+
+                    NiceAssert(!testisvnan(res)); // && ( !testisinf(res) || justcalcip ) );
                 }
             }
 
             else
             {
                 xKKK2(res,xa,xb,xainfo,xbinfo,rxagradOrder,rxbgradOrder,xaff,xbff,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,resmode,mlid,xy00,xy10,xy11,justcalcip,iaset,ibset,adensetype,bdensetype);
-NiceAssert(!testisvnan(res) && !testisinf(res));
+
+                NiceAssert(!testisvnan(res)); // && !testisinf(res));
             }
         }
 
@@ -28509,7 +28573,8 @@ NiceAssert(!testisvnan(res) && !testisinf(res));
                     OP_sqrt(res);
 
                     res *= calcKRBFSymmKern(dvaris,xdim,r0,r1,adensetype,bdensetype,rxagradOrder,rxbgradOrder,xdiff,xalb,xblb,xadir,xbdir);
-NiceAssert(!testisvnan(res) && !testisinf(res));
+
+                    NiceAssert(!testisvnan(res)); // && !testisinf(res));
                 }
 
                 else
@@ -28649,7 +28714,8 @@ NiceAssert(!testisvnan(res) && !testisinf(res));
                     OP_sqrt(res);
 
                     res *= calcKRBFSymmKern(dvaris,xdim,r0,r1,adensetype,bdensetype,rxagradOrder,rxbgradOrder,xdiff,xalb,xblb,xadir,xbdir);
-NiceAssert(!testisvnan(res) && !testisinf(res));
+
+                    NiceAssert(!testisvnan(res)); // && !testisinf(res));
                 }
 
                 else
@@ -28839,7 +28905,8 @@ NiceAssert(!testisvnan(res) && !testisinf(res));
                     OP_sqrt(res);
 
                     res *= calcKRBFSymmKern(dvaris,xdim,r0,r1,adensetype,bdensetype,rxagradOrder,rxbgradOrder,xdiff,xalb,xblb,xadir,xbdir);
-NiceAssert(!testisvnan(res) && !testisinf(res));
+
+                    NiceAssert(!testisvnan(res)); // && !testisinf(res));
                 }
 
                 else
@@ -29021,9 +29088,11 @@ inline double calcKRBFSymmKern(double dvaris, int xdim,
                         for ( i = 0 ; i < xdim ; ++i )
                         {
                             dres *= exp(-xdiff[i]*xdiff[i]);
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+
+                            NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                         }
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+
+                        NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                     }
 
                     else if ( !adensetype && !bdensetype && rxagradOrder && !rxbgradOrder )
@@ -29034,12 +29103,12 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
                         {
                             dres *= exp(-xdiff[i]*xdiff[i]);
                             scalefactor += (xdiff[i]*xadir[i]);
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
                         }
 
                         dres *= -2*scalefactor/r0;
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                     }
 
                     else if ( !adensetype && !bdensetype && !rxagradOrder && rxbgradOrder )
@@ -29050,12 +29119,12 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
                         {
                             dres *= exp(-xdiff[i]*xdiff[i]);
                             scalefactor += (xdiff[i]*xbdir[i]);
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
                         }
 
                         dres *= 2*scalefactor/r0;
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                     }
 
                     else if ( !adensetype && !bdensetype && rxagradOrder && rxbgradOrder )
@@ -29066,22 +29135,22 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
                         {
                             dres *= exp(-xdiff[i]*xdiff[i]);
                             scalefactor += (0.5-((xdiff[i]*xdiff[i])*(xadir[i]*xbdir[i])));
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
 
                             for ( j = 0 ; j < xdim ; j++ )
                             {
                                 if ( j != i )
                                 {
                                     scalefactor -= ((xdiff[i]*xdiff[j])*(xadir[i]*xbdir[j]));
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
                                 }
                             }
                         }
 
                         dres *= 4*scalefactor/(r0*r0);
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                     }
 
 // =================
@@ -29091,9 +29160,9 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
                         for ( i = 0 ; i < xdim ; ++i )
                         {
                             dres *= (NUMBASE_SQRTPI/2)*r0*(erf(xdiff[i])-erf(xalb[i]));
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                         }
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                     }
 
                     else if ( adensetype && !bdensetype && rxagradOrder && !rxbgradOrder )
@@ -29121,12 +29190,12 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
 
                             tmpres += scalefactor;
 
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
                         }
 
                         dres *= tmpres;
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                     }
 
                     else if ( adensetype && !bdensetype && !rxagradOrder && rxbgradOrder )
@@ -29154,12 +29223,12 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
 
                             tmpres += scalefactor;
 
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
                         }
 
                         dres *= tmpres;
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                     }
 
                     else if ( adensetype && !bdensetype && rxagradOrder && rxbgradOrder )
@@ -29174,7 +29243,7 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
 
                             partfactora[i] = (exp(-xalb[i]*xalb[i])-exp(-xdiff[i]*xdiff[i]));
                             partfactorb[i] = exp(-xdiff[i]*xdiff[i]);
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                         }
 
                         double scalefactor = 0.0;
@@ -29193,8 +29262,8 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
                             }
 
                             tmpres += scalefactor;
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
                         }
 
                         for ( i = 0 ; i < xdim ; i++ )
@@ -29214,13 +29283,13 @@ NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
                                     }
 
                                     tmpres += scalefactor;
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
                                 }
                             }
                         }
 
                         dres *= tmpres;
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                     }
 
 // =================
@@ -29230,7 +29299,7 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
                         for ( i = 0 ; i < xdim ; ++i )
                         {
                             dres *= (NUMBASE_SQRTPI/2)*r0*(erf(xblb[i])-erf(xdiff[i]));
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                         }
                     }
 
@@ -29259,12 +29328,12 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
 
                             tmpres += scalefactor;
 
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
                         }
 
                         dres *= tmpres;
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                     }
 
                     else if ( !adensetype && bdensetype && !rxagradOrder && rxbgradOrder )
@@ -29291,12 +29360,12 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
                             }
 
                             tmpres += scalefactor;
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
                         }
 
                         dres *= tmpres;
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                     }
 
                     else if ( !adensetype && bdensetype && rxagradOrder && rxbgradOrder )
@@ -29311,7 +29380,7 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
 
                             partfactora[i] = (exp(-xblb[i]*xblb[i])-exp(-xdiff[i]*xdiff[i]));
                             partfactorb[i] = exp(-xdiff[i]*xdiff[i]);
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                         }
 
                         double scalefactor = 0.0;
@@ -29330,7 +29399,7 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
                             }
 
                             tmpres += scalefactor;
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
                         }
 
                         for ( i = 0 ; i < xdim ; i++ )
@@ -29350,14 +29419,14 @@ NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
                                     }
 
                                     tmpres += scalefactor;
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
                                 }
                             }
                         }
 
                         dres *= tmpres;
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                     }
 
 // =================
@@ -29367,7 +29436,7 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
                         for ( i = 0 ; i < xdim ; ++i )
                         {
                             dres *= (NUMBASE_SQRTPI/2)*r0*r0*((xblb[i]*erf(xblb[i]))+(xalb[i]*erf(xalb[i]))-(xdiff[i]*erf(xdiff[i]))+((exp(-xalb[i]*xalb[i])+exp(-xblb[i]*xblb[i])-exp(-xdiff[i]*xdiff[i])-1)/NUMBASE_SQRTPI));
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                         }
                     }
 
@@ -29395,13 +29464,13 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
                             }
 
                             tmpres += scalefactor;
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                         }
 
                         dres *= tmpres;
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                     }
 
                     else if ( adensetype && bdensetype && !rxagradOrder && rxbgradOrder )
@@ -29428,13 +29497,13 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
                             }
 
                             tmpres += scalefactor;
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                         }
 
                         dres *= tmpres;
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                     }
 
                     else if ( adensetype && bdensetype && rxagradOrder && rxbgradOrder )
@@ -29447,7 +29516,7 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
                         {
                             deval[i] = (NUMBASE_SQRTPI/2)*r0*r0*((xblb[i]*erf(xblb[i]))+(xalb[i]*erf(xalb[i]))-(xdiff[i]*erf(xdiff[i]))+((exp(-xalb[i]*xalb[i])+exp(-xblb[i]*xblb[i])-exp(-xdiff[i]*xdiff[i])-1)/NUMBASE_SQRTPI));
                             dres *= deval[i];
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
 
                             partfactora[i] = ((NUMBASE_SQRTPI/2)*r0*(erf(xblb[i])-erf(xdiff[i])));
                             partfactorb[i] = ((NUMBASE_SQRTPI/2)*r0*(erf(xdiff[i])-erf(xalb[i])));
@@ -29469,8 +29538,8 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
                             }
 
                             tmpres += scalefactor;
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                         }
 
                         for ( i = 0 ; i < xdim ; i++ )
@@ -29490,15 +29559,15 @@ NiceAssert(!testisvnan(dres) && !testisinf(dres));
                                     }
 
                                     tmpres += tmpres;
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                                 }
                             }
                         }
 
                         dres *= tmpres;
-NiceAssert(!testisvnan(scalefactor) && !testisinf(scalefactor));
-NiceAssert(!testisvnan(dres) && !testisinf(dres));
+NiceAssert(!testisvnan(scalefactor)); // && !testisinf(scalefactor));
+NiceAssert(!testisvnan(dres)); // && !testisinf(dres));
                     }
 
                     return dres;
@@ -31102,7 +31171,7 @@ T &MercerKernel::xKK2(T &res,
     }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+//    NiceAssert( !testisinf(res) );
 
     return res;
 }
@@ -37059,7 +37128,7 @@ T &MercerKernel::LL1(T &res, T &logres, int &logresvalid,
             {
                 // Calculate ||x-y||^2 only as required
 
-                diff1norm(diffis,xyprod,getmnorm(xainfo,xa,1,xconsist,assumreal));
+                diff1norm(diffis,ia,xyprod,getmnorm(xainfo,xa,1,xconsist,assumreal));
             }
 
             else if ( ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
@@ -37132,7 +37201,7 @@ T &MercerKernel::LL1(T &res, T &logres, int &logresvalid,
                     kernel8xx(0,xanorm,dummyind,cType(0),zzz,zzz,zzz,xa,xa,xainfo,xainfo,ia,ia,xdim,0,mlid);
                 }
 
-                diff1norm(diffis,xyprod,xanorm);
+                diff1norm(diffis,ia,xyprod,xanorm);
 
                 if ( !justcalcip )
                 {
@@ -37470,12 +37539,12 @@ T &MercerKernel::LL2(int adensetype, int bdensetype, T &res, T &logres, int &log
 
                     if ( assumreal )
                     {
-                        diff2norm(diffis,(double) xyprod,(double) getmnorm(xainfo,xa,2,xconsist,assumreal),(double) getmnorm(xbinfo,xb,2,xconsist,assumreal));
+                        diff2norm(diffis,i,j,(double) xyprod,(double) getmnorm(xainfo,xa,2,xconsist,assumreal),(double) getmnorm(xbinfo,xb,2,xconsist,assumreal),xa,xb);
                     }
 
                     else
                     {
-                        diff2norm(diffis,(xyprod+yxprod)/2.0,getmnorm(xainfo,xa,2,xconsist,assumreal),getmnorm(xbinfo,xb,2,xconsist,assumreal));
+                        diff2norm(diffis,i,j,(xyprod+yxprod)/2.0,getmnorm(xainfo,xa,2,xconsist,assumreal),getmnorm(xbinfo,xb,2,xconsist,assumreal),xa,xb);
                     }
                 }
             }
@@ -37552,7 +37621,7 @@ T &MercerKernel::LL2(int adensetype, int bdensetype, T &res, T &logres, int &log
                     kernel8xx(0,xbnorm,dummyind,cType(0),zzz,zzz,zzz,xb,xb,xbinfo,xbinfo,j,j,xdim,0,mlid);
 //errstream() << "phantomxyz mer 2c" << ynorm << "\n";
 
-                    diff2norm(diffis,xyprod,xanorm,xbnorm);
+                    diff2norm(diffis,i,j,xyprod,xanorm,xbnorm,xa,xb);
                 }
             }
 
@@ -37604,8 +37673,8 @@ T &MercerKernel::LL2(int adensetype, int bdensetype, T &res, T &logres, int &log
                 NiceAssert( !testisvnan(xares) );
                 NiceAssert( !testisvnan(xbres) );
 
-                NiceAssert( !testisinf(xares) );
-                NiceAssert( !testisinf(xbres) );
+//                NiceAssert( !testisinf(xares) );
+//                NiceAssert( !testisinf(xbres) );
 
                 if ( ( (double) abs2(xares) <= BADZEROTOL ) || ( (double) abs2(xbres) <= BADZEROTOL ) )
                 {
@@ -37680,7 +37749,7 @@ else
 */
 
                 NiceAssert( !testisvnan(res) );
-                NiceAssert( !testisinf(res) );
+//                NiceAssert( !testisinf(res) );
             }
 
             else
@@ -37885,7 +37954,7 @@ T &MercerKernel::LL3(T &res, T &logres, int &logresvalid,
 
                 fillXYMatrix(altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,xa,xb,xc,xainfo,xbinfo,xcinfo,xy00,xy10,xy11,xy20,xy21,xy22,0,assumreal);
 
-                diff3norm(diffis,xyprod,getmnorm(xainfo,xa,3,xconsist,assumreal),getmnorm(xbinfo,xb,3,xconsist,assumreal),getmnorm(xcinfo,xc,3,xconsist,assumreal),altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,s);
+                diff3norm(diffis,ia,ib,ic,xyprod,getmnorm(xainfo,xa,3,xconsist,assumreal),getmnorm(xbinfo,xb,3,xconsist,assumreal),getmnorm(xcinfo,xc,3,xconsist,assumreal),altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,s);
             }
 
             else if ( ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
@@ -37977,7 +38046,7 @@ T &MercerKernel::LL3(T &res, T &logres, int &logresvalid,
                     }
                 }
 
-                diff3norm(diffis,xyprod,xanorm,xbnorm,xcnorm,altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,s);
+                diff3norm(diffis,ia,ib,ic,xyprod,xanorm,xbnorm,xcnorm,altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,s);
 
                 if ( !justcalcip )
                 {
@@ -38354,7 +38423,7 @@ T &MercerKernel::LL4(T &res, T &logres, int &logresvalid,
 
                 fillXYMatrix(altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,altxyr30,altxyr31,altxyr32,altxyr33,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,0,assumreal);
 
-                diff4norm(diffis,xyprod,getmnorm(xainfo,xa,4,xconsist,assumreal),getmnorm(xbinfo,xb,4,xconsist,assumreal),getmnorm(xcinfo,xc,4,xconsist,assumreal),getmnorm(xdinfo,xd,4,xconsist,assumreal),altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,altxyr30,altxyr31,altxyr32,altxyr33,s);
+                diff4norm(diffis,ia,ib,ic,id,xyprod,getmnorm(xainfo,xa,4,xconsist,assumreal),getmnorm(xbinfo,xb,4,xconsist,assumreal),getmnorm(xcinfo,xc,4,xconsist,assumreal),getmnorm(xdinfo,xd,4,xconsist,assumreal),altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,altxyr30,altxyr31,altxyr32,altxyr33,s);
             }
 
             else if ( ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
@@ -38880,7 +38949,7 @@ T &MercerKernel::LL4(T &res, T &logres, int &logresvalid,
                     }
                 }
 
-                diff4norm(diffis,xyprod,xanorm,xbnorm,xcnorm,xdnorm,altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,altxyr30,altxyr31,altxyr32,altxyr33,s);
+                diff4norm(diffis,ia,ib,ic,id,xyprod,xanorm,xbnorm,xcnorm,xdnorm,altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,altxyr30,altxyr31,altxyr32,altxyr33,s);
 
                 if ( !justcalcip )
                 {
@@ -39832,7 +39901,7 @@ T &MercerKernel::LLm(int m, T &res, T &logres, int &logresvalid,
 
                 Matrix<double> altxy;
 
-                diffmnorm(m,diffis,xyprod,xnormde,fillXYMatrix(m,altxy,x,xinfo,xy,0,assumreal),s);
+                diffmnorm(m,diffis,iv,xyprod,xnormde,fillXYMatrix(m,altxy,x,xinfo,xy,0,assumreal),s);
             }
 
             else if ( ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
@@ -40081,7 +40150,7 @@ T &MercerKernel::LLm(int m, T &res, T &logres, int &logresvalid,
                     }
                 }
 
-                diffmnorm(m,diffis,xyprod,xnormde,altxy,s);
+                diffmnorm(m,diffis,iv,xyprod,xnormde,altxy,s);
 
                 diffis *= (const T &) cWeight(0);
             }
@@ -41298,7 +41367,7 @@ void MercerKernel::dLL2(T &xygrad, T &xnormgrad, int &minmaxind,
         {
             if ( xy00 && xy11 )
             {
-                diff2norm(diffis,(double) xyprod,(*xy00),(*xy11));
+                diff2norm(diffis,i,j,(double) xyprod,(*xy00),(*xy11),x,y);
             }
 
             else if ( pxyprod && pxyprod[1] )
@@ -41312,12 +41381,12 @@ void MercerKernel::dLL2(T &xygrad, T &xnormgrad, int &minmaxind,
 
                 if ( assumreal )
                 {
-                    diff2norm(diffis,(double) xyprod,(double) getmnorm(xinfo,x,2,xconsist,assumreal),(double) getmnorm(yinfo,y,2,xconsist,assumreal));
+                    diff2norm(diffis,i,j,(double) xyprod,(double) getmnorm(xinfo,x,2,xconsist,assumreal),(double) getmnorm(yinfo,y,2,xconsist,assumreal),x,y);
                 }
 
                 else
                 {
-                    diff2norm(diffis,(xyprod+yxprod)/2.0,getmnorm(xinfo,x,2,xconsist,assumreal),getmnorm(yinfo,y,2,xconsist,assumreal));
+                    diff2norm(diffis,i,j,(xyprod+yxprod)/2.0,getmnorm(xinfo,x,2,xconsist,assumreal),getmnorm(yinfo,y,2,xconsist,assumreal),x,y);
                 }
             }
         }
@@ -41420,7 +41489,7 @@ void MercerKernel::dLL2(T &xygrad, T &xnormgrad, int &minmaxind,
             dkernel8xx(0,dxxgrad,dxnormgrad,xnorm,minmaxind,cType(0),zzz,zzz,zzz,x,x,xinfo,xinfo,i,i,xdim,48,mlid);
             dkernel8xx(0,dyygrad,dynormgrad,ynorm,minmaxind,cType(0),zzz,zzz,zzz,y,y,yinfo,yinfo,j,j,xdim,48,mlid);
 
-            diff2norm(diffis,xyprod,xnorm,ynorm);
+            diff2norm(diffis,i,j,xyprod,xnorm,ynorm,x,y);
 
             diffis *= (const T &) cWeight(0);
 
@@ -41479,7 +41548,7 @@ void MercerKernel::dLL2(T &xygrad, T &xnormgrad, int &minmaxind,
 
             if ( xy00 && xy11 )
             {
-                diff2norm(diffis,(double) xyprod,(*xy00),(*xy11));
+                diff2norm(diffis,i,j,(double) xyprod,(*xy00),(*xy11),x,y);
             }
 
             else if ( pxyprod && pxyprod[1] )
@@ -41501,12 +41570,12 @@ void MercerKernel::dLL2(T &xygrad, T &xnormgrad, int &minmaxind,
 
                 if ( assumreal )
                 {
-                    diff2norm(diffis,(double) xyprod,(double) xnorm,(double) ynorm);
+                    diff2norm(diffis,i,j,(double) xyprod,(double) xnorm,(double) ynorm,x,y);
                 }
 
                 else
                 {
-                    diff2norm(diffis,(xyprod+yxprod)/2.0,xnorm,ynorm);
+                    diff2norm(diffis,i,j,(xyprod+yxprod)/2.0,xnorm,ynorm,x,y);
                 }
             }
 
@@ -41671,7 +41740,7 @@ void MercerKernel::d2LL2(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T
         {
             if ( xy00 && xy11 )
             {
-                diff2norm(diffis,(double) xyprod,(*xy00),(*xy11));
+                diff2norm(diffis,i,j,(double) xyprod,(*xy00),(*xy11),x,y);
             }
 
             else if ( pxyprod && pxyprod[1] )
@@ -41685,12 +41754,12 @@ void MercerKernel::d2LL2(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T
 
                 if ( assumreal )
                 {
-                    diff2norm(diffis,(double) xyprod,(double) getmnorm(xinfo,x,2,xconsist,assumreal),(double) getmnorm(yinfo,y,2,xconsist,assumreal));
+                    diff2norm(diffis,i,j,(double) xyprod,(double) getmnorm(xinfo,x,2,xconsist,assumreal),(double) getmnorm(yinfo,y,2,xconsist,assumreal),x,y);
                 }
 
                 else
                 {
-                    diff2norm(diffis,(xyprod+yxprod)/2.0,getmnorm(xinfo,x,2,xconsist,assumreal),getmnorm(yinfo,y,2,xconsist,assumreal));
+                    diff2norm(diffis,i,j,(xyprod+yxprod)/2.0,getmnorm(xinfo,x,2,xconsist,assumreal),getmnorm(yinfo,y,2,xconsist,assumreal),x,y);
                 }
             }
         }
@@ -41779,7 +41848,7 @@ void MercerKernel::d2LL2(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T
 
             if ( xy00 && xy11 )
             {
-                diff2norm(diffis,(double) xyprod,(*xy00),(*xy11));
+                diff2norm(diffis,i,j,(double) xyprod,(*xy00),(*xy11),x,y);
             }
 
             else if ( pxyprod && pxyprod[1] )
@@ -41801,12 +41870,12 @@ void MercerKernel::d2LL2(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T
 
                 if ( assumreal )
                 {
-                    diff2norm(diffis,(double) xyprod,(double) xnorm,(double) ynorm);
+                    diff2norm(diffis,i,j,(double) xyprod,(double) xnorm,(double) ynorm,x,y);
                 }
 
                 else
                 {
-                    diff2norm(diffis,(xyprod+yxprod)/2.0,xnorm,ynorm);
+                    diff2norm(diffis,i,j,(xyprod+yxprod)/2.0,xnorm,ynorm,x,y);
                 }
             }
 
@@ -41890,7 +41959,7 @@ void MercerKernel::dnLL2del(Vector<T> &sc, Vector<Vector<int> > &nn, int &minmax
         {
             if ( xy00 && xy11 )
             {
-                diff2norm(diffis,(double) xyprod,(*xy00),(*xy11));
+                diff2norm(diffis,i,j,(double) xyprod,(*xy00),(*xy11),x,y);
             }
 
             else if ( pxyprod && pxyprod[1] )
@@ -41904,12 +41973,12 @@ void MercerKernel::dnLL2del(Vector<T> &sc, Vector<Vector<int> > &nn, int &minmax
 
                 if ( assumreal )
                 {
-                    diff2norm(diffis,(double) xyprod,(double) getmnorm(xinfo,x,2,xconsist,assumreal),(double) getmnorm(yinfo,y,2,xconsist,assumreal));
+                    diff2norm(diffis,i,j,(double) xyprod,(double) getmnorm(xinfo,x,2,xconsist,assumreal),(double) getmnorm(yinfo,y,2,xconsist,assumreal),x,y);
                 }
 
                 else
                 {
-                    diff2norm(diffis,(xyprod+yxprod)/2.0,getmnorm(xinfo,x,2,xconsist,assumreal),getmnorm(yinfo,y,2,xconsist,assumreal));
+                    diff2norm(diffis,i,j,(xyprod+yxprod)/2.0,getmnorm(xinfo,x,2,xconsist,assumreal),getmnorm(yinfo,y,2,xconsist,assumreal),x,y);
                 }
             }
         }

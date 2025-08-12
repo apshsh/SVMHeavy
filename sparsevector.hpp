@@ -1022,7 +1022,6 @@ template <class T> SparseVector<T>  operator-(const SparseVector<T> &left_op);
 // -  subtraction        - binary, return rvalue
 // *  multiplication     - binary, return rvalue
 // /  division           - binary, return rvalue
-// %  modulo             - binary, return rvalue
 //
 // NB: - adding a scalar to a vector adds the scalar to all elements of the
 //       vector.
@@ -1038,25 +1037,21 @@ template <class T> SparseVector<T>  operator+(const SparseVector<T> &left_op, co
 template <class T> SparseVector<T>  operator-(const SparseVector<T> &left_op, const SparseVector<T> &right_op);
 template <class T> SparseVector<T>  operator*(const SparseVector<T> &left_op, const SparseVector<T> &right_op);
 template <class T> SparseVector<T>  operator/(const SparseVector<T> &left_op, const SparseVector<T> &right_op);
-template <class T> SparseVector<T>  operator%(const SparseVector<T> &left_op, const SparseVector<T> &right_op);
 
 template <class T> SparseVector<T>  operator+(const SparseVector<T> &left_op, const T &right_op);
 template <class T> SparseVector<T>  operator-(const SparseVector<T> &left_op, const T &right_op);
 template <class T> SparseVector<T>  operator*(const SparseVector<T> &left_op, const T &right_op);
 template <class T> SparseVector<T>  operator/(const SparseVector<T> &left_op, const T &right_op);
-template <class T> SparseVector<T>  operator%(const SparseVector<T> &left_op, const T &right_op);
 
 template <class T> SparseVector<T>  operator+(const T &left_op, const SparseVector<T> &right_op);
 template <class T> SparseVector<T>  operator-(const T &left_op, const SparseVector<T> &right_op);
 template <class T> SparseVector<T>  operator*(const T &left_op, const SparseVector<T> &right_op);
 template <class T> SparseVector<T>  operator/(const T &left_op, const SparseVector<T> &right_op);
-template <class T> SparseVector<T>  operator%(const T &left_op, const SparseVector<T> &right_op);
 
 // +=  additive       assignment - binary, return lvalue
 // -=  subtractive    assignment - binary, return lvalue
 // *=  multiplicative assignment - binary, return lvalue
 // /=  divisive       assignment - binary, return lvalue
-// %=  modulo         assignment - binary, return lvalue
 //
 // NB: - adding a scalar to a vector adds the scalar to all elements of the
 //       vector.
@@ -1071,19 +1066,16 @@ template <class T> SparseVector<T>  operator%(const T &left_op, const SparseVect
 //template <class T> SparseVector<T> &operator-=(SparseVector<T> &left_op, const SparseVector<T> &right_op);
 //template <class T> SparseVector<T> &operator*=(SparseVector<T> &left_op, const SparseVector<T> &right_op);
 //template <class T> SparseVector<T> &operator/=(SparseVector<T> &left_op, const SparseVector<T> &right_op);
-template <class T> SparseVector<T> &operator%=(SparseVector<T> &left_op, const SparseVector<T> &right_op);
 
 template <class T> SparseVector<T> &operator+=(SparseVector<T> &left_op, const T &right_op);
 template <class T> SparseVector<T> &operator-=(SparseVector<T> &left_op, const T &right_op);
 template <class T> SparseVector<T> &operator*=(SparseVector<T> &left_op, const T &right_op);
 template <class T> SparseVector<T> &operator/=(SparseVector<T> &left_op, const T &right_op);
-template <class T> SparseVector<T> &operator%=(SparseVector<T> &left_op, const T &right_op);
 
 template <class T> SparseVector<T> &operator+=(const T &left_op, SparseVector<T> &right_op);
 template <class T> SparseVector<T> &operator-=(const T &left_op, SparseVector<T> &right_op);
 template <class T> SparseVector<T> &operator*=(const T &left_op, SparseVector<T> &right_op);
 template <class T> SparseVector<T> &operator/=(const T &left_op, SparseVector<T> &right_op);
-template <class T> SparseVector<T> &operator%=(const T &left_op, SparseVector<T> &right_op);
 
 // Related non-commutative operations
 //
@@ -10298,13 +10290,6 @@ template <class T> SparseVector<T>  operator/ (const SparseVector<T> &left_op, c
     return ( res /= right_op );
 }
 
-template <class T> SparseVector<T>  operator% (const SparseVector<T> &left_op, const SparseVector<T> &right_op)
-{
-    SparseVector<T> res(left_op);
-
-    return ( res %= right_op );
-}
-
 template <class T> SparseVector<T>  operator+ (const SparseVector<T> &left_op, const T               &right_op)
 {
     SparseVector<T> res(left_op);
@@ -10324,13 +10309,6 @@ template <class T> SparseVector<T>  operator/ (const SparseVector<T> &left_op, c
     SparseVector<T> res(left_op);
 
     return ( res /= right_op );
-}
-
-template <class T> SparseVector<T>  operator% (const SparseVector<T> &left_op, const T               &right_op)
-{
-    SparseVector<T> res(left_op);
-
-    return ( res %= right_op );
 }
 
 template <class T> SparseVector<T>  operator+ (const T               &left_op, const SparseVector<T> &right_op)
@@ -10359,13 +10337,6 @@ template <class T> SparseVector<T>  operator/ (const T               &left_op, c
     SparseVector<T> res(right_op);
 
     return ( left_op /= res );
-}
-
-template <class T> SparseVector<T>  operator% (const T               &left_op, const SparseVector<T> &right_op)
-{
-    SparseVector<T> res(right_op);
-
-    return ( left_op %= res );
 }
 
 
@@ -10620,60 +10591,6 @@ template <class T> SparseVector<T> &operator/=(      SparseVector<T> &left_op, c
     return left_op;
 }
 
-template <class T> SparseVector<T> &operator%=(      SparseVector<T> &left_op, const SparseVector<T> &right_op)
-{
-    if ( left_op.nearnonsparse() && right_op.nearnonsparse() && ( left_op.size() == right_op.size() ) )
-    {
-        left_op("&",left_op.ind()) %= right_op(right_op.ind());
-
-        return left_op;
-    }
-
-    int lsize = left_op.indsize();
-    int rsize = right_op.indsize();
-
-    if ( lsize && rsize )
-    {
-	int lpos = 0;
-	int rpos = 0;
-	int lelm;
-        int relm;
-
-	while ( ( lpos < lsize ) && ( rpos < rsize ) )
-	{
-            lelm = left_op.ind(lpos);
-	    relm = right_op.ind(rpos);
-
-	    if ( lelm == relm )
-	    {
-                left_op.direref(lpos) %= right_op.direcref(rpos);
-
-		++lpos;
-                ++rpos;
-	    }
-
-	    else if ( lelm < relm )
-	    {
-                left_op.zero(lelm);
-                --lsize;
-	    }
-
-	    else
-	    {
-                ++rpos;
-	    }
-	}
-
-	while ( lpos < lsize )
-	{
-	    left_op.zero(left_op.ind(lpos));
-            --lsize;
-	}
-    }
-
-    return left_op;
-}
-
 template <class T> SparseVector<T> &operator+=(      SparseVector<T> &left_op, const T               &right_op)
 {
     int i;
@@ -10728,21 +10645,6 @@ template <class T> SparseVector<T> &operator/=(      SparseVector<T> &left_op, c
 	for ( i = 0 ; i < left_op.indsize() ; ++i )
 	{
             left_op.direref(i) /= right_op;
-	}
-    }
-
-    return left_op;
-}
-
-template <class T> SparseVector<T> &operator%=(      SparseVector<T> &left_op, const T               &right_op)
-{
-    int i;
-
-    if ( left_op.indsize() )
-    {
-	for ( i = 0 ; i < left_op.indsize() ; ++i )
-	{
-            left_op.direref(i) %= right_op;
 	}
     }
 
@@ -10807,21 +10709,6 @@ template <class T> SparseVector<T> &operator/=(const T               &left_op,  
         for ( i = 0 ; i < right_op.indsize() ; ++i )
 	{
             rightmult(left_op,right_op.direref(i));
-	}
-    }
-
-    return right_op;
-}
-
-template <class T> SparseVector<T> &operator%=(const T               &left_op,       SparseVector<T> &right_op)
-{
-    int i;
-
-    if ( right_op.indsize() )
-    {
-        for ( i = 0 ; i < right_op.indsize() ; ++i )
-	{
-            right_op.direref(i) = left_op%right_op.direcref(i);
 	}
     }
 

@@ -1210,16 +1210,49 @@ double SMBOOptions::inf_dist(const SparseVector<S> &xz) const
     gentype Kxzx1;
     gentype Kxx;
 
-    getmuapprox_sample(0).K2(Kxzx1,locxz,locx1); // kappa0.phi_z(||z-1||).phi_x(0) = kappa0.phi_z(||z-1||)
-    getmuapprox_sample(0).K2(Kxx,  locxz,locxz); // kappa0.phi_z(0).phi_x(0) = kappa0
+    double res = 0;
+
+    for ( int q = 0 ; q < muapprox.size() ; ++q )
+    {
+        const ML_Base &modeltouse = getmuapprox_sample(q);
+
+        if ( isSVM(modeltouse) || isGPR(modeltouse) || isLSV(modeltouse) )
+        {
+            modeltouse.K2(Kxzx1,locxz,locx1); // kappa0.phi_z(||z-1||).phi_x(0) = kappa0.phi_z(||z-1||)
+            modeltouse.K2(Kxx,  locxz,locxz); // kappa0.phi_z(0).phi_x(0) = kappa0
 //errstream() << "phantomxyz inf_dist calc: Kxzx1 " << Kxzx1 << "\n";
 //errstream() << "phantomxyz inf_dist calc: Kxx " << Kxx << "\n";
 
-    double Kxzx1d = (double) Kxzx1;
-    double Kxxd   = (double) Kxx;
+            double Kxzx1d = (double) Kxzx1;
+            double Kxxd   = (double) Kxx;
 
-    double res = 1-((Kxzx1d/Kxxd)*(Kxzx1d/Kxxd));
-    res = ( res > 0 ) ? sqrt(res) : 0.0;
+            double tmpres = 1-((Kxzx1d/Kxxd)*(Kxzx1d/Kxxd));
+            tmpres = ( tmpres > 0 ) ? sqrt(tmpres) : 0.0;
+
+            res += tmpres;
+        }
+    }
+
+    for ( int q = 0 ; q < numcgt ; ++q )
+    {
+        const ML_Base &modeltouse = getcgtapprox(q);
+
+        if ( isSVM(modeltouse) || isGPR(modeltouse) || isLSV(modeltouse) )
+        {
+            modeltouse.K2(Kxzx1,locxz,locx1); // kappa0.phi_z(||z-1||).phi_x(0) = kappa0.phi_z(||z-1||)
+            modeltouse.K2(Kxx,  locxz,locxz); // kappa0.phi_z(0).phi_x(0) = kappa0
+//errstream() << "phantomxyz inf_dist calc: Kxzx1 " << Kxzx1 << "\n";
+//errstream() << "phantomxyz inf_dist calc: Kxx " << Kxx << "\n";
+
+            double Kxzx1d = (double) Kxzx1;
+            double Kxxd   = (double) Kxx;
+
+            double tmpres = 1-((Kxzx1d/Kxxd)*(Kxzx1d/Kxxd));
+            tmpres = ( tmpres > 0 ) ? sqrt(tmpres) : 0.0;
+
+            res += tmpres;
+        }
+    }
 //errstream() << "phantomxyz inf_dist calc:res " << res << "\n";
 
     return res;

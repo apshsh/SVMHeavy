@@ -1102,29 +1102,7 @@ class vecInfoBase;
 
 
 inline void qswap(vecInfoBase &a, vecInfoBase &b);
-inline void qswap(const vecInfoBase *&a, const vecInfoBase *&b);
-inline void qswap(vecInfoBase *&a, vecInfoBase *&b);
-
-inline vecInfoBase &setident (vecInfoBase &a);
-inline vecInfoBase &setzero  (vecInfoBase &a);
-inline vecInfoBase &setposate(vecInfoBase &a);
-inline vecInfoBase &setnegate(vecInfoBase &a);
-inline vecInfoBase &setconj  (vecInfoBase &a);
-inline vecInfoBase &setrand  (vecInfoBase &a);
-
-inline vecInfoBase *&setident (vecInfoBase *&a);
-inline vecInfoBase *&setzero  (vecInfoBase *&a);
-inline vecInfoBase *&setposate(vecInfoBase *&a);
-inline vecInfoBase *&setnegate(vecInfoBase *&a);
-inline vecInfoBase *&setconj  (vecInfoBase *&a);
-inline vecInfoBase *&setrand  (vecInfoBase *&a);
-
-inline const vecInfoBase *&setident (const vecInfoBase *&a);
-inline const vecInfoBase *&setzero  (const vecInfoBase *&a);
-inline const vecInfoBase *&setposate(const vecInfoBase *&a);
-inline const vecInfoBase *&setnegate(const vecInfoBase *&a);
-inline const vecInfoBase *&setconj  (const vecInfoBase *&a);
-inline const vecInfoBase *&setrand  (const vecInfoBase *&a);
+inline vecInfoBase &setzero(vecInfoBase &a);
 
 OVERLAYMAKEFNVECTOR(vecInfoBase)
 OVERLAYMAKEFNVECTOR(Vector<vecInfoBase>)
@@ -1213,25 +1191,10 @@ public:
     int hasbeenset;
 };
 
-inline vecInfoBase &setident (vecInfoBase &a) { NiceThrow("no"); return a; }
-inline vecInfoBase &setposate(vecInfoBase &a) { return a; }
-inline vecInfoBase &setnegate(vecInfoBase &a) { NiceThrow("bleh"); return a; }
-inline vecInfoBase &setconj  (vecInfoBase &a) { NiceThrow("blit"); return a; }
-inline vecInfoBase &setrand  (vecInfoBase &a) { NiceThrow("OK, rand"); return a; }
+COMMONOPDEF(vecInfoBase);
+COMMONOPDEFPT(vecInfoBase);
+COMMONOPDEFPT(const vecInfoBase);
 
-inline vecInfoBase *&setident (vecInfoBase *&a) { NiceThrow("no"); return a; }
-inline vecInfoBase *&setzero  (vecInfoBase *&a) { return a = nullptr; }
-inline vecInfoBase *&setposate(vecInfoBase *&a) { return a; }
-inline vecInfoBase *&setnegate(vecInfoBase *&a) { NiceThrow("bleh"); return a; }
-inline vecInfoBase *&setconj  (vecInfoBase *&a) { NiceThrow("blit"); return a; }
-inline vecInfoBase *&setrand  (vecInfoBase *&a) { NiceThrow("OK, rand"); return a; }
-
-inline const vecInfoBase *&setident (const vecInfoBase *&a) { NiceThrow("no"); return a; }
-inline const vecInfoBase *&setzero  (const vecInfoBase *&a) { return a = nullptr; }
-inline const vecInfoBase *&setposate(const vecInfoBase *&a) { return a; }
-inline const vecInfoBase *&setnegate(const vecInfoBase *&a) { NiceThrow("bleh"); return a; }
-inline const vecInfoBase *&setconj  (const vecInfoBase *&a) { NiceThrow("blit"); return a; }
-inline const vecInfoBase *&setrand  (const vecInfoBase *&a) { NiceThrow("OK, rand"); return a; }
 
 inline vecInfoBase &setzero(vecInfoBase &a)
 {
@@ -1257,16 +1220,6 @@ inline vecInfoBase &setzero(vecInfoBase &a)
     a.hasbeenset = 0;
 
     return a;
-}
-
-inline void qswap(const vecInfoBase *&a, const vecInfoBase *&b)
-{
-    const vecInfoBase *c(a); a = b; b = c;
-}
-
-inline void qswap(vecInfoBase *&a, vecInfoBase *&b)
-{
-    vecInfoBase *c(a); a = b; b = c;
 }
 
 inline void qswap(vecInfoBase &a, vecInfoBase &b)
@@ -1298,8 +1251,6 @@ inline void qswap(SparseVector<vecInfoBase> *&a, SparseVector<vecInfoBase> *&b)
 class vecInfo;
 
 inline void qswap(vecInfo &a, vecInfo &b);
-inline void qswap(const vecInfo *&a, const vecInfo *&b);
-inline void qswap(vecInfo *&a, vecInfo *&b);
 
 OVERLAYMAKEFNVECTOR(vecInfo)
 OVERLAYMAKEFNVECTOR(Vector<vecInfo>)
@@ -1562,37 +1513,11 @@ public:
 //#endif
 };
 
-inline vecInfo &setident (vecInfo &a) { NiceThrow("no"); return a; }
-inline vecInfo &setzero  (vecInfo &a) { vecInfo b; return a = b; }
-inline vecInfo &setposate(vecInfo &a) { return a; }
-inline vecInfo &setnegate(vecInfo &a) { NiceThrow("bleh"); return a; }
-inline vecInfo &setconj  (vecInfo &a) { NiceThrow("blit"); return a; }
-inline vecInfo &setrand  (vecInfo &a) { NiceThrow("OK, rand"); return a; }
+inline vecInfo &setzero(vecInfo &a) { vecInfo b; return a = b; }
 
-inline vecInfo *&setident (vecInfo *&a) { NiceThrow("no"); return a; }
-inline vecInfo *&setzero  (vecInfo *&a) { return a = nullptr; }
-inline vecInfo *&setposate(vecInfo *&a) { return a; }
-inline vecInfo *&setnegate(vecInfo *&a) { NiceThrow("bleh"); return a; }
-inline vecInfo *&setconj  (vecInfo *&a) { NiceThrow("blit"); return a; }
-inline vecInfo *&setrand  (vecInfo *&a) { NiceThrow("OK, rand"); return a; }
-
-inline const vecInfo *&setident (const vecInfo *&a) { NiceThrow("no"); return a; }
-inline const vecInfo *&setzero  (const vecInfo *&a) { return a = nullptr; }
-inline const vecInfo *&setposate(const vecInfo *&a) { return a; }
-inline const vecInfo *&setnegate(const vecInfo *&a) { NiceThrow("bleh"); return a; }
-inline const vecInfo *&setconj  (const vecInfo *&a) { NiceThrow("blit"); return a; }
-inline const vecInfo *&setrand  (const vecInfo *&a) { NiceThrow("OK, rand"); return a; }
-
-
-inline void qswap(const vecInfo *&a, const vecInfo *&b)
-{
-    const vecInfo *c(a); a = b; b = c;
-}
-
-inline void qswap(vecInfo *&a, vecInfo *&b)
-{
-    vecInfo *c(a); a = b; b = c;
-}
+COMMONOPDEF(vecInfo);
+COMMONOPDEFPT(vecInfo);
+COMMONOPDEFPT(const vecInfo);
 
 inline void qswap(vecInfo &a, vecInfo &b)
 {
@@ -1613,12 +1538,7 @@ inline void qswap(vecInfo &a, vecInfo &b)
 
 class kernPrecursor;
 
-inline kernPrecursor *&setzero  (kernPrecursor *&a);
-inline kernPrecursor *&setident (kernPrecursor *&a);
-inline kernPrecursor *&setposate(kernPrecursor *&a);
-inline kernPrecursor *&setnegate(kernPrecursor *&a);
-inline kernPrecursor *&setconj  (kernPrecursor *&a);
-inline kernPrecursor *&setrand  (kernPrecursor *&a);
+COMMONOPDEFPT(kernPrecursor);
 
 OVERLAYMAKEFNVECTOR(kernPrecursor)
 OVERLAYMAKEFNVECTOR(Vector<kernPrecursor>)
@@ -2180,22 +2100,6 @@ private:
 //#endif
 };
 
-inline kernPrecursor *&setident (kernPrecursor *&a) { NiceThrow("no"); return a; }
-inline kernPrecursor *&setposate(kernPrecursor *&a) { return a; }
-inline kernPrecursor *&setnegate(kernPrecursor *&a) { NiceThrow("bleh"); return a; }
-inline kernPrecursor *&setconj  (kernPrecursor *&a) { NiceThrow("blit"); return a; }
-inline kernPrecursor *&setrand  (kernPrecursor *&a) { NiceThrow("OK, rand"); return a; }
-
-inline kernPrecursor *&setzero(kernPrecursor *&a)
-{
-    return a = nullptr;
-}
-
-inline void qswap(kernPrecursor *&a, kernPrecursor *&b)
-{
-    kernPrecursor *c(a); a = b; b = c;
-}
-
 inline std::ostream &operator<<(std::ostream &output, const kernPrecursor &src)
 {
     return src.printstream(output,0);
@@ -2287,11 +2191,6 @@ public:
     unsigned int usesMaxDiff : 1; // set if kernel uses max(x-y) explicitly
 };
 
-inline void qswap(kernInfo *&a, kernInfo *&b)
-{
-    kernInfo *c(a); a = b; b = c;
-}
-
 //
 // +=: this is defined so that summing a vector of kernInfo works as OR
 // ==: equivalence operator
@@ -2307,35 +2206,12 @@ int operator==(const kernInfo &a, const kernInfo &b);
 std::ostream &operator<<(std::ostream &output, const kernInfo &src);
 std::istream &operator>>(std::istream &input, kernInfo &dest);
 
-inline kernInfo &setzero  (kernInfo &a);
-inline kernInfo &setident (kernInfo &a);
-inline kernInfo &setposate(kernInfo &a);
-inline kernInfo &setnegate(kernInfo &a);
-inline kernInfo &setconj  (kernInfo &a);
-inline kernInfo &setrand  (kernInfo &a);
-
-inline kernInfo &postProInnerProd(kernInfo &a) { return a; }
+inline kernInfo &setzero(kernInfo &a);
 inline void qswap(kernInfo &a, kernInfo &b);
 
-inline kernInfo &setident (kernInfo &a) { NiceThrow("no"); return a; }
-inline kernInfo &setposate(kernInfo &a) { return a; }
-inline kernInfo &setnegate(kernInfo &a) { NiceThrow("bleh"); return a; }
-inline kernInfo &setconj  (kernInfo &a) { NiceThrow("blit"); return a; }
-inline kernInfo &setrand  (kernInfo &a) { NiceThrow("OK, rand"); return a; }
-
-inline kernInfo *&setident (kernInfo *&a) { NiceThrow("no"); return a; }
-inline kernInfo *&setzero  (kernInfo *&a) { return a = nullptr; }
-inline kernInfo *&setposate(kernInfo *&a) { return a; }
-inline kernInfo *&setnegate(kernInfo *&a) { NiceThrow("bleh"); return a; }
-inline kernInfo *&setconj  (kernInfo *&a) { NiceThrow("blit"); return a; }
-inline kernInfo *&setrand  (kernInfo *&a) { NiceThrow("OK, rand"); return a; }
-
-inline const kernInfo *&setident (const kernInfo *&a) { NiceThrow("no"); return a; }
-inline const kernInfo *&setzero  (const kernInfo *&a) { return a = nullptr; }
-inline const kernInfo *&setposate(const kernInfo *&a) { return a; }
-inline const kernInfo *&setnegate(const kernInfo *&a) { NiceThrow("bleh"); return a; }
-inline const kernInfo *&setconj  (const kernInfo *&a) { NiceThrow("blit"); return a; }
-inline const kernInfo *&setrand  (const kernInfo *&a) { NiceThrow("OK, rand"); return a; }
+COMMONOPDEF(kernInfo);
+COMMONOPDEFPT(kernInfo);
+COMMONOPDEFPT(const kernInfo);
 
 inline kernInfo &setzero(kernInfo &a)
 {
@@ -2797,8 +2673,8 @@ public:
     //
     // but may be accelerated for some cases (kernels 300-399)
 
-    double distK(const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int assumreal = 0) const;
-    void ddistKdx(double &xscaleres, double &yscaleres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int assumreal = 0) const;
+    double distK(const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int assumreal = 0) const;
+    void ddistKdx(double &xscaleres, double &yscaleres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int assumreal = 0) const;
 
     // Evaluate kernel K(x,y).
     //
@@ -2907,7 +2783,7 @@ public:
         const static vecInfo yinfo;
 
 //        K2(res,x,y,xinfo,yinfo,defaultgentype(),nullptr,DEFAULT_VECT_INDEX,DEFAULT_VECT_INDEX,0,0,resmode,0,nullptr,nullptr,nullptr,0);
-        K2(res,x,y,xinfo,yinfo,0_gent,nullptr,DEFAULT_VECT_INDEX,DEFAULT_VECT_INDEX,0,0,resmode,0,nullptr,nullptr,nullptr,0);
+        K2(res,x,y,xinfo,yinfo,0_gent,nullptr,DEFAULT_VECT_INDEX,DEFAULT_VECT_INDEX-1,0,0,resmode,0,nullptr,nullptr,nullptr,0);
 
         return res;
     }
@@ -2932,14 +2808,14 @@ public:
     gentype &K1(gentype &res, const SparseVector<gentype> &xa, const vecInfo &xainfo, const gentype &bias, const gentype **pxyprod = nullptr, int ia = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, int assumreal = 0) const;
     double   K1(              const SparseVector<gentype> &xa, const vecInfo &xainfo,       double   bias, const gentype **pxyprod = nullptr, int ia = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, int assumreal = 0) const;
 
-    gentype &K2(gentype &res, const SparseVector<gentype> &xa,  const SparseVector<gentype> &xb,  const vecInfo &xainfo, const vecInfo &xbinfo, const gentype &bias, const gentype **pxyprod = nullptr, int ia = DEFAULT_VECT_INDEX, int ib = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int assumreal = 0) const;
-    double   K2(              const SparseVector<gentype> &xa,  const SparseVector<gentype> &xb,  const vecInfo &xainfo, const vecInfo &xbinfo,       double   bias, const gentype **pxyprod = nullptr, int ia = DEFAULT_VECT_INDEX, int ib = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int assumreal = 0) const;
+    gentype &K2(gentype &res, const SparseVector<gentype> &xa,  const SparseVector<gentype> &xb,  const vecInfo &xainfo, const vecInfo &xbinfo, const gentype &bias, const gentype **pxyprod = nullptr, int ia = DEFAULT_VECT_INDEX, int ib = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int assumreal = 0) const;
+    double   K2(              const SparseVector<gentype> &xa,  const SparseVector<gentype> &xb,  const vecInfo &xainfo, const vecInfo &xbinfo,       double   bias, const gentype **pxyprod = nullptr, int ia = DEFAULT_VECT_INDEX, int ib = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int assumreal = 0) const;
 
-    gentype &K3(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int k = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, const double *xy20 = nullptr, const double *xy21 = nullptr, const double *xy22 = nullptr, int assumreal = 0) const;
-    double   K3(              const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int k = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, const double *xy20 = nullptr, const double *xy21 = nullptr, const double *xy22 = nullptr, int assumreal = 0) const;
+    gentype &K3(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int k = DEFAULT_VECT_INDEX-2, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, const double *xy20 = nullptr, const double *xy21 = nullptr, const double *xy22 = nullptr, int assumreal = 0) const;
+    double   K3(              const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int k = DEFAULT_VECT_INDEX-2, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, const double *xy20 = nullptr, const double *xy21 = nullptr, const double *xy22 = nullptr, int assumreal = 0) const;
 
-    gentype &K4(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int k = DEFAULT_VECT_INDEX, int l = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, const double *xy20 = nullptr, const double *xy21 = nullptr, const double *xy22 = nullptr, const double *xy30 = nullptr, const double *xy31 = nullptr, const double *xy32 = nullptr, const double *xy33 = nullptr, int assumreal = 0) const;
-    double   K4(              const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int k = DEFAULT_VECT_INDEX, int l = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, const double *xy20 = nullptr, const double *xy21 = nullptr, const double *xy22 = nullptr, const double *xy30 = nullptr, const double *xy31 = nullptr, const double *xy32 = nullptr, const double *xy33 = nullptr, int assumreal = 0) const;
+    gentype &K4(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int k = DEFAULT_VECT_INDEX-2, int l = DEFAULT_VECT_INDEX-3, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, const double *xy20 = nullptr, const double *xy21 = nullptr, const double *xy22 = nullptr, const double *xy30 = nullptr, const double *xy31 = nullptr, const double *xy32 = nullptr, const double *xy33 = nullptr, int assumreal = 0) const;
+    double   K4(              const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int k = DEFAULT_VECT_INDEX-2, int l = DEFAULT_VECT_INDEX-3, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, const double *xy20 = nullptr, const double *xy21 = nullptr, const double *xy22 = nullptr, const double *xy30 = nullptr, const double *xy31 = nullptr, const double *xy32 = nullptr, const double *xy33 = nullptr, int assumreal = 0) const;
 
     gentype &Km(int m, gentype &res, Vector<const SparseVector<gentype> *> &x, Vector<const vecInfo *> &xinfo, const gentype &bias, Vector<int> &i, const gentype **pxyprod = nullptr, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const Matrix<double> *xy = nullptr, int assumreal = 0) const;
     double   Km(int m,               Vector<const SparseVector<gentype> *> &x, Vector<const vecInfo *> &xinfo,       double   bias, Vector<int> &i, const gentype **pxyprod = nullptr, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const Matrix<double> *xy = nullptr, int assumreal = 0) const;
@@ -2952,8 +2828,8 @@ public:
     // allowing them to be incorporated for a limited set of kernels without the
     // need for numerical integration.
 
-    gentype &K2x2(gentype &res, const SparseVector<gentype> &x,  const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,  const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo, const gentype &bias, int i = DEFAULT_VECT_INDEX, int ia = DEFAULT_VECT_INDEX, int ib = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, const double *xy20 = nullptr, const double *xy21 = nullptr, const double *xy22 = nullptr, int assumreal = 0) const;
-    double   K2x2(              const SparseVector<gentype> &x,  const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,  const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo,       double   bias, int i = DEFAULT_VECT_INDEX, int ia = DEFAULT_VECT_INDEX, int ib = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, const double *xy20 = nullptr, const double *xy21 = nullptr, const double *xy22 = nullptr, int assumreal = 0) const;
+    gentype &K2x2(gentype &res, const SparseVector<gentype> &x,  const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,  const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo, const gentype &bias, int i = DEFAULT_VECT_INDEX, int ia = DEFAULT_VECT_INDEX-1, int ib = DEFAULT_VECT_INDEX-2, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, const double *xy20 = nullptr, const double *xy21 = nullptr, const double *xy22 = nullptr, int assumreal = 0) const;
+    double   K2x2(              const SparseVector<gentype> &x,  const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,  const vecInfo &xinfo, const vecInfo &xainfo, const vecInfo &xbinfo,       double   bias, int i = DEFAULT_VECT_INDEX, int ia = DEFAULT_VECT_INDEX-1, int ib = DEFAULT_VECT_INDEX-2, int xdim = 0, int xconsist = 0, int resmode = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, const double *xy20 = nullptr, const double *xy21 = nullptr, const double *xy22 = nullptr, int assumreal = 0) const;
 
     // Density function (if defined for RFF):
 
@@ -2990,9 +2866,9 @@ public:
 
     double K0ip(double bias, const gentype **pxyprod, int xdim, int xconsist, int mlid, int assumreal) const;
     double K1ip(const SparseVector<gentype> &xa, const vecInfo &xainfo, double bias, const gentype **pxyprod = nullptr, int ia = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, int assumreal = 0) const;
-    double K2ip(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo &xainfo, const vecInfo &xbinfo, double bias, const gentype **pxyprod = nullptr, int ia = DEFAULT_VECT_INDEX, int ib = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, int assumreal = 0) const;
-    double K3ip(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, double bias, const gentype **pxyprod = nullptr, int ia = DEFAULT_VECT_INDEX, int ib = DEFAULT_VECT_INDEX, int ic = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, int assumreal = 0) const;
-    double K4ip(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo, double bias, const gentype **pxyprod = nullptr, int ia = DEFAULT_VECT_INDEX, int ib = DEFAULT_VECT_INDEX, int ic = DEFAULT_VECT_INDEX, int id = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, int assumreal = 0) const;
+    double K2ip(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo &xainfo, const vecInfo &xbinfo, double bias, const gentype **pxyprod = nullptr, int ia = DEFAULT_VECT_INDEX, int ib = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, int assumreal = 0) const;
+    double K3ip(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, double bias, const gentype **pxyprod = nullptr, int ia = DEFAULT_VECT_INDEX, int ib = DEFAULT_VECT_INDEX-1, int ic = DEFAULT_VECT_INDEX-2, int xdim = 0, int xconsist = 0, int mlid = 0, int assumreal = 0) const;
+    double K4ip(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo, double bias, const gentype **pxyprod = nullptr, int ia = DEFAULT_VECT_INDEX, int ib = DEFAULT_VECT_INDEX-1, int ic = DEFAULT_VECT_INDEX-2, int id = DEFAULT_VECT_INDEX-3, int xdim = 0, int xconsist = 0, int mlid = 0, int assumreal = 0) const;
     double Kmip(int m, Vector<const SparseVector<gentype> *> &x, Vector<const vecInfo *> &xinfo, Vector<int> &i, double bias, const gentype **pxyprod = nullptr, int xdim = 0, int xconsist = 0, int mlid = 0, int assumreal = 0) const;
 
     // 2-norm derivatives
@@ -3016,17 +2892,17 @@ public:
     //     scaling is present, so factor this in when calculating results.  That is
     //     d/dx_i => dScale_i d/dx_i etc
 
-    void dK2delx(gentype &xscaleres, gentype &yscaleres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int assumreal = 0) const;
-    void dK2delx(double  &xscaleres, double  &yscaleres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int assumreal = 0) const;
+    void dK2delx(gentype &xscaleres, gentype &yscaleres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int assumreal = 0) const;
+    void dK2delx(double  &xscaleres, double  &yscaleres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int assumreal = 0) const;
 
-    void d2K2delxdelx(gentype &xxscaleres, gentype &yyscaleres, gentype &xyscaleres, gentype &yxscaleres, gentype &constres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDerive = 0, int assumreal = 0) const;
-    void d2K2delxdelx(double  &xxscaleres, double  &yyscaleres, double  &xyscaleres, double  &yxscaleres, double  &constres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDerive = 0, int assumreal = 0) const;
+    void d2K2delxdelx(gentype &xxscaleres, gentype &yyscaleres, gentype &xyscaleres, gentype &yxscaleres, gentype &constres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDerive = 0, int assumreal = 0) const;
+    void d2K2delxdelx(double  &xxscaleres, double  &yyscaleres, double  &xyscaleres, double  &yxscaleres, double  &constres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDerive = 0, int assumreal = 0) const;
 
-    void d2K2delxdely(gentype &xxscaleres, gentype &yyscaleres, gentype &xyscaleres, gentype &yxscaleres, gentype &constres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDerive = 0, int assumreal = 0) const;
-    void d2K2delxdely(double  &xxscaleres, double  &yyscaleres, double  &xyscaleres, double  &yxscaleres, double  &constres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDerive = 0, int assumreal = 0) const;
+    void d2K2delxdely(gentype &xxscaleres, gentype &yyscaleres, gentype &xyscaleres, gentype &yxscaleres, gentype &constres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDerive = 0, int assumreal = 0) const;
+    void d2K2delxdely(double  &xxscaleres, double  &yyscaleres, double  &xyscaleres, double  &yxscaleres, double  &constres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDerive = 0, int assumreal = 0) const;
 
-    void dnK2del(Vector<gentype> &sc, Vector<Vector<int> > &n, int &minmaxind, const Vector<int> &q, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDerive = 0, int assumreal = 0) const;
-    void dnK2del(Vector<double>  &sc, Vector<Vector<int> > &n, int &minmaxind, const Vector<int> &q, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDerive = 0, int assumreal = 0) const;
+    void dnK2del(Vector<gentype> &sc, Vector<Vector<int> > &n, int &minmaxind, const Vector<int> &q, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDerive = 0, int assumreal = 0) const;
+    void dnK2del(Vector<double>  &sc, Vector<Vector<int> > &n, int &minmaxind, const Vector<int> &q, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDerive = 0, int assumreal = 0) const;
 
     // 2-norm derivatives (alternative form - deprecated)
     //
@@ -3039,13 +2915,13 @@ public:
     //     possible.  Behaviour for non-simple transfer kernels is ill-defined (unless
     //     deepDeriv is set to 1).
 
-    void dK(gentype &xygrad, gentype &xnormgrad, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDeriv = 0, int assumreal = 0) const;
-    void dK(double  &xygrad, double  &xnormgrad, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDeriv = 0, int assumreal = 0) const;
+    void dK(gentype &xygrad, gentype &xnormgrad, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDeriv = 0, int assumreal = 0) const;
+    void dK(double  &xygrad, double  &xnormgrad, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDeriv = 0, int assumreal = 0) const;
 
     // Note: dk(x,y)/dynorm = dk(y,x)/dxnorm etc, standard assumptions necessary
 
-    void d2K(gentype &xygrad, gentype &xnormgrad, gentype &xyxygrad, gentype &xyxnormgrad, gentype &xyynormgrad, gentype &xnormxnormgrad, gentype &xnormynormgrad, gentype &ynormynormgrad, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDeriv = 0, int assumreal = 0) const;
-    void d2K(double  &xygrad, double  &xnormgrad, double  &xyxygrad, double  &xyxnormgrad, double  &xyynormgrad, double  &xnormxnormgrad, double  &xnormynormgrad, double  &ynormynormgrad, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDeriv = 0, int assumreal = 0) const;
+    void d2K(gentype &xygrad, gentype &xnormgrad, gentype &xyxygrad, gentype &xyxnormgrad, gentype &xyynormgrad, gentype &xnormxnormgrad, gentype &xnormynormgrad, gentype &ynormynormgrad, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDeriv = 0, int assumreal = 0) const;
+    void d2K(double  &xygrad, double  &xnormgrad, double  &xyxygrad, double  &xyxnormgrad, double  &xyynormgrad, double  &xnormxnormgrad, double  &xnormynormgrad, double  &ynormynormgrad, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int deepDeriv = 0, int assumreal = 0) const;
 
     // "Reversing" functions.
     //
@@ -3127,8 +3003,8 @@ public:
 
     // Dense derivatives and integrals
 
-    void densedKdx(double &res, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, double bias, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, int assumreal = 0) const;
-    void denseintK(double &res, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, double bias, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX, int xdim = 0, int xconsist = 0, int mlid = 0, int assumreal = 0) const;
+    void densedKdx(double &res, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, double bias, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, int assumreal = 0) const;
+    void denseintK(double &res, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, double bias, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, int assumreal = 0) const;
 
     // Get vector information, taking into account indexing.
     //
@@ -3907,34 +3783,28 @@ private:
     SparseVector<gentype> &preShiftScale(SparseVector<gentype> &res, const SparseVector<gentype> &x) const;
 
     // Note: diff0norm and diff1norm evaluate to zero in all cases, so we bypass them here
+    // Note: because xyprod etc can be infinite for sets, need to take in ia,ib,... and set res = 0 if ia == ib == ic ... for diff kernels to work
 
-    void diff0norm(gentype &res, const gentype &xyprod) const { (void) xyprod; res = 0; }
-    void diff1norm(gentype &res, const gentype &xyprod, const gentype &xanorm) const { (void) xyprod; (void) xanorm; res = 0; }
-    void diff2norm(gentype &res, const gentype &xyprod, const gentype &xanorm, const gentype &xbnorm) const { res = xyprod; res *= -2.0; res += xanorm; setconj(res); res += xbnorm; setconj(res); }
-    void diff3norm(gentype &res, const gentype &xyprod, const gentype &xanorm, const gentype &xbnorm, const gentype &xcnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, const Vector<int> *s = nullptr) const;
-    void diff4norm(gentype &res, const gentype &xyprod, const gentype &xanorm, const gentype &xbnorm, const gentype &xcnorm, const gentype &xdnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, double xy30, double xy31, double xy32, double xy33, const Vector<int> *s = nullptr) const;
-    void diffmnorm(int m, gentype &res, const gentype &xyprod, const Vector<const gentype *> &xanorm, const Matrix<double> &xy, const Vector<int> *s = nullptr) const;
+    void diff0norm(gentype &res,                                 const gentype &xyprod) const { (void) xyprod; res = 0; }
+    void diff1norm(gentype &res, int ia,                         const gentype &xyprod, const gentype &xanorm) const { (void) ia; (void) xyprod; (void) xanorm; res = 0; }
+    void diff2norm(gentype &res, int ia, int ib,                 const gentype &xyprod, const gentype &xanorm, const gentype &xbnorm, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb) const;
+    void diff3norm(gentype &res, int ia, int ib, int ic,         const gentype &xyprod, const gentype &xanorm, const gentype &xbnorm, const gentype &xcnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, const Vector<int> *s = nullptr) const;
+    void diff4norm(gentype &res, int ia, int ib, int ic, int id, const gentype &xyprod, const gentype &xanorm, const gentype &xbnorm, const gentype &xcnorm, const gentype &xdnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, double xy30, double xy31, double xy32, double xy33, const Vector<int> *s = nullptr) const;
+    void diffmnorm(int m, gentype &res, const Vector<int> &i, const gentype &xyprod, const Vector<const gentype *> &xanorm, const Matrix<double> &xy, const Vector<int> *s = nullptr) const;
 
-    double diff0norm(double xyprod) const { (void) xyprod; return 0; }
-    double diff1norm(double xyprod, double xanorm) const { (void) xyprod; (void) xanorm; return 0; }
-    double diff2norm(double xyprod, double xanorm, double xbnorm) const { return xanorm+xbnorm-(2*xyprod); }
-    double diff3norm(double xyprod, double xanorm, double xbnorm, double xcnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, const Vector<int> *s = nullptr) const;
-    double diff4norm(double xyprod, double xanorm, double xbnorm, double xcnorm, double xdnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, double xy30, double xy31, double xy32, double xy33, const Vector<int> *s = nullptr) const;
-    double diffmnorm(int m, double xyprod, const Vector<const double *> &xanorm, const Matrix<double> &xy, const Vector<int> *s = nullptr) const;
+    void diff0norm(double &res,                                 double xyprod) const { (void) xyprod; res = 0; }
+    void diff1norm(double &res, int ia,                         double xyprod, double xanorm) const { (void) ia; (void) xyprod; (void) xanorm; res = 0; }
+    void diff2norm(double &res, int ia, int ib,                 double xyprod, double xanorm, double xbnorm, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb) const;
+    void diff3norm(double &res, int ia, int ib, int ic,         double xyprod, double xanorm, double xbnorm, double xcnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, const Vector<int> *s = nullptr) const;
+    void diff4norm(double &res, int ia, int ib, int ic, int id, double xyprod, double xanorm, double xbnorm, double xcnorm, double xdnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, double xy30, double xy31, double xy32, double xy33, const Vector<int> *s = nullptr) const;
+    void diffmnorm(int m, double &res, const Vector<int> &i, double xyprod, const Vector<const double *> &xanorm, const Matrix<double> &xy, const Vector<int> *s = nullptr) const;
 
-    void diff0norm(double &res, double xyprod) const { (void) xyprod; res = 0; }
-    void diff1norm(double &res, double xyprod, double xanorm) const { (void) xyprod; (void) xanorm; res = 0; }
-    void diff2norm(double &res, double xyprod, double xanorm, double xbnorm) const { res = xanorm+xbnorm-(2*xyprod); }
-    void diff3norm(double &res, double xyprod, double xanorm, double xbnorm, double xcnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, const Vector<int> *s = nullptr) const { res = diff3norm(xyprod,xanorm,xbnorm,xcnorm,xy00,xy10,xy11,xy20,xy21,xy22,s); }
-    void diff4norm(double &res, double xyprod, double xanorm, double xbnorm, double xcnorm, double xdnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, double xy30, double xy31, double xy32, double xy33, const Vector<int> *s = nullptr) const { res = diff4norm(xyprod,xanorm,xbnorm,xcnorm,xdnorm,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,s); }
-    void diffmnorm(int m, double &res, double xyprod, const Vector<const double *> &xanorm, const Matrix<double> &xy, const Vector<int> *s = nullptr) const { res = diffmnorm(m,xyprod,xanorm,xy,s); }
-
-    void diff0norm(gentype &res, double xyprod) const { (void) xyprod; res.force_double() = 0; }
-    void diff1norm(gentype &res, double xyprod, double xanorm) const { (void) xyprod; (void) xanorm; res.force_double() = 0; }
-    void diff2norm(gentype &res, double xyprod, double xanorm, double xbnorm) const { res.force_double() = xanorm+xbnorm-(2*xyprod); }
-    void diff3norm(gentype &res, double xyprod, double xanorm, double xbnorm, double xcnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, const Vector<int> *s = nullptr) const { diff3norm(res.force_double(),xyprod,xanorm,xbnorm,xcnorm,xy00,xy10,xy11,xy20,xy21,xy22,s); }
-    void diff4norm(gentype &res, double xyprod, double xanorm, double xbnorm, double xcnorm, double xdnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, double xy30, double xy31, double xy32, double xy33, const Vector<int> *s = nullptr) const { diff4norm(res.force_double(),xyprod,xanorm,xbnorm,xcnorm,xdnorm,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,s); }
-    void diffmnorm(int m, gentype &res, double xyprod, const Vector<const double *> &xanorm, const Matrix<double> &xy, const Vector<int> *s = nullptr) const { diffmnorm(m,res.force_double(),xyprod,xanorm,xy,s); }
+    void diff0norm(gentype &res,                                 double xyprod) const { diff0norm(res.force_double(),xyprod); }
+    void diff1norm(gentype &res, int ia,                         double xyprod, double xanorm) const { diff1norm(res.force_double(),ia,xyprod,xanorm); }
+    void diff2norm(gentype &res, int ia, int ib,                 double xyprod, double xanorm, double xbnorm, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb) const { diff2norm(res.force_double(),ia,ib,xyprod,xanorm,xbnorm,xa,xb); }
+    void diff3norm(gentype &res, int ia, int ib, int ic,         double xyprod, double xanorm, double xbnorm, double xcnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, const Vector<int> *s = nullptr) const { diff3norm(res.force_double(),ia,ib,ic,xyprod,xanorm,xbnorm,xcnorm,xy00,xy10,xy11,xy20,xy21,xy22,s); }
+    void diff4norm(gentype &res, int ia, int ib, int ic, int id, double xyprod, double xanorm, double xbnorm, double xcnorm, double xdnorm, double xy00, double xy10, double xy11, double xy20, double xy21, double xy22, double xy30, double xy31, double xy32, double xy33, const Vector<int> *s = nullptr) const { diff4norm(res.force_double(),ia,ib,ic,id,xyprod,xanorm,xbnorm,xcnorm,xdnorm,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,s); }
+    void diffmnorm(int m, gentype &res, const Vector<int> &i, double xyprod, const Vector<const double *> &xanorm, const Matrix<double> &xy, const Vector<int> *s = nullptr) const { diffmnorm(m,res.force_double(),i,xyprod,xanorm,xy,s); }
 
     // If optionCache set then dereferences this, otherwise resizes altres to m*m and fills it will <x,y> products.
 
@@ -4696,20 +4566,6 @@ inline void qswap(MercerKernel &a, MercerKernel &b)
     qswap((a.xneedsDiff)   ,(b.xneedsDiff)   );
     qswap((a.xneedsNorm)   ,(b.xneedsNorm)   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 #endif

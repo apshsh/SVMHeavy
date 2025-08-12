@@ -175,8 +175,8 @@ public:
     //
     // Sets all alpha = 0 constrained to zero, beta = 0 (state unchanged)
 
-    void reset(const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp);
-    void resethpzero(const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn);
+    void reset      (const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp);
+    void resethpzero(const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn                     );
 
     // Find position in pivotted variables
 
@@ -216,7 +216,6 @@ public:
     // after the change has been made to them.
 
     void rankone   (const Vector<double> &bp, const Vector<double> &bn, double c, const Vector<double> &bpGrad, const Vector<double> &bnGrad, double cGrad, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp);
-    void diagmult  (const Vector<double> &bp, const Vector<double> &bn,                                                                                     const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp);
     void diagoffset(const Vector<double> &bp, const Vector<double> &bn,           const Vector<double> &bpGrad, const Vector<double> &bnGrad,               const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp);
     void diagoffset(int i, double bpoff, double bpoffGrad,                                                                                                                const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp);
 
@@ -3100,81 +3099,6 @@ void optState<T,S>::rankone(const Vector<double> &bp, const Vector<double> &bn, 
     {
 	probContext.fact_rankone(bp,bn,c,Gp,Gn,Gpn,alphagradstate,betagradstate);
     }
-}
-
-template <class T, class S>
-void optState<T,S>::diagmult(const Vector<double> &bp, const Vector<double> &bn, const Matrix<double> &, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp)
-{
-    //comment out to enable threading in errortest NiceAssert( Gp.isSquare() );
-    //comment out to enable threading in errortest NiceAssert( GpGrad.isSquare() );
-    NiceAssert( Gn.isSquare() );
-    //NiceAssert( Gp.numRows() == Gpn.numRows() );
-    NiceAssert( GpGrad.numRows() == Gpn.numRows() );
-    NiceAssert( Gn.numCols() == Gpn.numCols() );
-    NiceAssert( Gpn.numRows() == aN() );
-    NiceAssert( Gpn.numCols() == bN() );
-    NiceAssert( gp.size() == aN() );
-    NiceAssert( gn.size() == bN() );
-    NiceAssert( hp.size() == aN() );
-    NiceAssert( bp.size() == aN() );
-    NiceAssert( bn.size() == bN() );
-
-    if ( gradFixAlphaInd || gradFixBetaInd )
-    {
-	fixGrad(GpGrad,Gn,Gpn,gp,gn,hp);
-    }
-
-    int i,iP;
-
-    if ( aNZ() < aN() )
-    {
-	for ( i = 0 ; i < aN() ; ++i )
-	{
-            recalcAlphaGrad(dalphaGrad("&",i),GpGrad,Gpn,gp,hp,i);
-	}
-    }
-
-    if ( bNC() < bN() )
-    {
-	for ( i = 0 ; i < bN() ; ++i )
-	{
-            recalcBetaGrad(dbetaGrad("&",i),Gn,Gpn,gn,i);
-	}
-    }
-
-    if ( keepfact() )
-    {
-	probContext.fact_diagmult(bp,bn,alphagradstate,betagradstate);
-    }
-
-    if ( keepfact() )
-    {
-	alphagradstate = -2;
-	betagradstate  = -1;
-
-	//if ( bNF() )
-	{
-	    for ( iP = 0 ; iP < bNF() ; ++iP )
-	    {
-                if ( abs2(betaGrad(pivBetaF(iP))) > dopttol )
-		{
-		    if ( betagradstate == -1 )
-		    {
-			betagradstate = iP;
-		    }
-
-		    else if ( betagradstate >= 0 )
-		    {
-			betagradstate = -2;
-
-			break;
-		    }
-		}
-	    }
-	}
-    }
-
-    cumgraderr = 0;
 }
 
 template <class T, class S>

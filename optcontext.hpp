@@ -1087,7 +1087,7 @@ public:
     //   bnNZ == -1 tells the code to assume that all of bn is zero
     //   bnNZ >= 0  tells the code to assume that bn(pBetaF)(0,1,nfact-1)
     //              is zero except for one element, namely bn(pBetaF)(bnNZ).
-    // - rankone and diagmult can both be called even if there is no factorisation.
+    // - rankone can be called even if there is no factorisation.
     // - fact_minverse returns pfact+nfact (ie the size of the inverted hessian).
     // - There is a special case here.  If Gp == Gn == 0 then no factorisation is
     //   possible, but nevertheless if Gpn is nonzero then it may be possible to
@@ -1143,28 +1143,6 @@ public:
         fixfact(Gp,Gn,Gpn,apos,bpos,aposdummy,bposdummy);
 
         return;
-    }
-
-    void fact_diagmult  (const Vector<double> &bp, const Vector<double> &bn,                                                                                          int &apos, int &bpos)
-    {
-        (void) apos;
-        (void) bpos;
-
-        NiceAssert( bp.size() == aN() );
-        NiceAssert( bn.size() == bN() );
-        NiceAssert( dkeepfact );
-
-        retVector<double> tmpva;
-        retVector<double> tmpvc;
-
-        freeVarChol.diagmult(bp(pAlphaF,tmpva),bn(pBetaF,0,1,dnfact-1,tmpvc));
-
-        // Note that multiplying elements symmetrically by +-1 on the off-
-        // diagonals makes no difference to the factorisability of a matrix, so
-        // there is no need to do anything here.
-
-        return;
-        //apos = bpos;
     }
 
     void fact_diagoffset(const Vector<double> &bp, const Vector<double> &bn,           const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, int &apos, int &bpos)

@@ -1310,11 +1310,13 @@ public:
 
     virtual const Matrix<double> &gprGp(void) const { return getGPRconst().gprGp(); }
 
-    virtual int isNaiveConst(void) const { return getGPRconst().isNaiveConst(); }
-    virtual int isEPConst   (void) const { return getGPRconst().isEPConst();    }
+    virtual int isNaiveConst  (void) const { return getGPRconst().isNaiveConst();   }
+    virtual int isEPConst     (void) const { return getGPRconst().isEPConst();      }
+    virtual int isLaplaceConst(void) const { return getGPRconst().isLaplaceConst(); }
 
-    virtual int setNaiveConst(void) { return getGPR().setNaiveConst(); }
-    virtual int setEPConst   (void) { return getGPR().setEPConst();    }
+    virtual int setNaiveConst  (void) { return getGPR().setNaiveConst();   }
+    virtual int setEPConst     (void) { return getGPR().setEPConst();      }
+    virtual int setLaplaceConst(void) { return getGPR().setLaplaceConst(); }
 
 
 

@@ -241,11 +241,13 @@ public:
     //       for inequality constraints and classification we instead use the
     //       naive method inheritted from SVM theory.
 
-    virtual int isNaiveConst(void) const { return 0; }
-    virtual int isEPConst   (void) const { return 1; }
+    virtual int isNaiveConst  (void) const { return 0; }
+    virtual int isEPConst     (void) const { return 0; }
+    virtual int isLaplaceConst(void) const { return 1; }
 
-    virtual int setNaiveConst(void) { return 0; }
-    virtual int setEPConst   (void) { return 0; }
+    virtual int setNaiveConst  (void) { return 0; }
+    virtual int setEPConst     (void) { return 0; }
+    virtual int setLaplaceConst(void) { return 0; }
 
     // Likelihood
 

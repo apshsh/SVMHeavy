@@ -329,7 +329,7 @@ SRC = basefn.cc randfun.cc clockbase.cc memdebug.cc gslrefs.cc zerocross.cc \
       mlm_generic.cc \
       mlm_scalar.cc mlm_binary.cc mlm_vector.cc \
       ml_mutable.cc \
-      fuzzyml.cc plotbase.cc plotml.cc xferml.cc errortest.cc addData.cc analyseAnomaly.cc balc.cc hillclimb.cc \
+      fuzzyml.cc makemonot.cc plotbase.cc plotml.cc xferml.cc errortest.cc addData.cc analyseAnomaly.cc balc.cc hillclimb.cc \
       globalopt.cc gridopt.cc directopt.cc nelderopt.cc smboopt.cc bayesopt.cc \
       awarestream.cc \
       mlinter.cc
@@ -353,7 +353,7 @@ LIBFLAG = -lm
 #FOR EXAMPLE THE FOLLOWING DOES NOT WORK IF -march=native IS USED!: ./svmheavyv7.exe -qw 3 -z d -kt 2 -kd 3 -Zx -qw 1 -Zx -R q -c 10 -kt 801 -ktx 3 -AA xor.txt -AA xor.txt -Zx -qw 2 -z r -Zx -R q -w 0 -c 10 -kt 801 -ktx 3 -AA and.txt -AA and.txt -Zx -qw 3 -Zx -xl -1 -xs 0 -xr 2 -xi 200 -xo 3 -xC 2 -x 20 [ 1 2 ] [ 1 1 ] -Zx -qw 3 -s temp3.svm -Zx -qw 1 -s temp1.svm -Zx -qw 2 -s temp2.svm
 #NOTE THAT YOU CAN USE -march=native EVERYWHERE EXCEPT FOR THE COMPILATION OF basefn.h AND EVERYTHING WILL WORK JUST FINE.
 OPTFLAGS = -O3 -DIGNOREMEM -DNDEBUG -mtune=native
-#OPTFLAGSMATHS = -ffast-math - don't use this!!!!!!  Parts of nlopt rely on isinf, and this flag makes isinf non-functional!
+#OPTFLAGSMATHS = -ffast-math - don't use this!!!!!!  Parts of nlopt rely on isinf, and this flag makes isinf non-functional! Also exp(-inf) can be -inf if this flag is set, and mercer.cc relies on exp(-inf) = 0 when dealing with infinite sets!
 OPTFLAGSMATHS =
 AVX2FLAGS = -DUSE_PMMINTRIN
 DEBUGFLAGS0 = -g
@@ -548,6 +548,7 @@ mex: $(OBJS)
 DYNARRAYDEP     = basefn.hpp memdebug.hpp niceassert.hpp qswapbase.hpp
 VECTORDEP       = numbase.hpp dynarray.hpp qswapbase.hpp $(DYNARRAYDEP)
 SPARSEVECTORDEP = strfns.hpp vector.hpp $(VECTORDEP) 
+DICTDEP         = vector.hpp $(VECTORDEP) 
 MATRIXDEP       = sparsevector.hpp $(SPARSEVECTORDEP)
 VECSTACKDEP     = vector.hpp $(VECTORDEP)
 NONZEROINTDEP   = basefn.hpp memdebug.hpp niceassert.hpp
@@ -564,7 +565,7 @@ IDSTOREDEP    = nonzeroint.hpp $(NONZEROINTDEP) sparsevector.hpp $(SPARSEVECTORD
 SMATRIXDEP    = matrix.hpp $(MATRIXDEP)
 GENTYPEDEP    = basefn.hpp memdebug.hpp niceassert.hpp numbase.hpp $(NUMBASEDEP) anion.hpp $(ANIONDEP) \
                 vector.hpp $(VECTORDEP) sparsevector.hpp $(SPARSEVECTORDEP) \
-                matrix.hpp $(MATRIXDEP) set.hpp $(SETDEP) dgraph.hpp $(DGRAPHDEP) \
+                matrix.hpp $(MATRIXDEP) set.hpp $(SETDEP) svmdict.hpp $(DICTDEP) dgraph.hpp $(DGRAPHDEP) \
                 opttest.hpp $(OPTTESTDEP) paretotest.hpp $(PARETOTESTDEP)
 MERCERDEP     = vector.hpp $(VECTORDEP) sparsevector.hpp $(SPARSEVECTORDEP) \
                 matrix.hpp $(MATRIXDEP) gentype.hpp $(GENTYPEDEP) numbase.hpp
@@ -729,6 +730,7 @@ ML_MUTABLEDEP = ml_base.hpp $(ML_BASEDEP) \
                 mlm_generic.hpp $(MLM_GENERICDEP)
 
 FUZZYMLDEP        = ml_base.hpp $(ML_BASEDEP)
+MAKEMONOTDEP      = makemonot.hpp $(ML_BASEDEP)
 PLOTBASEDEP       = basefn.hpp memdebug.hpp niceassert.hpp $(VECTORDEP)
 PLOTMLDEP         = ml_base.hpp $(ML_BASEDEP) imp_generic.hpp $(IMP_GENERICDEP) blk_conect.hpp $(BLK_CONECTDEP) plotbase.hpp $(PLOTBASEDEP) basefn.hpp memdebug.hpp niceassert.hpp
 XFERMLDEP         = svm_generic.hpp $(SVM_GENERICDEP) ml_base.hpp $(ML_BASEDEP)
@@ -1091,6 +1093,8 @@ ml_mutable.o : ml_mutable.cc ml_mutable.hpp $(ML_MUTABLEDEP) $(ML_MUTABLE_CCDEP)
 
 fuzzyml.o        : fuzzyml.cc fuzzyml.hpp $(FUZZYMLDEP) svm_single.hpp $(SVM_SINGLEDEP)
 	$(CC) $< -o $@ -c $(CFLAGS)
+makemonot.o      : makemonot.cc makemonot.hpp $(MAKEMONOTDEP) ml_base.hpp $(ML_BASEDEP)
+	$(CC) $< -o $@ -c $(CFLAGS)
 plotbase.o       : plotbase.cc plotbase.hpp $(PLOTBASEDEP)
 	$(CC) $< -o $@ -c $(CFLAGS)
 plotml.o         : plotml.cc plotml.hpp $(PLOTMLDEP) plotbase.hpp $(PLOTBASEDEP) imp_generic.hpp $(IMP_GENERICDEP)
@@ -1124,7 +1128,7 @@ bayesopt.o  : bayesopt.cc bayesopt.hpp $(BAYESOPTDEP) ml_mutable.hpp $(ML_MUTABL
 awarestream.o : awarestream.cc awarestream.hpp $(AWARESTREAMDEP)
 	$(CC) $< -o $@ -c $(CFLAGS)
 
-mlinter.o   : mlinter.cc mlinter.hpp $(MLINTERDEP) hillclimb.hpp $(HILLCLIMBDEP) fuzzyml.hpp $(FUZZYMLDEP) xferml.hpp $(XFERMLDEP) errortest.hpp $(ERRORTESTDEP) addData.hpp $(ADDDATADEP) analyseAnomaly.hpp $(ANALYSEANOMALYDEP) balc.hpp $(BALCDEP) gridopt.hpp $(GRIDOPTDEP) directopt.hpp $(DIRECTOPTDEP) nelderopt.hpp $(NELDEROPTDEP) smboopt.hpp $(SMBOOPTDEP) bayesopt.hpp $(BAYESOPTDEP) globalopt.hpp $(GLOBALOPTDEP) opttest.hpp $(OPTTESTDEP) paretotest.hpp $(PARETOTESTDEP)
+mlinter.o   : mlinter.cc mlinter.hpp $(MLINTERDEP) hillclimb.hpp $(HILLCLIMBDEP) fuzzyml.hpp $(FUZZYMLDEP) makemonot.hpp $(MAKEMONOTDEP) xferml.hpp $(XFERMLDEP) errortest.hpp $(ERRORTESTDEP) addData.hpp $(ADDDATADEP) analyseAnomaly.hpp $(ANALYSEANOMALYDEP) balc.hpp $(BALCDEP) gridopt.hpp $(GRIDOPTDEP) directopt.hpp $(DIRECTOPTDEP) nelderopt.hpp $(NELDEROPTDEP) smboopt.hpp $(SMBOOPTDEP) bayesopt.hpp $(BAYESOPTDEP) globalopt.hpp $(GLOBALOPTDEP) opttest.hpp $(OPTTESTDEP) paretotest.hpp $(PARETOTESTDEP)
 	$(CC) $< -o $@ -c $(CFLAGS)
 
 

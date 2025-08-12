@@ -21,8 +21,9 @@ GPR_Scalar::GPR_Scalar() : GPR_Generic()
 
     setaltx(nullptr);
 
-    xNaiveConst = 1; //0; - EP is currently buggy, this works more or less, so whatever
-    isLocked = 0;
+    xNaiveConst  = 0; // Laplace by default
+    xEPorLaplace = 1; // Laplace by default (EP is buggy)
+    isLocked     = 0;
 
     return;
 }
@@ -38,8 +39,9 @@ GPR_Scalar::GPR_Scalar(const GPR_Scalar &src) : GPR_Generic()
 
     setaltx(nullptr);
 
-    xNaiveConst = 1; //0;
-    isLocked = 0;
+    xNaiveConst  = 0;
+    xEPorLaplace = 1;
+    isLocked     = 0;
 
     assign(src,0);
 
@@ -57,8 +59,9 @@ GPR_Scalar::GPR_Scalar(const GPR_Scalar &src, const ML_Base *srcx) : GPR_Generic
 
     setaltx(srcx);
 
-    xNaiveConst = 1; //0;
-    isLocked = 0;
+    xNaiveConst  = 0;
+    xEPorLaplace = 1;
+    isLocked     = 0;
 
     assign(src,-1);
 
@@ -73,7 +76,9 @@ int GPR_Scalar::setNaiveConst(void)
     if ( !xNaiveConst )
     {
         res = 1;
-        xNaiveConst = 1;
+
+        xNaiveConst  = 1;
+        xEPorLaplace = 1;
 
         getQ().setd(d()); // make d in Q directly match real d
     }
@@ -88,7 +93,33 @@ int GPR_Scalar::setEPConst(void)
     if ( xNaiveConst )
     {
         res = 1;
-        xNaiveConst = 0;
+
+        xNaiveConst  = 0; // Not naive
+        xEPorLaplace = 0; // EP
+
+        Vector<int> dd(d());
+
+        for ( int i = 0 ; i < N() ; i++ )
+        {
+            dd("&",i) = dd(i) ? 2 : 0;
+        }
+
+        getQ().setd(dd); // treat d=+-1 as special cases
+    }
+
+    return res;
+}
+
+int GPR_Scalar::setLaplaceConst(void)
+{
+    int res = 0;
+
+    if ( xNaiveConst )
+    {
+        res = 1;
+
+        xNaiveConst  = 0; // Not naive
+        xEPorLaplace = 1; // Laplace
 
         Vector<int> dd(d());
 
@@ -111,13 +142,58 @@ int GPR_Scalar::setEPConst(void)
 
 
 
+/*
 
+Notes on Laplace approximation
+
+We follow Rassmusen's book \cite{Ras2}, around page 43. We use p(f|y) = Phi(d\frac{f-yreal}{sigma}),
+where d=+1 for f >= y, d=-1 for f <= y, and sigma is the variance given by the user. Working from
+this, it isn't too hard to show that:
+
+f^next = K.inv(K+inv(W)).(f + grad log p(y|f))
+E(f(x)) = k(x)^T.inv(K+inv(W)).(f + grad log p(y|f))
+W = -grad^2 log p(y|f)
+
+So basically we start with the target:
+
+t=yreal (t is target y for the underlying LSV, yreal is the true target in the dataset)
+and then update:
+f = outputs given training vectors X
+
+and at each iteration update:
+
+t = f + grad log p(y|f)
+W = -grad^2 log p(y|f)
+and then update:
+f = outputs given training vectors X
+
+and recurse until convergence.
+
+Note that W is 1/sigma, so we use setC(W) rather than setsigma as C=1/sigma
+
+For our log likelihood we use (Ras2, top of page 43):
+
+log p(y_i|f_i) = log Phi(d_i\frac{f_i-yreal_i}{sigma_i})
+
+where Phi is the cdf for the normal distribution; and so:
+
+grad log p(y_i|f_i) = \frac{d_i}{sigma_i} \frac{phi(d_i\frac{f_i-yreal_i}{sigma_i})}{Phi(d_i\frac{f_i-yreal_i}{sigma_i})}
+grad^2 log p(y_i|f_i) = -\frac{1}{sigma_i^2} \frac{phi(d_i\frac{f_i-yreal_i}{sigma_i})}{Phi(d_i\frac{f_i-yreal_i}{sigma_i})} [ \frac{phi(d_i\frac{f_i-yreal_i}{sigma_i})}{Phi(d_i\frac{f_i-yreal_i}{sigma_i})} - d_i \frac{f_i-yreal_i}{sigma_i} ]
+
+where phi is the pdf for the normal distribution.
+*/
 
 
 // Close-enough-to-infinity for variance
 
-#define CETI 1e8
-#define CUTI 1e-8
+//#define CETI 1e8
+//#define CUTI 1e-8
+#define CETI 1e25
+#define CUTI 1e-25
+#define MAXEPITCNT 4
+
+#define LAPSTEPSTOP 1e-3
+#define MAXLAPLACEITCNT 10
 
 int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
 {
@@ -127,6 +203,7 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
     }
 
     int Nineq = NNC(-1)+NNC(+1);
+errstream() << "phantomxyz Nineq = " << Nineq << "\n";
 
     int locres = 0;
 
@@ -134,23 +211,25 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
     {
 //FIXME: tune eps based on sigma here if required (method between naive and full EP)
         locres = getQ().train(res,killSwitch);
+errstream() << "phantomxyz method naive\n";
     }
 
-    else if ( N() == 1 )
-    {
-        int dval = d()(0);
+//    else if ( N() == 1 )
+//    {
+//        int dval = d()(0);
+//
+////errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
+//        getQ().setd(0,dval);
+////errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
+//        locres = getQ().train(res,killSwitch);
+////errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
+//        getQ().setd(0,2);
+////errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
+//    }
 
-//errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
-        getQ().setd(0,dval);
-//errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
-        locres = getQ().train(res,killSwitch);
-//errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
-        getQ().setd(0,2);
-//errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
-    }
-
-    else
+    else if ( isEPConst() )
     {
+errstream() << "phantomxyz method EP\n";
         int i,j;
 
         // Get indices of inequality constraints
@@ -200,7 +279,8 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
         Vector<double> pvar(svar);
 
         int isdone = 0;
-
+        int itcnt = 0;
+        int maxitcnt = MAXEPITCNT;
 
 // Notation: - mutilde_i, vartilde_i = Sigmatilde_ii = sigmatilde_i^2 are the mean and variance
 //             of the pseudo-observation of y (that we use to enforce the real observation/constraint)
@@ -221,6 +301,7 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
             for ( j = 0 ; j < Nineq ; ++j )
             {
                 i = indin(j);
+                //int di = d()(i);
 
                 // Disable vector and update
 
@@ -256,15 +337,18 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
 
                 //double zi = yi*munegi/sqrt(1+varnegi); // yi*mui/sqrt(nu+vari); - this was the old varsion.  Why nu not 1?
                 //double phizionPhizi = normphionPhi(zi);
-                double zi = yi*munegi/sqrt(1+varnegi); // yi*mui/sqrt(nu+vari); - this was the old varsion.  Why nu not 1?
+                double zi = yi*munegi/sqrt(1+varnegi);
+                //double zi = yi*mui/sqrt((nu*nu)+vari); - this is the Riihimaki version
                 double phizionPhizi = normphionPhi(zi);
 //errstream() << "phantomxyz zi " << zi << "\n";
 //errstream() << "phantomxyz phizionPhizi " << phizionPhizi << "\n";
 
                 //double varhati = vari - (((vari*vari*phizi)/((nu+vari)*Phizi))*(zi+(phizi/Phizi))); - this was the old varsion.  Why nu not 1?
                 //double muhati  = mui  + ((yi*vari*phizi)/(sqrt(nu+vari)*Phizi)); - this was the old varsion.  Why nu not 1?
-                double muhati  = ( munegi + (yi               *varnegi*phizionPhizi/sqrt(1+varnegi)) );
-                double varhati = ( 1      - ((zi+phizionPhizi)*varnegi*phizionPhizi/    (1+varnegi)) ) * varnegi;
+                double muhati  = ( munegi + (yi*varnegi*phizionPhizi/sqrt(1+varnegi)) );
+                //double muhati  = ( munegi + (yi*varnegi*phizionPhizi/(nu*sqrt(1+(varnegi/(nu*nu))))) ); - this is the Riihimaki version
+                double varhati = varnegi - ((zi+phizionPhizi)*varnegi*varnegi*phizionPhizi/(1+varnegi));
+                //double varhati = varnegi - ((zi+phizionPhizi)*varnegi*varnegi*phizionPhizi/((nu*nu)+varnegi)); - this is the Riihimaki version
 //errstream() << "phantomxyz muhati  " << muhati  << "\n";
 //errstream() << "phantomxyz varhati " << varhati << "\n";
 
@@ -274,8 +358,9 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
                 varhati = ( varhati >  CETI ) ?  CETI : varhati;
                 varhati = ( varhati < -CETI ) ? -CETI : varhati;
 
-                varhati = ( ( varhati <  0 ) && ( varhati > -CUTI ) ) ? -CUTI : varhati;
-                varhati = ( ( varhati >= 0 ) && ( varhati <  CUTI ) ) ?  CUTI : varhati;
+                //varhati = ( ( varhati <  0 ) && ( varhati > -CUTI ) ) ? -CUTI : varhati; - negative variance is nonsensical
+                //varhati = ( ( varhati >= 0 ) && ( varhati <  CUTI ) ) ?  CUTI : varhati;
+                varhati = ( varhati < CUTI ) ?  CUTI : varhati;
 //errstream() << "phantomxyz muhati bounded  " << muhati  << "\n";
 //errstream() << "phantomxyz varhati bounded " << varhati << "\n";
 
@@ -299,8 +384,9 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
                 vartildei = ( vartildei >  CETI ) ?  CETI : vartildei;
                 vartildei = ( vartildei < -CETI ) ? -CETI : vartildei;
 
-                vartildei = ( ( vartildei <  0 ) && ( vartildei > -CUTI ) ) ? -CUTI : vartildei;
-                vartildei = ( ( vartildei >= 0 ) && ( vartildei <  CUTI ) ) ?  CUTI : vartildei;
+                //vartildei = ( ( vartildei <  0 ) && ( vartildei > -CUTI ) ) ? -CUTI : vartildei; - negative variance is nonsensical
+                //vartildei = ( ( vartildei >= 0 ) && ( vartildei <  CUTI ) ) ?  CUTI : vartildei;
+                vartildei = ( vartildei <  CUTI ) ?  CUTI : vartildei;
 //errstream() << "phantomxyz mutildei bounded  " << mutildei  << "\n";
 //errstream() << "phantomxyz vartildei bounded " << vartildei << "\n";
 
@@ -317,6 +403,7 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
                 // Re-enable vector and update (no need to train)
 
                 getQ().setd(i,2);
+                //getQ().setd(i,di);
 //errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
             }
 
@@ -347,7 +434,8 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
 errstream() << "!" << stepsize << "!";
 
 //FIXME: may need better convergence test.
-            isdone = ( stepsize <= 1e-3 ) ? 1 : 0;
+            ++itcnt;
+            isdone = ( ( stepsize <= 1e-3*Nineq ) || ( itcnt >= maxitcnt ) ) ? 1 : 0;
         }
 
         // Final training update
@@ -357,6 +445,127 @@ errstream() << "!" << stepsize << "!";
 //errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
     }
 
+
+    else
+    {
+errstream() << "phantomxyz method Laplace\n";
+        int i,j;
+
+        // Get indices of inequality constraints
+
+        Vector<int> indin(Nineq);  // Index vector for inequality constraints
+        Vector<int> twovec(Nineq); // Vector of 2s
+        Vector<int> dreal(Nineq);
+
+        for ( i = 0, j = 0 ; i < N() ; ++i )
+        {
+            if ( ( d()(i) == +1 ) || ( d()(i) == -1 ) )
+            {
+                indin("&",j)  = i;
+                twovec("&",j) = 2;
+                dreal("&",j)  = d()(i);
+
+                ++j;
+            }
+        }
+
+        // Start with "base" mean/variance
+
+        retVector<int> tmpva;
+        retVector<double> tmpvb;
+        retVector<gentype> tmpvc;
+
+        Vector<gentype> yreal(y()(indin,tmpvc));              // This is the underlying target
+        Vector<double> sigrealsq(sigmaweight()(indin,tmpvb)); // This is the underlying variance
+
+        sigrealsq *= sigma();
+
+        Vector<gentype> f(Nineq);
+        Vector<gentype> t(Nineq);
+        Vector<double> W(Nineq);
+
+        Vector<gentype> fnext(Nineq);
+
+        // Initial train with *only* equality constraints (ie naive method)
+
+        getQ().setd(indin,dreal);
+        getQ().sety(indin,yreal);
+        getQ().setsigmaweight(indin,sigrealsq/sigma());
+        getQ().train(res,killSwitch);
+        getQ().setd(indin,twovec);
+
+        // Startup
+
+        for ( j = 0 ; j < Nineq ; ++j )
+        {
+            f("&",j).force_double() = yreal(j);
+        }
+
+        // Laplace loop
+
+        bool isdone = false;
+
+        int itcnt = 0;
+        int maxitcnt = MAXLAPLACEITCNT;
+
+errstream() << "entry alpha = " << getQ().alphaVal() << "\n";
+        while ( !isdone )
+        {
+            // Work out W and pseudo-targets
+
+errstream() << "phantomxyz f = " << f << "\n";
+            for ( j = 0 ; j < Nineq ; ++j )
+            {
+                double fmod     = dreal(j)*(((double) f(j))-((double) yreal(j)))/sqrt(sigrealsq(j));
+                double phival   = normphi(fmod);
+                double Phival   = normPhi(fmod);
+                double phionPhi = phival/Phival;
+
+                W("&",j)                = (1/sigrealsq(j))*phionPhi*(phionPhi+fmod);
+                t("&",j).force_double() = ((double) f(j)) + (((double) dreal(j))*phionPhi/(sqrt(sigrealsq(j))*W(j)));
+            }
+
+            // Set W (which corresponds to C) and pseudo-targets and train
+
+errstream() << "phantomxyz t = " << t << "\n";
+errstream() << "phantomxyz W = " << W << "\n";
+            getQ().sety(indin,t);
+            getQ().setCweight(indin,W*sigma());
+            getQ().train(res,killSwitch);
+errstream() << "phantomxyz alpha = " << getQ().alphaVal() << "\n";
+
+            // Termination conditions
+
+            ++itcnt;
+
+            if ( itcnt >= maxitcnt )
+            {
+                isdone = true;
+            }
+
+            else
+            {
+                for ( j = 0 ; j < Nineq ; ++j )
+                {
+                    getQ().ggTrainingVector(fnext("&",j),indin(j));
+                }
+
+                f -= fnext;
+
+errstream() << "phantomxyz stepsize = " << abs2(f) << "\n";
+                if ( abs2(f) <= LAPSTEPSTOP )
+                {
+                    isdone = true;
+                }
+
+                else
+                {
+                    f = fnext;
+                }
+            }
+        }
+    }
+
     return locres;
 }
 
@@ -364,7 +573,8 @@ std::ostream &GPR_Scalar::printstream(std::ostream &output, int dep) const
 {
     repPrint(output,'>',dep) << "GPR (Scalar/Real)\n";
 
-    repPrint(output,'>',dep) << "Base training inequality method: " << xNaiveConst << "\n";
+    repPrint(output,'>',dep) << "Base training inequality method: " << xNaiveConst  << "\n";
+    repPrint(output,'>',dep) << "Base training EP or Laplace:     " << xEPorLaplace << "\n";
 
     GPR_Generic::printstream(output,dep+1);
 
@@ -376,6 +586,7 @@ std::istream &GPR_Scalar::inputstream(std::istream &input )
     wait_dummy dummy;
 
     input >> dummy; input >> xNaiveConst;
+    input >> dummy; input >> xEPorLaplace;
 
     GPR_Generic::inputstream(input);
 

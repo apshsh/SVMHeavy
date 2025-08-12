@@ -1808,7 +1808,7 @@ errstream() << "BADBADBAD";
                         res = diagkerns(iacall);
 
                         NiceAssert( !testisvnan(res) );
-                        NiceAssert( !testisinf(res) );
+                        //NiceAssert( !testisinf(res) );
                     }
 
                     else if ( ( getKernel().isAltDiff() == 0 ) || ( getKernel().isAltDiff() == 1 ) )
@@ -1918,7 +1918,7 @@ errstream() << "BADBADBAD";
                                             twoProduct(ipres,xadirectProdsFull(j,k),xb); // Assume no conjugation for speed here
 
                                             NiceAssert( !testisvnan(ipres) );
-                                            NiceAssert( !testisinf(ipres) );
+                                            //NiceAssert( !testisinf(ipres) );
 
                                             // We have xyprod, and other norms will be inferred from xinfo.  Note that 
                                             // nullptrs are filled at ML_Base level as required, and relevant norms are 
@@ -1939,7 +1939,7 @@ errstream() << "BADBADBAD";
                                             kres *= aadirectProdsFull(j,k);
 
                                             NiceAssert( !testisvnan(kres) );
-                                            NiceAssert( !testisinf(kres) );
+                                            //NiceAssert( !testisinf(kres) );
 
                                             res += kres;
                                         }
@@ -1978,7 +1978,7 @@ errstream() << "BADBADBAD";
                                             twoProduct(ipres,xvdirectProdsFull(j,k),xout); // Again we assume commutativity etc
 
                                             NiceAssert( !testisvnan(ipres) );
-                                            NiceAssert( !testisinf(ipres) );
+                                            //NiceAssert( !testisinf(ipres) );
 
                                             K4(kres,ia,ib,j,k,pxyprod,&xa,&xb,nullptr,nullptr,&xainfo,&xbinfo,nullptr,nullptr,resmode);
 
@@ -1992,7 +1992,7 @@ errstream() << "BADBADBAD";
                                             kres *= aadirectProdsFull(j,k);
 
                                             NiceAssert( !testisvnan(kres) );
-                                            NiceAssert( !testisinf(kres) );
+                                            //NiceAssert( !testisinf(kres) );
 
                                             res += kres;
                                         }
@@ -2006,7 +2006,7 @@ errstream() << "BADBADBAD";
                             }
 
                             NiceAssert( !testisvnan(res) );
-                            NiceAssert( !testisinf(res) );
+                            //NiceAssert( !testisinf(res) );
                         }
                     }
 
@@ -2093,7 +2093,7 @@ errstream() << "BADBADBAD";
                                         kres *= aadirectProdsFull(j,k);
 
                                         NiceAssert( !testisvnan(kres) );
-                                        NiceAssert( !testisinf(kres) );
+                                        //NiceAssert( !testisinf(kres) );
 
                                         res += kres;
                                     }
@@ -2334,7 +2334,7 @@ errstream() << "BADBADBAD";
     }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return;
 }
@@ -2364,7 +2364,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
         res = (double) tempc;
 
         NiceAssert( !testisvnan(res) );
-        NiceAssert( !testisinf(res) );
+        //NiceAssert( !testisinf(res) );
 
         return;
     }
@@ -2379,7 +2379,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
         K2xfer(dxyprod,ddiffis,res,minmaxind,typeis,xyprod,yxprod,diffis,xb,xa,xbinfo,xainfo,ib,ia,xdim,densetype,resmode,mlid);
 
         NiceAssert( !testisvnan(res) );
-        NiceAssert( !testisinf(res) );
+        //NiceAssert( !testisinf(res) );
 
         return;
     }
@@ -2802,7 +2802,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
                         res = diagkerns(iacall);
 
                         NiceAssert( !testisvnan(res) );
-                        NiceAssert( !testisinf(res) );
+                        //NiceAssert( !testisinf(res) );
                     }
 
                     else if ( ( getKernel().isAltDiff() == 0 ) || ( getKernel().isAltDiff() == 1 ) )
@@ -2923,7 +2923,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
 //errstream() << "phantomx K2xfer 21b: " << ipres << "\n";
 
                                             NiceAssert( !testisvnan(ipres) );
-                                            NiceAssert( !testisinf(ipres) );
+                                            //NiceAssert( !testisinf(ipres) );
 
                                             // We have xyprod, and other norms will be inferred from xinfo.  Note that 
                                             // nullptrs are filled at ML_Base level as required, and relevant norms are 
@@ -2936,7 +2936,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
 //errstream() << "phantomx K2xfer 21c: " << kres << "\n";
 
                                             NiceAssert( !testisvnan(kres) );
-                                            NiceAssert( !testisinf(kres) );
+                                            //NiceAssert( !testisinf(kres) );
 
                                             if ( j != k )
                                             {
@@ -2950,7 +2950,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
 //errstream() << kres << "\n";
 
                                             NiceAssert( !testisvnan(kres) );
-                                            NiceAssert( !testisinf(kres) );
+                                            //NiceAssert( !testisinf(kres) );
 
                                             res += kres;
 //errstream() << "phantomx K2xfer 21e: " << res << "\n";
@@ -2960,7 +2960,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
                             }
 
                             NiceAssert( !testisvnan(res) );
-                            NiceAssert( !testisinf(res) );
+                            //NiceAssert( !testisinf(res) );
 //errstream() << "phantomx K2xfer 22\n";
                         }
 
@@ -2995,12 +2995,12 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
                                             twoProduct(ipres,xvdirectProdsFull(j,k),xout); // Again we assume commutativity etc
 
                                             NiceAssert( !testisvnan(ipres) );
-                                            NiceAssert( !testisinf(ipres) );
+                                            //NiceAssert( !testisinf(ipres) );
 
                                             kres = K4(ia,ib,j,k,pxyprod,&xa,&xb,nullptr,nullptr,&xainfo,&xbinfo,nullptr,nullptr,resmode);
 
                                             NiceAssert( !testisvnan(kres) );
-                                            NiceAssert( !testisinf(kres) );
+                                            //NiceAssert( !testisinf(kres) );
 
                                             if ( j != k )
                                             {
@@ -3012,7 +3012,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
                                             kres *= aadirectProdsFull(j,k);
 
                                             NiceAssert( !testisvnan(kres) );
-                                            NiceAssert( !testisinf(kres) );
+                                            //NiceAssert( !testisinf(kres) );
 
                                             res += kres;
                                         }
@@ -3021,7 +3021,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
                             }
 
                             NiceAssert( !testisvnan(res) );
-                            NiceAssert( !testisinf(res) );
+                            //NiceAssert( !testisinf(res) );
 
                             if ( ( iacall == ibcall ) && ( iacall >= 0 ) )
                             {
@@ -3121,7 +3121,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
                                         kres *= aadirectProdsFull(j,k);
 
                                         NiceAssert( !testisvnan(kres) );
-                                        NiceAssert( !testisinf(kres) );
+                                        //NiceAssert( !testisinf(kres) );
 
                                         res += kres;
                                     }
@@ -3393,7 +3393,7 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
     }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return;
 }

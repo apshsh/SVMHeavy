@@ -1,3 +1,4 @@
+
 //FIXME: putting a 0.5 min on lengthscale for task relatedness seemed to help?
 
 /*
@@ -9395,7 +9396,7 @@ double ML_Base::K1(int ia,
     }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return res;
 }
@@ -9538,7 +9539,7 @@ T &ML_Base::K1(T &res,
     }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return res;
 }
@@ -10003,7 +10004,7 @@ double ML_Base::K2x2(int ia, int ib, int ic,
     }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return res;
 }
@@ -10415,7 +10416,7 @@ T &ML_Base::K2x2(T &res,
     }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return res;
 }
@@ -10606,7 +10607,7 @@ double ML_Base::K2(int ia, int ib,
         {
             res = altK.K2(*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),nullptr,nullptr,nullptr,assumeReal);
 
-if ( testisvnan(res) || testisinf(res) )
+if ( testisvnan(res) ) //|| testisinf(res) )
 {
 errstream() << "K2 evaluated null 1: " << res << "\n";
 errstream() << "K2 evaluated null 2: " << *xa << "," << *xb << "\n";
@@ -10678,7 +10679,7 @@ errstream() << "K2 evaluated null 3: " << getKernel() << "\n";
         }
     }
 
-if ( testisvnan(res) || testisinf(res) )
+if ( testisvnan(res) ) //|| testisinf(res) )
 {
 errstream() << "phantomxyggghhhqq 1: " << res << "\n";
 errstream() << "phantomxyggghhhqq 2: " << *xa << "," << *xb << "\n";
@@ -10686,7 +10687,7 @@ errstream() << "phantomxyggghhhqq 3: " << getKernel() << "\n";
 }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return res;
 }
@@ -10876,7 +10877,7 @@ T &ML_Base::K2(T &res,
         {
             altK.K2(res,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),nullptr,nullptr,nullptr,assumeReal);
 
-if ( testisvnan(res) || testisinf(res) )
+if ( testisvnan(res) ) //|| testisinf(res) )
 {
 errstream() << "K2 evaluated null 1: " << res << "\n";
 errstream() << "K2 evaluated null 2: " << *xa << "," << *xb << "\n";
@@ -10948,7 +10949,7 @@ errstream() << "K2 evaluated null 3: " << getKernel() << "\n";
         }
     }
 
-if ( testisvnan(res) || testisinf(res) )
+if ( testisvnan(res) ) //|| testisinf(res) )
 {
 errstream() << "phantomxyggghhhqq 1: " << res << "\n";
 errstream() << "phantomxyggghhhqq 2: " << *xa << "," << *xb << "\n";
@@ -10956,7 +10957,7 @@ errstream() << "phantomxyggghhhqq 3: " << getKernel() << "\n";
 }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return res;
 }
@@ -11316,7 +11317,7 @@ double ML_Base::K3(int ia, int ib, int ic,
     }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return res;
 }
@@ -11676,7 +11677,7 @@ T &ML_Base::K3(T &res,
     }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return res;
 }
@@ -12200,7 +12201,7 @@ double ML_Base::K4(int ia, int ib, int ic, int id,
     }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return res;
 }
@@ -12724,7 +12725,7 @@ T &ML_Base::K4(T &res,
     }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return res;
 }
@@ -12991,7 +12992,7 @@ double ML_Base::Km(int m,
     }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return res;
 }
@@ -13256,7 +13257,7 @@ T &ML_Base::Km(int m, T &res,
     }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return res;
 }

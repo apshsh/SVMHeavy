@@ -93,7 +93,6 @@ public:
     // Factorisation functions
     //
     // rankone:    H := H + c.bp.bp'
-    // diagmult:   diag(H) := bp.*diag(H)
     // diagoffset: diag(H) := diag(H) + bp
     //
     // minverse: solve H.ap = bp for ap
@@ -107,7 +106,6 @@ public:
     // NB: fudgeOn is numerically dangerous - advise caution!
 
     void rankone   (const Vector<double> &bp, double c, const Matrix<double> &H) { Q.fact_rankone(bp,bn,c,H,Gn,Gpn,apos,bpos);  }
-    void diagmult  (const Vector<double> &bp                                   ) { Q.fact_diagmult(bp,bn,apos,bpos);            }
     void diagoffset(const Vector<double> &bp,           const Matrix<double> &H) { Q.fact_diagoffset(bp,bn,H,Gn,Gpn,apos,bpos); }
 
     int minverse(Vector<double> &ap, const Vector<double> &bp) const { Vector<double> an; return Q.fact_minverse(ap,an,bp,bn,Gn,Gpn); }

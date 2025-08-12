@@ -306,47 +306,55 @@ inline int getThreadID(void);
 
 
 
+#define COMMONOPDEF(_classname_) \
+inline _classname_ &setident (_classname_ &a) { throw("something"); return a; } \
+inline _classname_ &setposate(_classname_ &a) {                     return a; } \
+inline _classname_ &setnegate(_classname_ &a) { throw("something"); return a; } \
+inline _classname_ &setconj  (_classname_ &a) { throw("something"); return a; } \
+inline _classname_ &setrand  (_classname_ &a) { throw("something"); return a; } \
+inline _classname_ &postProInnerProd(_classname_ &a) { return a; }
+
+#define COMMONOPDEFTEMP(_classname_) \
+template <class T> inline _classname_ &setident (_classname_ &a) { throw("something"); return a; } \
+template <class T> inline _classname_ &setposate(_classname_ &a) {                     return a; } \
+template <class T> inline _classname_ &setnegate(_classname_ &a) { throw("something"); return a; } \
+template <class T> inline _classname_ &setconj  (_classname_ &a) { throw("something"); return a; } \
+template <class T> inline _classname_ &setrand  (_classname_ &a) { throw("something"); return a; } \
+template <class T> inline _classname_ &postProInnerProd(_classname_ &a) { return a; }
+
+#define COMMONOPDEFPT(_classname_) \
+inline _classname_ *&setzero  (_classname_ *&a) { return a = nullptr; } \
+inline _classname_ *&setident (_classname_ *&a) { throw("something"); return a; } \
+inline _classname_ *&setposate(_classname_ *&a) { return a; } \
+inline _classname_ *&setnegate(_classname_ *&a) { throw("something"); return a; } \
+inline _classname_ *&setconj  (_classname_ *&a) { throw("something"); return a; } \
+inline _classname_ *&setrand  (_classname_ *&a) { throw("something"); return a; } \
+inline _classname_ *&postProInnerProd(_classname_ *&a) { return a; } \
+inline void qswap(_classname_ *&a, _classname_ *&b) {  _classname_ *x = a; a = b; b = x; }
 
 
+template <class T> inline std::vector<T> &setzero         (std::vector<T> &a) { throw("Operation not defined"); return a; }
+template <class T> inline std::vector<T> &setzeropassive  (std::vector<T> &a) { throw("Operation not defined"); return a; }
 
-
-
-
-
-
-
-
-
-
-
-
-inline std::string *&setident (std::string *&a) { throw("something"); return a; }
-inline std::string *&setzero  (std::string *&a) { return a = nullptr; }
-inline std::string *&setposate(std::string *&a) { return a; }
-inline std::string *&setnegate(std::string *&a) { throw("something"); return a; }
-inline std::string *&setconj  (std::string *&a) { throw("something"); return a; }
-inline std::string *&setrand  (std::string *&a) { throw("something"); return a; }
-inline std::string *&postProInnerProd(std::string *&a) { return a; }
-
-inline void qswap(std::complex<double> *&a, std::complex<double> *&b);
-inline void qswap(std::complex<double> *&a, std::complex<double> *&b)
+template <class T> inline void qswap(std::vector<T> &a, std::vector<T> &b);
+template <class T> inline void qswap(std::vector<T> &a, std::vector<T> &b)
 {
-    std::complex<double> *x = a; a = b; b = x;
+    std::vector<T> x = a; a = b; b = x;
 }
 
-inline std::complex<double> *&setident (std::complex<double> *&a) { throw("something"); return a; }
-inline std::complex<double> *&setzero  (std::complex<double> *&a) { return a = nullptr; }
-inline std::complex<double> *&setposate(std::complex<double> *&a) { return a; }
-inline std::complex<double> *&setnegate(std::complex<double> *&a) { throw("something"); return a; }
-inline std::complex<double> *&setconj  (std::complex<double> *&a) { throw("something"); return a; }
-inline std::complex<double> *&setrand  (std::complex<double> *&a) { throw("something"); return a; }
-inline std::complex<double> *&postProInnerProd(std::complex<double> *&a) { return a; }
-
-inline void qswap(double *&a, double *&b);
-inline void qswap(double *&a, double *&b)
+inline void qswap(std::complex<double> &a, std::complex<double> &b);
+inline void qswap(std::complex<double> &a, std::complex<double> &b)
 {
-    double *x = a; a = b; b = x;
+    std::complex<double> x = a; a = b; b = x;
 }
+
+COMMONOPDEFTEMP(std::vector<T>);
+COMMONOPDEFPT(std::string);
+COMMONOPDEFPT(std::complex<double>);
+COMMONOPDEFPT(double);
+
+
+
 
 
 
@@ -868,13 +876,7 @@ inline void qswap(svm_pthread_t *&a, svm_pthread_t *&b)
     svm_pthread_t *x = a; a = b; b = x;
 }
 
-inline svm_pthread_t *&setident (svm_pthread_t *&a) { throw("something"); return a; }
-inline svm_pthread_t *&setzero  (svm_pthread_t *&a) { return a = nullptr; }
-inline svm_pthread_t *&setposate(svm_pthread_t *&a) { return a; }
-inline svm_pthread_t *&setnegate(svm_pthread_t *&a) { throw("something"); return a; }
-inline svm_pthread_t *&setconj  (svm_pthread_t *&a) { throw("something"); return a; }
-inline svm_pthread_t *&setrand  (svm_pthread_t *&a) { throw("something"); return a; }
-inline svm_pthread_t *&postProInnerProd(svm_pthread_t *&a) { return a; }
+COMMONOPDEFPT(svm_pthread_t);
 
 
 //typedef std::thread svm_pthread_t;
@@ -2404,9 +2406,19 @@ inline void clearkbquitdet(void)
 
 inline bool kbquitdet(const char *stateDescr, double **uservars, const char **varnames, const char **vardescr, int goanyhow)
 {
+    (void) stateDescr;
+    (void) uservars;
+    (void) varnames;
+    (void) vardescr;
+    (void) goanyhow;
+
+#ifndef USERLESS
+#ifndef HEADLESS
     static thread_local int goupone = 0;
     static thread_local int dostep = 0;
     static thread_local int reallymainthread = isMainThread(); // only need to call once this way
+#endif
+#endif
     bool res = false;
 
 #ifndef USERLESS
@@ -2729,26 +2741,6 @@ const std::string &getUniqueFile(std::string &res, const std::string &pre, const
 
 
 
-template <class T> inline std::vector<T> &setident        (std::vector<T> &a) { throw("Operation not defined"); return a; }
-template <class T> inline std::vector<T> &setzero         (std::vector<T> &a) { throw("Operation not defined"); return a; }
-template <class T> inline std::vector<T> &setzeropassive  (std::vector<T> &a) { throw("Operation not defined"); return a; }
-template <class T> inline std::vector<T> &setposate       (std::vector<T> &a) { throw("Operation not defined"); return a; }
-template <class T> inline std::vector<T> &setnegate       (std::vector<T> &a) { throw("Operation not defined"); return a; }
-template <class T> inline std::vector<T> &setconj         (std::vector<T> &a) { throw("Operation not defined"); return a; }
-template <class T> inline std::vector<T> &setrand         (std::vector<T> &a) { throw("Operation not defined"); return a; }
-template <class T> inline std::vector<T> &postProInnerProd(std::vector<T> &a) { return a; }
-
-template <class T> inline void qswap(std::vector<T> &a, std::vector<T> &b);
-template <class T> inline void qswap(std::vector<T> &a, std::vector<T> &b)
-{
-    std::vector<T> x = a; a = b; b = x;
-}
-
-inline void qswap(std::complex<double> &a, std::complex<double> &b);
-inline void qswap(std::complex<double> &a, std::complex<double> &b)
-{
-    std::complex<double> x = a; a = b; b = x;
-}
 
 
 

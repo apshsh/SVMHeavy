@@ -135,13 +135,13 @@ inline size_t *&setnegate(size_t *&a) { NiceThrow("don't do that");       return
 inline size_t *&setconj  (size_t *&a) {                                   return a; }
 inline size_t *&setrand  (size_t *&a) { NiceThrow("that's a silly idea"); return a; }
 
-inline double *&setident (double *&a) { NiceThrow("mummble"); return a; }
-inline double *&setzero  (double *&a) { a = nullptr;          return a; }
-inline double *&setposate(double *&a) {                       return a; }
-inline double *&setnegate(double *&a) { NiceThrow("mummble"); return a; }
-inline double *&setconj  (double *&a) { NiceThrow("mummble"); return a; }
-inline double *&setrand  (double *&a) { NiceThrow("mummble"); return a; }
-inline double *&postProInnerProd(double *&a) { return a; }
+//inline double *&setident (double *&a) { NiceThrow("mummble"); return a; }
+//inline double *&setzero  (double *&a) { a = nullptr;          return a; }
+//inline double *&setposate(double *&a) {                       return a; }
+//inline double *&setnegate(double *&a) { NiceThrow("mummble"); return a; }
+//inline double *&setconj  (double *&a) { NiceThrow("mummble"); return a; }
+//inline double *&setrand  (double *&a) { NiceThrow("mummble"); return a; }
+//inline double *&postProInnerProd(double *&a) { return a; }
 
 inline const double *&setident (const double *&a) { NiceThrow("mummble"); return a; }
 inline const double *&setzero  (const double *&a) { a = nullptr;          return a; }

@@ -149,7 +149,7 @@ template <class T, class S> void qswap(const Dgraph<T,S> *a, const Dgraph<T,S> *
 // norm2: norm2(A) = <A,A>
 //
 // metricDist:   metricDist(A,B) = abs2(A)+abs2(B)-2<A,B>
-// innerProduct: 
+// innerProduct:
 
 template <class T, class S> Dgraph<T,S> &setident(Dgraph<T,S> &a);
 template <class T, class S> Dgraph<T,S> &setzero(Dgraph<T,S> &a);

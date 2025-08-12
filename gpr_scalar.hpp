@@ -97,11 +97,13 @@ public:
     //       for inequality constraints and classification we instead use the
     //       naive method inheritted from SVM theory.
 
-    virtual int isNaiveConst(void) const override { return xNaiveConst;  }
-    virtual int isEPConst   (void) const override { return !xNaiveConst; }
+    virtual int isNaiveConst  (void) const override { return xNaiveConst;                   }
+    virtual int isEPConst     (void) const override { return !xNaiveConst && !xEPorLaplace; }
+    virtual int isLaplaceConst(void) const override { return !xNaiveConst && xEPorLaplace;  }
 
-    virtual int setNaiveConst(void) override;
-    virtual int setEPConst   (void) override;
+    virtual int setNaiveConst  (void) override;
+    virtual int setEPConst     (void) override;
+    virtual int setLaplaceConst(void) override;
 
 
     // Base-level stuff
@@ -131,7 +133,8 @@ private:
         return 1;
     }
 
-    int xNaiveConst;
+    int xNaiveConst;  // 1 nothing, 0 EP or Laplace
+    int xEPorLaplace; // 0 for EP, 1 for Laplace
     LSV_Scalar QQ;
 };
 
@@ -163,8 +166,9 @@ inline void GPR_Scalar::qswapinternal(ML_Base &bb)
 
     GPR_Generic::qswapinternal(b);
 
-    qswap(getQQ(),    b.getQQ()    );
-    qswap(xNaiveConst,b.xNaiveConst);
+    qswap(getQQ(),     b.getQQ()     );
+    qswap(xNaiveConst, b.xNaiveConst );
+    qswap(xEPorLaplace,b.xEPorLaplace);
 
     return;
 }
@@ -179,7 +183,8 @@ inline void GPR_Scalar::semicopy(const ML_Base &bb)
 
     getQQ().semicopy(b.getQQconst());
 
-    xNaiveConst = b.xNaiveConst;
+    xNaiveConst  = b.xNaiveConst;
+    xEPorLaplace = b.xEPorLaplace;
 
     return;
 }
@@ -193,7 +198,8 @@ inline void GPR_Scalar::assign(const ML_Base &bb, int onlySemiCopy)
     GPR_Generic::assign(src,onlySemiCopy);
     getQQ().assign(src.getQQconst(),onlySemiCopy);
 
-    xNaiveConst = src.xNaiveConst;
+    xNaiveConst  = src.xNaiveConst;
+    xEPorLaplace = src.xEPorLaplace;
 
     return;
 }

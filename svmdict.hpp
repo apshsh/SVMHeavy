@@ -14,6 +14,8 @@
 #include <iostream>
 #include "vector.hpp"
 
+typedef std::string dictkey;
+
 template <class K, class T> class Dict;
 
 // Stream operators
@@ -34,6 +36,7 @@ template <class K, class T>
 class Dict
 {
     template <class sK, class tT> friend void qswap(Dict<sK,tT> &a, Dict<sK,tT> &b);
+
     template <class sK, class tT> friend std::ostream &operator<<(std::ostream &output, const Dict<sK,tT> &src);
     template <class sK, class tT> friend std::istream &operator>>(std::istream &input, Dict<sK,tT> &dest);
     template <class sK, class tT> friend std::istream &streamItIn(std::istream &input, Dict<sK,tT> &dest, int processxyzvw);
@@ -109,7 +112,6 @@ public:
     bool array_slack(void) const { return values.array_slack(); }
 
 private:
-
     Vector<K> values;
     Vector<T> keys;
 
@@ -251,10 +253,39 @@ int operator==(const Dict<K,T> &left_op, const Dict<K,T> &right_op)
     return 1;
 }
 
+
+
+
+
+
+
+
+
+
+
+// Just... believe this is necessary. c++ is exhausting sometimes
+
+template <class T> bool isTaString(const T &dummy);
+template <> inline bool isTaString(const std::string &dummy);
+
+template <class T> bool isTaString(const T &dummy)
+{
+    (void) dummy;
+    return false;
+}
+
+template <> inline bool isTaString(const std::string &dummy)
+{
+    (void) dummy;
+    return true;
+}
+
 template <class K, class T>
 std::ostream &operator<<(std::ostream &output, const Dict<K,T> &src)
 {
     int size = src.size();
+    static T temp;
+    static std::string quoteish = isTaString(temp) ? "\"" : "";
 
     output << "{{ ";
 
@@ -262,12 +293,12 @@ std::ostream &operator<<(std::ostream &output, const Dict<K,T> &src)
     {
         if ( i < size-1 )
         {
-            output << (src.keys)(i) << " : " << (src.values)(i) << " ; ";
+            output << quoteish << (src.keys)(i) << quoteish << " : " << (src.values)(i) << " ; ";
         }
 
         else
         {
-            output << (src.keys)(i) << " : " << (src.values)(i);
+            output << quoteish << (src.keys)(i) << quoteish << " : " << (src.values)(i);
         }
     }
 
@@ -283,8 +314,9 @@ std::istream &operator>>(std::istream &input, Dict<K,T> &dest)
     (dest.keys).resize(0);
 
     std::string dummy;
-
     char tt;
+    static T temp;
+    static bool stringcase = isTaString(temp);
 
     while ( isspace(input.peek()) )
     {
@@ -316,7 +348,21 @@ std::istream &operator>>(std::istream &input, Dict<K,T> &dest)
         (dest.values).add(size);
         (dest.keys).add(size);
 
-        input >> (dest.keys)("&",size);
+        if ( stringcase )
+        {
+            std::string buffer;
+            input >> buffer;
+            NiceAssert( buffer.size() >= 2 );
+            NiceAssert( buffer[0] == '\"' );
+            NiceAssert( buffer[buffer.size()-2] == '\"' );
+            (dest.keys)("&",size) = buffer.substr(1,buffer.size()-2);
+        }
+
+        else
+        {
+            input >> (dest.keys)("&",size);
+        }
+
         input >> dummy;
         NiceAssert( dummy == ":" );
         input >> (dest.values)("&",size);
@@ -334,8 +380,9 @@ std::istream &streamItIn(std::istream &input, Dict<K,T> &dest, int processxyzvw)
     (dest.keys).resize(0);
 
     std::string dummy;
-
     char tt;
+    static T temp;
+    static bool stringcase = isTaString(temp);
 
     while ( isspace(input.peek()) )
     {
@@ -367,7 +414,21 @@ std::istream &streamItIn(std::istream &input, Dict<K,T> &dest, int processxyzvw)
         (dest.values).add(size);
         (dest.keys).add(size);
 
-        streamitin(input,(dest.keys)("&",size),processxyzvw);
+        if ( stringcase )
+        {
+            std::string buffer;
+            input >> buffer;
+            NiceAssert( buffer.size() >= 2 );
+            NiceAssert( buffer[0] == '\"' );
+            NiceAssert( buffer[buffer.size()-2] == '\"' );
+            (dest.keys)("&",size) = buffer.substr(1,buffer.size()-2);
+        }
+
+        else
+        {
+            input >> (dest.keys)("&",size);
+        }
+
         input >> dummy;
         NiceAssert( dummy == ":" );
         streamitin(input,(dest.values)("&",size),processxyzvw);
@@ -377,5 +438,20 @@ std::istream &streamItIn(std::istream &input, Dict<K,T> &dest, int processxyzvw)
 
     return input;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #endif

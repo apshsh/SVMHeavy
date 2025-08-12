@@ -36,6 +36,7 @@
 #include "plotml.hpp"
 #include "matrix.hpp"
 #include "randfun.hpp"
+#include "makemonot.hpp"
 
 // uncomment to process underscores in input as spaces
 //#define MANGLE_UNDERSCORES
@@ -2192,9 +2193,9 @@ int runsvmint(SVMThreadContext *svmContext,
             }
 
             else if ( ( currentarg == "-bv"   ) ||
-                      ( currentarg == "-B"    ) ||
                       ( currentarg == "-bz"   ) ||
                       ( currentarg == "-bgv"  ) ||
+                      ( currentarg == "-bgla" ) ||
                       ( currentarg == "-bgep" ) ||
                       ( currentarg == "-bgnc" ) ||
                       ( currentarg == "-bgz"  )    )
@@ -2213,6 +2214,7 @@ int runsvmint(SVMThreadContext *svmContext,
             }
 
             else if ( ( currentarg == "-ac"  ) ||
+                      ( currentarg == "-B"   ) ||
                       ( currentarg == "-R"   ) ||
                       ( currentarg == "-mlR" ) ||
                       ( currentarg == "-T"   ) ||
@@ -2471,6 +2473,21 @@ int runsvmint(SVMThreadContext *svmContext,
                 if ( grabargs(3,preloadopt,commstack,currentarg) )
                 {
                     retval  = 52;
+                    stopnow = 1;
+                }
+
+                updateargvars = 1;
+            }
+
+            else if ( ( currentarg == "-pmm"  )    )
+            {
+                preelse = 1;
+
+                // Preload options
+
+                if ( grabargs(8,preloadopt,commstack,currentarg) )
+                {
+                    retval  = 51;
                     stopnow = 1;
                 }
 
@@ -3551,7 +3568,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmgtmtb"   ) ||
                       ( currentarg == "-gmgtbmx"   )    )
             {
-                // Learning options
+                // Gridsearch options
 
                 if ( grabargs(1,gridopt,commstack,currentarg) )
                 {
@@ -3684,7 +3701,6 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmmc"        ) ||
                       ( currentarg == "-gmmd"        ) ||
                       ( currentarg == "-gbG"         ) ||
-                      ( currentarg == "-gbP"         ) ||
                       ( currentarg == "-gbmm"        ) ||
                       ( currentarg == "-gbpd"        ) ||
                       ( currentarg == "-gbp"         ) ||
@@ -4030,7 +4046,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmgtmugt"    ) ||
                       ( currentarg == "-gmgtmuml"    )    )
             {
-                // Learning options
+                // Gridsearch options
 
                 if ( grabargs(2,gridopt,commstack,currentarg) )
                 {
@@ -4152,9 +4168,24 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gmgtrkx"   ) ||
                       ( currentarg == "-gmgtrkX"   )    )
             {
-                // Learning options
+                // Gridsearch options
 
                 if ( grabargs(3,gridopt,commstack,currentarg) )
+                {
+                    retval  = 74;
+                    stopnow = 1;
+                }
+
+                updateargvars = 1;
+            }
+
+            else if ( ( currentarg == "-gmmm"   ) ||
+                      ( currentarg == "-gmsmm"  ) ||
+                      ( currentarg == "-gmgtmm" )    )
+            {
+                // Preload options
+
+                if ( grabargs(8,gridopt,commstack,currentarg) )
                 {
                     retval  = 74;
                     stopnow = 1;
@@ -5651,6 +5682,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-bgn"  ) { getMLref(svmbase,svmInd).setvarApproxim(safeatoi(currcommand(1),argvariables));            }
                     else if ( currcommand(0) == "-bgv"  ) { getMLref(svmbase,svmInd).setVarmuBias();                                                   }
                     else if ( currcommand(0) == "-bgz"  ) { getMLref(svmbase,svmInd).setZeromuBias();                                                  }
+                    else if ( currcommand(0) == "-bgla" ) { getMLref(svmbase,svmInd).setLaplaceConst();                                                }
                     else if ( currcommand(0) == "-bgep" ) { getMLref(svmbase,svmInd).setEPConst();                                                     }
                     else if ( currcommand(0) == "-bgnc" ) { getMLref(svmbase,svmInd).setNaiveConst();                                                  }
                     else if ( currcommand(0) == "-mls"  ) { getMLref(svmbase,svmInd).settsize(safeatoi(currcommand(1),argvariables));                  }
@@ -6122,6 +6154,29 @@ int runsvmint(SVMThreadContext *svmContext,
                         datfile.close();
 
                         getMLref(svmbase,svmInd).K2bypass(kernmat);
+                    }
+
+                    else if ( currcommand(0) == "-pmm" )
+                    {
+                        int n = safeatoi(currcommand(1),argvariables);
+                        int t = safeatoi(currcommand(2),argvariables);
+
+                        std::stringstream xbstr(currcommand(3));
+                        std::stringstream xlbstr(currcommand(4));
+                        std::stringstream xubstr(currcommand(5));
+
+                        SparseVector<gentype> xb;
+                        SparseVector<double> xlb;
+                        SparseVector<double> xub;
+
+                        streamItIn(xbstr,xb,0);
+                        streamItIn(xlbstr,xlb,0);
+                        streamItIn(xubstr,xub,0);
+
+                        int d = safeatoi(currcommand(6),argvariables);
+                        gentype y = safeatog(currcommand(7),argvariables);
+
+                        makeMonotone(getMLref(svmbase,svmInd),n,t,xb,xlb,xub,d,y);
                     }
                 }
 
@@ -7361,6 +7416,75 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gmgtmugt" ) { gentype mudef(currcommand(1)); ((*xbopts).altcgtapprox).setprival(mudef); }
                     else if ( currcommand(0) == "-gmgtmuml" ) { ((*xbopts).altcgtapprox).setpriml(&(getMLref(svmbase,safeatoi(currcommand(1),argvariables)))); }
 
+                    else if ( currcommand(0) == "-gmmm" )
+                    {
+                        int n = safeatoi(currcommand(1),argvariables);
+                        int t = safeatoi(currcommand(2),argvariables);
+
+                        std::stringstream xbstr(currcommand(3));
+                        std::stringstream xlbstr(currcommand(4));
+                        std::stringstream xubstr(currcommand(5));
+
+                        SparseVector<gentype> xb;
+                        SparseVector<double> xlb;
+                        SparseVector<double> xub;
+
+                        streamItIn(xbstr,xb,0);
+                        streamItIn(xlbstr,xlb,0);
+                        streamItIn(xubstr,xub,0);
+
+                        int d = safeatoi(currcommand(6),argvariables);
+                        gentype y = safeatog(currcommand(7),argvariables);
+
+                        makeMonotone((*xbopts).altmuapprox,n,t,xb,xlb,xub,d,y);
+                    }
+
+                    else if ( currcommand(0) == "-gmsmm" )
+                    {
+                        int n = safeatoi(currcommand(1),argvariables);
+                        int t = safeatoi(currcommand(2),argvariables);
+
+                        std::stringstream xbstr(currcommand(3));
+                        std::stringstream xlbstr(currcommand(4));
+                        std::stringstream xubstr(currcommand(5));
+
+                        SparseVector<gentype> xb;
+                        SparseVector<double> xlb;
+                        SparseVector<double> xub;
+
+                        streamItIn(xbstr,xb,0);
+                        streamItIn(xlbstr,xlb,0);
+                        streamItIn(xubstr,xub,0);
+
+                        int d = safeatoi(currcommand(6),argvariables);
+                        gentype y = safeatog(currcommand(7),argvariables);
+
+                        makeMonotone((*xbopts).altaugxapprox,n,t,xb,xlb,xub,d,y);
+                    }
+
+                    else if ( currcommand(0) == "-gmgtmm" )
+                    {
+                        int n = safeatoi(currcommand(1),argvariables);
+                        int t = safeatoi(currcommand(2),argvariables);
+
+                        std::stringstream xbstr(currcommand(3));
+                        std::stringstream xlbstr(currcommand(4));
+                        std::stringstream xubstr(currcommand(5));
+
+                        SparseVector<gentype> xb;
+                        SparseVector<double> xlb;
+                        SparseVector<double> xub;
+
+                        streamItIn(xbstr,xb,0);
+                        streamItIn(xlbstr,xlb,0);
+                        streamItIn(xubstr,xub,0);
+
+                        int d = safeatoi(currcommand(6),argvariables);
+                        gentype y = safeatog(currcommand(7),argvariables);
+
+                        makeMonotone((*xbopts).altcgtapprox,n,t,xb,xlb,xub,d,y);
+                    }
+
                     else if ( currcommand(0) == "-gmsw" )
                     {
                         Vector<int> augxapproxInd;
@@ -7563,7 +7687,6 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gbq"   ) { (*xbopts).impmeasu            = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables)).getIMP()); }
                     else if ( currcommand(0) == "-gbpp"  ) { (*xbopts).direcpre            = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables)).getML()); }
                     else if ( currcommand(0) == "-gbmm"  ) { (*xbopts).direcsubseqpre      = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables)).getML()); }
-                    else if ( currcommand(0) == "-gbP"   ) { (*xbopts).presource           = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables))); }
                     else if ( currcommand(0) == "-gbG"   ) { (*xbopts).gridsource          = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables))); }
                     else if ( currcommand(0) == "-gbsp"  ) { (*xbopts).stabpmax            = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbsP"  ) { (*xbopts).stabpmin            = safeatoi(currcommand(1),argvariables); }
@@ -14119,8 +14242,9 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                          >0 - approximate posterior  variance using this many\n" : "" );
     output << ( ( basic || advanced ) ? "                               training vectors closest  (in feature space) to\n" : "" );
     output << ( ( basic || advanced ) ? "                               the point being tested.                        \n" : "" );
-    output << ( ( basic || advanced ) ? "         -bgep           - GPR inequalities trained using expect prop (deflt).\n" : "" );
-    output << ( ( basic || advanced ) ? "         -bgnc           - GPR inequalities treated as per SVM.               \n" : "" );
+    output << ( ( basic || advanced ) ? "         -bgla           - GPR inequalities via Laplace aproximation (deflt). \n" : "" );
+    output << ( ( basic || advanced ) ? "         -bgep           - GPR inequalities via expect. prop. (not working).  \n" : "" );
+    output << ( ( basic || advanced ) ? "         -bgnc           - GPR inequalities as per SVM (naive approach).      \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                  -- MLM specific options                          --         \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
@@ -14286,6 +14410,33 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           This may be handy for  multi-instance learning with\n" : "" );
     output << ( (          advanced ) ? "                           many (1000s) of instances  in some examples, as for\n" : "" );
     output << ( (          advanced ) ? "                           reasons unknown this can crash during kernel eval. \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -pmm n t xb xlb xub d y - adds n inducing  points to the ML to approx\n" : "" );
+    output << ( (          advanced ) ? "                           for example monotonicity. Here:                    \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                           n: number of inducing points.                      \n" : "" );
+    output << ( (          advanced ) ? "                           t = 0: inducing point on a grid.                   \n" : "" );
+    output << ( (          advanced ) ? "                           t = 1: uniform random inducing points.             \n" : "" );
+    output << ( (          advanced ) ? "                           xb: base for inducing points.                      \n" : "" );
+    output << ( (          advanced ) ? "                           xlb: lower bound for x.                            \n" : "" );
+    output << ( (          advanced ) ? "                           xub: upper bound for x.                            \n" : "" );
+    output << ( (          advanced ) ? "                           d: inducing point constraint type.                 \n" : "" );
+    output << ( (          advanced ) ? "                           y: inducing point constraint target.               \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                           The inducing points x have the form:               \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                                xlb <= x-xb <= xub                            \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                           so for example if xb = [ :: e ] and d=+1 then:     \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                                x = [ xx :: e ]                               \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                           where xx is generated according to t and a training\n" : "" );
+    output << ( (          advanced ) ? "                           constraint of the form:                            \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                                e'.d/dxx g(xx) >= y                           \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                           is enforced.                                       \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                  -- SVM specific options                          --         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
@@ -15637,7 +15788,20 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           - non-trivial results are  returned for model based\n" : "" );
     output << ( (          advanced ) ? "                             methods in the following format:                 \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                        { y v [cg1..cgm] x' addexp f [xx1..xxn] t [tg1..tgm] }\n" : "" );
+    output << ( (          advanced ) ? "                     { y v [cg1..cgm] x' addexp f [xx1..xxn] t [tg1..tgm] cst}\n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                             or alteratively as key/value pairs in a dict:    \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                             \"y\": y                                           \n" : "" );
+    output << ( (          advanced ) ? "                             \"addvar\": v                                      \n" : "" );
+    output << ( (          advanced ) ? "                             \"c\": [cg1..cgm]                                  \n" : "" );
+    output << ( (          advanced ) ? "                             \"x\": x'                                          \n" : "" );
+    output << ( (          advanced ) ? "                             \"and\" : addexp                                   \n" : "" );
+    output << ( (          advanced ) ? "                             \"sf\": f                                          \n" : "" );
+    output << ( (          advanced ) ? "                             \"xsc\": [xx1..xxn]                                \n" : "" );
+    output << ( (          advanced ) ? "                             \"d\"; t                                           \n" : "" );
+    output << ( (          advanced ) ? "                             \"dc\": [tg1..tgm]                                 \n" : "" );
+    output << ( (          advanced ) ? "                             \"fidcost\": cst                                   \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                             where:                                           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
@@ -15663,6 +15827,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                               etc for information.                           \n" : "" );
     output << ( (          advanced ) ? "                             + t observation type (0 n/a, +1 >=, -1 <=, 2 ==).\n" : "" );
     output << ( (          advanced ) ? "                             + tcg like t but for [cg1..cgn].                 \n" : "" );
+    output << ( (          advanced ) ? "                             + cst is a cost override for multi-fidelity BO.  \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                             Not all additional data is required. Use null for\n" : "" );
     output << ( (          advanced ) ? "                             default operation ( or [ ] for vectors).         \n" : "" );
@@ -16122,13 +16287,17 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -gmmugt mu      - Prior mean function on GP for GPR model.           \n" : "" );
     output << ( (          advanced ) ? "         -gmmuml ml      - Prior mean ML number on GP for GPR model           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -gmsmu  {0,1,2} - Prior mean type on GP for GPR model.               \n" : "" );
-    output << ( (          advanced ) ? "         -gmsmugt mu     - Prior mean function on GP for GPR model.           \n" : "" );
-    output << ( (          advanced ) ? "         -gmsmuml ml     - Prior mean ML number on GP for GPR model           \n" : "" );
+    output << ( (          advanced ) ? "         -gmsmu  {0,1,2} - Prior mean type on GP for q(x) model.              \n" : "" );
+    output << ( (          advanced ) ? "         -gmsmugt mu     - Prior mean function on GP for q(x) model.          \n" : "" );
+    output << ( (          advanced ) ? "         -gmsmuml ml     - Prior mean ML number on GP for q(x) model          \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -gmgtmu {0,1,2} - Prior mean type on GP for GPR model.               \n" : "" );
-    output << ( (          advanced ) ? "         -gmgtmugt mu    - Prior mean function on GP for GPR model.           \n" : "" );
-    output << ( (          advanced ) ? "         -gmgtmuml ml    - Prior mean ML number on GP for GPR model           \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtmu {0,1,2} - Prior mean type on GP for c(x) model.              \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtmugt mu    - Prior mean function on GP for c(x) model.          \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtmuml ml    - Prior mean ML number on GP for c(x) model          \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -gmmm n t xb xlb xub d y - inducing priors on GP for GPR models -pmm.\n" : "" );
+    output << ( (          advanced ) ? "         -gmsmm n t xb xlb xub d y - inducing priors GP for q(x) models -pmm. \n" : "" );
+    output << ( (          advanced ) ? "         -gmgtmm n t xb xlb xub d y - inducing priors GP for c(x) models -pmm.\n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmk...         - set default kernel parameters on GP for GPR model. \n" : "" );
     output << ( (          advanced ) ? "         -gmsk...        - set default kernel paras on GP for side-channel.   \n" : "" );
@@ -16320,7 +16489,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -gbb n          - RNG seed right before main optimisation loop if >=0\n" : "" );
     output << ( (          advanced ) ? "                           Default 69.  -2 means seed with time, -1 no seed.  \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -gbP n          - pre-add data from this ML before starting optim.   \n" : "" );
     output << ( (          advanced ) ? "         -gbG n          - do  grid-search,  where ML n  defines grid  data in\n" : "" );
     output << ( (          advanced ) ? "                           terms of x (dimensions  must agree  with definition\n" : "" );
     output << ( (          advanced ) ? "                           in -gb). If y is NULL then it is ignored: otherwise\n" : "" );
@@ -17977,9 +18145,11 @@ void printhelpgentype(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "       - Strings: a,d,'t',\"hello world\"                                       \n" : "" );
     output << ( ( basic || advanced ) ? "       - Vectors: eg. [ 1 -3.2 4I ... ]                                       \n" : "" );
     output << ( ( basic || advanced ) ? "       - Matrices: eg. M:[ 1 2 3 ; 4 5 6 ]                                    \n" : "" );
-    output << ( ( basic || advanced ) ? "       - Sets: eg. { -2 14.3 \"chickens\" \"cats\" ... }                          \n" : "" );
+    output << ( ( basic || advanced ) ? "       - Sets: eg. { -2 14.3 \"chickens\" \"cats\" ... }.  Note that the empty set\n" : "" );
+    output << ( ( basic || advanced ) ? "         is denoted { }, and the \"full set\" {*}.                              \n" : "" );
     output << ( ( basic || advanced ) ? "       - Directed graphs: G:{ [ n1 n2 .. ] ;  M:[ w11 w12 .. ; w21 w22 .. ] },\n" : "" );
     output << ( ( basic || advanced ) ? "         where n1 n2 ... are nodes, w11 w12 ... are edge weights.             \n" : "" );
+    output << ( ( basic || advanced ) ? "       - Dictionaries: {{ \"key1\": value1, \"key2\": value2, ...}}.              \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "The following operators are expanded, in order, with given direction (e- means\n" : "" );
     output << ( ( basic || advanced ) ? "elementwise operation), and replaced with the functional form:                \n" : "" );
@@ -18020,6 +18190,8 @@ void printhelpgentype(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "       - The product of two vectors is the inner-product of the vectors.      \n" : "" );
     output << ( ( basic || advanced ) ? "       - The product of two strings is 1 if they are identical, 0 otherwise.  \n" : "" );
     output << ( ( basic || advanced ) ? "       - The product of two sets is the number of elements in common.         \n" : "" );
+    output << ( ( basic || advanced ) ? "       - For sets, A-B = A\\B, A+B = A union B, ||{*}|| = inf.                 \n" : "" );
+    output << ( ( basic || advanced ) ? "       - For set A, non-set b, a.A = {a}.A, A.a = A.{a}.                      \n" : "" );
     output << ( ( basic || advanced ) ? "       - The product of two directed graphs A = { An ; Aw }, B = { Bn ; Bw} is\n" : "" );
     output << ( ( basic || advanced ) ? "         A*B = { Cn ; Cw }. where:                                            \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );

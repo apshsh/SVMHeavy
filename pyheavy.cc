@@ -2,14 +2,9 @@
 //
 // SVMHeavyv7 Python CLI-like Interface
 //
-// Version: 7
-// Date: 05/12/2014
+// Date: 01/07/2025
 // Written by: Alistair Shilton (AlShilton@gmail.com)
 // Copyright: all rights reserved
-//
-
-//
-// Usage: pyheavy('commands'), where commands are just like the regular CLI
 //
 
 //#ifndef DNDEBUG
@@ -39,12 +34,6 @@ inline py::object *&setnegate(py::object *&a) { throw("something"); return a; }
 inline py::object *&setconj  (py::object *&a) { throw("something"); return a; }
 inline py::object *&setrand  (py::object *&a) { throw("something"); return a; }
 inline py::object *&postProInnerProd(py::object *&a) { return a; }
-
-inline void qswap(std::string *&a, std::string *&b);
-inline void qswap(std::string *&a, std::string *&b)
-{
-    std::string *x = a; a = b; b = x;
-}
 
 #include "mlinter.hpp"
 #include "basefn.hpp"
@@ -473,7 +462,6 @@ py::object mlK3(int i, py::object xa, py::object xb, py::object xc);
 py::object mlK4(int i, py::object xa, py::object xb, py::object xc, py::object xd);
 
 void boSetgridsource(int i, int j);
-void boSetpresource (int i, int j);
 
 GETSETDEF(getMLType,ssetMLTypeClean,std::string);
 
@@ -1405,7 +1393,6 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPT(m_opt,fidvar,    Bayesian,"fidelity additive variance function n(z), added to measurement vari (dflt 0).");
 
     m_opt_model_Bayesian.def("setgridsrc",&boSetgridsource,"For BO, set grid source.",py::arg("i")=0,py::arg("j")=0);
-    m_opt_model_Bayesian.def("setpresrc", &boSetpresource, "For BO, set pre source.", py::arg("i")=0,py::arg("j")=0);
 
     m_opt_model_Bayesian.def("selaltmu", &selmlaltmuapprox,   "Select default objective model for BO i to use like any ML (see also selml).",py::arg("i")=0);
     m_opt_model_Bayesian.def("selaltc",  &selmlaltcgtapprox,  "select default constraint model for BO i to use like any ML (see also selml).",py::arg("i")=0);
@@ -1748,16 +1735,6 @@ void boSetgridsource(int i, int j)
     j = glob_MLInd(j);
 
     getBayesianref(i).gridsource = &getMLref(i);
-}
-
-void boSetpresource(int i, int j)
-{
-    dostartup();
-
-    i = glob_BayesianInd(i);
-    j = glob_MLInd(j);
-
-    getBayesianref(i).presource = &getMLref(i);
 }
 
 double mltuneKernel(int i, int method, double xwidth, int tuneK, int tuneP)

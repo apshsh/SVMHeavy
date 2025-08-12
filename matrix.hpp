@@ -16,6 +16,7 @@
 #include <iostream>
 #include <string.h>
 #include <sstream>
+#include <limits.h>
 #include "randfun.hpp"
 #include "vector.hpp"
 #include "sparsevector.hpp"
@@ -338,8 +339,6 @@ public:
     // - rankone adds c*outerproduct(a,b) to the matrix without wasting memory
     //   by calling outerproduct(a,b), creating a temporary matrix and then
     //   adding that.
-    // - diagmult G := J.G.K' where J and K are diagonal matrices (stored as
-    //   vectors).
     // - diagoffset G += diag(d) or G += c.diag(d)
     // - sqdiagoffset G += diag(d).diag(d) or G += diag(c.d).diag(c.d)
     // - SVD: computes singular value decomposition, assuming real, to find
@@ -444,7 +443,6 @@ public:
     //   NB: *No attempt is made to enforce convergence, so use with care!*
 
     Matrix<T> &rankone(const T &c, const Vector<T> &a, const Vector<T> &b);
-    Matrix<T> &diagmult(const Vector<T> &J, const Vector<T> &K);
 
     Matrix<T> &diagoffset(const T &d);
     Matrix<T> &diagoffset(const Vector<T> &d);
@@ -561,10 +559,10 @@ public:
     //     - For non-square matrices, inverse will return conjugate transpose
     //       of the pseudoinverse
 
-    T det(void) const;
-    T trace(void) const;
-    T tracelog(void) const; // sum of logs of diagonals
-    T diagprod(void) const;
+    T trace   (int maxsize = INT_MAX) const; // the argument is an optional "max size stop" (so do upper-left of no more than this size)
+    T tracelog(int maxsize = INT_MAX) const; // sum of logs of diagonals
+    T diagprod(int maxsize = INT_MAX) const;
+    T det     (void) const;
     T invtrace(void) const;
     T miner(int i, int j) const;
     T cofactor(int i, int j) const;
@@ -5240,56 +5238,6 @@ template <> inline Matrix<double> &Matrix<double>::rankone(const double &c, cons
 }
 
 template <class T>
-Matrix<T> &Matrix<T>::diagmult(const Vector<T> &J, const Vector<T> &K)
-{
-    NiceAssert( dnumRows == J.size() );
-    NiceAssert( dnumCols == K.size() );
-
-    Vector<T> KK(K);
-    KK.conj();
-
-    int i;
-
-    if ( dnumRows && dnumCols )
-    {
-        retVector<T> tmpva;
-        retVector<T> tmpvb;
-        retVector<T> tmpvc;
-
-	for ( i = 0 ; i < dnumRows ; ++i )
-	{
-            (*this)("&",i,"&",tmpva,tmpvc) = J(i)*(((*this)(i,tmpvb))*KK);
-	}
-    }
-
-    return *this;
-}
-
-template <> inline Matrix<double> &Matrix<double>::diagmult(const Vector<double> &J, const Vector<double> &K);
-template <> inline Matrix<double> &Matrix<double>::diagmult(const Vector<double> &J, const Vector<double> &K)
-{
-    NiceAssert( dnumRows == J.size() );
-    NiceAssert( dnumCols == K.size() );
-
-    int i;
-
-    if ( dnumRows && dnumCols )
-    {
-        retVector<double> tmpva;
-        retVector<double> tmpvb;
-        retVector<double> tmpvc;
-        retVector<double> tmpvd;
-
-	for ( i = 0 ; i < dnumRows ; ++i )
-	{
-            (*this)("&",i,"&",tmpva,tmpvc) = (J.v(i))*(((*this)(i,tmpvb,tmpvd))*K);
-	}
-    }
-
-    return *this;
-}
-
-template <class T>
 Matrix<T> &Matrix<T>::diagoffset(const Vector<T> &d)
 {
     int minsize = ( dnumRows < dnumCols ) ? dnumRows : dnumCols;
@@ -7666,13 +7614,11 @@ T Matrix<T>::logdet_naiveChol(const Vector<T> &diagsign, Matrix<T> &factScratch,
 
 
 template <class T>
-T Matrix<T>::trace(void) const
+T Matrix<T>::trace(int maxsize) const
 {
-    NiceAssert( isSquare() );
-
     T res;
 
-    if ( !dnumRows )
+    if ( !dnumRows || !dnumCols || !maxsize )
     {
         setzero(res);
     }
@@ -7681,12 +7627,9 @@ T Matrix<T>::trace(void) const
     {
 	res = (*this)(0,0);
 
-	//if ( dnumRows > 1 )
-	{
-	    for ( int i = 1 ; i < dnumRows ; ++i )
-	    {
-		res += (*this)(i,i);
-	    }
+        for ( int i = 1 ; ( i < dnumRows ) && ( i < dnumCols ) && ( i < maxsize ) ; ++i )
+        {
+            res += (*this)(i,i);
 	}
     }
 
@@ -7694,13 +7637,11 @@ T Matrix<T>::trace(void) const
 }
 
 template <class T>
-T Matrix<T>::tracelog(void) const
+T Matrix<T>::tracelog(int maxsize) const
 {
-    NiceAssert( isSquare() );
-
     T res;
 
-    if ( !dnumRows )
+    if ( !dnumRows || !dnumCols || !maxsize )
     {
         setzero(res);
     }
@@ -7709,12 +7650,9 @@ T Matrix<T>::tracelog(void) const
     {
 	res = log((*this)(0,0));
 
-	//if ( dnumRows > 1 )
-	{
-	    for ( int i = 1 ; i < dnumRows ; ++i )
-	    {
-		res += log((*this)(i,i));
-	    }
+        for ( int i = 1 ; ( i < dnumRows ) && ( i < dnumCols ) && ( i < maxsize ) ; ++i )
+        {
+	    res += log((*this)(i,i));
 	}
     }
 
@@ -7722,13 +7660,11 @@ T Matrix<T>::tracelog(void) const
 }
 
 template <class T>
-T Matrix<T>::diagprod(void) const
+T Matrix<T>::diagprod(int maxsize) const
 {
-    NiceAssert( isSquare() );
-
     T res;
 
-    if ( !dnumRows )
+    if ( !dnumRows || !dnumCols || !maxsize )
     {
         setident(res);
     }
@@ -7737,12 +7673,9 @@ T Matrix<T>::diagprod(void) const
     {
 	res = (*this)(0,0);
 
-	//if ( dnumRows > 1 )
-	{
-	    for ( int i = 1 ; i < dnumRows ; ++i )
-	    {
-		res *= (*this)(i,i);
-	    }
+        for ( int i = 1 ; ( i < dnumRows ) && ( i < dnumCols ) && ( i < maxsize ) ; ++i )
+        {
+            res *= (*this)(i,i);
 	}
     }
 

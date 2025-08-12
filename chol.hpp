@@ -1,4 +1,3 @@
-
 //
 // Modified Cholesky factorisation class
 //
@@ -186,7 +185,7 @@ public:
     //
     // G = L.D.L'
     //
-    // where L is a lower triangular matrix and D is a (pre-defined) diagonal
+    // where L is a lower triangular matrix, and D is a(pre-defined) diagonal
     // matrix of the form:
     //
     // D = diag(d0,d1,...)
@@ -216,7 +215,7 @@ public:
     // Constuctors:
     //
     // G:  the matrix to be factorised
-    // D:  the factorisatin diagonal
+    // D:  the factorisation diagonal
     // zt: zero tolerance level to be used
 
     explicit Chol(double zt = DEFAULT_ZTOL, int fudgeit = 0);
@@ -270,25 +269,25 @@ public:
     //   fbused is incremented if fallback occurs.
 
     template <class S> int minverse(Vector<S> &ap, Vector<S> &an, const Vector<S> &bp, const Vector<S> &bn, int zp_start = 0, int zp_end = 0, int zn_start = 0, int zn_end = 0) const;
-    template <class S> int minverse(Vector<S> &ap,                const Vector<S> &bp,                      int zp_start = 0, int zp_end = 0                                  ) const;
+    template <class S> int minverse(Vector<S> &ap,                const Vector<S> &bp,                      int zp_start = 0, int zp_end = 0                                  ) const { NiceAssert( !dnneg ); Vector<S> antmp(0); Vector<S> bntmp(0); return minverse(ap,antmp,bp,bntmp,zp_start,zp_end,0,0); }
 
     template <class S> int forwardElim(Vector<S> &ap, Vector<S> &an, const Vector<S> &bp, const Vector<S> &bn, int zp_start = 0, int zp_end = 0, int zn_start = 0, int zn_end = 0) const;
-    template <class S> int forwardElim(Vector<S> &ap,                const Vector<S> &bp,                      int zp_start = 0, int zp_end = 0                                  ) const;
+    template <class S> int forwardElim(Vector<S> &ap,                const Vector<S> &bp,                      int zp_start = 0, int zp_end = 0                                  ) const { NiceAssert( !dnneg ); Vector<S> antmp(0); Vector<S> bntmp(0); return forwardElim(ap,antmp,bp,bntmp,zp_start,zp_end,0,0); }
 
     template <class S> int backwardSubst(Vector<S> &ap, Vector<S> &an, const Vector<S> &bp, const Vector<S> &bn, int zp_start = 0, int zp_end = 0, int zn_start = 0, int zn_end = 0) const;
-    template <class S> int backwardSubst(Vector<S> &ap,                const Vector<S> &bp,                      int zp_start = 0, int zp_end = 0                                  ) const;
+    template <class S> int backwardSubst(Vector<S> &ap,                const Vector<S> &bp,                      int zp_start = 0, int zp_end = 0                                  ) const { NiceAssert( !dnneg ); Vector<S> antmp(0); Vector<S> bntmp(0); return backwardSubst(ap,antmp,bp,bntmp,zp_start,zp_end,0,0); }
 
     template <class S> int near_invert(Vector<S> &ap, Vector<S> &an) const;
-    template <class S> int near_invert(Vector<S> &ap               ) const;
+    template <class S> int near_invert(Vector<S> &ap               ) const { NiceAssert( !dnneg ); Vector<S> antmp(0); return near_invert(ap,antmp); }
 
-    template <class S> int minverseOffset(Vector<S> &ap, const Vector<S> &bp, double c, const Vector<T> &s, const Matrix<T> &Gp, const Vector<double> &Gpoff, int &fbused, double convScale = CONVSCALE) const;
+    template <class S> int minverseOffset(Vector<S> &ap, const Vector<S> &bp, double c, const Vector<T> &q, const Matrix<T> &Gp, const Vector<double> &Gpoff, int &fbused, double convScale = CONVSCALE) const;
 
     // Inverse diagonal calculation
     //
     // Calculates diag(inv(G)^2)
 
     template <class S> int minvdiagsq(Vector<S> &ares, Vector<S> &bres) const;
-    template <class S> int minvdiagsq(Vector<S> &ares                 ) const;
+    template <class S> int minvdiagsq(Vector<S> &ares                 ) const { NiceAssert( !dnneg ); Vector<S> brestmp(0); return minvdiagsq(ares,brestmp); }
 
     // Rank-1 updates:
     //
@@ -312,10 +311,10 @@ public:
     //
     // Return value: all return dnbad
 
-    int rankone(const Vector<T> &bp, const Vector<T> &bn, double c, const Matrix<T> &Gp, const Vector<double> &Gpoff, const Matrix<T> &Gn, const Matrix<T> &Gpn, int zp_start = 0, int zp_end = 0, int zn_start = 0, int zn_end = 0) {                     return xrankone(bp,bn   ,c,Gp,Gn   ,Gpn   ,&Gpoff,zp_start,zp_end,zn_start,zn_end); }
-    int rankone(const Vector<T> &bp, const Vector<T> &bn, double c, const Matrix<T> &Gp,                              const Matrix<T> &Gn, const Matrix<T> &Gpn, int zp_start = 0, int zp_end = 0, int zn_start = 0, int zn_end = 0) {                     return xrankone(bp,bn   ,c,Gp,Gn   ,Gpn   ,nullptr  ,zp_start,zp_end,zn_start,zn_end); }
-    int rankone(const Vector<T> &bp,                      double c, const Matrix<T> &Gp, const Vector<double> &Gpoff,                                            int zp_start = 0, int zp_end = 0                                  ) { Vector<T> bntmp(0); return xrankone(bp,bntmp,c,Gp,Gntmp,Gpntmp,&Gpoff,zp_start,zp_end,0       ,0     ); }
-    int rankone(const Vector<T> &bp,                      double c, const Matrix<T> &Gp,                                                                         int zp_start = 0, int zp_end = 0                                  ) { Vector<T> bntmp(0); return xrankone(bp,bntmp,c,Gp,Gntmp,Gpntmp,nullptr  ,zp_start,zp_end,0       ,0     ); }
+    int rankone(const Vector<T> &bp, const Vector<T> &bn, double c, const Matrix<T> &Gp, const Vector<double> &Gpoff, const Matrix<T> &Gn, const Matrix<T> &Gpn, int zp_start = 0, int zp_end = 0, int zn_start = 0, int zn_end = 0) {                     return xrankone(bp,bn   ,c,Gp,Gn   ,Gpn   ,&Gpoff ,zp_start,zp_end,zn_start,zn_end); }
+    int rankone(const Vector<T> &bp, const Vector<T> &bn, double c, const Matrix<T> &Gp,                              const Matrix<T> &Gn, const Matrix<T> &Gpn, int zp_start = 0, int zp_end = 0, int zn_start = 0, int zn_end = 0) {                     return xrankone(bp,bn   ,c,Gp,Gn   ,Gpn   ,nullptr,zp_start,zp_end,zn_start,zn_end); }
+    int rankone(const Vector<T> &bp,                      double c, const Matrix<T> &Gp, const Vector<double> &Gpoff,                                            int zp_start = 0, int zp_end = 0                                  ) { Vector<T> bntmp(0); return xrankone(bp,bntmp,c,Gp,Gntmp,Gpntmp,&Gpoff ,zp_start,zp_end,0       ,0     ); }
+    int rankone(const Vector<T> &bp,                      double c, const Matrix<T> &Gp,                                                                         int zp_start = 0, int zp_end = 0                                  ) { Vector<T> bntmp(0); return xrankone(bp,bntmp,c,Gp,Gntmp,Gpntmp,nullptr,zp_start,zp_end,0       ,0     ); }
 
     // Diagonal addition
     //
@@ -326,37 +325,10 @@ public:
     //
     // Return value: all return dnbad
 
-    int diagoffset(const Vector<double> &ndp, const Vector<double> &ndn, const Matrix<T> &Gp, const Vector<double> &Gpoff, const Matrix<T> &Gn, const Matrix<T> &Gpn, int zp_start = 0, int zp_end = 0, int zn_start = 0, int zn_end = 0) {                           return xdiagoffset(ndp,ndn   ,Gp,Gn   ,Gpn   ,&Gpoff,zp_start,zp_end,zn_start,zn_end); }
-    int diagoffset(const Vector<double> &ndp, const Vector<double> &ndn, const Matrix<T> &Gp,                              const Matrix<T> &Gn, const Matrix<T> &Gpn, int zp_start = 0, int zp_end = 0, int zn_start = 0, int zn_end = 0) {                           return xdiagoffset(ndp,ndn   ,Gp,Gn   ,Gpn   ,nullptr  ,zp_start,zp_end,zn_start,zn_end); }
-    int diagoffset(const Vector<double> &ndp,                            const Matrix<T> &Gp, const Vector<double> &Gpoff,                                            int zp_start = 0, int zp_end = 0                                  ) { Vector<double> ndntmp(0); return xdiagoffset(ndp,ndntmp,Gp,Gntmp,Gpntmp,&Gpoff,zp_start,zp_end,0       ,0     ); }
-    int diagoffset(const Vector<double> &ndp,                            const Matrix<T> &Gp,                                                                         int zp_start = 0, int zp_end = 0                                  ) { Vector<double> ndntmp(0); return xdiagoffset(ndp,ndntmp,Gp,Gntmp,Gpntmp,nullptr  ,zp_start,zp_end,0       ,0     ); }
-
-    // Diagonal multiplicative update
-    //
-    // Perform a diagonal multiplicative update on G: that is:
-    //
-    // G := J.G.J'
-    //
-    // where J is a diagonal matrix (stored as a vector) that is assumed to
-    // be unit: ie. J.J' = I
-    //
-    // LL' := J.L.L'.J'
-    //     := J.L.I.L'.J'
-    //     := J.L.J'.J.L'.J'
-    //     := (J.L.J').(J.L'.J')
-    //     := (J.L.J').(J.L.J')'
-    //
-    // G is assumed to be the non-factorised G with the diagonal update
-    // completed prior to calling this function.  Likewise for D.
-    //
-    // In this case ip_start, ip_end, in_start and in_end refer to the number
-    // of 1s in at, respectively, the start and end of, respectively, the
-    // diagonal matrices Jp and Jn.
-    //
-    // Return value: all return dnbad
-
-    int diagmult(const Vector<T> &JJp, const Vector<T> &JJn, int ip_start = 0, int ip_end = 0, int in_start = 0, int in_end = 0) {                      return xdiagmult(JJp,JJn   ,ip_start,ip_end,in_start,in_end); }
-    int diagmult(const Vector<T> &JJp,                       int ip_start = 0, int ip_end = 0                                  ) { Vector<T> JJntmp(0); return xdiagmult(JJp,JJntmp,ip_start,ip_end,0       ,0     ); }
+    int diagoffset(const Vector<double> &ndp, const Vector<double> &ndn, const Matrix<T> &Gp, const Vector<double> &Gpoff, const Matrix<T> &Gn, const Matrix<T> &Gpn, int zp_start = 0, int zp_end = 0, int zn_start = 0, int zn_end = 0) {                           return xdiagoffset(ndp,ndn   ,Gp,Gn   ,Gpn   ,&Gpoff ,zp_start,zp_end,zn_start,zn_end); }
+    int diagoffset(const Vector<double> &ndp, const Vector<double> &ndn, const Matrix<T> &Gp,                              const Matrix<T> &Gn, const Matrix<T> &Gpn, int zp_start = 0, int zp_end = 0, int zn_start = 0, int zn_end = 0) {                           return xdiagoffset(ndp,ndn   ,Gp,Gn   ,Gpn   ,nullptr,zp_start,zp_end,zn_start,zn_end); }
+    int diagoffset(const Vector<double> &ndp,                            const Matrix<T> &Gp, const Vector<double> &Gpoff,                                            int zp_start = 0, int zp_end = 0                                  ) { Vector<double> ndntmp(0); return xdiagoffset(ndp,ndntmp,Gp,Gntmp,Gpntmp,&Gpoff ,zp_start,zp_end,0       ,0     ); }
+    int diagoffset(const Vector<double> &ndp,                            const Matrix<T> &Gp,                                                                         int zp_start = 0, int zp_end = 0                                  ) { Vector<double> ndntmp(0); return xdiagoffset(ndp,ndntmp,Gp,Gntmp,Gpntmp,nullptr,zp_start,zp_end,0       ,0     ); }
 
     // Scale update
     //
@@ -422,37 +394,18 @@ public:
     //
     // (i,j) - constant reference to element i,j in L
     // (i)   - constant reference to element i in d
+    // [i]   - constant reference to element i in d*s*s
     // ()    - constant reference to the zero tolerance
     //
     // det(): determinant of L (good part)
 
     const T &operator()(int i, int j) const { return L(i,j); }
-    double   operator()(int i)        const { return d(i);   }
+    double   operator()(int i)        const { return d.v(i); }
+    double   operator[](int i)        const { return d.v(i); }
     double   operator()(void)         const { return zt;     }
 
-    const T det(void) const
-    {
-        double res = 1;
-
-        for ( int i = 0 ; i < dsize-dnbad ; ++i )
-        {
-            res *= L(i,i);
-        }
-
-        return res;
-    }
-
-    const T logdet(void) const
-    {
-        double res = 0;
-
-        for ( int i = 0 ; i < dsize-dnbad ; ++i )
-        {
-            res += log(L(i,i));
-        }
-
-        return res;
-    }
+    const T det   (void) const { return (L.diagprod(dsize-dnbad)); }
+    const T logdet(void) const { return (L.tracelog(dsize-dnbad)); }
 
     // Factorisation testing: reconstructs G in dest using L
 
@@ -460,7 +413,7 @@ public:
 
     // Fudge factor
     //
-    // If fudging is on the when a singular matrix is detected rather than 
+    // If fudging is on the when a singular matrix is detected rather than
     // use a partial factorisation add an offset to the diagonal and continue.
     // Note that this is not numerically stable and generally not a good idea:
     // use only as a last resort.
@@ -540,8 +493,6 @@ private:
     int xrankone   (const Vector<T> &bp, const Vector<T> &bn, double c,   const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn, const Vector<double> *Gpoff, int zp_start, int zp_end, int zn_start, int zn_end);
     int xdiagoffset(const Vector<double> &ndp, const Vector<double> &ndn, const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn, const Vector<double> *Gpoff, int zp_start, int zp_end, int zn_start, int zn_end);
 
-    int xdiagmult(const Vector<T> &JJp, const Vector<T> &JJn, int ip_start, int ip_end, int in_start, int in_end);
-
     int xxfact(void);
 
     int xxrankone(const Vector<T> &a, double b, const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn,                          const Vector<double> *Gpoff, int hold_off, int z_start, int z_end);
@@ -592,8 +543,8 @@ template <> template <> inline int Chol<double>::minverse(Vector<double> &ap, Ve
 template <> template <> inline int Chol<double>::near_invert(Vector<double> &ap, Vector<double> &an) const;
 template <> template <> inline int Chol<double>::minverseOffset(Vector<double> &ap, const Vector<double> &bp, double c, const Vector<double> &s, const Matrix<double> &Gp, const Vector<double> &Gpoff, int &fbused, double convScale) const;
 
-template <> inline int Chol<double>::xadd(int ix, double Dix, const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> *Gpoff);
-template <> inline int Chol<double>::xremove(int ix, const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> *Gpoff);
+template <> inline int Chol<double>::xadd    (int ix, double Dix,                                           const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> *Gpoff);
+template <> inline int Chol<double>::xremove (int ix,                                                       const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> *Gpoff);
 template <> inline int Chol<double>::xrankone(const Vector<double> &bp, const Vector<double> &bn, double c, const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> *Gpoff, int zp_start, int zp_end, int zn_start, int zn_end);
 
 template <> inline int Chol<double>::xxfact(void);
@@ -633,40 +584,37 @@ std::ostream &operator<<(std::ostream &output, const Chol<T> &src)
 	output << "Cholesky(zero " << src() << " strict)[ ";
     }
 
-    //if ( dsize )
+    for ( i = 0 ; i < dsize ; ++i )
     {
-	for ( i = 0 ; i < dsize ; ++i )
-	{
-	    for ( j = 0 ; j < dsize ; ++j )
-	    {
-		if ( i == j )
-		{
-		    if ( i >= dsize-dnbad )
-		    {
-                        output << src(i) << " b " << src(i,j) << "\t";
-		    }
+        for ( j = 0 ; j < dsize ; ++j )
+        {
+            if ( i == j )
+            {
+                if ( i >= dsize-dnbad )
+                {
+                    output << src[i] << " b " << src(i,j) << "\t";
+                }
 
-		    else
-		    {
-                        output << src(i) << " g " << src(i,j) << "\t";
-		    }
-		}
+                else
+                {
+                    output << src[i] << " g " << src(i,j) << "\t";
+                }
+            }
 
-		else
-		{
-		    output << src(i,j) << "\t";
-		}
-	    }
+            else
+            {
+                output << src(i,j) << "\t";
+            }
+        }
 
-	    if ( i < dsize-1 )
-	    {
-		output << ";\n  ";
-	    }
+        if ( i < dsize-1 )
+        {
+            output << ";\n  ";
+        }
 
-	    else
-	    {
-		output << "  ";
-	    }
+        else
+        {
+            output << "  ";
 	}
     }
 
@@ -753,8 +701,17 @@ std::istream &operator>>(std::istream &input, Chol<T> &dest)
 
 		if ( colcnt == numRows )
 		{
-		    input >> (dest.d)("&",numRows);
+                    double Z = 0;
+
+		    input >> Z;
                     input >> buffer;
+
+                    (dest.d)("&",numRows) = 1;
+
+                    if ( Z < 0 )
+                    {
+                        (dest.d)("&",numRows) = -1;
+                    }
 
 		    if ( buffer == "b" )
 		    {
@@ -809,24 +766,21 @@ std::istream &operator>>(std::istream &input, Chol<T> &dest)
     dest.dnpos = 0;
     dest.dnneg = 0;
 
-    //if ( dest.dsize )
+    for ( int i = 0 ; i < dest.dsize ; ++i )
     {
-	for ( int i = 0 ; i < dest.dsize ; ++i )
-	{
-	    (dest.dposind).sv(i,dest.dnpos);
-	    (dest.dnegind).sv(i,dest.dnneg);
+        (dest.dposind).sv(i,dest.dnpos);
+        (dest.dnegind).sv(i,dest.dnneg);
 
-	    if ( (dest.d)(i) > 0 )
-	    {
-		(dest.ddpnset).sv(i,1);
-                ++(dest.dnpos);
-	    }
+        if ( (dest.d)(i) > 0 )
+        {
+            (dest.ddpnset).sv(i,1);
+            ++(dest.dnpos);
+        }
 
-	    else
-	    {
-		(dest.ddpnset).sv(i,0);
-                ++(dest.dnneg);
-	    }
+        else
+        {
+            (dest.ddpnset).sv(i,0);
+            ++(dest.dnneg);
 	}
     }
 
@@ -879,12 +833,6 @@ Chol<T>::Chol(const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn, co
     NiceAssert( Gpn.numCols() == Gn.numCols() );
     NiceAssert( D.size() == Gp.numRows() + Gn.numRows() );
 
-    //b_xxfact.useSlackAllocation();
-    //bd_xxfact.useSlackAllocation();
-
-    //b_xxfact.prealloc(dsize);
-    //bd_xxfact.prealloc(dsize);
-
     L.useSlackAllocation();
     d.useSlackAllocation();
 
@@ -915,12 +863,6 @@ Chol<T>::Chol(const Matrix<T> &Gp, const Vector<double> &Gpoff, const Matrix<T> 
     NiceAssert( Gpn.numCols() == Gn.numCols() );
     NiceAssert( D.size() == Gp.numRows() + Gn.numRows() );
 
-    //b_xxfact.useSlackAllocation();
-    //bd_xxfact.useSlackAllocation();
-
-    //b_xxfact.prealloc(dsize);
-    //bd_xxfact.prealloc(dsize);
-
     L.useSlackAllocation();
     d.useSlackAllocation();
 
@@ -945,12 +887,6 @@ Chol<T>::Chol(const Matrix<T> &Gp, double xzt, int fudgeit) : zt(fudgeit ? xzt*1
                                                               Gpntmp(Gp.numRows(),0)
 {
     NiceAssert( Gp.isSquare() );
-
-    //b_xxfact.useSlackAllocation();
-    //bd_xxfact.useSlackAllocation();
-
-    //b_xxfact.prealloc(dsize);
-    //bd_xxfact.prealloc(dsize);
 
     L.useSlackAllocation();
     d.useSlackAllocation();
@@ -980,12 +916,6 @@ Chol<T>::Chol(const Matrix<T> &Gp, const Vector<double> &Gpoff, double xzt, int 
                                                                                            Gpntmp(Gp.numRows(),0)
 {
     NiceAssert( Gp.isSquare() );
-
-    //b_xxfact.useSlackAllocation();
-    //bd_xxfact.useSlackAllocation();
-
-    //b_xxfact.prealloc(dsize);
-    //bd_xxfact.prealloc(dsize);
 
     L.useSlackAllocation();
     d.useSlackAllocation();
@@ -1023,12 +953,12 @@ Chol<T>::~Chol()
 template <class T>
 int Chol<T>::remake(const Matrix<T> &Gp, const Vector<double> &Gpoff, const Matrix<T> &Gn, const Matrix<T> &Gpn, const Vector<double> &D, double xzt, int fudgeit)
 {
-    NiceAssert( Gpoff.size() == Gp.numCols() );
-    NiceAssert( Gp.numRows() == Gp.numCols() );
-    NiceAssert( Gn.numRows() == Gn.numCols() );
+    NiceAssert( Gpoff.size()  == Gp.numCols() );
+    NiceAssert( Gp.numRows()  == Gp.numCols() );
+    NiceAssert( Gn.numRows()  == Gn.numCols() );
     NiceAssert( Gpn.numRows() == Gp.numRows() );
     NiceAssert( Gpn.numCols() == Gn.numCols() );
-    NiceAssert( D.size() == Gp.numRows() + Gn.numRows() );
+    NiceAssert( D.size()      == Gp.numRows() + Gn.numRows() );
 
     zt = fudgeit ? xzt*100 : xzt;
     ztbackup = xzt;
@@ -1038,6 +968,7 @@ int Chol<T>::remake(const Matrix<T> &Gp, const Vector<double> &Gpoff, const Matr
     dnpos = Gp.numRows();
     dnneg = Gn.numRows();
     dnbad = Gp.numRows() + Gn.numRows();
+
     dnbadpos = Gp.numRows();
     dnbadneg = Gn.numRows();
 
@@ -1050,9 +981,6 @@ int Chol<T>::remake(const Matrix<T> &Gp, const Vector<double> &Gpoff, const Matr
     ddpnset.resize(0);
     dposind.resize(0);
     dnegind.resize(0);
-
-    //b_xxfact.prealloc(dsize);
-    //bd_xxfact.prealloc(dsize);
 
     xxsetfact(Gp,Gn,Gpn,D,&Gpoff);
     xxfact();
@@ -1063,11 +991,11 @@ int Chol<T>::remake(const Matrix<T> &Gp, const Vector<double> &Gpoff, const Matr
 template <class T>
 int Chol<T>::remake(const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn, const Vector<double> &D, double xzt, int fudgeit)
 {
-    NiceAssert( Gp.numRows() == Gp.numCols() );
-    NiceAssert( Gn.numRows() == Gn.numCols() );
+    NiceAssert( Gp.numRows()  == Gp.numCols() );
+    NiceAssert( Gn.numRows()  == Gn.numCols() );
     NiceAssert( Gpn.numRows() == Gp.numRows() );
     NiceAssert( Gpn.numCols() == Gn.numCols() );
-    NiceAssert( D.size() == Gp.numRows() + Gn.numRows() );
+    NiceAssert( D.size()      == Gp.numRows() + Gn.numRows() );
 
     zt = fudgeit ? xzt*100 : xzt;
     ztbackup = xzt;
@@ -1077,6 +1005,7 @@ int Chol<T>::remake(const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &G
     dnpos = Gp.numRows();
     dnneg = Gn.numRows();
     dnbad = Gp.numRows() + Gn.numRows();
+
     dnbadpos = Gp.numRows();
     dnbadneg = Gn.numRows();
 
@@ -1089,9 +1018,6 @@ int Chol<T>::remake(const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &G
     ddpnset.resize(0);
     dposind.resize(0);
     dnegind.resize(0);
-
-    //b_xxfact.prealloc(dsize);
-    //bd_xxfact.prealloc(dsize);
 
     xxsetfact(Gp,Gn,Gpn,D,nullptr);
     xxfact();
@@ -1112,6 +1038,7 @@ int Chol<T>::remake(const Matrix<T> &Gp, const Vector<double> &Gpoff, double xzt
     dnpos = Gp.numRows();
     dnneg = 0;
     dnbad = Gp.numRows();
+
     dnbadpos = Gp.numRows();
     dnbadneg = 0;
 
@@ -1124,9 +1051,6 @@ int Chol<T>::remake(const Matrix<T> &Gp, const Vector<double> &Gpoff, double xzt
     ddpnset.resize(0);
     dposind.resize(0);
     dnegind.resize(0);
-
-    //b_xxfact.prealloc(dsize);
-    //bd_xxfact.prealloc(dsize);
 
     Vector<double> DD(dsize);
 
@@ -1151,6 +1075,7 @@ int Chol<T>::remake(const Matrix<T> &Gp, double xzt, int fudgeit)
     dnpos = Gp.numRows();
     dnneg = 0;
     dnbad = Gp.numRows();
+
     dnbadpos = Gp.numRows();
     dnbadneg = 0;
 
@@ -1163,9 +1088,6 @@ int Chol<T>::remake(const Matrix<T> &Gp, double xzt, int fudgeit)
     ddpnset.resize(0);
     dposind.resize(0);
     dnegind.resize(0);
-
-    //b_xxfact.prealloc(dsize);
-    //bd_xxfact.prealloc(dsize);
 
     Vector<double> DD(dsize);
 
@@ -1196,6 +1118,7 @@ Chol<T> &Chol<T>::operator=(const Chol<T> &src)
     dnpos = src.dnpos;
     dnneg = src.dnneg;
     dnbad = src.dnbad;
+
     dnbadpos = src.dnbadpos;
     dnbadneg = src.dnbadneg;
 
@@ -1213,39 +1136,6 @@ Chol<T> &Chol<T>::operator=(const Chol<T> &src)
 
 
 // Inversion:
-
-template <class T>
-template <class S> int Chol<T>::minverse(Vector<S> &ap, const Vector<S> &bp, int zp_start, int zp_end) const
-{
-    NiceAssert( !dnneg );
-
-    Vector<S> antmp(0);
-    Vector<S> bntmp(0);
-
-    return minverse(ap,antmp,bp,bntmp,zp_start,zp_end,0,0);
-}
-
-template <class T>
-template <class S> int Chol<T>::forwardElim(Vector<S> &ap, const Vector<S> &bp, int zp_start, int zp_end) const
-{
-    NiceAssert( !dnneg );
-
-    Vector<S> antmp(0);
-    Vector<S> bntmp(0);
-
-    return forwardElim(ap,antmp,bp,bntmp,zp_start,zp_end,0,0);
-}
-
-template <class T>
-template <class S> int Chol<T>::backwardSubst(Vector<S> &ap, const Vector<S> &bp, int zp_start, int zp_end) const
-{
-    NiceAssert( !dnneg );
-
-    Vector<S> antmp(0);
-    Vector<S> bntmp(0);
-
-    return backwardSubst(ap,antmp,bp,bntmp,zp_start,zp_end,0,0);
-}
 
 template <class T>
 template <class S> int Chol<T>::minverse(Vector<S> &ap, Vector<S> &an, const Vector<S> &bp, const Vector<S> &bn, int zp_start, int zp_end, int zn_start, int zn_end) const
@@ -1285,7 +1175,7 @@ template <class S> int Chol<T>::minverse(Vector<S> &ap, Vector<S> &an, const Vec
 	// [ Lb Ld 0  ] [ cb ] = [ Lb.ca + Ld.cb         ] = [ bb ]
 	// [ Lc Le Lf ] [ cc ] = [ Lc.ca + Le.cb + Lf.cc ]   [ 0  ]
 	//
-	// ca = 0
+	// ca    = 0
 	// Ld.cb = bb
 	// Lf.cc = -Le.cb
 	//
@@ -1296,7 +1186,7 @@ template <class S> int Chol<T>::minverse(Vector<S> &ap, Vector<S> &an, const Vec
 	// [ 0    Lxdef' ] [ abc ]   [ ebc ]   [ ebc ]
 	//
 	// Lxdef'.abc = ebc
-	// Lxa'.aa = -Lxbc'.abc
+	// Lxa'.aa    = -Lxbc'.abc
 
 	Vector<S> ce(dsize-dnbad);
 
@@ -1312,7 +1202,7 @@ template <class S> int Chol<T>::minverse(Vector<S> &ap, Vector<S> &an, const Vec
 	L(z_start,1,dsize-dnbad-z_end-1,z_start,1,dsize-dnbad-z_end-1,tmpma).forwardElim(ce("&",z_start,1,dsize-dnbad-z_end-1,tmpva),b(z_start,1,dsize-dnbad-z_end-1,tmpvb));
 	(L(dsize-dnbad-z_end,1,dsize-dnbad-1,dsize-dnbad-z_end,1,dsize-dnbad-1,tmpma).forwardElim(ce("&",dsize-dnbad-z_end,1,dsize-dnbad-1,tmpva),L(dsize-dnbad-z_end,1,dsize-dnbad-1,z_start,1,dsize-dnbad-z_end-1,tmpmb)*ce(z_start,1,dsize-dnbad-z_end-1,tmpvb))).negate();
 
-        ce("&",z_start,1,dsize-dnbad-1,tmpva) *= d(z_start,1,dsize-dnbad-1,tmpvc);
+        ce("&",z_start,1,dsize-dnbad-1,tmpva) *= d(z_start,1,dsize-dnbad-1,tmpvc); // multiplication is faster
 
 	L(z_start,1,dsize-dnbad-1,z_start,1,dsize-dnbad-1,tmpma).backwardSubst(a("&",z_start,1,dsize-dnbad-1,tmpva),ce(z_start,1,dsize-dnbad-1,tmpvb));
 	(L(0,1,z_start-1,0,1,z_start-1,tmpma).backwardSubst(a("&",0,1,z_start-1,tmpva),L(0,1,z_start-1,z_start,1,dsize-dnbad-1,tmpmb)*a(z_start,1,dsize-dnbad-1,tmpvb))).negate();
@@ -1320,6 +1210,67 @@ template <class S> int Chol<T>::minverse(Vector<S> &ap, Vector<S> &an, const Vec
 	for ( i = 0 ; i < dsize-dnbad ; ++i )
 	{
 	    xxsetvect(a(i),i,ap,an);
+	}
+    }
+
+    return dnbad;
+}
+
+template <>
+template <> inline int Chol<double>::minverse(Vector<double> &ap, Vector<double> &an, const Vector<double> &bp, const Vector<double> &bn, int zp_start, int zp_end, int zn_start, int zn_end) const
+{
+    NiceAssert( zp_start+zp_end <= dnpos-dnbadpos );
+    NiceAssert( zn_start+zn_end <= dnneg-dnbadneg );
+    NiceAssert( bp.size() == dnpos-dnbadpos );
+    NiceAssert( bn.size() == dnneg-dnbadneg );
+
+    int i;
+
+    ap = bp;
+    an = bn;
+    ap.zero();
+    an.zero();
+
+    if ( zp_start+zp_end+zn_start+zn_end < dsize-dnbad )
+    {
+	static thread_local Vector<double> a("&",2);
+	static thread_local Vector<double> b("&",2);
+	static thread_local Vector<double> ce("&",2);
+
+        retVector<double> tmpva;
+        retVector<double> tmpvb;
+        retVector<double> tmpvc;
+        retMatrix<double> tmpmad;
+        retMatrix<double> tmpmbd;
+
+        a.resize(dsize-dnbad,-3);
+        b.resize(dsize-dnbad,-3);
+        ce.resize(dsize-dnbad,-3);
+
+	for ( i = 0 ; i < dsize-dnbad ; ++i )
+	{
+	    b.sv(i,xxgetvect_v(i,bp,bn));
+	}
+
+	int z_start = 0;
+        int z_end = 0;
+
+        calc_zstart_zend(z_start,z_end,zp_start,zp_end,zn_start,zn_end,dnbad);
+
+        a.zero();
+	ce.zero();
+
+	L(z_start,1,dsize-dnbad-z_end-1,z_start,1,dsize-dnbad-z_end-1,tmpmad).forwardElim(ce("&",z_start,1,dsize-dnbad-z_end-1,tmpva),b(z_start,1,dsize-dnbad-z_end-1,tmpvb));
+	(L(dsize-dnbad-z_end,1,dsize-dnbad-1,dsize-dnbad-z_end,1,dsize-dnbad-1,tmpmad).forwardElim(ce("&",dsize-dnbad-z_end,1,dsize-dnbad-1,tmpva),L(dsize-dnbad-z_end,1,dsize-dnbad-1,z_start,1,dsize-dnbad-z_end-1,tmpmbd)*ce(z_start,1,dsize-dnbad-z_end-1,tmpvb))).negate();
+
+        ce("&",z_start,1,dsize-dnbad-1,tmpva) *= d(z_start,1,dsize-dnbad-1,tmpvb); // multiplication is faster
+
+	L(z_start,1,dsize-dnbad-1,z_start,1,dsize-dnbad-1,tmpmad).backwardSubst(a("&",z_start,1,dsize-dnbad-1,tmpva),ce(z_start,1,dsize-dnbad-1,tmpvb));
+	(L(0,1,z_start-1,0,1,z_start-1,tmpmad).backwardSubst(a("&",0,1,z_start-1,tmpva),L(0,1,z_start-1,z_start,1,dsize-dnbad-1,tmpmbd)*a(z_start,1,dsize-dnbad-1,tmpvb))).negate();
+
+	for ( i = 0 ; i < dsize-dnbad ; ++i )
+	{
+	    xxsetvect_v(a.v(i),i,ap,an);
 	}
     }
 
@@ -1374,7 +1325,7 @@ template <class S> int Chol<T>::forwardElim(Vector<S> &ap, Vector<S> &an, const 
 
         retVector<S>      tmpva;
         retVector<S>      tmpvb;
-        //retVector<double> tmpvc;
+        retVector<double> tmpvc;
         retMatrix<T>      tmpma;
         retMatrix<T>      tmpmb;
 
@@ -1386,6 +1337,61 @@ template <class S> int Chol<T>::forwardElim(Vector<S> &ap, Vector<S> &an, const 
 	for ( i = 0 ; i < dsize-dnbad ; ++i )
 	{
 	    xxsetvect(a(i),i,ap,an);
+	}
+    }
+
+    return dnbad;
+}
+
+template <>
+template <> inline int Chol<double>::forwardElim(Vector<double> &ap, Vector<double> &an, const Vector<double> &bp, const Vector<double> &bn, int zp_start, int zp_end, int zn_start, int zn_end) const
+{
+    NiceAssert( zp_start+zp_end <= dnpos-dnbadpos );
+    NiceAssert( zn_start+zn_end <= dnneg-dnbadneg );
+    NiceAssert( bp.size() == dnpos-dnbadpos );
+    NiceAssert( bn.size() == dnneg-dnbadneg );
+
+    int i;
+
+    ap = bp;
+    an = bn;
+    ap.zero();
+    an.zero();
+
+    if ( zp_start+zp_end+zn_start+zn_end < dsize-dnbad )
+    {
+	static thread_local Vector<double> a("&",2);
+	static thread_local Vector<double> b("&",2);
+
+        retVector<double> tmpva;
+        retVector<double> tmpvb;
+        retVector<double> tmpvc;
+        retMatrix<double> tmpmad;
+        retMatrix<double> tmpmbd;
+
+        a.resize(dsize-dnbad,-3);
+        b.resize(dsize-dnbad,-3);
+
+	for ( i = 0 ; i < dsize-dnbad ; ++i )
+	{
+	    b.sv(i,xxgetvect_v(i,bp,bn));
+	}
+
+	int z_start = 0;
+        int z_end = 0;
+
+        calc_zstart_zend(z_start,z_end,zp_start,zp_end,zn_start,zn_end,dnbad);
+
+        a.zero();
+
+	L(z_start,1,dsize-dnbad-z_end-1,z_start,1,dsize-dnbad-z_end-1,tmpmad).forwardElim(a("&",z_start,1,dsize-dnbad-z_end-1,tmpva),b(z_start,1,dsize-dnbad-z_end-1,tmpvb));
+	(L(dsize-dnbad-z_end,1,dsize-dnbad-1,dsize-dnbad-z_end,1,dsize-dnbad-1,tmpmad).forwardElim(a("&",dsize-dnbad-z_end,1,dsize-dnbad-1,tmpva),L(dsize-dnbad-z_end,1,dsize-dnbad-1,z_start,1,dsize-dnbad-z_end-1,tmpmbd)*a(z_start,1,dsize-dnbad-z_end-1,tmpvb))).negate();
+
+        //a("&",z_start,1,dsize-dnbad-1,tmpva) *= d(z_start,1,dsize-dnbad-1,tmpvb);
+
+	for ( i = 0 ; i < dsize-dnbad ; ++i )
+	{
+	    xxsetvect_v(a.v(i),i,ap,an);
 	}
     }
 
@@ -1449,7 +1455,7 @@ template <class S> int Chol<T>::backwardSubst(Vector<S> &ap, Vector<S> &an, cons
 
         retVector<S>      tmpva;
         retVector<S>      tmpvb;
-        //retVector<double> tmpvc;
+        retVector<double> tmpvc;
         retMatrix<T>      tmpma;
         retMatrix<T>      tmpmb;
 
@@ -1467,14 +1473,69 @@ template <class S> int Chol<T>::backwardSubst(Vector<S> &ap, Vector<S> &an, cons
     return dnbad;
 }
 
+template <>
+template <> inline int Chol<double>::backwardSubst(Vector<double> &ap, Vector<double> &an, const Vector<double> &bp, const Vector<double> &bn, int zp_start, int zp_end, int zn_start, int zn_end) const
+{
+    NiceAssert( zp_start+zp_end <= dnpos-dnbadpos );
+    NiceAssert( zn_start+zn_end <= dnneg-dnbadneg );
+    NiceAssert( bp.size() == dnpos-dnbadpos );
+    NiceAssert( bn.size() == dnneg-dnbadneg );
+
+    int i;
+
+    ap = bp;
+    an = bn;
+    ap.zero();
+    an.zero();
+
+    if ( zp_start+zp_end+zn_start+zn_end < dsize-dnbad )
+    {
+	static thread_local Vector<double> a("&",2);
+	static thread_local Vector<double> b("&",2);
+
+        retVector<double> tmpva;
+        retVector<double> tmpvb;
+        retVector<double> tmpvc;
+        retMatrix<double> tmpmad;
+        retMatrix<double> tmpmbd;
+
+        a.resize(dsize-dnbad,-3);
+        b.resize(dsize-dnbad,-3);
+
+	for ( i = 0 ; i < dsize-dnbad ; ++i )
+	{
+	    b.sv(i,xxgetvect_v(i,bp,bn));
+	}
+
+	int z_start = 0;
+        int z_end = 0;
+
+        calc_zstart_zend(z_start,z_end,zp_start,zp_end,zn_start,zn_end,dnbad);
+
+        a.zero();
+
+        //b("&",z_start,1,dsize-dnbad-z_end-1,tmpva) *= d(z_start,1,dsize-dnbad-z_end-1,tmpvb);
+
+	L(z_start,1,dsize-dnbad-z_end-1,z_start,1,dsize-dnbad-z_end-1,tmpmad).backwardSubst(a("&",z_start,1,dsize-dnbad-z_end-1,tmpva),b(z_start,1,dsize-dnbad-z_end-1,tmpvb));
+	(L(0,1,z_start-1,0,1,z_start-1,tmpmad).backwardSubst(a("&",0,1,z_start-1,tmpva),L(0,1,z_start-1,z_start,1,dsize-dnbad-z_end-1,tmpmbd)*a(z_start,1,dsize-dnbad-z_end-1,tmpvb))).negate();
+
+	for ( i = 0 ; i < dsize-dnbad ; ++i )
+	{
+	    xxsetvect_v(a.v(i),i,ap,an);
+	}
+    }
+
+    return dnbad;
+}
+
 template <class T>
 template <class S> int Chol<T>::minverseOffset(Vector<S> &ap, const Vector<S> &bp, double c, const Vector<T> &s, const Matrix<T> &Gp, const Vector<double> &Gpoff, int &fbused, double convScale) const
 {
     NiceAssert( Gp.isSquare() );
-    NiceAssert( Gp.numRows() = npos() );
-    NiceAssert( ap.size() == Gp.numRows() );
-    NiceAssert( bp.size() == Gp.numRows() );
-    NiceAssert( s.size() == Gp.numRows() );
+    NiceAssert( Gp.numRows() == npos()       );
+    NiceAssert( ap.size()    == Gp.numRows() );
+    NiceAssert( bp.size()    == Gp.numRows() );
+    NiceAssert( s.size()     == Gp.numRows() );
     NiceAssert( Gpoff.size() == Gp.numRows() );
 
 
@@ -1544,15 +1605,15 @@ template <class S> int Chol<T>::minverseOffset(Vector<S> &ap, const Vector<S> &b
     return dnbad;
 }
 
-
-template <> template <> inline int Chol<double>::minverseOffset(Vector<double> &ap, const Vector<double> &bp, double c, const Vector<double> &s, const Matrix<double> &Gp, const Vector<double> &Gpoff, int &fbused, double convScale) const
+template <>
+template <> inline int Chol<double>::minverseOffset(Vector<double> &ap, const Vector<double> &bp, double c, const Vector<double> &s, const Matrix<double> &Gp, const Vector<double> &Gpoff, int &fbused, double convScale) const
 {
     int size = bp.size();
 
     static thread_local Vector<double> xi("&",2);
     static thread_local Vector<double> q("&",2);
 
-    xi.resize(size);
+    xi.resize(size,-3);
 
     // Calculate x0 and ensure that the factorisation is ready for use
 
@@ -1614,16 +1675,6 @@ template <> template <> inline int Chol<double>::minverseOffset(Vector<double> &
 }
 
 template <class T>
-template <class S> int Chol<T>::minvdiagsq(Vector<S> &ares) const
-{
-    NiceAssert( !dnneg );
-
-    Vector<S> brestmp(0);
-
-    return minvdiagsq(ares,brestmp);
-}
-
-template <class T>
 template <class S> int Chol<T>::minvdiagsq(Vector<S> &ares, Vector<S> &bres) const
 {
     NiceAssert( ares.size() == dnpos-dnbadpos );
@@ -1674,181 +1725,6 @@ template <class S> int Chol<T>::minvdiagsq(Vector<S> &ares, Vector<S> &bres) con
     return dnbad;
 }
 
-template <> template <> inline int Chol<double>::minverse(Vector<double> &ap, Vector<double> &an, const Vector<double> &bp, const Vector<double> &bn, int zp_start, int zp_end, int zn_start, int zn_end) const
-{
-    NiceAssert( zp_start+zp_end <= dnpos-dnbadpos );
-    NiceAssert( zn_start+zn_end <= dnneg-dnbadneg );
-    NiceAssert( bp.size() == dnpos-dnbadpos );
-    NiceAssert( bn.size() == dnneg-dnbadneg );
-
-    int i;
-
-    ap = bp;
-    an = bn;
-    ap.zero();
-    an.zero();
-
-    if ( zp_start+zp_end+zn_start+zn_end < dsize-dnbad )
-    {
-	static thread_local Vector<double> a("&",2);
-	static thread_local Vector<double> b("&",2);
-	static thread_local Vector<double> ce("&",2);
-
-        retVector<double> tmpva;
-        retVector<double> tmpvb;
-        retMatrix<double> tmpmad;
-        retMatrix<double> tmpmbd;
-
-        a.resize(dsize-dnbad);
-        b.resize(dsize-dnbad);
-        ce.resize(dsize-dnbad);
-
-	for ( i = 0 ; i < dsize-dnbad ; ++i )
-	{
-	    b.sv(i,xxgetvect_v(i,bp,bn));
-	}
-
-	int z_start = 0;
-        int z_end = 0;
-
-        calc_zstart_zend(z_start,z_end,zp_start,zp_end,zn_start,zn_end,dnbad);
-
-        a.zero();
-	ce.zero();
-
-	L(z_start,1,dsize-dnbad-z_end-1,z_start,1,dsize-dnbad-z_end-1,tmpmad).forwardElim(ce("&",z_start,1,dsize-dnbad-z_end-1,tmpva),b(z_start,1,dsize-dnbad-z_end-1,tmpvb));
-	(L(dsize-dnbad-z_end,1,dsize-dnbad-1,dsize-dnbad-z_end,1,dsize-dnbad-1,tmpmad).forwardElim(ce("&",dsize-dnbad-z_end,1,dsize-dnbad-1,tmpva),L(dsize-dnbad-z_end,1,dsize-dnbad-1,z_start,1,dsize-dnbad-z_end-1,tmpmbd)*ce(z_start,1,dsize-dnbad-z_end-1,tmpvb))).negate();
-
-        ce("&",z_start,1,dsize-dnbad-1,tmpva) *= d(z_start,1,dsize-dnbad-1,tmpvb);
-
-	L(z_start,1,dsize-dnbad-1,z_start,1,dsize-dnbad-1,tmpmad).backwardSubst(a("&",z_start,1,dsize-dnbad-1,tmpva),ce(z_start,1,dsize-dnbad-1,tmpvb));
-	(L(0,1,z_start-1,0,1,z_start-1,tmpmad).backwardSubst(a("&",0,1,z_start-1,tmpva),L(0,1,z_start-1,z_start,1,dsize-dnbad-1,tmpmbd)*a(z_start,1,dsize-dnbad-1,tmpvb))).negate();
-
-	for ( i = 0 ; i < dsize-dnbad ; ++i )
-	{
-	    xxsetvect_v(a.v(i),i,ap,an);
-	}
-    }
-
-    return dnbad;
-}
-
-template <> template <> inline int Chol<double>::forwardElim(Vector<double> &ap, Vector<double> &an, const Vector<double> &bp, const Vector<double> &bn, int zp_start, int zp_end, int zn_start, int zn_end) const
-{
-    NiceAssert( zp_start+zp_end <= dnpos-dnbadpos );
-    NiceAssert( zn_start+zn_end <= dnneg-dnbadneg );
-    NiceAssert( bp.size() == dnpos-dnbadpos );
-    NiceAssert( bn.size() == dnneg-dnbadneg );
-
-    int i;
-
-    ap = bp;
-    an = bn;
-    ap.zero();
-    an.zero();
-
-    if ( zp_start+zp_end+zn_start+zn_end < dsize-dnbad )
-    {
-	static thread_local Vector<double> a("&",2);
-	static thread_local Vector<double> b("&",2);
-
-        retVector<double> tmpva;
-        retVector<double> tmpvb;
-        retMatrix<double> tmpmad;
-        retMatrix<double> tmpmbd;
-
-        a.resize(dsize-dnbad);
-        b.resize(dsize-dnbad);
-
-	for ( i = 0 ; i < dsize-dnbad ; ++i )
-	{
-	    b.sv(i,xxgetvect_v(i,bp,bn));
-	}
-
-	int z_start = 0;
-        int z_end = 0;
-
-        calc_zstart_zend(z_start,z_end,zp_start,zp_end,zn_start,zn_end,dnbad);
-
-        a.zero();
-
-	L(z_start,1,dsize-dnbad-z_end-1,z_start,1,dsize-dnbad-z_end-1,tmpmad).forwardElim(a("&",z_start,1,dsize-dnbad-z_end-1,tmpva),b(z_start,1,dsize-dnbad-z_end-1,tmpvb));
-	(L(dsize-dnbad-z_end,1,dsize-dnbad-1,dsize-dnbad-z_end,1,dsize-dnbad-1,tmpmad).forwardElim(a("&",dsize-dnbad-z_end,1,dsize-dnbad-1,tmpva),L(dsize-dnbad-z_end,1,dsize-dnbad-1,z_start,1,dsize-dnbad-z_end-1,tmpmbd)*a(z_start,1,dsize-dnbad-z_end-1,tmpvb))).negate();
-
-        //a("&",z_start,1,dsize-dnbad-1,tmpva) *= d(z_start,1,dsize-dnbad-1,tmpvb);
-
-	for ( i = 0 ; i < dsize-dnbad ; ++i )
-	{
-	    xxsetvect_v(a.v(i),i,ap,an);
-	}
-    }
-
-    return dnbad;
-}
-
-template <> template <> inline int Chol<double>::backwardSubst(Vector<double> &ap, Vector<double> &an, const Vector<double> &bp, const Vector<double> &bn, int zp_start, int zp_end, int zn_start, int zn_end) const
-{
-    NiceAssert( zp_start+zp_end <= dnpos-dnbadpos );
-    NiceAssert( zn_start+zn_end <= dnneg-dnbadneg );
-    NiceAssert( bp.size() == dnpos-dnbadpos );
-    NiceAssert( bn.size() == dnneg-dnbadneg );
-
-    int i;
-
-    ap = bp;
-    an = bn;
-    ap.zero();
-    an.zero();
-
-    if ( zp_start+zp_end+zn_start+zn_end < dsize-dnbad )
-    {
-	static thread_local Vector<double> a("&",2);
-	static thread_local Vector<double> b("&",2);
-
-        retVector<double> tmpva;
-        retVector<double> tmpvb;
-        retMatrix<double> tmpmad;
-        retMatrix<double> tmpmbd;
-
-        a.resize(dsize-dnbad);
-        b.resize(dsize-dnbad);
-
-	for ( i = 0 ; i < dsize-dnbad ; ++i )
-	{
-	    b.sv(i,xxgetvect_v(i,bp,bn));
-	}
-
-	int z_start = 0;
-        int z_end = 0;
-
-        calc_zstart_zend(z_start,z_end,zp_start,zp_end,zn_start,zn_end,dnbad);
-
-        a.zero();
-
-        //b("&",z_start,1,dsize-dnbad-z_end-1,tmpva) *= d(z_start,1,dsize-dnbad-z_end-1,tmpvb);
-
-	L(z_start,1,dsize-dnbad-z_end-1,z_start,1,dsize-dnbad-z_end-1,tmpmad).backwardSubst(a("&",z_start,1,dsize-dnbad-z_end-1,tmpva),b(z_start,1,dsize-dnbad-z_end-1,tmpvb));
-	(L(0,1,z_start-1,0,1,z_start-1,tmpmad).backwardSubst(a("&",0,1,z_start-1,tmpva),L(0,1,z_start-1,z_start,1,dsize-dnbad-z_end-1,tmpmbd)*a(z_start,1,dsize-dnbad-z_end-1,tmpvb))).negate();
-
-	for ( i = 0 ; i < dsize-dnbad ; ++i )
-	{
-	    xxsetvect_v(a.v(i),i,ap,an);
-	}
-    }
-
-    return dnbad;
-}
-
-template <class T>
-template <class S> int Chol<T>::near_invert(Vector<S> &ap) const
-{
-    NiceAssert( !dnneg );
-
-    Vector<S> antmp(0);
-
-    return near_invert(ap,antmp);
-}
-
 template <class T>
 template <class S> int Chol<T>::near_invert(Vector<S> &ap, Vector<S> &an) const
 {
@@ -1877,7 +1753,9 @@ template <class S> int Chol<T>::near_invert(Vector<S> &ap, Vector<S> &an) const
             a.set(i,conj(L(i,dsize-dnbad)));
 	}
 
-	L(0,1,dsize-dnbad-1,0,1,dsize-dnbad-1).backwardSubst(a,a);
+        retMatrix<S> tmpmad;
+
+	L(0,1,dsize-dnbad-1,0,1,dsize-dnbad-1,tmpmad).backwardSubst(a,a);
 
 	for ( int i = 0 ; i < dsize-dnbad ; ++i )
 	{
@@ -1888,7 +1766,8 @@ template <class S> int Chol<T>::near_invert(Vector<S> &ap, Vector<S> &an) const
     return dnbad;
 }
 
-template <> template <> inline int Chol<double>::near_invert(Vector<double> &ap, Vector<double> &an) const
+template <>
+template <> inline int Chol<double>::near_invert(Vector<double> &ap, Vector<double> &an) const
 {
     NiceAssert( dnbad );
 
@@ -1910,15 +1789,12 @@ template <> template <> inline int Chol<double>::near_invert(Vector<double> &ap,
     {
 	static thread_local Vector<double> a("&",2);
 
-        a.resize(dsize-dnbad);
+        a.resize(dsize-dnbad,-3);
 
-	//if ( dsize-dnbad )
-	{
-	    for ( int i = 0 ; i < dsize-dnbad ; ++i )
-	    {
-                a.sv(i,L.v(i,dsize-dnbad));
-	    }
-	}
+        for ( int i = 0 ; i < dsize-dnbad ; ++i )
+        {
+            a.sv(i,L.v(i,dsize-dnbad));
+        }
 
         retMatrix<double> tmpmad;
 
@@ -1942,12 +1818,12 @@ template <class T>
 int Chol<T>::xrankone(const Vector<T> &bp, const Vector<T> &bn, double c, const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn, const Vector<double> *Gpoff, int zp_start, int zp_end, int zn_start, int zn_end)
 {
     NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
-    NiceAssert( Gp.numRows() == Gp.numCols() );
-    NiceAssert( Gn.numRows() == Gn.numCols() );
+    NiceAssert( Gp.numRows()  == Gp.numCols() );
+    NiceAssert( Gn.numRows()  == Gn.numCols() );
     NiceAssert( Gpn.numRows() == Gp.numRows() );
     NiceAssert( Gpn.numCols() == Gn.numCols() );
-    NiceAssert( Gp.numRows() == dnpos );
-    NiceAssert( Gn.numRows() == dnneg );
+    NiceAssert( Gp.numRows()  == dnpos );
+    NiceAssert( Gn.numRows()  == dnneg );
     NiceAssert( zp_start+zp_end <= dnpos );
     NiceAssert( zn_start+zn_end <= dnneg );
     NiceAssert( bp.size() == dnpos );
@@ -1956,7 +1832,7 @@ int Chol<T>::xrankone(const Vector<T> &bp, const Vector<T> &bn, double c, const 
     if ( ( c != 0.0 ) && ( zp_start+zp_end+zn_start+zn_end < dsize ) )
     {
         static thread_local Vector<T> b("&",2);
-        b.resize(dsize);
+        b.resize(dsize,-3);
 
 	for ( int i = 0 ; i < dsize ; ++i )
 	{
@@ -1976,15 +1852,16 @@ int Chol<T>::xrankone(const Vector<T> &bp, const Vector<T> &bn, double c, const 
     return dnbad;
 }
 
-template <> inline int Chol<double>::xrankone(const Vector<double> &bp, const Vector<double> &bn, double c, const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> *Gpoff, int zp_start, int zp_end, int zn_start, int zn_end)
+template <>
+inline int Chol<double>::xrankone(const Vector<double> &bp, const Vector<double> &bn, double c, const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> *Gpoff, int zp_start, int zp_end, int zn_start, int zn_end)
 {
     NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
-    NiceAssert( Gp.numRows() == Gp.numCols() );
-    NiceAssert( Gn.numRows() == Gn.numCols() );
+    NiceAssert( Gp.numRows()  == Gp.numCols() );
+    NiceAssert( Gn.numRows()  == Gn.numCols() );
     NiceAssert( Gpn.numRows() == Gp.numRows() );
     NiceAssert( Gpn.numCols() == Gn.numCols() );
-    NiceAssert( Gp.numRows() == dnpos );
-    NiceAssert( Gn.numRows() == dnneg );
+    NiceAssert( Gp.numRows()  == dnpos );
+    NiceAssert( Gn.numRows()  == dnneg );
     NiceAssert( zp_start+zp_end <= dnpos );
     NiceAssert( zn_start+zn_end <= dnneg );
     NiceAssert( bp.size() == dnpos );
@@ -1993,7 +1870,7 @@ template <> inline int Chol<double>::xrankone(const Vector<double> &bp, const Ve
     if ( ( c != 0.0 ) && ( zp_start+zp_end+zn_start+zn_end < dsize ) )
     {
         static thread_local Vector<double> b("&",2);
-        b.resize(dsize);
+        b.resize(dsize,-3);
 
 	for ( int i = 0 ; i < dsize ; ++i )
 	{
@@ -2017,12 +1894,12 @@ template <class T>
 int Chol<T>::xdiagoffset(const Vector<double> &ndp, const Vector<double> &ndn, const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn, const Vector<double> *Gpoff, int zp_start, int zp_end, int zn_start, int zn_end)
 {
     NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
-    NiceAssert( Gp.numRows() == Gp.numCols() );
-    NiceAssert( Gn.numRows() == Gn.numCols() );
+    NiceAssert( Gp.numRows()  == Gp.numCols() );
+    NiceAssert( Gn.numRows()  == Gn.numCols() );
     NiceAssert( Gpn.numRows() == Gp.numRows() );
     NiceAssert( Gpn.numCols() == Gn.numCols() );
-    NiceAssert( Gp.numRows() == dnpos );
-    NiceAssert( Gn.numRows() == dnneg );
+    NiceAssert( Gp.numRows()  == dnpos );
+    NiceAssert( Gn.numRows()  == dnneg );
     NiceAssert( zp_start+zp_end <= dnpos );
     NiceAssert( zn_start+zn_end <= dnneg );
     NiceAssert( ndp.size() == dnpos );
@@ -2090,78 +1967,19 @@ int Chol<T>::xdiagoffset(const Vector<double> &ndp, const Vector<double> &ndn, c
 
 
 
-// Diagonal multiplicative update
-
-template <class T>
-int Chol<T>::xdiagmult(const Vector<T> &Jp, const Vector<T> &Jn, int zp_start, int zp_end, int zn_start, int zn_end)
-{
-    NiceAssert( Jp.size() == dnpos );
-    NiceAssert( Jn.size() == dnneg );
-
-    if ( dsize && ( zp_start+zp_end+zn_start+zn_end < dsize ) )
-    {
-	Vector<T> J(dsize);
-	int i,j;
-
-	for ( i = 0 ; i < dsize ; ++i )
-	{
-	    xxgetvect(J("&",i),i,Jp,Jn);
-	}
-
-	int z_start = 0;
-        int z_end = 0;
-
-        calc_zstart_zend(z_start,z_end,zp_start,zp_end,zn_start,zn_end,0);
-
-	for ( i = z_start ; i < dsize-z_end ; ++i )
-	{
-	    for ( j = z_start ; j < dsize-z_end ; ++j )
-	    {
-		L("&",i,j) = (J(i)*L(i,j))*conj(J(j));
-	    }
-	}
-
-	if ( z_start )
-	{
-	    for ( i = z_start ; i < dsize-z_end ; ++i )
-	    {
-		for ( j = 0 ; j < z_start ; ++j )
-		{
-		    L("&",i,j) = J(i)*L(i,j);
-		    L("&",j,i) = L(j,i)*conj(J(i));
-		}
-	    }
-	}
-
-	if ( z_end )
-	{
-	    for ( i = z_start ; i < dsize-z_end ; ++i )
-	    {
-		for ( j = dsize-z_end ; j < dsize ; ++j )
-		{
-		    L("&",i,j) = J(i)*L(i,j);
-		    L("&",j,i) = L(j,i)*conj(J(i));
-		}
-	    }
-	}
-    }
-
-    return dnbad;
-}
-
-
-
 // Scale update
 
 template <class T>
 int Chol<T>::xscale(double a, const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn, const Vector<double> *Gpoff)
 {
     NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
-    NiceAssert( Gp.numRows() == Gp.numCols() );
-    NiceAssert( Gn.numRows() == Gn.numCols() );
+    NiceAssert( Gp.numRows()  == Gp.numCols() );
+    NiceAssert( Gn.numRows()  == Gn.numCols() );
     NiceAssert( Gpn.numRows() == Gp.numRows() );
     NiceAssert( Gpn.numCols() == Gn.numCols() );
     NiceAssert( a > 0 );
+
+    // Naive assumption: we don't worry if this makes the L diagonals too big, this isn't used much anyhow (svm_scalar_rff only)
 
     if ( dsize )
     {
@@ -2196,7 +2014,7 @@ int Chol<T>::xscale(double a, const Matrix<T> &Gp, const Matrix<T> &Gn, const Ma
                             xxgetG(L("&",j,k),j,k,Gp,Gn,Gpn,Gpoff);
                         }
 
-                        if ( d(j) > 0 )
+                        if ( d.v(j) > 0 )
                         {
                             ++dnbadnew;
                             ++dnbadpos;
@@ -2235,855 +2053,6 @@ int Chol<T>::xscale(double a, const Matrix<T> &Gp, const Matrix<T> &Gn, const Ma
     }
 
     return dnbad;
-}
-
-
-
-
-// Matrix manipulations:
-
-
-template <class T>
-int Chol<T>::xadd(int ix, double Dix, const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn, const Vector<double> *Gpoff)
-{
-    NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
-    NiceAssert( Gp.numRows() == Gp.numCols() );
-    NiceAssert( Gn.numRows() == Gn.numCols() );
-    NiceAssert( Gpn.numRows() == Gp.numRows() );
-    NiceAssert( Gpn.numCols() == Gn.numCols() );
-    NiceAssert( ix >= 0 );
-    NiceAssert( ix < dsize+1 );
-
-    int i,j,k;
-
-    int pospos = 0;
-    int negpos = 0;
-
-    if ( ix == dsize )
-    {
-	if ( ix )
-	{
-	    pospos = dposind.v(ix-1);
-	    negpos = dnegind.v(ix-1);
-
-	    if ( ddpnset.v(ix-1) )
-	    {
-                ++pospos;
-	    }
-
-	    else
-	    {
-		++negpos;
-	    }
-	}
-    }
-
-    else
-    {
-	pospos = dposind.v(ix);
-	negpos = dnegind.v(ix);
-    }
-
-    ddpnset.add(ix);
-    dposind.add(ix);
-    dnegind.add(ix);
-
-    dposind.sv(ix,pospos);
-    dnegind.sv(ix,negpos);
-
-    if ( Dix > 0 )
-    {
-	ddpnset.sv(ix,1);
-
-	if ( ix >= dsize-dnbad )
-	{
-	    ++dnbad;
-	    ++dnbadpos;
-	}
-
-        ++dnpos;
-	++dsize;
-
-	//if ( ix+1 < dsize )
-	{
-	    for ( i = ix+1 ; i < dsize ; ++i )
-	    {
-		++(dposind("&",i));
-	    }
-	}
-    }
-
-    else
-    {
-	ddpnset.sv(ix,0);
-
-	if ( ix >= dsize-dnbad )
-	{
-	    ++dnbad;
-	    ++dnbadneg;
-	}
-
-        ++dnneg;
-	++dsize;
-
-	//if ( ix+1 < dsize )
-	{
-	    for ( i = ix+1 ; i < dsize ; ++i )
-	    {
-		++(dnegind("&",i));
-	    }
-	}
-    }
-
-    NiceAssert( Gp.numRows() == dnpos );
-    NiceAssert( Gn.numRows() == dnneg );
-
-    static thread_local Vector<T> g("&",2);
-    g.resize(dsize);
-
-    for ( i = 0 ; i < dsize ; ++i )
-    {
-	xxgetG(g("&",i),i,ix,Gp,Gn,Gpn,Gpoff);
-    }
-
-    d.add(ix);
-    d.sv(ix,Dix);
-
-    L.addRowCol(ix);
-
-    if ( ix >= dsize-dnbad )
-    {
-	// [ Lu 0 ... ] [ Du 0 0 ] [ Lu' b ... ]   [ Gu x ... ]
-	// [ b' . ... ] [ 0  : : ] [ 0   : ... ] = [ x' : ... ]
-	// [ :  . ... ] [ 0  : : ] [ ... : ... ]   [ :  : ... ]
-	//
-	// so: Lu.Du.b = x
-	//
-	// Lu.mu = x
-	// Du.bu = mu
-
-        retVector<T> tmpvb;
-        retMatrix<T> tmpma;
-
-	if ( dsize-dnbad )
-	{
-	    int zer = 0;
-
-            retVector<T> tmpva; // only use this in defining gpartof!!!
-            Vector<T> &gpartof = g("&",zer,1,dsize-dnbad-1,tmpva);
-
-	    L(0,1,dsize-dnbad-1,0,1,dsize-dnbad-1,tmpma).forwardElim(gpartof,gpartof);
-
-	    for ( i = 0 ; i < dsize-dnbad ; ++i )
-	    {
-		g("&",i) *= d(i);
-	    }
-	}
-
-        L("&",0,1,L.numRows()-1,ix,tmpma,"&") = g;
-//	L.setCol(ix,g);
-	//g.applyon(conj);
-	g.conj();
-	L("&",ix,0,1,dsize-1,tmpvb) = g;
-    }
-
-    else
-    {
-	// Current:
-        //
-	// [ Ga  Gc' ] = [ Ma  0  ] [ Da  0  ] [ Ma' Mc' ]
-	// [ Gc  Gf  ]   [ Mc  Mf ] [ 0   Dc ] [ 0   Mf' ]
-        //
-	//             = [ Ma  0  ] [ Da.Ma'  Da.Mc' ]
-	//               [ Mc  Mf ] [ 0       Dc.Mf' ]
-        //
-	//             = [ Ma.Da.Ma'   Ma.Da.Mc'             ]
-	//               [ Mc.Da.Ma'   Mc.Da.Mc' + Mf.Dc.Mf' ]
-	//
-	// Target:
-        //
-	// [ Ga  gb Gc' ]   [ La  0  0  ] [ Da 0  0  ] [ La' lb Lc' ]
-	// [ gb' gd ge' ] = [ lb' ld 0' ] [ 0  db 0  ] [ 0'  ld le' ]
-	// [ Gc  ge Gf  ]   [ Lc  le Lf ] [ 0  0  Dc ] [ 0   0  Lf' ]
-        //
-	//                  [ La   0   0  ] [ Da.La'  Da.lb  Da.Lc' ]
-	//                = [ lb'  ld  0' ] [ 0'      db.ld  db.le' ]
-	//                  [ Lc   le  Lf ] [ 0       0      Dc.Lf' ]
-        //
-	//                  [ La.Da.La'   La.Da.lb              La.Da.Lc'                         ]
-	//                = [ lb'.Da.La'  lb'.Da.lb + ld.db.ld  lb'.Da.Lc' + ld.db.le'            ]
-	//                  [ Lc.Da.La'   Lc.Da.lb + le.db.ld   Lc.Da.Lc' + le.db.le' + Lf.Dc.Lf' ]
-	//
-	// So: (La): La = Ma
-	//     (lb): Da.lb = inv(La).gb
-	//     (Lc): Lc = Mc
-	//     (ld): ld = sqrt( db.( gd - (Da.lb)'.Da.(Da.lb) ) )    (may need to truncate factorisation at this step)
-	//     (le): le = ( ge - Lc.(Da.lb) ) / (db.ld)              (and continue this to the end of g = [ gb' gd ge' ]')
-	//     (Lf): Lf.Dc.Lf' = Mf.Dc.Mf + le.(-db).le'             (let xxrankone take care of this)
-
-	// Calculate lb:
-        //
-	//     (lb): Da.lb = inv(La).gb
-	//
-	// Trick: for now, it's actually more convenient to keep Da.lb
-
-        retVector<T> tmpva;
-        retVector<T> tmpvb;
-        retMatrix<T> tmpma;
-
-	if ( ix )
-	{
-	    int zer = 0;
-
-            retVector<T> tmpvc; // only use for gpartof
-            Vector<T> &gpartof = g("&",zer,1,ix-1,tmpvc);
-
-	    L(0,1,ix-1,0,1,ix-1,tmpma).forwardElim(gpartof,gpartof);
-	}
-
-	// complete ld calculation and truncate factorisation is required:
-        //
-	//     (ld): ld = sqrt( db.( gd - (Da.lb)'.Da.(Da.lb) ) )
-
-        double ld = real(g(ix));
-
-	//if ( ix )
-	{
-	    for ( i = 0 ; i < ix ; ++i )
-	    {
-                ld -= (d(i)*norm2(g(i)));
-	    }
-	}
-
-        ld *= d(ix);
-
-	if ( ld <= zt*zt )
-	{
-	    if ( dfudge )
-	    {
-		ld = zt*zt;
-	    }
-
-	    else
-	    {
-                int dnbadnew = dnbad;
-
-		if ( ix )
-		{
-		    // Finish calculate of lb: lb := Da.lb
-
-		    for ( i = 0 ; i < ix ; ++i )
-		    {
-			g.set(i,d(i));
-		    }
-
-                    // Write lb to L matrix
-
-		    int zer = 0;
-
-		    L("&",0,1,ix-1,ix,tmpma,"&") = g(zer,1,ix-1,tmpva);
-//		    L("&",0,1,ix-1,0,1,ix,tmpma).setCol(ix,g(zer,1,ix-1,tmpva));
-                    //(g("&",0,1,ix-1,tmpva)).applyon(conj);
-                    (g("&",0,1,ix-1,tmpva)).conj();
-		    L("&",ix,0,1,ix-1,tmpva) = g(zer,1,ix-1,tmpvb);
-		}
-
-		for ( j = ix ; j < dsize-dnbad ; ++j )
-		{
-		    for ( k = ix ; k < dsize-dnbad ; ++k )
-		    {
-			xxgetG(L("&",j,k),j,k,Gp,Gn,Gpn,Gpoff);
-		    }
-
-		    if ( d(j) > 0 )
-		    {
-			++dnbadnew;
-			++dnbadpos;
-		    }
-
-		    else
-		    {
-			++dnbadnew;
-			++dnbadneg;
-		    }
-		}
-
-		if ( dnbad )
-		{
-		    for ( j = ix ; j < dsize-dnbad ; ++j )
-		    {
-			for ( k = dsize-dnbad ; k < dsize ; ++k )
-			{
-			    xxgetG(L("&",j,k),j,k,Gp,Gn,Gpn,Gpoff);
-			    xxgetG(L("&",k,j),k,j,Gp,Gn,Gpn,Gpoff);
-			}
-		    }
-		}
-
-		dnbad = dnbadnew;
-
-		goto keep_going;
-	    }
-	}
-
-	ld = sqrt(ld);
-	g.set(ix,ld);
-
-        NiceAssert( !testisvnan(ld) );
-
-	// Calculate le:
-        //
-	//     (le): le = ( ge - Lc.(Da.lb) ) / (db.ld) (to end of l)
-
-	if ( ix )
-	{
-	    for ( i = ix+1 ; i < dsize ; ++i )
-	    {
-		for ( j = 0 ; j < ix ; ++j )
-		{
-                    g("&",i) -= (L(i,j)*g(j));
-		}
-	    }
-	}
-
-	for ( i = ix+1 ; i < dsize ; ++i )
-	{
-	    g("&",i) *= (d(ix)/ld);
-	}
-
-	// Finish calculate of lb: lb := Da.lb
-
-	//if ( ix )
-	{
-	    for ( i = 0 ; i < ix ; ++i )
-	    {
-		g("&",i) *= d(i);
-	    }
-	}
-
-	// Set row/column lb,ld,le in L:
-
-        L("&",0,1,L.numRows()-1,ix,tmpma,"&") = g;
-//	L.setCol(ix,g);
-        //g.applyon(conj);
-        g.conj();
-	L("&",ix,tmpva) = g;
-        //g.applyon(conj);
-        g.conj();
-
-	// Do rank-one update on Lf:
-        //
-	//     (Lf): Lf.Dc.Lf' = Mf.Dc.Mf + le.(-db).le'             (let xxrankone take care of this)
-
-        g("&",0,1,ix,tmpva).zero();
-
-	xxrankone(g,-d(ix),Gp,Gn,Gpn,Gpoff,1,ix+1,0);
-    }
-
-keep_going:
-
-    return xxfact();
-}
-
-template <> inline int Chol<double>::xadd(int ix, double Dix, const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> *Gpoff)
-{
-    NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
-    NiceAssert( Gp.numRows() == Gp.numCols() );
-    NiceAssert( Gn.numRows() == Gn.numCols() );
-    NiceAssert( Gpn.numRows() == Gp.numRows() );
-    NiceAssert( Gpn.numCols() == Gn.numCols() );
-    NiceAssert( ix >= 0 );
-    NiceAssert( ix < dsize+1 );
-
-    int i,j,k;
-
-    int pospos = 0;
-    int negpos = 0;
-
-    if ( ix == dsize )
-    {
-	if ( ix )
-	{
-	    pospos = dposind.v(ix-1);
-	    negpos = dnegind.v(ix-1);
-
-	    if ( ddpnset.v(ix-1) )
-	    {
-                ++pospos;
-	    }
-
-	    else
-	    {
-		++negpos;
-	    }
-	}
-    }
-
-    else
-    {
-	pospos = dposind.v(ix);
-	negpos = dnegind.v(ix);
-    }
-
-    ddpnset.add(ix);
-    dposind.add(ix);
-    dnegind.add(ix);
-
-    dposind.sv(ix,pospos);
-    dnegind.sv(ix,negpos);
-
-    if ( Dix > 0 )
-    {
-	ddpnset.sv(ix,1);
-
-	if ( ix >= dsize-dnbad )
-	{
-	    ++dnbad;
-	    ++dnbadpos;
-	}
-
-        ++dnpos;
-	++dsize;
-
-	//if ( ix+1 < dsize )
-	{
-	    for ( i = ix+1 ; i < dsize ; ++i )
-	    {
-		++(dposind("&",i));
-	    }
-	}
-    }
-
-    else
-    {
-	ddpnset.sv(ix,0);
-
-	if ( ix >= dsize-dnbad )
-	{
-	    ++dnbad;
-	    ++dnbadneg;
-	}
-
-        ++dnneg;
-	++dsize;
-
-	//if ( ix+1 < dsize )
-	{
-	    for ( i = ix+1 ; i < dsize ; ++i )
-	    {
-		++(dnegind("&",i));
-	    }
-	}
-    }
-
-    NiceAssert( Gp.numRows() == dnpos );
-    NiceAssert( Gn.numRows() == dnneg );
-
-    static thread_local Vector<double> g("&",2);
-    g.resize(dsize);
-
-    for ( i = 0 ; i < dsize ; ++i )
-    {
-	g.sv(i,xxgetG_v(i,ix,Gp,Gn,Gpn,Gpoff));
-    }
-
-    d.add(ix);
-    d.sv(ix,Dix);
-
-    L.addRowCol(ix);
-
-    if ( ix >= dsize-dnbad )
-    {
-        retVector<double> tmpvb;
-        retVector<double> tmpvc;
-        retMatrix<double> tmpmad;
-
-	if ( dsize-dnbad )
-	{
-	    int zer = 0;
-
-            retVector<double> tmpva; // only use this in defining gpartof!!!
-            Vector<double> &gpartof = g("&",zer,1,dsize-dnbad-1,tmpva);
-
-	    L(0,1,dsize-dnbad-1,0,1,dsize-dnbad-1,tmpmad).forwardElim(gpartof,gpartof);
-
-	    for ( i = 0 ; i < dsize-dnbad ; ++i )
-	    {
-		g("&",i) *= d.v(i);
-	    }
-	}
-
-        L("&",0,1,L.numRows()-1,ix,tmpmad,"&") = g;
-	L("&",ix,0,1,dsize-1,tmpvb,tmpvc) = g;
-    }
-
-    else
-    {
-        retVector<double> tmpva;
-        retVector<double> tmpvb;
-        retVector<double> tmpvc;
-        retMatrix<double> tmpmad;
-
-	if ( ix )
-	{
-	    int zer = 0;
-
-            retVector<double> tmpvd; // only use for gpartof
-            Vector<double> &gpartof = g("&",zer,1,ix-1,tmpvd);
-
-	    L(0,1,ix-1,0,1,ix-1,tmpmad).forwardElim(gpartof,gpartof);
-	}
-
-        double ld = g.v(ix);
-
-	//if ( ix )
-	{
-	    for ( i = 0 ; i < ix ; ++i )
-	    {
-                ld -= (d.v(i)*norm2(g.v(i)));
-	    }
-	}
-
-        ld *= d.v(ix);
-
-	if ( ld <= zt*zt )
-	{
-	    if ( dfudge )
-	    {
-		ld = zt*zt;
-	    }
-
-	    else
-	    {
-                int dnbadnew = dnbad;
-
-		if ( ix )
-		{
-		    for ( i = 0 ; i < ix ; ++i )
-		    {
-			g("&",i) *= d.v(i);
-		    }
-
-                    // Write lb to L matrix
-
-		    int zer = 0;
-
-		    L("&",0,1,ix-1,ix,tmpmad,"&") = g(zer,1,ix-1,tmpva);
-		    L("&",ix,0,1,ix-1,tmpva,tmpvc) = g(zer,1,ix-1,tmpvb);
-		}
-
-		for ( j = ix ; j < dsize-dnbad ; ++j )
-		{
-		    for ( k = ix ; k < dsize-dnbad ; ++k )
-		    {
-			L.sv(j,k,xxgetG_v(j,k,Gp,Gn,Gpn,Gpoff));
-		    }
-
-		    if ( d(j) > 0 )
-		    {
-			++dnbadnew;
-			++dnbadpos;
-		    }
-
-		    else
-		    {
-			++dnbadnew;
-			++dnbadneg;
-		    }
-		}
-
-		if ( dnbad )
-		{
-		    for ( j = ix ; j < dsize-dnbad ; ++j )
-		    {
-			for ( k = dsize-dnbad ; k < dsize ; ++k )
-			{
-			    L.sv(j,k,xxgetG_v(j,k,Gp,Gn,Gpn,Gpoff));
-			    L.sv(k,j,xxgetG_v(k,j,Gp,Gn,Gpn,Gpoff));
-			}
-		    }
-		}
-
-		dnbad = dnbadnew;
-
-		goto keep_going;
-	    }
-	}
-
-	ld = sqrt(ld);
-	g.sv(ix,ld);
-
-        NiceAssert( !testisvnan(ld) );
-
-	if ( ix )
-	{
-	    for ( i = ix+1 ; i < dsize ; ++i )
-	    {
-		for ( j = 0 ; j < ix ; ++j )
-		{
-                    g("&",i) -= (L.v(i,j)*g.v(j));
-		}
-	    }
-	}
-
-	for ( i = ix+1 ; i < dsize ; ++i )
-	{
-	    g("&",i) *= (d.v(ix)/ld);
-	}
-
-	//if ( ix )
-	{
-	    for ( i = 0 ; i < ix ; ++i )
-	    {
-		g("&",i) *= d.v(i);
-	    }
-	}
-
-	// Set row/column lb,ld,le in L:
-
-        L("&",0,1,L.numRows()-1,ix,tmpmad,"&") = g;
-	L("&",ix,tmpva,tmpvc) = g;
-
-        g("&",0,1,ix,tmpva).zero();
-
-	xxrankone(g,-d(ix),Gp,Gn,Gpn,Gpoff,1,ix+1,0);
-    }
-
-keep_going:
-
-    return xxfact();
-}
-
-template <class T>
-int Chol<T>::xremove(int ix, const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn, const Vector<double> *Gpoff)
-{
-    NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
-    NiceAssert( Gp.numRows() == Gp.numCols() );
-    NiceAssert( Gn.numRows() == Gn.numCols() );
-    NiceAssert( Gpn.numRows() == Gp.numRows() );
-    NiceAssert( Gpn.numCols() == Gn.numCols() );
-    NiceAssert( ix >= 0 );
-    NiceAssert( ix < dsize );
-
-    int i;
-
-    if ( ddpnset.v(ix) )
-    {
-	//if ( ix+1 < dsize )
-	{
-	    for ( i = ix+1 ; i < dsize ; ++i )
-	    {
-		--(dposind("&",i));
-	    }
-	}
-
-        --dnpos;
-    }
-
-    else
-    {
-	//if ( ix+1 < dsize )
-	{
-	    for ( i = ix+1 ; i < dsize ; ++i )
-	    {
-		--(dnegind("&",i));
-	    }
-	}
-
-        --dnneg;
-    }
-
-    ddpnset.remove(ix);
-    dposind.remove(ix);
-    dnegind.remove(ix);
-
-    NiceAssert( Gp.numRows() == dnpos );
-    NiceAssert( Gn.numRows() == dnneg );
-
-    if ( ix > dsize-dnbad-1 )
-    {
-	if ( d(ix) > 0 )
-	{
-	    --dnbad;
-	    --dnbadpos;
-	    --dsize;
-	}
-
-	else
-	{
-	    --dnbad;
-	    --dnbadneg;
-	    --dsize;
-	}
-
-	L.removeRowCol(ix);
-        d.remove(ix);
-    }
-
-    else if ( ix == dsize-dnbad-1 )
-    {
-	L.removeRowCol(ix);
-        d.remove(ix);
-
-	--dsize;
-    }
-
-    else
-    {
-	// Current:
-        //
-	// [ Ga  gb Gc' ]   [ La  0  0  ] [ Da 0  0  ] [ La' lb Lc' ]
-	// [ gb' gd ge' ] = [ lb' ld 0' ] [ 0  Db 0  ] [ 0'  ld le' ]
-	// [ Gc  ge Gf  ]   [ Lc  le Lf ] [ 0  0  Dc ] [ 0   0  Lf' ]
-        //
-	//                  [ La   0   0  ] [ Da.La'  Da.lb  Da.Lc' ]
-	//                = [ lb'  ld  0' ] [ 0'      db.ld  db.le' ]
-	//                  [ Lc   le  Lf ] [ 0       0      Dc.Lf' ]
-        //
-	//                  [ La   0   0  ] [ La.Da.La'   La.Da.lb              La.Da.Lc'                         ]
-	//                = [ lb'  ld  0' ] [ lb'.Da.La'  lb'.Da.lb + ld.db.ld  lb'.Da.Lc' + ld.db.le'            ]
-	//                  [ Lc   le  Lf ] [ Lc.Da.La'   Lc.Da.lb + le.db.ld   Lc.Da.Lc' + le.db.le' + Lf.Dc.Lf' ]
-	//
-	// Target:
-        //
-	// [ Ga  Gc' ] = [ Ma  0  ] [ Da  0  ] [ Ma' Mc' ]
-	// [ Gc  Gf  ]   [ Mc  Mf ] [ 0   Dc ] [ 0   Mf' ]
-        //
-	//             = [ Ma  0  ] [ Da.Ma'  Da.Mc' ]
-	//               [ Mc  Mf ] [ 0       Dc.Mf' ]
-        //
-	//             = [ Ma  0  ] [ Ma.Da.Ma'   Ma.Da.Mc'             ]
-	//               [ Mc  Mf ] [ Mc.Da.Ma'   Mc.Da.Mc' + Mf.Dc.Mf' ]
-	//
-	// So: Ma = La
-	//     Mc = Lc
-	//     Mf.Dc.Mf = Lf.Dc.Lf' + le.db.le'
-	//
-	// That is: we need to do a rank-one upate on the factorised part that
-	//          comes after the removed row/column.
-
-	static thread_local Vector<T> q("&",2);
-        q.resize(dsize);
-        double db;
-
-        retVector<T> tmpva;
-        retMatrix<T> tmpma;
-
-	//L.getCol(q,ix);
-        q = L(0,1,L.numRows()-1,ix,tmpma,"&");
-        db = d(ix);
-	q("&",0,1,ix,tmpva).zero();
-
-	L.removeRowCol(ix);
-	q.remove(ix);
-	d.remove(ix);
-
-        --dsize;
-
-	xxrankone(q,db,Gp,Gn,Gpn,Gpoff,1,ix,0);
-    }
-
-    return xxfact();
-}
-
-template <> inline int Chol<double>::xremove(int ix, const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> *Gpoff)
-{
-    NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
-    NiceAssert( Gp.numRows() == Gp.numCols() );
-    NiceAssert( Gn.numRows() == Gn.numCols() );
-    NiceAssert( Gpn.numRows() == Gp.numRows() );
-    NiceAssert( Gpn.numCols() == Gn.numCols() );
-    NiceAssert( ix >= 0 );
-    NiceAssert( ix < dsize );
-
-    int i;
-
-    if ( ddpnset.v(ix) )
-    {
-	//if ( ix+1 < dsize )
-	{
-	    for ( i = ix+1 ; i < dsize ; ++i )
-	    {
-		--(dposind("&",i));
-	    }
-	}
-
-        --dnpos;
-    }
-
-    else
-    {
-	//if ( ix+1 < dsize )
-	{
-	    for ( i = ix+1 ; i < dsize ; ++i )
-	    {
-		--(dnegind("&",i));
-	    }
-	}
-
-        --dnneg;
-    }
-
-    ddpnset.remove(ix);
-    dposind.remove(ix);
-    dnegind.remove(ix);
-
-    NiceAssert( Gp.numRows() == dnpos );
-    NiceAssert( Gn.numRows() == dnneg );
-
-    if ( ix > dsize-dnbad-1 )
-    {
-	if ( d(ix) > 0 )
-	{
-	    --dnbad;
-	    --dnbadpos;
-	    --dsize;
-	}
-
-	else
-	{
-	    --dnbad;
-	    --dnbadneg;
-	    --dsize;
-	}
-
-	L.removeRowCol(ix);
-        d.remove(ix);
-    }
-
-    else if ( ix == dsize-dnbad-1 )
-    {
-	L.removeRowCol(ix);
-        d.remove(ix);
-
-	--dsize;
-    }
-
-    else
-    {
-	static thread_local Vector<double> q("&",2);
-        q.resize(dsize);
-        double db;
-
-        retVector<double> tmpva;
-        retMatrix<double> tmpmad;
-
-        int vz = 0;
-
-        q = L(vz,1,L.numRows()-1,ix,tmpmad,"&");
-        db = d.v(ix);
-	q("&",0,1,ix,tmpva).zero();
-
-	L.removeRowCol(ix);
-	q.remove(ix);
-	d.remove(ix);
-
-        --dsize;
-
-	xxrankone(q,db,Gp,Gn,Gpn,Gpoff,1,ix,0);
-    }
-
-    return xxfact();
 }
 
 
@@ -3192,8 +2161,8 @@ void Chol<T>::testFact(Matrix<T> &Gpdest, Matrix<T> &Gndest, Matrix<T> &Gpndest,
 
 		for ( k = 0 ; ( ( k <= i ) && ( k <= j ) ) ; ++k )
 		{
-		    g = L(i,k);
-		    g *= d(k);
+		    g  = L(i,k);
+		    g *= d.v(k);
 		    g *= L(k,j);
 
                     res += g;
@@ -3220,688 +2189,23 @@ void Chol<T>::testFact(Matrix<T> &Gpdest, Matrix<T> &Gndest, Matrix<T> &Gpndest,
 
 
 
-// Internal functions:
 
-template <class T>
-int Chol<T>::xxfact(void)
-{
-andagain:
-    int i,j;
 
-    if ( dnbad == 0 )
-    {
-        return 0;
-    }
 
-    // [ Lu  0   0 ] [ Du     0 ] [ Lu' lm  Lb' ]   [ Lu  0   0 ] [ Du.Lu' Du.lm  Du.Lb' ]
-    // [ lm' lf  0 ] [ 0  df  0 ] [ 0   lf  lp' ] = [ lm' lf  0 ] [ 0      df.lf  df.lp' ]
-    // [ Lb  lp    ] [ 0  0     ] [ 0   0       ]   [ Lb  lp    ] [ 0      0             ]
-    //
-    //                                              [ Lu.Du.Lu'   Lu.Du.lm               Lu.Du.Lb'               ]
-    //                                            = [ lm'.Du.Lu'  lm'.Du.lm + lf.df.lf   lm'.Du.Lb' + lf.df.lp'  ]
-    //                                              [ Lb.Du.Lu'   Lb.Du.lm + lp.df.lf                            ]
-    //
-    //                                              [ Gu   gm  Gb' ]
-    //                                            = [ gm'  gf  gp' ]
-    //                                              [ Gb   gp      ]
-    //
-    // lf = sqrt( df.gf - df.lm'.Du.lm )
-    // lp = ( gp - Lb.Du.lm ) / ( df.lf )
 
-    static thread_local Vector<T> b("&",2);
-    static thread_local Vector<T> bd("&",2);
 
-    b.resize(dsize-dnbad,-3);
-    bd.resize(dsize-dnbad,-3);
 
-    double f;
-    T g;
-    T h;
-
-    //L(0,1,dsize-dnbad-1,dsize-dnbad,1,dsize-dnbad).getCol(b,0);
-
-    retMatrix<double> tmpmad;
-
-    b = L(0,1,dsize-dnbad-1,dsize-dnbad,tmpmad,"&");
-    bd = b;
-
-    //if ( dsize-dnbad )
-    {
-	for ( int i = 0 ; i < dsize-dnbad ; ++i )
-	{
-            bd("&",i) *= d(i);
-	}
-    }
-
-    T temp;
-
-    f = d(dsize-dnbad) * ( real(L(dsize-dnbad,dsize-dnbad)) - real(innerProduct(temp,b,bd)) );
-
-#ifndef NDEBUG
-if ( testisvnan(f) )
-{
-errstream() << "chol.hpp testisvnan(f) 0: " << d(dsize-dnbad) << "\n";
-errstream() << "chol.hpp testisvnan(f) 1: " << real(L(dsize-dnbad,dsize-dnbad)) << "\n";
-errstream() << "chol.hpp testisvnan(f) 2: " << real(innerProduct(temp,b,bd)) << "\n";
-errstream() << "chol.hpp testisvnan(f) 3: " << L(dsize-dnbad,dsize-dnbad) << "\n";
-errstream() << "chol.hpp testisvnan(f) 4: " << innerProduct(temp,b,bd) << "\n";
-errstream() << "chol.hpp testisvnan(f) 5: " << b << "\n";
-errstream() << "chol.hpp testisvnan(f) 6: " << bd << "\n";
-errstream() << "chol.hpp testisvnan(f) 7: " << L << "\n";
-}
-#endif
-    NiceAssert( !testisvnan(f) );
-
-    if ( f <= zt*zt )
-    {
-	if ( dfudge )
-	{
-            //L("&",dsize-dnbad,dsize-dnbad) += (d(dsize-dnbad)*((zt*zt)-f));
-	    f = zt*zt; // f += ((zt*zt)-f);
-	}
-
-	else
-	{
-	    return dnbad;
-	}
-    }
-
-    // No else, this is deliberate
-
-    f = sqrt(f);
-
-    NiceAssert( !testisvnan(f) );
-
-    L("&",dsize-dnbad,dsize-dnbad) = f;
-
-    if ( dnbad > 1 )
-    {
-	// and now the flow down.
-
-	f = d(dsize-dnbad)/f;
-
-        NiceAssert( !testisvnan(f) );
-
-	for ( i = dsize-dnbad+1 ; i < dsize ; ++i )
-	{
-	    g = L(i,dsize-dnbad);
-
-	    if ( dsize-dnbad )
-	    {
-		for ( j = 0 ; j < dsize-dnbad ; ++j )
-		{
-		    h = L(i,j);
-		    h *= d(j);
-		    h *= b(j);
-
-		    g -= h;
-		}
-	    }
-
-	    g *= f;
-
-	    L("&",i,dsize-dnbad) = g;
-	    L("&",dsize-dnbad,i) = conj(g);
-	}
-    }
-
-    if ( d(dsize-dnbad) > 0 )
-    {
-	--dnbad;
-	--dnbadpos;
-    }
-
-    else
-    {
-	--dnbad;
-	--dnbadneg;
-    }
-
-goto andagain; // avoid recursion for speed!
-    return xxfact();
-}
-
-
-template <> inline int Chol<double>::xxfact(void)
-{
-    int i,j;
-    double f,g,temp;
-
-    static thread_local Vector<double> b("&",2);
-    static thread_local Vector<double> bd("&",2);
-
-    retVector<double> tmpva;
-    retMatrix<double> tmpmad;
-
-    while ( 1 )
-    {
-        if ( dnbad == 0 )
-        {
-            return 0;
-        }
-
-        b.resize(dsize-dnbad,-3);
-        bd.resize(dsize-dnbad,-3);
-
-        int z = 0;
-
-        b  = L(z,1,dsize-dnbad-1,dsize-dnbad,tmpmad,"&");
-        bd = b;
-        bd *= d(0,1,dsize-dnbad-1,tmpva);
-
-        f = d.v(dsize-dnbad) * ( L.v(dsize-dnbad,dsize-dnbad) - twoProduct(temp,b,bd) );
-
-#ifndef NDEBUG
-if ( testisvnan(f) )
-{
-errstream() << "chol.hpp testisvnan(f) 0: " << d(dsize-dnbad) << "\n";
-errstream() << "chol.hpp testisvnan(f) 1: " << L(dsize-dnbad,dsize-dnbad) << "\n";
-errstream() << "chol.hpp testisvnan(f) 2: " << twoProduct(temp,b,bd) << "\n";
-errstream() << "chol.hpp testisvnan(f) 3: " << L(dsize-dnbad,dsize-dnbad) << "\n";
-errstream() << "chol.hpp testisvnan(f) 4: " << twoProduct(temp,b,bd) << "\n";
-errstream() << "chol.hpp testisvnan(f) 5: " << b << "\n";
-errstream() << "chol.hpp testisvnan(f) 6: " << bd << "\n";
-errstream() << "chol.hpp testisvnan(f) 7: " << L << "\n";
-}
-#endif
-        NiceAssert( !testisvnan(f) );
-
-        if ( f <= zt*zt )
-        {
-	    if ( dfudge )
-	    {
-	        f = zt*zt; // f += ((zt*zt)-f);
-	    }
-
-            else
-	    {
-	       return dnbad;
-	    }
-        }
-
-        f = sqrt(f);
-
-        NiceAssert( !testisvnan(f) );
-
-        L("&",dsize-dnbad,dsize-dnbad) = f;
-
-        if ( dnbad > 1 )
-        {
-	    f = d(dsize-dnbad)/f;
-
-            NiceAssert( !testisvnan(f) );
-
-   	    for ( i = dsize-dnbad+1 ; i < dsize ; ++i )
-	    {
-	        g = L.v(i,dsize-dnbad);
-
-	        //if ( dsize-dnbad )
-	        {
-		    for ( j = 0 ; j < dsize-dnbad ; ++j )
-		    {
-		        g -= L.v(i,j)*d.v(j)*b.v(j);
-		    }
-	        }
-
-  	        g *= f;
-
-	        L("&",i,dsize-dnbad) = g;
-	        L("&",dsize-dnbad,i) = g;
-	    }
-        }
-
-        if ( d(dsize-dnbad) > 0 )
-        {
-	    --dnbad;
-	    --dnbadpos;
-        }
-
-        else
-        {
-	    --dnbad;
-	    --dnbadneg;
-        }
-    }
-
-    //return xxfact(); - avoid recursion for speed!
-    return 0;
-}
-
-template <class T>
-int Chol<T>::xxrankone(const Vector<T> &ax, double bx, const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn, const Vector<double> *Gpoff, int hold_off, int z_start, int z_end)
-{
-    NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
-    NiceAssert( Gp.numRows() == Gp.numCols() );
-    NiceAssert( Gn.numRows() == Gn.numCols() );
-    NiceAssert( Gpn.numRows() == Gp.numRows() );
-    NiceAssert( Gpn.numCols() == Gn.numCols() );
-    NiceAssert( Gp.numRows() == dnpos );
-    NiceAssert( Gn.numRows() == dnneg );
-    NiceAssert( z_start+z_end <= dsize );
-    NiceAssert( ax.size() == dsize );
-
-    // Gnew = Gold + s.a.a'
-    //
-    // Gold_ij = sum_{k=0,min(i,j)} Lold_ik.d_k.Lold_jk
-    // Gnew_ij = sum_{k=0,min(i,j)} Lnew_ik.d_k.Lnew_jk
-    //         = Gold_ij + s.a_i.a_j
-    //         = sum_{k=0,min(i,j)} Lold_ik.d_k.Lold_jk + s.a_i.a_j
-    //
-    // Hence:
-    //
-    // Gnew_00 = d_0.Lnew_00^2 = d_0.Lold_00^2 + s.a_0^2
-    // => Lnew_00 = sqrt( Lold_00^2 + d_0.s.a_0^2 )
-    //
-    // Gnew_i0 = d_0.Lnew_i0.Lnew_00 = d_0.Lold_i0.Lold_00 + s.a_i.a_0
-    // => Lnew_i0 = ( Lold_i0.Lold_00 + d_0.s.a_i.a_0 ) / Lnew_00
-    //
-    // For all i,j > 0:
-    //
-    // sum_{k=1,min(i,j)} Lnew_ik.d_k.Lnew_jk = sum_{k=1,min(i,j)} Lold_ik.d_k.Lold_jk + Lold_i0.d_0.Lold_j0 - Lnew_i0.d_0.Lnew_j0 + s.a_i.a_j
-    //                                        = sum_{k=1,min(i,j)} Lold_ik.d_k.Lold_jk + s.amod_i.amod_j
-    //
-    // where some calculation will show that:
-    //
-    // amod_i = ( Lold_00.a_i - Lold_io.a_0 ) / Lnew_00
-    //
-    // Method: do top left corner and column below it, calculate modified
-    //         update and recurse in an iterative manner.
-
-    if ( ( bx != 0.0 ) && ( dsize-z_start-z_end > 0 ) )
-    {
-	int i,j,k;
-
-        static thread_local Vector<T> a("&",2);
-	double b;
-
-	a = ax;
-	b = bx;
-
-	T x;
-	double xabs;
-	double yabs;
-	T alpha;
-	T beta;
-	T gamma;
-	T epsilon;
-	double sgnis;
-	int dnbadnew = dnbad;
-        int dnbadold = dnbad;
-
-	// Step 1: update the factorised corner
-	//
-        // We first normalise so that b = +-1.
-
-        double babs = abs2(b);
-        double bsqabs = sqrt(babs);
-
-	b /= babs; // b = +-1 after this
-
-	for ( i = z_start ; i < dsize-z_end ; ++i )
-	{
-            a("&",i) *= bsqabs; // Can't do a single step a("&",z_start,1,dsize-z_end-1) *= bsqabs as bsqabs is type double and a of type Vector<T>, and T != double in general
-	}
-
-	if ( dsize-dnbad > z_start )
-	{
-	    static thread_local Vector<T> aaz("&",2);
-
-	    aaz = a;
-
-	    for ( i = z_start ; i < dsize-dnbad ; ++i )
-	    {
-		sgnis = (b*d(i));
-
-		xabs =  abs2(L(i,i));
-		xabs *= xabs;
-
-		// xabs = L_{ii}^{{\rm old} 2}
-
-		yabs =  abs2(aaz(i));
-		yabs *= yabs;
-		yabs *= sgnis;
-
-                // yabs = s.D.|a_i|^2
-
-		xabs += yabs;
-
-		// xabs = L_{ii}^{{\rm old} 2} + s.D.|a_i|^2
-		//      = L_{ii}^{{\rm new} 2}
-
-                bool dofallback = false;
-
-                if ( testisvnan(xabs) || ( xabs >= (1/(zt*zt)) ) )
-                {
-                    // PROBABLE OVERFLOW DETECTED.  Noting that xxrankone is
-                    // always followed by xxfact, we can use a fallback to xxrankone
-                    // to attempt to update the factorisation from scratch.
-
-                    dofallback = true;
-                }
-
-		else if ( xabs <= zt*zt )
-		{
-		    if ( dfudge )
-		    {
-			xabs = zt*zt;
-		    }
-
-                    else
-                    {
-                        dofallback = true;
-                    }
-                }
-
-                if ( dofallback )
-                {
-		    for ( j = i ; j < dsize-dnbad ; ++j )
-		    {
-		        for ( k = i ; k < dsize-dnbad ; ++k )
-		        {
-		            xxgetG(L("&",j,k),j,k,Gp,Gn,Gpn,Gpoff);
-			}
-
-			if ( d(j) > 0 )
-			{
-                            ++dnbadnew;
-                            ++dnbadpos;
-			}
-
-			else
-			{
-                            ++dnbadnew;
-                            ++dnbadneg;
-			}
-		    }
-
-		    if ( dnbad )
-		    {
-		        for ( j = i ; j < dsize-dnbad ; ++j )
-		        {
-			    for ( k = dsize-dnbad ; k < dsize ; ++k )
-			    {
-				xxgetG(L("&",j,k),j,k,Gp,Gn,Gpn,Gpoff);
-				xxgetG(L("&",k,j),k,j,Gp,Gn,Gpn,Gpoff);
-			    }
-			}
-		    }
-
-                    dnbad = dnbadnew;
-
-		    goto keep_going;
-		}
-
-		// NB: we don't want an "else" statement here as this is also
-                // the fall-back case if fudging has been used.
-
-		xabs = sqrt(xabs);
-
-                NiceAssert( !testisvnan(xabs) );
-
-		// xabs = L_{ii}^{\rm new}
-
-		x = xabs;
-
-		// x = L_{ii}^{\rm new} but type T, not type double
-
-		alpha =  aaz(i);
-		alpha *= (1/xabs);
-
-                NiceAssert( !testisvnan(alpha) );
-
-		// alpha = a_i / L_{ii}^{\rm new}
-
-		beta =  L(i,i);
-		beta *= (1/xabs);
-
-                NiceAssert( !testisvnan(beta) );
-
-		// beta = L_{ii}^{\rm old} / L_{ii}^{\rm new}
-
-		//if ( i+1 < dsize )
-		{
-		    for ( j = i+1 ; j < dsize ; ++j )
-		    {
-			gamma   = aaz(j);
-			epsilon = L(j,i);
-
-			// gamma = a_j
-			// epsilon = L_{ji}^{\rm old}
-
-			aaz("&",j) =  ( beta * gamma );
-			aaz("&",j) -= ( epsilon * alpha );
-
-			// a_j^{\rm mod} = ( L_{ii}^{\rm old} / L_{ii}^{\rm new} ) a_j    -    L_{ji}^{\rm old} ( a_i / L_{ii}^{\rm new} )
-
-			L("&",j,i) =  ( gamma * conj(alpha) );
-			L("&",j,i) *= sgnis;
-			L("&",j,i) += ( beta * epsilon );
-
-			// L_{ji}^{\rm new} := ( D_0 s_i a_j {\bar a}_i ) / L_{ii}^{\rm new}    +    ( L_{ii}^{\rm old} L_{ji}^{\rm old} ) / L_{ii}^{\rm new}
-
-			L("&",i,j) = conj(L(j,i));
-
-                        // Fill upper right with the transpose
-		    }
-		}
-
-		L("&",i,i) = x;
-
-		// L_{ii}^{\rm new} := L_{ii}^{\rm new}
-	    }
-	}
-
-	// Step 2. update unfactorised corner
-
-    keep_going:
-
-	if ( ( dnbadold > z_end ) && !hold_off )
-	{
-	    for ( i = dsize-dnbadold ; i < dsize-z_end ; ++i )
-	    {
-		for ( j = dsize-dnbadold ; j < dsize-z_end ; ++j )
-		{
-		    xxgetG(L("&",i,j),i,j,Gp,Gn,Gpn,Gpoff);
-		}
-	    }
-	}
-    }
-
-    return dnbad;
-}
-
-template <> inline int Chol<double>::xxrankone(const Vector<double> &ax, double bx, const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> *Gpoff, int hold_off, int z_start, int z_end)
-{
-    NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
-    NiceAssert( Gp.numRows() == Gp.numCols() );
-    NiceAssert( Gn.numRows() == Gn.numCols() );
-    NiceAssert( Gpn.numRows() == Gp.numRows() );
-    NiceAssert( Gpn.numCols() == Gn.numCols() );
-    NiceAssert( Gp.numRows() == dnpos );
-    NiceAssert( Gn.numRows() == dnneg );
-    NiceAssert( z_start+z_end <= dsize );
-    NiceAssert( ax.size() == dsize );
-
-    if ( ( bx != 0.0 ) && ( dsize-z_start-z_end > 0 ) )
-    {
-	int i,j,k;
-
-        static thread_local Vector<double> a("&",2);
-	double b;
-
-	a = ax;
-	b = bx;
-
-	double x;
-	double xabs;
-	double yabs;
-	double alpha;
-	double beta;
-	double gamma;
-	double epsilon;
-	double sgnis;
-	int dnbadnew = dnbad;
-        int dnbadold = dnbad;
-
-        double babs = abs2(b);
-        double bsqabs = sqrt(babs);
-
-	b /= babs; // b = +-1 after this
-
-	for ( i = z_start ; i < dsize-z_end ; ++i )
-	{
-            a("&",i) *= bsqabs; // Can't do a single step a("&",z_start,1,dsize-z_end-1) *= bsqabs as bsqabs is type double and a of type Vector<T>, and T != double in general
-	}
-
-	if ( dsize-dnbad > z_start )
-	{
-	    static thread_local Vector<double> aaz("&",2);
-
-	    aaz = a;
-
-	    for ( i = z_start ; i < dsize-dnbad ; ++i )
-	    {
-		sgnis = (b*d.v(i));
-
-		xabs =  abs2(L.v(i,i));
-		xabs *= xabs;
-
-		yabs =  abs2(aaz.v(i));
-		yabs *= yabs;
-		yabs *= sgnis;
-
-		xabs += yabs;
-
-                bool dofallback = false;
-
-                if ( testisvnan(xabs) || ( xabs >= (1/(zt*zt)) ) )
-                {
-                    // PROBABLE OVERFLOW DETECTED.  Noting that xxrankone is
-                    // always followed by xxfact, we can use a fallback to xxrankone
-                    // to attempt to update the factorisation from scratch.
-
-                    dofallback = true;
-                }
-
-		else if ( xabs <= zt*zt )
-		{
-		    if ( dfudge )
-		    {
-			xabs = zt*zt;
-		    }
-
-                    else
-                    {
-                        dofallback = true;
-                    }
-                }
-
-		if ( dofallback )
-		{
-		    for ( j = i ; j < dsize-dnbad ; ++j )
-		    {
-			for ( k = i ; k < dsize-dnbad ; ++k )
-			{
-			    L.sv(j,k,xxgetG_v(j,k,Gp,Gn,Gpn,Gpoff));
-			}
-
-			if ( d(j) > 0 )
-			{
-                            ++dnbadnew;
-                            ++dnbadpos;
-			}
-
-			else
-			{
-                            ++dnbadnew;
-                            ++dnbadneg;
-			}
-		    }
-
-		    if ( dnbad )
-		    {
-			for ( j = i ; j < dsize-dnbad ; ++j )
-			{
-			    for ( k = dsize-dnbad ; k < dsize ; ++k )
-		            {
-				L.sv(j,k,xxgetG_v(j,k,Gp,Gn,Gpn,Gpoff));
-				L.sv(k,j,xxgetG_v(k,j,Gp,Gn,Gpn,Gpoff));
-			    }
-		        }
-		    }
-
-                    dnbad = dnbadnew;
-
-	            goto keep_going;
-		}
-
-                NiceAssert( !testisvnan(xabs) );
-
-		xabs = sqrt(xabs);
-
-                NiceAssert( !testisvnan(xabs) );
-
-		x = xabs;
-
-		alpha =  aaz(i);
-		alpha *= (1/xabs);
-
-                NiceAssert( !testisvnan(alpha) );
-
-		beta =  L(i,i);
-		beta *= (1/xabs);
-
-                NiceAssert( !testisvnan(beta) );
-
-		//if ( i+1 < dsize )
-		{
-		    for ( j = i+1 ; j < dsize ; ++j )
-		    {
-			gamma   = aaz.v(j);
-			epsilon = L.v(j,i);
-
-			aaz("&",j) =  ( beta * gamma );
-			aaz("&",j) -= ( epsilon * alpha );
-
-			L("&",j,i) =  ( gamma * alpha );
-			L("&",j,i) *= sgnis;
-			L("&",j,i) += ( beta * epsilon );
-
-			L("&",i,j) = L.v(j,i);
-		    }
-		}
-
-		L("&",i,i) = x;
-	    }
-	}
-
-    keep_going:
-
-	if ( ( dnbadold > z_end ) && !hold_off )
-	{
-	    for ( i = dsize-dnbadold ; i < dsize-z_end ; ++i )
-	    {
-		for ( j = dsize-dnbadold ; j < dsize-z_end ; ++j )
-		{
-		    L.sv(i,j,xxgetG_v(i,j,Gp,Gn,Gpn,Gpoff));
-		}
-	    }
-	}
-    }
-
-    return dnbad;
-}
 
 template <class T>
 int Chol<T>::xxsetfact(const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn, const Vector<double> &D, const Vector<double> *Gpoff)
 {
     NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
-    NiceAssert( Gp.numRows() == Gp.numCols() );
-    NiceAssert( Gn.numRows() == Gn.numCols() );
+    NiceAssert( Gp.numRows()  == Gp.numCols() );
+    NiceAssert( Gn.numRows()  == Gn.numCols() );
     NiceAssert( Gpn.numRows() == Gp.numRows() );
     NiceAssert( Gpn.numCols() == Gn.numCols() );
-    NiceAssert( Gp.numRows() == dnpos );
-    NiceAssert( Gn.numRows() == dnneg );
+    NiceAssert( Gp.numRows()  == dnpos );
+    NiceAssert( Gn.numRows()  == dnneg );
     NiceAssert( D.size() == dsize );
 
     d = D;
@@ -3918,39 +2222,33 @@ int Chol<T>::xxsetfact(const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T>
     ip = 0;
     in = 0;
 
-    //if ( dsize )
+    for ( i = 0 ; i < dsize ; ++i )
     {
-	for ( i = 0 ; i < dsize ; ++i )
-	{
-	    dposind.sv(i,ip);
-	    dnegind.sv(i,in);
+        dposind.sv(i,ip);
+        dnegind.sv(i,in);
 
-	    if ( d(i) > 0 )
-	    {
-		ddpnset.sv(i,1);
-		++ip;
-	    }
+        if ( d.v(i) > 0 )
+        {
+            ddpnset.sv(i,1);
+            ++ip;
+        }
 
-	    else
-	    {
-		ddpnset.sv(i,0);
-		++in;
-	    }
-	}
+        else
+        {
+            ddpnset.sv(i,0);
+            ++in;
+        }
     }
 
     NiceAssert( ip == dnpos );
     NiceAssert( in == dnneg );
 
-    //if ( dsize )
+    for ( i = 0 ; i < dsize ; ++i )
     {
-	for ( i = 0 ; i < dsize ; ++i )
-	{
-	    for ( j = 0 ; j < dsize ; ++j )
-	    {
-		xxgetG(L("&",i,j),i,j,Gp,Gn,Gpn,Gpoff);
-	    }
-	}
+        for ( j = 0 ; j < dsize ; ++j )
+        {
+            xxgetG(L("&",i,j),i,j,Gp,Gn,Gpn,Gpoff);
+        }
     }
 
     return dnbad;
@@ -4222,6 +2520,1487 @@ void Chol<T>::calc_zstart_zend(int &z_start, int &z_end, int zp_start, int zp_en
 	}
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Matrix manipulations:
+
+template <class T>
+int Chol<T>::xremove(int ix, const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn, const Vector<double> *Gpoff)
+{
+    NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
+    NiceAssert( Gp.numRows()  == Gp.numCols() );
+    NiceAssert( Gn.numRows()  == Gn.numCols() );
+    NiceAssert( Gpn.numRows() == Gp.numRows() );
+    NiceAssert( Gpn.numCols() == Gn.numCols() );
+    NiceAssert( ix >= 0 );
+    NiceAssert( ix < dsize );
+
+    int i;
+
+    if ( ddpnset.v(ix) )
+    {
+        for ( i = ix+1 ; i < dsize ; ++i )
+        {
+            --(dposind("&",i));
+	}
+
+        --dnpos;
+    }
+
+    else
+    {
+        for ( i = ix+1 ; i < dsize ; ++i )
+        {
+            --(dnegind("&",i));
+	}
+
+        --dnneg;
+    }
+
+    ddpnset.remove(ix);
+    dposind.remove(ix);
+    dnegind.remove(ix);
+
+    NiceAssert( Gp.numRows() == dnpos );
+    NiceAssert( Gn.numRows() == dnneg );
+
+    if ( ix > dsize-dnbad-1 )
+    {
+	if ( d.v(ix) > 0 )
+	{
+	    --dnbad;
+	    --dnbadpos;
+	    --dsize;
+	}
+
+	else
+	{
+	    --dnbad;
+	    --dnbadneg;
+	    --dsize;
+	}
+
+	L.removeRowCol(ix);
+        d.remove(ix);
+    }
+
+    else if ( ix == dsize-dnbad-1 )
+    {
+	L.removeRowCol(ix);
+        d.remove(ix);
+
+	--dsize;
+    }
+
+    else
+    {
+	// Current:
+        //
+	// [ Ga  gb Gc' ]   [ La  0  0  ] [ Da 0  0  ] [ La' lb Lc' ]
+	// [ gb' gd ge' ] = [ lb' ld 0' ] [ 0  dd 0  ] [ 0'  ld le' ]
+	// [ Gc  ge Gf  ]   [ Lc  le Lf ] [ 0  0  Df ] [ 0   0  Lf' ]
+        //
+	//                  [ La   0   0  ] [ Da.La'    Da.lb     Da.Lc' ]
+	//                = [ lb'  ld  0' ] [ 0'        dd.ld     dd.le' ]
+	//                  [ Lc   le  Lf ] [ 0         0         Df.Lf' ]
+        //
+	//                  [  La.Da.La'    La.Da.lb               La.Da.Lc'                         ]
+	//                = [ lb'.Da.La'   lb'.Da.lb + ld.dd.ld   lb'.Da.Lc' + ld.dd.le'             ]
+	//                  [  Lc.Da.La'    Lc.Da.lb + le.dd.ld    Lc.Da.Lc' + le.dd.le' + Lf.Df.Lf' ]
+	//
+	// Target:
+        //
+	// [ Ga  Gc' ] = [ Ma  0  ] [ Da  0  ] [ Ma' Mc' ]
+	// [ Gc  Gf  ]   [ Mc  Mf ] [ 0   Df ] [ 0   Mf' ]
+        //
+	//             = [ Ma  0  ] [ Da.Ma'  Da.Mc' ]
+	//               [ Mc  Mf ] [ 0       Df.Mf' ]
+        //
+	//             = [ Ma.Da.Ma'   Ma.Da.Mc'             ]
+	//               [ Mc.Da.Ma'   Mc.Da.Mc' + Mf.Df.Mf' ]
+	//
+	// So: Ma = La
+	//     Mc = Lc
+	//     Mf.Df.Mf = Lf.Df.Lf' + le.df.le'
+	//
+	// That is: we need to do a rank-one upate on the factorised part that
+	//          comes after the removed row/column.
+
+	static thread_local Vector<T> q("&",2);
+        q.resize(dsize,-3);
+        double db;
+
+        retVector<T> tmpva;
+        retMatrix<T> tmpma;
+
+        q  = L(0,1,L.numRows()-1,ix,tmpma,"&");
+        db = d.v(ix);
+	q("&",0,1,ix,tmpva).zero();
+
+	L.removeRowCol(ix);
+	q.remove(ix);
+	d.remove(ix);
+
+        --dsize;
+
+	xxrankone(q,db,Gp,Gn,Gpn,Gpoff,1,ix,0);
+    }
+
+    return xxfact();
+}
+
+template <>
+inline int Chol<double>::xremove(int ix, const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> *Gpoff)
+{
+    NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
+    NiceAssert( Gp.numRows() == Gp.numCols() );
+    NiceAssert( Gn.numRows() == Gn.numCols() );
+    NiceAssert( Gpn.numRows() == Gp.numRows() );
+    NiceAssert( Gpn.numCols() == Gn.numCols() );
+    NiceAssert( ix >= 0 );
+    NiceAssert( ix < dsize );
+
+    int i;
+
+    if ( ddpnset.v(ix) )
+    {
+        for ( i = ix+1 ; i < dsize ; ++i )
+        {
+            --(dposind("&",i));
+	}
+
+        --dnpos;
+    }
+
+    else
+    {
+        for ( i = ix+1 ; i < dsize ; ++i )
+        {
+            --(dnegind("&",i));
+	}
+
+        --dnneg;
+    }
+
+    ddpnset.remove(ix);
+    dposind.remove(ix);
+    dnegind.remove(ix);
+
+    NiceAssert( Gp.numRows() == dnpos );
+    NiceAssert( Gn.numRows() == dnneg );
+
+    if ( ix > dsize-dnbad-1 )
+    {
+	if ( d.v(ix) > 0 )
+	{
+	    --dnbad;
+	    --dnbadpos;
+	    --dsize;
+	}
+
+	else
+	{
+	    --dnbad;
+	    --dnbadneg;
+	    --dsize;
+	}
+
+	L.removeRowCol(ix);
+        d.remove(ix);
+    }
+
+    else if ( ix == dsize-dnbad-1 )
+    {
+	L.removeRowCol(ix);
+        d.remove(ix);
+
+	--dsize;
+    }
+
+    else
+    {
+	static thread_local Vector<double> q("&",2);
+        q.resize(dsize,-3);
+        double db;
+
+        retVector<double> tmpva;
+        retMatrix<double> tmpmad;
+
+        int vz = 0;
+
+        q  = L(vz,1,L.numRows()-1,ix,tmpmad,"&");
+        db = d.v(ix);
+	q("&",0,1,ix,tmpva).zero();
+
+	L.removeRowCol(ix);
+	q.remove(ix);
+	d.remove(ix);
+
+        --dsize;
+
+	xxrankone(q,db,Gp,Gn,Gpn,Gpoff,1,ix,0);
+    }
+
+    return xxfact();
+}
+
+template <class T>
+int Chol<T>::xadd(int ix, double Dix, const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn, const Vector<double> *Gpoff)
+{
+    NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
+    NiceAssert( Gp.numRows()  == Gp.numCols() );
+    NiceAssert( Gn.numRows()  == Gn.numCols() );
+    NiceAssert( Gpn.numRows() == Gp.numRows() );
+    NiceAssert( Gpn.numCols() == Gn.numCols() );
+    NiceAssert( ix >= 0 );
+    NiceAssert( ix < dsize+1 );
+
+    int i,j,k;
+
+    int pospos = 0;
+    int negpos = 0;
+
+    if ( ix == dsize )
+    {
+	if ( ix )
+	{
+	    pospos = dposind.v(ix-1);
+	    negpos = dnegind.v(ix-1);
+
+	    if ( ddpnset.v(ix-1) )
+	    {
+                ++pospos;
+	    }
+
+	    else
+	    {
+		++negpos;
+	    }
+	}
+    }
+
+    else
+    {
+	pospos = dposind.v(ix);
+	negpos = dnegind.v(ix);
+    }
+
+    ddpnset.add(ix);
+    dposind.add(ix);
+    dnegind.add(ix);
+
+    dposind.sv(ix,pospos);
+    dnegind.sv(ix,negpos);
+
+    if ( Dix > 0 )
+    {
+	ddpnset.sv(ix,1);
+
+	if ( ix >= dsize-dnbad )
+	{
+	    ++dnbad;
+	    ++dnbadpos;
+	}
+
+        ++dnpos;
+	++dsize;
+
+        for ( i = ix+1 ; i < dsize ; ++i )
+        {
+            ++(dposind("&",i));
+        }
+    }
+
+    else
+    {
+	ddpnset.sv(ix,0);
+
+	if ( ix >= dsize-dnbad )
+	{
+	    ++dnbad;
+	    ++dnbadneg;
+	}
+
+        ++dnneg;
+	++dsize;
+
+        for ( i = ix+1 ; i < dsize ; ++i )
+        {
+            ++(dnegind("&",i));
+	}
+    }
+
+    NiceAssert( Gp.numRows() == dnpos );
+    NiceAssert( Gn.numRows() == dnneg );
+
+    static thread_local Vector<T> g("&",2);
+    g.resize(dsize,-3);
+
+    for ( i = 0 ; i < dsize ; ++i )
+    {
+	xxgetG(g("&",i),i,ix,Gp,Gn,Gpn,Gpoff);
+    }
+
+    d.add(ix);
+    d.sv(ix,Dix);
+
+    L.addRowCol(ix);
+
+    if ( ix >= dsize-dnbad )
+    {
+	// [ Lu  0  ... ] [ Du 0 0 ] [ Lu'  b  ... ]   [ Gu x ... ]
+	// [ b'  .  ... ] [ 0  : : ] [ 0    :  ... ] = [ x' : ... ]
+	// [ :   .  ... ] [ 0  : : ] [ ...  :  ... ]   [ :  : ... ]
+	//
+	// so: Lu.Du.b = x
+	//
+	// Lu.mu = x
+	// Du.bu = mu
+
+        retVector<T> tmpvb;
+        retMatrix<T> tmpma;
+
+	if ( dsize-dnbad )
+	{
+	    int zer = 0;
+
+            retVector<T> tmpva; // only use this in defining gpartof!!!
+            Vector<T> &gpartof = g("&",zer,1,dsize-dnbad-1,tmpva); // We need forwardElim to detect that the vectors are the same and do the copy!
+
+	    L(0,1,dsize-dnbad-1,0,1,dsize-dnbad-1,tmpma).forwardElim(gpartof,gpartof);
+
+	    for ( i = 0 ; i < dsize-dnbad ; ++i )
+	    {
+		g("&",i) *= d.v(i);
+	    }
+	}
+
+        L("&",0,1,L.numRows()-1,ix,tmpma,"&") = g;
+	g.conj();
+	L("&",ix,0,1,dsize-1,tmpvb) = g;
+    }
+
+    else
+    {
+	// Current:
+        //
+	// [ Ga  Gc' ] = [ Ma  0  ] [ Da  0  ] [ Ma' Mc' ]
+	// [ Gc  Gf  ]   [ Mc  Mf ] [ 0   Df ] [ 0   Mf' ]
+        //
+	//             = [ Ma  0  ] [ Da.Ma'  Da.Mc' ]
+	//               [ Mc  Mf ] [ 0       Dc.Mf' ]
+        //
+	//             = [ Ma.Da.Ma'   Ma.Da.Mc'             ]
+	//               [ Mc.Da.Ma'   Mc.Da.Mc' + Mf.Df.Mf' ]
+	//
+	// Target:
+        //
+	// [ Ga  gb Gc' ]   [ La  0  0  ] [ Da 0  0  ] [ La' lb Lc' ]
+	// [ gb' gd ge' ] = [ lb' ld 0' ] [ 0  dd 0  ] [ 0'  ld le' ]
+	// [ Gc  ge Gf  ]   [ Lc  le Lf ] [ 0  0  Df ] [ 0   0  Lf' ]
+        //
+	//                  [ La   0   0  ] [ Da.La'  Da.lb  Da.Lc' ]
+	//                = [ lb'  ld  0' ] [ 0'      dd.ld  dd.le' ]
+	//                  [ Lc   le  Lf ] [ 0       0      Dc.Lf' ]
+        //
+	//                  [  La.Da.La'    La.Da.lb                La.Da.Lc'                         ]
+	//                = [ lb'.Da.La'   lb'.Da.lb + ld.dd.ld    lb'.Da.Lc' + ld.dd.le'             ]
+	//                  [  Lc.Da.La'    Lc.Da.lb + le.dd.ld     Lc.Da.Lc' + le.dd.le' + Lf.Df.Lf' ]
+	//
+        // NOTE: Z elements below should be removed - they were used, but no longer relevant
+        //
+        // lb'.Za.Da.Za.lb + ld.zd.dd.zd.ld = gd
+        // ld.zd.dd.zd.ld = gd - (lb'.Za.Da).Da.(Da.Za.lb)
+        // (dd.zd.ld)^2 = dd.( gd - (lb'.Za.Da).Da.(Da.Za.lb) )
+        // dd.zd.ld = sqrt( dd.( gd - (lb'.Za.Da).Da.(Da.Za.lb) ) )
+        //
+        // Lc.Za.Da.Za.lb + le.zd.dd.zd.ld = ge
+        // le.zd.(dd.zd.ld) = ge - Lc.Za.(Da.Za.lb)
+        // zd.le = ( ge - Lc.Za.(Da.Za.lb) )/(dd.zd.ld)
+        // dd.zd.le = dd.( ge - Lc.Za.(Da.Za.lb) )/(dd.zd.ld)
+        //
+        // Lc.Za.Da.Za.Lc' + le.zd.dd.zd.le' + Lf.Zf.Df.Zf.Lf' = Mc.Za.Da.Za.Mc' + Mf.Zf.Df.Zf.Mf'
+        // Mc.Za.Da.Za.Mc' + le.zd.dd.zd.le' + Lf.Zf.Df.Zf.Lf' = Mc.Za.Da.Za.Mc' + Mf.Zf.Df.Zf.Mf'
+        // le.zd.dd.zd.le' + Lf.Zf.Df.Zf.Lf' = Mf.Zf.Df.Zf.Mf'
+        // Lf.Zf.Df.Zf.Lf' = Mf.Zf.Df.Zf.Mf' - le.zd.dd.zd.le'
+        // Lf.Zf.Df.Zf.Lf' = Mf.Zf.Df.Zf.Mf' + (dd.zd.le).(-dd).(dd.zd.le)'
+        //
+	// Zo: (La): La = Ma
+	//     (lb): Da.Za.lb = inv(Za).inv(La).gb
+	//     (Lc): Lc = Mc
+	//     (ld): dd.zd.ld = sqrt( dd.( gd - (Da.Za.lb)'.Da.(Da.Za.lb) ) )              (may need to truncate factorisation at this step)
+	//     (le): dd.zd.le = dd.( ge - Lc.Za.(Da.Za.lb) )/(dd.zd.ld)                    (and continue this to the end of g = [ gb' gd ge' ]')
+	//     (Lf): Lf.Zf.Df.Zf.Lf' = Mf.Zf.Df.Zf.Mf + (dd.zd.le).(-dd).(dd.zd.le)'       (let xxrankone take care of this)
+        //
+        //     [ gb ]   [ Da.Za.lb ]   [ inv(Za).inv(La).gb                            ]   || [ inv(Za).inv(La).gb            ]
+        // g = [ gd ] = [ dd.zd.ld ] = [ sqrt( dd.( gd - (Da.Za.lb)'.Da.(Da.Za.lb) ) ) ] = || [ sqrt( dd.( gd - ga'.Da.ga ) ) ]
+        //     [ ge ]   [ dd.zd.le ]   [ dd.( ge - Lc.Za.(Da.Za.lb) )/(dd.zd.ld)       ]   \/ [ dd.( ge - Lc.Za.ga )/gd       ]
+        //
+        // Let: ld = min( ldmax, sqrt( dd.( gd - (Da.Za.lb)'.Da.(Da.Za.lb) ) ) )
+        //      zd =             sqrt( dd.( gd - (Da.Za.lb)'.Da.(Da.Za.lb) ) )   / ld
+
+        // gb = inv(Za).inv(La).gb
+
+        retVector<T> tmpva;
+        retVector<T> tmpvb;
+        retVector<double> tmpvcc;
+        retMatrix<T> tmpma;
+
+	if ( ix )
+	{
+            retVector<T> tmpvc; // only use for gpartof
+            retVector<double> tmpvq; // only use for gpartof
+
+            Vector<T> &gpartof = g("&",0,1,ix-1,tmpvc);
+
+	    L(0,1,ix-1,0,1,ix-1,tmpma).forwardElim(gpartof,gpartof); // NB: gpartof,gpartof so that forwardElim can detect that they're the same thing
+	}
+
+        // gd = sqrt( dd.( gd - ga'.Da.ga ) ) (but don't take the square-root yet)
+
+        double ld = real(g(ix));
+
+        for ( i = 0 ; i < ix ; ++i )
+        {
+            ld -= (d.v(i))*norm2(g(i));
+        }
+
+        ld *= d.v(ix);
+
+	if ( ld <= zt*zt )
+	{
+	    if ( dfudge )
+	    {
+		ld = zt*zt;
+	    }
+
+	    else
+	    {
+                int dnbadnew = dnbad;
+
+		if ( ix )
+		{
+		    // lb = inv(Sa).inv(Da).gb
+
+                    g("&",0,1,ix-1,tmpva) *= d(0,1,ix-1,tmpvcc);
+
+                    // Write lb to L matrix
+
+		    L("&",0,1,ix-1,ix,tmpma,"&") = g(0,1,ix-1,tmpva);
+                    (g("&",0,1,ix-1,tmpva)).conj();
+		    L("&",ix,0,1,ix-1,tmpva) = g(0,1,ix-1,tmpvb);
+		}
+
+                retVector<double> tmpvcc;
+
+		for ( j = ix ; j < dsize-dnbad ; ++j )
+		{
+		    for ( k = ix ; k < dsize-dnbad ; ++k )
+		    {
+			xxgetG(L("&",j,k),j,k,Gp,Gn,Gpn,Gpoff);
+		    }
+
+		    if ( d.v(j) > 0 )
+		    {
+			++dnbadnew;
+			++dnbadpos;
+		    }
+
+		    else
+		    {
+			++dnbadnew;
+			++dnbadneg;
+		    }
+		}
+
+		if ( dnbad )
+		{
+		    for ( j = ix ; j < dsize-dnbad ; ++j )
+		    {
+			for ( k = dsize-dnbad ; k < dsize ; ++k )
+			{
+			    xxgetG(L("&",j,k),j,k,Gp,Gn,Gpn,Gpoff);
+			    xxgetG(L("&",k,j),k,j,Gp,Gn,Gpn,Gpoff);
+			}
+		    }
+		}
+
+		dnbad = dnbadnew;
+
+		goto keep_going;
+	    }
+	}
+
+	ld = sqrt(ld);
+	g.set(ix,ld);
+
+        // Let: ld = min( ldmax, sqrt( dd.( gd - (Da.Sa.lb)'.Da.(Da.Sa.lb) ) ) )
+        //      sd =             sqrt( dd.( gd - (Da.Sa.lb)'.Da.(Da.Sa.lb) ) )   / ld
+//FIXME ld/S here!
+
+        NiceAssert( !testisvnan(ld) );
+
+        // ge = dd.( ge - Lc.Sa.ga )/gd
+
+	if ( ix )
+	{
+	    for ( i = ix+1 ; i < dsize ; ++i )
+	    {
+		for ( j = 0 ; j < ix ; ++j )
+		{
+                    g("&",i) -= (L(i,j)*g(j));
+		}
+	    }
+	}
+
+        // lb = inv(Sa).inv(Da).gb
+        // ld = gd/(dd.sd)
+        // le = le/(dd.sd)
+
+        g("&",0,1,ix-1,tmpva) *= d(0,1,ix-1,tmpvcc);
+        g("&",ix,1,dsize-1,tmpva) *= d.v(ix);
+
+	// Set row/column lb,ld,le in L:
+
+        L("&",0,1,L.numRows()-1,ix,tmpma,"&") = g;
+        g.conj();
+	L("&",ix,tmpva) = g;
+        g.conj();
+
+        // Lf.Sf.Df.Sf.Lf' = Mf.Sf.Df.Sf.Mf + (dd.sd.le).(-dd).(dd.sd.le)'
+        //                 = Mf.Sf.Df.Sf.Mf + le.(-dd.sd.sd).le'
+
+        g("&",0,1,ix,tmpva).zero();
+
+	xxrankone(g,-d.v(ix),Gp,Gn,Gpn,Gpoff,1,ix+1,0);
+    }
+
+keep_going:
+
+    return xxfact();
+}
+
+template <>
+inline int Chol<double>::xadd(int ix, double Dix, const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> *Gpoff)
+{
+    NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
+    NiceAssert( Gp.numRows()  == Gp.numCols() );
+    NiceAssert( Gn.numRows()  == Gn.numCols() );
+    NiceAssert( Gpn.numRows() == Gp.numRows() );
+    NiceAssert( Gpn.numCols() == Gn.numCols() );
+    NiceAssert( ix >= 0 );
+    NiceAssert( ix < dsize+1 );
+
+    int i,j,k;
+
+    int pospos = 0;
+    int negpos = 0;
+
+    if ( ix == dsize )
+    {
+	if ( ix )
+	{
+	    pospos = dposind.v(ix-1);
+	    negpos = dnegind.v(ix-1);
+
+	    if ( ddpnset.v(ix-1) )
+	    {
+                ++pospos;
+	    }
+
+	    else
+	    {
+		++negpos;
+	    }
+	}
+    }
+
+    else
+    {
+	pospos = dposind.v(ix);
+	negpos = dnegind.v(ix);
+    }
+
+    ddpnset.add(ix);
+    dposind.add(ix);
+    dnegind.add(ix);
+
+    dposind.sv(ix,pospos);
+    dnegind.sv(ix,negpos);
+
+    if ( Dix > 0 )
+    {
+	ddpnset.sv(ix,1);
+
+	if ( ix >= dsize-dnbad )
+	{
+	    ++dnbad;
+	    ++dnbadpos;
+	}
+
+        ++dnpos;
+	++dsize;
+
+        for ( i = ix+1 ; i < dsize ; ++i )
+        {
+            ++(dposind("&",i));
+	}
+    }
+
+    else
+    {
+	ddpnset.sv(ix,0);
+
+	if ( ix >= dsize-dnbad )
+	{
+	    ++dnbad;
+	    ++dnbadneg;
+	}
+
+        ++dnneg;
+	++dsize;
+
+        for ( i = ix+1 ; i < dsize ; ++i )
+        {
+            ++(dnegind("&",i));
+	}
+    }
+
+    NiceAssert( Gp.numRows() == dnpos );
+    NiceAssert( Gn.numRows() == dnneg );
+
+    static thread_local Vector<double> g("&",2);
+    g.resize(dsize,-3);
+
+    for ( i = 0 ; i < dsize ; ++i )
+    {
+	xxgetG(g("&",i),i,ix,Gp,Gn,Gpn,Gpoff);
+    }
+
+    d.add(ix);
+    d.sv(ix,Dix);
+
+    L.addRowCol(ix);
+
+    if ( ix >= dsize-dnbad )
+    {
+        retVector<double> tmpvb;
+        retVector<double> tmpvbb;
+        retMatrix<double> tmpma;
+
+	if ( dsize-dnbad )
+	{
+            retVector<double> tmpva;
+            retVector<double> tmpvc;
+
+            Vector<double> &gpartof = g("&",0,1,dsize-dnbad-1,tmpva);
+
+	    L(0,1,dsize-dnbad-1,0,1,dsize-dnbad-1,tmpma).forwardElim(gpartof,gpartof);
+
+            gpartof *= d(0,1,dsize-dnbad-1,tmpvc);
+	}
+
+        L("&",0,1,L.numRows()-1,ix,tmpma,"&") = g;
+	L("&",ix,0,1,dsize-1,tmpvb,tmpvbb) = g;
+    }
+
+    else
+    {
+        retVector<double> tmpva;
+        retVector<double> tmpvaa;
+        retVector<double> tmpvb;
+        retVector<double> tmpvcc;
+        retMatrix<double> tmpma;
+
+	if ( ix )
+	{
+            retVector<double> tmpvc;
+            retVector<double> tmpvq;
+
+            Vector<double> &gpartof = g("&",0,1,ix-1,tmpvc);
+
+	    L(0,1,ix-1,0,1,ix-1,tmpma).forwardElim(gpartof,gpartof);
+	}
+
+        double ld = g.v(ix);
+
+        for ( i = 0 ; i < ix ; ++i )
+        {
+            ld -= (d.v(i))*norm2(g.v(i));
+        }
+
+        ld *= d.v(ix);
+
+	if ( ld <= zt*zt )
+	{
+	    if ( dfudge )
+	    {
+		ld = zt*zt;
+	    }
+
+	    else
+	    {
+                int dnbadnew = dnbad;
+
+		if ( ix )
+		{
+                    g("&",0,1,ix-1,tmpva) *= d(0,1,ix-1,tmpvcc);
+
+		    L("&",0,1,ix-1,ix,tmpma,"&") = g(0,1,ix-1,tmpva);
+		    L("&",ix,0,1,ix-1,tmpva,tmpvaa) = g(0,1,ix-1,tmpvb);
+		}
+
+                retVector<double> tmpvcc;
+
+		for ( j = ix ; j < dsize-dnbad ; ++j )
+		{
+		    for ( k = ix ; k < dsize-dnbad ; ++k )
+		    {
+			xxgetG(L("&",j,k),j,k,Gp,Gn,Gpn,Gpoff);
+		    }
+
+		    if ( d.v(j) > 0 )
+		    {
+			++dnbadnew;
+			++dnbadpos;
+		    }
+
+		    else
+		    {
+			++dnbadnew;
+			++dnbadneg;
+		    }
+		}
+
+		if ( dnbad )
+		{
+		    for ( j = ix ; j < dsize-dnbad ; ++j )
+		    {
+			for ( k = dsize-dnbad ; k < dsize ; ++k )
+			{
+			    xxgetG(L("&",j,k),j,k,Gp,Gn,Gpn,Gpoff);
+			    xxgetG(L("&",k,j),k,j,Gp,Gn,Gpn,Gpoff);
+			}
+		    }
+		}
+
+		dnbad = dnbadnew;
+
+		goto keep_going;
+	    }
+	}
+
+	ld = sqrt(ld);
+	g.sv(ix,ld);
+
+        // Let: ld = min( ldmax, sqrt( dd.( gd - (Da.Sa.lb)'.Da.(Da.Sa.lb) ) ) )
+        //      sd =             sqrt( dd.( gd - (Da.Sa.lb)'.Da.(Da.Sa.lb) ) )   / ld
+//FIXME ld/S here!
+
+        NiceAssert( !testisvnan(ld) );
+
+	if ( ix )
+	{
+	    for ( i = ix+1 ; i < dsize ; ++i )
+	    {
+		for ( j = 0 ; j < ix ; ++j )
+		{
+                    g("&",i) -= ((L.v(i,j))*(g.v(j)));
+		}
+	    }
+	}
+
+        g("&",0,1,ix-1,tmpva) *= d(0,1,ix-1,tmpvcc);
+        g("&",ix,1,dsize-1,tmpva) *= d.v(ix);
+
+        L("&",0,1,L.numRows()-1,ix,tmpma,"&") = g;
+	L("&",ix,tmpva,tmpvaa) = g;
+
+        g("&",0,1,ix,tmpva).zero();
+
+	xxrankone(g,-d.v(ix),Gp,Gn,Gpn,Gpoff,1,ix+1,0);
+    }
+
+keep_going:
+
+    return xxfact();
+}
+
+// Internal functions:
+
+template <class T>
+int Chol<T>::xxrankone(const Vector<T> &ax, double bx, const Matrix<T> &Gp, const Matrix<T> &Gn, const Matrix<T> &Gpn, const Vector<double> *Gpoff, int hold_off, int z_start, int z_end)
+{
+    NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
+    NiceAssert( Gp.numRows()  == Gp.numCols() );
+    NiceAssert( Gn.numRows()  == Gn.numCols() );
+    NiceAssert( Gpn.numRows() == Gp.numRows() );
+    NiceAssert( Gpn.numCols() == Gn.numCols() );
+    NiceAssert( Gp.numRows()  == dnpos );
+    NiceAssert( Gn.numRows()  == dnneg );
+    NiceAssert( z_start+z_end <= dsize );
+    NiceAssert( ax.size() == dsize );
+
+    // Gnew = Gold + s.a.a'
+    //
+    // Gold_ij = sum_{k=0,min(i,j)} Lold_ik.d_k.Lold_jk
+    // Gnew_ij = sum_{k=0,min(i,j)} Lnew_ik.d_k.Lnew_jk
+    //         = Gold_ij + s.a_i.a_j
+    //         = sum_{k=0,min(i,j)} Lold_ik.d_k.Lold_jk + s.a_i.a_j
+    //
+    // Hence:
+    //
+    // Gnew_00 = d_0.Lnew_00^2 = d_0.Lold_00^2 + s.a_0^2
+    // => Lnew_00 = sqrt( Lold_00^2 + d_0.s.a_0^2 )
+    //
+    // Gnew_i0 = d_0.Lnew_i0.Lnew_00 = d_0.Lold_i0.Lold_00 + s.a_i.a_0
+    // => Lnew_i0 = ( Lold_i0.Lold_00 + d_0.s.a_i.a_0 ) / Lnew_00
+    //
+    // For all i,j > 0:
+    //
+    // sum_{k=1,min(i,j)} Lnew_ik.d_k.Lnew_jk = sum_{k=1,min(i,j)} Lold_ik.d_k.Lold_jk + Lold_i0.d_0.Lold_j0 - Lnew_i0.d_0.Lnew_j0 + s.a_i.a_j
+    //                                        = sum_{k=1,min(i,j)} Lold_ik.d_k.Lold_jk + s.amod_i.amod_j
+    //
+    // where some calculation will show that:
+    //
+    // amod_i = ( Lold_00.a_i - Lold_io.a_0 ) / Lnew_00
+    //
+    // Method: do top left corner and column below it, calculate modified
+    //         update and recurse in an iterative manner.
+
+    if ( ( bx != 0.0 ) && ( dsize-z_start-z_end > 0 ) )
+    {
+	int i,j,k;
+
+        static thread_local Vector<T> a("&",2);
+	double b;
+
+	a = ax;
+	b = bx;
+
+	T x;
+	double xabs;
+	double yabs;
+	T alpha;
+	T beta;
+	T gamma;
+	T epsilon;
+	double sgnis;
+	int dnbadnew = dnbad;
+        int dnbadold = dnbad;
+
+	// Step 1: update the factorised corner
+	//
+        // We first normalise so that b = +-1.
+
+        double babs = abs2(b);
+        double bsqabs = sqrt(babs);
+
+	b /= babs; // b = +-1 after this
+
+	for ( i = z_start ; i < dsize-z_end ; ++i )
+	{
+            a("&",i) *= bsqabs; // Can't do a single step a("&",z_start,1,dsize-z_end-1) *= bsqabs as bsqabs is type double and a of type Vector<T>, and T != double in general
+	}
+
+	if ( dsize-dnbad > z_start )
+	{
+	    static thread_local Vector<T> aaz("&",2);
+
+	    aaz = a;
+
+	    for ( i = z_start ; i < dsize-dnbad ; ++i )
+	    {
+		sgnis = (b*d.v(i));
+
+		xabs =  abs2(L(i,i));
+		xabs *= xabs;
+
+		// xabs = L_{ii}^{{\rm old} 2}
+
+		yabs =  abs2(aaz(i));
+		yabs *= yabs;
+		yabs *= sgnis;
+
+                // yabs = s.D.|a_i|^2
+
+		xabs += yabs;
+
+		// xabs = L_{ii}^{{\rm old} 2} + s.D.|a_i|^2
+		//      = L_{ii}^{{\rm new} 2}
+
+                bool dofallback = false;
+
+//FIXME ld/S here!
+                if ( testisvnan(xabs) || testisinf(xabs) ) //( xabs >= (1/(zt*zt)) ) ) // testisinf(xabs) ) // ||
+                {
+                    // PROBABLE OVERFLOW DETECTED.  Noting that xxrankone is
+                    // always followed by xxfact, we can use a fallback to xxrankone
+                    // to attempt to update the factorisation from scratch.
+
+                    dofallback = true;
+                }
+
+		else if ( xabs <= zt*zt )
+		{
+		    if ( dfudge )
+		    {
+			xabs = zt*zt;
+		    }
+
+                    else
+                    {
+                        dofallback = true;
+                    }
+                }
+
+                if ( dofallback )
+                {
+		    for ( j = i ; j < dsize-dnbad ; ++j )
+		    {
+		        for ( k = i ; k < dsize-dnbad ; ++k )
+		        {
+		            xxgetG(L("&",j,k),j,k,Gp,Gn,Gpn,Gpoff);
+			}
+
+			if ( d(j) > 0 )
+			{
+                            ++dnbadnew;
+                            ++dnbadpos;
+			}
+
+			else
+			{
+                            ++dnbadnew;
+                            ++dnbadneg;
+			}
+		    }
+
+		    if ( dnbad )
+		    {
+		        for ( j = i ; j < dsize-dnbad ; ++j )
+		        {
+			    for ( k = dsize-dnbad ; k < dsize ; ++k )
+			    {
+				xxgetG(L("&",j,k),j,k,Gp,Gn,Gpn,Gpoff);
+				xxgetG(L("&",k,j),k,j,Gp,Gn,Gpn,Gpoff);
+			    }
+			}
+		    }
+
+                    dnbad = dnbadnew;
+
+		    goto keep_going;
+		}
+
+		// NB: we don't want an "else" statement here as this is also
+                // the fall-back case if fudging has been used.
+
+		xabs = sqrt(xabs);
+
+                NiceAssert( !testisvnan(xabs) );
+
+		// xabs = L_{ii}^{\rm new}
+
+		x = xabs;
+
+		// x = L_{ii}^{\rm new} but type T, not type double
+
+		alpha =  aaz(i);
+		alpha *= (1/xabs);
+
+                NiceAssert( !testisvnan(alpha) );
+
+		// alpha = a_i / L_{ii}^{\rm new}
+
+		beta =  L(i,i);
+		beta *= (1/xabs);
+
+                NiceAssert( !testisvnan(beta) );
+
+		// beta = L_{ii}^{\rm old} / L_{ii}^{\rm new}
+
+		for ( j = i+1 ; j < dsize ; ++j )
+		{
+		    gamma   = aaz(j);
+		    epsilon = L(j,i);
+
+		    // gamma = a_j
+		    // epsilon = L_{ji}^{\rm old}
+
+		    aaz("&",j) =  ( beta * gamma );
+		    aaz("&",j) -= ( epsilon * alpha );
+
+		    // a_j^{\rm mod} = ( L_{ii}^{\rm old} / L_{ii}^{\rm new} ) a_j    -    L_{ji}^{\rm old} ( a_i / L_{ii}^{\rm new} )
+
+		    L("&",j,i) =  ( gamma * conj(alpha) );
+		    L("&",j,i) *= sgnis;
+		    L("&",j,i) += ( beta * epsilon );
+
+		    // L_{ji}^{\rm new} := ( D_0 s_i a_j {\bar a}_i ) / L_{ii}^{\rm new}    +    ( L_{ii}^{\rm old} L_{ji}^{\rm old} ) / L_{ii}^{\rm new}
+
+		    L("&",i,j) = conj(L(j,i));
+
+                    // Fill upper right with the transpose
+		}
+
+		L("&",i,i) = x;
+
+		// L_{ii}^{\rm new} := L_{ii}^{\rm new}
+	    }
+	}
+
+	// Step 2. update unfactorised corner
+
+    keep_going:
+
+	if ( ( dnbadold > z_end ) && !hold_off )
+	{
+	    for ( i = dsize-dnbadold ; i < dsize-z_end ; ++i )
+	    {
+		for ( j = dsize-dnbadold ; j < dsize-z_end ; ++j )
+		{
+		    xxgetG(L("&",i,j),i,j,Gp,Gn,Gpn,Gpoff);
+		}
+	    }
+	}
+    }
+
+    return dnbad;
+}
+
+template <>
+inline int Chol<double>::xxrankone(const Vector<double> &ax, double bx, const Matrix<double> &Gp, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<double> *Gpoff, int hold_off, int z_start, int z_end)
+{
+    NiceAssert( !Gpoff || ( (*Gpoff).size() == Gp.numCols() ) );
+    NiceAssert( Gp.numRows()  == Gp.numCols() );
+    NiceAssert( Gn.numRows()  == Gn.numCols() );
+    NiceAssert( Gpn.numRows() == Gp.numRows() );
+    NiceAssert( Gpn.numCols() == Gn.numCols() );
+    NiceAssert( Gp.numRows()  == dnpos );
+    NiceAssert( Gn.numRows()  == dnneg );
+    NiceAssert( z_start+z_end <= dsize );
+    NiceAssert( ax.size() == dsize );
+
+    if ( ( bx != 0.0 ) && ( dsize-z_start-z_end > 0 ) )
+    {
+	int i,j,k;
+
+        static thread_local Vector<double> a("&",2);
+	double b;
+
+	a = ax;
+	b = bx;
+
+	double x;
+	double xabs;
+	double yabs;
+	double alpha;
+	double beta;
+	double gamma;
+	double epsilon;
+	double sgnis;
+	int dnbadnew = dnbad;
+        int dnbadold = dnbad;
+
+        double babs = abs2(b);
+        double bsqabs = sqrt(babs);
+
+	b /= babs;
+
+	for ( i = z_start ; i < dsize-z_end ; ++i )
+	{
+            a("&",i) *= bsqabs;
+	}
+
+	if ( dsize-dnbad > z_start )
+	{
+	    static thread_local Vector<double> aaz("&",2);
+
+	    aaz = a;
+
+	    for ( i = z_start ; i < dsize-dnbad ; ++i )
+	    {
+		sgnis = (b*d.v(i));
+
+		xabs = (L.v(i,i))*(L.v(i,i));
+		yabs = sgnis*(aaz.v(i))*(aaz.v(i));
+
+		xabs += yabs;
+
+                bool dofallback = false;
+
+//FIXME ld/S here!
+                if ( testisvnan(xabs) || testisinf(xabs) ) //|| ( xabs >= (1/(zt*zt)) ) ) // testisinf(xabs) ) // ||
+                {
+                    dofallback = true;
+                }
+
+		else if ( xabs <= zt*zt )
+		{
+		    if ( dfudge )
+		    {
+			xabs = zt*zt;
+		    }
+
+                    else
+                    {
+                        dofallback = true;
+                    }
+                }
+
+                if ( dofallback )
+                {
+		    for ( j = i ; j < dsize-dnbad ; ++j )
+		    {
+		        for ( k = i ; k < dsize-dnbad ; ++k )
+		        {
+		            xxgetG(L("&",j,k),j,k,Gp,Gn,Gpn,Gpoff);
+			}
+
+			if ( d(j) > 0 )
+			{
+                            ++dnbadnew;
+                            ++dnbadpos;
+			}
+
+			else
+			{
+                            ++dnbadnew;
+                            ++dnbadneg;
+			}
+		    }
+
+		    if ( dnbad )
+		    {
+		        for ( j = i ; j < dsize-dnbad ; ++j )
+		        {
+			    for ( k = dsize-dnbad ; k < dsize ; ++k )
+			    {
+				xxgetG(L("&",j,k),j,k,Gp,Gn,Gpn,Gpoff);
+				xxgetG(L("&",k,j),k,j,Gp,Gn,Gpn,Gpoff);
+			    }
+			}
+		    }
+
+                    dnbad = dnbadnew;
+
+		    goto keep_going;
+		}
+
+		xabs = sqrt(xabs);
+
+                NiceAssert( !testisvnan(xabs) );
+
+		x = xabs;
+
+		alpha = aaz.v(i)/xabs;
+		beta  = L.v(i,i)/xabs;
+
+                NiceAssert( !testisvnan(alpha) );
+                NiceAssert( !testisvnan(beta) );
+
+		for ( j = i+1 ; j < dsize ; ++j )
+		{
+		    gamma   = aaz(j);
+		    epsilon = L(j,i);
+
+		    aaz.sv(j,(beta*gamma)-(epsilon*alpha));
+
+                    double Lval = (sgnis*(gamma*alpha))+(beta*epsilon);
+
+		    L.sv(j,i,Lval);
+		    L.sv(i,j,Lval);
+		}
+
+		L.sv(i,i,x);
+	    }
+	}
+
+    keep_going:
+
+	if ( ( dnbadold > z_end ) && !hold_off )
+	{
+	    for ( i = dsize-dnbadold ; i < dsize-z_end ; ++i )
+	    {
+		for ( j = dsize-dnbadold ; j < dsize-z_end ; ++j )
+		{
+		    xxgetG(L("&",i,j),i,j,Gp,Gn,Gpn,Gpoff);
+		}
+	    }
+	}
+    }
+
+    return dnbad;
+}
+
+
+
+template <class T>
+int Chol<T>::xxfact(void)
+{
+andagain:
+    int i,j;
+
+    if ( dnbad == 0 )
+    {
+        return 0;
+    }
+
+    // [ Lu  0   0 ] [ Du     0 ] [ Lu' lm  Lb' ]   [ Lu  0   0 ] [ Du.Lu' Du.lm  Du.Lb' ]
+    // [ lm' lf  0 ] [ 0  df  0 ] [ 0   lf  lp' ] = [ lm' lf  0 ] [ 0      df.lf  df.lp' ]
+    // [ Lb  lp    ] [ 0  0     ] [ 0   0       ]   [ Lb  lp    ] [ 0      0             ]
+    //
+    //                                              [ Lu.Du.Lu'   Lu.Du.lm               Lu.Du.Lb'               ]
+    //                                            = [ lm'.Du.Lu'  lm'.Du.lm + lf.df.lf   lm'.Du.Lb' + lf.df.lp'  ]
+    //                                              [ Lb.Du.Lu'   Lb.Du.lm + lp.df.lf                            ]
+    //
+    //                                              [ Gu   gm  Gb' ]
+    //                                            = [ gm'  gf  gp' ]
+    //                                              [ Gb   gp      ]
+    //
+    // lf = sqrt( df.gf - df.lm'.Du.lm )
+    // lp = ( gp - Lb.Du.lm ) / ( df.lf )
+
+    static thread_local Vector<T> b("&",2);
+    static thread_local Vector<T> bd("&",2);
+
+    b.resize(dsize-dnbad,-3);
+    bd.resize(dsize-dnbad,-3);
+
+    double f;
+    T g;
+    T h;
+
+    //L(0,1,dsize-dnbad-1,dsize-dnbad,1,dsize-dnbad).getCol(b,0);
+
+    retMatrix<double> tmpmad;
+    retVector<double> tmpvcc;
+
+    b = L(0,1,dsize-dnbad-1,dsize-dnbad,tmpmad,"&");
+    bd = b;
+    bd *= d(0,1,dsize-dnbad-1,tmpvcc);
+
+    T temp;
+
+    f = d(dsize-dnbad) * ( real(L(dsize-dnbad,dsize-dnbad)) - real(innerProduct(temp,b,bd)) ); // new
+
+#ifndef NDEBUG
+if ( testisvnan(f) || testisinf(f) )
+{
+errstream() << "chol.hpp testisvnan(f) 0: " << d(dsize-dnbad) << "\n";
+errstream() << "chol.hpp testisvnan(f) 1: " << real(L(dsize-dnbad,dsize-dnbad)) << "\n";
+errstream() << "chol.hpp testisvnan(f) 2: " << real(innerProduct(temp,b,bd)) << "\n";
+errstream() << "chol.hpp testisvnan(f) 3: " << L(dsize-dnbad,dsize-dnbad) << "\n";
+errstream() << "chol.hpp testisvnan(f) 4: " << innerProduct(temp,b,bd) << "\n";
+errstream() << "chol.hpp testisvnan(f) 5: " << b << "\n";
+errstream() << "chol.hpp testisvnan(f) 6: " << bd << "\n";
+errstream() << "chol.hpp testisvnan(f) 7: " << L << "\n";
+}
+#endif
+    NiceAssert( !testisvnan(f) );
+
+    if ( f <= zt*zt )
+    {
+	if ( dfudge )
+	{
+            //L("&",dsize-dnbad,dsize-dnbad) += (d(dsize-dnbad)*((zt*zt)-f));
+	    f = zt*zt; // f += ((zt*zt)-f);
+	}
+
+	else
+	{
+	    return dnbad;
+	}
+    }
+
+    // No else, this is deliberate
+
+    f = sqrt(f);
+
+    NiceAssert( !testisvnan(f) );
+
+    L("&",dsize-dnbad,dsize-dnbad) = f;
+
+    if ( dnbad > 1 )
+    {
+	// and now the flow down.
+
+	f = d(dsize-dnbad)/f;
+
+        NiceAssert( !testisvnan(f) );
+
+	for ( i = dsize-dnbad+1 ; i < dsize ; ++i )
+	{
+	    g = L(i,dsize-dnbad);
+
+	    if ( dsize-dnbad )
+	    {
+		for ( j = 0 ; j < dsize-dnbad ; ++j )
+		{
+		    h = L(i,j);
+		    h *= d(j);
+		    h *= b(j);
+
+		    g -= h;
+		}
+	    }
+
+	    g *= f;
+
+	    L("&",i,dsize-dnbad) = g;
+	    L("&",dsize-dnbad,i) = conj(g);
+	}
+    }
+
+    if ( d(dsize-dnbad) > 0 )
+    {
+	--dnbad;
+	--dnbadpos;
+    }
+
+    else
+    {
+	--dnbad;
+	--dnbadneg;
+    }
+
+goto andagain; // avoid recursion for speed!
+    return xxfact();
+}
+
+template <>
+inline int Chol<double>::xxfact(void)
+{
+    int i,j;
+    double f,g,temp;
+
+    static thread_local Vector<double> b("&",2);
+    static thread_local Vector<double> bd("&",2);
+
+    retVector<double> tmpva;
+    retVector<double> tmpvcc;
+    retMatrix<double> tmpmad;
+
+    while ( 1 )
+    {
+        if ( dnbad == 0 )
+        {
+            return 0;
+        }
+
+        b.resize(dsize-dnbad,-3);
+        bd.resize(dsize-dnbad,-3);
+
+        int z = 0;
+
+        b  = L(z,1,dsize-dnbad-1,dsize-dnbad,tmpmad,"&");
+        bd = b;
+        bd *= d(0,1,dsize-dnbad-1,tmpva);
+
+        f = d.v(dsize-dnbad) * ( L.v(dsize-dnbad,dsize-dnbad) - twoProduct(temp,b,bd) ); // new
+
+#ifndef NDEBUG
+if ( testisvnan(f) )
+{
+errstream() << "chol.hpp testisvnan(f) 0: " << d(dsize-dnbad) << "\n";
+errstream() << "chol.hpp testisvnan(f) 1: " << L(dsize-dnbad,dsize-dnbad) << "\n";
+errstream() << "chol.hpp testisvnan(f) 2: " << twoProduct(temp,b,bd) << "\n";
+errstream() << "chol.hpp testisvnan(f) 3: " << L(dsize-dnbad,dsize-dnbad) << "\n";
+errstream() << "chol.hpp testisvnan(f) 4: " << twoProduct(temp,b,bd) << "\n";
+errstream() << "chol.hpp testisvnan(f) 5: " << b << "\n";
+errstream() << "chol.hpp testisvnan(f) 6: " << bd << "\n";
+errstream() << "chol.hpp testisvnan(f) 7: " << L << "\n";
+}
+#endif
+        NiceAssert( !testisvnan(f) );
+
+        if ( f <= zt*zt )
+        {
+	    if ( dfudge )
+	    {
+	        f = zt*zt; // f += ((zt*zt)-f);
+	    }
+
+            else
+	    {
+	       return dnbad;
+	    }
+        }
+
+        f = sqrt(f);
+
+        NiceAssert( !testisvnan(f) );
+
+        L("&",dsize-dnbad,dsize-dnbad) = f;
+
+        if ( dnbad > 1 )
+        {
+	    f = d(dsize-dnbad)/f;
+
+            NiceAssert( !testisvnan(f) );
+
+   	    for ( i = dsize-dnbad+1 ; i < dsize ; ++i )
+	    {
+	        g = L.v(i,dsize-dnbad);
+
+                for ( j = 0 ; j < dsize-dnbad ; ++j )
+	        {
+	            g -= L.v(i,j)*d.v(j)*b.v(j); // new
+	        }
+
+  	        g *= f;
+
+	        L("&",i,dsize-dnbad) = g;
+	        L("&",dsize-dnbad,i) = g;
+	    }
+        }
+
+        if ( d(dsize-dnbad) > 0 )
+        {
+	    --dnbad;
+	    --dnbadpos;
+        }
+
+        else
+        {
+	    --dnbad;
+	    --dnbadneg;
+        }
+    }
+
+    //return xxfact(); - avoid recursion for speed!
+    return 0;
+}
+
+
+
+
+
+
 
 
 

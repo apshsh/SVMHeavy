@@ -161,8 +161,6 @@ public:
     //           NB: if there are nulls in any x then the method is selected *as
     //           if* the nulls were present in all x's.
     //           NULL by default.
-    // presource: like gridsource, but only contains prior observations and does
-    //           not define a search grid. Only for f model, not constraints.
     //
     // penalty: this is a vector of (positive valued) penalty functions.  When
     //           evaluating the acquisition function each of these will be
@@ -349,7 +347,6 @@ public:
     Vector<double> direcmin;
     Vector<double> direcmax;
     ML_Base *gridsource;
-    ML_Base *presource;
 
     Vector<ML_Base *> penalty;
 
@@ -391,7 +388,7 @@ public:
     int totitersmultiobj;
     int ehimethodmultiobj;
 
-    BayesOptions(IMP_Generic *impmeasux = nullptr, ML_Base *xdirecpre = nullptr, int xdirecdim = 0, ML_Base *xdirecsubseqpre = nullptr, ML_Base *xgridsource = nullptr, ML_Base *xpresource = nullptr) : SMBOOptions()
+    BayesOptions(IMP_Generic *impmeasux = nullptr, ML_Base *xdirecpre = nullptr, int xdirecdim = 0, ML_Base *xdirecsubseqpre = nullptr, ML_Base *xgridsource = nullptr) : SMBOOptions()
     {
         optname = "Bayesian Optimisation";
 
@@ -442,7 +439,6 @@ public:
         direcmax.resize(direcdim);
 
         gridsource = xgridsource;
-        presource  = xpresource;
 
         startpointsmultiobj = startpoints;
         totitersmultiobj    = totiters;
@@ -515,7 +511,6 @@ public:
         direcmin       = src.direcmin;
         direcmax       = src.direcmax;
         gridsource     = src.gridsource;
-        presource      = src.presource;
 
         penalty           = src.penalty;
 

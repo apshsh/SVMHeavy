@@ -619,7 +619,7 @@ public:
    virtual Vector<T> &addit (const T         &b) { if ( imoverhere ) { overhere().addit(b);  } else { NiceThrow("Not in FuncVector 16a"); } return *this; }
    virtual Vector<T> &mulit (const Vector<T> &b) { if ( imoverhere ) { overhere().mulit(b);  } else { NiceThrow("Not in FuncVector 17a");  } return *this; } // this*b
    virtual Vector<T> &rmulit(const Vector<T> &b) { if ( imoverhere ) { overhere().rmulit(b); } else { NiceThrow("Not in FuncVector 18a");  } return *this; } // b*this
-   virtual Vector<T> &divit (const Vector<T> &b) { if ( imoverhere ) { overhere().divit(b);  } else { NiceThrow("Not in FuncVector 19a");  } return *this; } // this/b
+   template <class Y> Vector<T> &divit (const Vector<Y> &b) { if ( imoverhere ) { overhere().divit(b);  } else { NiceThrow("Not in FuncVector 19a");  } return *this; } // this/b
    virtual Vector<T> &rdivit(const Vector<T> &b) { if ( imoverhere ) { overhere().rdivit(b); } else { NiceThrow("Not in FuncVector 20a");  } return *this; } // b\this
     virtual Vector<T> &mulit (const T         &b) { if ( imoverhere ) { overhere().mulit(b);  } else { NiceThrow("Not in FuncVector 17");   } return *this; } // this*b
     virtual Vector<T> &rmulit(const T         &b) { if ( imoverhere ) { overhere().rmulit(b); } else { NiceThrow("Not in FuncVector 18");   } return *this; } // b*this
@@ -891,12 +891,16 @@ template <class T> T sum     (const Vector<T> &a);
 template <class T> T sqsum   (const Vector<T> &a);
 template <class T> T orall   (const Vector<T> &a);
 template <class T> T andall  (const Vector<T> &a);
+template <class T> T logsum  (const Vector<T> &a); // sum of the logs of the vector
 template <class T> T prod    (const Vector<T> &a);
 template <class T> T Prod    (const Vector<T> &a);
 template <class T> T mean    (const Vector<T> &a);
 template <class T> T sqmean  (const Vector<T> &a);
 template <class T> T vari    (const Vector<T> &a);
 template <class T> T stdev   (const Vector<T> &a);
+
+template <class T> T logsum  (const Vector<T> &a, int maxsize); // sum of the logs of the vector up to no more than length maxsize
+template <class T> T prod    (const Vector<T> &a, int maxsize); // only do product to max of vector size and maxsize
 
 template <class T> const T &max   (const Vector<T> &a, int &i);
 template <class T> const T &min   (const Vector<T> &a, int &i);
@@ -1134,7 +1138,6 @@ template <class T> Vector<T>  operator- (const Vector<T> &left_op);
 // -  subtraction        - binary, return rvalue
 // *  multiplication     - binary, return rvalue
 // /  division           - binary, return rvalue
-// %  modulo             - binary, return rvalue
 //
 // NB: - adding a scalar to a vector adds the scalar to all elements of the
 //       vector.
@@ -1150,25 +1153,21 @@ template <class T> Vector<T>  operator+ (const Vector<T> &left_op, const Vector<
 template <class T> Vector<T>  operator- (const Vector<T> &left_op, const Vector<T> &right_op);
 template <class T> Vector<T>  operator* (const Vector<T> &left_op, const Vector<T> &right_op);
 template <class T> Vector<T>  operator/ (const Vector<T> &left_op, const Vector<T> &right_op);
-template <class T> Vector<T>  operator% (const Vector<T> &left_op, const Vector<T> &right_op);
 
 template <class T> Vector<T>  operator+ (const Vector<T> &left_op, const T         &right_op);
 template <class T> Vector<T>  operator- (const Vector<T> &left_op, const T         &right_op);
 template <class T> Vector<T>  operator* (const Vector<T> &left_op, const T         &right_op);
 template <class T> Vector<T>  operator/ (const Vector<T> &left_op, const T         &right_op);
-template <class T> Vector<T>  operator% (const Vector<T> &left_op, const T         &right_op);
 
 template <class T> Vector<T>  operator+ (const T         &left_op, const Vector<T> &right_op);
 template <class T> Vector<T>  operator- (const T         &left_op, const Vector<T> &right_op);
 template <class T> Vector<T>  operator* (const T         &left_op, const Vector<T> &right_op);
 template <class T> Vector<T>  operator/ (const T         &left_op, const Vector<T> &right_op);
-template <class T> Vector<T>  operator% (const T         &left_op, const Vector<T> &right_op);
 
 // +=  additive       assignment - binary, return lvalue
 // -=  subtractive    assignment - binary, return lvalue
 // *=  multiplicative assignment - binary, return lvalue
 // /=  divisive       assignment - binary, return lvalue
-// %=  modulo         assignment - binary, return lvalue
 //
 // NB: - adding a scalar to a vector adds the scalar to all elements of the
 //       vector.
@@ -1182,25 +1181,22 @@ template <class T> Vector<T>  operator% (const T         &left_op, const Vector<
 template <         class T> Vector<T> &operator+=(Vector<T> &left_op, const Vector<T> &right_op);
 template <         class T> Vector<T> &operator-=(Vector<T> &left_op, const Vector<T> &right_op);
 template <class S, class T> Vector<S> &operator*=(Vector<S> &left_op, const Vector<T> &right_op);
-template <         class T> Vector<T> &operator/=(Vector<T> &left_op, const Vector<T> &right_op);
-//template <         class T> Vector<T> &operator%=(Vector<T> &left_op, const Vector<T> &right_op);
+template <class S, class T> Vector<S> &operator/=(Vector<S> &left_op, const Vector<T> &right_op); // elementwise for chol.hpp
 
 template <class T> Vector<T> &operator+=(Vector<T> &left_op, const T &right_op);
 template <class T> Vector<T> &operator-=(Vector<T> &left_op, const T &right_op);
 template <class T> Vector<T> &operator*=(Vector<T> &left_op, const T &right_op);
 template <class T> Vector<T> &operator/=(Vector<T> &left_op, const T &right_op);
-template <class T> Vector<T> &operator%=(Vector<T> &left_op, const T &right_op);
 
 template <class T> Vector<T> &operator+=(const T &left_op, Vector<T> &right_op);
 template <class T> Vector<T> &operator-=(const T &left_op, Vector<T> &right_op);
 template <class T> Vector<T> &operator*=(const T &left_op, Vector<T> &right_op);
 template <class T> Vector<T> &operator/=(const T &left_op, Vector<T> &right_op);
-template <class T> Vector<T> &operator%=(const T &left_op, Vector<T> &right_op);
 
 template <> inline Vector<double> &operator+=(Vector<double> &left_op, const Vector<double> &right_op);
 template <> inline Vector<double> &operator-=(Vector<double> &left_op, const Vector<double> &right_op);
 template <> inline Vector<double> &operator*=(Vector<double> &left_op, const Vector<double> &right_op);
-template <> inline Vector<double> &operator/=(Vector<double> &left_op, const Vector<double> &right_op);
+template <> inline Vector<double> &operator/=(Vector<double> &left_op, const Vector<double> &right_op); // elementwise for chol.hpp
 
 template <> inline Vector<double> &operator+=(Vector<double> &left_op, const double &right_op);
 template <> inline Vector<double> &operator-=(Vector<double> &left_op, const double &right_op);
@@ -5192,16 +5188,18 @@ const T &andall(T &res, const Vector<T> &a)
 template <class T>
 const T &prod(T &res, const Vector<T> &a)
 {
-    if ( a.size() )
+    if ( a.infsize() )
+    {
+        NiceThrow("Good try old chap");
+    }
+
+    else if ( a.size() )
     {
         res = a(0);
 
-        //if ( a.size() > 1 )
-	{
-            for ( int i = 1 ; i < a.size() ; ++i )
-	    {
-                res *= a(i);
-	    }
+        for ( int i = 1 ; i < a.size() ; ++i )
+        {
+            res *= a(i);
 	}
     }
 
@@ -5214,11 +5212,115 @@ const T &prod(T &res, const Vector<T> &a)
 }
 
 template <class T>
+const T logsum(const Vector<T> &a)
+{
+    T res;
+
+    if ( a.infsize() )
+    {
+        NiceThrow("Yaaarrrrrr");
+    }
+
+    else if ( a.size() )
+    {
+        res = log(a(0));
+
+        for ( int i = 1 ; i < a.size() ; ++i )
+        {
+            res += log(a(i));
+        }
+    }
+
+    else
+    {
+        setzero(res);
+    }
+
+    return res;
+}
+
+template <class T>
+const T logsum(const Vector<T> &a, int maxsize)
+{
+    T res;
+
+    if ( a.infsize() )
+    {
+        NiceThrow("Yaaarrrrrr");
+    }
+
+    else if ( a.size() && maxsize )
+    {
+        res = log(a(0));
+
+        for ( int i = 1 ; ( i < a.size() ) && ( i < maxsize ) ; ++i )
+        {
+            res += log(a(i));
+        }
+    }
+
+    else
+    {
+        setzero(res);
+    }
+
+    return res;
+}
+
+template <class T>
 T prod(const Vector<T> &a)
 {
     T res;
 
-    return prod(res,a);
+    if ( a.infsize() )
+    {
+        NiceThrow("Good try old chap");
+    }
+
+    else if ( a.size() )
+    {
+        res = a(0);
+
+        for ( int i = 1 ; i < a.size() ; ++i )
+        {
+            res *= a(i);
+	}
+    }
+
+    else
+    {
+        setident(res);
+    }
+
+    return res;
+}
+
+template <class T>
+T prod(const Vector<T> &a, int maxsize)
+{
+    T res;
+
+    if ( a.infsize() )
+    {
+        NiceThrow("Good try old chap");
+    }
+
+    else if ( a.size() && maxsize )
+    {
+        res = a(0);
+
+        for ( int i = 1 ; ( i < a.size() ) && ( i < maxsize ) ; ++i )
+        {
+            res *= a(i);
+	}
+    }
+
+    else
+    {
+        setident(res);
+    }
+
+    return res;
 }
 
 template <class T>
@@ -9165,27 +9267,6 @@ template <class T> Vector<T>  operator/ (const T         &left_op, const Vector<
     return ( left_op /= res );
 }
 
-template <class T> Vector<T>  operator% (const Vector<T> &left_op, const Vector<T> &right_op)
-{
-    Vector<T> res(left_op);
-
-    return ( res %= right_op );
-}
-
-template <class T> Vector<T>  operator% (const Vector<T> &left_op, const T         &right_op)
-{
-    Vector<T> res(left_op);
-
-    return ( res %= right_op );
-}
-
-template <class T> Vector<T>  operator% (const T         &left_op, const Vector<T> &right_op)
-{
-    Vector<T> res(right_op);
-
-    return ( left_op %= res );
-}
-
 template <class T>          Vector<T> &operator+= (const T         &left_op,       Vector<T> &right_op)
 {
     return ( right_op += left_op );
@@ -9250,77 +9331,6 @@ template <class T> Vector<T>  operator- (const Vector<T> &left_op)
 
     return res;
 }
-
-/*
-template <class T> Vector<T> &operator%= (      Vector<T> &left_op, const Vector<T> &right_op)
-{
-    if ( right_op.size() && left_op.shareBase(right_op) )
-    {
-        Vector<T> temp(right_op);
-
-        left_op %= temp;
-    }
-
-    else
-    {
-	// We treat empty vectors as additive identities (ie. zero)
-
-        NiceAssert( !left_op.infsize() && !right_op.infsize() );
-        NiceAssert( ( left_op.size() == right_op.size() ) || !(left_op.size()) || !(right_op.size()) );
-
-	if ( !(left_op.size()) && right_op.size() )
-	{
-	    left_op.resize(right_op.size());
-            left_op.zero();
-	}
-
-	else if ( !(right_op.size()) )
-	{
-	    left_op.zero();
-	}
-
-	else
-	{
-	    for ( int i = 0 ; i < left_op.size() ; ++i )
-	    {
-		left_op("&",i) %= right_op(i);
-	    }
-	}
-    }
-
-    return left_op;
-}
-
-template <class T> Vector<T> &operator%= (      Vector<T> &left_op, const T         &right_op)
-{
-    NiceAssert( !left_op.infsize() );
-
-    //if ( left_op.size() )
-    {
-	for ( int i = 0 ; i < left_op.size() ; ++i )
-	{
-            left_op("&",i) %= right_op;
-	}
-    }
-
-    return left_op;
-}
-
-template <class T>          Vector<T> &operator%= (const T         &left_op,       Vector<T> &right_op)
-{
-    NiceAssert( !left_op.infsize() );
-
-    //if ( left_op.size() )
-    {
-	for ( int i = 0 ; i < left_op.size() ; ++i )
-	{
-            right_op("&",i) = left_op%right_op(i);
-	}
-    }
-
-    return right_op;
-}
-*/
 
 
 
@@ -9410,7 +9420,8 @@ template <class T>          Vector<T> &operator*= (const T         &left_op,    
     return right_op;
 }
 
-template <class T> Vector<T> &operator/= (      Vector<T> &left_op, const Vector<T> &right_op)
+// elementwise for chol.hpp
+template <class S, class T> Vector<S> &operator/=(Vector<S> &left_op, const Vector<T> &right_op)
 {
     if ( right_op.size() && left_op.shareBase(right_op) )
     {
@@ -9688,6 +9699,7 @@ template <> inline Vector<double> &operator*=(Vector<double> &left_op, const dou
 }
 
 
+// elementwise for chol.hpp
 template <> inline Vector<double> &operator/=(Vector<double> &left_op, const Vector<double> &right_op)
 {
     int size = left_op.size();

@@ -247,9 +247,10 @@ inline eqninfoblock &postProInnerProd(eqninfoblock &a) { return a; }
 
 
 
-static int pairBrackets(int start, int &end, const std::string &src, int LRorRL);
-static int processNumLtoR(int start, int &end, const std::string &src, bool &isconst);
+static int pairBrackets   (int start, int &end, const std::string &src, int LRorRL   );
+static int processNumLtoR (int start, int &end, const std::string &src, bool &isconst);
 static int processExprLtoR(int start, int &end, int &isitastring, const std::string &src, std::string &exprname, Vector<int> &commapos);
+
 std::ostream &operator<<(std::ostream &output, const eqninfoblock &src );
 void qswap(eqninfoblock &a, eqninfoblock &b);
 int operatorToFunction(int LtoRRtoL, int UnaryBinary, const Vector<std::string> &opSymb, const Vector<std::string> &opFuncEquiv, const Vector<int> &opRevBinOrder, Vector<eqninfoblock> &srcxblock);
@@ -2192,7 +2193,7 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
     if ( isfasttype() && src.isfasttype() )
     {
         //deleteVectMatMem(); just leave any temporaries lying around, they
-        // will be deleted later anyhow and deleting them wastes time.
+        // will be deleted later anyhow and deleting them now wastes time.
 
         typeis     = src.typeis;
         isNomConst = src.isNomConst;
@@ -4177,19 +4178,19 @@ int gentype::loctoMatrix(Matrix<gentype> &res, std::string &errstr) const
 
         else if ( isValSet() )
 	{
-            errstr = "Can't cast set to vector.";
+            errstr = "Can't cast set to matrix.";
 	    lociserr = 1;
 	}
 
         else if ( isValDict() )
 	{
-            errstr = "Can't cast dictionary to vector.";
+            errstr = "Can't cast dictionary to matrix.";
 	    lociserr = 1;
 	}
 
         else if ( isValDgraph() )
 	{
-            errstr = "Can't cast dgraph to vector.";
+            errstr = "Can't cast dgraph to matrix.";
 	    lociserr = 1;
 	}
 
@@ -4212,7 +4213,7 @@ int gentype::loctoMatrix(Matrix<gentype> &res, std::string &errstr) const
 
         errstr = *stringval;
 	errstr += "\n";
-	errstr += "Can't cast error to integer.";
+	errstr += "Can't cast error to matrix.";
 
         lociserr = 1;
     }
@@ -4897,7 +4898,7 @@ SparseVector<SparseVector<int> > &gentype::varsUsed(SparseVector<SparseVector<in
         int i;
         int xsize = size();
 
-        if ( xsize )
+        if ( xsize > 0 )
         {
             for ( i = 0 ; i < xsize ; ++i )
             {
@@ -5000,7 +5001,7 @@ SparseVector<int> &gentype::rowsUsed(SparseVector<int> &res) const
         int i;
         int xsize = size();
 
-        if ( xsize )
+        if ( xsize > 0 )
         {
             for ( i = 0 ; i < xsize ; ++i )
             {
@@ -5171,7 +5172,7 @@ int gentype::realDeriv(const gentype &ix, const gentype &jx)
 
         else if ( isValSet() )
         {
-            if ( (*setval).size() )
+            if ( (*setval).size() > 0 )
 	    {
                 for ( i = 0 ; i < (*setval).size() ; ++i )
 		{
@@ -5449,7 +5450,7 @@ int gentype::fastevaluate(const SparseVector<SparseVector<gentype> > &evalargs, 
 
     else if ( isValSet() )
     {
-	//if ( size() )
+	if ( size() > 0 )
 	{
 	    for ( i = 0 ; i < size() ; ++i )
 	    {
@@ -7056,7 +7057,7 @@ int gentype::makeEqnInternal(const std::string &src)
             resbuffer >> sres;
         }
 
-        else
+        else if ( src[1] != '*' )
         {
             // Need to put in spaces
 
@@ -7065,6 +7066,20 @@ int gentype::makeEqnInternal(const std::string &src)
             altsrc = "{ ";
             altsrc += src.substr(1,(src.length())-2);
             altsrc += " }";
+
+            resbuffer << altsrc;
+            resbuffer >> sres;
+        }
+
+        else
+        {
+            // Infinite sets are {*} - DON'T PUT IN SPACES!
+
+            std::string altsrc;
+
+            altsrc = "{";
+            altsrc += src.substr(1,(src.length())-2);
+            altsrc += "}";
 
             resbuffer << altsrc;
             resbuffer >> sres;
@@ -9895,50 +9910,28 @@ static int checkAddCompat(const gentype &a, const gentype &b, int &acast, int &b
 
     else if ( a.isValVector() )
     {
-             if ( b.isValNull()    && !isstrict ) { acast = 4; bcast = 7; return 4; }
-        else if ( b.isValInteger() && !isstrict ) { acast = 4; bcast = 7; return 4; }
-        else if ( b.isValReal()    && !isstrict ) { acast = 4; bcast = 7; return 4; }
-        else if ( b.isValAnion()   && !isstrict ) { acast = 4; bcast = 7; return 4; }
-
-        else if ( b.isValVector() )
-        {
-            if ( a.size() == b.size() ) { acast = 4; bcast = 4; return 4; }
-            else                        { acast = 0; bcast = 0; return 0; }
-	}
-
-	else if ( b.isValMatrix() )
-	{
-            if ( ( b.numRows() == a.size() ) && ( b.numCols() == 1 ) ) { acast = 5; bcast = 5; return 5; }
-            else                                                       { acast = 0; bcast = 0; return 0; }
-	}
-
-        else if ( b.isValSet()  && !isstrict ) { acast = 7; bcast = 8;  return 8;  }
-        else if ( b.isValString()            ) { acast = 6; bcast = 6;  return 6;  }
-        else                                   { acast = 0; bcast = 0;  return 0;  }
+             if ( b.isValNull()    && !isstrict                                               ) { acast = 4; bcast = 7; return 4; }
+        else if ( b.isValInteger() && !isstrict                                               ) { acast = 4; bcast = 7; return 4; }
+        else if ( b.isValReal()    && !isstrict                                               ) { acast = 4; bcast = 7; return 4; }
+        else if ( b.isValAnion()   && !isstrict                                               ) { acast = 4; bcast = 7; return 4; }
+        else if ( b.isValVector()  && ( a.size() == b.size() )                                ) { acast = 4; bcast = 4; return 4; }
+	else if ( b.isValMatrix()  && ( ( b.numRows() == a.size() ) && ( b.numCols() == 1 ) ) ) { acast = 5; bcast = 5; return 5; }
+        else if ( b.isValSet()     && !isstrict                                               ) { acast = 7; bcast = 8; return 8;  }
+        else if ( b.isValString()                                                             ) { acast = 6; bcast = 6; return 6;  }
+        else                                                                                    { acast = 0; bcast = 0; return 0;  }
     }
 
     else if ( a.isValMatrix() )
     {
-             if ( b.isValNull()    && !isstrict ) { acast = 5; bcast = 7; return 5; }
-        else if ( b.isValInteger() && !isstrict ) { acast = 5; bcast = 7; return 5; }
-        else if ( b.isValReal()    && !isstrict ) { acast = 5; bcast = 7; return 5; }
-        else if ( b.isValAnion()   && !isstrict ) { acast = 5; bcast = 7; return 5; }
-
-        else if ( b.isValVector() )
-        {
-            if ( ( a.numRows() == b.size() ) && ( a.numCols() == 1 ) ) { acast = 5; bcast = 5; return 5; }
-            else                                                       { acast = 0; bcast = 0; return 0; }
-	}
-
-	else if ( b.isValMatrix() )
-	{
-            if ( ( a.numRows() == b.numRows() ) && ( a.numCols() == b.numCols() ) ) { acast = 5; bcast = 5; return 5; }
-            else                                                                    { acast = 0; bcast = 0; return 0; }
-	}
-
-        else if ( b.isValSet()  && !isstrict ) { acast = 7; bcast = 8;  return 8;  }
-        else if ( b.isValString()            ) { acast = 6; bcast = 6;  return 6;  }
-        else                                   { acast = 0; bcast = 0;  return 0;  }
+             if ( b.isValNull()    && !isstrict                                                            ) { acast = 5; bcast = 7; return 5; }
+        else if ( b.isValInteger() && !isstrict                                                            ) { acast = 5; bcast = 7; return 5; }
+        else if ( b.isValReal()    && !isstrict                                                            ) { acast = 5; bcast = 7; return 5; }
+        else if ( b.isValAnion()   && !isstrict                                                            ) { acast = 5; bcast = 7; return 5; }
+        else if ( b.isValVector()  && ( ( a.numRows() == b.size() ) && ( a.numCols() == 1 ) )              ) { acast = 5; bcast = 5; return 5; }
+	else if ( b.isValMatrix()  && ( ( a.numRows() == b.numRows() ) && ( a.numCols() == b.numCols() ) ) ) { acast = 5; bcast = 5; return 5; }
+        else if ( b.isValSet()     && !isstrict                                                            ) { acast = 7; bcast = 8; return 8;  }
+        else if ( b.isValString()                                                                          ) { acast = 6; bcast = 6; return 6;  }
+        else                                                                                                 { acast = 0; bcast = 0; return 0;  }
     }
 
     else if ( a.isValSet() )
@@ -9999,12 +9992,7 @@ void constructError(const gentype &a, gentype &res, const std::string &errstrval
 {
     std::string errstr = errstrval;
 
-    if ( a.isValError() )
-    {
-	errstr += ",(";
-	errstr += a.cast_string(0);
-        errstr += ")";
-    }
+    if ( a.isValError() ) { errstr += ",("; errstr += a.cast_string(0); errstr += ")"; }
 
     res.makeError(errstr);
 
@@ -10015,19 +10003,8 @@ void constructError(const gentype &a, const gentype &b, gentype &res, const std:
 {
     std::string errstr = errstrval;
 
-    if ( a.isValError() )
-    {
-	errstr += ",(";
-	errstr += a.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( b.isValError() )
-    {
-	errstr += ",(";
-	errstr += b.cast_string(0);
-        errstr += ")";
-    }
+    if ( a.isValError() ) { errstr += ",("; errstr += a.cast_string(0); errstr += ")"; }
+    if ( b.isValError() ) { errstr += ",("; errstr += b.cast_string(0); errstr += ")"; }
 
     res.makeError(errstr);
 
@@ -10038,26 +10015,9 @@ void constructError(const gentype &a, const gentype &b, const gentype &c, gentyp
 {
     std::string errstr = errstrval;
 
-    if ( a.isValError() )
-    {
-	errstr += ",(";
-	errstr += a.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( b.isValError() )
-    {
-	errstr += ",(";
-	errstr += b.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( c.isValError() )
-    {
-	errstr += ",(";
-	errstr += c.cast_string(0);
-        errstr += ")";
-    }
+    if ( a.isValError() ) { errstr += ",("; errstr += a.cast_string(0); errstr += ")"; }
+    if ( b.isValError() ) { errstr += ",("; errstr += b.cast_string(0); errstr += ")"; }
+    if ( c.isValError() ) { errstr += ",("; errstr += c.cast_string(0); errstr += ")"; }
 
     res.makeError(errstr);
 
@@ -10068,33 +10028,10 @@ void constructError(const gentype &a, const gentype &b, const gentype &c, const 
 {
     std::string errstr = errstrval;
 
-    if ( a.isValError() )
-    {
-	errstr += ",(";
-	errstr += a.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( b.isValError() )
-    {
-	errstr += ",(";
-	errstr += b.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( c.isValError() )
-    {
-	errstr += ",(";
-	errstr += c.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( d.isValError() )
-    {
-	errstr += ",(";
-	errstr += d.cast_string(0);
-        errstr += ")";
-    }
+    if ( a.isValError() ) { errstr += ",("; errstr += a.cast_string(0); errstr += ")"; }
+    if ( b.isValError() ) { errstr += ",("; errstr += b.cast_string(0); errstr += ")"; }
+    if ( c.isValError() ) { errstr += ",("; errstr += c.cast_string(0); errstr += ")"; }
+    if ( d.isValError() ) { errstr += ",("; errstr += d.cast_string(0); errstr += ")"; }
 
     res.makeError(errstr);
 
@@ -10105,40 +10042,11 @@ void constructError(const gentype &a, const gentype &b, const gentype &c, const 
 {
     std::string errstr = errstrval;
 
-    if ( a.isValError() )
-    {
-	errstr += ",(";
-	errstr += a.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( b.isValError() )
-    {
-	errstr += ",(";
-	errstr += b.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( c.isValError() )
-    {
-	errstr += ",(";
-	errstr += c.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( d.isValError() )
-    {
-	errstr += ",(";
-	errstr += d.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( e.isValError() )
-    {
-	errstr += ",(";
-        errstr += e.cast_string(0);
-        errstr += ")";
-    }
+    if ( a.isValError() ) { errstr += ",("; errstr += a.cast_string(0); errstr += ")"; }
+    if ( b.isValError() ) { errstr += ",("; errstr += b.cast_string(0); errstr += ")"; }
+    if ( c.isValError() ) { errstr += ",("; errstr += c.cast_string(0); errstr += ")"; }
+    if ( d.isValError() ) { errstr += ",("; errstr += d.cast_string(0); errstr += ")"; }
+    if ( e.isValError() ) { errstr += ",("; errstr += e.cast_string(0); errstr += ")"; }
 
     res.makeError(errstr);
 
@@ -10149,47 +10057,12 @@ void constructError(const gentype &a, const gentype &b, const gentype &c, const 
 {
     std::string errstr = errstrval;
 
-    if ( a.isValError() )
-    {
-	errstr += ",(";
-	errstr += a.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( b.isValError() )
-    {
-	errstr += ",(";
-	errstr += b.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( c.isValError() )
-    {
-	errstr += ",(";
-	errstr += c.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( d.isValError() )
-    {
-	errstr += ",(";
-	errstr += d.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( e.isValError() )
-    {
-	errstr += ",(";
-        errstr += e.cast_string(0);
-        errstr += ")";
-    }
-
-    if ( f.isValError() )
-    {
-	errstr += ",(";
-        errstr += f.cast_string(0);
-        errstr += ")";
-    }
+    if ( a.isValError() ) { errstr += ",("; errstr += a.cast_string(0); errstr += ")"; }
+    if ( b.isValError() ) { errstr += ",("; errstr += b.cast_string(0); errstr += ")"; }
+    if ( c.isValError() ) { errstr += ",("; errstr += c.cast_string(0); errstr += ")"; }
+    if ( d.isValError() ) { errstr += ",("; errstr += d.cast_string(0); errstr += ")"; }
+    if ( e.isValError() ) { errstr += ",("; errstr += e.cast_string(0); errstr += ")"; }
+    if ( f.isValError() ) { errstr += ",("; errstr += f.cast_string(0); errstr += ")"; }
 
     res.makeError(errstr);
 
@@ -10726,18 +10599,18 @@ gentype  operator%(const gentype &a, const gentype &b)
 
 gentype &gentype::leftmult(const gentype &b)
 {
-    if ( isCastableToIntegerWithoutLoss() )
+    if ( isCastableToIntegerWithoutLoss() && !b.isValSet() )
     {
-             if ( cast_int(0) ==  0 ) { return *this; }
-        else if ( cast_int(0) ==  1 ) { fastcopy(b,1); return *this; }
+        if      ( cast_int(0) ==  0 ) {                          return *this; }
+        else if ( cast_int(0) ==  1 ) { fastcopy(b,1);           return *this; }
         else if ( cast_int(0) == -1 ) { fastcopy(b,1); negate(); return *this; }
     }
 
-    if ( b.isCastableToIntegerWithoutLoss() )
+    if ( !isValSet() && b.isCastableToIntegerWithoutLoss() )
     {
         //NB:  need to keep structure of result, even if it is zero
         //     if ( b.cast_int(0) ==  0 ) { *this = 0; return *this; }
-        if ( b.cast_int(0) ==  1 ) { return *this; }
+        if      ( b.cast_int(0) ==  1 ) {           return *this; }
         else if ( b.cast_int(0) == -1 ) { negate(); return *this; }
     }
 
@@ -10854,12 +10727,12 @@ gentype &gentype::leftmult(const gentype &b)
     else if ( isValMatrix()  && b.isValAnion()   ) { ::leftmult(dir_matrix(),b               ); }
     else if ( isValMatrix()  && b.isValMatrix()  ) { ::leftmult(dir_matrix(),b.cast_matrix(0)); }
     else if ( isValMatrix()  && b.isValString()  ) { ::leftmult(dir_matrix(),b               ); }
-    else if ( isValSet()     && b.isValInteger() ) { ::leftmult(dir_set()   ,b               ); }
-    else if ( isValSet()     && b.isValReal()    ) { ::leftmult(dir_set()   ,b               ); }
-    else if ( isValSet()     && b.isValAnion()   ) { ::leftmult(dir_set()   ,b               ); }
-    else if ( isValSet()     && b.isValString()  ) { ::leftmult(dir_set()   ,b               ); }
+    else if ( isValSet()     && b.isValInteger() ) { Set<gentype> bb(b); double temp; innerProduct(temp,cast_set(0),bb); *this = temp; }
+    else if ( isValSet()     && b.isValReal()    ) { Set<gentype> bb(b); double temp; innerProduct(temp,cast_set(0),bb); *this = temp; }
+    else if ( isValSet()     && b.isValAnion()   ) { Set<gentype> bb(b); double temp; innerProduct(temp,cast_set(0),bb); *this = temp; }
+    else if ( isValSet()     && b.isValString()  ) { Set<gentype> bb(b); double temp; innerProduct(temp,cast_set(0),bb); *this = temp; }
 
-    else if ( isValNull()    && b.isValNull()    ) { ; }
+    else if ( isValNull()    && b.isValNull()    ) { ;          }
     else if ( isValInteger() && b.isValNull()    ) { *this = 0; }
     else if ( isValReal()    && b.isValNull()    ) { *this = 0; }
     else if ( isValAnion()   && b.isValNull()    ) { *this = 0; }
@@ -10881,24 +10754,24 @@ gentype &gentype::leftmult(const gentype &b)
 
     else if ( isValInteger() && b.isValVector()  ) { int     x = cast_int(0);       *this = b; *this *= x; }
     else if ( isValInteger() && b.isValMatrix()  ) { int     x = cast_int(0);       *this = b; *this *= x; }
-    else if ( isValInteger() && b.isValSet()     ) { int     x = cast_int(0);       *this = b; *this *= x; }
+    else if ( isValInteger() && b.isValSet()     ) { Set<gentype> aa(*this); double temp; innerProduct(temp,aa,b.cast_set(0)); *this = temp; }
     else if ( isValReal()    && b.isValVector()  ) { double  x = cast_double(0);    *this = b; *this *= x; }
     else if ( isValReal()    && b.isValMatrix()  ) { double  x = cast_double(0);    *this = b; *this *= x; }
-    else if ( isValReal()    && b.isValSet()     ) { double  x = cast_double(0);    *this = b; *this *= x; }
+    else if ( isValReal()    && b.isValSet()     ) { Set<gentype> aa(*this); double temp; innerProduct(temp,aa,b.cast_set(0)); *this = temp; }
     else if ( isValString()  && b.isValVector()  ) { std::string x(cast_string(0)); *this = b; *this *= x; }
     else if ( isValString()  && b.isValMatrix()  ) { std::string x(cast_string(0)); *this = b; *this *= x; }
-    else if ( isValString()  && b.isValSet()     ) { std::string x(cast_string(0)); *this = b; *this *= x; }
+    else if ( isValString()  && b.isValSet()     ) { Set<gentype> aa(*this); double temp; innerProduct(temp,aa,b.cast_set(0)); *this = temp; }
 
     else if ( isValAnion()   && b.isValVector()  ) { gentype x(*this); *this = b; rightmult(x); }
     else if ( isValAnion()   && b.isValMatrix()  ) { gentype x(*this); *this = b; rightmult(x); }
-    else if ( isValAnion()   && b.isValSet()     ) { gentype x(*this); *this = b; rightmult(x); }
+    else if ( isValAnion()   && b.isValSet()     ) { Set<gentype> aa(*this); double temp; innerProduct(temp,aa,b.cast_set(0)); *this = temp; }
 
-    else if ( isValVector()  && b.isValVector()  ) { gentype temp; twoProduct(temp,cast_vector(0),b.cast_vector(0)); *this = temp; }
-    else if ( isValSet()     && b.isValSet()     ) { double  temp; innerProduct      (temp,cast_set(0),   b.cast_set(0)   ); *this = temp; }
-    else if ( isValDgraph()  && b.isValDgraph()  ) { double  temp; innerProduct      (temp,cast_dgraph(0),b.cast_dgraph(0)); *this = temp; }
+    else if ( isValVector()  && b.isValVector()  ) { gentype temp; twoProduct  (temp,cast_vector(0),b.cast_vector(0)); *this = temp; }
+    else if ( isValSet()     && b.isValSet()     ) { double  temp; innerProduct(temp,cast_set(0),   b.cast_set(0)   ); *this = temp; }
+    else if ( isValDgraph()  && b.isValDgraph()  ) { double  temp; innerProduct(temp,cast_dgraph(0),b.cast_dgraph(0)); *this = temp; }
 
     else if ( isValMatrix()  && b.isValVector()  ) { *this = ( cast_matrix(0) * b.cast_vector(0) ); }
-    else if ( isValString()  && b.isValString()  ) { *this = ( ( *this == b ) ? 1 : -1 ); }
+    else if ( isValString()  && b.isValString()  ) { *this = ( ( *this == b ) ? 1 : -1 );           }
 
     else if ( isValInteger() && b.isValString()  ) { goto errcase; }
     else if ( isValInteger() && b.isValDgraph()  ) { goto errcase; }
@@ -10953,14 +10826,14 @@ gentype &gentype::leftmult(double b)
 
 gentype &gentype::rightmult(const gentype &a)
 {
-    if ( isCastableToIntegerWithoutLoss() )
+    if ( isCastableToIntegerWithoutLoss() && !a.isValSet() )
     {
              if ( cast_int(0) ==  0 ) { return *this; }
         else if ( cast_int(0) ==  1 ) { fastcopy(a,1); return *this; }
         else if ( cast_int(0) == -1 ) { fastcopy(a,1); negate(); return *this; }
     }
 
-    if ( a.isCastableToIntegerWithoutLoss() )
+    if ( !isValSet() && a.isCastableToIntegerWithoutLoss() )
     {
         //NB:  need to keep structure of result, even if it is zero
         //     if ( a.cast_int(0) ==  0 ) { *this = 0; return *this; }
@@ -11061,26 +10934,26 @@ gentype &gentype::rightmult(const gentype &a)
     else if ( a.isValInteger() && isValAnion()   ) { ::rightmult(a.cast_double(0),dir_anion() ); }
     else if ( a.isValInteger() && isValVector()  ) { ::rightmult(a               ,dir_vector()); }
     else if ( a.isValInteger() && isValMatrix()  ) { ::rightmult(a               ,dir_matrix()); }
-    else if ( a.isValInteger() && isValSet()     ) { ::rightmult(a               ,dir_set()   ); }
+    else if ( a.isValInteger() && isValSet()     ) { *this = dir_set()*a;                        }
     else if ( a.isValReal()    && isValInteger() ) { ::rightmult(a.cast_double(0),dir_double()); }
     else if ( a.isValReal()    && isValReal()    ) { ::rightmult(a.cast_double(0),dir_double()); }
     else if ( a.isValReal()    && isValAnion()   ) { ::rightmult(a.cast_double(0),dir_anion() ); }
     else if ( a.isValReal()    && isValVector()  ) { ::rightmult(a               ,dir_vector()); }
     else if ( a.isValReal()    && isValMatrix()  ) { ::rightmult(a               ,dir_matrix()); }
-    else if ( a.isValReal()    && isValSet()     ) { ::rightmult(a               ,dir_set()   ); }
+    else if ( a.isValReal()    && isValSet()     ) { *this = dir_set()*a;                        }
     else if ( a.isValAnion()   && isValInteger() ) { ::rightmult(a.cast_anion(0) ,dir_anion() ); }
     else if ( a.isValAnion()   && isValReal()    ) { ::rightmult(a.cast_anion(0) ,dir_anion() ); }
     else if ( a.isValAnion()   && isValAnion()   ) { ::rightmult(a.cast_anion(0) ,dir_anion() ); }
     else if ( a.isValAnion()   && isValVector()  ) { ::rightmult(a               ,dir_vector()); }
     else if ( a.isValAnion()   && isValMatrix()  ) { ::rightmult(a               ,dir_matrix()); }
-    else if ( a.isValAnion()   && isValSet()     ) { ::rightmult(a               ,dir_set()   ); }
+    else if ( a.isValAnion()   && isValSet()     ) { *this = dir_set()*a;                        }
     else if ( a.isValMatrix()  && isValVector()  ) { ::rightmult(a.cast_matrix(0),dir_vector()); }
     else if ( a.isValMatrix()  && isValMatrix()  ) { ::rightmult(a.cast_matrix(0),dir_matrix()); }
     else if ( a.isValString()  && isValVector()  ) { ::rightmult(a               ,dir_vector()); }
     else if ( a.isValString()  && isValMatrix()  ) { ::rightmult(a               ,dir_matrix()); }
-    else if ( a.isValString()  && isValSet()     ) { ::rightmult(a               ,dir_set()   ); }
+    else if ( a.isValString()  && isValSet()     ) { *this = dir_set()*a;                        }
 
-    else if ( a.isValNull()    && isValNull()    ) { ; }
+    else if ( a.isValNull()    && isValNull()    ) { ;          }
     else if ( a.isValInteger() && isValNull()    ) { *this = 0; }
     else if ( a.isValReal()    && isValNull()    ) { *this = 0; }
     else if ( a.isValAnion()   && isValNull()    ) { *this = 0; }
@@ -11114,12 +10987,12 @@ gentype &gentype::rightmult(const gentype &a)
     else if ( a.isValMatrix()  && isValAnion()   ) { gentype x(*this); *this = a; leftmult(x); }
     else if ( a.isValSet()     && isValAnion()   ) { gentype x(*this); *this = a; leftmult(x); }
 
-    else if ( a.isValVector()  && isValVector()  ) { gentype temp; twoProduct(temp,a.cast_vector(0),cast_vector(0)); *this = temp; }
-    else if ( a.isValSet()     && isValSet()     ) { double  temp; innerProduct      (temp,a.cast_set(0)   ,cast_set(0)   ); *this = temp; }
-    else if ( a.isValDgraph()  && isValDgraph()  ) { double  temp; innerProduct      (temp,a.cast_dgraph(0),cast_dgraph(0)); *this = temp; }
+    else if ( a.isValVector()  && isValVector()  ) { gentype temp; twoProduct  (temp,a.cast_vector(0),cast_vector(0)); *this = temp; }
+    else if ( a.isValSet()     && isValSet()     ) { double  temp; innerProduct(temp,a.cast_set(0)   ,cast_set(0)   ); *this = temp; }
+    else if ( a.isValDgraph()  && isValDgraph()  ) { double  temp; innerProduct(temp,a.cast_dgraph(0),cast_dgraph(0)); *this = temp; }
 
     else if ( a.isValVector()  && isValMatrix()  ) { *this = ( a.cast_vector(0) * cast_matrix(0) ); }
-    else if ( a.isValString()  && isValString()  ) { *this = ( ( a == *this ) ? 1 : -1 ); }
+    else if ( a.isValString()  && isValString()  ) { *this = ( ( a == *this ) ? 1 : -1 );           }
 
     else if ( a.isValInteger() && isValString()  ) { goto errcase; }
     else if ( a.isValInteger() && isValDgraph()  ) { goto errcase; }
@@ -11239,93 +11112,93 @@ gentype &gentype::leftdiv(const gentype &b)
         goto errcase;
     }
 
-         if ( isValNull()    && b.isValNull()    ) { ;                                     }
-    else if ( isValNull()    && b.isValInteger() ) { dir_double() /= b.cast_double(0);     }
-    else if ( isValNull()    && b.isValReal()    ) { dir_double() /= b.cast_double(0);     }
-    else if ( isValNull()    && b.isValAnion()   ) { dir_anion()  *= inv(b.cast_anion(0)); }
-    else if ( isValNull()    && b.isValVector()  ) { goto errcase;                         }
-    else if ( isValNull()    && b.isValMatrix()  ) { double temp = cast_int(0); *this = b; inverse(); *this *= temp; }
-    else if ( isValNull()    && b.isValString()  ) { goto errcase;                         }
-    else if ( isValNull()    && b.isValSet()     ) { goto errcase;                         }
-    else if ( isValNull()    && b.isValDict()    ) { goto errcase;                         }
-    else if ( isValNull()    && b.isValDgraph()  ) { goto errcase;                         }
+         if ( isValNull() && b.isValNull()    ) { ;                                                               }
+    else if ( isValNull() && b.isValInteger() ) { dir_double() /= b.cast_double(0);                               }
+    else if ( isValNull() && b.isValReal()    ) { dir_double() /= b.cast_double(0);                               }
+    else if ( isValNull() && b.isValAnion()   ) { dir_anion()  *= inv(b.cast_anion(0));                           }
+    else if ( isValNull() && b.isValVector()  ) { goto errcase;                                                   }
+    else if ( isValNull() && b.isValMatrix()  ) { double temp = cast_int(0); *this = b; inverse(); *this *= temp; }
+    else if ( isValNull() && b.isValString()  ) { goto errcase;                                                   }
+    else if ( isValNull() && b.isValSet()     ) { goto errcase;                                                   }
+    else if ( isValNull() && b.isValDict()    ) { goto errcase;                                                   }
+    else if ( isValNull() && b.isValDgraph()  ) { goto errcase;                                                   }
 
-    else if ( isValInteger() && b.isValNull()    ) { dir_double() /= b.cast_int(0);        }
-    else if ( isValInteger() && b.isValInteger() ) { dir_double() /= b.cast_double(0);     }
-    else if ( isValInteger() && b.isValReal()    ) { dir_double() /= b.cast_double(0);     }
-    else if ( isValInteger() && b.isValAnion()   ) { dir_anion()  *= inv(b.cast_anion(0)); }
-    else if ( isValInteger() && b.isValVector()  ) { goto errcase;                         }
+    else if ( isValInteger() && b.isValNull()    ) { dir_double() /= b.cast_int(0);                                  }
+    else if ( isValInteger() && b.isValInteger() ) { dir_double() /= b.cast_double(0);                               }
+    else if ( isValInteger() && b.isValReal()    ) { dir_double() /= b.cast_double(0);                               }
+    else if ( isValInteger() && b.isValAnion()   ) { dir_anion()  *= inv(b.cast_anion(0));                           }
+    else if ( isValInteger() && b.isValVector()  ) { goto errcase;                                                   }
     else if ( isValInteger() && b.isValMatrix()  ) { double temp = cast_int(0); *this = b; inverse(); *this *= temp; }
-    else if ( isValInteger() && b.isValString()  ) { goto errcase;                         }
-    else if ( isValInteger() && b.isValSet()     ) { goto errcase;                         }
-    else if ( isValInteger() && b.isValDict()    ) { goto errcase;                         }
-    else if ( isValInteger() && b.isValDgraph()  ) { goto errcase;                         }
+    else if ( isValInteger() && b.isValString()  ) { goto errcase;                                                   }
+    else if ( isValInteger() && b.isValSet()     ) { goto errcase;                                                   }
+    else if ( isValInteger() && b.isValDict()    ) { goto errcase;                                                   }
+    else if ( isValInteger() && b.isValDgraph()  ) { goto errcase;                                                   }
 
-    else if ( isValReal()    && b.isValNull()    ) { dir_double() /= b.cast_double(0);     }
-    else if ( isValReal()    && b.isValInteger() ) { dir_double() /= b.cast_double(0);     }
-    else if ( isValReal()    && b.isValReal()    ) { dir_double() /= b.cast_double(0);     }
-    else if ( isValReal()    && b.isValAnion()   ) { dir_anion()  *= inv(b.cast_anion(0)); }
-    else if ( isValReal()    && b.isValVector()  ) { goto errcase;                         }
-    else if ( isValReal()    && b.isValMatrix()  ) { double temp = cast_double(0);  *this = b; inverse(); *this *= temp; }
-    else if ( isValReal()    && b.isValString()  ) { goto errcase;                         }
-    else if ( isValReal()    && b.isValSet()     ) { goto errcase;                         }
-    else if ( isValReal()    && b.isValDict()    ) { goto errcase;                         }
-    else if ( isValReal()    && b.isValDgraph()  ) { goto errcase;                         }
+    else if ( isValReal() && b.isValNull()    ) { dir_double() /= b.cast_double(0);                                   }
+    else if ( isValReal() && b.isValInteger() ) { dir_double() /= b.cast_double(0);                                   }
+    else if ( isValReal() && b.isValReal()    ) { dir_double() /= b.cast_double(0);                                   }
+    else if ( isValReal() && b.isValAnion()   ) { dir_anion()  *= inv(b.cast_anion(0));                               }
+    else if ( isValReal() && b.isValVector()  ) { goto errcase;                                                       }
+    else if ( isValReal() && b.isValMatrix()  ) { double temp = cast_double(0);  *this = b; inverse(); *this *= temp; }
+    else if ( isValReal() && b.isValString()  ) { goto errcase;                                                       }
+    else if ( isValReal() && b.isValSet()     ) { goto errcase;                                                       }
+    else if ( isValReal() && b.isValDict()    ) { goto errcase;                                                       }
+    else if ( isValReal() && b.isValDgraph()  ) { goto errcase;                                                       }
 
-    else if ( isValAnion()   && b.isValNull()    ) { dir_anion()  /= b.cast_double(0);      }
-    else if ( isValAnion()   && b.isValInteger() ) { dir_anion()  /= b.cast_double(0);      }
-    else if ( isValAnion()   && b.isValReal()    ) { dir_anion()  /= b.cast_double(0);      }
-    else if ( isValAnion()   && b.isValAnion()   ) { dir_anion()  *= inv(b.cast_anion(0));  }
-    else if ( isValAnion()   && b.isValVector()  ) { goto errcase;                          }
-    else if ( isValAnion()   && b.isValMatrix()  ) { gentype temp(cast_anion(0)); *this = b; inverse(); rightmult(temp); }
-    else if ( isValAnion()   && b.isValString()  ) { goto errcase;                          }
-    else if ( isValAnion()   && b.isValSet()     ) { goto errcase;                          }
-    else if ( isValAnion()   && b.isValDict()    ) { goto errcase;                          }
-    else if ( isValAnion()   && b.isValDgraph()  ) { goto errcase;                          }
+    else if ( isValAnion() && b.isValNull()    ) { dir_anion()  /= b.cast_double(0);                                   }
+    else if ( isValAnion() && b.isValInteger() ) { dir_anion()  /= b.cast_double(0);                                   }
+    else if ( isValAnion() && b.isValReal()    ) { dir_anion()  /= b.cast_double(0);                                   }
+    else if ( isValAnion() && b.isValAnion()   ) { dir_anion()  *= inv(b.cast_anion(0));                               }
+    else if ( isValAnion() && b.isValVector()  ) { goto errcase;                                                       }
+    else if ( isValAnion() && b.isValMatrix()  ) { gentype temp(cast_anion(0)); *this = b; inverse(); rightmult(temp); }
+    else if ( isValAnion() && b.isValString()  ) { goto errcase;                                                       }
+    else if ( isValAnion() && b.isValSet()     ) { goto errcase;                                                       }
+    else if ( isValAnion() && b.isValDict()    ) { goto errcase;                                                       }
+    else if ( isValAnion() && b.isValDgraph()  ) { goto errcase;                                                       }
 
-    else if ( isValVector()  && b.isValNull()    ) { dir_vector() *= inv(b);                }
-    else if ( isValVector()  && b.isValInteger() ) { dir_vector() *= inv(b);                }
-    else if ( isValVector()  && b.isValReal()    ) { dir_vector() *= inv(b);                }
-    else if ( isValVector()  && b.isValAnion()   ) { dir_vector() *= inv(b);                }
-    else if ( isValVector()  && b.isValVector()  ) { goto errcase;                          }
-    else if ( isValVector()  && b.isValMatrix()  ) { dir_vector() *= inv(b.cast_matrix(0)); }
-    else if ( isValVector()  && b.isValString()  ) { goto errcase;                          }
-    else if ( isValVector()  && b.isValSet()     ) { goto errcase;                          }
-    else if ( isValVector()  && b.isValDict()    ) { goto errcase;                          }
-    else if ( isValVector()  && b.isValDgraph()  ) { goto errcase;                          }
+    else if ( isValVector() && b.isValNull()    ) { dir_vector() *= inv(b);                }
+    else if ( isValVector() && b.isValInteger() ) { dir_vector() *= inv(b);                }
+    else if ( isValVector() && b.isValReal()    ) { dir_vector() *= inv(b);                }
+    else if ( isValVector() && b.isValAnion()   ) { dir_vector() *= inv(b);                }
+    else if ( isValVector() && b.isValVector()  ) { goto errcase;                          }
+    else if ( isValVector() && b.isValMatrix()  ) { dir_vector() *= inv(b.cast_matrix(0)); }
+    else if ( isValVector() && b.isValString()  ) { goto errcase;                          }
+    else if ( isValVector() && b.isValSet()     ) { goto errcase;                          }
+    else if ( isValVector() && b.isValDict()    ) { goto errcase;                          }
+    else if ( isValVector() && b.isValDgraph()  ) { goto errcase;                          }
 
-    else if ( isValMatrix()  && b.isValNull()    ) { dir_matrix() *= inv(b);                }
-    else if ( isValMatrix()  && b.isValInteger() ) { dir_matrix() *= inv(b);                }
-    else if ( isValMatrix()  && b.isValReal()    ) { dir_matrix() *= inv(b);                }
-    else if ( isValMatrix()  && b.isValAnion()   ) { dir_matrix() *= inv(b);                }
-    else if ( isValMatrix()  && b.isValVector()  ) { goto errcase;                          }
-    else if ( isValMatrix()  && b.isValMatrix()  ) { dir_matrix() *= inv(b.cast_matrix(0)); }
-    else if ( isValMatrix()  && b.isValString()  ) { goto errcase;                          }
-    else if ( isValMatrix()  && b.isValSet()     ) { goto errcase;                          }
-    else if ( isValMatrix()  && b.isValDict()    ) { goto errcase;                          }
-    else if ( isValMatrix()  && b.isValDgraph()  ) { goto errcase;                          }
+    else if ( isValMatrix() && b.isValNull()    ) { dir_matrix() *= inv(b);                }
+    else if ( isValMatrix() && b.isValInteger() ) { dir_matrix() *= inv(b);                }
+    else if ( isValMatrix() && b.isValReal()    ) { dir_matrix() *= inv(b);                }
+    else if ( isValMatrix() && b.isValAnion()   ) { dir_matrix() *= inv(b);                }
+    else if ( isValMatrix() && b.isValVector()  ) { goto errcase;                          }
+    else if ( isValMatrix() && b.isValMatrix()  ) { dir_matrix() *= inv(b.cast_matrix(0)); }
+    else if ( isValMatrix() && b.isValString()  ) { goto errcase;                          }
+    else if ( isValMatrix() && b.isValSet()     ) { goto errcase;                          }
+    else if ( isValMatrix() && b.isValDict()    ) { goto errcase;                          }
+    else if ( isValMatrix() && b.isValDgraph()  ) { goto errcase;                          }
 
-    else if ( isValString()  && b.isValNull()    ) { goto errcase; }
-    else if ( isValString()  && b.isValInteger() ) { goto errcase; }
-    else if ( isValString()  && b.isValReal()    ) { goto errcase; }
-    else if ( isValString()  && b.isValAnion()   ) { goto errcase; }
-    else if ( isValString()  && b.isValVector()  ) { goto errcase; }
-    else if ( isValString()  && b.isValMatrix()  ) { goto errcase; }
-    else if ( isValString()  && b.isValString()  ) { goto errcase; }
-    else if ( isValString()  && b.isValSet()     ) { goto errcase; }
-    else if ( isValString()  && b.isValDict()    ) { goto errcase; }
-    else if ( isValString()  && b.isValDgraph()  ) { goto errcase; }
+    else if ( isValString() && b.isValNull()    ) { goto errcase; }
+    else if ( isValString() && b.isValInteger() ) { goto errcase; }
+    else if ( isValString() && b.isValReal()    ) { goto errcase; }
+    else if ( isValString() && b.isValAnion()   ) { goto errcase; }
+    else if ( isValString() && b.isValVector()  ) { goto errcase; }
+    else if ( isValString() && b.isValMatrix()  ) { goto errcase; }
+    else if ( isValString() && b.isValString()  ) { goto errcase; }
+    else if ( isValString() && b.isValSet()     ) { goto errcase; }
+    else if ( isValString() && b.isValDict()    ) { goto errcase; }
+    else if ( isValString() && b.isValDgraph()  ) { goto errcase; }
 
-    else if ( isValSet()     && b.isValNull()    ) { dir_set() *= inv(b); }
-    else if ( isValSet()     && b.isValInteger() ) { dir_set() *= inv(b); }
-    else if ( isValSet()     && b.isValReal()    ) { dir_set() *= inv(b); }
-    else if ( isValSet()     && b.isValAnion()   ) { dir_set() *= inv(b); }
-    else if ( isValSet()     && b.isValVector()  ) { goto errcase;        }
-    else if ( isValSet()     && b.isValMatrix()  ) { goto errcase;        }
-    else if ( isValSet()     && b.isValString()  ) { goto errcase;        }
-    else if ( isValSet()     && b.isValSet()     ) { goto errcase;        }
-    else if ( isValSet()     && b.isValDict()    ) { goto errcase;        }
-    else if ( isValSet()     && b.isValDgraph()  ) { goto errcase;        }
+    else if ( isValSet() && b.isValNull()    ) { goto errcase; }
+    else if ( isValSet() && b.isValInteger() ) { goto errcase; }
+    else if ( isValSet() && b.isValReal()    ) { goto errcase; }
+    else if ( isValSet() && b.isValAnion()   ) { goto errcase; }
+    else if ( isValSet() && b.isValVector()  ) { goto errcase; }
+    else if ( isValSet() && b.isValMatrix()  ) { goto errcase; }
+    else if ( isValSet() && b.isValString()  ) { goto errcase; }
+    else if ( isValSet() && b.isValSet()     ) { goto errcase; }
+    else if ( isValSet() && b.isValDict()    ) { goto errcase; }
+    else if ( isValSet() && b.isValDgraph()  ) { goto errcase; }
 
     else if ( isValDgraph()  && b.isValNull()    ) { goto errcase; }
     else if ( isValDgraph()  && b.isValInteger() ) { goto errcase; }
@@ -11369,14 +11242,14 @@ gentype &gentype::rightdiv(const gentype &b)
     // Based on a leftdiv with appropriate modifications.
     // (note reversal of b and a in the function definition)
 
-    if ( isCastableToIntegerWithoutLoss() )
+    if ( isCastableToIntegerWithoutLoss() && !b.isValSet() )
     {
              if ( cast_int(0) ==  0 ) {                                   return *this; }
         else if ( cast_int(0) ==  1 ) { fastcopy(b); inverse();           return *this; }
         else if ( cast_int(0) == -1 ) { fastcopy(b); inverse(); negate(); return *this; }
     }
 
-    if ( b.isCastableToIntegerWithoutLoss() )
+    if ( !isValSet() && b.isCastableToIntegerWithoutLoss() )
     {
              if ( b.cast_int(0) ==  1 ) {           return *this; }
         else if ( b.cast_int(0) == -1 ) { negate(); return *this; }
@@ -11448,95 +11321,95 @@ gentype &gentype::rightdiv(const gentype &b)
     // Note that the code only differs from leftdiv when dealing with
     // non-commutative fields
 
-         if ( isValNull()    && b.isValNull()    ) { ;                                              }
-    else if ( isValNull()    && b.isValInteger() ) { dir_double() /= b.cast_double(0);              }
-    else if ( isValNull()    && b.isValReal()    ) { dir_double() /= b.cast_double(0);              }
-    else if ( isValNull()    && b.isValAnion()   ) { ::rightmult(inv(b.cast_anion(0)),dir_anion()); }
-    else if ( isValNull()    && b.isValVector()  ) { goto errcase;                                  }
-    else if ( isValNull()    && b.isValMatrix()  ) { double temp = cast_int(0); *this = b; inverse(); *this *= temp; }
-    else if ( isValNull()    && b.isValString()  ) { goto errcase;                                  }
-    else if ( isValNull()    && b.isValSet()     ) { goto errcase;                                  }
-    else if ( isValNull()    && b.isValDgraph()  ) { goto errcase;                                  }
+         if ( isValNull() && b.isValNull()    ) { ;                                                               }
+    else if ( isValNull() && b.isValInteger() ) { dir_double() /= b.cast_double(0);                               }
+    else if ( isValNull() && b.isValReal()    ) { dir_double() /= b.cast_double(0);                               }
+    else if ( isValNull() && b.isValAnion()   ) { ::rightmult(inv(b.cast_anion(0)),dir_anion());                  }
+    else if ( isValNull() && b.isValVector()  ) { goto errcase;                                                   }
+    else if ( isValNull() && b.isValMatrix()  ) { double temp = cast_int(0); *this = b; inverse(); *this *= temp; }
+    else if ( isValNull() && b.isValString()  ) { goto errcase;                                                   }
+    else if ( isValNull() && b.isValSet()     ) { goto errcase;                                                   }
+    else if ( isValNull() && b.isValDgraph()  ) { goto errcase;                                                   }
 
-    else if ( isValInteger() && b.isValNull()    ) { dir_double() /= b.cast_double(0);              }
-    else if ( isValInteger() && b.isValInteger() ) { dir_double() /= b.cast_double(0);              }
-    else if ( isValInteger() && b.isValReal()    ) { dir_double() /= b.cast_double(0);              }
-    else if ( isValInteger() && b.isValAnion()   ) { ::rightmult(inv(b.cast_anion(0)),dir_anion()); }
-    else if ( isValInteger() && b.isValVector()  ) { goto errcase;                                  }
+    else if ( isValInteger() && b.isValNull()    ) { dir_double() /= b.cast_double(0);                               }
+    else if ( isValInteger() && b.isValInteger() ) { dir_double() /= b.cast_double(0);                               }
+    else if ( isValInteger() && b.isValReal()    ) { dir_double() /= b.cast_double(0);                               }
+    else if ( isValInteger() && b.isValAnion()   ) { ::rightmult(inv(b.cast_anion(0)),dir_anion());                  }
+    else if ( isValInteger() && b.isValVector()  ) { goto errcase;                                                   }
     else if ( isValInteger() && b.isValMatrix()  ) { double temp = cast_int(0); *this = b; inverse(); *this *= temp; }
-    else if ( isValInteger() && b.isValString()  ) { goto errcase;                                  }
-    else if ( isValInteger() && b.isValSet()     ) { goto errcase;                                  }
-    else if ( isValInteger() && b.isValDgraph()  ) { goto errcase;                                  }
+    else if ( isValInteger() && b.isValString()  ) { goto errcase;                                                   }
+    else if ( isValInteger() && b.isValSet()     ) { goto errcase;                                                   }
+    else if ( isValInteger() && b.isValDgraph()  ) { goto errcase;                                                   }
 
-    else if ( isValReal()    && b.isValNull()    ) { dir_double() /= b.cast_double(0);              }
-    else if ( isValReal()    && b.isValInteger() ) { dir_double() /= b.cast_double(0);              }
-    else if ( isValReal()    && b.isValReal()    ) { dir_double() /= b.cast_double(0);              }
-    else if ( isValReal()    && b.isValAnion()   ) { ::rightmult(inv(b.cast_anion(0)),dir_anion()); }
-    else if ( isValReal()    && b.isValVector()  ) { goto errcase;                                  }
-    else if ( isValReal()    && b.isValMatrix()  ) { double temp = cast_double(0); *this = b; inverse(); *this *= temp; }
-    else if ( isValReal()    && b.isValString()  ) { goto errcase;                                  }
-    else if ( isValReal()    && b.isValSet()     ) { goto errcase;                                  }
-    else if ( isValReal()    && b.isValDgraph()  ) { goto errcase;                                  }
+    else if ( isValReal() && b.isValNull()    ) { dir_double() /= b.cast_double(0);                                  }
+    else if ( isValReal() && b.isValInteger() ) { dir_double() /= b.cast_double(0);                                  }
+    else if ( isValReal() && b.isValReal()    ) { dir_double() /= b.cast_double(0);                                  }
+    else if ( isValReal() && b.isValAnion()   ) { ::rightmult(inv(b.cast_anion(0)),dir_anion());                     }
+    else if ( isValReal() && b.isValVector()  ) { goto errcase;                                                      }
+    else if ( isValReal() && b.isValMatrix()  ) { double temp = cast_double(0); *this = b; inverse(); *this *= temp; }
+    else if ( isValReal() && b.isValString()  ) { goto errcase;                                                      }
+    else if ( isValReal() && b.isValSet()     ) { goto errcase;                                                      }
+    else if ( isValReal() && b.isValDgraph()  ) { goto errcase;                                                      }
 
-    else if ( isValAnion()   && b.isValNull()    ) { dir_anion()  /= (double) b.cast_double(0);     }
-    else if ( isValAnion()   && b.isValInteger() ) { dir_anion()  /= (double) b.cast_double(0);     }
-    else if ( isValAnion()   && b.isValReal()    ) { dir_anion()  /=          b.cast_double(0);     }
-    else if ( isValAnion()   && b.isValAnion()   ) { ::rightmult(inv(b.cast_anion(0)),dir_anion()); }
-    else if ( isValAnion()   && b.isValVector()  ) { goto errcase;                                  }
-    else if ( isValAnion()   && b.isValMatrix()  ) { gentype temp(cast_anion(0)); *this = b; inverse(); leftmult(temp); }
-    else if ( isValAnion()   && b.isValString()  ) { goto errcase;                                  }
-    else if ( isValAnion()   && b.isValSet()     ) { goto errcase;                                  }
-    else if ( isValAnion()   && b.isValDgraph()  ) { goto errcase;                                  }
+    else if ( isValAnion() && b.isValNull()    ) { dir_anion()  /= (double) b.cast_double(0);                         }
+    else if ( isValAnion() && b.isValInteger() ) { dir_anion()  /= (double) b.cast_double(0);                         }
+    else if ( isValAnion() && b.isValReal()    ) { dir_anion()  /=          b.cast_double(0);                         }
+    else if ( isValAnion() && b.isValAnion()   ) { ::rightmult(inv(b.cast_anion(0)),dir_anion());                     }
+    else if ( isValAnion() && b.isValVector()  ) { goto errcase;                                                      }
+    else if ( isValAnion() && b.isValMatrix()  ) { gentype temp(cast_anion(0)); *this = b; inverse(); leftmult(temp); }
+    else if ( isValAnion() && b.isValString()  ) { goto errcase;                                                      }
+    else if ( isValAnion() && b.isValSet()     ) { goto errcase;                                                      }
+    else if ( isValAnion() && b.isValDgraph()  ) { goto errcase;                                                      }
 
-    else if ( isValVector()  && b.isValNull()    ) { dir_vector() *= inv(b);           }
-    else if ( isValVector()  && b.isValInteger() ) { dir_vector() *= inv(b);           }
-    else if ( isValVector()  && b.isValReal()    ) { dir_vector() *= inv(b);           }
-    else if ( isValVector()  && b.isValAnion()   ) { ::rightmult(inv(b),dir_vector()); }
-    else if ( isValVector()  && b.isValVector()  ) { goto errcase;                     }
-    else if ( isValVector()  && b.isValMatrix()  ) { ::rightmult(inv(b.cast_matrix(0)),dir_vector()); }
-    else if ( isValVector()  && b.isValString()  ) { goto errcase;                     }
-    else if ( isValVector()  && b.isValSet()     ) { goto errcase;                     }
-    else if ( isValVector()  && b.isValDgraph()  ) { goto errcase;                     }
+    else if ( isValVector() && b.isValNull()    ) { dir_vector() *= inv(b);                          }
+    else if ( isValVector() && b.isValInteger() ) { dir_vector() *= inv(b);                          }
+    else if ( isValVector() && b.isValReal()    ) { dir_vector() *= inv(b);                          }
+    else if ( isValVector() && b.isValAnion()   ) { ::rightmult(inv(b),dir_vector());                }
+    else if ( isValVector() && b.isValVector()  ) { goto errcase;                                    }
+    else if ( isValVector() && b.isValMatrix()  ) { ::rightmult(inv(b.cast_matrix(0)),dir_vector()); }
+    else if ( isValVector() && b.isValString()  ) { goto errcase;                                    }
+    else if ( isValVector() && b.isValSet()     ) { goto errcase;                                    }
+    else if ( isValVector() && b.isValDgraph()  ) { goto errcase;                                    }
 
-    else if ( isValMatrix()  && b.isValNull()    ) { dir_matrix() *= inv(b);           }
-    else if ( isValMatrix()  && b.isValInteger() ) { dir_matrix() *= inv(b);           }
-    else if ( isValMatrix()  && b.isValReal()    ) { dir_matrix() *= inv(b);           }
-    else if ( isValMatrix()  && b.isValAnion()   ) { ::rightmult(inv(b),dir_matrix()); }
-    else if ( isValMatrix()  && b.isValVector()  ) { goto errcase;                     }
-    else if ( isValMatrix()  && b.isValMatrix()  ) { ::rightmult(inv(b.cast_matrix(0)),dir_matrix()); }
-    else if ( isValMatrix()  && b.isValString()  ) { goto errcase;                     }
-    else if ( isValMatrix()  && b.isValSet()     ) { goto errcase;                     }
-    else if ( isValMatrix()  && b.isValDgraph()  ) { goto errcase;                     }
+    else if ( isValMatrix() && b.isValNull()    ) { dir_matrix() *= inv(b);                          }
+    else if ( isValMatrix() && b.isValInteger() ) { dir_matrix() *= inv(b);                          }
+    else if ( isValMatrix() && b.isValReal()    ) { dir_matrix() *= inv(b);                          }
+    else if ( isValMatrix() && b.isValAnion()   ) { ::rightmult(inv(b),dir_matrix());                }
+    else if ( isValMatrix() && b.isValVector()  ) { goto errcase;                                    }
+    else if ( isValMatrix() && b.isValMatrix()  ) { ::rightmult(inv(b.cast_matrix(0)),dir_matrix()); }
+    else if ( isValMatrix() && b.isValString()  ) { goto errcase;                                    }
+    else if ( isValMatrix() && b.isValSet()     ) { goto errcase;                                    }
+    else if ( isValMatrix() && b.isValDgraph()  ) { goto errcase;                                    }
 
-    else if ( isValString()  && b.isValNull()    ) { goto errcase; }
-    else if ( isValString()  && b.isValInteger() ) { goto errcase; }
-    else if ( isValString()  && b.isValReal()    ) { goto errcase; }
-    else if ( isValString()  && b.isValAnion()   ) { goto errcase; }
-    else if ( isValString()  && b.isValVector()  ) { goto errcase; }
-    else if ( isValString()  && b.isValMatrix()  ) { goto errcase; }
-    else if ( isValString()  && b.isValString()  ) { goto errcase; }
-    else if ( isValString()  && b.isValSet()     ) { goto errcase; }
-    else if ( isValString()  && b.isValDgraph()  ) { goto errcase; }
+    else if ( isValString() && b.isValNull()    ) { goto errcase; }
+    else if ( isValString() && b.isValInteger() ) { goto errcase; }
+    else if ( isValString() && b.isValReal()    ) { goto errcase; }
+    else if ( isValString() && b.isValAnion()   ) { goto errcase; }
+    else if ( isValString() && b.isValVector()  ) { goto errcase; }
+    else if ( isValString() && b.isValMatrix()  ) { goto errcase; }
+    else if ( isValString() && b.isValString()  ) { goto errcase; }
+    else if ( isValString() && b.isValSet()     ) { goto errcase; }
+    else if ( isValString() && b.isValDgraph()  ) { goto errcase; }
 
-    else if ( isValSet()     && b.isValNull()    ) { dir_set() *= inv(b); }
-    else if ( isValSet()     && b.isValInteger() ) { dir_set() *= inv(b); }
-    else if ( isValSet()     && b.isValReal()    ) { dir_set() *= inv(b); }
-    else if ( isValSet()     && b.isValAnion()   ) { ::rightmult(inv(b),dir_set()); }
-    else if ( isValSet()     && b.isValVector()  ) { goto errcase;        }
-    else if ( isValSet()     && b.isValMatrix()  ) { goto errcase;        }
-    else if ( isValSet()     && b.isValString()  ) { goto errcase;        }
-    else if ( isValSet()     && b.isValSet()     ) { goto errcase;        }
-    else if ( isValSet()     && b.isValDgraph()  ) { goto errcase;        }
+    else if ( isValSet() && b.isValNull()    ) { goto errcase; }
+    else if ( isValSet() && b.isValInteger() ) { goto errcase; }
+    else if ( isValSet() && b.isValReal()    ) { goto errcase; }
+    else if ( isValSet() && b.isValAnion()   ) { goto errcase; }
+    else if ( isValSet() && b.isValVector()  ) { goto errcase; }
+    else if ( isValSet() && b.isValMatrix()  ) { goto errcase; }
+    else if ( isValSet() && b.isValString()  ) { goto errcase; }
+    else if ( isValSet() && b.isValSet()     ) { goto errcase; }
+    else if ( isValSet() && b.isValDgraph()  ) { goto errcase; }
 
-    else if ( isValDgraph()  && b.isValNull()    ) { goto errcase; }
-    else if ( isValDgraph()  && b.isValInteger() ) { goto errcase; }
-    else if ( isValDgraph()  && b.isValReal()    ) { goto errcase; }
-    else if ( isValDgraph()  && b.isValAnion()   ) { goto errcase; }
-    else if ( isValDgraph()  && b.isValVector()  ) { goto errcase; }
-    else if ( isValDgraph()  && b.isValMatrix()  ) { goto errcase; }
-    else if ( isValDgraph()  && b.isValString()  ) { goto errcase; }
-    else if ( isValDgraph()  && b.isValSet()     ) { goto errcase; }
-    else if ( isValDgraph()  && b.isValDgraph()  ) { goto errcase; }
+    else if ( isValDgraph() && b.isValNull()    ) { goto errcase; }
+    else if ( isValDgraph() && b.isValInteger() ) { goto errcase; }
+    else if ( isValDgraph() && b.isValReal()    ) { goto errcase; }
+    else if ( isValDgraph() && b.isValAnion()   ) { goto errcase; }
+    else if ( isValDgraph() && b.isValVector()  ) { goto errcase; }
+    else if ( isValDgraph() && b.isValMatrix()  ) { goto errcase; }
+    else if ( isValDgraph() && b.isValString()  ) { goto errcase; }
+    else if ( isValDgraph() && b.isValSet()     ) { goto errcase; }
+    else if ( isValDgraph() && b.isValDgraph()  ) { goto errcase; }
 
     else
     {
@@ -11568,12 +11441,12 @@ gentype &gentype::rightdiv(double a)
 
 gentype &gentype::leftadd(const gentype &b)
 {
-    if ( isCastableToIntegerWithoutLoss() && ( cast_int(0) == 0 ) )
+    if ( isCastableToIntegerWithoutLoss() && ( cast_int(0) == 0 ) && !b.isValSet() )
     {
         fastcopy(b);
     }
 
-    else if ( b.isCastableToIntegerWithoutLoss() && ( b.cast_int(0) == 0 ) )
+    else if ( !isValSet() && b.isCastableToIntegerWithoutLoss() && ( b.cast_int(0) == 0 ) )
     {
         ;
     }
@@ -11742,13 +11615,13 @@ gentype &gentype::leftadd(double b)
 
 gentype &gentype::leftsub(const gentype &b)
 {
-    if ( isCastableToIntegerWithoutLoss() && ( cast_int(0) == 0 ) )
+    if ( isCastableToIntegerWithoutLoss() && ( cast_int(0) == 0 ) && !b.isValSet() )
     {
         fastcopy(b);
         negate();
     }
 
-    else if ( b.isCastableToIntegerWithoutLoss() && ( b.cast_int(0) == 0 ) )
+    else if ( !isValSet() && b.isCastableToIntegerWithoutLoss() && ( b.cast_int(0) == 0 ) )
     {
         ;
     }
@@ -11816,8 +11689,8 @@ gentype &gentype::leftsub(const gentype &b)
         else if ( isValReal()    && b.isValInteger() ) { dir_double() -= b.cast_int(0);    }
         else if ( isValReal()    && b.isValReal()    ) { dir_double() -= b.cast_double(0); }
         else if ( isValReal()    && b.isValAnion()   ) { dir_anion()  -= b.cast_anion(0);  }
-        else if ( isValAnion()   && b.isValNull()    ) { dir_anion()  -= b.cast_double(0);  }
-        else if ( isValAnion()   && b.isValInteger() ) { dir_anion()  -= b.cast_double(0);  }
+        else if ( isValAnion()   && b.isValNull()    ) { dir_anion()  -= b.cast_double(0); }
+        else if ( isValAnion()   && b.isValInteger() ) { dir_anion()  -= b.cast_double(0); }
         else if ( isValAnion()   && b.isValReal()    ) { dir_anion()  -= b.cast_double(0); }
         else if ( isValAnion()   && b.isValAnion()   ) { dir_anion()  -= b.cast_anion(0);  }
         //else if ( isValNull()    && b.isValInteger() ) { dir_int()    -= b.cast_int(0);    }
@@ -11869,19 +11742,19 @@ gentype &gentype::leftsub(const gentype &b)
                 }
             }
 
-            else if ( ( acast == 2  ) && ( bcast == 2  ) ) { dir_double() -= b.cast_double(0); }
-            else if ( ( acast == 3  ) && ( bcast == 3  ) ) { dir_anion()  -= b.cast_anion(0);  }
-            else if ( ( acast == 4  ) && ( bcast == 4  ) ) { dir_vector() -= b.cast_vector(0); }
-            else if ( ( acast == 4  ) && ( bcast == 7  ) ) { dir_vector() -= b;               }
-            else if ( ( acast == 5  ) && ( bcast == 5  ) ) { dir_matrix() -= b.cast_matrix(0); }
-            else if ( ( acast == 5  ) && ( bcast == 7  ) ) { dir_matrix() -= b;               }
-            else if ( ( acast == 8  ) && ( bcast == 7  ) ) { dir_set()    -= b;               }
-            else if ( ( acast == 8  ) && ( bcast == 8  ) ) { dir_set()    -= b.cast_set(0);    }
-            else if ( ( acast == 7  ) && ( bcast == 10 ) ) { *this = b; negate(); }
-            else if ( ( acast == 10 ) && ( bcast == 7  ) ) { ; }
-            else if ( ( acast == 10 ) && ( bcast == 10 ) ) { ; }
+            else if ( ( acast == 2  ) && ( bcast == 2  ) ) { dir_double() -= b.cast_double(0);     }
+            else if ( ( acast == 3  ) && ( bcast == 3  ) ) { dir_anion()  -= b.cast_anion(0);      }
+            else if ( ( acast == 4  ) && ( bcast == 4  ) ) { dir_vector() -= b.cast_vector(0);     }
+            else if ( ( acast == 4  ) && ( bcast == 7  ) ) { dir_vector() -= b;                    }
+            else if ( ( acast == 5  ) && ( bcast == 5  ) ) { dir_matrix() -= b.cast_matrix(0);     }
+            else if ( ( acast == 5  ) && ( bcast == 7  ) ) { dir_matrix() -= b;                    }
+            else if ( ( acast == 8  ) && ( bcast == 7  ) ) { dir_set()    -= b;                    }
+            else if ( ( acast == 8  ) && ( bcast == 8  ) ) { dir_set()    -= b.cast_set(0);        }
+            else if ( ( acast == 7  ) && ( bcast == 10 ) ) { *this = b; negate();                  }
+            else if ( ( acast == 10 ) && ( bcast == 7  ) ) { ;                                     }
+            else if ( ( acast == 10 ) && ( bcast == 10 ) ) { ;                                     }
             else if ( ( acast == 7  ) && ( bcast == 4  ) ) { *this = ( *this - b.cast_vector(0) ); }
-            else if ( ( acast == 7  ) && ( bcast == 8  ) ) { *this = ( *this - b.cast_set(0)    ); }
+            //else if ( ( acast == 7  ) && ( bcast == 8  ) ) { *this = ( *this - b.cast_set(0)    ); }
             else                                           { *this = ( *this - b.cast_matrix(0) ); }
         }
 
@@ -11927,7 +11800,7 @@ gentype &gentype::leftsub(double b)
 
 gentype &operator+=(gentype &a, int bb)
 {
-    if ( bb == 0 )
+    if ( ( bb == 0 ) && !a.isValSet() )
     {
         ;
     }
@@ -11973,12 +11846,12 @@ gentype &operator+=(gentype &a, int bb)
         }
     }
 
-    else if ( a.isValNull()    ) { ;                                             }
-    else if ( a.isValReal()    ) {                a.dir_double() += bb;          }
-    else if ( a.isValAnion()   ) {                a.dir_anion()  += (double) bb; }
-    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() += b;           }
-    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() += b;           }
-    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    += b;           }
+    else if ( a.isValNull()    ) { ;                                                            }
+    else if ( a.isValReal()    ) {                a.dir_double() += bb;                         }
+    else if ( a.isValAnion()   ) {                a.dir_anion()  += (double) bb;                }
+    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() += b;                          }
+    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() += b;                          }
+    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    += b;                          }
     else if ( a.isValDgraph()  ) { constructError(a,a,"Error: cannot add a graph and an int."); }
 
     else
@@ -11991,7 +11864,7 @@ gentype &operator+=(gentype &a, int bb)
 
 gentype &operator-=(gentype &a, int bb)
 {
-    if ( bb == 0 )
+    if ( ( bb == 0 ) && !a.isValSet() )
     {
         ;
     }
@@ -12037,12 +11910,12 @@ gentype &operator-=(gentype &a, int bb)
         }
     }
 
-    else if ( a.isValNull()    ) { ;                                             }
-    else if ( a.isValReal()    ) {                a.dir_double() -= bb;          }
-    else if ( a.isValAnion()   ) {                a.dir_anion()  -= (double) bb; }
-    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() -= b;           }
-    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() -= b;           }
-    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    -= b;           }
+    else if ( a.isValNull()    ) { ;                                                                  }
+    else if ( a.isValReal()    ) {                a.dir_double() -= bb;                               }
+    else if ( a.isValAnion()   ) {                a.dir_anion()  -= (double) bb;                      }
+    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() -= b;                                }
+    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() -= b;                                }
+    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    -= b;                                }
     else if ( a.isValDgraph()  ) { constructError(a,a,"Error: cannot subtract an int from a graph."); }
 
     else
@@ -12061,7 +11934,7 @@ gentype &operator*=(gentype &a, int bb)
     //    a = 0;
     //}
 
-    if ( bb == 1 )
+    if ( ( bb == 1 ) && !a.isValSet() )
     {
         ;
     }
@@ -12095,12 +11968,12 @@ gentype &operator*=(gentype &a, int bb)
 	}
     }
 
-    else if ( a.isValNull()    ) { ;                                             }
-    else if ( a.isValReal()    ) {                a.dir_double() *= bb;          }
-    else if ( a.isValAnion()   ) {                a.dir_anion()  *= (double) bb; }
-    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() *= b;           }
-    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() *= b;           }
-    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    *= b;           }
+    else if ( a.isValNull()    ) { ;                                                                }
+    else if ( a.isValReal()    ) {                a.dir_double() *= bb;                             }
+    else if ( a.isValAnion()   ) {                a.dir_anion()  *= (double) bb;                    }
+    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() *= b;                              }
+    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() *= b;                              }
+    else if ( a.isValSet()     ) { gentype b(bb); a = a.dir_set()*b;                                }
     else if ( a.isValDgraph()  ) { constructError(a,a,"Error: cannot multiply a graph and a int."); }
 
     else if ( a.isValInteger() )
@@ -12138,7 +12011,7 @@ gentype &operator*=(gentype &a, int bb)
 
 gentype &operator+=(gentype &a, double bb)
 {
-    if ( bb == 0 )
+    if ( ( bb == 0 ) && !a.isValSet() )
     {
         ;
     }
@@ -12167,13 +12040,13 @@ gentype &operator+=(gentype &a, double bb)
 	}
     }
 
-    else if ( a.isValNull()    ) { ;                                    }
-    else if ( a.isValInteger() ) {                a.dir_double() += bb; }
-    else if ( a.isValReal()    ) {                a.dir_double() += bb; }
-    else if ( a.isValAnion()   ) {                a.dir_anion()  += bb; }
-    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() += b;  }
-    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() += b;  }
-    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    += b;  }
+    else if ( a.isValNull()    ) { ;                                                              }
+    else if ( a.isValInteger() ) {                a.dir_double() += bb;                           }
+    else if ( a.isValReal()    ) {                a.dir_double() += bb;                           }
+    else if ( a.isValAnion()   ) {                a.dir_anion()  += bb;                           }
+    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() += b;                            }
+    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() += b;                            }
+    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    += b;                            }
     else if ( a.isValDgraph()  ) { constructError(a,a,"Error: cannot add a graph and a double."); }
 
     else
@@ -12186,7 +12059,7 @@ gentype &operator+=(gentype &a, double bb)
 
 gentype &operator-=(gentype &a, double bb)
 {
-    if ( bb == 0 )
+    if ( ( bb == 0 ) && !a.isValSet() )
     {
         ;
     }
@@ -12215,13 +12088,13 @@ gentype &operator-=(gentype &a, double bb)
 	}
     }
 
-    else if ( a.isValNull()    ) { ;                                    }
-    else if ( a.isValInteger() ) {                a.dir_double() -= bb; }
-    else if ( a.isValReal()    ) {                a.dir_double() -= bb; }
-    else if ( a.isValAnion()   ) {                a.dir_anion()  -= bb; }
-    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() -= b;  }
-    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() -= b;  }
-    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    -= b;  }
+    else if ( a.isValNull()    ) { ;                                                                    }
+    else if ( a.isValInteger() ) {                a.dir_double() -= bb;                                 }
+    else if ( a.isValReal()    ) {                a.dir_double() -= bb;                                 }
+    else if ( a.isValAnion()   ) {                a.dir_anion()  -= bb;                                 }
+    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() -= b;                                  }
+    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() -= b;                                  }
+    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    -= b;                                  }
     else if ( a.isValDgraph()  ) { constructError(a,a,"Error: cannot subtract a double from a graph."); }
 
     else
@@ -12240,7 +12113,7 @@ gentype &operator*=(gentype &a, double bb)
     //    a = 0;
     //}
 
-    if ( bb == 1 )
+    if ( ( bb == 1 ) && !a.isValSet() )
     {
         ;
     }
@@ -12274,13 +12147,13 @@ gentype &operator*=(gentype &a, double bb)
 	}
     }
 
-    else if ( a.isValNull()    ) { ;                                    }
-    else if ( a.isValInteger() ) {                a.dir_double() *= bb; }
-    else if ( a.isValReal()    ) {                a.dir_double() *= bb; }
-    else if ( a.isValAnion()   ) {                a.dir_anion()  *= bb; }
-    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() *= b;  }
-    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() *= b;  }
-    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    *= b;  }
+    else if ( a.isValNull()    ) { ;                                                                   }
+    else if ( a.isValInteger() ) {                a.dir_double() *= bb;                                }
+    else if ( a.isValReal()    ) {                a.dir_double() *= bb;                                }
+    else if ( a.isValAnion()   ) {                a.dir_anion()  *= bb;                                }
+    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() *= b;                                 }
+    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() *= b;                                 }
+    else if ( a.isValSet()     ) { gentype b(bb); a = a.dir_set()*b;                                   }
     else if ( a.isValDgraph()  ) { constructError(a,a,"Error: cannot multiply a graph and a double."); }
 
     else
@@ -12297,7 +12170,7 @@ gentype &operator*=(gentype &a, double bb)
 
 gentype &operator+=(gentype &a, const d_anion  &bb)
 {
-    if ( bb == 0 )
+    if ( ( bb == 0 ) && !a.isValSet() )
     {
         ;
     }
@@ -12326,13 +12199,13 @@ gentype &operator+=(gentype &a, const d_anion  &bb)
 	}
     }
 
-    else if ( a.isValNull()    ) { ;                                    }
-    else if ( a.isValInteger() ) {                a.dir_anion()  += bb; }
-    else if ( a.isValReal()    ) {                a.dir_anion()  += bb; }
-    else if ( a.isValAnion()   ) {                a.dir_anion()  += bb; }
-    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() += b;  }
-    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() += b;  }
-    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    += b;  }
+    else if ( a.isValNull()    ) { ;                                                              }
+    else if ( a.isValInteger() ) {                a.dir_anion()  += bb;                           }
+    else if ( a.isValReal()    ) {                a.dir_anion()  += bb;                           }
+    else if ( a.isValAnion()   ) {                a.dir_anion()  += bb;                           }
+    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() += b;                            }
+    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() += b;                            }
+    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    += b;                            }
     else if ( a.isValDgraph()  ) { constructError(a,a,"Error: cannot add a graph and a double."); }
 
     else
@@ -12345,7 +12218,7 @@ gentype &operator+=(gentype &a, const d_anion  &bb)
 
 gentype &operator-=(gentype &a, const d_anion  &bb)
 {
-    if ( bb == 0 )
+    if ( ( bb == 0 ) && !a.isValSet() )
     {
         ;
     }
@@ -12374,13 +12247,13 @@ gentype &operator-=(gentype &a, const d_anion  &bb)
 	}
     }
 
-    else if ( a.isValNull()    ) { ;                                    }
-    else if ( a.isValInteger() ) {                a.dir_anion()  -= bb; }
-    else if ( a.isValReal()    ) {                a.dir_anion()  -= bb; }
-    else if ( a.isValAnion()   ) {                a.dir_anion()  -= bb; }
-    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() -= b;  }
-    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() -= b;  }
-    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    -= b;  }
+    else if ( a.isValNull()    ) { ;                                                                    }
+    else if ( a.isValInteger() ) {                a.dir_anion()  -= bb;                                 }
+    else if ( a.isValReal()    ) {                a.dir_anion()  -= bb;                                 }
+    else if ( a.isValAnion()   ) {                a.dir_anion()  -= bb;                                 }
+    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() -= b;                                  }
+    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() -= b;                                  }
+    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    -= b;                                  }
     else if ( a.isValDgraph()  ) { constructError(a,a,"Error: cannot subtract a double from a graph."); }
 
     else
@@ -12399,7 +12272,7 @@ gentype &operator*=(gentype &a, const d_anion  &bb)
     //    a = 0;
     //}
 
-    if ( bb == 1 )
+    if ( ( bb == 1 ) && !a.isValSet() )
     {
         ;
     }
@@ -12433,13 +12306,13 @@ gentype &operator*=(gentype &a, const d_anion  &bb)
 	}
     }
 
-    else if ( a.isValNull()    ) { ; }
-    else if ( a.isValInteger() ) {                a.dir_anion()  *= bb; }
-    else if ( a.isValReal()    ) {                a.dir_anion()  *= bb; }
-    else if ( a.isValAnion()   ) {                a.dir_anion()  *= bb; }
-    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() *= b;  }
-    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() *= b;  }
-    else if ( a.isValSet()     ) { gentype b(bb); a.dir_set()    *= b;  }
+    else if ( a.isValNull()    ) { ;                                                                   }
+    else if ( a.isValInteger() ) {                a.dir_anion()  *= bb;                                }
+    else if ( a.isValReal()    ) {                a.dir_anion()  *= bb;                                }
+    else if ( a.isValAnion()   ) {                a.dir_anion()  *= bb;                                }
+    else if ( a.isValVector()  ) { gentype b(bb); a.dir_vector() *= b;                                 }
+    else if ( a.isValMatrix()  ) { gentype b(bb); a.dir_matrix() *= b;                                 }
+    else if ( a.isValSet()     ) { gentype b(bb); a=a.dir_set()*b;                                     }
     else if ( a.isValDgraph()  ) { constructError(a,a,"Error: cannot multiply a graph and a double."); }
 
     else
@@ -12682,55 +12555,18 @@ int nandOR(int a, int b);
 int xorOR (int a, int b);
 int xandOR(int a, int b);
 
-int trueOR(double)
-{
-    return 1;
-}
+int trueOR  (double) { return 1; }
+int falseOR (double) { return 0; }
 
-int falseOR(double)
-{
-    return 0;
-}
+int invertOR(int a) { return !a; }
+int bufferOR(int a) { return a;  }
 
-int invertOR(int a)
-{
-    return !a;
-}
-
-int bufferOR(int a)
-{
-    return a;
-}
-
-int andOR(int a, int b)
-{
-    return a && b;
-}
-
-int orOR(int a, int b)
-{
-    return a || b;
-}
-
-int norOR(int a, int b)
-{
-    return !(a || b);
-}
-
-int nandOR(int a, int b)
-{
-    return !(a && b);
-}
-
-int xorOR(int a, int b)
-{
-    return ( a && !b ) || ( !a && b );
-}
-
-int xandOR(int a, int b)
-{
-    return ( !a && !b ) || ( a && b );
-}
+int andOR (int a, int b) { return a && b;                     }
+int orOR  (int a, int b) { return a || b;                     }
+int norOR (int a, int b) { return !(a || b);                  }
+int nandOR(int a, int b) { return !(a && b);                  }
+int xorOR (int a, int b) { return ( a && !b ) || ( !a && b ); }
+int xandOR(int a, int b) { return ( !a && !b ) || ( a && b ); }
 
 
 gentype &OP_elementwiseDefaultCallA(gentype &a, const gentype &fnbare, const char *fname, gentype &(*op_elmfn)(gentype &), d_anion (*anionfn)(const d_anion &), double (*restanionfn)(const d_anion &), double (*doublefn)(double), int (*intfn)(int), int (*outRangeTest)(double));
@@ -12758,66 +12594,66 @@ gentype &OP_elementwiseDefaultCallA(gentype &a, const gentype &fnbare, const cha
 
     else if ( anionfn != nullptr )
     {
-             if ( a.isValStrErr()                       ) { std::string errstr = fname; errstr += " ill-defined for string"; constructError(a,a,errstr); }
-        else if ( a.isValDgraph()                       ) { std::string errstr = fname; errstr += " ill-defined for dgraph"; constructError(a,a,errstr); }
-        else if ( a.isValSet()                          ) { (a.dir_set()   ).applyon(elmfn); }
-        else if ( a.isValDict()                         ) { (a.dir_dict()  ).applyon(elmfn); }
-        else if ( a.isValMatrix()                       ) { (a.dir_matrix()).applyon(elmfn); }
-        else if ( a.isValVector()                       ) { (a.dir_vector()).applyon(elmfn); }
-        else if ( a.isValAnion()                        ) { a.dir_anion()  = anionfn( a.cast_anion(0) ); }
-        else if ( outRangeTest(a.cast_double(0))        ) { a.dir_anion()  = anionfn( a.cast_anion(0) ); }
-        else if ( a.isValReal()                         ) { a.dir_double() = doublefn(a.cast_double(0)); }
+             if ( a.isValStrErr()                        ) { std::string errstr = fname; errstr += " ill-defined for string"; constructError(a,a,errstr); }
+        else if ( a.isValDgraph()                        ) { std::string errstr = fname; errstr += " ill-defined for dgraph"; constructError(a,a,errstr); }
+        else if ( a.isValSet()                           ) { (a.dir_set()   ).applyon(elmfn); }
+        else if ( a.isValDict()                          ) { (a.dir_dict()  ).applyon(elmfn); }
+        else if ( a.isValMatrix()                        ) { (a.dir_matrix()).applyon(elmfn); }
+        else if ( a.isValVector()                        ) { (a.dir_vector()).applyon(elmfn); }
+        else if ( a.isValAnion()                         ) { a.dir_anion()  = anionfn( a.cast_anion(0) ); }
+        else if ( outRangeTest(a.cast_double(0))         ) { a.dir_anion()  = anionfn( a.cast_anion(0) ); }
+        else if ( a.isValReal()                          ) { a.dir_double() = doublefn(a.cast_double(0)); }
         else if ( a.isValInteger() && ( intfn == nullptr ) ) { a.dir_double() = doublefn(a.cast_double(0)); }
-        else if ( a.isValNull()                         ) { ; }
-        else                                              { a.dir_int()    = intfn(   a.cast_int(0)   ); }
+        else if ( a.isValNull()                          ) { ; }
+        else                                               { a.dir_int()    = intfn(   a.cast_int(0)   ); }
     }
 
     else if ( restanionfn != nullptr )
     {
-             if ( a.isValStrErr()                       ) { std::string errstr = fname; errstr += " ill-defined for string"; constructError(a,a,errstr); }
-        else if ( a.isValDgraph()                       ) { std::string errstr = fname; errstr += " ill-defined for dgraph"; constructError(a,a,errstr); }
-        else if ( a.isValSet()                          ) { (a.dir_set()   ).applyon(elmfn); }
-        else if ( a.isValDict()                         ) { (a.dir_dict()  ).applyon(elmfn); }
-        else if ( a.isValMatrix()                       ) { (a.dir_matrix()).applyon(elmfn); }
-        else if ( a.isValVector()                       ) { (a.dir_vector()).applyon(elmfn); }
-        else if ( a.isValAnion()                        ) { a.dir_anion()  = restanionfn(a.cast_anion(0) ); }
-        else if ( outRangeTest(a.cast_double(0))        ) { a.dir_anion()  = restanionfn(a.cast_anion(0) ); }
-        else if ( a.isValReal()                         ) { a.dir_double() = doublefn(   a.cast_double(0)); }
+             if ( a.isValStrErr()                        ) { std::string errstr = fname; errstr += " ill-defined for string"; constructError(a,a,errstr); }
+        else if ( a.isValDgraph()                        ) { std::string errstr = fname; errstr += " ill-defined for dgraph"; constructError(a,a,errstr); }
+        else if ( a.isValSet()                           ) { (a.dir_set()   ).applyon(elmfn); }
+        else if ( a.isValDict()                          ) { (a.dir_dict()  ).applyon(elmfn); }
+        else if ( a.isValMatrix()                        ) { (a.dir_matrix()).applyon(elmfn); }
+        else if ( a.isValVector()                        ) { (a.dir_vector()).applyon(elmfn); }
+        else if ( a.isValAnion()                         ) { a.dir_anion()  = restanionfn(a.cast_anion(0) ); }
+        else if ( outRangeTest(a.cast_double(0))         ) { a.dir_anion()  = restanionfn(a.cast_anion(0) ); }
+        else if ( a.isValReal()                          ) { a.dir_double() = doublefn(   a.cast_double(0)); }
         else if ( a.isValInteger() && ( intfn == nullptr ) ) { a.dir_double() = doublefn(   a.cast_double(0)); }
-        else if ( a.isValNull()                         ) { ; }
-        else                                              { a.dir_int()    = intfn(      a.cast_int(0)   ); }
+        else if ( a.isValNull()                          ) { ; }
+        else                                               { a.dir_int()    = intfn(      a.cast_int(0)   ); }
     }
 
     else if ( doublefn != nullptr )
     {
-             if ( a.isValStrErr()                       ) { std::string errstr = fname; errstr += " ill-defined for string"; constructError(a,a,errstr); }
-        else if ( a.isValDgraph()                       ) { std::string errstr = fname; errstr += " ill-defined for dgraph"; constructError(a,a,errstr); }
-        else if ( a.isValSet()                          ) { (a.dir_set()   ).applyon(elmfn); }
-        else if ( a.isValDict()                         ) { (a.dir_dict()  ).applyon(elmfn); }
-        else if ( a.isValMatrix()                       ) { (a.dir_matrix()).applyon(elmfn); }
-        else if ( a.isValVector()                       ) { (a.dir_vector()).applyon(elmfn); }
-        else if ( a.isValAnion()                        ) { std::string errstr = fname; errstr += " ill-defined for anions"; constructError(a,a,errstr); }
-        else if ( outRangeTest(a.cast_double(0))        ) { std::string errstr = fname; errstr += " ill-defined for out-of-range reals"; constructError(a,a,errstr); }
-        else if ( a.isValReal()                         ) { a.dir_double() = doublefn(a.cast_double(0)); }
+             if ( a.isValStrErr()                        ) { std::string errstr = fname; errstr += " ill-defined for string"; constructError(a,a,errstr); }
+        else if ( a.isValDgraph()                        ) { std::string errstr = fname; errstr += " ill-defined for dgraph"; constructError(a,a,errstr); }
+        else if ( a.isValSet()                           ) { (a.dir_set()   ).applyon(elmfn); }
+        else if ( a.isValDict()                          ) { (a.dir_dict()  ).applyon(elmfn); }
+        else if ( a.isValMatrix()                        ) { (a.dir_matrix()).applyon(elmfn); }
+        else if ( a.isValVector()                        ) { (a.dir_vector()).applyon(elmfn); }
+        else if ( a.isValAnion()                         ) { std::string errstr = fname; errstr += " ill-defined for anions"; constructError(a,a,errstr); }
+        else if ( outRangeTest(a.cast_double(0))         ) { std::string errstr = fname; errstr += " ill-defined for out-of-range reals"; constructError(a,a,errstr); }
+        else if ( a.isValReal()                          ) { a.dir_double() = doublefn(a.cast_double(0)); }
         else if ( a.isValInteger() && ( intfn == nullptr ) ) { a.dir_double() = doublefn(a.cast_double(0)); }
-        else if ( a.isValNull()                         ) { ; }
-        else                                              { a.dir_int()    = intfn(   a.cast_int(0)   ); }
+        else if ( a.isValNull()                          ) { ; }
+        else                                               { a.dir_int()    = intfn(   a.cast_int(0)   ); }
     }
 
     else
     {
-             if ( a.isValStrErr()                       ) { std::string errstr = fname; errstr += " ill-defined for string"; constructError(a,a,errstr); }
-        else if ( a.isValDgraph()                       ) { std::string errstr = fname; errstr += " ill-defined for dgraph"; constructError(a,a,errstr); }
-        else if ( a.isValSet()                          ) { (a.dir_set()   ).applyon(elmfn); }
-        else if ( a.isValDict()                         ) { (a.dir_dict()  ).applyon(elmfn); }
-        else if ( a.isValMatrix()                       ) { (a.dir_matrix()).applyon(elmfn); }
-        else if ( a.isValVector()                       ) { (a.dir_vector()).applyon(elmfn); }
-        else if ( a.isValAnion()                        ) { std::string errstr = fname; errstr += " ill-defined for anions"; constructError(a,a,errstr); }
-        else if ( outRangeTest(a.cast_double(0))        ) { std::string errstr = fname; errstr += " ill-defined for out-of-range reals"; constructError(a,a,errstr); }
-        else if ( a.isValReal()                         ) { std::string errstr = fname; errstr += " ill-defined for reals"; constructError(a,a,errstr); }
+             if ( a.isValStrErr()                        ) { std::string errstr = fname; errstr += " ill-defined for string"; constructError(a,a,errstr); }
+        else if ( a.isValDgraph()                        ) { std::string errstr = fname; errstr += " ill-defined for dgraph"; constructError(a,a,errstr); }
+        else if ( a.isValSet()                           ) { (a.dir_set()   ).applyon(elmfn); }
+        else if ( a.isValDict()                          ) { (a.dir_dict()  ).applyon(elmfn); }
+        else if ( a.isValMatrix()                        ) { (a.dir_matrix()).applyon(elmfn); }
+        else if ( a.isValVector()                        ) { (a.dir_vector()).applyon(elmfn); }
+        else if ( a.isValAnion()                         ) { std::string errstr = fname; errstr += " ill-defined for anions"; constructError(a,a,errstr); }
+        else if ( outRangeTest(a.cast_double(0))         ) { std::string errstr = fname; errstr += " ill-defined for out-of-range reals"; constructError(a,a,errstr); }
+        else if ( a.isValReal()                          ) { std::string errstr = fname; errstr += " ill-defined for reals"; constructError(a,a,errstr); }
         else if ( a.isValInteger() && ( intfn == nullptr ) ) { std::string errstr = fname; errstr += " ill-defined for integers out of range"; constructError(a,a,errstr); }
-        else if ( a.isValNull()                         ) { ; }
-        else                                              { a.dir_int() = intfn(a.cast_int(0)); }
+        else if ( a.isValNull()                          ) { ; }
+        else                                               { a.dir_int() = intfn(a.cast_int(0)); }
     }
 
     return a;
@@ -13947,41 +13783,19 @@ gentype Nthrtintern(const gentype &a, const gentype &b)
     return res;
 }
 
-gentype powintern(const gentype &a, const gentype &b);
-gentype powintern(const gentype &a, const gentype &b)
-{
-    return genpowintern(a,b,"pow",pow);
-}
-
-gentype Powintern(const gentype &a, const gentype &b);
-gentype Powintern(const gentype &a, const gentype &b)
-{
-    return genpowintern(a,b,"Pow",Pow);
-}
-
+gentype powintern (const gentype &a, const gentype &b);
+gentype Powintern (const gentype &a, const gentype &b);
 gentype powlintern(const gentype &a, const gentype &b);
-gentype powlintern(const gentype &a, const gentype &b)
-{
-    return genpowintern(a,b,"powl",powl);
-}
-
 gentype Powlintern(const gentype &a, const gentype &b);
-gentype Powlintern(const gentype &a, const gentype &b)
-{
-    return genpowintern(a,b,"Powl",Powl);
-}
-
 gentype powrintern(const gentype &a, const gentype &b);
-gentype powrintern(const gentype &a, const gentype &b)
-{
-    return genpowintern(a,b,"powr",powr);
-}
-
 gentype Powrintern(const gentype &a, const gentype &b);
-gentype Powrintern(const gentype &a, const gentype &b)
-{
-    return genpowintern(a,b,"Powr",Powr);
-}
+
+gentype powintern (const gentype &a, const gentype &b) { return genpowintern(a,b,"pow", pow);  }
+gentype Powintern (const gentype &a, const gentype &b) { return genpowintern(a,b,"Pow", Pow);  }
+gentype powlintern(const gentype &a, const gentype &b) { return genpowintern(a,b,"powl",powl); }
+gentype Powlintern(const gentype &a, const gentype &b) { return genpowintern(a,b,"Powl",Powl); }
+gentype powrintern(const gentype &a, const gentype &b) { return genpowintern(a,b,"powr",powr); }
+gentype Powrintern(const gentype &a, const gentype &b) { return genpowintern(a,b,"Powr",Powr); }
 
 gentype ifthenelse(const gentype &a, const gentype &b, const gentype &c)
 {
@@ -14465,13 +14279,14 @@ gentype eps_comm(const gentype &n, const gentype &q, const gentype &r, const gen
     else if ( !q.isCastableToIntegerWithoutLoss()      ) { constructError(n,q,r,s,res,"eps_comm must have integer arguments"); }
     else if ( !r.isCastableToIntegerWithoutLoss()      ) { constructError(n,q,r,s,res,"eps_comm must have integer arguments"); }
     else if ( !s.isCastableToIntegerWithoutLoss()      ) { constructError(n,q,r,s,res,"eps_comm must have integer arguments"); }
-    else if ( n.cast_int(0) < 0                        ) { constructError(n,q,r,s,res,"eps_comm must have n >= 0"); }
-    else if ( q.cast_int(0) < 0                        ) { constructError(n,q,r,s,res,"eps_comm must have q >= 0"); }
-    else if ( r.cast_int(0) < 0                        ) { constructError(n,q,r,s,res,"eps_comm must have r >= 0"); }
-    else if ( s.cast_int(0) < 0                        ) { constructError(n,q,r,s,res,"eps_comm must have s >= 0"); }
-    else if ( q.cast_int(0) > pow(2.0,n.cast_int(0))-1 ) { constructError(n,q,r,s,res,"eps_comm must have q < 2^n-1"); }
-    else if ( r.cast_int(0) > pow(2.0,n.cast_int(0))-1 ) { constructError(n,q,r,s,res,"eps_comm must have r < 2^n-1"); }
-    else if ( s.cast_int(0) > pow(2.0,n.cast_int(0))-1 ) { constructError(n,q,r,s,res,"eps_comm must have s < 2^n-1"); }
+    else if ( n.cast_int(0) < 0                        ) { constructError(n,q,r,s,res,"eps_comm must have n >= 0");            }
+    else if ( q.cast_int(0) < 0                        ) { constructError(n,q,r,s,res,"eps_comm must have q >= 0");            }
+    else if ( r.cast_int(0) < 0                        ) { constructError(n,q,r,s,res,"eps_comm must have r >= 0");            }
+    else if ( s.cast_int(0) < 0                        ) { constructError(n,q,r,s,res,"eps_comm must have s >= 0");            }
+    else if ( q.cast_int(0) > pow(2.0,n.cast_int(0))-1 ) { constructError(n,q,r,s,res,"eps_comm must have q < 2^n-1");         }
+    else if ( r.cast_int(0) > pow(2.0,n.cast_int(0))-1 ) { constructError(n,q,r,s,res,"eps_comm must have r < 2^n-1");         }
+    else if ( s.cast_int(0) > pow(2.0,n.cast_int(0))-1 ) { constructError(n,q,r,s,res,"eps_comm must have s < 2^n-1");         }
+
     else
     {
 	int nn = n.cast_int(0);
@@ -14508,15 +14323,16 @@ gentype eps_assoc(const gentype &n, const gentype &q, const gentype &r, const ge
     else if ( !r.isCastableToIntegerWithoutLoss()             ) { constructError(n,q,r,s,res,"eps_assoc must have integer arguments"); }
     else if ( !s.isCastableToIntegerWithoutLoss()             ) { constructError(n,q,r,s,res,"eps_assoc must have integer arguments"); }
     else if ( !t.isCastableToIntegerWithoutLoss()             ) { constructError(n,q,r,s,res,"eps_assoc must have integer arguments"); }
-    else if ( n.cast_int(0) < 0                                ) { constructError(n,q,r,s,res,"eps_assoc must have n >= 0"); }
-    else if ( q.cast_int(0) < 0                                ) { constructError(n,q,r,s,res,"eps_assoc must have q >= 0"); }
-    else if ( r.cast_int(0) < 0                                ) { constructError(n,q,r,s,res,"eps_assoc must have r >= 0"); }
-    else if ( s.cast_int(0) < 0                                ) { constructError(n,q,r,s,res,"eps_assoc must have s >= 0"); }
-    else if ( t.cast_int(0) < 0                                ) { constructError(n,q,r,s,res,"eps_assoc must have t >= 0"); }
-    else if ( q.cast_int(0) > pow(2.0,(double) n.cast_int(0))-1 ) { constructError(n,q,r,s,res,"eps_assoc must have q < 2^n-1"); }
-    else if ( r.cast_int(0) > pow(2.0,(double) n.cast_int(0))-1 ) { constructError(n,q,r,s,res,"eps_assoc must have r < 2^n-1"); }
-    else if ( s.cast_int(0) > pow(2.0,(double) n.cast_int(0))-1 ) { constructError(n,q,r,s,res,"eps_assoc must have s < 2^n-1"); }
-    else if ( t.cast_int(0) > pow(2.0,(double) n.cast_int(0))-1 ) { constructError(n,q,r,s,res,"eps_assoc must have t < 2^n-1"); }
+    else if ( n.cast_int(0) < 0                                ) { constructError(n,q,r,s,res,"eps_assoc must have n >= 0");           }
+    else if ( q.cast_int(0) < 0                                ) { constructError(n,q,r,s,res,"eps_assoc must have q >= 0");           }
+    else if ( r.cast_int(0) < 0                                ) { constructError(n,q,r,s,res,"eps_assoc must have r >= 0");           }
+    else if ( s.cast_int(0) < 0                                ) { constructError(n,q,r,s,res,"eps_assoc must have s >= 0");           }
+    else if ( t.cast_int(0) < 0                                ) { constructError(n,q,r,s,res,"eps_assoc must have t >= 0");           }
+    else if ( q.cast_int(0) > pow(2.0,(double) n.cast_int(0))-1 ) { constructError(n,q,r,s,res,"eps_assoc must have q < 2^n-1");       }
+    else if ( r.cast_int(0) > pow(2.0,(double) n.cast_int(0))-1 ) { constructError(n,q,r,s,res,"eps_assoc must have r < 2^n-1");       }
+    else if ( s.cast_int(0) > pow(2.0,(double) n.cast_int(0))-1 ) { constructError(n,q,r,s,res,"eps_assoc must have s < 2^n-1");       }
+    else if ( t.cast_int(0) > pow(2.0,(double) n.cast_int(0))-1 ) { constructError(n,q,r,s,res,"eps_assoc must have t < 2^n-1");       }
+
     else
     {
 	int nn = n.cast_int(0);
@@ -14550,8 +14366,8 @@ gentype im_complex(const gentype &x)
     }
 
          if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,res,"im_complex must have integer arguments"); }
-    else if ( x.cast_int(0) < 0                    ) { constructError(x,res,"im_complex argument must be 0 or 1"); }
-    else if ( x.cast_int(0) > 1                    ) { constructError(x,res,"im_complex argument must be 0 or 1"); }
+    else if ( x.cast_int(0) < 0                    ) { constructError(x,res,"im_complex argument must be 0 or 1");    }
+    else if ( x.cast_int(0) > 1                    ) { constructError(x,res,"im_complex argument must be 0 or 1");    }
     else
     {
 	d_anion tres(1);
@@ -14573,8 +14389,8 @@ gentype im_quat(const gentype &x)
     }
 
          if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,res,"im_quat must have integer arguments"); }
-    else if ( x.cast_int(0) < 0                   ) { constructError(x,res,"im_quat argument must be 0,1,2,3"); }
-    else if ( x.cast_int(0) > 3                   ) { constructError(x,res,"im_quat argument must be 0,1,2,3"); }
+    else if ( x.cast_int(0) < 0                   ) { constructError(x,res,"im_quat argument must be 0,1,2,3");    }
+    else if ( x.cast_int(0) > 3                   ) { constructError(x,res,"im_quat argument must be 0,1,2,3");    }
     else
     {
 	d_anion tres(2);
@@ -14595,7 +14411,7 @@ gentype im_octo(const gentype &x)
         return resx(x);
     }
 
-         if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,res,"im_octo must have integer arguments"); }
+         if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,res,"im_octo must have integer arguments");      }
     else if ( x.cast_int(0) < 0                   ) { constructError(x,res,"im_octo argument must be 0,1,2,3,4,5,6,7"); }
     else if ( x.cast_int(0) > 7                   ) { constructError(x,res,"im_octo argument must be 0,1,2,3,4,5,6,7"); }
     else
@@ -14618,8 +14434,8 @@ gentype im_anion(const gentype &x, const gentype &y)
         return resx(x,y);
     }
 
-         if ( !y.isCastableToIntegerWithoutLoss()               ) { constructError(x,y,res,"im_anion must have integer arguments"); }
-    else if ( !x.isCastableToIntegerWithoutLoss()               ) { constructError(x,y,res,"im_anion must have integer arguments"); }
+         if ( !y.isCastableToIntegerWithoutLoss()               ) { constructError(x,y,res,"im_anion must have integer arguments");    }
+    else if ( !x.isCastableToIntegerWithoutLoss()               ) { constructError(x,y,res,"im_anion must have integer arguments");    }
     else if ( y.cast_int(0) < 0                                 ) { constructError(x,y,res,"im_anion argument must be 0,1,...,2^n-1"); }
     else if ( y.cast_int(0) > pow(2.0,(double) x.cast_int(0))-1 ) { constructError(x,y,res,"im_anion argument must be 0,1,...,2^n-1"); }
     else
@@ -14643,8 +14459,8 @@ gentype Im_complex(const gentype &x)
     }
 
          if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,res,"im_complex must have integer arguments"); }
-    else if ( x.cast_int(0) < 0                   ) { constructError(x,res,"im_complex argument must be 0 or 1"); }
-    else if ( x.cast_int(0) > 1                   ) { constructError(x,res,"im_complex argument must be 0 or 1"); }
+    else if ( x.cast_int(0) < 0                   ) { constructError(x,res,"im_complex argument must be 0 or 1");     }
+    else if ( x.cast_int(0) > 1                   ) { constructError(x,res,"im_complex argument must be 0 or 1");     }
     else
     {
 	d_anion tres(1);
@@ -14666,8 +14482,8 @@ gentype Im_quat(const gentype &x)
     }
 
          if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,res,"im_quat must have integer arguments"); }
-    else if ( x.cast_int(0) < 0                   ) { constructError(x,res,"im_quat argument must be 0,1,2,3"); }
-    else if ( x.cast_int(0) > 3                   ) { constructError(x,res,"im_quat argument must be 0,1,2,3"); }
+    else if ( x.cast_int(0) < 0                   ) { constructError(x,res,"im_quat argument must be 0,1,2,3");    }
+    else if ( x.cast_int(0) > 3                   ) { constructError(x,res,"im_quat argument must be 0,1,2,3");    }
     else
     {
 	d_anion tres(2);
@@ -14688,7 +14504,7 @@ gentype Im_octo(const gentype &x)
         return resx(x);
     }
 
-         if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,res,"im_octo must have integer arguments"); }
+         if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,res,"im_octo must have integer arguments");      }
     else if ( x.cast_int(0) < 0                   ) { constructError(x,res,"im_octo argument must be 0,1,2,3,4,5,6,7"); }
     else if ( x.cast_int(0) > 7                   ) { constructError(x,res,"im_octo argument must be 0,1,2,3,4,5,6,7"); }
     else
@@ -14711,8 +14527,8 @@ gentype Im_anion(const gentype &x, const gentype &y)
         return resx(x,y);
     }
 
-         if ( !y.isCastableToIntegerWithoutLoss()               ) { constructError(x,y,res,"im_anion must have integer arguments"); }
-    else if ( !x.isCastableToIntegerWithoutLoss()               ) { constructError(x,y,res,"im_anion must have integer arguments"); }
+         if ( !y.isCastableToIntegerWithoutLoss()               ) { constructError(x,y,res,"im_anion must have integer arguments");    }
+    else if ( !x.isCastableToIntegerWithoutLoss()               ) { constructError(x,y,res,"im_anion must have integer arguments");    }
     else if ( y.cast_int(0) < 0                                 ) { constructError(x,y,res,"im_anion argument must be 0,1,...,2^n-1"); }
     else if ( y.cast_int(0) > pow(2.0,(double) x.cast_int(0))-1 ) { constructError(x,y,res,"im_anion argument must be 0,1,...,2^n-1"); }
     else
@@ -14737,7 +14553,7 @@ gentype vect_const(const gentype &x, const gentype &y)
     }
 
          if ( !x.isCastableToIntegerWithoutLoss() ) { constructError(x,y,res,"vect_const must have integer vector size"); }
-    else if ( x.cast_int(0) < 0                   ) { constructError(x,y,res,"vect_const must have non-negative size"); }
+    else if ( x.cast_int(0) < 0                   ) { constructError(x,y,res,"vect_const must have non-negative size");   }
     else
     {
 	Vector<gentype> tres(x.cast_int(0));
@@ -14758,10 +14574,10 @@ gentype vect_unit(const gentype &x, const gentype &y)
         return resx(x,y);
     }
 
-         if ( !x.isCastableToIntegerWithoutLoss()   ) { constructError(x,y,res,"vect_unit must have integer arguments"); }
-    else if ( !y.isCastableToIntegerWithoutLoss()   ) { constructError(x,y,res,"vect_unit must have integer arguments"); }
-    else if ( x.cast_int(0) < 0                     ) { constructError(x,y,res,"vect_unit must have non-negative size"); }
-    else if ( y.cast_int(0) < 0                     ) { constructError(x,y,res,"vect_unit must have non-negative index"); }
+         if ( !x.isCastableToIntegerWithoutLoss()   ) { constructError(x,y,res,"vect_unit must have integer arguments");           }
+    else if ( !y.isCastableToIntegerWithoutLoss()   ) { constructError(x,y,res,"vect_unit must have integer arguments");           }
+    else if ( x.cast_int(0) < 0                     ) { constructError(x,y,res,"vect_unit must have non-negative size");           }
+    else if ( y.cast_int(0) < 0                     ) { constructError(x,y,res,"vect_unit must have non-negative index");          }
     else if ( y.cast_int(0) >= x.cast_int(0)        ) { constructError(x,y,res,"vect_unit must have index less than vector size"); }
     else
     {
@@ -14845,13 +14661,13 @@ gentype cayleyDickson(const gentype &x, const gentype &y)
         return resx(x,y);
     }
 
-	 if ( x.isValStrErr() || y.isValStrErr() ) { constructError(x,y,res,"CayleyDickson not defined for strings."); }
-    else if ( x.isValMatrix() || y.isValMatrix() ) { constructError(x,y,res,"CayleyDickson not defined for matrices."); }
-    else if ( x.isValVector() || y.isValVector() ) { constructError(x,y,res,"CayleyDickson not defined for vectors."); }
-    else if ( x.isValSet()    || y.isValSet()    ) { constructError(x,y,res,"CayleyDickson not defined for sets."); }
+	 if ( x.isValStrErr() || y.isValStrErr() ) { constructError(x,y,res,"CayleyDickson not defined for strings.");    }
+    else if ( x.isValMatrix() || y.isValMatrix() ) { constructError(x,y,res,"CayleyDickson not defined for matrices.");   }
+    else if ( x.isValVector() || y.isValVector() ) { constructError(x,y,res,"CayleyDickson not defined for vectors.");    }
+    else if ( x.isValSet()    || y.isValSet()    ) { constructError(x,y,res,"CayleyDickson not defined for sets.");       }
     else if ( x.isValDict()   || y.isValDict()   ) { constructError(x,y,res,"CayleyDickson not defined for dictionary."); }
-    else if ( x.isValDgraph() || y.isValDgraph() ) { constructError(x,y,res,"CayleyDickson not defined for dgraphs."); }
-    else                                           { d_anion temp(x.cast_anion(0),y.cast_anion(0)); res = temp; }
+    else if ( x.isValDgraph() || y.isValDgraph() ) { constructError(x,y,res,"CayleyDickson not defined for dgraphs.");    }
+    else                                           { d_anion temp(x.cast_anion(0),y.cast_anion(0)); res = temp;           }
 
     return res;
 }
@@ -14879,13 +14695,13 @@ gentype CayleyDickson(const gentype &x, const gentype &y)
         return resx(x,y);
     }
 
-	 if ( x.isValStrErr() || y.isValStrErr() ) { constructError(x,y,res,"CayleyDickson not defined for strings."); }
+	 if ( x.isValStrErr() || y.isValStrErr() ) { constructError(x,y,res,"CayleyDickson not defined for strings.");  }
     else if ( x.isValMatrix() || y.isValMatrix() ) { constructError(x,y,res,"CayleyDickson not defined for matrices."); }
-    else if ( x.isValVector() || y.isValVector() ) { constructError(x,y,res,"CayleyDickson not defined for vectors."); }
-    else if ( x.isValSet()    || y.isValSet()    ) { constructError(x,y,res,"CayleyDickson not defined for sets."); }
-    else if ( x.isValDict()   || y.isValDict()   ) { constructError(x,y,res,"CayleyDickson not defined for dict."); }
-    else if ( x.isValDgraph() || y.isValDgraph() ) { constructError(x,y,res,"CayleyDickson not defined for dgraphs."); }
-    else                                           { d_anion temp(conj(x.cast_anion(0)),-y.cast_anion(0)); res = temp; }
+    else if ( x.isValVector() || y.isValVector() ) { constructError(x,y,res,"CayleyDickson not defined for vectors.");  }
+    else if ( x.isValSet()    || y.isValSet()    ) { constructError(x,y,res,"CayleyDickson not defined for sets.");     }
+    else if ( x.isValDict()   || y.isValDict()   ) { constructError(x,y,res,"CayleyDickson not defined for dict.");     }
+    else if ( x.isValDgraph() || y.isValDgraph() ) { constructError(x,y,res,"CayleyDickson not defined for dgraphs.");  }
+    else                                           { d_anion temp(conj(x.cast_anion(0)),-y.cast_anion(0)); res = temp;  }
 
     return res;
 }
@@ -15636,7 +15452,7 @@ gentype multifact(const gentype &i, const gentype &m)
 
          if ( i.isValStrErr()                     ) { constructError(i,m,res,"multifact not defined for strings."); }
     else if ( i.isValDgraph()                     ) { constructError(i,m,res,"multifact not defined for dgraphs."); }
-    else if ( i.isValAnion()                      ) { constructError(i,m,res,"multifact not defined for anions."); }
+    else if ( i.isValAnion()                      ) { constructError(i,m,res,"multifact not defined for anions.");  }
     else if ( i.isValSet()                        ) { Set<gentype>              temp(i.cast_set(0));    temp.applyon(dubmultifact,(void *) &m); res = temp; }
     else if ( i.isValDict()                       ) { Dict<gentype,dictkey>     temp(i.cast_dict(0));   temp.applyon(dubmultifact,(void *) &m); res = temp; }
     else if ( i.isValMatrix()                     ) { Matrix<gentype>           temp(i.cast_matrix(0)); temp.applyon(dubmultifact,(void *) &m); res = temp; }
@@ -16201,16 +16017,16 @@ gentype abs1(const gentype &a)
         return resx(a);
     }
 
-    else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented"); }
+    else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented");    }
     else if ( a.isValDict()    ) { constructError(a,res,"Dictonary norm not implemented"); }
-    else if ( a.isValSet()     ) { res = abs1(a.cast_set(0)); }
-    else if ( a.isValDgraph()  ) { res = abs1(a.cast_dgraph(0)); }
-    else if ( a.isValMatrix()  ) { res = abs1mat(a.cast_matrix(0)); }
-    else if ( a.isValVector()  ) { res = abs1vec(a.cast_vector(0)); }
-    else if ( a.isValAnion()   ) { res = abs1(a.cast_anion(0)); }
-    else if ( a.isValReal()    ) { res = abs1(a.cast_double(0)); }
-    else if ( a.isValInteger() ) { res = abs1(a.cast_int(0)); }
-    else                         { res = a; }
+    else if ( a.isValSet()     ) { res = abs1(a.cast_set(0));                              }
+    else if ( a.isValDgraph()  ) { res = abs1(a.cast_dgraph(0));                           }
+    else if ( a.isValMatrix()  ) { res = abs1mat(a.cast_matrix(0));                        }
+    else if ( a.isValVector()  ) { res = abs1vec(a.cast_vector(0));                        }
+    else if ( a.isValAnion()   ) { res = abs1(a.cast_anion(0));                            }
+    else if ( a.isValReal()    ) { res = abs1(a.cast_double(0));                           }
+    else if ( a.isValInteger() ) { res = abs1(a.cast_int(0));                              }
+    else                         { res = a;                                                }
 
     return res;
 }
@@ -16230,16 +16046,16 @@ gentype abs2(const gentype &a)
         return resx(a);
     }
 
-    else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented"); }
+    else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented");    }
     else if ( a.isValDict()    ) { constructError(a,res,"Dictonary norm not implemented"); }
-    else if ( a.isValSet()     ) { res = abs2(a.cast_set(0)); }
-    else if ( a.isValDgraph()  ) { res = abs2(a.cast_dgraph(0)); }
-    else if ( a.isValMatrix()  ) { res = abs2mat(a.cast_matrix(0)); }
-    else if ( a.isValVector()  ) { res = abs2vec(a.cast_vector(0)); }
-    else if ( a.isValAnion()   ) { res = abs2(a.cast_anion(0)); }
-    else if ( a.isValReal()    ) { res = abs2(a.cast_double(0)); }
-    else if ( a.isValInteger() ) { res = abs2(a.cast_int(0)); }
-    else                         { res = a; }
+    else if ( a.isValSet()     ) { res = abs2(a.cast_set(0));                              }
+    else if ( a.isValDgraph()  ) { res = abs2(a.cast_dgraph(0));                           }
+    else if ( a.isValMatrix()  ) { res = abs2mat(a.cast_matrix(0));                        }
+    else if ( a.isValVector()  ) { res = abs2vec(a.cast_vector(0));                        }
+    else if ( a.isValAnion()   ) { res = abs2(a.cast_anion(0));                            }
+    else if ( a.isValReal()    ) { res = abs2(a.cast_double(0));                           }
+    else if ( a.isValInteger() ) { res = abs2(a.cast_int(0));                              }
+    else                         { res = a;                                                }
 
     return res;
 }
@@ -16264,16 +16080,16 @@ gentype absp(const gentype &a, const gentype &q)
         constructError(a,q,res,"p must be real or integer for p-norm");
     }
 
-    else if ( a.isValStrErr()  ) { constructError(a,q,res,"String norm not implemented"); }
+    else if ( a.isValStrErr()  ) { constructError(a,q,res,"String norm not implemented");    }
     else if ( a.isValDict()    ) { constructError(a,q,res,"Dictonary norm not implemented"); }
-    else if ( a.isValSet()     ) { res = absp(a.cast_set(0),q.cast_double(0)); }
-    else if ( a.isValDgraph()  ) { res = absp(a.cast_dgraph(0),q.cast_double(0)); }
-    else if ( a.isValMatrix()  ) { res = abspmat(a.cast_matrix(0),q.cast_double(0)); }
-    else if ( a.isValVector()  ) { res = abspvec(a.cast_vector(0),q.cast_double(0)); }
-    else if ( a.isValAnion()   ) { res = absp(a.cast_anion(0),q.cast_double(0)); }
-    else if ( a.isValReal()    ) { res = absp(a.cast_double(0),q.cast_double(0)); }
-    else if ( a.isValInteger() ) { res = absp(a.cast_int(0),q.cast_double(0)); }
-    else                         { res = a; }
+    else if ( a.isValSet()     ) { res = absp(a.cast_set(0),q.cast_double(0));               }
+    else if ( a.isValDgraph()  ) { res = absp(a.cast_dgraph(0),q.cast_double(0));            }
+    else if ( a.isValMatrix()  ) { res = abspmat(a.cast_matrix(0),q.cast_double(0));         }
+    else if ( a.isValVector()  ) { res = abspvec(a.cast_vector(0),q.cast_double(0));         }
+    else if ( a.isValAnion()   ) { res = absp(a.cast_anion(0),q.cast_double(0));             }
+    else if ( a.isValReal()    ) { res = absp(a.cast_double(0),q.cast_double(0));            }
+    else if ( a.isValInteger() ) { res = absp(a.cast_int(0),q.cast_double(0));               }
+    else                         { res = a;                                                  }
 
     return res;
 }
@@ -16383,16 +16199,16 @@ gentype absinf(const gentype &a)
         return resx(a);
     }
 
-    else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented"); }
+    else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented");    }
     else if ( a.isValDict()    ) { constructError(a,res,"Dictonary norm not implemented"); }
-    else if ( a.isValMatrix()  ) { res = absinfmat(a.cast_matrix(0)); }
-    else if ( a.isValSet()     ) { res = absinf(a.cast_set(0)); }
-    else if ( a.isValDgraph()  ) { res = absinf(a.cast_dgraph(0)); }
-    else if ( a.isValVector()  ) { res = absinfvec(a.cast_vector(0)); }
-    else if ( a.isValAnion()   ) { res = absinf(a.cast_anion(0)); }
-    else if ( a.isValReal()    ) { res = absinf(a.cast_double(0)); }
-    else if ( a.isValInteger() ) { res = absinf(a.cast_int(0)); }
-    else                         { res = a; }
+    else if ( a.isValMatrix()  ) { res = absinfmat(a.cast_matrix(0));                      }
+    else if ( a.isValSet()     ) { res = absinf(a.cast_set(0));                            }
+    else if ( a.isValDgraph()  ) { res = absinf(a.cast_dgraph(0));                         }
+    else if ( a.isValVector()  ) { res = absinfvec(a.cast_vector(0));                      }
+    else if ( a.isValAnion()   ) { res = absinf(a.cast_anion(0));                          }
+    else if ( a.isValReal()    ) { res = absinf(a.cast_double(0));                         }
+    else if ( a.isValInteger() ) { res = absinf(a.cast_int(0));                            }
+    else                         { res = a;                                                }
 
     return res;
 }
@@ -16502,16 +16318,16 @@ gentype abs0(const gentype &a)
         return resx(a);
     }
 
-    else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented"); }
+    else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented");    }
     else if ( a.isValDict()    ) { constructError(a,res,"Dictonary norm not implemented"); }
-    else if ( a.isValMatrix()  ) { res = abs0mat(a.cast_matrix(0)); }
-    else if ( a.isValSet()     ) { res = abs0(a.cast_set(0)); }
-    else if ( a.isValDgraph()  ) { res = abs0(a.cast_dgraph(0)); }
-    else if ( a.isValVector()  ) { res = abs0vec(a.cast_vector(0)); }
-    else if ( a.isValAnion()   ) { res = abs0(a.cast_anion(0)); }
-    else if ( a.isValReal()    ) { res = abs0(a.cast_double(0)); }
-    else if ( a.isValInteger() ) { res = abs0(a.cast_int(0)); }
-    else                         { res = a; }
+    else if ( a.isValMatrix()  ) { res = abs0mat(a.cast_matrix(0));                        }
+    else if ( a.isValSet()     ) { res = abs0(a.cast_set(0));                              }
+    else if ( a.isValDgraph()  ) { res = abs0(a.cast_dgraph(0));                           }
+    else if ( a.isValVector()  ) { res = abs0vec(a.cast_vector(0));                        }
+    else if ( a.isValAnion()   ) { res = abs0(a.cast_anion(0));                            }
+    else if ( a.isValReal()    ) { res = abs0(a.cast_double(0));                           }
+    else if ( a.isValInteger() ) { res = abs0(a.cast_int(0));                              }
+    else                         { res = a;                                                }
 
     return res;
 }
@@ -16557,16 +16373,16 @@ gentype norm1(const gentype &a)
                 bb = resx(aa);
             }
 
-            else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented"); }
+            else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented");    }
             else if ( aa.isValDict()    ) { constructError(aa,bb,"Dictonary norm not implemented"); }
-            else if ( aa.isValSet()     ) { bb = norm1(aa.cast_set(0)); }
-            else if ( aa.isValDgraph()  ) { bb = norm1(aa.cast_dgraph(0)); }
-            else if ( aa.isValMatrix()  ) { bb = norm2mat(aa.cast_matrix(0)); }
-            else if ( aa.isValVector()  ) { bb = norm1vec(aa.cast_vector(0)); }
-            else if ( aa.isValAnion()   ) { bb = norm1(aa.cast_anion(0)); }
-            else if ( aa.isValReal()    ) { bb = norm1(aa.cast_double(0)); }
-            else if ( aa.isValInteger() ) { bb = norm1(aa.cast_int(0)); }
-            else                          { bb = aa; }
+            else if ( aa.isValSet()     ) { bb = norm1(aa.cast_set(0));                             }
+            else if ( aa.isValDgraph()  ) { bb = norm1(aa.cast_dgraph(0));                          }
+            else if ( aa.isValMatrix()  ) { bb = norm2mat(aa.cast_matrix(0));                       }
+            else if ( aa.isValVector()  ) { bb = norm1vec(aa.cast_vector(0));                       }
+            else if ( aa.isValAnion()   ) { bb = norm1(aa.cast_anion(0));                           }
+            else if ( aa.isValReal()    ) { bb = norm1(aa.cast_double(0));                          }
+            else if ( aa.isValInteger() ) { bb = norm1(aa.cast_int(0));                             }
+            else                          { bb = aa;                                                }
 
             bb /= ((double) numpts);
 
@@ -16613,16 +16429,16 @@ gentype norm1(const gentype &a)
                 bb = resx(aa);
             }
 
-            else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented"); }
+            else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented");    }
             else if ( aa.isValDict()    ) { constructError(aa,bb,"Dictonary norm not implemented"); }
-            else if ( aa.isValSet()     ) { bb = norm1(aa.cast_set(0)); }
-            else if ( aa.isValDgraph()  ) { bb = norm1(aa.cast_dgraph(0)); }
-            else if ( aa.isValMatrix()  ) { bb = norm2mat(aa.cast_matrix(0)); }
-            else if ( aa.isValVector()  ) { bb = norm1vec(aa.cast_vector(0)); }
-            else if ( aa.isValAnion()   ) { bb = norm1(aa.cast_anion(0)); }
-            else if ( aa.isValReal()    ) { bb = norm1(aa.cast_double(0)); }
-            else if ( aa.isValInteger() ) { bb = norm1(aa.cast_int(0)); }
-            else                          { bb = aa; }
+            else if ( aa.isValSet()     ) { bb = norm1(aa.cast_set(0));                             }
+            else if ( aa.isValDgraph()  ) { bb = norm1(aa.cast_dgraph(0));                          }
+            else if ( aa.isValMatrix()  ) { bb = norm2mat(aa.cast_matrix(0));                       }
+            else if ( aa.isValVector()  ) { bb = norm1vec(aa.cast_vector(0));                       }
+            else if ( aa.isValAnion()   ) { bb = norm1(aa.cast_anion(0));                           }
+            else if ( aa.isValReal()    ) { bb = norm1(aa.cast_double(0));                          }
+            else if ( aa.isValInteger() ) { bb = norm1(aa.cast_int(0));                             }
+            else                          { bb = aa;                                                }
 
             bb /= ((double) numtot);
 
@@ -16655,16 +16471,16 @@ gentype norm1(const gentype &a)
         return resx(a);
     }
 
-    else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented"); }
+    else if ( a.isValStrErr()  ) { constructError(a,res,"String norm not implemented");    }
     else if ( a.isValDict()    ) { constructError(a,res,"Dictonary norm not implemented"); }
-    else if ( a.isValSet()     ) { res = norm1(a.cast_set(0)); }
-    else if ( a.isValDgraph()  ) { res = norm1(a.cast_dgraph(0)); }
-    else if ( a.isValMatrix()  ) { res = norm2mat(a.cast_matrix(0)); }
-    else if ( a.isValVector()  ) { res = norm1vec(a.cast_vector(0)); }
-    else if ( a.isValAnion()   ) { res = norm1(a.cast_anion(0)); }
-    else if ( a.isValReal()    ) { res = norm1(a.cast_double(0)); }
-    else if ( a.isValInteger() ) { res = norm1(a.cast_int(0)); }
-    else                         { res = a; }
+    else if ( a.isValSet()     ) { res = norm1(a.cast_set(0));                             }
+    else if ( a.isValDgraph()  ) { res = norm1(a.cast_dgraph(0));                          }
+    else if ( a.isValMatrix()  ) { res = norm2mat(a.cast_matrix(0));                       }
+    else if ( a.isValVector()  ) { res = norm1vec(a.cast_vector(0));                       }
+    else if ( a.isValAnion()   ) { res = norm1(a.cast_anion(0));                           }
+    else if ( a.isValReal()    ) { res = norm1(a.cast_double(0));                          }
+    else if ( a.isValInteger() ) { res = norm1(a.cast_int(0));                             }
+    else                         { res = a;                                                }
 
     // The integer case might overflow, but probably not unless we're very unlucky
 
@@ -16717,16 +16533,16 @@ gentype norm2(const gentype &a)
                 bb = resx(aa);
             }
 
-            else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented"); }
+            else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented");    }
             else if ( aa.isValDict()    ) { constructError(aa,bb,"Dictonary norm not implemented"); }
-            else if ( aa.isValSet()     ) { bb = norm2(aa.cast_set(0)); }
-            else if ( aa.isValDgraph()  ) { bb = norm2(aa.cast_dgraph(0)); }
-            else if ( aa.isValMatrix()  ) { bb = norm2mat(aa.cast_matrix(0)); }
-            else if ( aa.isValVector()  ) { bb = norm2vec(aa.cast_vector(0)); }
-            else if ( aa.isValAnion()   ) { bb = norm2(aa.cast_anion(0)); }
-            else if ( aa.isValReal()    ) { bb = norm2(aa.cast_double(0)); }
-            else if ( aa.isValInteger() ) { bb = norm2(aa.cast_double(0)); }
-            else                          { bb = aa; }
+            else if ( aa.isValSet()     ) { bb = norm2(aa.cast_set(0));                             }
+            else if ( aa.isValDgraph()  ) { bb = norm2(aa.cast_dgraph(0));                          }
+            else if ( aa.isValMatrix()  ) { bb = norm2mat(aa.cast_matrix(0));                       }
+            else if ( aa.isValVector()  ) { bb = norm2vec(aa.cast_vector(0));                       }
+            else if ( aa.isValAnion()   ) { bb = norm2(aa.cast_anion(0));                           }
+            else if ( aa.isValReal()    ) { bb = norm2(aa.cast_double(0));                          }
+            else if ( aa.isValInteger() ) { bb = norm2(aa.cast_double(0));                          }
+            else                          { bb = aa;                                                }
 
             bb /= ((double) numpts);
 //errstream() << "phantomxg 5(" << i << "): " << bb << "\n";
@@ -16776,16 +16592,16 @@ gentype norm2(const gentype &a)
                 bb = resx(aa);
             }
 
-            else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm2 not implemented"); }
+            else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm2 not implemented");   }
             else if ( aa.isValDict()    ) { constructError(aa,bb,"Dictonary norm not implemented"); }
-            else if ( aa.isValSet()     ) { bb = norm2(aa.cast_set(0)); }
-            else if ( aa.isValDgraph()  ) { bb = norm2(aa.cast_dgraph(0)); }
-            else if ( aa.isValMatrix()  ) { bb = norm2mat(aa.cast_matrix(0)); }
-            else if ( aa.isValVector()  ) { bb = norm2vec(aa.cast_vector(0)); }
-            else if ( aa.isValAnion()   ) { bb = norm2(aa.cast_anion(0)); }
-            else if ( aa.isValReal()    ) { bb = norm2(aa.cast_double(0)); }
-            else if ( aa.isValInteger() ) { bb = norm2(aa.cast_double(0)); }
-            else                          { bb = aa; }
+            else if ( aa.isValSet()     ) { bb = norm2(aa.cast_set(0));                             }
+            else if ( aa.isValDgraph()  ) { bb = norm2(aa.cast_dgraph(0));                          }
+            else if ( aa.isValMatrix()  ) { bb = norm2mat(aa.cast_matrix(0));                       }
+            else if ( aa.isValVector()  ) { bb = norm2vec(aa.cast_vector(0));                       }
+            else if ( aa.isValAnion()   ) { bb = norm2(aa.cast_anion(0));                           }
+            else if ( aa.isValReal()    ) { bb = norm2(aa.cast_double(0));                          }
+            else if ( aa.isValInteger() ) { bb = norm2(aa.cast_double(0));                          }
+            else                          { bb = aa;                                                }
 
             bb /= ((double) numtot);
 
@@ -16818,16 +16634,16 @@ gentype norm2(const gentype &a)
         return resx(a);
     }
 
-    else if ( a.isValStrErr()  ) { constructError(a,res,"String norm2 not implemented"); }
+    else if ( a.isValStrErr()  ) { constructError(a,res,"String norm2 not implemented");   }
     else if ( a.isValDict()    ) { constructError(a,res,"Dictonary norm not implemented"); }
-    else if ( a.isValSet()     ) { res = norm2(a.cast_set(0)); }
-    else if ( a.isValDgraph()  ) { res = norm2(a.cast_dgraph(0)); }
-    else if ( a.isValMatrix()  ) { res = norm2mat(a.cast_matrix(0)); }
-    else if ( a.isValVector()  ) { res = norm2vec(a.cast_vector(0)); }
-    else if ( a.isValAnion()   ) { res = norm2(a.cast_anion(0)); }
-    else if ( a.isValReal()    ) { res = norm2(a.cast_double(0)); }
-    else if ( a.isValInteger() ) { res = norm2(a.cast_double(0)); }
-    else                         { res = a; }
+    else if ( a.isValSet()     ) { res = norm2(a.cast_set(0));                             }
+    else if ( a.isValDgraph()  ) { res = norm2(a.cast_dgraph(0));                          }
+    else if ( a.isValMatrix()  ) { res = norm2mat(a.cast_matrix(0));                       }
+    else if ( a.isValVector()  ) { res = norm2vec(a.cast_vector(0));                       }
+    else if ( a.isValAnion()   ) { res = norm2(a.cast_anion(0));                           }
+    else if ( a.isValReal()    ) { res = norm2(a.cast_double(0));                          }
+    else if ( a.isValInteger() ) { res = norm2(a.cast_double(0));                          }
+    else                         { res = a;                                                }
 
     //else if ( a.isValInteger() ) { res = norm2(a.cast_double(0)); }
 
@@ -16877,16 +16693,16 @@ gentype normp(const gentype &a, const gentype &q)
                 bb = resx(aa,q);
             }
 
-            else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented"); }
+            else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented");    }
             else if ( aa.isValDict()    ) { constructError(aa,bb,"Dictonary norm not implemented"); }
-            else if ( aa.isValSet()     ) { bb = normp(aa.cast_set(0),p); }
-            else if ( aa.isValDgraph()  ) { bb = normp(aa.cast_dgraph(0),p); }
-            else if ( aa.isValMatrix()  ) { bb = normpmat(aa.cast_matrix(0),p); }
-            else if ( aa.isValVector()  ) { bb = normpvec(aa.cast_vector(0),p); }
-            else if ( aa.isValAnion()   ) { bb = normp(aa.cast_anion(0),p); }
-            else if ( aa.isValReal()    ) { bb = normp(aa.cast_double(0),p); }
-            else if ( aa.isValInteger() ) { bb = normp((double) aa.cast_int(0),p); }
-            else                          { bb = aa; }
+            else if ( aa.isValSet()     ) { bb = normp(aa.cast_set(0),p);                           }
+            else if ( aa.isValDgraph()  ) { bb = normp(aa.cast_dgraph(0),p);                        }
+            else if ( aa.isValMatrix()  ) { bb = normpmat(aa.cast_matrix(0),p);                     }
+            else if ( aa.isValVector()  ) { bb = normpvec(aa.cast_vector(0),p);                     }
+            else if ( aa.isValAnion()   ) { bb = normp(aa.cast_anion(0),p);                         }
+            else if ( aa.isValReal()    ) { bb = normp(aa.cast_double(0),p);                        }
+            else if ( aa.isValInteger() ) { bb = normp((double) aa.cast_int(0),p);                  }
+            else                          { bb = aa;                                                }
 
             bb /= ((double) numpts);
 
@@ -16935,16 +16751,16 @@ gentype normp(const gentype &a, const gentype &q)
                 bb = resx(aa,q);
             }
 
-            else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented"); }
+            else if ( aa.isValStrErr()  ) { constructError(aa,bb,"String norm not implemented");    }
             else if ( aa.isValDict()    ) { constructError(aa,bb,"Dictonary norm not implemented"); }
-            else if ( aa.isValSet()     ) { bb = normp(aa.cast_set(0),p); }
-            else if ( aa.isValDgraph()  ) { bb = normp(aa.cast_dgraph(0),p); }
-            else if ( aa.isValMatrix()  ) { bb = normpmat(aa.cast_matrix(0),p); }
-            else if ( aa.isValVector()  ) { bb = normpvec(aa.cast_vector(0),p); }
-            else if ( aa.isValAnion()   ) { bb = normp(aa.cast_anion(0),p); }
-            else if ( aa.isValReal()    ) { bb = normp(aa.cast_double(0),p); }
-            else if ( aa.isValInteger() ) { bb = normp((double) aa.cast_int(0),p); }
-            else                          { bb = aa; }
+            else if ( aa.isValSet()     ) { bb = normp(aa.cast_set(0),p);                           }
+            else if ( aa.isValDgraph()  ) { bb = normp(aa.cast_dgraph(0),p);                        }
+            else if ( aa.isValMatrix()  ) { bb = normpmat(aa.cast_matrix(0),p);                     }
+            else if ( aa.isValVector()  ) { bb = normpvec(aa.cast_vector(0),p);                     }
+            else if ( aa.isValAnion()   ) { bb = normp(aa.cast_anion(0),p);                         }
+            else if ( aa.isValReal()    ) { bb = normp(aa.cast_double(0),p);                        }
+            else if ( aa.isValInteger() ) { bb = normp((double) aa.cast_int(0),p);                  }
+            else                          { bb = aa;                                                }
 
             bb /= ((double) numtot);
 
@@ -16982,16 +16798,16 @@ gentype normp(const gentype &a, const gentype &q)
         constructError(a,q,res,"p must be real or integer for p-norm");
     }
 
-    else if ( a.isValStrErr()  ) { constructError(a,q,res,"String norm not implemented"); }
+    else if ( a.isValStrErr()  ) { constructError(a,q,res,"String norm not implemented");    }
     else if ( a.isValDict()    ) { constructError(a,q,res,"Dictonary norm not implemented"); }
-    else if ( a.isValSet()     ) { res = normp(a.cast_set(0),q.cast_double(0)); }
-    else if ( a.isValDgraph()  ) { res = normp(a.cast_dgraph(0),q.cast_double(0)); }
-    else if ( a.isValMatrix()  ) { res = normpmat(a.cast_matrix(0),q.cast_double(0)); }
-    else if ( a.isValVector()  ) { res = normpvec(a.cast_vector(0),q.cast_double(0)); }
-    else if ( a.isValAnion()   ) { res = normp(a.cast_anion(0),q.cast_double(0)); }
-    else if ( a.isValReal()    ) { res = normp(a.cast_double(0),q.cast_double(0)); }
-    else if ( a.isValInteger() ) { res = normp(a.cast_double(0),q.cast_double(0)); }
-    else                         { res = a; }
+    else if ( a.isValSet()     ) { res = normp(a.cast_set(0),q.cast_double(0));              }
+    else if ( a.isValDgraph()  ) { res = normp(a.cast_dgraph(0),q.cast_double(0));           }
+    else if ( a.isValMatrix()  ) { res = normpmat(a.cast_matrix(0),q.cast_double(0));        }
+    else if ( a.isValVector()  ) { res = normpvec(a.cast_vector(0),q.cast_double(0));        }
+    else if ( a.isValAnion()   ) { res = normp(a.cast_anion(0),q.cast_double(0));            }
+    else if ( a.isValReal()    ) { res = normp(a.cast_double(0),q.cast_double(0));           }
+    else if ( a.isValInteger() ) { res = normp(a.cast_double(0),q.cast_double(0));           }
+    else                         { res = a;                                                  }
 
     return res;
 }
@@ -17006,16 +16822,16 @@ gentype angle(const gentype &a)
         return resx(a);
     }
 
-         if ( a.isValStrErr()  ) { constructError(a,res,"angle ill-defined for string"); }
-    else if ( a.isValDict()    ) { constructError(a,res,"angle ill-defined for dict"); }
-    else if ( a.isValSet()     ) { constructError(a,res,"angle ill-defined for sets"); }
+         if ( a.isValStrErr()  ) { constructError(a,res,"angle ill-defined for string");  }
+    else if ( a.isValDict()    ) { constructError(a,res,"angle ill-defined for dict");    }
+    else if ( a.isValSet()     ) { constructError(a,res,"angle ill-defined for sets");    }
     else if ( a.isValDgraph()  ) { constructError(a,res,"angle ill-defined for dgraphs"); }
-    else if ( a.isValMatrix()  ) { res = angle(a.cast_matrix(0)); }
-    else if ( a.isValVector()  ) { res = angle(a.cast_vector(0)); }
-    else if ( a.isValAnion()   ) { res = angle(a.cast_anion(0)); }
-    else if ( a.isValReal()    ) { res = angle(a.cast_double(0)); }
-    else if ( a.isValInteger() ) { res = angle(a.cast_int(0)); }
-    else                         { res = a; }
+    else if ( a.isValMatrix()  ) { res = angle(a.cast_matrix(0));                         }
+    else if ( a.isValVector()  ) { res = angle(a.cast_vector(0));                         }
+    else if ( a.isValAnion()   ) { res = angle(a.cast_anion(0));                          }
+    else if ( a.isValReal()    ) { res = angle(a.cast_double(0));                         }
+    else if ( a.isValInteger() ) { res = angle(a.cast_int(0));                            }
+    else                         { res = a;                                               }
 
     return res;
 }
@@ -17032,16 +16848,16 @@ gentype inv(const gentype &a)
 
     // NB: inv returns pseudo-inverse for non-square matrices
 
-         if ( a.isValStrErr()  ) { constructError(a,res,"inv ill-defined for string"); }
-    else if ( a.isValSet()     ) { constructError(a,res,"inv ill-defined for sets"); }
-    else if ( a.isValDict()    ) { constructError(a,res,"inv ill-defined for dict"); }
+         if ( a.isValStrErr()  ) { constructError(a,res,"inv ill-defined for string");  }
+    else if ( a.isValSet()     ) { constructError(a,res,"inv ill-defined for sets");    }
+    else if ( a.isValDict()    ) { constructError(a,res,"inv ill-defined for dict");    }
     else if ( a.isValDgraph()  ) { constructError(a,res,"inv ill-defined for dgraphs"); }
-    else if ( a.isValMatrix()  ) { res = inv(a.cast_matrix(0)); }
-    else if ( a.isValVector()  ) { constructError(a,res,"inv ill-defined for vector"); }
-    else if ( a.isValAnion()   ) { res = inv(a.cast_anion(0)); }
-    else if ( a.isValReal()    ) { res = inv(a.cast_double(0)); }
-    else if ( a.isValInteger() ) { res = inv(a.cast_int(0)); }
-    else                         { res = a; }
+    else if ( a.isValMatrix()  ) { res = inv(a.cast_matrix(0));                         }
+    else if ( a.isValVector()  ) { constructError(a,res,"inv ill-defined for vector");  }
+    else if ( a.isValAnion()   ) { res = inv(a.cast_anion(0));                          }
+    else if ( a.isValReal()    ) { res = inv(a.cast_double(0));                         }
+    else if ( a.isValInteger() ) { res = inv(a.cast_int(0));                            }
+    else                         { res = a;                                             }
 
     return res;
 }
@@ -17057,207 +16873,73 @@ gentype inv(const gentype &a)
 
 // Various maths functions
 
-gentype dubeabsp(const gentype &a, const void *q);
-gentype dubeabsp(const gentype &a, const void *q)
-{
-    return eabsp(a,*((const gentype *) q));
-}
-
-gentype dubenormp(const gentype &a, const void *q);
-gentype dubenormp(const gentype &a, const void *q)
-{
-    return enormp(a,*((const gentype *) q));
-}
-
+gentype dubeabsp    (const gentype &a, const void *q);
+gentype dubenormp   (const gentype &a, const void *q);
 gentype dubpolyDistr(const gentype &a, const void *q);
-gentype dubpolyDistr(const gentype &a, const void *q)
-{
-    return polyDistr(a,*((const gentype *) q));
-}
-
 gentype dubPolyDistr(const gentype &a, const void *q);
-gentype dubPolyDistr(const gentype &a, const void *q)
-{
-    return PolyDistr(a,*((const gentype *) q));
-}
+
+gentype dubeabsp    (const gentype &a, const void *q) { return eabsp    (a,*((const gentype *) q)); }
+gentype dubenormp   (const gentype &a, const void *q) { return enormp   (a,*((const gentype *) q)); }
+gentype dubpolyDistr(const gentype &a, const void *q) { return polyDistr(a,*((const gentype *) q)); }
+gentype dubPolyDistr(const gentype &a, const void *q) { return PolyDistr(a,*((const gentype *) q)); }
 
 double imagx(double x);
-double imagx(double x)
-{
-    return 0;
-    return x;
-}
-
 int imagx(int x);
-int imagx(int x)
-{
-    return 0;
-    return x;
-}
 
-int sqrtOR(double a);
-int sqrtOR(double a)
-{
-    return a <= 0;
-}
+double imagx(double) { return 0; }
+int    imagx(int   ) { return 0; }
 
-int logOR(double a);
-int logOR(double a)
-{
-    return a <= 0;
-}
-
-int acashypOR(double a);
-int acashypOR(double a)
-{
-    return a <= 0;
-}
-
+int sqrtOR    (double a);
+int logOR     (double a);
+int acashypOR (double a);
 int acaschypOR(double a);
-int acaschypOR(double a)
-{
-    return a <= 0;
-}
-
-int log10OR(double a);
-int log10OR(double a)
-{
-    return a <= 0;
-}
-
-int asinOR(double a);
-int asinOR(double a)
-{
-    return ( a < -1 ) || ( a > 1 );
-}
-
-int acosOR(double a);
-int acosOR(double a)
-{
-    return ( a < -1 ) || ( a > 1 );
-}
-
-int acastrgOR(double a);
-int acastrgOR(double a)
-{
-    return ( a < -NUMBASE_SQRT2 ) || ( a > NUMBASE_SQRT2 );
-}
-
+int log10OR   (double a);
+int asinOR    (double a);
+int acosOR    (double a);
+int acastrgOR (double a);
 int acasctrgOR(double a);
-int acasctrgOR(double a)
-{
-    return ( a < -NUMBASE_SQRT2 ) || ( a > NUMBASE_SQRT2 );
-}
-
-int acosecOR(double a);
-int acosecOR(double a)
-{
-    // acosec(x) = asin(1/x)
-    return ( a > -1 ) && ( a < 1 );
-}
-
-int asecOR(double a);
-int asecOR(double a)
-{
-    // asec(x) = acos(1/x)
-    return ( a > -1 ) && ( a < 1 );
-}
-
-int aversOR(double a);
-int aversOR(double a)
-{
-    // avers(x) = acos(1+x)
-    return ( a < -2 ) || ( a > 0 );
-}
-
-int acoversOR(double a);
-int acoversOR(double a)
-{
-    // avers(x) = asin(1+x)
-    return ( a < -2 ) || ( a > 0 );
-}
-
-int ahavOR(double a);
-int ahavOR(double a)
-{
-    // ahav(x) = avers(2x)
-    return ( a < -1 ) || ( a > 0 );
-}
-
+int acosecOR  (double a);
+int asecOR    (double a);
+int aversOR   (double a);
+int acoversOR (double a);
+int ahavOR    (double a);
 int aexcosecOR(double a);
-int aexcosecOR(double a)
-{
-    // aexcosec(x) = acosec(1+x)
-    return ( a > -2 ) && ( a < 0 );
-}
+int aexsecOR  (double a);
+int acoshOR   (double a);
+int atanhOR   (double a);
+int asechOR   (double a);
+int acothOR   (double a);
+int avershOR  (double a);
+int ahavhOR   (double a);
+int aexsechOR (double a);
+int asigmOR   (double a);
+int agdOR     (double a);
 
-int aexsecOR(double a);
-int aexsecOR(double a)
-{
-    // aexsec(x) = asec(1+x)
-    return ( a > -2 ) && ( a < 0 );
-}
-
-int acoshOR(double a);
-int acoshOR(double a)
-{
-    return a < 1;
-}
-
-int atanhOR(double a);
-int atanhOR(double a)
-{
-    return ( a < -1 ) || ( a > 1 );
-}
-
-int asechOR(double a);
-int asechOR(double a)
-{
-    // asech(x) = acosh(1/x)
-    return ( a > 1 ) || ( a < 0 );
-}
-
-int acothOR(double a);
-int acothOR(double a)
-{
-    // acoth(x) = atanh(1/x)
-    return ( a > -1 ) && ( a < 1 );
-}
-
-int avershOR(double a);
-int avershOR(double a)
-{
-    // aversh(x) = acosh(1+x)
-    return a < 0;
-}
-
-int ahavhOR(double a);
-int ahavhOR(double a)
-{
-    // ahavh(x) = aversh(2x)
-    return a < 0;
-}
-
-int aexsechOR(double a);
-int aexsechOR(double a)
-{
-    // aexsechOR(x) = asech(1+x)
-    return ( a > 0 ) || ( a < -1 );
-}
-
-int asigmOR(double a);
-int asigmOR(double a)
-{
-    // asigmOR(a) = log((1/a)-1)
-    return ( a <= 0 ) || ( a >= 1 );
-}
-
-int agdOR(double a);
-int agdOR(double a)
-{
-    // agdOR(a) = 2.atanh(tan(a/2))
-    return ( a < -NUMBASE_PI/2 ) || ( a > NUMBASE_PI/2 );
-}
+int sqrtOR    (double a) { return a <= 0;                                            }
+int logOR     (double a) { return a <= 0;                                            }
+int acashypOR (double a) { return a <= 0;                                            }
+int acaschypOR(double a) { return a <= 0;                                            }
+int log10OR   (double a) { return a <= 0;                                            }
+int asinOR    (double a) { return ( a <  -1             ) || ( a >  1             ); }
+int acosOR    (double a) { return ( a <  -1             ) || ( a >  1             ); }
+int acastrgOR (double a) { return ( a <  -NUMBASE_SQRT2 ) || ( a >  NUMBASE_SQRT2 ); }
+int acasctrgOR(double a) { return ( a <  -NUMBASE_SQRT2 ) || ( a >  NUMBASE_SQRT2 ); }
+int acosecOR  (double a) { return ( a >  -1             ) && ( a <  1             ); } // acosec(x) = asin(1/x)
+int asecOR    (double a) { return ( a >  -1             ) && ( a <  1             ); } // asec(x) = acos(1/x)
+int aversOR   (double a) { return ( a <  -2             ) || ( a >  0             ); } // avers(x) = acos(1+x)
+int acoversOR (double a) { return ( a <  -2             ) || ( a >  0             ); } // avers(x) = asin(1+x)
+int ahavOR    (double a) { return ( a <  -1             ) || ( a >  0             ); } // ahav(x) = avers(2x)
+int aexcosecOR(double a) { return ( a >  -2             ) && ( a <  0             ); } // aexcosec(x) = acosec(1+x)
+int aexsecOR  (double a) { return ( a >  -2             ) && ( a <  0             ); } // aexsec(x) = asec(1+x)
+int acoshOR   (double a) { return a < 1;                                             }
+int atanhOR   (double a) { return ( a <  -1             ) || ( a >  1             ); }
+int asechOR   (double a) { return ( a >  1              ) || ( a <  0             ); } // asech(x) = acosh(1/x)
+int acothOR   (double a) { return ( a >  -1             ) && ( a <  1             ); } // acoth(x) = atanh(1/x)
+int avershOR  (double a) { return a < 0;                                             } // aversh(x) = acosh(1+x)
+int ahavhOR   (double a) { return a < 0;                                             } // ahavh(x) = aversh(2x)
+int aexsechOR (double a) { return ( a >  0              ) || ( a <  -1            ); } // aexsechOR(x) = asech(1+x)
+int asigmOR   (double a) { return ( a <= 0              ) || ( a >= 1             ); } // asigmOR(a) = log((1/a)-1)
+int agdOR     (double a) { return ( a < -NUMBASE_PI/2   ) || ( a >  NUMBASE_PI/2  ); } // agdOR(a) = 2.atanh(tan(a/2))
 
 
 
@@ -17304,11 +16986,11 @@ gentype gamma(const gentype &a)
 
          if ( a.isValStrErr() ) { constructError(a,res,"gamma not defined for strings."); }
     else if ( a.isValDgraph() ) { constructError(a,res,"gamma not defined for dgraphs."); }
+    else if ( a.isValAnion()  ) { constructError(a,res,"gamma not defined for anions.");  }
     else if ( a.isValSet()    ) { Set<gentype>          temp(a.cast_set(0));    temp.applyon(gamma); res = temp; }
     else if ( a.isValDict()   ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(gamma); res = temp; }
     else if ( a.isValMatrix() ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(gamma); res = temp; }
     else if ( a.isValVector() ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(gamma); res = temp; }
-    else if ( a.isValAnion()  ) { constructError(a,res,"gamma not defined for anions."); }
 
     else
     {
@@ -17338,11 +17020,11 @@ gentype lngamma(const gentype &a)
 
          if ( a.isValStrErr() ) { constructError(a,res,"lngamma not defined for strings."); }
     else if ( a.isValDgraph() ) { constructError(a,res,"lngamma not defined for dgraphs."); }
+    else if ( a.isValAnion()  ) { constructError(a,res,"lngamma not defined for anions.");  }
     else if ( a.isValSet()    ) { Set<gentype>          temp(a.cast_set(0));    temp.applyon(lngamma); res = temp; }
     else if ( a.isValDict()   ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(lngamma); res = temp; }
     else if ( a.isValMatrix() ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(lngamma); res = temp; }
     else if ( a.isValVector() ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(lngamma); res = temp; }
-    else if ( a.isValAnion()  ) { constructError(a,res,"lngamma not defined for anions."); }
 
     else
     {
@@ -17372,12 +17054,12 @@ gentype psi(const gentype &x)
     }
 
          if ( x.isValStrErr() ) { constructError(x,res,"psi not defined for strings."); }
+    else if ( x.isValDgraph() ) { constructError(x,res,"psi not defined for dgraphs."); }
+    else if ( x.isValAnion()  ) { constructError(x,res,"psi not defined for anions.");  }
     else if ( x.isValSet()    ) { Set<gentype>          temp(x.cast_set(0));    temp.applyon(psi); res = temp; }
     else if ( x.isValDict()   ) { Dict<gentype,dictkey> temp(x.cast_dict(0));   temp.applyon(psi); res = temp; }
     else if ( x.isValMatrix() ) { Matrix<gentype>       temp(x.cast_matrix(0)); temp.applyon(psi); res = temp; }
     else if ( x.isValVector() ) { Vector<gentype>       temp(x.cast_vector(0)); temp.applyon(psi); res = temp; }
-    else if ( x.isValDgraph() ) { constructError(x,res,"psi not defined for dgraphs."); }
-    else if ( x.isValAnion()  ) { constructError(x,res,"psi not defined for anions."); }
 
     else
     {
@@ -17409,12 +17091,12 @@ gentype psi_n(const gentype &i, const gentype &x)
     }
 
          if ( x.isValStrErr()                     ) { constructError(i,x,res,"psi_n not defined for strings."); }
+    else if ( x.isValDgraph()                     ) { constructError(i,x,res,"psi_n not defined for dgraphs."); }
+    else if ( x.isValAnion()                      ) { constructError(i,x,res,"psi_n not defined for anions.");  }
     else if ( x.isValSet()                        ) { Set<gentype>          temp(x.cast_set(0));    temp.applyon(dubpsi_n,(void *) &i); res = temp; }
     else if ( x.isValDict()                       ) { Dict<gentype,dictkey> temp(x.cast_dict(0));   temp.applyon(dubpsi_n,(void *) &i); res = temp; }
-    else if ( x.isValDgraph()                     ) { constructError(i,x,res,"psi_n not defined for dgraphs."); }
     else if ( x.isValMatrix()                     ) { Matrix<gentype>       temp(x.cast_matrix(0)); temp.applyon(dubpsi_n,(void *) &i); res = temp; }
     else if ( x.isValVector()                     ) { Vector<gentype>       temp(x.cast_vector(0)); temp.applyon(dubpsi_n,(void *) &i); res = temp; }
-    else if ( x.isValAnion()                      ) { constructError(i,x,res,"psi_n not defined for anions."); }
     else if ( !i.isCastableToIntegerWithoutLoss() ) { constructError(i,x,res,"psi_n not defined for non-integer n."); }
 
     else
@@ -17453,18 +17135,18 @@ gentype gamic(const gentype &a, const gentype &x)
     }
 
          if ( a.isValStrErr() ) { constructError(a,x,res,"gamic not defined for strings."); }
+    else if ( a.isValDgraph() ) { constructError(a,x,res,"gamic not defined for dgraphs."); }
+    else if ( a.isValAnion()  ) { constructError(a,x,res,"gamic not defined for anions.");  }
     else if ( a.isValSet()    ) { Set<gentype>          temp(a.cast_set(0));  temp.applyon(dubgamic,(void *) &x); res = temp; }
     else if ( a.isValDict()   ) { Dict<gentype,dictkey> temp(a.cast_dict(0)); temp.applyon(dubgamic,(void *) &x); res = temp; }
-    else if ( a.isValDgraph() ) { constructError(a,x,res,"gamic not defined for dgraphs."); }
     else if ( a.isValMatrix() ) { Matrix<gentype> temp(a.cast_matrix(0)); temp.applyon(dubgamic,(void *) &x); res = temp; }
     else if ( a.isValVector() ) { Vector<gentype> temp(a.cast_vector(0)); temp.applyon(dubgamic,(void *) &x); res = temp; }
-    else if ( a.isValAnion()  ) { constructError(a,x,res,"gamic not defined for anions."); }
     else if ( x.isValStrErr() ) { constructError(a,x,res,"gamic not defined for strings."); }
-    else if ( x.isValSet()    ) { Set<gentype>    temp(x.cast_set(0));    temp.applyon(debgamic,(void *) &a); res = temp; }
     else if ( x.isValDgraph() ) { constructError(a,x,res,"gamic not defined for dgraphs."); }
+    else if ( x.isValAnion()  ) { constructError(a,x,res,"gamic not defined for anions.");  }
+    else if ( x.isValSet()    ) { Set<gentype>    temp(x.cast_set(0));    temp.applyon(debgamic,(void *) &a); res = temp; }
     else if ( x.isValMatrix() ) { Matrix<gentype> temp(x.cast_matrix(0)); temp.applyon(debgamic,(void *) &a); res = temp; }
     else if ( x.isValVector() ) { Vector<gentype> temp(x.cast_vector(0)); temp.applyon(debgamic,(void *) &a); res = temp; }
-    else if ( x.isValAnion()  ) { constructError(a,x,res,"gamic not defined for anions."); }
 
     else
     {
@@ -17494,11 +17176,11 @@ gentype zeta(const gentype &a)
 
          if ( a.isValStrErr() ) { constructError(a,res,"zeta not defined for strings."); }
     else if ( a.isValDgraph() ) { constructError(a,res,"zeta not defined for dgraphs."); }
+    else if ( a.isValAnion()  ) { constructError(a,res,"zeta not defined for anions.");  }
     else if ( a.isValSet()    ) { Set<gentype>          temp(a.cast_set (0));   temp.applyon(zeta); res = temp; }
     else if ( a.isValDict()   ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(zeta); res = temp; }
     else if ( a.isValMatrix() ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(zeta); res = temp; }
     else if ( a.isValVector() ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(zeta); res = temp; }
-    else if ( a.isValAnion()  ) { constructError(a,res,"zeta not defined for anions."); }
 
     else
     {
@@ -17523,11 +17205,11 @@ gentype lambertW(const gentype &a)
 
          if ( a.isValStrErr() ) { constructError(a,res,"lambert W not defined for strings."); }
     else if ( a.isValDgraph() ) { constructError(a,res,"lambert W not defined for dgraphs."); }
+    else if ( a.isValAnion()  ) { constructError(a,res,"lambert W not defined for anions.");  }
     else if ( a.isValSet()    ) { Set<gentype>          temp(a.cast_set(0));    temp.applyon(lambertW); res = temp; }
     else if ( a.isValDict()   ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(lambertW); res = temp; }
     else if ( a.isValMatrix() ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(lambertW); res = temp; }
     else if ( a.isValVector() ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(lambertW); res = temp; }
-    else if ( a.isValAnion()  ) { constructError(a,res,"lambert W not defined for anions."); }
 
     else
     {
@@ -17557,11 +17239,11 @@ gentype lambertWx(const gentype &a)
 
          if ( a.isValStrErr() ) { constructError(a,res,"lambert W not defined for strings."); }
     else if ( a.isValDgraph() ) { constructError(a,res,"lambert W not defined for dgraphs."); }
+    else if ( a.isValAnion()  ) { constructError(a,res,"lambert W not defined for anions.");  }
     else if ( a.isValSet()    ) { Set<gentype>          temp(a.cast_set(0));    temp.applyon(lambertWx); res = temp; }
     else if ( a.isValDict()   ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(lambertWx); res = temp; }
     else if ( a.isValMatrix() ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(lambertWx); res = temp; }
     else if ( a.isValVector() ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(lambertWx); res = temp; }
-    else if ( a.isValAnion()  ) { constructError(a,res,"lambert W not defined for anions."); }
 
     else
     {
@@ -17654,11 +17336,11 @@ gentype dawson(const gentype &x)
 
          if ( x.isValStrErr() ) { constructError(x,res,"dawson not defined for strings."); }
     else if ( x.isValDgraph() ) { constructError(x,res,"dawson not defined for dgraphs."); }
+    else if ( x.isValAnion()  ) { constructError(x,res,"dawson not defined for anions.");  }
     else if ( x.isValSet()    ) { Set<gentype>          temp(x.cast_set(0));    temp.applyon(dawson); res = temp; }
     else if ( x.isValDict()   ) { Dict<gentype,dictkey> temp(x.cast_dict(0));   temp.applyon(dawson); res = temp; }
     else if ( x.isValMatrix() ) { Matrix<gentype>       temp(x.cast_matrix(0)); temp.applyon(dawson); res = temp; }
     else if ( x.isValVector() ) { Vector<gentype>       temp(x.cast_vector(0)); temp.applyon(dawson); res = temp; }
-    else if ( x.isValAnion()  ) { constructError(x,res,"dawson not defined for anions."); }
 
     else
     {
@@ -18806,11 +18488,11 @@ gentype ceil(const gentype &a)
 
          if ( a.isValStrErr()  ) { constructError(a,res,"ceil not defined for strings."); }
     else if ( a.isValDgraph()  ) { constructError(a,res,"ceil not defined for dgraphs."); }
+    else if ( a.isValAnion()   ) { constructError(a,res,"ceil not defined for anions.");  }
     else if ( a.isValSet()     ) { Set<gentype>          temp(a.cast_set(0));    temp.applyon(ceil); res = temp; }
     else if ( a.isValDict()    ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(ceil); res = temp; }
     else if ( a.isValMatrix()  ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(ceil); res = temp; }
     else if ( a.isValVector()  ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(ceil); res = temp; }
-    else if ( a.isValAnion()   ) { constructError(a,res,"ceil not defined for anions."); }
     else if ( a.isValInteger() ) { res = a; }
     else if ( a.isCastableToIntegerWithoutLoss() ) { res = a.cast_int(0); }
 
@@ -18848,11 +18530,11 @@ gentype floor(const gentype &a)
 
          if ( a.isValStrErr()  ) { constructError(a,res,"floor not defined for strings."); }
     else if ( a.isValDgraph()  ) { constructError(a,res,"floor not defined for dgraphs."); }
+    else if ( a.isValAnion()   ) { constructError(a,res,"floor not defined for anions.");  }
     else if ( a.isValSet()     ) { Set<gentype>          temp(a.cast_set(0));    temp.applyon(floor); res = temp; }
     else if ( a.isValDict()    ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(floor); res = temp; }
     else if ( a.isValMatrix()  ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(floor); res = temp; }
     else if ( a.isValVector()  ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(floor); res = temp; }
-    else if ( a.isValAnion()   ) { constructError(a,res,"floor not defined for anions."); }
     else if ( a.isValInteger() ) { res = a; }
     else if ( a.isCastableToIntegerWithoutLoss() ) { res = a.cast_int(0); }
 
@@ -18890,11 +18572,11 @@ gentype rint(const gentype &a)
 
          if ( a.isValStrErr() ) { constructError(a,res,"rint not defined for strings."); }
     else if ( a.isValDgraph() ) { constructError(a,res,"rint not defined for dgraphs."); }
+    else if ( a.isValAnion()  ) { constructError(a,res,"rint not defined for anions.");  }
     else if ( a.isValSet()    ) { Set<gentype>          temp(a.cast_set(0));    temp.applyon(rint); res = temp; }
     else if ( a.isValDict()   ) { Dict<gentype,dictkey> temp(a.cast_dict(0));   temp.applyon(rint); res = temp; }
     else if ( a.isValMatrix() ) { Matrix<gentype>       temp(a.cast_matrix(0)); temp.applyon(rint); res = temp; }
     else if ( a.isValVector() ) { Vector<gentype>       temp(a.cast_vector(0)); temp.applyon(rint); res = temp; }
-    else if ( a.isValAnion()  ) { constructError(a,res,"rint not defined for anions."); }
     else if ( a.isValInteger() ) { res = a; }
     else if ( a.isCastableToIntegerWithoutLoss() ) { res = a.cast_int(0); }
 
@@ -19526,12 +19208,12 @@ gentype fourProd(const gentype &a, const gentype &b, const gentype &c, const gen
     }
 
          if ( a.isValStrErr() || b.isValStrErr() || c.isValStrErr() || d.isValStrErr() ) { constructError(a,b,c,d,res,"String 4-product not implemented"); }
-    else if ( a.isValSet()    || b.isValSet()    || c.isValSet()    || d.isValSet()    ) { constructError(a,b,c,d,res,"Set 4-product not implemented"); }
-    else if ( a.isValDict()   || b.isValDict()   || c.isValDict()   || d.isValDict()   ) { constructError(a,b,c,d,res,"Dict 4-product not implemented"); }
+    else if ( a.isValDict()   || b.isValDict()   || c.isValDict()   || d.isValDict()   ) { constructError(a,b,c,d,res,"Dict 4-product not implemented");   }
     else if ( a.isValDgraph() || b.isValDgraph() || c.isValDgraph() || d.isValDgraph() ) { constructError(a,b,c,d,res,"Dgraph 4-product not implemented"); }
     else if ( a.isValMatrix() || b.isValMatrix() || c.isValMatrix() || d.isValMatrix() ) { constructError(a,b,c,d,res,"Matrix 4-product not implemented"); }
+    else if ( a.isValSet()    || b.isValSet()    || c.isValSet()    || d.isValSet()    ) { if ( ( a.size() != b.size() ) || ( b.size() != c.size() ) || ( c.size() != d.size() ) ) { constructError(a,b,c,d,res,"Size mismatch in 4-product"); } else { gentype temp; fourProduct(temp.force_double(),a.cast_set   (0),b.cast_set   (0),c.cast_set   (0),d.cast_set   (0)); res = temp; } }
     else if ( a.isValVector() || b.isValVector() || c.isValVector() || d.isValVector() ) { if ( ( a.size() != b.size() ) || ( b.size() != c.size() ) || ( c.size() != d.size() ) ) { constructError(a,b,c,d,res,"Size mismatch in 4-product"); } else { gentype temp; fourProduct(temp,a.cast_vector(0),b.cast_vector(0),c.cast_vector(0),d.cast_vector(0)); res = temp; } }
-    else if ( a.isValAnion()  || b.isValAnion()  || c.isValAnion()  || d.isValAnion()  ) { res = (a.cast_anion(0))*(b.cast_anion(0))*(c.cast_anion(0))*(d.cast_anion(0)); }
+    else if ( a.isValAnion()  || b.isValAnion()  || c.isValAnion()  || d.isValAnion()  ) { res = (a.cast_anion (0))*(b.cast_anion (0))*(c.cast_anion (0))*(d.cast_anion (0)); }
     else                                                                                 { res = (a.cast_double(0))*(b.cast_double(0))*(c.cast_double(0))*(d.cast_double(0)); }
     //else if ( a.isValReal()   || b.isValReal()   || c.isValReal()   || d.isValReal()   ) { res = (a.cast_double(0))*(b.cast_double(0))*(c.cast_double(0))*(d.cast_double(0)); }
     //else                                                                                 { res = (a.cast_int(0))*(b.cast_int(0))*(c.cast_int(0))*(d.cast_int(0)); }
@@ -19550,10 +19232,10 @@ gentype outerProd(const gentype &a, const gentype &b)
     }
 
          if ( a.isValStrErr() || b.isValStrErr() ) { constructError(a,b,res,"String outer product not implemented"); }
-    else if ( a.isValSet()    || b.isValSet()    ) { constructError(a,b,res,"Set outer product not implemented"); }
-    else if ( a.isValDict()   || b.isValDict()   ) { constructError(a,b,res,"Dict outer product not implemented"); }
+    else if ( a.isValDict()   || b.isValDict()   ) { constructError(a,b,res,"Dict outer product not implemented");   }
     else if ( a.isValDgraph() || b.isValDgraph() ) { constructError(a,b,res,"Dgraph outer product not implemented"); }
     else if ( a.isValMatrix() || b.isValMatrix() ) { constructError(a,b,res,"Matrix outer product not implemented"); }
+    else if ( a.isValSet()    || b.isValSet()    ) { constructError(a,b,res,"Set outer product not implemented");    }
     else if ( a.isValVector() || b.isValVector() ) { res = outerProduct(a.cast_vector(0),b.cast_vector(0)); }
     else if ( a.isValAnion()  || b.isValAnion()  ) { res = (a.cast_anion(0))*conj(b.cast_anion(0)); }
     else                                           { res = (a.cast_double(0))*(b.cast_double(0)); }
@@ -19593,11 +19275,11 @@ gentype det(const gentype &a)
     }
 
          if ( a.isValStrErr() ) { constructError(a,res,"String det not implemented"); }
-    else if ( a.isValSet()    ) { constructError(a,res,"Set det not implemented"); }
-    else if ( a.isValDict()   ) { constructError(a,res,"Dict det not implemented"); }
+    else if ( a.isValSet()    ) { constructError(a,res,"Set det not implemented");    }
+    else if ( a.isValDict()   ) { constructError(a,res,"Dict det not implemented");   }
     else if ( a.isValDgraph() ) { constructError(a,res,"Dgraph det not implemented"); }
-    else if ( a.isValMatrix() ) { if ( a.numRows() != a.numCols() ) { constructError(a,res,"Determinant only defined for square matrices."); } else { res = (a.cast_matrix(0)).det(); } }
     else if ( a.isValVector() ) { constructError(a,res,"Vector det not implemented"); }
+    else if ( a.isValMatrix() ) { if ( a.numRows() != a.numCols() ) { constructError(a,res,"Determinant only defined for square matrices."); } else { res = (a.cast_matrix(0)).det(); } }
     else                        { res = a; }
 
     return res;
@@ -19614,11 +19296,11 @@ gentype trace(const gentype &a)
     }
 
          if ( a.isValStrErr() ) { constructError(a,res,"String trace not implemented"); }
-    else if ( a.isValSet()    ) { constructError(a,res,"Set trace not implemented"); }
-    else if ( a.isValDict()   ) { constructError(a,res,"Dict trace not implemented"); }
+    else if ( a.isValSet()    ) { constructError(a,res,"Set trace not implemented");    }
+    else if ( a.isValDict()   ) { constructError(a,res,"Dict trace not implemented");   }
     else if ( a.isValDgraph() ) { constructError(a,res,"Dgraph trace not implemented"); }
-    else if ( a.isValMatrix() ) { if ( a.numRows() != a.numCols() ) { constructError(a,res,"Trace only defined for square matrices."); } else { res = (a.cast_matrix(0)).trace(); } }
     else if ( a.isValVector() ) { constructError(a,res,"Vector trace not implemented"); }
+    else if ( a.isValMatrix() ) { if ( a.numRows() != a.numCols() ) { constructError(a,res,"Trace only defined for square matrices."); } else { res = (a.cast_matrix(0)).trace(); } }
     else                        { res = a; }
 
     return res;
@@ -19636,7 +19318,7 @@ gentype miner(const gentype &a, const gentype &i, const gentype &j)
 
          if ( !i.isCastableToIntegerWithoutLoss() ) { constructError(a,i,j,res,"Matrix minor requires integer coefficients"); }
     else if ( !j.isCastableToIntegerWithoutLoss() ) { constructError(a,i,j,res,"Matrix minor requires integer coefficients"); }
-    else if ( !a.isValMatrix()                    ) { constructError(a,i,j,res,"Matrix minor only defined for matrices"); }
+    else if ( !a.isValMatrix()                    ) { constructError(a,i,j,res,"Matrix minor only defined for matrices");     }
     else
     {
 	if ( a.numRows() != a.numCols() )
@@ -19680,7 +19362,7 @@ gentype cofactor(const gentype &a, const gentype &i, const gentype &j)
 
          if ( !i.isCastableToIntegerWithoutLoss() ) { constructError(a,i,j,res,"Matrix cofactor requires integer coefficients"); }
     else if ( !j.isCastableToIntegerWithoutLoss() ) { constructError(a,i,j,res,"Matrix cofactor requires integer coefficients"); }
-    else if ( !a.isValMatrix()                    ) { constructError(a,i,j,res,"Matrix cofactor only defined for matrices"); }
+    else if ( !a.isValMatrix()                    ) { constructError(a,i,j,res,"Matrix cofactor only defined for matrices");     }
     else
     {
 	if ( a.numRows() != a.numCols() )
@@ -19751,9 +19433,9 @@ gentype adj(const gentype &a)
 
 
 
-gentype polar (const gentype &x, const gentype &y, const gentype &a) { return div(add(emul(x,exp(emul(y,a))),emul(exp(emul(a,y)),x)),2_gent); }
-gentype polard(const gentype &x, const gentype &y, const gentype &a) { return div(add(emul(x,exp(emul(y,a))),emul(exp(emul(a,y)),x)),2_gent); }
-gentype polarx(const gentype &x, const gentype &a)                   { return div(add(emul(x,exp(a)),emul(exp(a),x)),2_gent);                 }
+gentype polar (const gentype &x, const gentype &y, const gentype &a) { return div(add(emul(x,exp(emul(y,a))),emul(exp(emul(a,y)),x)),2_gent);          }
+gentype polard(const gentype &x, const gentype &y, const gentype &a) { return div(add(emul(x,exp(emul(y,a))),emul(exp(emul(a,y)),x)),2_gent);          }
+gentype polarx(const gentype &x, const gentype &a)                   { return div(add(emul(x,exp(a)),emul(exp(a),x)),2_gent);                          }
 //gentype polar (const gentype &x, const gentype &y, const gentype &a) { return div(add(emul(x,exp(emul(y,a))),emul(exp(emul(a,y)),x)),twointgentype()); }
 //gentype polard(const gentype &x, const gentype &y, const gentype &a) { return div(add(emul(x,exp(emul(y,a))),emul(exp(emul(a,y)),x)),twointgentype()); }
 //gentype polarx(const gentype &x, const gentype &a)                   { return div(add(emul(x,exp(a)),emul(exp(a),x)),twointgentype());                 }
@@ -19767,10 +19449,10 @@ gentype Logb (const gentype &a, const gentype &b) { return emul(einv(Log(b)),Log
 gentype Logbl(const gentype &a, const gentype &b) { return emul(Log(a),einv(Log(b)));                        }
 gentype Logbr(const gentype &a, const gentype &b) { return emul(einv(Log(b)),Log(a));                        }
 
-gentype commutate    (const gentype &x, const gentype &y                  ) { return div(add(emul(x,y),neg(emul(y,x))),2_gent);                 }
-gentype anticommutate(const gentype &x, const gentype &y                  ) { return div(add(emul(x,y),    emul(y,x) ),2_gent);                 }
-gentype associate    (const gentype &x, const gentype &y, const gentype &z) { return div(add(emul(x,emul(y,z)),neg(emul(emul(x,y),z))),2_gent); }
-gentype antiassociate(const gentype &x, const gentype &y, const gentype &z) { return div(add(emul(x,emul(y,z)),    emul(emul(x,y),z) ),2_gent); }
+gentype commutate    (const gentype &x, const gentype &y                  ) { return div(add(emul(x,y),neg(emul(y,x))),2_gent);                          }
+gentype anticommutate(const gentype &x, const gentype &y                  ) { return div(add(emul(x,y),    emul(y,x) ),2_gent);                          }
+gentype associate    (const gentype &x, const gentype &y, const gentype &z) { return div(add(emul(x,emul(y,z)),neg(emul(emul(x,y),z))),2_gent);          }
+gentype antiassociate(const gentype &x, const gentype &y, const gentype &z) { return div(add(emul(x,emul(y,z)),    emul(emul(x,y),z) ),2_gent);          }
 //gentype commutate    (const gentype &x, const gentype &y                  ) { return div(add(emul(x,y),neg(emul(y,x))),twointgentype());                 }
 //gentype anticommutate(const gentype &x, const gentype &y                  ) { return div(add(emul(x,y),    emul(y,x) ),twointgentype());                 }
 //gentype associate    (const gentype &x, const gentype &y, const gentype &z) { return div(add(emul(x,emul(y,z)),neg(emul(emul(x,y),z))),twointgentype()); }
@@ -19898,8 +19580,8 @@ gentype normDistr(const gentype &x)
     }
 
          if ( x.isValEqnDir() ) { constructError(x,res,"String normDistr not implemented"); }
-    else if ( x.isValSet()    ) { Set<gentype>    temp(x.cast_set(0));    temp.applyon(normDistr); res = temp; }
     else if ( x.isValDgraph() ) { constructError(x,res,"Dgraph normDistr not implemented"); }
+    else if ( x.isValSet()    ) { Set<gentype>    temp(x.cast_set(0));    temp.applyon(normDistr); res = temp; }
     else if ( x.isValMatrix() ) { Matrix<gentype> temp(x.cast_matrix(0)); temp.applyon(normDistr); res = temp; }
     else if ( x.isValVector() ) { Vector<gentype> temp(x.cast_vector(0)); temp.applyon(normDistr); res = temp; }
     else
@@ -20063,7 +19745,6 @@ gentype operator"" _rgent(unsigned long long int valr) { return gentype(d_anion(
 
 
 
-
 gentype eq(const gentype &a, const gentype &b) { gentype res; return binLogicForm(res,a,b,"eq",operator==,1); }
 gentype ne(const gentype &a, const gentype &b) { gentype res; return binLogicForm(res,a,b,"ne",operator!=,0); }
 gentype gt(const gentype &a, const gentype &b) { gentype res; return binLogicForm(res,a,b,"gt",operator> ,1); }
@@ -20215,59 +19896,59 @@ gentype enormp   (const gentype &a, const gentype &q) { gentype res; return elem
 gentype polyDistr(const gentype &a, const gentype &q) { gentype res; return elementwiseDefaultCallB(res,a,q,"polyDistr",&dubpolyDistr,&polyDistrintern); }
 gentype PolyDistr(const gentype &a, const gentype &q) { gentype res; return elementwiseDefaultCallB(res,a,q,"PolyDistr",&dubPolyDistr,&PolyDistrintern); }
 
-gentype emul (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"emul" ,emul ,mul ,nullptr ); }
-gentype ermul(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ermul",ermul,rmul,nullptr ); }
-gentype ediv (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ediv" ,ediv ,div ,nullptr ); }
-gentype eidiv(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"eidiv",eidiv,idiv,nullptr ); }
-gentype erdiv(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"erdiv",erdiv,rdiv,nullptr ); }
-gentype emod (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"emod" ,emod ,mod ,nullptr ); }
-gentype epow (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"epow" ,epow ,pow ,nullptr ); }
-gentype Epow (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"Epow" ,Epow ,Pow ,nullptr ); }
-gentype epowl(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"epowl",epowl,powl,nullptr ); }
-gentype Epowl(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"Epowl",Epowl,Powl,nullptr ); }
-gentype epowr(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"epowr",epowr,powr,nullptr ); }
-gentype Epowr(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"Epowr",Epowr,Powr,nullptr ); }
+gentype emul (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"emul" ,emul       ,mul        ,nullptr); }
+gentype ermul(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ermul",ermul      ,rmul       ,nullptr); }
+gentype ediv (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ediv" ,ediv       ,div        ,nullptr); }
+gentype eidiv(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"eidiv",eidiv      ,idiv       ,nullptr); }
+gentype erdiv(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"erdiv",erdiv      ,rdiv       ,nullptr); }
+gentype emod (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"emod" ,emod       ,mod        ,nullptr); }
+gentype epow (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"epow" ,epow       ,pow        ,nullptr); }
+gentype Epow (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"Epow" ,Epow       ,Pow        ,nullptr); }
+gentype epowl(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"epowl",epowl      ,powl       ,nullptr); }
+gentype Epowl(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"Epowl",Epowl      ,Powl       ,nullptr); }
+gentype epowr(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"epowr",epowr      ,powr       ,nullptr); }
+gentype Epowr(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"Epowr",Epowr      ,Powr       ,nullptr); }
 gentype nthrt(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"nthrt",nthrtintern,nthrtintern,nullptr); }
 gentype Nthrt(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"Nthrt",Nthrtintern,Nthrtintern,nullptr); }
-gentype eeq  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"eeq"  ,eeq  ,eq  ,nullptr ); }
-gentype ene  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ene"  ,ene  ,ne  ,nullptr ); }
-gentype egt  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"egt"  ,egt  ,gt  ,nullptr ); }
-gentype ege  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ege"  ,ege  ,ge  ,nullptr ); }
-gentype ele  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ele"  ,ele  ,le  ,nullptr ); }
-gentype elt  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"elt"  ,elt  ,lt  ,nullptr ); }
-gentype lor  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lor"  ,lor  ,nullptr,orOR ); }
-gentype lnor (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lnor" ,lnor ,nullptr,norOR); }
-gentype land (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"land" ,land ,nullptr,andOR); }
-gentype lnand(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lnand",lnand,nullptr,nandOR); }
-gentype lxor (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lxor" ,lxor ,nullptr,xorOR); }
-gentype lxand(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lxand",lxand,nullptr,xandOR); }
+gentype eeq  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"eeq"  ,eeq        ,eq         ,nullptr); }
+gentype ene  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ene"  ,ene        ,ne         ,nullptr); }
+gentype egt  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"egt"  ,egt        ,gt         ,nullptr); }
+gentype ege  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ege"  ,ege        ,ge         ,nullptr); }
+gentype ele  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ele"  ,ele        ,le         ,nullptr); }
+gentype elt  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"elt"  ,elt        ,lt         ,nullptr); }
+gentype lor  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lor"  ,lor        ,nullptr    ,orOR   ); }
+gentype lnor (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lnor" ,lnor       ,nullptr    ,norOR  ); }
+gentype land (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"land" ,land       ,nullptr    ,andOR  ); }
+gentype lnand(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lnand",lnand      ,nullptr    ,nandOR ); }
+gentype lxor (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lxor" ,lxor       ,nullptr    ,xorOR  ); }
+gentype lxand(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lxand",lxand      ,nullptr    ,xandOR ); }
 
-gentype max       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"max"          ,max       ,max   ,nullptr,max   ,i,j,0,0,0); }
-gentype min       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"min"          ,min       ,min   ,nullptr,min   ,i,j,0,0,0); }
-gentype maxabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"maxabs"       ,maxabs    ,maxabs,nullptr,maxabs,i,j,0,1,0); }
-gentype minabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"minabs"       ,minabs    ,minabs,nullptr,minabs,i,j,0,1,0); }
-gentype maxdiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"maxdiag"      ,maxdiag   ,nullptr  ,nullptr,nullptr  ,i,j,0,0,0); }
-gentype mindiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"mindiag"      ,mindiag   ,nullptr  ,nullptr,nullptr  ,i,j,0,0,0); }
-gentype maxabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"maxabsdiag"   ,maxabsdiag,nullptr  ,nullptr,nullptr  ,i,j,0,1,0); }
-gentype minabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"minabsdiag"   ,minabsdiag,nullptr  ,nullptr,nullptr  ,i,j,0,1,0); }
+gentype max       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"max"       ,max       ,max    ,nullptr,max    ,i,j,0,0,0); }
+gentype min       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"min"       ,min       ,min    ,nullptr,min    ,i,j,0,0,0); }
+gentype maxabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"maxabs"    ,maxabs    ,maxabs ,nullptr,maxabs ,i,j,0,1,0); }
+gentype minabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"minabs"    ,minabs    ,minabs ,nullptr,minabs ,i,j,0,1,0); }
+gentype maxdiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"maxdiag"   ,maxdiag   ,nullptr,nullptr,nullptr,i,j,0,0,0); }
+gentype mindiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"mindiag"   ,mindiag   ,nullptr,nullptr,nullptr,i,j,0,0,0); }
+gentype maxabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"maxabsdiag",maxabsdiag,nullptr,nullptr,nullptr,i,j,0,1,0); }
+gentype minabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"minabsdiag",minabsdiag,nullptr,nullptr,nullptr,i,j,0,1,0); }
 
-gentype argmax       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmax"       ,max       ,max   ,nullptr,nullptr,i,j,1,0,0); }
-gentype argmin       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmin"       ,min       ,min   ,nullptr,nullptr,i,j,1,0,0); }
-gentype argmaxabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argmaxabs"    ,maxabs    ,maxabs,nullptr,nullptr,i,j,1,1,0); }
-gentype argminabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argminabs"    ,minabs    ,minabs,nullptr,nullptr,i,j,1,1,0); }
-gentype argmaxdiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmaxdiag"   ,maxdiag   ,nullptr  ,nullptr,nullptr,i,j,1,0,0); }
-gentype argmindiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmindiag"   ,mindiag   ,nullptr  ,nullptr,nullptr,i,j,1,0,0); }
-gentype argmaxabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argmaxabsdiag",maxabsdiag,nullptr  ,nullptr,nullptr,i,j,1,1,0); }
-gentype argminabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argminabsdiag",minabsdiag,nullptr  ,nullptr,nullptr,i,j,1,1,0); }
+gentype argmax       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmax"       ,max       ,max    ,nullptr,nullptr,i,j,1,0,0); }
+gentype argmin       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmin"       ,min       ,min    ,nullptr,nullptr,i,j,1,0,0); }
+gentype argmaxabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argmaxabs"    ,maxabs    ,maxabs ,nullptr,nullptr,i,j,1,1,0); }
+gentype argminabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argminabs"    ,minabs    ,minabs ,nullptr,nullptr,i,j,1,1,0); }
+gentype argmaxdiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmaxdiag"   ,maxdiag   ,nullptr,nullptr,nullptr,i,j,1,0,0); }
+gentype argmindiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmindiag"   ,mindiag   ,nullptr,nullptr,nullptr,i,j,1,0,0); }
+gentype argmaxabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argmaxabsdiag",maxabsdiag,nullptr,nullptr,nullptr,i,j,1,1,0); }
+gentype argminabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argminabsdiag",minabsdiag,nullptr,nullptr,nullptr,i,j,1,1,0); }
 
-gentype allargmax       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmax"       ,max       ,max   ,nullptr,nullptr,i,j,1,0,1); }
-gentype allargmin       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmin"       ,min       ,min   ,nullptr,nullptr,i,j,1,0,1); }
-gentype allargmaxabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argmaxabs"    ,maxabs    ,maxabs,nullptr,nullptr,i,j,1,1,1); }
-gentype allargminabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argminabs"    ,minabs    ,minabs,nullptr,nullptr,i,j,1,1,1); }
-gentype allargmaxdiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmaxdiag"   ,maxdiag   ,nullptr  ,nullptr,nullptr,i,j,1,0,1); }
-gentype allargmindiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmindiag"   ,mindiag   ,nullptr  ,nullptr,nullptr,i,j,1,0,1); }
-gentype allargmaxabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argmaxabsdiag",maxabsdiag,nullptr  ,nullptr,nullptr,i,j,1,1,1); }
-gentype allargminabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argminabsdiag",minabsdiag,nullptr  ,nullptr,nullptr,i,j,1,1,1); }
+gentype allargmax       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmax"       ,max       ,max    ,nullptr,nullptr,i,j,1,0,1); }
+gentype allargmin       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmin"       ,min       ,min    ,nullptr,nullptr,i,j,1,0,1); }
+gentype allargmaxabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argmaxabs"    ,maxabs    ,maxabs ,nullptr,nullptr,i,j,1,1,1); }
+gentype allargminabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argminabs"    ,minabs    ,minabs ,nullptr,nullptr,i,j,1,1,1); }
+gentype allargmaxdiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmaxdiag"   ,maxdiag   ,nullptr,nullptr,nullptr,i,j,1,0,1); }
+gentype allargmindiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmindiag"   ,mindiag   ,nullptr,nullptr,nullptr,i,j,1,0,1); }
+gentype allargmaxabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argmaxabsdiag",maxabsdiag,nullptr,nullptr,nullptr,i,j,1,1,1); }
+gentype allargminabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argminabsdiag",minabsdiag,nullptr,nullptr,nullptr,i,j,1,1,1); }
 
 gentype sum      (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"sum"      ,nullptr,nullptr,sum    ,sum    ,i,j,0,0,0); }
 gentype prod     (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"prod"     ,nullptr,nullptr,prod   ,prod   ,i,j,0,0,0); }
@@ -20276,12 +19957,12 @@ gentype mean     (const gentype &a) { gentype res; int i,j; return maxmincommonf
 gentype median   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"median"   ,nullptr,median ,nullptr,median ,i,j,0,0,0); }
 gentype argmedian(const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmedian",nullptr,median ,nullptr,nullptr,i,j,1,0,0); }
 
-gentype pow  (const gentype &a, const gentype &b) { return powintern  (a,b); }
-gentype powl (const gentype &a, const gentype &b) { return powlintern (a,b); }
-gentype powr (const gentype &a, const gentype &b) { return powrintern (a,b); }
-gentype Pow  (const gentype &a, const gentype &b) { return Powintern  (a,b); }
-gentype Powl (const gentype &a, const gentype &b) { return Powlintern (a,b); }
-gentype Powr (const gentype &a, const gentype &b) { return Powrintern (a,b); }
+gentype pow  (const gentype &a, const gentype &b) { return powintern (a,b); }
+gentype powl (const gentype &a, const gentype &b) { return powlintern(a,b); }
+gentype powr (const gentype &a, const gentype &b) { return powrintern(a,b); }
+gentype Pow  (const gentype &a, const gentype &b) { return Powintern (a,b); }
+gentype Powl (const gentype &a, const gentype &b) { return Powlintern(a,b); }
+gentype Powr (const gentype &a, const gentype &b) { return Powrintern(a,b); }
 
 
 
@@ -20642,7 +20323,7 @@ gentype &postProInnerProd(gentype &a)
     if ( a.scalarfn_isscalarfn() && ( a.scalarfn_i().size() == 1 ) )
     {
         gentype res;
- 
+
         NiceAssert( a.scalarfn_i().size() == a.scalarfn_j().size() );
 
         int numpts = a.scalarfn_numpts();
@@ -20674,7 +20355,7 @@ gentype &postProInnerProd(gentype &a)
     if ( a.scalarfn_isscalarfn() )
     {
         gentype res;
- 
+
         NiceAssert( a.scalarfn_i().size() == a.scalarfn_j().size() );
 
         int numvar = a.scalarfn_i().size();
@@ -24448,20 +24129,9 @@ int disableAltContent(bool justquery, int actuallyForceEnable)
 
 template <> gentype &oneProduct(gentype &gres, const SparseVector<gentype> &a)
 {
-    if ( a.altcontent )
-    {
-        gres = fastoneProduct(a.altcontent,a.indsize());
-    }
-
-    else if ( a.altcontentsp )
-    {
-        gres = fastoneProduct(a.altcontentsp,a.indsize());
-    }
-
-    else
-    {
-        oneProductPrelude(gres,a);
-    }
+    if      ( a.altcontent   ) { gres = fastoneProduct(a.altcontent,a.indsize());   }
+    else if ( a.altcontentsp ) { gres = fastoneProduct(a.altcontentsp,a.indsize()); }
+    else                       { oneProductPrelude(gres,a);                         }
 
     return gres;
 }
@@ -24487,20 +24157,9 @@ template <> gentype &oneProductScaled(gentype &gres, const SparseVector<gentype>
 
 template <> double &oneProductAssumeReal(double &res, const SparseVector<gentype> &a)
 {
-    if ( a.altcontent )
-    {
-        res = fastoneProduct(a.altcontent,a.indsize());
-    }
-
-    else if ( a.altcontentsp )
-    {
-        res = fastoneProduct(a.altcontentsp,a.indsize());
-    }
-
-    else
-    {
-        oneProductAssumeRealPrelude(res,a);
-    }
+    if      ( a.altcontent   ) { res = fastoneProduct(a.altcontent,a.indsize());   }
+    else if ( a.altcontentsp ) { res = fastoneProduct(a.altcontentsp,a.indsize()); }
+    else                       { oneProductAssumeRealPrelude(res,a);               }
 
     return res;
 }
@@ -24516,25 +24175,10 @@ template <> gentype &innerProduct(gentype &gres, const SparseVector<gentype> &a,
         gres = fasttwoProduct(a.altcontent,b.altcontent,dim);
     }
 
-    else if ( a.altcontent && b.altcontentsp )
-    {
-        gres = fasttwoProductSparse(a.altcontent,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize());
-    }
-
-    else if ( a.altcontentsp && b.altcontent )
-    {
-        gres = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontent,&(b.indref(0)),b.indsize());
-    }
-
-    else if ( a.altcontentsp && b.altcontentsp )
-    {
-        gres = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize());
-    }
-
-    else
-    {
-        innerProductPrelude(gres,a,b);
-    }
+    else if ( a.altcontent   && b.altcontentsp ) { gres = fasttwoProductSparse(a.altcontent,  &(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize()); }
+    else if ( a.altcontentsp && b.altcontent   ) { gres = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontent,  &(b.indref(0)),b.indsize()); }
+    else if ( a.altcontentsp && b.altcontentsp ) { gres = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize()); }
+    else                                         { innerProductPrelude(gres,a,b); }
 
     return gres;
 }
@@ -24570,25 +24214,10 @@ template <> gentype &twoProduct(gentype &gres, const SparseVector<gentype> &a, c
         gres = fasttwoProduct(a.altcontent,b.altcontent,dim);
     }
 
-    else if ( a.altcontent && b.altcontentsp )
-    {
-        gres = fasttwoProductSparse(a.altcontent,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize());
-    }
-
-    else if ( a.altcontentsp && b.altcontent )
-    {
-        gres = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontent,&(b.indref(0)),b.indsize());
-    }
-
-    else if ( a.altcontentsp && b.altcontentsp )
-    {
-        gres = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize());
-    }
-
-    else
-    {
-        twoProductPrelude(gres,a,b);
-    }
+    else if ( a.altcontent   && b.altcontentsp ) { gres = fasttwoProductSparse(a.altcontent,  &(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize()); }
+    else if ( a.altcontentsp && b.altcontent   ) { gres = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontent,  &(b.indref(0)),b.indsize()); }
+    else if ( a.altcontentsp && b.altcontentsp ) { gres = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize()); }
+    else                                         { twoProductPrelude(gres,a,b);                                                                                      }
 
     return gres;
 }
@@ -24624,25 +24253,10 @@ template <> gentype &innerProductRevConj(gentype &gres, const SparseVector<genty
         gres = fasttwoProduct(a.altcontent,b.altcontent,dim);
     }
 
-    else if ( a.altcontent && b.altcontentsp )
-    {
-        gres = fasttwoProductSparse(a.altcontent,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize());
-    }
-
-    else if ( a.altcontentsp && b.altcontent )
-    {
-        gres = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontent,&(b.indref(0)),b.indsize());
-    }
-
-    else if ( a.altcontentsp && b.altcontentsp )
-    {
-        gres = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize());
-    }
-
-    else
-    {
-        innerProductRevConjPrelude(gres,a,b);
-    }
+    else if ( a.altcontent   && b.altcontentsp ) { gres = fasttwoProductSparse(a.altcontent,  &(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize()); }
+    else if ( a.altcontentsp && b.altcontent   ) { gres = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontent,  &(b.indref(0)),b.indsize()); }
+    else if ( a.altcontentsp && b.altcontentsp ) { gres = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize()); }
+    else                                         { innerProductRevConjPrelude(gres,a,b);                                                                             }
 
     return gres;
 }
@@ -24678,25 +24292,10 @@ template <> double &innerProductAssumeReal(double &res, const SparseVector<genty
         res = fasttwoProduct(a.altcontent,b.altcontent,dim);
     }
 
-    else if ( a.altcontent && b.altcontentsp )
-    {
-        res = fasttwoProductSparse(a.altcontent,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize());
-    }
-
-    else if ( a.altcontentsp && b.altcontent )
-    {
-        res = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontent,&(b.indref(0)),b.indsize());
-    }
-
-    else if ( a.altcontentsp && b.altcontentsp )
-    {
-        res = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize());
-    }
-
-    else
-    {
-        innerProductAssumeRealPrelude(res,a,b);
-    }
+    else if ( a.altcontent   && b.altcontentsp ) { res = fasttwoProductSparse(a.altcontent,  &(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize()); }
+    else if ( a.altcontentsp && b.altcontent   ) { res = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontent,  &(b.indref(0)),b.indsize()); }
+    else if ( a.altcontentsp && b.altcontentsp ) { res = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize()); }
+    else                                         { innerProductAssumeRealPrelude(res,a,b);                                                                          }
 
     return res;
 }
@@ -24712,25 +24311,10 @@ template <> double &twoProductAssumeReal(double &res, const SparseVector<gentype
         res = fasttwoProduct(a.altcontent,b.altcontent,dim);
     }
 
-    else if ( a.altcontent && b.altcontentsp )
-    {
-        res = fasttwoProductSparse(a.altcontent,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize());
-    }
-
-    else if ( a.altcontentsp && b.altcontent )
-    {
-        res = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontent,&(b.indref(0)),b.indsize());
-    }
-
-    else if ( a.altcontentsp && b.altcontentsp )
-    {
-        res = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize());
-    }
-
-    else
-    {
-        twoProductAssumeRealPrelude(res,a,b);
-    }
+    else if ( a.altcontent   && b.altcontentsp ) { res = fasttwoProductSparse(a.altcontent,  &(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize()); }
+    else if ( a.altcontentsp && b.altcontent   ) { res = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontent,  &(b.indref(0)),b.indsize()); }
+    else if ( a.altcontentsp && b.altcontentsp ) { res = fasttwoProductSparse(a.altcontentsp,&(a.indref(0)),a.indsize(),b.altcontentsp,&(b.indref(0)),b.indsize()); }
+    else                                         { twoProductAssumeRealPrelude(res,a,b);                                                                            }
 
     return res;
 }
@@ -25794,6 +25378,21 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<doub
 
     return res;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

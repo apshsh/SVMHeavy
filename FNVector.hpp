@@ -292,7 +292,7 @@ public:
     virtual Vector<gentype> &addit (const gentype         &b);
     virtual Vector<gentype> &mulit (const Vector<gentype> &b);
     virtual Vector<gentype> &rmulit(const Vector<gentype> &b);
-    virtual Vector<gentype> &divit (const Vector<gentype> &b);
+    template <class T> Vector<gentype> &divit (const Vector<T> &b);
     virtual Vector<gentype> &rdivit(const Vector<gentype> &b);
     virtual Vector<gentype> &mulit (const gentype         &b); // this*b
     virtual Vector<gentype> &rmulit(const gentype         &b); // b*this
@@ -592,7 +592,7 @@ public:
     virtual Vector<gentype> &addit (const gentype         &b);
     virtual Vector<gentype> &mulit (const Vector<gentype> &b) { (void) b; NiceThrow("I'm sorry Dave, I don't know how to do that");   return *this; }
     virtual Vector<gentype> &rmulit(const Vector<gentype> &b) { (void) b; NiceThrow("I'm sorry Darren, I don't know how to do that"); return *this; }
-    virtual Vector<gentype> &divit (const Vector<gentype> &b) { (void) b; NiceThrow("I'm sorry Garian, I don't know how to do that"); return *this; }
+    template <class T> Vector<gentype> &divit (const Vector<T> &b) { (void) b; NiceThrow("I'm sorry Garian, I don't know how to do that"); return *this; }
     virtual Vector<gentype> &rdivit(const Vector<gentype> &b) { (void) b; NiceThrow("I'm sorry Fred, I don't know how to do that");   return *this; }
     virtual Vector<gentype> &mulit (const gentype         &b);
     virtual Vector<gentype> &rmulit(const gentype         &b);
@@ -884,7 +884,7 @@ public:
     virtual Vector<gentype> &addit (const gentype         &b);
     virtual Vector<gentype> &mulit (const Vector<gentype> &b) { (void) b; NiceThrow("I'm sorry Liam, I don't know how to do that");  return *this; }
     virtual Vector<gentype> &rmulit(const Vector<gentype> &b) { (void) b; NiceThrow("I'm sorry Ivy, I don't know how to do that");   return *this; }
-    virtual Vector<gentype> &divit (const Vector<gentype> &b) { (void) b; NiceThrow("I'm sorry Cindy, I don't know how to do that"); return *this; }
+    template <class T> Vector<gentype> &divit (const Vector<T> &b) { (void) b; NiceThrow("I'm sorry Cindy, I don't know how to do that"); return *this; }
     virtual Vector<gentype> &rdivit(const Vector<gentype> &b) { (void) b; NiceThrow("I'm sorry you, I don't know how to do that");   return *this; }
     virtual Vector<gentype> &mulit (const gentype         &b);
     virtual Vector<gentype> &rmulit(const gentype         &b);

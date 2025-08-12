@@ -313,7 +313,7 @@ void evalKSVM_Scalar(double &res, int i, int j, const gentype **pxyprod, const v
             res = realOwner->K2(ix,jx,pxyprod);
 
             NiceAssert( !testisvnan(res) );
-            NiceAssert( !testisinf(res) );
+            //NiceAssert( !testisinf(res) );
 	}
 
 	else
@@ -321,14 +321,14 @@ void evalKSVM_Scalar(double &res, int i, int j, const gentype **pxyprod, const v
 	    res = (realOwner->kerndiagval)(i);
 
             NiceAssert( !testisvnan(res) );
-            NiceAssert( !testisinf(res) );
+            //NiceAssert( !testisinf(res) );
 	}
     }
 
     res += ( ( i == j ) ? (realOwner->diagoff)(i) : 0 );
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return;
 }
@@ -352,7 +352,7 @@ void evalKSVM_Scalar_fast(double &res, int i, int j, const gentype **pxyprod, co
     }
 
     NiceAssert( !testisvnan(res) );
-    NiceAssert( !testisinf(res) );
+    //NiceAssert( !testisinf(res) );
 
     return;
 }
