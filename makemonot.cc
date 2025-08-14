@@ -89,9 +89,14 @@ ML_Base &makeMonotone(ML_Base &ml,
 
     // Add grid to ML, setting d as we go
 
+    gentype yy(y);
+
+    yy.isNomConst = true; // suppress counting when working out errors etc!
+
     for ( int i = 0 ; i < n ; ++i )
     {
-        ml.qaddTrainingVector(ml.N(),y,x("&",i),Cweigh,epsweigh,d);
+        ml.qaddTrainingVector(ml.N(),yy,x("&",i),Cweigh,epsweigh,d);
+        ml.y()(ml.N()-1).isNomConst = true;
     }
 
     // and we're done

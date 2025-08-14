@@ -96,8 +96,11 @@ int SVM_BiScor::qaddTrainingVector(int i, const gentype &zzz, SparseVector<genty
     locz.add(i); locz("&",i) = zzz;
     locd.add(i); locd("&",i) = dd;
 
+    gentype zeroy = 0.0_gent;
+    zeroy.isNomConst = zzz.isNomConst;
+
     //res |= SVM_Binary::qaddTrainingVector(i,zerointgentype(),xxxx,Cweigh,epsweigh);
-    res |= SVM_Binary::qaddTrainingVector(i,0_gent,xxxx,Cweigh,epsweigh);
+    res |= SVM_Binary::qaddTrainingVector(i,zeroy,xxxx,Cweigh,epsweigh);
 
     // Update current inequalities
 

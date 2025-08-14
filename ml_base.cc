@@ -4673,7 +4673,7 @@ void ML_Base::K1xfer(gentype &res, int &minmaxind, int typeis,
         case 800:
         case 810:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
 
             switch ( resmode )
             {
@@ -4966,8 +4966,8 @@ void ML_Base::K2xfer(gentype &dxyprod, gentype &ddiffis, gentype &res, int &minm
         case 810:
         {
 //errstream() << "phantomxy 1: " << ia << "," << ib << "\t" << xa << "," << xb << "\n";
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
 
             switch ( resmode )
             {
@@ -5238,8 +5238,8 @@ void ML_Base::K2xfer(gentype &dxyprod, gentype &ddiffis, gentype &res, int &minm
         case 819:
         {
 //errstream() << "phantomxy 1: " << ia << "," << ib << "\t" << xa << "," << xb << "\n";
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
 
             switch ( resmode )
             {
@@ -5305,9 +5305,9 @@ void ML_Base::K3xfer(gentype &res, int &minmaxind, int typeis,
         case 800:
         case 810:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
-            if ( ic < 0 ) { setInnerWildpc(&xc,&xcinfo); ic = -3; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
+            if ( ic < 0 ) { ic = setInnerWildpc(&xc,&xcinfo); }
 
             switch ( resmode )
             {
@@ -5607,10 +5607,10 @@ void ML_Base::K4xfer(gentype &res, int &minmaxind, int typeis,
         case 800:
         case 810:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
-            if ( ic < 0 ) { setInnerWildpc(&xc,&xcinfo); ic = -3; }
-            if ( id < 0 ) { setInnerWildpd(&xd,&xdinfo); id = -4; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
+            if ( ic < 0 ) { ic = setInnerWildpc(&xc,&xcinfo); }
+            if ( id < 0 ) { id = setInnerWildpd(&xd,&xdinfo); }
 
             switch ( resmode )
             {
@@ -6429,7 +6429,7 @@ void ML_Base::K1xfer(double &res, int &minmaxind, int typeis,
         case 800:
         case 810:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
 
             switch ( resmode )
             {
@@ -6635,8 +6635,8 @@ void ML_Base::K2xfer(double &dxyprod, double &ddiffis, double &res, int &minmaxi
         case 810:
         {
 //errstream() << "phantomxy 0: " << ia << "," << ib << "\n";
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
 
             switch ( resmode )
             {
@@ -6826,8 +6826,8 @@ void ML_Base::K2xfer(double &dxyprod, double &ddiffis, double &res, int &minmaxi
         case 819:
         {
 //errstream() << "phantomxy 1: " << ia << "," << ib << "\t" << xa << "," << xb << "\n";
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
 
             switch ( resmode )
             {
@@ -6889,9 +6889,9 @@ void ML_Base::K3xfer(double &res, int &minmaxind, int typeis,
         case 800:
         case 810:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
-            if ( ic < 0 ) { setInnerWildpc(&xc,&xcinfo); ic = -3; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
+            if ( ic < 0 ) { ic = setInnerWildpc(&xc,&xcinfo); }
 
             switch ( resmode )
             {
@@ -7096,10 +7096,10 @@ void ML_Base::K4xfer(double &res, int &minmaxind, int typeis,
         case 800:
         case 810:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
-            if ( ic < 0 ) { setInnerWildpc(&xc,&xcinfo); ic = -3; }
-            if ( id < 0 ) { setInnerWildpd(&xd,&xdinfo); id = -4; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
+            if ( ic < 0 ) { ic = setInnerWildpc(&xc,&xcinfo); }
+            if ( id < 0 ) { id = setInnerWildpd(&xd,&xdinfo); }
 
             switch ( resmode )
             {
@@ -7796,7 +7796,7 @@ tryagain:
                         }
                     }
 
-                    else if ( ( j == 0 ) && ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 48 ) && !(kernel.cRealConstants(i)(j).isNomConst) )
+                    else if ( ( j == 0 ) && ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 32 ) && ( kernel.cType(i) != 48 ) && !(kernel.cRealConstants(i)(j).isNomConst) )
                     {
                         int xdim = xspaceDim(uu(i));
 
@@ -7937,7 +7937,7 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
                         }
                     }
 
-                    else if ( ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 48 ) && ( j == 0 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) //&& kernel.isAdjRealConstants(j,i) )
+                    else if ( ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 32 ) && ( kernel.cType(i) != 48 ) && ( j == 0 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) //&& kernel.isAdjRealConstants(j,i) )
                     {
                         // This is length-scale, always, with the single exception of kernels 0 and 48 where lengthscale is meaningless (log)
 

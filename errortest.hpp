@@ -54,6 +54,7 @@
 //                  vectors
 //       - suppressfn: nz means give no feedback
 //       - useThreads: nz means do folds in parallel threads
+//       - if y is nominally constant then this is treated as d=0
 
 double calcLOO     (const ML_Base &baseML,                                                                    int startpoint = 0, int suppressfb = 0, int useThreads = 0);
 double calcRecall  (const ML_Base &baseML,                                                                    int startpoint = 0, int suppressfb = 0, int useThreads = 0);

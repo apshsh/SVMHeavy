@@ -1073,7 +1073,7 @@ void SVM_Generic::K1xfer(gentype &res, int &minmaxind, int typeis,
         case 801:
         case 811:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
 
             Vector<const SparseVector<gentype> *> x(2);
             Vector<const vecInfo *> xinfo(2);
@@ -1247,7 +1247,7 @@ void SVM_Generic::K1xfer(double &res, int &minmaxind, int typeis,
         case 801:
         case 811:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
 
             Vector<const SparseVector<gentype> *> x(2);
             Vector<const vecInfo *> xinfo(2);
@@ -1435,8 +1435,8 @@ errstream() << "BADBADBAD";
         case 801:
         case 811:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
 
             res = 0.0;
 
@@ -2180,8 +2180,8 @@ errstream() << "BADBADBAD";
         case 802:
         case 812:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
 
             NiceAssert( !(resmode & 0x80 ) );
 
@@ -2410,8 +2410,8 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
         case 811:
         {
 //errstream() << "phantomx 0: " << getKernel().isAltDiff() << "," << NLB()+NUB()+NF() << "\n";
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
 
             res = 0.0;
 
@@ -3238,8 +3238,8 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
         case 802:
         case 812:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
 
             NiceAssert( !(resmode & 0x80 ) );
 
@@ -3442,9 +3442,9 @@ void SVM_Generic::K3xfer(gentype &res, int &minmaxind, int typeis,
         case 801:
         case 811:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
-            if ( ic < 0 ) { setInnerWildpc(&xc,&xcinfo); ic = -3; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
+            if ( ic < 0 ) { ic = setInnerWildpc(&xc,&xcinfo); }
 
             Vector<const SparseVector<gentype> *> x(6);
             Vector<const vecInfo *> xinfo(6);
@@ -3690,9 +3690,9 @@ void SVM_Generic::K3xfer(double &res, int &minmaxind, int typeis,
         case 801:
         case 811:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
-            if ( ic < 0 ) { setInnerWildpc(&xc,&xcinfo); ic = -3; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
+            if ( ic < 0 ) { ic = setInnerWildpc(&xc,&xcinfo); }
 
             Vector<const SparseVector<gentype> *> x(6);
             Vector<const vecInfo *> xinfo(6);
@@ -3949,10 +3949,10 @@ void SVM_Generic::K4xfer(gentype &res, int &minmaxind, int typeis,
         case 801:
         case 811:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
-            if ( ic < 0 ) { setInnerWildpc(&xc,&xcinfo); ic = -3; }
-            if ( id < 0 ) { setInnerWildpd(&xd,&xdinfo); id = -4; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
+            if ( ic < 0 ) { ic = setInnerWildpc(&xc,&xcinfo); }
+            if ( id < 0 ) { id = setInnerWildpd(&xd,&xdinfo); }
 
             Vector<const SparseVector<gentype> *> x(8);
             Vector<const vecInfo *> xinfo(8);
@@ -4123,10 +4123,10 @@ void SVM_Generic::K4xfer(gentype &res, int &minmaxind, int typeis,
         case 802:
         case 812:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
-            if ( ic < 0 ) { setInnerWildpc(&xc,&xcinfo); ic = -3; }
-            if ( id < 0 ) { setInnerWildpd(&xd,&xdinfo); id = -4; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
+            if ( ic < 0 ) { ic = setInnerWildpc(&xc,&xcinfo); }
+            if ( id < 0 ) { id = setInnerWildpd(&xd,&xdinfo); }
 
             NiceAssert( !( resmode & 0x80 ) );
 
@@ -4356,10 +4356,10 @@ void SVM_Generic::K4xfer(double &res, int &minmaxind, int typeis,
         case 801:
         case 811:
         {
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
-            if ( ic < 0 ) { setInnerWildpc(&xc,&xcinfo); ic = -3; }
-            if ( id < 0 ) { setInnerWildpd(&xd,&xdinfo); id = -4; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
+            if ( ic < 0 ) { ic = setInnerWildpc(&xc,&xcinfo); }
+            if ( id < 0 ) { id = setInnerWildpd(&xd,&xdinfo); }
 
             Vector<const SparseVector<gentype> *> x(8);
             Vector<const vecInfo *> xinfo(8);
@@ -4532,10 +4532,10 @@ void SVM_Generic::K4xfer(double &res, int &minmaxind, int typeis,
         {
             NiceAssert( !( resmode & 0x80 ) );
 
-            if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-            if ( ib < 0 ) { setInnerWildpb(&xb,&xbinfo); ib = -2; }
-            if ( ic < 0 ) { setInnerWildpc(&xc,&xcinfo); ic = -3; }
-            if ( id < 0 ) { setInnerWildpd(&xd,&xdinfo); id = -4; }
+            if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+            if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
+            if ( ic < 0 ) { ic = setInnerWildpc(&xc,&xcinfo); }
+            if ( id < 0 ) { id = setInnerWildpd(&xd,&xdinfo); }
 
             res = 0.0;
 

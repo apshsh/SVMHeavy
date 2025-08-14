@@ -1019,6 +1019,10 @@ class fninnerinnerArg
     {
 //FIXME - TS-MOO
         NiceAssert( !(muy.isValVector()) );
+//errstream() << "phantomxyz mu = " << muy << "\n";
+//errstream() << "phantomxyz sigmay = " << sigmay << "\n";
+//errstream() << "phantomxyz yymaxcorrect = " << yymaxcorrect << "\n";
+//errstream() << "phantomxyz gridi = " << gridi << "\n";
 
         switch ( method )
         {
@@ -1217,6 +1221,9 @@ locsigmay = stabscore*stabscore*locsigmay;
             mucgt("&",i) -= bbopts.cgtmargin; // ((bbopts.cgtmargin)*2*sqrt(varcgt(i)));
         }
 
+//errstream() << "phantomxyz mucgt = " << mucgt << "\n";
+//errstream() << "phantomxyz varcgt = " << varcgt << "\n";
+//errstream() << "phantomxyz gridi = " << gridi << "\n";
         double probofvalid             = 1;
         double totalconstraintvariance = 0;
 
@@ -1613,10 +1620,10 @@ static void readres(gentype &res,
 
     // Overrides
 
-    bool resSet = false;
-
     if ( res.isValSet() )
     {
+        bool resSet = false;
+
         // Keep set return for backwards compatability
 
         const Set<gentype> &z = (const Set<gentype> &) res;
@@ -1633,10 +1640,19 @@ static void readres(gentype &res,
         if ( ( z.size() >= 8  ) && !z.all()(7).isValNull() ) { xobstype     = (int)    z.all()(7);                                    }
         if ( ( z.size() >= 9  ) && !z.all()(8).isValNull() ) { xobstype_cgt =          z.all()(8).cast_vector_int();                  }
         if ( ( z.size() >= 10 ) && !z.all()(9).isValNull() ) { fidcost      = (double) z.all()(9);                                    }
+
+        if ( !resSet )
+        {
+            res.force_null();
+        }
     }
 
     else if ( res.isValDict() )
     {
+        bool resSet = false;
+
+        // Proper way to do it
+
         const Dict<gentype,dictkey> &z = (const Dict<gentype,dictkey> &) res;
 
         if ( z.iskeypresent("c")      && !z("c").isValNull() ) { ycgt = z("c").cast_vector();          }
@@ -1651,11 +1667,11 @@ static void readres(gentype &res,
         if ( z.iskeypresent("d")       && !z("d").isValNull()       ) { xobstype     = (int)    z("d");                                    }
         if ( z.iskeypresent("dc")      && !z("dc").isValNull()      ) { xobstype_cgt =          z("dc").cast_vector_int();                 }
         if ( z.iskeypresent("fidcost") && !z("fidcost").isValNull() ) { fidcost      = (double) z("fidcost");                              }
-    }
 
-    if ( !resSet )
-    {
-        res.force_null();
+        if ( !resSet )
+        {
+            res.force_null();
+        }
     }
 }
 
@@ -1792,7 +1808,7 @@ bool addDataToModel(int &ii,
 
     if ( !ycgt.size() && bopts.numcgt )
     {
-        ycgt.resize(bopts.numcgt) = nullgentype();
+        ycgt.resize(bopts.numcgt) = 0.0_gent; //nullgentype(); - don't want null here!
         xobstype_cgt.resize(bopts.numcgt) = 0;
     }
 

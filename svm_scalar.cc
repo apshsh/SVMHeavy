@@ -4593,7 +4593,7 @@ void SVM_Scalar::fastg(double &res,
 {
     if ( emm == 2 )
     {
-        if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
+        if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
 
         int jP,k;
         double Kxj;
@@ -4654,8 +4654,8 @@ void SVM_Scalar::fastg(double &res,
 {
     if ( emm == 2 )
     {
-        if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-        if ( ib < 0 ) { setInnerWildpa(&xb,&xbinfo); ib = -2; }
+        if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+        if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
 
         int jP,k;
         double Kxj;
@@ -4770,7 +4770,7 @@ void SVM_Scalar::fastg(gentype &res,
 {
     if ( emm == 2 )
     {
-        if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
+        if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
 
         int jP,k;
         double Kxj;
@@ -4831,8 +4831,8 @@ void SVM_Scalar::fastg(gentype &res,
 {
     if ( emm == 2 )
     {
-        if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-        if ( ib < 0 ) { setInnerWildpa(&xb,&xbinfo); ib = -2; }
+        if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+        if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
 
         int jP,k;
         double Kxj;

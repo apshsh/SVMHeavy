@@ -3658,6 +3658,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gbu"         ) ||
                       ( currentarg == "-gbv"         ) ||
                       ( currentarg == "-gmw"         ) ||
+                      ( currentarg == "-gmwcgt"      ) ||
                       ( currentarg == "-gmsc"        ) ||
                       ( currentarg == "-gmsn"        ) ||
                       ( currentarg == "-gmsy"        ) ||
@@ -7364,6 +7365,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gmrff"    ) { (*xbopts).modelrff      = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmq"      ) { (*xbopts).oracleMode    = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmw"      ) { ((*xbopts).extmuapprox).resize(1)   = &(getMLref(svmbase,( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) ))); }
+                    else if ( currcommand(0) == "-gmwcgt"   ) { ((*xbopts).extcgtapprox).resize(1)  = &(getMLref(svmbase,( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) ))); }
                     else if ( currcommand(0) == "-gmo"      ) { (*xbopts).ismoo         = 1; }
                     else if ( currcommand(0) == "-gms"      ) { (*xbopts).ismoo         = 0; }
                     else if ( currcommand(0) == "-gmr"      ) { (*xbopts).makenoise     = 1; }
@@ -16378,6 +16380,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           already in this model is treated as observations of\n" : "" );
     output << ( (          advanced ) ? "                           y = -f(x) (NOTE THE NEGATIVE SIGN THERE).  See also\n" : "" );
     output << ( (          advanced ) ? "                           -gmx for more on transfer learning.                \n" : "" );
+    output << ( (          advanced ) ? "         -gmwcgt n       - like -gmw for cgt model.                           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmt n          - model basis:                                       \n" : "" );
     output << ( (          advanced ) ? "                           0 - model f(p(x)) using p(x) (default).            \n" : "" );

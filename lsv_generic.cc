@@ -207,7 +207,10 @@ int LSV_Generic::addTrainingVector(int i, const gentype &y, const SparseVector<g
 
     else
     {
-        res = SVM_Scalar::addTrainingVector(i,0.0_gent,x,Cweigh,epsweigh,dval);
+        gentype zeroy = 0.0_gent;
+        zeroy.isNomConst = y.isNomConst;
+
+        res = SVM_Scalar::addTrainingVector(i,zeroy,x,Cweigh,epsweigh,dval);
     }
 
     return res;
@@ -235,7 +238,10 @@ int LSV_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentyp
 
     else
     {
-        res = SVM_Scalar::qaddTrainingVector(i,0.0_gent,x,Cweigh,epsweigh,dval);
+        gentype zeroy = 0.0_gent;
+        zeroy.isNomConst = y.isNomConst;
+
+        res = SVM_Scalar::qaddTrainingVector(i,zeroy,x,Cweigh,epsweigh,dval);
     }
 
     return res;

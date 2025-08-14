@@ -1004,7 +1004,7 @@ void *doatest(void *args_ptr)
         {
             loctmpres += 1;
 
-            cla = (*locML).getInternalClass(locy(l));
+            cla = locy(l).isNomConst ? 0 : (*locML).getInternalClass(locy(l));
             clb = Nclasses;
         }
 
@@ -1012,7 +1012,7 @@ void *doatest(void *args_ptr)
         {
             loctmpres += locML->calcDist(kresh(l),locy(l),l,locisenabled(l));
 
-            cla = (*locML).getInternalClass(locy(l));
+            cla = locy(l).isNomConst ? 0 : (*locML).getInternalClass(locy(l));
             clb = (*locML).getInternalClass(kresh(l));
         }
 
@@ -1160,7 +1160,7 @@ nullPrint(errstream(),i,-5);
 //errstream() << "phantomx2: classifier\n";
                     res += 1;
 
-                    cla = (*locML).getInternalClass(locy);
+                    cla = locy.isNomConst ? 0 : (*locML).getInternalClass(locy);
                     clb = Nclasses;
                 }
 
@@ -1170,7 +1170,7 @@ nullPrint(errstream(),i,-5);
 //errstream() << "phantomx3: regression: dist = " << (*locML).calcDist(resh(i),locy,i,locisenable) << "\n";
                     res += (*locML).calcDist(resh(i),locy,i,locisenable);
 
-                    cla = (*locML).getInternalClass(locy);
+                    cla = locy.isNomConst ? 0 : (*locML).getInternalClass(locy);
                     clb = (*locML).getInternalClass((resh)(i));
                 }
 
@@ -1257,7 +1257,7 @@ double calcTest(const ML_Base &baseML, const Vector<SparseVector<gentype> > &xte
             {
                 res += 1;
 
-                cla = baseML.getInternalClass(ytest(i));
+                cla = ytest(i).isNomConst ? 0 : baseML.getInternalClass(ytest(i));
                 clb = Nclasses;
             }
 
@@ -1265,7 +1265,7 @@ double calcTest(const ML_Base &baseML, const Vector<SparseVector<gentype> > &xte
             {
                 res += baseML.calcDist(resh(i),ytest(i),xtest(i).isf4indpresent(3) ? (int) xtest(i).f4(3) : -1);
 
-                cla = baseML.getInternalClass(ytest(i));
+                cla = ytest(i).isNomConst ? 0 : baseML.getInternalClass(ytest(i));
                 clb = baseML.getInternalClass(resh (i));
             }
 
@@ -1432,7 +1432,7 @@ nullPrint(errstream(),k,-5);
                     {
                         locres += 1;
 
-                        cla = (*locML).getInternalClass(locy);
+                        cla = locy.isNomConst ? 0 : (*locML).getInternalClass(locy);
                         clb = Nclasses;
                     }
 
@@ -1440,7 +1440,7 @@ nullPrint(errstream(),k,-5);
                     {
                         locres += locML->calcDist(resh(k)(j),locy,j,locisenabled);
 
-                        cla = (*locML).getInternalClass(locy);
+                        cla = locy.isNomConst ? 0 : (*locML).getInternalClass(locy);
                         clb = (*locML).getInternalClass((resh(k))(j));
                     }
 
@@ -1526,7 +1526,7 @@ double assessResult(const ML_Base &baseML, Vector<int> &cnt, Matrix<int> &cfm, c
             {
                 res += 1;
 
-                cla = baseML.getInternalClass(ytest(i));
+                cla = ytest(i).isNomConst ? 0 : baseML.getInternalClass(ytest(i));
                 clb = Nclasses;
             }
 
@@ -1534,7 +1534,7 @@ double assessResult(const ML_Base &baseML, Vector<int> &cnt, Matrix<int> &cfm, c
             {
                 res += baseML.calcDist(ytestresh(i),ytest(i),outkernind(i));
 
-                cla = baseML.getInternalClass(ytest(i));
+                cla = ytest(i).isNomConst ? 0 : baseML.getInternalClass(ytest(i));
                 clb = baseML.getInternalClass(ytestresh(i));
             }
 
@@ -1628,6 +1628,11 @@ static int isVectorActive(int i, ML_Base *activeML)
 
 static int isVectorEnabled(int i, ML_Base *activeML)
 {
+    if ( (*activeML).y(i).isNomConst )
+    {
+        return 0;
+    }
+
     return (*activeML).isenabled(i);
 }
 

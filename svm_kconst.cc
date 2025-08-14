@@ -119,7 +119,7 @@ void SVM_KConst::fastg(double &res,
                        const SparseVector<gentype> &xa,
                        const vecInfo &xainfo) const
 {
-    if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
+    if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
 
     int j;
     double Kxj;
@@ -146,8 +146,8 @@ void SVM_KConst::fastg(double &res,
                        const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, 
                        const vecInfo &xainfo, const vecInfo &xbinfo) const
 {
-    if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-    if ( ib < 0 ) { setInnerWildpa(&xb,&xbinfo); ib = -2; }
+    if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+    if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
 
     int j;
     double Kxj;
@@ -194,7 +194,7 @@ void SVM_KConst::fastg(gentype &res,
                        const SparseVector<gentype> &xa,
                        const vecInfo &xainfo) const
 {
-    if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
+    if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
 
     int j;
     double Kxj;
@@ -221,8 +221,8 @@ void SVM_KConst::fastg(gentype &res,
                        const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, 
                        const vecInfo &xainfo, const vecInfo &xbinfo) const
 {
-    if ( ia < 0 ) { setInnerWildpa(&xa,&xainfo); ia = -1; }
-    if ( ib < 0 ) { setInnerWildpa(&xb,&xbinfo); ib = -2; }
+    if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
+    if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
 
     int j;
     double Kxj;

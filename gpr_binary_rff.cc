@@ -194,9 +194,12 @@ int GPR_Binary_rff::addTrainingVector(int i, const gentype &y, const SparseVecto
     bintraintarg.add(i);
     bintraintarg("&",i) = y;
 
+    gentype zeroy = 0.0_gent;
+    zeroy.isNomConst = y.isNomConst;
+
     int res = 0;
 
-    res |= GPR_Scalar_rff::addTrainingVector(i,0.0_gent,x,Cweigh,epsweigh);
+    res |= GPR_Scalar_rff::addTrainingVector(i,zeroy,x,Cweigh,epsweigh);
     res |= GPR_Scalar_rff::setd(i,(int) y);
 
     return res;
@@ -211,9 +214,12 @@ int GPR_Binary_rff::qaddTrainingVector(int i, const gentype &y, SparseVector<gen
     bintraintarg.add(i);
     bintraintarg("&",i) = (int) y;
 
+    gentype zeroy = 0.0_gent;
+    zeroy.isNomConst = y.isNomConst;
+
     int res = 0;
 
-    res |= GPR_Scalar_rff::qaddTrainingVector(i,0.0_gent,x,Cweigh,epsweigh);
+    res |= GPR_Scalar_rff::qaddTrainingVector(i,zeroy,x,Cweigh,epsweigh);
     res |= GPR_Scalar_rff::setd(i,(int) y);
 
     return res;

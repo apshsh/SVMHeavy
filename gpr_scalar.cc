@@ -142,47 +142,6 @@ int GPR_Scalar::setLaplaceConst(void)
 
 
 
-/*
-
-Notes on Laplace approximation
-
-We follow Rassmusen's book \cite{Ras2}, around page 43. We use p(f|y) = Phi(d\frac{f-yreal}{sigma}),
-where d=+1 for f >= y, d=-1 for f <= y, and sigma is the variance given by the user. Working from
-this, it isn't too hard to show that:
-
-f^next = K.inv(K+inv(W)).(f + grad log p(y|f))
-E(f(x)) = k(x)^T.inv(K+inv(W)).(f + grad log p(y|f))
-W = -grad^2 log p(y|f)
-
-So basically we start with the target:
-
-t=yreal (t is target y for the underlying LSV, yreal is the true target in the dataset)
-and then update:
-f = outputs given training vectors X
-
-and at each iteration update:
-
-t = f + grad log p(y|f)
-W = -grad^2 log p(y|f)
-and then update:
-f = outputs given training vectors X
-
-and recurse until convergence.
-
-Note that W is 1/sigma, so we use setC(W) rather than setsigma as C=1/sigma
-
-For our log likelihood we use (Ras2, top of page 43):
-
-log p(y_i|f_i) = log Phi(d_i\frac{f_i-yreal_i}{sigma_i})
-
-where Phi is the cdf for the normal distribution; and so:
-
-grad log p(y_i|f_i) = \frac{d_i}{sigma_i} \frac{phi(d_i\frac{f_i-yreal_i}{sigma_i})}{Phi(d_i\frac{f_i-yreal_i}{sigma_i})}
-grad^2 log p(y_i|f_i) = -\frac{1}{sigma_i^2} \frac{phi(d_i\frac{f_i-yreal_i}{sigma_i})}{Phi(d_i\frac{f_i-yreal_i}{sigma_i})} [ \frac{phi(d_i\frac{f_i-yreal_i}{sigma_i})}{Phi(d_i\frac{f_i-yreal_i}{sigma_i})} - d_i \frac{f_i-yreal_i}{sigma_i} ]
-
-where phi is the pdf for the normal distribution.
-*/
-
 
 // Close-enough-to-infinity for variance
 
@@ -193,7 +152,7 @@ where phi is the pdf for the normal distribution.
 #define MAXEPITCNT 4
 
 #define LAPSTEPSTOP 1e-3
-#define MAXLAPLACEITCNT 10
+#define MAXLAPLACEITCNT 5
 
 int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
 {
@@ -203,7 +162,6 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
     }
 
     int Nineq = NNC(-1)+NNC(+1);
-errstream() << "phantomxyz Nineq = " << Nineq << "\n";
 
     int locres = 0;
 
@@ -211,7 +169,6 @@ errstream() << "phantomxyz Nineq = " << Nineq << "\n";
     {
 //FIXME: tune eps based on sigma here if required (method between naive and full EP)
         locres = getQ().train(res,killSwitch);
-errstream() << "phantomxyz method naive\n";
     }
 
 //    else if ( N() == 1 )
@@ -229,7 +186,6 @@ errstream() << "phantomxyz method naive\n";
 
     else if ( isEPConst() )
     {
-errstream() << "phantomxyz method EP\n";
         int i,j;
 
         // Get indices of inequality constraints
@@ -448,7 +404,47 @@ errstream() << "!" << stepsize << "!";
 
     else
     {
-errstream() << "phantomxyz method Laplace\n";
+/*
+Notes on Laplace approximation
+
+We follow Rassmusen's book \cite{Ras2}, around page 43. We use p(f|y) = Phi(d\frac{f-yreal}{sigma}),
+where d=+1 for f >= y, d=-1 for f <= y, and sigma is the variance given by the user. Working from
+this, it isn't too hard to show that:
+
+f^next = K.inv(K+inv(W)).(f + grad log p(y|f))
+E(f(x)) = k(x)^T.inv(K+inv(W)).(f + grad log p(y|f))
+W = -grad^2 log p(y|f)
+
+So basically we start with the target:
+
+t=yreal (t is target y for the underlying LSV, yreal is the true target in the dataset)
+and then update:
+f = outputs given training vectors X
+
+and at each iteration update:
+
+t = f + grad log p(y|f)
+W = -grad^2 log p(y|f)
+and then update:
+f = outputs given training vectors X
+
+and recurse until convergence.
+
+Note that W is 1/sigma, so we use setC(W) rather than setsigma as C=1/sigma
+
+For our log likelihood we use (Ras2, top of page 43):
+
+log p(y_i|f_i) = log Phi(d_i\frac{f_i-yreal_i}{sigma_i})
+
+where Phi is the cdf for the normal distribution; and so:
+
+grad log p(y_i|f_i) = \frac{d_i}{sigma_i} \frac{phi(d_i\frac{f_i-yreal_i}{sigma_i})}{Phi(d_i\frac{f_i-yreal_i}{sigma_i})}
+grad^2 log p(y_i|f_i) = -\frac{1}{sigma_i^2} \frac{phi(d_i\frac{f_i-yreal_i}{sigma_i})}{Phi(d_i\frac{f_i-yreal_i}{sigma_i})} [ \frac{phi(d_i\frac{f_i-yreal_i}{sigma_i})}{Phi(d_i\frac{f_i-yreal_i}{sigma_i})} - d_i \frac{f_i-yreal_i}{sigma_i} ]
+
+where phi is the pdf for the normal distribution.
+*/
+
+errstream() << "Laplace approx training... ";
         int i,j;
 
         // Get indices of inequality constraints
@@ -475,16 +471,16 @@ errstream() << "phantomxyz method Laplace\n";
         retVector<double> tmpvb;
         retVector<gentype> tmpvc;
 
-        Vector<gentype> yreal(y()(indin,tmpvc));              // This is the underlying target
+        Vector<double> yreal(yR()(indin,tmpvb));               // This is the underlying target
         Vector<double> sigrealsq(sigmaweight()(indin,tmpvb)); // This is the underlying variance
 
         sigrealsq *= sigma();
 
-        Vector<gentype> f(Nineq);
-        Vector<gentype> t(Nineq);
+        Vector<double> f(Nineq);
+        Vector<double> t(Nineq);
         Vector<double> W(Nineq);
 
-        Vector<gentype> fnext(Nineq);
+        Vector<double> fnext(Nineq);
 
         // Initial train with *only* equality constraints (ie naive method)
 
@@ -498,7 +494,7 @@ errstream() << "phantomxyz method Laplace\n";
 
         for ( j = 0 ; j < Nineq ; ++j )
         {
-            f("&",j).force_double() = yreal(j);
+            f("&",j) = yreal(j);
         }
 
         // Laplace loop
@@ -508,7 +504,7 @@ errstream() << "phantomxyz method Laplace\n";
         int itcnt = 0;
         int maxitcnt = MAXLAPLACEITCNT;
 
-errstream() << "entry alpha = " << getQ().alphaVal() << "\n";
+errstream() << "entry alpha = " << getQ().alphaVal()(indin,tmpvc) << "\n";
         while ( !isdone )
         {
             // Work out W and pseudo-targets
@@ -516,13 +512,13 @@ errstream() << "entry alpha = " << getQ().alphaVal() << "\n";
 errstream() << "phantomxyz f = " << f << "\n";
             for ( j = 0 ; j < Nineq ; ++j )
             {
-                double fmod     = dreal(j)*(((double) f(j))-((double) yreal(j)))/sqrt(sigrealsq(j));
+                double fmod     = dreal(j)*(f(j)-yreal(j))/sqrt(sigrealsq(j));
                 double phival   = normphi(fmod);
                 double Phival   = normPhi(fmod);
                 double phionPhi = phival/Phival;
 
-                W("&",j)                = (1/sigrealsq(j))*phionPhi*(phionPhi+fmod);
-                t("&",j).force_double() = ((double) f(j)) + (((double) dreal(j))*phionPhi/(sqrt(sigrealsq(j))*W(j)));
+                W("&",j) = (1/sigrealsq(j))*phionPhi*(phionPhi+fmod);
+                t("&",j) = f(j) + (dreal(j)*phionPhi/(sqrt(sigrealsq(j))*W(j)));
             }
 
             // Set W (which corresponds to C) and pseudo-targets and train
@@ -532,7 +528,7 @@ errstream() << "phantomxyz W = " << W << "\n";
             getQ().sety(indin,t);
             getQ().setCweight(indin,W*sigma());
             getQ().train(res,killSwitch);
-errstream() << "phantomxyz alpha = " << getQ().alphaVal() << "\n";
+errstream() << "phantomxyz alpha = " << getQ().alphaVal()(indin,tmpvc) << "\n";
 
             // Termination conditions
 
@@ -552,7 +548,7 @@ errstream() << "phantomxyz alpha = " << getQ().alphaVal() << "\n";
 
                 f -= fnext;
 
-errstream() << "phantomxyz stepsize = " << abs2(f) << "\n";
+errstream() << abs2(f) << ", ";
                 if ( abs2(f) <= LAPSTEPSTOP )
                 {
                     isdone = true;
@@ -564,6 +560,7 @@ errstream() << "phantomxyz stepsize = " << abs2(f) << "\n";
                 }
             }
         }
+errstream() << "\n";
     }
 
     return locres;

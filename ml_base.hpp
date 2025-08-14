@@ -356,11 +356,11 @@ public:
     virtual int isUnderlyingVector(void) const { return 0; }
     virtual int isUnderlyingAnions(void) const { return 0; }
 
-    virtual const Vector<int> &ClassLabels       (void)             const { const static Vector<int> temp; return temp;         }
-    virtual       int          getInternalClass  (const gentype &)  const {                                return 0;            }
-    virtual       int          numInternalClasses(void)             const {                                return numClasses(); }
-    virtual       int          isenabled         (int i)            const {                                return d()(i);       }
-    virtual       int          isVarDefined      (void)             const {                                return 0;            }
+    virtual const Vector<int> &ClassLabels       (void)             const { const static Vector<int> temp;         return temp;         }
+    virtual       int          getInternalClass  (const gentype &)  const {                                        return 0;            }
+    virtual       int          numInternalClasses(void)             const {                                        return numClasses(); }
+    virtual       int          isenabled         (int i)            const { if ( y()(i).isNomConst ) { return 0; } return d()(i);       }
+    virtual       int          isVarDefined      (void)             const {                                        return 0;            }
 
     virtual const int *ClassLabelsInt     (void)  const {                return &(getMLconst().ClassLabels()(0)); }
     virtual       int  getInternalClassInt(int y) const { gentype yy(y); return getInternalClass(yy);             }
@@ -652,19 +652,19 @@ public:
     virtual gentype &Keqn(gentype &res,                           int resmode = 1) const;
     virtual gentype &Keqn(gentype &res, const MercerKernel &altK, int resmode = 1) const;
 
-    virtual gentype &K1(gentype &res, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr) const { setInnerWildpa(&xa,xainf); K1(res,-1); resetInnerWildp(( xainf == nullptr )); return res; }
-    virtual gentype &K2(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr) const { setInnerWildpa(&xa,xainf); setInnerWildpb(&xb,xbinf); K2(res,-1,-3); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
-    virtual gentype &K3(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xcinf = nullptr) const { setInnerWildpa(&xa,xainf); setInnerWildpb(&xb,xbinf); setInnerWildpc(&xc,xcinf); K3(res,-1,-3,-4);  resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr ),( xcinf == nullptr )); return res; }
-    virtual gentype &K4(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xcinf = nullptr, const vecInfo *xdinf = nullptr) const { setInnerWildpa(&xa,xainf); setInnerWildpb(&xb,xbinf); setInnerWildpc(&xc,xcinf); setInnerWildpd(&xd,xdinf); K4(res,-1,-3,-4,-5); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr ),(xcinf == nullptr),(xdinf == nullptr)); return res; }
+    virtual gentype &K1(gentype &res, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); K1(res,ia); resetInnerWildp(( xainf == nullptr )); return res; }
+    virtual gentype &K2(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); K2(res,ia,ib); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
+    virtual gentype &K3(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xcinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int ic = setInnerWildpc(&xc,xcinf); K3(res,ia,ib,ic);  resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr ),( xcinf == nullptr )); return res; }
+    virtual gentype &K4(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xcinf = nullptr, const vecInfo *xdinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int ic = setInnerWildpc(&xc,xcinf); int id = setInnerWildpd(&xd,xdinf); K4(res,ia,ib,ic,id); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr ),(xcinf == nullptr),(xdinf == nullptr)); return res; }
     virtual gentype &Km(gentype &res, const Vector<SparseVector<gentype> > &xx) const { int m = xx.size(); setInnerWildpx(&xx); retVector<int> tmpva; Vector<int> ii(cntintvec(m,tmpva)); ii += 1; ii *= -100; Km(m,res,ii); resetInnerWildp(); return res; }
 
-    virtual double  K2ip(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr) const { setInnerWildpa(&xa,xainf); setInnerWildpb(&xb,xbinf); double res = K2ip(-1,-3,0.0); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
-    virtual double distK(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr) const { setInnerWildpa(&xa,xainf); setInnerWildpb(&xb,xbinf); double res = distK(-1,-3); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
+    virtual double  K2ip(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); double res = K2ip(ia,ib,0.0); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
+    virtual double distK(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); double res = distK(ia,ib); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
 
-    virtual Vector<gentype> &phi2(Vector<gentype> &res,         const SparseVector<gentype> &xa,           const vecInfo *xainf = nullptr) const { setInnerWildpa(&xa,xainf); phi2(res,-1); resetInnerWildp(( xainf == nullptr )); return res; }
+    virtual Vector<gentype> &phi2(Vector<gentype> &res,         const SparseVector<gentype> &xa,           const vecInfo *xainf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); phi2(res,ia); resetInnerWildp(( xainf == nullptr )); return res; }
     virtual Vector<gentype> &phi2(Vector<gentype> &res, int ia, const SparseVector<gentype> *xa = nullptr, const vecInfo *xainf = nullptr) const;
 
-    virtual Vector<double> &phi2(Vector<double> &res,         const SparseVector<gentype> &xa,           const vecInfo *xainf = nullptr) const { setInnerWildpa(&xa,xainf); phi2(res,-1); resetInnerWildp(( xainf == nullptr )); return res; }
+    virtual Vector<double> &phi2(Vector<double> &res,         const SparseVector<gentype> &xa,           const vecInfo *xainf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); phi2(res,ia); resetInnerWildp(( xainf == nullptr )); return res; }
     virtual Vector<double> &phi2(Vector<double> &res, int ia, const SparseVector<gentype> *xa = nullptr, const vecInfo *xainf = nullptr) const;
 
     virtual double K0ip(                                const gentype **pxyprod = nullptr)                                                                                                                                                                                                                                                                                                                 const { return KK0ip(0.0,pxyprod);                                                     }
@@ -1202,41 +1202,41 @@ public:
 
     virtual int gg(               gentype &resg, const SparseVector<gentype> &x,                  const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { gentype resh; return gh(resh,resg,x,0,xinf,pxyprodx); }
     virtual int hh(gentype &resh,                const SparseVector<gentype> &x,                  const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { gentype resg; return gh(resh,resg,x,0,xinf,pxyprodx); }
-    virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { setInnerWildpa(&x,xinf); int res = ghTrainingVector(resh,resg,-1,retaltg,pxyprodx); resetInnerWildp(xinf == nullptr); return res; }
+    virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { int ia = setInnerWildpa(&x,xinf); int res = ghTrainingVector(resh,resg,ia,retaltg,pxyprodx); resetInnerWildp(xinf == nullptr); return res; }
 
-    virtual double e(const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { setInnerWildpa(&x,xinf); setWildTargpp(y); double res = eTrainingVector(-1); resetInnerWildp(xinf == nullptr); return res; }
+    virtual double e(const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); double res = eTrainingVector(ia); resetInnerWildp(xinf == nullptr); return res; }
 
-    virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodxa = nullptr, gentype ***pxyprodxb = nullptr, gentype **pxyprodij = nullptr) const { setInnerWildpa(&xa,xainf); setInnerWildpb(&xb,xbinf); int res = covTrainingVector(resv,resmu,-1,-3,pxyprodxa,pxyprodxb,pxyprodij); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
+    virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodxa = nullptr, gentype ***pxyprodxb = nullptr, gentype **pxyprodij = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int res = covTrainingVector(resv,resmu,ia,ib,pxyprodxa,pxyprodxb,pxyprodij); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
 
-    virtual void dedg(double         &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { setInnerWildpa(&x,xinf); setWildTargpp(y); dedgTrainingVector(res,-1); resetInnerWildp(xinf == nullptr); }
-    virtual void dedg(Vector<double> &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { setInnerWildpa(&x,xinf); setWildTargpp(y); dedgTrainingVector(res,-1); resetInnerWildp(xinf == nullptr); }
-    virtual void dedg(d_anion        &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { setInnerWildpa(&x,xinf); setWildTargpp(y); dedgTrainingVector(res,-1); resetInnerWildp(xinf == nullptr); }
-    virtual void dedg(gentype        &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { setInnerWildpa(&x,xinf); setWildTargpp(y); dedgTrainingVector(res,-1); resetInnerWildp(xinf == nullptr); }
+    virtual void dedg(double         &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); dedgTrainingVector(res,ia); resetInnerWildp(xinf == nullptr); }
+    virtual void dedg(Vector<double> &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); dedgTrainingVector(res,ia); resetInnerWildp(xinf == nullptr); }
+    virtual void dedg(d_anion        &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); dedgTrainingVector(res,ia); resetInnerWildp(xinf == nullptr); }
+    virtual void dedg(gentype        &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); dedgTrainingVector(res,ia); resetInnerWildp(xinf == nullptr); }
 
     virtual double &d2edg2(double &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { (void) res; (void) y; (void) x; (void) xinf; NiceThrow("d2db2 not implemented for this ML"); return res; }
 
-    virtual void dgX(Vector<gentype> &resx, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { setInnerWildpa(&x,xinf); dgTrainingVectorX(resx,-1); resetInnerWildp(xinf == nullptr); }
-    virtual void dgX(Vector<double>  &resx, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { setInnerWildpa(&x,xinf); dgTrainingVectorX(resx,-1); resetInnerWildp(xinf == nullptr); }
+    virtual void dgX(Vector<gentype> &resx, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVectorX(resx,ia); resetInnerWildp(xinf == nullptr); }
+    virtual void dgX(Vector<double>  &resx, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVectorX(resx,ia); resetInnerWildp(xinf == nullptr); }
 
-    virtual void deX(Vector<gentype> &resx, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { setInnerWildpa(&x,xinf); setWildTargpp(y); deTrainingVectorX(resx,-1); resetInnerWildp(xinf == nullptr); }
+    virtual void deX(Vector<gentype> &resx, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); deTrainingVectorX(resx,ia); resetInnerWildp(xinf == nullptr); }
 
-    virtual int gg(double         &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { setInnerWildpa(&x,xinf); int resi = ggTrainingVector(resg,-1,retaltg,pxyprodx); resetInnerWildp(xinf == nullptr); return resi; }
-    virtual int gg(Vector<double> &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { setInnerWildpa(&x,xinf); int resi = ggTrainingVector(resg,-1,retaltg,pxyprodx); resetInnerWildp(xinf == nullptr); return resi; }
-    virtual int gg(d_anion        &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { setInnerWildpa(&x,xinf); int resi = ggTrainingVector(resg,-1,retaltg,pxyprodx); resetInnerWildp(xinf == nullptr); return resi; }
+    virtual int gg(double         &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { int ia = setInnerWildpa(&x,xinf); int resi = ggTrainingVector(resg,ia,retaltg,pxyprodx); resetInnerWildp(xinf == nullptr); return resi; }
+    virtual int gg(Vector<double> &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { int ia = setInnerWildpa(&x,xinf); int resi = ggTrainingVector(resg,ia,retaltg,pxyprodx); resetInnerWildp(xinf == nullptr); return resi; }
+    virtual int gg(d_anion        &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { int ia = setInnerWildpa(&x,xinf); int resi = ggTrainingVector(resg,ia,retaltg,pxyprodx); resetInnerWildp(xinf == nullptr); return resi; }
 
-    virtual void dg(Vector<gentype>         &res, gentype        &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,-1); resetInnerWildp(xinf == nullptr); }
-    virtual void dg(Vector<double>          &res, double         &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,-1); resetInnerWildp(xinf == nullptr); }
-    virtual void dg(Vector<Vector<double> > &res, Vector<double> &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,-1); resetInnerWildp(xinf == nullptr); }
-    virtual void dg(Vector<d_anion>         &res, d_anion        &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,-1); resetInnerWildp(xinf == nullptr); }
+    virtual void dg(Vector<gentype>         &res, gentype        &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
+    virtual void dg(Vector<double>          &res, double         &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
+    virtual void dg(Vector<Vector<double> > &res, Vector<double> &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
+    virtual void dg(Vector<d_anion>         &res, d_anion        &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
 
-    virtual void de(Vector<gentype> &res, gentype &resn, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { setInnerWildpa(&x,xinf); setWildTargpp(y); deTrainingVector(res,resn,-1); resetInnerWildp(xinf == nullptr); }
+    virtual void de(Vector<gentype> &res, gentype &resn, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); deTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
 
-    virtual void stabProb(double  &res, const SparseVector<gentype> &x, int p, double pnrm, int rot, double mu, double B) const { setInnerWildpa(&x); stabProbTrainingVector(res,-1,p,pnrm,rot,mu,B); resetInnerWildp(); }
+    virtual void stabProb(double  &res, const SparseVector<gentype> &x, int p, double pnrm, int rot, double mu, double B) const { int ia = setInnerWildpa(&x); stabProbTrainingVector(res,ia,p,pnrm,rot,mu,B); resetInnerWildp(); }
 
     // var and covar functions
 
     virtual int varTrainingVector(gentype &resv, gentype &resmu, int i, gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const { return covTrainingVector(resv,resmu,i,i,pxyprodi,pxyprodi,pxyprodii); }
-    virtual int var(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const { setInnerWildpa(&xa,xainf); int res = covTrainingVector(resv,resmu,-1,-1,pxyprodx,pxyprodx,pxyprodxx); resetInnerWildp(xainf == nullptr); return res; }
+    virtual int var(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int res = covTrainingVector(resv,resmu,ia,ia,pxyprodx,pxyprodx,pxyprodxx); resetInnerWildp(xainf == nullptr); return res; }
 
     virtual int covarTrainingVector(Matrix<gentype> &resv, const Vector<int> &i) const;
     virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const;
@@ -1255,10 +1255,10 @@ public:
     // assuming input noise is "small" relative to gradient variation).
 
     virtual int noisevarTrainingVector(gentype &resv, gentype &resmu, int i, const SparseVector<gentype> &xvar, int u = -1, gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const;
-    virtual int noisevar(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const { setInnerWildpa(&xa,xainf); int res = noisevarTrainingVector(resv,resmu,-1,xvar,u,pxyprodx,pxyprodxx); resetInnerWildp(xainf == nullptr); return res; }
+    virtual int noisevar(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int res = noisevarTrainingVector(resv,resmu,ia,xvar,u,pxyprodx,pxyprodxx); resetInnerWildp(xainf == nullptr); return res; }
 
     virtual int noisecovTrainingVector(gentype &resv, gentype &resmu, int i, int j, const SparseVector<gentype> &xvar, int u = -1, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const;
-    virtual int noisecov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodxy = nullptr) const { setInnerWildpa(&xa,xainf); setInnerWildpb(&xb,xbinf); int res = noisecovTrainingVector(resv,resmu,-1,-3,xvar,u,pxyprodx,pxyprody,pxyprodxy); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
+    virtual int noisecov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodxy = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int res = noisecovTrainingVector(resv,resmu,ia,ib,xvar,u,pxyprodx,pxyprody,pxyprodxy); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
 
     // Training data tracking functions:
     //
@@ -1576,6 +1576,7 @@ public:
 //            int ind18present = xib.isf4indpresent(18) && !(xib.f4(18).isValNull());
             int ind19present = xib.isf4indpresent(19) && !(xib.f4(19).isValNull());
             int ind20present = xib.isf4indpresent(20) && !(xib.f4(20).isValNull());
+//            int ind21present = xib.isf4indpresent(21) && !(xib.f4(21).isValNull()); used in setInnerWildpa...
 
             ilr         = ind0present  ? 1 : 0;
             irr         = ind1present  ? 1 : 0;
@@ -2218,8 +2219,13 @@ private:
 
     // Functions to control wilds
 
-    virtual void setInnerWildpa(const SparseVector<gentype> *xl, const vecInfo *xinf = nullptr) const
+    virtual int setInnerWildpa(const SparseVector<gentype> *xl, const vecInfo *xinf = nullptr) const
     {
+        if ( (*xl).isf4indpresent(21) && !((*xl).f4(21).isCastableToIntegerWithoutLoss()) )
+        {
+            return (int) (*xl).f4(21);
+        }
+
         (*xl).makealtcontent();
 
         wildxgenta = xl;
@@ -2269,10 +2275,17 @@ private:
             ytargdatapA = (const d_anion &) ytargdatap;
             ytargdatapV = (const Vector<double> &) ytargdatap;
         }
+
+        return -1;
     }
 
-    virtual void setInnerWildpb(const SparseVector<gentype> *xl, const vecInfo *xinf = nullptr) const
+    virtual int setInnerWildpb(const SparseVector<gentype> *xl, const vecInfo *xinf = nullptr) const
     {
+        if ( (*xl).isf4indpresent(21) && !((*xl).f4(21).isCastableToIntegerWithoutLoss()) )
+        {
+            return (int) (*xl).f4(21);
+        }
+
         (*xl).makealtcontent();
 
         wildxgentb = xl;
@@ -2314,10 +2327,17 @@ private:
         {
             calcSetAssumeReal(0);
         }
+
+        return -3;
     }
 
-    virtual void setInnerWildpc(const SparseVector<gentype> *xl, const vecInfo *xinf = nullptr) const
+    virtual int setInnerWildpc(const SparseVector<gentype> *xl, const vecInfo *xinf = nullptr) const
     {
+        if ( (*xl).isf4indpresent(21) && !((*xl).f4(21).isCastableToIntegerWithoutLoss()) )
+        {
+            return (int) (*xl).f4(21);
+        }
+
         (*xl).makealtcontent();
 
         wildxgentc = xl;
@@ -2359,10 +2379,17 @@ private:
         {
             calcSetAssumeReal(0);
         }
+
+        return -4;
     }
 
-    virtual void setInnerWildpd(const SparseVector<gentype> *xl, const vecInfo *xinf = nullptr) const
+    virtual int setInnerWildpd(const SparseVector<gentype> *xl, const vecInfo *xinf = nullptr) const
     {
+        if ( (*xl).isf4indpresent(21) && !((*xl).f4(21).isCastableToIntegerWithoutLoss()) )
+        {
+            return (int) (*xl).f4(21);
+        }
+
         (*xl).makealtcontent();
 
         wildxgentd = xl;
@@ -2404,6 +2431,8 @@ private:
         {
             calcSetAssumeReal(0);
         }
+
+        return -5;
     }
 
     virtual void setInnerWildpx(const Vector<SparseVector<gentype> > *xl) const
