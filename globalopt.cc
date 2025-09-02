@@ -378,7 +378,7 @@ int GlobalOptions::realOptim(int dim,
             (*temprandDirtemplate).setMLTypeClean(defrandDirtemplateVec.type());
 
             (*temprandDirtemplate).getML() = defrandDirtemplateVec;
-            randDirtemplateInd = regML(temprandDirtemplate,fnarg,0);
+            randDirtemplateInd = regMLloc(temprandDirtemplate,fnarg,0);
 
             randDirtemplate = &((*temprandDirtemplate).getML());
 
@@ -395,7 +395,7 @@ int GlobalOptions::realOptim(int dim,
             (*temprandDirtemplate).setMLTypeClean(defrandDirtemplateFnGP.type());
 
             (*temprandDirtemplate).getML() = defrandDirtemplateFnGP;
-            randDirtemplateInd = regML(temprandDirtemplate,fnarg,1);
+            randDirtemplateInd = regMLloc(temprandDirtemplate,fnarg,1);
 
             randDirtemplate = &((*temprandDirtemplate).getML());
 
@@ -434,7 +434,7 @@ int GlobalOptions::realOptim(int dim,
             (*temprandDirtemplate).setMLTypeClean(defrandDirtemplateFnBern.type());
 
             (*temprandDirtemplate).getML() = defrandDirtemplateFnBern;
-            randDirtemplateInd = regML(temprandDirtemplate,fnarg,1);
+            randDirtemplateInd = regMLloc(temprandDirtemplate,fnarg,1);
 
             randDirtemplate = &((*temprandDirtemplate).getML());
 
@@ -741,7 +741,7 @@ int GlobalOptions::makeSubspace(int dim, void *fnarg, int substatus, const Spars
                     (*randDir).setMLTypeClean((*randDirtemplate).type());
 
                     (*randDir).getML() = (*randDirtemplate);
-                    subDefInd("&",i) = regML(randDir,fnarg,2);
+                    subDefInd("&",i) = regMLloc(randDir,fnarg,2);
 
                     subDef("&",i) = &((*randDir).getML());
 
@@ -763,7 +763,7 @@ int GlobalOptions::makeSubspace(int dim, void *fnarg, int substatus, const Spars
                     (*randDir).setMLTypeClean(207);  // BLK_UsrFnb
 
                     (*randDir).setoutfn(outfnhere);
-                    subDefInd("&",i) = regML(randDir,fnarg,2);
+                    subDefInd("&",i) = regMLloc(randDir,fnarg,2);
 
                     subDef("&",i) = &((*randDir).getML());
                 }
@@ -787,7 +787,7 @@ int GlobalOptions::makeSubspace(int dim, void *fnarg, int substatus, const Spars
             (*projOpRaw).setMLTypeClean(projOptemplate.type());
 
             (*projOpRaw).getML() = projOptemplate;
-            projOpInd = regML(projOpRaw,fnarg,3);
+            projOpInd = regMLloc(projOpRaw,fnarg,3);
 
             projOp = &(dynamic_cast<BLK_Conect &>((*projOpRaw).getBLK()));
 
@@ -880,7 +880,7 @@ int GlobalOptions::makeSubspace(int dim, void *fnarg, int substatus, const Spars
                 (*randDir).setMLTypeClean((*randDirtemplate).type());
 
                 (*randDir).getML() = (*randDirtemplate);
-                subDefInd("&",i) = regML(randDir,fnarg,8);
+                subDefInd("&",i) = regMLloc(randDir,fnarg,8);
 
                 subDef("&",i) = &((*randDir).getML());
 
@@ -908,7 +908,7 @@ int GlobalOptions::makeSubspace(int dim, void *fnarg, int substatus, const Spars
             (*projOpRaw).setMLTypeClean(projOptemplate.type());
 
             (*projOpRaw).getML() = projOptemplate;
-            projOpInd = regML(projOpRaw,fnarg,9);
+            projOpInd = regMLloc(projOpRaw,fnarg,9);
 
             projOp = &(dynamic_cast<BLK_Conect &>((*projOpRaw).getBLK()));
 

@@ -103,12 +103,13 @@ public:
 
 
 
-    virtual double C        (void)  const override { return getRepConst().C();         }
-    virtual double sigma    (void)  const override { return getRepConst().sigma();     }
-    virtual double sigma_cut(void)  const override { return getRepConst().sigma_cut(); }
-    virtual double eps      (void)  const override { return getRepConst().eps();       }
-    virtual double Cclass   (int d) const override { return getRepConst().Cclass(d);   }
-    virtual double epsclass (int d) const override { return getRepConst().epsclass(d); }
+    virtual double C         (void)  const override { return getRepConst().C();           }
+    virtual double sigma     (void)  const override { return getRepConst().sigma();       }
+    virtual double sigma_cut (void)  const override { return getRepConst().sigma_cut();   }
+    virtual double eps       (void)  const override { return getRepConst().eps();         }
+    virtual double Cclass    (int d) const override { return getRepConst().Cclass(d);     }
+    virtual double sigmaclass(int d) const override { return getRepConst().sigmaclass(d); }
+    virtual double epsclass  (int d) const override { return getRepConst().epsclass(d);   }
 
     virtual int    memsize     (void) const override { return getRepConst().memsize();      }
     virtual double zerotol     (void) const override { return getRepConst().zerotol();      }
@@ -269,12 +270,13 @@ public:
 
     virtual int setbetarank(double nv) override;
 
-    virtual int setC        (double xC)        override;
-    virtual int setsigma    (double xC)        override;
-    virtual int setsigma_cut(double xC)        override;
-    virtual int seteps      (double xC)        override;
-    virtual int setCclass   (int d, double xC) override;
-    virtual int setepsclass (int d, double xC) override;
+    virtual int setC         (double xC)        override;
+    virtual int setsigma     (double xC)        override;
+    virtual int setsigma_cut (double xC)        override;
+    virtual int seteps       (double xC)        override;
+    virtual int setCclass    (int d, double xC) override;
+    virtual int setsigmaclass(int d, double xC) override;
+    virtual int setepsclass  (int d, double xC) override;
 
     virtual int scale  (double a) override;
     virtual int reset  (void)     override;
@@ -297,7 +299,7 @@ public:
     virtual void fudgeOn (void) override;
     virtual void fudgeOff(void) override;
 
-    virtual int train(int &res) override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
     virtual int train(int &res, svmvolatile int &killSwitch) override;
 
     // Information functions:

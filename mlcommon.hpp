@@ -146,7 +146,8 @@
 #define DEFAULTOUTERRELTOL         1e-4
 #define MINROWDIM                  500
 #define ROWDIMSTEPRATIO            1.3
-#define MAXBOUND                   1e6
+//#define MAXBOUND                   1e6
+#define MAXBOUND                   1e20
 #define DEFAULTEPS                 0.001
 #define DEFAULTCYCEPS              0.1
 #define CZEROOFFSET                1e-6

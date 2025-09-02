@@ -43,53 +43,53 @@ public:
     KNN_Generic &operator=(const KNN_Generic &src) { assign(src); return *this; }
     virtual ~KNN_Generic();
 
-    virtual int prealloc(int expectedN) override;
-    virtual int preallocsize(void) const override;
-    virtual void setmemsize(int memsize) override { kerncache.setmemsize(memsize,kerncache.get_min_rowdim()); return; }
+    virtual int  prealloc    (int expectedN)       override;
+    virtual int  preallocsize(void)          const override;
+    virtual void setmemsize  (int memsize)         override { kerncache.setmemsize(memsize,kerncache.get_min_rowdim()); return; }
 
-    virtual void assign(const ML_Base &src, int onlySemiCopy = 0) override;
-    virtual void semicopy(const ML_Base &src) override;
-    virtual void qswapinternal(ML_Base &b) override;
+    virtual void assign       (const ML_Base &src, int onlySemiCopy = 0) override;
+    virtual void semicopy     (const ML_Base &src)                       override;
+    virtual void qswapinternal(ML_Base &b)                               override;
 
     virtual int getparam (int ind, gentype         &val, const gentype         &xa, int ia, const gentype         &xb, int ib, charptr &desc) const override;
     virtual int egetparam(int ind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib               ) const override;
 
     virtual std::ostream &printstream(std::ostream &output, int dep) const override;
-    virtual std::istream &inputstream(std::istream &input ) override;
+    virtual std::istream &inputstream(std::istream &input          )       override;
 
     virtual       ML_Base &getML     (void)       override { return static_cast<      ML_Base &>(getKNN());      }
     virtual const ML_Base &getMLconst(void) const override { return static_cast<const ML_Base &>(getKNNconst()); }
 
     // Information functions (training data):
 
-    virtual int tspaceDim(void)    const override { return 1; }
-    virtual int tspaceSparse(void) const override { return 0; }
-    virtual int xspaceSparse(void) const override { return 1; }
+    virtual int tspaceDim   (void)       const override { return 1; }
+    virtual int tspaceSparse(void)       const override { return 0; }
+    virtual int xspaceSparse(void)       const override { return 1; }
 
-    virtual int isTrained(void)    const override { return 1; }
+    virtual int isTrained(void) const override { return 1; }
 
     virtual int isUnderlyingScalar(void) const override { return 1; }
     virtual int isUnderlyingVector(void) const override { return 0; }
     virtual int isUnderlyingAnions(void) const override { return 0; }
 
-    virtual int numInternalClasses(void) const override;
-    virtual int isenabled(int i)         const override { return d()(i); }
+    virtual int numInternalClasses(void)  const override;
+    virtual int isenabled         (int i) const override { return d()(i); }
 
     virtual int memsize(void) const override { return kerncache.get_memsize(); }
 
     virtual double sparlvl(void) const override { return N()-NNC(0) ? ( ( k() > N()-NNC(0) ) ? k() : N()-NNC(0) )/((double) N()-NNC(0)) : 1; }
 
-    virtual const Vector<int> &d         (void) const override { return dd;     }
-    virtual const Vector<int> &alphaState(void) const override { return onevec; }
+    virtual const Vector<int>     &d         (void) const override { return dd;     }
+    virtual const Vector<int>     &alphaState(void) const override { return onevec; }
+    virtual const Vector<gentype> &alphaVal  (void) const override { NiceThrow("alphaVal has no meaning here"); static const Vector<gentype> dummy; return dummy; }
 
-    virtual const Vector<gentype> &alphaVal(void)  const override { NiceThrow("alphaVal has no meaning here"); static const Vector<gentype> dummy; return dummy; }
-    virtual       double           alphaVal(int i) const override { (void) i; NiceThrow("alpha has no meaning here");                              return 0.0;   }
+    virtual double alphaVal(int i) const override { (void) i; NiceThrow("alpha has no meaning here"); return 0.0; }
 
     // Kernel Modification
 
-    virtual void prepareKernel(void) override { return; }
     virtual int resetKernel(int modind = 1, int onlyChangeRowI = -1, int updateInfo = 1) override;
     virtual int setKernel(const MercerKernel &xkernel, int modind = 1, int onlyChangeRowI = -1) override;
+    virtual void prepareKernel(void) override { return; }
     virtual double tuneKernel(int, double, int = 1, int = 0, const tkBounds * = nullptr) override { return 0; }
 
     // Training set modification:
@@ -130,7 +130,7 @@ public:
     //     KNN Specific functions
     // ================================================================
 
-    virtual       KNN_Generic &getKNN(void)            { return *this; }
+    virtual       KNN_Generic &getKNN     (void)       { return *this; }
     virtual const KNN_Generic &getKNNconst(void) const { return *this; }
 
     // Information functions (training data):
@@ -138,12 +138,14 @@ public:
     virtual int k  (void) const { return kay; }
     virtual int ktp(void) const { return wkt; }
 
-    virtual const Matrix<double>  &Gp(void) const { return *Gpdist; }
-
     // General modification and autoset functions
 
     virtual int setk  (int xk) { NiceAssert( xk >  0 ); incgvernum(); kay = xk; return 1; }
     virtual int setktp(int xk) { NiceAssert( xk >= 0 ); incgvernum(); wkt = xk; return 1; }
+
+    // Not sure how this fits
+
+    virtual const Matrix<double> &Gp(void) const { return *Gpdist; }
 
 protected:
 

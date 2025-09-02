@@ -72,26 +72,28 @@ public:
     IMP_Generic &operator=(const IMP_Generic &src) { assign(src); return *this; }
     virtual ~IMP_Generic();
 
-    virtual void assign(const ML_Base &src, int onlySemiCopy = 0) override;
-    virtual void semicopy(const ML_Base &src) override;
-    virtual void qswapinternal(ML_Base &b) override;
+    virtual void assign       (const ML_Base &src, int onlySemiCopy = 0) override;
+    virtual void semicopy     (const ML_Base &src)                       override;
+    virtual void qswapinternal(ML_Base &b)                               override;
 
     virtual int getparam (int ind, gentype         &val, const gentype         &xa, int ia, const gentype         &xb, int ib, charptr &desc) const override;
     virtual int egetparam(int ind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib               ) const override;
 
     virtual std::ostream &printstream(std::ostream &output, int dep) const override;
-    virtual std::istream &inputstream(std::istream &input ) override;
+    virtual std::istream &inputstream(std::istream &input          )       override;
 
-    virtual       ML_Base &getML(void)            override { return static_cast<      ML_Base &>(getIMP()     ); }
+    virtual       ML_Base &getML     (void)       override { return static_cast<      ML_Base &>(getIMP()     ); }
     virtual const ML_Base &getMLconst(void) const override { return static_cast<const ML_Base &>(getIMPconst()); }
 
     // Information functions (training data):
 
-    virtual int tspaceDim(void)     const override { return 1;                          }
-    virtual int xspaceDim(int = -1) const override { return ( zxdim >= 0 ) ? zxdim : 0; }
-    virtual int subtype  (void)     const override { return 0;                          }
-    virtual int isTrained(void)     const override { return disTrained;                 }
-    virtual char targType(void)     const override { return 'N';                        }
+    virtual int  subtype (void)  const override { return 0;   }
+    virtual char targType(void)  const override { return 'N'; }
+
+    virtual int tspaceDim   (void)     const override { return 1;                          }
+    virtual int xspaceDim   (int = -1) const override { return ( zxdim >= 0 ) ? zxdim : 0; }
+
+    virtual int isTrained(void) const override { return disTrained; }
 
     // Data modification
 
@@ -117,15 +119,15 @@ public:
     virtual int setd(const Vector<int> &i, const Vector<int> &nd) override;
     virtual int setd(                      const Vector<int> &nd) override;
 
-    // Training functions:
-
-    virtual int train(int &res, svmvolatile int &) override { (void) res; disTrained = 1; return 0; }
-    virtual int train(int &res) override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
-
     // General modification and autoset functions
 
     virtual int reset(void)   override { untrain(); return 1;       }
     virtual int restart(void) override { return getQ().restart(); }
+
+    // Training functions:
+
+    virtual int train(int &res)                    override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
+    virtual int train(int &res, svmvolatile int &) override { res = 0; disTrained = 1;        return 0;                     }
 
 
 

@@ -161,7 +161,6 @@ int main(int argc, char *argv[])
 
         int svmInd = 1; // not 0 anymore - want to reserve that index for other stuff! 0;
         static thread_local SVMThreadContext *svmContext;
-        SparseVector<ML_Mutable *> svmbase;
         MEMNEW(svmContext,SVMThreadContext(svmInd));
         errstream() << "{";
 
@@ -169,7 +168,7 @@ int main(int argc, char *argv[])
 
         SparseVector<SparseVector<int> > returntag;
 
-        runsvm(svmContext,svmbase,commstack,globargvariables,cligetsetExtVar,returntag);
+        runsvm(svmContext,commstack,globargvariables,cligetsetExtVar,returntag);
 
         // Unlock the thread, signalling that the context can be deleted etc
 
@@ -185,7 +184,7 @@ int main(int argc, char *argv[])
 
         errstream() << "Clearing memory.\n";
 
-        deleteMLs(svmbase);
+        deleteMLs();
 
         cliPrintToOutLog('*',1);
         cliPrintToErrLog('*',1);

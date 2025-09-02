@@ -120,10 +120,11 @@ const gentype &VVcallbackdef(gentype &res, int m, const gentype &kval, const ML_
 #define DEFCMAX 10
 #define DEFEPSMIN 1e-5
 #define DEFEPSMAX 2
-#define NUMZOOMS   2
+#define NUMZOOMS   1
+#define NUMRESTARTS   2
 #define ZOOMFACTOR 0.3
 //#define MAXADIM 10000
-#define MAXADIM 15000
+#define MAXADIM 25000
 
 class tkBounds
 {
@@ -156,8 +157,9 @@ public:
         epsmin = DEFEPSMIN;
         epsmax = DEFEPSMAX;
 
-        numzooms   = NUMZOOMS;
-        zoomfactor = ZOOMFACTOR;
+        numzooms    = NUMZOOMS;
+        numrestarts = NUMRESTARTS;
+        zoomfactor  = ZOOMFACTOR;
     }
 
     Vector<double> wlb; // kernel weight lower bounds
@@ -171,6 +173,7 @@ public:
     double epsmax;
 
     int    numzooms;
+    int    numrestarts;
     double zoomfactor;
 };
 
@@ -347,7 +350,7 @@ public:
     virtual int isMutable(void) const { return 0; }
     virtual int isPool   (void) const { return 0; }
 
-    virtual double calcDist(const gentype &ha, const gentype &hb, int ia = -1, int db = 2) const { (void) ha; (void) hb; (void) ia; (void) db; NiceThrow("calcDist undefined at this level."); return 0; }
+    virtual double calcDist(const gentype &, const gentype &, int ia = -1, int db = 2) const { (void) ia; (void) db; NiceThrow("calcDist undefined at this level."); return 0; }
 
     virtual double calcDistInt(int    ha, int    hb, int ia = -1, int db = 2) const { gentype haa(ha); gentype hbb(hb); return getMLconst().calcDistInt(haa,hbb,ia,db); }
     virtual double calcDistDbl(double ha, double hb, int ia = -1, int db = 2) const { gentype haa(ha); gentype hbb(hb); return getMLconst().calcDistDbl(haa,hbb,ia,db); }
@@ -365,12 +368,13 @@ public:
     virtual const int *ClassLabelsInt     (void)  const {                return &(getMLconst().ClassLabels()(0)); }
     virtual       int  getInternalClassInt(int y) const { gentype yy(y); return getInternalClass(yy);             }
 
-    virtual double C        (void) const { return 1/locsigma;        } // Originally there was no sigma here and the code was designed assuming C() was defined locally,
-    virtual double sigma    (void) const { return 1.0/C();           } // sigma relied on the base version. We can't change this, so we have the roundabout bit here.
-    virtual double sigma_cut(void) const { return DEFAULT_SIGMA_CUT; }
-    virtual double eps      (void) const { return DEFAULTEPS;        }
-    virtual double Cclass   (int)  const { return 1;                 }
-    virtual double epsclass (int)  const { return 1;                 }
+    virtual double C         (void)  const { return 1/locsigma;        } // Originally there was no sigma here and the code was designed assuming C() was defined locally,
+    virtual double sigma     (void)  const { return 1.0/C();           } // sigma relied on the base version. We can't change this, so we have the roundabout bit here.
+    virtual double sigma_cut (void)  const { return DEFAULT_SIGMA_CUT; }
+    virtual double eps       (void)  const { return DEFAULTEPS;        }
+    virtual double Cclass    (int)   const { return 1;                 }
+    virtual double sigmaclass(int d) const { return 1.0/Cclass(d);     }
+    virtual double epsclass  (int)   const { return 1;                 }
 
     virtual       int      prim  (void) const { return xmuprior;    }
     virtual const gentype &prival(void) const { return xmuprior_gt; }
@@ -420,7 +424,7 @@ public:
     virtual const Vector<gentype>                &alphaVal   (void) const { NiceThrow("alphaVal has no meaning here"); static const Vector<gentype> dummy; return dummy; }
     virtual const Vector<int>                    &alphaState (void) const { return xalphaState;                              }
 
-    virtual const SparseVector<gentype> &x       (int i)              const override { return xgetloc(i); }
+    virtual const SparseVector<gentype> &x       (int i)              const override { return xgetloc(i);                                     }
     virtual const SparseVector<gentype> &x       (int i, int altMLid) const override { kernPrecursor *tmp = nullptr; getaltML(tmp,altMLid);  NiceAssert(tmp); return (*tmp).x(i);  }
     virtual const gentype               &y       (int i)              const          { if ( i >= 0 ) { return y()(i);   } return ytargdata;   }
     virtual       double                 yR      (int i)              const          { if ( i >= 0 ) { return yR()(i);  } return ytargdataR;  }
@@ -430,8 +434,8 @@ public:
     virtual       double                 ypR     (int i)              const          { if ( i >= 0 ) { return ypR()(i); } return ytargdatapR; }
     virtual const d_anion               &ypA     (int i)              const          { if ( i >= 0 ) { return ypA()(i); } return ytargdatapA; }
     virtual const Vector<double>        &ypV     (int i)              const          { if ( i >= 0 ) { return ypV()(i); } return ytargdatapV; }
-    virtual const vecInfo               &xinfo   (int i)              const          { return locxinfo(i); }
-    virtual       int                    xtang   (int i)              const          { return locxtang(i); }
+    virtual const vecInfo               &xinfo   (int i)              const          { return locxinfo(i);                                    }
+    virtual       int                    xtang   (int i)              const          { return locxtang(i);                                    }
     virtual       double                 alphaVal(int)                const          { NiceThrow("alphaVal has no meaning here"); return 0.0; }
 
     virtual int xisrank      (int i)                               const { const SparseVector<gentype> &xres = x(i); return xres.isf1offindpresent() || xres.isf4indpresent(1);  }
@@ -439,7 +443,7 @@ public:
     virtual int xisrankorgrad(int i)                               const { const SparseVector<gentype> &xres = x(i); return xres.isf1offindpresent() || xres.isf4indpresent(1) || xres.isf2offindpresent(); }
     virtual int xisclass     (int i, int defaultclass, int q = -1) const { const SparseVector<gentype> &xres = x(i); return ( q == -1 ) ? defaultclass : ( xres.isf4indpresent((100*q)+0) ? ( (int) xres.f4((100*q)+0) ) : defaultclass ); }
 
-    virtual int RFFordata(int) const { return 0; }
+    virtual int RFFordata(int)   const { return 0; }
 
     virtual int isClassifier(void) const { return 0;               }
     virtual int isRegression(void) const { return !isClassifier(); }
@@ -960,7 +964,7 @@ public:
     // space and calls these functions to reflect changes.  They can be
     // polymorphed by child functions where this knowledge is important.
 
-    virtual int randomise  (double sparsity) { (void) sparsity; return 0; }
+    virtual int randomise  (double) { return 0; }
     virtual int autoen     (void);
     virtual int renormalise(void);
     virtual int realign    (void);
@@ -978,18 +982,19 @@ public:
     virtual int setmaxtraintime(double xmaxtraintime) { (void) xmaxtraintime; return 0; }
     virtual int settraintimeend(double xtraintimeend) { (void) xtraintimeend; return 0; }
 
-    virtual int setmaxitermvrank(int    nv) { (void) nv; NiceThrow("Function setmaxitermvrank not available for this ML type."); return 0; }
-    virtual int setlrmvrank     (double nv) { (void) nv; NiceThrow("Function setlrmvrank not available for this ML type.");      return 0; }
-    virtual int setztmvrank     (double nv) { (void) nv; NiceThrow("Function setztmvrank not available for this ML type.");      return 0; }
+    virtual int setmaxitermvrank(int)    { NiceThrow("Function setmaxitermvrank not available for this ML type."); return 0; }
+    virtual int setlrmvrank     (double) { NiceThrow("Function setlrmvrank not available for this ML type.");      return 0; }
+    virtual int setztmvrank     (double) { NiceThrow("Function setztmvrank not available for this ML type.");      return 0; }
 
     virtual int setbetarank(double nv) { (void) nv; NiceThrow("Function setbetarank not available for this ML type."); return 0; }
 
-    virtual int setC        (double xC)          { locsigma = 1/xC;             return 1; }
-    virtual int setsigma    (double xsigma)      { locsigma = (xsigma<SIGMA_MIN)?SIGMA_MIN:xsigma; return setC(1/locsigma); }
-    virtual int setsigma_cut(double xsigma_cut)  {           (void) xsigma_cut; return 0; }
-    virtual int seteps      (double xeps)        {           (void) xeps;       return 0; }
-    virtual int setCclass   (int d, double xC)   { (void) d; (void) xC;         return 0; }
-    virtual int setepsclass (int d, double xeps) { (void) d; (void) xeps;       return 0; }
+    virtual int setC         (double xC)          { locsigma = 1/xC;             return 1; }
+    virtual int setsigma     (double xsigma)      { locsigma = (xsigma<SIGMA_MIN)?SIGMA_MIN:xsigma; return setC(1/locsigma); }
+    virtual int setsigma_cut (double xsigma_cut)  {           (void) xsigma_cut; return 0; }
+    virtual int seteps       (double xeps)        {           (void) xeps;       return 0; }
+    virtual int setCclass    (int d, double xC)   { (void) d; (void) xC;         return 0; }
+    virtual int setsigmaclass(int d, double xsig) { return setCclass(d,1/xsig); }
+    virtual int setepsclass  (int d, double xeps) { (void) d; (void) xeps;       return 0; }
 
     virtual int setprim  (int nv)            { xmuprior    = nv; calcallprior(); return 0; }
     virtual int setprival(const gentype &nv) { xmuprior_gt = nv; calcallprior(); return 0; }
@@ -1005,21 +1010,21 @@ public:
     virtual int scaleby(double sf) { *this *= sf; return 1; }
 
     virtual int settspaceDim    (int newdim);
-    virtual int addtspaceFeat   (int i);
-    virtual int removetspaceFeat(int i);
-    virtual int addxspaceFeat   (int) { return 0; }
-    virtual int removexspaceFeat(int) { return 0; }
+    virtual int addtspaceFeat   (int i     );
+    virtual int removetspaceFeat(int i     );
+    virtual int addxspaceFeat   (int       ) { return 0; }
+    virtual int removexspaceFeat(int       ) { return 0; }
 
     virtual int setsubtype(int i) { (void) i; NiceAssert( i == 0 ); return 0; }
 
     virtual int setorder(int neword);
     virtual int addclass(int label, int epszero = 0) { (void) label; (void) epszero; NiceThrow("Function addclass not available for this ML type"); return 0; }
 
-    virtual int setNRff   (int nv) { (void) nv; NiceThrow("Function setNRff not available for this ML type.");    return 0; }
-    virtual int setNRffRep(int nv) { (void) nv; NiceThrow("Function setNRffRep not available for this ML type."); return 0; }
-    virtual int setReOnly (int nv) { (void) nv; NiceThrow("Function setReOnly not available for this ML type.");  return 0; }
-    virtual int setinAdam (int nv) { (void) nv; NiceThrow("Function setInAdam not available for this ML type.");  return 0; }
-    virtual int setoutGrad(int nv) { (void) nv; NiceThrow("Function setoutGrad not available for this ML type."); return 0; }
+    virtual int setNRff   (int) { NiceThrow("Function setNRff not available for this ML type.");    return 0; }
+    virtual int setNRffRep(int) { NiceThrow("Function setNRffRep not available for this ML type."); return 0; }
+    virtual int setReOnly (int) { NiceThrow("Function setReOnly not available for this ML type.");  return 0; }
+    virtual int setinAdam (int) { NiceThrow("Function setInAdam not available for this ML type.");  return 0; }
+    virtual int setoutGrad(int) { NiceThrow("Function setoutGrad not available for this ML type."); return 0; }
 
     // Sampling mode
     //
@@ -1086,11 +1091,11 @@ public:
     // NB: - killSwitch is polled periodically, and training will terminate
     //       early if it is set.  This is designed for multi-thread use.
 
-    virtual void fudgeOn (void) { }
-    virtual void fudgeOff(void) { }
+    virtual void fudgeOn (void) { ; }
+    virtual void fudgeOff(void) { ; }
 
-    virtual int train(int &res)                              { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
-    virtual int train(int &res, svmvolatile int &killSwitch) { (void) res;     killSwitch = 0; return 0;                     }
+    virtual int train(int &res)                    { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
+    virtual int train(int &res, svmvolatile int &) { res = 0;                        return 0;                     }
 
     // Information functions:
     //
@@ -1235,11 +1240,11 @@ public:
 
     // var and covar functions
 
-    virtual int varTrainingVector(gentype &resv, gentype &resmu, int i, gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const { return covTrainingVector(resv,resmu,i,i,pxyprodi,pxyprodi,pxyprodii); }
-    virtual int var(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int res = covTrainingVector(resv,resmu,ia,ia,pxyprodx,pxyprodx,pxyprodxx); resetInnerWildp(xainf == nullptr); return res; }
+    virtual int varTrainingVector(gentype &resv, gentype &resmu, int i,                                                           gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const { return covTrainingVector(resv,resmu,i,i,pxyprodi,pxyprodi,pxyprodii); }
+    virtual int var              (gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int res = covTrainingVector(resv,resmu,ia,ia,pxyprodx,pxyprodx,pxyprodxx); resetInnerWildp(xainf == nullptr); return res; }
 
-    virtual int covarTrainingVector(Matrix<gentype> &resv, const Vector<int> &i) const;
-    virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const;
+    virtual int covarTrainingVector(Matrix<gentype> &resv, const Vector<int> &i)                    const;
+    virtual int covar              (Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const;
 
     // Input-Output noise calculation
     //
@@ -1254,11 +1259,11 @@ public:
     // (basically we model output noise as input noise times gradient,
     // assuming input noise is "small" relative to gradient variation).
 
-    virtual int noisevarTrainingVector(gentype &resv, gentype &resmu, int i, const SparseVector<gentype> &xvar, int u = -1, gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const;
-    virtual int noisevar(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int res = noisevarTrainingVector(resv,resmu,ia,xvar,u,pxyprodx,pxyprodxx); resetInnerWildp(xainf == nullptr); return res; }
+    virtual int noisevarTrainingVector(gentype &resv, gentype &resmu, int i,                           const SparseVector<gentype> &xvar, int u = -1,                                 gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const;
+    virtual int noisevar              (gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int res = noisevarTrainingVector(resv,resmu,ia,xvar,u,pxyprodx,pxyprodxx); resetInnerWildp(xainf == nullptr); return res; }
 
-    virtual int noisecovTrainingVector(gentype &resv, gentype &resmu, int i, int j, const SparseVector<gentype> &xvar, int u = -1, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const;
-    virtual int noisecov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodxy = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int res = noisecovTrainingVector(resv,resmu,ia,ib,xvar,u,pxyprodx,pxyprody,pxyprodxy); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
+    virtual int noisecovTrainingVector(gentype &resv, gentype &resmu, int i,                           int j,                           const SparseVector<gentype> &xvar, int u = -1,                                                                 gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const;
+    virtual int noisecov              (gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodxy = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int res = noisecovTrainingVector(resv,resmu,ia,ib,xvar,u,pxyprodx,pxyprody,pxyprodxy); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
 
     // Training data tracking functions:
     //
@@ -1291,7 +1296,7 @@ public:
 
     virtual void setaltx(const ML_Base *_altxsrc) { incxvernum(); altxsrc = _altxsrc; }
 
-    virtual int disable(int i);
+    virtual int disable(int                i);
     virtual int disable(const Vector<int> &i);
 
     // ================================================================
@@ -1859,10 +1864,6 @@ public:
 
         return methodkey;
     }
-
-
-
-
 
 protected:
 

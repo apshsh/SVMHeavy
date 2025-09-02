@@ -59,6 +59,7 @@ public:
 
     // Training functions - we need to overwrite this enable EP if inequality constraints are present
 
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
     virtual int train(int &res, svmvolatile int &killSwitch) override;
 
     // Evaluation Functions:

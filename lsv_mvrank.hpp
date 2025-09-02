@@ -104,12 +104,13 @@ public:
     virtual const int *ClassLabelsInt(void) const override { return ML_Base::ClassLabelsInt();       }
     virtual int  getInternalClassInt(int y) const override { return ML_Base::getInternalClassInt(y); }
 
-    virtual double C        (void)  const override { return getQconst().C();         }
-    virtual double sigma    (void)  const override { return getQconst().sigma();     }
-    virtual double sigma_cut(void)  const override { return getQconst().sigma_cut(); }
-    virtual double eps      (void)  const override { return getQconst().eps();       }
-    virtual double Cclass   (int d) const override { return getQconst().Cclass(d);   }
-    virtual double epsclass (int d) const override { return getQconst().epsclass(d); }
+    virtual double C         (void)  const override { return getQconst().C();           }
+    virtual double sigma     (void)  const override { return getQconst().sigma();       }
+    virtual double sigma_cut (void)  const override { return getQconst().sigma_cut();   }
+    virtual double eps       (void)  const override { return getQconst().eps();         }
+    virtual double Cclass    (int d) const override { return getQconst().Cclass(d);     }
+    virtual double sigmaclass(int d) const override { return getQconst().sigmaclass(d); }
+    virtual double epsclass  (int d) const override { return getQconst().epsclass(d);   }
 
     virtual       int      prim  (void) const override { return getQconst().prim();   }
     virtual const gentype &prival(void) const override { return getQconst().prival(); }
@@ -491,12 +492,13 @@ public:
 
     virtual int setbetarank(double nv) override { return getQ().setbetarank(nv); }
 
-    virtual int setC        (double xC)          override { return getQ().setC(xC);            }
-    virtual int setsigma    (double xC)          override { return getQ().setsigma(xC);        }
-    virtual int setsigma_cut(double xC)          override { return getQ().setsigma_cut(xC);    }
-    virtual int seteps      (double xeps)        override { return getQ().seteps(xeps);        }
-    virtual int setCclass   (int d, double xC)   override { return getQ().setCclass(d,xC);     }
-    virtual int setepsclass (int d, double xeps) override { return getQ().setepsclass(d,xeps); }
+    virtual int setC         (double xC)          override { return getQ().setC(xC);              }
+    virtual int setsigma     (double xC)          override { return getQ().setsigma(xC);          }
+    virtual int setsigma_cut (double xC)          override { return getQ().setsigma_cut(xC);      }
+    virtual int seteps       (double xeps)        override { return getQ().seteps(xeps);          }
+    virtual int setCclass    (int d, double xC)   override { return getQ().setCclass(d,xC);       }
+    virtual int setsigmaclass(int d, double xsig) override { return getQ().setsigmaclass(d,xsig); }
+    virtual int setepsclass  (int d, double xeps) override { return getQ().setepsclass(d,xeps);   }
 
     virtual int setprim  (int nv)            override { return getQ().setprim(nv);   }
     virtual int setprival(const gentype &nv) override { return getQ().setprival(nv); }
@@ -538,8 +540,8 @@ public:
     virtual void fudgeOn(void)  override { getQ().fudgeOn();  return; }
     virtual void fudgeOff(void) override { getQ().fudgeOff(); return; }
 
-    virtual int train(int &res) override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
-    virtual int train(int &res, svmvolatile int &killSwitch) override { return getQ().train(res,killSwitch); }
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch);        }
+    virtual int train(int &res, svmvolatile int &killSwitch) override {                                 return getQ().train(res,killSwitch); }
 
     // Evaluation Functions:
 

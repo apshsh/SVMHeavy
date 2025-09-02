@@ -139,7 +139,8 @@ class fninnerinnerArg
                     const double &_ztol,
                     const double &_delta,
                     const double &_zeta,
-                    const double &_nu,
+                    const double &_q_defnu,
+                    double &_q_nuscale,
                     gentype &_ires,
                     const double &_a,
                     const double &_b,
@@ -188,7 +189,8 @@ class fninnerinnerArg
                     const int &_unscentK,
                     const Matrix<double> &_unscentSqrtSigma,
                     const int &_stabUseSig,
-                    const double &_stabThresh) : bbopts(_bbopts),
+                    const double &_stabThresh,
+                    const int &_iires) : bbopts(_bbopts),
                                                 _q_x(&_x),
                                                 muy(_muy),
                                                 sigmay(_sigmay),
@@ -198,7 +200,8 @@ class fninnerinnerArg
                                                 ztol(_ztol),
                                                 _q_delta(_delta),
                                                 _q_zeta(_zeta),
-                                                _q_nu(_nu),
+                                                _q_defnu(_q_defnu),
+                                                _q_nuscale(_q_nuscale),
                                                 ires(_ires),
                                                 _q_a(_a),
                                                 _q_b(_b),
@@ -249,8 +252,10 @@ class fninnerinnerArg
                                                 stabUseSig(_stabUseSig),
                                                 stabThresh(_stabThresh),
                                                 mode(0),
-                                                storebeta(0.0),
-                                                storeepspinf(false)
+                                                storeeps(0.0),
+                                                storeepspinf(false),
+                                                storenu(1.0),
+                                                iires(_iires)
     {
         return;
     }
@@ -265,7 +270,8 @@ class fninnerinnerArg
                                                   ztol(src.ztol),
                                                   _q_delta(src._q_delta),
                                                   _q_zeta(src._q_zeta),
-                                                  _q_nu(src._q_nu),
+                                                  _q_defnu(src._q_defnu),
+                                                  _q_nuscale(src._q_nuscale),
                                                   ires(src.ires),
                                                   _q_a(src._q_a),
                                                   _q_b(src._q_b),
@@ -316,8 +322,10 @@ class fninnerinnerArg
                                                   stabUseSig(src.stabUseSig),
                                                   stabThresh(src.stabThresh),
                                                   mode(0),
-                                                  storebeta(0.0),
-                                                  storeepspinf(false)
+                                                  storeeps(0.0),
+                                                  storeepspinf(false),
+                                                  storenu(1.0),
+                                                  iires(src.iires)
     {
         NiceThrow("Can't use copy constructer on fninnerinnerArg");
     }
@@ -338,7 +346,8 @@ class fninnerinnerArg
     const double &ztol;
     double _q_delta;
     double _q_zeta;
-    double _q_nu;
+    double _q_defnu;
+    double &_q_nuscale; // we want to tune this as we go along!
     gentype &ires;
     double _q_a;
     double _q_b;
@@ -391,8 +400,11 @@ class fninnerinnerArg
     int PIscale = bbopts.PIscale;
 
     int mode; // 0 for normal, set 1 when entering DirECT, which will calc beta and zero x precisely once then set to 2, set 2 for no beta calc/x zero
-    double storebeta;
+    double storeeps;
     bool storeepspinf;
+    double storenu;
+
+    const int &iires; // if -1 then we don't have a solution, so use alternative acquisition function to force exploration!
 
     double fnfnapprox(int n, const double *xx)
     {
@@ -443,19 +455,20 @@ class fninnerinnerArg
 
   double fnfnapproxNoUnscent(int n, const double *xx)
   {
-    double delta = _q_delta;
-    double zeta  = _q_zeta;
-    double nu    = _q_nu;
-    double a     = _q_a;
-    double b     = _q_b;
-    double r     = _q_r;
-    double p     = _q_p;
-    double modD  = _q_modD;
-    double R     = _q_R;
-    double B     = _q_BB;
-    double mig   = _q_mig;
+    double delta   = _q_delta;
+    double zeta    = _q_zeta;
+    double defnu   = _q_defnu;
+    double nuscale = _q_nuscale; // this can change with user input!
+    double a       = _q_a;
+    double b       = _q_b;
+    double r       = _q_r;
+    double p       = _q_p;
+    double modD    = _q_modD;
+    double R       = _q_R;
+    double B       = _q_BB;
+    double mig     = _q_mig;
 
-    int locmethod       = _q_locmethod;
+    int locmethod       = ( (bbopts.cgtapprox).size() && ( iires == -1 ) ) ? 100 : _q_locmethod;
     int thisbatchsize   = _q_thisbatchsize;
     int thisbatchmethod = _q_thisbatchmethod;
     int gridi           = _q_gridi;
@@ -483,6 +496,8 @@ class fninnerinnerArg
     bool epspinf = false;
     int betasgn  = ( locmethod >= 0 ) ? 1 : -1;
     int method   = betasgn*locmethod;
+    double eps   = 0;
+    double nu    = 1;
 
     // We start by working out beta. We do this for all cases, even IMP etc.
     //
@@ -494,8 +509,6 @@ class fninnerinnerArg
     {
         double altiters = static_cast<double>(( itcntmethod == 2 ) ? iters-itinbatch : iters); //+1;
         double d        = (double) dim;
-        double eps      = 0;
-        double locnu    = 1; // nu (beta scale) only applied to Srinivas variants of GP-UCB.
         double dvalreal = d-(bbopts.getdimfid()); // don't include fidelity variables in this scaling: it's not really a "feature" in the usual sense
 
         switch ( method )
@@ -507,44 +520,50 @@ class fninnerinnerArg
 
             //FIXME ell1 should be the L1 diameter of X computed by scaling each dimension by the inverse of the SE bandwitdh
 
-            case 0:  /* Mean only           */ {             eps = 0;                                                                                        break; }
-            case 1:  /* EI                  */ {             eps = 0;                                                                                        break; }
-            case 2:  /* PI                  */ {             eps = 0;                                                                                        break; }
-            case 12: /* TS-Kand             */ {             eps = 0;                                                                                        break; }
-            case 16: /* TS-Kand             */ {             eps = 0;                                                                                        break; }
-            case 9:  /* PE                  */ {             eps = valpinf();  epspinf = true;                                                               break; }
-            case 10: /* PEc                 */ {             eps = valpinf();  epspinf = true;                                                               break; }
-            case 18: /* Human               */ {             eps = valvnan();                                                                                break; }
-            case 19: /* HE                  */ {             eps = 0.001;                                                                                    break; }
-            case 4:  /* gpUCB finite        */ { locnu = nu; eps = 2*log(modD*pow(altiters,2)*(NUMBASE_PI*NUMBASE_PI/(6*delta)));                            break; }
-            case 5:  /* gpUCB infinite      */ { locnu = nu; eps = (2*log(pow(altiters,2)*(2*NUMBASE_PI*NUMBASE_PI/(3*delta)))) + (2*thisbatchsize*dvalreal*log(((thisbatchsize==1)?1.0:2.0)*pow(altiters,2)*dvalreal*b*r*sqrt(log(4*thisbatchsize*dvalreal*a/delta)))); break; }
-            case 7:  /* gpUCB p finite      */ { locnu = nu; eps = 2*log(modD*numbase_zeta(p)*pow(altiters,p)/delta);                                        break; }
-            case 8:  /* gpUCB p infinite    */ { locnu = nu; eps = (2*log(4*numbase_zeta(p)*pow(altiters,p)/delta)) + (2*thisbatchsize*dvalreal*log(((thisbatchsize==1)?1.0:2.0)*pow(altiters,2)*dvalreal*b*r*sqrt(log(4*thisbatchsize*dvalreal*a/delta)))); break; }
-            case 11: /* gpUCB user def      */ {             gentype teval(altiters); gentype deval((double) dvalreal); gentype deltaeval(delta); gentype modDeval(modD); gentype aeval(a); eps = (double) betafn(teval,deval,deltaeval,modDeval,aeval); break; }
-            case 13: /* gpUCB inf RKHS Sri1 */ { locnu = nu; eps = (2*B) + (300*mig*pow(log(altiters/delta),3));                                             break; }
-            case 3:  /* gpUCB basic         */ {             eps = 2*log(pow(altiters,(2+(dvalreal/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta)));                  break; }
-            case 6:  /* gpUCB p basic       */ {             eps = 2*log(2*pow(sqrt(altiters),dvalreal)*numbase_zeta(p)*pow(altiters,p)/delta);              break; }
-            case 14: /* gpUCB inf RKHS Cho7 */ {             eps = B + (R*sqrt(2*(mig+1+log(2/delta)))); eps *= eps;                                         break; }
-            case 15: /* gpUCB inf RKHS Bog2 */ {             eps = B + (R*sqrt(2*(mig+(2*log(1/delta)))));eps *= eps;                                        break; }
-            case 17: /* gpUCB MultiFid      */ {             double ell1 = dvalreal/(bbopts.model_lenscale(0)); eps = 0.5*dvalreal*log((2*ell1*altiters)+1); break; }
-            case 20: /* gpUCB as in BO-Muse */ {             eps = sqrt(bbopts.model_sigma(0)*((2*log(1/delta))+1+mig))+B; eps = 7*eps*eps;                  break; }
-            default: /* fallback trigger    */ {             eps = valvnan();                                                                                break; }
+            case 0:   /* Mean only           */ { nu = 1;     eps = 0;                                                                                        break; }
+            case 1:   /* EI                  */ { nu = 1;     eps = 0;                                                                                        break; }
+            case 2:   /* PI                  */ { nu = 1;     eps = 0;                                                                                        break; }
+            case 12:  /* TS-Kand             */ { nu = 1;     eps = 0;                                                                                        break; }
+            case 16:  /* TS-Kand             */ { nu = 1;     eps = 0;                                                                                        break; }
+            case 19:  /* HE                  */ { nu = 1;     eps = 0.001;                                                                                    break; }
+            case 9:   /* PE                  */ { nu = 1;     eps = valpinf();  epspinf = true;                                                               break; }
+            case 10:  /* PEc                 */ { nu = 1;     eps = valpinf();  epspinf = true;                                                               break; }
+            case 100: /* PEc-b               */ { nu = 1;     eps = valpinf();  epspinf = true;                                                               break; }
+            case 4:   /* gpUCB finite        */ { nu = defnu; eps = 2*log(modD*pow(altiters,2)*(NUMBASE_PI*NUMBASE_PI/(6*delta)));                            break; }
+            case 5:   /* gpUCB infinite      */ { nu = defnu; eps = (2*log(pow(altiters,2)*(2*NUMBASE_PI*NUMBASE_PI/(3*delta)))) + (2*thisbatchsize*dvalreal*log(((thisbatchsize==1)?1.0:2.0)*pow(altiters,2)*dvalreal*b*r*sqrt(log(4*thisbatchsize*dvalreal*a/delta)))); break; }
+            case 7:   /* gpUCB p finite      */ { nu = defnu; eps = 2*log(modD*numbase_zeta(p)*pow(altiters,p)/delta);                                        break; }
+            case 8:   /* gpUCB p infinite    */ { nu = nu;    eps = (2*log(4*numbase_zeta(p)*pow(altiters,p)/delta)) + (2*thisbatchsize*dvalreal*log(((thisbatchsize==1)?1.0:2.0)*pow(altiters,2)*dvalreal*b*r*sqrt(log(4*thisbatchsize*dvalreal*a/delta)))); break; }
+            case 11:  /* gpUCB user def      */ { nu = 1;     gentype teval(altiters); gentype deval((double) dvalreal); gentype deltaeval(delta); gentype modDeval(modD); gentype aeval(a); eps = (double) betafn(teval,deval,deltaeval,modDeval,aeval); break; }
+            case 13:  /* gpUCB inf RKHS Sri1 */ { nu = defnu; eps = (2*B) + (300*mig*pow(log(altiters/delta),3));                                             break; }
+            case 3:   /* gpUCB basic         */ { nu = 1;     eps = 2*log(pow(altiters,(2+(dvalreal/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta)));                  break; }
+            case 6:   /* gpUCB p basic       */ { nu = 1;     eps = 2*log(2*pow(sqrt(altiters),dvalreal)*numbase_zeta(p)*pow(altiters,p)/delta);              break; }
+            case 14:  /* gpUCB inf RKHS Cho7 */ { nu = 1;     eps = B + (R*sqrt(2*(mig+1+log(2/delta)))); eps *= eps;                                         break; }
+            case 15:  /* gpUCB inf RKHS Bog2 */ { nu = 1;     eps = B + (R*sqrt(2*(mig+(2*log(1/delta)))));eps *= eps;                                        break; }
+            case 17:  /* gpUCB MultiFid      */ { nu = 1;     double ell1 = dvalreal/(bbopts.model_lenscale(0)); eps = 0.5*dvalreal*log((2*ell1*altiters)+1); break; }
+            case 20:  /* gpUCB as in BO-Muse */ { nu = 1;     eps = sqrt(bbopts.model_sigma(0)*((2*log(1/delta))+1+mig))+B; eps = 7*eps*eps;                  break; }
+            case 18:  /* Human               */ { nu = 1;     eps = valvnan();                                                                                break; }
+            default:  /* fallback trigger    */ { nu = 1;     eps = valvnan();                                                                                break; }
         }
 
         StrucAssert( !testisvnan(eps) ); // Human and fallback will trigger this, but if either reaches here then that's an error
 
-        beta = locnu*eps;
+        storeeps = eps;
+        storenu  = nu;
 
-        storebeta    = beta;
         storeepspinf = epspinf;
+
         x.zero();
     }
 
     else if ( mode == 2 )
     {
-        beta    = storebeta;
+        eps = storeeps;
+        nu  = storenu;
+
         epspinf = storeepspinf;
     }
+
+    beta = nuscale*nu*eps; // remember that nu can change!
 
     if ( justreturnbeta == 1 )
     {
@@ -770,13 +789,25 @@ class fninnerinnerArg
 
     double resscale = 1.0;
 
-    if ( PIscale )
+    if ( (bbopts.cgtapprox).size() && PIscale && ( iires >= 0 ) ) // don't do this if we don't have any solution yet, as that indicates to feasible results and hence completely flat CGT!
     {
         NiceAssert( !ymax.isValVector() && !muy.isValVector() );
 
-        if      ( (double) sigmay > ztol      ) { resscale = normPhi( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay ); }
-        else if ( (double) muy < yymaxcorrect ) { resscale = 0;                                                                }
-        else                                    { resscale = 1;                                                                }
+//errstream() << "phantomxyz muy > yymaxoccrect? " << muy << " ?>? " << yymaxcorrect << " (" << sigmay << ")";
+//errstream() << "\n";
+//errstream() << "(double) muy = " << ((double) muy) << "\n";
+//errstream() << "(double) sigmay = " << ((double) sigmay) << "\n";
+//errstream() << "( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay ) = " << ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay ) << "\n";
+//errstream() << "( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )*NUMBASE_SQRT1ON2 = " << ( ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )*NUMBASE_SQRT1ON2) << "\n";
+//errstream() << "erf( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay ) = " << erf(( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )*NUMBASE_SQRT1ON2) << "\n";
+//errstream() << "normPhi( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay ) = " << normPhi( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay ) << "\n";
+//double tempvalue = ( ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )*NUMBASE_SQRT1ON2);
+//errstream() << "tempvalue = " << tempvalue << "\n";
+//errstream() << "normPhi(tempvalue) = " << normPhi(tempvalue) << "\n";
+        if      ( (double) sigmay > ztol      ) { double tempvalue = ( ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )*NUMBASE_SQRT1ON2); resscale = normPhi(tempvalue); }
+        else if ( (double) muy < yymaxcorrect ) { resscale = 0; }
+        else                                    { resscale = 1; }
+//errstream() << "(" << resscale << ")\n";
     }
 
     // =======================================================================
@@ -785,7 +816,7 @@ class fninnerinnerArg
     // =======================================================================
     // =======================================================================
 
-    if ( (bbopts.cgtapprox).size() && ( bbopts.cgtmethod == 1 ) )
+    if ( (bbopts.cgtapprox).size() && ( bbopts.cgtmethod == 1 ) && ( iires >= 0 ) ) // don't do this if we don't have any solution yet, as that indicates to feasible results and hence completely flat CGT!
     {
         NiceAssert( thisbatchsize == 1 );
 
@@ -815,9 +846,9 @@ class fninnerinnerArg
             double ecgt   = (double) mucgt(i);
             double vcgtsq = (double) varcgtsq(i);
 
-            if      ( testisvnan(vcgtsq) ) { errstream() << "varcgt NaN in Bayesian Optimisation!\n"; vcgtsq = 0.0; }
-            else if ( testisinf(vcgtsq)  ) { errstream() << "varcgt inf in Bayesian Optimisation!\n"; vcgtsq = 0.0; }
-            else if ( vcgtsq <= 0        ) { errstream() << "varcgt neg in Bayesian Optimisation!\n"; vcgtsq = 0.0; }
+            if      ( testisvnan(vcgtsq) ) { errstream() << "varcgt " << vcgtsq << " NaN in Bayesian Optimisation!\n"; vcgtsq = 0.0; }
+            else if ( testisinf(vcgtsq)  ) { errstream() << "varcgt " << vcgtsq << " inf in Bayesian Optimisation!\n"; vcgtsq = 0.0; }
+            else if ( vcgtsq <= 0        ) { errstream() << "varcgt " << vcgtsq << " or " << varcgtsq(i) << " neg in Bayesian Optimisation!\n"; vcgtsq = 0.0; }
 
             // This is basically PI
 
@@ -843,6 +874,10 @@ class fninnerinnerArg
 
         cgtmean("&",(bbopts.cgtapprox).size()) = (double) muy;
         cgtvar("&",(bbopts.cgtapprox).size())  = (double) sigmay;
+//errstream() << "phantomxyz muy: " << muy << "\n";
+//errstream() << "phantomxyz sigmay: " << sigmay << "\n";
+//errstream() << "phantomxyz muy_cgt: " << cgtmean(0) << "\n";
+//errstream() << "phantomxyz sigmay_cgt: " << cgtvar(0) << "\n";
 
         // See Goodman: On the Exact Variance of Products
 
@@ -890,6 +925,8 @@ class fninnerinnerArg
 
         muy    = meantot;      // corrected mean
         sigmay = sqrt(vartot); // corrected variance
+//errstream() << "phantomxyz muy_corrected: " << muy << "\n";
+//errstream() << "phantomxyz sigmay_corrected: " << sigmay << "\n";
     }
 
     // =======================================================================
@@ -1121,9 +1158,18 @@ class fninnerinnerArg
 
                 NiceAssert( !isstable );
 
-                if      ( (double) sigmay > ztol      ) { res = normPhi(( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )); }
+                if      ( (double) sigmay > ztol      ) { double tempvalue = ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay ); res = normPhi(tempvalue); }
                 else if ( (double) muy > yymaxcorrect ) { res = 1;                                                                  }
                 else                                    { res = 0;                                                                  }
+
+                break;
+            }
+
+            case 100:
+            {
+                // PEc-b
+
+                res = 0;
 
                 break;
             }
@@ -1198,7 +1244,7 @@ locsigmay = stabscore*stabscore*locsigmay;
     // =======================================================================
     // =======================================================================
 
-    if ( (bbopts.cgtapprox).size() && ( bbopts.cgtmethod == 0 ) )
+    if ( (bbopts.cgtapprox).size() && ( ( bbopts.cgtmethod == 0 ) || ( iires == -1 ) ) ) // don't do this if we don't have any solution yet, as that indicates to feasible results and hence completely flat CGT!
     {
         Vector<gentype> mucgt;
         Vector<gentype> varcgt;
@@ -1234,9 +1280,9 @@ locsigmay = stabscore*stabscore*locsigmay;
 
             // Sanity check here!
 
-            if      ( testisvnan(vcgt) ) { errstream() << "varcgt NaN in Bayesian Optimisation!\n"; vcgt = 0.0; }
-            else if ( testisinf(vcgt)  ) { errstream() << "varcgt inf in Bayesian Optimisation!\n"; vcgt = 0.0; }
-            else if ( vcgt <= 0        ) { errstream() << "varcgt neg in Bayesian Optimisation!\n"; vcgt = 0.0; }
+            if      ( testisvnan(vcgt) ) { errstream() << "varcgt " << vcgt << " NaN in Bayesian Optimisation!\n"; vcgt = 0.0; }
+            else if ( testisinf(vcgt)  ) { errstream() << "varcgt " << vcgt << " inf in Bayesian Optimisation!\n"; vcgt = 0.0; }
+            else if ( vcgt <= 0        ) { errstream() << "varcgt " << vcgt << " or " << varcgt << " neg in Bayesian Optimisation!\n"; vcgt = 0.0; }
 
             // This is basically PI
 
@@ -1254,8 +1300,9 @@ locsigmay = stabscore*stabscore*locsigmay;
 
         // Method 10 aims for exploration in constraints and objective
 
-        if ( method == 10 ) { res += betasgn*totalconstraintvariance; }
-        else                { res *= probofvalid;                     }
+        if      ( method == 10  ) { res += betasgn*totalconstraintvariance; }
+        else if ( method == 100 ) { res  = betasgn*totalconstraintvariance; }
+        else                      { res *= probofvalid;                     }
     }
 
     // =======================================================================
@@ -1576,6 +1623,7 @@ static gentype &negateoutery(gentype &res)
 // obstype_cgt:      NULL or vector:  observations type for ycgt
 // addexp:           NULL or gentype: additional observation of the same form (recursively)
 // fidcost:          NULL or double:  cost of evaluation for multi-fidelity (-1 for calculate in code, default)
+// nuscale:          NULL or double:  scaling factor on beta in acquisition function
 //
 // use of NULL: if a variable is NULL or absent then the corresponding vector is not set
 // replacexx: this is set if xxreplace is set
@@ -1590,7 +1638,8 @@ static void readres(gentype &res,
                     Vector<gentype> &xsidechan,
                     int &xobstype,
                     Vector<int> &xobstype_cgt,
-                    double &fidcost);
+                    double &fidcost,
+                    double &nuscale);
 
 
 static void readres(gentype &res,
@@ -1603,7 +1652,8 @@ static void readres(gentype &res,
                     Vector<gentype> &xsidechan,
                     int &xobstype,
                     Vector<int> &xobstype_cgt,
-                    double &fidcost)
+                    double &fidcost,
+                    double &nuscale)
 {
     // Defaults
 
@@ -1628,18 +1678,19 @@ static void readres(gentype &res,
 
         const Set<gentype> &z = (const Set<gentype> &) res;
 
-        if ( ( z.size() >= 3 ) && !z.all()(2).isValNull() ) { ycgt = z.all()(2).cast_vector();      }
-        if ( ycgt.size() && !xobstype_cgt.size()          ) { xobstype_cgt.resize(ycgt.size()) = 2; }
+        if ( ( z.size() >= 3  ) && !z.all()(2) .isValNull() ) { ycgt = z.all()(2).cast_vector();      }
+        if ( ycgt.size() && !xobstype_cgt.size()            ) { xobstype_cgt.resize(ycgt.size()) = 2; }
 
-        if ( ( z.size() >= 1  ) && !z.all()(0).isValNull() ) { res          =          z.all()(0);                     resSet = true; }
-        if ( ( z.size() >= 2  ) && !z.all()(1).isValNull() ) { addvar       = (double) z.all()(1);                                    }
-        if ( ( z.size() >= 4  ) && !z.all()(3).isValNull() ) { xxreplace    =          z.all()(3).cast_sparsevector(); replacexx = 1; }
-        if ( ( z.size() >= 5  ) && !z.all()(4).isValNull() ) { addexp       =          z.all()(4);                                    }
-        if ( ( z.size() >= 6  ) && !z.all()(5).isValNull() ) { stopflags    = (int)    z.all()(5);                                    }
-        if ( ( z.size() >= 7  ) && !z.all()(6).isValNull() ) { xsidechan    =          z.all()(6).cast_vector();                      }
-        if ( ( z.size() >= 8  ) && !z.all()(7).isValNull() ) { xobstype     = (int)    z.all()(7);                                    }
-        if ( ( z.size() >= 9  ) && !z.all()(8).isValNull() ) { xobstype_cgt =          z.all()(8).cast_vector_int();                  }
-        if ( ( z.size() >= 10 ) && !z.all()(9).isValNull() ) { fidcost      = (double) z.all()(9);                                    }
+        if ( ( z.size() >= 1  ) && !z.all()(0) .isValNull() ) { res          =          z.all()(0);                     resSet = true; }
+        if ( ( z.size() >= 2  ) && !z.all()(1) .isValNull() ) { addvar       = (double) z.all()(1);                                    }
+        if ( ( z.size() >= 4  ) && !z.all()(3) .isValNull() ) { xxreplace    =          z.all()(3).cast_sparsevector(); replacexx = 1; }
+        if ( ( z.size() >= 5  ) && !z.all()(4) .isValNull() ) { addexp       =          z.all()(4);                                    }
+        if ( ( z.size() >= 6  ) && !z.all()(5) .isValNull() ) { stopflags    = (int)    z.all()(5);                                    }
+        if ( ( z.size() >= 7  ) && !z.all()(6) .isValNull() ) { xsidechan    =          z.all()(6).cast_vector();                      }
+        if ( ( z.size() >= 8  ) && !z.all()(7) .isValNull() ) { xobstype     = (int)    z.all()(7);                                    }
+        if ( ( z.size() >= 9  ) && !z.all()(8) .isValNull() ) { xobstype_cgt =          z.all()(8).cast_vector_int();                  }
+        if ( ( z.size() >= 10 ) && !z.all()(9) .isValNull() ) { fidcost      = (double) z.all()(9);                                    }
+        if ( ( z.size() >= 11 ) && !z.all()(10).isValNull() ) { nuscale      = (double) z.all()(10);                                   }
 
         if ( !resSet )
         {
@@ -1667,6 +1718,7 @@ static void readres(gentype &res,
         if ( z.iskeypresent("d")       && !z("d").isValNull()       ) { xobstype     = (int)    z("d");                                    }
         if ( z.iskeypresent("dc")      && !z("dc").isValNull()      ) { xobstype_cgt =          z("dc").cast_vector_int();                 }
         if ( z.iskeypresent("fidcost") && !z("fidcost").isValNull() ) { fidcost      = (double) z("fidcost");                              }
+        if ( z.iskeypresent("nuscale") && !z("nuscale").isValNull() ) { fidcost      = (double) z("nuscale");                              }
 
         if ( !resSet )
         {
@@ -1959,7 +2011,9 @@ bool addDataToModel(int &ii,
         int qxobstype = 2;
         Vector<int> qxobstype_cgt;
 
-        readres(qres,qaddvar,qycgt,qxxreplace,qreplacexx,qaddexp,qstopflags,qxsidechan,qxobstype,qxobstype_cgt,fidcost);
+        double nuscaledummy = 1;
+
+        readres(qres,qaddvar,qycgt,qxxreplace,qreplacexx,qaddexp,qstopflags,qxsidechan,qxobstype,qxobstype_cgt,fidcost,nuscaledummy);
 
         // add to model, disgarding return
 
@@ -2018,8 +2072,8 @@ void SparsenearToSparsenonnear(SparseVector<gentype> &dest, const SparseVector<d
 {
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j).force_double() = src(j);            }
-        else                  { dest("&",j).force_double() = src.n(j-dimfid,1); }
+        if ( j < dim-dimfid ) { if ( testisvnan(src(j))            ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src(j);            } }
+        else                  { if ( testisvnan(src.n(j-dimfid,1)) ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src.n(j-dimfid,1); } }
     }
 }
 
@@ -2055,8 +2109,8 @@ void SparsenearToNonsparse(Vector<gentype> &dest, const SparseVector<double> &sr
 {
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j).force_double() = src(j);            }
-        else                  { dest("&",j).force_double() = src.n(j-dimfid,1); }
+        if ( j < dim-dimfid ) { if ( testisvnan(src(j))            ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src(j);            } }
+        else                  { if ( testisvnan(src.n(j-dimfid,1)) ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src.n(j-dimfid,1); } }
     }
 }
 
@@ -2074,7 +2128,7 @@ void SparsenonnearToSparsenear(SparseVector<gentype> &dest, const SparseVector<g
 {
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j) = src(j);            }
+        if ( j < dim-dimfid ) { dest("&",j)            = src(j); }
         else                  { dest.n("&",j-dimfid,1) = src(j); }
     }
 }
@@ -2083,7 +2137,7 @@ void SparsenonnearToSparsenear(SparseVector<double> &dest, const SparseVector<ge
 {
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j) = (double) src(j);            }
+        if ( j < dim-dimfid ) { dest("&",j)            = (double) src(j); }
         else                  { dest.n("&",j-dimfid,1) = (double) src(j); }
     }
 }
@@ -2092,8 +2146,8 @@ void SparsenonnearToSparsenear(SparseVector<gentype> &dest, const SparseVector<d
 {
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j).force_double() = src(j);            }
-        else                  { dest.n("&",j-dimfid,1).force_double() = src(j); }
+        if ( j < dim-dimfid ) { if ( testisvnan(src(j)) ) { dest("&",j)            = nullgentype(); } else { dest("&",j).force_double()            = src(j); } }
+        else                  { if ( testisvnan(src(j)) ) { dest.n("&",j-dimfid,1) = nullgentype(); } else { dest.n("&",j-dimfid,1).force_double() = src(j); } }
     }
 }
 
@@ -2101,7 +2155,7 @@ void SparsenonnearToSparsenear(SparseVector<double> &dest, const SparseVector<do
 {
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j) = src(j);            }
+        if ( j < dim-dimfid ) { dest("&",j)            = src(j); }
         else                  { dest.n("&",j-dimfid,1) = src(j); }
     }
 }
@@ -2111,7 +2165,7 @@ void NonsparseToSparsenear(SparseVector<gentype> &dest, const Vector<gentype> &s
 {
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j) = src(j);            }
+        if ( j < dim-dimfid ) { dest("&",j)            = src(j); }
         else                  { dest.n("&",j-dimfid,1) = src(j); }
     }
 }
@@ -2120,7 +2174,7 @@ void NonsparseToSparsenear(SparseVector<double> &dest, const Vector<gentype> &sr
 {
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j) = (double) src(j);            }
+        if ( j < dim-dimfid ) { dest("&",j)            = (double) src(j); }
         else                  { dest.n("&",j-dimfid,1) = (double) src(j); }
     }
 }
@@ -2129,8 +2183,8 @@ void NonsparseToSparsenear(SparseVector<gentype> &dest, const Vector<double> &sr
 {
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j).force_double() = src(j);            }
-        else                  { dest.n("&",j-dimfid,1).force_double() = src(j); }
+        if ( j < dim-dimfid ) { if ( testisvnan(src(j)) ) { dest("&",j)            = nullgentype(); } else { dest("&",j).force_double()            = src(j); } }
+        else                  { if ( testisvnan(src(j)) ) { dest.n("&",j-dimfid,1) = nullgentype(); } else { dest.n("&",j-dimfid,1).force_double() = src(j); } }
     }
 }
 
@@ -2138,7 +2192,7 @@ void NonsparseToSparsenear(SparseVector<double> &dest, const Vector<double> &src
 {
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j) = src(j);            }
+        if ( j < dim-dimfid ) { dest("&",j)            = src(j); }
         else                  { dest.n("&",j-dimfid,1) = src(j); }
     }
 }
@@ -2166,8 +2220,8 @@ void NonsparseToSparsenonnear(SparseVector<gentype> &dest, const Vector<double> 
 {
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j).force_double() = src(j); }
-        else                  { dest("&",j).force_double() = src(j); }
+        if ( j < dim-dimfid ) { if ( testisvnan(src(j)) ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src(j); } }
+        else                  { if ( testisvnan(src(j)) ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src(j); } }
     }
 }
 
@@ -2209,7 +2263,7 @@ int bayesOpt(int dim,
              gentype &fres,
              const Vector<double> &qmin,
              const Vector<double> &qmax,
-             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd, double fidcost),
+             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd, double fidcost, double &nuscale),
              void *fnarg,
              BayesOptions &bopts,
              svmvolatile int &killSwitch,
@@ -2411,7 +2465,9 @@ int bayesOpt(int dim,
                     int xobstype = 2;
                     Vector<int> xobstype_cgt;
 
-                    readres(yyval,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost);
+                    double nuscaledummy = 1;
+
+                    readres(yyval,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost,nuscaledummy);
 
                     StrucAssert( addexp.isValNull() );
 
@@ -2469,7 +2525,9 @@ int bayesOpt(int dim,
             xobstype = (*gridsource).d()(i); // default value as specified in gridsource
             xobstype_cgt.resize(0); //bopts.numcgt) = 2; // default value is equality on constraints
 
-            readres(yyval,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost);
+            double nuscaledummy = 1;
+
+            readres(yyval,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost,nuscaledummy);
 
             StrucAssert( addexp.isValNull() );
 
@@ -2817,10 +2875,12 @@ int bayesOpt(int dim,
                     }
                 }
 
+                double nuscaledummy;
+
                 fidcost = -1;
                 xobstype = 2;
                 fnapproxout.force_int() = -1;
-                (*fn)(dim,fnapproxout,&xb(k)(0),fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridresis,muapproxsize,ycgtis,false,fidcost);
+                (*fn)(dim,fnapproxout,&xb(k)(0),fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridresis,muapproxsize,ycgtis,false,fidcost,nuscaledummy);
                 negateoutery(fnapproxout);
 
                 bool fullobs    = false;
@@ -3076,7 +3136,9 @@ int bayesOpt(int dim,
                         xobstype = 2;
                         xobstype_cgt.resize(0);
 
-                        readres(fnapproxout,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost);
+                        double nuscaledummy = 1;
+
+                        readres(fnapproxout,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost,nuscaledummy);
                         negateoutery(fnapproxout);
                     }
                 }
@@ -3361,10 +3423,11 @@ int bayesOpt(int dim,
 
     gentype locpen;
 
-    double ztol  = bopts.ztol;
-    double delta = bopts.delta;
-    double zeta  = bopts.zeta;
-    double nu    = bopts.nu;
+    double ztol    = bopts.ztol;
+    double delta   = bopts.delta;
+    double zeta    = bopts.zeta;
+    double nu      = bopts.nu;
+    double nuscale = 1;
 
     // Variables used in stable bayesian
 
@@ -3385,6 +3448,7 @@ int bayesOpt(int dim,
                                delta,
                                zeta,
                                nu,
+                               nuscale,
                                tempval,
                                //yb("&",0),
                                (bopts.a),
@@ -3434,7 +3498,8 @@ int bayesOpt(int dim,
                                (bopts.unscentK),
                                (bopts.unscentSqrtSigma),
                                (bopts.stabUseSig),
-                               (bopts.stabThresh));
+                               (bopts.stabThresh),
+                               ires);
 
     void *fnarginnerdr = (void *) &fnarginner;
 
@@ -3544,7 +3609,7 @@ int bayesOpt(int dim,
         fidcost = -1;
         xobstype = 2;
         dummyyres.force_int() = 0;
-        (*fn)(-1,dummyyres,nullptr,fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,nullgentype(),muapproxsize,dummyyres_cgt,false,fidcost);
+        (*fn)(-1,dummyyres,nullptr,fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,nullgentype(),muapproxsize,dummyyres_cgt,false,fidcost,nuscale);
 
         // ===================================================================
         // ===================================================================
@@ -3610,7 +3675,7 @@ int bayesOpt(int dim,
                     fnarginner._q_modD            = ( ( ((bopts.betafn)(k)).size() >= 4 ) && !(((bopts.betafn)(k)(3 )).isValVector()) ) ?  (((bopts.betafn)(k)(3 )).cast_double(0)) :  bopts.modD;
                     fnarginner._q_delta           = ( ( ((bopts.betafn)(k)).size() >= 5 ) && !(((bopts.betafn)(k)(4 )).isValVector()) ) ?  (((bopts.betafn)(k)(4 )).cast_double(0)) :  delta;
                     fnarginner._q_zeta            = 0.01; //( ( ((bopts.betafn)(k)).size() >= 5 ) && !(((bopts.betafn)(k)(4 )).isValVector()) ) ?  (((bopts.betafn)(k)(4 )).cast_double(0)) :  delta;
-                    fnarginner._q_nu              = ( ( ((bopts.betafn)(k)).size() >= 6 ) && !(((bopts.betafn)(k)(5 )).isValVector()) ) ?  (((bopts.betafn)(k)(5 )).cast_double(0)) :  nu;
+                    fnarginner._q_defnu           = ( ( ((bopts.betafn)(k)).size() >= 6 ) && !(((bopts.betafn)(k)(5 )).isValVector()) ) ?  (((bopts.betafn)(k)(5 )).cast_double(0)) :  nu;
                     fnarginner._q_a               = ( ( ((bopts.betafn)(k)).size() >= 7 ) && !(((bopts.betafn)(k)(6 )).isValVector()) ) ?  (((bopts.betafn)(k)(6 )).cast_double(0)) :  (bopts.a);
                     fnarginner._q_b               = ( ( ((bopts.betafn)(k)).size() >= 8 ) && !(((bopts.betafn)(k)(7 )).isValVector()) ) ?  (((bopts.betafn)(k)(7 )).cast_double(0)) :  (bopts.b);
                     fnarginner._q_r               = ( ( ((bopts.betafn)(k)).size() >= 9 ) && !(((bopts.betafn)(k)(8 )).isValVector()) ) ?  (((bopts.betafn)(k)(8 )).cast_double(0)) :  (bopts.r);
@@ -3641,7 +3706,7 @@ int bayesOpt(int dim,
                     fnarginner._q_modD            = bopts.modD;
                     fnarginner._q_delta           = delta;
                     fnarginner._q_zeta            = zeta;
-                    fnarginner._q_nu              = nu;
+                    fnarginner._q_defnu           = nu;
                     fnarginner._q_a               = (bopts.a);
                     fnarginner._q_b               = (bopts.b);
                     fnarginner._q_r               = (bopts.r);
@@ -3719,7 +3784,7 @@ int bayesOpt(int dim,
                 // Adjust bounds for multifidelity (recommendation is always done
                 // for max fidelity, then the real fidelity is chosen afterwards
 
-                if ( ( bopts.getdimfid() > 0 ) && ( locmethod != 18 ) )
+                if ( bopts.getdimfid() > 0 )
                 {
                     // variabls xa[n-1] is a fidelity variable, 1 is the max fidelity, so set it 1 and compress the range
                     // when choosing x as per Kandasamy.
@@ -3766,27 +3831,18 @@ int bayesOpt(int dim,
 
                     if ( locmethod == 18 )
                     {
-                        // Ask a human
+                        // Fill with nulls/nans to indicate "human expert to fill"
 
-                        std::stringstream xpromptbuff;
-                        xpromptbuff << "USER-GENERATED EXPERIMENTAL PARAMETERS REQUIRED\n";
-                        promptstream(xpromptbuff.str());
-
-                        for ( int jij = 0 ; jij < n ; jij++ )
+                        for ( int jij = 0 ; jij < n-bopts.getdimfid() ; jij++ )
                         {
-                            std::stringstream promptbuff;
-
-                            promptbuff << "Enter x[" << jij << "] in range [" << xmin(jij) << "," << xmax(jij) << "]";
-                            promptbuff << ( ( jij >= n-bopts.getdimfid() ) ? " (fidelity variable)" : "" );
-                            promptbuff << ": ";
-
-                            prompttod(xa("&",jij),xmin(jij),xmax(jij),promptbuff.str());
+                            xa("&",jij) = valvnan();
                         }
                     }
 
                     else
                     {
-                        // Use DIRect
+                        // Use DIRect to maximise the acquisition function
+
                         fnarginner.mode = 1; // turn on single beta, stale x calculation fast mode
                         dres = directOpt(n,xa("&",0,1,n-1,tmpva),dummyres,direcmin(0,1,n-1,tmpvb),direcmax(0,1,n-1,tmpvc),
                                          fnfnapprox,fnarginnerdr,bopts.goptssingleobj,killSwitch);
@@ -3825,21 +3881,11 @@ int bayesOpt(int dim,
 
                     if ( locmethod == 18 )
                     {
-                        // Ask a human
+                        // Fill with nulls/nans to indicate "human expert to fill"
 
-                        std::stringstream xpromptbuff;
-                        xpromptbuff << "USER-GENERATED EXPERIMENTAL PARAMETERS REQUIRED\n";
-                        promptstream(xpromptbuff.str());
-
-                        for ( int jij = 0 ; jij < n ; jij++ )
+                        for ( int jij = 0 ; jij < n-bopts.getdimfid() ; jij++ )
                         {
-                            std::stringstream promptbuff;
-
-                            promptbuff << "Enter x[" << jij << "] in range [" << xmin(jij) << "," << xmax(jij) << "]";
-                            promptbuff << ( ( jij >= n-bopts.getdimfid() ) ? " (fidelity variable)" : "" );
-                            promptbuff << ": ";
-
-                            prompttod(xa("&",jij),xmin(jij),xmax(jij),promptbuff.str());
+                            xa("&",jij) = valvnan();
                         }
                     }
 
@@ -4094,6 +4140,7 @@ int bayesOpt(int dim,
                             }
                         }
 
+/*
                         // Human fidelity override
 
                         if ( bopts.fidover == 1 )
@@ -4115,7 +4162,9 @@ int bayesOpt(int dim,
                             }
                         }
 
-                        else if ( bopts.fidover == 2 )
+                        else
+*/
+                        if ( bopts.fidover == 2 )
                         {
                             for ( int jij = 0 ; jij < dimfid ; jij++ )
                             {
@@ -4128,7 +4177,7 @@ int bayesOpt(int dim,
 
                         for ( int jij = 0 ; jij < dimfid ; jij++ )
                         {
-                            xa("&",n-dimfid+jij) = ((double) zindex(jij))/((double) numfids);
+                            xa("&",n-dimfid+jij) = ( zindex(jij) == -1 ) ? valvnan() : (((double) zindex(jij))/((double) numfids));
                         }
                     }
 
@@ -4442,7 +4491,7 @@ int bayesOpt(int dim,
 
                 if ( isgridopt && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
                 {
-                    mupred("&",numRecs) = bopts.model_y()(Nbasemu+gridi);
+                    mupred("&",numRecs)    = bopts.model_y()(Nbasemu+gridi);
                     sigmapred("&",numRecs) = bopts.model_sigma(0);
                 }
 
@@ -4516,111 +4565,7 @@ int bayesOpt(int dim,
             // ===============================================================
             // ===============================================================
 
-            if ( bopts.evaluse )
-            {
-                // Allow user to override and change the experiment, result etc if desired
-
-                std::stringstream outbuff;
-                outbuff << "USER INPUT REQUIRED:\n";
-                outbuff << "Recommended experiment ";
-                printoneline(outbuff,xxb(k));
-
-                outbuff << "\n";
-outeroptions:
-                outbuff << "Options: p: Proceed with evaluation.\n";
-                outbuff << "         q: Stop optimisation early.\n";
-                outbuff << "         f: Give feedback.\n";
-
-                std::string evaloption;
-
-                promptstream(outbuff.str()) >> evaloption;
-
-                if ( evaloption == "p" )
-                {
-                    ;
-                }
-
-                else if ( evaloption == "q" )
-                {
-                    stopearly  = true;
-                    doeval     = false;
-                }
-
-                else if ( evaloption == "f" )
-                {
-                    outbuff.str("");
-midoptions:
-                    outbuff << "Options: y: Directly enter result for recommended experiment.\n";
-                    outbuff << "         x: Change recommended experiment, then evaluate normally.\n";
-                    outbuff << "         z: Change recommended experiment and directly enter result.\n";
-                    outbuff << "         a: Advanced feedback for priors.\n";
-                    outbuff << "         c: Cancel\n";
-
-                    std::string evaloption;
-
-                    promptstream(outbuff.str()) >> evaloption;
-
-                    if ( ( evaloption == "x" ) || ( evaloption == "z" ) )
-                    {
-                        outbuff.str("");
-                        outbuff << "Replacement Experiment: ";
-
-                        promptstream(outbuff.str()) >> xxb("&",k);
-
-                        SparsenearToSparsenonnear(xb("&",k),xxb(k),dim,bopts.getdimfid());
-
-                        if ( evaloption == "z" )
-                        {
-                            goto option_y;
-                        }
-                    }
-
-                    else if ( evaloption == "y" )
-                    {
-                        option_y:
-
-                        std::string ystring;
-
-                        outbuff.str("");
-                        outbuff << "Result override: ";
-
-                        promptstream(outbuff.str()) >> ystring;
-
-//FIXME: use safe converseion here!
-                        fnapproxout = ystring;
-                        doeval = false;
-                    }
-
-                    else if ( evaloption == "c" )
-                    {
-                        outbuff.str("");
-                        goto outeroptions;
-                    }
-
-                    else
-                    {
-                        outbuff.str("");
-                        promptoutstream() << "ERROR: " << evaloption << " is not one of the options.";
-
-                        outbuff.str("");
-                        goto midoptions;
-                    }
-                }
-
-                else if ( evaloption == "c" )
-                {
-                    ;
-                }
-
-                else
-                {
-                    outbuff.str("");
-                    promptoutstream() << "ERROR: " << evaloption << " is not one of the options.";
-
-                    outbuff.str("");
-                    goto outeroptions;
-                }
-            }
+//REMOVED: YOU CAN DO THIS ON THE USER SIDE WITH COMPLEX RETURN TYPES
 
             // ===============================================================
             // ===============================================================
@@ -4671,7 +4616,7 @@ midoptions:
                 fidcost = -1;
                 xobstype = 2;
                 fnapproxout.force_int() = static_cast<int>(itcnt+1);
-                (*fn)(dim,fnapproxout,&(xb(k)(0)),fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridresis,muapproxsize,ycgtis,false,fidcost);
+                (*fn)(dim,fnapproxout,&(xb(k)(0)),fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridresis,muapproxsize,ycgtis,false,fidcost,nuscale);
                 negateoutery(fnapproxout);
             }
 
@@ -4688,7 +4633,7 @@ midoptions:
                 xobstype = dval; //2;
                 xobstype_cgt.resize(0);
 
-                readres(fnapproxout,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost);
+                readres(fnapproxout,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost,nuscale);
                 negateoutery(fnapproxout);
             }
 
@@ -5031,7 +4976,9 @@ midoptions:
                     xobstype = 2;
                     xobstype_cgt.resize(0);
 
-                    readres(fnapproxout,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost);
+                    double nuscaledummy = 1;
+
+                    readres(fnapproxout,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost,nuscaledummy);
                     negateoutery(fnapproxout);
                 }
             }
@@ -5338,7 +5285,7 @@ class fninnerArg
     Vector<double> &scnoise;
     int numcgt;
 
-    void operator()(int dim, gentype &res, const double *x, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_ycgt, bool onlyAdd, double fidcost)
+    void operator()(int dim, gentype &res, const double *x, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_ycgt, bool onlyAdd, double fidcost, double &nuscale)
     {
         // ===========================================================================
         // Inner loop evaluation function.  This is used as a buffer between the
@@ -5394,7 +5341,7 @@ class fninnerArg
 
         xobstype_cgt.resize(0);
 
-        readres(res,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost);
+        readres(res,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost,nuscale);
 
         NonsparseToSparsenear(xxb,xa,dim,dimfid);
         NonsparseToSparsenonnear(xb,xa,dim,dimfid);
@@ -5637,7 +5584,7 @@ class fninnerArg
                         altxobstype_cgt.resize(0);
                         altfidcost = -1;
 
-                        readres(altres,altaddvar,altycgt,altxxreplace,altreplacexx,altaddexp,altstopflags,altxsidechan,altxobstype,altxobstype_cgt,altfidcost);
+                        readres(altres,altaddvar,altycgt,altxxreplace,altreplacexx,altaddexp,altstopflags,altxsidechan,altxobstype,altxobstype_cgt,altfidcost,nuscale);
                         negateoutery(altres);
                     }
                 }
@@ -5658,10 +5605,10 @@ class fninnerArg
 // and saves things like timing, beta etc.
 // ===========================================================================
 
-static void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd, double fidcost);
-static void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd, double fidcost)
+static void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd, double fidcost, double &nuscale);
+static void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd, double fidcost, double &nuscale)
 {
-    (*((fninnerArg *) arg))(dim,res,x,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridres,muapproxsize,gridres_cgt,onlyAdd,fidcost);
+    (*((fninnerArg *) arg))(dim,res,x,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridres,muapproxsize,gridres_cgt,onlyAdd,fidcost,nuscale);
     return;
 }
 
@@ -5930,3 +5877,134 @@ allmres("&",k) *= 1/(1+exp(-1000*(sscore(k)-bopts.stabThresh)));
 
 
 
+/*
+REMOVED FROM CODE
+
+            if ( bopts.evaluse )
+            {
+                // Allow user to override and change the experiment, result etc if desired
+
+                std::stringstream outbuff;
+                outbuff << "USER INPUT REQUIRED:\n";
+                outbuff << "Recommended experiment ";
+                printoneline(outbuff,xxb(k));
+
+                outbuff << "\n";
+outeroptions:
+                outbuff << "Options: p: Proceed with evaluation.\n";
+                outbuff << "         q: Stop optimisation early.\n";
+                outbuff << "         f: Give feedback.\n";
+
+                std::string evaloption;
+
+                promptstream(outbuff.str()) >> evaloption;
+
+                if ( evaloption == "p" )
+                {
+                    ;
+                }
+
+                else if ( evaloption == "q" )
+                {
+                    stopearly  = true;
+                    doeval     = false;
+                }
+
+                else if ( evaloption == "f" )
+                {
+                    outbuff.str("");
+midoptions:
+                    outbuff << "Options: y: Directly enter result for recommended experiment.\n";
+                    outbuff << "         x: Change recommended experiment, then evaluate normally.\n";
+                    outbuff << "         z: Change recommended experiment and directly enter result.\n";
+                    outbuff << "         a: Advanced feedback for priors.\n";
+                    outbuff << "         c: Cancel\n";
+
+                    std::string evaloption;
+
+                    promptstream(outbuff.str()) >> evaloption;
+
+                    if ( ( evaloption == "x" ) || ( evaloption == "z" ) )
+                    {
+                        outbuff.str("");
+                        outbuff << "Replacement Experiment: ";
+
+                        promptstream(outbuff.str()) >> xxb("&",k);
+
+                        SparsenearToSparsenonnear(xb("&",k),xxb(k),dim,bopts.getdimfid());
+
+                        if ( evaloption == "z" )
+                        {
+                            goto option_y;
+                        }
+                    }
+
+                    else if ( evaloption == "y" )
+                    {
+                        option_y:
+
+                        std::string ystring;
+
+                        outbuff.str("");
+                        outbuff << "Result override: ";
+
+                        promptstream(outbuff.str()) >> ystring;
+
+//FIXME: use safe converseion here!
+                        fnapproxout = ystring;
+                        doeval = false;
+                    }
+
+                    else if ( evaloption == "c" )
+                    {
+                        outbuff.str("");
+                        goto outeroptions;
+                    }
+
+                    else
+                    {
+                        outbuff.str("");
+                        promptoutstream() << "ERROR: " << evaloption << " is not one of the options.";
+
+                        outbuff.str("");
+                        goto midoptions;
+                    }
+                }
+
+                else if ( evaloption == "c" )
+                {
+                    ;
+                }
+
+                else
+                {
+                    outbuff.str("");
+                    promptoutstream() << "ERROR: " << evaloption << " is not one of the options.";
+
+                    outbuff.str("");
+                    goto outeroptions;
+                }
+            }
+
+*/
+
+
+
+/*
+                        // Ask a human
+
+                        std::stringstream xpromptbuff;
+                        xpromptbuff << "USER-GENERATED EXPERIMENTAL PARAMETERS REQUIRED\n";
+                        promptstream(xpromptbuff.str());
+
+                        for ( int jij = 0 ; jij < n ; jij++ )
+                        {
+                            std::stringstream promptbuff;
+
+                            promptbuff << "Enter x[" << jij << "] in range [" << xmin(jij) << "," << xmax(jij) << "]";
+                            promptbuff << ( ( jij >= n-bopts.getdimfid() ) ? " (fidelity variable)" : "" );
+                            promptbuff << ": ";
+
+                            prompttod(xa("&",jij),xmin(jij),xmax(jij),promptbuff.str());
+                        }
+*/

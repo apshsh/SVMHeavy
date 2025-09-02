@@ -651,7 +651,7 @@ int SVM_SimLrn::train(int &res, svmvolatile int &killSwitch)
 //errstream() << "phantomx 3 GpOuter = " << *GpOuter << "\n";
     setGp(GpOuter,GpSigmaOuter,xyOuter);
 
-    while ( !isopt )
+    while ( !isopt && !res )
     {
 //errstream() << "phantomx 5\n";
         kerncachesim->padCol(4);
@@ -662,7 +662,7 @@ int SVM_SimLrn::train(int &res, svmvolatile int &killSwitch)
         //(*GpOuter).resize(N(),N()+2);
         //(*GpSigmaOuter).resize(N(),N()+2);
 
-        intres = inintrain(killSwitch);
+        intres = inintrain(res,killSwitch);
 
         kerncachesim->padCol(0);
         xycachesim->padCol(0);

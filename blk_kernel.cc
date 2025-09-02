@@ -503,6 +503,8 @@ void BLK_Kernel::Kmxfer(double &res, int &minmaxind, int typeis,
 
 int BLK_Kernel::train(int &res, svmvolatile int &killswitch)
 {
+    res = 0;
+
     int Nblk = altMLidsKB().size(); // number of MLs being optimised for
 
     if ( Nblk )
@@ -612,7 +614,9 @@ int BLK_Kernel::train(int &res, svmvolatile int &killswitch)
                 ML_Base &MLblock = dynamic_cast<ML_Base &>(*MLblk);
 
                 MLblock.resetKernel();
-                MLblock.train(res,killswitch);
+                int restemp = 0;
+                MLblock.train(restemp,killswitch);
+                res += 100*restemp;
             }
 
             firststep = 0;

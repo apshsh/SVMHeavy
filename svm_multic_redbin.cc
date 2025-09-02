@@ -2314,7 +2314,10 @@ int SVM_MultiC_redbin::train(int &res, svmvolatile int &killSwitch)
 
 	for ( q = 0 ; q < tspaceDim() ; ++q )
 	{
-            result |= Q("&",q).loctrain(res,killSwitch,realN,1);
+            int tempres = 0;
+            result |= Q("&",q).loctrain(tempres,killSwitch,realN,1);
+            res *= 100;
+            res += tempres;
 	}
 
         xycache.padCol(0);

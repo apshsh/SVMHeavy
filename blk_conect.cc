@@ -1395,6 +1395,21 @@ int BLK_Conect::setCclass(int d, double xC)
     return res;
 }
 
+int BLK_Conect::setsigmaclass(int d, double xC)
+{
+    int ii;
+    int res = 0;
+    // NB: if alpha(i) != 0 then this will set isTrained = 0, so retrain and y fix
+    // will be automatically updated.
+
+    for ( ii = 0 ; ii < numReps() ; ++ii )
+    {
+        res |= getRep(ii).setsigmaclass(d,xC);
+    }
+
+    return res;
+}
+
 int BLK_Conect::setepsclass(int d, double xC)
 {
     int ii;
@@ -1608,6 +1623,8 @@ int BLK_Conect::addclass(int label, int epszero)
 
 int BLK_Conect::train(int &res, svmvolatile int &killSwitch)
 {
+    res = 0;
+
     int resi = 0;
 
     Vector<gentype> yrem;
@@ -1632,7 +1649,9 @@ int BLK_Conect::train(int &res, svmvolatile int &killSwitch)
             localygood = 1;
         }
 
-        resi |= getRep(ii).train(res,killSwitch);
+        int restemp = 0;
+        resi |= getRep(ii).train(restemp,killSwitch);
+        res += 100*restemp;
 
         if ( getmlqmode() && ( ii < numReps()-1 ) )
         {

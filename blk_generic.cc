@@ -482,7 +482,38 @@ BLK_Generic::BLK_Generic(const BLK_Generic &src, const ML_Base *xsrc, int isIndP
 
 
 
+int BLK_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double sampScale, double sampSlack)
+{
+    int res = ( xissample != nv ) ? 1 : 0;
 
+    if ( ( xissample = nv ) )
+    {
+        doutfn.finalise();
+    }
+
+    return res | ML_Base::setSampleMode(nv,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack);
+}
+
+int BLK_Generic::setbattparam(const Vector<gentype> &nv)
+{
+    Vector<double> nnv(xbattParam);
+
+    NiceAssert( nv.size() == nnv.size() );
+
+    int i;
+
+    for ( i = 0 ; i < nv.size() ; ++i )
+    {
+        if ( !nv(i).isValNull() )
+        {
+            nnv.sv(i,(double) nv(i));
+        }
+    }
+
+    xbattParam = nnv;
+
+    return 1;
+}
 
 
 int BLK_Generic::egetparam(int ind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib) const

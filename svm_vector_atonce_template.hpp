@@ -322,8 +322,8 @@ public:
     virtual void fudgeOn(void)  override { Q.fact_fudgeOn(*GpGrad,Gn,Gpn);  return; }
     virtual void fudgeOff(void) override { Q.fact_fudgeOff(*GpGrad,Gn,Gpn); return; }
 
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
     virtual int train(int &res, svmvolatile int &killSwitch) override;
-    virtual int train(int &res) override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
 
     // Evaluation:
 

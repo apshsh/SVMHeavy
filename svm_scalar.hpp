@@ -42,6 +42,7 @@ template <class T> class SVM_Vector_redbin;
 class SVM_SimLrn;
 class LSV_Generic;
 class LSV_Scalar;
+class GPR_Scalar;
 class LSV_Vector;
 class LSV_Anions;
 class LSV_ScScor;
@@ -88,6 +89,7 @@ class SVM_Scalar : public SVM_Generic
     friend class SVM_SimLrn;
     friend class LSV_Generic;
     friend class LSV_Scalar;
+    friend class GPR_Scalar;
     friend class LSV_Vector;
     friend class LSV_Anions;
     friend class LSV_ScScor;
@@ -431,8 +433,8 @@ public:
     virtual void fudgeOn (void) override;
     virtual void fudgeOff(void) override;
 
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
     virtual int train(int &res, svmvolatile int &killSwitch) override;
-    virtual int train(int &res) override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
 
     // Evaluation:
     //
@@ -605,6 +607,18 @@ public:
 
 
 
+    // Only for the GP branch - elementwise kernel scaling
+
+    virtual const Vector<double> &Lweight(void) const { return Lweightval; }
+    virtual int setLweight(int i, double xLweight);
+    virtual int setLweight(const Vector<int> &i, const Vector<double> &xLweight);
+    virtual int setLweight(const Vector<double> &xLweight);
+    virtual int setuseLweight(void);
+    virtual int setnoLweight (void);
+
+
+
+
 
 
 protected:
@@ -676,9 +690,11 @@ protected:
     }
 
 
+
     // Cached access to K matrix
 public:
-    virtual double getKval(int i, int j) const override { return Gp()(i,j) - ( ( i == j ) ? diagoff(i) : 0.0 ); }
+//phantomxyzxyz
+    virtual double getKval(int i, int j) const override;
 
 private:
     virtual int gTrainingVector(double &res, int &unusedvar, int i, int raw = 0, gentype ***pxyprodi = nullptr) const;
@@ -738,9 +754,9 @@ private:
 
 public:
     int isStateOpt;           // set if SVM is in optimal state
-private:
     mutable int isQuasiLogLikeCalced; // set if quasi log likelihood is calculated
     mutable int isMaxInfGainCalced;   // set if max info gain is calculated
+private:
 
     mutable double quasiloglike;
     mutable double quasimaxinfogain;
@@ -752,6 +768,9 @@ private:
     Vector<double> Cweightval;
     Vector<double> Cweightfuzzval;
     Vector<double> epsweightval;
+
+    bool useLweight;
+    Vector<double> Lweightval;
 
     // Quadratic program definition
     //
@@ -775,8 +794,8 @@ private:
     Vector<double> ub;
     Matrix<double> *GpnExt;
 
-    int intrain(svmvolatile int &killSwitch);
-    int inintrain(svmvolatile int &killSwitch, double (*fixHigherOrderTerms)(fullOptState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *htArg = nullptr, double stepscalefactor = 1);
+    int intrain(int &res, svmvolatile int &killSwitch);
+    int inintrain(int &res, svmvolatile int &killSwitch, double (*fixHigherOrderTerms)(fullOptState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *htArg = nullptr, double stepscalefactor = 1);
 
     // Generalised cost functions / iterative fuzzy support
 
@@ -1003,6 +1022,8 @@ inline void SVM_Scalar::qswapinternal(ML_Base &bb)
         qswap(traintarg                  ,b.traintarg                  );
         qswap(trainclass                 ,b.trainclass                 );
         qswap(Cweightval                 ,b.Cweightval                 );
+        qswap(Lweightval                 ,b.Lweightval                 );
+        qswap(useLweight                 ,b.useLweight                 );
         qswap(Cweightfuzzval             ,b.Cweightfuzzval             );
         qswap(epsweightval               ,b.epsweightval               );
         qswap(Gplocal                    ,b.Gplocal                    );
@@ -1135,6 +1156,8 @@ inline void SVM_Scalar::semicopy(const ML_Base &bb)
     autosetnuvalx = b.autosetnuvalx;
 
     Cweightval     = b.Cweightval;
+    Lweightval     = b.Lweightval;
+    useLweight     = b.useLweight;
     Cweightfuzzval = b.Cweightfuzzval;
     epsweightval   = b.epsweightval;
 
@@ -1256,6 +1279,8 @@ inline void SVM_Scalar::assign(const ML_Base &bb, int onlySemiCopy)
     traintarg      = src.traintarg;
     trainclass     = src.trainclass;
     Cweightval     = src.Cweightval;
+    Lweightval     = src.Lweightval;
+    useLweight     = src.useLweight;
     Cweightfuzzval = src.Cweightfuzzval;
     epsweightval   = src.epsweightval;
 
@@ -1358,7 +1383,8 @@ inline void SVM_Scalar::assign(const ML_Base &bb, int onlySemiCopy)
 	    Gplocal = 1;
 
             MEMNEW(xyval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &xycache   ,trainclass.size(),trainclass.size()));
-            MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,trainclass.size(),trainclass.size()));
+            MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,trainclass.size(),trainclass.size(),nullptr,nullptr,&Lweightval,useLweight));
+//phantomxyzxyz            MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,trainclass.size(),trainclass.size()));
             MEMNEW(Gpsigma,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &sigmacache,trainclass.size(),trainclass.size()));
         }
 

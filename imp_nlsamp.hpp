@@ -64,7 +64,7 @@ public:
 
     // Training function (pre-calculates min_i(x(i)) for x(i) enabled)
 
-    virtual int train(int &res) override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
     virtual int train(int &res, svmvolatile int &killSwitch) override;
 
     // General modification and autoset functions

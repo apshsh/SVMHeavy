@@ -132,10 +132,10 @@ public:
 
     virtual int NRff (void) const override { return 0; }
 
-    virtual double C(void)            const override { return CNval;                                    }
-    virtual double eps(void)          const override { return epsval;                                   }
-    virtual double Cclass(int d)      const override { return mulCclass(label_placeholder.findID(d));   }
-    virtual double epsclass(int d)    const override { return mulepsclass(label_placeholder.findID(d)); }
+    virtual double C         (void)  const override { return CNval;                                    }
+    virtual double eps       (void)  const override { return epsval;                                   }
+    virtual double Cclass    (int d) const override { return mulCclass(label_placeholder.findID(d));   }
+    virtual double epsclass  (int d) const override { return mulepsclass(label_placeholder.findID(d)); }
 
     virtual int    memsize     (void) const override { return 2*QA.memsize();       }
     virtual double zerotol     (void) const override { return Q.zerotol();          }
@@ -345,8 +345,8 @@ public:
     virtual void fudgeOn(void) override;
     virtual void fudgeOff(void) override;
 
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
     virtual int train(int &res, svmvolatile int &killSwitch) override;
-    virtual int train(int &res) override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
 
     // Evaluation:
 

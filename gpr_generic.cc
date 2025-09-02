@@ -41,6 +41,8 @@ GPR_Generic::GPR_Generic() : ML_Base_Deref()
 
     setaltx(nullptr);
 
+    xsigmaclass.resize(4) = 1.0;
+
     Nnc.resize(4);
     Nnc = 0;
 
@@ -56,6 +58,8 @@ GPR_Generic::GPR_Generic(const GPR_Generic &src) : ML_Base_Deref()
     sampleScale = 1.0;
 
     setaltx(nullptr);
+
+    xsigmaclass.resize(4) = 1.0;
 
     Nnc.resize(4);
     Nnc = 0;
@@ -75,6 +79,8 @@ GPR_Generic::GPR_Generic(const GPR_Generic &src, const ML_Base *srcx) : ML_Base_
 
     setaltx(srcx);
 
+    xsigmaclass.resize(4) = 1.0;
+
     Nnc.resize(4);
     Nnc = 0;
 
@@ -86,6 +92,9 @@ GPR_Generic::GPR_Generic(const GPR_Generic &src, const ML_Base *srcx) : ML_Base_
 int GPR_Generic::prealloc(int expectedN)
 {
     dy.prealloc(expectedN);
+    dyR.prealloc(expectedN);
+    dyA.prealloc(expectedN);
+    dyV.prealloc(expectedN);
     dsigmaweight.prealloc(expectedN);
     dCweight.prealloc(expectedN);
     xd.prealloc(expectedN);
@@ -100,7 +109,11 @@ std::ostream &GPR_Generic::printstream(std::ostream &output, int dep) const
     repPrint(output,'>',dep) << "Measurement sigma_cut:     " << dsigma_cut   << "\n";
     repPrint(output,'>',dep) << "Measurement sigma weights: " << dsigmaweight << "\n";
     repPrint(output,'>',dep) << "Measurement C weights:     " << dCweight     << "\n";
+    repPrint(output,'>',dep) << "Measurement sigma class:   " << xsigmaclass  << "\n";
     repPrint(output,'>',dep) << "Local (actual) y:          " << dy           << "\n";
+    repPrint(output,'>',dep) << "Local (actual) yR:         " << dyR          << "\n";
+    repPrint(output,'>',dep) << "Local (actual) yA:         " << dyA          << "\n";
+    repPrint(output,'>',dep) << "Local (actual) yV:         " << dyV          << "\n";
     repPrint(output,'>',dep) << "Local (actual) d:          " << xd           << "\n";
     repPrint(output,'>',dep) << "Class counts Nnc:          " << Nnc          << "\n";
     repPrint(output,'>',dep) << "Sample mode:               " << sampleMode   << "\n";
@@ -120,7 +133,11 @@ std::istream &GPR_Generic::inputstream(std::istream &input )
     input >> dummy; input >> dsigma_cut;
     input >> dummy; input >> dsigmaweight;
     input >> dummy; input >> dCweight;
+    input >> dummy; input >> xsigmaclass;
     input >> dummy; input >> dy;
+    input >> dummy; input >> dyR;
+    input >> dummy; input >> dyA;
+    input >> dummy; input >> dyV;
     input >> dummy; input >> xd;
     input >> dummy; input >> Nnc;
     input >> dummy; input >> sampleMode;
@@ -136,18 +153,15 @@ int GPR_Generic::addTrainingVector(int i, const gentype &y, const SparseVector<g
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
+    NiceAssert( epsweigh = 1 );
 
-    dsigmaweight.add(i);
-    dsigmaweight("&",i) = 1/Cweigh;
-
-    dCweight.add(i);
-    dCweight("&",i) = Cweigh;
-
-    xd.add(i);
-    xd("&",i) = dval; //2;
-
-    dy.add(i);
-    dy("&",i) = y;
+    dsigmaweight.add(i);  dsigmaweight("&",i) = 1/Cweigh;
+    dCweight.add(i);      dCweight("&",i)     = Cweigh;
+    xd.add(i);            xd("&",i)           = dval; //2;
+    dy.add(i);            dy("&",i)           = y;
+    dyR.add(i);           dyR("&",i)          = (double) y;
+    dyA.add(i);           dyA("&",i)          = (const d_anion &) y;
+    dyV.add(i);           dyV("&",i)          = (const Vector<double> &) y;
 
     ++(Nnc("&",xd(i)+1));
 
@@ -158,18 +172,15 @@ int GPR_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentyp
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
+    NiceAssert( epsweigh = 1 );
 
-    dsigmaweight.add(i);
-    dsigmaweight("&",i) = 1/Cweigh;
-
-    dCweight.add(i);
-    dCweight("&",i) = Cweigh;
-
-    xd.add(i);
-    xd("&",i) = dval; //2;
-
-    dy.add(i);
-    dy("&",i) = y;
+    dsigmaweight.add(i);  dsigmaweight("&",i) = 1/Cweigh;
+    dCweight.add(i);      dCweight("&",i)     = Cweigh;
+    xd.add(i);            xd("&",i)           = dval; //2;
+    dy.add(i);            dy("&",i)           = y;
+    dyR.add(i);           dyR("&",i)          = (double) y;
+    dyA.add(i);           dyA("&",i)          = (const d_anion &) y;
+    dyV.add(i);           dyV("&",i)          = (const Vector<double> &) y;
 
     ++(Nnc("&",xd(i)+1));
 
@@ -231,6 +242,9 @@ int GPR_Generic::removeTrainingVector(int i, gentype &y, SparseVector<gentype> &
     dCweight.remove(i);
     xd.remove(i);
     dy.remove(i);
+    dyR.remove(i);
+    dyA.remove(i);
+    dyV.remove(i);
 
     gentype dummy;
 
@@ -250,6 +264,162 @@ int GPR_Generic::removeTrainingVector(int i, int num)
     }
 
     return res;
+}
+
+int GPR_Generic::sety(int i, const gentype &nv)
+{
+    dy("&",i) = nv;
+
+    dyR("&",i) = (double) nv;
+    dyA("&",i) = (const d_anion &) nv;
+    dyV("&",i) = (const Vector<double> &) nv;
+
+    return getQ().sety(i,nv);
+}
+
+int GPR_Generic::sety(const Vector<int> &i, const Vector<gentype> &nv)
+{
+    for ( int ii = 0 ; ii < i.size() ; ++ii )
+    {
+        dy("&",i(ii)) = nv(ii);
+
+        dyR("&",i(ii)) = (double) nv(ii);
+        dyA("&",i(ii)) = (const d_anion &) nv(ii);
+        dyV("&",i(ii)) = (const Vector<double> &) nv(00);
+    }
+
+    return getQ().sety(i,nv);
+}
+
+int GPR_Generic::sety(const Vector<gentype> &nv)
+{
+    for ( int ii = 0 ; ii < N() ; ++ii )
+    {
+        dy("&",ii) = nv(ii);
+
+        dyR("&",ii) = (double) nv(ii);
+        dyA("&",ii) = (const d_anion &) nv(ii);
+        dyV("&",ii) = (const Vector<double> &) nv(00);
+    }
+
+    return getQ().sety(nv);
+}
+
+int GPR_Generic::sety(int i, double nv)
+{
+    dy("&",i) = nv;
+
+    dyR("&",i) = nv;
+    dyA("&",i) = nv;
+    dyV("&",i) = nv;
+
+    return getQ().sety(i,nv);
+}
+
+int GPR_Generic::sety(const Vector<int> &i, const Vector<double> &nv)
+{
+    for ( int ii = 0 ; ii < i.size() ; ++ii )
+    {
+        dy("&",i(ii)) = nv(ii);
+
+        dyR("&",i(ii)) = nv(ii);
+        dyA("&",i(ii)) = nv(ii);
+        dyV("&",i(ii)) = nv(00);
+    }
+
+    return getQ().sety(i,nv);
+}
+
+int GPR_Generic::sety(const Vector<double> &nv)
+{
+    for ( int ii = 0 ; ii < N() ; ++ii )
+    {
+        dy("&",ii) = nv(ii);
+
+        dyR("&",ii) = nv(ii);
+        dyA("&",ii) = nv(ii);
+        dyV("&",ii) = nv(00);
+    }
+
+    return getQ().sety(nv);
+}
+
+int GPR_Generic::sety(int i, const Vector<double> &nv)
+{
+    gentype n(nv);
+
+    return sety(i,n);
+}
+
+int GPR_Generic::sety(const Vector<int> &i, const Vector<Vector<double> > &nv)
+{
+    Vector<gentype> n(i.size());
+
+    for ( int ii = 0 ; ii < i.size() ; ++ii )
+    {
+        n("&",ii) = nv(ii);
+
+        n("&",ii) = nv(ii);
+        n("&",ii) = nv(ii);
+        n("&",ii) = nv(ii);
+    }
+
+    return sety(i,n);
+}
+
+int GPR_Generic::sety(const Vector<Vector<double> > &nv)
+{
+    Vector<gentype> n(N());
+
+    for ( int ii = 0 ; ii < N() ; ++ii )
+    {
+        n("&",ii) = nv(ii);
+
+        n("&",ii) = nv(ii);
+        n("&",ii) = nv(ii);
+        n("&",ii) = nv(ii);
+    }
+
+    return sety(n);
+}
+
+int GPR_Generic::sety(int i, const d_anion &nv)
+{
+    gentype n(nv);
+
+    return sety(i,n);
+}
+
+int GPR_Generic::sety(const Vector<int> &i, const Vector<d_anion> &nv)
+{
+    Vector<gentype> n(i.size());
+
+    for ( int ii = 0 ; ii < i.size() ; ++ii )
+    {
+        n("&",ii) = nv(ii);
+
+        n("&",ii) = nv(ii);
+        n("&",ii) = nv(ii);
+        n("&",ii) = nv(ii);
+    }
+
+    return sety(i,n);
+}
+
+int GPR_Generic::sety(const Vector<d_anion> &nv)
+{
+    Vector<gentype> n(N());
+
+    for ( int ii = 0 ; ii < N() ; ++ii )
+    {
+        n("&",ii) = nv(ii);
+
+        n("&",ii) = nv(ii);
+        n("&",ii) = nv(ii);
+        n("&",ii) = nv(ii);
+    }
+
+    return sety(n);
 }
 
 int GPR_Generic::setsigmaweight(int i, double nv)
@@ -303,7 +473,7 @@ int GPR_Generic::setsigmaweight(const Vector<double> &nv)
 
 int GPR_Generic::setCweight(int i, double nv)
 {
-    dCweight = nv;
+    dCweight("&",i) = nv;
     dsigmaweight("&",i) = 1/nv;
 
     return getQ().setCweight(i,nv);

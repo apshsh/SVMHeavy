@@ -75,8 +75,8 @@ public:
 
     // Training functions:
 
-    virtual int train(int &res) override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
-    virtual int train(int &res, svmvolatile int &killSwitch) override { int ires = getQ().train(res,killSwitch); ires |= IMP_Generic::train(res,killSwitch); return ires; }
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
+    virtual int train(int &res, svmvolatile int &killSwitch) override { int resa = 0; int resb = 0; int ires = getQ().train(resa,killSwitch); ires |= IMP_Generic::train(resb,killSwitch); res = resa+(100*resb); return ires; }
 
 
 

@@ -71,8 +71,8 @@ public:
 
     // Training
 
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
     virtual int train(int &res, svmvolatile int &killSwitch) override;
-    virtual int train(int &res) override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
 
 protected:
 

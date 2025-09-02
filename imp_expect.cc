@@ -121,7 +121,7 @@ int IMP_Expect::train(int &res, svmvolatile int &killSwitch)
     // the problem is re-framed as *maximisation*.  The outputs we
     // see are all greater than zref(), and we want to maximise them.
 
-    (void) res;
+    res = 0;
 
     int retval = 0;
 
@@ -129,7 +129,9 @@ int IMP_Expect::train(int &res, svmvolatile int &killSwitch)
 
     if ( !isTrained() )
     {
-        retval = IMP_Generic::train(res,killSwitch);
+        int restemp = 0;
+        retval = IMP_Generic::train(restemp,killSwitch);
+        res += 100*restemp;
 
         xmaxval = 0.0;
 

@@ -902,7 +902,7 @@ public:
                             (*projOpNowRaw).setMLTypeClean((*projOp).type());
 
                             (*projOpNowRaw).getML() = *projOp;
-                            projOpNowInd = regML(projOpNowRaw,locfnarg,4);
+                            projOpNowInd = regMLloc(projOpNowRaw,locfnarg,4);
 
                             // Default (work anywhere) version
 
@@ -961,7 +961,7 @@ public:
                             (*projOpNowRaw).setMLTypeClean((*projOp).type());
 
                             (*projOpNowRaw).getML() = *projOp;
-                            projOpNowInd = regML(projOpNowRaw,locfnarg,4);
+                            projOpNowInd = regMLloc(projOpNowRaw,locfnarg,4);
 
                             // Default (work anywhere) version
 
@@ -1332,7 +1332,7 @@ public:
 
     // ML registration stuff (for functional optimisation)
 
-    int regML(ML_Mutable *MLcase, void *fnarg, int ltyp) const
+    int regMLloc(ML_Mutable *MLcase, void *fnarg, int ltyp) const
     {
         int nres = -1;
 

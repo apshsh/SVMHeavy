@@ -573,19 +573,16 @@ public:
 
     int default_model_settspaceDim  (int                          nv) { return altmuapprox.settspaceDim(nv);   }
     int default_model_setsigma      (double                       nv) { return altmuapprox.setsigma(nv);       }
-    int default_model_setvarApproxim(int                          nv) { return altmuapprox.setvarApproxim(nv); }
     int default_model_setkernelg    (const gentype               &nv);
     int default_model_setkernelgg   (const SparseVector<gentype> &nv);
 
     int default_modelaugx_settspaceDim  (int                          nv) { return altaugxapprox.settspaceDim(nv); }
     int default_modelaugx_setsigma      (double                       nv) { return altaugxapprox.setsigma(nv);     }
-    int default_modelaugx_setvarApproxim(int                          nv) { return altaugxapprox.setvarApproxim(nv); }
     int default_modelaugx_setkernelg    (const gentype               &nv);
     int default_modelaugx_setkernelgg   (const SparseVector<gentype> &nv);
 
     int default_modelcgt_settspaceDim  (int                          nv) { return altcgtapprox.settspaceDim(nv);   }
     int default_modelcgt_setsigma      (double                       nv) { return altcgtapprox.setsigma(nv);       }
-    int default_modelcgt_setvarApproxim(int                          nv) { return altcgtapprox.setvarApproxim(nv); }
     int default_modelcgt_setkernelg    (const gentype               &nv);
     int default_modelcgt_setkernelgg   (const SparseVector<gentype> &nv);
 

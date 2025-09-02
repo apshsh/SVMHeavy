@@ -23,7 +23,7 @@ static void disableVector(const Vector<int> &i, ML_Base *activeML);
 static void resetGlobal(ML_Base *activeML);
 static void semicopyML(ML_Base *activeML, const ML_Base *srcML);
 static void copyML(ML_Base *activeML, const ML_Base *srcML);
-static int trainGlobal(ML_Base *activeML, int islastopt);
+static int trainGlobal(int &res, ML_Base *activeML, int islastopt);
 static int isVectorActive(int i, ML_Base *activeML);
 static int isVectorEnabled(int i, ML_Base *activeML);
 static int isTrainedML(ML_Base *activeML);
@@ -279,7 +279,8 @@ class foldargs
       xlocy(locy),
       xstartpoint(startpoint),
       xcalcgvarres(calcgvarres),
-      mainid(xmainid)
+      mainid(xmainid),
+      foldres(0)
       { ; }
 
 
@@ -299,6 +300,7 @@ class foldargs
     int xstartpoint;
     int xcalcgvarres;
     const svm_pthread_id &mainid;
+    int foldres;
 };
 
 void qswap(const foldargs *&a, const foldargs *&b)
@@ -623,10 +625,7 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
                         MEMNEW(vprepthread("&",i),svm_pthread_t);
 
                         int tfail = svm_pthread_create(vprepthread("&",i),doaprep,(void *) vxargs("&",i));
-
-                        (void) tfail;
-
-                        NiceAssert( !tfail );
+                        if ( tfail ) { return valvnan(); }
                     }
                 }
 
@@ -637,10 +636,7 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
                     if ( i )
                     {
                         int tfail = svm_pthread_join(*vprepthread("&",i),nullptr);
-
-                        (void) tfail;
-
-                        NiceAssert( !tfail );
+                        if ( tfail ) { return valvnan(); }
                     }
 	        }
 
@@ -702,26 +698,23 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
                         MEMNEW(vfoldthread("&",i),svm_pthread_t);
 
                         int tfail = svm_pthread_create(vfoldthread("&",i),doafold,(void *) vxargs("&",i));
-
-                        (void) tfail;
-
-                        NiceAssert( !tfail );
+                        if ( tfail ) { return valvnan(); }
                     }
                 }
 
                 doafold((void *) vxargs("&",0));
+                if ( vxargs(0)->foldres ) { return valvnan(); }
 
                 for ( i = 0 ; ( i < m ) && ( !i || !oneoff ) ; ++i )
                 {
                     if ( i )
                     {
                         int tfail = svm_pthread_join(*vfoldthread("&",i),nullptr);
-
-                        (void) tfail;
-
-                        NiceAssert( !tfail );
+                        if ( tfail || vxargs(i)->foldres ) { return valvnan(); }
                     }
 	        }
+
+                if ( locres ) { return valvnan(); }
 
                 // Fold cleanup
 
@@ -764,10 +757,7 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
                         MEMNEW(vtestthread("&",i),svm_pthread_t);
 
                         int tfail = svm_pthread_create(vtestthread("&",i),doatest,(void *) vxargs("&",i));
-
-                        (void) tfail;
-
-                        NiceAssert( !tfail );
+                        if ( tfail ) { return valvnan(); }
                     }
                 }
 
@@ -779,10 +769,7 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
                     if ( i )
                     {
                         int tfail = svm_pthread_join(*vtestthread("&",i),nullptr);
-
-                        (void) tfail;
-
-                        NiceAssert( !tfail );
+                        if ( tfail ) { return valvnan(); }
                     }
 	        }
 
@@ -829,6 +816,7 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
 
                     doaprep((void *) vxargs("&",i));
                     doafold((void *) vxargs("&",i));
+                    if ( vxargs(0)->foldres ) { return valvnan(); }
                     doatest((void *) vxargs("&",i));
                     semicopyML(locML,srcML);
                 }
@@ -946,7 +934,7 @@ void *doafold(void *args_ptr)
     //int calcgvarres = args.xcalcgvarres;
     //const svm_pthread_id &mainid = args.mainid;
 
-        trainGlobal(locML,trainglobcond);
+        trainGlobal(args.foldres,locML,trainglobcond);
 
     return nullptr;
 }
@@ -1127,7 +1115,9 @@ nullPrint(errstream(),i,-5);
                         resetGlobal(locML);
                     }
 
-                    trainGlobal(locML,( i == N-1 ));
+                    int loclocres = 0;
+                    trainGlobal(loclocres,locML,( i == N-1 ));
+                    if ( loclocres ) { return valvnan(); }
 
                     isReTrain = 1;
 		}
@@ -1135,7 +1125,9 @@ nullPrint(errstream(),i,-5);
 
             else if ( isLOO && ( i == N-1 ) )
             {
-                trainGlobal(locML,( i == N-1 ));
+                int loclocres = 0;
+                trainGlobal(loclocres,locML,( i == N-1 ));
+                if ( loclocres ) { return valvnan(); }
             }
 //if ( !suppressfb )
 //{
@@ -1403,7 +1395,9 @@ if ( !suppressfb )
 nullPrint(errstream(),"~~~~~",5);
 nullPrint(errstream(),k,-5); 
 }
-            trainGlobal(locML,( k == numreps-1 ));
+            int loclocres = 0;
+            trainGlobal(loclocres,locML,( k == numreps-1 ));
+            if ( loclocres ) { return valvnan(); }
 
             for ( j = 0 ; j < N ; ++j )
             {
@@ -1584,9 +1578,9 @@ static void resetGlobal(ML_Base *activeML)
     return;
 }
 
-static int trainGlobal(ML_Base *activeML, int islastopt)
+static int trainGlobal(int &res, ML_Base *activeML, int islastopt)
 {
-    int dummyres = 0; // FIXME: should check return value
+    res = 0;
 
     if ( activeML->type() == 0 )
     {
@@ -1603,8 +1597,7 @@ static int trainGlobal(ML_Base *activeML, int islastopt)
         (dynamic_cast<SVM_Single &>(activeML->getML())).inEmm4Solve = islastopt ? 0 : 2;
     }
 
-//phantomxyz
-    return activeML->train(dummyres);
+    return activeML->train(res);
 }
 
 static void semicopyML(ML_Base *activeML, const ML_Base *srcML)

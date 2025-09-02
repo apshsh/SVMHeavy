@@ -102,12 +102,13 @@ public:
     virtual int setmaxtraintime(double xmaxtraintime) override { int res = Qatonce.setmaxtraintime(xmaxtraintime); res |= Qredbin.setmaxtraintime(xmaxtraintime); return res; }
     virtual int settraintimeend(double xtraintimeend) override { int res = Qatonce.settraintimeend(xtraintimeend); res |= Qredbin.settraintimeend(xtraintimeend); return res; }
 
-    virtual int setC        (double xC)          override { int res = Qatonce.setC(xC);            res |= Qredbin.setC(xC);            return res; }
-    virtual int setsigma    (double xC)          override { int res = Qatonce.setsigma(xC);        res |= Qredbin.setsigma(xC);        return res; }
-    virtual int setsigma_cut(double xC)          override { int res = Qatonce.setsigma_cut(xC);    res |= Qredbin.setsigma_cut(xC);    return res; }
-    virtual int seteps      (double xeps)        override { int res = Qatonce.seteps(xeps);        res |= Qredbin.seteps(xeps);        return res; }
-    virtual int setCclass   (int d, double xC)   override { int res = Qatonce.setCclass(d,xC);     res |= Qredbin.setCclass(d,xC);     return res; }
-    virtual int setepsclass (int d, double xeps) override { int res = Qatonce.setepsclass(d,xeps); res |= Qredbin.setepsclass(d,xeps); return res; }
+    virtual int setC         (double xC)          override { int res = Qatonce.setC(xC);              res |= Qredbin.setC(xC);              return res; }
+    virtual int setsigma     (double xC)          override { int res = Qatonce.setsigma(xC);          res |= Qredbin.setsigma(xC);          return res; }
+    virtual int setsigma_cut (double xC)          override { int res = Qatonce.setsigma_cut(xC);      res |= Qredbin.setsigma_cut(xC);      return res; }
+    virtual int seteps       (double xeps)        override { int res = Qatonce.seteps(xeps);          res |= Qredbin.seteps(xeps);          return res; }
+    virtual int setCclass    (int d, double xC)   override { int res = Qatonce.setCclass(d,xC);       res |= Qredbin.setCclass(d,xC);       return res; }
+    virtual int setsigmaclass(int d, double xsig) override { int res = Qatonce.setsigmaclass(d,xsig); res |= Qredbin.setsigmaclass(d,xsig); return res; }
+    virtual int setepsclass  (int d, double xeps) override { int res = Qatonce.setepsclass(d,xeps);   res |= Qredbin.setepsclass(d,xeps);   return res; }
 
     virtual int scale  (double a) override { int res = Qredbin.scale(a); res |= Qatonce.scale(a); return res; }
     virtual int reset  (void)     override { int res = Qredbin.reset();  res |= Qatonce.reset();  return res; }

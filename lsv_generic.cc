@@ -19,7 +19,6 @@ std::ostream &LSV_Generic::printstream(std::ostream &output, int dep) const
 {
     repPrint(output,'>',dep) << "Base training alpha:            " << dalpha       << "\n";
     repPrint(output,'>',dep) << "Base training bias:             " << dbias        << "\n";
-    repPrint(output,'>',dep) << "Base training covm:             " << covm         << "\n";
     repPrint(output,'>',dep) << "Base training training target:  " << alltraintarg << "\n";
 
     SVM_Scalar::printstream(output,dep+1);
@@ -35,7 +34,6 @@ std::istream &LSV_Generic::inputstream(std::istream &input )
 
     input >> dummy; input >> dalpha;
     input >> dummy; input >> dbias;
-    input >> dummy; input >> covm;
     input >> dummy; input >> alltraintarg;
 
     SVM_Scalar::inputstream(input);
@@ -48,7 +46,6 @@ LSV_Generic::LSV_Generic() : SVM_Scalar()
     fastweights = nullptr;
     fastxsums   = nullptr;
     fastdim = 0;
-    covm = -1;
 
     fastweights_base = nullptr;
     fastxsums_base   = nullptr;
@@ -66,7 +63,6 @@ LSV_Generic::LSV_Generic(const LSV_Generic &src) : SVM_Scalar()
     fastweights = nullptr;
     fastxsums   = nullptr;
     fastdim = 0;
-    covm = -1;
 
     fastweights_base = nullptr;
     fastxsums_base   = nullptr;
@@ -88,7 +84,6 @@ LSV_Generic::LSV_Generic(const LSV_Generic &src, const ML_Base *srcx) : SVM_Scal
     fastweights = nullptr;
     fastxsums   = nullptr;
     fastdim = 0;
-    covm = -1;
 
     fastweights_base = nullptr;
     fastxsums_base   = nullptr;
@@ -420,7 +415,8 @@ int LSV_Generic::train(int &res, svmvolatile int &killSwitch)
 {
     incgvernum();
 
-    (void) res;
+    res = 0;
+
     int blah = killSwitch;
     (void) blah;
 
@@ -437,6 +433,7 @@ int LSV_Generic::setgamma(const Vector<gentype> &newW)
     killfasts();
 
     dalpha = newW;
+    SVM_Scalar::setAlpha(newW);
 
     return 1;
 }
@@ -446,13 +443,7 @@ int LSV_Generic::setdelta(const gentype &newB)
     killfasts();
 
     dbias = newB;
-
-    return 1;
-}
-
-int LSV_Generic::setvarApprox(const int m)
-{
-    covm = m;
+    SVM_Scalar::setBias(newB);
 
     return 1;
 }
@@ -714,7 +705,6 @@ int LSV_Generic::getparam(int ind, gentype &val, const gentype &xa, int ia, cons
         case 5001: { val = isZerodelta();      desc = "LSV_Generic::isZerodelta"; break; }
         case 5002: { val = gamma();            desc = "LSV_Generic::gamma"; break; }
         case 5003: { val = delta();            desc = "LSV_Generic::delta"; break; }
-//FIXME        case 5004: { val = varApprox();        desc = "LSV_Generic::varApprox"; break; }
         case 5005: { val = loglikelihood();    desc = "LSV_Generic::loglikelihood"; break; }
         case 9070: { val = lsvGp();            desc = "LSV_Generic::lsvGp"; break; }
 

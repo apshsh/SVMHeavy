@@ -50,52 +50,8 @@ inline py::object *&postProInnerProd(py::object *&a) { return a; }
 
 void dostartup(void);
 
-#define BOILER_PTR(T) \
-inline void qswap(T *&a, T *&b); \
-inline void qswap(T *&a, T *&b) { T *x = a; a = b; b = x; } \
-inline T *&setident (T *&a) { throw("something"); return a; } \
-inline T *&setzero  (T *&a) { return a = nullptr;           } \
-inline T *&setposate(T *&a) { return a;                     } \
-inline T *&setnegate(T *&a) { throw("something"); return a; } \
-inline T *&setconj  (T *&a) { throw("something"); return a; } \
-inline T *&setrand  (T *&a) { throw("something"); return a; } \
-inline T *&postProInnerProd(T *&a) { return a; }
-
-BOILER_PTR(GridOptions);
-BOILER_PTR(DIRectOptions);
-BOILER_PTR(NelderOptions);
-BOILER_PTR(BayesOptions);
-
 #define OPTGLOBOFFSET 100000
 #define OPTGRIDSTEP   1000
-
-int glob_MLInd        (int i = 0, int seti = 0) { static int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
-int glob_gridInd      (int i = 0, int seti = 0) { static int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
-int glob_DIRectInd    (int i = 0, int seti = 0) { static int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
-int glob_NelderMeadInd(int i = 0, int seti = 0) { static int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
-int glob_BayesianInd  (int i = 0, int seti = 0) { static int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
-
-SparseVector<ML_Mutable    *> &getMLmodels       (void) { static SparseVector<ML_Mutable    *> MLbase;         return MLbase;         }
-SparseVector<GridOptions   *> &getgridOptim      (void) { static SparseVector<GridOptions   *> gridbase;       return gridbase;       }
-SparseVector<DIRectOptions *> &getDIRectOptim    (void) { static SparseVector<DIRectOptions *> DIRectbase;     return DIRectbase;     }
-SparseVector<NelderOptions *> &getNelderMeadOptim(void) { static SparseVector<NelderOptions *> NelderMeadbase; return NelderMeadbase; }
-SparseVector<BayesOptions  *> &getBayesianOptim  (void) { static SparseVector<BayesOptions  *> Bayesianbase;   return Bayesianbase;   }
-
-//void grabML        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        ) { NiceAssert( MLind         > 0 ); if ( MLbase        (MLInd)         == nullptr ) { MEMNEW(MLbase        ("&",MLInd        ),ML_Mutable   ); } return; }
-void grabgrid      (SparseVector<GridOptions   *> &gridbase,       int gridInd      ) { NiceAssert( gridInd       > 0 ); if ( gridbase      (gridInd)       == nullptr ) { MEMNEW(gridbase      ("&",gridInd      ),GridOptions  ); } return; }
-void grabDIRect    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    ) { NiceAssert( DIRectInd     > 0 ); if ( DIRectbase    (DIRectInd)     == nullptr ) { MEMNEW(DIRectbase    ("&",DIRectInd    ),DIRectOptions); } return; }
-void grabNelderMead(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd) { NiceAssert( NelderMeadInd > 0 ); if ( NelderMeadbase(NelderMeadInd) == nullptr ) { MEMNEW(NelderMeadbase("&",NelderMeadInd),NelderOptions); } return; }
-void grabBayesian  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  ) { NiceAssert( BayesianInd   > 0 ); if ( Bayesianbase  (BayesianInd)   == nullptr ) { MEMNEW(Bayesianbase  ("&",BayesianInd  ),BayesOptions ); } return; }
-
-const GridOptions   &getgridrefconst      (SparseVector<GridOptions   *> &gridbase,       int gridInd      ) { grabgrid      (gridbase,      gridInd      ); return *(gridbase      (gridInd      )); }
-const DIRectOptions &getDIRectrefconst    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    ) { grabDIRect    (DIRectbase,    DIRectInd    ); return *(DIRectbase    (DIRectInd    )); }
-const NelderOptions &getNelderMeadrefconst(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd) { grabNelderMead(NelderMeadbase,NelderMeadInd); return *(NelderMeadbase(NelderMeadInd)); }
-const BayesOptions  &getBayesianrefconst  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  ) { grabBayesian  (Bayesianbase,  BayesianInd  ); return *(Bayesianbase  (BayesianInd  )); }
-
-GridOptions   &getgridref      (SparseVector<GridOptions   *> &gridbase,       int gridInd      ) { grabgrid      (gridbase,      gridInd      ); return *(gridbase      ("&",gridInd      )); }
-DIRectOptions &getDIRectref    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    ) { grabDIRect    (DIRectbase,    DIRectInd    ); return *(DIRectbase    ("&",DIRectInd    )); }
-NelderOptions &getNelderMeadref(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd) { grabNelderMead(NelderMeadbase,NelderMeadInd); return *(NelderMeadbase("&",NelderMeadInd)); }
-BayesOptions  &getBayesianref  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  ) { grabBayesian  (Bayesianbase,  BayesianInd  ); return *(Bayesianbase  ("&",BayesianInd  )); }
 
 const GridOptions   &getgridrefconst      (int gridInd      ) { return getgridrefconst      (getgridOptim(),      gridInd      ); }
 const DIRectOptions &getDIRectrefconst    (int DIRectInd    ) { return getDIRectrefconst    (getDIRectOptim(),    DIRectInd    ); }
@@ -221,16 +177,16 @@ bool isComplex(const py::object &src)
 
 // unconvertable objects converted to nan
 
-                   py::object convToPy(      int               src);
-                   py::object convToPy(      double            src);
-                   py::object convToPy(const d_anion          &src);
-                   py::object convToPy(const std::string      &src);
-template <class T> py::object convToPy(const Vector<T>        &src);
-template <class T> py::object convToPy(const Matrix<T>        &src);
-template <class T> py::object convToPy(const Set<T>           &src);
-template <class T> py::object convToPy(const Dict<T,dictkey>  &src);
-template <class T> py::object convToPy(const SparseVector<T>  &src);
-                   py::object convToPy(const gentype          &src);
+                   py::object convToPy(                int               src);
+                   py::object convToPy(                double            src);
+                   py::object convToPy(          const d_anion          &src);
+                   py::object convToPy(          const std::string      &src);
+template <class T> py::object convToPy(          const Vector<T>        &src);
+template <class T> py::object convToPy(          const Matrix<T>        &src);
+template <class T> py::object convToPy(          const Set<T>           &src);
+template <class T> py::object convToPy(          const Dict<T,dictkey>  &src);
+template <class T> py::object convToPy(          const SparseVector<T>  &src);
+                   py::object convToPy(          const gentype          &src);
                    py::object convToPy(int size, const double *src);
 
 template <> py::object convToPy(const Vector<double> &src);
@@ -3879,7 +3835,6 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
 
 //        static thread_local int MLInd = 0;
         static thread_local SVMThreadContext *svmContext;
-        SparseVector<ML_Mutable *> &svmbase = getMLmodels();
         MEMNEW(svmContext,SVMThreadContext(glob_MLInd()));
         errstream() << "{";
 
@@ -3887,7 +3842,7 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
 
         SparseVector<SparseVector<int> > returntag;
 
-        runsvm(svmContext,svmbase,commstack,globargvariables,cligetsetExtVar,returntag);
+        runsvm(svmContext,commstack,globargvariables,cligetsetExtVar,returntag);
 
         // Unlock the thread, signalling that the context can be deleted etc
 
@@ -3914,7 +3869,7 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
 
             killallthreads(svmContext);
 
-            deleteMLs(svmbase);
+            deleteMLs();
 
             cliPrintToOutLog('*',1);
             cliPrintToErrLog('*',1);
@@ -4130,23 +4085,23 @@ void cliPrintToErrLog(char c, int mode)
 
         else if ( errlog && !LoggingOstreamErr::suppressStreamFile )
         {
-            static int bstring = 0;
+            //static int bstring = 0;
 
             if ( c != '\b' )
             {
-                bstring = 0;
+                //bstring = 0;
 
                 (*errlog) << c;
                 (*errlog).flush();
             }
 
-            else if ( !bstring )
-            {
-                bstring = 1;
-
-                (*errlog) << '\n';
-                (*errlog).flush();
-            }
+            //else if ( !bstring )
+            //{
+            //    bstring = 1;
+            //
+            //    (*errlog) << '\n';
+            //    (*errlog).flush();
+            //}
         }
     }
 

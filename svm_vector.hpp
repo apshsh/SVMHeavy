@@ -102,12 +102,13 @@ public:
     virtual int setmaxtraintime(double xmaxtraintime) override { int res = Qatonce.setmaxtraintime(xmaxtraintime); res |= Qredbin.setmaxtraintime(xmaxtraintime); res |= QMatonce.setmaxtraintime(xmaxtraintime); res |= QMredbin.setmaxtraintime(xmaxtraintime); return res; }
     virtual int settraintimeend(double xtraintimeend) override { int res = Qatonce.settraintimeend(xtraintimeend); res |= Qredbin.settraintimeend(xtraintimeend); res |= QMatonce.settraintimeend(xtraintimeend); res |= QMredbin.settraintimeend(xtraintimeend); return res; }
 
-    virtual int setC        (double xC)          override { int res = Qatonce.setC(xC);            res |= Qredbin.setC(xC);            res |= QMatonce.setC(xC);            res |= QMredbin.setC(xC);            return res; }
-    virtual int setsigma    (double xC)          override { int res = Qatonce.setsigma(xC);        res |= Qredbin.setsigma(xC);        res |= QMatonce.setsigma(xC);        res |= QMredbin.setsigma(xC);        return res; }
-    virtual int setsigma_cut(double xC)          override { int res = Qatonce.setsigma_cut(xC);    res |= Qredbin.setsigma_cut(xC);    res |= QMatonce.setsigma_cut(xC);    res |= QMredbin.setsigma_cut(xC);    return res; }
-    virtual int seteps      (double xeps)        override { int res = Qatonce.seteps(xeps);        res |= Qredbin.seteps(xeps);        res |= QMatonce.seteps(xeps);        res |= QMredbin.seteps(xeps);        return res; }
-    virtual int setCclass   (int d, double xC)   override { int res = Qatonce.setCclass(d,xC);     res |= Qredbin.setCclass(d,xC);     res |= QMatonce.setCclass(d,xC);     res |= QMredbin.setCclass(d,xC);     return res; }
-    virtual int setepsclass (int d, double xeps) override { int res = Qatonce.setepsclass(d,xeps); res |= Qredbin.setepsclass(d,xeps); res |= QMatonce.setepsclass(d,xeps); res |= QMredbin.setepsclass(d,xeps); return res; }
+    virtual int setC         (double xC)          override { int res = Qatonce.setC(xC);              res |= Qredbin.setC(xC);              res |= QMatonce.setC(xC);              res |= QMredbin.setC(xC);              return res; }
+    virtual int setsigma     (double xC)          override { int res = Qatonce.setsigma(xC);          res |= Qredbin.setsigma(xC);          res |= QMatonce.setsigma(xC);          res |= QMredbin.setsigma(xC);          return res; }
+    virtual int setsigma_cut (double xC)          override { int res = Qatonce.setsigma_cut(xC);      res |= Qredbin.setsigma_cut(xC);      res |= QMatonce.setsigma_cut(xC);      res |= QMredbin.setsigma_cut(xC);      return res; }
+    virtual int seteps       (double xeps)        override { int res = Qatonce.seteps(xeps);          res |= Qredbin.seteps(xeps);          res |= QMatonce.seteps(xeps);          res |= QMredbin.seteps(xeps);          return res; }
+    virtual int setCclass    (int d, double xC)   override { int res = Qatonce.setCclass(d,xC);       res |= Qredbin.setCclass(d,xC);       res |= QMatonce.setCclass(d,xC);       res |= QMredbin.setCclass(d,xC);       return res; }
+    virtual int setsigmaclass(int d, double xsig) override { int res = Qatonce.setsigmaclass(d,xsig); res |= Qredbin.setsigmaclass(d,xsig); res |= QMatonce.setsigmaclass(d,xsig); res |= QMredbin.setsigmaclass(d,xsig); return res; }
+    virtual int setepsclass  (int d, double xeps) override { int res = Qatonce.setepsclass(d,xeps);   res |= Qredbin.setepsclass(d,xeps);   res |= QMatonce.setepsclass(d,xeps);   res |= QMredbin.setepsclass(d,xeps);   return res; }
 
     virtual int scale  (double a) override { int res = Qatonce.scale(a); res |= Qredbin.scale(a); res |= QMatonce.scale(a); res |= QMredbin.scale(a); return res; }
     virtual int reset  (void)     override { int res = Qatonce.reset();  res |= Qredbin.reset();  res |= QMatonce.reset();  res |= QMredbin.reset();  return res; }

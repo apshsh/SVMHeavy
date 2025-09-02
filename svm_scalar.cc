@@ -38,6 +38,12 @@ class SVM_Single;
 #define MEMSHARE_XYCACHE(_totmem_)    ( ( (_totmem_) == -1 ) ? -1 : ( SVM_Scalar::isOptActive() ? ( ( (_totmem_) > 0 ) ? (_totmem_) : 1 ) : ( ( (_totmem_)/2 > 0 ) ? (_totmem_)/2 : 1 ) ) )
 #define MEMSHARE_SIGMACACHE(_totmem_) ( ( (_totmem_) == -1 ) ? -1 : ( SVM_Scalar::isOptActive() ? 1                                       : ( ( (_totmem_)/2 > 0 ) ? (_totmem_)/2 : 1 ) ) )
 
+#define KSCALE0              1.0
+#define KSCALE1(ia)          (( ( useLweight && ( ia >= 0 ) ) ? Lweightval(ia) : 1.0 ))
+#define KSCALE2(ia,ib)       (( ( useLweight && ( ia >= 0 ) ) ? Lweightval(ia) : 1.0 )*( ( useLweight && ( ib >= 0 ) ) ? Lweightval(ib) : 1.0 ))
+#define KSCALE3(ia,ib,ic)    (( ( useLweight && ( ia >= 0 ) ) ? Lweightval(ia) : 1.0 )*( ( useLweight && ( ib >= 0 ) ) ? Lweightval(ib) : 1.0 )*( ( useLweight && ( ic >= 0 ) ) ? Lweightval(ic) : 1.0 ))
+#define KSCALE4(ia,ib,ic,id) (( ( useLweight && ( ia >= 0 ) ) ? Lweightval(ia) : 1.0 )*( ( useLweight && ( ib >= 0 ) ) ? Lweightval(ib) : 1.0 )*( ( useLweight && ( ic >= 0 ) ) ? Lweightval(ic) : 1.0 )*( ( useLweight && ( id >= 0 ) ) ? Lweightval(id) : 1.0 ))
+
 
 
 //#define K4DIAGOFF 1e-4
@@ -325,7 +331,16 @@ void evalKSVM_Scalar(double &res, int i, int j, const gentype **pxyprod, const v
 	}
     }
 
-    res += ( ( i == j ) ? (realOwner->diagoff)(i) : 0 );
+//phantomxyzxyz
+    if ( realOwner->useLweight )
+    {
+        res += ( ( i == j ) ? (((realOwner->diagoff)(i))/(((realOwner->Lweightval)(i))*((realOwner->Lweightval)(j)))) : 0 );
+    }
+
+    else
+    {
+        res += ( ( i == j ) ? ((realOwner->diagoff)(i)) : 0 );
+    }
 
     NiceAssert( !testisvnan(res) );
     //NiceAssert( !testisinf(res) );
@@ -346,9 +361,14 @@ void evalKSVM_Scalar_fast(double &res, int i, int j, const gentype **pxyprod, co
         res = realOwner->K2(i,j,pxyprod);
     }
 
+    else if ( realOwner->useLweight )
+    {
+        res = realOwner->kerndiagval(i) + (((realOwner->diagoff)(i))/(((realOwner->Lweightval)(i))*((realOwner->Lweightval)(j))));
+    }
+
     else
     {
-        res = (realOwner->kerndiagval)(i)+(realOwner->diagoff)(i);
+        res = realOwner->kerndiagval(i) + ((realOwner->diagoff)(i));
     }
 
     NiceAssert( !testisvnan(res) );
@@ -502,7 +522,8 @@ SVM_Scalar::SVM_Scalar() : SVM_Generic()
     Gplocal = 1;
 
     MEMNEW(xyval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &xycache   ,0,0));
-    MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,0,0));
+    MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,0,0,nullptr,nullptr,&Lweightval,useLweight));
+//phantomxyzxyz    MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,0,0));
     MEMNEW(Gpsigma,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &sigmacache,0,0));
 
     Q.setkeepfact(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),1);
@@ -669,7 +690,8 @@ int SVM_Scalar::setAlphaR(const Vector<double> &newAlpha)
     retMatrix<double> tmpma;
     retMatrix<double> tmpmb;
 
-    Q.setAlpha(newAlpha,(*Gpval)(z,1,SVM_Scalar::N()-1,z,1,SVM_Scalar::N()-1,tmpma),(*Gpval)(z,1,SVM_Scalar::N()-1,z,1,SVM_Scalar::N()-1,tmpmb),Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp,lb,ub);
+    // NB: we ignore bounds on alpha here so that LSV scalar can with with the true no-bound case
+    Q.setAlpha(newAlpha,(*Gpval)(z,1,SVM_Scalar::N()-1,z,1,SVM_Scalar::N()-1,tmpma),(*Gpval)(z,1,SVM_Scalar::N()-1,z,1,SVM_Scalar::N()-1,tmpmb),Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp,lb,ub,-1,1);
 
     // update gentype alpha
 
@@ -877,7 +899,8 @@ void SVM_Scalar::setGp(Matrix<double> *extGp, Matrix<double> *extGpsigma, Matrix
 	    Gplocal = 1;
 
             MEMNEW(xyval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &xycache   ,trainclass.size(),trainclass.size()));
-            MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,trainclass.size(),trainclass.size()));
+            MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,trainclass.size(),trainclass.size(),nullptr,nullptr,&Lweightval,useLweight));
+//phantomxyzxyz            MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,trainclass.size(),trainclass.size()));
             MEMNEW(Gpsigma,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &sigmacache,trainclass.size(),trainclass.size()));
 	}
     }
@@ -1997,6 +2020,62 @@ int SVM_Scalar::setCweight(int i, double xC)
     return 1;
 }
 
+int SVM_Scalar::setLweight(int i, double xL)
+{
+    NiceAssert( i >= 0 );
+    NiceAssert( i < SVM_Scalar::N() );
+    NiceAssert( xL > 0 );
+
+    int ires = 0;
+
+    Lweightval("&",i) = xL;
+
+    if ( useLweight )
+    {
+        int needGradRecalc = 0;
+
+        if ( alphaState()(i) )
+        {
+            isStateOpt = 0;
+
+            isQuasiLogLikeCalced = 0;
+            isMaxInfGainCalced   = 0;
+
+            if ( Q.factbad(Gn,GPNorGPNEXT(Gpn,GpnExt)) )
+            {
+                return setLweight(Lweightval); // trigger full refactorisation from scratch
+            }
+
+            //if ( abs2(alphaR()(i)) > zerotol() )
+            {
+                needGradRecalc = 1;
+            }
+        }
+
+        //kerndiagval("&",i) = K2(i,i);
+
+        if ( needGradRecalc )
+        {
+            // Gradient is all wrong - fix it
+
+            Q.refreshGrad_anyhow(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
+        }
+
+        else
+        {
+            // Gradient is part wrong - fix it
+
+            Q.refreshGrad_anyhow(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp,i);
+        }
+
+        SVM_Scalar::fixautosettings(1,0);
+
+        ires = 1;
+    }
+
+    return ires;
+}
+
 int SVM_Scalar::setCweightfuzz(int i, double xC)
 {
     NiceAssert( i >= 0 );
@@ -2144,6 +2223,35 @@ int SVM_Scalar::setCweight(const Vector<int> &j, const Vector<double> &xCweight)
     return 1;
 }
 
+int SVM_Scalar::setLweight(const Vector<int> &j, const Vector<double> &xLweight)
+{
+    int ires = 0;
+
+    retVector<double> tmpva;
+    Lweightval("&",j,tmpva) = xLweight;
+
+    if ( useLweight && SVM_Scalar::N() )
+    {
+	isStateOpt = 0;
+
+        isQuasiLogLikeCalced = 0;
+        isMaxInfGainCalced   = 0;
+
+        //for ( int i = 0 ; i < SVM_Scalar::N() ; ++i )
+	//{
+        //    kerndiagval("&",i) = K2(i,i);
+	//}
+
+        Q.refact(*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
+
+        SVM_Scalar::fixautosettings(1,0);
+
+        ires = 1;
+    }
+
+    return ires;
+}
+
 int SVM_Scalar::setepsweight(const Vector<int> &j, const Vector<double> &xepsweight)
 {
     NiceAssert( j.size() == xepsweight.size() );
@@ -2247,6 +2355,34 @@ int SVM_Scalar::setCweight(const Vector<double> &xCweight)
     }
 
     return 1;
+}
+
+int SVM_Scalar::setLweight(const Vector<double> &xLweight)
+{
+    int ires = 0;
+
+    Lweightval = xLweight;
+
+    if ( useLweight && SVM_Scalar::N() )
+    {
+	isStateOpt = 0;
+
+        isQuasiLogLikeCalced = 0;
+        isMaxInfGainCalced   = 0;
+
+        //for ( int i = 0 ; i < SVM_Scalar::N() ; ++i )
+	//{
+        //    kerndiagval("&",i) = K2(i,i);
+	//}
+
+        Q.refact(*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
+
+        SVM_Scalar::fixautosettings(1,0);
+
+        ires = 1;
+    }
+
+    return ires;
 }
 
 int SVM_Scalar::setCweightfuzz(const Vector<double> &xCweight)
@@ -2772,7 +2908,7 @@ updateInfo = 1;
             isQuasiLogLikeCalced = 0;
             isMaxInfGainCalced   = 0;
 
-            // NB: - removing a row/column from the Cholesky factorisation 
+            // NB: - removing a row/column from the Cholesky factorisation
             //       does not require reference to Gp() in 99% of cases -
             //       see chol.h.
             //     - it does however require reference to Gp() if alpha(I)
@@ -3000,6 +3136,7 @@ int SVM_Scalar::removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x
     traintarg.remove(i);
     trainclass.remove(i);
     Cweightval.remove(i);
+    Lweightval.remove(i);
     Cweightfuzzval.remove(i);
     epsweightval.remove(i);
     kerndiagval.remove(i);
@@ -3309,6 +3446,7 @@ int SVM_Scalar::qtaddTrainingVector(int i, double zi, double Cweigh, double epsw
     traintarg.add(i);  traintarg("&",i) = zi;
 
     Cweightval.add(i);     Cweightval("&",i) = Cweigh;
+    Lweightval.add(i);     Lweightval("&",i) = 1;
     Cweightfuzzval.add(i); Cweightfuzzval("&",i) = 1.0;
     epsweightval.add(i);   epsweightval("&",i) = epsweigh;
     diagoff.add(i);        diagoff("&",i) = QUADCOSTDIAGOFFSET(CNval,xCclass,d,Cweigh,1.0);
@@ -3372,6 +3510,7 @@ int SVM_Scalar::qtaddTrainingVector(int i, double zi, double Cweigh, double epsw
 
 double SVM_Scalar::loglikelihood(void) const
 {
+//errstream() << "phantomxloglike\n";
     if ( !isQuasiLogLikeCalced )
     {
         int i;
@@ -3383,13 +3522,40 @@ double SVM_Scalar::loglikelihood(void) const
         //                   = -1/2 y'.alpha - 1/2 log(det(Gp)) - n/2 log 2.pi
         // (works for fixed-bias GP, not defined well at this level, but meh)
 
+        // We assume that, if Lsigma != I then we are really trying to solve:
+        //
+        // Ktrue.alpha + inv(L.D.L).alphatrue = ytrue
+        // -> inv(L).L.Ktrue.L.inv(L).alpha + inv(L).D.inv(L).alphatrue = ytrue
+        // -> inv(L) ( L.Ktrue.L + D ) inv(L).alphatrue = ytrue
+        // ->( L.Ktrue.L + D ) ( inv(L).alphatrue ) = (L.ytrue)
+        // ->( L.Ktrue.L + D ) alpha = y
+        //
+        // alpha = inv(L).alphatrue
+        // y = L.ytrue
+        // alpha'.y = alphatrue'.ytrue (no correction factor required)
+        // det(Ktrue + inv(L).D.inv(L)) = det(inv(L).( L.Ktrue.L + D ).inv(L)) = det(L.Ktrue.L + D).det(inv(L)^2)
+        // logdet(Ktrue + inv(L).D.inv(L)) = logdet(L.Ktrue.L + D) + log(det(inv(L))^2)
+        //                                 = logdet(L.Ktrue.L + D) - 2.logdet(L) (note correction factor)
+
         //if ( N() )
         {
             for ( i = 0 ; i < SVM_Scalar::N() ; ++i )
             {
                 if ( alphaState()(i) )
                 {
-                    (quasiloglike) -= (double) (y(i)*alpha()(i));
+//                    (quasiloglike) -= (((double) (y(i)*alpha()(i)))/2);
+                    (quasiloglike) -= (zR()(i)*alphaR()(i)/2);
+                }
+            }
+        }
+
+        if ( useLweight )
+        {
+            for ( i = 0 ; i < SVM_Scalar::N() ; ++i )
+            {
+                if ( alphaState()(i) )
+                {
+                    (quasiloglike) += 2.0*log(Lweightval(i))/2.0;
                 }
             }
         }
@@ -3398,7 +3564,6 @@ double SVM_Scalar::loglikelihood(void) const
         // the Cholesky factorisation instead.  Also the determinant of chol(G)^2 scales
         // linearly, whereas the "raw" determinant scales horribly.
 
-//errstream() << "[" << Q.fact_logdet() << "," << Q.aN() << "," << Q.aNF() << "," << Q.factbad(Gn,GPNorGPNEXT(Gpn,GpnExt)) << "]";
         (quasiloglike) -= Q.fact_logdet()/2.0; // log(Q.fact_det())/2.0;
         (quasiloglike) -= NUMBASE_LN2PI*SVM_Scalar::NS()/2.0;
     }
@@ -3423,7 +3588,24 @@ double SVM_Scalar::maxinfogain(void) const
 
         // See considerations in log-likelihood function.
 
+        // We assume that, if Lsigma != I then we are really trying to solve:
+        //
+        // Ktrue.alpha + inv(L.D.L).alphatrue = ytrue
+        // -> inv(L).L.Ktrue.L.inv(L).alpha + inv(L).D.inv(L).alphatrue = ytrue
+        // -> inv(L) ( L.Ktrue.L + D ) inv(L).alphatrue = ytrue
+        // ->( L.Ktrue.L + D ) ( inv(L).alphatrue ) = (L.ytrue)
+        // ->( L.Ktrue.L + D ) alpha = y
+
         (quasimaxinfogain)  = Q.fact_logdet()/2.0;
+
+        if ( useLweight )
+        {
+            for ( int i = 0 ; i < SVM_Scalar::N() ; ++i )
+            {
+                (quasiloglike) += 2.0*log(Lweightval(i));
+            }
+        }
+
         (quasimaxinfogain) -= (NS()*log(sigma()))/2.0;
     }
 
@@ -3534,8 +3716,6 @@ double SVM_Scalar::RKHSnorm(void) const
 
 
 
-
-
 int SVM_Scalar::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     int tempresh = 0;
@@ -3584,12 +3764,16 @@ fallback:
 
             resg += traintarg(i);
             resg -= diagoff(i)*alphaR()(i);
+
+            resg /= KSCALE1(i);
         }
 
         else if ( ( i >= 0 ) && !resbad )
         {
             resg += traintarg(i);
             resg -= diagoff(i)*alphaR()(i);
+
+            resg /= KSCALE1(i);
         }
 
         else if ( emm == 2 )
@@ -3603,19 +3787,21 @@ fallback:
             {
                 for ( jP = 0 ; jP < NLB() ; ++jP )
                 {
-                    K2(Kxj,i,Q.pivAlphaLB()(jP),pxyprodi ? (const gentype **) pxyprodi[Q.pivAlphaLB()(jP)] : nullptr);
+                    int j = Q.pivAlphaLB()(jP);
+
+                    K2(Kxj,i,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
 //errstream() << "phantomxyzsvm 0 : " << jP << " = " << Kxj << "\n";
 
                     if ( firstval )
                     {
-                        resg = Kxj*(alpha()(Q.pivAlphaLB()(jP)));
+                        resg = Kxj*KSCALE2(i,j)*(alpha()(j));
 
                         firstval = 0;
                     }
 
                     else
                     {
-                        resg += Kxj*(alpha()(Q.pivAlphaLB()(jP)));
+                        resg += Kxj*KSCALE2(i,j)*(alpha()(j));
                     }
                 }
             }
@@ -3624,19 +3810,21 @@ fallback:
             {
                 for ( jP = 0 ; jP < NUB() ; ++jP )
                 {
-                    K2(Kxj,i,Q.pivAlphaUB()(jP),pxyprodi ? (const gentype **) pxyprodi[Q.pivAlphaUB()(jP)] : nullptr);
+                    int j = Q.pivAlphaUB()(jP);
+
+                    K2(Kxj,i,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
 //errstream() << "phantomxyzsvm 1 : " << jP << " = " << Kxj << "\n";
 
                     if ( firstval )
                     {
-                        resg = Kxj*(alpha()(Q.pivAlphaUB()(jP)));
+                        resg = Kxj*KSCALE2(i,j)*(alpha()(j));
 
                         firstval = 0;
                     }
 
                     else
                     {
-                        resg += Kxj*(alpha()(Q.pivAlphaUB()(jP)));
+                        resg += Kxj*KSCALE2(i,j)*(alpha()(j));
                     }
                 }
             }
@@ -3645,24 +3833,33 @@ fallback:
             {
                 for ( jP = 0 ; jP < NF() ; ++jP )
                 {
-                    K2(Kxj,i,Q.pivAlphaF()(jP),pxyprodi ? (const gentype **) pxyprodi[Q.pivAlphaF()(jP)] : nullptr);
+                    int j = Q.pivAlphaF()(jP);
+
+                    K2(Kxj,i,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
 //errstream() << "phantomxyzsvm 3 : " << jP << " = " << Kxj << "\n";
 
                     if ( firstval )
                     {
-                        resg = Kxj*(alpha()(Q.pivAlphaF()(jP)));
+                        resg = Kxj*KSCALE2(i,j)*(alpha()(j));
 
                         firstval = 0;
                     }
 
                     else
                     {
-                        resg += Kxj*(alpha()(Q.pivAlphaF()(jP)));
+                        resg += Kxj*KSCALE2(i,j)*(alpha()(j));
                     }
                 }
             }
 
+            bool biasZero = ( ( dtv & (7+64) ) || ( biasR() == 0 ) ); // No bias if this is a gradient, dense or otherwise
+
+            NiceAssert( ( biasR() == 0 ) || !( dtv & 32 ) ); // can't combine non-zero bias with dense integration (result is infinite in this case)
+
+            resg += ( biasZero ? 0.0 : biasR() );
             resg += yp(i);
+
+            resg /= KSCALE1(i);
 
 //            if ( prim() )
 //            {
@@ -3975,6 +4172,8 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
             res += traintarg(i);
             res -= diagoff(i)*alphaR()(i);
         }
+
+        res /= KSCALE1(i);
     }
 
     // NB: the above might fall through with no result.  This is indicated by resbad.
@@ -3989,6 +4188,8 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
 
         res += traintarg(i);
         res -= diagoff(i)*alphaR()(i);
+
+        res /= KSCALE1(i);
     }
 
     else if ( ( emm == 2 ) && !( retaltg & 2 ) )
@@ -4011,7 +4212,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                 j = Q.pivAlphaLB()(jP);
 
                 Kxj = K2(i,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
-                res += (alphaR()(j))*Kxj;
+                res += (alphaR()(j))*Kxj*KSCALE2(i,j);
             }
         }
 
@@ -4021,7 +4222,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                 j = Q.pivAlphaUB()(jP);
 
                 Kxj = K2(i,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
-                res += (alphaR()(j))*Kxj;
+                res += (alphaR()(j))*Kxj*KSCALE2(i,j);
             }
         }
 
@@ -4031,7 +4232,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                 j = Q.pivAlphaF()(jP);
 
                 Kxj = K2(i,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
-                res += (alphaR()(j))*Kxj;
+                res += (alphaR()(j))*Kxj*KSCALE2(i,j);
             }
         }
 
@@ -4053,6 +4254,8 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
 //                res += (double) resprior;
 //            }
 //        }
+
+        res /= KSCALE1(i);
     }
 
     else if ( emm == 2 )
@@ -4083,7 +4286,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                     j = Q.pivAlphaLB()(jP);
 
                     Kxj = K2(i,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
-                    res += (alphaR()(j))*Kxj;
+                    res += (alphaR()(j))*Kxj*KSCALE2(i,j);
                 }
             }
 
@@ -4093,7 +4296,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                     j = Q.pivAlphaUB()(jP);
 
                     Kxj = K2(i,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
-                    res += (alphaR()(j))*Kxj;
+                    res += (alphaR()(j))*Kxj*KSCALE2(i,j);
                 }
             }
 
@@ -4103,7 +4306,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                     j = Q.pivAlphaF()(jP);
 
                     Kxj = K2(i,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
-                    res += (alphaR()(j))*Kxj;
+                    res += (alphaR()(j))*Kxj*KSCALE2(i,j);
                 }
             }
 
@@ -4127,7 +4330,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                             jb = Q.pivAlphaLB()(jbP);
 
                             Kxj = K2x2(i,ja,jb);
-                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj;
+                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj*KSCALE3(i,ja,jb);
                         }
                     }
 
@@ -4137,7 +4340,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                             jb = Q.pivAlphaUB()(jbP);
 
                             Kxj = K2x2(i,ja,jb);
-                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj;
+                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj*KSCALE3(i,ja,jb);
                         }
                     }
 
@@ -4147,7 +4350,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                             jb = Q.pivAlphaF()(jbP);
 
                             Kxj = K2x2(i,ja,jb);
-                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj;
+                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj*KSCALE3(i,ja,jb);
                         }
                     }
                 }
@@ -4164,7 +4367,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                             jb = Q.pivAlphaLB()(jbP);
 
                             Kxj = K2x2(i,ja,jb);
-                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj;
+                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj*KSCALE3(i,ja,jb);
                         }
                     }
 
@@ -4174,7 +4377,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                             jb = Q.pivAlphaUB()(jbP);
 
                             Kxj = K2x2(i,ja,jb);
-                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj;
+                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj*KSCALE3(i,ja,jb);
                         }
                     }
 
@@ -4184,7 +4387,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                             jb = Q.pivAlphaF()(jbP);
 
                             Kxj = K2x2(i,ja,jb);
-                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj;
+                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj*KSCALE3(i,ja,jb);
                         }
                     }
                 }
@@ -4201,7 +4404,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                             jb = Q.pivAlphaLB()(jbP);
 
                             Kxj = K2x2(i,ja,jb);
-                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj;
+                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj*KSCALE3(i,ja,jb);
                         }
                     }
 
@@ -4211,7 +4414,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                             jb = Q.pivAlphaUB()(jbP);
 
                             Kxj = K2x2(i,ja,jb);
-                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj;
+                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj*KSCALE3(i,ja,jb);
                         }
                     }
 
@@ -4221,7 +4424,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                             jb = Q.pivAlphaF()(jbP);
 
                             Kxj = K2x2(i,ja,jb);
-                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj;
+                            res += (alphaR()(ja))*(alphaR()(jb))*Kxj*KSCALE3(i,ja,jb);
                         }
                     }
                 }
@@ -4246,6 +4449,8 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
 //                res += (double) resprior;
 //            }
 //        }
+
+        res /= KSCALE1(i);
     }
 
     else if ( resbad && ( emm == 4 ) )
@@ -4290,7 +4495,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                                                      ((alphaR()(k))*(alphaR()(j))*(alphaR()(l))) + 
                                                      ((alphaR()(k))*(alphaR()(l))*(alphaR()(j))) + 
                                                      ((alphaR()(l))*(alphaR()(j))*(alphaR()(k))) + 
-                                                     ((alphaR()(l))*(alphaR()(k))*(alphaR()(j)))    )*Kxj;
+                                                     ((alphaR()(l))*(alphaR()(k))*(alphaR()(j)))    )*Kxj*KSCALE4(i,j,k,l);
                                         }
 			            }
 
@@ -4298,19 +4503,19 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
 
                                     res += ( ((alphaR()(j))*(alphaR()(k))*(alphaR()(k))) +
                                              ((alphaR()(k))*(alphaR()(j))*(alphaR()(k))) +
-                                             ((alphaR()(k))*(alphaR()(k))*(alphaR()(j)))   )*Kxj;
+                                             ((alphaR()(k))*(alphaR()(k))*(alphaR()(j)))   )*Kxj*KSCALE4(i,j,k,k);
 
                                     Kxj = K4(i,j,j,k);
 
                                     res += ( ((alphaR()(k))*(alphaR()(j))*(alphaR()(j))) +
                                              ((alphaR()(j))*(alphaR()(k))*(alphaR()(j))) +
-                                             ((alphaR()(j))*(alphaR()(j))*(alphaR()(k)))    )*Kxj;
+                                             ((alphaR()(j))*(alphaR()(j))*(alphaR()(k)))    )*Kxj*KSCALE4(i,j,j,k);
 			        }
 		            }
 
                             Kxj = K4(i,j,j,j);
 
-                            res += ( ((alphaR()(j))*(alphaR()(j))*(alphaR()(j))) )*Kxj;
+                            res += ( ((alphaR()(j))*(alphaR()(j))*(alphaR()(j))) )*Kxj*KSCALE4(i,j,j,j);
                         }
 		    }
 	        }
@@ -4353,7 +4558,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
                                                  ((alphaR()(k))*(alphaR()(j))*(alphaR()(l))) + 
                                                  ((alphaR()(k))*(alphaR()(l))*(alphaR()(j))) + 
                                                  ((alphaR()(l))*(alphaR()(j))*(alphaR()(k))) + 
-                                                 ((alphaR()(l))*(alphaR()(k))*(alphaR()(j)))    )*Kxj;
+                                                 ((alphaR()(l))*(alphaR()(k))*(alphaR()(j)))    )*Kxj*KSCALE4(i,j,k,l);
                                     }
 			        }
 
@@ -4361,19 +4566,19 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
 
                                 res += ( ((alphaR()(j))*(alphaR()(k))*(alphaR()(k))) +
                                          ((alphaR()(k))*(alphaR()(j))*(alphaR()(k))) +
-                                         ((alphaR()(k))*(alphaR()(k))*(alphaR()(j)))   )*Kxj;
+                                         ((alphaR()(k))*(alphaR()(k))*(alphaR()(j)))   )*Kxj*KSCALE4(i,j,k,k);
 
                                 Kxj = K4(i,j,j,k);
 
                                 res += ( ((alphaR()(k))*(alphaR()(j))*(alphaR()(j))) +
                                          ((alphaR()(j))*(alphaR()(k))*(alphaR()(j))) +
-                                         ((alphaR()(j))*(alphaR()(j))*(alphaR()(k)))    )*Kxj;
+                                         ((alphaR()(j))*(alphaR()(j))*(alphaR()(k)))    )*Kxj*KSCALE4(i,j,j,k);
 			    }
 		        }
 
                         Kxj = K4(i,j,j,j);
 
-                        res += ( ((alphaR()(j))*(alphaR()(j))*(alphaR()(j))) )*Kxj;
+                        res += ( ((alphaR()(j))*(alphaR()(j))*(alphaR()(j))) )*Kxj*KSCALE4(i,j,j,j);
                     }
 		}
 	    }
@@ -4397,6 +4602,8 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
 //                res += (double) resprior;
 //            }
 //        }
+
+        res /= KSCALE1(i);
     }
 
     else if ( resbad )
@@ -4526,6 +4733,8 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
 //                res += (double) resprior;
 //            }
 //        }
+
+        res /= KSCALE1(i);
     }
 
     return ( unusedvar = ( res > 0 ) ? +1 : -1 );
@@ -4535,7 +4744,7 @@ void SVM_Scalar::fastg(double &res) const
 {
     if ( emm == 2 )
     {
-        int jP,k;
+        int jP;
         double Kxj;
 
         res = biasR();
@@ -4544,11 +4753,11 @@ void SVM_Scalar::fastg(double &res) const
         {
             for ( jP = 0 ; jP < NLB() ; ++jP )
             {
-                k = Q.pivAlphaLB()(jP);
+                int k = Q.pivAlphaLB()(jP);
 
                 Kxj = K1(k,nullptr,&(x(k)),&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE1(k);
             }
         }
 
@@ -4556,11 +4765,11 @@ void SVM_Scalar::fastg(double &res) const
         {
             for ( jP = 0 ; jP < NUB() ; ++jP )
             {
-                k = Q.pivAlphaUB()(jP);
+                int k = Q.pivAlphaUB()(jP);
 
                 Kxj = K1(k,nullptr,&(x(k)),&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE1(k);
             }
         }
 
@@ -4568,13 +4777,15 @@ void SVM_Scalar::fastg(double &res) const
         {
             for ( jP = 0 ; jP < NF() ; ++jP )
             {
-                k = Q.pivAlphaF()(jP);
+                int k = Q.pivAlphaF()(jP);
 
                 Kxj = K1(k,nullptr,&(x(k)),&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE1(k);
             }
         }
+
+        res /= KSCALE0;
     }
 
     else
@@ -4595,7 +4806,7 @@ void SVM_Scalar::fastg(double &res,
     {
         if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
 
-        int jP,k;
+        int jP;
         double Kxj;
 
         res = biasR();
@@ -4604,11 +4815,11 @@ void SVM_Scalar::fastg(double &res,
         {
             for ( jP = 0 ; jP < NLB() ; ++jP )
             {
-                k = Q.pivAlphaLB()(jP);
+                int k = Q.pivAlphaLB()(jP);
 
                 Kxj = K2(ia,k,nullptr,&xa,&(x(k)),&xainfo,&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE2(ia,k);
             }
         }
 
@@ -4616,11 +4827,11 @@ void SVM_Scalar::fastg(double &res,
         {
             for ( jP = 0 ; jP < NUB() ; ++jP )
             {
-                k = Q.pivAlphaUB()(jP);
+                int k = Q.pivAlphaUB()(jP);
 
                 Kxj = K2(ia,k,nullptr,&xa,&(x(k)),&xainfo,&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE2(ia,k);
             }
         }
 
@@ -4628,15 +4839,17 @@ void SVM_Scalar::fastg(double &res,
         {
             for ( jP = 0 ; jP < NF() ; ++jP )
             {
-                k = Q.pivAlphaF()(jP);
+                int k = Q.pivAlphaF()(jP);
 
                 Kxj = K2(ia,k,nullptr,&xa,&(x(k)),&xainfo,&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE2(ia,k);
             }
         }
 
         if ( ia < 0 ) { resetInnerWildp(); }
+
+        res /= KSCALE1(ia);
     }
 
     else
@@ -4647,9 +4860,9 @@ void SVM_Scalar::fastg(double &res,
     return;
 }
 
-void SVM_Scalar::fastg(double &res, 
+void SVM_Scalar::fastg(double &res,
                        int ia, int ib,
-                       const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, 
+                       const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
                        const vecInfo &xainfo, const vecInfo &xbinfo) const
 {
     if ( emm == 2 )
@@ -4657,7 +4870,7 @@ void SVM_Scalar::fastg(double &res,
         if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
         if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
 
-        int jP,k;
+        int jP;
         double Kxj;
 
         res = biasR();
@@ -4666,11 +4879,11 @@ void SVM_Scalar::fastg(double &res,
         {
             for ( jP = 0 ; jP < NLB() ; ++jP )
             {
-                k = Q.pivAlphaLB()(jP);
+                int k = Q.pivAlphaLB()(jP);
 
                 Kxj = K3(ia,ib,k,nullptr,&xa,&xb,&(x(k)),&xainfo,&xbinfo,&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE3(ia,ib,k);
             }
         }
 
@@ -4678,11 +4891,11 @@ void SVM_Scalar::fastg(double &res,
         {
             for ( jP = 0 ; jP < NUB() ; ++jP )
             {
-                k = Q.pivAlphaUB()(jP);
+                int k = Q.pivAlphaUB()(jP);
 
                 Kxj = K3(ia,ib,k,nullptr,&xa,&xb,&(x(k)),&xainfo,&xbinfo,&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE3(ia,ib,k);
             }
         }
 
@@ -4690,15 +4903,17 @@ void SVM_Scalar::fastg(double &res,
         {
             for ( jP = 0 ; jP < NF() ; ++jP )
             {
-                k = Q.pivAlphaF()(jP);
+                int k = Q.pivAlphaF()(jP);
 
                 Kxj = K3(ia,ib,k,nullptr,&xa,&xb,&(x(k)),&xainfo,&xbinfo,&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE3(ia,ib,k);
             }
         }
 
         if ( ( ia < 0 ) || ( ib < 0 ) ) { resetInnerWildp(); }
+
+        res /= KSCALE2(ia,ib);
     }
 
     else
@@ -4713,7 +4928,7 @@ void SVM_Scalar::fastg(gentype &res) const
 {
     if ( emm == 2 )
     {
-        int jP,k;
+        int jP;
         double Kxj;
 
         res = biasR();
@@ -4722,11 +4937,11 @@ void SVM_Scalar::fastg(gentype &res) const
         {
             for ( jP = 0 ; jP < NLB() ; ++jP )
             {
-                k = Q.pivAlphaLB()(jP);
+                int k = Q.pivAlphaLB()(jP);
 
                 Kxj = K1(k,nullptr,&(x(k)),&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE1(k);
             }
         }
 
@@ -4734,11 +4949,11 @@ void SVM_Scalar::fastg(gentype &res) const
         {
             for ( jP = 0 ; jP < NUB() ; ++jP )
             {
-                k = Q.pivAlphaUB()(jP);
+                int k = Q.pivAlphaUB()(jP);
 
                 Kxj = K1(k,nullptr,&(x(k)),&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE1(k);
             }
         }
 
@@ -4746,13 +4961,15 @@ void SVM_Scalar::fastg(gentype &res) const
         {
             for ( jP = 0 ; jP < NF() ; ++jP )
             {
-                k = Q.pivAlphaF()(jP);
+                int k = Q.pivAlphaF()(jP);
 
                 Kxj = K1(k,nullptr,&(x(k)),&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE1(k);
             }
         }
+
+        res /= KSCALE0;
     }
 
     else
@@ -4772,7 +4989,7 @@ void SVM_Scalar::fastg(gentype &res,
     {
         if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
 
-        int jP,k;
+        int jP;
         double Kxj;
 
         res = biasR();
@@ -4781,11 +4998,11 @@ void SVM_Scalar::fastg(gentype &res,
         {
             for ( jP = 0 ; jP < NLB() ; ++jP )
             {
-                k = Q.pivAlphaLB()(jP);
+                int k = Q.pivAlphaLB()(jP);
 
                 Kxj = K2(ia,k,nullptr,&xa,&(x(k)),&xainfo,&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE2(ia,k);
             }
         }
 
@@ -4793,11 +5010,11 @@ void SVM_Scalar::fastg(gentype &res,
         {
             for ( jP = 0 ; jP < NUB() ; ++jP )
             {
-                k = Q.pivAlphaUB()(jP);
+                int k = Q.pivAlphaUB()(jP);
 
                 Kxj = K2(ia,k,nullptr,&xa,&(x(k)),&xainfo,&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE2(ia,k);
             }
         }
 
@@ -4805,15 +5022,17 @@ void SVM_Scalar::fastg(gentype &res,
         {
             for ( jP = 0 ; jP < NF() ; ++jP )
             {
-                k = Q.pivAlphaF()(jP);
+                int k = Q.pivAlphaF()(jP);
 
                 Kxj = K2(ia,k,nullptr,&xa,&(x(k)),&xainfo,&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE2(ia,k);
             }
         }
 
         if ( ia < 0 ) { resetInnerWildp(); }
+
+        res /= KSCALE1(ia);
     }
 
     else
@@ -4824,9 +5043,9 @@ void SVM_Scalar::fastg(gentype &res,
     return;
 }
 
-void SVM_Scalar::fastg(gentype &res, 
+void SVM_Scalar::fastg(gentype &res,
                        int ia, int ib,
-                       const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, 
+                       const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
                        const vecInfo &xainfo, const vecInfo &xbinfo) const
 {
     if ( emm == 2 )
@@ -4834,7 +5053,7 @@ void SVM_Scalar::fastg(gentype &res,
         if ( ia < 0 ) { ia = setInnerWildpa(&xa,&xainfo); }
         if ( ib < 0 ) { ib = setInnerWildpb(&xb,&xbinfo); }
 
-        int jP,k;
+        int jP;
         double Kxj;
 
         res = biasR();
@@ -4843,11 +5062,11 @@ void SVM_Scalar::fastg(gentype &res,
         {
             for ( jP = 0 ; jP < NLB() ; ++jP )
             {
-                k = Q.pivAlphaLB()(jP);
+                int k = Q.pivAlphaLB()(jP);
 
                 Kxj = K3(ia,ib,k,nullptr,&xa,&xb,&(x(k)),&xainfo,&xbinfo,&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE3(ia,ib,k);
             }
         }
 
@@ -4855,11 +5074,11 @@ void SVM_Scalar::fastg(gentype &res,
         {
             for ( jP = 0 ; jP < NUB() ; ++jP )
             {
-                k = Q.pivAlphaUB()(jP);
+                int k = Q.pivAlphaUB()(jP);
 
                 Kxj = K3(ia,ib,k,nullptr,&xa,&xb,&(x(k)),&xainfo,&xbinfo,&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE3(ia,ib,k);
             }
         }
 
@@ -4867,15 +5086,17 @@ void SVM_Scalar::fastg(gentype &res,
         {
             for ( jP = 0 ; jP < NF() ; ++jP )
             {
-                k = Q.pivAlphaF()(jP);
+                int k = Q.pivAlphaF()(jP);
 
                 Kxj = K3(ia,ib,k,nullptr,&xa,&xb,&(x(k)),&xainfo,&xbinfo,&(xinfo(k)));
 
-                res += (alphaR()(k))*Kxj;
+                res += (alphaR()(k))*Kxj*KSCALE3(ia,ib,k);
             }
         }
 
         if ( ( ia < 0 ) || ( ib < 0 ) ) { resetInnerWildp(); }
+
+        res /= KSCALE2(ia,ib);
     }
 
     else
@@ -4962,6 +5183,7 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             else
             {
                 K2(Kii,ia,ib,(const gentype **) pxyprodij);
+                Kii *= KSCALE2(ia,ib);
             }
 
             if ( ia >= 0 )
@@ -4994,6 +5216,7 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                     if ( alphaState()(j) ) //|| ( ia == j ) || ( ib == j ) )
                     {
                         K2(Kia("&",j),ia,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
+                        Kia("&",ia) *= KSCALE2(ia,j);
                     }
 
                     else
@@ -5028,6 +5251,7 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                     retVector<double> tmpva;
 
                     Kib("&",ib) -= diagoff(tmpva)(ib);
+                    Kib("&",ib) *= KSCALE2(j,ib);
                 }
             }
 
@@ -5040,6 +5264,7 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                         //K2(Kib("&",j),j,ib,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr); - reversed in line with assumptions in Kxfer (unknown "x" comes first)
                         K2(Kib("&",j),ib,j,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr);
                         setconj(Kib("&",j));
+                        Kib("&",j) *= KSCALE2(ib,j);
                     }
 
                     else
@@ -5158,6 +5383,7 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             else
             {
                 K2(resv,ia,ib,(const gentype **) pxyprodij);
+                resv *= KSCALE2(ia,ib);
             }
 
             if ( !( dtva & 7 ) )
@@ -5172,7 +5398,7 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             }
         }
 
-        // Additional terms: if the kernel itself is a random process then we need to 
+        // Additional terms: if the kernel itself is a random process then we need to
         // allow for variance from this.  This extra term is:
         //
         // variance_k(g(x))
@@ -5191,8 +5417,10 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             {
                 for ( jP = 0 ; jP < NLB() ; ++jP )
                 {
-                    K2(Kxj,ia,Q.pivAlphaLB()(jP),nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
-                    addres += (alphaR()((Q.pivAlphaLB()(jP))))*(alphaR()((Q.pivAlphaLB()(jP))))*Kxj;
+                    int j = Q.pivAlphaLB()(jP);
+
+                    K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                    addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
                 }
             }
 
@@ -5200,8 +5428,10 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             {
                 for ( jP = 0 ; jP < NUB() ; ++jP )
                 {
-                    K2(Kxj,ia,Q.pivAlphaUB()(jP),nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
-                    addres += (alphaR()((Q.pivAlphaUB()(jP))))*(alphaR()((Q.pivAlphaUB()(jP))))*Kxj;
+                    int j = Q.pivAlphaUB()(jP);
+
+                    K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                    addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
                 }
             }
 
@@ -5209,12 +5439,12 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             {
                 for ( jP = 0 ; jP < NF() ; ++jP )
                 {
-                    K2(Kxj,ia,Q.pivAlphaF()(jP),nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
-                    addres += (alphaR()((Q.pivAlphaF()(jP))))*(alphaR()((Q.pivAlphaF()(jP))))*Kxj;
+                    int j = Q.pivAlphaF()(jP);
+
+                    K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                    addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
                 }
             }
-
-            resv += addres;
         }
     }
 
@@ -5255,6 +5485,7 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             else
             {
                 Kii = K2(ia,ib,(const gentype **) pxyprodij);
+                Kii *= KSCALE2(ia,ib);
             }
 
             if ( ia >= 0 )
@@ -5274,6 +5505,7 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                 for ( j = 0 ; j < NN ; ++j )
                 {
                     Kia("&",j) = K2(ia,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
+                    Kia("&",j) *= KSCALE2(ia,j);
                 }
             }
 
@@ -5300,6 +5532,7 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                 {
                     //K2(Kib("&",j),j,ib,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr); - see above
                     Kib("&",j) = K2(ib,j,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr);
+                    Kib("&",j) *= KSCALE2(ib,j);
                 }
             }
 
@@ -5325,19 +5558,25 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
 
             // mu calculation
 
-            for ( j = 0 ; j < pivAlphaF().size() ; ++j )
+            for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
             {
-                resgg += Kia(pivAlphaF()(j))*alphaR()(pivAlphaF()(j));
+                int j = pivAlphaF()(jP);
+
+                resgg += Kia(j)*alphaR()(j);
             }
 
-            for ( j = 0 ; j < pivAlphaLB().size() ; ++j )
+            for ( int jP = 0 ; jP < pivAlphaLB().size() ; ++jP )
             {
-                resgg += Kia(pivAlphaLB()(j))*alphaR()(pivAlphaLB()(j));
+                int j = pivAlphaLB()(jP);
+
+                resgg += Kia(j)*alphaR()(j);
             }
 
-            for ( j = 0 ; j < pivAlphaUB().size() ; ++j )
+            for ( int jP = 0 ; jP < pivAlphaUB().size() ; ++jP )
             {
-                resgg += Kia(pivAlphaUB()(j))*alphaR()(pivAlphaUB()(j));
+                int j = pivAlphaUB()(jP);
+
+                resgg += Kia(j)*alphaR()(j);
             }
         }
 
@@ -5353,7 +5592,7 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
 
             else
             {
-                resvv = K2(ia,ib,(const gentype **) pxyprodij);
+                resvv = K2(ia,ib,(const gentype **) pxyprodij)*KSCALE2(ia,ib);
             }
         }
 
@@ -5376,8 +5615,10 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             {
                 for ( jP = 0 ; jP < NLB() ; ++jP )
                 {
-                    Kxj = K2(ia,Q.pivAlphaLB()(jP),nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
-                    addres += (alphaR()((Q.pivAlphaLB()(jP))))*(alphaR()((Q.pivAlphaLB()(jP))))*Kxj;
+                    int j = Q.pivAlphaLB()(jP);
+
+                    Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                    addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
                 }
             }
 
@@ -5385,8 +5626,10 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             {
                 for ( jP = 0 ; jP < NUB() ; ++jP )
                 {
-                    Kxj = K2(ia,Q.pivAlphaUB()(jP),nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
-                    addres += (alphaR()((Q.pivAlphaUB()(jP))))*(alphaR()((Q.pivAlphaUB()(jP))))*Kxj;
+                    int j = Q.pivAlphaUB()(jP);
+
+                    Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                    addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
                 }
             }
 
@@ -5394,16 +5637,19 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             {
                 for ( jP = 0 ; jP < NF() ; ++jP )
                 {
-                    Kxj = K2(ia,Q.pivAlphaF()(jP),nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
-                    addres += (alphaR()((Q.pivAlphaF()(jP))))*(alphaR()((Q.pivAlphaF()(jP))))*Kxj;
+                    int j = Q.pivAlphaUB()(jP);
+
+                    Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                    addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
                 }
             }
-
-            resvv += addres;
         }
     }
 
     resmu += yp(ia);
+
+    resmu /= KSCALE1(ia);
+    resv  /= KSCALE2(ia,ib);
 
 //        if ( prim() )
 //        {
@@ -5712,8 +5958,13 @@ void SVM_Scalar::fudgeOff(void)
 }
 
 
+
 int SVM_Scalar::train(int &res, svmvolatile int &killSwitch)
 {
+    bool skipset = ( res == 42424242 ) ? true : false; // magic number to avoid gentype stuff *for now*. This is used in gpr_scalar, passed via lsv_scalar
+
+    res = 0;
+
     if ( !SVM_Scalar::N() || isTrained() )
     {
         return 0;
@@ -5721,7 +5972,7 @@ int SVM_Scalar::train(int &res, svmvolatile int &killSwitch)
 
     if ( !usefuzztval )
     {
-        res |= intrain(killSwitch);
+        res |= intrain(res,killSwitch);
     }
 
     else
@@ -5742,9 +5993,9 @@ int SVM_Scalar::train(int &res, svmvolatile int &killSwitch)
 
         // This outermost loop takes care of fuzzy weights etc
 
-        while ( !killSwitch && !isopt && ( ( itcnt < maxiterfuzztval ) || !maxiterfuzztval ) )
+        while ( !killSwitch && !res && !isopt && ( ( itcnt < maxiterfuzztval ) || !maxiterfuzztval ) )
         {
-            res |= intrain(killSwitch);
+            res |= intrain(res,killSwitch);
 
             isopt = 1;
             ++itcnt;
@@ -5816,7 +6067,10 @@ int SVM_Scalar::train(int &res, svmvolatile int &killSwitch)
         }
     }
 
-    SVM_Generic::basesetAlphaBiasFromAlphaBiasR();
+    if ( !skipset )
+    {
+        SVM_Generic::basesetAlphaBiasFromAlphaBiasR();
+    }
 
     isStateOpt = res ? 0 : 1;
 
@@ -6018,18 +6272,18 @@ double emmupfixer(fullOptState<double,double> &x, void *y, const Vector<double> 
     return res;
 }
 
-int SVM_Scalar::intrain(svmvolatile int &killSwitch)
+int SVM_Scalar::intrain(int &res, svmvolatile int &killSwitch)
 {
     if ( !SVM_Scalar::N() || isTrained() )
     {
         return 0;
     }
 
-    int res = 0;
+    int ires = 0;
 
     if ( emm == 2 )
     {
-        res |= inintrain(killSwitch);
+        ires |= inintrain(res,killSwitch);
     }
 
     else
@@ -6084,7 +6338,7 @@ int SVM_Scalar::intrain(svmvolatile int &killSwitch)
 //        {
 //            errstream() << " pretrain ";
 //
-//            res |= inintrain(killSwitch);
+//            ires |= inintrain(killSwitch);
 //        }
 //
 //        errstream() << " setup ";
@@ -6099,7 +6353,7 @@ int SVM_Scalar::intrain(svmvolatile int &killSwitch)
         diagoffsetBase = diagoff;
         gpBase = gp;
 
-        res |= inintrain(killSwitch,emmupfixer,(void *) this,outerlrval);
+        ires |= inintrain(res,killSwitch,emmupfixer,(void *) this,outerlrval);
 
         // NB: sQgraddesc has been modified to remove offsets on exit without
         // destroying caches, so no need to do the following anymore.
@@ -6326,12 +6580,14 @@ int SVM_Scalar::intrain(svmvolatile int &killSwitch)
         }
     }
 
-    return res;
+    return ires;
 }
 
-int SVM_Scalar::inintrain(svmvolatile int &killSwitch, double (*fixHigherOrderTerms)(fullOptState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &), void *htArg, double stepscalefactor) 
+int SVM_Scalar::inintrain(int &res, svmvolatile int &killSwitch, double (*fixHigherOrderTerms)(fullOptState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &), void *htArg, double stepscalefactor) 
 {
-    int res = 0;
+    res = 0; // major copout I know
+
+    int ires = 0;
 
     if ( !SVM_Scalar::N() || isTrained() )
     {
@@ -6458,10 +6714,10 @@ int SVM_Scalar::inintrain(svmvolatile int &killSwitch, double (*fixHigherOrderTe
     sc.maxruntime = maxtraintimeval;
     sc.runtimeend = traintimeendval;
 
-    res = solve_linear_program(Q, wr,gn, cr,ddr, *Gpval,GPNorGPNEXT(Gpn,GpnExt),
-                               Qnp,Qn, gp,hp,qn, lb,ub, Gn,gn,
-                               alpharestrictoverride,Qconstype,
-                               killSwitch,sc); //maxitcntval,maxtraintimeval,traintimeendval);
+    ires = solve_linear_program(Q, wr,gn, cr,ddr, *Gpval,GPNorGPNEXT(Gpn,GpnExt),
+                                Qnp,Qn, gp,hp,qn, lb,ub, Gn,gn,
+                                alpharestrictoverride,Qconstype,
+                                killSwitch,sc); //maxitcntval,maxtraintimeval,traintimeendval);
   }
 
   else
@@ -6482,8 +6738,8 @@ int SVM_Scalar::inintrain(svmvolatile int &killSwitch, double (*fixHigherOrderTe
              ( SVM_Scalar::isNegBias() && (      betaGrad  < -Opttol() ) )    )
 	{
 nullPrint(errstream(),"^");
-            res = presolveit(betaGrad);
-if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
+            ires = presolveit(betaGrad);
+if ( ires ) { errstream() << "FAIL: No optimal start point.\n"; }
 	}
     }
 
@@ -6496,14 +6752,14 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
 //phantomxyzabc
     if ( fixHigherOrderTerms || SVM_Scalar::isOptActive() || SVM_Scalar::isPosBias() || SVM_Scalar::isNegBias() || SVM_Scalar::isShrinkTube() )
     {
-	res = 1;
+	ires = 1;
 
         if ( SVM_Scalar::isFixedTube() )
 	{
             if ( fabs(epsval) < zerotol() )
 	    {
                 int oldGpSize = (*Gpval).numRows();
-                int oldxySize = (*xyval).numRows(); 
+                int oldxySize = (*xyval).numRows();
                 int oldGpsigmaSize = (*Gpsigma).numRows();
 
                 if ( !delaydownsize )
@@ -6511,6 +6767,10 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
                     kerncache.padCol(4*(GPNorGPNEXT(Gpn,GpnExt).numCols()));
                     xycache.padCol(4*(GPNorGPNEXT(Gpn,GpnExt).numCols()));
                     sigmacache.padCol(4*(GPNorGPNEXT(Gpn,GpnExt).numCols()));
+
+                    Lweightval.resize(oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
+                    retVector<double> tmpvvvv;
+                    Lweightval("&",oldGpSize,1,oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols()))-1,tmpvvvv) = 1.0;
 
                     (*xyval).resize(oldxySize,oldxySize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
                     (*Gpval).resize(oldGpSize,oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
@@ -6532,7 +6792,7 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
                     xx.sc.outertol        = ( outertolval > Opttol() ) ? outertolval : Opttol();
                     //xx.reltol          = ;
 
-                    res = xx.wrapsolve(killSwitch);
+                    ires = xx.wrapsolve(killSwitch);
                 }
 
                 else
@@ -6543,7 +6803,7 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
                     xx.sc.maxruntime = maxtraintimeval;
                     xx.sc.runtimeend = traintimeendval;
 
-                    res = xx.wrapsolve(killSwitch);
+                    ires = xx.wrapsolve(killSwitch);
 
                 }
 
@@ -6552,6 +6812,8 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
                     kerncache.padCol(0);
                     xycache.padCol(0);
                     sigmacache.padCol(0);
+
+                    Lweightval.resize(oldGpSize);
 
                     (*xyval).resize(oldxySize,oldxySize);
                     (*Gpval).resize(oldGpSize,oldGpSize);
@@ -6570,6 +6832,10 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
                     kerncache.padCol(4*(GPNorGPNEXT(Gpn,GpnExt).numCols()));
                     xycache.padCol(4*(GPNorGPNEXT(Gpn,GpnExt).numCols()));
                     sigmacache.padCol(4*(GPNorGPNEXT(Gpn,GpnExt).numCols()));
+
+                    Lweightval.resize(oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
+                    retVector<double> tmpvvvv;
+                    Lweightval("&",oldGpSize,1,oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols()))-1,tmpvvvv) = 1.0;
 
                     (*xyval).resize(oldxySize,oldxySize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
                     (*Gpval).resize(oldGpSize,oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
@@ -6591,7 +6857,7 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
                     xx.sc.outertol        = ( outertolval > Opttol() ) ? outertolval : Opttol();
                     //xx.sc.reltol          = ;
 
-                    res = xx.wrapsolve(killSwitch);
+                    ires = xx.wrapsolve(killSwitch);
                 }
 
                 else
@@ -6602,7 +6868,7 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
                     xx.sc.maxruntime = maxtraintimeval;
                     xx.sc.runtimeend = traintimeendval;
 
-                    res = xx.wrapsolve(killSwitch);
+                    ires = xx.wrapsolve(killSwitch);
                 }
 
                 if ( !delaydownsize )
@@ -6610,6 +6876,8 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
                     kerncache.padCol(0);
                     xycache.padCol(0);
                     sigmacache.padCol(0);
+
+                    Lweightval.resize(oldGpSize);
 
                     (*xyval).resize(oldxySize,oldxySize);
                     (*Gpval).resize(oldGpSize,oldGpSize);
@@ -6686,6 +6954,10 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
                     xycache.padCol(4*(GPNorGPNEXT(Gpn,GpnExt).numCols()));
                     sigmacache.padCol(4*(GPNorGPNEXT(Gpn,GpnExt).numCols()));
 
+                    Lweightval.resize(oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
+                    retVector<double> tmpvvvv;
+                    Lweightval("&",oldGpSize,1,oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols()))-1,tmpvvvv) = 1.0;
+
                     (*xyval).resize(oldxySize,oldxySize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
                     (*Gpval).resize(oldGpSize,oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
                     (*Gpsigma).resize(oldGpsigmaSize,oldGpsigmaSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
@@ -6706,7 +6978,7 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
                     xx.sc.outertol        = ( outertolval > Opttol() ) ? outertolval : Opttol();
                     //xx.sc.reltol          = ;
 
-                    res = xx.wrapsolve(killSwitch);
+                    ires = xx.wrapsolve(killSwitch);
                 }
 
                 else
@@ -6717,7 +6989,7 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
                     xx.sc.maxruntime = maxtraintimeval;
                     xx.sc.runtimeend = traintimeendval;
 
-                    res = xx.wrapsolve(killSwitch);
+                    ires = xx.wrapsolve(killSwitch);
                 }
 
                 if ( !delaydownsize )
@@ -6725,6 +6997,8 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
                     kerncache.padCol(0);
                     xycache.padCol(0);
                     sigmacache.padCol(0);
+
+                    Lweightval.resize(oldGpSize);
 
                     (*xyval).resize(oldxySize,oldxySize);
                     (*Gpval).resize(oldGpSize,oldGpSize);
@@ -6765,6 +7039,10 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
             xycache.padCol(4*(GPNorGPNEXT(Gpn,GpnExt).numCols()));
             sigmacache.padCol(4*(GPNorGPNEXT(Gpn,GpnExt).numCols()));
 
+            Lweightval.resize(oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
+            retVector<double> tmpvvvv;
+            Lweightval("&",oldGpSize,1,oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols()))-1,tmpvvvv) = 1.0;
+
             (*xyval).resize(oldxySize,oldxySize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
             (*Gpval).resize(oldGpSize,oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
             (*Gpsigma).resize(oldGpsigmaSize,oldGpsigmaSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
@@ -6777,7 +7055,7 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
             xx.sc.maxruntime = maxtraintimeval;
             xx.sc.runtimeend = traintimeendval;
 
-            res = xx.wrapsolve(killSwitch);
+            ires = xx.wrapsolve(killSwitch);
         }
 
         if ( !delaydownsize )
@@ -6785,6 +7063,8 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
             kerncache.padCol(0);
             xycache.padCol(0);
             sigmacache.padCol(0);
+
+            Lweightval.resize(oldGpSize);
 
             (*xyval).resize(oldxySize,oldxySize);
             (*Gpval).resize(oldGpSize,oldGpSize);
@@ -6806,6 +7086,10 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
             xycache.padCol(4*(GPNorGPNEXT(Gpn,GpnExt).numCols()));
             sigmacache.padCol(4*(GPNorGPNEXT(Gpn,GpnExt).numCols()));
 
+            Lweightval.resize(oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
+            retVector<double> tmpvvvv;
+            Lweightval("&",oldGpSize,1,oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols()))-1,tmpvvvv) = 1.0;
+
             (*xyval).resize(oldxySize,oldxySize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
             (*Gpval).resize(oldGpSize,oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
             (*Gpsigma).resize(oldGpsigmaSize,oldGpsigmaSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
@@ -6818,7 +7102,7 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
             xx.sc.maxruntime = maxtraintimeval;
             xx.sc.runtimeend = traintimeendval;
 
-            res = xx.wrapsolve(killSwitch);
+            ires = xx.wrapsolve(killSwitch);
         }
 
         if ( !delaydownsize )
@@ -6826,6 +7110,8 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
             kerncache.padCol(0);
             xycache.padCol(0);
             sigmacache.padCol(0);
+
+            Lweightval.resize(oldGpSize);
 
             (*xyval).resize(oldxySize,oldxySize);
             (*Gpval).resize(oldGpSize,oldGpSize);
@@ -6847,6 +7133,10 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
             xycache.padCol(4*(GPNorGPNEXT(Gpn,GpnExt).numCols()));
             sigmacache.padCol(4*(GPNorGPNEXT(Gpn,GpnExt).numCols()));
 
+            Lweightval.resize(oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
+            retVector<double> tmpvvvv;
+            Lweightval("&",oldGpSize,1,oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols()))-1,tmpvvvv) = 1.0;
+
             (*xyval).resize(oldxySize,oldxySize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
             (*Gpval).resize(oldGpSize,oldGpSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
             (*Gpsigma).resize(oldGpsigmaSize,oldGpsigmaSize+(2*(GPNorGPNEXT(Gpn,GpnExt).numCols())));
@@ -6859,7 +7149,7 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
             xx.sc.maxruntime = maxtraintimeval;
             xx.sc.runtimeend = traintimeendval;
 
-            res = xx.wrapsolve(killSwitch);
+            ires = xx.wrapsolve(killSwitch);
         }
 
         if ( !delaydownsize )
@@ -6867,6 +7157,8 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
             kerncache.padCol(0);
             xycache.padCol(0);
             sigmacache.padCol(0);
+
+            Lweightval.resize(oldGpSize);
 
             (*xyval).resize(oldxySize,oldxySize);
             (*Gpval).resize(oldGpSize,oldGpSize);
@@ -6984,7 +7276,7 @@ if ( res ) { errstream() << "FAIL: No optimal start point.\n"; }
         kerncache.cheatSetEvalCache(evalKSVM_Scalar);
     }
 
-  return res;
+  return ires;
 }
 
 int SVM_Scalar::presolveit(double betaGrad)
@@ -7851,6 +8143,8 @@ std::ostream &SVM_Scalar::printstream(std::ostream &output, int dep) const
     repPrint(output,'>',dep) << "Training targets:                " << traintarg              << "\n";
     repPrint(output,'>',dep) << "Training classes:                " << trainclass             << "\n";
     repPrint(output,'>',dep) << "Training C weights:              " << Cweightval             << "\n";
+    repPrint(output,'>',dep) << "Training L weights:              " << Lweightval             << "\n";
+    repPrint(output,'>',dep) << "Use L weights:                   " << useLweight             << "\n";
     repPrint(output,'>',dep) << "Training C weights fuzzing:      " << Cweightfuzzval         << "\n";
     repPrint(output,'>',dep) << "Training eps weights:            " << epsweightval           << "\n";
 
@@ -7945,6 +8239,8 @@ std::istream &SVM_Scalar::inputstream(std::istream &input)
     input >> dummy; input >> traintarg;
     input >> dummy; input >> trainclass;
     input >> dummy; input >> Cweightval;
+    input >> dummy; input >> Lweightval;
+    input >> dummy; input >> useLweight;
     input >> dummy; input >> Cweightfuzzval;
     input >> dummy; input >> epsweightval;
 
@@ -7986,7 +8282,8 @@ std::istream &SVM_Scalar::inputstream(std::istream &input)
     Gplocal = 1;
 
     MEMNEW(xyval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &xycache,   SVM_Scalar::N(),SVM_Scalar::N()));
-    MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache, SVM_Scalar::N(),SVM_Scalar::N()));
+    MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache, SVM_Scalar::N(),SVM_Scalar::N(),nullptr,nullptr,&(SVM_Scalar::Lweightval),SVM_Scalar::useLweight));
+//phantomxyzxyz    MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache, SVM_Scalar::N(),SVM_Scalar::N()));
     MEMNEW(Gpsigma,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &sigmacache,SVM_Scalar::N(),SVM_Scalar::N()));
 
     int oldmemsize = kerncache.get_memsize();
@@ -8013,6 +8310,7 @@ int SVM_Scalar::prealloc(int expectedN)
     traintarg.prealloc(expectedN);
     trainclass.prealloc(expectedN);
     Cweightval.prealloc(expectedN);
+    Lweightval.prealloc(expectedN);
     Cweightfuzzval.prealloc(expectedN);
     epsweightval.prealloc(expectedN);
     gp.prealloc(expectedN);
@@ -8210,7 +8508,91 @@ int SVM_Scalar::fact_minvdiagsq(Vector<gentype> &ares, Vector<gentype> &bres) co
     return 0;
 }
 
+double SVM_Scalar::getKval(int i, int j) const
+{
+    double res = Gp()(i,j);
 
+    if ( useLweight )
+    {
+        res /= (Lweightval(i)*Lweightval(j));
+    }
+
+    return res - ( ( i == j ) ? diagoff(i) : 0.0 );
+}
+
+int SVM_Scalar::setuseLweight(void)
+{
+    int ires = 0;
+
+    if ( !useLweight )
+    {
+        useLweight = true;
+
+        if ( SVM_Scalar::N() )
+        {
+            isStateOpt = 0;
+
+            isQuasiLogLikeCalced = 0;
+            isMaxInfGainCalced   = 0;
+        }
+
+        if ( Gplocal )
+        {
+            MEMDEL(Gpval);
+            Gpval = nullptr;
+
+            MEMDEL(Gpsigma);
+            Gpsigma = nullptr;
+
+            MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,trainclass.size(),trainclass.size(),nullptr,nullptr,&Lweightval,useLweight));
+//phantomxyzxyz            MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,trainclass.size(),trainclass.size()));
+            MEMNEW(Gpsigma,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &sigmacache,trainclass.size(),trainclass.size()));
+        }
+
+        Q.refact(*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
+
+        ires = 1;
+    }
+
+    return ires;
+}
+
+int SVM_Scalar::setnoLweight(void)
+{
+    int ires = 0;
+
+    if ( !useLweight )
+    {
+        useLweight = false;
+
+        if ( SVM_Scalar::N() )
+        {
+            isStateOpt = 0;
+
+            isQuasiLogLikeCalced = 0;
+            isMaxInfGainCalced   = 0;
+        }
+
+        if ( Gplocal )
+        {
+            MEMDEL(Gpval);
+            Gpval = nullptr;
+
+            MEMDEL(Gpsigma);
+            Gpsigma = nullptr;
+
+            MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,trainclass.size(),trainclass.size(),nullptr,nullptr,&Lweightval,useLweight));
+//phantomxyzxyz            MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,trainclass.size(),trainclass.size()));
+            MEMNEW(Gpsigma,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &sigmacache,trainclass.size(),trainclass.size()));
+        }
+
+        Q.refact(*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
+
+        ires = 1;
+    }
+
+    return ires;
+}
 
 
 

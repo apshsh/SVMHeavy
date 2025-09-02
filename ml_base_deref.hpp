@@ -102,21 +102,22 @@ public:
     virtual int isUnderlyingVector(void) const override { return getQconst().isUnderlyingVector(); }
     virtual int isUnderlyingAnions(void) const override { return getQconst().isUnderlyingAnions(); }
 
-    virtual const Vector<int> &ClassLabels(void)             const override { return getQconst().ClassLabels();        }
-    virtual int   getInternalClass        (const gentype &y) const override { return getQconst().getInternalClass(y);  }
-    virtual int   numInternalClasses      (void)             const override { return getQconst().numInternalClasses(); }
-    virtual int   isenabled               (int i)            const override { return getQconst().isenabled(i);         }
-    virtual int   isVarDefined            (void)             const override { return getQconst().isVarDefined();       }
+    virtual const Vector<int> &ClassLabels       (void)             const override { return getQconst().ClassLabels();        }
+    virtual       int          getInternalClass  (const gentype &y) const override { return getQconst().getInternalClass(y);  }
+    virtual       int          numInternalClasses(void)             const override { return getQconst().numInternalClasses(); }
+    virtual       int          isenabled         (int i)            const override { return getQconst().isenabled(i);         }
+    virtual       int          isVarDefined      (void)             const override { return getQconst().isVarDefined();       }
 
     virtual const int *ClassLabelsInt     (void)  const override { return getQconst().ClassLabelsInt();       }
     virtual       int  getInternalClassInt(int y) const override { return getQconst().getInternalClassInt(y); }
 
-    virtual double C        (void)  const override { return getQconst().C();         }
-    virtual double sigma    (void)  const override { return getQconst().sigma();     }
-    virtual double sigma_cut(void)  const override { return getQconst().sigma_cut(); }
-    virtual double eps      (void)  const override { return getQconst().eps();       }
-    virtual double Cclass   (int d) const override { return getQconst().Cclass(d);   }
-    virtual double epsclass (int d) const override { return getQconst().epsclass(d); }
+    virtual double C         (void)  const override { return getQconst().C();           }
+    virtual double sigma     (void)  const override { return getQconst().sigma();       }
+    virtual double sigma_cut (void)  const override { return getQconst().sigma_cut();   }
+    virtual double eps       (void)  const override { return getQconst().eps();         }
+    virtual double Cclass    (int d) const override { return getQconst().Cclass(d);     }
+    virtual double sigmaclass(int d) const override { return getQconst().sigmaclass(d); }
+    virtual double epsclass  (int d) const override { return getQconst().epsclass(d);   }
 
     virtual       int      prim  (void) const override { return getQconst().prim();   }
     virtual const gentype &prival(void) const override { return getQconst().prival(); }
@@ -504,12 +505,13 @@ public:
 
     virtual int setbetarank(double nv) override { return getQ().setbetarank(nv); }
 
-    virtual int setC        (double xC)          override { return getQ().setC(xC);                 }
-    virtual int setsigma    (double xsigma)      override { return getQ().setsigma(xsigma);         }
-    virtual int setsigma_cut(double xsigma_cut)  override { return getQ().setsigma_cut(xsigma_cut); }
-    virtual int seteps      (double xeps)        override { return getQ().seteps(xeps);             }
-    virtual int setCclass   (int d, double xC)   override { return getQ().setCclass(d,xC);          }
-    virtual int setepsclass (int d, double xeps) override { return getQ().setepsclass(d,xeps);      }
+    virtual int setC         (double xC)          override { return getQ().setC(xC);                 }
+    virtual int setsigma     (double xsigma)      override { return getQ().setsigma(xsigma);         }
+    virtual int setsigma_cut (double xsigma_cut)  override { return getQ().setsigma_cut(xsigma_cut); }
+    virtual int seteps       (double xeps)        override { return getQ().seteps(xeps);             }
+    virtual int setCclass    (int d, double xC)   override { return getQ().setCclass(d,xC);          }
+    virtual int setsigmaclass(int d, double xsig) override { return getQ().setsigmaclass(d,xsig);    }
+    virtual int setepsclass  (int d, double xeps) override { return getQ().setepsclass(d,xeps);      }
 
     virtual int setprim  (int nv)            override { return getQ().setprim(nv);   }
     virtual int setprival(const gentype &nv) override { return getQ().setprival(nv); }

@@ -25,11 +25,6 @@
 #include "addData.hpp"
 #include "analyseAnomaly.hpp"
 #include "balc.hpp"
-#include "gridopt.hpp"
-#include "directopt.hpp"
-#include "nelderopt.hpp"
-#include "bayesopt.hpp"
-#include "globalopt.hpp"
 #include "opttest.hpp"
 #include "paretotest.hpp"
 #include "xferml.hpp"
@@ -40,7 +35,6 @@
 
 // uncomment to process underscores in input as spaces
 //#define MANGLE_UNDERSCORES
-
 
 // Argument extraction
 // ===================
@@ -173,8 +167,7 @@ void preExtractLinesFromFile(ofiletype &filelines, gentype &linesleft, std::stri
 // currcommandis overwrites currcomand(0)
 
 void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &currcommandis, const Vector<std::string> &currcomand, int ktype,
-                   SparseVector<SparseVector<gentype> > &argvariables, int &kernnum, int firstcall,
-                   SparseVector<ML_Mutable *> &svmbase, int svmInd);
+                   SparseVector<SparseVector<gentype> > &argvariables, int &kernnum, int firstcall, int svmInd);
 
 
 // SVM testing functions
@@ -228,21 +221,13 @@ int gridelmMLreg(int ind, ML_Mutable *MLreg, void *arg);
 // Global gentype ML_Base access function
 
 
-int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib,
-              SparseVector<ML_Mutable *> *svmbase = nullptr);
-int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib,
-              SparseVector<ML_Mutable *> *xsvmbase)
+int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib);
+int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib)
 {
-    static SparseVector<ML_Mutable *> *svmbase = nullptr;
-
-    svmbase = xsvmbase ? xsvmbase : svmbase;
-
-    NiceAssert( svmbase );
-
     if ( svmInd >= 0 )
     {
         const char *dummy = "";
-        return getMLrefconst(*svmbase,svmInd).getparam(fnind,val,xa,ia,xb,ib,dummy);
+        return getMLrefconst(getMLmodels(),svmInd).getparam(fnind,val,xa,ia,xb,ib,dummy);
     }
 
     else if ( ( svmInd == -1 ) && ( ia == 0 ) )
@@ -283,20 +268,12 @@ int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia,
     return 1;
 }
 
-int egetparamfull(int svmInd, int fnind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib,
-              SparseVector<ML_Mutable *> *svmbase = nullptr);
-int egetparamfull(int svmInd, int fnind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib,
-              SparseVector<ML_Mutable *> *xsvmbase)
+int egetparamfull(int svmInd, int fnind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib);
+int egetparamfull(int svmInd, int fnind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib)
 {
-    static SparseVector<ML_Mutable *> *svmbase = nullptr;
-
-    svmbase = xsvmbase ? xsvmbase : svmbase;
-
-    NiceAssert( svmbase );
-
     if ( svmInd >= 0 )
     {
-        return getMLrefconst(*svmbase,svmInd).egetparam(fnind,val,xa,ia,xb,ib);
+        return getMLrefconst(getMLmodels(),svmInd).egetparam(fnind,val,xa,ia,xb,ib);
     }
 
     else if ( ( svmInd == -1 ) && ( ia == 0 ) )
@@ -433,14 +410,12 @@ void egetparam(int svmind, int fnind, Vector<gentype> &val, const Vector<gentype
 }
 
 int runsvmint(SVMThreadContext *svmContext,
-              SparseVector<ML_Mutable *> &svmbase,
               Stack<awarestream *> *xxxcommstack,
               svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
               int (*getsetExtVar)(gentype &res, const gentype &src, int num),
               SparseVector<SparseVector<int> > &returntag);
 
 int runsvm(SVMThreadContext *svmContext,
-           SparseVector<ML_Mutable *> &svmbase,
            Stack<awarestream *> *xxxcommstack,
            svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
            int (*getsetExtVar)(gentype &res, const gentype &src, int num),
@@ -451,14 +426,14 @@ int runsvm(SVMThreadContext *svmContext,
     gentype temp;
     Vector<gentype> etemp;
 
-    getparamfull(0,0,temp,temp,0,temp,0,&svmbase);
-    egetparamfull(0,0,etemp,etemp,0,etemp,0,&svmbase);
+    getparamfull((*svmContext).svmInd,0,temp,temp,0,temp,0);
+    egetparamfull((*svmContext).svmInd,0,etemp,etemp,0,etemp,0);
 
     setGenFunc(getparam);
     seteGenFunc(egetparam);
 
 //FIXME
-    return runsvmint(svmContext,svmbase,xxxcommstack,globargvariables,getsetExtVar,returntag);
+    return runsvmint(svmContext,xxxcommstack,globargvariables,getsetExtVar,returntag);
 }
 
 
@@ -808,13 +783,13 @@ int writeLog(const Matrix<T> &res, const std::string &resfilename, int (*getsetE
 
 
 
-// grabsvm: make SVM svmInd exist
-// regsvm: register SVM whattoreg at first available index >= svmInd
-//         returns index where registered
+// grabML:   make SVM svmInd exist
+// regML:    register SVM whattoreg at first available index >= svmInd
+//           returns index where registered
 // getMLref: get reference to requested ML
 
-//void grabsvm(SparseVector<ML_Mutable *> &svmbase, int svmInd);
-//int regsvm(SparseVector<ML_Mutable *> &svmbase, int svmInd, ML_Mutable &whattoreg);
+//void grabML(SparseVector<ML_Mutable *> &svmbase, int svmInd);
+//int regML(SparseVector<ML_Mutable *> &svmbase, int svmInd, ML_Mutable &whattoreg);
 //ML_Mutable &getMLref(SparseVector<ML_Mutable *> &svmbase, int svmInd);
 //const ML_Mutable &getMLrefconst(SparseVector<ML_Mutable *> &svmbase, int svmInd);
 
@@ -837,68 +812,56 @@ void killallthreads(SVMThreadContext *svmContext)
     return;
 }
 
-void deleteMLs(SparseVector<ML_Mutable *> &svmbase)
-{
-    if ( svmbase.indsize() )
-    {
-        int i,svmInd;
+int glob_MLInd        (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
+int glob_gridInd      (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
+int glob_DIRectInd    (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
+int glob_NelderMeadInd(int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
+int glob_BayesianInd  (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
 
-        for ( i = svmbase.indsize()-1 ; i >= 0 ; --i )
-        {
-            svmInd = svmbase.ind(i);
+SparseVector<ML_Mutable    *> &getMLmodels       (void) { static SparseVector<ML_Mutable    *> MLbase;         return MLbase;         }
+SparseVector<GridOptions   *> &getgridOptim      (void) { static SparseVector<GridOptions   *> gridbase;       return gridbase;       }
+SparseVector<DIRectOptions *> &getDIRectOptim    (void) { static SparseVector<DIRectOptions *> DIRectbase;     return DIRectbase;     }
+SparseVector<NelderOptions *> &getNelderMeadOptim(void) { static SparseVector<NelderOptions *> NelderMeadbase; return NelderMeadbase; }
+SparseVector<BayesOptions  *> &getBayesianOptim  (void) { static SparseVector<BayesOptions  *> Bayesianbase;   return Bayesianbase;   }
 
-            MEMDEL(svmbase.direref(i));
-            svmbase.zero(svmInd);
-        }
-    }
+void deleteMLs        (void) { SparseVector<ML_Mutable    *> &mlbase         = getMLmodels();        for ( int i = mlbase.        indsize()-1 ; i >= 0 ; --i ) { MEMDEL(mlbase.        direref(i)); mlbase.        zero(mlbase.        ind(i)); } return; }
+void deletegrids      (void) { SparseVector<GridOptions   *> &gridbase       = getgridOptim();       for ( int i = gridbase.      indsize()-1 ; i >= 0 ; --i ) { MEMDEL(gridbase.      direref(i)); gridbase.      zero(gridbase.      ind(i)); } return; }
+void deleteDIRects    (void) { SparseVector<DIRectOptions *> &DIRectbase     = getDIRectOptim();     for ( int i = DIRectbase.    indsize()-1 ; i >= 0 ; --i ) { MEMDEL(DIRectbase.    direref(i)); DIRectbase.    zero(DIRectbase.    ind(i)); } return; }
+void deleteNelderMeads(void) { SparseVector<NelderOptions *> &NelderMeadbase = getNelderMeadOptim(); for ( int i = NelderMeadbase.indsize()-1 ; i >= 0 ; --i ) { MEMDEL(NelderMeadbase.direref(i)); NelderMeadbase.zero(NelderMeadbase.ind(i)); } return; }
+void deleteBayess     (void) { SparseVector<BayesOptions  *> &Bayesianbase   = getBayesianOptim();   for ( int i = Bayesianbase.  indsize()-1 ; i >= 0 ; --i ) { MEMDEL(Bayesianbase.  direref(i)); Bayesianbase.  zero(Bayesianbase.  ind(i)); } return; }
 
-    return;
-}
+void grabML        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        ) { NiceAssert( MLInd         > 0 ); if ( MLbase        (MLInd)         == nullptr ) { MEMNEW(MLbase        ("&",MLInd        ),ML_Mutable   ); } return; }
+void grabgrid      (SparseVector<GridOptions   *> &gridbase,       int gridInd      ) { NiceAssert( gridInd       > 0 ); if ( gridbase      (gridInd)       == nullptr ) { MEMNEW(gridbase      ("&",gridInd      ),GridOptions  ); } return; }
+void grabDIRect    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    ) { NiceAssert( DIRectInd     > 0 ); if ( DIRectbase    (DIRectInd)     == nullptr ) { MEMNEW(DIRectbase    ("&",DIRectInd    ),DIRectOptions); } return; }
+void grabNelderMead(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd) { NiceAssert( NelderMeadInd > 0 ); if ( NelderMeadbase(NelderMeadInd) == nullptr ) { MEMNEW(NelderMeadbase("&",NelderMeadInd),NelderOptions); } return; }
+void grabBayesian  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  ) { NiceAssert( BayesianInd   > 0 ); if ( Bayesianbase  (BayesianInd)   == nullptr ) { MEMNEW(Bayesianbase  ("&",BayesianInd  ),BayesOptions ); } return; }
 
-void grabsvm(SparseVector<ML_Mutable *> &svmbase, int svmInd)
-{
-    // If svmInd does not exist we need to make it and own it
+const ML_Mutable    &getMLrefconst        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        ) { grabML        (MLbase,        MLInd        ); return *(MLbase        (MLInd        )); }
+const GridOptions   &getgridrefconst      (SparseVector<GridOptions   *> &gridbase,       int gridInd      ) { grabgrid      (gridbase,      gridInd      ); return *(gridbase      (gridInd      )); }
+const DIRectOptions &getDIRectrefconst    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    ) { grabDIRect    (DIRectbase,    DIRectInd    ); return *(DIRectbase    (DIRectInd    )); }
+const NelderOptions &getNelderMeadrefconst(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd) { grabNelderMead(NelderMeadbase,NelderMeadInd); return *(NelderMeadbase(NelderMeadInd)); }
+const BayesOptions  &getBayesianrefconst  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  ) { grabBayesian  (Bayesianbase,  BayesianInd  ); return *(Bayesianbase  (BayesianInd  )); }
 
-    NiceAssert( svmInd >= 0 );
+ML_Mutable    &getMLref        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        ) { grabML        (MLbase,        MLInd        ); return *(MLbase        ("&",MLInd        )); }
+GridOptions   &getgridref      (SparseVector<GridOptions   *> &gridbase,       int gridInd      ) { grabgrid      (gridbase,      gridInd      ); return *(gridbase      ("&",gridInd      )); }
+DIRectOptions &getDIRectref    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    ) { grabDIRect    (DIRectbase,    DIRectInd    ); return *(DIRectbase    ("&",DIRectInd    )); }
+NelderOptions &getNelderMeadref(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd) { grabNelderMead(NelderMeadbase,NelderMeadInd); return *(NelderMeadbase("&",NelderMeadInd)); }
+BayesOptions  &getBayesianref  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  ) { grabBayesian  (Bayesianbase,  BayesianInd  ); return *(Bayesianbase  ("&",BayesianInd  )); }
 
-    if ( svmbase(svmInd) == nullptr )
-    {
-        MEMNEW(const_cast<svmvolatile ML_Mutable *&>(svmbase("&",svmInd)),ML_Mutable);
-    }
 
-    return;
-}
-
-int regsvm(SparseVector<ML_Mutable *> &svmbase, int svmInd, ML_Mutable *whattoreg)
+int regML(SparseVector<ML_Mutable *> &mlbase, int mlInd, ML_Mutable *whattoreg)
 {
     // Put whattoreg at nearest available ind
 
-    while ( svmbase(svmInd) != nullptr )
+    while ( mlbase(mlInd) != nullptr )
     {
-        ++svmInd;
+        ++mlInd;
     }
 
-    const_cast<svmvolatile ML_Mutable *&>(svmbase("&",svmInd)) = whattoreg;
+    const_cast<ML_Mutable *&>(mlbase("&",mlInd)) = whattoreg;
 
-    return svmInd;
+    return mlInd;
 }
-
-const ML_Mutable &getMLrefconst(SparseVector<ML_Mutable *> &svmbase, int svmInd)
-{
-    grabsvm(svmbase,svmInd);
-
-    const ML_Mutable &res = *((svmbase)(svmInd));
-
-    return res;
-}
-
-ML_Mutable &getMLref(SparseVector<ML_Mutable *> &svmbase, int svmInd)
-{
-    grabsvm(svmbase,svmInd);
-
-    return *((svmbase)("&",svmInd));
-}
-
 
 
 
@@ -956,7 +919,6 @@ ML_Mutable &getMLref(SparseVector<ML_Mutable *> &svmbase, int svmInd)
 // variables only required for the call written over.
 
 int callsvm(SVMThreadContext *svmContext,
-            SparseVector<ML_Mutable *> &svmbase,
             Stack<awarestream *> *xxxgridcommstack,
             svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
             int (*getsetExtVar)(gentype &res, const gentype &src, int num),
@@ -966,7 +928,6 @@ int callsvm(SVMThreadContext *svmContext,
             std::string &loclogfile);
 
 int callsvm(SVMThreadContext *svmContext,
-            SparseVector<ML_Mutable *> &svmbase,
             Stack<awarestream *> *xxxgridcommstack,
             svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
             int (*getsetExtVar)(gentype &res, const gentype &src, int num),
@@ -1000,7 +961,7 @@ int callsvm(SVMThreadContext *svmContext,
 
     SparseVector<SparseVector<int> > returntag;
 
-    int res = runsvmint(svmContext,svmbase,&gridcommstack,globargvariables,getsetExtVar,returntag);
+    int res = runsvmint(svmContext,&gridcommstack,globargvariables,getsetExtVar,returntag);
 
     locfinalresult = finalresult;
 
@@ -1040,7 +1001,6 @@ int callsvm(SVMThreadContext *svmContext,
 #define WAIT_ADDSLEEP_RAND     10000
 
 int runsvmint(SVMThreadContext *svmContext,
-              SparseVector<ML_Mutable *> &svmbase,
               Stack<awarestream *> *xxxcommstack,
               svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
               int (*getsetExtVar)(gentype &res, const gentype &src, int num),
@@ -1285,7 +1245,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         MEMNEW(gridcommstack,Stack<awarestream *>);
                         gridcommstack->push(gridbox);
 
-                        runsvmint(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,returntag);
+                        runsvmint(svmContext,gridcommstack,globargvariables,getsetExtVar,returntag);
 
                         errstream() << "Finished running command " << evalarg << "\n";
                     }
@@ -1431,7 +1391,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         MEMNEW(gridcommstack,Stack<awarestream *>);
                         gridcommstack->push(gridbox);
 
-                        runsvmint(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,returntag);
+                        runsvmint(svmContext,gridcommstack,globargvariables,getsetExtVar,returntag);
 
                         errstream() << "Finished running command " << evalargtrue << "\n";
                     }
@@ -1450,7 +1410,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         MEMNEW(gridcommstack,Stack<awarestream *>);
                         gridcommstack->push(gridbox);
 
-                        runsvmint(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,returntag);
+                        runsvmint(svmContext,gridcommstack,globargvariables,getsetExtVar,returntag);
 
                         errstream() << "Finished running command " << evalargfalse << "\n";
                     }
@@ -1500,7 +1460,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         MEMNEW(gridcommstack,Stack<awarestream *>);
                         gridcommstack->push(gridbox);
 
-                        runsvmint(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,returntag);
+                        runsvmint(svmContext,gridcommstack,globargvariables,getsetExtVar,returntag);
                     }
 
                     errstream() << "Finished while loop... " << evalarg << "\n";
@@ -2223,8 +2183,6 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-N"   ) ||
                       ( currentarg == "-br"  ) ||
                       ( currentarg == "-bd"  ) ||
-                      ( currentarg == "-bn"  ) ||
-                      ( currentarg == "-bgn" ) ||
                       ( currentarg == "-XT"  )    )
             {
                 preelse = 1;
@@ -3624,7 +3582,7 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gbTs"        ) ||
                       ( currentarg == "-gbTx"        ) ||
                       ( currentarg == "-gbTv"        ) ||
-                      ( currentarg == "-gbeu"        ) ||
+                      //( currentarg == "-gbeu"        ) ||
                       ( currentarg == "-gbTn"        ) ||
                       ( currentarg == "-gtp"         ) ||
                       ( currentarg == "-gtP"         ) ||
@@ -3692,9 +3650,6 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-gma"         ) ||
                       ( currentarg == "-gmT"         ) ||
                       ( currentarg == "-gmd"         ) ||
-                      ( currentarg == "-gmbgn"       ) ||
-                      ( currentarg == "-gmsbgn"      ) ||
-                      ( currentarg == "-gmgtbgn"     ) ||
                       ( currentarg == "-gmg"         ) ||
                       ( currentarg == "-gmgg"        ) ||
                       ( currentarg == "-gmma"        ) ||
@@ -5391,15 +5346,15 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         // First claim the ML in question for the current thread...
 
-                        grabsvm(svmbase,nInd);
+                        grabML(getMLmodels(),nInd);
 
                         // ...delete it...
 
-                        MEMDEL(svmbase("&",nInd));
+                        MEMDEL(getMLmodels()("&",nInd));
 
                         // ...and remove all traces
 
-                        svmbase.zero(nInd);
+                        getMLmodels().zero(nInd);
 
                         // NB: if nInd = svmInd then the SVM will be automatically
                         // re-created in restarted state on first dereference
@@ -5432,12 +5387,12 @@ int runsvmint(SVMThreadContext *svmContext,
                         {
                             // Claim both SVMs for current thread...
 
-                            grabsvm(svmbase,nInd);
-                            grabsvm(svmbase,mInd);
+                            grabML(getMLmodels(),nInd);
+                            grabML(getMLmodels(),mInd);
 
                             // ...overwrite...
 
-                            getMLref(svmbase,nInd) = getMLrefconst(svmbase,mInd);
+                            getMLref(getMLmodels(),nInd) = getMLrefconst(getMLmodels(),mInd);
 
                             if ( nInd == svmInd )
                             {
@@ -5454,7 +5409,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::ofstream savefile(currcommand(2).c_str());
 
-                        savefile << getMLrefconst(svmbase,mInd);
+                        savefile << getMLrefconst(getMLmodels(),mInd);
 
                         savefile.close();
                     }
@@ -5480,12 +5435,12 @@ int runsvmint(SVMThreadContext *svmContext,
                         {
                             // Claim both SVMs for current thread...
 
-                            grabsvm(svmbase,nInd);
-                            grabsvm(svmbase,mInd);
+                            grabML(getMLmodels(),nInd);
+                            grabML(getMLmodels(),mInd);
 
                             // ...swap...
 
-                            svmbase.squareswap(nInd,mInd);
+                            getMLmodels().squareswap(nInd,mInd);
 
                             if ( ( nInd == svmInd ) || ( mInd == svmInd ) )
                             {
@@ -5509,7 +5464,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         {
                             // ...claim new ML...
 
-                            grabsvm(svmbase,nInd);
+                            grabML(getMLmodels(),nInd);
 
                             // ...and update indexes
 
@@ -5536,7 +5491,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         {
                             // ...claim new ML...
 
-                            grabsvm(svmbase,nInd);
+                            grabML(getMLmodels(),nInd);
 
                             // ...and update indexes
 
@@ -5563,7 +5518,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         {
                             // ...claim new ML...
 
-                            grabsvm(svmbase,nInd);
+                            grabML(getMLmodels(),nInd);
 
                             // ...and update indexes
 
@@ -5596,23 +5551,23 @@ int runsvmint(SVMThreadContext *svmContext,
                     currcommand = svmpresetupopt(0);
                     svmpresetupopt.remove(0);
 
-                         if ( currcommand(0) == "-z"  ) { if ( getMLref(svmbase,svmInd).ssetMLTypeClean(currcommand(1)) ) { STRTHROW("Syntax error: -z  options are many, but this is not one of them"); } }
-                    else if ( currcommand(0) == "-zd" ) { if ( getMLref(svmbase,svmInd).ssetMLTypeMorph(currcommand(1)) ) { STRTHROW("Syntax error: -zd options are many, but this is not one of them"); } }
-                    else if ( currcommand(0) == "-zv" ) { if ( getMLref(svmbase,svmInd).setVmethod(currcommand(1)) ) { STRTHROW("Syntax error: -zv options are many, but this is not one of them"); } }
-                    else if ( currcommand(0) == "-zc" ) { if ( getMLref(svmbase,svmInd).setCmethod(currcommand(1)) ) { STRTHROW("Syntax error: -zc options are many, but this is not one of them"); } }
-                    else if ( currcommand(0) == "-zo" ) { if ( getMLref(svmbase,svmInd).setOmethod(currcommand(1)) ) { STRTHROW("Syntax error: -zo options are many, but this is not one of them"); } }
-                    else if ( currcommand(0) == "-ac" ) { if ( getMLref(svmbase,svmInd).setAmethod(currcommand(1)) ) { STRTHROW("Syntax error: -ac options are many, but this is not one of them"); } }
-                    else if ( currcommand(0) == "-R"  ) { if ( getMLref(svmbase,svmInd).setRmethod(currcommand(1)) ) { STRTHROW("Syntax error: -R options are many, but this is not one of them"); } }
-                    else if ( currcommand(0) == "-T"  ) { if ( getMLref(svmbase,svmInd).setTmethod(currcommand(1)) ) { STRTHROW("Syntax error: -T options are many, but this is not one of them"); } }
+                         if ( currcommand(0) == "-z"  ) { if ( getMLref(getMLmodels(),svmInd).ssetMLTypeClean(currcommand(1)) ) { STRTHROW("Syntax error: -z  options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-zd" ) { if ( getMLref(getMLmodels(),svmInd).ssetMLTypeMorph(currcommand(1)) ) { STRTHROW("Syntax error: -zd options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-zv" ) { if ( getMLref(getMLmodels(),svmInd).setVmethod(currcommand(1))      ) { STRTHROW("Syntax error: -zv options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-zc" ) { if ( getMLref(getMLmodels(),svmInd).setCmethod(currcommand(1))      ) { STRTHROW("Syntax error: -zc options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-zo" ) { if ( getMLref(getMLmodels(),svmInd).setOmethod(currcommand(1))      ) { STRTHROW("Syntax error: -zo options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-ac" ) { if ( getMLref(getMLmodels(),svmInd).setAmethod(currcommand(1))      ) { STRTHROW("Syntax error: -ac options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-R"  ) { if ( getMLref(getMLmodels(),svmInd).setRmethod(currcommand(1))      ) { STRTHROW("Syntax error: -R options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-T"  ) { if ( getMLref(getMLmodels(),svmInd).setTmethod(currcommand(1))      ) { STRTHROW("Syntax error: -T options are many, but this is not one of them"); } }
 
-                    else if ( currcommand(0) == "-TT" ) { getMLref(svmbase,svmInd).setkconstWeights(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-TT" ) { getMLref(getMLmodels(),svmInd).setkconstWeights(safeatoi(currcommand(1),argvariables)); }
 
                     else if ( currcommand(0) == "-mlR" )
                     {
                         // Set empirical risk type
 
-                        if      ( currcommand(2) == "l" ) { getMLref(svmbase,svmInd).setregtype(safeatoi(currcommand(1),argvariables),1); }
-                        else if ( currcommand(2) == "q" ) { getMLref(svmbase,svmInd).setregtype(safeatoi(currcommand(1),argvariables),2); }
+                        if      ( currcommand(2) == "l" ) { getMLref(getMLmodels(),svmInd).setregtype(safeatoi(currcommand(1),argvariables),1); }
+                        else if ( currcommand(2) == "q" ) { getMLref(getMLmodels(),svmInd).setregtype(safeatoi(currcommand(1),argvariables),2); }
                         else { STRTHROW("Error: "+currentarg+" is not a valid -mlR mode."); }
                     }
 
@@ -5629,7 +5584,7 @@ int runsvmint(SVMThreadContext *svmContext,
                             STRTHROW("Unable to open SVM file "+currcommand(1));
                         }
 
-                        loadfile >> getMLref(svmbase,svmInd);
+                        loadfile >> getMLref(getMLmodels(),svmInd);
 
                         loadfile.close();
                     }
@@ -5662,31 +5617,29 @@ int runsvmint(SVMThreadContext *svmContext,
                     gentype tmpg;
                     Vector<gentype> tmpv;
 
-                         if ( currcommand(0) == "-mc"   ) { getMLref(svmbase,svmInd).setmercachesize(safeatoi(currcommand(1),argvariables));           }
-                    else if ( currcommand(0) == "-mcn"  ) { getMLref(svmbase,svmInd).setmercachenorm(safeatoi(currcommand(1),argvariables));           }
-                    else if ( currcommand(0) == "-mba"  ) { getMLref(svmbase,svmInd).setmlqlist(safeatoi(currcommand(1),argvariables),getMLref(svmbase,safeatoi(currcommand(2),argvariables))); }
-                    else if ( currcommand(0) == "-mbw"  ) { getMLref(svmbase,svmInd).setmlqweight(safeatoi(currcommand(1),argvariables),safeatowhatever(tmpg,currcommand(2),argvariables));     }
-                    else if ( currcommand(0) == "-mbm"  ) { getMLref(svmbase,svmInd).setmlqmode(safeatoi(currcommand(1),argvariables));                }
-                    else if ( currcommand(0) == "-mbA"  ) { getMLref(svmbase,svmInd).removemlqlist(safeatoi(currcommand(1),argvariables));             }
-                    else if ( currcommand(0) == "-mbI"  ) { getMLref(svmbase,svmInd).addmlqlist(safeatoi(currcommand(1),argvariables),getMLref(svmbase,safeatoi(currcommand(2),argvariables))); }
-                    else if ( currcommand(0) == "-msn"  ) { getMLref(svmbase,svmInd).setBernDegree(safeatowhatever(tmpg,currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-msw"  ) { getMLref(svmbase,svmInd).setBernIndex(safeatowhatever(tmpg,currcommand(1),argvariables));  }
-                    else if ( currcommand(0) == "-bat"  ) { getMLref(svmbase,svmInd).setbattparam(safeatowhatever(tmpv,currcommand(1),argvariables));  }
-                    else if ( currcommand(0) == "-bam"  ) { getMLref(svmbase,svmInd).setbatttmax(safeatof(currcommand(1),argvariables));               }
-                    else if ( currcommand(0) == "-bac"  ) { getMLref(svmbase,svmInd).setbattImax(safeatof(currcommand(1),argvariables));               }
-                    else if ( currcommand(0) == "-bad"  ) { getMLref(svmbase,svmInd).setbatttdelta(safeatof(currcommand(1),argvariables));             }
-                    else if ( currcommand(0) == "-bav"  ) { getMLref(svmbase,svmInd).setbattVstart(safeatof(currcommand(1),argvariables));             }
-                    else if ( currcommand(0) == "-baT"  ) { getMLref(svmbase,svmInd).setbattthetaStart(safeatof(currcommand(1),argvariables));         }
-                    else if ( currcommand(0) == "-bv"   ) { getMLref(svmbase,svmInd).setVardelta();                                                    }
-                    else if ( currcommand(0) == "-bz"   ) { getMLref(svmbase,svmInd).setZerodelta();                                                   }
-                    else if ( currcommand(0) == "-bn"   ) { getMLref(svmbase,svmInd).setvarApprox(safeatoi(currcommand(1),argvariables));              }
-                    else if ( currcommand(0) == "-bgn"  ) { getMLref(svmbase,svmInd).setvarApproxim(safeatoi(currcommand(1),argvariables));            }
-                    else if ( currcommand(0) == "-bgv"  ) { getMLref(svmbase,svmInd).setVarmuBias();                                                   }
-                    else if ( currcommand(0) == "-bgz"  ) { getMLref(svmbase,svmInd).setZeromuBias();                                                  }
-                    else if ( currcommand(0) == "-bgla" ) { getMLref(svmbase,svmInd).setLaplaceConst();                                                }
-                    else if ( currcommand(0) == "-bgep" ) { getMLref(svmbase,svmInd).setEPConst();                                                     }
-                    else if ( currcommand(0) == "-bgnc" ) { getMLref(svmbase,svmInd).setNaiveConst();                                                  }
-                    else if ( currcommand(0) == "-mls"  ) { getMLref(svmbase,svmInd).settsize(safeatoi(currcommand(1),argvariables));                  }
+                         if ( currcommand(0) == "-mc"   ) { getMLref(getMLmodels(),svmInd).setmercachesize(safeatoi(currcommand(1),argvariables));           }
+                    else if ( currcommand(0) == "-mcn"  ) { getMLref(getMLmodels(),svmInd).setmercachenorm(safeatoi(currcommand(1),argvariables));           }
+                    else if ( currcommand(0) == "-mba"  ) { getMLref(getMLmodels(),svmInd).setmlqlist(safeatoi(currcommand(1),argvariables),getMLref(getMLmodels(),safeatoi(currcommand(2),argvariables))); }
+                    else if ( currcommand(0) == "-mbw"  ) { getMLref(getMLmodels(),svmInd).setmlqweight(safeatoi(currcommand(1),argvariables),safeatowhatever(tmpg,currcommand(2),argvariables));     }
+                    else if ( currcommand(0) == "-mbm"  ) { getMLref(getMLmodels(),svmInd).setmlqmode(safeatoi(currcommand(1),argvariables));                }
+                    else if ( currcommand(0) == "-mbA"  ) { getMLref(getMLmodels(),svmInd).removemlqlist(safeatoi(currcommand(1),argvariables));             }
+                    else if ( currcommand(0) == "-mbI"  ) { getMLref(getMLmodels(),svmInd).addmlqlist(safeatoi(currcommand(1),argvariables),getMLref(getMLmodels(),safeatoi(currcommand(2),argvariables))); }
+                    else if ( currcommand(0) == "-msn"  ) { getMLref(getMLmodels(),svmInd).setBernDegree(safeatowhatever(tmpg,currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-msw"  ) { getMLref(getMLmodels(),svmInd).setBernIndex(safeatowhatever(tmpg,currcommand(1),argvariables));  }
+                    else if ( currcommand(0) == "-bat"  ) { getMLref(getMLmodels(),svmInd).setbattparam(safeatowhatever(tmpv,currcommand(1),argvariables));  }
+                    else if ( currcommand(0) == "-bam"  ) { getMLref(getMLmodels(),svmInd).setbatttmax(safeatof(currcommand(1),argvariables));               }
+                    else if ( currcommand(0) == "-bac"  ) { getMLref(getMLmodels(),svmInd).setbattImax(safeatof(currcommand(1),argvariables));               }
+                    else if ( currcommand(0) == "-bad"  ) { getMLref(getMLmodels(),svmInd).setbatttdelta(safeatof(currcommand(1),argvariables));             }
+                    else if ( currcommand(0) == "-bav"  ) { getMLref(getMLmodels(),svmInd).setbattVstart(safeatof(currcommand(1),argvariables));             }
+                    else if ( currcommand(0) == "-baT"  ) { getMLref(getMLmodels(),svmInd).setbattthetaStart(safeatof(currcommand(1),argvariables));         }
+                    else if ( currcommand(0) == "-bv"   ) { getMLref(getMLmodels(),svmInd).setVardelta();                                                    }
+                    else if ( currcommand(0) == "-bz"   ) { getMLref(getMLmodels(),svmInd).setZerodelta();                                                   }
+                    else if ( currcommand(0) == "-bgv"  ) { getMLref(getMLmodels(),svmInd).setVarmuBias();                                                   }
+                    else if ( currcommand(0) == "-bgz"  ) { getMLref(getMLmodels(),svmInd).setZeromuBias();                                                  }
+                    else if ( currcommand(0) == "-bgla" ) { getMLref(getMLmodels(),svmInd).setLaplaceConst();                                                }
+                    else if ( currcommand(0) == "-bgep" ) { getMLref(getMLmodels(),svmInd).setEPConst();                                                     }
+                    else if ( currcommand(0) == "-bgnc" ) { getMLref(getMLmodels(),svmInd).setNaiveConst();                                                  }
+                    else if ( currcommand(0) == "-mls"  ) { getMLref(getMLmodels(),svmInd).settsize(safeatoi(currcommand(1),argvariables));                  }
 
                     else if ( currcommand(0) == "-fV"   ) { argvariables("&",0)("&",safeatoi(currcommand(1),argvariables)) = currcommand(2); }
                     else if ( currcommand(0) == "-fW"   ) { safeatowhatever(argvariables("&",0)("&",safeatoi(currcommand(1),argvariables)),currcommand(2),argvariables); argvariables("&",0)("&",safeatoi(currcommand(1),argvariables)).finalise(); }
@@ -5703,10 +5656,10 @@ int runsvmint(SVMThreadContext *svmContext,
                     {
                         // Set bias type
 
-                        if      ( currcommand(1) == "f" ) { getMLref(svmbase,svmInd).setFixedBias(biasdefault); }
-                        else if ( currcommand(1) == "v" ) { getMLref(svmbase,svmInd).setVarBias(); }
-                        else if ( currcommand(1) == "p" ) { getMLref(svmbase,svmInd).setPosBias(); }
-                        else if ( currcommand(1) == "n" ) { getMLref(svmbase,svmInd).setNegBias(); }
+                        if      ( currcommand(1) == "f" ) { getMLref(getMLmodels(),svmInd).setFixedBias(biasdefault); }
+                        else if ( currcommand(1) == "v" ) { getMLref(getMLmodels(),svmInd).setVarBias(); }
+                        else if ( currcommand(1) == "p" ) { getMLref(getMLmodels(),svmInd).setPosBias(); }
+                        else if ( currcommand(1) == "n" ) { getMLref(getMLmodels(),svmInd).setNegBias(); }
                         else { STRTHROW("Error: "+currentarg+" is not a valid -B mode."); }
                     }
 
@@ -5716,7 +5669,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         pssize = ( pssize >= 0 ) ? pssize : INT_MAX-1;
 
-                        getMLref(svmbase,svmInd).prealloc(pssize);
+                        getMLref(getMLmodels(),svmInd).prealloc(pssize);
 
                         if ( pssize > ((int) (1.5*LARGE_TRAIN_BOUNDARY)) )
                         {
@@ -5980,27 +5933,27 @@ int runsvmint(SVMThreadContext *svmContext,
                              if ( currcommand(0) == "-oo"   ) { doopt = 0; }
                         else if ( currcommand(0) == "-oO"   ) { doopt = 1; }
 
-                        else if ( currcommand(0) == "-oz"   ) { getMLref(svmbase,svmInd).setzerotol(safeatof(currcommand(1),argvariables));       }
-                        else if ( currcommand(0) == "-ot"   ) { getMLref(svmbase,svmInd).setmaxitcnt(safeatoi(currcommand(1),argvariables));      }
-                        else if ( currcommand(0) == "-oy"   ) { getMLref(svmbase,svmInd).setmaxtraintime(safeatof(currcommand(1),argvariables));  }
-                        else if ( currcommand(0) == "-oY"   ) { getMLref(svmbase,svmInd).settraintimeend(safeatof(currcommand(1),argvariables));  }
-                        else if ( currcommand(0) == "-olr"  ) { getMLref(svmbase,svmInd).setlr(safeatof(currcommand(1),argvariables));            }
-                        else if ( currcommand(0) == "-olrb" ) { getMLref(svmbase,svmInd).setlrb(safeatof(currcommand(1),argvariables));           }
-                        else if ( currcommand(0) == "-olrc" ) { getMLref(svmbase,svmInd).setlrc(safeatof(currcommand(1),argvariables));           }
-                        else if ( currcommand(0) == "-olrd" ) { getMLref(svmbase,svmInd).setlrd(safeatof(currcommand(1),argvariables));           }
-                        else if ( currcommand(0) == "-oM"   ) { getMLref(svmbase,svmInd).setmemsize(safeatoi(currcommand(1),argvariables));       }
-                        else if ( currcommand(0) == "-ofa"  ) { getMLref(svmbase,svmInd).setoutermethod(safeatoi(currcommand(1),argvariables));   }
-                        else if ( currcommand(0) == "-ofe"  ) { getMLref(svmbase,svmInd).setoutertol(safeatof(currcommand(1),argvariables));      }
-                        else if ( currcommand(0) == "-ofm"  ) { getMLref(svmbase,svmInd).setoutermom(safeatof(currcommand(1),argvariables));      }
-                        else if ( currcommand(0) == "-ofr"  ) { getMLref(svmbase,svmInd).setouterlr(safeatof(currcommand(1),argvariables));       }
-                        else if ( currcommand(0) == "-ofs"  ) { getMLref(svmbase,svmInd).setouterovsc(safeatof(currcommand(1),argvariables));     }
-                        else if ( currcommand(0) == "-oft"  ) { getMLref(svmbase,svmInd).setoutermaxitcnt(safeatoi(currcommand(1),argvariables)); }
-                        else if ( currcommand(0) == "-ofM"  ) { getMLref(svmbase,svmInd).setoutermaxcache(safeatoi(currcommand(1),argvariables)); }
-                        else if ( currcommand(0) == "-ofy"  ) { getMLref(svmbase,svmInd).fudgeOn();                                               }
-                        else if ( currcommand(0) == "-ofn"  ) { getMLref(svmbase,svmInd).fudgeOff();                                              }
-                        else if ( currcommand(0) == "-omr"  ) { getMLref(svmbase,svmInd).setmlmlr(safeatof(currcommand(1),argvariables));         }
-                        else if ( currcommand(0) == "-ome"  ) { getMLref(svmbase,svmInd).setdiffstop(safeatof(currcommand(1),argvariables));      }
-                        else if ( currcommand(0) == "-oms"  ) { getMLref(svmbase,svmInd).setlsparse(safeatof(currcommand(1),argvariables));       }
+                        else if ( currcommand(0) == "-oz"   ) { getMLref(getMLmodels(),svmInd).setzerotol(safeatof(currcommand(1),argvariables));       }
+                        else if ( currcommand(0) == "-ot"   ) { getMLref(getMLmodels(),svmInd).setmaxitcnt(safeatoi(currcommand(1),argvariables));      }
+                        else if ( currcommand(0) == "-oy"   ) { getMLref(getMLmodels(),svmInd).setmaxtraintime(safeatof(currcommand(1),argvariables));  }
+                        else if ( currcommand(0) == "-oY"   ) { getMLref(getMLmodels(),svmInd).settraintimeend(safeatof(currcommand(1),argvariables));  }
+                        else if ( currcommand(0) == "-olr"  ) { getMLref(getMLmodels(),svmInd).setlr(safeatof(currcommand(1),argvariables));            }
+                        else if ( currcommand(0) == "-olrb" ) { getMLref(getMLmodels(),svmInd).setlrb(safeatof(currcommand(1),argvariables));           }
+                        else if ( currcommand(0) == "-olrc" ) { getMLref(getMLmodels(),svmInd).setlrc(safeatof(currcommand(1),argvariables));           }
+                        else if ( currcommand(0) == "-olrd" ) { getMLref(getMLmodels(),svmInd).setlrd(safeatof(currcommand(1),argvariables));           }
+                        else if ( currcommand(0) == "-oM"   ) { getMLref(getMLmodels(),svmInd).setmemsize(safeatoi(currcommand(1),argvariables));       }
+                        else if ( currcommand(0) == "-ofa"  ) { getMLref(getMLmodels(),svmInd).setoutermethod(safeatoi(currcommand(1),argvariables));   }
+                        else if ( currcommand(0) == "-ofe"  ) { getMLref(getMLmodels(),svmInd).setoutertol(safeatof(currcommand(1),argvariables));      }
+                        else if ( currcommand(0) == "-ofm"  ) { getMLref(getMLmodels(),svmInd).setoutermom(safeatof(currcommand(1),argvariables));      }
+                        else if ( currcommand(0) == "-ofr"  ) { getMLref(getMLmodels(),svmInd).setouterlr(safeatof(currcommand(1),argvariables));       }
+                        else if ( currcommand(0) == "-ofs"  ) { getMLref(getMLmodels(),svmInd).setouterovsc(safeatof(currcommand(1),argvariables));     }
+                        else if ( currcommand(0) == "-oft"  ) { getMLref(getMLmodels(),svmInd).setoutermaxitcnt(safeatoi(currcommand(1),argvariables)); }
+                        else if ( currcommand(0) == "-ofM"  ) { getMLref(getMLmodels(),svmInd).setoutermaxcache(safeatoi(currcommand(1),argvariables)); }
+                        else if ( currcommand(0) == "-ofy"  ) { getMLref(getMLmodels(),svmInd).fudgeOn();                                               }
+                        else if ( currcommand(0) == "-ofn"  ) { getMLref(getMLmodels(),svmInd).fudgeOff();                                              }
+                        else if ( currcommand(0) == "-omr"  ) { getMLref(getMLmodels(),svmInd).setmlmlr(safeatof(currcommand(1),argvariables));         }
+                        else if ( currcommand(0) == "-ome"  ) { getMLref(getMLmodels(),svmInd).setdiffstop(safeatof(currcommand(1),argvariables));      }
+                        else if ( currcommand(0) == "-oms"  ) { getMLref(getMLmodels(),svmInd).setlsparse(safeatof(currcommand(1),argvariables));       }
 
                         else if ( currcommand(0) == "-oe" )
                         {
@@ -6008,15 +5961,15 @@ int runsvmint(SVMThreadContext *svmContext,
 
                             if ( currcommand(1) == "A" )
                             {
-                                if ( isSVM(getMLrefconst(svmbase,svmInd)) )
+                                if ( isSVM(getMLrefconst(getMLmodels(),svmInd)) )
                                 {
-                                    etol = ( 0.01*(getMLrefconst(svmbase,svmInd).eps()) > 100*(getMLrefconst(svmbase,svmInd).zerotol()) ) ? 0.01*(getMLrefconst(svmbase,svmInd).eps()) : 100*(getMLrefconst(svmbase,svmInd).zerotol());
+                                    etol = ( 0.01*(getMLrefconst(getMLmodels(),svmInd).eps()) > 100*(getMLrefconst(getMLmodels(),svmInd).zerotol()) ) ? 0.01*(getMLrefconst(getMLmodels(),svmInd).eps()) : 100*(getMLrefconst(getMLmodels(),svmInd).zerotol());
                                 }
 
 
                                 else
                                 {
-                                    etol = 100*getMLrefconst(svmbase,svmInd).zerotol();
+                                    etol = 100*getMLrefconst(getMLmodels(),svmInd).zerotol();
                                 }
                             }
 
@@ -6025,8 +5978,8 @@ int runsvmint(SVMThreadContext *svmContext,
                                 etol = safeatof(currcommand(1),argvariables);
                             }
 
-                            getMLref(svmbase,svmInd).setOpttol(etol);
-                            getMLref(svmbase,svmInd).setOpttolb(etol);
+                            getMLref(getMLmodels(),svmInd).setOpttol(etol);
+                            getMLref(getMLmodels(),svmInd).setOpttolb(etol);
                         }
 
                         else if ( currcommand(0) == "-oea" )
@@ -6035,15 +5988,15 @@ int runsvmint(SVMThreadContext *svmContext,
 
                             if ( currcommand(1) == "A" )
                             {
-                                if ( isSVM(getMLrefconst(svmbase,svmInd)) )
+                                if ( isSVM(getMLrefconst(getMLmodels(),svmInd)) )
                                 {
-                                    etol = ( 0.01*(getMLrefconst(svmbase,svmInd).eps()) > 100*(getMLrefconst(svmbase,svmInd).zerotol()) ) ? 0.01*(getMLrefconst(svmbase,svmInd).eps()) : 100*(getMLrefconst(svmbase,svmInd).zerotol());
+                                    etol = ( 0.01*(getMLrefconst(getMLmodels(),svmInd).eps()) > 100*(getMLrefconst(getMLmodels(),svmInd).zerotol()) ) ? 0.01*(getMLrefconst(getMLmodels(),svmInd).eps()) : 100*(getMLrefconst(getMLmodels(),svmInd).zerotol());
                                 }
 
 
                                 else
                                 {
-                                    etol = 100*getMLrefconst(svmbase,svmInd).zerotol();
+                                    etol = 100*getMLrefconst(getMLmodels(),svmInd).zerotol();
                                 }
                             }
 
@@ -6052,7 +6005,7 @@ int runsvmint(SVMThreadContext *svmContext,
                                 etol = safeatof(currcommand(1),argvariables);
                             }
 
-                            getMLref(svmbase,svmInd).setOpttol(etol);
+                            getMLref(getMLmodels(),svmInd).setOpttol(etol);
                         }
 
                         else if ( currcommand(0) == "-oeb" )
@@ -6061,15 +6014,15 @@ int runsvmint(SVMThreadContext *svmContext,
 
                             if ( currcommand(1) == "A" )
                             {
-                                if ( isSVM(getMLrefconst(svmbase,svmInd)) )
+                                if ( isSVM(getMLrefconst(getMLmodels(),svmInd)) )
                                 {
-                                    etol = ( 0.01*(getMLrefconst(svmbase,svmInd).eps()) > 100*(getMLrefconst(svmbase,svmInd).zerotol()) ) ? 0.01*(getMLrefconst(svmbase,svmInd).eps()) : 100*(getMLrefconst(svmbase,svmInd).zerotol());
+                                    etol = ( 0.01*(getMLrefconst(getMLmodels(),svmInd).eps()) > 100*(getMLrefconst(getMLmodels(),svmInd).zerotol()) ) ? 0.01*(getMLrefconst(getMLmodels(),svmInd).eps()) : 100*(getMLrefconst(getMLmodels(),svmInd).zerotol());
                                 }
 
 
                                 else
                                 {
-                                    etol = 100*getMLrefconst(svmbase,svmInd).zerotol();
+                                    etol = 100*getMLrefconst(getMLmodels(),svmInd).zerotol();
                                 }
                             }
 
@@ -6078,15 +6031,15 @@ int runsvmint(SVMThreadContext *svmContext,
                                 etol = safeatof(currcommand(1),argvariables);
                             }
 
-                            getMLref(svmbase,svmInd).setOpttolb(etol);
+                            getMLref(getMLmodels(),svmInd).setOpttolb(etol);
                         }
 
                         else if ( currcommand(0) == "-om" )
                         {
-                            if      ( currcommand(1) == "a" ) { getMLref(svmbase,svmInd).setOptActive(); }
-                            else if ( currcommand(1) == "s" ) { getMLref(svmbase,svmInd).setOptSMO();    }
-                            else if ( currcommand(1) == "d" ) { getMLref(svmbase,svmInd).setOptD2C();    }
-                            else if ( currcommand(1) == "g" ) { getMLref(svmbase,svmInd).setOptGrad();   }
+                            if      ( currcommand(1) == "a" ) { getMLref(getMLmodels(),svmInd).setOptActive(); }
+                            else if ( currcommand(1) == "s" ) { getMLref(getMLmodels(),svmInd).setOptSMO();    }
+                            else if ( currcommand(1) == "d" ) { getMLref(getMLmodels(),svmInd).setOptD2C();    }
+                            else if ( currcommand(1) == "g" ) { getMLref(getMLmodels(),svmInd).setOptGrad();   }
 
                             else
                             {
@@ -6121,23 +6074,23 @@ int runsvmint(SVMThreadContext *svmContext,
 
                     gentype tmpg;
 
-                    if      ( currcommand(0) == "-pr"  ) { getMLref(svmbase,svmInd).removeTrainingVector(safeatoi(currcommand(1),argvariables));                       }
-                    else if ( currcommand(0) == "-pcw" ) { getMLref(svmbase,svmInd).setCweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-pcs" ) { getMLref(svmbase,svmInd).scaleCweight(safeatof(currcommand(1),argvariables));                               }
-                    else if ( currcommand(0) == "-pww" ) { getMLref(svmbase,svmInd).setepsweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-pws" ) { getMLref(svmbase,svmInd).scaleepsweight(safeatof(currcommand(1),argvariables));                             }
-                    else if ( currcommand(0) == "-pS"  ) { getMLref(svmbase,svmInd).scale(1/abs2(getMLref(svmbase,svmInd).alpha()));                                   }
-                    else if ( currcommand(0) == "-ps"  ) { getMLref(svmbase,svmInd).scale(safeatof(currcommand(1),argvariables));                                      }
-                    else if ( currcommand(0) == "-psz" ) { getMLref(svmbase,svmInd).sety(safeatoi(currcommand(1),argvariables),safeatowhatever(tmpg,currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-pR"  ) { getMLref(svmbase,svmInd).reset();                                                                           }
-                    else if ( currcommand(0) == "-pRR" ) { getMLref(svmbase,svmInd).restart();                                                                         }
-                    else if ( currcommand(0) == "-pro" ) { getMLref(svmbase,svmInd).removeTrainingVector(0,safeatoi(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-fic" ) { getMLref(svmbase,svmInd).fillCache();                                                                       }
-                    else if ( currcommand(0) == "-pdw" ) { getMLref(svmbase,svmInd).setsigmaweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-pds" ) { getMLref(svmbase,svmInd).scalesigmaweight(safeatof(currcommand(1),argvariables));                           }
-                    else if ( currcommand(0) == "-prz" ) { getMLref(svmbase,svmInd).removeNonSupports();                                                               }
-                    else if ( currcommand(0) == "-prm" ) { getMLref(svmbase,svmInd).trimTrainingSet(safeatoi(currcommand(1),argvariables));                            }
-                    else if ( currcommand(0) == "-psd" ) { getMLref(svmbase,svmInd).setd(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
+                    if      ( currcommand(0) == "-pr"  ) { getMLref(getMLmodels(),svmInd).removeTrainingVector(safeatoi(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-pcw" ) { getMLref(getMLmodels(),svmInd).setCweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-pcs" ) { getMLref(getMLmodels(),svmInd).scaleCweight(safeatof(currcommand(1),argvariables));                               }
+                    else if ( currcommand(0) == "-pww" ) { getMLref(getMLmodels(),svmInd).setepsweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-pws" ) { getMLref(getMLmodels(),svmInd).scaleepsweight(safeatof(currcommand(1),argvariables));                             }
+                    else if ( currcommand(0) == "-pS"  ) { getMLref(getMLmodels(),svmInd).scale(1/abs2(getMLref(getMLmodels(),svmInd).alpha()));                                   }
+                    else if ( currcommand(0) == "-ps"  ) { getMLref(getMLmodels(),svmInd).scale(safeatof(currcommand(1),argvariables));                                      }
+                    else if ( currcommand(0) == "-psz" ) { getMLref(getMLmodels(),svmInd).sety(safeatoi(currcommand(1),argvariables),safeatowhatever(tmpg,currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-pR"  ) { getMLref(getMLmodels(),svmInd).reset();                                                                           }
+                    else if ( currcommand(0) == "-pRR" ) { getMLref(getMLmodels(),svmInd).restart();                                                                         }
+                    else if ( currcommand(0) == "-pro" ) { getMLref(getMLmodels(),svmInd).removeTrainingVector(0,safeatoi(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-fic" ) { getMLref(getMLmodels(),svmInd).fillCache();                                                                       }
+                    else if ( currcommand(0) == "-pdw" ) { getMLref(getMLmodels(),svmInd).setsigmaweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-pds" ) { getMLref(getMLmodels(),svmInd).scalesigmaweight(safeatof(currcommand(1),argvariables));                           }
+                    else if ( currcommand(0) == "-prz" ) { getMLref(getMLmodels(),svmInd).removeNonSupports();                                                               }
+                    else if ( currcommand(0) == "-prm" ) { getMLref(getMLmodels(),svmInd).trimTrainingSet(safeatoi(currcommand(1),argvariables));                            }
+                    else if ( currcommand(0) == "-psd" ) { getMLref(getMLmodels(),svmInd).setd(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
 
                     else if ( currcommand(0) == "-pk" )
                     {
@@ -6154,7 +6107,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         datfile.close();
 
-                        getMLref(svmbase,svmInd).K2bypass(kernmat);
+                        getMLref(getMLmodels(),svmInd).K2bypass(kernmat);
                     }
 
                     else if ( currcommand(0) == "-pmm" )
@@ -6177,7 +6130,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         int d = safeatoi(currcommand(6),argvariables);
                         gentype y = safeatog(currcommand(7),argvariables);
 
-                        makeMonotone(getMLref(svmbase,svmInd),n,t,xb,xlb,xub,d,y);
+                        makeMonotone(getMLref(getMLmodels(),svmInd),n,t,xb,xlb,xub,d,y);
                     }
                 }
 
@@ -6221,23 +6174,23 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-AGl"  ) { safeatowhatever(AGlb,currcommand(1),argvariables);    }
                     else if ( currcommand(0) == "-AGu"  ) { safeatowhatever(AGub,currcommand(1),argvariables);    }
 
-                    else if ( currcommand(0) == "-Ad"   ) { getMLref(svmbase,svmInd).settspaceDim(safeatoi(currcommand(1),argvariables));      }
-                    else if ( currcommand(0) == "-AD"   ) { getMLref(svmbase,svmInd).setorder(safeatoi(currcommand(1),argvariables));          }
-                    else if ( currcommand(0) == "-Ac"   ) { getMLref(svmbase,svmInd).addclass(safeatoi(currcommand(1),argvariables));          }
-                    else if ( currcommand(0) == "-As"   ) { getMLref(svmbase,svmInd).setanomalyclass(safeatoi(currcommand(1),argvariables));   }
-                    else if ( currcommand(0) == "-Acz"  ) { getMLref(svmbase,svmInd).addclass(safeatoi(currcommand(1),argvariables),1);        }
-                    else if ( currcommand(0) == "-Aca"  ) { getMLref(svmbase,svmInd).anomalyOn(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-Acd"  ) { getMLref(svmbase,svmInd).anomalyOff();                                             }
-                    else if ( currcommand(0) == "-Aby"  ) { getMLref(svmbase,svmInd).setBasisYUU();                                            }
-                    else if ( currcommand(0) == "-Abu"  ) { getMLref(svmbase,svmInd).setBasisUUU();                                            }
-                    else if ( currcommand(0) == "-AeU"  ) { getMLref(svmbase,svmInd).addToBasisUU(getMLrefconst(svmbase,svmInd).NbasisUU(),safeatowhatever(tmpg,currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-AeR"  ) { getMLref(svmbase,svmInd).setBasisUU(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-Ar"   ) { getMLref(svmbase,svmInd).removeFromBasisUU(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-ABy"  ) { getMLref(svmbase,svmInd).setBasisYVV();                                            }
-                    else if ( currcommand(0) == "-ABu"  ) { getMLref(svmbase,svmInd).setBasisUVV();                                            }
-                    else if ( currcommand(0) == "-AEU"  ) { getMLref(svmbase,svmInd).addToBasisVV(getMLrefconst(svmbase,svmInd).NbasisVV(),safeatowhatever(tmpg,currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-AER"  ) { getMLref(svmbase,svmInd).setBasisVV(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-AR"   ) { getMLref(svmbase,svmInd).removeFromBasisVV(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-Ad"   ) { getMLref(getMLmodels(),svmInd).settspaceDim(safeatoi(currcommand(1),argvariables));      }
+                    else if ( currcommand(0) == "-AD"   ) { getMLref(getMLmodels(),svmInd).setorder(safeatoi(currcommand(1),argvariables));          }
+                    else if ( currcommand(0) == "-Ac"   ) { getMLref(getMLmodels(),svmInd).addclass(safeatoi(currcommand(1),argvariables));          }
+                    else if ( currcommand(0) == "-As"   ) { getMLref(getMLmodels(),svmInd).setanomalyclass(safeatoi(currcommand(1),argvariables));   }
+                    else if ( currcommand(0) == "-Acz"  ) { getMLref(getMLmodels(),svmInd).addclass(safeatoi(currcommand(1),argvariables),1);        }
+                    else if ( currcommand(0) == "-Aca"  ) { getMLref(getMLmodels(),svmInd).anomalyOn(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Acd"  ) { getMLref(getMLmodels(),svmInd).anomalyOff();                                             }
+                    else if ( currcommand(0) == "-Aby"  ) { getMLref(getMLmodels(),svmInd).setBasisYUU();                                            }
+                    else if ( currcommand(0) == "-Abu"  ) { getMLref(getMLmodels(),svmInd).setBasisUUU();                                            }
+                    else if ( currcommand(0) == "-AeU"  ) { getMLref(getMLmodels(),svmInd).addToBasisUU(getMLrefconst(getMLmodels(),svmInd).NbasisUU(),safeatowhatever(tmpg,currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-AeR"  ) { getMLref(getMLmodels(),svmInd).setBasisUU(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Ar"   ) { getMLref(getMLmodels(),svmInd).removeFromBasisUU(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-ABy"  ) { getMLref(getMLmodels(),svmInd).setBasisYVV();                                            }
+                    else if ( currcommand(0) == "-ABu"  ) { getMLref(getMLmodels(),svmInd).setBasisUVV();                                            }
+                    else if ( currcommand(0) == "-AEU"  ) { getMLref(getMLmodels(),svmInd).addToBasisVV(getMLrefconst(getMLmodels(),svmInd).NbasisVV(),safeatowhatever(tmpg,currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-AER"  ) { getMLref(getMLmodels(),svmInd).setBasisVV(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-AR"   ) { getMLref(getMLmodels(),svmInd).removeFromBasisVV(safeatoi(currcommand(1),argvariables)); }
 
                     else if ( ( currcommand(0) == "-Ag" ) || ( currcommand(0) == "-AG" ) || ( currcommand(0) == "-Agc" ) || ( currcommand(0) == "-AGc" ) )
                     {
@@ -6322,7 +6275,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         addtemptox(xdata,xtemplate);
 
-                        getMLref(svmbase,svmInd).addTrainingVector(getMLref(svmbase,svmInd).N(),ydata,xdata,Qweight,Qweight);
+                        getMLref(getMLmodels(),svmInd).addTrainingVector(getMLref(getMLmodels(),svmInd).N(),ydata,xdata,Qweight,Qweight);
                     }
 
                     else if ( currcommand(0) == "-Aq" )
@@ -6335,11 +6288,11 @@ int runsvmint(SVMThreadContext *svmContext,
                         double nvadd;
 
                         int jj,kk;
-                        int xdim = (getMLref(svmbase,svmInd).indKey())(getMLref(svmbase,svmInd).indKey().size()-1)+1;
+                        int xdim = (getMLref(getMLmodels(),svmInd).indKey())(getMLref(getMLmodels(),svmInd).indKey().size()-1)+1;
 
-                        for ( jj = 0 ; jj < getMLref(svmbase,svmInd).N() ; ++jj )
+                        for ( jj = 0 ; jj < getMLref(getMLmodels(),svmInd).N() ; ++jj )
                         {
-                            SparseVector<gentype> xj = (getMLref(svmbase,svmInd).x(jj));
+                            SparseVector<gentype> xj = (getMLref(getMLmodels(),svmInd).x(jj));
 
                             for ( kk = 0 ; kk < nbad ; ++kk )
                             {
@@ -6348,7 +6301,7 @@ int runsvmint(SVMThreadContext *svmContext,
                                 xj("[]",xdim+kk) = nmean+(nvadd*nvar);
                             }
 
-                            getMLref(svmbase,svmInd).setx(jj,xj);
+                            getMLref(getMLmodels(),svmInd).setx(jj,xj);
                         }
                     }
 
@@ -6391,7 +6344,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::string savefiledummy("");
 
-                        int pointsadded = addtrainingdata(getMLref(svmbase,svmInd),xtemplate,trainfile,reverse,ignoreStart,imax,ibase,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,savefiledummy);
+                        int pointsadded = addtrainingdata(getMLref(getMLmodels(),svmInd),xtemplate,trainfile,reverse,ignoreStart,imax,ibase,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,savefiledummy);
 
                         errstream() << "Added " << pointsadded << " training vectors/";
                     }
@@ -6443,8 +6396,8 @@ int runsvmint(SVMThreadContext *svmContext,
                         Vector<int> anomVect;
                         Vector<int> addVect;
 
-                        loadFileForHillClimb(getMLref(svmbase,svmInd),xtemplate,trainfile,reverse,ignoreStart,imax,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,xxx,yyy);
-                        anomaliesRelabelled = anAnomalyCreate(getMLref(svmbase,svmInd).getSVM(),xxx,zassign,trigVect,anomVect,addVect,Nantrig,adist,nadist,daclass,addVectsToML,0);
+                        loadFileForHillClimb(getMLref(getMLmodels(),svmInd),xtemplate,trainfile,reverse,ignoreStart,imax,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,xxx,yyy);
+                        anomaliesRelabelled = anAnomalyCreate(getMLref(getMLmodels(),svmInd).getSVM(),xxx,zassign,trigVect,anomVect,addVect,Nantrig,adist,nadist,daclass,addVectsToML,0);
 
                         errstream() << "Added " << addVect.size() << " out of " << xxx.size() << " training vectors (" << anomaliesRelabelled << " relabels, " << anomVect.size() << " ignored)/";
                     }
@@ -6461,7 +6414,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         streamItIn(xstr,x("&",0),0);
                         safeatowhatever(dz("&",0),currcommand(1),argvariables);
 
-                        addtrainingdata(getMLref(svmbase,svmInd),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(getMLmodels(),svmInd),xtemplate,x,dz,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AY" )
@@ -6473,7 +6426,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         safeatowhatever(dz("&",0),currcommand(1),argvariables);
                         x("&",0) = safeatowhatever(tmpg,currcommand(2),argvariables).cast_vector(1);
 
-                        addtrainingdata(getMLref(svmbase,svmInd),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(getMLmodels(),svmInd),xtemplate,x,dz,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AZ" )
@@ -6491,7 +6444,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         safeatowhatever(dz("&",0),currcommand(1),argvariables);
                         x("&",0) = safeatowhatever(tmpg,currcommand(2),argvariables).cast_vector(1);
 
-                        addtrainingdata(getMLref(svmbase,nInd),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(getMLmodels(),nInd),xtemplate,x,dz,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AV" )
@@ -6506,7 +6459,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         dstr >> dz;
                         streamItIn(xstr,x,0);
 
-                        addtrainingdata(getMLref(svmbase,svmInd),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(getMLmodels(),svmInd),xtemplate,x,dz,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AVv" )
@@ -6529,7 +6482,7 @@ int runsvmint(SVMThreadContext *svmContext,
                              x("&",ij) = ghgh(ij);
                         }
 
-                        addtrainingdata(getMLref(svmbase,svmInd),xtemplate,x,(const Vector<gentype> &) dd,-1,0,0,temp);
+                        addtrainingdata(getMLref(getMLmodels(),svmInd),xtemplate,x,(const Vector<gentype> &) dd,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AVV" )
@@ -6554,7 +6507,7 @@ int runsvmint(SVMThreadContext *svmContext,
                              x("&",ij) = (const Vector<gentype> &) ghgh(ij);
                         }
 
-                        addtrainingdata(getMLref(svmbase,svmInd),xtemplate,x,(const Vector<gentype> &) dd,(const Vector<gentype> &) ss,-1,0,0,temp);
+                        addtrainingdata(getMLref(getMLmodels(),svmInd),xtemplate,x,(const Vector<gentype> &) dd,(const Vector<gentype> &) ss,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AW" )
@@ -6563,23 +6516,23 @@ int runsvmint(SVMThreadContext *svmContext,
                         Vector<SparseVector<gentype> > x;
                         gentype temp;
 
-                        int pointsadded = loadDataFromMatlab(currcommand(2),currcommand(1),x,dz,getMLrefconst(svmbase,svmInd).targType(),getsetExtVar);
+                        int pointsadded = loadDataFromMatlab(currcommand(2),currcommand(1),x,dz,getMLrefconst(getMLmodels(),svmInd).targType(),getsetExtVar);
 
-                        addtrainingdata(getMLref(svmbase,svmInd),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(getMLmodels(),svmInd),xtemplate,x,dz,-1,0,0,temp);
 
                         errstream() << "Added " << pointsadded << " vectors from Matlab/";
                     }
 
                     else if ( currcommand(0) == "-AeA" ) 
                     {
-                        int pointsadded = addbasisdataUU(getMLref(svmbase,svmInd),currcommand(1));
+                        int pointsadded = addbasisdataUU(getMLref(getMLmodels(),svmInd),currcommand(1));
 
                         errstream() << "Added " << pointsadded << " U basis vectors/";
                     }
 
                     else if ( currcommand(0) == "-AEA" ) 
                     {
-                        int pointsadded = addbasisdataVV(getMLref(svmbase,svmInd),currcommand(1));
+                        int pointsadded = addbasisdataVV(getMLref(getMLmodels(),svmInd),currcommand(1));
 
                         errstream() << "Added " << pointsadded << " V basis vectors/";
                     }
@@ -6628,28 +6581,28 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-Stc"  ) { samScale  = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-Stq"  ) { samSlack  = safeatof(currcommand(1),argvariables); }
 
-                    else if ( currcommand(0) == "-Snx"  ) { getMLref(svmbase,svmInd).normKernelNone();                                                             }
-                    else if ( currcommand(0) == "-Sna"  ) { getMLref(svmbase,svmInd).normKernelZeroMeanUnitVariance();                                             }
-                    else if ( currcommand(0) == "-Snb"  ) { getMLref(svmbase,svmInd).normKernelZeroMedianUnitVariance();                                           }
-                    else if ( currcommand(0) == "-Snc"  ) { getMLref(svmbase,svmInd).normKernelUnitRange();                                                        }
-                    else if ( currcommand(0) == "-SNa"  ) { getMLref(svmbase,svmInd).normKernelZeroMeanUnitVariance(0,1);                                          }
-                    else if ( currcommand(0) == "-SNb"  ) { getMLref(svmbase,svmInd).normKernelZeroMedianUnitVariance(0,1);                                        }
-                    else if ( currcommand(0) == "-SNc"  ) { getMLref(svmbase,svmInd).normKernelUnitRange(0,1);                                                     }
-                    else if ( currcommand(0) == "-SnA"  ) { getMLref(svmbase,svmInd).normKernelZeroMeanUnitVariance(1,0);                                          }
-                    else if ( currcommand(0) == "-SnB"  ) { getMLref(svmbase,svmInd).normKernelZeroMedianUnitVariance(1,0);                                        }
-                    else if ( currcommand(0) == "-SnC"  ) { getMLref(svmbase,svmInd).normKernelUnitRange(1,0);                                                     }
-                    else if ( currcommand(0) == "-SNA"  ) { getMLref(svmbase,svmInd).normKernelZeroMeanUnitVariance(1,1);                                          }
-                    else if ( currcommand(0) == "-SNB"  ) { getMLref(svmbase,svmInd).normKernelZeroMedianUnitVariance(1,1);                                        }
-                    else if ( currcommand(0) == "-SNC"  ) { getMLref(svmbase,svmInd).normKernelUnitRange(1,1);                                                     }
-                    else if ( currcommand(0) == "-Sra"  ) { getMLref(svmbase,svmInd).randomise(safeatof(currcommand(1),argvariables));                             }
-                    else if ( currcommand(0) == "-Snt"  ) { getMLref(svmbase,svmInd).setSampleMode(0,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-St"   ) { getMLref(svmbase,svmInd).setSampleMode(1,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Spt"  ) { getMLref(svmbase,svmInd).setSampleMode(2,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Sjt"  ) { getMLref(svmbase,svmInd).setSampleMode(3,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Sjt+" ) { getMLref(svmbase,svmInd).setSampleMode(4,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Sjt-" ) { getMLref(svmbase,svmInd).setSampleMode(5,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Svc"  ) { getMLref(svmbase,svmInd).setsigma_cut(safeatof(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-Sdi"  ) { getMLref(svmbase,svmInd).disable(-safeatoi(currcommand(1),argvariables)-1);                            }
+                    else if ( currcommand(0) == "-Snx"  ) { getMLref(getMLmodels(),svmInd).normKernelNone();                                                             }
+                    else if ( currcommand(0) == "-Sna"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMeanUnitVariance();                                             }
+                    else if ( currcommand(0) == "-Snb"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMedianUnitVariance();                                           }
+                    else if ( currcommand(0) == "-Snc"  ) { getMLref(getMLmodels(),svmInd).normKernelUnitRange();                                                        }
+                    else if ( currcommand(0) == "-SNa"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMeanUnitVariance(0,1);                                          }
+                    else if ( currcommand(0) == "-SNb"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMedianUnitVariance(0,1);                                        }
+                    else if ( currcommand(0) == "-SNc"  ) { getMLref(getMLmodels(),svmInd).normKernelUnitRange(0,1);                                                     }
+                    else if ( currcommand(0) == "-SnA"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMeanUnitVariance(1,0);                                          }
+                    else if ( currcommand(0) == "-SnB"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMedianUnitVariance(1,0);                                        }
+                    else if ( currcommand(0) == "-SnC"  ) { getMLref(getMLmodels(),svmInd).normKernelUnitRange(1,0);                                                     }
+                    else if ( currcommand(0) == "-SNA"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMeanUnitVariance(1,1);                                          }
+                    else if ( currcommand(0) == "-SNB"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMedianUnitVariance(1,1);                                        }
+                    else if ( currcommand(0) == "-SNC"  ) { getMLref(getMLmodels(),svmInd).normKernelUnitRange(1,1);                                                     }
+                    else if ( currcommand(0) == "-Sra"  ) { getMLref(getMLmodels(),svmInd).randomise(safeatof(currcommand(1),argvariables));                             }
+                    else if ( currcommand(0) == "-Snt"  ) { getMLref(getMLmodels(),svmInd).setSampleMode(0,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-St"   ) { getMLref(getMLmodels(),svmInd).setSampleMode(1,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Spt"  ) { getMLref(getMLmodels(),svmInd).setSampleMode(2,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Sjt"  ) { getMLref(getMLmodels(),svmInd).setSampleMode(3,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Sjt+" ) { getMLref(getMLmodels(),svmInd).setSampleMode(4,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Sjt-" ) { getMLref(getMLmodels(),svmInd).setSampleMode(5,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Svc"  ) { getMLref(getMLmodels(),svmInd).setsigma_cut(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-Sdi"  ) { getMLref(getMLmodels(),svmInd).disable(-safeatoi(currcommand(1),argvariables)-1);                            }
 
                     else if ( currcommand(0) == "-SdI"  )
                     {
@@ -6663,7 +6616,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         iii *= -1;
                         iii -= -1;
 
-                        getMLref(svmbase,svmInd).disable(iii);
+                        getMLref(getMLmodels(),svmInd).disable(iii);
                     }
 
                     if ( currcommand(0) == "-Sa" )
@@ -6677,32 +6630,32 @@ int runsvmint(SVMThreadContext *svmContext,
                             STRTHROW("Unable to open file -Sa "+currcommand(1));
                         }
 
-                        Vector<gentype> alpha(getMLref(svmbase,svmInd).alpha());
+                        Vector<gentype> alpha(getMLref(getMLmodels(),svmInd).alpha());
 
                         datfile >> alpha;
                         datfile.close();
 
-                        getMLref(svmbase,svmInd).setAlpha(alpha);
+                        getMLref(getMLmodels(),svmInd).setAlpha(alpha);
                     }
 
                     else if ( currcommand(0) == "-Sai" )
                     {
-                        Vector<gentype> alpha(getMLref(svmbase,svmInd).alpha());
+                        Vector<gentype> alpha(getMLref(getMLmodels(),svmInd).alpha());
 
                         safeatowhatever(alpha("&",safeatoi(currcommand(1),argvariables)),currcommand(2),argvariables);
 
-                        getMLref(svmbase,svmInd).setAlpha(alpha);
+                        getMLref(getMLmodels(),svmInd).setAlpha(alpha);
                     }
 
                     else if ( currcommand(0) == "-Saa" )
                     {
                         std::stringstream xstr(currcommand(1));
 
-                        Vector<gentype> alpha(getMLref(svmbase,svmInd).alpha());
+                        Vector<gentype> alpha(getMLref(getMLmodels(),svmInd).alpha());
 
                         streamItIn(xstr,alpha,0);
 
-                        getMLref(svmbase,svmInd).setAlpha(alpha);
+                        getMLref(getMLmodels(),svmInd).setAlpha(alpha);
                     }
 
                     else if ( currcommand(0) == "-Sb" )
@@ -6719,14 +6672,14 @@ int runsvmint(SVMThreadContext *svmContext,
                         gentype bias;
                         datfile >> bias;
                         datfile.close();
-                        getMLref(svmbase,svmInd).setBias(bias);
+                        getMLref(getMLmodels(),svmInd).setBias(bias);
                     }
 
                     else if ( currcommand(0) == "-Sbb" )
                     {
                         gentype tmpg;
 
-                        getMLref(svmbase,svmInd).setBias(safeatowhatever(tmpg,currcommand(1),argvariables));
+                        getMLref(getMLmodels(),svmInd).setBias(safeatowhatever(tmpg,currcommand(1),argvariables));
                     }
 
                     else if ( currcommand(0) == "-SA" )
@@ -6740,37 +6693,37 @@ int runsvmint(SVMThreadContext *svmContext,
                             STRTHROW("Unable to open file -SA "+currcommand(1));
                         }
 
-                        Matrix<double> lambda(getMLref(svmbase,svmInd).lambdaKB());
+                        Matrix<double> lambda(getMLref(getMLmodels(),svmInd).lambdaKB());
 
                         datfile >> lambda;
                         datfile.close();
 
-                        getMLref(svmbase,svmInd).setlambdaKB(lambda);
+                        getMLref(getMLmodels(),svmInd).setlambdaKB(lambda);
                     }
 
                     else if ( currcommand(0) == "-SAi" )
                     {
-                        Matrix<double> lambda(getMLref(svmbase,svmInd).lambdaKB());
+                        Matrix<double> lambda(getMLref(getMLmodels(),svmInd).lambdaKB());
 
                         safeatowhatever(lambda("&",safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)),currcommand(3),argvariables);
 
-                        getMLref(svmbase,svmInd).setlambdaKB(lambda);
+                        getMLref(getMLmodels(),svmInd).setlambdaKB(lambda);
                     }
 
                     else if ( currcommand(0) == "-SAA" )
                     {
                         std::stringstream xstr(currcommand(1));
 
-                        Matrix<double> lambda(getMLref(svmbase,svmInd).lambdaKB());
+                        Matrix<double> lambda(getMLref(getMLmodels(),svmInd).lambdaKB());
 
                         streamItIn(xstr,lambda,0);
 
-                        getMLref(svmbase,svmInd).setlambdaKB(lambda);
+                        getMLref(getMLmodels(),svmInd).setlambdaKB(lambda);
                     }
 
                     else if ( currcommand(0) == "-Sx"  )
                     {
-                        ML_Base &model = getMLref(svmbase,svmInd);
+                        ML_Base &model = getMLref(getMLmodels(),svmInd);
 
                         gentype f;
 
@@ -6812,101 +6765,101 @@ int runsvmint(SVMThreadContext *svmContext,
                     currcommand = learningopt(0);
                     learningopt.remove(0);
 
-                         if ( currcommand(0) == "-c"    ) { getMLref(svmbase,svmInd).setC(safeatof(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-dc"   ) { getMLref(svmbase,svmInd).setD(safeatof(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-ec"   ) { getMLref(svmbase,svmInd).setE(safeatof(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-fc"   ) { getMLref(svmbase,svmInd).setF(safeatof(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-Gc"   ) { getMLref(svmbase,svmInd).setG(safeatof(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-dcs"  ) { getMLref(svmbase,svmInd).setsigmaD(safeatof(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-ecs"  ) { getMLref(svmbase,svmInd).setsigmaE(safeatof(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-fcs"  ) { getMLref(svmbase,svmInd).setsigmaF(safeatof(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-Gcs"  ) { getMLref(svmbase,svmInd).setsigmaG(safeatof(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-trf"  ) { getMLref(svmbase,svmInd).settunev(safeatoi(currcommand(1),argvariables));                      }
-                    else if ( currcommand(0) == "-trk"  ) { getMLref(svmbase,svmInd).setpegk(safeatoi(currcommand(1),argvariables));                       }
-                    else if ( currcommand(0) == "-tmv"  ) { getMLref(svmbase,svmInd).setminv(safeatof(currcommand(1),argvariables));                       }
-                    else if ( currcommand(0) == "-rfs"  ) { getMLref(svmbase,svmInd).setReOnly(safeatoi(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-dia"  ) { getMLref(svmbase,svmInd).setinAdam(safeatoi(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-dog"  ) { getMLref(svmbase,svmInd).setoutGrad(safeatoi(currcommand(1),argvariables));                    }
-                    else if ( currcommand(0) == "-nN"   ) { getMLref(svmbase,svmInd).setNRff(safeatoi(currcommand(1),argvariables));                       }
-                    else if ( currcommand(0) == "-mtl"  ) { getMLref(svmbase,svmInd).setNRffRep(safeatoi(currcommand(1),argvariables));                    }
-                    else if ( currcommand(0) == "-th"   ) { getMLref(svmbase,svmInd).settheta(safeatof(currcommand(1),argvariables));                      }
-                    else if ( currcommand(0) == "-thn"  ) { getMLref(svmbase,svmInd).setsimnorm(safeatoi(currcommand(1),argvariables));                    }
-                    else if ( currcommand(0) == "-c+"   ) { getMLref(svmbase,svmInd).setCclass(+1,safeatof(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-c-"   ) { getMLref(svmbase,svmInd).setCclass(-1,safeatof(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-c="   ) { getMLref(svmbase,svmInd).setCclass(2,safeatof(currcommand(1),argvariables));                   }
-                    else if ( currcommand(0) == "-cd"   ) { getMLref(svmbase,svmInd).setCclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-cs"   ) { getMLref(svmbase,svmInd).setC(getMLrefconst(svmbase,svmInd).C()*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-c+s"  ) { getMLref(svmbase,svmInd).setCclass(+1,getMLrefconst(svmbase,svmInd).Cclass(+1)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-c-s"  ) { getMLref(svmbase,svmInd).setCclass(-1,getMLrefconst(svmbase,svmInd).Cclass(-1)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-c=s"  ) { getMLref(svmbase,svmInd).setCclass(2,getMLrefconst(svmbase,svmInd).Cclass(2)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-cds"  ) { getMLref(svmbase,svmInd).setCclass(safeatoi(currcommand(1),argvariables),getMLrefconst(svmbase,svmInd).Cclass(safeatoi(currcommand(1),argvariables))*safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-j"    ) { getMLref(svmbase,svmInd).setCclass(+1,safeatof(currcommand(1),argvariables)); getMLref(svmbase,svmInd).setCclass(-1,1); }
-                    else if ( currcommand(0) == "-jc"   ) { getMLref(svmbase,svmInd).setCclass(+1,safeatof(currcommand(1),argvariables)); getMLref(svmbase,svmInd).setCclass(-1,1); }
-                    else if ( currcommand(0) == "-dd"   ) { getMLref(svmbase,svmInd).setRejectThreshold(safeatof(currcommand(1),argvariables));            }
-                    else if ( currcommand(0) == "-w"    ) { getMLref(svmbase,svmInd).seteps(safeatof(currcommand(1),argvariables));                        }
-                    else if ( currcommand(0) == "-w+"   ) { getMLref(svmbase,svmInd).setepsclass(+1,safeatof(currcommand(1),argvariables));                }
-                    else if ( currcommand(0) == "-w-"   ) { getMLref(svmbase,svmInd).setepsclass(-1,safeatof(currcommand(1),argvariables));                }
-                    else if ( currcommand(0) == "-w="   ) { getMLref(svmbase,svmInd).setepsclass(2,safeatof(currcommand(1),argvariables));                 }
-                    else if ( currcommand(0) == "-wd"   ) { getMLref(svmbase,svmInd).setepsclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-ws"   ) { getMLref(svmbase,svmInd).seteps(getMLrefconst(svmbase,svmInd).eps()*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-w+s"  ) { getMLref(svmbase,svmInd).setepsclass(+1,getMLrefconst(svmbase,svmInd).epsclass(+1)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-w-s"  ) { getMLref(svmbase,svmInd).setepsclass(-1,getMLrefconst(svmbase,svmInd).epsclass(-1)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-w=s"  ) { getMLref(svmbase,svmInd).setepsclass(2,getMLrefconst(svmbase,svmInd).epsclass(2)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-wds"  ) { getMLref(svmbase,svmInd).setepsclass(safeatoi(currcommand(1),argvariables),getMLrefconst(svmbase,svmInd).Cclass(safeatoi(currcommand(1),argvariables))*safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-jw"   ) { getMLref(svmbase,svmInd).setepsclass(+1,safeatof(currcommand(1),argvariables)); getMLref(svmbase,svmInd).setepsclass(-1,1); }
-                    else if ( currcommand(0) == "-cw"   ) { getMLref(svmbase,svmInd).setCweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-ww"   ) { getMLref(svmbase,svmInd).setepsweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-mvb"  ) { getMLref(svmbase,svmInd).setbetarank(safeatof(currcommand(1),argvariables));                   }
-                    else if ( currcommand(0) == "-ds"   ) { getMLref(svmbase,svmInd).setsigma(getMLrefconst(svmbase,svmInd).sigma()*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-dw"   ) { getMLref(svmbase,svmInd).setsigmaweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-mlc"  ) { getMLref(svmbase,svmInd).setregC(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-Mn"   ) { getMLref(svmbase,svmInd).setNoMonotonicConstraints();                                          }
-                    else if ( currcommand(0) == "-Mi"   ) { getMLref(svmbase,svmInd).setForcedMonotonicIncreasing();                                       }
-                    else if ( currcommand(0) == "-Md"   ) { getMLref(svmbase,svmInd).setForcedMonotonicDecreasing();                                       }
-                    else if ( currcommand(0) == "-nm"   ) { getMLref(svmbase,svmInd).setm(safeatoi(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-Tl"   ) { getMLref(svmbase,svmInd).setnu(safeatof(currcommand(1),argvariables));                         }
-                    else if ( currcommand(0) == "-Tq"   ) { getMLref(svmbase,svmInd).setnuQuad(safeatof(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-Nl"   ) { getMLref(svmbase,svmInd).setLinBiasForceclass(-2,safeatof(currcommand(1),argvariables));       }
-                    else if ( currcommand(0) == "-Nq"   ) { getMLref(svmbase,svmInd).setQuadBiasForceclass(-2,safeatof(currcommand(1),argvariables));      }
-                    else if ( currcommand(0) == "-Nld"  ) { getMLref(svmbase,svmInd).setLinBiasForceclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-Nqd"  ) { getMLref(svmbase,svmInd).setQuadBiasForceclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-mvi"  ) { getMLref(svmbase,svmInd).setmaxitermvrank(safeatoi(currcommand(1),argvariables));              }
-                    else if ( currcommand(0) == "-mvlr" ) { getMLref(svmbase,svmInd).setlrmvrank(safeatof(currcommand(1),argvariables));                   }
-                    else if ( currcommand(0) == "-mvzt" ) { getMLref(svmbase,svmInd).setztmvrank(safeatof(currcommand(1),argvariables));                   }
-                    else if ( currcommand(0) == "-Fi"   ) { getMLref(svmbase,svmInd).setmaxiterfuzzt(safeatoi(currcommand(1),argvariables));               }
-                    else if ( currcommand(0) == "-Flr"  ) { getMLref(svmbase,svmInd).setlrfuzzt(safeatof(currcommand(1),argvariables));                    }
-                    else if ( currcommand(0) == "-Fzt"  ) { getMLref(svmbase,svmInd).setztfuzzt(safeatof(currcommand(1),argvariables));                    }
-                    else if ( currcommand(0) == "-Fc"   ) { getMLref(svmbase,svmInd).setcostfnfuzzt(currcommand(1));                                       }
-                    else if ( currcommand(0) == "-blx"  ) { getMLref(svmbase,svmInd).setoutfn(currcommand(1));                                             }
-                    else if ( currcommand(0) == "-bly"  ) { getMLref(svmbase,svmInd).setmexcall(currcommand(1));                                           }
-                    else if ( currcommand(0) == "-blz"  ) { getMLref(svmbase,svmInd).setmexcallid(safeatoi(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-bls"  ) { getMLref(svmbase,svmInd).setsyscall(currcommand(1));                                           }
-                    else if ( currcommand(0) == "-bfx"  ) { getMLref(svmbase,svmInd).setxfilename(currcommand(1));                                         }
-                    else if ( currcommand(0) == "-bfy"  ) { getMLref(svmbase,svmInd).setyfilename(currcommand(1));                                         }
-                    else if ( currcommand(0) == "-bfxy" ) { getMLref(svmbase,svmInd).setxyfilename(currcommand(1));                                        }
-                    else if ( currcommand(0) == "-bfyx" ) { getMLref(svmbase,svmInd).setyxfilename(currcommand(1));                                        }
-                    else if ( currcommand(0) == "-bfr"  ) { getMLref(svmbase,svmInd).setrfilename(currcommand(1));                                         }
-                    else if ( currcommand(0) == "-k"    ) { getMLref(svmbase,svmInd).setk(safeatoi(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-K"    ) { getMLref(svmbase,svmInd).setktp(safeatoi(currcommand(1),argvariables));                        }
-                    else if ( currcommand(0) == "-d"    ) { getMLref(svmbase,svmInd).setsigma(safeatof(currcommand(1),argvariables));                      }
-                    else if ( currcommand(0) == "-ccs"  ) { getMLref(svmbase,svmInd).setsigma(safeatof(currcommand(1),argvariables));                      }
-                    else if ( currcommand(0) == "-iz"   ) { getMLref(svmbase,svmInd).setzref(safeatof(currcommand(1),argvariables));                       }
-                    else if ( currcommand(0) == "-ie"   ) { getMLref(svmbase,svmInd).setehimethod(safeatoi(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-is"   ) { getMLref(svmbase,svmInd).setscaltype (safeatoi(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-ia"   ) { getMLref(svmbase,svmInd).setscalalpha(safeatof(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-in"   ) { getMLref(svmbase,svmInd).setNsamp    (safeatoi(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-il"   ) { getMLref(svmbase,svmInd).setsampSlack(safeatof(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-mu"   ) { getMLref(svmbase,svmInd).setprim(safeatoi(currcommand(1),argvariables));                       }
-                    else if ( currcommand(0) == "-mugt" ) { gentype mudef(currcommand(1)); getMLref(svmbase,svmInd).setprival(mudef);                      }
-                    else if ( currcommand(0) == "-muml" ) { getMLref(svmbase,svmInd).setpriml(&(getMLref(svmbase,safeatoi(currcommand(1),argvariables)))); }
+                         if ( currcommand(0) == "-c"    ) { getMLref(getMLmodels(),svmInd).setC(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-dc"   ) { getMLref(getMLmodels(),svmInd).setD(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-ec"   ) { getMLref(getMLmodels(),svmInd).setE(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-fc"   ) { getMLref(getMLmodels(),svmInd).setF(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-Gc"   ) { getMLref(getMLmodels(),svmInd).setG(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-dcs"  ) { getMLref(getMLmodels(),svmInd).setsigmaD(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-ecs"  ) { getMLref(getMLmodels(),svmInd).setsigmaE(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-fcs"  ) { getMLref(getMLmodels(),svmInd).setsigmaF(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-Gcs"  ) { getMLref(getMLmodels(),svmInd).setsigmaG(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-trf"  ) { getMLref(getMLmodels(),svmInd).settunev(safeatoi(currcommand(1),argvariables));                      }
+                    else if ( currcommand(0) == "-trk"  ) { getMLref(getMLmodels(),svmInd).setpegk(safeatoi(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-tmv"  ) { getMLref(getMLmodels(),svmInd).setminv(safeatof(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-rfs"  ) { getMLref(getMLmodels(),svmInd).setReOnly(safeatoi(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-dia"  ) { getMLref(getMLmodels(),svmInd).setinAdam(safeatoi(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-dog"  ) { getMLref(getMLmodels(),svmInd).setoutGrad(safeatoi(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-nN"   ) { getMLref(getMLmodels(),svmInd).setNRff(safeatoi(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-mtl"  ) { getMLref(getMLmodels(),svmInd).setNRffRep(safeatoi(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-th"   ) { getMLref(getMLmodels(),svmInd).settheta(safeatof(currcommand(1),argvariables));                      }
+                    else if ( currcommand(0) == "-thn"  ) { getMLref(getMLmodels(),svmInd).setsimnorm(safeatoi(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-c+"   ) { getMLref(getMLmodels(),svmInd).setCclass(+1,safeatof(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-c-"   ) { getMLref(getMLmodels(),svmInd).setCclass(-1,safeatof(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-c="   ) { getMLref(getMLmodels(),svmInd).setCclass(2,safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-cd"   ) { getMLref(getMLmodels(),svmInd).setCclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-cs"   ) { getMLref(getMLmodels(),svmInd).setC(getMLrefconst(getMLmodels(),svmInd).C()*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-c+s"  ) { getMLref(getMLmodels(),svmInd).setCclass(+1,getMLrefconst(getMLmodels(),svmInd).Cclass(+1)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-c-s"  ) { getMLref(getMLmodels(),svmInd).setCclass(-1,getMLrefconst(getMLmodels(),svmInd).Cclass(-1)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-c=s"  ) { getMLref(getMLmodels(),svmInd).setCclass(2,getMLrefconst(getMLmodels(),svmInd).Cclass(2)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-cds"  ) { getMLref(getMLmodels(),svmInd).setCclass(safeatoi(currcommand(1),argvariables),getMLrefconst(getMLmodels(),svmInd).Cclass(safeatoi(currcommand(1),argvariables))*safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-j"    ) { getMLref(getMLmodels(),svmInd).setCclass(+1,safeatof(currcommand(1),argvariables)); getMLref(getMLmodels(),svmInd).setCclass(-1,1); }
+                    else if ( currcommand(0) == "-jc"   ) { getMLref(getMLmodels(),svmInd).setCclass(+1,safeatof(currcommand(1),argvariables)); getMLref(getMLmodels(),svmInd).setCclass(-1,1); }
+                    else if ( currcommand(0) == "-dd"   ) { getMLref(getMLmodels(),svmInd).setRejectThreshold(safeatof(currcommand(1),argvariables));            }
+                    else if ( currcommand(0) == "-w"    ) { getMLref(getMLmodels(),svmInd).seteps(safeatof(currcommand(1),argvariables));                        }
+                    else if ( currcommand(0) == "-w+"   ) { getMLref(getMLmodels(),svmInd).setepsclass(+1,safeatof(currcommand(1),argvariables));                }
+                    else if ( currcommand(0) == "-w-"   ) { getMLref(getMLmodels(),svmInd).setepsclass(-1,safeatof(currcommand(1),argvariables));                }
+                    else if ( currcommand(0) == "-w="   ) { getMLref(getMLmodels(),svmInd).setepsclass(2,safeatof(currcommand(1),argvariables));                 }
+                    else if ( currcommand(0) == "-wd"   ) { getMLref(getMLmodels(),svmInd).setepsclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-ws"   ) { getMLref(getMLmodels(),svmInd).seteps(getMLrefconst(getMLmodels(),svmInd).eps()*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-w+s"  ) { getMLref(getMLmodels(),svmInd).setepsclass(+1,getMLrefconst(getMLmodels(),svmInd).epsclass(+1)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-w-s"  ) { getMLref(getMLmodels(),svmInd).setepsclass(-1,getMLrefconst(getMLmodels(),svmInd).epsclass(-1)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-w=s"  ) { getMLref(getMLmodels(),svmInd).setepsclass(2,getMLrefconst(getMLmodels(),svmInd).epsclass(2)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-wds"  ) { getMLref(getMLmodels(),svmInd).setepsclass(safeatoi(currcommand(1),argvariables),getMLrefconst(getMLmodels(),svmInd).Cclass(safeatoi(currcommand(1),argvariables))*safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-jw"   ) { getMLref(getMLmodels(),svmInd).setepsclass(+1,safeatof(currcommand(1),argvariables)); getMLref(getMLmodels(),svmInd).setepsclass(-1,1); }
+                    else if ( currcommand(0) == "-cw"   ) { getMLref(getMLmodels(),svmInd).setCweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-ww"   ) { getMLref(getMLmodels(),svmInd).setepsweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-mvb"  ) { getMLref(getMLmodels(),svmInd).setbetarank(safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-ds"   ) { getMLref(getMLmodels(),svmInd).setsigma(getMLrefconst(getMLmodels(),svmInd).sigma()*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-dw"   ) { getMLref(getMLmodels(),svmInd).setsigmaweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-mlc"  ) { getMLref(getMLmodels(),svmInd).setregC(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Mn"   ) { getMLref(getMLmodels(),svmInd).setNoMonotonicConstraints();                                          }
+                    else if ( currcommand(0) == "-Mi"   ) { getMLref(getMLmodels(),svmInd).setForcedMonotonicIncreasing();                                       }
+                    else if ( currcommand(0) == "-Md"   ) { getMLref(getMLmodels(),svmInd).setForcedMonotonicDecreasing();                                       }
+                    else if ( currcommand(0) == "-nm"   ) { getMLref(getMLmodels(),svmInd).setm(safeatoi(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-Tl"   ) { getMLref(getMLmodels(),svmInd).setnu(safeatof(currcommand(1),argvariables));                         }
+                    else if ( currcommand(0) == "-Tq"   ) { getMLref(getMLmodels(),svmInd).setnuQuad(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-Nl"   ) { getMLref(getMLmodels(),svmInd).setLinBiasForceclass(-2,safeatof(currcommand(1),argvariables));       }
+                    else if ( currcommand(0) == "-Nq"   ) { getMLref(getMLmodels(),svmInd).setQuadBiasForceclass(-2,safeatof(currcommand(1),argvariables));      }
+                    else if ( currcommand(0) == "-Nld"  ) { getMLref(getMLmodels(),svmInd).setLinBiasForceclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Nqd"  ) { getMLref(getMLmodels(),svmInd).setQuadBiasForceclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-mvi"  ) { getMLref(getMLmodels(),svmInd).setmaxitermvrank(safeatoi(currcommand(1),argvariables));              }
+                    else if ( currcommand(0) == "-mvlr" ) { getMLref(getMLmodels(),svmInd).setlrmvrank(safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-mvzt" ) { getMLref(getMLmodels(),svmInd).setztmvrank(safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-Fi"   ) { getMLref(getMLmodels(),svmInd).setmaxiterfuzzt(safeatoi(currcommand(1),argvariables));               }
+                    else if ( currcommand(0) == "-Flr"  ) { getMLref(getMLmodels(),svmInd).setlrfuzzt(safeatof(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-Fzt"  ) { getMLref(getMLmodels(),svmInd).setztfuzzt(safeatof(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-Fc"   ) { getMLref(getMLmodels(),svmInd).setcostfnfuzzt(currcommand(1));                                       }
+                    else if ( currcommand(0) == "-blx"  ) { getMLref(getMLmodels(),svmInd).setoutfn(currcommand(1));                                             }
+                    else if ( currcommand(0) == "-bly"  ) { getMLref(getMLmodels(),svmInd).setmexcall(currcommand(1));                                           }
+                    else if ( currcommand(0) == "-blz"  ) { getMLref(getMLmodels(),svmInd).setmexcallid(safeatoi(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-bls"  ) { getMLref(getMLmodels(),svmInd).setsyscall(currcommand(1));                                           }
+                    else if ( currcommand(0) == "-bfx"  ) { getMLref(getMLmodels(),svmInd).setxfilename(currcommand(1));                                         }
+                    else if ( currcommand(0) == "-bfy"  ) { getMLref(getMLmodels(),svmInd).setyfilename(currcommand(1));                                         }
+                    else if ( currcommand(0) == "-bfxy" ) { getMLref(getMLmodels(),svmInd).setxyfilename(currcommand(1));                                        }
+                    else if ( currcommand(0) == "-bfyx" ) { getMLref(getMLmodels(),svmInd).setyxfilename(currcommand(1));                                        }
+                    else if ( currcommand(0) == "-bfr"  ) { getMLref(getMLmodels(),svmInd).setrfilename(currcommand(1));                                         }
+                    else if ( currcommand(0) == "-k"    ) { getMLref(getMLmodels(),svmInd).setk(safeatoi(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-K"    ) { getMLref(getMLmodels(),svmInd).setktp(safeatoi(currcommand(1),argvariables));                        }
+                    else if ( currcommand(0) == "-d"    ) { getMLref(getMLmodels(),svmInd).setsigma(safeatof(currcommand(1),argvariables));                      }
+                    else if ( currcommand(0) == "-ccs"  ) { getMLref(getMLmodels(),svmInd).setsigma(safeatof(currcommand(1),argvariables));                      }
+                    else if ( currcommand(0) == "-iz"   ) { getMLref(getMLmodels(),svmInd).setzref(safeatof(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-ie"   ) { getMLref(getMLmodels(),svmInd).setehimethod(safeatoi(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-is"   ) { getMLref(getMLmodels(),svmInd).setscaltype (safeatoi(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-ia"   ) { getMLref(getMLmodels(),svmInd).setscalalpha(safeatof(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-in"   ) { getMLref(getMLmodels(),svmInd).setNsamp    (safeatoi(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-il"   ) { getMLref(getMLmodels(),svmInd).setsampSlack(safeatof(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-mu"   ) { getMLref(getMLmodels(),svmInd).setprim(safeatoi(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-mugt" ) { gentype mudef(currcommand(1)); getMLref(getMLmodels(),svmInd).setprival(mudef);                      }
+                    else if ( currcommand(0) == "-muml" ) { getMLref(getMLmodels(),svmInd).setpriml(&(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables)))); }
 
                     else if ( currcommand(0) == "-Bf"   )
                     {
                         safeatowhatever(biasdefault,currcommand(1),argvariables);
 
-                        if ( getMLrefconst(svmbase,svmInd).isFixedBias() )
+                        if ( getMLrefconst(getMLmodels(),svmInd).isFixedBias() )
                         {
-                            getMLref(svmbase,svmInd).setFixedBias(biasdefault);
+                            getMLref(getMLmodels(),svmInd).setFixedBias(biasdefault);
                         }
                     }
 
@@ -6914,12 +6867,12 @@ int runsvmint(SVMThreadContext *svmContext,
                     {
                         if ( currcommand(1) == "r" )
                         {
-                            getMLref(svmbase,svmInd).setKreal();
+                            getMLref(getMLmodels(),svmInd).setKreal();
                         }
 
                         else if ( currcommand(1) == "m" )
                         {
-                            getMLref(svmbase,svmInd).setKunreal();
+                            getMLref(getMLmodels(),svmInd).setKunreal();
                         }
 
                         else
@@ -6966,10 +6919,10 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::string currcommandis = "-" + ((currcommand(0)).substr(2));
 
-                        ML_Base &kernML = getMLref(svmbase,svmInd);
+                        ML_Base &kernML = getMLref(getMLmodels(),svmInd);
                         MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,ekernnum,efirstcall,svmbase,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,ekernnum,efirstcall,svmInd);
 
                         efirstcall = 0;
                     }
@@ -6980,10 +6933,10 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::string currcommandis = "-" + ((currcommand(0)).substr(2));
 
-                        ML_Base &kernML = getMLref(svmbase,svmInd);
+                        ML_Base &kernML = getMLref(getMLmodels(),svmInd);
                         MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,rkernnum,rfirstcall,svmbase,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,rkernnum,rfirstcall,svmInd);
 
                         rfirstcall = 0;
                     }
@@ -6994,10 +6947,10 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::string currcommandis = currcommand(0);
 
-                        ML_Base &kernML = getMLref(svmbase,svmInd);
+                        ML_Base &kernML = getMLref(getMLmodels(),svmInd);
                         MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,kernnum,firstcall,svmbase,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,kernnum,firstcall,svmInd);
 
                         firstcall = 0;
                     }
@@ -7027,36 +6980,36 @@ int runsvmint(SVMThreadContext *svmContext,
                     currcommand = tuningopt(0);
                     tuningopt.remove(0);
 
-                         if ( currcommand(0) == "-bal"     ) { balc(getMLref(svmbase,svmInd));                                                                                            }
+                         if ( currcommand(0) == "-bal"     ) { balc(getMLref(getMLmodels(),svmInd));                                                                                            }
 
-                    else if ( currcommand(0) == "-NlA"     ) { getMLref(svmbase,svmInd).autosetLinBiasForce(safeatof(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-cA"      ) { getMLref(svmbase,svmInd).autosetCNKmean();                                                        }
-                    else if ( currcommand(0) == "-cB"      ) { getMLref(svmbase,svmInd).autosetCNKmedian();                                                      }
-                    else if ( currcommand(0) == "-cAN"     ) { getMLref(svmbase,svmInd).autosetCKmean();                                                         }
-                    else if ( currcommand(0) == "-cBN"     ) { getMLref(svmbase,svmInd).autosetCKmedian();                                                       }
-                    else if ( currcommand(0) == "-cX"      ) { getMLref(svmbase,svmInd).autosetCscaled(safeatof(currcommand(1),argvariables));                   }
-                    else if ( currcommand(0) == "-cua"     ) { getMLref(svmbase,svmInd).autosetOff();                                                            }
-                    else if ( currcommand(0) == "-tkL"     ) { getMLref(svmbase,svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,0,nullptr); }
-                    else if ( currcommand(0) == "-tkloo"   ) { getMLref(svmbase,svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,0,nullptr); }
-                    else if ( currcommand(0) == "-tkrec"   ) { getMLref(svmbase,svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,0,nullptr); }
-                    else if ( currcommand(0) == "-tcL"     ) { getMLref(svmbase,svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,1,nullptr); }
-                    else if ( currcommand(0) == "-tcloo"   ) { getMLref(svmbase,svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,1,nullptr); }
-                    else if ( currcommand(0) == "-tcrec"   ) { getMLref(svmbase,svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,1,nullptr); }
-                    else if ( currcommand(0) == "-teL"     ) { getMLref(svmbase,svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,2,nullptr); }
-                    else if ( currcommand(0) == "-teloo"   ) { getMLref(svmbase,svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,2,nullptr); }
-                    else if ( currcommand(0) == "-terec"   ) { getMLref(svmbase,svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,2,nullptr); }
-                    else if ( currcommand(0) == "-tceL"    ) { getMLref(svmbase,svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,3,nullptr); }
-                    else if ( currcommand(0) == "-tceloo"  ) { getMLref(svmbase,svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,3,nullptr); }
-                    else if ( currcommand(0) == "-tcerec"  ) { getMLref(svmbase,svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,3,nullptr); }
-                    else if ( currcommand(0) == "-tkcL"    ) { getMLref(svmbase,svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,1,nullptr); }
-                    else if ( currcommand(0) == "-tkcloo"  ) { getMLref(svmbase,svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,1,nullptr); }
-                    else if ( currcommand(0) == "-tkcrec"  ) { getMLref(svmbase,svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,1,nullptr); }
-                    else if ( currcommand(0) == "-tkeL"    ) { getMLref(svmbase,svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,2,nullptr); }
-                    else if ( currcommand(0) == "-tkeloo"  ) { getMLref(svmbase,svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,2,nullptr); }
-                    else if ( currcommand(0) == "-tkerec"  ) { getMLref(svmbase,svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,2,nullptr); }
-                    else if ( currcommand(0) == "-tkceL"   ) { getMLref(svmbase,svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,3,nullptr); }
-                    else if ( currcommand(0) == "-tkceloo" ) { getMLref(svmbase,svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,3,nullptr); }
-                    else if ( currcommand(0) == "-tkcerec" ) { getMLref(svmbase,svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,3,nullptr); }
+                    else if ( currcommand(0) == "-NlA"     ) { getMLref(getMLmodels(),svmInd).autosetLinBiasForce(safeatof(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-cA"      ) { getMLref(getMLmodels(),svmInd).autosetCNKmean();                                                        }
+                    else if ( currcommand(0) == "-cB"      ) { getMLref(getMLmodels(),svmInd).autosetCNKmedian();                                                      }
+                    else if ( currcommand(0) == "-cAN"     ) { getMLref(getMLmodels(),svmInd).autosetCKmean();                                                         }
+                    else if ( currcommand(0) == "-cBN"     ) { getMLref(getMLmodels(),svmInd).autosetCKmedian();                                                       }
+                    else if ( currcommand(0) == "-cX"      ) { getMLref(getMLmodels(),svmInd).autosetCscaled(safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-cua"     ) { getMLref(getMLmodels(),svmInd).autosetOff();                                                            }
+                    else if ( currcommand(0) == "-tkL"     ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,0,nullptr); }
+                    else if ( currcommand(0) == "-tkloo"   ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,0,nullptr); }
+                    else if ( currcommand(0) == "-tkrec"   ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,0,nullptr); }
+                    else if ( currcommand(0) == "-tcL"     ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,1,nullptr); }
+                    else if ( currcommand(0) == "-tcloo"   ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,1,nullptr); }
+                    else if ( currcommand(0) == "-tcrec"   ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,1,nullptr); }
+                    else if ( currcommand(0) == "-teL"     ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,2,nullptr); }
+                    else if ( currcommand(0) == "-teloo"   ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,2,nullptr); }
+                    else if ( currcommand(0) == "-terec"   ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,2,nullptr); }
+                    else if ( currcommand(0) == "-tceL"    ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,3,nullptr); }
+                    else if ( currcommand(0) == "-tceloo"  ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,3,nullptr); }
+                    else if ( currcommand(0) == "-tcerec"  ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,3,nullptr); }
+                    else if ( currcommand(0) == "-tkcL"    ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,1,nullptr); }
+                    else if ( currcommand(0) == "-tkcloo"  ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,1,nullptr); }
+                    else if ( currcommand(0) == "-tkcrec"  ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,1,nullptr); }
+                    else if ( currcommand(0) == "-tkeL"    ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,2,nullptr); }
+                    else if ( currcommand(0) == "-tkeloo"  ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,2,nullptr); }
+                    else if ( currcommand(0) == "-tkerec"  ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,2,nullptr); }
+                    else if ( currcommand(0) == "-tkceL"   ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,3,nullptr); }
+                    else if ( currcommand(0) == "-tkceloo" ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,3,nullptr); }
+                    else if ( currcommand(0) == "-tkcerec" ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,3,nullptr); }
                 }
 
                 time_used endtime = TIMECALL;
@@ -7268,7 +7221,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         ML_Base &kernML = (*xbopts).defrandDirtemplateFnGP;
                         MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gPkernnum,gPfirstcall,svmbase,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gPkernnum,gPfirstcall,svmInd);
 
                         (*xnopts).defrandDirtemplateFnGP.getKernel_unsafe() = theKern;
                         (*xgopts).defrandDirtemplateFnGP.getKernel_unsafe() = theKern;
@@ -7285,7 +7238,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         ML_Base dummyML;
 
-                        processKernel(dummyML,(*xbopts).defrandDirtemplateFnRKHS.kern("&"),currcommandis,currcommand,2,argvariables,gphkernnum,gphfirstcall,svmbase,svmInd);
+                        processKernel(dummyML,(*xbopts).defrandDirtemplateFnRKHS.kern("&"),currcommandis,currcommand,2,argvariables,gphkernnum,gphfirstcall,svmInd);
 
                         (*xnopts).defrandDirtemplateFnRKHS.kern("&") = (*xbopts).defrandDirtemplateFnRKHS.kern();
                         (*xgopts).defrandDirtemplateFnRKHS.kern("&") = (*xbopts).defrandDirtemplateFnRKHS.kern();
@@ -7364,8 +7317,8 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gmt"      ) { (*xbopts).modeltype     = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmrff"    ) { (*xbopts).modelrff      = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmq"      ) { (*xbopts).oracleMode    = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmw"      ) { ((*xbopts).extmuapprox).resize(1)   = &(getMLref(svmbase,( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) ))); }
-                    else if ( currcommand(0) == "-gmwcgt"   ) { ((*xbopts).extcgtapprox).resize(1)  = &(getMLref(svmbase,( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) ))); }
+                    else if ( currcommand(0) == "-gmw"      ) { ((*xbopts).extmuapprox).resize(1)   = &(getMLref(getMLmodels(),( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) ))); }
+                    else if ( currcommand(0) == "-gmwcgt"   ) { ((*xbopts).extcgtapprox).resize(1)  = &(getMLref(getMLmodels(),( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) ))); }
                     else if ( currcommand(0) == "-gmo"      ) { (*xbopts).ismoo         = 1; }
                     else if ( currcommand(0) == "-gms"      ) { (*xbopts).ismoo         = 0; }
                     else if ( currcommand(0) == "-gmr"      ) { (*xbopts).makenoise     = 1; }
@@ -7373,9 +7326,6 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gma"      ) { (*xbopts).moodim        = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmT"      ) { std::stringstream xstr(currcommand(1)); SparseVector<gentype> xt; streamItIn(xstr,xt,0); (*xbopts).xtemplate = xt; }
                     else if ( currcommand(0) == "-gmd"      ) { (*xbopts).default_model_setsigma(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-gmbgn"    ) { (*xbopts).default_model_setvarApproxim(safeatoi(currcommand(1),argvariables));}
-                    else if ( currcommand(0) == "-gmsbgn"   ) { (*xbopts).default_modelaugx_setvarApproxim(safeatoi(currcommand(1),argvariables));}
-                    else if ( currcommand(0) == "-gmgtbgn"  ) { (*xbopts).default_modelcgt_setvarApproxim(safeatoi(currcommand(1),argvariables));}
                     else if ( currcommand(0) == "-gmg"      ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_model_setkernelg(temp); }
                     else if ( currcommand(0) == "-gmgg"     ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_model_setkernelgg(xscale); }
                     else if ( currcommand(0) == "-gmma"     ) { (*xbopts).tunemu        = safeatoi(currcommand(1),argvariables); }
@@ -7385,7 +7335,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gmx"      ) { (*xbopts).tranmeth      = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmxa"     ) { (*xbopts).alpha0        = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmxb"     ) { (*xbopts).beta0         = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmy"      ) { (*xbopts).kernapprox    = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables))); }
+                    else if ( currcommand(0) == "-gmy"      ) { (*xbopts).kernapprox    = &(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables))); }
                     else if ( currcommand(0) == "-gmya"     ) { (*xbopts).kxfnum        = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmyb"     ) { (*xbopts).kxfnorm       = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gmsc"     ) { (*xbopts).usemodelaugx  = safeatoi(currcommand(1),argvariables); }
@@ -7410,13 +7360,13 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gmmu"     ) { ((*xbopts).altmuapprox).setprim(safeatoi(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-gmmugt"   ) { gentype mudef(currcommand(1)); ((*xbopts).altmuapprox).setprival(mudef); }
                     else if ( currcommand(0) == "-gmft"     ) { (*xbopts).PIscale      = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmmuml"   ) { ((*xbopts).altmuapprox).setpriml(&(getMLref(svmbase,safeatoi(currcommand(1),argvariables)))); }
+                    else if ( currcommand(0) == "-gmmuml"   ) { ((*xbopts).altmuapprox).setpriml(&(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables)))); }
                     else if ( currcommand(0) == "-gmsmu"    ) { ((*xbopts).altaugxapprox).setprim(safeatoi(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-gmsmugt"  ) { gentype mudef(currcommand(1)); ((*xbopts).altaugxapprox).setprival(mudef); }
-                    else if ( currcommand(0) == "-gmsmuml"  ) { ((*xbopts).altaugxapprox).setpriml(&(getMLref(svmbase,safeatoi(currcommand(1),argvariables)))); }
+                    else if ( currcommand(0) == "-gmsmuml"  ) { ((*xbopts).altaugxapprox).setpriml(&(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables)))); }
                     else if ( currcommand(0) == "-gmgtmu"   ) { ((*xbopts).altcgtapprox).setprim(safeatoi(currcommand(1),argvariables)); }
                     else if ( currcommand(0) == "-gmgtmugt" ) { gentype mudef(currcommand(1)); ((*xbopts).altcgtapprox).setprival(mudef); }
-                    else if ( currcommand(0) == "-gmgtmuml" ) { ((*xbopts).altcgtapprox).setpriml(&(getMLref(svmbase,safeatoi(currcommand(1),argvariables)))); }
+                    else if ( currcommand(0) == "-gmgtmuml" ) { ((*xbopts).altcgtapprox).setpriml(&(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables)))); }
 
                     else if ( currcommand(0) == "-gmmm" )
                     {
@@ -7497,7 +7447,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         for ( ifr = 0 ; ifr < augxapproxInd.size() ; ++ifr )
                         {
-                            (*xbopts).extaugxapprox = &(getMLref(svmbase,augxapproxInd(ifr)));
+                            (*xbopts).extaugxapprox = &(getMLref(getMLmodels(),augxapproxInd(ifr)));
                         }
                     }
 
@@ -7511,7 +7461,7 @@ int runsvmint(SVMThreadContext *svmContext,
                             ML_Base &kernML = (*xbopts).altmuapprox;
                             MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gekkernnum,gekfirstcall,svmbase,svmInd);
+                            processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gekkernnum,gekfirstcall,svmInd);
 
                             gekfirstcall = 0;
                         }
@@ -7520,7 +7470,7 @@ int runsvmint(SVMThreadContext *svmContext,
                             ML_Base &kernML = (*xbopts).altmuapprox_rff;
                             MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gekkernnum_rff,gekfirstcall_rff,svmbase,svmInd);
+                            processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gekkernnum_rff,gekfirstcall_rff,svmInd);
 
                             gekfirstcall_rff = 0;
                         }
@@ -7536,7 +7486,7 @@ int runsvmint(SVMThreadContext *svmContext,
                             ML_Base &kernML = (*xbopts).altmuapprox;
                             MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,grkkernnum,grkfirstcall,svmbase,svmInd);
+                            processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,grkkernnum,grkfirstcall,svmInd);
 
                             grkfirstcall = 0;
                         }
@@ -7545,7 +7495,7 @@ int runsvmint(SVMThreadContext *svmContext,
                             ML_Base &kernML = (*xbopts).altmuapprox_rff;
                             MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,grkkernnum_rff,grkfirstcall_rff,svmbase,svmInd);
+                            processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,grkkernnum_rff,grkfirstcall_rff,svmInd);
 
                             grkfirstcall_rff = 0;
                         }
@@ -7559,7 +7509,7 @@ int runsvmint(SVMThreadContext *svmContext,
                             ML_Base &kernML = (*xbopts).altmuapprox;
                             MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gkkernnum,gkfirstcall,svmbase,svmInd);
+                            processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gkkernnum,gkfirstcall,svmInd);
 
                             gkfirstcall = 0;
                         }
@@ -7568,7 +7518,7 @@ int runsvmint(SVMThreadContext *svmContext,
                             ML_Base &kernML = (*xbopts).altmuapprox_rff;
                             MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gkkernnum_rff,gkfirstcall_rff,svmbase,svmInd);
+                            processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gkkernnum_rff,gkfirstcall_rff,svmInd);
 
                             gkfirstcall_rff = 0;
                         }
@@ -7583,7 +7533,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         ML_Base &kernML = (*xbopts).altaugxapprox;
                         MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gsekkernnum,gsekfirstcall,svmbase,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gsekkernnum,gsekfirstcall,svmInd);
 
                         gsekfirstcall = 0;
                     }
@@ -7597,7 +7547,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         ML_Base &kernML = (*xbopts).altaugxapprox;
                         MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,gsrkkernnum,gsrkfirstcall,svmbase,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,gsrkkernnum,gsrkfirstcall,svmInd);
 
                         gsrkfirstcall = 0;
                     }
@@ -7609,7 +7559,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         ML_Base &kernML = (*xbopts).altaugxapprox;
                         MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmbase,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmInd);
 
 //errstream() << "phantomxyznlp " << theKern << "\n";
                         gskfirstcall = 0;
@@ -7624,7 +7574,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         ML_Base &kernML = (*xbopts).altcgtapprox;
                         MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gsekkernnum,gsekfirstcall,svmbase,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gsekkernnum,gsekfirstcall,svmInd);
 
                         gsekfirstcall = 0;
                     }
@@ -7638,7 +7588,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         ML_Base &kernML = (*xbopts).altcgtapprox;
                         MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,gsrkkernnum,gsrkfirstcall,svmbase,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,gsrkkernnum,gsrkfirstcall,svmInd);
 
                         gsrkfirstcall = 0;
                     }
@@ -7650,7 +7600,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         ML_Base &kernML = (*xbopts).altcgtapprox;
                         MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmbase,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmInd);
 
 //errstream() << "phantomxyznlp " << theKern << "\n";
                         gskfirstcall = 0;
@@ -7661,7 +7611,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gbm"    ) { (*xbopts).intrinbatchmethod   = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbj"    ) { (*xbopts).startpoints         = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbTv"   ) { (*xbopts).sigma_cut           = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbeu"   ) { (*xbopts).evaluse             = safeatoi(currcommand(1),argvariables); }
+                    //else if ( currcommand(0) == "-gbeu"   ) { (*xbopts).evaluse             = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbTs"   ) { (*xbopts).TSsampType          = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbTx"   ) { (*xbopts).TSxsampType         = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbTm"   ) { (*xbopts).TSmode              = safeatoi(currcommand(1),argvariables); }
@@ -7686,10 +7636,10 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gbv"   ) { (*xbopts).betafn              = currcommand(1); }
                     else if ( currcommand(0) == "-gbim"  ) { (*xbopts).itcntmethod         = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbpd"  ) { (*xbopts).direcdim            = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbq"   ) { (*xbopts).impmeasu            = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables)).getIMP()); }
-                    else if ( currcommand(0) == "-gbpp"  ) { (*xbopts).direcpre            = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables)).getML()); }
-                    else if ( currcommand(0) == "-gbmm"  ) { (*xbopts).direcsubseqpre      = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables)).getML()); }
-                    else if ( currcommand(0) == "-gbG"   ) { (*xbopts).gridsource          = &(getMLref(svmbase,safeatoi(currcommand(1),argvariables))); }
+                    else if ( currcommand(0) == "-gbq"   ) { (*xbopts).impmeasu            = &(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables)).getIMP()); }
+                    else if ( currcommand(0) == "-gbpp"  ) { (*xbopts).direcpre            = &(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables)).getML()); }
+                    else if ( currcommand(0) == "-gbmm"  ) { (*xbopts).direcsubseqpre      = &(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables)).getML()); }
+                    else if ( currcommand(0) == "-gbG"   ) { (*xbopts).gridsource          = &(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables))); }
                     else if ( currcommand(0) == "-gbsp"  ) { (*xbopts).stabpmax            = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbsP"  ) { (*xbopts).stabpmin            = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbsA"  ) { (*xbopts).stabA               = safeatof(currcommand(1),argvariables); }
@@ -7727,7 +7677,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                             for ( ij = 0 ; ij < penaltyrefs.size() ; ++ij )
                             {
-                                ((*xbopts).penalty)("&",ij) = &(getMLref(svmbase,penaltyrefs(ij)));
+                                ((*xbopts).penalty)("&",ij) = &(getMLref(getMLmodels(),penaltyrefs(ij)));
                             }
                         }
                     }
@@ -8023,7 +7973,7 @@ int runsvmint(SVMThreadContext *svmContext,
                                 fnarg[8]  = (void *) &globargvariables;
                                 fnarg[9]  = (void *) &argnums;
                                 fnarg[10] = (void *) getsetExtVar;
-                                fnarg[11] = (void *) &svmbase;
+                                fnarg[11] = (void *) &getMLmodels();
                                 fnarg[13] = (void *) &interstring;
                                 fnarg[14] = (void *) &xfnis;
                                 fnarg[15] = (void *) &MLnumbers; // IMPORTANT: this number must be fixed!
@@ -8293,7 +8243,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                                         gentype dummyres;
 
-                                        callsvm(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,dummyres,loclogfile);
+                                        callsvm(svmContext,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,dummyres,loclogfile);
 
                                         MEMDEL(gridcommstack);
                                     }
@@ -8523,12 +8473,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         NiceAssert( mln.size() == caseweight.size() );
 
-                        SVM_Generic &core = dynamic_cast<SVM_Generic &>(getMLref(svmbase,svmInd).getSVM());
+                        SVM_Generic &core = dynamic_cast<SVM_Generic &>(getMLref(getMLmodels(),svmInd).getSVM());
                         Vector<ML_Base *> cases(mln.size());
 
                         for ( i = 0 ; i < mln.size() ; ++i )
                         {
-                            cases("&",i) = &(getMLref(svmbase,( mln(i) < 0 ) ? -mln(i) : mln(i)).getML());
+                            cases("&",i) = &(getMLref(getMLmodels(),( mln(i) < 0 ) ? -mln(i) : mln(i)).getML());
                         }
 
                         xferMLtrain(thread_killswitch,core,cases,n,maxiter,maxtime,soltol,caseweight,( llrr < 0 ) ? 1 : 0,( llrr < 0 ) ? 0 : llrr,randtype,method,mlCval,regtype,randvari,alphaRange,useH01);
@@ -8614,14 +8564,14 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         if ( (currcommand(0)).substr(0,4) == "-fsx" )
                         {
-                            bestres = optFeatHillClimb(getMLref(svmbase,svmInd),-1,0,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
+                            bestres = optFeatHillClimb(getMLref(getMLmodels(),svmInd),-1,0,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
 
                             errstream() << "Hill climbing best error: " << bestres << "\n";
                         }
 
                         else if ( (currcommand(0)).substr(0,4) == "-fsr" )
                         {
-                            bestres = optFeatHillClimb(getMLref(svmbase,svmInd),-2,0,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
+                            bestres = optFeatHillClimb(getMLref(getMLmodels(),svmInd),-2,0,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
 
                             errstream() << "Hill climbing best error: " << bestres << "\n";
                         }
@@ -8632,7 +8582,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                             randcross  = ( (currcommand(0)).substr(0,4) == "-fsC" ) ? 1 : 0;
                             numfolds   = ( (currcommand(0)).substr(0,4) == "-fsC" ) ? safeatoi(currcommand(2),argvariables) : safeatoi(currcommand(1),argvariables);
 
-                            bestres = optFeatHillClimb(getMLref(svmbase,svmInd),numfolds,numreps,randcross,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
+                            bestres = optFeatHillClimb(getMLref(getMLmodels(),svmInd),numfolds,numreps,randcross,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
 
                             errstream() << "Hill climbing best error: " << bestres << "\n";
                         }
@@ -8641,9 +8591,9 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         {
                             trainfile = currcommand(1);
 
-                            loadFileForHillClimb(getMLrefconst(svmbase,svmInd),xtemplate,trainfile,reverse,ignoreStart,imax,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,xtest,ytest);
+                            loadFileForHillClimb(getMLrefconst(getMLmodels(),svmInd),xtemplate,trainfile,reverse,ignoreStart,imax,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,xtest,ytest);
 
-                            bestres = optFeatHillClimb(getMLref(svmbase,svmInd),-3,1,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
+                            bestres = optFeatHillClimb(getMLref(getMLmodels(),svmInd),-3,1,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
 
                             errstream() << "Hill climbing best error: " << bestres << "\n";
                         }
@@ -8707,7 +8657,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         if ( !tdistkernstarted )
                         {
                             tdistkernstarted = 1;
-                            tdistkern = getMLrefconst(svmbase,svmInd).getKernel();
+                            tdistkern = getMLrefconst(getMLmodels(),svmInd).getKernel();
                         }
 
                         dotfuzz = 1;
@@ -8720,7 +8670,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         if ( !sdistkernstarted )
                         {
                             sdistkernstarted = 1;
-                            sdistkern = getMLrefconst(svmbase,svmInd).getKernel();
+                            sdistkern = getMLrefconst(getMLmodels(),svmInd).getKernel();
                         }
 
                         dosfuzz = 1;
@@ -8748,12 +8698,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         if ( !tdistkernstarted )
                         {
                             tdistkernstarted = 1;
-                            tdistkern = getMLrefconst(svmbase,svmInd).getKernel();
+                            tdistkern = getMLrefconst(getMLmodels(),svmInd).getKernel();
                         }
 
                         ML_Base dummyML;
 
-                        processKernel(dummyML,tdistkern,currcommandis,currcommand,2,argvariables,tkernnum,tkernfirstcall,svmbase,svmInd);
+                        processKernel(dummyML,tdistkern,currcommandis,currcommand,2,argvariables,tkernnum,tkernfirstcall,svmInd);
 
                         tkernfirstcall = 0;
                     }
@@ -8780,12 +8730,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         if ( !sdistkernstarted )
                         {
                             sdistkernstarted = 1;
-                            sdistkern = getMLrefconst(svmbase,svmInd).getKernel();
+                            sdistkern = getMLrefconst(getMLmodels(),svmInd).getKernel();
                         }
 
                         ML_Base dummyML;
 
-                        processKernel(dummyML,sdistkern,currcommandis,currcommand,2,argvariables,skernnum,skernfirstcall,svmbase,svmInd);
+                        processKernel(dummyML,sdistkern,currcommandis,currcommand,2,argvariables,skernnum,skernfirstcall,svmInd);
 
                         skernfirstcall = 0;
                     }
@@ -8793,7 +8743,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                 if ( dotfuzz )
                 {
-                    if ( calcFuzzML(getMLref(svmbase,svmInd),tfuzzfn,argvariables,tdistkern,tfuzzf,tfuzzm,tfuzznu,1) )
+                    if ( calcFuzzML(getMLref(getMLmodels(),svmInd),tfuzzfn,argvariables,tdistkern,tfuzzf,tfuzzm,tfuzznu,1) )
                     {
                         STRTHROW("Unknown error during "+currcommand(0)+" operation.");
                     }
@@ -8801,7 +8751,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                 if ( dosfuzz )
                 {
-                    if ( calcFuzzML(getMLref(svmbase,svmInd),sfuzzfn,argvariables,sdistkern,sfuzzf,sfuzzm,sfuzznu,0) )
+                    if ( calcFuzzML(getMLref(getMLmodels(),svmInd),sfuzzfn,argvariables,sdistkern,sfuzzf,sfuzzm,sfuzznu,0) )
                     {
                         STRTHROW("Unknown error during "+currcommand(0)+" operation.");
                     }
@@ -8831,7 +8781,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                     if ( currcommand(0) == "-boot" )
                     {
-                         bootstrapML(getMLref(svmbase,svmInd));
+                         bootstrapML(getMLref(getMLmodels(),svmInd));
                     }
                 }
 
@@ -8855,10 +8805,10 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                 int res = 0;
 
-                if ( isSVM(getMLref(svmbase,svmInd)) )
+                if ( isSVM(getMLref(getMLmodels(),svmInd)) )
                 {
                     errstream() << "Start pretraining...";
-                    getMLref(svmbase,svmInd).pretrain();
+                    getMLref(getMLmodels(),svmInd).pretrain();
                     errstream() << " done, proceed with training if required....";
                 }
 
@@ -8867,7 +8817,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     errstream() << "Training SVM... ";
 
                     res = 0;
-                    getMLref(svmbase,svmInd).train(res,thread_killswitch);
+                    getMLref(getMLmodels(),svmInd).train(res,thread_killswitch);
                 }
 
                 time_used endtime = TIMECALL;
@@ -9120,7 +9070,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        testTest(logfile,getMLrefconst(svmbase,svmInd),x,dz,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
+                        testTest(logfile,getMLrefconst(getMLmodels(),svmInd),x,dz,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
 
                         argvariables("&",1)("&",1) = finalresult;
                     }
@@ -9132,11 +9082,11 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         Vector<SparseVector<gentype> > x;
                         gentype temp;
 
-                        loadDataFromMatlab(currcommand(2),currcommand(1),x,dz,getMLrefconst(svmbase,svmInd).targType(),getsetExtVar);
+                        loadDataFromMatlab(currcommand(2),currcommand(1),x,dz,getMLrefconst(getMLmodels(),svmInd).targType(),getsetExtVar);
 
                         addtemptox(x,xtemplate);
 
-                        testTest(logfile,getMLrefconst(svmbase,svmInd),x,dz,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
+                        testTest(logfile,getMLrefconst(getMLmodels(),svmInd),x,dz,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
 
                         argvariables("&",1)("&",1) = finalresult;
                     }
@@ -9150,7 +9100,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double nmean = safeatof(currcommand(3),argvariables);
                         double nvar  = safeatof(currcommand(4),argvariables);
 
-                        testSparSens(logfile,getMLrefconst(svmbase,svmInd),firstsum,minbad,maxbad,nmean,nvar,0,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
+                        testSparSens(logfile,getMLrefconst(getMLmodels(),svmInd),firstsum,minbad,maxbad,nmean,nvar,0,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
                     }
 
                     else if ( ( currcommand(0) == "-tg" ) || ( currcommand(0) == "-tG" ) || ( currcommand(0) == "-tgc" ) || ( currcommand(0) == "-tGc" ) )
@@ -9215,7 +9165,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(xdata,xtemplate);
 
-                        testTest(logfile,getMLrefconst(svmbase,svmInd),xdata,ydata,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
+                        testTest(logfile,getMLrefconst(getMLmodels(),svmInd),xdata,ydata,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
 
                         argvariables("&",1)("&",1) = finalresult;
                     }
@@ -9256,27 +9206,27 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         if ( (currcommand(0)).substr(0,3) == "-tx" )
                         {
-                            testLOO(logfile,getMLrefconst(svmbase,svmInd),firstsum,startpoint,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
+                            testLOO(logfile,getMLrefconst(getMLmodels(),svmInd),firstsum,startpoint,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
                         }
 
                         else if ( (currcommand(0)).substr(0,3) == "-tl" )
                         {
-                            testnegloglike(logfile,getMLrefconst(svmbase,svmInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
+                            testnegloglike(logfile,getMLrefconst(getMLmodels(),svmInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
                         }
 
                         else if ( (currcommand(0)).substr(0,4) == "-tmg" )
                         {
-                            testmaxinfogain(logfile,getMLrefconst(svmbase,svmInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
+                            testmaxinfogain(logfile,getMLrefconst(getMLmodels(),svmInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
                         }
 
                         else if ( (currcommand(0)).substr(0,6) == "-ta" )
                         {
-                            testRKHSnorm(logfile,getMLrefconst(svmbase,svmInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
+                            testRKHSnorm(logfile,getMLrefconst(getMLmodels(),svmInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
                         }
 
                         else if ( (currcommand(0)).substr(0,3) == "-tr" )
                         {
-                            testRecall(logfile,getMLrefconst(svmbase,svmInd),firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
+                            testRecall(logfile,getMLrefconst(getMLmodels(),svmInd),firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
                         }
 
                         else if ( ( (currcommand(0)).substr(0,3) == "-tc" ) || ( (currcommand(0)).substr(0,3) == "-tC" ) )
@@ -9285,12 +9235,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
                             randcross  = ( (currcommand(0)).substr(0,3) == "-tC" ) ? 1 : 0;
                             numfolds   = ( (currcommand(0)).substr(0,3) == "-tC" ) ? safeatoi(currcommand(2),argvariables) : safeatoi(currcommand(1),argvariables);
 
-                            testCross(logfile,getMLrefconst(svmbase,svmInd),firstsum,numreps,startpoint,randcross,numfolds,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
+                            testCross(logfile,getMLrefconst(getMLmodels(),svmInd),firstsum,numreps,startpoint,randcross,numfolds,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
                         }
 
                         else if ( ( (currcommand(0)).substr(0,3) == "-tf" ) || ( (currcommand(0)).substr(0,3) == "-tF" ) )
                         {
-                            testFileVectors(binaryRelabel,singleDrop,logfile,getMLrefconst(svmbase,svmInd),trainfile,reverse,ignoreStart,imax,firstsum,coercetosingle,coercefromsingle,fromsingletarget,finalresult,uselinesvector,linesread,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,xtemplate);
+                            testFileVectors(binaryRelabel,singleDrop,logfile,getMLrefconst(getMLmodels(),svmInd),trainfile,reverse,ignoreStart,imax,firstsum,coercetosingle,coercefromsingle,fromsingletarget,finalresult,uselinesvector,linesread,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,xtemplate);
                         }
                     }
 
@@ -9365,13 +9315,13 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         gentype sumtot(0.0);
 
-                        for ( ii = 0 ; ii < getMLrefconst(svmbase,svmInd).N() ; ii++ )
+                        for ( ii = 0 ; ii < getMLrefconst(getMLmodels(),svmInd).N() ; ii++ )
                         {
                             gentype Kxx,Kii,Kxi;
 
-                            getMLrefconst(svmbase,svmInd).K2(Kxx,xa,xa);
-                            getMLrefconst(svmbase,svmInd).K2(Kii,getMLrefconst(svmbase,svmInd).x(ii),getMLrefconst(svmbase,svmInd).x(ii));
-                            getMLrefconst(svmbase,svmInd).K2(Kxi,xa,getMLrefconst(svmbase,svmInd).x(ii));
+                            getMLrefconst(getMLmodels(),svmInd).K2(Kxx,xa,xa);
+                            getMLrefconst(getMLmodels(),svmInd).K2(Kii,getMLrefconst(getMLmodels(),svmInd).x(ii),getMLrefconst(getMLmodels(),svmInd).x(ii));
+                            getMLrefconst(getMLmodels(),svmInd).K2(Kxi,xa,getMLrefconst(getMLmodels(),svmInd).x(ii));
 
                             sumtot += ((Kxx*Kii)-(Kxi*Kxi));
 
@@ -9393,7 +9343,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).gh(resh,resg,x);
+                        getMLrefconst(getMLmodels(),svmInd).gh(resh,resg,x);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9416,7 +9366,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).gh(resh,resg,x,2);
+                        getMLrefconst(getMLmodels(),svmInd).gh(resh,resg,x,2);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9436,7 +9386,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        double res = getMLrefconst(svmbase,svmInd).e(y,x);
+                        double res = getMLrefconst(getMLmodels(),svmInd).e(y,x);
 
                         errstream() << "error(x) = " << res << "\n";
                     }
@@ -9454,7 +9404,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         gentype res;
 
-                        getMLrefconst(svmbase,svmInd).dedg(res,y,x);
+                        getMLrefconst(getMLmodels(),svmInd).dedg(res,y,x);
 
                         errstream() << "error gradient(x) = " << res << "\n";
                     }
@@ -9475,7 +9425,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).stabProb(res,x,p,pnrm,rot,mu,B);
+                        getMLrefconst(getMLmodels(),svmInd).stabProb(res,x,p,pnrm,rot,mu,B);
 
                         errstream() << "Pr(x) = " << res << "\n";
                     }
@@ -9496,7 +9446,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).stabProb(res,x,p,pnrm,rot,mu,B);
+                        getMLrefconst(getMLmodels(),svmInd).stabProb(res,x,p,pnrm,rot,mu,B);
 
                         errstream() << "Pr(x) = " << res << "\n";
                     }
@@ -9512,7 +9462,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double pnrm = safeatof(currcommand(5),argvariables);
                         int rot = 0;
 
-                        getMLrefconst(svmbase,svmInd).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B);
+                        getMLrefconst(getMLmodels(),svmInd).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B);
 
                         errstream() << "Pr(x) = " << res << "\n";
                     }
@@ -9528,7 +9478,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double pnrm = 1;
                         int rot = 1;
 
-                        getMLrefconst(svmbase,svmInd).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B);
+                        getMLrefconst(getMLmodels(),svmInd).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B);
 
                         errstream() << "Pr(x) = " << res << "\n";
                     }
@@ -9570,7 +9520,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     {
                         gentype res;
 
-                        getMLrefconst(svmbase,svmInd).K0(res);
+                        getMLrefconst(getMLmodels(),svmInd).K0(res);
 
                         errstream() << "K0() = " << res << "\n";
                     }
@@ -9587,7 +9537,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(xa,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).K1(res,xa);
+                        getMLrefconst(getMLmodels(),svmInd).K1(res,xa);
 
                         errstream() << "K1(x) = " << res << "\n";
                     }
@@ -9604,7 +9554,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(xa,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).phi2(res,xa);
+                        getMLrefconst(getMLmodels(),svmInd).phi2(res,xa);
 
                         errstream() << "phi2(x) = " << res << "\n";
                     }
@@ -9625,7 +9575,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xa,xtemplate);
                         addtemptox(xb,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).K2(res,xa,xb);
+                        getMLrefconst(getMLmodels(),svmInd).K2(res,xa,xb);
 
                         errstream() << "K2(x,y) = " << res << "\n";
                     }
@@ -9650,7 +9600,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xb,xtemplate);
                         addtemptox(xc,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).K3(res,xa,xb,xc);
+                        getMLrefconst(getMLmodels(),svmInd).K3(res,xa,xb,xc);
 
                         errstream() << "K3(x,y,u) = " << res << "\n";
                     }
@@ -9679,7 +9629,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xc,xtemplate);
                         addtemptox(xd,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).K4(res,xa,xb,xc,xd);
+                        getMLrefconst(getMLmodels(),svmInd).K4(res,xa,xb,xc,xd);
 
                         errstream() << "K4(x,y,u,v) = " << res << "\n";
                     }
@@ -9700,7 +9650,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(xx,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).Km(res,xx);
+                        getMLrefconst(getMLmodels(),svmInd).Km(res,xx);
 
                         errstream() << "Km(...) = " << res << "\n";
                     }
@@ -9720,7 +9670,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).gh(resh,resg,x);
+                        getMLrefconst(getMLmodels(),svmInd).gh(resh,resg,x);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9744,7 +9694,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).gh(resh,resg,x,2);
+                        getMLrefconst(getMLmodels(),svmInd).gh(resh,resg,x,2);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9764,7 +9714,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                          addtemptox(x,xtemplate);
 
-                         double res = getMLrefconst(svmbase,svmInd).e(y,x);
+                         double res = getMLrefconst(getMLmodels(),svmInd).e(y,x);
 
                          errstream() << "error(x) = " << res << "\n";
                     }
@@ -9782,7 +9732,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                          gentype res;
 
-                         getMLrefconst(svmbase,svmInd).dedg(res,y,x);
+                         getMLrefconst(getMLmodels(),svmInd).dedg(res,y,x);
 
                          errstream() << "error gradient(x) = " << res << "\n";
                     }
@@ -9808,7 +9758,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLref(svmbase,nInd).gh(resh,resg,x);
+                        getMLref(getMLmodels(),nInd).gh(resh,resg,x);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9838,7 +9788,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLref(svmbase,nInd).gh(resh,resg,x,2);
+                        getMLref(getMLmodels(),nInd).gh(resh,resg,x,2);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9866,7 +9816,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         {
                             for ( i = 0 ; i < x.size() ; ++i )
                             {
-                                getMLrefconst(svmbase,svmInd).gh(resh("&",i),resg("&",i),x("&",i));
+                                getMLrefconst(getMLmodels(),svmInd).gh(resh("&",i),resg("&",i),x("&",i));
                             }
 
                             argvariables("&",1)("&",8) = resh;
@@ -9896,7 +9846,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         {
                             for ( i = 0 ; i < x.size() ; ++i )
                             {
-                                getMLrefconst(svmbase,svmInd).gh(resh("&",i),resg("&",i),x("&",i),2);
+                                getMLrefconst(getMLmodels(),svmInd).gh(resh("&",i),resg("&",i),x("&",i),2);
                             }
 
                             argvariables("&",1)("&",8) = resh;
@@ -9916,7 +9866,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
 
-                        getMLrefconst(svmbase,svmInd).ghTrainingVector(resh,resg,i);
+                        getMLrefconst(getMLmodels(),svmInd).ghTrainingVector(resh,resg,i);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9934,7 +9884,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
 
-                        getMLrefconst(svmbase,svmInd).ghTrainingVector(resh,resg,i,2);
+                        getMLrefconst(getMLmodels(),svmInd).ghTrainingVector(resh,resg,i,2);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9947,7 +9897,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     {
                         int i = safeatoi(currcommand(1),argvariables);
 
-                        double res = getMLrefconst(svmbase,svmInd).eTrainingVector(i);
+                        double res = getMLrefconst(getMLmodels(),svmInd).eTrainingVector(i);
 
                         errstream() << "error(x) = " << res << "\n";
                     }
@@ -9958,7 +9908,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         gentype res;
 
-                        getMLrefconst(svmbase,svmInd).dedgTrainingVector(res,i);
+                        getMLrefconst(getMLmodels(),svmInd).dedgTrainingVector(res,i);
 
                         errstream() << "error gradient(x) = " << res << "\n";
                     }
@@ -9966,17 +9916,17 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     else if ( currcommand(0) == "-hX" )
                     {
                         int i;
-                        Vector<gentype> resh(getMLrefconst(svmbase,svmInd).N());
-                        Vector<gentype> resg(getMLrefconst(svmbase,svmInd).N());
+                        Vector<gentype> resh(getMLrefconst(getMLmodels(),svmInd).N());
+                        Vector<gentype> resg(getMLrefconst(getMLmodels(),svmInd).N());
 
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
 
-                        if ( getMLrefconst(svmbase,svmInd).N() )
+                        if ( getMLrefconst(getMLmodels(),svmInd).N() )
                         {
-                            for ( i = 0 ; i < getMLrefconst(svmbase,svmInd).N() ; ++i )
+                            for ( i = 0 ; i < getMLrefconst(getMLmodels(),svmInd).N() ; ++i )
                             {
-                                getMLrefconst(svmbase,svmInd).ghTrainingVector(resh("&",i),resg("&",i),i);
+                                getMLrefconst(getMLmodels(),svmInd).ghTrainingVector(resh("&",i),resg("&",i),i);
                             }
                         }
 
@@ -9990,17 +9940,17 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     else if ( currcommand(0) == "-hhX" )
                     {
                         int i;
-                        Vector<gentype> resh(getMLrefconst(svmbase,svmInd).N());
-                        Vector<gentype> resg(getMLrefconst(svmbase,svmInd).N());
+                        Vector<gentype> resh(getMLrefconst(getMLmodels(),svmInd).N());
+                        Vector<gentype> resg(getMLrefconst(getMLmodels(),svmInd).N());
 
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
 
-                        if ( getMLrefconst(svmbase,svmInd).N() )
+                        if ( getMLrefconst(getMLmodels(),svmInd).N() )
                         {
-                            for ( i = 0 ; i < getMLrefconst(svmbase,svmInd).N() ; ++i )
+                            for ( i = 0 ; i < getMLrefconst(getMLmodels(),svmInd).N() ; ++i )
                             {
-                                getMLrefconst(svmbase,svmInd).ghTrainingVector(resh("&",i),resg("&",i),i,2);
+                                getMLrefconst(getMLmodels(),svmInd).ghTrainingVector(resh("&",i),resg("&",i),i,2);
                             }
                         }
 
@@ -10025,7 +9975,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xa,xtemplate);
                         addtemptox(xb,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).cov(resh,dummy,xa,xb);
+                        getMLrefconst(getMLmodels(),svmInd).cov(resh,dummy,xa,xb);
 
                         errstream() << "cov(x,y) = " << resh << "\n";
                     }
@@ -10044,7 +9994,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xa,xtemplate);
                         addtemptox(xb,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).cov(resh,dummy,xa,xb);
+                        getMLrefconst(getMLmodels(),svmInd).cov(resh,dummy,xa,xb);
 
                         errstream() << "cov(x,y) = " << resh << "\n";
                     }
@@ -10069,7 +10019,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xa,xtemplate);
                         addtemptox(xb,xtemplate);
 
-                        getMLref(svmbase,nInd).cov(resh,dummy,xa,xb);
+                        getMLref(getMLmodels(),nInd).cov(resh,dummy,xa,xb);
 
                         errstream() << "cov(x,y) = " << resh << "\n";
                     }
@@ -10080,7 +10030,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         int ib = safeatoi(currcommand(2),argvariables);
                         gentype resh,dummy;
 
-                        getMLrefconst(svmbase,svmInd).covTrainingVector(resh,dummy,ia,ib);
+                        getMLrefconst(getMLmodels(),svmInd).covTrainingVector(resh,dummy,ia,ib);
 
                         errstream() << "cov(x,y) = " << resh << "\n";
                     }
@@ -10095,7 +10045,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).var(resh,dummy,x);
+                        getMLrefconst(getMLmodels(),svmInd).var(resh,dummy,x);
 
                         errstream() << "var(x) = " << resh << "\n";
                     }
@@ -10110,7 +10060,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).var(resh,dummy,x);
+                        getMLrefconst(getMLmodels(),svmInd).var(resh,dummy,x);
 
                         errstream() << "var(x) = " << resh << "\n";
                     }
@@ -10130,7 +10080,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         xv = safeatowhatever(tmpga,currcommand(2),argvariables).cast_vector(1);
 
-                        getMLrefconst(svmbase,svmInd).noisevar(resh,dummy,x,xv);
+                        getMLrefconst(getMLmodels(),svmInd).noisevar(resh,dummy,x,xv);
 
                         errstream() << "noisevar(x) = " << resh << "\n";
                     }
@@ -10151,7 +10101,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLref(svmbase,nInd).var(resh,dummy,x);
+                        getMLref(getMLmodels(),nInd).var(resh,dummy,x);
 
                         errstream() << "var(x) = " << resh << "\n";
                     }
@@ -10161,7 +10111,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         int i = safeatoi(currcommand(1),argvariables);
                         gentype resh,dummy;
 
-                        getMLrefconst(svmbase,svmInd).varTrainingVector(resh,dummy,i);
+                        getMLrefconst(getMLmodels(),svmInd).varTrainingVector(resh,dummy,i);
 
                         errstream() << "var(x) = " << resh << "\n";
                     }
@@ -10182,7 +10132,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         {
                             for ( i = 0 ; i < x.size() ; ++i )
                             {
-                                getMLrefconst(svmbase,svmInd).var(resh("&",i),dummy,x("&",i));
+                                getMLrefconst(getMLmodels(),svmInd).var(resh("&",i),dummy,x("&",i));
                             }
 
                             errstream() << "var(x) = " << resh(i) << "\n";
@@ -10199,7 +10149,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(svmbase,svmInd).covar(resh,x);
+                        getMLrefconst(getMLmodels(),svmInd).covar(resh,x);
 
                         errstream() << "covar(x) = " << resh << "\n";
                     }
@@ -10208,13 +10158,13 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     {
                         int i;
                         gentype dummy;
-                        Vector<gentype> resh(getMLrefconst(svmbase,svmInd).N());
+                        Vector<gentype> resh(getMLrefconst(getMLmodels(),svmInd).N());
 
-                        if ( getMLrefconst(svmbase,svmInd).N() )
+                        if ( getMLrefconst(getMLmodels(),svmInd).N() )
                         {
-                            for ( i = 0 ; i < getMLrefconst(svmbase,svmInd).N() ; ++i )
+                            for ( i = 0 ; i < getMLrefconst(getMLmodels(),svmInd).N() ; ++i )
                             {
-                                getMLrefconst(svmbase,svmInd).varTrainingVector(resh("&",i),dummy,i);
+                                getMLrefconst(getMLmodels(),svmInd).varTrainingVector(resh("&",i),dummy,i);
                             }
                         }
 
@@ -10249,22 +10199,22 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                     else if ( currcommand(0) == "-a" )
                     {
-                        NiceAssert( isSVM(getMLrefconst(svmbase,svmInd)) );
+                        NiceAssert( isSVM(getMLrefconst(getMLmodels(),svmInd)) );
 
                         argvariables("&",1)("&",18).makeString(currcommand(1));
 
-                        writeLog(getMLrefconst(svmbase,svmInd).alpha(),currcommand(1),getsetExtVar);
+                        writeLog(getMLrefconst(getMLmodels(),svmInd).alpha(),currcommand(1),getsetExtVar);
                     }
 
                     else if ( currcommand(0) == "-b" )
                     {
-                        NiceAssert( isSVM(getMLrefconst(svmbase,svmInd)) );
+                        NiceAssert( isSVM(getMLrefconst(getMLmodels(),svmInd)) );
 
                         argvariables("&",1)("&",19).makeString(currcommand(1));
 
                         Vector<gentype> biasfill(1);
 
-                        biasfill("&",0) = getMLrefconst(svmbase,svmInd).bias();
+                        biasfill("&",0) = getMLrefconst(getMLmodels(),svmInd).bias();
 
                         writeLog(biasfill,currcommand(1),getsetExtVar);
                     }
@@ -10283,7 +10233,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                             STRTHROW("Unable to open svm file "+currcommand(0)+" "+svmfile);
                         }
 
-                        sfile << getMLrefconst(svmbase,svmInd);
+                        sfile << getMLrefconst(getMLmodels(),svmInd);
                         sfile.close();
                     }
 
@@ -10305,7 +10255,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double xmin = safeatof(currcommand(2),argvariables);
                         double xmax = safeatof(currcommand(3),argvariables);
 
-                        plotml(getMLrefconst(svmbase,svmInd),index,xmin,xmax,plotymin,plotymax,plotname,plotdataname,plotoutformat,plotincdata,plotbaseline,plotincvar,0,plotxtemplate,plotoutsquare);
+                        plotml(getMLrefconst(getMLmodels(),svmInd),index,xmin,xmax,plotymin,plotymax,plotname,plotdataname,plotoutformat,plotincdata,plotbaseline,plotincvar,0,plotxtemplate,plotoutsquare);
                     }
 
                     else if ( currcommand(0) == "-surf" )
@@ -10320,7 +10270,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double ymin = safeatof(currcommand(5),argvariables);
                         double ymax = safeatof(currcommand(6),argvariables);
 
-                        plotml(getMLrefconst(svmbase,svmInd),xindex,yindex,xmin,xmax,ymin,ymax,plotymin,plotymax,plotname,plotdataname,plotoutformat,plotincdata,plotbaseline,plotincvar,0,1,plotxtemplate,plotoutsquare);
+                        plotml(getMLrefconst(getMLmodels(),svmInd),xindex,yindex,xmin,xmax,ymin,ymax,plotymin,plotymax,plotname,plotdataname,plotoutformat,plotincdata,plotbaseline,plotincvar,0,1,plotxtemplate,plotoutsquare);
                     }
                 }
 
@@ -10373,47 +10323,47 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     loggerfile << "Performance evaluation time (sec): " << performtime     << "\n";
                     loggerfile << "Report time (sec):                 " << reporttime      << "\n\n";
 
-                    loggerfile << "Trained: " << getMLrefconst(svmbase,svmInd).isTrained() << "\n\n";
+                    loggerfile << "Trained: " << getMLrefconst(getMLmodels(),svmInd).isTrained() << "\n\n";
 
-                    loggerfile << "N:       " << getMLrefconst(svmbase,svmInd).N()     << "\n";
-                    loggerfile << "NNC(0):  " << getMLrefconst(svmbase,svmInd).NNC(0)  << "\n\n";
+                    loggerfile << "N:       " << getMLrefconst(getMLmodels(),svmInd).N()     << "\n";
+                    loggerfile << "NNC(0):  " << getMLrefconst(getMLmodels(),svmInd).NNC(0)  << "\n\n";
 
-                    loggerfile << "Target space dimension: " << getMLrefconst(svmbase,svmInd).tspaceDim()  << "\n";
-                    loggerfile << "Classes:                " << getMLrefconst(svmbase,svmInd).numClasses() << "\n";
-                    loggerfile << "SVM type:               " << getMLrefconst(svmbase,svmInd).type()       << "\n\n";
+                    loggerfile << "Target space dimension: " << getMLrefconst(getMLmodels(),svmInd).tspaceDim()  << "\n";
+                    loggerfile << "Classes:                " << getMLrefconst(getMLmodels(),svmInd).numClasses() << "\n";
+                    loggerfile << "SVM type:               " << getMLrefconst(getMLmodels(),svmInd).type()       << "\n\n";
 
-                    loggerfile << "Class labels:         " << getMLrefconst(svmbase,svmInd).ClassLabels() << "\n";
+                    loggerfile << "Class labels:         " << getMLrefconst(getMLmodels(),svmInd).ClassLabels() << "\n";
 
-                    loggerfile << "Zero tolerance:      " << getMLrefconst(svmbase,svmInd).zerotol()      << "\n";
-                    loggerfile << "Optimal tolerance:   " << getMLrefconst(svmbase,svmInd).Opttol()       << "\n";
-                    loggerfile << "Max iterations:      " << getMLrefconst(svmbase,svmInd).maxitcnt()     << "\n";
-                    loggerfile << "Max training time:   " << getMLrefconst(svmbase,svmInd).maxtraintime() << "\n\n";
+                    loggerfile << "Zero tolerance:      " << getMLrefconst(getMLmodels(),svmInd).zerotol()      << "\n";
+                    loggerfile << "Optimal tolerance:   " << getMLrefconst(getMLmodels(),svmInd).Opttol()       << "\n";
+                    loggerfile << "Max iterations:      " << getMLrefconst(getMLmodels(),svmInd).maxitcnt()     << "\n";
+                    loggerfile << "Max training time:   " << getMLrefconst(getMLmodels(),svmInd).maxtraintime() << "\n\n";
 
-                    loggerfile << "Underlying scalar:    " << getMLrefconst(svmbase,svmInd).isUnderlyingScalar() << "\n";
-                    loggerfile << "Underlying vectorial: " << getMLrefconst(svmbase,svmInd).isUnderlyingVector() << "\n\n";
-                    loggerfile << "Underlying anionic:   " << getMLrefconst(svmbase,svmInd).isUnderlyingAnions() << "\n\n";
+                    loggerfile << "Underlying scalar:    " << getMLrefconst(getMLmodels(),svmInd).isUnderlyingScalar() << "\n";
+                    loggerfile << "Underlying vectorial: " << getMLrefconst(getMLmodels(),svmInd).isUnderlyingVector() << "\n\n";
+                    loggerfile << "Underlying anionic:   " << getMLrefconst(getMLmodels(),svmInd).isUnderlyingAnions() << "\n\n";
 
-                    loggerfile << "Kernel dictionary size: " << getMLrefconst(svmbase,svmInd).getKernel().size()      << "\n";
-                    loggerfile << "Kernel indexed:         " << getMLrefconst(svmbase,svmInd).getKernel().isIndex()   << "\n";
-                    loggerfile << "Kernel indices:         " << getMLrefconst(svmbase,svmInd).getKernel().cIndexes()  << "\n\n";
+                    loggerfile << "Kernel dictionary size: " << getMLrefconst(getMLmodels(),svmInd).getKernel().size()      << "\n";
+                    loggerfile << "Kernel indexed:         " << getMLrefconst(getMLmodels(),svmInd).getKernel().isIndex()   << "\n";
+                    loggerfile << "Kernel indices:         " << getMLrefconst(getMLmodels(),svmInd).getKernel().cIndexes()  << "\n\n";
 
-                    if ( getMLrefconst(svmbase,svmInd).getKernel().size() )
+                    if ( getMLrefconst(getMLmodels(),svmInd).getKernel().size() )
                     {
-                        for ( i = 0 ; i < getMLrefconst(svmbase,svmInd).getKernel().size() ; ++i )
+                        for ( i = 0 ; i < getMLrefconst(getMLmodels(),svmInd).getKernel().size() ; ++i )
                         {
-                            loggerfile << "Kernel type       (" << i << "): " << getMLrefconst(svmbase,svmInd).getKernel().cType(i)          << "\n";
-                            loggerfile << "Kernel weight     (" << i << "): " << getMLrefconst(svmbase,svmInd).getKernel().cWeight(i)        << "\n";
-                            loggerfile << "Normalised        (" << i << "): " << getMLrefconst(svmbase,svmInd).getKernel().isNormalised(i)   << "\n";
-                            loggerfile << "Integer constants (" << i << "): " << getMLrefconst(svmbase,svmInd).getKernel().cIntConstants(i)  << "\n";
-                            loggerfile << "Real constants    (" << i << "): " << getMLrefconst(svmbase,svmInd).getKernel().cRealConstants(i) << "\n\n";
+                            loggerfile << "Kernel type       (" << i << "): " << getMLrefconst(getMLmodels(),svmInd).getKernel().cType(i)          << "\n";
+                            loggerfile << "Kernel weight     (" << i << "): " << getMLrefconst(getMLmodels(),svmInd).getKernel().cWeight(i)        << "\n";
+                            loggerfile << "Normalised        (" << i << "): " << getMLrefconst(getMLmodels(),svmInd).getKernel().isNormalised(i)   << "\n";
+                            loggerfile << "Integer constants (" << i << "): " << getMLrefconst(getMLmodels(),svmInd).getKernel().cIntConstants(i)  << "\n";
+                            loggerfile << "Real constants    (" << i << "): " << getMLrefconst(getMLmodels(),svmInd).getKernel().cRealConstants(i) << "\n\n";
                         }
 
                         loggerfile << "\n";
                     }
 
-                    if ( isSVM(getMLrefconst(svmbase,svmInd)) )
+                    if ( isSVM(getMLrefconst(getMLmodels(),svmInd)) )
                     {
-                        const SVM_Generic &locsvmref = getMLrefconst(svmbase,svmInd).getSVMconst();
+                        const SVM_Generic &locsvmref = getMLrefconst(getMLmodels(),svmInd).getSVMconst();
 
                         loggerfile << "SVM specifics:\n\n";
 
@@ -10665,9 +10615,9 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
 int gridelmMLreg(int ind, ML_Mutable *MLreg, void *arg)
 {
-    SparseVector<ML_Mutable *> &svmbase = *((SparseVector<ML_Mutable *> *) ((void **) arg)[11]);
+    //SparseVector<ML_Mutable *> &svmbase = *((SparseVector<ML_Mutable *> *) ((void **) arg)[11]);
 
-    return regsvm(svmbase,ind,MLreg);
+    return regML(getMLmodels(),ind,MLreg);
 }
 
 void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
@@ -10682,7 +10632,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
     svmvolatile SparseVector<SparseVector<gentype> > &globargvariables = *((SparseVector<SparseVector<gentype> >  *) ((void **) arg)[8] );
     Vector<int> &argnums                                               = *((Vector<int>                           *) ((void **) arg)[9] );
     int (*getsetExtVar)(gentype &, const gentype &, int)               = ((int (*)(gentype &, const gentype &, int)) ((void **) arg)[10]);
-    SparseVector<ML_Mutable *> &svmbase                                = *((SparseVector<ML_Mutable *>            *) ((void **) arg)[11]);
+    //SparseVector<ML_Mutable *> &svmbase                                = *((SparseVector<ML_Mutable *>            *) ((void **) arg)[11]);
     std::string &interstring                                           = *((std::string                           *) ((void **) arg)[13]);
     gentype &xfnis                                                     = *((gentype                               *) ((void **) arg)[14]);
     Vector<int> &MLnumbers                                             = *((Vector<int>                           *) ((void **) arg)[15]);
@@ -10773,7 +10723,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
         gridcommstack->push(gridbox);
         std::string loclogfile = logfile+"_gridlog";
 
-        callsvm(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
+        callsvm(svmContext,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
         errstream() << "res = " << res << " ... ";
 
         MEMDEL(gridcommstack);
@@ -10799,7 +10749,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
 
         // Call runsvm to get test result and save result
 
-        callsvm(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
+        callsvm(svmContext,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
 
         MEMDEL(gridcommstack);
     }
@@ -10824,7 +10774,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
 
         // Call runsvm to get test result and save result
 
-        callsvm(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
+        callsvm(svmContext,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
 
         MEMDEL(gridcommstack);
     }
@@ -10849,7 +10799,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
 
         // Call runsvm to get test result and save result
 
-        callsvm(svmContext,svmbase,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
+        callsvm(svmContext,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
 
         MEMDEL(gridcommstack);
     }
@@ -11579,7 +11529,8 @@ void preExtractLinesFromFile(ofiletype &filelines, gentype &linesleft, std::stri
 
 
 
-void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &currcommandis, const Vector<std::string> &currcommand, int ktype, SparseVector<SparseVector<gentype> > &argvariables, int &kernnum, int firstcall, SparseVector<ML_Mutable *> &svmbase, int svmInd)
+void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &currcommandis, const Vector<std::string> &currcommand, int ktype,
+                   SparseVector<SparseVector<gentype> > &argvariables, int &kernnum, int firstcall, int svmInd)
 {
     (void) svmInd;
 
@@ -11720,7 +11671,7 @@ void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &cu
 //                        else if ( currcommandis == "-kcy " ) { theKern.setChurnInner(1); }
 //                        else if ( currcommandis == "-kcn"  ) { theKern.setChurnInner(0); }
                         else if ( currcommandis == "-kan"  ) { theKern.setAltDiff(safeatoi(currcommand(1),argvariables)); }
-                        else if ( currcommandis == "-ktx"  ) { theKern.setAltCall((getMLref(svmbase,safeatoi(currcommand(1),argvariables))).MLid(),kernnum); }
+                        else if ( currcommandis == "-ktx"  ) { theKern.setAltCall((getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables))).MLid(),kernnum); }
 
                         else if ( currcommandis == "-kI" ) 
                         { 
@@ -14227,23 +14178,11 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         -bv             - LSV variable bias (default).                       \n" : "" );
     output << ( ( basic || advanced ) ? "         -bz             - LSV zero bias.                                     \n" : "" );
-    output << ( ( basic || advanced ) ? "         -bn  n          - LSV posterior variance terms:                      \n" : "" );
-    output << ( ( basic || advanced ) ? "                          -1 - usual (exact) posterior variance calc.         \n" : "" );
-    output << ( ( basic || advanced ) ? "                          0  - return prior variance (kernel) instead.        \n" : "" );
-    output << ( ( basic || advanced ) ? "                          >0 - approximate posterior  variance using this many\n" : "" );
-    output << ( ( basic || advanced ) ? "                               training vectors closest  (in feature space) to\n" : "" );
-    output << ( ( basic || advanced ) ? "                               the point being tested.                        \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                  -- GPR specific options                          --         \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         -bgv            - GPR variable bias.                                 \n" : "" );
     output << ( ( basic || advanced ) ? "         -bgz            - GPR zero bias (default).                           \n" : "" );
-    output << ( ( basic || advanced ) ? "         -bgn n          - GPR posterior variance terms:                      \n" : "" );
-    output << ( ( basic || advanced ) ? "                          -1 - usual (exact) posterior variance calc.         \n" : "" );
-    output << ( ( basic || advanced ) ? "                          0  - return prior variance (kernel) instead.        \n" : "" );
-    output << ( ( basic || advanced ) ? "                          >0 - approximate posterior  variance using this many\n" : "" );
-    output << ( ( basic || advanced ) ? "                               training vectors closest  (in feature space) to\n" : "" );
-    output << ( ( basic || advanced ) ? "                               the point being tested.                        \n" : "" );
     output << ( ( basic || advanced ) ? "         -bgla           - GPR inequalities via Laplace aproximation (deflt). \n" : "" );
     output << ( ( basic || advanced ) ? "         -bgep           - GPR inequalities via expect. prop. (not working).  \n" : "" );
     output << ( ( basic || advanced ) ? "         -bgnc           - GPR inequalities as per SVM (naive approach).      \n" : "" );
@@ -16272,11 +16211,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -gmsd s         - set noise variance for default q(x) model.         \n" : "" );
     output << ( (          advanced ) ? "         -gmgtd s        - set noise variance for default c(x) model.         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -gmbgn n        - set default GPR model posterior variance terms. See\n" : "" );
-    output << ( (          advanced ) ? "                           -bgn for details.                                  \n" : "" );
-    output << ( (          advanced ) ? "         -gmsbgn n       - set default q(x) model postrior variance terms.    \n" : "" );
-    output << ( (          advanced ) ? "         -gmgtbgn n      - set default c(x) model postrior variance terms.    \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmg g          - set length scale for default GPR kernel.           \n" : "" );
     output << ( (          advanced ) ? "         -gmsg g         - set length scale for default q(x) kernel.          \n" : "" );
     output << ( (          advanced ) ? "         -gmgtg g        - set length scale for default c(x) kernel.          \n" : "" );
@@ -16482,9 +16416,9 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -gbTs n         - sample type for -gbTm 1.  See -Stt for details.    \n" : "" );
     output << ( (          advanced ) ? "         -gbTx n         - x sample type for -gbTm 1.  See -Stx for details.  \n" : "" );
     output << ( (          advanced ) ? "         -gbTv sigscale  - Set variance scale for JIT Thompson (deflt 0.1).   \n" : "" );
-    output << ( (          advanced ) ? "         -gbeu n         - If 0 (default) then nothing. If 1 then the user can\n" : "" );
-    output << ( (          advanced ) ? "                           interactively  override  the recommendation  and/or\n" : "" );
-    output << ( (          advanced ) ? "                           the evaluation.                                    \n" : "" );
+    //output << ( (          advanced ) ? "         -gbeu n         - If 0 (default) then nothing. If 1 then the user can\n" : "" );
+    //output << ( (          advanced ) ? "                           interactively  override  the recommendation  and/or\n" : "" );
+    //output << ( (          advanced ) ? "                           the evaluation.                                    \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gba n          - if >=  0 then  this is  used to  seed the  RNG when\n" : "" );
     output << ( (          advanced ) ? "                           generating initial  points (see -gbj,  default 42).\n" : "" );
@@ -16628,7 +16562,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "         -gbfk  kappa    - kappa (default 1, see Kandasamy).                  \n" : "" );
     output << ( (          advanced ) ? "         -gbfo  f        - fidelity overwrite.                                \n" : "" );
     output << ( (          advanced ) ? "                           0: use fidelity generated by algorithm.            \n" : "" );
-    output << ( (          advanced ) ? "                           1: ask human to set fidelity (with recommendation).\n" : "" );
     output << ( (          advanced ) ? "                           2: randomly select fidelity <= reommendation.      \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gbsp p         - set >= 1 to enforce  mu_{1:p}-stability, where this\n" : "" );

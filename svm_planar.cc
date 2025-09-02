@@ -146,7 +146,7 @@ void SVM_Planar::setmemsize(int memsize)
 
 int SVM_Planar::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 {
-    NiceAssert( onlyChangeRowI >= -1 );
+    NiceAssert( onlyChangeRowI >= -2 );
     NiceAssert( onlyChangeRowI < SVM_Planar::N() );
 
     int res = 0;
@@ -159,7 +159,7 @@ int SVM_Planar::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 
 int SVM_Planar::setKernel(const MercerKernel &xkernel, int modind, int onlyChangeRowI)
 {
-    NiceAssert( onlyChangeRowI >= -1 );
+    NiceAssert( onlyChangeRowI >= -2 );
     NiceAssert( onlyChangeRowI < SVM_Planar::N() );
 
     int res = 0;

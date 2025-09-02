@@ -398,7 +398,7 @@ int SMBOOptions::realOptim(int dim,
                 (*(muapproxRaw("&",0))).setMLTypeClean((*(extmuapprox(0))).type());
 
                 (*(muapproxRaw("&",0))).getML() = *(extmuapprox(0));
-                muapproxInd("&",0) = regML(muapproxRaw("&",0),fnarg,5);
+                muapproxInd("&",0) = regMLloc(muapproxRaw("&",0),fnarg,5);
 
                 muapprox("&",0) = &((*(muapproxRaw("&",0))).getML());
             }
@@ -410,7 +410,7 @@ int SMBOOptions::realOptim(int dim,
                 (*(muapproxRaw("&",0))).setMLTypeClean(altmuapprox.type());
 
                 (*(muapproxRaw("&",0))).getML() = altmuapprox;
-                muapproxInd("&",0) = regML(muapproxRaw("&",0),fnarg,5);
+                muapproxInd("&",0) = regMLloc(muapproxRaw("&",0),fnarg,5);
 
                 muapprox("&",0) = &((*(muapproxRaw("&",0))).getML());
 //RKHSFIXME
@@ -424,7 +424,7 @@ int SMBOOptions::realOptim(int dim,
                 (*(muapproxRaw("&",0))).setMLTypeClean(altmuapprox_rff.type());
 
                 (*(muapproxRaw("&",0))).getML() = altmuapprox_rff;
-                muapproxInd("&",0) = regML(muapproxRaw("&",0),fnarg,5);
+                muapproxInd("&",0) = regMLloc(muapproxRaw("&",0),fnarg,5);
 
                 muapprox("&",0) = &((*(muapproxRaw("&",0))).getML());
 
@@ -442,7 +442,7 @@ int SMBOOptions::realOptim(int dim,
                 (*(muapproxRaw("&",0))).setMLTypeClean(altmuapprox.type());
 
                 (*(muapproxRaw("&",0))).getML() = altmuapprox;
-                muapproxInd("&",0) = regML(muapproxRaw("&",0),fnarg,5);
+                muapproxInd("&",0) = regMLloc(muapproxRaw("&",0),fnarg,5);
 
                 muapprox("&",0) = &((*(muapproxRaw("&",0))).getML());
             }
@@ -474,7 +474,7 @@ int SMBOOptions::realOptim(int dim,
                     (*(muapproxRaw("&",ii))).setMLTypeClean((*(extmuapprox(ii))).type());
 
                     (*(muapproxRaw("&",ii))).getML() = *(extmuapprox(ii));
-                    muapproxInd("&",ii) = regML(muapproxRaw("&",ii),fnarg,6);
+                    muapproxInd("&",ii) = regMLloc(muapproxRaw("&",ii),fnarg,6);
 
                     muapprox("&",ii) = &((*(muapproxRaw("&",ii))).getML());
                 }
@@ -485,7 +485,7 @@ int SMBOOptions::realOptim(int dim,
                     (*(muapproxRaw("&",ii))).setMLTypeClean(altmuapprox.type());
 
                     (*(muapproxRaw("&",ii))).getML() = altmuapprox;
-                    muapproxInd("&",ii) = regML(muapproxRaw("&",ii),fnarg,6);
+                    muapproxInd("&",ii) = regMLloc(muapproxRaw("&",ii),fnarg,6);
 
                     muapprox("&",ii) = &((*(muapproxRaw("&",ii))).getML());
 //RKHSFIXME
@@ -512,24 +512,27 @@ int SMBOOptions::realOptim(int dim,
             {
                 if ( ( extcgtapprox.size() > ii ) && extcgtapprox(ii) )
                 {
+//errstream() << "rawset\n";
                     MEMNEW(cgtapproxRaw("&",ii),ML_Mutable);
                     (*(cgtapproxRaw("&",ii))).setMLTypeClean((*(extcgtapprox(ii))).type());
 
                     (*(cgtapproxRaw("&",ii))).getML() = *(extcgtapprox(ii));
-                    cgtInd("&",ii) = regML(cgtapproxRaw("&",ii),fnarg,14);
+                    cgtInd("&",ii) = regMLloc(cgtapproxRaw("&",ii),fnarg,14);
 
                     cgtapprox("&",ii) = &((*(cgtapproxRaw("&",ii))).getML());
                 }
 
                 else
                 {
+//errstream() << "inset: " << altcgtapprox << "\n";
                     MEMNEW(cgtapproxRaw("&",ii),ML_Mutable);
                     (*(cgtapproxRaw("&",ii))).setMLTypeClean(altcgtapprox.type());
 
                     (*(cgtapproxRaw("&",ii))).getML() = altcgtapprox;
-                    cgtInd("&",ii) = regML(cgtapproxRaw("&",ii),fnarg,14);
+                    cgtInd("&",ii) = regMLloc(cgtapproxRaw("&",ii),fnarg,14);
 
                     cgtapprox("&",ii) = &((*(cgtapproxRaw("&",ii))).getML());
+//errstream() << "outset: " << (*(cgtapprox(ii))) << "\n";
                 }
 
                 MLnumbers("&",7) = cgtInd(0);
@@ -558,7 +561,7 @@ int SMBOOptions::realOptim(int dim,
                     (*(augxapproxRaw("&",i))).setMLTypeClean((*(extaugxapprox(i))).type());
 
                     (*(augxapproxRaw("&",i))).getML() = *(extaugxapprox(i));
-                    augxInd("&",i) = regML(augxapproxRaw("&",i),fnarg,12);
+                    augxInd("&",i) = regMLloc(augxapproxRaw("&",i),fnarg,12);
 
                     augxapprox("&",i) = &((*(augxapproxRaw("&",i))).getML());
                 }
@@ -569,7 +572,7 @@ int SMBOOptions::realOptim(int dim,
                     (*(augxapproxRaw("&",i))).setMLTypeClean(altaugxapprox.type());
 
                     (*(augxapproxRaw("&",i))).getML() = altaugxapprox;
-                    augxInd("&",i) = regML(augxapproxRaw("&",i),fnarg,12);
+                    augxInd("&",i) = regMLloc(augxapproxRaw("&",i),fnarg,12);
 
                     augxapprox("&",i) = &((*(augxapproxRaw("&",i))).getML());
                 }
@@ -589,7 +592,7 @@ int SMBOOptions::realOptim(int dim,
             (*sigmaapproxRaw).setMLTypeClean(getmuapprox(0).type());
 
             (*sigmaapproxRaw).getML() = getmuapprox(0);
-            sigInd = regML(sigmaapproxRaw,fnarg,7);
+            sigInd = regMLloc(sigmaapproxRaw,fnarg,7);
 
             sigmaapprox = &((*sigmaapproxRaw).getML());
 
@@ -664,7 +667,7 @@ int SMBOOptions::realOptim(int dim,
             MEMNEW(srcmodel,ML_Mutable);
             (*srcmodel).setMLTypeClean(getmuapprox(0).type());
             (*srcmodel).getML() = getmuapprox(0);
-            srcmodelInd = regML(srcmodel ,fnarg,10);
+            srcmodelInd = regMLloc(srcmodel ,fnarg,10);
 
 //RKHSFIXME
             //(*srcmodel).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
@@ -690,8 +693,8 @@ int SMBOOptions::realOptim(int dim,
             //(*srcmodel).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
             //(*diffmodel).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
 
-            srcmodelInd  = regML(srcmodel ,fnarg,10);
-            diffmodelInd = regML(diffmodel,fnarg,11);
+            srcmodelInd  = regMLloc(srcmodel ,fnarg,10);
+            diffmodelInd = regMLloc(diffmodel,fnarg,11);
 
             MLnumbers("&",4) = srcmodelInd;
             MLnumbers("&",5) = diffmodelInd;
@@ -1751,6 +1754,7 @@ int SMBOOptions::model_muvarTrainingVector_cgt(Vector<gentype> &resv, Vector<gen
     return resi;
 }
 
+#define CGOFFsCALE 1.1
 int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
 {
         int i,ires = 0;
@@ -1760,7 +1764,7 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
         if ( tunediffmod && diffmodel )
         {
 //errstrean() << "phantomxyziii diffmodel\n";
-            (*diffmodel).getML().tuneKernel(tunediffmod,getxwidth(),1,0,nullptr);
+            (*diffmodel).tuneKernel(tunediffmod,getxwidth(),1,0,nullptr);
         }
 
         ires |= modelaugx_int_train(res,killSwitch);
@@ -1770,7 +1774,7 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
             for ( i = 0 ; i < augxapprox.size() ; ++i )
             {
 //errstrean() << "phantomxyziii augx " << i << "\n";
-                getaugxapprox("&",i).getML().tuneKernel(tuneaugxmod,getxwidth(),1,0,nullptr);
+                getaugxapprox("&",i).tuneKernel(tuneaugxmod,getxwidth(),1,0,nullptr);
             }
         }
 
@@ -1782,68 +1786,71 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
 //errstrean() << "phantomxyziii muapprox\n";
             for ( i = 0 ; i < muapprox.size() ; ++i )
             {
-                tkBounds tuneBounds(getmuapprox("&",i).getML().getKernel());
+                tkBounds tuneBounds(getmuapprox("&",i).getKernel());
 
                 // It is possible for BOCA to get "stuck" with bad parameters:
                 // - too little connection between different different fidelities (no connection)
                 // - posterior variance over-shrunk (too confindent)
 
-                if ( getmuapprox(i).getMLconst().N() < 40 )
+                if ( getmuapprox(i).N() < 40 )
                 {
                     tuneBounds.wlb = 0.5;
 
-                    for ( int i = 0 ; i < getdimfid() ; i++ )
+                    for ( int j = 0 ; j < getdimfid() ; j++ )
                     {
-                        tuneBounds.klb("&",i+1) = 0.6;
+                        tuneBounds.klb("&",j+1) = 0.6;
                     }
 // original heuristic: 0.5 if N <= 40, unchange otherwise
                 }
 
-                else if ( getmuapprox(i).getMLconst().N() < 50 )
+                else if ( getmuapprox(i).N() < 50 )
                 {
-                    double scale = (50.0-getmuapprox("&",i).getML().N())/10.0;
+                    double scale = (50.0-getmuapprox("&",i).N())/10.0;
 
                     tuneBounds.wlb = 0.1+(0.4*scale);
 
-                    for ( int i = 0 ; i < getdimfid() ; i++ )
+                    for ( int j = 0 ; j < getdimfid() ; j++ )
                     {
-                        tuneBounds.klb("&",i+1) = 0.6*scale;
+                        tuneBounds.klb("&",j+1) = 0.6*scale;
                     }
                 }
 
-                getmuapprox("&",i).getML().tuneKernel(tunemu,getxwidth(),1,0,&tuneBounds);
+                getmuapprox("&",i).tuneKernel(tunemu,getxwidth(),1,0,&tuneBounds);
             }
         }
 
+errstream() << "-:" << tunecgt << ":-";
         if ( tunecgt && cgtapprox.size() )
         {
             for ( i = 0 ; i < cgtapprox.size() ; ++i )
             {
-                tkBounds tuneBounds(getcgtapprox(i).getMLconst().getKernel());
+                tkBounds tuneBounds(getcgtapprox(i).getKernel());
 
-                if ( getcgtapprox(i).getMLconst().N() < 40 )
+                if ( getcgtapprox(i).N() < 40 )
                 {
                     tuneBounds.wlb = 0.5;
 
-                    for ( int i = 0 ; i < getdimfid() ; i++ )
+                    for ( int j = 0 ; j < getdimfid() ; j++ )
                     {
-                        tuneBounds.klb("&",i+1) = 0.6;
+                        tuneBounds.klb("&",j+1) = 0.6;
                     }
                 }
 
-                else if ( getcgtapprox(i).getMLconst().N() < 50 )
+                else if ( getcgtapprox(i).N() < 50 )
                 {
-                    double scale = (50.0-getcgtapprox(i).getMLconst().N())/10.0;
+                    double scale = (50.0-getcgtapprox(i).N())/10.0;
 
                     tuneBounds.wlb = 0.1+(0.4*scale);
 
-                    for ( int i = 0 ; i < getdimfid() ; i++ )
+                    for ( int j = 0 ; j < getdimfid() ; j++ )
                     {
-                        tuneBounds.klb("&",i+1) = 0.6*scale;
+                        tuneBounds.klb("&",j+1) = 0.6*scale;
                     }
                 }
 
-                getcgtapprox("&",i).getML().tuneKernel(tunecgt,getxwidth(),1,0,&tuneBounds);
+errstream() << ":!" << i << ",";
+                getcgtapprox("&",i).tuneKernel(tunecgt,CGOFFsCALE*getxwidth(),1,0,&tuneBounds);
+errstream() << "!:";
             }
         }
 
@@ -1852,7 +1859,7 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
         if ( tunesigma && sigmuseparate )
         {
 //errstrean() << "phantomxyziii sigapprox\n";
-            getsigmaapprox("&").getML().tuneKernel(tunesigma,getxwidth(),1,0,nullptr);
+            getsigmaapprox("&").tuneKernel(tunesigma,getxwidth(),1,0,nullptr);
         }
 
         return ires;
@@ -2705,7 +2712,7 @@ int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype
             if ( firsttrain && srcmodel && tunesrcmod )
             {
 //outstream() << "Tuning source model\n";
-                (*srcmodel).getML().tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
+                (*srcmodel).tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
                 firsttrain = 0;
                 int dummy = 0;
                 (*srcmodel).train(dummy);
@@ -2731,7 +2738,7 @@ int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype
 
             if ( firsttrain && srcmodel && tunesrcmod )
             {
-                (*srcmodel).getML().tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
+                (*srcmodel).tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
                 firsttrain = 0;
                 int dummy = 0;
                 (*srcmodel).train(dummy);
@@ -2790,7 +2797,7 @@ int SMBOOptions::modeldiff_int_train(int &res, svmvolatile int &killSwitch)
 
             if ( firsttrain && srcmodel && tunesrcmod )
             {
-                (*srcmodel).getML().tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
+                (*srcmodel).tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
                 firsttrain = 0;
                 int dummy = 0;
                 (*srcmodel).train(dummy);
@@ -2811,7 +2818,7 @@ int SMBOOptions::modeldiff_int_train(int &res, svmvolatile int &killSwitch)
 
             if ( firsttrain && srcmodel && tunesrcmod )
             {
-                (*srcmodel).getML().tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
+                (*srcmodel).tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
                 firsttrain = 0;
                 int dummy = 0;
                 (*srcmodel).train(dummy);

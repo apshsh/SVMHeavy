@@ -976,7 +976,7 @@ int dosurf(double xmin, double xmax, double ymin, double ymax, double omin, doub
         }
 
         // Clean up
-
+/*
 #ifndef USE_MEX
 #ifdef DO_CLEANUP
         std::string delstringa = "rm "+dnameplot;
@@ -986,6 +986,7 @@ int dosurf(double xmin, double xmax, double ymin, double ymax, double omin, doub
         svm_system(delstringb.c_str());
 #endif
 #endif
+*/
     }
 
     else if ( outformat == 3 )

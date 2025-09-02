@@ -27,7 +27,7 @@
 
 #define NUMSAMP 1000
 //#define NUMSAMPSURF 1000
-#define NUMSAMPSURF 400
+#define NUMSAMPSURF 800
 //#define STDDEVSCALE 2.0
 #define STDDEVSCALE 1.0
 // 1 standard deviation seems like the standard here https://scikit-learn.org/stable/auto_examples/gaussian_process/plot_gpr_prior_posterior.html
@@ -114,11 +114,13 @@ int surffn(double xmin, double xmax, double ymin, double ymax, double omin, doub
 
     int ires = dosurf(xmin,xmax,ymin,ymax,omin,omax,fname,dname,outformat);
 
+/*
 #ifdef DO_CLEANUP
     std::string delstringa = "rm "+dname;
 
     svm_system(delstringa.c_str());
 #endif
+*/
 
     return ires;
 }

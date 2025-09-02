@@ -341,9 +341,9 @@ int LSV_Anions::train(int &res, svmvolatile int &killSwitch)
             dybeta = 0.0;
             dbetaR = 0.0;
 
-            if ( fact_minverse(dalphaR,dbetaR,alltraintargR,dybeta) >= 0 )
+            if ( ( res = fact_minverse(dalphaR,dbetaR,alltraintargR,dybeta) ) >= 0 )
             {
-                throw("Cholesky factorisation failure.");
+                return 1;
             }
 
             if ( N() )
@@ -366,6 +366,8 @@ int LSV_Anions::train(int &res, svmvolatile int &killSwitch)
 
             dbias.dir_anion()("&",j) = dbiasA(j);
         }
+
+        return 1;
     }
 
     return 0;

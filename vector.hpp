@@ -121,6 +121,8 @@ public:
 
     retVector<T> &creset(const Vector<T> &cover); // this version deletes pivot (if !pbase) and sets pivot = null
     DynArray<int> *creset_p(const Vector<T> &cover, int pivotsize); // this version allocates pivot(pivotsize) (or resizes if pbase)
+
+    retVector<T> &reset(const char *dummy, const Vector<T> &src); // full assignment version. Call this and the retVector is basically overwritten with a vector
 };
 
 // Handy fixed vectors
@@ -385,6 +387,11 @@ public:
     template <class S> Vector<T>  &scale(const Vector<S> &a);
     template <class S> Vector<T> &lscale(const S         &a);
     template <class S> Vector<T> &lscale(const Vector<S> &a);
+
+    Vector<T> &Rscale(const T         &a);
+    Vector<T> &Rscale(const Vector<T> &a);
+    Vector<T> &Lscale(const T         &a);
+    Vector<T> &Lscale(const Vector<T> &a);
 
     // Scaled addition:
     //
@@ -743,7 +750,7 @@ private:
     // Blind constructor: does no allocation, just sets bkref and defaults
 
     explicit Vector(const char *dummy, const Vector<T> &src) : newln(src.newln), nbase(false), pbase(true), dsize(0), defaulttightalloc(0), iib(0), iis(0), imoverhere(nullptr), bkref(src.bkref), content(nullptr), ccontent(nullptr), pivot(nullptr) { (void) dummy; }
-    explicit Vector(const char *dummy)                       : newln('\n'),      nbase(false), pbase(true), dsize(0), defaulttightalloc(0), iib(0), iis(0), imoverhere(nullptr), bkref(nullptr),      content(nullptr), ccontent(nullptr), pivot(nullptr) { (void) dummy; }
+    explicit Vector(const char *dummy)                       : newln('\n'),      nbase(false), pbase(true), dsize(0), defaulttightalloc(0), iib(0), iis(0), imoverhere(nullptr), bkref(nullptr),   content(nullptr), ccontent(nullptr), pivot(nullptr) { (void) dummy; }
 
     // Dynarray constructor - constructs a (const) vector refering to an
     // external dynamic array.  Result is nominally constant: use with care
@@ -1460,6 +1467,65 @@ DynArray<int> *retVector<T>::creset_p(const Vector<T> &cover, int pivotsize)
 
     return resval;
 }
+
+template <class T>
+retVector<T> &retVector<T>::reset(const char *, const Vector<T> &src)
+{
+    // Delete if assigned
+
+    if ( !(Vector<T>::pbase) && Vector<T>::pivot )
+    {
+        MEMDEL(Vector<T>::pivot);
+    }
+
+    if ( !(Vector<T>::nbase) && Vector<T>::content )
+    {
+        MEMDEL(Vector<T>::content);
+    }
+
+    Vector<T>::newln             = src.newln;
+    Vector<T>::nbase             = false;
+    Vector<T>::pbase             = true;
+    Vector<T>::dsize             = src.size();
+    Vector<T>::defaulttightalloc = src.defaulttightalloc;
+    Vector<T>::iib               = 0;
+    Vector<T>::iis               = 1;
+    Vector<T>::imoverhere        = nullptr;
+    Vector<T>::bkref             = this;
+    Vector<T>::content           = nullptr;
+    Vector<T>::ccontent          = nullptr;
+    Vector<T>::pivot             = cntintarray(src.size());
+
+    if ( src.imoverhere )
+    {
+        Vector<T>::imoverhere = (src.overhere()).makeDup();
+    }
+
+    else if ( src.infsize() )
+    {
+        Vector<T>::imoverhere = src.makeDup();
+    }
+
+    MEMNEW(Vector<T>::content,DynArray<T>);
+    (*(Vector<T>::content)) = { nullptr,0,0,Vector<T>::defaulttightalloc,false,false,false };
+    (*(Vector<T>::content)).resize(Vector<T>::dsize);
+    Vector<T>::ccontent = Vector<T>::content;
+
+    NiceAssert( Vector<T>::content );
+
+    Vector<T>::assign(src);
+
+    return *this;
+}
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3830,6 +3896,18 @@ template <> template <> inline Vector<double> &Vector<double>::lscale(const doub
     return *this *= a;
 }
 
+template <> inline Vector<double> &Vector<double>::Rscale(const double &a);
+template <> inline Vector<double> &Vector<double>::Rscale(const double &a)
+{
+    return *this *= a;
+}
+
+template <> inline Vector<double> &Vector<double>::Lscale(const double &a);
+template <> inline Vector<double> &Vector<double>::Lscale(const double &a)
+{
+    return *this *= a;
+}
+
 template <class T>
 template <class S> Vector<T> &Vector<T>::scale(const S &a)
 {
@@ -3856,6 +3934,32 @@ template <class S> Vector<T> &Vector<T>::lscale(const S &a)
     return *this;
 }
 
+template <class T>
+Vector<T> &Vector<T>::Rscale(const T &a)
+{
+    NiceAssert( !infsize() );
+
+    for ( int i = 0 ; i < size() ; ++i )
+    {
+        (*this)("&",i) *= a;
+    }
+
+    return *this;
+}
+
+template <class T>
+Vector<T> &Vector<T>::Lscale(const T &a)
+{
+    NiceAssert( !infsize() );
+
+    for ( int i = 0 ; i < size() ; ++i )
+    {
+        rightmult(a,(*this)("&",i));
+    }
+
+    return *this;
+}
+
 template <> template <> inline Vector<double> &Vector<double>::scale(const Vector<double> &a);
 template <> template <> inline Vector<double> &Vector<double>::scale(const Vector<double> &a)
 {
@@ -3864,6 +3968,18 @@ template <> template <> inline Vector<double> &Vector<double>::scale(const Vecto
 
 template <> template <> inline Vector<double> &Vector<double>::lscale(const Vector<double> &a);
 template <> template <> inline Vector<double> &Vector<double>::lscale(const Vector<double> &a)
+{
+    return *this *= a;
+}
+
+template <> inline Vector<double> &Vector<double>::Rscale(const Vector<double> &a);
+template <> inline Vector<double> &Vector<double>::Rscale(const Vector<double> &a)
+{
+    return *this *= a;
+}
+
+template <> inline Vector<double> &Vector<double>::Lscale(const Vector<double> &a);
+template <> inline Vector<double> &Vector<double>::Lscale(const Vector<double> &a)
 {
     return *this *= a;
 }
@@ -3893,6 +4009,52 @@ template <class S> Vector<T> &Vector<T>::scale(const Vector<S> &a)
 
 template <class T>
 template <class S> Vector<T> &Vector<T>::lscale(const Vector<S> &a)
+{
+    NiceAssert( !infsize() );
+    NiceAssert( ( size() == a.size() ) || !(size()) || !(a.size()) );
+
+    if ( !size() && a.size() )
+    {
+	resize(a.size());
+        zero();
+    }
+
+    else if ( a.size() )
+    {
+	for ( int i = 0 ; i < size() ; ++i )
+	{
+            rightmult(a(i),(*this)("&",i));
+	}
+    }
+
+    return *this;
+}
+
+template <class T>
+Vector<T> &Vector<T>::Rscale(const Vector<T> &a)
+{
+    NiceAssert( !infsize() );
+    NiceAssert( ( size() == a.size() ) || !(size()) || !(a.size()) );
+
+    if ( !size() && a.size() )
+    {
+	resize(a.size());
+        zero();
+    }
+
+    else if ( a.size() )
+    {
+	for ( int i = 0 ; i < size() ; ++i )
+	{
+	    (*this)("&",i) *= a(i);
+	}
+    }
+
+    return *this;
+}
+
+template <class T>
+Vector<T> &Vector<T>::Lscale(const Vector<T> &a)
 {
     NiceAssert( !infsize() );
     NiceAssert( ( size() == a.size() ) || !(size()) || !(a.size()) );
@@ -9624,6 +9786,45 @@ template <class T> Vector<T> &rightmult(const T         &left_op,       Vector<T
     return ( left_op *= right_op );
 }
 
+template <class T> Vector<T> &rightmult(const Vector<T> &left_op, Vector<T> &right_op)
+{
+    if ( left_op.size() && right_op.shareBase(left_op) )
+    {
+        Vector<T> temp(left_op);
+
+        rightmult(temp,right_op);
+    }
+
+    else
+    {
+	// We treat empty vectors as additive identities (ie. zero)
+
+        NiceAssert( !right_op.infsize() && !left_op.infsize() );
+        NiceAssert( ( right_op.size() == left_op.size() ) || !(right_op.size()) || !(left_op.size()) );
+
+	if ( !(right_op.size()) && left_op.size() )
+	{
+	    right_op.resize(left_op.size());
+            right_op.zero();
+	}
+
+	else if ( !(left_op.size()) )
+	{
+	    right_op.zero();
+	}
+
+	else
+	{
+	    for ( int i = 0 ; i < right_op.size() ; ++i )
+	    {
+		rightmult(left_op(i),right_op("&",i));
+	    }
+	}
+    }
+
+    return right_op;
+}
+
 template <> inline Vector<double> &rightmult(const Vector<double> &left_op, Vector<double> &right_op)
 {
     return ( right_op *= left_op );
@@ -10438,6 +10639,11 @@ std::ostream &operator<<(std::ostream &output, const Vector<T> &src)
         src.outstream(output);
     }
 
+    else if ( src.size() == 1 )
+    {
+        output << "[ " << src(0) << " ]";
+    }
+
     else
     {
         int xsize = src.size();
@@ -10482,6 +10688,11 @@ std::ostream &printoneline(std::ostream &output, const Vector<T> &src)
     else if ( src.infsize() )
     {
         src.outstream(output);
+    }
+
+    else if ( src.size() == 1 )
+    {
+        output << "[ " << src(0) << " ]";
     }
 
     else

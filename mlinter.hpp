@@ -21,6 +21,11 @@
 #include "ofiletype.hpp"
 #include "vecstack.hpp"
 #include "awarestream.hpp"
+#include "gridopt.hpp"
+#include "directopt.hpp"
+#include "nelderopt.hpp"
+#include "bayesopt.hpp"
+#include "globalopt.hpp"
 
 
 
@@ -68,7 +73,6 @@ class SVMThreadContext;
 // 301-399: unknown throw
 
 int runsvm(SVMThreadContext *svmContext,
-           SparseVector<ML_Mutable *> &svmbase,
            Stack<awarestream *> *commstack,
            svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
            int (*getsetExtVar)(gentype &res, const gentype &src, int num),
@@ -78,22 +82,52 @@ int runsvm(SVMThreadContext *svmContext,
 
 void killallthreads(SVMThreadContext *svmContext);
 
-// Delete all MLs
-
-void deleteMLs(SparseVector<ML_Mutable *> &svmbase);
-
 // Direct access to MLs
 //
-// grabsvm:  make SVM svmInd exist
-// regsvm:   register SVM whattoreg at first available index >= svmInd
-//           returns index where registered
-// getMLref: get reference to requested ML
+// grabML:        make ML mlInd exist
+// getMLref:      get reference to requested ML
+// getMLrefconst: get constant reference to requested ML
+// deleteMLs:     delete all MLs
+//
+// regML:         register SVM whattoreg at first available index >= svmInd (returns index where registered)
 
-void grabsvm(SparseVector<ML_Mutable *> &svmbase, int svmInd);
-int regsvm(SparseVector<ML_Mutable *> &svmbase, int svmInd, ML_Mutable &whattoreg);
-ML_Mutable &getMLref(SparseVector<ML_Mutable *> &svmbase, int svmInd);
-const ML_Mutable &getMLrefconst(SparseVector<ML_Mutable *> &svmbase, int svmInd);
+int glob_MLInd        (int i = 0, int seti = 0);
+int glob_gridInd      (int i = 0, int seti = 0);
+int glob_DIRectInd    (int i = 0, int seti = 0);
+int glob_NelderMeadInd(int i = 0, int seti = 0);
+int glob_BayesianInd  (int i = 0, int seti = 0);
 
+void grabML        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        );
+void grabgrid      (SparseVector<GridOptions   *> &gridbase,       int gridInd      );
+void grabDIRect    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    );
+void grabNelderMead(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd);
+void grabBayesian  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  );
+
+const ML_Mutable    &getMLrefconst        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        );
+const GridOptions   &getgridrefconst      (SparseVector<GridOptions   *> &gridbase,       int gridInd      );
+const DIRectOptions &getDIRectrefconst    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    );
+const NelderOptions &getNelderMeadrefconst(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd);
+const BayesOptions  &getBayesianrefconst  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  );
+
+ML_Mutable    &getMLref        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        );
+GridOptions   &getgridref      (SparseVector<GridOptions   *> &gridbase,       int gridInd      );
+DIRectOptions &getDIRectref    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    );
+NelderOptions &getNelderMeadref(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd);
+BayesOptions  &getBayesianref  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  );
+
+SparseVector<ML_Mutable    *> &getMLmodels       (void);
+SparseVector<GridOptions   *> &getgridOptim      (void);
+SparseVector<DIRectOptions *> &getDIRectOptim    (void);
+SparseVector<NelderOptions *> &getNelderMeadOptim(void);
+SparseVector<BayesOptions  *> &getBayesianOptim  (void);
+
+void deleteMLs        (void);
+void deletegrids      (void);
+void deleteDIRects    (void);
+void deleteNelderMeads(void);
+void deleteBayess     (void);
+
+int regML(int svmInd, ML_Mutable &whattoreg);
 
 
 
@@ -224,5 +258,23 @@ inline void qswap(SVMThreadContext *&a, SVMThreadContext *&b)
 //
 //    return x;
 //}
+
+#define BOILER_PTR(T) \
+inline void qswap(T *&a, T *&b); \
+inline void qswap(T *&a, T *&b) { T *x = a; a = b; b = x; } \
+inline T *&setident (T *&a) { throw("something"); return a; } \
+inline T *&setzero  (T *&a) { return a = nullptr;           } \
+inline T *&setposate(T *&a) { return a;                     } \
+inline T *&setnegate(T *&a) { throw("something"); return a; } \
+inline T *&setconj  (T *&a) { throw("something"); return a; } \
+inline T *&setrand  (T *&a) { throw("something"); return a; } \
+inline T *&postProInnerProd(T *&a) { return a; }
+
+BOILER_PTR(GridOptions);
+BOILER_PTR(DIRectOptions);
+BOILER_PTR(NelderOptions);
+BOILER_PTR(BayesOptions);
+
+
 
 #endif

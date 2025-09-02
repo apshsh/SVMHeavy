@@ -75,8 +75,8 @@ public:
     //          * beta_n = 2.log((n^{2+dim/2}).(pi^2)/(3.delta))
     //          # Chowdhury, On Kernelised Multi-Arm Bandits, Alg 2
     //          ~ Bogunovic, Misspecified GP Bandit Optim., Lemma 1
-    // evaluse: 0 = normal operation
-    //          1 = user has option to change x and/or y
+    // REMOVED evaluse: 0 = normal operation
+    // REMOVED          1 = user has option to change x and/or y
     // sigmuseparate: for multi-recommendation by default both sigma and by
     //         are approximated by the same ML.  Alternatively you can do
     //         them separately: mu is updated for each batch, and sigma
@@ -196,7 +196,7 @@ public:
     // fidvar:      fidelity-based error-scale.  By default this is 0, but can be f(z)
     //              so that the noise variance becomes s+f(z)
     // fidover:     0: nothing
-    //              1: human can override fidelity
+    //              REMOVED, HUMAN CAN DO THIS WHENEVER THEY WANT! - 1: human can override fidelity
     //              2: randomly choose fidelity less than recommended
     // FIXME: add fidvar to mlinter and test it
     //
@@ -314,7 +314,7 @@ public:
     int method;
     int intrinbatch;
     int intrinbatchmethod;
-    int evaluse;
+    //int evaluse;
     //int sigmuseparate;
     int startpoints;
     int startseed;         // this changes during optimisation setup to ensure no repeats unless specified
@@ -395,7 +395,7 @@ public:
         method            = 1;
         intrinbatch       = 1;
         intrinbatchmethod = 0;
-        evaluse           = 0;
+        //evaluse           = 0;
         //sigmuseparate     = 0;
         startpoints       = -1; //5; //500; //10;
         startseed         = 42;
@@ -472,7 +472,7 @@ public:
         method            = src.method;
         intrinbatch       = src.intrinbatch;
         intrinbatchmethod = src.intrinbatchmethod;
-        evaluse           = src.evaluse;
+        //evaluse           = src.evaluse;
         //sigmuseparate     = src.sigmuseparate;
         startpoints       = src.startpoints;
         startseed         = src.startseed;

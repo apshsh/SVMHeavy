@@ -78,7 +78,7 @@ int GPR_Scalar::setNaiveConst(void)
         res = 1;
 
         xNaiveConst  = 1;
-        xEPorLaplace = 1;
+        xEPorLaplace = 0;
 
         getQ().setd(d()); // make d in Q directly match real d
     }
@@ -110,7 +110,7 @@ int GPR_Scalar::setEPConst(void)
     return res;
 }
 
-int GPR_Scalar::setLaplaceConst(void)
+int GPR_Scalar::setLaplaceConst(int type)
 {
     int res = 0;
 
@@ -118,8 +118,8 @@ int GPR_Scalar::setLaplaceConst(void)
     {
         res = 1;
 
-        xNaiveConst  = 0; // Not naive
-        xEPorLaplace = 1; // Laplace
+        xNaiveConst  = 0;    // Not naive
+        xEPorLaplace = type; // Laplace
 
         Vector<int> dd(d());
 
@@ -151,41 +151,44 @@ int GPR_Scalar::setLaplaceConst(void)
 #define CUTI 1e-25
 #define MAXEPITCNT 4
 
-#define LAPSTEPSTOP 1e-3
-#define MAXLAPLACEITCNT 5
+//#define LAPSTEPSTOP 1e-3
+#define LAPSTEPSTOP 1e-2
+////#define MAXLAPLACEITCNT 10
+//#define MAXLAPLACEITCNT 100
+#define MAXLAPLACEITCNT 1000
+
+#define WMINVAL 1e-12
+//#define WMAXVAL 1e12 - diag offset is roughtly >= 1/WMAXVAL, so need enough to avoid numerical shennanigans
+#define WMAXVAL 1e6
+#define tMAXVAL 1e12
 
 int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
 {
+//errstream() << "phantomxyz fuck me: " << *this << "\n";
+    res = 0;
+
+    NiceAssert( !isSampleMode() );
+
     if ( isLocked )
     {
         return 0;
     }
 
-    int Nineq = NNC(-1)+NNC(+1);
+    int Nn = NNC(-1);
+    int Np = NNC(+1);
+
+    int Nineq = Nn+Np;
 
     int locres = 0;
 
     if ( !Nineq || isNaiveConst() )
     {
-//FIXME: tune eps based on sigma here if required (method between naive and full EP)
         locres = getQ().train(res,killSwitch);
     }
 
-//    else if ( N() == 1 )
-//    {
-//        int dval = d()(0);
-//
-////errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
-//        getQ().setd(0,dval);
-////errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
-//        locres = getQ().train(res,killSwitch);
-////errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
-//        getQ().setd(0,2);
-////errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
-//    }
-
     else if ( isEPConst() )
     {
+getQ().reset();
         int i,j;
 
         // Get indices of inequality constraints
@@ -245,7 +248,7 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
 //                           = {\bf K} - {\bf K} ( {\bf K} + {\tilde{\bg{\Sigma}}} )^{-1} {\bf K}
 //             so mu_i, vari = Sigma_ii = sigma_i^2 are the posterior mean/variance when evaluating f
 
-        while ( !isdone )
+        while ( !isdone && !res )
         {
             // Record current mean/variance (for convergence testing)
 
@@ -401,8 +404,7 @@ errstream() << "!" << stepsize << "!";
 //errstream() << "phantomxyz line " << __LINE__ << " alpha = " << getQ().alphaVal(0) << "\n";
     }
 
-
-    else
+    else if ( isLaplaceConst() == 1 )
     {
 /*
 Notes on Laplace approximation
@@ -442,24 +444,46 @@ grad log p(y_i|f_i) = \frac{d_i}{sigma_i} \frac{phi(d_i\frac{f_i-yreal_i}{sigma_
 grad^2 log p(y_i|f_i) = -\frac{1}{sigma_i^2} \frac{phi(d_i\frac{f_i-yreal_i}{sigma_i})}{Phi(d_i\frac{f_i-yreal_i}{sigma_i})} [ \frac{phi(d_i\frac{f_i-yreal_i}{sigma_i})}{Phi(d_i\frac{f_i-yreal_i}{sigma_i})} - d_i \frac{f_i-yreal_i}{sigma_i} ]
 
 where phi is the pdf for the normal distribution.
+
+
+
+NB: as noted in Rassmussen, the gradient of the log-likelihood is always
+    positive (if d=1) or negative (if d=-1). Thus in the final solution
+    alpha must be positive (if d=1) or negative (if d=-1), and we can
+    therefore retain the sign constraint on alpha in QQ. Moreover doing
+    this seems to prevent some sort of numerical runaway issue where
+    the sign of alpha is "wrong", leading to sigma and t diverging. Thus
+    we keep the constraint. In theory this makes things slower (training
+    reverts to SVM training), but in practice it seems ok.
 */
 
-errstream() << "Laplace approx training... ";
+        errstream() << "Laplace approx training (Gaussian CDF, " << sigma() << ")... ";
+
+        // Put underlying LS-SVR into known-good state
+
+        QQ.setuseLweight();
+        QQ.reset(); // this retains the active set but sets alpha = 0
+
         int i,j;
 
-        // Get indices of inequality constraints
+        retVector<double> tmpva;
+        retVector<double> tmpvb;
 
-        Vector<int> indin(Nineq);  // Index vector for inequality constraints
-        Vector<int> twovec(Nineq); // Vector of 2s
-        Vector<int> dreal(Nineq);
+        // Get indices of inequality constraints, classes, targets and variances
+
+        Vector<int>    indin(Nineq);     // Index vector for inequality constraints
+        Vector<int>    dreal(Nineq);     // Vector or real d (training constraint type)
+        Vector<double> yreal(Nineq);     // This is the underlying target
+        Vector<double> sigrealsq(Nineq); // This is the underlying variance weight
 
         for ( i = 0, j = 0 ; i < N() ; ++i )
         {
             if ( ( d()(i) == +1 ) || ( d()(i) == -1 ) )
             {
-                indin("&",j)  = i;
-                twovec("&",j) = 2;
-                dreal("&",j)  = d()(i);
+                indin.sv(j,i);
+                dreal.sv(j,d().v(i));
+                yreal.sv(j,yR().v(i));
+                sigrealsq.sv(j,sigma()*sigmaweight().v(i)*sigmaclass(d().v(i))); //FIXME
 
                 ++j;
             }
@@ -467,35 +491,32 @@ errstream() << "Laplace approx training... ";
 
         // Start with "base" mean/variance
 
-        retVector<int> tmpva;
-        retVector<double> tmpvb;
-        retVector<gentype> tmpvc;
+        Vector<double> t(QQ.yR()(indin,tmpva));
+        Vector<double> tsigma(QQ.yR()(indin,tmpva));
+        Vector<double> f(Nineq,0.0);
+        Vector<double> fnext(Nineq,0.0);
+        //Vector<double> W(Nineq);
+        Vector<double> Wsigma(Nineq,0.0); // literally W*sigma() to avoid double-calculations
+        Vector<double> Lsigma(Nineq,1.0); // sqrt(Wsigma)
 
-        Vector<double> yreal(yR()(indin,tmpvb));               // This is the underlying target
-        Vector<double> sigrealsq(sigmaweight()(indin,tmpvb)); // This is the underlying variance
+        if ( QQ.prim() )
+        {
+            yreal -= QQ.ypR()(indin,tmpva);
+            t     -= QQ.ypR()(indin,tmpva);
+        }
 
-        sigrealsq *= sigma();
+        // Initial training run
 
-        Vector<double> f(Nineq);
-        Vector<double> t(Nineq);
-        Vector<double> W(Nineq);
+        QQ.sety(indin,yreal);
+        QQ.setLweight(indin,Lsigma);
+        res = 42424242; // this is a magic number to stop svm_scalar from calling svm_generic to set the gentype representation of alpha. This will be fixed by fintrain
+        QQ.localtrain(res,killSwitch);
 
-        Vector<double> fnext(Nineq);
-
-        // Initial train with *only* equality constraints (ie naive method)
-
-        getQ().setd(indin,dreal);
-        getQ().sety(indin,yreal);
-        getQ().setsigmaweight(indin,sigrealsq/sigma());
-        getQ().train(res,killSwitch);
-        getQ().setd(indin,twovec);
+        Vector<double> localpha(QQ.alphaR()(indin,tmpva));
 
         // Startup
 
-        for ( j = 0 ; j < Nineq ; ++j )
-        {
-            f("&",j) = yreal(j);
-        }
+        f = yreal;
 
         // Laplace loop
 
@@ -504,31 +525,67 @@ errstream() << "Laplace approx training... ";
         int itcnt = 0;
         int maxitcnt = MAXLAPLACEITCNT;
 
-errstream() << "entry alpha = " << getQ().alphaVal()(indin,tmpvc) << "\n";
-        while ( !isdone )
+        double laststep = valpinf();
+
+        bool firstit = true;
+
+        while ( !isdone && !res )
         {
             // Work out W and pseudo-targets
 
-errstream() << "phantomxyz f = " << f << "\n";
             for ( j = 0 ; j < Nineq ; ++j )
             {
-                double fmod     = dreal(j)*(f(j)-yreal(j))/sqrt(sigrealsq(j));
-                double phival   = normphi(fmod);
-                double Phival   = normPhi(fmod);
-                double phionPhi = phival/Phival;
+                double fmod     = dreal.v(j)*(f.v(j)-yreal.v(j))/sqrt(sigrealsq.v(j));
+                double phionPhi = normphionPhi(fmod); //phival/Phival;
 
-                W("&",j) = (1/sigrealsq(j))*phionPhi*(phionPhi+fmod);
-                t("&",j) = f(j) + (dreal(j)*phionPhi/(sqrt(sigrealsq(j))*W(j)));
+                ////W("&",j) = (1/sigrealsq(j))*(phionPhi*(phionPhi+fmod));
+                //Wsigma.sv(j,(sigma()/sigrealsq.v(j))*(phionPhi*(phionPhi+fmod)));
+                Wsigma.sv(j,(phionPhi*(phionPhi+fmod)));
+
+                // Problems occur when W is too big or too small - cut it, and reverse engineer phonPhi post-hoc
+                // (this isn't really a problem now we use L-scaling on Gp, but keep the code just in case)
+                //
+                // 1/sigma phionPhi/(phionPhi+fmod) = W
+                // => phionPhi = (sigma.W)/(1-(sigma.W)) fmod
+                //
+                // NB: really W shouldn't be negative at all, so the second line shouldn't do anything.
+
+                if ( testisvnan(Wsigma.v(j)) || testispinf(Wsigma.v(j)) || ( Wsigma.v(j) >  WMAXVAL ) ) { Wsigma.sv(j, WMAXVAL); } // phionPhi = (Wsigma(j)/(1-Wsigma(j)))*fmod; }
+                if ( testisvnan(Wsigma.v(j)) || testisninf(Wsigma.v(j)) || ( Wsigma.v(j) < -WMAXVAL ) ) { Wsigma.sv(j,-WMAXVAL); } // phionPhi = (Wsigma(j)/(1-Wsigma(j)))*fmod; }
+
+                if ( ( Wsigma.v(j) >= 0 ) && ( Wsigma.v(j) <  WMINVAL ) ) { Wsigma.sv(j, WMINVAL); } // phionPhi = (Wsigma(j)/(1-Wsigma(j)))*fmod; }
+                if ( ( Wsigma.v(j) <= 0 ) && ( Wsigma.v(j) > -WMINVAL ) ) { Wsigma.sv(j,-WMINVAL); } // phionPhi = (Wsigma(j)/(1-Wsigma(j)))*fmod; }
+
+                // non-expanded form - not stable if W is small
+                //t("&",j) = f(j) + (dreal(j)*(phionPhi/(sqrt(sigrealsq(j))*W(j))));
+                // expanded form - more stable
+                t.sv(j,f.v(j) + dreal.v(j)*sqrt(sigrealsq.v(j))/(phionPhi+fmod));
+
+                // Sanity check on targets, this is important!
+
+                if ( testisvnan(t.v(j)) || testispinf(t.v(j)) || ( t.v(j) >  tMAXVAL ) ) { t.sv(j, tMAXVAL); }
+                if ( testisvnan(t.v(j)) || testisninf(t.v(j)) || ( t.v(j) < -tMAXVAL ) ) { t.sv(j,-tMAXVAL); }
             }
 
             // Set W (which corresponds to C) and pseudo-targets and train
+            // Recalling the sign-constraints on alpha (these are compatible
+            // with the final solution and prevent divergence), we use the
+            // SVM optimizer.
 
-errstream() << "phantomxyz t = " << t << "\n";
-errstream() << "phantomxyz W = " << W << "\n";
-            getQ().sety(indin,t);
-            getQ().setCweight(indin,W*sigma());
-            getQ().train(res,killSwitch);
-errstream() << "phantomxyz alpha = " << getQ().alphaVal()(indin,tmpvc) << "\n";
+            {
+                // cut-down version of train function in lsv_scalar, we want to avoid all unnecessary calls involving svm_scalar and gentype
+
+                for ( j = 0 ; j < Nineq ; ++j )
+                {
+                    Lsigma.sv(j,sqrt(Wsigma(j)));
+                    tsigma.sv(j,Lsigma(j)*(t(j)+yreal(j)));
+                }
+
+                QQ.sety(indin,tsigma);
+                res = 42424242; // this is a magic number to stop svm_scalar from calling svm_generic to set the gentype representation of alpha. This will be fixed by fintrain
+                QQ.localtrain(res,killSwitch);
+                localpha = QQ.alphaR()(indin,tmpva);
+            }
 
             // Termination conditions
 
@@ -543,13 +600,25 @@ errstream() << "phantomxyz alpha = " << getQ().alphaVal()(indin,tmpvc) << "\n";
             {
                 for ( j = 0 ; j < Nineq ; ++j )
                 {
-                    getQ().ggTrainingVector(fnext("&",j),indin(j));
+                    // It's trained. Thus K.alpha + diagoffset.*alpha + bias = t
+                    // g(x) = K.alpha + bias
+                    // => g(x) = t - diagoffset.*alpha
+
+                    fnext.sv(j,t.v(j)-((QQ.diagoffset()(j))*(localpha.v(j))));
                 }
 
-                f -= fnext;
+                //f -= fnext;
+                //laststep = abs2(f);
 
-errstream() << abs2(f) << ", ";
-                if ( abs2(f) <= LAPSTEPSTOP )
+                double laststep = 0;
+
+                for ( j = 0 ; j < Nineq ; j++ )
+                {
+                    laststep += (fabs(f(j)-fnext(j)))/(fabs(f(j))+fabs(fnext(j))+1e-6);
+                }
+
+errstream() << laststep << ", ";
+                if ( !firstit && laststep <= LAPSTEPSTOP )
                 {
                     isdone = true;
                 }
@@ -558,9 +627,185 @@ errstream() << abs2(f) << ", ";
                 {
                     f = fnext;
                 }
+
+                firstit = 0;
             }
         }
-errstream() << "\n";
+
+        {
+            // Update the whole model
+
+            QQ.fintrain();
+        }
+
+        if ( laststep > LAPSTEPSTOP )
+        {
+            res = -1; // indicates failure to converge
+        }
+//errstream() << "\n";
+    }
+
+    else if ( isLaplaceConst() == 2 )
+    {
+        // Like above, but different p(y|f)
+
+        errstream() << "Laplace approx training (Logistic)... ";
+
+        // Put underlying LS-SVR into known-good state
+
+        QQ.setuseLweight();
+        QQ.reset(); // this retains the active set but sets alpha = 0
+
+        int i,j;
+
+        retVector<double> tmpva;
+        retVector<double> tmpvb;
+
+        // Get indices of inequality constraints, classes, targets and variances
+
+        Vector<int>    indin(Nineq);     // Index vector for inequality constraints
+        Vector<int>    dreal(Nineq);     // Vector or real d (training constraint type)
+        Vector<double> yreal(Nineq);     // This is the underlying target
+        Vector<double> sigrealsq(Nineq); // This is the underlying variance weight
+
+        for ( i = 0, j = 0 ; i < N() ; ++i )
+        {
+            if ( ( d()(i) == +1 ) || ( d()(i) == -1 ) )
+            {
+                indin.sv(j,i);
+                dreal.sv(j,d().v(i));
+                yreal.sv(j,yR().v(i));
+                sigrealsq.sv(j,sigma()*sigmaweight().v(i)*sigmaclass(d().v(i)));
+
+                ++j;
+            }
+        }
+
+        // Start with "base" mean/variance
+
+        Vector<double> t(QQ.yR()(indin,tmpva));
+        Vector<double> tsigma(QQ.yR()(indin,tmpva));
+        Vector<double> f(Nineq,0.0);
+        Vector<double> fnext(Nineq,0.0);
+        Vector<double> Wsigma(Nineq,0.0); // literally W*sigma() to avoid double-calculations
+        Vector<double> Lsigma(Nineq,1.0); // sqrt(Wsigma)
+
+        if ( QQ.prim() )
+        {
+            yreal -= QQ.ypR()(indin,tmpva);
+            t -= QQ.ypR()(indin,tmpva);
+        }
+
+        // Initial training run
+
+        QQ.sety(indin,yreal);
+        QQ.setLweight(indin,Lsigma);
+        res = 42424242; // this is a magic number to stop svm_scalar from calling svm_generic to set the gentype representation of alpha. This will be fixed by fintrain
+        QQ.localtrain(res,killSwitch);
+
+        Vector<double> localpha(QQ.alphaR()(indin,tmpva));
+
+        // Startup
+
+        f = yreal;
+
+        // Laplace loop
+
+        bool isdone = false;
+
+        int itcnt = 0;
+        int maxitcnt = MAXLAPLACEITCNT;
+
+        double laststep = valpinf();
+
+        bool firstit = true;
+
+        while ( !isdone && !res )
+        {
+            // Work out W and pseudo-targets
+
+            for ( j = 0 ; j < Nineq ; ++j )
+            {
+                double fmod = dreal.v(j)*(f.v(j)-yreal.v(j))/sqrt(sigrealsq.v(j));
+                double pie  = ( fmod > 0 ) ? (exp(-fmod)/(1+exp(-fmod))) : (1/(1+exp(fmod)));
+
+                Wsigma.sv(j,(pie*(1-pie)));
+
+                if ( testisvnan(Wsigma.v(j)) || testispinf(Wsigma.v(j)) || ( Wsigma.v(j) >  WMAXVAL ) ) { Wsigma.sv(j, WMAXVAL); }
+                if ( testisvnan(Wsigma.v(j)) || testisninf(Wsigma.v(j)) || ( Wsigma.v(j) < -WMAXVAL ) ) { Wsigma.sv(j,-WMAXVAL); }
+
+                if ( ( Wsigma.v(j) >= 0 ) && ( Wsigma.v(j) <  WMINVAL ) ) { Wsigma.sv(j, WMINVAL); }
+                if ( ( Wsigma.v(j) <= 0 ) && ( Wsigma.v(j) > -WMINVAL ) ) { Wsigma.sv(j,-WMINVAL); }
+
+                t.sv(j,f.v(j) + dreal.v(j)*sqrt(sigrealsq.v(j))/(1-pie));
+
+                if ( testisvnan(t.v(j)) || testispinf(t.v(j)) || ( t.v(j) >  tMAXVAL ) ) { t.sv(j, tMAXVAL); }
+                if ( testisvnan(t.v(j)) || testisninf(t.v(j)) || ( t.v(j) < -tMAXVAL ) ) { t.sv(j,-tMAXVAL); }
+            }
+
+            // Set W (which corresponds to C) and pseudo-targets and train
+
+            {
+                for ( j = 0 ; j < Nineq ; ++j )
+                {
+                    Lsigma.sv(j,sqrt(Wsigma(j)));
+                    tsigma.sv(j,Lsigma(j)*(t(j)+yreal(j)));
+                }
+
+                QQ.sety(indin,tsigma);
+                res = 42424242; // this is a magic number to stop svm_scalar from calling svm_generic to set the gentype representation of alpha. This will be fixed by fintrain
+                QQ.localtrain(res,killSwitch);
+                localpha = QQ.alphaR()(indin,tmpva);
+            }
+
+            // Termination conditions
+
+            ++itcnt;
+
+            if ( itcnt >= maxitcnt )
+            {
+                isdone = true;
+            }
+
+            else
+            {
+                for ( j = 0 ; j < Nineq ; ++j )
+                {
+                    fnext.sv(j,t.v(j)-((QQ.diagoffset()(j))*(localpha.v(j))));
+                }
+
+                double laststep = 0;
+
+                for ( j = 0 ; j < Nineq ; j++ )
+                {
+                    laststep += (fabs(f(j)-fnext(j)))/(fabs(f(j))+fabs(fnext(j))+1e-6);
+                }
+
+errstream() << laststep << ", ";
+                if ( !firstit && laststep <= LAPSTEPSTOP )
+                {
+                    isdone = true;
+                }
+
+                else
+                {
+                    f = fnext;
+                }
+
+                firstit = 0;
+            }
+        }
+
+        {
+            // Update the whole model
+
+            QQ.fintrain();
+        }
+
+        if ( laststep > LAPSTEPSTOP )
+        {
+            res = -1; // indicates failure to converge
+        }
     }
 
     return locres;

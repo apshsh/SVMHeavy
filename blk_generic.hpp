@@ -90,31 +90,21 @@ public:
 
 
 
-    virtual void assign(const ML_Base &src, int onlySemiCopy = 0) override;
-    virtual void semicopy(const ML_Base &src) override;
-    virtual void qswapinternal(ML_Base &b) override;
+    virtual void assign       (const ML_Base &src, int onlySemiCopy = 0) override;
+    virtual void semicopy     (const ML_Base &src)                       override;
+    virtual void qswapinternal(ML_Base &b)                               override;
 
     virtual int getparam (int ind, gentype         &val, const gentype         &xa, int ia, const gentype         &xb, int ib, charptr &desc) const override;
     virtual int egetparam(int ind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib               ) const override;
 
     virtual std::ostream &printstream(std::ostream &output, int dep) const override;
-    virtual std::istream &inputstream(std::istream &input ) override;
+    virtual std::istream &inputstream(std::istream &input          )       override;
 
     virtual       ML_Base &getML     (void)       override { return static_cast<      ML_Base &>(getBLK()     ); }
     virtual const ML_Base &getMLconst(void) const override { return static_cast<const ML_Base &>(getBLKconst()); }
 
-    virtual int isSampleMode(void) const override { return xissample; }
-    virtual int setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double sampScale, double sampSlack = 0) override
-    {
-        int res = ( xissample != nv ) ? 1 : 0;
-
-        if ( ( xissample = nv ) )
-        {
-            doutfn.finalise();
-        }
-
-        return res | ML_Base::setSampleMode(nv,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack);
-    }
+    virtual int  isSampleMode(void) const override { return xissample; }
+    virtual int setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double sampScale, double sampSlack = 0) override;
 
     // Make this null so that it can be included as a prior without wasting time in optimising... nothing
     virtual double tuneKernel(int, double, int = 1, int = 0, const tkBounds * = nullptr) override { return 0; }
@@ -129,7 +119,7 @@ public:
 
     // Information functions (training data):
 
-    virtual const gentype &outfn    (void) const { return doutfn; }
+    virtual const gentype &outfn    (void) const {                                            return doutfn; }
     virtual const gentype &outfngrad(void) const { outgrad = outfn(); outgrad.realDeriv(0,0); return outgrad; }
 
     // General modification and autoset functions
@@ -210,7 +200,7 @@ public:
     virtual int setmexcallid(int xmexfnid)              { mexfnid = xmexfnid; return 1; }
 
     virtual const std::string &getmexcall  (void) const { return mexfn;   }
-    virtual       int          getmexcallid(void) const { return mexfnid; }
+    virtual int                getmexcallid(void) const { return mexfnid; }
 
     // Callback string used by sytem call interface
     //
@@ -265,11 +255,11 @@ public:
     // fill cache: pre-calculates all elements in cache for later use
     // norm cache: normalise cache so that diagonals are all 1 in K2
 
-    virtual int mercachesize   (void)   const { return xmercachesize; }
-    virtual int setmercachesize(int nv)       { NiceAssert( nv >= -1 ); xmercachesize = nv; return 1; }
+    virtual int mercachesize   (void)   const {                                             return xmercachesize; }
+    virtual int setmercachesize(int nv)       { NiceAssert( nv >= -1 ); xmercachesize = nv; return 1;             }
 
-    virtual int mercachenorm   (void)   const { return xmercachenorm; }
-    virtual int setmercachenorm(int nv)       { xmercachenorm = nv; return 1; }
+    virtual int mercachenorm   (void)   const {                     return xmercachenorm; }
+    virtual int setmercachenorm(int nv)       { xmercachenorm = nv; return 1;             }
 
     // ML block averaging: set/remove element in list of ML blocks being averaged
     //
@@ -288,8 +278,8 @@ public:
     virtual int setmlqweight(int i, const gentype &w)  { xmlqweight("[]",i) = w; return 1; }
     virtual int setmlqweight(const Vector<gentype> &w) { xmlqweight = w;         return 1; }
 
-    virtual int addmlqlist(int i, ML_Base &src) { xmlqlist.add(i); xmlqlist("[]",i) = &src; xmlqweight.add(i); xmlqweight("[]",i) = 1.0; return 1; }
-    virtual int removemlqlist(int i)            { xmlqlist.remove(i);                       xmlqweight.remove(i);                        return 1; }
+    virtual int addmlqlist   (int i, ML_Base &src) { xmlqlist.add(i); xmlqlist("[]",i) = &src; xmlqweight.add(i); xmlqweight("[]",i) = 1.0; return 1; }
+    virtual int removemlqlist(int i)               { xmlqlist.remove(i);                       xmlqweight.remove(i);                        return 1; }
 
     const SparseVector<ML_Base *> mlqlist  (void) const { return xmlqlist; }
     const SparseVector<gentype>   mlqweight(void) const { return xmlqweight; }
@@ -349,34 +339,14 @@ public:
     virtual       int             battneglectParasitic(void) const { return xbattneglectParasitic; }
     virtual       double          battfixedTheta      (void) const { return xbattfixedTheta;       }
 
-    virtual int setbattparam(const Vector<gentype> &nv)
-    {
-        Vector<double> nnv(xbattParam);
-
-        NiceAssert( nv.size() == nnv.size() );
-
-        int i;
-
-        for ( i = 0 ; i < nv.size() ; ++i )
-        {
-            if ( !nv(i).isValNull() )
-            {
-                nnv.sv(i,(double) nv(i));
-            }
-        }
-
-        xbattParam = nnv;
-
-        return 1;
-    }
-
-    virtual int setbatttmax            (double nv) { xbatttmax             = nv; return 1; }
-    virtual int setbattImax            (double nv) { xbattImax             = nv; return 1; }
-    virtual int setbatttdelta          (double nv) { xbatttdelta           = nv; return 1; }
-    virtual int setbattVstart          (double nv) { xbattVstart           = nv; return 1; }
-    virtual int setbattthetaStart      (double nv) { xbattthetaStart       = nv; return 1; }
-    virtual int setbattneglectParasitic(int    nv) { xbattneglectParasitic = nv; return 1; }
-    virtual int setbattfixedTheta      (double nv) { xbattfixedTheta       = nv; return 1; }
+    virtual int setbattparam           (const Vector<gentype> &nv);
+    virtual int setbatttmax            (double                 nv) { xbatttmax             = nv; return 1; }
+    virtual int setbattImax            (double                 nv) { xbattImax             = nv; return 1; }
+    virtual int setbatttdelta          (double                 nv) { xbatttdelta           = nv; return 1; }
+    virtual int setbattVstart          (double                 nv) { xbattVstart           = nv; return 1; }
+    virtual int setbattthetaStart      (double                 nv) { xbattthetaStart       = nv; return 1; }
+    virtual int setbattneglectParasitic(int                    nv) { xbattneglectParasitic = nv; return 1; }
+    virtual int setbattfixedTheta      (double                 nv) { xbattfixedTheta       = nv; return 1; }
 
 private:
 

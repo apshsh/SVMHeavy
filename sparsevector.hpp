@@ -10729,7 +10729,10 @@ template <class T> SparseVector<T> &rightmult(const SparseVector<T> &left_op,   
 {
     if ( left_op.nearnonsparse() && right_op.nearnonsparse() && ( left_op.size() == right_op.size() ) )
     {
-        rightmult(left_op(left_op.ind()),right_op("&",right_op.ind()));
+        retVector<T> tmpva;
+        retVector<T> tmpvb;
+
+        rightmult(left_op(left_op.ind(),tmpva),right_op("&",right_op.ind(),tmpvb));
 
         return right_op;
     }

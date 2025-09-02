@@ -19,6 +19,12 @@
 
 #define FASTXDIMMAX 32
 
+#define KSCALE0              1.0
+#define KSCALE1(ia)          (( ( useLweight && ( ia >= 0 ) ) ? Lweightval(ia) : 1.0 ))
+#define KSCALE2(ia,ib)       (( ( useLweight && ( ia >= 0 ) ) ? Lweightval(ia) : 1.0 )*( ( useLweight && ( ib >= 0 ) ) ? Lweightval(ib) : 1.0 ))
+#define KSCALE3(ia,ib,ic)    (( ( useLweight && ( ia >= 0 ) ) ? Lweightval(ia) : 1.0 )*( ( useLweight && ( ib >= 0 ) ) ? Lweightval(ib) : 1.0 )*( ( useLweight && ( ic >= 0 ) ) ? Lweightval(ic) : 1.0 ))
+#define KSCALE4(ia,ib,ic,id) (( ( useLweight && ( ia >= 0 ) ) ? Lweightval(ia) : 1.0 )*( ( useLweight && ( ib >= 0 ) ) ? Lweightval(ib) : 1.0 )*( ( useLweight && ( ic >= 0 ) ) ? Lweightval(ic) : 1.0 )*( ( useLweight && ( id >= 0 ) ) ? Lweightval(id) : 1.0 ))
+
 std::ostream &LSV_Scalar::printstream(std::ostream &output, int dep) const
 {
     repPrint(output,'>',dep) << "Base training alphaR: " << dalphaR << "\n";
@@ -320,6 +326,33 @@ int LSV_Scalar::train(int &res, svmvolatile int &killSwitch)
 
     incgvernum();
 
+    int ires = localtrain(res,killSwitch); // important we don't set res as gpr_scalar can pass-through magic numbers here!
+
+    fintrain();
+
+    return ires;
+}
+
+void LSV_Scalar::fintrain(void)
+{
+    SVM_Generic::basesetAlphaBiasFromAlphaBiasR();
+
+    if ( N() )
+    {
+//errstream() << "phantomx lsvtrain 1\n";
+        for ( int i = 0 ; i < N() ; ++i )
+        {
+            dalpha("&",i).dir_double() = dalphaR(i);
+        }
+    }
+
+    dbias.dir_double() = dbiasR;
+}
+
+int LSV_Scalar::localtrain(int &res, svmvolatile int &killSwitch)
+{
+    int ires = 0;
+
 //errstream() << "phantomx lsvtrain 0: " << NNC(-1) << "," << NNC(+1) << "\n";
     if ( !NNC(-1) && !NNC(+1) && ( eps() == 0.0 ) )
     {
@@ -350,7 +383,9 @@ int LSV_Scalar::train(int &res, svmvolatile int &killSwitch)
 //errstream() << "_" << badindex << "," << SVM_Scalar::Cweight()(badindex) << "_";
 //SVM_Scalar::setCweight(badindex,Cweight()(badindex)/10);
 //goto tryagain;
-                goto fallback_method; // training has failed as Hessian is indefinite!
+                res = 42;
+                return 1;
+//                goto fallback_method; // training has failed as Hessian is indefinite!
             }
 //errstream() << "phantomx lsvtrain 5: " << dalphaR << "\n";
 //errstream() << "phantomx lsvtrain 6: " << dbetaR << "\n";
@@ -364,10 +399,12 @@ int LSV_Scalar::train(int &res, svmvolatile int &killSwitch)
 //tryagain:
             if ( ( badindex = fact_minverse(dalphaR,dbetaR,correctedTrainTargR,dybeta) ) >= 0 )
             {
+                res = 42;
+                return 1;
 //errstream() << "_" << badindex << "," << SVM_Scalar::Cweight()(badindex) << "_";
 //SVM_Scalar::setCweight(badindex,Cweight()(badindex)/10);
 //goto tryagain;
-                goto fallback_method; // training has failed as Hessian is indefinite!
+//                goto fallback_method; // training has failed as Hessian is indefinite!
             }
 //errstream() << "phantomx lsvtrain 5: " << dalphaR << "\n";
 //errstream() << "phantomx lsvtrain 6: " << dbetaR << "\n";
@@ -375,16 +412,18 @@ int LSV_Scalar::train(int &res, svmvolatile int &killSwitch)
 
         dbiasR = dbetaR(0);
 
+        // These will automatically expand bounds as required
+
         SVM_Scalar::setAlphaR(dalphaR);
         SVM_Scalar::setBiasR(dbiasR);
     }
 
     else
     {
-fallback_method:
+//fallback_method:
 errstream() << "@";
         SVM_Scalar::isStateOpt = 0;
-        SVM_Scalar::train(res,killSwitch);
+        ires = SVM_Scalar::train(res,killSwitch);
 
         dalphaR = SVM_Scalar::alphaR();
         dbiasR  = SVM_Scalar::biasR();
@@ -392,20 +431,7 @@ errstream() << "@";
 //errstream() << "phantomxyz lsv bias  = " << dbiasR << "\n";
     }
 
-    if ( N() )
-    {
-//errstream() << "phantomx lsvtrain 1\n";
-        int i;
-
-        for ( i = 0 ; i < N() ; ++i )
-        {
-            dalpha("&",i).dir_double() = dalphaR(i);
-        }
-    }
-
-    dbias.dir_double() = dbiasR;
-
-    return 0;
+    return ires;
 }
 
 int LSV_Scalar::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
@@ -416,12 +442,70 @@ int LSV_Scalar::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
 
     setzero(resg);
 
-    if ( isloc && ( eps() == 0.0 ) && !( retaltg & 2 ) )
+    if ( !( dtv & 4 ) && isloc && ( eps() == 0.0 ) && !( retaltg & 2 ) )
     {
-        double &res = resg.force_double();
-        setzero(res);
+        double &resgg = resg.force_double();
 
-        res = ( -((double) dalpha(i)) * ((diagoffset())(i)) ) + ((double) alltraintarg(i));
+        resgg = dbiasR;
+
+        if ( NNC(-1) || NNC(+1) || NNC(2) )
+        {
+            int j;
+
+            Vector<double> Kia(N());
+            static thread_local Vector<double> itsone(1,1.0); //Vector<double> itsone(1);//isVarBias() ? 1 : 0); itsone("&",0) = 1.0;
+
+            if ( i >= 0 )
+            {
+                for ( j = 0 ; j < N() ; ++j )
+                {
+                    if ( alphaState()(j) )
+                    {
+                        Kia("&",j) = lsvGp()(i,j);
+                    }
+
+                    else
+                    {
+                        Kia("&",j) = 0.0;
+                    }
+                }
+
+                if ( alphaState()(i) )
+                {
+                    Kia("&",i) -= diagoffset()(i);
+                }
+            }
+
+            else
+            {
+                for ( j = 0 ; j < N() ; ++j )
+                {
+                    if ( alphaState()(j) )
+                    {
+                        Kia("&",j) = K2(i,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
+                        Kia("&",j) *= KSCALE2(i,j);
+                    }
+
+                    else
+                    {
+                        Kia("&",j) = 0.0;
+                    }
+                }
+            }
+
+            for ( j = 0 ; j < N() ; ++j )
+            {
+                if ( alphaState()(j) )
+                {
+                    resgg += Kia(j)*dalphaR(j);
+                }
+            }
+        }
+
+        resg += yp(i);
+        resg /= KSCALE1(i);
+
+        //This only works if isTrained, and we don't store that here: res = ( -((double) dalpha(i)) * ((diagoffset())(i)) ) + ((double) alltraintarg(i));
     }
 
     else if ( ( dtv & 4 ) )
@@ -443,7 +527,7 @@ int LSV_Scalar::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
                     // This probably won't happen, but undirected gradient constraints are
                     // ok in the training set if xspaceDim() == 1, which is the case here.
 
-                    Kxj = Gp()(i,j);
+                    Kxj = lsvGp()(i,j);
 
                     if ( i == j )
                     {
@@ -454,6 +538,7 @@ int LSV_Scalar::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
                 else
                 {
                     K2(Kxj,i,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
+                    Kxj *= KSCALE2(i,j);
                 }
 
                 if ( isfirst )
@@ -470,6 +555,7 @@ int LSV_Scalar::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
         }
 
         resg += yp(i);
+        resg /= KSCALE1(i);
 
 //        if ( prim() )
 //        {
@@ -618,7 +704,7 @@ double LSV_Scalar::ghTrainingVectorUnbiasedUnsquaredNotundirectedgradIneg(int i,
                     // in for example grid-search we will just end up calculating the same
                     // kernel evaluations over and over again!
 
-                    Kxj = (double) (Gp()(i,j));
+                    Kxj = (double) (lsvGp()(i,j));
 
                     if ( i == j )
                     {
@@ -629,6 +715,7 @@ double LSV_Scalar::ghTrainingVectorUnbiasedUnsquaredNotundirectedgradIneg(int i,
                 else
                 {
                     Kxj = K2(i,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
+                    Kxj *= KSCALE2(i,j);
                 }
 
                 res += Kxj*dalphaR(j);
@@ -637,6 +724,7 @@ double LSV_Scalar::ghTrainingVectorUnbiasedUnsquaredNotundirectedgradIneg(int i,
     }
 
     res += ypR(i);
+    res /= KSCALE1(i);
 
 //        if ( prim() )
 //        {
@@ -728,7 +816,7 @@ double LSV_Scalar::ghTrainingVectorUnbiasedSquaredNotundirectedgradIneg(int i, i
 
                             MEMNEWARRAY(fastxsums[fastdim],double,xdim);
 
-                            Kxj = (double) (Gp()(ja,jb));
+                            Kxj = (double) (lsvGp()(ja,jb));
 
                             if ( ja == jb )
                             {
@@ -835,7 +923,7 @@ double LSV_Scalar::ghTrainingVectorUnbiasedSquaredNotundirectedgradIneg(int i, i
                 {
                     if ( d()(jb) )
                     {
-                        Kxj = K2x2(i,ja,jb);
+                        Kxj = K2x2(i,ja,jb)*KSCALE3(i,ja,jb);
 
                         res += Kxj*dalphaR(ja)*dalphaR(jb);
                     }
@@ -845,6 +933,7 @@ double LSV_Scalar::ghTrainingVectorUnbiasedSquaredNotundirectedgradIneg(int i, i
     }
 
     res += ypR(i);
+    res /= KSCALE1(i);
 
 //        if ( prim() )
 //        {
@@ -975,9 +1064,6 @@ Vector<double> &LSV_Scalar::dedKTrainingVector(Vector<double> &res, int i) const
     return res;
 }
 
-//FIXME test to make sure posterior variance is still working!
-//FIXME: do approximate version covm (see lsv_generic) here.  Find closest covm points, use these as observation points in variance calculation 
-//FIXME: with explicit inverse (chol version with diagonal offsets).  Then bridge this though GPR modules.
 int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib, gentype ***pxyprodi, gentype ***pxyprodj, gentype **pxyprodij) const
 {
 //errstream() << "phantomxmeep 0: " << x(ia) << "," << x(ib) << "\n";
@@ -985,8 +1071,6 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
 
     int dtva = xtang(ia) & (7+32+64);
     int dtvb = xtang(ib) & (7+32+64);
-
-    int covm = ( ( ia != ib ) && !varApprox() ) ? -1 : varApprox();
 
     NiceAssert( dtva >= 0 );
     NiceAssert( dtvb >= 0 );
@@ -1001,30 +1085,29 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             int j;
 
             Vector<gentype> Kia(N());
-            Vector<gentype> Kib((( covm && ( ia != ib ) ) ? N() : 0));
-            Vector<gentype> itsone(1);//isVarBias() ? 1 : 0);
-            gentype Kiaib,Kiaia,Kibib;
-
-            itsone("&",0) = 1.0;
+            Vector<gentype> Kib(( ia != ib ) ? N() : 0);
+            static thread_local Vector<gentype> itsone(1,1.0_gent); //Vector<gentype> itsone(1);//isVarBias() ? 1 : 0); itsone("&",0) = 1.0;
+            gentype Kiaib; //,Kiaia,Kibib;
 
             if ( ( ia >= 0 ) && ( ib >= 0 ) )
             {
-                Kiaib  = Gp()(ia,ib);
+                Kiaib  = lsvGp()(ia,ib);
                 Kiaib -= ( ia == ib ) ? diagoffset()(ia) : 0.0;
             }
 
             else
             {
                 K2(Kiaib,ia,ib,(const gentype **) pxyprodij);
+                Kiaib *= KSCALE2(ia,ib);
             }
 
-            if ( covm && ( ia >= 0 ) )
+            if ( ia >= 0 )
             {
                 for ( j = 0 ; j < N() ; ++j )
                 {
                     if ( alphaState()(j) ) //|| ( ia == j ) || ( ib == j ) )
                     {
-                        Kia("&",j) = Gp()(ia,j);
+                        Kia("&",j) = lsvGp()(ia,j);
                     }
 
                     else
@@ -1038,16 +1121,17 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                     Kia("&",ia) -= diagoffset()(ia);
                 }
 
-                Kiaia = Kia(ia);
+                //Kiaia = Kia(ia);
             }
 
-            else if ( covm )
+            else
             {
                 for ( j = 0 ; j < N() ; ++j )
                 {
                     if ( alphaState()(j) ) //|| ( ia == j ) || ( ib == j ) )
                     {
                         K2(Kia("&",j),ia,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
+                        Kia("&",j) *= KSCALE2(ia,j);
                     }
 
                     else
@@ -1056,21 +1140,21 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                     }
                 }
 
-                K2(Kiaia,ia,ia,nullptr);
+                //K2(Kiaia,ia,ia,nullptr);
             }
 
-            if ( covm && ( ia == ib ) )
+            if ( ia == ib )
             {
-                Kibib = Kiaia;
+                ; //Kibib = Kiaia;
             }
 
-            else if ( covm && ( ib >= 0 ) && ( ia != ib ) )
+            else if ( ( ib >= 0 ) && ( ia != ib ) )
             {
                 for ( j = 0 ; j < N() ; ++j )
                 {
                     if ( alphaState()(j) ) //|| ( ia == j ) || ( ib == j ) )
                     {
-                        Kib("&",j) = Gp()(j,ib);
+                        Kib("&",j) = lsvGp()(j,ib);
                     }
 
                     else
@@ -1084,10 +1168,10 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                     Kib("&",ib) -= diagoffset()(ib);
                 }
 
-                Kibib = Kib(ib);
+                //Kibib = Kib(ib);
             }
 
-            else if ( covm && ( ia != ib ) )
+            else if ( ia != ib )
             {
                 for ( j = 0 ; j < N() ; ++j )
                 {
@@ -1095,6 +1179,7 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                     {
                         //K2(Kib("&",j),j,ib,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr);
                         K2(Kib("&",j),ib,j,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr); // do this to suit the assumptions in mercer Kxfer (that the unknown "x" is first)
+                        Kib("&",j) *= KSCALE2(ib,j);
                         setconj(Kib("&",j));
                     }
 
@@ -1104,19 +1189,11 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                     }
                 }
 
-                K2(Kibib,ib,ib,nullptr);
+                //K2(Kibib,ib,ib,nullptr);
             }
 
             // covariance calculation
 
-            if ( !covm )
-            {
-                // Calculate prior variance
-
-                resv = Kiaib;
-            }
-
-            else if ( covm == -1 )
             {
                 resv = Kiaib;
 
@@ -1152,124 +1229,6 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                     // This is the additional corrective factor
 
                     resv -= btemp(0);
-                }
-            }
-
-            else
-            {
-//errstream() << "$"; //phantomxyzxyz
-                // Calculate approximate posterior variance
-
-                int realcovm = 0;
-
-                Vector<double> vardist(covm+1); // deliberately oversize by one to simplify code
-                Vector<int> varind(covm+1); // deliberately oversize by one to simplify code
-
-                // First find the closest covm vectors
-
-                gentype Kjj;
-                int k;
-                double distmax = 0;
-
-                for ( j = 0 ; j < N() ; ++j )
-                {
-                    // This is important or variance will be fracking negative!!!!
-
-                    if ( ( alphaState()(j) == -1 ) || ( alphaState()(j) == +1 ) )
-                    {
-                        Kjj  = Gp()(j,j);
-                        Kjj -= diagoffset()(j);
-
-                        double iajdist = 0;
-                        double ibjdist = 0;
-                        double jdist = 0;
-
-                        if ( ia == ib )
-                        {
-                            jdist = (double) (Kiaia+Kjj-Kia(j)-Kia(j));
-                        }
-
-                        else
-                        {
-                            iajdist = (double) (Kiaia+Kjj-Kia(j)-Kia(j));
-                            ibjdist = (double) (Kibib+Kjj-Kib(j)-Kib(j));
-
-                            jdist = ( iajdist <= ibjdist ) ? iajdist : ibjdist;
-                        }
-
-                        if ( ( jdist < distmax ) || ( realcovm < covm ) )
-                        {
-                            for ( k = 0 ; k < realcovm ; k++ )
-                            {
-                                if ( jdist < vardist(k) )
-                                {
-                                    break;
-                                }
-                            }
-
-                            //if ( ( k < realcovm ) || ( realcovm < covm ) )
-                            {
-                                int kk = k;
-
-                                for ( k = realcovm ; k > kk ; k-- )
-                                {
-                                    vardist("&",k) = vardist(k-1);
-                                    varind("&",k)  = varind(k-1);
-                                }
-
-                                vardist("&",kk) = jdist;
-                                varind("&",kk) = j;
-
-                                if ( realcovm < covm )
-                                {
-                                    realcovm++;
-                                }
-                            }
-
-                            distmax = vardist(realcovm-1);
-                        }
-                    }
-                }
-
-                vardist.resize(realcovm);
-                varind.resize(realcovm);
-
-                // Now approximate the posterior covariance
-
-                NiceAssert( !isVarBias() );
-
-                resv = Kiaib;
-
-                // Calculate real posterior variance
-
-                Vector<gentype> Kres(realcovm);
-                Matrix<double> Gpinv(realcovm,realcovm);
-
-                retVector<gentype> tmpva;
-                retMatrix<double> tmpma;
-
-                Gp()(varind,varind,tmpma).inveSymm(Gpinv); // cubic cost, but better if realcovm is small
-
-                if ( ia == ib )
-                {
-                    Kres = Kia(varind,tmpva);
-                    Kres *= Gpinv;
-                }
-
-                else
-                {
-                    Kres = Kib(varind,tmpva);
-                    Kres *= Gpinv;
-                }
-
-                for ( j = 0 ; j < realcovm ; ++j )
-                {
-                    // This is important or variance will be fracking negative!!!!
-
-                    if ( ( alphaState()(varind(j)) == -1 ) || ( alphaState()(varind(j)) == +1 ) )
-                    {
-                        resv -= outerProd(Kia(varind(j)),Kres(j));
-                    }
                 }
             }
 
@@ -1327,7 +1286,7 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
         {
             if ( ( ia >= 0 ) && ( ib >= 0 ) )
             {
-                resv  = Gp()(ia,ib);
+                resv  = lsvGp()(ia,ib);
                 resv -= ( ia == ib ) ? diagoffset()(ia) : 0.0;
             }
 
@@ -1359,6 +1318,7 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             for ( j = 0 ; j < N() ; ++j )
             {
                 K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                Kxj *= KSCALE2(ia,j);
                 addres += ((double) dalpha(j))*((double) dalpha(j))*Kxj;
             }
 
@@ -1403,31 +1363,30 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             int j;
 
             Vector<double> Kia(N());
-            Vector<double> Kib((( covm && ( ia != ib ) ) ? N() : 0));
-            Vector<double> itsone(1);//isVarBias() ? 1 : 0);
-            double Kiaib,Kiaia,Kibib;
-
-            itsone("&",0) = 1.0;
+            Vector<double> Kib(( ia != ib ) ? N() : 0);
+            static thread_local Vector<double> itsone(1,1.0); //Vector<double> itsone(1);//isVarBias() ? 1 : 0); itsone("&",0) = 1.0;
+            double Kiaib; //,Kiaia,Kibib;
 
             if ( ( ia >= 0 ) && ( ib >= 0 ) )
             {
-                Kiaib  = Gp()(ia,ib);
+                Kiaib  = lsvGp()(ia,ib);
                 Kiaib -= ( ia == ib ) ? diagoffset()(ia) : 0.0;
             }
 
             else
             {
                 Kiaib = K2(ia,ib,(const gentype **) pxyprodij);
+                Kiaib *= KSCALE2(ia,ib);
             }
 
 //errstream() << "phantomxyggg 2 Kiaib = " << Kiaib << "\n";
-            if ( covm && ( ia >= 0 ) )
+            if ( ia >= 0 )
             {
                 for ( j = 0 ; j < N() ; ++j )
                 {
                     if ( alphaState()(j) ) //|| ( ia == j ) || ( ib == j ) )
                     {
-                        Kia("&",j) = Gp()(ia,j);
+                        Kia("&",j) = lsvGp()(ia,j);
                     }
 
                     else
@@ -1441,16 +1400,17 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                     Kia("&",ia) -= diagoffset()(ia);
                 }
 
-                Kiaia = Kia(ia);
+                //Kiaia = Kia(ia);
             }
 
-            else if ( covm )
+            else
             {
                 for ( j = 0 ; j < N() ; ++j )
                 {
                     if ( alphaState()(j) ) //|| ( ia == j ) || ( ib == j ) )
                     {
                         Kia("&",j) = K2(ia,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
+                        Kia("&",j) *= KSCALE2(ia,j);
                     }
 
                     else
@@ -1459,27 +1419,27 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                     }
                 }
 
-                Kiaia = K2(ia,ia,nullptr);
+                //Kiaia = K2(ia,ia,nullptr);
 //errstream() << "phantomxyggg 2 Gp = " << Gp() << "\n";
 //errstream() << "phantomxyggg 2 kernel = " << getKernel() << "\n";
 //errstream() << "phantomxyggg 2 Kiaia = " << Kiaia << "\n";
 //errstream() << "phantomxyggg 2 Kia = " << Kia << "\n";
             }
 
-            Kibib = Kiaia;
+            //Kibib = Kiaia;
 
-            if ( covm && ( ia == ib ) )
+            if ( ia == ib )
             {
                 ;
             }
 
-            else if ( covm && ( ib >= 0 ) && ( ia != ib ) )
+            else if ( ( ib >= 0 ) && ( ia != ib ) )
             {
                 for ( j = 0 ; j < N() ; ++j )
                 {
                     if ( alphaState()(j) ) //|| ( ia == j ) || ( ib == j ) )
                     {
-                        Kib("&",j) = Gp()(j,ib);
+                        Kib("&",j) = lsvGp()(j,ib);
                     }
 
                     else
@@ -1493,10 +1453,10 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                     Kib("&",ib) -= diagoffset()(ib);
                 }
 
-                Kibib = Kib(ib);
+                //Kibib = Kib(ib);
             }
 
-            else if ( covm && ( ia != ib ) )
+            else if ( ia != ib )
             {
                 for ( j = 0 ; j < N() ; ++j )
                 {
@@ -1504,6 +1464,7 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                     {
                         //K2(Kib("&",j),j,ib,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr); - see above
                         Kib("&",j) = K2(ib,j,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr);
+                        Kib("&",j) *= KSCALE2(ib,j);
                     }
 
                     else
@@ -1512,17 +1473,11 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                     }
                 }
 
-                Kibib = K2(ib,ib,nullptr);
+                //Kibib = K2(ib,ib,nullptr);
             }
 
             // covariance calculation
 
-            if ( !covm )
-            {
-                resvv = Kiaib;
-            }
-
-            else if ( covm == -1 )
             {
                 resvv = Kiaib;
 
@@ -1559,123 +1514,6 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
                 }
             }
 
-            else
-            {
-//errstream() << "$"; //phantomxyzxyz
-                // Calculate approximate posterior variance
-
-                int realcovm = 0;
-
-                Vector<double> vardist(covm+1); // deliberately oversize by one to simplify code
-                Vector<int> varind(covm+1); // deliberately oversize by one to simplify code
-
-                // First find the closest covm vectors
-
-                double Kjj;
-                int k;
-                double distmax = 0;
-
-                for ( j = 0 ; j < N() ; ++j )
-                {
-                    // This is important or variance will be fracking negative!!!!
-
-                    if ( ( alphaState()(j) == -1 ) || ( alphaState()(j) == +1 ) )
-                    {
-                        Kjj = Gp()(j,j) - diagoffset()(j);
-
-                        double iajdist = 0;
-                        double ibjdist = 0;
-                        double jdist = 0;
-
-                        if ( ia == ib )
-                        {
-                            jdist = (Kiaia+Kjj-(2*Kia(j)));
-                        }
-
-                        else
-                        {
-                            iajdist = (Kiaia+Kjj-(2*Kia(j)));
-                            ibjdist = (Kibib+Kjj-(2*Kib(j)));
-
-                            jdist = ( iajdist <= ibjdist ) ? iajdist : ibjdist;
-                        }
-
-                        if ( ( jdist < distmax ) || ( realcovm < covm ) )
-                        {
-                            for ( k = 0 ; k < realcovm ; k++ )
-                            {
-                                if ( jdist < vardist(k) )
-                                {
-                                    break;
-                                }
-                            }
-
-//                            if ( ( k < realcovm ) || ( realcovm < covm ) )
-                            {
-                                int kk = k;
-
-                                for ( k = realcovm ; k > kk ; k-- )
-                                {
-                                    vardist("&",k) = vardist(k-1);
-                                    varind("&",k)  = varind(k-1);
-                                }
-
-                                vardist("&",kk) = jdist;
-                                varind("&",kk) = j;
-
-                                if ( realcovm < covm )
-                                {
-                                    realcovm++;
-                                }
-                            }
-
-                            distmax = vardist(realcovm-1);
-                        }
-                    }
-                }
-
-                vardist.resize(realcovm);
-                varind.resize(realcovm);
-
-                // Now approximate the posterior covariance
-
-                NiceAssert( !isVarBias() );
-
-                resvv = Kiaib;
-
-                // Calculate real posterior variance
-
-                Vector<double> Kres(realcovm);
-                Matrix<double> Gpinv(realcovm,realcovm);
-
-                retVector<double> tmpva;
-                retMatrix<double> tmpma;
-
-                Gp()(varind,varind,tmpma).inveSymm(Gpinv); // cubic cost, but better if realcovm is small
-
-                if ( ia == ib )
-                {
-                    Kres = Kia(varind,tmpva);
-                    Kres *= Gpinv;
-                }
-
-                else
-                {
-                    Kres = Kib(varind,tmpva);
-                    Kres *= Gpinv;
-                }
-
-                for ( j = 0 ; j < realcovm ; ++j )
-                {
-                    // This is important or variance will be fracking negative!!!!
-
-                    if ( ( alphaState()(varind(j)) == -1 ) || ( alphaState()(varind(j)) == +1 ) )
-                    {
-                        resvv -= Kia(varind(j))*Kres(j);
-                    }
-                }
-            }
-
             // mu calculation
 
             for ( j = 0 ; j < N() ; ++j )
@@ -1692,14 +1530,14 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
 //errstream() << "phantomxyggg 100\n";
             if ( ( ia >= 0 ) && ( ib >= 0 ) )
             {
-                resvv  = Gp()(ia,ib);
+                resvv  = lsvGp()(ia,ib);
                 resvv -= ( ia == ib ) ? diagoffset()(ia) : 0.0;
             }
 
             else
             {
 //errstream() << "phantomxyggg 101\n";
-                resvv = K2(ia,ib,(const gentype **) pxyprodij);
+                resvv = K2(ia,ib,(const gentype **) pxyprodij)*KSCALE2(ia,ib);
             }
 
             if ( !( dtva & 7 ) )
@@ -1726,10 +1564,8 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             for ( j = 0 ; j < N() ; ++j )
             {
                 Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
-                addres += ((double) dalpha(j))*((double) dalpha(j))*Kxj;
+                addres += ((double) dalpha(j))*((double) dalpha(j))*Kxj*KSCALE2(ia,j);
             }
-
-            resvv += addres;
         }
 
         if ( ( ia == ib ) && ( resvv <= 0.0 ) )
@@ -1744,6 +1580,9 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
     }
 
     resmu += yp(ia);
+
+    resmu /= KSCALE1(ia);
+    resv  /= KSCALE2(ia,ib);
 
 //        if ( prim() )
 //        {

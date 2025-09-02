@@ -128,19 +128,19 @@ public:
     SVM_Generic &operator=(const SVM_Generic &src)                       { xyvalid = 0;                   assign(src);    return *this; }
     virtual ~SVM_Generic() { return; }
 
-    virtual int prealloc(int expectedN) override;
-    virtual int preallocsize(void) const override;
-    virtual void setmemsize(int memsize) override { ML_Base::setmemsize(memsize); return; }
+    virtual int  prealloc    (int expectedN)       override;
+    virtual int  preallocsize(void)          const override;
+    virtual void setmemsize  (int memsize)         override { ML_Base::setmemsize(memsize); return; }
 
-    virtual void assign  (const ML_Base &src, int onlySemiCopy = 0) override;
-    virtual void semicopy(const ML_Base &src)                       override;
-    virtual void qswapinternal(ML_Base &b) override;
+    virtual void assign       (const ML_Base &src, int onlySemiCopy = 0) override;
+    virtual void semicopy     (const ML_Base &src)                       override;
+    virtual void qswapinternal(ML_Base &b)                               override;
 
     virtual int getparam (int ind, gentype         &val, const gentype         &xa, int ia, const gentype         &xb, int ib, charptr &desc) const override;
     virtual int egetparam(int ind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib               ) const override;
 
     virtual std::ostream &printstream(std::ostream &output, int dep) const override;
-    virtual std::istream &inputstream(std::istream &input ) override;
+    virtual std::istream &inputstream(std::istream &input          )       override;
 
     virtual       ML_Base &getML     (void)       override { return static_cast<      ML_Base &>(getSVM());      }
     virtual const ML_Base &getMLconst(void) const override { return static_cast<const ML_Base &>(getSVMconst()); }
@@ -156,7 +156,8 @@ public:
 
     virtual const Vector<int>     &alphaState(void)  const override { return xalphaState; }
     virtual const Vector<gentype> &alphaVal  (void)  const override { return alpha();     }
-    virtual double                 alphaVal  (int i) const override { return alphaR()(i); }
+
+    virtual double alphaVal(int i) const override { return alphaR()(i); }
 
     virtual int isClassifier(void) const override { return 0; }
     virtual int isRegression(void) const override { return 0; }

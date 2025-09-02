@@ -73,6 +73,7 @@ public:
 
     // Training functions - we need to overwrite this enable EP if inequality constraints are present
 
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
     virtual int train(int &res, svmvolatile int &killSwitch) override;
 
 
@@ -97,13 +98,13 @@ public:
     //       for inequality constraints and classification we instead use the
     //       naive method inheritted from SVM theory.
 
-    virtual int isNaiveConst  (void) const override { return xNaiveConst;                   }
-    virtual int isEPConst     (void) const override { return !xNaiveConst && !xEPorLaplace; }
-    virtual int isLaplaceConst(void) const override { return !xNaiveConst && xEPorLaplace;  }
+    virtual int isNaiveConst  (void) const override { return xNaiveConst;                                                          }
+    virtual int isEPConst     (void) const override { return ( ( xNaiveConst == 0 ) && ( xEPorLaplace == 0 ) ) ? 1            : 0; }
+    virtual int isLaplaceConst(void) const override { return ( ( xNaiveConst == 0 ) && ( xEPorLaplace != 0 ) ) ? xEPorLaplace : 0; }
 
-    virtual int setNaiveConst  (void) override;
-    virtual int setEPConst     (void) override;
-    virtual int setLaplaceConst(void) override;
+    virtual int setNaiveConst  (void        ) override;
+    virtual int setEPConst     (void        ) override;
+    virtual int setLaplaceConst(int type = 1) override;
 
 
     // Base-level stuff
@@ -134,7 +135,7 @@ private:
     }
 
     int xNaiveConst;  // 1 nothing, 0 EP or Laplace
-    int xEPorLaplace; // 0 for EP, 1 for Laplace
+    int xEPorLaplace; // 0 for EP, 1 for Laplace with Gaussian CDF, 2 for Laplace with logistic
     LSV_Scalar QQ;
 };
 

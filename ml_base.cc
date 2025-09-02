@@ -31,6 +31,7 @@ give a vector or matrix, which could potentially be used as a matrix-valued kern
 //#include <mutex>
 //#endif
 #include "nlopt_direct.hpp"
+#include "ml_mutable.hpp"
 
 #define LARGE_TRAIN_BOUNDARY       5000
 // SEE ALSO KCACHE_H
@@ -3425,8 +3426,8 @@ void ML_Base::stabProbTrainingVector(double &res, int i, int p, double pnrm, int
                     //numbase_Phi(Phil,( ((double) meanvals(l)) + mu ) / ((double) eigvals(l)) );
                     //numbase_Phi(Phir,( ((double) meanvals(l)) - mu ) / ((double) eigvals(l)) );
 
-                    Phil = normPhi(( ((double) meanvals(l)) + mu ) / ((double) eigvals(l)) );
-                    Phir = normPhi(( ((double) meanvals(l)) - mu ) / ((double) eigvals(l)) );
+                    double tempvaluea = ( ((double) meanvals(l)) + mu ) / ((double) eigvals(l)); Phil = normPhi(tempvaluea);
+                    double tempvalueb = ( ((double) meanvals(l)) - mu ) / ((double) eigvals(l)); Phir = normPhi(tempvalueb);
 
                     res *= (Phil-Phir);
                 }
@@ -7623,10 +7624,10 @@ double ML_Base::getvalIfPresent_v(int numi, int numj, int &isgood) const
 
 double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, const tkBounds *tuneBounds)
 {
-    int    numzooms   = !tuneBounds ? ( tuneK ? NUMZOOMS : 1 ) : ((*tuneBounds).numzooms);
-    double zoomfactor = !tuneBounds ? ZOOMFACTOR               : ((*tuneBounds).zoomfactor);
-
-    double xscale = 1;
+    int    numzooms    = !tuneBounds ? ( tuneK ? NUMZOOMS : 1 ) : ((*tuneBounds).numzooms);
+    int    numrestarts = !tuneBounds ? 1                        : ((*tuneBounds).numrestarts);
+    double zoomfactor  = !tuneBounds ? ZOOMFACTOR               : ((*tuneBounds).zoomfactor);
+    double xscale      = 1;
 
     if ( ( !tuneK && !tuneP ) || ( type() == 200 ) )
     {
@@ -7680,6 +7681,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 
     MercerKernel &kernel = model.getKernel_unsafe();
     int kdim = kernel.size();
+    int Nval = model.N() - model.NNC(0);
 
     int i,j;
 
@@ -7694,7 +7696,6 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
     Vector<double> kmax; // range maximum
     Vector<double> kvar; // added noise variance
     Vector<int> kstp;    // number of steps over range
-    Vector<Vector<gentype> > constVecs(kdim);
 
     Vector<int> uu(kdim);
 
@@ -7718,6 +7719,12 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
     // Preliminary adim scaling
 
     double trycount = 1;
+
+    double Cval   = 1;
+    double epsval = 1;
+
+    Vector<Vector<gentype> > constVecs(kdim);
+    Vector<double>           weightval(kdim);
 
 tryagain:
     if ( kdim )
@@ -7800,7 +7807,7 @@ tryagain:
                     {
                         int xdim = xspaceDim(uu(i));
 
-                        double lencorrect = std::sqrt((double) xdim)/std::pow( (double) N(),(double) xdim );
+                        double lencorrect = std::sqrt((double) xdim)/std::pow( (double) Nval,(double) xdim );
 
                         lencorrect = ( lencorrect < 0.05 ) ? 0.05 : lencorrect;
 
@@ -7850,7 +7857,7 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
     adim = 1;
     ddim = 0;
 
-    if ( kdim )
+    if ( tuneK && kdim )
     {
         for ( i = 0 ; i < kdim ; ++i )
         {
@@ -7946,20 +7953,36 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
 
                         int xdim = xspaceDim(uu(i));
 
-                        double lencorrect = std::sqrt((double) xdim)/std::pow( (double) N(),(double) xdim );
+                        //double lencorrect = std::sqrt((double) xdim)/std::pow( (double) Nval,(double) xdim );
+                        double lencorrect = std::sqrt((double) xdim)/std::pow( (double) Nval,(0.5/sqrt((double) xdim)) ); // 20/8/2025 - yet another attempted fix
+errstream() << "___" << xdim << "," << Nval << "|" << lencorrect << ",";
+                        double minscaler = 1/24.0;          // heuristic stuff
+                        double maxscaler = 3/(1.1*1.88264); // heuristic stuff
 
-                        lencorrect = ( lencorrect < 0.05 ) ? 0.05 : lencorrect;
+                        lencorrect = ( lencorrect < 0.01 ) ? 0.01 : lencorrect; // heuristics again - much smaller than this and numerical issues start to arise
 
-                        lb    = ( ( uu(i) == -1 ) ? xscale : 1.0 )*lencorrect*0.1*xwidth; //0.3*xwidth; // 0.01*xwidth; //1e-2*xwidth;
-                        ub    = ( ( uu(i) == -1 ) ? xscale : 1.0 )*1.5*sqrt((double) xdim)*xwidth; //sqrt((double) xdim)*xwidth; // 3*xwidth; //15*xwidth;
+errstream() << xscale << ",";
+errstream() << xwidth << ",";
+                        lb = ( ( uu(i) == -1 ) ? xscale : 1.0 )*lencorrect*minscaler*xwidth; //0.3*xwidth; // 0.01*xwidth; //1e-2*xwidth;
+                        ub = ( ( uu(i) == -1 ) ? xscale : 1.0 )*lencorrect*maxscaler*xwidth; //lencorrect*maxscaler*xwidth; // *sqrt((double) xdim); //sqrt((double) xdim)*xwidth; // 3*xwidth; //15*xwidth;
+
+                        double ubb = ( ( uu(i) == -1 ) ? xscale : 1.0 )*sqrt((double) xdim)*xwidth; // max distance accross search space (corner to corner)
+                        double ulb = ( ( uu(i) == -1 ) ? xscale : 1.0 )*xwidth;                     // min distance accross search space (side to side)
+
+                        ub = ( ub < ubb ) ? (ub+ub+ub+ubb)/4 : ubb; // graceful decrease with N, cut off at max distance across search space
+                        ub = ( ub > ulb ) ? ub : ulb;            // hard limit at minimum distance across search space
+
                         //FIXME: consider increasing ub
+errstream() << lb << " to " << ub << ",";
                         steps = ( ( ((int) (50/trycount)) > 5 ) ? ((int) (50/trycount)) : 5 ); //50/trycount; //30; //20; // 15; //20;
 
                         lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
                         ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
+errstream() << lb << " to " << ub << ",";
 
                         lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
                         ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
+errstream() << lb << " to " << ub << "___";
 
                         if ( lb < ub )
                         {
@@ -8027,273 +8050,219 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
         adim *= steps;
     }
 
-    double bestres = 1;
+    double bestres = valpinf();
 
     if ( ddim )
     {
-        Vector<int> pointspec(ddim);
+        // Save "base state". This becomes a restore point if an error is thrown,
+        // and a reset point before the final training (to avoid cumulative numerical
+        // errors).
 
+        MercerKernel backkernel;
+
+        double backC   = 0.0;
+        double backeps = 0.0;
+
+        if ( tuneK     ) { backkernel = kernel; }
+        if ( tuneP & 1 ) { backC      = C();    }
+        if ( tuneP & 2 ) { backeps    = eps();  }
+
+        // Store for optimal results
+
+        Vector<Vector<gentype> > bestconstVecs(constVecs); // this will store the best constVecs
+        Vector<double>           bestweightval(weightval); // "
+
+        double bestCval   = backC;   // "
+        double bestepsval = backeps; // "
+
+        // For all points in grid: set parameters, train, do tests, reset to start point
+
+        Vector<int> pointspec(ddim); // we use this to pre-size the elements of stepgrid
         Vector<Vector<int> > stepgrid(adim);
-        Vector<double> gridres(adim);
 
-        Vector<double> weightval(kdim);
+        stepgrid = ( pointspec = 0 );
 
-        double Cval = 1;
-        double epsval = 1;
-
-//        Vector<double> L1norm(adim); - tried regularization, it made it worse
-
-        int bestind = -1;
-        int dummy;
-
-        for ( int zooms = 0 ; zooms < numzooms ; zooms++ )
+        for ( i = 1 ; i < adim ; ++i )
         {
-            if ( bestind == -1 )
-            {
-                // setup step grid
+            stepgrid("&",i) = stepgrid(i-1);
 
-                stepgrid = pointspec;
+            for ( j = 0 ; j < ddim ; ++j )
+            {
+                ++(stepgrid("&",i)("&",j));
+
+                if ( stepgrid(i)(j) < kstp(j) ) { break; }
+                else { stepgrid("&",i)("&",j) = 0; }
+            }
+        }
+//errstream() << "stepgrid = " << stepgrid << "\n";
+
+        Vector<double> ffull(ddim);
+        Vector<double> bestffull(ddim);
+
+        Vector<double> basekmin(kmin); // range minimum backup
+        Vector<double> basekmax(kmax); // range maximum backup
+
+        for ( int restart = 0 ; restart < numrestarts ; ++restart )
+        {
+            for ( int zooms = 0 ; zooms < numzooms ; ++zooms )
+            {
+                if ( !zooms )
+                {
+                    kmin = basekmin;
+                    kmax = basekmax;
+                }
+
+                else
+                {
+                    // Zoom grid around current optimal
+
+                    for ( j = 0 ; j < ddim ; ++j )
+                    {
+                        double ublbdiff = zoomfactor*(kmax(j)-kmin(j));
+                        double midpoint = bestffull(j);
+
+                        double newkmin = midpoint-(ublbdiff/2);
+                        double newkmax = midpoint+(ublbdiff/2);
+
+                        kmin("&",j) = ( newkmin > kmin(j) ) ? newkmin : kmin(j);
+                        kmax("&",j) = ( newkmax < kmax(j) ) ? newkmax : kmax(j);
+                    }
+                }
+
+                // Work out results on all of grid
 
                 for ( i = 0 ; i < adim ; ++i )
                 {
-                    if ( !i )
+                    weightval = 1.0;
+
+                    for ( j = 0 ; j < ddim ; ++j )
                     {
-                        stepgrid("&",i) = 0;
+                        ffull("&",j) = 0.0;
+
+//errstream() << "stepgrid(" << i << ") = " << stepgrid(i) << "\n";
+                        if ( restart ) { randufill(ffull("&",j),kmin(j),kmax(j)); } // random point in range (uniform distribution) for restarts
+                        else           { ffull("&",j) = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1)); } // nice even grid
+
+                        if      ( kelm(j) >= 0  ) { constVecs("&",kind(j))("&",kelm(j)) = ffull(j); }
+                        else if ( kelm(j) == -1 ) { weightval("&",kind(j))              = ffull(j); }
+                        else if ( kelm(j) == -2 ) { Cval                                = ffull(j); }
+                        else if ( kelm(j) == -3 ) { epsval                              = ffull(j); }
                     }
 
-                    else
+                    if ( tuneK )
                     {
-                        stepgrid("&",i) = stepgrid(i-1);
-
-                        for ( j = 0 ; j < ddim ; ++j )
+                        for ( j = 0 ; j < kdim ; ++j )
                         {
-                            ++(stepgrid("&",i)("&",j));
+                            gentype wv(weightval(j));
 
-                            if ( stepgrid(i)(j) < kstp(j) )
-                            {
-                                break;
-                            }
+                            kernel.setRealConstants(constVecs(j),j);
+                            kernel.setWeight(wv,j);
+                        }
 
-                            else
-                            {
-                                stepgrid("&",i)("&",j) = 0;
-                            }
+                        model.resetKernel();
+                    }
+
+                    if ( tuneP & 1 ) { setC(Cval);     }
+                    if ( tuneP & 2 ) { seteps(epsval); }
+
+                    bool isgood = true;
+                    double evalval = 0.0;
+
+//errstream() << ";" << model.type() << ";";
+                    {
+                        int rescode = 0;
+                        reset();
+                        model.train(rescode);
+
+//                        if ( rescode )
+//                        {
+//                            isgood = false;
+//                        }
+
+                        if      ( method == 1 ) { evalval = calcnegloglikelihood(model,1); }
+                        else if ( method == 2 ) { evalval = calcLOO(model,0,1);            }
+                        else if ( method == 3 ) { evalval = calcRecall(model,0,1);         }
+
+errstream() << "[[" << evalval << "," << ffull << "]]";
+                        if ( testisvnan(evalval) || testisinf(evalval) )
+                        {
+                            isgood = false;
                         }
                     }
+
+                    if ( !isgood )
+                    {
+                        reset();
+
+                        if ( tuneK )     { kernel = backkernel; resetKernel(); }
+                        if ( tuneP & 1 ) { setC(backC);                        }
+                        if ( tuneP & 2 ) { seteps(backeps);                    }
+
+                        reset();
+                    }
+
+                    else if ( evalval < bestres )
+                    {
+                        if ( type() >= 400 ) { reset(); } // for some reason this helps!
+
+errstream() << "[[!!]]";
+                        bestres   = evalval;
+                        bestffull = ffull;
+
+                        bestconstVecs = constVecs;
+                        bestweightval = weightval;
+
+                        bestCval   = Cval;
+                        bestepsval = epsval;
+
+//                        if ( type() >= 400 ) { reset(); } // for some reason this helps!
+                    }
+
+errstream() << "\n";
                 }
+            }
+        }
+
+        {
+            // Restore startpoint to "clear out" cumulative errors
+
+            reset();
+
+            // Set kernel params to best result
+
+            if ( !testisinf(bestres) && !testisvnan(bestres) )
+            {
+                constVecs = bestconstVecs;
+                weightval = bestweightval;
+
+                Cval   = bestCval;
+                epsval = bestepsval;
+
+                if ( tuneK )
+                {
+                    for ( j = 0 ; j < kdim ; ++j )
+                    {
+                        gentype wv(weightval(j));
+
+                        kernel.setRealConstants(constVecs(j),j);
+                        kernel.setWeight(wv,j);
+                    }
+
+                    model.resetKernel();
+                }
+
+                if ( tuneP & 1 ) { setC(Cval);     }
+                if ( tuneP & 2 ) { seteps(epsval); }
             }
 
             else
             {
-                // Zoom grid around current optimal
-
-                i = bestind;
-
-                for ( j = 0 ; j < ddim ; ++j )
-                {
-                    double ublbdiff = zoomfactor*(kmax(j)-kmin(j)); // new width should be 0.3*old width
-                    double midpoint = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
-
-                    double newkmin = midpoint-(ublbdiff/2);
-                    double newkmax = midpoint+(ublbdiff/2);
-
-                    kmin("&",j) = ( newkmin > kmin(j) ) ? newkmin : kmin(j);
-                    kmax("&",j) = ( newkmax < kmax(j) ) ? newkmax : kmax(j);
-                }
+                if ( tuneK )     { kernel = backkernel; resetKernel(); }
+                if ( tuneP & 1 ) { setC(backC);                        }
+                if ( tuneP & 2 ) { seteps(backeps);                    }
             }
 
-            // Work out results on all of grid
-
-            gridres = 0.0;
-
-//            double gridresmax = 0.0;
-//            double gridresmin = 0.0;
-
-            for ( i = 0 ; i < adim ; ++i )
-            {
-//                L1norm("&",i) = 0.0;
-                weightval = 1.0;
-
-                for ( j = 0 ; j < ddim ; ++j )
-                {
-                    if ( kelm(j) >= 0 )
-                    {
-                        constVecs("&",kind(j))("&",kelm(j)) = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
-                    }
-
-                    else if ( kelm(j) == -1 )
-                    {
-                        weightval("&",kind(j))              = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
-                    }
-
-                    else if ( kelm(j) == -2 )
-                    {
-                        Cval                                = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
-                    }
-
-                    else if ( kelm(j) == -3 )
-                    {
-                        epsval                              = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
-                    }
-
-//                    L1norm("&",i) += (stepgrid(i)(j)/((double) kstp(j)-1))*(stepgrid(i)(j)/((double) kstp(j)-1));
-                }
-
-                for ( j = 0 ; j < kdim ; ++j )
-                {
-                    gentype wv(weightval(j));
-
-                    kernel.setRealConstants(constVecs(j),j);
-                    kernel.setWeight(wv,j);
-                }
-
-                model.resetKernel();
-
-                if ( tuneP & 1 )
-                {
-                    setC(Cval);
-                }
-
-                if ( tuneP & 2 )
-                {
-                    seteps(epsval);
-                }
-
-                model.train(dummy);
-
-                if ( method == 1 )
-                {
-                    gridres("&",i) = calcnegloglikelihood(model,1);
-//gridres("&",i) = (((double) (N()-1))*calcnegloglikelihood(model,1)/((double) N())) + (calcRecall(model,0,1)/((double) N()));
-                }
-
-                else if ( method == 2 )
-                {
-                    gridres("&",i) = calcLOO(model,0,1);
-                }
-
-                else if ( method == 3 )
-                {
-                    gridres("&",i) = calcRecall(model,0,1);
-                }
-
-//                if ( !i )
-//                {
-//                    gridresmax = gridres(i);
-//                    gridresmin = gridres(i);
-//                }
-//
-//                else
-//                {
-//                    if ( gridres(i) > gridresmax )
-//                    {
-//                        gridresmax = gridres(i);
-//                    }
-//
-//                    if ( gridres(i) < gridresmin )
-//                    {
-//                        gridresmin = gridres(i);
-//                    }
-//                }
-
-//                for ( j = 0 ; j < ddim ; ++j )
-//                {
-//                    if ( islen(j) )
-//                    {
-//                        gridres("&",i) += (constVecs(kind(j))(kelm(j))-kmin(j))/((kmax(j)-kmin(j));
-//                    }
-//                }
-//errstream() << "Tuning kernel: weight " << weightval << ", const " << constVecs << " = " << gridres(i) << "\n";
-//errstream() << gridres(i) << "(" << i << "), ";
-            }
-
-            // Dynamic regularisation to prevent overfit, particularly on lengthscale
-            // Note that regularisation scales to a fraction of the current result range
-
-/*
-            double resrange = std::abs(gridresmax-gridresmin);
-            double lambda = -1;
-
-            for ( i = 0 ; i < adim ; ++i )
-            {
-                if ( L1norm(i) > 0 )
-                {
-                    double loclambda = resrange/L1norm(i);
-
-                    if ( ( lambda < 0 ) || ( loclambda < lambda ) )
-                    {
-                        lambda = loclambda;
-                    }
-                }
-            }
-
-            double regul_const = PARA_REGUL*lambda;
-
-            for ( i = 0 ; i < adim ; ++i )
-            {
-                gridres("&",i) += regul_const*L1norm(i);
-            }
-*/
-
-//errstream() << "\n";
-            // Find best result index
-
-            bestres = min(gridres,bestind);
-        }
-
-        // Set kernel params to best result
-
-        i = bestind;
-        {
-            for ( j = 0 ; j < ddim ; ++j )
-            {
-                if ( kelm(j) >= 0 )
-                {
-                    constVecs("&",kind(j))("&",kelm(j)) = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
-                }
-
-                else if ( kelm(j) == -1 )
-                {
-                    weightval("&",kind(j))              = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
-                }
-
-                else if ( kelm(j) == -2 )
-                {
-                    Cval                                = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
-                }
-
-                else if ( kelm(j) == -3 )
-                {
-                    epsval                              = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1));
-                }
-            }
-
-//            weightval /= abs2(weightval);
-//            weightval *= sqrt((double) kdim);
-
-//errstream() << "LOO goodset params " << constVecs << "\n";
-//errstream() << "LOO goodset weights " << weightval << "\n";
-            for ( j = 0 ; j < kdim ; ++j )
-            {
-                gentype wv(weightval(j));
-
-                kernel.setRealConstants(constVecs(j),j);
-                kernel.setWeight(wv,j);
-            }
-
-//errstream() << "Test: " << model << "\n";
-            model.resetKernel();
-
-            if ( tuneP & 1 )
-            {
-                setC(Cval);
-            }
-
-            if ( tuneP & 2 )
-            {
-                seteps(epsval);
-            }
-
+            int dummy;
             model.train(dummy);
         }
     }
@@ -14623,7 +14592,9 @@ double ML_Base::distK(int i, int j) const
 //phantomx
     //FIXME: implement gradients and rank
 
-    return altK.distK(x(i),x(j),xinfo(i),xinfo(j),i,j,xspaceDim(),isXConsistent() && istrv(i) && istrv(j),MLid(),nullptr,0,0,assumeReal);
+    double res = altK.distK(x(i),x(j),xinfo(i),xinfo(j),i,j,xspaceDim(),isXConsistent() && istrv(i) && istrv(j),MLid(),nullptr,0,0,assumeReal);
+
+    return res;
 }
 
 void ML_Base::ddistKdx(double &xscaleres, double &yscaleres, int &minmaxind, int i, int j) const

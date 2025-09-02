@@ -61,19 +61,19 @@ public:
     GPR_Generic &operator=(const GPR_Generic &src) { assign(src); return *this; }
     virtual ~GPR_Generic() { return; }
 
-    virtual int prealloc(int expectedN) override;
-    virtual int preallocsize(void) const override { return getQconst().preallocsize(); }
-    virtual void setmemsize(int memsize) override { return getQ().setmemsize(memsize); }
+    virtual int  prealloc    (int expectedN)       override;
+    virtual int  preallocsize(void)          const override { return getQconst().preallocsize(); }
+    virtual void setmemsize  (int memsize)         override { return getQ().setmemsize(memsize); }
 
-    virtual void assign(const ML_Base &src, int onlySemiCopy = 0) override;
-    virtual void semicopy(const ML_Base &src) override;
-    virtual void qswapinternal(ML_Base &b) override;
+    virtual void assign       (const ML_Base &src, int onlySemiCopy = 0) override;
+    virtual void semicopy     (const ML_Base &src)                       override;
+    virtual void qswapinternal(ML_Base &b)                               override;
 
     virtual int getparam (int ind, gentype         &val, const gentype         &xa, int ia, const gentype         &xb, int ib, charptr &desc) const override;
     virtual int egetparam(int ind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib               ) const override;
 
     virtual std::ostream &printstream(std::ostream &output, int dep) const override;
-    virtual std::istream &inputstream(std::istream &input ) override;
+    virtual std::istream &inputstream(std::istream &input          )       override;
 
     virtual       ML_Base &getML     (void)       override { return static_cast<      ML_Base &>(getGPR());      }
     virtual const ML_Base &getMLconst(void) const override { return static_cast<const ML_Base &>(getGPRconst()); }
@@ -86,20 +86,36 @@ public:
 
     virtual int isSolGlob(void) const override { return 1; }
 
-    virtual int isVarDefined(void) const override { return 1; }
-
     virtual double calcDistInt(int    ha, int    hb, int ia = -1, int db = 2) const override { return ML_Base::calcDistInt(ha,hb,ia,db); }
     virtual double calcDistDbl(double ha, double hb, int ia = -1, int db = 2) const override { return ML_Base::calcDistDbl(ha,hb,ia,db); }
 
-    virtual double C(void)         const override { return 1/dsigma;      }
-    virtual double sigma(void)     const override { return dsigma;        }
-    virtual double sigma_cut(void) const override { return dsigma_cut;    }
-    virtual double Cclass(int d)   const override { (void) d; return 1.0; }
+    virtual int isVarDefined(void) const override { return 1; }
 
-    virtual const Vector<gentype> &y          (void) const override { return dy;           }
-    virtual const Vector<int>     &d          (void) const override { return xd;           }
-    virtual const Vector<double>  &Cweight    (void) const override { return dCweight;     }
-    virtual const Vector<double>  &sigmaweight(void) const override { return dsigmaweight; }
+    virtual double C         (void)  const override {                                          return 1/dsigma;           }
+    virtual double sigma     (void)  const override {                                          return dsigma;             }
+    virtual double sigma_cut (void)  const override {                                          return dsigma_cut;         }
+    virtual double eps       (void)  const override {                                          return 0;                  }
+    virtual double Cclass    (int d) const override { NiceAssert( ( d >= -1 ) && ( d <= 2 ) ); return 1/xsigmaclass(d+1); }
+    virtual double sigmaclass(int d) const override { NiceAssert( ( d >= -1 ) && ( d <= 2 ) ); return xsigmaclass(d+1);   }
+    virtual double epsclass  (int)   const override {                                          return 0.0;                }
+
+    virtual const Vector<gentype>         &y          (void) const override { return dy;           }
+    virtual const Vector<double>          &yR         (void) const override { return dyR;          }
+    virtual const Vector<d_anion>         &yA         (void) const override { return dyA;          }
+    virtual const Vector<Vector<double> > &yV         (void) const override { return dyV;          }
+    virtual const Vector<int>             &d          (void) const override { return xd;           }
+    virtual const Vector<double>          &Cweight    (void) const override { return dCweight;     }
+    virtual const Vector<double>          &sigmaweight(void) const override { return dsigmaweight; }
+    virtual const Vector<double>          &epsweight  (void) const override { static thread_local Vector<double> xepsweight; xepsweight.resize(N()) = 1.0; return xepsweight;   }
+
+    virtual const gentype        &y (int i) const override { return ( i >= 0 ) ? y ()(i) : getQconst().y (i); }
+    virtual       double          yR(int i) const override { return ( i >= 0 ) ? yR()(i) : getQconst().yR(i); }
+    virtual const d_anion        &yA(int i) const override { return ( i >= 0 ) ? yA()(i) : getQconst().yA(i); }
+    virtual const Vector<double> &yV(int i) const override { return ( i >= 0 ) ? yV()(i) : getQconst().yV(i); }
+
+    // Kernel tuning - you need this to jump straight to base because this needs to call GPR training (for inequalities at least), *NOT* LSV training
+
+    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr) override { return ML_Base::tuneKernel(method,xwidth,tuneK,tuneP,tunebounds); }
 
     // Training set modification:
 
@@ -113,27 +129,21 @@ public:
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
     virtual int removeTrainingVector(int i, int num                             ) override;
 
-    virtual int setepsweight(int i,                double nv               ) { return getQ().setepsweight(i,nv); }
-    virtual int setepsweight(const Vector<int> &i, const Vector<double> &nv) { return getQ().setepsweight(i,nv); }
-    virtual int setepsweight(                      const Vector<double> &nv) { return getQ().setepsweight(  nv); }
+    virtual int sety(int                i, const gentype         &nv) override;
+    virtual int sety(const Vector<int> &i, const Vector<gentype> &nv) override;
+    virtual int sety(                      const Vector<gentype> &nv) override;
 
-    virtual int seteps(double xeps) override { return getQ().seteps(xeps); }
+    virtual int sety(int                i, double                nv) override;
+    virtual int sety(const Vector<int> &i, const Vector<double> &nv) override;
+    virtual int sety(                      const Vector<double> &nv) override;
 
-    virtual int sety(int                i, const gentype         &nv) override { dy.set(i,nv); return getQ().sety(i,nv); }
-    virtual int sety(const Vector<int> &i, const Vector<gentype> &nv) override { dy.set(i,nv); return getQ().sety(i,nv); }
-    virtual int sety(                      const Vector<gentype> &nv) override { dy = nv;      return getQ().sety(  nv); }
+    virtual int sety(int                i, const Vector<double>          &nv) override;
+    virtual int sety(const Vector<int> &i, const Vector<Vector<double> > &nv) override;
+    virtual int sety(                      const Vector<Vector<double> > &nv) override;
 
-    virtual int sety(int                i, double                nv) override {                           dy("&",i) = nv;                 return getQ().sety(i,nv); }
-    virtual int sety(const Vector<int> &i, const Vector<double> &nv) override { retVector<gentype> tmpva; dy("&",i,tmpva).castassign(nv); return getQ().sety(i,nv); }
-    virtual int sety(                      const Vector<double> &nv) override {                           dy.castassign(nv);              return getQ().sety(  nv); }
-
-    virtual int sety(int                i, const Vector<double>          &nv) override { int ires = getQ().sety(i,nv);                           dy.set(i,getQconst().y()(i));       return ires; }
-    virtual int sety(const Vector<int> &i, const Vector<Vector<double> > &nv) override { int ires = getQ().sety(i,nv); retVector<gentype> tmpvb; dy.set(i,getQconst().y()(i,tmpvb)); return ires; }
-    virtual int sety(                      const Vector<Vector<double> > &nv) override { int ires = getQ().sety(  nv);                           dy = getQconst().y();               return ires; }
-
-    virtual int sety(int                i, const d_anion         &nv) override { int ires = getQ().sety(i,nv);                           dy.set(i,getQconst().y()(i));       return ires; }
-    virtual int sety(const Vector<int> &i, const Vector<d_anion> &nv) override { int ires = getQ().sety(i,nv); retVector<gentype> tmpvb; dy.set(i,getQconst().y()(i,tmpvb)); return ires; }
-    virtual int sety(                      const Vector<d_anion> &nv) override { int ires = getQ().sety(  nv);                           dy = getQconst().y();               return ires; }
+    virtual int sety(int                i, const d_anion         &nv) override;
+    virtual int sety(const Vector<int> &i, const Vector<d_anion> &nv) override;
+    virtual int sety(                      const Vector<d_anion> &nv) override;
 
     virtual int setd(int                i, int                nd) override;
     virtual int setd(const Vector<int> &i, const Vector<int> &nd) override;
@@ -151,18 +161,24 @@ public:
     virtual int setsigmaweight(const Vector<int> &i, const Vector<double> &nv) override;
     virtual int setsigmaweight(                      const Vector<double> &nv) override;
 
+    virtual int setepsweight(int,                 double                ) { NiceThrow("eps not included in GP methods"); return 0; }
+    virtual int setepsweight(const Vector<int> &, const Vector<double> &) { NiceThrow("eps not included in GP methods"); return 0; }
+    virtual int setepsweight(                     const Vector<double> &) { NiceThrow("eps not included in GP methods"); return 0; }
+
     virtual int scaleCweight    (double s) override;
     virtual int scaleCweightfuzz(double s) override { (void) s; NiceThrow("Weight fuzzing not available for gpr models"); return 1; }
     virtual int scalesigmaweight(double s) override;
-
-    virtual const gentype &y(int i) const override { return ( i >= 0 ) ? y()(i) : getQconst().y(i); }
+    virtual int scaleepsweight  (double)   override { NiceThrow("eps not included in GP methods"); return 0; }
 
     // General modification and autoset functions
 
-    virtual int setC        (double xC)         override { return setsigma(1/xC);                          }
-    virtual int setsigma    (double xsigma)     override { dsigma = xsigma; return getQ().setC(1/sigma()); }
-    virtual int setsigma_cut(double xsigma_cut) override { dsigma_cut = xsigma_cut; return getQ().setsigma_cut(xsigma_cut); }
-    virtual int setCclass   (int d, double xC)  override { (void) d; (void) xC; NiceThrow("Weight classing not available for gpr models"); return 1; }
+    virtual int setC         (double xC)          override {                                                                      return setsigma(1/xC);                  }
+    virtual int setsigma     (double xsigma)      override {                                         dsigma     = xsigma;         return getQ().setC(1/sigma());          }
+    virtual int setsigma_cut (double xsigma_cut)  override {                                         dsigma_cut = xsigma_cut;     return getQ().setsigma_cut(xsigma_cut); }
+    virtual int seteps       (double xeps)        override {           (void) xeps; NiceThrow("eps not included in GP methods");  return 0;                               }
+    virtual int setCclass    (int d, double xC)   override { NiceAssert( ( d >= 0 ) && ( d <= 2 ) ); xsigmaclass("&",d+1) = 1/xC; return getQ().setCclass(d,xC);          }
+    virtual int setsigmaclass(int d, double xsig) override { NiceAssert( ( d >= 0 ) && ( d <= 2 ) ); xsigmaclass("&",d+1) = xsig; return getQ().setCclass(d,1/xsig);      }
+    virtual int setepsclass  (int d, double xeps) override { (void) d; (void) xeps; NiceThrow("eps not included in GP methods");  return 1;                               }
 
     virtual int scale(double a) override;
 
@@ -172,13 +188,20 @@ public:
 
     // Sampling mode
 
-    virtual int isSampleMode(void) const override { return sampleMode; }
+    virtual int  isSampleMode(void) const override { return sampleMode; }
     virtual int setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double xsampScale, double sampSlack = 0) override;
 
     // Training functions:
 
-    virtual int train(int &res) override { svmvolatile int killSwitch = 0; return train(res,killSwitch); }
-    virtual int train(int &res, svmvolatile int &killSwitch) override { return isLocked ? 0 : getQ().train(res,killSwitch); }
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch);                       }
+    virtual int train(int &res, svmvolatile int &killSwitch) override {                                 return isLocked ? 0 : getQ().train(res,killSwitch); }
+
+    // Likelihood
+
+    virtual double loglikelihood(void) const override { return getQQconst().loglikelihood(); }
+    virtual double maxinfogain  (void) const override { return getQQconst().maxinfogain  (); }
+    virtual double RKHSnorm     (void) const override { return getQQconst().RKHSnorm     (); }
+    virtual double RKHSabs      (void) const override { return getQQconst().RKHSabs      (); }
 
     // Evaluation Functions:
 
@@ -192,8 +215,8 @@ public:
 
     virtual int var(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override;
 
-    virtual int covarTrainingVector(Matrix<gentype> &resv, const Vector<int> &i) const override { return ML_Base::covarTrainingVector(resv,i); }
-    virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const override;
+    virtual int covarTrainingVector(Matrix<gentype> &resv, const Vector<int> &i)                    const override { return ML_Base::covarTrainingVector(resv,i); }
+    virtual int covar              (Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const override;
 
     virtual int noisevar(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override;
     virtual int noisecov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodxy = nullptr) const override;
@@ -223,15 +246,11 @@ public:
     virtual int setZeromuBias(void) { return getQQ().setZerodelta(); }
     virtual int setVarmuBias (void) { return getQQ().setVardelta();  }
 
-    virtual int setvarApproxim(const int m) { return getQQ().setvarApprox(m); }
-
     virtual const Vector<gentype> &muWeight(void) const { return getQQconst().gamma(); }
     virtual const gentype         &muBias  (void) const { return getQQconst().delta(); }
 
     virtual int isZeromuBias(void) const { return getQQconst().isZerodelta(); }
     virtual int isVarmuBias (void) const { return getQQconst().isVardelta();  }
-
-    virtual int varApproxim(void) const { return getQQconst().varApprox(); }
 
     virtual const Matrix<double> &gprGp(void) const { return getQQconst().lsvGp(); }
 
@@ -245,16 +264,9 @@ public:
     virtual int isEPConst     (void) const { return 0; }
     virtual int isLaplaceConst(void) const { return 1; }
 
-    virtual int setNaiveConst  (void) { return 0; }
-    virtual int setEPConst     (void) { return 0; }
-    virtual int setLaplaceConst(void) { return 0; }
-
-    // Likelihood
-
-    virtual double loglikelihood(void) const { return getQQconst().loglikelihood(); }
-    virtual double maxinfogain  (void) const { return getQQconst().maxinfogain  (); }
-    virtual double RKHSnorm     (void) const { return getQQconst().RKHSnorm     (); }
-    virtual double RKHSabs      (void) const { return getQQconst().RKHSabs      (); }
+    virtual int setNaiveConst  (void        ) {              return 0; }
+    virtual int setEPConst     (void        ) {              return 0; }
+    virtual int setLaplaceConst(int type = 1) { (void) type; return 0; }
 
     // Base-level stuff
     //
@@ -282,7 +294,11 @@ private:
     double dsigma_cut;
     Vector<double> dsigmaweight;
     Vector<double> dCweight;
+    Vector<double> xsigmaclass;   // classwise C weights (0 = -1, 1 = zero, 2 = +1, 3 = free)
     Vector<gentype> dy;
+    Vector<double> dyR;
+    Vector<d_anion> dyA;
+    Vector<Vector<double> > dyV;
 
     // Local copy of d.  "d" as passed into lsv_generic is 0/2, d kept here
     // maintains -1,+1.  These can then be used in EP to enforce inequality
@@ -350,7 +366,11 @@ inline void GPR_Generic::qswapinternal(ML_Base &bb)
     qswap(dsigma      ,b.dsigma      );
     qswap(dsigma_cut  ,b.dsigma_cut  );
     qswap(dsigmaweight,b.dsigmaweight);
+    qswap(xsigmaclass ,b.xsigmaclass );
     qswap(dy          ,b.dy          );
+    qswap(dyR         ,b.dyR         );
+    qswap(dyA         ,b.dyA         );
+    qswap(dyV         ,b.dyV         );
     qswap(dCweight    ,b.dCweight    );
     qswap(sampleMode  ,b.sampleMode  );
     qswap(sampleScale ,b.sampleScale );
@@ -373,7 +393,11 @@ inline void GPR_Generic::semicopy(const ML_Base &bb)
     dsigma       = b.dsigma;
     dsigma_cut   = b.dsigma_cut;
     dsigmaweight = b.dsigmaweight;
+    xsigmaclass  = b.xsigmaclass;
     dy           = b.dy;
+    dyR          = b.dyR;
+    dyA          = b.dyA;
+    dyV          = b.dyV;
     dCweight     = b.dCweight;
     sampleMode   = b.sampleMode;
     sampleScale  = b.sampleScale;
@@ -396,7 +420,11 @@ inline void GPR_Generic::assign(const ML_Base &bb, int onlySemiCopy)
     dsigma       = src.dsigma;
     dsigma_cut   = src.dsigma_cut;
     dsigmaweight = src.dsigmaweight;
+    xsigmaclass  = src.xsigmaclass;
     dy           = src.dy;
+    dyR          = src.dyR;
+    dyA          = src.dyA;
+    dyV          = src.dyV;
     dCweight     = src.dCweight;
     sampleMode   = src.sampleMode;
     sampleScale  = src.sampleScale;

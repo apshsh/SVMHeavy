@@ -231,7 +231,7 @@ int SVM_MvRank::train(int &res, svmvolatile int &killSwitch)
 
     // Main training loop
 
-    while ( !killSwitch && !isopt && ( ( itcnt < (size_t) maxitcntval ) || !maxitcntval ) && !timeout )
+    while ( !killSwitch && !res && !isopt && ( ( itcnt < (size_t) maxitcntval ) || !maxitcntval ) && !timeout )
     {
         // Train inner loop for alpha calculation
 

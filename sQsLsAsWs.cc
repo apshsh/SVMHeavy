@@ -37,6 +37,7 @@ errstream() << "*+*+*+"; } errstream() << "\n";       \
 
 #ifndef DEBUGBRIEF
 #define DEBUGCATCH errstream() << "\n";
+//#define DEBUGCATCH
 #endif
 #endif
 
@@ -232,7 +233,8 @@ int int_solve_quadratic_program(svmvolatile int &killSwitch,
                                 double (*fixHigherOrderTerms)(optState<double,double> &x, void *, const Vector<double> &, const Vector<double> &, double &), void *htArg,
                                 double stepscalefactor, int chistart, int linbreak)
 {
-    nullPrint(errstream(),"#");
+    errstream() << "#";
+    //nullPrint(errstream(),"#");
     int iP,res = 0;
     int kickstart = 0;
 
@@ -1798,6 +1800,7 @@ getout:
 
 #ifndef DEBUGBRIEF
 #define DEBUGCATCH errstream() << "\n";
+//#define DEBUGCATCH
 #endif
 #endif
 
@@ -1813,7 +1816,8 @@ int int_solve_quadratic_program_hpzero(svmvolatile int &killSwitch, optState<dou
                                        double stepscalefactor, int chistart, int linbreak)
 {
     int kickstart = 0;
-    nullPrint(errstream(),"#");
+    errstream() << "#";
+    //nullPrint(errstream(),"#");
     int iP,res = 0;
 
     double *uservars[] = { &(sc.maxitcnt), &(sc.maxruntime), &(sc.runtimeend), &stepscalefactor, nullptr };

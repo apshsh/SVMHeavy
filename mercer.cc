@@ -42,7 +42,7 @@ MercerKernel::MercerKernel()
     isdiffalt       = 1;
     isfullnorm      = 0;
     issymmset       = 0;
-    xdenseZeroPoint = -1.0;
+    xdenseZeroPoint = -1;
 
     leftplain  = 0;
     rightplain = 0;
@@ -1359,7 +1359,9 @@ double  MercerKernel::Km(int m,
 
 int MercerKernel::phim(int m, Vector<gentype> &res, const SparseVector<gentype> &xa, const vecInfo &xainfo, int ia, int allowfinite, int xdim, int xconsist, int assumreal) const
 {
-    return yyyphim(m,res,xa,xainfo,ia,allowfinite,xdim,xconsist,assumreal);
+    int ires = yyyphim(m,res,xa,xainfo,ia,allowfinite,xdim,xconsist,assumreal);
+
+    return ires;
 }
 
 // ===================================================================================
@@ -1369,7 +1371,9 @@ gentype &MercerKernel::K0(gentype &res,
                           const gentype **pxyprod,
                           int xdim, int xconsist, int xresmode, int mlid, int assumreal) const
 {
-    return yyyK0(res,bias,pxyprod,xdim,xconsist,xresmode,mlid,assumreal,0);
+    yyyK0(res,bias,pxyprod,xdim,xconsist,xresmode,mlid,assumreal,0);
+
+    return res;
 }
 
 gentype &MercerKernel::K1(gentype &res,
@@ -1381,7 +1385,9 @@ gentype &MercerKernel::K1(gentype &res,
                           int xdim, int xconsist, int resmode, int mlid, 
                           const double *xy, int assumreal) const
 {
-    return yyyK1(res,x,xinfo,bias,pxyprod,i,xdim,xconsist,resmode,mlid,xy,assumreal,0);
+    yyyK1(res,x,xinfo,bias,pxyprod,i,xdim,xconsist,resmode,mlid,xy,assumreal,0);
+
+    return res;
 }
 
 gentype &MercerKernel::K2(gentype &res,
@@ -1393,7 +1399,9 @@ gentype &MercerKernel::K2(gentype &res,
                           int xdim, int xconsist, int resmode, int mlid, 
                           const double *xy00, const double *xy10, const double *xy11, int assumreal) const
 {
-    return yyyK2(res,x,y,xinfo,yinfo,bias,pxyprod,i,j,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,assumreal,0);
+    yyyK2(res,x,y,xinfo,yinfo,bias,pxyprod,i,j,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,assumreal,0);
+
+    return res;
 }
 
 gentype &MercerKernel::K2x2(gentype &res,
@@ -1414,7 +1422,9 @@ gentype &MercerKernel::K2x2(gentype &res,
 //    K2(resb,x,xb,xinfo,xbinfo,bias,nullptr,i,ib,xdim,xconsist,resmode,mlid,xy00,xy20,xy22,assumreal);
 //
 //    return res = resa*resb;
-    return yyyK2x2(res,x,xa,xb,xinfo,xainfo,xbinfo,bias,i,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,assumreal,0);
+    yyyK2x2(res,x,xa,xb,xinfo,xainfo,xbinfo,bias,i,ia,ib,xdim,xconsist,resmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,assumreal,0);
+
+    return res;
 }
 
 gentype &MercerKernel::K3(gentype &res,
@@ -1426,7 +1436,9 @@ gentype &MercerKernel::K3(gentype &res,
                           int xdim, int xconsist, int xresmode, int mlid, 
                           const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, int assumreal) const
 {
-    return yyyK3(res,xa,xb,xc,xainfo,xbinfo,xcinfo,bias,pxyprod,ia,ib,ic,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,assumreal,0);
+    yyyK3(res,xa,xb,xc,xainfo,xbinfo,xcinfo,bias,pxyprod,ia,ib,ic,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,assumreal,0);
+
+    return res;
 }
 
 gentype &MercerKernel::K4(gentype &res,
@@ -1438,7 +1450,9 @@ gentype &MercerKernel::K4(gentype &res,
                           int xdim, int xconsist, int xresmode, int mlid, 
                           const double *xy00, const double *xy10, const double *xy11, const double *xy20, const double *xy21, const double *xy22, const double *xy30, const double *xy31, const double *xy32, const double *xy33, int assumreal) const
 {
-    return yyyK4(res,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,assumreal,0);
+    yyyK4(res,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo,bias,pxyprod,ia,ib,ic,id,xdim,xconsist,xresmode,mlid,xy00,xy10,xy11,xy20,xy21,xy22,xy30,xy31,xy32,xy33,assumreal,0);
+
+    return res;
 }
 
 gentype &MercerKernel::Km(int m, gentype &res,
@@ -1449,12 +1463,16 @@ gentype &MercerKernel::Km(int m, gentype &res,
                           const gentype **pxyprod, int xdim, int xconsist, int resmode, int mlid, 
                           const Matrix<double> *xy, int assumreal) const
 {
-    return yyyKm(m,res,x,xinfo,bias,i,pxyprod,xdim,xconsist,resmode,mlid,xy,assumreal,0);
+    yyyKm(m,res,x,xinfo,bias,i,pxyprod,xdim,xconsist,resmode,mlid,xy,assumreal,0);
+
+    return res;
 }
 
 int MercerKernel::phim(int m, Vector<double>  &res, const SparseVector<gentype> &xa, const vecInfo &xainfo, int ia, int allowfinite, int xdim, int xconsist, int assumreal) const
 {
-    return yyyphim(m,res,xa,xainfo,ia,allowfinite,xdim,xconsist,assumreal);
+    int ires = yyyphim(m,res,xa,xainfo,ia,allowfinite,xdim,xconsist,assumreal);
+
+    return ires;
 }
 
 double MercerKernel::K0ip(double bias, const gentype **pxyprod,
@@ -16361,7 +16379,7 @@ std::istream &MercerKernel::inputstream(std::istream &input)
         dest.dScale.zero();
         dest.xnumsamples         = DEFAULT_NUMKERNSAMP;
         dest.xsampdist           = tempsampdist;
-        dest.xdenseZeroPoint     = -1.0;
+        dest.xdenseZeroPoint     = -1;
 
         dest.xindsub.zero();
 

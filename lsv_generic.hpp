@@ -42,19 +42,19 @@ public:
     LSV_Generic &operator=(const LSV_Generic &src) { assign(src); return *this; }
     virtual ~LSV_Generic() { return; }
 
-    virtual int prealloc(int expectedN) override;
-    virtual int preallocsize(void) const override;
-    virtual void setmemsize(int memsize) override { SVM_Scalar::setmemsize(memsize); return; }
+    virtual int  prealloc    (int expectedN)       override;
+    virtual int  preallocsize(void)          const override;
+    virtual void setmemsize  (int memsize)         override { SVM_Scalar::setmemsize(memsize); return; }
 
-    virtual void assign(const ML_Base &src, int onlySemiCopy = 0) override;
-    virtual void semicopy(const ML_Base &src) override;
-    virtual void qswapinternal(ML_Base &b) override;
+    virtual void assign       (const ML_Base &src, int onlySemiCopy = 0) override;
+    virtual void semicopy     (const ML_Base &src)                       override;
+    virtual void qswapinternal(ML_Base &b)                               override;
 
     virtual int getparam (int ind, gentype         &val, const gentype         &xa, int ia, const gentype         &xb, int ib, charptr &desc) const override;
     virtual int egetparam(int ind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib               ) const override;
 
     virtual std::ostream &printstream(std::ostream &output, int dep) const override;
-    virtual std::istream &inputstream(std::istream &input ) override;
+    virtual std::istream &inputstream(std::istream &input          )       override;
 
     virtual       ML_Base &getML     (void)       override { return static_cast<      ML_Base &>(getLSV     ()); }
     virtual const ML_Base &getMLconst(void) const override { return static_cast<const ML_Base &>(getLSVconst()); }
@@ -80,7 +80,10 @@ public:
     virtual int isRegression(void) const override { return 1; }
     virtual int isPlanarType(void) const override { return 0; }
 
-    // Kernel Modification
+    virtual const Vector<gentype> &alphaVal(void)  const override { return gamma(); }
+
+    virtual const gentype &y       (int i) const override { if ( i >= 0 ) { return y()(i); } return SVM_Scalar::y(i);    }
+    virtual       double   alphaVal(int i) const override {                                  return (double) gamma()(i); }
 
     // Training set modification:
 
@@ -114,31 +117,26 @@ public:
     virtual int setd(const Vector<int> &i, const Vector<int> &nd) override;
     virtual int setd(                      const Vector<int> &nd) override;
 
-    virtual const gentype &y(int i) const override { if ( i >= 0 ) { return y()(i); } return SVM_Scalar::y(i); }
-
-    virtual const Vector<gentype> &alphaVal(void)  const override { return gamma();             }
-    virtual       double           alphaVal(int i) const override { return (double) gamma()(i); }
-
     // General modification and autoset functions
 
     virtual int randomise(double sparsity) override { SVM_Scalar::isStateOpt = 0; return ML_Base::randomise(sparsity); }
 
-    virtual int scale(double a) override;
-    virtual int reset(void) override;
-    virtual int restart(void) override { return ML_Base::restart(); }
+    virtual int scale  (double a) override;
+    virtual int reset  (void)     override;
+    virtual int restart(void)     override { return ML_Base::restart(); }
 
-    virtual int settspaceDim(int newdim) override { return ML_Base::settspaceDim(newdim); }
-    virtual int addtspaceFeat(int i)     override { return ML_Base::addtspaceFeat(i);     }
-    virtual int removetspaceFeat(int i)  override { return ML_Base::removetspaceFeat(i);  }
+    virtual int settspaceDim    (int newdim) override { return ML_Base::settspaceDim(newdim); }
+    virtual int addtspaceFeat   (int i)      override { return ML_Base::addtspaceFeat(i);     }
+    virtual int removetspaceFeat(int i)      override { return ML_Base::removetspaceFeat(i);  }
 
     virtual int setorder(int neword) override { return ML_Base::setorder(neword); }
 
     // Training functions:
 
-    virtual void fudgeOn(void)  override { return; }
+    virtual void fudgeOn (void) override { return; }
     virtual void fudgeOff(void) override { return; }
 
-    virtual int train(int &res) override { svmvolatile int killSwitch = 0; return LSV_Generic::train(res,killSwitch); }
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return LSV_Generic::train(res,killSwitch); }
     virtual int train(int &res, svmvolatile int &killSwitch) override;
 
     // Evaluation Functions:
@@ -186,15 +184,9 @@ public:
     virtual int setZerodelta(void);
 
     // Constructors, destructors, assignment etc..
-    //
-    // VarApprox: m == -1: cov is the usual posterior covariance
-    //            m == 0:  cov is the prior covariance (kernel)
-    //            m > 0:   cov approx posterior using m nearest x's
 
     virtual int setgamma(const Vector<gentype> &newgamma);
     virtual int setdelta(const gentype         &newdelta);
-
-    virtual int setvarApprox(const int m);
 
     // Additional information
 
@@ -203,8 +195,6 @@ public:
 
     virtual const Vector<gentype> &gamma(void) const { return dalpha; }
     virtual const gentype         &delta(void) const { return dbias;  }
-
-    virtual int varApprox(void) const { return covm; }
 
     virtual const Matrix<double> &lsvGp(void) const { return SVM_Scalar::Gp(); }
 
@@ -226,13 +216,13 @@ public:
 
 
 
+
 protected:
 
     // Variables
 
     Vector<gentype> dalpha;
     gentype dbias;
-    int covm;
 
     // Find vector closest (up to) m free training vectors
     // The vector res will be resized appropriately (but sizing set slack
@@ -376,7 +366,6 @@ inline void LSV_Generic::qswapinternal(ML_Base &bb)
 
     qswap(dalpha      ,b.dalpha      );
     qswap(dbias       ,b.dbias       );
-    qswap(covm        ,b.covm        );
     qswap(alltraintarg,b.alltraintarg);
 
     killfasts();
@@ -395,7 +384,6 @@ inline void LSV_Generic::semicopy(const ML_Base &bb)
 
     dalpha = b.dalpha;
     dbias  = b.dbias;
-    covm   = b.covm;
 //    alltraintarg = b.alltraintarg;
 
     killfasts();
@@ -413,7 +401,6 @@ inline void LSV_Generic::assign(const ML_Base &bb, int onlySemiCopy)
 
     dalpha       = src.dalpha;
     dbias        = src.dbias;
-    covm         = src.covm;
     alltraintarg = src.alltraintarg;
 
     killfasts();

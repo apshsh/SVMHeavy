@@ -125,12 +125,12 @@ public:
     //
     // setAlphaF: only sets free variables, retains state (F), with rounding as required (but pass in full alpha vector)
 
-    void setAlpha(const Vector<T> &newAlpha, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp, const Vector<double> &lb, const Vector<double> &ub, double ztoloverride = -1);
+    void setAlpha(const Vector<T> &newAlpha, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp, const Vector<double> &lb, const Vector<double> &ub, double ztoloverride = -1, int ignorebound = 0);
     void setBeta (const Vector<T> &newBeta,  const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp, double ztoloverride = -1);
 
     void setAlphaF(const Vector<T> &newAlpha, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp, const Vector<double> &lb, const Vector<double> &ub, double ztoloverride = -1);
 
-    void setAlphahpzero(const Vector<T> &newAlpha, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<double> &lb, const Vector<double> &ub, double ztoloverride = -1);
+    void setAlphahpzero(const Vector<T> &newAlpha, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<double> &lb, const Vector<double> &ub, double ztoloverride = -1, int ignorebound = 0);
     void setBetahpzero (const Vector<T> &newBeta,  const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, double ztoloverride = -1);
 
     // Reconstructor:
@@ -832,7 +832,7 @@ optState<T,S> &optState<T,S>::operator=(const optState<T,S> &src)
 }
 
 template <class T, class S>
-void optState<T,S>::setAlpha(const Vector<T> &newAlpha, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp, const Vector<double> &lb, const Vector<double> &ub, double ztoloverride)
+void optState<T,S>::setAlpha(const Vector<T> &newAlpha, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<T> &hp, const Vector<double> &lb, const Vector<double> &ub, double ztoloverride, int ignorebound)
 {
     NiceAssert( newAlpha.size() == aN() );
 
@@ -846,156 +846,122 @@ void optState<T,S>::setAlpha(const Vector<T> &newAlpha, const Matrix<double> &Gp
 	{
             if ( newAlpha(i) != alpha(i) )
             {
-	        alphaStep(i,newAlpha(i)-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
+	      alphaStep(i,newAlpha(i)-alpha(i),GpGrad,Gn,Gpn,gp,gn,hp,1);
 
-	        if ( alphaState(i) == -2 )
+              if ( !ignorebound )
+              {
+  	        if ( alphaState(i) == -2 )
 	        {
 		    iP = findInAlphaLB(i);
 
-		    if ( newAlpha(i) > ub.v(i)-ztoloverride )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-		        iP = modAlphaLBtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
-
-		    else if ( ( newAlpha(i) >= ztoloverride ) && ( newAlpha(i) > 0.0 ) )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-		        iP = modAlphaLBtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
-
-		    else if ( ( newAlpha(i) > -ztoloverride ) || ( newAlpha(i) == 0.0 ) )
-		    {
-		        iP = modAlphaLBtoZ(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
-
-		    else if ( ( newAlpha(i) >= lb.v(i)+ztoloverride ) && ( newAlpha(i) > lb.v(i) ) )
-		    {
-		        iP = modAlphaLBtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
+		    if      (   newAlpha(i) > ub.v(i)-ztoloverride                                  ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                                                                        iP = modAlphaLBtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( ( newAlpha(i) >= ztoloverride         ) && ( newAlpha(i) >  0.0     ) ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                                                                        iP = modAlphaLBtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( ( newAlpha(i) > -ztoloverride         ) || ( newAlpha(i) == 0.0     ) ) { iP = modAlphaLBtoZ(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);  }
+		    else if ( ( newAlpha(i) >= lb.v(i)+ztoloverride ) && ( newAlpha(i) >  lb.v(i) ) ) { iP = modAlphaLBtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
 	        }
 
 	        else if ( alphaState(i) == +2 )
 	        {
 		    iP = findInAlphaUB(i);
 
-		    if ( newAlpha(i) < lb.v(i)+ztoloverride )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-		        iP = modAlphaUBtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
-
-		    else if ( ( newAlpha(i) <= -ztoloverride ) && ( newAlpha(i) < 0.0 ) )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-		        iP = modAlphaUBtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
-
-		    else if ( ( newAlpha(i) < ztoloverride ) || ( newAlpha(i) == 0.0 ) )
-		    {
-		        iP = modAlphaUBtoZ(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
-
-		    else if ( ( newAlpha(i) <= ub.v(i)-ztoloverride ) && ( newAlpha(i) < ub.v(i) ) )
-		    {
-		        iP = modAlphaUBtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
+		    if      (   newAlpha(i) <  lb.v(i)+ztoloverride                                 ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                                                                        iP = modAlphaUBtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( ( newAlpha(i) <= -ztoloverride        ) && ( newAlpha(i) <  0.0     ) ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                                                                        iP = modAlphaUBtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( ( newAlpha(i) <  ztoloverride         ) || ( newAlpha(i) == 0.0     ) ) { iP = modAlphaUBtoZ(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);  }
+		    else if ( ( newAlpha(i) <= ub.v(i)-ztoloverride ) && ( newAlpha(i) <  ub.v(i) ) ) { iP = modAlphaUBtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
 	        }
 
 	        else if ( alphaState(i) == -1 )
 	        {
 		    iP = findInAlphaF(i);
 
-		    if ( newAlpha(i) > ub.v(i)-ztoloverride )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-		        iP = modAlphaLFtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp,ub);
-		    }
-
-		    else if ( ( newAlpha(i) >= ztoloverride ) && ( newAlpha(i) > 0.0 ) )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-		        iP = modAlphaLFtoUF(iP,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
-
-		    else if ( ( newAlpha(i) > -ztoloverride ) || ( newAlpha(i) == 0.0 ) )
-		    {
-		        iP = modAlphaLFtoZ(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
-
-		    else if ( newAlpha(i) < lb.v(i)+ztoloverride )
-		    {
-		        iP = modAlphaLFtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp,lb);
-		    }
+		    if      (   newAlpha(i) > ub.v(i)-ztoloverride                                  ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                                                                        iP = modAlphaLFtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp,ub); }
+		    else if ( ( newAlpha(i) >= ztoloverride         ) && ( newAlpha(i) >  0.0     ) ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                                                                        iP = modAlphaLFtoUF(iP,GpGrad,Gn,Gpn,gp,gn,hp);       }
+		    else if ( ( newAlpha(i) > -ztoloverride         ) || ( newAlpha(i) == 0.0     ) ) { iP = modAlphaLFtoZ(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);     }
+		    else if (   newAlpha(i) < lb.v(i)+ztoloverride                                  ) { iP = modAlphaLFtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp,lb); }
 	        }
 
 	        else if ( alphaState(i) == +1 )
 	        {
 		    iP = findInAlphaF(i);
 
-		    if ( newAlpha(i) < lb.v(i)+ztoloverride )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-		        iP = modAlphaUFtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp,lb);
-		    }
-
-		    else if ( ( newAlpha(i) <= -ztoloverride ) && ( newAlpha(i) < 0.0 ) )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
-
-		        iP = modAlphaUFtoLF(iP,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
-
-		    else if ( ( newAlpha(i) < ztoloverride ) || ( newAlpha(i) == 0.0 ) )
-		    {
-		        iP = modAlphaUFtoZ(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
-
-		    else if ( newAlpha(i) > ub.v(i)-ztoloverride )
-		    {
-		        iP = modAlphaUFtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp,ub);
-		    }
+		    if      (   newAlpha(i) <  lb.v(i)+ztoloverride                                 ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                                                                        iP = modAlphaUFtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp,lb); }
+		    else if ( ( newAlpha(i) <= -ztoloverride        ) && ( newAlpha(i) <  0.0     ) ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                                                                        iP = modAlphaUFtoLF(iP,GpGrad,Gn,Gpn,gp,gn,hp);       }
+		    else if ( ( newAlpha(i) <  ztoloverride         ) || ( newAlpha(i) == 0.0     ) ) { iP = modAlphaUFtoZ(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);     }
+		    else if (   newAlpha(i) >  ub.v(i)-ztoloverride )                                 { iP = modAlphaUFtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp,ub); }
 	        }
 
 	        else if ( alphaState(i) == 0 )
 	        {
 		    iP = findInAlphaZ(i);
 
-		    if ( newAlpha(i) < lb.v(i)+ztoloverride )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+		    if      (   newAlpha(i) <  lb.v(i)+ztoloverride                                 ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                                                                        iP = modAlphaZtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if (   newAlpha(i) >  ub.v(i)-ztoloverride                                 ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                                                                        iP = modAlphaZtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( ( newAlpha(i) <= -ztoloverride        ) && ( newAlpha(i) <  0.0     ) ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                                                                        iP = modAlphaZtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( ( newAlpha(i) >= ztoloverride         ) && ( newAlpha(i) >  0.0     ) ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                                                                        iP = modAlphaZtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+                }
+              }
 
-		        iP = modAlphaZtoLB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
 
-		    else if ( newAlpha(i) > ub.v(i)-ztoloverride )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
 
-		        iP = modAlphaZtoUB(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
 
-		    else if ( ( newAlpha(i) <= -ztoloverride ) && ( newAlpha(i) < 0.0 ) )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+              else
+              {
+  	        if ( alphaState(i) == -2 )
+	        {
+		    iP = findInAlphaLB(i);
 
-		        iP = modAlphaZtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
+		    if      ( newAlpha(i) > lb.v(i) ) { iP = modAlphaLBtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( newAlpha(i) > 0.0     ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                        iP = modAlphaLBtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+	        }
 
-		    else if ( ( newAlpha(i) >= ztoloverride ) && ( newAlpha(i) > 0.0 ) )
-		    {
-                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
+	        else if ( alphaState(i) == +2 )
+	        {
+		    iP = findInAlphaUB(i);
 
-		        iP = modAlphaZtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp);
-		    }
-		}
+		    if      ( newAlpha(i) < ub.v(i) ) { iP = modAlphaUBtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( newAlpha(i) < 0.0     ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                        iP = modAlphaUBtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+	        }
+
+	        else if ( alphaState(i) == -1 )
+	        {
+		    iP = findInAlphaF(i);
+
+		    if      ( newAlpha(i) > 0.0     ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                        iP = modAlphaLFtoUF(iP,GpGrad,Gn,Gpn,gp,gn,hp); }
+	        }
+
+	        else if ( alphaState(i) == +1 )
+	        {
+		    iP = findInAlphaF(i);
+
+		    if      ( newAlpha(i) < 0.0     ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                        iP = modAlphaUFtoLF(iP,GpGrad,Gn,Gpn,gp,gn,hp); }
+	        }
+
+	        else if ( alphaState(i) == 0 )
+	        {
+		    iP = findInAlphaZ(i);
+
+		    if      ( newAlpha(i) < 0.0     ) { NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                        iP = modAlphaZtoLF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+		    else if ( newAlpha(i) > 0.0     ) { NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
+                                                        iP = modAlphaZtoUF(iP,Gp,GpGrad,Gn,Gpn,gp,gn,hp); }
+                }
+              }
 	    }
 	}
     }
@@ -1144,7 +1110,7 @@ inline int isTVector(const double &temp)
 }
 
 template <class T, class S>
-void optState<T,S>::setAlphahpzero(const Vector<T> &newAlpha, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<double> &lb, const Vector<double> &ub, double ztoloverride)
+void optState<T,S>::setAlphahpzero(const Vector<T> &newAlpha, const Matrix<double> &Gp, const Matrix<S> &GpGrad, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<T> &gp, const Vector<T> &gn, const Vector<double> &lb, const Vector<double> &ub, double ztoloverride, int ignorebound)
 {
     NiceAssert( newAlpha.size() == aN() );
 
@@ -1163,8 +1129,10 @@ void optState<T,S>::setAlphahpzero(const Vector<T> &newAlpha, const Matrix<doubl
 	{
             if ( newAlpha(i) != alpha(i) )
             {
-                alphaStephpzero(i,newAlpha(i)-alpha(i),GpGrad,Gn,Gpn,gp,gn,1);
+              alphaStephpzero(i,newAlpha(i)-alpha(i),GpGrad,Gn,Gpn,gp,gn,1);
 
+              if ( !ignorebound )
+              {
 	        if ( alphaState(i) == -2 )
 	        {
                     NiceAssert( !isTVector(dummy) );
@@ -1335,6 +1303,106 @@ void optState<T,S>::setAlphahpzero(const Vector<T> &newAlpha, const Matrix<doubl
                         iP = modAlphaZtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
 		    }
 	        }
+              }
+
+              else
+              {
+	        if ( alphaState(i) == -2 )
+	        {
+                    NiceAssert( !isTVector(dummy) );
+
+		    iP = findInAlphaLB(i);
+
+		    if ( newAlpha(i) > 0.0 )
+		    {
+                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
+
+                        iP = modAlphaLBtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
+		    }
+
+		    else if ( newAlpha(i) > lb.v(i) )
+		    {
+                        iP = modAlphaLBtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
+		    }
+	        }
+
+	        else if ( alphaState(i) == +2 )
+	        {
+                    NiceAssert( !isTVector(dummy) );
+
+		    iP = findInAlphaUB(i);
+
+		    if ( newAlpha(i) < 0.0 )
+		    {
+                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+
+                        iP = modAlphaUBtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
+		    }
+
+		    else if ( newAlpha(i) < ub.v(i) )
+		    {
+                        iP = modAlphaUBtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
+		    }
+	        }
+
+	        else if ( alphaState(i) == -1 )
+	        {
+                    NiceAssert( !isTVector(dummy) );
+
+		    iP = findInAlphaF(i);
+
+		    if ( newAlpha(i) > 0.0 )
+		    {
+                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
+
+                        iP = modAlphaLFtoUFhpzero(iP,GpGrad,Gn,Gpn,gp,gn);
+		    }
+	        }
+
+	        else if ( alphaState(i) == +1 )
+	        {
+		    iP = findInAlphaF(i);
+
+                    if ( isTVector(dummy) )
+                    {
+                        ;
+                    }
+
+		    else if ( newAlpha(i) < 0.0 )
+		    {
+                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+
+                        iP = modAlphaUFtoLFhpzero(iP,GpGrad,Gn,Gpn,gp,gn);
+		    }
+	        }
+
+	        else if ( alphaState(i) == 0 )
+	        {
+		    iP = findInAlphaZ(i);
+
+                    if ( isTVector(dummy) )
+                    {
+                        if ( abs2(newAlpha(i)) > ztoloverride )
+                        {
+                            iP = modAlphaZtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
+                        }
+                    }
+
+		    else if ( newAlpha(i) < 0.0 )
+		    {
+                        NiceAssert( ( dalphaRestrict.v(i) != 1 ) && ( dalphaRestrict.v(i) != 3 ) );
+
+                        iP = modAlphaZtoLFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
+		    }
+
+		    else if ( newAlpha(i) > 0.0 )
+		    {
+                        NiceAssert( ( dalphaRestrict.v(i) != 2 ) && ( dalphaRestrict.v(i) != 3 ) );
+
+                        iP = modAlphaZtoUFhpzero(iP,Gp,GpGrad,Gn,Gpn,gp,gn);
+		    }
+	        }
+              }
 	    }
 	}
     }

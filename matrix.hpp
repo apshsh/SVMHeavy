@@ -127,11 +127,11 @@ class Matrix
 
     template <class S> friend void qswap(Matrix<S> &a, Matrix<S> &b);
 
-    friend inline const Matrix<int> &zerointmatrix (         int numRows, int numCols, retMatrix<int> &tmpm);
-    friend inline const Matrix<int> &oneintmatrix  (         int numRows, int numCols, retMatrix<int> &tmpm);
+    friend inline const Matrix<int> &zerointmatrix(int numRows, int numCols, retMatrix<int> &tmpm);
+    friend inline const Matrix<int> &oneintmatrix (int numRows, int numCols, retMatrix<int> &tmpm);
 
-    friend inline const Matrix<double> &zerodoublematrix (         int numRows, int numCols, retMatrix<double> &tmpm);
-    friend inline const Matrix<double> &onedoublematrix  (         int numRows, int numCols, retMatrix<double> &tmpm);
+    friend inline const Matrix<double> &zerodoublematrix(int numRows, int numCols, retMatrix<double> &tmpm);
+    friend inline const Matrix<double> &onedoublematrix (int numRows, int numCols, retMatrix<double> &tmpm);
 
     friend inline const Matrix<int> &zerointmatrixbasic(void);
     friend inline const Matrix<int> &oneintmatrixbasic (void);
@@ -153,9 +153,10 @@ public:
     explicit Matrix();
     explicit Matrix(const T &); // this one just makes an empty matrix, but the additional ("zero") argument is required by kcache
     explicit Matrix(int numRows, int numCols = 0);
-    explicit Matrix(const T &(*celm)(int, int, const void *, retVector<T> &), const Vector<T> &(*crow)(int, const void *, retVector<T> &), const void *cdref, int numRows = 0, int numCols = 0, void (*xcdelfn)(const void *, void *) = nullptr, void *dref = nullptr);
-    explicit Matrix(T (*celm_v)(int, int, const void *, retVector<T> &), const T &(*celm)(int, int, const void *, retVector<T> &), const Vector<T> &(*crow)(int, const void *, retVector<T> &), const void *cdref, int numRows = 0, int numCols = 0, void (*xcdelfn)(const void *, void *) = nullptr, void *dref = nullptr);
-    explicit Matrix(T &(*elm)(int, int, void *, retVector<T> &), Vector<T> &(*row)(int, void *, retVector<T> &), void *dref, const T &(*celm)(int, int, const void *, retVector<T> &), const Vector<T> &(*crow)(int, const void *, retVector<T> &tmp), const void *cdref, int numRows = 0, int numCols = 0, void (*xdelfn)(void *) = nullptr, void (*xcdelfn)(const void *, void *) = nullptr);
+    explicit Matrix(                                                     const T &(*celm)(int, int, const void *, retVector<T> &), const Vector<T> &(*crow)(int, const void *, retVector<T> &), const void *cdref = nullptr, int numRows = 0, int numCols = 0,                                   void (*xcdelfn)(const void *, void *) = nullptr, void *dref = nullptr, const Vector<T> *_Lweight = nullptr, bool _useLweight = false);
+    explicit Matrix(T (*celm_v)(int, int, const void *, retVector<T> &), const T &(*celm)(int, int, const void *, retVector<T> &), const Vector<T> &(*crow)(int, const void *, retVector<T> &), const void *cdref = nullptr, int numRows = 0, int numCols = 0,                                   void (*xcdelfn)(const void *, void *) = nullptr, void *dref = nullptr, const Vector<T> *_Lweight = nullptr, bool _useLweight = false);
+    explicit Matrix(T &(*elm)(int, int, void *, retVector<T> &), Vector<T> &(*row)(int, void *, retVector<T> &), void *dref,
+                                                                         const T &(*celm)(int, int, const void *, retVector<T> &), const Vector<T> &(*crow)(int, const void *, retVector<T> &), const void *cdref = nullptr, int numRows = 0, int numCols = 0, void (*xdelfn)(void *) = nullptr, void (*xcdelfn)(const void *, void *) = nullptr,                       const Vector<T> *_Lweight = nullptr, bool _useLweight = false);
              Matrix(const Matrix<T> &src);
 
     ~Matrix();
@@ -687,9 +688,11 @@ private:
     // elmfn: if iscover then this function is called to access data
     // rowfn: if iscover then this function is called to access rows of data
     // dref: argument passed to elmfn and rowfn, presumably giving details
-    // celmfn: if iscover then this fn is called to access (const) data
+    // celmfn: if iscover then this fn is called to access (const) data by reference
+    // celmfn_v: if iscover then this fn is called to access (const) data by value
     // crowfn: if iscover then this fn is called to access rows of const data
     // cdref: argument passed to celmfn and crowfn, presumably giving details
+    // Lweight: diagonal weight matrix Lweight.G.Lweight if non-null
 
     int dnumRows;
     int dnumCols;
@@ -720,6 +723,8 @@ private:
     const Vector<T> &(*crowfn)(int, const void *, retVector<T> &);
     void (*cdelfn)(const void *, void *);
     const void *cdref;
+    const Vector<T> *Lweight;
+    bool useLweight;
 
     // Blind constructor: does no allocation, just sets bkref and defaults
 
@@ -750,16 +755,17 @@ template <class T> void qswap(Matrix<T> &a, Matrix<T> &b)
     NiceAssert( a.nbase == false );
     NiceAssert( b.nbase == false );
 
-    qswap(a.dnumRows,b.dnumRows);
-    qswap(a.dnumCols,b.dnumCols);
-    qswap(a.nbase   ,b.nbase   );
-    qswap(a.pbaseRow,b.pbaseRow);
-    qswap(a.pbaseCol,b.pbaseCol);
-    qswap(a.iibRow  ,b.iibRow  );
-    qswap(a.iisRow  ,b.iisRow  );
-    qswap(a.iibCol  ,b.iibCol  );
-    qswap(a.iisCol  ,b.iisCol  );
-    qswap(a.iscover ,b.iscover );
+    qswap(a.dnumRows  ,b.dnumRows  );
+    qswap(a.dnumCols  ,b.dnumCols  );
+    qswap(a.nbase     ,b.nbase     );
+    qswap(a.pbaseRow  ,b.pbaseRow  );
+    qswap(a.pbaseCol  ,b.pbaseCol  );
+    qswap(a.iibRow    ,b.iibRow    );
+    qswap(a.iisRow    ,b.iisRow    );
+    qswap(a.iibCol    ,b.iibCol    );
+    qswap(a.iisCol    ,b.iisCol    );
+    qswap(a.iscover   ,b.iscover   );
+    qswap(a.useLweight,b.useLweight);
 
     const Matrix<T> *bkref;
     Vector<Vector<T> > *content;
@@ -782,6 +788,7 @@ template <class T> void qswap(Matrix<T> &a, Matrix<T> &b)
     const Vector<T> &(*crowfn)(int, const void *, retVector<T> &);
     void (*cdelfn)(const void *, void *);
     const void *cdref;
+    const Vector<T> *Lweight;
 
     elmfn    = a.elmfn;    a.elmfn    = b.elmfn;    b.elmfn    = elmfn;
     rowfn    = a.rowfn;    a.rowfn    = b.rowfn;    b.rowfn    = rowfn;
@@ -792,6 +799,7 @@ template <class T> void qswap(Matrix<T> &a, Matrix<T> &b)
     crowfn   = a.crowfn;   a.crowfn   = b.crowfn;   b.crowfn   = crowfn;
     cdelfn   = a.cdelfn;   a.cdelfn   = b.cdelfn;   b.cdelfn   = cdelfn;
     cdref    = a.cdref;    a.cdref    = b.cdref;    b.cdref    = cdref;
+    Lweight  = a.Lweight;  a.Lweight  = b.Lweight;  b.Lweight  = Lweight;
 
     // The above will have messed up one important thing, namely bkref and
     // bkref in any child vectors.  We must now repair the child trees if
@@ -1258,7 +1266,6 @@ inline int tql2(Vector<T> &d, Vector<T> &e, Matrix<T> &z);
 
 
 
-
 template <class T>
 void retMatrix<T>::reset(Matrix<T> &cover)
 {
@@ -1275,23 +1282,24 @@ void retMatrix<T>::reset(Matrix<T> &cover)
         MEMDEL(Matrix<T>::pivotCol);
     }
 
-    Matrix<T>::pbaseCol = true;
-    Matrix<T>::pivotCol = nullptr;
-
-    Matrix<T>::bkref    = cover.bkref;
-    Matrix<T>::nbase    = true;
-    Matrix<T>::content  = cover.content;
-    Matrix<T>::ccontent = cover.ccontent;
-    Matrix<T>::iscover  = cover.iscover;
-    Matrix<T>::elmfn    = cover.elmfn;
-    Matrix<T>::rowfn    = cover.rowfn;
-    Matrix<T>::delfn    = cover.delfn;
-    Matrix<T>::dref     = cover.dref;
-    Matrix<T>::celmfn   = cover.celmfn;
-    Matrix<T>::celmfn_v = cover.celmfn_v;
-    Matrix<T>::crowfn   = cover.crowfn;
-    Matrix<T>::cdelfn   = cover.cdelfn;
-    Matrix<T>::cdref    = cover.cdref;
+    Matrix<T>::pbaseCol   = true;
+    Matrix<T>::pivotCol   = nullptr;
+    Matrix<T>::bkref      = cover.bkref;
+    Matrix<T>::nbase      = true;
+    Matrix<T>::content    = cover.content;
+    Matrix<T>::ccontent   = cover.ccontent;
+    Matrix<T>::iscover    = cover.iscover;
+    Matrix<T>::elmfn      = cover.elmfn;
+    Matrix<T>::rowfn      = cover.rowfn;
+    Matrix<T>::delfn      = cover.delfn;
+    Matrix<T>::dref       = cover.dref;
+    Matrix<T>::celmfn     = cover.celmfn;
+    Matrix<T>::celmfn_v   = cover.celmfn_v;
+    Matrix<T>::crowfn     = cover.crowfn;
+    Matrix<T>::cdelfn     = cover.cdelfn;
+    Matrix<T>::cdref      = cover.cdref;
+    Matrix<T>::Lweight    = cover.Lweight;
+    Matrix<T>::useLweight = cover.useLweight;
 
     return;
 }
@@ -1322,23 +1330,24 @@ DynArray<int> *retMatrix<T>::reset_r(Matrix<T> &cover, int rowpivotsize)
         MEMDEL(Matrix<T>::pivotCol);
     }
 
-    Matrix<T>::pbaseCol = true;
-    Matrix<T>::pivotCol = nullptr;
-
-    Matrix<T>::bkref    = cover.bkref;
-    Matrix<T>::nbase    = true;
-    Matrix<T>::content  = cover.content;
-    Matrix<T>::ccontent = cover.ccontent;
-    Matrix<T>::iscover  = cover.iscover;
-    Matrix<T>::elmfn    = cover.elmfn;
-    Matrix<T>::rowfn    = cover.rowfn;
-    Matrix<T>::delfn    = cover.delfn;
-    Matrix<T>::dref     = cover.dref;
-    Matrix<T>::celmfn   = cover.celmfn;
-    Matrix<T>::celmfn_v = cover.celmfn_v;
-    Matrix<T>::crowfn   = cover.crowfn;
-    Matrix<T>::cdelfn   = cover.cdelfn;
-    Matrix<T>::cdref    = cover.cdref;
+    Matrix<T>::pbaseCol   = true;
+    Matrix<T>::pivotCol   = nullptr;
+    Matrix<T>::bkref      = cover.bkref;
+    Matrix<T>::nbase      = true;
+    Matrix<T>::content    = cover.content;
+    Matrix<T>::ccontent   = cover.ccontent;
+    Matrix<T>::iscover    = cover.iscover;
+    Matrix<T>::elmfn      = cover.elmfn;
+    Matrix<T>::rowfn      = cover.rowfn;
+    Matrix<T>::delfn      = cover.delfn;
+    Matrix<T>::dref       = cover.dref;
+    Matrix<T>::celmfn     = cover.celmfn;
+    Matrix<T>::celmfn_v   = cover.celmfn_v;
+    Matrix<T>::crowfn     = cover.crowfn;
+    Matrix<T>::cdelfn     = cover.cdelfn;
+    Matrix<T>::cdref      = cover.cdref;
+    Matrix<T>::Lweight    = cover.Lweight;
+    Matrix<T>::useLweight = cover.useLweight;
 
     return resval;
 }
@@ -1372,20 +1381,22 @@ DynArray<int> *retMatrix<T>::reset_c(Matrix<T> &cover, int colpivotsize)
         Matrix<T>::pivotCol = resval;
     }
 
-    Matrix<T>::bkref    = cover.bkref;
-    Matrix<T>::nbase    = true;
-    Matrix<T>::content  = cover.content;
-    Matrix<T>::ccontent = cover.ccontent;
-    Matrix<T>::iscover  = cover.iscover;
-    Matrix<T>::elmfn    = cover.elmfn;
-    Matrix<T>::rowfn    = cover.rowfn;
-    Matrix<T>::delfn    = cover.delfn;
-    Matrix<T>::dref     = cover.dref;
-    Matrix<T>::celmfn   = cover.celmfn;
-    Matrix<T>::celmfn_v = cover.celmfn_v;
-    Matrix<T>::crowfn   = cover.crowfn;
-    Matrix<T>::cdelfn   = cover.cdelfn;
-    Matrix<T>::cdref    = cover.cdref;
+    Matrix<T>::bkref      = cover.bkref;
+    Matrix<T>::nbase      = true;
+    Matrix<T>::content    = cover.content;
+    Matrix<T>::ccontent   = cover.ccontent;
+    Matrix<T>::iscover    = cover.iscover;
+    Matrix<T>::elmfn      = cover.elmfn;
+    Matrix<T>::rowfn      = cover.rowfn;
+    Matrix<T>::delfn      = cover.delfn;
+    Matrix<T>::dref       = cover.dref;
+    Matrix<T>::celmfn     = cover.celmfn;
+    Matrix<T>::celmfn_v   = cover.celmfn_v;
+    Matrix<T>::crowfn     = cover.crowfn;
+    Matrix<T>::cdelfn     = cover.cdelfn;
+    Matrix<T>::cdref      = cover.cdref;
+    Matrix<T>::Lweight    = cover.Lweight;
+    Matrix<T>::useLweight = cover.useLweight;
 
     return resval;
 }
@@ -1427,20 +1438,22 @@ DynArray<int> *retMatrix<T>::reset_rc(Matrix<T> &cover, DynArray<int> *&tpivCol,
         Matrix<T>::pivotCol = tpivCol;
     }
 
-    Matrix<T>::bkref    = cover.bkref;
-    Matrix<T>::nbase    = true;
-    Matrix<T>::content  = cover.content;
-    Matrix<T>::ccontent = cover.ccontent;
-    Matrix<T>::iscover  = cover.iscover;
-    Matrix<T>::elmfn    = cover.elmfn;
-    Matrix<T>::rowfn    = cover.rowfn;
-    Matrix<T>::delfn    = cover.delfn;
-    Matrix<T>::dref     = cover.dref;
-    Matrix<T>::celmfn   = cover.celmfn;
-    Matrix<T>::celmfn_v = cover.celmfn_v;
-    Matrix<T>::crowfn   = cover.crowfn;
-    Matrix<T>::cdelfn   = cover.cdelfn;
-    Matrix<T>::cdref    = cover.cdref;
+    Matrix<T>::bkref      = cover.bkref;
+    Matrix<T>::nbase      = true;
+    Matrix<T>::content    = cover.content;
+    Matrix<T>::ccontent   = cover.ccontent;
+    Matrix<T>::iscover    = cover.iscover;
+    Matrix<T>::elmfn      = cover.elmfn;
+    Matrix<T>::rowfn      = cover.rowfn;
+    Matrix<T>::delfn      = cover.delfn;
+    Matrix<T>::dref       = cover.dref;
+    Matrix<T>::celmfn     = cover.celmfn;
+    Matrix<T>::celmfn_v   = cover.celmfn_v;
+    Matrix<T>::crowfn     = cover.crowfn;
+    Matrix<T>::cdelfn     = cover.cdelfn;
+    Matrix<T>::cdref      = cover.cdref;
+    Matrix<T>::Lweight    = cover.Lweight;
+    Matrix<T>::useLweight = cover.useLweight;
 
     return tpivRow;
 }
@@ -1465,20 +1478,22 @@ void retMatrix<T>::creset(const Matrix<T> &cover)
     Matrix<T>::pbaseCol = true;
     Matrix<T>::pivotCol = nullptr;
 
-    Matrix<T>::bkref    = cover.bkref;
-    Matrix<T>::nbase    = true;
-    Matrix<T>::content  = nullptr;
-    Matrix<T>::ccontent = cover.ccontent;
-    Matrix<T>::iscover  = cover.iscover;
-    Matrix<T>::elmfn    = nullptr;
-    Matrix<T>::rowfn    = nullptr;
-    Matrix<T>::delfn    = nullptr;
-    Matrix<T>::dref     = nullptr;
-    Matrix<T>::celmfn   = cover.celmfn;
-    Matrix<T>::celmfn_v = cover.celmfn_v;
-    Matrix<T>::crowfn   = cover.crowfn;
-    Matrix<T>::cdelfn   = cover.cdelfn;
-    Matrix<T>::cdref    = cover.cdref;
+    Matrix<T>::bkref      = cover.bkref;
+    Matrix<T>::nbase      = true;
+    Matrix<T>::content    = nullptr;
+    Matrix<T>::ccontent   = cover.ccontent;
+    Matrix<T>::iscover    = cover.iscover;
+    Matrix<T>::elmfn      = nullptr;
+    Matrix<T>::rowfn      = nullptr;
+    Matrix<T>::delfn      = nullptr;
+    Matrix<T>::dref       = nullptr;
+    Matrix<T>::celmfn     = cover.celmfn;
+    Matrix<T>::celmfn_v   = cover.celmfn_v;
+    Matrix<T>::crowfn     = cover.crowfn;
+    Matrix<T>::cdelfn     = cover.cdelfn;
+    Matrix<T>::cdref      = cover.cdref;
+    Matrix<T>::Lweight    = cover.Lweight;
+    Matrix<T>::useLweight = cover.useLweight;
 
     return;
 }
@@ -1509,23 +1524,24 @@ DynArray<int> *retMatrix<T>::creset_r(const Matrix<T> &cover, int rowpivotsize)
         MEMDEL(Matrix<T>::pivotCol);
     }
 
-    Matrix<T>::pbaseCol = true;
-    Matrix<T>::pivotCol = nullptr;
-
-    Matrix<T>::bkref    = cover.bkref;
-    Matrix<T>::nbase    = true;
-    Matrix<T>::content  = nullptr;
-    Matrix<T>::ccontent = cover.ccontent;
-    Matrix<T>::iscover  = cover.iscover;
-    Matrix<T>::elmfn    = nullptr;
-    Matrix<T>::rowfn    = nullptr;
-    Matrix<T>::delfn    = nullptr;
-    Matrix<T>::dref     = nullptr;
-    Matrix<T>::celmfn   = cover.celmfn;
-    Matrix<T>::celmfn_v = cover.celmfn_v;
-    Matrix<T>::crowfn   = cover.crowfn;
-    Matrix<T>::cdelfn   = cover.cdelfn;
-    Matrix<T>::cdref    = cover.cdref;
+    Matrix<T>::pbaseCol   = true;
+    Matrix<T>::pivotCol   = nullptr;
+    Matrix<T>::bkref      = cover.bkref;
+    Matrix<T>::nbase      = true;
+    Matrix<T>::content    = nullptr;
+    Matrix<T>::ccontent   = cover.ccontent;
+    Matrix<T>::iscover    = cover.iscover;
+    Matrix<T>::elmfn      = nullptr;
+    Matrix<T>::rowfn      = nullptr;
+    Matrix<T>::delfn      = nullptr;
+    Matrix<T>::dref       = nullptr;
+    Matrix<T>::celmfn     = cover.celmfn;
+    Matrix<T>::celmfn_v   = cover.celmfn_v;
+    Matrix<T>::crowfn     = cover.crowfn;
+    Matrix<T>::cdelfn     = cover.cdelfn;
+    Matrix<T>::cdref      = cover.cdref;
+    Matrix<T>::Lweight    = cover.Lweight;
+    Matrix<T>::useLweight = cover.useLweight;
 
     return resval;
 }
@@ -1559,20 +1575,22 @@ DynArray<int> *retMatrix<T>::creset_c(const Matrix<T> &cover, int colpivotsize)
         Matrix<T>::pivotCol = resval;
     }
 
-    Matrix<T>::bkref    = cover.bkref;
-    Matrix<T>::nbase    = true;
-    Matrix<T>::content  = nullptr;
-    Matrix<T>::ccontent = cover.ccontent;
-    Matrix<T>::iscover  = cover.iscover;
-    Matrix<T>::elmfn    = nullptr;
-    Matrix<T>::rowfn    = nullptr;
-    Matrix<T>::delfn    = nullptr;
-    Matrix<T>::dref     = nullptr;
-    Matrix<T>::celmfn   = cover.celmfn;
-    Matrix<T>::celmfn_v = cover.celmfn_v;
-    Matrix<T>::crowfn   = cover.crowfn;
-    Matrix<T>::cdelfn   = cover.cdelfn;
-    Matrix<T>::cdref    = cover.cdref;
+    Matrix<T>::bkref      = cover.bkref;
+    Matrix<T>::nbase      = true;
+    Matrix<T>::content    = nullptr;
+    Matrix<T>::ccontent   = cover.ccontent;
+    Matrix<T>::iscover    = cover.iscover;
+    Matrix<T>::elmfn      = nullptr;
+    Matrix<T>::rowfn      = nullptr;
+    Matrix<T>::delfn      = nullptr;
+    Matrix<T>::dref       = nullptr;
+    Matrix<T>::celmfn     = cover.celmfn;
+    Matrix<T>::celmfn_v   = cover.celmfn_v;
+    Matrix<T>::crowfn     = cover.crowfn;
+    Matrix<T>::cdelfn     = cover.cdelfn;
+    Matrix<T>::cdref      = cover.cdref;
+    Matrix<T>::Lweight    = cover.Lweight;
+    Matrix<T>::useLweight = cover.useLweight;
 
     return resval;
 }
@@ -1614,20 +1632,22 @@ DynArray<int> *retMatrix<T>::creset_rc(const Matrix<T> &cover, DynArray<int> *&t
         Matrix<T>::pivotCol = tpivCol;
     }
 
-    Matrix<T>::bkref    = cover.bkref;
-    Matrix<T>::nbase    = true;
-    Matrix<T>::content  = nullptr;
-    Matrix<T>::ccontent = cover.ccontent;
-    Matrix<T>::iscover  = cover.iscover;
-    Matrix<T>::elmfn    = nullptr;
-    Matrix<T>::rowfn    = nullptr;
-    Matrix<T>::delfn    = nullptr;
-    Matrix<T>::dref     = nullptr;
-    Matrix<T>::celmfn   = cover.celmfn;
-    Matrix<T>::celmfn_v = cover.celmfn_v;
-    Matrix<T>::crowfn   = cover.crowfn;
-    Matrix<T>::cdelfn   = cover.cdelfn;
-    Matrix<T>::cdref    = cover.cdref;
+    Matrix<T>::bkref      = cover.bkref;
+    Matrix<T>::nbase      = true;
+    Matrix<T>::content    = nullptr;
+    Matrix<T>::ccontent   = cover.ccontent;
+    Matrix<T>::iscover    = cover.iscover;
+    Matrix<T>::elmfn      = nullptr;
+    Matrix<T>::rowfn      = nullptr;
+    Matrix<T>::delfn      = nullptr;
+    Matrix<T>::dref       = nullptr;
+    Matrix<T>::celmfn     = cover.celmfn;
+    Matrix<T>::celmfn_v   = cover.celmfn_v;
+    Matrix<T>::crowfn     = cover.crowfn;
+    Matrix<T>::cdelfn     = cover.cdelfn;
+    Matrix<T>::cdref      = cover.cdref;
+    Matrix<T>::Lweight    = cover.Lweight;
+    Matrix<T>::useLweight = cover.useLweight;
 
     return tpivRow;
 }
@@ -1659,7 +1679,9 @@ Matrix<T>::Matrix() : dnumRows(0),
                       celmfn_v(nullptr),
                       crowfn(nullptr),
                       cdelfn(nullptr),
-                      cdref(nullptr)
+                      cdref(nullptr),
+                      Lweight(nullptr),
+                      useLweight(false)
 {
     MEMNEW(content,Vector<Vector<T> >(dnumRows));
     ccontent = content;
@@ -1691,7 +1713,9 @@ Matrix<T>::Matrix(const T &) : dnumRows(0),
                       celmfn_v(nullptr),
                       crowfn(nullptr),
                       cdelfn(nullptr),
-                      cdref(nullptr)
+                      cdref(nullptr),
+                      Lweight(nullptr),
+                      useLweight(false)
 {
     MEMNEW(content,Vector<Vector<T> >(dnumRows));
     ccontent = content;
@@ -1723,8 +1747,9 @@ Matrix<T>::Matrix(int numRows, int numCols) : dnumRows(numRows),
                                               celmfn_v(nullptr),
                                               crowfn(nullptr),
                                               cdelfn(nullptr),
-                                              cdref(nullptr)
-
+                                              cdref(nullptr),
+                                              Lweight(nullptr),
+                                              useLweight(false)
 {
     int i;
 
@@ -1743,7 +1768,7 @@ Matrix<T>::Matrix(int numRows, int numCols) : dnumRows(numRows),
 }
 
 template <class T>
-Matrix<T>::Matrix(const T &(*celm)(int, int, const void *, retVector<T> &), const Vector<T> &(*crow)(int, const void *, retVector<T> &), const void *cxdref, int numRows, int numCols, void (*xcdelfn)(const void *, void *), void *xdref)
+Matrix<T>::Matrix(const T &(*celm)(int, int, const void *, retVector<T> &), const Vector<T> &(*crow)(int, const void *, retVector<T> &), const void *cxdref, int numRows, int numCols, void (*xcdelfn)(const void *, void *), void *xdref, const Vector<T> *_Lweight, bool _useLweight)
                       : dnumRows(numRows),
                         dnumCols(numCols),
                         iibRow(0),
@@ -1767,14 +1792,16 @@ Matrix<T>::Matrix(const T &(*celm)(int, int, const void *, retVector<T> &), cons
                         celmfn_v(nullptr),
                         crowfn(crow),
                         cdelfn(xcdelfn),
-                        cdref(cxdref)
+                        cdref(cxdref),
+                        Lweight(_Lweight),
+                        useLweight(_useLweight)
 {
     NiceAssert( numRows >= 0 );
     NiceAssert( numCols >= 0 );
 }
 
 template <class T>
-Matrix<T>::Matrix(T (*celm_v)(int, int, const void *, retVector<T> &), const T &(*celm)(int, int, const void *, retVector<T> &), const Vector<T> &(*crow)(int, const void *, retVector<T> &), const void *cxdref, int numRows, int numCols, void (*xcdelfn)(const void *, void *), void *xdref)
+Matrix<T>::Matrix(T (*celm_v)(int, int, const void *, retVector<T> &), const T &(*celm)(int, int, const void *, retVector<T> &), const Vector<T> &(*crow)(int, const void *, retVector<T> &), const void *cxdref, int numRows, int numCols, void (*xcdelfn)(const void *, void *), void *xdref, const Vector<T> *_Lweight, bool _useLweight)
                       : dnumRows(numRows),
                         dnumCols(numCols),
                         iibRow(0),
@@ -1798,14 +1825,16 @@ Matrix<T>::Matrix(T (*celm_v)(int, int, const void *, retVector<T> &), const T &
                         celmfn_v(celm_v),
                         crowfn(crow),
                         cdelfn(xcdelfn),
-                        cdref(cxdref)
+                        cdref(cxdref),
+                        Lweight(_Lweight),
+                        useLweight(_useLweight)
 {
     NiceAssert( numRows >= 0 );
     NiceAssert( numCols >= 0 );
 }
 
 template <class T>
-Matrix<T>::Matrix(T &(*elm)(int, int, void *, retVector<T> &), Vector<T> &(*row)(int, void *, retVector<T> &), void *xdref, const T &(*celm)(int, int, const void *, retVector<T> &), const Vector<T> &(*crow)(int, const void *, retVector<T> &), const void *cxdref, int numRows, int numCols, void (*xdelfn)(void *), void (*xcdelfn)(const void *, void *))
+Matrix<T>::Matrix(T &(*elm)(int, int, void *, retVector<T> &), Vector<T> &(*row)(int, void *, retVector<T> &), void *xdref, const T &(*celm)(int, int, const void *, retVector<T> &), const Vector<T> &(*crow)(int, const void *, retVector<T> &), const void *cxdref, int numRows, int numCols, void (*xdelfn)(void *), void (*xcdelfn)(const void *, void *), const Vector<T> *_Lweight, bool _useLweight)
                       : dnumRows(numRows),
                         dnumCols(numCols),
                         iibRow(0),
@@ -1829,7 +1858,9 @@ Matrix<T>::Matrix(T &(*elm)(int, int, void *, retVector<T> &), Vector<T> &(*row)
                         celmfn_v(nullptr),
                         crowfn(crow),
                         cdelfn(xcdelfn),
-                        cdref(cxdref)
+                        cdref(cxdref),
+                        Lweight(_Lweight),
+                        useLweight(_useLweight)
 {
     NiceAssert( numRows >= 0 );
     NiceAssert( numCols >= 0 );
@@ -1859,7 +1890,9 @@ Matrix<T>::Matrix(const Matrix<T> &src) : dnumRows(0),
                                           celmfn_v(nullptr),
                                           crowfn(nullptr),
                                           cdelfn(nullptr),
-                                          cdref(nullptr)
+                                          cdref(nullptr),
+                                          Lweight(nullptr),
+                                          useLweight(false)
 {
     MEMNEW(content,Vector<Vector<T> >);
     ccontent = content;
@@ -1893,7 +1926,9 @@ Matrix<T>::Matrix(const char *, const Matrix<T> &src) : dnumRows(0),
                                                              celmfn_v(nullptr),
                                                              crowfn(nullptr),
                                                              cdelfn(nullptr),
-                                                             cdref(nullptr)
+                                                             cdref(nullptr),
+                                                             Lweight(nullptr),
+                                                             useLweight(false)
 {
     ;
 }
@@ -1922,7 +1957,9 @@ Matrix<T>::Matrix(const char *) : dnumRows(0),
                                        celmfn_v(nullptr),
                                        crowfn(nullptr),
                                        cdelfn(nullptr),
-                                       cdref(nullptr)
+                                       cdref(nullptr),
+                                       Lweight(nullptr),
+                                       useLweight(false)
 {
     ;
 }
@@ -1951,7 +1988,9 @@ Matrix<T>::Matrix(const char *, const Vector<T> &ccondummy) : dnumRows(INT_MAX-1
                                        celmfn_v(nullptr),
                                        crowfn(nullptr),
                                        cdelfn(nullptr),
-                                       cdref(nullptr)
+                                       cdref(nullptr),
+                                       Lweight(nullptr),
+                                       useLweight(false)
 {
     bkref = this;
 
@@ -2196,11 +2235,14 @@ T &Matrix<T>::operator()(const char *dummy, int i, int j)
     NiceAssert( pivotRow );
     NiceAssert( pivotCol );
 
+    NiceAssert( !iscover );
+
     if ( iscover )
     {
         static thread_local retVector<T> tmpva;
 
         NiceAssert( elmfn );
+        NiceAssert( !Lweight || !useLweight );
 
         return (*elmfn)((*pivotRow).v(iibRow+(i*iisRow)),(*pivotCol).v(iibCol+(j*iisCol)),dref,tmpva);
     }
@@ -2220,13 +2262,25 @@ const T &Matrix<T>::operator()(int i, int j) const
     NiceAssert( pivotRow );
     NiceAssert( pivotCol );
 
-    if ( iscover )
+    if ( iscover && ( !Lweight || !useLweight ) )
     {
         static thread_local retVector<T> tmpva;
 
         NiceAssert( celmfn );
 
         return (*celmfn)((*pivotRow).v(iibRow+(i*iisRow)),(*pivotCol).v(iibCol+(j*iisCol)),cdref,tmpva);
+    }
+
+    else if ( iscover )
+    {
+        static thread_local retVector<T> tmpva;
+        static thread_local T tmpres;
+
+        NiceAssert( celmfn );
+
+        tmpres = ((*Lweight).v((*pivotRow).v(iibRow+(i*iisRow))))*((*Lweight).v((*pivotCol).v(iibCol+(j*iisCol))))*(*celmfn)((*pivotRow).v(iibRow+(i*iisRow)),(*pivotCol).v(iibCol+(j*iisCol)),cdref,tmpva);
+
+        return tmpres;
     }
 
     NiceAssert( ccontent );
@@ -2244,7 +2298,7 @@ T Matrix<T>::v(int i, int j) const
     NiceAssert( pivotRow );
     NiceAssert( pivotCol );
 
-    if ( iscover && ( celmfn_v ) )
+    if ( iscover && celmfn_v && ( !Lweight || !useLweight ) )
     {
         static thread_local retVector<T> tmpva;
 
@@ -2253,13 +2307,31 @@ T Matrix<T>::v(int i, int j) const
         return (*celmfn_v)((*pivotRow).v(iibRow+(i*iisRow)),(*pivotCol).v(iibCol+(j*iisCol)),cdref,tmpva);
     }
 
-    else if ( iscover )
+    else if ( iscover && celmfn_v )
+    {
+        static thread_local retVector<T> tmpva;
+
+        NiceAssert( celmfn_v );
+
+        return ((*Lweight).v((*pivotRow).v(iibRow+(i*iisRow))))*((*Lweight).v((*pivotCol).v(iibCol+(j*iisCol))))*(*celmfn_v)((*pivotRow).v(iibRow+(i*iisRow)),(*pivotCol).v(iibCol+(j*iisCol)),cdref,tmpva);
+    }
+
+    else if ( iscover && ( !Lweight || !useLweight ) )
     {
         static thread_local retVector<T> tmpva;
 
         NiceAssert( celmfn );
 
         return (*celmfn)((*pivotRow).v(iibRow+(i*iisRow)),(*pivotCol).v(iibCol+(j*iisCol)),cdref,tmpva);
+    }
+
+    else if ( iscover )
+    {
+        static thread_local retVector<T> tmpva;
+
+        NiceAssert( celmfn );
+
+        return ((*Lweight).v((*pivotRow).v(iibRow+(i*iisRow))))*((*Lweight).v((*pivotCol).v(iibCol+(j*iisCol))))*(*celmfn)((*pivotRow).v(iibRow+(i*iisRow)),(*pivotCol).v(iibCol+(j*iisCol)),cdref,tmpva);
     }
 
     NiceAssert( ccontent );
@@ -2277,11 +2349,14 @@ void Matrix<T>::sv(int i, int j, T x) const
     NiceAssert( pivotRow );
     NiceAssert( pivotCol );
 
+    NiceAssert( !iscover );
+
     if ( iscover )
     {
         retVector<T> tmpva;
 
         NiceAssert( elmfn );
+        NiceAssert( !Lweight || useLweight );
 
         (*elmfn)((*pivotRow).v(iibRow+(i*iisRow)),(*pivotCol).v(iibCol+(j*iisCol)),dref,tmpva) = x;
     }
@@ -2301,9 +2376,12 @@ Vector<T> &Matrix<T>::operator()(const char *dummy, int i, retVector<T> &tmpb, r
 
     int jnumCols = numCols();
 
+    NiceAssert( !iscover );
+
     if ( iscover )
     {
         NiceAssert( rowfn );
+        NiceAssert( !Lweight || !useLweight );
 
 	if ( !nbase )
 	{
@@ -2350,9 +2428,12 @@ Vector<T> &Matrix<T>::operator()(const char *dummy, int i, int jb, int js, int j
 
     jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
+    NiceAssert( !iscover );
+
     if ( iscover )
     {
         NiceAssert( rowfn );
+        NiceAssert( !Lweight || !useLweight );
 
 	if ( !nbase )
 	{
@@ -2412,7 +2493,7 @@ const Vector<T> &Matrix<T>::operator()(int i, retVector<T> &res, retVector<T> &t
 
     int jnumCols = numCols();
 
-    if ( iscover )
+    if ( iscover && ( !Lweight || !useLweight ) )
     {
         NiceAssert( crowfn );
 
@@ -2428,6 +2509,43 @@ const Vector<T> &Matrix<T>::operator()(int i, retVector<T> &res, retVector<T> &t
         int iim = iib+((ressize-1)*iis);
 
 	return ((*crowfn)((*pivotRow).v(iibRow+(i*iisRow)),cdref,tmp))(*pivotCol,iib,iis,iim,res);
+    }
+
+    else if ( iscover )
+    {
+        NiceAssert( crowfn );
+
+	if ( !nbase )
+	{
+            retVector<T> tmpres;
+
+	    ((*crowfn)((*pivotRow).v(iibRow+(i*iisRow)),cdref,tmpres));
+
+            res.reset("&",tmpres); // this is the overwrite form
+
+            static_cast<Vector<T> &>(res).Lscale((*Lweight).v((*pivotRow).v(iibRow+(i*iisRow))));
+            static_cast<Vector<T> &>(res).Rscale((*Lweight));
+
+            return res;
+	}
+
+        int ressize = numCols();
+
+        int iib = iibCol;
+        int iis = iisCol;
+        int iim = iib+((ressize-1)*iis);
+
+        retVector<T> tmpres;
+        retVector<T> tmpva;
+
+	((*crowfn)((*pivotRow).v(iibRow+(i*iisRow)),cdref,tmp))(*pivotCol,iib,iis,iim,tmpres);
+
+        res.reset("&",tmpres); // this is the overwrite form
+
+        static_cast<Vector<T> &>(res).Lscale((*Lweight).v((*pivotRow).v(iibRow+(i*iisRow))));
+        static_cast<Vector<T> &>(res).Rscale((*Lweight)(*pivotCol,iib,iis,iim,tmpva));
+
+        return res;
     }
 
     NiceAssert( ccontent );
@@ -2463,7 +2581,7 @@ const Vector<T> &Matrix<T>::operator()(int i, int jb, int js, int jm, retVector<
 
     jnumCols = ( jnumCols < 0 ) ? 0 : jnumCols;
 
-    if ( iscover )
+    if ( iscover && ( !Lweight || !useLweight ) )
     {
         NiceAssert( crowfn );
 
@@ -2489,6 +2607,54 @@ const Vector<T> &Matrix<T>::operator()(int i, int jb, int js, int jm, retVector<
         int iim = iib+((ressize-1)*iis);
 
 	return ((*crowfn)((*pivotRow).v(iibRow+(i*iisRow)),cdref,tmp))(*pivotCol,iib,iis,iim,res);
+    }
+
+    else if ( iscover )
+    {
+        NiceAssert( crowfn );
+
+	if ( !nbase )
+	{
+            retVector<T> tmpres;
+            retVector<T> tmpva;
+
+	    ((*crowfn)((*pivotRow).v(iibRow+(i*iisRow)),cdref,tmp))(jb,js,jm,tmpres);
+
+            res.reset("&",tmpres); // this is the overwrite form
+
+            static_cast<Vector<T> &>(res).Lscale((*Lweight).v((*pivotRow).v(iibRow+(i*iisRow))));
+            static_cast<Vector<T> &>(res).Rscale((*Lweight)(jb,js,jm,tmpva));
+
+            return res;
+	}
+
+	//return (((*crowfn)((*pivotRow)(iibRow+(i*iisRow)),cdref,tmp))(*pivotCol,iibCol,iisCol,iibCol+((dnumCols-1)*iisCol)))(jb,js,jm,res);
+
+        int ressize = ( jb > jm ) ? 0 : ( ((jm-jb)/js)+1 );
+
+        int iib0 = iibCol;
+        int iis0 = iisCol;
+        //int iim0 = iibCol+((dnumCols-1)*iisCol);
+
+        int iib1 = jb;
+        int iis1 = js;
+        //int iim1 = jm;
+
+        int iib = iib0+(iis0*iib1);
+        int iis = iis0*iis1;
+        int iim = iib+((ressize-1)*iis);
+
+        retVector<T> tmpres;
+        retVector<T> tmpva;
+
+	((*crowfn)((*pivotRow).v(iibRow+(i*iisRow)),cdref,tmp))(*pivotCol,iib,iis,iim,tmpres);
+
+        res.reset("&",tmpres); // this is the overwrite form
+
+        static_cast<Vector<T> &>(res).Lscale((*Lweight).v((*pivotRow).v(iibRow+(i*iisRow))));
+        static_cast<Vector<T> &>(res).Rscale((*Lweight)(*pivotCol,iib,iis,iim,tmpva));
+
+        return res;
     }
 
     NiceAssert( ccontent );
@@ -2526,9 +2692,12 @@ Vector<T> &Matrix<T>::operator()(const char *dummy, int i, const Vector<int> &j,
     NiceAssert( pivotRow );
     NiceAssert( pivotCol );
 
+    NiceAssert( !iscover );
+
     if ( iscover )
     {
         NiceAssert( rowfn );
+        NiceAssert( !Lweight || !useLweight );
 
 	if ( !nbase )
 	{
@@ -2557,9 +2726,12 @@ Vector<T> &Matrix<T>::operator()(const char *dummy, int i, const Vector<int> &j,
     NiceAssert( pivotRow );
     NiceAssert( pivotCol );
 
+    NiceAssert( !iscover );
+
     if ( iscover )
     {
         NiceAssert( rowfn );
+        NiceAssert( !Lweight || !useLweight );
 
 	if ( !nbase )
 	{
@@ -2588,7 +2760,7 @@ const Vector<T> &Matrix<T>::operator()(int i, const Vector<int> &j, retVector<T>
     NiceAssert( pivotRow );
     NiceAssert( pivotCol );
 
-    if ( iscover )
+    if ( iscover && ( !Lweight || !useLweight ) )
     {
         NiceAssert( crowfn );
 
@@ -2598,6 +2770,39 @@ const Vector<T> &Matrix<T>::operator()(int i, const Vector<int> &j, retVector<T>
 	}
 
 	return (((*crowfn)((*pivotRow).v(iibRow+(i*iisRow)),cdref,tmpb))(*pivotCol,iibCol,iisCol,iibCol+((dnumCols-1)*iisCol),tmp))(j,res);
+    }
+
+    else if ( iscover )
+    {
+        NiceAssert( crowfn );
+
+	if ( !nbase )
+	{
+            retVector<T> tmpres;
+            retVector<T> tmpva;
+
+	    ((*crowfn)((*pivotRow).v(iibRow+(i*iisRow)),cdref,tmpb))(j,tmpres);
+
+            res.reset("&",tmpres); // this is the overwrite form
+
+            static_cast<Vector<T> &>(res).Lscale((*Lweight).v((*pivotRow).v(iibRow+(i*iisRow))));
+            static_cast<Vector<T> &>(res).Rscale((*Lweight)(j,tmpva));
+
+            return res;
+	}
+
+        retVector<T> tmpres;
+        retVector<T> tmpva;
+        retVector<T> tmpvb;
+
+        (((*crowfn)((*pivotRow).v(iibRow+(i*iisRow)),cdref,tmpb))(*pivotCol,iibCol,iisCol,iibCol+((dnumCols-1)*iisCol),tmp))(j,tmpres);
+
+        res.reset("&",tmpres); // this is the overwrite form
+
+        static_cast<Vector<T> &>(res).Lscale((*Lweight).v((*pivotRow).v(iibRow+(i*iisRow))));
+        static_cast<Vector<T> &>(res).Rscale((*Lweight)(*pivotCol,iibCol,iisCol,iibCol+((dnumCols-1)*iisCol),tmpvb)(j,tmpva));
+
+        return res;
     }
 
     NiceAssert( ccontent );
@@ -2619,7 +2824,7 @@ const Vector<T> &Matrix<T>::operator()(int i, const Vector<int> &j, retVector<T>
     NiceAssert( pivotRow );
     NiceAssert( pivotCol );
 
-    if ( iscover )
+    if ( iscover && ( !Lweight || !useLweight ) )
     {
         NiceAssert( crowfn );
 
@@ -2629,6 +2834,39 @@ const Vector<T> &Matrix<T>::operator()(int i, const Vector<int> &j, retVector<T>
 	}
 
 	return (((*crowfn)((*pivotRow).v(iibRow+(i*iisRow)),cdref,tmpb))(*pivotCol,iibCol,iisCol,iibCol+((dnumCols-1)*iisCol),tmp))(j,jb,js,jm,res);
+    }
+
+    else if ( iscover )
+    {
+        NiceAssert( crowfn );
+
+	if ( !nbase )
+	{
+            retVector<T> tmpres;
+            retVector<T> tmpva;
+
+	    ((*crowfn)((*pivotRow).v(iibRow+(i*iisRow)),cdref,tmpb))(j,jb,js,jm,tmpres);
+
+            res.reset("&",tmpres); // this is the overwrite form
+
+            static_cast<Vector<T> &>(res).Lscale((*Lweight).v((*pivotRow).v(iibRow+(i*iisRow))));
+            static_cast<Vector<T> &>(res).Rscale((*Lweight)(j,jb,js,jm,tmpva));
+
+            return res;
+	}
+
+        retVector<T> tmpres;
+        retVector<T> tmpva;
+        retVector<T> tmpvb;
+
+	(((*crowfn)((*pivotRow).v(iibRow+(i*iisRow)),cdref,tmpb))(*pivotCol,iibCol,iisCol,iibCol+((dnumCols-1)*iisCol),tmp))(j,jb,js,jm,tmpres);
+
+        res.reset("&",tmpres); // this is the overwrite form
+
+        static_cast<Vector<T> &>(res).Lscale((*Lweight).v((*pivotRow).v(iibRow+(i*iisRow))));
+        static_cast<Vector<T> &>(res).Rscale((*Lweight)(*pivotCol,iibCol,iisCol,iibCol+((dnumCols-1)*iisCol),tmpvb)(j,jb,js,jm,tmpva));
+
+        return res;
     }
 
     NiceAssert( ccontent );
