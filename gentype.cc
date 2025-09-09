@@ -6356,7 +6356,7 @@ int gentype::mathsparse(std::string &srcx, const std::string &src)
 
     // Run through all strings and convert to expressions
     //
-    // null -> null()
+    // null,Null,none,None -> null()
     // nan,NaN,... -> vnan()
     // inf -> pinf()
     // pinf -> pinf()
@@ -6382,7 +6382,7 @@ int gentype::mathsparse(std::string &srcx, const std::string &src)
     {
 	if ( srcxblock(i).isstr )
 	{
-            if ( srcxblock(i).fnname == "null" )
+            if ( ( srcxblock(i).fnname == "null" ) || ( srcxblock(i).fnname == "Null" ) || ( srcxblock(i).fnname == "none" ) || ( srcxblock(i).fnname == "None" ) )
 	    {
                 srcxblock("&",i).text  = "null()";
 		srcxblock("&",i).isstr = 0;

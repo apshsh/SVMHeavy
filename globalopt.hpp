@@ -80,19 +80,11 @@ class GlobalOptions
 
 public:
 
+    bool ispydirect; // true if called directly from python (so don't muck around with intermediate callbacks etc)
+
     // Optname used for logging only
 
     std::string optname;
-
-    // Set 1 if MLnumbers are to be passed in via fnarg[15] (see mlinter)
-
-    int MLdefined;
-
-    // usealtoptfn: set 1 to use altoptfn rather than fn
-    // altoptfn: some function to be optimised if usealtoptfn set
-
-    int usealtoptfn;
-    gentype altoptfn;
 
     // recursive allxres
 
@@ -122,9 +114,9 @@ public:
     // if isProjection set then x = projOp.g(x), where projOp is a weighted
     // combination of random directions specified by subDef, which are a vector
     // of dim versions of randDirtemplate, where the user must set the distribution
-    // in randDir.  By default defrandDirtemplateVec is used, which corresponds
+    // in randDir.  By default priorrandDirtemplateVec is used, which corresponds
     // to finite dimensional random directions, but you can change this to 
-    // defrandDirtemplateFnGP to specify function drawn from a GPR.
+    // priorrandDirtemplateFnGP to specify function drawn from a GPR.
     //
     // isProjection  - 0 for normal (no fancy projection stuff)
     //                 1 for vector
@@ -166,10 +158,15 @@ public:
     int fnDim;         // default 1
     int bernstart;     // default 1
 
-    BLK_UsrFnB defrandDirtemplateVec;
-    GPR_Scalar defrandDirtemplateFnGP;
-    BLK_Bernst defrandDirtemplateFnBern;
-    RKHSVector defrandDirtemplateFnRKHS;
+    BLK_UsrFnB priorrandDirtemplateVec;
+    ML_Mutable priorrandDirtemplateFnGP;   // GPR_Scalar
+    BLK_Bernst priorrandDirtemplateFnBern;
+    RKHSVector priorrandDirtemplateFnRKHS;
+
+    //BLK_UsrFnB priorrandDirtemplateVec;
+    //GPR_Scalar priorrandDirtemplateFnGP;
+    //BLK_Bernst priorrandDirtemplateFnBern;
+    //RKHSVector priorrandDirtemplateFnRKHS;
 
     // ML registration stuff (for functional optimisation)
     //
@@ -180,211 +177,23 @@ public:
 
     // Constructors and assignment operators
 
-    GlobalOptions()
-    {
-        altallxres = nullptr;
-
-        optname = "Global Optimisation";
-
-        MLdefined = 0;
-
-        randDirtemplate    = nullptr;
-        randDirtemplateInd = -1;
-        projOp             = nullptr;
-        projOpRaw          = nullptr;
-        projOpInd          = -1;
-
-        MLregind = DEFAULT_MLREGIND;
-        MLregfn  = nullptr;
-
-        usealtoptfn = 0;
-        altoptfn    = 0;
-
-        maxtraintime = 0;
-
-        softmin = valninf(); // 0;
-        softmax = valpinf(); // 1;
-        hardmin = valninf();
-        hardmax = valpinf();
-
-        xwidth = 0;
-
-        penterm = 0.0;
-
-        isProjection  = 0;
-        includeConst  = 0;
-        whatConst     = 2.0;
-        randReproject = 0;
-        useScalarFn   = 1;
-        xxSampType    = 3;
-        xNsamp        = DEFAULT_SAMPLES_SAMPLE;
-        xSampSplit    = 1;
-        xSampType     = 0;
-        fnDim         = 1;
-        bernstart     = 1;
-
-        overfnitcnt = 0;
-
-        ismodel_convertx_simple = false;
-    }
-
-    GlobalOptions(const GlobalOptions &src)
-    {
-        *this = src;
-    }
-
+    GlobalOptions();
+    GlobalOptions(const GlobalOptions &src);
     // It is important that this not be made virtual!
-    GlobalOptions &operator=(const GlobalOptions &src)
-    {
-        altallxres = src.altallxres;
-
-        usealtoptfn = src.usealtoptfn;
-        altoptfn    = src.altoptfn;
-
-        maxtraintime = src.maxtraintime;
-
-        optname = src.optname;
-
-        MLdefined = src.MLdefined;
-
-        softmin = src.softmin;
-        softmax = src.softmax;
-        hardmin = src.hardmin;
-        hardmax = src.hardmax;
-
-        xwidth = src.xwidth;
-
-        penterm = src.penterm;
-
-        isProjection  = src.isProjection;
-        includeConst  = src.includeConst;
-        whatConst     = src.whatConst;
-        randReproject = src.randReproject;
-        useScalarFn   = src.useScalarFn;
-        xxSampType    = src.xxSampType;
-        xNsamp        = src.xNsamp;
-        xSampSplit    = src.xSampSplit;
-        xSampType     = src.xSampType;
-        fnDim         = src.fnDim;
-        bernstart     = src.bernstart;
-
-        defrandDirtemplateVec    = src.defrandDirtemplateVec;
-        defrandDirtemplateFnGP   = src.defrandDirtemplateFnGP;
-        defrandDirtemplateFnBern = src.defrandDirtemplateFnBern;
-        defrandDirtemplateFnRKHS = src.defrandDirtemplateFnRKHS;
-
-        stopearly  = src.stopearly;
-        firsttest  = src.firsttest;
-        spOverride = src.spOverride;
-        berndim    = src.berndim;
-        bestyet    = src.bestyet;
-
-        MLregind = src.MLregind;
-        MLregfn  = src.MLregfn;
-
-        MLreglist = src.MLreglist;
-        MLregltyp = src.MLregltyp;
-
-        a = src.a;
-        b = src.b;
-        c = src.c;
-
-        locdistMode = src.locdistMode;
-        locvarsType = src.locvarsType;
-
-        projOptemplate    = src.projOptemplate;
-        projOp            = src.projOp;
-        projOpRaw         = src.projOpRaw;
-        projOpInd         = src.projOpInd;
-
-        randDirtemplate    = src.randDirtemplate;
-        randDirtemplateInd = src.randDirtemplateInd;
-        subDef             = src.subDef;
-        subDefInd          = src.subDefInd;
-
-        addSubDim = src.addSubDim;
-
-        locfnarg = src.locfnarg;
-
-        xpweight         = src.xpweight;
-        xpweightIsWeight = src.xpweightIsWeight;
-        xbasis           = src.xbasis;
-        xbasisprod       = src.xbasisprod;
-
-        overfnitcnt = src.overfnitcnt;
-
-        ismodel_convertx_simple = src.ismodel_convertx_simple;
-
-        return *this;
-    }
+    GlobalOptions &operator=(const GlobalOptions &src);
 
     // Reset function so that the next simulation can run
 
-    virtual void reset(void)
-    {
-        altallxres = nullptr;
-
-        xwidth = 0;
-
-        stopearly  = 0;
-        firsttest  = 1;
-        spOverride = 0;
-        berndim    = 0;
-        bestyet    = 0.0;
-
-        // We leave the following unchanged so that we don't get
-        // ML overwriting
-        //
-        // int MLregind;
-        //
-        // Vector<int> MLreglist;
-        // Vector<int> MLregltyp;
-
-        xpweight.resize(0);
-        xpweightIsWeight = 0;
-        xbasis.resize(0);
-        xbasisprod.resize(0,0);
-
-        a.resize(0);
-        b.resize(0);
-        c.resize(0);
-
-        locdistMode.resize(0);
-        locvarsType.resize(0);
-
-        randDirtemplate    = nullptr;
-        randDirtemplateInd = -1;
-        projOp             = nullptr;
-        projOpRaw          = nullptr;
-        projOpInd          = -1;
-
-        subDef = nullptr;
-        subDef.resize(0);
-        subDefInd.resize(0);
-
-        addSubDim = 0;
-
-        locfnarg = nullptr;
-
-        overfnitcnt = 0;
-
-        return;
-    }
+    virtual void reset(void);
 
     // Generate a copy of the relevant optimisation class.
 
-    virtual GlobalOptions *makeDup(void) const
-    {
-        GlobalOptions *newver;
-
-        MEMNEW(newver,GlobalOptions(*this));
-
-        return newver;
-    }
+//    virtual GlobalOptions *makeDup(void) const;
 
     // virtual Destructor to get rid of annoying warnings
 
-    virtual ~GlobalOptions() { }
+    virtual ~GlobalOptions();
+    void delstuff(void);
 
     // Optimisation function stubs
     //
@@ -395,12 +204,6 @@ public:
     // cres: c(x) result
     // ires: index of result.
     // mInd: for functional optimisation, this returns the (registered) index of the ML model found
-    // muInd: index of mu model approximation (if any)
-    // augxInd: index of augx model approximation (if any)
-    // cgtInd: index of inequality constraint approximation (if any)
-    // sigInd: index of sigma model approximation (if any)
-    // srcmodInd: index of source model (if used, see diff-GP and env-GP)
-    // diffmodInd: index of diff model (if used, see diff-GP)
     // allxres: all x results.
     // allfres: all f(x) results.
     // allcres: all c(x) results.
@@ -543,12 +346,6 @@ public:
                       gentype &fres,
                       int &ires,
                       int &mInd,
-                      Vector<int> &muInd,
-                      Vector<int> &augxInd,
-                      Vector<int> &cgtInd,
-                      int &sigInd,
-                      int &srcmodInd,
-                      int &diffmodInd,
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
                       Vector<gentype> &allfres,
@@ -577,12 +374,6 @@ public:
                       gentype &fres,
                       int &ires,
                       int &mInd,
-                      Vector<int> &muInd,
-                      Vector<int> &augxInd,
-                      Vector<int> &cgtInd,
-                      int &sigInd,
-                      int &srcmodInd,
-                      int &diffmodInd,
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
                       Vector<gentype> &allfres,
@@ -1002,14 +793,14 @@ public:
             else if ( isProjection == 5 )
             {
 //RKHSFIXME
-                NiceAssert( res.indsize() == defrandDirtemplateFnRKHS.N() );
+                NiceAssert( res.indsize() == priorrandDirtemplateFnRKHS.N() );
 
                 SparseVector<gentype> xxmod;
 
                 retVector<gentype> tmpva;
                 retVector<gentype> tmpvb;
 
-                RKHSVector realres(defrandDirtemplateFnRKHS);
+                RKHSVector realres(priorrandDirtemplateFnRKHS);
 
                 realres.a("&",tmpva) = res(tmpvb); // strip off sparseness (RHS), assign non-sparse version to alpha (weights) in RKHS
                 xxmod("&",(res.ind())(0)) = realres; // set zeroth index of xxmod as RKHSVector using magic
@@ -1276,13 +1067,13 @@ public:
             else if ( isProjection == 5 )
             {
 //RKHSFIXME
-                NiceAssert( res.size() == defrandDirtemplateFnRKHS.N() );
+                NiceAssert( res.size() == priorrandDirtemplateFnRKHS.N() );
 
                 Vector<gentype> xxmod(res);
 
                 retVector<gentype> tmpva;
 
-                RKHSVector realres(defrandDirtemplateFnRKHS);
+                RKHSVector realres(priorrandDirtemplateFnRKHS);
 
                 realres.a("&",tmpva) = res; // assign weights to alpha in RKHS
                 xxmod("&",0) = realres; // set zeroth index of xxmod as RKHSVector using magic
@@ -1396,8 +1187,8 @@ private:
     //            index is returned.
     // MLreglist: list of all registered MLs (so they can be deleted)
     // MLregltyp: list of all registered ML types
-    //            0  = randDirtemplate (copy of defrandDirtemplateVec in constructor)
-    //            1  = randDirtemplate (copy of defrandDirtemplateFnGP in constructor)
+    //            0  = randDirtemplate (copy of priorrandDirtemplateVec in constructor)
+    //            1  = randDirtemplate (copy of priorrandDirtemplateFnGP in constructor)
     //            2  = subDef (in makeSubspace)
     //            3  = projOp (in makeSubspace)
     //            4  = projOpNow (in convertx)

@@ -165,7 +165,6 @@ class fninnerinnerArg
                     const double &_softmax,
                     const int &_itcntmethod,
                     const int &_itinbatch,
-                    const Vector<ML_Base *> &_penalty,
                     gentype &_locpen,
                     const vecInfo **_xinf,
                     const int &_qNbasemu,
@@ -226,7 +225,6 @@ class fninnerinnerArg
                                                 softmax(_softmax),
                                                 itcntmethod(_itcntmethod),
                                                 itinbatch(_itinbatch),
-                                                penalty(_penalty),
                                                 locpen(_locpen),
                                                 xinf(_xinf),
                                                 Nbasemu(_qNbasemu),
@@ -296,7 +294,6 @@ class fninnerinnerArg
                                                   softmax(src.softmax),
                                                   itcntmethod(src.itcntmethod),
                                                   itinbatch(src.itinbatch),
-                                                  penalty(src.penalty),
                                                   locpen(src.locpen),
                                                   xinf(src.xinf),
                                                   Nbasemu(src.Nbasemu),
@@ -372,7 +369,6 @@ class fninnerinnerArg
     const double &softmax;
     const int &itcntmethod;
     const int &itinbatch;
-    const Vector<ML_Base *> &penalty;
     gentype &locpen;
     const vecInfo **xinf;
     const int &Nbasemu;
@@ -1219,21 +1215,6 @@ locsigmay = stabscore*stabscore*locsigmay;
 
                 break;
             }
-        }
-    }
-
-    // =======================================================================
-    // =======================================================================
-    // Add penalties
-    // =======================================================================
-    // =======================================================================
-
-    if ( penalty.size() )
-    {
-        for ( i = 0 ; i < penalty.size() ; ++i )
-        {
-            (*(penalty(i))).gg(locpen,x,*xinf);
-            res -= (double) locpen;
         }
     }
 
@@ -2435,7 +2416,7 @@ int bayesOpt(int dim,
     {
         // Work out if this is a full grid with unknown constraints
 
-        if ( bopts.numcgt )
+        //if ( bopts.numcgt )
         {
             isfullgrid = true;
             int allfullobs = 1;
@@ -2846,8 +2827,8 @@ int bayesOpt(int dim,
                 xb("&",k)("&",dim+11) = sigmagptraintime;
                 xb("&",k)("&",dim+12) = gridi;
                 xb("&",k)("&",dim+13) = gridy;
-                xb("&",k)("&",dim+14) = ( ( bopts.B <= 0 ) && !bopts.ismoo ) ? bopts.model_RKHSnorm(0) : bopts.B; // Only makes sense for single-objective
-                xb("&",k)("&",dim+15) = !bopts.ismoo ? bopts.model_maxinfogain(0) : 0.0;                          // Only makes sense for single-objective
+                xb("&",k)("&",dim+14) = ( ( bopts.B <= 0 ) && !bopts.ismoo() ) ? bopts.model_RKHSnorm(0) : bopts.B; // Only makes sense for single-objective
+                xb("&",k)("&",dim+15) = !bopts.ismoo() ? bopts.model_maxinfogain(0) : 0.0;                          // Only makes sense for single-objective
                 xb("&",k)("&",dim+16) = fidtotcost;
 
                 // ===========================================================
@@ -3297,8 +3278,8 @@ int bayesOpt(int dim,
         int firstone;
         int NC = bopts.model_N_mu()-bopts.model_NNCz_mu(0);
 
-        //ysort.prealloc( NC+(( bopts.totiters == -1 ) ? 10*dim*( bopts.ismoo ? bopts.moodim : 1 ) : bopts.totiters)+10);
-        //sscore.prealloc(NC+(( bopts.totiters == -1 ) ? 10*dim*( bopts.ismoo ? bopts.moodim : 1 ) : bopts.totiters)+10);
+        //ysort.prealloc( NC+(( bopts.totiters == -1 ) ? 10*dim*( bopts.ismoo() ? bopts.moodim : 1 ) : bopts.totiters)+10);
+        //sscore.prealloc(NC+(( bopts.totiters == -1 ) ? 10*dim*( bopts.ismoo() ? bopts.moodim : 1 ) : bopts.totiters)+10);
         ysort.prealloc( NC+(( bopts.totiters == -1 ) ? DEFITERS(dim) : bopts.totiters)+10);
         sscore.prealloc(NC+(( bopts.totiters == -1 ) ? DEFITERS(dim) : bopts.totiters)+10);
 
@@ -3474,7 +3455,6 @@ int bayesOpt(int dim,
                                softmax,
                                itcntmethod,
                                k,
-                               (bopts.penalty),
                                locpen,
                                &xinf,
                                Nbasemu,
@@ -3513,7 +3493,7 @@ int bayesOpt(int dim,
     int timeout     = 0;
     int isopt       = 0;
     double xmtrtime = bopts.maxtraintime;
-    //double maxitcnt = ( bopts.totiters == -2 ) ? 0 : ( ( bopts.totiters == -1 ) ? 10*effdim*( bopts.ismoo ? bopts.moodim : 1 ) : bopts.totiters ); // note use of effdim, not dim ( bopts.totiters == -2 ) ? 0 : ( ( bopts.totiters == -1 ) ? 10*dim : bopts.totiters );
+    //double maxitcnt = ( bopts.totiters == -2 ) ? 0 : ( ( bopts.totiters == -1 ) ? 10*effdim*( bopts.ismoo() ? bopts.moodim : 1 ) : bopts.totiters ); // note use of effdim, not dim ( bopts.totiters == -2 ) ? 0 : ( ( bopts.totiters == -1 ) ? 10*dim : bopts.totiters );
     double maxitcnt = ( ( bopts.totiters == -2 ) ||  usefidbudget ) ? 0 : ( ( bopts.totiters == -1 ) ? DEFITERS(effdim) : bopts.totiters ); // note use of effdim, not dim ( bopts.totiters == -2 ) ? 0 : ( ( bopts.totiters == -1 ) ? 10*dim : bopts.totiters );
     int dofreqstop  = ( ( bopts.totiters == -2 ) && !usefidbudget ) ? 1 : 0;
 
@@ -3844,8 +3824,15 @@ int bayesOpt(int dim,
                         // Use DIRect to maximise the acquisition function
 
                         fnarginner.mode = 1; // turn on single beta, stale x calculation fast mode
-                        dres = directOpt(n,xa("&",0,1,n-1,tmpva),dummyres,direcmin(0,1,n-1,tmpvb),direcmax(0,1,n-1,tmpvc),
-                                         fnfnapprox,fnarginnerdr,bopts.goptssingleobj,killSwitch);
+                        dres = directOpt(n,
+                                         xa("&",0,1,n-1,tmpva),
+                                         dummyres,
+                                         direcmin(0,1,n-1,tmpvb),
+                                         direcmax(0,1,n-1,tmpvc),
+                                         fnfnapprox,
+                                         fnarginnerdr,
+                                         bopts.goptssingleobj,
+                                         killSwitch);
                         fnarginner.mode = 0; // turn off single beta, stale x calculation fast mode
                     }
 
@@ -4295,7 +4282,7 @@ int bayesOpt(int dim,
 
                 locimpmeasu.setehimethod(bopts.ehimethodmultiobj);
 
-                locbopts.ismoo             = 1;
+                locbopts.moodim            = recBatchSize;
                 locbopts.impmeasu          = &(static_cast<IMP_Generic &>(locimpmeasu));
                 locbopts.method            = 1;
                 locbopts.intrinbatch       = 1;
@@ -4523,8 +4510,8 @@ int bayesOpt(int dim,
                 xb("&",numRecs)("&",dim+11) = (double) sigmagptraintime;
                 xb("&",numRecs)("&",dim+12) = gridi;
                 xb("&",numRecs)("&",dim+13) = gridy;
-                xb("&",numRecs)("&",dim+14) = ( ( bopts.B <= 0 ) && !bopts.ismoo ) ? bopts.model_RKHSnorm(0) : bopts.B;
-                xb("&",numRecs)("&",dim+15) = !bopts.ismoo ? bopts.model_maxinfogain(0) : 0.0;
+                xb("&",numRecs)("&",dim+14) = ( ( bopts.B <= 0 ) && !bopts.ismoo() ) ? bopts.model_RKHSnorm(0) : bopts.B;
+                xb("&",numRecs)("&",dim+15) = !bopts.ismoo() ? bopts.model_maxinfogain(0) : 0.0;
                 xb("&",numRecs)("&",dim+16) = fidtotcost;
 
                 ++numRecs;
@@ -5685,7 +5672,7 @@ int bayesOpt(int dim,
 //errstream() << "phantomxyzabcd obsnoise = " << obsnoise << "\n";
 //errstream() << "phantomxyzabcd scnoise = " << scnoise << "\n";
 //    fninnerArg optargs(dim,
-//                       ( ( bopts.startpoints == -1 ) ? dim+1 : bopts.startpoints ) + ( ( bopts.totiters == -1 ) ? 10*dim*( bopts.ismoo ? bopts.moodim : 1 ) : bopts.totiters ),
+//                       ( ( bopts.startpoints == -1 ) ? dim+1 : bopts.startpoints ) + ( ( bopts.totiters == -1 ) ? 10*dim*( bopts.ismoo() ? bopts.moodim : 1 ) : bopts.totiters ),
     fninnerArg optargs(dim,
                        ( ( bopts.startpoints == -1 ) ? dim+1 : bopts.startpoints ) + ( ( bopts.totiters == -1 ) ? DEFITERS(dim) : bopts.totiters ),
                        fn,

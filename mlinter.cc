@@ -167,7 +167,7 @@ void preExtractLinesFromFile(ofiletype &filelines, gentype &linesleft, std::stri
 // currcommandis overwrites currcomand(0)
 
 void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &currcommandis, const Vector<std::string> &currcomand, int ktype,
-                   SparseVector<SparseVector<gentype> > &argvariables, int &kernnum, int firstcall, int svmInd);
+                   SparseVector<SparseVector<gentype> > &argvariables, int &kernnum, int firstcall);
 
 
 // SVM testing functions
@@ -221,16 +221,16 @@ int gridelmMLreg(int ind, ML_Mutable *MLreg, void *arg);
 // Global gentype ML_Base access function
 
 
-int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib);
-int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib)
+int getparamfull(int MLInd, int fnind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib);
+int getparamfull(int MLInd, int fnind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib)
 {
-    if ( svmInd >= 0 )
+    if ( MLInd >= 0 )
     {
         const char *dummy = "";
-        return getMLrefconst(getMLmodels(),svmInd).getparam(fnind,val,xa,ia,xb,ib,dummy);
+        return getMLrefconst(MLInd).getparam(fnind,val,xa,ia,xb,ib,dummy);
     }
 
-    else if ( ( svmInd == -1 ) && ( ia == 0 ) )
+    else if ( ( MLInd == -1 ) && ( ia == 0 ) )
     {
         const Vector<double> &xxx = (const Vector<double> &) xa;
 
@@ -239,7 +239,7 @@ int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia,
         return 0;
     }
 
-    else if ( ( svmInd == -2 ) && ( ia == 0 ) && ( ib == 0 ) )
+    else if ( ( MLInd == -2 ) && ( ia == 0 ) && ( ib == 0 ) )
     {
         const Vector<double> &xxx = (const Vector<double> &) xa;
         const Matrix<double> &aaa = (const Matrix<double> &) xb;
@@ -249,7 +249,7 @@ int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia,
         return 0;
     }
 
-    else if ( ( svmInd == -3 ) && ( ia == 0 ) && ( ib == 0 ) )
+    else if ( ( MLInd == -3 ) && ( ia == 0 ) && ( ib == 0 ) )
     {
         const Vector<double> &xxx = (const Vector<double> &) xa;
         int MM = (int) xb;
@@ -268,15 +268,15 @@ int getparamfull(int svmInd, int fnind, gentype &val, const gentype &xa, int ia,
     return 1;
 }
 
-int egetparamfull(int svmInd, int fnind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib);
-int egetparamfull(int svmInd, int fnind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib)
+int egetparamfull(int MLInd, int fnind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib);
+int egetparamfull(int MLInd, int fnind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib)
 {
-    if ( svmInd >= 0 )
+    if ( MLInd >= 0 )
     {
-        return getMLrefconst(getMLmodels(),svmInd).egetparam(fnind,val,xa,ia,xb,ib);
+        return getMLrefconst(MLInd).egetparam(fnind,val,xa,ia,xb,ib);
     }
 
-    else if ( ( svmInd == -1 ) && ( ia == 0 ) )
+    else if ( ( MLInd == -1 ) && ( ia == 0 ) )
     {
         int k;
 
@@ -294,7 +294,7 @@ int egetparamfull(int svmInd, int fnind, Vector<gentype> &val, const Vector<gent
         return 0;
     }
 
-    else if ( ( svmInd == -2 ) && ( ia == 0 ) && ( ib == 0 ) )
+    else if ( ( MLInd == -2 ) && ( ia == 0 ) && ( ib == 0 ) )
     {
         int k;
 
@@ -313,7 +313,7 @@ int egetparamfull(int svmInd, int fnind, Vector<gentype> &val, const Vector<gent
         return 0;
     }
 
-    else if ( ( svmInd == -3 ) && ( ia == 0 ) && ( ib == 0 ) )
+    else if ( ( MLInd == -3 ) && ( ia == 0 ) && ( ib == 0 ) )
     {
         int k;
 
@@ -426,8 +426,8 @@ int runsvm(SVMThreadContext *svmContext,
     gentype temp;
     Vector<gentype> etemp;
 
-    getparamfull((*svmContext).svmInd,0,temp,temp,0,temp,0);
-    egetparamfull((*svmContext).svmInd,0,etemp,etemp,0,etemp,0);
+    getparamfull((*svmContext).MLInd,0,temp,temp,0,temp,0);
+    egetparamfull((*svmContext).MLInd,0,etemp,etemp,0,etemp,0);
 
     setGenFunc(getparam);
     seteGenFunc(egetparam);
@@ -449,6 +449,16 @@ void theRoundFile(char c)
 {
     (void) c;
     return;
+}
+
+
+void runInteract(void);
+void runInteract(void)
+{
+    int tmpval = setgetkbstate();
+    enablekbquitdet();
+    kbquitdet("Root",nullptr,nullptr,nullptr,1);
+    setgetkbstate(tmpval);
 }
 
 
@@ -783,15 +793,17 @@ int writeLog(const Matrix<T> &res, const std::string &resfilename, int (*getsetE
 
 
 
-// grabML:   make SVM svmInd exist
-// regML:    register SVM whattoreg at first available index >= svmInd
+// grabML:   make SVM MLInd exist
+// regML:    register SVM whattoreg at first available index >= MLInd
 //           returns index where registered
 // getMLref: get reference to requested ML
+//
+// regML:         register SVM whattoreg at first available index >= MLInd (returns index where registered)
 
-//void grabML(SparseVector<ML_Mutable *> &svmbase, int svmInd);
-//int regML(SparseVector<ML_Mutable *> &svmbase, int svmInd, ML_Mutable &whattoreg);
-//ML_Mutable &getMLref(SparseVector<ML_Mutable *> &svmbase, int svmInd);
-//const ML_Mutable &getMLrefconst(SparseVector<ML_Mutable *> &svmbase, int svmInd);
+//void grabML(SparseVector<ML_Mutable *> &svmbase, int MLInd);
+//int regML(SparseVector<ML_Mutable *> &svmbase, int MLInd, ML_Mutable &whattoreg);
+//ML_Mutable &getMLref(SparseVector<ML_Mutable *> &svmbase, int MLInd);
+//const ML_Mutable &getMLrefconst(SparseVector<ML_Mutable *> &svmbase, int MLInd);
 
 void killallthreads(SVMThreadContext *svmContext)
 {
@@ -812,11 +824,31 @@ void killallthreads(SVMThreadContext *svmContext)
     return;
 }
 
-int glob_MLInd        (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
-int glob_gridInd      (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
-int glob_DIRectInd    (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
-int glob_NelderMeadInd(int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
-int glob_BayesianInd  (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
+void grabML        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        );
+void grabgrid      (SparseVector<GridOptions   *> &gridbase,       int gridInd      );
+void grabDIRect    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    );
+void grabNelderMead(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd);
+void grabBayesian  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  );
+
+const ML_Mutable    &getMLrefconst        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        );
+const GridOptions   &getgridrefconst      (SparseVector<GridOptions   *> &gridbase,       int gridInd      );
+const DIRectOptions &getDIRectrefconst    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    );
+const NelderOptions &getNelderMeadrefconst(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd);
+const BayesOptions  &getBayesianrefconst  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  );
+
+ML_Mutable    &getMLref        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        );
+GridOptions   &getgridref      (SparseVector<GridOptions   *> &gridbase,       int gridInd      );
+DIRectOptions &getDIRectref    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    );
+NelderOptions &getNelderMeadref(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd);
+BayesOptions  &getBayesianref  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  );
+
+SparseVector<ML_Mutable    *> &getMLmodels       (void);
+SparseVector<GridOptions   *> &getgridOptim      (void);
+SparseVector<DIRectOptions *> &getDIRectOptim    (void);
+SparseVector<NelderOptions *> &getNelderMeadOptim(void);
+SparseVector<BayesOptions  *> &getBayesianOptim  (void);
+
+int regML(int MLInd, ML_Mutable &whattoreg);
 
 SparseVector<ML_Mutable    *> &getMLmodels       (void) { static SparseVector<ML_Mutable    *> MLbase;         return MLbase;         }
 SparseVector<GridOptions   *> &getgridOptim      (void) { static SparseVector<GridOptions   *> gridbase;       return gridbase;       }
@@ -847,6 +879,89 @@ GridOptions   &getgridref      (SparseVector<GridOptions   *> &gridbase,       i
 DIRectOptions &getDIRectref    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    ) { grabDIRect    (DIRectbase,    DIRectInd    ); return *(DIRectbase    ("&",DIRectInd    )); }
 NelderOptions &getNelderMeadref(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd) { grabNelderMead(NelderMeadbase,NelderMeadInd); return *(NelderMeadbase("&",NelderMeadInd)); }
 BayesOptions  &getBayesianref  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  ) { grabBayesian  (Bayesianbase,  BayesianInd  ); return *(Bayesianbase  ("&",BayesianInd  )); }
+
+const GridOptions   &getgridrefconst      (int gridInd      ) { return getgridrefconst      (getgridOptim(),      gridInd      ); }
+const DIRectOptions &getDIRectrefconst    (int DIRectInd    ) { return getDIRectrefconst    (getDIRectOptim(),    DIRectInd    ); }
+const NelderOptions &getNelderMeadrefconst(int NelderMeadInd) { return getNelderMeadrefconst(getNelderMeadOptim(),NelderMeadInd); }
+const BayesOptions  &getBayesianrefconst  (int BayesianInd  ) { return getBayesianrefconst  (getBayesianOptim(),  BayesianInd  ); }
+
+GridOptions   &getgridref      (int gridInd      ) { return getgridref      (getgridOptim(),      gridInd      ); }
+DIRectOptions &getDIRectref    (int DIRectInd    ) { return getDIRectref    (getDIRectOptim(),    DIRectInd    ); }
+NelderOptions &getNelderMeadref(int NelderMeadInd) { return getNelderMeadref(getNelderMeadOptim(),NelderMeadInd); }
+BayesOptions  &getBayesianref  (int BayesianInd  ) { return getBayesianref  (getBayesianOptim(),  BayesianInd  ); }
+
+// For simplicity, we use indices -1,-2,...,-999 for muapprox in Bayesian optimizers 1,2,...,999, and similarly -1001,-1002,... for cgtapprox etc
+
+#define OPTGLOBOFFSET 100000
+#define OPTGRIDSTEP   1000
+
+int MLIndForBayesian_srcmodel   (int i)        { return -i-(5*OPTGLOBOFFSET);                 }
+int MLIndForBayesian_diffmodel  (int i)        { return -i-(4*OPTGLOBOFFSET);                 }
+int MLIndForBayesian_sigmaapprox(int i)        { return -i-(3*OPTGLOBOFFSET);                 }
+int MLIndForBayesian_augxapprox (int i, int k) { return -i-(2*OPTGLOBOFFSET)-(k*OPTGRIDSTEP); }
+int MLIndForBayesian_cgtapprox  (int i, int k) { return -i-(1*OPTGLOBOFFSET)-(k*OPTGRIDSTEP); }
+int MLIndForBayesian_muapprox   (int i, int k) { return -i-(0*OPTGLOBOFFSET)-(k*OPTGRIDSTEP); }
+
+int MLIndForBayesian_srcmodel_prior   (int i) { return -i-(11*OPTGLOBOFFSET); }
+int MLIndForBayesian_diffmodel_prior  (int i) { return -i-(10*OPTGLOBOFFSET); }
+int MLIndForBayesian_sigmaapprox_prior(int i) { return -i-(9* OPTGLOBOFFSET); }
+int MLIndForBayesian_augxapprox_prior (int i) { return -i-(8* OPTGLOBOFFSET); }
+int MLIndForBayesian_cgtapprox_prior  (int i) { return -i-(7* OPTGLOBOFFSET); }
+int MLIndForBayesian_muapprox_prior   (int i) { return -i-(6* OPTGLOBOFFSET); }
+
+int MLIndForgrid_randDirtemplate_prior      (int i) { return -i-(15*OPTGLOBOFFSET); }
+int MLIndForDIRect_randDirtemplate_prior    (int i) { return -i-(14*OPTGLOBOFFSET); }
+int MLIndForNelderMead_randDirtemplate_prior(int i) { return -i-(13*OPTGLOBOFFSET); }
+int MLIndForBayesian_randDirtemplate_prior  (int i) { return -i-(12*OPTGLOBOFFSET); }
+
+const ML_Mutable &getMLrefconst(int MLInd)
+{
+    StrucAssert( MLInd > -16*OPTGLOBOFFSET);
+
+    if      ( MLInd < -15*OPTGLOBOFFSET ) { return    getgridrefconst      ( -((15*OPTGLOBOFFSET)+MLInd)).priorrandDirtemplateFnGP; }
+    else if ( MLInd < -14*OPTGLOBOFFSET ) { return    getDIRectrefconst    ( -((14*OPTGLOBOFFSET)+MLInd)).priorrandDirtemplateFnGP; }
+    else if ( MLInd < -13*OPTGLOBOFFSET ) { return    getNelderMeadrefconst( -((13*OPTGLOBOFFSET)+MLInd)).priorrandDirtemplateFnGP; }
+    else if ( MLInd < -12*OPTGLOBOFFSET ) { return    getBayesianrefconst  ( -((12*OPTGLOBOFFSET)+MLInd)).priorrandDirtemplateFnGP; }
+    else if ( MLInd < -11*OPTGLOBOFFSET ) { return    getBayesianrefconst  ( -((11*OPTGLOBOFFSET)+MLInd)).priorsrcmodel;            }
+    else if ( MLInd < -10*OPTGLOBOFFSET ) { return    getBayesianrefconst  ( -((10*OPTGLOBOFFSET)+MLInd)).priordiffmodel;           }
+    else if ( MLInd <  -9*OPTGLOBOFFSET ) { return    getBayesianrefconst  ( -((9* OPTGLOBOFFSET)+MLInd)).priorsigmaapprox;         }
+    else if ( MLInd <  -8*OPTGLOBOFFSET ) { return    getBayesianrefconst  ( -((8* OPTGLOBOFFSET)+MLInd)).prioraugxapprox;          }
+    else if ( MLInd <  -7*OPTGLOBOFFSET ) { return    getBayesianrefconst  ( -((7* OPTGLOBOFFSET)+MLInd)).priorcgtapprox;           }
+    else if ( MLInd <  -6*OPTGLOBOFFSET ) { return    getBayesianrefconst  ( -((6* OPTGLOBOFFSET)+MLInd)).priormuapprox;            }
+    else if ( MLInd <  -5*OPTGLOBOFFSET ) { return    getBayesianrefconst  ( -((5* OPTGLOBOFFSET)+MLInd)).srcmodel;                 }
+    else if ( MLInd <  -4*OPTGLOBOFFSET ) { return    getBayesianrefconst  ( -((4* OPTGLOBOFFSET)+MLInd)).diffmodel;                }
+    else if ( MLInd <  -3*OPTGLOBOFFSET ) { return    getBayesianrefconst  ( -((3* OPTGLOBOFFSET)+MLInd)).sigmaapprox;              }
+    else if ( MLInd <  -2*OPTGLOBOFFSET ) { return *((getBayesianrefconst  ((-((2* OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).augxapproxRaw)((-((2*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
+    else if ( MLInd <  -1*OPTGLOBOFFSET ) { return *((getBayesianrefconst  ((-((1* OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).cgtapproxRaw )((-((1*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
+    else if ( MLInd <  -0*OPTGLOBOFFSET ) { return *((getBayesianrefconst  ((-((0* OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).muapproxRaw  )((-((0*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
+
+    return getMLrefconst(getMLmodels(),MLInd);
+}
+
+ML_Mutable &getMLref(int MLInd)
+{
+    StrucAssert( MLInd > -16*OPTGLOBOFFSET);
+
+    if      ( MLInd < -15*OPTGLOBOFFSET ) { return    getgridref      ( -((15*OPTGLOBOFFSET)+MLInd)).priorrandDirtemplateFnGP; }
+    else if ( MLInd < -14*OPTGLOBOFFSET ) { return    getDIRectref    ( -((14*OPTGLOBOFFSET)+MLInd)).priorrandDirtemplateFnGP; }
+    else if ( MLInd < -13*OPTGLOBOFFSET ) { return    getNelderMeadref( -((13*OPTGLOBOFFSET)+MLInd)).priorrandDirtemplateFnGP; }
+    else if ( MLInd < -12*OPTGLOBOFFSET ) { return    getBayesianref  ( -((12*OPTGLOBOFFSET)+MLInd)).priorrandDirtemplateFnGP; }
+    else if ( MLInd < -11*OPTGLOBOFFSET ) { return    getBayesianref  ( -((11*OPTGLOBOFFSET)+MLInd)).priorsrcmodel;            }
+    else if ( MLInd < -10*OPTGLOBOFFSET ) { return    getBayesianref  ( -((10*OPTGLOBOFFSET)+MLInd)).priordiffmodel;           }
+    else if ( MLInd <  -9*OPTGLOBOFFSET ) { return    getBayesianref  ( -((9* OPTGLOBOFFSET)+MLInd)).priorsigmaapprox;         }
+    else if ( MLInd <  -8*OPTGLOBOFFSET ) { return    getBayesianref  ( -((8* OPTGLOBOFFSET)+MLInd)).prioraugxapprox;          }
+    else if ( MLInd <  -7*OPTGLOBOFFSET ) { return    getBayesianref  ( -((7* OPTGLOBOFFSET)+MLInd)).priorcgtapprox;           }
+    else if ( MLInd <  -6*OPTGLOBOFFSET ) { return    getBayesianref  ( -((6* OPTGLOBOFFSET)+MLInd)).priormuapprox;            }
+    else if ( MLInd <  -5*OPTGLOBOFFSET ) { return    getBayesianref  ( -((5* OPTGLOBOFFSET)+MLInd)).srcmodel;                 }
+    else if ( MLInd <  -4*OPTGLOBOFFSET ) { return    getBayesianref  ( -((4* OPTGLOBOFFSET)+MLInd)).diffmodel;                }
+    else if ( MLInd <  -3*OPTGLOBOFFSET ) { return    getBayesianref  ( -((3* OPTGLOBOFFSET)+MLInd)).sigmaapprox;              }
+    else if ( MLInd <  -2*OPTGLOBOFFSET ) { return *((getBayesianref  ((-((2* OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).augxapproxRaw)("&",(-((2*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
+    else if ( MLInd <  -1*OPTGLOBOFFSET ) { return *((getBayesianref  ((-((1* OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).cgtapproxRaw )("&",(-((1*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
+    else if ( MLInd <  -0*OPTGLOBOFFSET ) { return *((getBayesianref  ((-((0* OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).muapproxRaw  )("&",(-((0*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
+
+    return getMLref(getMLmodels(),MLInd);
+}
+
 
 
 int regML(SparseVector<ML_Mutable *> &mlbase, int mlInd, ML_Mutable *whattoreg)
@@ -1016,7 +1131,11 @@ int runsvmint(SVMThreadContext *svmContext,
 
     int                                  &verblevel         = svmContext->verblevel;
     gentype                              &finalresult       = svmContext->finalresult;
-    int                                  &svmInd            = svmContext->svmInd;
+    int                                  &MLInd             = svmContext->MLInd;
+    int                                  &gridInd           = svmContext->gridInd;
+    int                                  &DIRectInd         = svmContext->DIRectInd;
+    int                                  &NelderMeadInd     = svmContext->NelderMeadInd;
+    int                                  &BayesianInd       = svmContext->BayesianInd;
     gentype                              &biasdefault       = svmContext->biasdefault;
     SparseVector<gentype>                &xtemplate         = svmContext->xtemplate;
     SparseVector<SparseVector<gentype> > &argvariables      = svmContext->argvariables;
@@ -1096,7 +1215,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
         if ( updateargvars && !argbatchsize )
         {
-            argvariables("&",42)("&",42) = svmInd;
+            argvariables("&",42)("&",42) = MLInd;
             updateargvars = 0;
         }
 
@@ -1116,39 +1235,33 @@ int runsvmint(SVMThreadContext *svmContext,
 
             int preelse = 0; // visual studio has annoying limits on the number of "else if's" you can next
 
-            if ( iscomment )
-            {
-                preelse = 1;
+            if ( iscomment ) { preelse = 1; if ( currentarg == "*/" /* */ ) { preelse = 1; iscomment = 0; } } /* end   comment */
+            else                            if ( currentarg == "/*" /* */ ) { preelse = 1; iscomment = 1;   } /* start comment */
 
-                // If in comment mode then wait for comment close marker
-
-                if ( currentarg == "*/" )
-                {
-                    iscomment = 0;
-                }
-            }
-
-            else if ( currentarg == "/*"         ) { preelse = 1; iscomment = 1; /* syntax highlighting ok */ }
-            else if ( currentarg == "-bike"      ) { preelse = 1; ; /* -bike used to be an accelerator option, now does nothing, but still in a few scripts */ }
-            else if ( currentarg == "-?"         ) { preelse = 1; printhelp(outstream()); }
-            else if ( currentarg == "-??"        ) { preelse = 1; printhelp(outstream(),1,1); }
-            else if ( currentarg == "-??k"       ) { preelse = 1; printhelpkernel(outstream(),1,1); }
-            else if ( currentarg == "-??v"       ) { preelse = 1; printhelpvars(outstream(),1,1); }
-            else if ( currentarg == "-??g"       ) { preelse = 1; printhelpgentype(outstream(),1,1); }
+            else if ( currentarg == "-?"         ) { preelse = 1; printhelp(outstream());                }
+            else if ( currentarg == "-??"        ) { preelse = 1; printhelp(outstream(),1,1);            }
+            else if ( currentarg == "-??k"       ) { preelse = 1; printhelpkernel(outstream(),1,1);      }
+            else if ( currentarg == "-??v"       ) { preelse = 1; printhelpvars(outstream(),1,1);        }
+            else if ( currentarg == "-??g"       ) { preelse = 1; printhelpgentype(outstream(),1,1);     }
             else if ( currentarg == "-???"       ) { preelse = 1; errstream() << "\n\n\n\n\n\n\n\n\n\n"; }
-            else if ( currentarg == "-Zinteract" ) { preelse = 1; int tmpval = setgetkbstate(); enablekbquitdet(); kbquitdet("Root",nullptr,nullptr,nullptr,1); setgetkbstate(tmpval); }
-            else if ( currentarg == "-Zgod"      ) { preelse = 1; enablekbquitdet(); }
+
+            else if ( currentarg == "-Zinteract" ) { preelse = 1; runInteract();      }
+            else if ( currentarg == "-Zgod"      ) { preelse = 1; enablekbquitdet();  }
             else if ( currentarg == "-Zdawkins"  ) { preelse = 1; disablekbquitdet(); }
+
             else if ( currentarg == "-Zx"        ) { preelse = 1; skipon = 1; goto processnow; }
             else if ( currentarg == ";"          ) { preelse = 1; skipon = 1; goto processnow; }
+
             else if ( currentarg == "-ZZ"        ) { preelse = 1; ZZeval: stopnow = 1; skipon = 1; goto processnow; }
-            else if ( currentarg == "end"        ) { preelse = 1; stopnow = 1; skipon = 1; goto processnow; }
+            else if ( currentarg == "end"        ) { preelse = 1;         stopnow = 1; skipon = 1; goto processnow; }
+
             else if ( currentarg == "-ZZZZ"      ) { preelse = 1; ZZZZeval: errstream() << "Halt encountered: exitting now.\n"; stopnow = 1; retval = -1; }
-            else if ( currentarg == "exit"       ) { preelse = 1; errstream() << "Halt encountered: exitting now.\n"; stopnow = 1; retval = -1; }
-            else if ( currentarg == "-Zmute"     ) { preelse = 1;   suppresserrstreamcout();  }
-            else if ( currentarg == "-Zunmute"   ) { preelse = 1; unsuppresserrstreamcout();  }
-            else if ( currentarg == "-ZMute"     ) { preelse = 1;   suppressoutstreamcout();  }
-            else if ( currentarg == "-ZunMute"   ) { preelse = 1; unsuppressoutstreamcout();  }
+            else if ( currentarg == "exit"       ) { preelse = 1;           errstream() << "Halt encountered: exitting now.\n"; stopnow = 1; retval = -1; }
+
+            else if ( currentarg == "-Zmute"     ) { preelse = 1;   suppresserrstreamcout(); }
+            else if ( currentarg == "-Zunmute"   ) { preelse = 1; unsuppresserrstreamcout(); }
+            else if ( currentarg == "-ZMute"     ) { preelse = 1;   suppressoutstreamcout(); }
+            else if ( currentarg == "-ZunMute"   ) { preelse = 1; unsuppressoutstreamcout(); }
             else if ( currentarg == "-ZMUTE"     ) { preelse = 1;   suppressallstreamcout(); }
             else if ( currentarg == "-ZunMUTE"   ) { preelse = 1; unsuppressallstreamcout(); }
 
@@ -1162,23 +1275,13 @@ int runsvmint(SVMThreadContext *svmContext,
 
                 if ( !stopnow )
                 {
-                    int sval = -2;
+                    int sval = -2; /* true random seed in randseed */
 
-                    if ( currentarg != "time" )
-                    {
-                        sval = safeatoi(currentarg,argvariables);
-                    }
+                    if ( currentarg != "time" ) { sval = safeatoi(currentarg,argvariables); }
+                    else                        { sval = (int) time(nullptr);               }
 
-                    else
-                    {
-                        //sval = -2;
-                        sval = (int) time(nullptr);
-                    }
-
-                    //svm_srand(sval);
                     srand(sval);
-                    double dodum = 0;
-                    randfill(dodum,'S',sval);
+                    randseed(sval);
                 }
 
                 else
@@ -1209,7 +1312,6 @@ int runsvmint(SVMThreadContext *svmContext,
                     // Strip curly braces off command
 
                     std::string evalarg = zifargs(0)(2);
-
                     stripcurlybrackets(evalarg);
 
                     // want to repeat b times
@@ -1244,7 +1346,6 @@ int runsvmint(SVMThreadContext *svmContext,
                         Stack<awarestream *> *gridcommstack;
                         MEMNEW(gridcommstack,Stack<awarestream *>);
                         gridcommstack->push(gridbox);
-
                         runsvmint(svmContext,gridcommstack,globargvariables,getsetExtVar,returntag);
 
                         errstream() << "Finished running command " << evalarg << "\n";
@@ -1352,13 +1453,11 @@ int runsvmint(SVMThreadContext *svmContext,
                     // Strip curly braces off command
 
                     std::string evalargtrue = zifargs(0)(2);
-
                     stripcurlybrackets(evalargtrue);
 
                     // Strip curly braces off command
 
                     std::string evalargfalse = zifargs(0)(2);
-
                     stripcurlybrackets(evalargfalse);
 
                     // Only proceed if test evaluated true
@@ -1390,7 +1489,6 @@ int runsvmint(SVMThreadContext *svmContext,
                         Stack<awarestream *> *gridcommstack;
                         MEMNEW(gridcommstack,Stack<awarestream *>);
                         gridcommstack->push(gridbox);
-
                         runsvmint(svmContext,gridcommstack,globargvariables,getsetExtVar,returntag);
 
                         errstream() << "Finished running command " << evalargtrue << "\n";
@@ -1409,7 +1507,6 @@ int runsvmint(SVMThreadContext *svmContext,
                         Stack<awarestream *> *gridcommstack;
                         MEMNEW(gridcommstack,Stack<awarestream *>);
                         gridcommstack->push(gridbox);
-
                         runsvmint(svmContext,gridcommstack,globargvariables,getsetExtVar,returntag);
 
                         errstream() << "Finished running command " << evalargfalse << "\n";
@@ -1437,41 +1534,39 @@ int runsvmint(SVMThreadContext *svmContext,
                     // Strip curly braces off command
 
                     std::string evalarg = zifargs(0)(2);
-
                     stripcurlybrackets(evalarg);
 
                     // Only proceed if test evaluated true
 
-                  try
-                  {
-                    errstream() << "While loop... " << evalarg << "...";
-
-                    while ( !stopnow && safeatoi(zifargs(0)(1),argvariables) )
+                    try
                     {
-                        errstream() << "@";
+                        errstream() << "While loop... " << evalarg << "...";
 
-                        // Setup environment and run command
+                        while ( !stopnow && safeatoi(zifargs(0)(1),argvariables) )
+                        {
+                            errstream() << "@";
 
-                        std::stringstream *tmpcommand;
-                        MEMNEW(tmpcommand,std::stringstream(evalarg));
-                        awarestream *gridbox;
-                        MEMNEW(gridbox,awarestream(tmpcommand,1));
-                        Stack<awarestream *> *gridcommstack;
-                        MEMNEW(gridcommstack,Stack<awarestream *>);
-                        gridcommstack->push(gridbox);
+                            // Setup environment and run command
 
-                        runsvmint(svmContext,gridcommstack,globargvariables,getsetExtVar,returntag);
+                            std::stringstream *tmpcommand;
+                            MEMNEW(tmpcommand,std::stringstream(evalarg));
+                            awarestream *gridbox;
+                            MEMNEW(gridbox,awarestream(tmpcommand,1));
+                            Stack<awarestream *> *gridcommstack;
+                            MEMNEW(gridcommstack,Stack<awarestream *>);
+                            gridcommstack->push(gridbox);
+                            runsvmint(svmContext,gridcommstack,globargvariables,getsetExtVar,returntag);
+                        }
+
+                        errstream() << "Finished while loop... " << evalarg << "\n";
                     }
 
-                    errstream() << "Finished while loop... " << evalarg << "\n";
-                  }
-
-                  catch ( ... )
-                  {
-                    errstream() << "Syntax error: -Zwhile argument 1 must evaluate to logical (integer)\n";
-                    retval  = 25;
-                    stopnow = 1;
-                  }
+                    catch ( ... )
+                    {
+                        errstream() << "Syntax error: -Zwhile argument 1 must evaluate to logical (integer)\n";
+                        retval  = 25;
+                        stopnow = 1;
+                    }
                 }
             }
 
@@ -1566,7 +1661,6 @@ int runsvmint(SVMThreadContext *svmContext,
                     }
 
                     std::ifstream *filein;
-
                     MEMNEW(filein,std::ifstream);
 
                     if ( filein )
@@ -1576,9 +1670,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         if ( filein->is_open() )
                         {
                             awarestream *fileinbox;
-
                             MEMNEW(fileinbox,awarestream(filein,1));
-
                             commstack.push(fileinbox);
                         }
 
@@ -1621,9 +1713,7 @@ int runsvmint(SVMThreadContext *svmContext,
                 }
 
                 awarestream *stdcinbox;
-
                 MEMNEW(stdcinbox,awarestream(&instream(),0));
-
                 commstack.push(stdcinbox);
             }
 
@@ -1647,7 +1737,6 @@ int runsvmint(SVMThreadContext *svmContext,
                 if ( !stopnow )
                 {
                     std::ifstream *filein;
-
                     MEMNEW(filein,std::ifstream);
 
                     if ( filein )
@@ -1669,7 +1758,6 @@ int runsvmint(SVMThreadContext *svmContext,
                                 }
 
                                 std::ofstream *fileout;
-
                                 MEMNEW(fileout,std::ofstream);
 
                                 if ( fileout )
@@ -1679,9 +1767,7 @@ int runsvmint(SVMThreadContext *svmContext,
                                     if ( fileout->is_open() )
                                     {
                                         awarestream *fileiobox;
-
                                         MEMNEW(fileiobox,awarestream(filein,fileout,1,1));
-
                                         commstack.push(fileiobox);
                                     }
 
@@ -1748,9 +1834,7 @@ int runsvmint(SVMThreadContext *svmContext,
                 }
 
                 awarestream *stdcinbox;
-
                 MEMNEW(stdcinbox,awarestream(&instream(),&outstream(),0,0));
-
                 commstack.push(stdcinbox);
             }
 
@@ -1866,7 +1950,6 @@ int runsvmint(SVMThreadContext *svmContext,
                         if ( !stopnow )
                         {
                             gentype tmpg;
-
                             flagfile << safeatowhatever(tmpg,currentarg,argvariables) << "\n";
                             flagfile.close();
                         }
@@ -1874,7 +1957,6 @@ int runsvmint(SVMThreadContext *svmContext,
                         else
                         {
                             flagfile.close();
-
                             errstream() << "Syntax error: -Zff requires 2 arguments\n";
                             retval  = 37;
                             stopnow = 1;
@@ -1910,7 +1992,6 @@ int runsvmint(SVMThreadContext *svmContext,
                 if ( !stopnow )
                 {
                     std::string zppnum;
-
                     stopnow = grabnextarg(commstack,zppnum);
 
                     if ( !stopnow )
@@ -2050,1174 +2131,624 @@ int runsvmint(SVMThreadContext *svmContext,
 
 
 
-            else if ( ( currentarg == "-Lmute"    ) ||
-                      ( currentarg == "-Lunmute"  ) ||
-                      ( currentarg == "-LMute"    ) ||
-                      ( currentarg == "-LunMute"  ) ||
-                      ( currentarg == "-LMUTE"    ) ||
-                      ( currentarg == "-LunMUTE"  )    )
+            else if ( ( currentarg == "-Lmute"   ) || ( currentarg == "-Lunmute" ) || ( currentarg == "-LMute"   ) ||
+                      ( currentarg == "-LunMute" ) || ( currentarg == "-LMUTE"   ) || ( currentarg == "-LunMUTE" ) )
             {
                 preelse = 1;
 
                 // Logging options
 
-                if ( grabargs(1,loggingopt,commstack,currentarg) )
-                {
-                    retval  = 39;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,loggingopt,commstack,currentarg) ) { retval = 39; stopnow = 1; }
             }
 
-            else if ( ( currentarg == "-v"  ) ||
-                      ( currentarg == "-L"  ) ||
-                      ( currentarg == "-LL" )    )
+            else if ( ( currentarg == "-v" ) || ( currentarg == "-L" ) || ( currentarg == "-LL" ) )
             {
                 preelse = 1;
 
                 // Logging options
 
-                if ( grabargs(2,loggingopt,commstack,currentarg) )
-                {
-                    retval  = 39;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,loggingopt,commstack,currentarg) ) { retval = 39; stopnow = 1; }
             }
 
-            else if ( ( currentarg == "-qpop" )    )
+            else if ( ( currentarg == "-qpop" ) )
             {
                 preelse = 1;
 
                 // Setup options
 
-                if ( grabargs(1,multirunopt,commstack,currentarg) )
-                {
-                    retval  = 40;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,multirunopt,commstack,currentarg) ) { retval = 40; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-qR"    ) ||
-                      ( currentarg == "-qpush" ) ||
-                      ( currentarg == "-qw"    )    )
+            else if ( ( currentarg == "-qR"         ) || ( currentarg == "-qpush"     ) || ( currentarg == "-qw"         ) ||
+                      ( currentarg == "-gqw"        ) || ( currentarg == "-gdqw"      ) || ( currentarg == "-gNqw"       ) ||
+                      ( currentarg == "-gbqw"       ) ||
+                      ( currentarg == "-gbqwsigma"  ) || ( currentarg == "-gbqwdiff"  ) || ( currentarg == "-gbqwsrc"    ) ||
+                      ( currentarg == "-gbqwsigmap" ) || ( currentarg == "-gbqwdiffp" ) || ( currentarg == "-gbqwsrcp"   ) ||
+                      ( currentarg == "-gbqwmup"    ) || ( currentarg == "-gbqwgtp"   ) || ( currentarg == "-gbqwaugxp"  ) ||
+                      ( currentarg == "-gqwrandp"   ) || ( currentarg == "-gdqwrandp" ) || ( currentarg == "-gNqwrandp"  ) ||
+                      ( currentarg == "-gbqwrandp"  ) )
             {
                 preelse = 1;
 
                 // Setup options
 
-                if ( grabargs(2,multirunopt,commstack,currentarg) )
-                {
-                    retval  = 40;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,multirunopt,commstack,currentarg) ) { retval = 40; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-qc"    ) ||
-                      ( currentarg == "-qsave" ) ||
-                      ( currentarg == "-qs"    )    )
+            else if ( ( currentarg == "-qc"     ) || ( currentarg == "-qsave"  ) || ( currentarg == "-qs"       ) ||
+                      ( currentarg == "-gbqwmu" ) || ( currentarg == "-gbqwgt" ) || ( currentarg == "-gbqwaugx" ) )
             {
                 preelse = 1;
 
                 // Setup options
 
-                if ( grabargs(3,multirunopt,commstack,currentarg) )
-                {
-                    retval  = 41;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,multirunopt,commstack,currentarg) ) { retval = 41; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-z"  ) ||
-                      ( currentarg == "-zc" ) ||
-                      ( currentarg == "-zo" ) ||
-                      ( currentarg == "-zd" ) ||
-                      ( currentarg == "-zv" ) ||
-                      ( currentarg == "-zl" )    )
+            else if ( ( currentarg == "-z"  ) || ( currentarg == "-zc" ) || ( currentarg == "-zo" ) ||
+                      ( currentarg == "-zd" ) || ( currentarg == "-zv" ) || ( currentarg == "-zl" ) )
             {
                 preelse = 1;
 
                 // Setup options
 
-                if ( grabargs(2,svmpresetupopt,commstack,currentarg) )
-                {
-                    retval  = 42;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,svmpresetupopt,commstack,currentarg) ) { retval = 42; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-bv"   ) ||
-                      ( currentarg == "-bz"   ) ||
-                      ( currentarg == "-bgv"  ) ||
-                      ( currentarg == "-bgla" ) ||
-                      ( currentarg == "-bgep" ) ||
-                      ( currentarg == "-bgnc" ) ||
-                      ( currentarg == "-bgz"  )    )
+            else if ( ( currentarg == "-bv"   ) || ( currentarg == "-bz"   ) || ( currentarg == "-bgv"  ) ||
+                      ( currentarg == "-bgla" ) || ( currentarg == "-bgep" ) || ( currentarg == "-bgnc" ) ||
+                      ( currentarg == "-bgz"  ) )
             {
                 preelse = 1;
 
                 // Setup options
 
-                if ( grabargs(1,svmsetupopt,commstack,currentarg) )
-                {
-                    retval  = 43;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,svmsetupopt,commstack,currentarg) ) { retval = 43; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-ac"  ) ||
-                      ( currentarg == "-B"   ) ||
-                      ( currentarg == "-R"   ) ||
-                      ( currentarg == "-mlR" ) ||
-                      ( currentarg == "-T"   ) ||
-                      ( currentarg == "-TT"  ) ||
-                      ( currentarg == "-mls" ) ||
-                      ( currentarg == "-N"   ) ||
-                      ( currentarg == "-br"  ) ||
-                      ( currentarg == "-bd"  ) ||
-                      ( currentarg == "-XT"  )    )
+            else if ( ( currentarg == "-ac"  ) || ( currentarg == "-B"  ) || ( currentarg == "-R"  ) ||
+                      ( currentarg == "-mlR" ) || ( currentarg == "-T"  ) || ( currentarg == "-TT" ) ||
+                      ( currentarg == "-mls" ) || ( currentarg == "-N"  ) || ( currentarg == "-br" ) ||
+                      ( currentarg == "-bd"  ) || ( currentarg == "-XT" ) )
             {
                 preelse = 1;
 
                 // Setup options
 
-                if ( grabargs(2,svmsetupopt,commstack,currentarg) )
-                {
-                    retval  = 44;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,svmsetupopt,commstack,currentarg) ) { retval = 44; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fru" ) ||
-                      ( currentarg == "-frn" ) ||
-                      ( currentarg == "-fri" ) ||
-                      ( currentarg == "-mc"  ) ||
-                      ( currentarg == "-mcn" ) ||
-                      ( currentarg == "-mbA" ) ||
-                      ( currentarg == "-mbm" ) ||
-                      ( currentarg == "-msn" ) ||
-                      ( currentarg == "-msw" ) ||
-                      ( currentarg == "-bat" ) ||
-                      ( currentarg == "-bam" ) ||
-                      ( currentarg == "-bac" ) ||
-                      ( currentarg == "-bad" ) ||
-                      ( currentarg == "-bav" ) ||
-                      ( currentarg == "-baT" ) ||
-                      ( currentarg == "-fat" )    )
+            else if ( ( currentarg == "-fru" ) || ( currentarg == "-frn" ) || ( currentarg == "-fri" ) ||
+                      ( currentarg == "-mc"  ) || ( currentarg == "-mcn" ) || ( currentarg == "-mbA" ) ||
+                      ( currentarg == "-mbm" ) || ( currentarg == "-msn" ) || ( currentarg == "-msw" ) ||
+                      ( currentarg == "-bat" ) || ( currentarg == "-bam" ) || ( currentarg == "-bac" ) ||
+                      ( currentarg == "-bad" ) || ( currentarg == "-bav" ) || ( currentarg == "-baT" ) ||
+                      ( currentarg == "-fat" ) )
             {
                 preelse = 1;
 
                 // Setup options
 
-                if ( grabargs(2,svmsetupopt,commstack,currentarg) )
-                {
-                    retval  = 45;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,svmsetupopt,commstack,currentarg) ) { retval = 45; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fo"   ) ||
-                      ( currentarg == "-foe"  ) ||
-                      ( currentarg == "-fV"   ) ||
-                      ( currentarg == "-fW"   ) ||
-                      ( currentarg == "-fWW"  ) ||
-                      ( currentarg == "-fret" ) ||
-                      ( currentarg == "-fVg"  ) ||
-                      ( currentarg == "-fWg"  ) ||
-                      ( currentarg == "-fVG"  ) ||
-                      ( currentarg == "-fWG"  ) ||
-                      ( currentarg == "-mbw"  ) ||
-                      ( currentarg == "-mbI"  ) ||
-                      ( currentarg == "-mba"  )    )
+            else if ( ( currentarg == "-fo"  ) || ( currentarg == "-foe" ) || ( currentarg == "-fV"   ) ||
+                      ( currentarg == "-fW"  ) || ( currentarg == "-fWW" ) || ( currentarg == "-fret" ) ||
+                      ( currentarg == "-fVg" ) || ( currentarg == "-fWg" ) || ( currentarg == "-fVG"  ) ||
+                      ( currentarg == "-fWG" ) || ( currentarg == "-mbw" ) || ( currentarg == "-mbI"  ) ||
+                      ( currentarg == "-mba" ) )
             {
                 preelse = 1;
 
                 // Setup options
 
-                if ( grabargs(3,svmsetupopt,commstack,currentarg) )
-                {
-                    retval  = 45;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,svmsetupopt,commstack,currentarg) ) { retval = 45; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fWm" ) ||
-                      ( currentarg == "-fWM" )    )
+            else if ( ( currentarg == "-fWm" ) || ( currentarg == "-fWM" ) )
             {
                 preelse = 1;
 
                 // Setup options
 
-                if ( grabargs(4,svmsetupopt,commstack,currentarg) )
-                {
-                    retval  = 45;
-                    stopnow = 1;
-                }
+                if ( grabargs(4,svmsetupopt,commstack,currentarg) ) { retval = 45; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fu"  ) ||
-                      ( currentarg == "-fuG" )    )
+            else if ( ( currentarg == "-fu"  ) || ( currentarg == "-fuG" ) )
             {
                 preelse = 1;
 
                 // Setup options
 
-                if ( grabargs(4,svmsetupopt,commstack,currentarg) )
-                {
-                    retval  = 46;
-                    stopnow = 1;
-                }
+                if ( grabargs(4,svmsetupopt,commstack,currentarg) ) { retval = 46; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-ft"   ) ||
-                      ( currentarg == "-ftG"  ) ||
-                      ( currentarg == "-fuu"  ) ||
-                      ( currentarg == "-fuuG" )    )
+            else if ( ( currentarg == "-ft"   ) || ( currentarg == "-ftG" ) || ( currentarg == "-fuu" ) ||
+                      ( currentarg == "-fuuG" ) )
             {
                 preelse = 1;
 
                 // Setup options
 
-                if ( grabargs(5,svmsetupopt,commstack,currentarg) )
-                {
-                    retval  = 46;
-                    stopnow = 1;
-                }
+                if ( grabargs(5,svmsetupopt,commstack,currentarg) ) { retval = 46; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fM"  )    )
+            else if ( ( currentarg == "-fM"  ) )
             {
                 preelse = 1;
 
                 // Setup options
 
-                if ( grabargs(3,svmsetupopt,commstack,currentarg) )
-                {
-                    retval  = 47;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,svmsetupopt,commstack,currentarg) ) { retval = 47; stopnow = 1; }
 
                 stripcurlybrackets(svmsetupopt("&",svmsetupopt.size()-1)("&",2));
-
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-oo"  ) ||
-                      ( currentarg == "-ofy" ) ||
-                      ( currentarg == "-ofn" ) ||
-                      ( currentarg == "-oO"  )    )
+            else if ( ( currentarg == "-oo" ) || ( currentarg == "-ofy" ) || ( currentarg == "-ofn" ) ||
+                      ( currentarg == "-oO" ) )
             {
                 preelse = 1;
 
                 // Optimisation options - here so that the cholesky doesn't get filled for smo/d2c/gradient, which is important for large datasets
 
-                if ( grabargs(1,optimopt,commstack,currentarg) )
-                {
-                    retval  = 87;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,optimopt,commstack,currentarg) ) { retval = 87; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-om"   ) ||
-                      ( currentarg == "-oM"   ) ||
-                      ( currentarg == "-oe"   ) ||
-                      ( currentarg == "-oea"  ) ||
-                      ( currentarg == "-oeb"  ) ||
-                      ( currentarg == "-oz"   ) ||
-                      ( currentarg == "-ot"   ) ||
-                      ( currentarg == "-oy"   ) ||
-                      ( currentarg == "-oY"   ) ||
-                      ( currentarg == "-ofa"  ) ||
-                      ( currentarg == "-ofe"  ) ||
-                      ( currentarg == "-ofm"  ) ||
-                      ( currentarg == "-ofr"  ) ||
-                      ( currentarg == "-ofs"  ) ||
-                      ( currentarg == "-oft"  ) ||
-                      ( currentarg == "-ofM"  ) ||
-                      ( currentarg == "-omr"  ) ||
-                      ( currentarg == "-ome"  ) ||
-                      ( currentarg == "-oms"  ) ||
-                      ( currentarg == "-olr"  ) ||
-                      ( currentarg == "-olrb" ) ||
-                      ( currentarg == "-olrc" ) ||
-                      ( currentarg == "-olrd" )    )
+            else if ( ( currentarg == "-om"   ) || ( currentarg == "-oM"   ) || ( currentarg == "-oe"   ) ||
+                      ( currentarg == "-oea"  ) || ( currentarg == "-oeb"  ) || ( currentarg == "-oz"   ) ||
+                      ( currentarg == "-ot"   ) || ( currentarg == "-oy"   ) || ( currentarg == "-oY"   ) ||
+                      ( currentarg == "-ofa"  ) || ( currentarg == "-ofe"  ) || ( currentarg == "-ofm"  ) ||
+                      ( currentarg == "-ofr"  ) || ( currentarg == "-ofs"  ) || ( currentarg == "-oft"  ) ||
+                      ( currentarg == "-ofM"  ) || ( currentarg == "-omr"  ) || ( currentarg == "-ome"  ) ||
+                      ( currentarg == "-oms"  ) || ( currentarg == "-olr"  ) || ( currentarg == "-olrb" ) ||
+                      ( currentarg == "-olrc" ) || ( currentarg == "-olrd" ) )
             {
                 preelse = 1;
 
                 // Optimisation options
 
-                if ( grabargs(2,optimopt,commstack,currentarg) )
-                {
-                    retval  = 88;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,optimopt,commstack,currentarg) ) { retval = 88; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-prz" ) ||
-                      ( currentarg == "-pR"  ) ||
-                      ( currentarg == "-pRR" ) ||
-                      ( currentarg == "-pS"  ) ||
-                      ( currentarg == "-fic" )    )
+            else if ( ( currentarg == "-prz" ) || ( currentarg == "-pR"  ) || ( currentarg == "-pRR" ) ||
+                      ( currentarg == "-pS"  ) || ( currentarg == "-fic" ) )
             {
                 preelse = 1;
 
                 // Preload options
 
-                if ( grabargs(1,preloadopt,commstack,currentarg) )
-                {
-                    retval  = 50;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,preloadopt,commstack,currentarg) ) { retval = 50; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-pr"  ) ||
-                      ( currentarg == "-pro" ) ||
-                      ( currentarg == "-prm" ) ||
-                      ( currentarg == "-pcs" ) ||
-                      ( currentarg == "-pds" ) ||
-                      ( currentarg == "-pws" ) ||
-                      ( currentarg == "-pk"  ) ||
-                      ( currentarg == "-ps"  )    )
+            else if ( ( currentarg == "-pr"  ) || ( currentarg == "-pro" ) || ( currentarg == "-prm" ) ||
+                      ( currentarg == "-pcs" ) || ( currentarg == "-pds" ) || ( currentarg == "-pws" ) ||
+                      ( currentarg == "-pk"  ) || ( currentarg == "-ps"  ) )
             {
                 preelse = 1;
 
                 // Preload options
 
-                if ( grabargs(2,preloadopt,commstack,currentarg) )
-                {
-                    retval  = 51;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,preloadopt,commstack,currentarg) ) { retval  = 51; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-pcw" ) ||
-                      ( currentarg == "-pdw" ) ||
-                      ( currentarg == "-pww" ) ||
-                      ( currentarg == "-psd" ) ||
-                      ( currentarg == "-psz" )    )
+            else if ( ( currentarg == "-pcw" ) || ( currentarg == "-pdw" ) || ( currentarg == "-pww" ) ||
+                      ( currentarg == "-psd" ) || ( currentarg == "-psz" ) )
             {
                 preelse = 1;
 
                 // Preload options
 
-                if ( grabargs(3,preloadopt,commstack,currentarg) )
-                {
-                    retval  = 52;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,preloadopt,commstack,currentarg) ) { retval = 52; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-pmm"  )    )
+            else if ( ( currentarg == "-pmm"  ) )
             {
                 preelse = 1;
 
                 // Preload options
 
-                if ( grabargs(8,preloadopt,commstack,currentarg) )
-                {
-                    retval  = 51;
-                    stopnow = 1;
-                }
+                if ( grabargs(8,preloadopt,commstack,currentarg) ) { retval = 51; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-Acd" ) ||
-                      ( currentarg == "-Aby" ) ||
-                      ( currentarg == "-ABy" ) ||
-                      ( currentarg == "-Abu" ) ||
-                      ( currentarg == "-ABu" )    )
+            else if ( ( currentarg == "-Acd" ) || ( currentarg == "-Aby" ) || ( currentarg == "-ABy" ) ||
+                      ( currentarg == "-Abu" ) || ( currentarg == "-ABu" ) )
             {
                 preelse = 1;
 
                 // Load options
 
-                if ( grabargs(1,loadopt,commstack,currentarg) )
-                {
-                    retval  = 53;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,loadopt,commstack,currentarg) ) { retval = 53; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-Ac"     ) ||
-                      ( currentarg == "-As"     ) ||
-                      ( currentarg == "-Ad"     ) ||
-                      ( currentarg == "-AD"     ) ||
-                      ( currentarg == "-Ar"     ) ||
-                      ( currentarg == "-AR"     ) ||
-                      ( currentarg == "-AA"     ) ||
-                      ( currentarg == "-AAe"    ) ||
-                      ( currentarg == "-AAi"    ) ||
-                      ( currentarg == "-AAI"    ) ||
-                      ( currentarg == "-AAr"    ) ||
-                      ( currentarg == "-AAR"    ) ||
-                      ( currentarg == "-AAu"    ) ||
-                      ( currentarg == "-AAei"   ) ||
-                      ( currentarg == "-AAeI"   ) ||
-                      ( currentarg == "-AAer"   ) ||
-                      ( currentarg == "-AAeR"   ) ||
-                      ( currentarg == "-AAeu"   ) ||
-                      ( currentarg == "-AAiu"   ) ||
-                      ( currentarg == "-AAIu"   ) ||
-                      ( currentarg == "-AAru"   ) ||
-                      ( currentarg == "-AARu"   ) ||
-                      ( currentarg == "-AAeiu"  ) ||
-                      ( currentarg == "-AAeIu"  ) ||
-                      ( currentarg == "-AAeru"  ) ||
-                      ( currentarg == "-AAeRu"  ) ||
-                      ( currentarg == "-ATA"    ) ||
-                      ( currentarg == "-ATAe"   ) ||
-                      ( currentarg == "-ATAi"   ) ||
-                      ( currentarg == "-ATAI"   ) ||
-                      ( currentarg == "-ATAr"   ) ||
-                      ( currentarg == "-ATAR"   ) ||
-                      ( currentarg == "-ATAu"   ) ||
-                      ( currentarg == "-ATAei"  ) ||
-                      ( currentarg == "-ATAeI"  ) ||
-                      ( currentarg == "-ATAer"  ) ||
-                      ( currentarg == "-ATAeR"  ) ||
-                      ( currentarg == "-ATAeu"  ) ||
-                      ( currentarg == "-ATAiu"  ) ||
-                      ( currentarg == "-ATAIu"  ) ||
-                      ( currentarg == "-ATAru"  ) ||
-                      ( currentarg == "-ATARu"  ) ||
-                      ( currentarg == "-ATAeiu" ) ||
-                      ( currentarg == "-ATAeIu" ) ||
-                      ( currentarg == "-ATAeru" ) ||
-                      ( currentarg == "-ATAeRu" ) ||
-                      ( currentarg == "-ATb"    ) ||
-                      ( currentarg == "-ATa"    ) ||
-                      ( currentarg == "-ATn"    ) ||
-                      ( currentarg == "-ATx"    ) ||
-                      ( currentarg == "-ATy"    ) ||
-                      ( currentarg == "-Acz"    ) ||
-                      ( currentarg == "-AeA"    ) ||
-                      ( currentarg == "-AEA"    ) ||
-                      ( currentarg == "-AeU"    ) ||
-                      ( currentarg == "-AEU"    ) ||
-                      ( currentarg == "-AGl"    ) ||
-                      ( currentarg == "-AGu"    ) ||
-                      ( currentarg == "-ID"     )    )
+            else if ( ( currentarg == "-Ac"     ) || ( currentarg == "-As"     ) || ( currentarg == "-Ad"     ) ||
+                      ( currentarg == "-AD"     ) || ( currentarg == "-Ar"     ) || ( currentarg == "-AR"     ) ||
+                      ( currentarg == "-AA"     ) || ( currentarg == "-AAe"    ) || ( currentarg == "-AAi"    ) ||
+                      ( currentarg == "-AAI"    ) || ( currentarg == "-AAr"    ) || ( currentarg == "-AAR"    ) ||
+                      ( currentarg == "-AAu"    ) || ( currentarg == "-AAei"   ) || ( currentarg == "-AAeI"   ) ||
+                      ( currentarg == "-AAer"   ) || ( currentarg == "-AAeR"   ) || ( currentarg == "-AAeu"   ) ||
+                      ( currentarg == "-AAiu"   ) || ( currentarg == "-AAIu"   ) || ( currentarg == "-AAru"   ) ||
+                      ( currentarg == "-AARu"   ) || ( currentarg == "-AAeiu"  ) || ( currentarg == "-AAeIu"  ) ||
+                      ( currentarg == "-AAeru"  ) || ( currentarg == "-AAeRu"  ) || ( currentarg == "-ATA"    ) ||
+                      ( currentarg == "-ATAe"   ) || ( currentarg == "-ATAi"   ) || ( currentarg == "-ATAI"   ) ||
+                      ( currentarg == "-ATAr"   ) || ( currentarg == "-ATAR"   ) || ( currentarg == "-ATAu"   ) ||
+                      ( currentarg == "-ATAei"  ) || ( currentarg == "-ATAeI"  ) || ( currentarg == "-ATAer"  ) ||
+                      ( currentarg == "-ATAeR"  ) || ( currentarg == "-ATAeu"  ) || ( currentarg == "-ATAiu"  ) ||
+                      ( currentarg == "-ATAIu"  ) || ( currentarg == "-ATAru"  ) || ( currentarg == "-ATARu"  ) ||
+                      ( currentarg == "-ATAeiu" ) || ( currentarg == "-ATAeIu" ) || ( currentarg == "-ATAeru" ) ||
+                      ( currentarg == "-ATAeRu" ) || ( currentarg == "-ATb"    ) || ( currentarg == "-ATa"    ) ||
+                      ( currentarg == "-ATn"    ) || ( currentarg == "-ATx"    ) || ( currentarg == "-ATy"    ) ||
+                      ( currentarg == "-Acz"    ) || ( currentarg == "-AeA"    ) || ( currentarg == "-AEA"    ) ||
+                      ( currentarg == "-AeU"    ) || ( currentarg == "-AEU"    ) || ( currentarg == "-AGl"    ) ||
+                      ( currentarg == "-AGu"    ) || ( currentarg == "-ID"     ) )
             {
                 preelse = 1;
 
                 // Load options
 
-                if ( grabargs(2,loadopt,commstack,currentarg) )
-                {
-                    retval  = 54;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,loadopt,commstack,currentarg) ) { retval = 54; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-AU"  ) ||
-                      ( currentarg == "-AY"  ) ||
-                      ( currentarg == "-AV"  ) ||
-                      ( currentarg == "-AVv" ) ||
-                      ( currentarg == "-AeR" ) ||
-                      ( currentarg == "-AER" ) ||
-                      ( currentarg == "-AW"  )    )
+            else if ( ( currentarg == "-AU"  ) || ( currentarg == "-AY"  ) || ( currentarg == "-AV"  ) ||
+                      ( currentarg == "-AVv" ) || ( currentarg == "-AeR" ) || ( currentarg == "-AER" ) ||
+                      ( currentarg == "-AW"  ) )
             {
                 preelse = 1;
 
                 // Load options
 
-                if ( grabargs(3,loadopt,commstack,currentarg) )
-                {
-                    retval  = 55;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,loadopt,commstack,currentarg) ) { retval = 55; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-AZ"  ) ||
-                      ( currentarg == "-Aq"  ) ||
-                      ( currentarg == "-AVV" )    )
+            else if ( ( currentarg == "-AZ" ) || ( currentarg == "-Aq" ) || ( currentarg == "-AVV" )    )
             {
                 preelse = 1;
 
                 // Load options
 
-                if ( grabargs(4,loadopt,commstack,currentarg) )
-                {
-                    retval  = 56;
-                    stopnow = 1;
-                }
+                if ( grabargs(4,loadopt,commstack,currentarg) ) { retval = 56; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-AAl"    ) ||
-                      ( currentarg == "-AAel"   ) ||
-                      ( currentarg == "-AAil"   ) ||
-                      ( currentarg == "-AAIl"   ) ||
-                      ( currentarg == "-AArl"   ) ||
-                      ( currentarg == "-AARl"   ) ||
-                      ( currentarg == "-AAeil"  ) ||
-                      ( currentarg == "-AAeIl"  ) ||
-                      ( currentarg == "-AAerl"  ) ||
-                      ( currentarg == "-AAeRl"  ) ||
-                      ( currentarg == "-ATAl"   ) ||
-                      ( currentarg == "-ATAel"  ) ||
-                      ( currentarg == "-ATAil"  ) ||
-                      ( currentarg == "-ATAIl"  ) ||
-                      ( currentarg == "-ATArl"  ) ||
-                      ( currentarg == "-ATARl"  ) ||
-                      ( currentarg == "-ATAeil" ) ||
-                      ( currentarg == "-ATAeIl" ) ||
-                      ( currentarg == "-ATAerl" ) ||
-                      ( currentarg == "-ATAeRl" ) ||
-                      ( currentarg == "-Aca"    )    )
+            else if ( ( currentarg == "-AAl"    ) || ( currentarg == "-AAel"   ) || ( currentarg == "-AAil"   ) ||
+                      ( currentarg == "-AAIl"   ) || ( currentarg == "-AArl"   ) || ( currentarg == "-AARl"   ) ||
+                      ( currentarg == "-AAeil"  ) || ( currentarg == "-AAeIl"  ) || ( currentarg == "-AAerl"  ) ||
+                      ( currentarg == "-AAeRl"  ) || ( currentarg == "-ATAl"   ) || ( currentarg == "-ATAel"  ) ||
+                      ( currentarg == "-ATAil"  ) || ( currentarg == "-ATAIl"  ) || ( currentarg == "-ATArl"  ) ||
+                      ( currentarg == "-ATARl"  ) || ( currentarg == "-ATAeil" ) || ( currentarg == "-ATAeIl" ) ||
+                      ( currentarg == "-ATAerl" ) || ( currentarg == "-ATAeRl" ) || ( currentarg == "-Aca"    )    )
             {
                 preelse = 1;
 
                 // Load options
 
-                if ( grabargs(3,loadopt,commstack,currentarg) )
-                {
-                    retval  = 57;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,loadopt,commstack,currentarg) ) { retval = 57; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-Ag"     ) ||
-                      ( currentarg == "-AG"     ) ||
-                      ( currentarg == "-AN"     ) ||
-                      ( currentarg == "-ANe"    ) ||
-                      ( currentarg == "-ANi"    ) ||
-                      ( currentarg == "-ANI"    ) ||
-                      ( currentarg == "-ANr"    ) ||
-                      ( currentarg == "-ANR"    ) ||
-                      ( currentarg == "-ANu"    ) ||
-                      ( currentarg == "-ANeu"   ) ||
-                      ( currentarg == "-ANiu"   ) ||
-                      ( currentarg == "-ANIu"   ) ||
-                      ( currentarg == "-ANru"   ) ||
-                      ( currentarg == "-ANRu"   ) ||
-                      ( currentarg == "-ANei"   ) ||
-                      ( currentarg == "-ANeI"   ) ||
-                      ( currentarg == "-ANer"   ) ||
-                      ( currentarg == "-ANeR"   ) ||
-                      ( currentarg == "-ANeiu"  ) ||
-                      ( currentarg == "-ANeIu"  ) ||
-                      ( currentarg == "-ANeru"  ) ||
-                      ( currentarg == "-ANeRu"  ) ||
-                      ( currentarg == "-ATN"    ) ||
-                      ( currentarg == "-ATNe"   ) ||
-                      ( currentarg == "-ATNi"   ) ||
-                      ( currentarg == "-ATNI"   ) ||
-                      ( currentarg == "-ATNr"   ) ||
-                      ( currentarg == "-ATNR"   ) ||
-                      ( currentarg == "-ATNu"   ) ||
-                      ( currentarg == "-ATNeu"  ) ||
-                      ( currentarg == "-ATNiu"  ) ||
-                      ( currentarg == "-ATNIu"  ) ||
-                      ( currentarg == "-ATNru"  ) ||
-                      ( currentarg == "-ATNRu"  ) ||
-                      ( currentarg == "-ATNei"  ) ||
-                      ( currentarg == "-ATNeI"  ) ||
-                      ( currentarg == "-ATNer"  ) ||
-                      ( currentarg == "-ATNeR"  ) ||
-                      ( currentarg == "-ATNeiu" ) ||
-                      ( currentarg == "-ATNeIu" ) ||
-                      ( currentarg == "-ATNeru" ) ||
-                      ( currentarg == "-ATNeRu" )    )
+            else if ( ( currentarg == "-Ag"     ) || ( currentarg == "-AG"     ) || ( currentarg == "-AN"     ) ||
+                      ( currentarg == "-ANe"    ) || ( currentarg == "-ANi"    ) || ( currentarg == "-ANI"    ) ||
+                      ( currentarg == "-ANr"    ) || ( currentarg == "-ANR"    ) || ( currentarg == "-ANu"    ) ||
+                      ( currentarg == "-ANeu"   ) || ( currentarg == "-ANiu"   ) || ( currentarg == "-ANIu"   ) ||
+                      ( currentarg == "-ANru"   ) || ( currentarg == "-ANRu"   ) || ( currentarg == "-ANei"   ) ||
+                      ( currentarg == "-ANeI"   ) || ( currentarg == "-ANer"   ) || ( currentarg == "-ANeR"   ) ||
+                      ( currentarg == "-ANeiu"  ) || ( currentarg == "-ANeIu"  ) || ( currentarg == "-ANeru"  ) ||
+                      ( currentarg == "-ANeRu"  ) || ( currentarg == "-ATN"    ) || ( currentarg == "-ATNe"   ) ||
+                      ( currentarg == "-ATNi"   ) || ( currentarg == "-ATNI"   ) || ( currentarg == "-ATNr"   ) ||
+                      ( currentarg == "-ATNR"   ) || ( currentarg == "-ATNu"   ) || ( currentarg == "-ATNeu"  ) ||
+                      ( currentarg == "-ATNiu"  ) || ( currentarg == "-ATNIu"  ) || ( currentarg == "-ATNru"  ) ||
+                      ( currentarg == "-ATNRu"  ) || ( currentarg == "-ATNei"  ) || ( currentarg == "-ATNeI"  ) ||
+                      ( currentarg == "-ATNer"  ) || ( currentarg == "-ATNeR"  ) || ( currentarg == "-ATNeiu" ) ||
+                      ( currentarg == "-ATNeIu" ) || ( currentarg == "-ATNeru" ) || ( currentarg == "-ATNeRu" ) )
             {
                 preelse = 1;
 
                 // Load options
 
-                if ( grabargs(5,loadopt,commstack,currentarg) )
-                {
-                    retval  = 58;
-                    stopnow = 1;
-                }
+                if ( grabargs(5,loadopt,commstack,currentarg) ) { retval = 58; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-Agc"    ) ||
-                      ( currentarg == "-AGc"    ) ||
-                      ( currentarg == "-ANl"    ) ||
-                      ( currentarg == "-ANel"   ) ||
-                      ( currentarg == "-ANil"   ) ||
-                      ( currentarg == "-ANIl"   ) ||
-                      ( currentarg == "-ANrl"   ) ||
-                      ( currentarg == "-ANRl"   ) ||
-                      ( currentarg == "-ANeil"  ) ||
-                      ( currentarg == "-ANeIl"  ) ||
-                      ( currentarg == "-ANerl"  ) ||
-                      ( currentarg == "-ANeRl"  ) ||
-                      ( currentarg == "-ATNl"   ) ||
-                      ( currentarg == "-ATNel"  ) ||
-                      ( currentarg == "-ATNil"  ) ||
-                      ( currentarg == "-ATNIl"  ) ||
-                      ( currentarg == "-ATNrl"  ) ||
-                      ( currentarg == "-ATNRl"  ) ||
-                      ( currentarg == "-ATNeil" ) ||
-                      ( currentarg == "-ATNeIl" ) ||
-                      ( currentarg == "-ATNerl" ) ||
-                      ( currentarg == "-ATNeRl" )    )
+            else if ( ( currentarg == "-Agc"    ) || ( currentarg == "-AGc"    ) || ( currentarg == "-ANl"    ) ||
+                      ( currentarg == "-ANel"   ) || ( currentarg == "-ANil"   ) || ( currentarg == "-ANIl"   ) ||
+                      ( currentarg == "-ANrl"   ) || ( currentarg == "-ANRl"   ) || ( currentarg == "-ANeil"  ) ||
+                      ( currentarg == "-ANeIl"  ) || ( currentarg == "-ANerl"  ) || ( currentarg == "-ANeRl"  ) ||
+                      ( currentarg == "-ATNl"   ) || ( currentarg == "-ATNel"  ) || ( currentarg == "-ATNil"  ) ||
+                      ( currentarg == "-ATNIl"  ) || ( currentarg == "-ATNrl"  ) || ( currentarg == "-ATNRl"  ) ||
+                      ( currentarg == "-ATNeil" ) || ( currentarg == "-ATNeIl" ) || ( currentarg == "-ATNerl" ) ||
+                      ( currentarg == "-ATNeRl" ) )
             {
                 preelse = 1;
 
                 // Load options
 
-                if ( grabargs(6,loadopt,commstack,currentarg) )
-                {
-                    retval  = 59;
-                    stopnow = 1;
-                }
+                if ( grabargs(6,loadopt,commstack,currentarg) ) { retval = 59; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-Snx"  ) ||
-                      ( currentarg == "-Sna"  ) ||
-                      ( currentarg == "-Snb"  ) ||
-                      ( currentarg == "-Snc"  ) ||
-                      ( currentarg == "-SNa"  ) ||
-                      ( currentarg == "-SNb"  ) ||
-                      ( currentarg == "-SNc"  ) ||
-                      ( currentarg == "-SnA"  ) ||
-                      ( currentarg == "-SnB"  ) ||
-                      ( currentarg == "-SnC"  ) ||
-                      ( currentarg == "-SNA"  ) ||
-                      ( currentarg == "-SNB"  ) ||
-                      ( currentarg == "-SNC"  ) ||
-                      ( currentarg == "-St"   ) ||
-                      ( currentarg == "-Spt"  ) ||
-                      ( currentarg == "-SPt"  ) ||
-                      ( currentarg == "-Sjt"  ) ||
-                      ( currentarg == "-Sjt+" ) ||
-                      ( currentarg == "-Sjt-" ) ||
-                      ( currentarg == "-Srt"  ) ||
-                      ( currentarg == "-Snt"  )    )
+            else if ( ( currentarg == "-Snx"  ) || ( currentarg == "-Sna"  ) || ( currentarg == "-Snb"  ) ||
+                      ( currentarg == "-Snc"  ) || ( currentarg == "-SNa"  ) || ( currentarg == "-SNb"  ) ||
+                      ( currentarg == "-SNc"  ) || ( currentarg == "-SnA"  ) || ( currentarg == "-SnB"  ) ||
+                      ( currentarg == "-SnC"  ) || ( currentarg == "-SNA"  ) || ( currentarg == "-SNB"  ) ||
+                      ( currentarg == "-SNC"  ) || ( currentarg == "-St"   ) || ( currentarg == "-Spt"  ) ||
+                      ( currentarg == "-SPt"  ) || ( currentarg == "-Sjt"  ) || ( currentarg == "-Sjt+" ) ||
+                      ( currentarg == "-Sjt-" ) || ( currentarg == "-Srt"  ) || ( currentarg == "-Snt"  ) )
             {
                 preelse = 1;
 
                 // Postload options
 
-                if ( grabargs(1,postloadopt,commstack,currentarg) )
-                {
-                    retval  = 60;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,postloadopt,commstack,currentarg) ) { retval = 60; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-Sa"  ) ||
-                      ( currentarg == "-Sb"  ) ||
-                      ( currentarg == "-Saa" ) ||
-                      ( currentarg == "-Sbb" ) ||
-                      ( currentarg == "-SA"  ) ||
-                      ( currentarg == "-SAA" ) ||
-                      ( currentarg == "-Sdi" ) ||
-                      ( currentarg == "-Stl" ) ||
-                      ( currentarg == "-Stu" ) ||
-                      ( currentarg == "-StN" ) ||
-                      ( currentarg == "-Sts" ) ||
-                      ( currentarg == "-Stx" ) ||
-                      ( currentarg == "-Stt" ) ||
-                      ( currentarg == "-Stc" ) ||
-                      ( currentarg == "-Stq" ) ||
-                      ( currentarg == "-Svc" ) ||
-                      ( currentarg == "-Sx"  ) ||
-                      ( currentarg == "-Sra" )    )
+            else if ( ( currentarg == "-Sa"  ) || ( currentarg == "-Sb"  ) || ( currentarg == "-Saa" ) ||
+                      ( currentarg == "-Sbb" ) || ( currentarg == "-SA"  ) || ( currentarg == "-SAA" ) ||
+                      ( currentarg == "-Sdi" ) || ( currentarg == "-Stl" ) || ( currentarg == "-Stu" ) ||
+                      ( currentarg == "-StN" ) || ( currentarg == "-Sts" ) || ( currentarg == "-Stx" ) ||
+                      ( currentarg == "-Stt" ) || ( currentarg == "-Stc" ) || ( currentarg == "-Stq" ) ||
+                      ( currentarg == "-Svc" ) || ( currentarg == "-Sx"  ) || ( currentarg == "-Sra" ) )
             {
                 preelse = 1;
 
                 // Postload options
 
-                if ( grabargs(2,postloadopt,commstack,currentarg) )
-                {
-                    retval  = 61;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,postloadopt,commstack,currentarg) ) { retval = 61; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-Sai" ) ||
-                      ( currentarg == "-SdI" )    )
+            else if ( ( currentarg == "-Sai" ) || ( currentarg == "-SdI" ) )
             {
                 preelse = 1;
 
                 // Postload options
 
-                if ( grabargs(3,postloadopt,commstack,currentarg) )
-                {
-                    retval  = 61;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,postloadopt,commstack,currentarg) ) { retval = 61; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-SAi" )    )
+            else if ( ( currentarg == "-SAi" ) )
             {
                 preelse = 1;
 
                 // Postload options
 
-                if ( grabargs(4,postloadopt,commstack,currentarg) )
-                {
-                    retval  = 61;
-                    stopnow = 1;
-                }
+                if ( grabargs(4,postloadopt,commstack,currentarg) ) { retval = 61; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-Mn" ) ||
-                      ( currentarg == "-Mi" ) ||
-                      ( currentarg == "-Md" )    )
+            else if ( ( currentarg == "-Mn" ) || ( currentarg == "-Mi" ) || ( currentarg == "-Md" ) )
             {
                 preelse = 1;
 
                 // Learning options
 
-                if ( grabargs(1,learningopt,commstack,currentarg) )
-                {
-                    retval  = 62;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,learningopt,commstack,currentarg) ) { retval = 62; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-c"    ) ||
-                      ( currentarg == "-dc"   ) ||
-                      ( currentarg == "-ec"   ) ||
-                      ( currentarg == "-fc"   ) ||
-                      ( currentarg == "-Gc"   ) ||
-                      ( currentarg == "-dcs"  ) ||
-                      ( currentarg == "-ecs"  ) ||
-                      ( currentarg == "-fcs"  ) ||
-                      ( currentarg == "-Gcs"  ) ||
-                      ( currentarg == "-trf"  ) ||
-                      ( currentarg == "-trk"  ) ||
-                      ( currentarg == "-tmv"  ) ||
-                      ( currentarg == "-rfs"  ) ||
-                      ( currentarg == "-dia"  ) ||
-                      ( currentarg == "-dog"  ) ||
-                      ( currentarg == "-th"   ) ||
-                      ( currentarg == "-thn"  ) ||
-                      ( currentarg == "-c+"   ) ||
-                      ( currentarg == "-c-"   ) ||
-                      ( currentarg == "-c="   ) ||
-                      ( currentarg == "-cs"   ) ||
-                      ( currentarg == "-ds"   ) ||
-                      ( currentarg == "-ccs"  ) ||
-                      ( currentarg == "-c+s"  ) ||
-                      ( currentarg == "-c-s"  ) ||
-                      ( currentarg == "-c=s"  ) ||
-                      ( currentarg == "-j"    ) ||
-                      ( currentarg == "-jc"   ) ||
-                      ( currentarg == "-dd"   ) ||
-                      ( currentarg == "-w"    ) ||
-                      ( currentarg == "-mu"   ) ||
-                      ( currentarg == "-mugt" ) ||
-                      ( currentarg == "-muml" ) ||
-                      ( currentarg == "-w+"   ) ||
-                      ( currentarg == "-w-"   ) ||
-                      ( currentarg == "-w="   ) ||
-                      ( currentarg == "-ws"   ) ||
-                      ( currentarg == "-w+s"  ) ||
-                      ( currentarg == "-w-s"  ) ||
-                      ( currentarg == "-w=s"  ) ||
-                      ( currentarg == "-jw"   ) ||
-                      ( currentarg == "-nm"   ) ||
-                      ( currentarg == "-nN"   ) ||
-                      ( currentarg == "-mtl"  ) ||
-                      ( currentarg == "-Bf"   ) ||
-                      ( currentarg == "-Tl"   ) ||
-                      ( currentarg == "-Tq"   ) ||
-                      ( currentarg == "-Nl"   ) ||
-                      ( currentarg == "-Nq"   ) ||
-                      ( currentarg == "-Fi"   ) ||
-                      ( currentarg == "-Flr"  ) ||
-                      ( currentarg == "-Fzt"  ) ||
-                      ( currentarg == "-mvi"  ) ||
-                      ( currentarg == "-mvlr" ) ||
-                      ( currentarg == "-mvzt" ) ||
-                      ( currentarg == "-mvb"  ) ||
-                      ( currentarg == "-Fc"   ) ||
-                      ( currentarg == "-m"    ) ||
-                      ( currentarg == "-blx"  ) ||
-                      ( currentarg == "-bly"  ) ||
-                      ( currentarg == "-blz"  ) ||
-                      ( currentarg == "-bls"  ) ||
-                      ( currentarg == "-bfx"  ) ||
-                      ( currentarg == "-bfy"  ) ||
-                      ( currentarg == "-bfxy" ) ||
-                      ( currentarg == "-bfyx" ) ||
-                      ( currentarg == "-bfr"  ) ||
-                      ( currentarg == "-k"    ) ||
-                      ( currentarg == "-ek"   ) ||
-                      ( currentarg == "-rk"   ) ||
-                      ( currentarg == "-K"    ) ||
-                      ( currentarg == "-iz"   ) ||
-                      ( currentarg == "-ie"   ) ||
-                      ( currentarg == "-is"   ) ||
-                      ( currentarg == "-ia"   ) ||
-                      ( currentarg == "-in"   ) ||
-                      ( currentarg == "-il"   ) ||
-                      ( currentarg == "-d"    ) ||
-                      ( currentarg == "-ccs"  )    )
+            else if ( ( currentarg == "-c"    ) || ( currentarg == "-dc"   ) || ( currentarg == "-ec"   ) ||
+                      ( currentarg == "-fc"   ) || ( currentarg == "-Gc"   ) || ( currentarg == "-dcs"  ) ||
+                      ( currentarg == "-ecs"  ) || ( currentarg == "-fcs"  ) || ( currentarg == "-Gcs"  ) ||
+                      ( currentarg == "-trf"  ) || ( currentarg == "-trk"  ) || ( currentarg == "-tmv"  ) ||
+                      ( currentarg == "-rfs"  ) || ( currentarg == "-dia"  ) || ( currentarg == "-dog"  ) ||
+                      ( currentarg == "-th"   ) || ( currentarg == "-thn"  ) || ( currentarg == "-c+"   ) ||
+                      ( currentarg == "-c-"   ) || ( currentarg == "-c="   ) || ( currentarg == "-cs"   ) ||
+                      ( currentarg == "-ds"   ) || ( currentarg == "-ccs"  ) || ( currentarg == "-c+s"  ) ||
+                      ( currentarg == "-c-s"  ) || ( currentarg == "-c=s"  ) || ( currentarg == "-j"    ) ||
+                      ( currentarg == "-jc"   ) || ( currentarg == "-dd"   ) || ( currentarg == "-w"    ) ||
+                      ( currentarg == "-mu"   ) || ( currentarg == "-mugt" ) || ( currentarg == "-muml" ) ||
+                      ( currentarg == "-w+"   ) || ( currentarg == "-w-"   ) || ( currentarg == "-w="   ) ||
+                      ( currentarg == "-ws"   ) || ( currentarg == "-w+s"  ) || ( currentarg == "-w-s"  ) ||
+                      ( currentarg == "-w=s"  ) || ( currentarg == "-jw"   ) || ( currentarg == "-nm"   ) ||
+                      ( currentarg == "-nN"   ) || ( currentarg == "-mtl"  ) || ( currentarg == "-Bf"   ) ||
+                      ( currentarg == "-Tl"   ) || ( currentarg == "-Tq"   ) || ( currentarg == "-Nl"   ) ||
+                      ( currentarg == "-Nq"   ) || ( currentarg == "-Fi"   ) || ( currentarg == "-Flr"  ) ||
+                      ( currentarg == "-Fzt"  ) || ( currentarg == "-mvi"  ) || ( currentarg == "-mvlr" ) ||
+                      ( currentarg == "-mvzt" ) || ( currentarg == "-mvb"  ) || ( currentarg == "-Fc"   ) ||
+                      ( currentarg == "-m"    ) || ( currentarg == "-blx"  ) || ( currentarg == "-bly"  ) ||
+                      ( currentarg == "-blz"  ) || ( currentarg == "-bls"  ) || ( currentarg == "-bfx"  ) ||
+                      ( currentarg == "-bfy"  ) || ( currentarg == "-bfxy" ) || ( currentarg == "-bfyx" ) ||
+                      ( currentarg == "-bfr"  ) || ( currentarg == "-k"    ) || ( currentarg == "-ek"   ) ||
+                      ( currentarg == "-rk"   ) || ( currentarg == "-K"    ) || ( currentarg == "-iz"   ) ||
+                      ( currentarg == "-ie"   ) || ( currentarg == "-is"   ) || ( currentarg == "-ia"   ) ||
+                      ( currentarg == "-in"   ) || ( currentarg == "-il"   ) || ( currentarg == "-d"    ) ||
+                      ( currentarg == "-ccs"  ) )
             {
                 preelse = 1;
 
                 // Learning options
 
-                if ( grabargs(2,learningopt,commstack,currentarg) )
-                {
-                    retval  = 62;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,learningopt,commstack,currentarg) ) { retval = 62; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-cd"  ) ||
-                      ( currentarg == "-cw"  ) ||
-                      ( currentarg == "-dw"  ) ||
-                      ( currentarg == "-mlc" ) ||
-                      ( currentarg == "-cds" ) ||
-                      ( currentarg == "-wd"  ) ||
-                      ( currentarg == "-ww"  ) ||
-                      ( currentarg == "-wds" ) ||
-                      ( currentarg == "-Nld" ) ||
-                      ( currentarg == "-Nqd" )    )
+            else if ( ( currentarg == "-cd"  ) || ( currentarg == "-cw"  ) || ( currentarg == "-dw"  ) ||
+                      ( currentarg == "-mlc" ) || ( currentarg == "-cds" ) || ( currentarg == "-wd"  ) ||
+                      ( currentarg == "-ww"  ) || ( currentarg == "-wds" ) || ( currentarg == "-Nld" ) ||
+                      ( currentarg == "-Nqd" ) )
             {
                 preelse = 1;
 
                 // Learning options
 
-                if ( grabargs(3,learningopt,commstack,currentarg) )
-                {
-                    retval  = 63;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,learningopt,commstack,currentarg) ) { retval = 63; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-kn"    ) ||
-                      ( currentarg == "-kp"    ) ||
-                      ( currentarg == "-knp"   ) ||
-                      ( currentarg == "-ku"    ) ||
-                      ( currentarg == "-kss"   ) ||
-                      ( currentarg == "-kus"   ) ||
-                      ( currentarg == "-knn"   ) ||
-                      ( currentarg == "-kuu"   ) ||
-                      ( currentarg == "-kc"    ) ||
-                      ( currentarg == "-kuc"   ) ||
-                      ( currentarg == "-km"    ) ||
-                      ( currentarg == "-kum"   ) ||
-                      ( currentarg == "-kS"    ) ||
-                      ( currentarg == "-kA"    ) ||
-                      ( currentarg == "-kuS"   ) ||
-                      ( currentarg == "-kMS"   ) ||
-                      ( currentarg == "-kMA"   ) ||
-                      ( currentarg == "-kMuS"  ) ||
-                      ( currentarg == "-kU"    ) ||
-                      ( currentarg == "-koz"   ) ||
-                      ( currentarg == "-mtb"   ) ||
-                      ( currentarg == "-bmx"   ) ||
-                      ( currentarg == "-kOz"   ) ||
-                      ( currentarg == "-ekn"   ) ||
-                      ( currentarg == "-ekp"   ) ||
-                      ( currentarg == "-eknp"  ) ||
-                      ( currentarg == "-eku"   ) ||
-                      ( currentarg == "-ekss"  ) ||
-                      ( currentarg == "-ekus"  ) ||
-                      ( currentarg == "-eknn"  ) ||
-                      ( currentarg == "-ekuu"  ) ||
-                      ( currentarg == "-ekc"   ) ||
-                      ( currentarg == "-ekuc"  ) ||
-                      ( currentarg == "-ekm"   ) ||
-                      ( currentarg == "-ekum"  ) ||
-                      ( currentarg == "-ekS"   ) ||
-                      ( currentarg == "-ekA"   ) ||
-                      ( currentarg == "-ekuS"  ) ||
-                      ( currentarg == "-ekMS"  ) ||
-                      ( currentarg == "-ekMA"  ) ||
-                      ( currentarg == "-ekMuS" ) ||
-                      ( currentarg == "-ekU"   ) ||
-                      ( currentarg == "-ekoz"  ) ||
-                      ( currentarg == "-emtb"  ) ||
-                      ( currentarg == "-ebmx"  ) ||
-                      ( currentarg == "-ekOz"  ) ||
-                      ( currentarg == "-rkn"   ) ||
-                      ( currentarg == "-rkp"   ) ||
-                      ( currentarg == "-rknp"  ) ||
-                      ( currentarg == "-rku"   ) ||
-                      ( currentarg == "-rkss"  ) ||
-                      ( currentarg == "-rkus"  ) ||
-                      ( currentarg == "-rknn"  ) ||
-                      ( currentarg == "-rkuu"  ) ||
-                      ( currentarg == "-rkc"   ) ||
-                      ( currentarg == "-rkuc"  ) ||
-                      ( currentarg == "-rkm"   ) ||
-                      ( currentarg == "-rkum"  ) ||
-                      ( currentarg == "-rkS"   ) ||
-                      ( currentarg == "-rkA"   ) ||
-                      ( currentarg == "-rkuS"  ) ||
-                      ( currentarg == "-rkMS"  ) ||
-                      ( currentarg == "-rkMA"  ) ||
-                      ( currentarg == "-rkMuS" ) ||
-                      ( currentarg == "-rkU"   ) ||
-                      ( currentarg == "-rkoz"  ) ||
-                      ( currentarg == "-rmtb"  ) ||
-                      ( currentarg == "-rbmx"  ) ||
-                      ( currentarg == "-rkOz"  )    )
+            else if ( ( currentarg == "-kn"    ) || ( currentarg == "-kp"    ) || ( currentarg == "-knp"   ) ||
+                      ( currentarg == "-ku"    ) || ( currentarg == "-kss"   ) || ( currentarg == "-kus"   ) ||
+                      ( currentarg == "-knn"   ) || ( currentarg == "-kuu"   ) || ( currentarg == "-kc"    ) ||
+                      ( currentarg == "-kuc"   ) || ( currentarg == "-km"    ) || ( currentarg == "-kum"   ) ||
+                      ( currentarg == "-kS"    ) || ( currentarg == "-kA"    ) || ( currentarg == "-kuS"   ) ||
+                      ( currentarg == "-kMS"   ) || ( currentarg == "-kMA"   ) || ( currentarg == "-kMuS"  ) ||
+                      ( currentarg == "-kU"    ) || ( currentarg == "-koz"   ) || ( currentarg == "-mtb"   ) ||
+                      ( currentarg == "-bmx"   ) || ( currentarg == "-kOz"   ) ||
+                      ( currentarg == "-ekn"   ) || ( currentarg == "-ekp"   ) || ( currentarg == "-eknp"  ) ||
+                      ( currentarg == "-eku"   ) || ( currentarg == "-ekss"  ) || ( currentarg == "-ekus"  ) ||
+                      ( currentarg == "-eknn"  ) || ( currentarg == "-ekuu"  ) || ( currentarg == "-ekc"   ) ||
+                      ( currentarg == "-ekuc"  ) || ( currentarg == "-ekm"   ) || ( currentarg == "-ekum"  ) ||
+                      ( currentarg == "-ekS"   ) || ( currentarg == "-ekA"   ) || ( currentarg == "-ekuS"  ) ||
+                      ( currentarg == "-ekMS"  ) || ( currentarg == "-ekMA"  ) || ( currentarg == "-ekMuS" ) ||
+                      ( currentarg == "-ekU"   ) || ( currentarg == "-ekoz"  ) || ( currentarg == "-emtb"  ) ||
+                      ( currentarg == "-ebmx"  ) || ( currentarg == "-ekOz"  ) ||
+                      ( currentarg == "-rkn"   ) || ( currentarg == "-rkp"   ) || ( currentarg == "-rknp"  ) ||
+                      ( currentarg == "-rku"   ) || ( currentarg == "-rkss"  ) || ( currentarg == "-rkus"  ) ||
+                      ( currentarg == "-rknn"  ) || ( currentarg == "-rkuu"  ) || ( currentarg == "-rkc"   ) ||
+                      ( currentarg == "-rkuc"  ) || ( currentarg == "-rkm"   ) || ( currentarg == "-rkum"  ) ||
+                      ( currentarg == "-rkS"   ) || ( currentarg == "-rkA"   ) || ( currentarg == "-rkuS"  ) ||
+                      ( currentarg == "-rkMS"  ) || ( currentarg == "-rkMA"  ) || ( currentarg == "-rkMuS" ) ||
+                      ( currentarg == "-rkU"   ) || ( currentarg == "-rkoz"  ) || ( currentarg == "-rmtb"  ) ||
+                      ( currentarg == "-rbmx"  ) || ( currentarg == "-rkOz"  ) )
             {
                 preelse = 1;
 
                 // Kernel options
 
-                if ( grabargs(1,kernelopt,commstack,currentarg) )
-                {
-                    retval  = 64;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,kernelopt,commstack,currentarg) ) { retval = 64; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-ks"    ) ||
-                      ( currentarg == "-ki"    ) ||
-                      ( currentarg == "-ka"    ) ||
-                      ( currentarg == "-kb"    ) ||
-                      ( currentarg == "-ke"    ) ||
-                      ( currentarg == "-kw"    ) ||
-                      ( currentarg == "-kwlb"  ) ||
-                      ( currentarg == "-kwub"  ) ||
-                      ( currentarg == "-kt"    ) ||
-                      ( currentarg == "-ktx"   ) ||
-                      ( currentarg == "-ktk"   ) ||
-                      ( currentarg == "-krn"   ) ||
-                      ( currentarg == "-kgg"   ) ||
-                      ( currentarg == "-kf"    ) ||
-                      ( currentarg == "-kr"    ) ||
-                      ( currentarg == "-kg"    ) ||
-                      ( currentarg == "-kd"    ) ||
-                      ( currentarg == "-kG"    ) ||
-                      ( currentarg == "-krlb"  ) ||
-                      ( currentarg == "-kglb"  ) ||
-                      ( currentarg == "-kdlb"  ) ||
-                      ( currentarg == "-kGlb"  ) ||
-                      ( currentarg == "-krub"  ) ||
-                      ( currentarg == "-kgub"  ) ||
-                      ( currentarg == "-kdub"  ) ||
-                      ( currentarg == "-kGub"  ) ||
-                      ( currentarg == "-kI"    ) ||
+            else if ( ( currentarg == "-ks"    ) || ( currentarg == "-ki"    ) || ( currentarg == "-ka"    ) ||
+                      ( currentarg == "-kb"    ) || ( currentarg == "-ke"    ) || ( currentarg == "-kw"    ) ||
+                      ( currentarg == "-kwlb"  ) || ( currentarg == "-kwub"  ) || ( currentarg == "-kt"    ) ||
+                      ( currentarg == "-ktx"   ) || ( currentarg == "-ktk"   ) || ( currentarg == "-krn"   ) ||
+                      ( currentarg == "-kgg"   ) || ( currentarg == "-kf"    ) || ( currentarg == "-kr"    ) ||
+                      ( currentarg == "-kg"    ) || ( currentarg == "-kd"    ) || ( currentarg == "-kG"    ) ||
+                      ( currentarg == "-krlb"  ) || ( currentarg == "-kglb"  ) || ( currentarg == "-kdlb"  ) ||
+                      ( currentarg == "-kGlb"  ) || ( currentarg == "-krub"  ) || ( currentarg == "-kgub"  ) ||
+                      ( currentarg == "-kdub"  ) || ( currentarg == "-kGub"  ) || ( currentarg == "-kI"    ) ||
                       ( currentarg == "-kan"   ) ||
-                      ( currentarg == "-eks"   ) ||
-                      ( currentarg == "-eki"   ) ||
-                      ( currentarg == "-eka"   ) ||
-                      ( currentarg == "-ekb"   ) ||
-                      ( currentarg == "-eke"   ) ||
-                      ( currentarg == "-ekw"   ) ||
-                      ( currentarg == "-ekwlb" ) ||
-                      ( currentarg == "-ekwub" ) ||
-                      ( currentarg == "-ekt"   ) ||
-                      ( currentarg == "-ektx"  ) ||
-                      ( currentarg == "-ektk"  ) ||
-                      ( currentarg == "-ekgg"  ) ||
-                      ( currentarg == "-ekf"   ) ||
-                      ( currentarg == "-ekrn"  ) ||
-                      ( currentarg == "-ekr"   ) ||
-                      ( currentarg == "-ekg"   ) ||
-                      ( currentarg == "-ekd"   ) ||
-                      ( currentarg == "-ekG"   ) ||
-                      ( currentarg == "-ekrlb" ) ||
-                      ( currentarg == "-ekglb" ) ||
-                      ( currentarg == "-ekdlb" ) ||
-                      ( currentarg == "-ekGlb" ) ||
-                      ( currentarg == "-ekrub" ) ||
-                      ( currentarg == "-ekgub" ) ||
-                      ( currentarg == "-ekdub" ) ||
-                      ( currentarg == "-ekGub" ) ||
-                      ( currentarg == "-ekI"   ) ||
+                      ( currentarg == "-eks"   ) || ( currentarg == "-eki"   ) || ( currentarg == "-eka"   ) ||
+                      ( currentarg == "-ekb"   ) || ( currentarg == "-eke"   ) || ( currentarg == "-ekw"   ) ||
+                      ( currentarg == "-ekwlb" ) || ( currentarg == "-ekwub" ) || ( currentarg == "-ekt"   ) ||
+                      ( currentarg == "-ektx"  ) || ( currentarg == "-ektk"  ) || ( currentarg == "-ekgg"  ) ||
+                      ( currentarg == "-ekf"   ) || ( currentarg == "-ekrn"  ) || ( currentarg == "-ekr"   ) ||
+                      ( currentarg == "-ekg"   ) || ( currentarg == "-ekd"   ) || ( currentarg == "-ekG"   ) ||
+                      ( currentarg == "-ekrlb" ) || ( currentarg == "-ekglb" ) || ( currentarg == "-ekdlb" ) ||
+                      ( currentarg == "-ekGlb" ) || ( currentarg == "-ekrub" ) || ( currentarg == "-ekgub" ) ||
+                      ( currentarg == "-ekdub" ) || ( currentarg == "-ekGub" ) || ( currentarg == "-ekI"   ) ||
                       ( currentarg == "-ekan"  ) ||
-                      ( currentarg == "-rks"   ) ||
-                      ( currentarg == "-rki"   ) ||
-                      ( currentarg == "-rkrn"  ) ||
-                      ( currentarg == "-rka"   ) ||
-                      ( currentarg == "-rkb"   ) ||
-                      ( currentarg == "-rke"   ) ||
-                      ( currentarg == "-rkw"   ) ||
-                      ( currentarg == "-rkwlb" ) ||
-                      ( currentarg == "-rkwub" ) ||
-                      ( currentarg == "-rkt"   ) ||
-                      ( currentarg == "-rktx"  ) ||
-                      ( currentarg == "-rktk"  ) ||
-                      ( currentarg == "-rkgg"  ) ||
-                      ( currentarg == "-rkf"   ) ||
-                      ( currentarg == "-rkr"   ) ||
-                      ( currentarg == "-rkg"   ) ||
-                      ( currentarg == "-rkd"   ) ||
-                      ( currentarg == "-rkG"   ) ||
-                      ( currentarg == "-rkrlb" ) ||
-                      ( currentarg == "-rkglb" ) ||
-                      ( currentarg == "-rkdlb" ) ||
-                      ( currentarg == "-rkGlb" ) ||
-                      ( currentarg == "-rkrub" ) ||
-                      ( currentarg == "-rkgub" ) ||
-                      ( currentarg == "-rkdub" ) ||
-                      ( currentarg == "-rkGub" ) ||
-                      ( currentarg == "-rkI"   ) ||
-                      ( currentarg == "-rkan"  )    )
+                      ( currentarg == "-rks"   ) || ( currentarg == "-rki"   ) || ( currentarg == "-rkrn"  ) ||
+                      ( currentarg == "-rka"   ) || ( currentarg == "-rkb"   ) || ( currentarg == "-rke"   ) ||
+                      ( currentarg == "-rkw"   ) || ( currentarg == "-rkwlb" ) || ( currentarg == "-rkwub" ) ||
+                      ( currentarg == "-rkt"   ) || ( currentarg == "-rktx"  ) || ( currentarg == "-rktk"  ) ||
+                      ( currentarg == "-rkgg"  ) || ( currentarg == "-rkf"   ) || ( currentarg == "-rkr"   ) ||
+                      ( currentarg == "-rkg"   ) || ( currentarg == "-rkd"   ) || ( currentarg == "-rkG"   ) ||
+                      ( currentarg == "-rkrlb" ) || ( currentarg == "-rkglb" ) || ( currentarg == "-rkdlb" ) ||
+                      ( currentarg == "-rkGlb" ) || ( currentarg == "-rkrub" ) || ( currentarg == "-rkgub" ) ||
+                      ( currentarg == "-rkdub" ) || ( currentarg == "-rkGub" ) || ( currentarg == "-rkI"   ) ||
+                      ( currentarg == "-rkan"  ) )
             {
                 preelse = 1;
 
                 // Kernel options
 
-                if ( grabargs(2,kernelopt,commstack,currentarg) )
-                {
-                    retval  = 65;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,kernelopt,commstack,currentarg) ) { retval = 65; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-kv"    ) ||
-                      ( currentarg == "-kV"    ) ||
-                      ( currentarg == "-kvlb"  ) ||
-                      ( currentarg == "-kVlb"  ) ||
-                      ( currentarg == "-kvub"  ) ||
-                      ( currentarg == "-kVub"  ) ||
-                      ( currentarg == "-ko"    ) ||
-                      ( currentarg == "-kO"    ) ||
-                      ( currentarg == "-kx"    ) ||
+            else if ( ( currentarg == "-kv"    ) || ( currentarg == "-kV"    ) || ( currentarg == "-kvlb"  ) ||
+                      ( currentarg == "-kVlb"  ) || ( currentarg == "-kvub"  ) || ( currentarg == "-kVub"  ) ||
+                      ( currentarg == "-ko"    ) || ( currentarg == "-kO"    ) || ( currentarg == "-kx"    ) ||
                       ( currentarg == "-kX"    ) ||
-                      ( currentarg == "-ekv"   ) ||
-                      ( currentarg == "-ekV"   ) ||
-                      ( currentarg == "-ekvlb" ) ||
-                      ( currentarg == "-ekVlb" ) ||
-                      ( currentarg == "-ekvub" ) ||
-                      ( currentarg == "-ekVub" ) ||
-                      ( currentarg == "-eko"   ) ||
-                      ( currentarg == "-ekO"   ) ||
-                      ( currentarg == "-ekx"   ) ||
+                      ( currentarg == "-ekv"   ) || ( currentarg == "-ekV"   ) || ( currentarg == "-ekvlb" ) ||
+                      ( currentarg == "-ekVlb" ) || ( currentarg == "-ekvub" ) || ( currentarg == "-ekVub" ) ||
+                      ( currentarg == "-eko"   ) || ( currentarg == "-ekO"   ) || ( currentarg == "-ekx"   ) ||
                       ( currentarg == "-ekX"   ) ||
-                      ( currentarg == "-rkv"   ) ||
-                      ( currentarg == "-rkV"   ) ||
-                      ( currentarg == "-rkvlb" ) ||
-                      ( currentarg == "-rkVlb" ) ||
-                      ( currentarg == "-rkvub" ) ||
-                      ( currentarg == "-rkVub" ) ||
-                      ( currentarg == "-rko"   ) ||
-                      ( currentarg == "-rkO"   ) ||
-                      ( currentarg == "-rkx"   ) ||
+                      ( currentarg == "-rkv"   ) || ( currentarg == "-rkV"   ) || ( currentarg == "-rkvlb" ) ||
+                      ( currentarg == "-rkVlb" ) || ( currentarg == "-rkvub" ) || ( currentarg == "-rkVub" ) ||
+                      ( currentarg == "-rko"   ) || ( currentarg == "-rkO"   ) || ( currentarg == "-rkx"   ) ||
                       ( currentarg == "-rkX"   )    )
             {
                 preelse = 1;
 
                 // Kernel options
 
-                if ( grabargs(3,kernelopt,commstack,currentarg) )
-                {
-                    retval  = 66;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,kernelopt,commstack,currentarg) ) { retval = 66; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-cua" ) ||
-                      ( currentarg == "-cA"  ) ||
-                      ( currentarg == "-cB"  ) ||
-                      ( currentarg == "-cAN" ) ||
-                      ( currentarg == "-cBN" ) ||
-                      ( currentarg == "-bal" )    )
+            else if ( ( currentarg == "-cua" ) || ( currentarg == "-cA"  ) || ( currentarg == "-cB"  ) ||
+                      ( currentarg == "-cAN" ) || ( currentarg == "-cBN" ) || ( currentarg == "-bal" ) )
             {
                 preelse = 1;
 
                 // Tuning options
 
-                if ( grabargs(1,tuningopt,commstack,currentarg) )
-                {
-                    retval  = 67;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,tuningopt,commstack,currentarg) ) { retval = 67; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-cX"      ) ||
-                      ( currentarg == "-tkL"     ) ||
-                      ( currentarg == "-tkloo"   ) ||
-                      ( currentarg == "-tkrec"   ) ||
-                      ( currentarg == "-tcL"     ) ||
-                      ( currentarg == "-tcloo"   ) ||
-                      ( currentarg == "-tcrec"   ) ||
-                      ( currentarg == "-teL"     ) ||
-                      ( currentarg == "-teloo"   ) ||
-                      ( currentarg == "-terec"   ) ||
-                      ( currentarg == "-tceL"    ) ||
-                      ( currentarg == "-tceloo"  ) ||
-                      ( currentarg == "-tcerec"  ) ||
-                      ( currentarg == "-tkcL"    ) ||
-                      ( currentarg == "-tkcloo"  ) ||
-                      ( currentarg == "-tkcrec"  ) ||
-                      ( currentarg == "-tkeL"    ) ||
-                      ( currentarg == "-tkeloo"  ) ||
-                      ( currentarg == "-tkerec"  ) ||
-                      ( currentarg == "-tkceL"   ) ||
-                      ( currentarg == "-tkceloo" ) ||
-                      ( currentarg == "-tkcerec" )    )
+            else if ( ( currentarg == "-cX"      ) || ( currentarg == "-tkL"     ) || ( currentarg == "-tkloo"   ) ||
+                      ( currentarg == "-tkrec"   ) || ( currentarg == "-tcL"     ) || ( currentarg == "-tcloo"   ) ||
+                      ( currentarg == "-tcrec"   ) || ( currentarg == "-teL"     ) || ( currentarg == "-teloo"   ) ||
+                      ( currentarg == "-terec"   ) || ( currentarg == "-tceL"    ) || ( currentarg == "-tceloo"  ) ||
+                      ( currentarg == "-tcerec"  ) || ( currentarg == "-tkcL"    ) || ( currentarg == "-tkcloo"  ) ||
+                      ( currentarg == "-tkcrec"  ) || ( currentarg == "-tkeL"    ) || ( currentarg == "-tkeloo"  ) ||
+                      ( currentarg == "-tkerec"  ) || ( currentarg == "-tkceL"   ) || ( currentarg == "-tkceloo" ) ||
+                      ( currentarg == "-tkcerec" ) )
             {
                 preelse = 1;
 
                 // Tuning options
 
-                if ( grabargs(2,tuningopt,commstack,currentarg) )
-                {
-                    retval  = 68;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,tuningopt,commstack,currentarg) ) { retval = 68; stopnow = 1; }
 
                 updateargvars = 1;
             }
@@ -3228,21 +2759,15 @@ int runsvmint(SVMThreadContext *svmContext,
 
                 // Tuning options
 
-                if ( grabargs(3,tuningopt,commstack,currentarg) )
-                {
-                    retval  = 69;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,tuningopt,commstack,currentarg) ) { retval = 69; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
             if ( preelse ) { ; }
 
-            else if ( ( currentarg == "-g"  ) ||
-                      ( currentarg == "-gd" ) ||
-                      ( currentarg == "-gN" ) ||
-                      ( currentarg == "-gb" )    )
+            else if ( ( currentarg == "-g"  ) || ( currentarg == "-gd" ) || ( currentarg == "-gN" ) ||
+                      ( currentarg == "-gb" ) )
             {
                 // Gridsearch options
                 //
@@ -3262,7 +2787,6 @@ int runsvmint(SVMThreadContext *svmContext,
                     if ( a >= 0 )
                     {
                         int acnt = (5*a)+2;
-
                         currentarg = storearg;
 
                         if ( grabargs(acnt+1,gridopt,commstack,currentarg) )
@@ -3296,879 +2820,326 @@ int runsvmint(SVMThreadContext *svmContext,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-gmo"       ) ||
-                      ( currentarg == "-gms"       ) ||
-                      ( currentarg == "-gmr"       ) ||
-                      ( currentarg == "-gmR"       ) ||
-                      ( currentarg == "-gnp"       ) ||
-                      ( currentarg == "-gpb"       ) ||
-                      ( currentarg == "-gph"       ) ||
-                      ( currentarg == "-gnr"       ) ||
-                      ( currentarg == "-gan"       ) ||
-                      ( currentarg == "-gplot"     ) ||
-                      ( currentarg == "-gphkn"     ) ||
-                      ( currentarg == "-gphku"     ) ||
-                      ( currentarg == "-gphkss"    ) ||
-                      ( currentarg == "-gphkus"    ) ||
-                      ( currentarg == "-gphknn"    ) ||
-                      ( currentarg == "-gphkuu"    ) ||
-                      ( currentarg == "-gphkc"     ) ||
-                      ( currentarg == "-gphkuc"    ) ||
-                      ( currentarg == "-gphkm"     ) ||
-                      ( currentarg == "-gphkum"    ) ||
-                      ( currentarg == "-gphkS"     ) ||
-                      ( currentarg == "-gphkA"     ) ||
-                      ( currentarg == "-gphkuS"    ) ||
-                      ( currentarg == "-gphkMS"    ) ||
-                      ( currentarg == "-gphkMA"    ) ||
-                      ( currentarg == "-gphkMuS"   ) ||
-                      ( currentarg == "-gphkU"     ) ||
-                      ( currentarg == "-gphkoz"    ) ||
-                      ( currentarg == "-gphmtb"    ) ||
-                      ( currentarg == "-gphbmx"    ) ||
-                      ( currentarg == "-gphkOz"    ) ||
-                      ( currentarg == "-gPkn"      ) ||
-                      ( currentarg == "-gPku"      ) ||
-                      ( currentarg == "-gPkss"     ) ||
-                      ( currentarg == "-gPkus"     ) ||
-                      ( currentarg == "-gPknn"     ) ||
-                      ( currentarg == "-gPkuu"     ) ||
-                      ( currentarg == "-gPkc"      ) ||
-                      ( currentarg == "-gPkuc"     ) ||
-                      ( currentarg == "-gPkm"      ) ||
-                      ( currentarg == "-gPkum"     ) ||
-                      ( currentarg == "-gPkS"      ) ||
-                      ( currentarg == "-gPkA"      ) ||
-                      ( currentarg == "-gPkuS"     ) ||
-                      ( currentarg == "-gPkMS"     ) ||
-                      ( currentarg == "-gPkMA"     ) ||
-                      ( currentarg == "-gPkMuS"    ) ||
-                      ( currentarg == "-gPkU"      ) ||
-                      ( currentarg == "-gPkoz"     ) ||
-                      ( currentarg == "-gPmtb"     ) ||
-                      ( currentarg == "-gPbmx"     ) ||
-                      ( currentarg == "-gPkOz"     ) ||
-                      ( currentarg == "-gmkn"      ) ||
-                      ( currentarg == "-gmku"      ) ||
-                      ( currentarg == "-gmkss"     ) ||
-                      ( currentarg == "-gmkus"     ) ||
-                      ( currentarg == "-gmknn"     ) ||
-                      ( currentarg == "-gmkuu"     ) ||
-                      ( currentarg == "-gmkc"      ) ||
-                      ( currentarg == "-gmkuc"     ) ||
-                      ( currentarg == "-gmkm"      ) ||
-                      ( currentarg == "-gmkum"     ) ||
-                      ( currentarg == "-gmkS"      ) ||
-                      ( currentarg == "-gmkA"      ) ||
-                      ( currentarg == "-gmkuS"     ) ||
-                      ( currentarg == "-gmkMS"     ) ||
-                      ( currentarg == "-gmkMA"     ) ||
-                      ( currentarg == "-gmkMuS"    ) ||
-                      ( currentarg == "-gmkU"      ) ||
-                      ( currentarg == "-gmkoz"     ) ||
-                      ( currentarg == "-gmkOz"     ) ||
-                      ( currentarg == "-gmekn"     ) ||
-                      ( currentarg == "-gmeku"     ) ||
-                      ( currentarg == "-gmekss"    ) ||
-                      ( currentarg == "-gmekus"    ) ||
-                      ( currentarg == "-gmeknn"    ) ||
-                      ( currentarg == "-gmekuu"    ) ||
-                      ( currentarg == "-gmekc"     ) ||
-                      ( currentarg == "-gmekuc"    ) ||
-                      ( currentarg == "-gmekm"     ) ||
-                      ( currentarg == "-gmekum"    ) ||
-                      ( currentarg == "-gmekS"     ) ||
-                      ( currentarg == "-gmekA"     ) ||
-                      ( currentarg == "-gmekuS"    ) ||
-                      ( currentarg == "-gmekMS"    ) ||
-                      ( currentarg == "-gmekMA"    ) ||
-                      ( currentarg == "-gmekMuS"   ) ||
-                      ( currentarg == "-gmekU"     ) ||
-                      ( currentarg == "-gmekoz"    ) ||
-                      ( currentarg == "-gmekOz"    ) ||
-                      ( currentarg == "-gmrkn"     ) ||
-                      ( currentarg == "-gmrku"     ) ||
-                      ( currentarg == "-gmrkss"    ) ||
-                      ( currentarg == "-gmrkus"    ) ||
-                      ( currentarg == "-gmrknn"    ) ||
-                      ( currentarg == "-gmrkuu"    ) ||
-                      ( currentarg == "-gmrkc"     ) ||
-                      ( currentarg == "-gmrkuc"    ) ||
-                      ( currentarg == "-gmrkm"     ) ||
-                      ( currentarg == "-gmrkum"    ) ||
-                      ( currentarg == "-gmrkS"     ) ||
-                      ( currentarg == "-gmrkA"     ) ||
-                      ( currentarg == "-gmrkuS"    ) ||
-                      ( currentarg == "-gmrkMS"    ) ||
-                      ( currentarg == "-gmrkMA"    ) ||
-                      ( currentarg == "-gmrkMuS"   ) ||
-                      ( currentarg == "-gmrkU"     ) ||
-                      ( currentarg == "-gmrkoz"    ) ||
-                      ( currentarg == "-gmrkOz"    ) ||
-                      ( currentarg == "-gmmtb"     ) ||
-                      ( currentarg == "-gmbmx"     ) ||
-                      ( currentarg == "-gmskn"     ) ||
-                      ( currentarg == "-gmsku"     ) ||
-                      ( currentarg == "-gmskss"    ) ||
-                      ( currentarg == "-gmskus"    ) ||
-                      ( currentarg == "-gmsknn"    ) ||
-                      ( currentarg == "-gmskuu"    ) ||
-                      ( currentarg == "-gmskc"     ) ||
-                      ( currentarg == "-gmskuc"    ) ||
-                      ( currentarg == "-gmskm"     ) ||
-                      ( currentarg == "-gmskum"    ) ||
-                      ( currentarg == "-gmskS"     ) ||
-                      ( currentarg == "-gmskA"     ) ||
-                      ( currentarg == "-gmskuS"    ) ||
-                      ( currentarg == "-gmskMS"    ) ||
-                      ( currentarg == "-gmskMA"    ) ||
-                      ( currentarg == "-gmskMuS"   ) ||
-                      ( currentarg == "-gmskU"     ) ||
-                      ( currentarg == "-gmskoz"    ) ||
-                      ( currentarg == "-gmskOz"    ) ||
-                      ( currentarg == "-gmsekn"    ) ||
-                      ( currentarg == "-gmseku"    ) ||
-                      ( currentarg == "-gmsekss"   ) ||
-                      ( currentarg == "-gmsekus"   ) ||
-                      ( currentarg == "-gmseknn"   ) ||
-                      ( currentarg == "-gmsekuu"   ) ||
-                      ( currentarg == "-gmsekc"    ) ||
-                      ( currentarg == "-gmsekuc"   ) ||
-                      ( currentarg == "-gmsekm"    ) ||
-                      ( currentarg == "-gmsekum"   ) ||
-                      ( currentarg == "-gmsekS"    ) ||
-                      ( currentarg == "-gmsekA"    ) ||
-                      ( currentarg == "-gmsekuS"   ) ||
-                      ( currentarg == "-gmsekMS"   ) ||
-                      ( currentarg == "-gmsekMA"   ) ||
-                      ( currentarg == "-gmsekMuS"  ) ||
-                      ( currentarg == "-gmsekU"    ) ||
-                      ( currentarg == "-gmsekoz"   ) ||
-                      ( currentarg == "-gmsekOz"   ) ||
-                      ( currentarg == "-gmsrkn"    ) ||
-                      ( currentarg == "-gmsrku"    ) ||
-                      ( currentarg == "-gmsrkss"   ) ||
-                      ( currentarg == "-gmsrkus"   ) ||
-                      ( currentarg == "-gmsrknn"   ) ||
-                      ( currentarg == "-gmsrkuu"   ) ||
-                      ( currentarg == "-gmsrkc"    ) ||
-                      ( currentarg == "-gmsrkuc"   ) ||
-                      ( currentarg == "-gmsrkm"    ) ||
-                      ( currentarg == "-gmsrkum"   ) ||
-                      ( currentarg == "-gmsrkS"    ) ||
-                      ( currentarg == "-gmsrkA"    ) ||
-                      ( currentarg == "-gmsrkuS"   ) ||
-                      ( currentarg == "-gmsrkMS"   ) ||
-                      ( currentarg == "-gmsrkMA"   ) ||
-                      ( currentarg == "-gmsrkMuS"  ) ||
-                      ( currentarg == "-gmsrkU"    ) ||
-                      ( currentarg == "-gmsrkoz"   ) ||
-                      ( currentarg == "-gmsrkOz"   ) ||
-                      ( currentarg == "-gmsmtb"    ) ||
-                      ( currentarg == "-gmsbmx"    ) ||
-                      ( currentarg == "-gmgtkn"    ) ||
-                      ( currentarg == "-gmgtku"    ) ||
-                      ( currentarg == "-gmgtkss"   ) ||
-                      ( currentarg == "-gmgtkus"   ) ||
-                      ( currentarg == "-gmgtknn"   ) ||
-                      ( currentarg == "-gmgtkuu"   ) ||
-                      ( currentarg == "-gmgtkc"    ) ||
-                      ( currentarg == "-gmgtkuc"   ) ||
-                      ( currentarg == "-gmgtkm"    ) ||
-                      ( currentarg == "-gmgtkum"   ) ||
-                      ( currentarg == "-gmgtkS"    ) ||
-                      ( currentarg == "-gmgtkA"    ) ||
-                      ( currentarg == "-gmgtkuS"   ) ||
-                      ( currentarg == "-gmgtkMS"   ) ||
-                      ( currentarg == "-gmgtkMA"   ) ||
-                      ( currentarg == "-gmgtkMuS"  ) ||
-                      ( currentarg == "-gmgtkU"    ) ||
-                      ( currentarg == "-gmgtkoz"   ) ||
-                      ( currentarg == "-gmgtkOz"   ) ||
-                      ( currentarg == "-gmgtekn"   ) ||
-                      ( currentarg == "-gmgteku"   ) ||
-                      ( currentarg == "-gmgtekss"  ) ||
-                      ( currentarg == "-gmgtekus"  ) ||
-                      ( currentarg == "-gmgteknn"  ) ||
-                      ( currentarg == "-gmgtekuu"  ) ||
-                      ( currentarg == "-gmgtekc"   ) ||
-                      ( currentarg == "-gmgtekuc"  ) ||
-                      ( currentarg == "-gmgtekm"   ) ||
-                      ( currentarg == "-gmgtekum"  ) ||
-                      ( currentarg == "-gmgtekS"   ) ||
-                      ( currentarg == "-gmgtekA"   ) ||
-                      ( currentarg == "-gmgtekuS"  ) ||
-                      ( currentarg == "-gmgtekMS"  ) ||
-                      ( currentarg == "-gmgtekMA"  ) ||
-                      ( currentarg == "-gmgtekMuS" ) ||
-                      ( currentarg == "-gmgtekU"   ) ||
-                      ( currentarg == "-gmgtekoz"  ) ||
-                      ( currentarg == "-gmgtekOz"  ) ||
-                      ( currentarg == "-gmgtrkn"   ) ||
-                      ( currentarg == "-gmgtrku"   ) ||
-                      ( currentarg == "-gmgtrkss"  ) ||
-                      ( currentarg == "-gmgtrkus"  ) ||
-                      ( currentarg == "-gmgtrknn"  ) ||
-                      ( currentarg == "-gmgtrkuu"  ) ||
-                      ( currentarg == "-gmgtrkc"   ) ||
-                      ( currentarg == "-gmgtrkuc"  ) ||
-                      ( currentarg == "-gmgtrkm"   ) ||
-                      ( currentarg == "-gmgtrkum"  ) ||
-                      ( currentarg == "-gmgtrkS"   ) ||
-                      ( currentarg == "-gmgtrkA"   ) ||
-                      ( currentarg == "-gmgtrkuS"  ) ||
-                      ( currentarg == "-gmgtrkMS"  ) ||
-                      ( currentarg == "-gmgtrkMA"  ) ||
-                      ( currentarg == "-gmgtrkMuS" ) ||
-                      ( currentarg == "-gmgtrkU"   ) ||
-                      ( currentarg == "-gmgtrkoz"  ) ||
-                      ( currentarg == "-gmgtrkOz"  ) ||
-                      ( currentarg == "-gmgtmtb"   ) ||
-                      ( currentarg == "-gmgtbmx"   )    )
+            else if ( ( currentarg == "-gmr"       ) ||
+                      ( currentarg == "-gmR"       ) || ( currentarg == "-gnp"       ) || ( currentarg == "-gpb"       ) ||
+                      ( currentarg == "-gph"       ) || ( currentarg == "-gnr"       ) || ( currentarg == "-gplot"     ) ||
+                      ( currentarg == "-gphkn"     ) || ( currentarg == "-gphkp"     ) || ( currentarg == "-gphknp"    ) ||
+                      ( currentarg == "-gphku"     ) || ( currentarg == "-gphkss"    ) || ( currentarg == "-gphkus"    ) ||
+                      ( currentarg == "-gphknn"    ) || ( currentarg == "-gphkuu"    ) || ( currentarg == "-gphkc"     ) ||
+                      ( currentarg == "-gphkuc"    ) || ( currentarg == "-gphkm"     ) || ( currentarg == "-gphkum"    ) ||
+                      ( currentarg == "-gphkS"     ) || ( currentarg == "-gphkA"     ) || ( currentarg == "-gphkuS"    ) ||
+                      ( currentarg == "-gphkMS"    ) || ( currentarg == "-gphkMA"    ) || ( currentarg == "-gphkMuS"   ) ||
+                      ( currentarg == "-gphkU"     ) || ( currentarg == "-gphkoz"    ) || ( currentarg == "-gphmtb"    ) ||
+                      ( currentarg == "-gphbmx"    ) || ( currentarg == "-gphkOz"    ) ||
+                      ( currentarg == "-gmkn"      ) || ( currentarg == "-gmkp"      ) || ( currentarg == "-gmknp"     ) ||
+                      ( currentarg == "-gmku"      ) || ( currentarg == "-gmkss"     ) || ( currentarg == "-gmkus"     ) ||
+                      ( currentarg == "-gmknn"     ) || ( currentarg == "-gmkuu"     ) || ( currentarg == "-gmkc"      ) ||
+                      ( currentarg == "-gmkuc"     ) || ( currentarg == "-gmkm"      ) || ( currentarg == "-gmkum"     ) ||
+                      ( currentarg == "-gmkS"      ) || ( currentarg == "-gmkA"      ) || ( currentarg == "-gmkuS"     ) ||
+                      ( currentarg == "-gmkMS"     ) || ( currentarg == "-gmkMA"     ) || ( currentarg == "-gmkMuS"    ) ||
+                      ( currentarg == "-gmkU"      ) || ( currentarg == "-gmkoz"     ) || ( currentarg == "-gmmtb"     ) ||
+                      ( currentarg == "-gmbmx"     ) || ( currentarg == "-gmkOz"     ) ||
+                      ( currentarg == "-gmekn"     ) || ( currentarg == "-gmekp"     ) || ( currentarg == "-gmeknp"    ) ||
+                      ( currentarg == "-gmeku"     ) || ( currentarg == "-gmekss"    ) || ( currentarg == "-gmekus"    ) ||
+                      ( currentarg == "-gmeknn"    ) || ( currentarg == "-gmekuu"    ) || ( currentarg == "-gmekc"     ) ||
+                      ( currentarg == "-gmekuc"    ) || ( currentarg == "-gmekm"     ) || ( currentarg == "-gmekum"    ) ||
+                      ( currentarg == "-gmekS"     ) || ( currentarg == "-gmekA"     ) || ( currentarg == "-gmekuS"    ) ||
+                      ( currentarg == "-gmekMS"    ) || ( currentarg == "-gmekMA"    ) || ( currentarg == "-gmekMuS"   ) ||
+                      ( currentarg == "-gmekU"     ) || ( currentarg == "-gmekoz"    ) || ( currentarg == "-gmemtb"    ) ||
+                      ( currentarg == "-gmebmx"    ) || ( currentarg == "-gmekOz"    ) ||
+                      ( currentarg == "-gmrkn"     ) || ( currentarg == "-gmrkp"     ) || ( currentarg == "-gmrknp"    ) ||
+                      ( currentarg == "-gmrku"     ) || ( currentarg == "-gmrkss"    ) || ( currentarg == "-gmrkus"    ) ||
+                      ( currentarg == "-gmrknn"    ) || ( currentarg == "-gmrkuu"    ) || ( currentarg == "-gmrkc"     ) ||
+                      ( currentarg == "-gmrkuc"    ) || ( currentarg == "-gmrkm"     ) || ( currentarg == "-gmrkum"    ) ||
+                      ( currentarg == "-gmrkS"     ) || ( currentarg == "-gmrkA"     ) || ( currentarg == "-gmrkuS"    ) ||
+                      ( currentarg == "-gmrkMS"    ) || ( currentarg == "-gmrkMA"    ) || ( currentarg == "-gmrkMuS"   ) ||
+                      ( currentarg == "-gmrkU"     ) || ( currentarg == "-gmrkoz"    ) || ( currentarg == "-gmrmtb"    ) ||
+                      ( currentarg == "-gmrbmx"    ) || ( currentarg == "-gmrkOz"    ) ||
+                      ( currentarg == "-gmskn"     ) || ( currentarg == "-gmskp"     ) || ( currentarg == "-gmsknp"    ) ||
+                      ( currentarg == "-gmsku"     ) || ( currentarg == "-gmskss"    ) || ( currentarg == "-gmskus"    ) ||
+                      ( currentarg == "-gmsknn"    ) || ( currentarg == "-gmskuu"    ) || ( currentarg == "-gmskc"     ) ||
+                      ( currentarg == "-gmskuc"    ) || ( currentarg == "-gmskm"     ) || ( currentarg == "-gmskum"    ) ||
+                      ( currentarg == "-gmskS"     ) || ( currentarg == "-gmskA"     ) || ( currentarg == "-gmskuS"    ) ||
+                      ( currentarg == "-gmskMS"    ) || ( currentarg == "-gmskMA"    ) || ( currentarg == "-gmskMuS"   ) ||
+                      ( currentarg == "-gmskU"     ) || ( currentarg == "-gmskoz"    ) || ( currentarg == "-gmsmtb"    ) ||
+                      ( currentarg == "-gmsbmx"    ) || ( currentarg == "-gmskOz"    ) ||
+                      ( currentarg == "-gmsekn"    ) || ( currentarg == "-gmsekp"    ) || ( currentarg == "-gmseknp"   ) ||
+                      ( currentarg == "-gmseku"    ) || ( currentarg == "-gmsekss"   ) || ( currentarg == "-gmsekus"   ) ||
+                      ( currentarg == "-gmseknn"   ) || ( currentarg == "-gmsekuu"   ) || ( currentarg == "-gmsekc"    ) ||
+                      ( currentarg == "-gmsekuc"   ) || ( currentarg == "-gmsekm"    ) || ( currentarg == "-gmsekum"   ) ||
+                      ( currentarg == "-gmsekS"    ) || ( currentarg == "-gmsekA"    ) || ( currentarg == "-gmsekuS"   ) ||
+                      ( currentarg == "-gmsekMS"   ) || ( currentarg == "-gmsekMA"   ) || ( currentarg == "-gmsekMuS"  ) ||
+                      ( currentarg == "-gmsekU"    ) || ( currentarg == "-gmsekoz"   ) || ( currentarg == "-gmsemtb"   ) ||
+                      ( currentarg == "-gmsebmx"   ) || ( currentarg == "-gmsekOz"   ) ||
+                      ( currentarg == "-gmsrkn"    ) || ( currentarg == "-gmsrkp"    ) || ( currentarg == "-gmsrknp"   ) ||
+                      ( currentarg == "-gmsrku"    ) || ( currentarg == "-gmsrkss"   ) || ( currentarg == "-gmsrkus"   ) ||
+                      ( currentarg == "-gmsrknn"   ) || ( currentarg == "-gmsrkuu"   ) || ( currentarg == "-gmsrkc"    ) ||
+                      ( currentarg == "-gmsrkuc"   ) || ( currentarg == "-gmsrkm"    ) || ( currentarg == "-gmsrkum"   ) ||
+                      ( currentarg == "-gmsrkS"    ) || ( currentarg == "-gmsrkA"    ) || ( currentarg == "-gmsrkuS"   ) ||
+                      ( currentarg == "-gmsrkMS"   ) || ( currentarg == "-gmsrkMA"   ) || ( currentarg == "-gmsrkMuS"  ) ||
+                      ( currentarg == "-gmsrkU"    ) || ( currentarg == "-gmsrkoz"   ) || ( currentarg == "-gmsrmtb"   ) ||
+                      ( currentarg == "-gmsrbmx"   ) || ( currentarg == "-gmsrkOz"   ) ||
+                      ( currentarg == "-gmgtkn"    ) || ( currentarg == "-gmgtkp"    ) || ( currentarg == "-gmgtknp"   ) ||
+                      ( currentarg == "-gmgtku"    ) || ( currentarg == "-gmgtkss"   ) || ( currentarg == "-gmgtkus"   ) ||
+                      ( currentarg == "-gmgtknn"   ) || ( currentarg == "-gmgtkuu"   ) || ( currentarg == "-gmgtkc"    ) ||
+                      ( currentarg == "-gmgtkuc"   ) || ( currentarg == "-gmgtkm"    ) || ( currentarg == "-gmgtkum"   ) ||
+                      ( currentarg == "-gmgtkS"    ) || ( currentarg == "-gmgtkA"    ) || ( currentarg == "-gmgtkuS"   ) ||
+                      ( currentarg == "-gmgtkMS"   ) || ( currentarg == "-gmgtkMA"   ) || ( currentarg == "-gmgtkMuS"  ) ||
+                      ( currentarg == "-gmgtkU"    ) || ( currentarg == "-gmgtkoz"   ) || ( currentarg == "-gmgtmtb"   ) ||
+                      ( currentarg == "-gmgtbmx"   ) || ( currentarg == "-gmgtkOz"   ) ||
+                      ( currentarg == "-gmgtekn"   ) || ( currentarg == "-gmgtekp"   ) || ( currentarg == "-gmgteknp"  ) ||
+                      ( currentarg == "-gmgteku"   ) || ( currentarg == "-gmgtekss"  ) || ( currentarg == "-gmgtekus"  ) ||
+                      ( currentarg == "-gmgteknn"  ) || ( currentarg == "-gmgtekuu"  ) || ( currentarg == "-gmgtekc"   ) ||
+                      ( currentarg == "-gmgtekuc"  ) || ( currentarg == "-gmgtekm"   ) || ( currentarg == "-gmgtekum"  ) ||
+                      ( currentarg == "-gmgtekS"   ) || ( currentarg == "-gmgtekA"   ) || ( currentarg == "-gmgtekuS"  ) ||
+                      ( currentarg == "-gmgtekMS"  ) || ( currentarg == "-gmgtekMA"  ) || ( currentarg == "-gmgtekMuS" ) ||
+                      ( currentarg == "-gmgtekU"   ) || ( currentarg == "-gmgtekoz"  ) || ( currentarg == "-gmgtemtb"  ) ||
+                      ( currentarg == "-gmgtebmx"  ) || ( currentarg == "-gmgtekOz"  ) ||
+                      ( currentarg == "-gmgtrkn"   ) || ( currentarg == "-gmgtrkp"   ) || ( currentarg == "-gmgtrknp"  ) ||
+                      ( currentarg == "-gmgtrku"   ) || ( currentarg == "-gmgtrkss"  ) || ( currentarg == "-gmgtrkus"  ) ||
+                      ( currentarg == "-gmgtrknn"  ) || ( currentarg == "-gmgtrkuu"  ) || ( currentarg == "-gmgtrkc"   ) ||
+                      ( currentarg == "-gmgtrkuc"  ) || ( currentarg == "-gmgtrkm"   ) || ( currentarg == "-gmgtrkum"  ) ||
+                      ( currentarg == "-gmgtrkS"   ) || ( currentarg == "-gmgtrkA"   ) || ( currentarg == "-gmgtrkuS"  ) ||
+                      ( currentarg == "-gmgtrkMS"  ) || ( currentarg == "-gmgtrkMA"  ) || ( currentarg == "-gmgtrkMuS" ) ||
+                      ( currentarg == "-gmgtrkU"   ) || ( currentarg == "-gmgtrkoz"  ) || ( currentarg == "-gmgtrmtb"  ) ||
+                      ( currentarg == "-gmgtrbmx"  ) || ( currentarg == "-gmgtrkOz"  ) )
             {
                 // Gridsearch options
 
-                if ( grabargs(1,gridopt,commstack,currentarg) )
-                {
-                    retval  = 73;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,gridopt,commstack,currentarg) ) { retval = 73; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-gy"          ) ||
-                      ( currentarg == "-gao"         ) ||
-                      ( currentarg == "-gr"          ) ||
-                      ( currentarg == "-gpr"         ) ||
-                      ( currentarg == "-gnr"         ) ||
-                      ( currentarg == "-gp"          ) ||
-                      ( currentarg == "-gP"          ) ||
-                      ( currentarg == "-gpd"         ) ||
-                      ( currentarg == "-gf"          ) ||
-                      ( currentarg == "-gc"          ) ||
-                      ( currentarg == "-gC"          ) ||
-                      ( currentarg == "-g+"          ) ||
-                      ( currentarg == "-gpln"        ) ||
-                      ( currentarg == "-gpld"        ) ||
-                      ( currentarg == "-gplT"        ) ||
-                      ( currentarg == "-gplt"        ) ||
-                      ( currentarg == "-gplm"        ) ||
-                      ( currentarg == "-gplM"        ) ||
-                      ( currentarg == "-gns"         ) ||
-                      ( currentarg == "-gkm"         ) ||
-                      ( currentarg == "-gkt"         ) ||
-                      ( currentarg == "-gfm"         ) ||
-                      ( currentarg == "-gfu"         ) ||
-                      ( currentarg == "-gfM"         ) ||
-                      ( currentarg == "-gfU"         ) ||
-                      ( currentarg == "-gxs"         ) ||
-                      ( currentarg == "-ggm"         ) ||
-                      ( currentarg == "-ggi"         ) ||
-                      ( currentarg == "-gdc"         ) ||
-                      ( currentarg == "-gdf"         ) ||
-                      ( currentarg == "-gde"         ) ||
-                      ( currentarg == "-gda"         ) ||
-                      ( currentarg == "-gbH"         ) ||
-                      ( currentarg == "-gbs"         ) ||
-                      ( currentarg == "-gbm"         ) ||
-                      ( currentarg == "-gbj"         ) ||
-                      ( currentarg == "-gba"         ) ||
-                      ( currentarg == "-gbb"         ) ||
-                      ( currentarg == "-gbt"         ) ||
-                      ( currentarg == "-gbe"         ) ||
-                      ( currentarg == "-gbts"        ) ||
-                      ( currentarg == "-gbTm"        ) ||
-                      ( currentarg == "-gbTs"        ) ||
-                      ( currentarg == "-gbTx"        ) ||
-                      ( currentarg == "-gbTv"        ) ||
-                      //( currentarg == "-gbeu"        ) ||
-                      ( currentarg == "-gbTn"        ) ||
-                      ( currentarg == "-gtp"         ) ||
-                      ( currentarg == "-gtP"         ) ||
-                      ( currentarg == "-gtx"         ) ||
-                      ( currentarg == "-gref"        ) ||
-                      ( currentarg == "-gbpp"        ) ||
-                      ( currentarg == "-gbfid"       ) ||
-                      ( currentarg == "-gbfn"        ) ||
-                      ( currentarg == "-gbfo"        ) ||
-                      ( currentarg == "-gbfp"        ) ||
-                      ( currentarg == "-gbfb"        ) ||
-                      ( currentarg == "-gbfk"        ) ||
-                      ( currentarg == "-gbz"         ) ||
-                      ( currentarg == "-gbZ"         ) ||
-                      ( currentarg == "-gpB"         ) ||
-                      ( currentarg == "-gmx"         ) ||
-                      ( currentarg == "-gmxa"        ) ||
-                      ( currentarg == "-gmxb"        ) ||
-                      ( currentarg == "-gmy"         ) ||
-                      ( currentarg == "-gmya"        ) ||
-                      ( currentarg == "-gmyb"        ) ||
-                      ( currentarg == "-gbD"         ) ||
-                      ( currentarg == "-gbzz"        ) ||
-                      ( currentarg == "-gbk"         ) ||
-                      ( currentarg == "-gbx"         ) ||
-                      ( currentarg == "-gbo"         ) ||
-                      ( currentarg == "-gbB"         ) ||
-                      ( currentarg == "-gbr"         ) ||
-                      ( currentarg == "-gbRR"        ) ||
-                      ( currentarg == "-gbBB"        ) ||
-                      ( currentarg == "-gbu"         ) ||
-                      ( currentarg == "-gbv"         ) ||
-                      ( currentarg == "-gmw"         ) ||
-                      ( currentarg == "-gmwcgt"      ) ||
-                      ( currentarg == "-gmsc"        ) ||
-                      ( currentarg == "-gmsn"        ) ||
-                      ( currentarg == "-gmsy"        ) ||
-                      ( currentarg == "-gmsw"        ) ||
-                      ( currentarg == "-gmsa"        ) ||
-                      ( currentarg == "-gmsd"        ) ||
-                      ( currentarg == "-gmsg"        ) ||
-                      ( currentarg == "-gmsgg"       ) ||
-                      ( currentarg == "-gmsmd"       ) ||
-                      ( currentarg == "-gmgtc"       ) ||
-                      ( currentarg == "-gmgtcv"      ) ||
-                      ( currentarg == "-gmgtcz"      ) ||
-                      ( currentarg == "-gmgtn"       ) ||
-                      ( currentarg == "-gmgty"       ) ||
-                      ( currentarg == "-gmgtw"       ) ||
-                      ( currentarg == "-gmgta"       ) ||
-                      ( currentarg == "-gmgtd"       ) ||
-                      ( currentarg == "-gmgtg"       ) ||
-                      ( currentarg == "-gmgtgg"      ) ||
-                      ( currentarg == "-gmgtmd"      ) ||
-                      ( currentarg == "-gmn"         ) ||
-                      ( currentarg == "-gmLf"        ) ||
-                      ( currentarg == "-gmLF"        ) ||
-                      ( currentarg == "-gmLn"        ) ||
-                      ( currentarg == "-gmhplb"      ) ||
-                      ( currentarg == "-gmt"         ) ||
-                      ( currentarg == "-gmrff"       ) ||
-                      ( currentarg == "-gmq"         ) ||
-                      ( currentarg == "-gbim"        ) ||
-                      ( currentarg == "-gbq"         ) ||
-                      ( currentarg == "-gma"         ) ||
-                      ( currentarg == "-gmT"         ) ||
-                      ( currentarg == "-gmd"         ) ||
-                      ( currentarg == "-gmg"         ) ||
-                      ( currentarg == "-gmgg"        ) ||
-                      ( currentarg == "-gmma"        ) ||
-                      ( currentarg == "-gmmb"        ) ||
-                      ( currentarg == "-gmmc"        ) ||
-                      ( currentarg == "-gmmd"        ) ||
-                      ( currentarg == "-gbG"         ) ||
-                      ( currentarg == "-gbmm"        ) ||
-                      ( currentarg == "-gbpd"        ) ||
-                      ( currentarg == "-gbp"         ) ||
-                      ( currentarg == "-gbpl"        ) ||
-                      ( currentarg == "-gbpu"        ) ||
-                      ( currentarg == "-gdy"         ) ||
-                      ( currentarg == "-gNa"         ) ||
-                      ( currentarg == "-gNb"         ) ||
-                      ( currentarg == "-gNc"         ) ||
-                      ( currentarg == "-gNd"         ) ||
-                      ( currentarg == "-gNg"         ) ||
-                      ( currentarg == "-gNe"         ) ||
-                      ( currentarg == "-gNf"         ) ||
-                      ( currentarg == "-gBy"         ) ||
-                      ( currentarg == "-gBfm"        ) ||
-                      ( currentarg == "-gBfM"        ) ||
-                      ( currentarg == "-gBfU"        ) ||
-                      ( currentarg == "-gBdc"        ) ||
-                      ( currentarg == "-gBdf"        ) ||
-                      ( currentarg == "-gBde"        ) ||
-                      ( currentarg == "-gBda"        ) ||
-                      ( currentarg == "-gBdy"        ) ||
-                      ( currentarg == "-gBbj"        ) ||
-                      ( currentarg == "-gBbt"        ) ||
-                      ( currentarg == "-gBbH"        ) ||
-                      ( currentarg == "-gbsp"        ) ||
-                      ( currentarg == "-gbsP"        ) ||
-                      ( currentarg == "-gbsA"        ) ||
-                      ( currentarg == "-gbsB"        ) ||
-                      ( currentarg == "-gbsF"        ) ||
-                      ( currentarg == "-gbsr"        ) ||
-                      ( currentarg == "-gbsz"        ) ||
-                      ( currentarg == "-gbss"        ) ||
-                      ( currentarg == "-gbst"        ) ||
-                      ( currentarg == "-gbuu"        ) ||
-                      ( currentarg == "-gbuk"        ) ||
-                      ( currentarg == "-gbuS"        ) ||
-                      ( currentarg == "-gphks"       ) ||
-                      ( currentarg == "-gphki"       ) ||
-                      ( currentarg == "-gphka"       ) ||
-                      ( currentarg == "-gphkb"       ) ||
-                      ( currentarg == "-gphke"       ) ||
-                      ( currentarg == "-gphkw"       ) ||
-                      ( currentarg == "-gphkwlb"     ) ||
-                      ( currentarg == "-gphkwub"     ) ||
-                      ( currentarg == "-gphkt"       ) ||
-                      ( currentarg == "-gphktx"      ) ||
-                      ( currentarg == "-gphktk"      ) ||
-                      ( currentarg == "-gphkgg"      ) ||
-                      ( currentarg == "-gphkf"       ) ||
-                      ( currentarg == "-gphkr"       ) ||
-                      ( currentarg == "-gphkg"       ) ||
-                      ( currentarg == "-gphkd"       ) ||
-                      ( currentarg == "-gphkG"       ) ||
-                      ( currentarg == "-gphkrlb"     ) ||
-                      ( currentarg == "-gphkglb"     ) ||
-                      ( currentarg == "-gphkdlb"     ) ||
-                      ( currentarg == "-gphkGlb"     ) ||
-                      ( currentarg == "-gphkrub"     ) ||
-                      ( currentarg == "-gphkgub"     ) ||
-                      ( currentarg == "-gphkdub"     ) ||
-                      ( currentarg == "-gphkGub"     ) ||
-                      ( currentarg == "-gphkI"       ) ||
+            else if ( ( currentarg == "-gy"          ) || ( currentarg == "-gr"          ) ||
+                      ( currentarg == "-gpr"         ) || ( currentarg == "-gnr"         ) || ( currentarg == "-gp"          ) ||
+                      ( currentarg == "-gP"          ) || ( currentarg == "-gpd"         ) || ( currentarg == "-gf"          ) ||
+                      ( currentarg == "-gc"          ) || ( currentarg == "-gC"          ) || ( currentarg == "-g+"          ) ||
+                      ( currentarg == "-gpln"        ) || ( currentarg == "-gpld"        ) || ( currentarg == "-gplT"        ) ||
+                      ( currentarg == "-gplt"        ) || ( currentarg == "-gplm"        ) || ( currentarg == "-gplM"        ) ||
+                      ( currentarg == "-gns"         ) || ( currentarg == "-gkm"         ) || ( currentarg == "-gkt"         ) ||
+                      ( currentarg == "-gfm"         ) || ( currentarg == "-gfu"         ) || ( currentarg == "-gfM"         ) ||
+                      ( currentarg == "-gfU"         ) || ( currentarg == "-gxs"         ) || ( currentarg == "-ggm"         ) ||
+                      ( currentarg == "-ggi"         ) || ( currentarg == "-gdc"         ) || ( currentarg == "-gdf"         ) ||
+                      ( currentarg == "-gde"         ) || ( currentarg == "-gda"         ) || ( currentarg == "-gbH"         ) ||
+                      ( currentarg == "-gbs"         ) || ( currentarg == "-gbm"         ) || ( currentarg == "-gbj"         ) ||
+                      ( currentarg == "-gba"         ) || ( currentarg == "-gbb"         ) || ( currentarg == "-gbt"         ) ||
+                      ( currentarg == "-gbe"         ) || ( currentarg == "-gbts"        ) || ( currentarg == "-gbTm"        ) ||
+                      ( currentarg == "-gbTs"        ) || ( currentarg == "-gbTx"        ) || ( currentarg == "-gbTv"        ) ||
+                      ( currentarg == "-gbTn"        ) || ( currentarg == "-gtp"         ) || ( currentarg == "-gtP"         ) ||
+                      ( currentarg == "-gtx"         ) || ( currentarg == "-gref"        ) || ( currentarg == "-gbpp"        ) ||
+                      ( currentarg == "-gbfid"       ) || ( currentarg == "-gbfn"        ) || ( currentarg == "-gbfo"        ) ||
+                      ( currentarg == "-gbfp"        ) || ( currentarg == "-gbfb"        ) || ( currentarg == "-gbfk"        ) ||
+                      ( currentarg == "-gbz"         ) || ( currentarg == "-gbZ"         ) || ( currentarg == "-gpB"         ) ||
+                      ( currentarg == "-gmx"         ) || ( currentarg == "-gmxa"        ) || ( currentarg == "-gmxb"        ) ||
+                      ( currentarg == "-gmy"         ) || ( currentarg == "-gmya"        ) || ( currentarg == "-gmyb"        ) ||
+                      ( currentarg == "-gbD"         ) || ( currentarg == "-gbzz"        ) || ( currentarg == "-gbk"         ) ||
+                      ( currentarg == "-gbx"         ) || ( currentarg == "-gbo"         ) || ( currentarg == "-gbB"         ) ||
+                      ( currentarg == "-gbr"         ) || ( currentarg == "-gbRR"        ) || ( currentarg == "-gbBB"        ) ||
+                      ( currentarg == "-gbu"         ) || ( currentarg == "-gbv"         ) || ( currentarg == "-gmw"         ) ||
+                      ( currentarg == "-gmsc"        ) || ( currentarg == "-gmsn"        ) ||
+                      ( currentarg == "-gmsy"        ) || ( currentarg == "-gmsa"        ) ||
+                      ( currentarg == "-gmsd"        ) || ( currentarg == "-gmsg"        ) || ( currentarg == "-gmsgg"       ) ||
+                      ( currentarg == "-gmsmd"       ) || ( currentarg == "-gmgtc"       ) || ( currentarg == "-gmgtcv"      ) ||
+                      ( currentarg == "-gmgtcz"      ) || ( currentarg == "-gmgtn"       ) || ( currentarg == "-gmgty"       ) ||
+                      ( currentarg == "-gmgtw"       ) || ( currentarg == "-gmgta"       ) || ( currentarg == "-gmgtd"       ) ||
+                      ( currentarg == "-gmgtg"       ) || ( currentarg == "-gmgtgg"      ) || ( currentarg == "-gmgtmd"      ) ||
+                      ( currentarg == "-gmn"         ) || ( currentarg == "-gmLf"        ) || ( currentarg == "-gmLF"        ) ||
+                      ( currentarg == "-gmLn"        ) || ( currentarg == "-gmhplb"      ) || ( currentarg == "-gmt"         ) ||
+                      ( currentarg == "-gmq"         ) || ( currentarg == "-gbim"        ) ||
+                      ( currentarg == "-gbq"         ) || ( currentarg == "-gma"         ) || ( currentarg == "-gmT"         ) ||
+                      ( currentarg == "-gmd"         ) || ( currentarg == "-gmg"         ) || ( currentarg == "-gmgg"        ) ||
+                      ( currentarg == "-gmma"        ) || ( currentarg == "-gmmb"        ) || ( currentarg == "-gmmc"        ) ||
+                      ( currentarg == "-gmmd"        ) || ( currentarg == "-gbG"         ) || ( currentarg == "-gbmm"        ) ||
+                      ( currentarg == "-gbpd"        ) || ( currentarg == "-gbpl"        ) ||
+                      ( currentarg == "-gbpu"        ) || ( currentarg == "-gdy"         ) || ( currentarg == "-gNa"         ) ||
+                      ( currentarg == "-gNb"         ) || ( currentarg == "-gNc"         ) || ( currentarg == "-gNd"         ) ||
+                      ( currentarg == "-gNg"         ) || ( currentarg == "-gNe"         ) || ( currentarg == "-gNf"         ) ||
+                      ( currentarg == "-gBy"         ) || ( currentarg == "-gBfm"        ) || ( currentarg == "-gBfM"        ) ||
+                      ( currentarg == "-gBfU"        ) || ( currentarg == "-gBdc"        ) || ( currentarg == "-gBdf"        ) ||
+                      ( currentarg == "-gBde"        ) || ( currentarg == "-gBda"        ) || ( currentarg == "-gBdy"        ) ||
+                      ( currentarg == "-gBbj"        ) || ( currentarg == "-gBbt"        ) || ( currentarg == "-gBbH"        ) ||
+                      ( currentarg == "-gbsp"        ) || ( currentarg == "-gbsP"        ) || ( currentarg == "-gbsA"        ) ||
+                      ( currentarg == "-gbsB"        ) || ( currentarg == "-gbsF"        ) || ( currentarg == "-gbsr"        ) ||
+                      ( currentarg == "-gbsz"        ) || ( currentarg == "-gbss"        ) || ( currentarg == "-gbst"        ) ||
+                      ( currentarg == "-gbuu"        ) || ( currentarg == "-gbuk"        ) || ( currentarg == "-gbuS"        ) ||
+                      ( currentarg == "-gphks"       ) || ( currentarg == "-gphki"       ) || ( currentarg == "-gphka"       ) ||
+                      ( currentarg == "-gphkb"       ) || ( currentarg == "-gphke"       ) || ( currentarg == "-gphkw"       ) ||
+                      ( currentarg == "-gphkwlb"     ) || ( currentarg == "-gphkwub"     ) || ( currentarg == "-gphkt"       ) ||
+                      ( currentarg == "-gphktx"      ) || ( currentarg == "-gphktk"      ) || ( currentarg == "-gphkrn"      ) ||
+                      ( currentarg == "-gphkgg"      ) || ( currentarg == "-gphkf"       ) || ( currentarg == "-gphkr"       ) ||
+                      ( currentarg == "-gphkg"       ) || ( currentarg == "-gphkd"       ) || ( currentarg == "-gphkG"       ) ||
+                      ( currentarg == "-gphkrlb"     ) || ( currentarg == "-gphkglb"     ) || ( currentarg == "-gphkdlb"     ) ||
+                      ( currentarg == "-gphkGlb"     ) || ( currentarg == "-gphkrub"     ) || ( currentarg == "-gphkgub"     ) ||
+                      ( currentarg == "-gphkdub"     ) || ( currentarg == "-gphkGub"     ) || ( currentarg == "-gphkI"       ) ||
                       ( currentarg == "-gphkan"      ) ||
-                      ( currentarg == "-gPks"        ) ||
-                      ( currentarg == "-gPki"        ) ||
-                      ( currentarg == "-gPka"        ) ||
-                      ( currentarg == "-gPkb"        ) ||
-                      ( currentarg == "-gPke"        ) ||
-                      ( currentarg == "-gPkw"        ) ||
-                      ( currentarg == "-gPkwlb"      ) ||
-                      ( currentarg == "-gPkwub"      ) ||
-                      ( currentarg == "-gPkt"        ) ||
-                      ( currentarg == "-gPktx"       ) ||
-                      ( currentarg == "-gPktk"       ) ||
-                      ( currentarg == "-gPkgg"       ) ||
-                      ( currentarg == "-gPkf"        ) ||
-                      ( currentarg == "-gPkr"        ) ||
-                      ( currentarg == "-gPkg"        ) ||
-                      ( currentarg == "-gPkd"        ) ||
-                      ( currentarg == "-gPkG"        ) ||
-                      ( currentarg == "-gPkrlb"      ) ||
-                      ( currentarg == "-gPkglb"      ) ||
-                      ( currentarg == "-gPkdlb"      ) ||
-                      ( currentarg == "-gPkGlb"      ) ||
-                      ( currentarg == "-gPkrub"      ) ||
-                      ( currentarg == "-gPkgub"      ) ||
-                      ( currentarg == "-gPkdub"      ) ||
-                      ( currentarg == "-gPkGub"      ) ||
-                      ( currentarg == "-gPkI"        ) ||
-                      ( currentarg == "-gPkan"       ) ||
-                      ( currentarg == "-gmks"        ) ||
-                      ( currentarg == "-gmki"        ) ||
-                      ( currentarg == "-gmka"        ) ||
-                      ( currentarg == "-gmkb"        ) ||
-                      ( currentarg == "-gmke"        ) ||
-                      ( currentarg == "-gmkw"        ) ||
-                      ( currentarg == "-gmkwlb"      ) ||
-                      ( currentarg == "-gmkwub"      ) ||
-                      ( currentarg == "-gmkt"        ) ||
-                      ( currentarg == "-gmktx"       ) ||
-                      ( currentarg == "-gmktk"       ) ||
-                      ( currentarg == "-gmkgg"       ) ||
-                      ( currentarg == "-gmkf"        ) ||
-                      ( currentarg == "-gmkr"        ) ||
-                      ( currentarg == "-gmkg"        ) ||
-                      ( currentarg == "-gmkd"        ) ||
-                      ( currentarg == "-gmkG"        ) ||
-                      ( currentarg == "-gmkrlb"      ) ||
-                      ( currentarg == "-gmkglb"      ) ||
-                      ( currentarg == "-gmkdlb"      ) ||
-                      ( currentarg == "-gmkGlb"      ) ||
-                      ( currentarg == "-gmkrub"      ) ||
-                      ( currentarg == "-gmkgub"      ) ||
-                      ( currentarg == "-gmkdub"      ) ||
-                      ( currentarg == "-gmkGub"      ) ||
-                      ( currentarg == "-gmkI"        ) ||
+                      ( currentarg == "-gmks"        ) || ( currentarg == "-gmki"        ) || ( currentarg == "-gmka"        ) ||
+                      ( currentarg == "-gmkb"        ) || ( currentarg == "-gmke"        ) || ( currentarg == "-gmkw"        ) ||
+                      ( currentarg == "-gmkwlb"      ) || ( currentarg == "-gmkwub"      ) || ( currentarg == "-gmkt"        ) ||
+                      ( currentarg == "-gmktx"       ) || ( currentarg == "-gmktk"       ) || ( currentarg == "-gmkrn"       ) ||
+                      ( currentarg == "-gmkgg"       ) || ( currentarg == "-gmkf"        ) || ( currentarg == "-gmkr"        ) ||
+                      ( currentarg == "-gmkg"        ) || ( currentarg == "-gmkd"        ) || ( currentarg == "-gmkG"        ) ||
+                      ( currentarg == "-gmkrlb"      ) || ( currentarg == "-gmkglb"      ) || ( currentarg == "-gmkdlb"      ) ||
+                      ( currentarg == "-gmkGlb"      ) || ( currentarg == "-gmkrub"      ) || ( currentarg == "-gmkgub"      ) ||
+                      ( currentarg == "-gmkdub"      ) || ( currentarg == "-gmkGub"      ) || ( currentarg == "-gmkI"        ) ||
                       ( currentarg == "-gmkan"       ) ||
-                      ( currentarg == "-gmeks"       ) ||
-                      ( currentarg == "-gmeki"       ) ||
-                      ( currentarg == "-gmeka"       ) ||
-                      ( currentarg == "-gmekb"       ) ||
-                      ( currentarg == "-gmeke"       ) ||
-                      ( currentarg == "-gmekw"       ) ||
-                      ( currentarg == "-gmekwlb"     ) ||
-                      ( currentarg == "-gmekwub"     ) ||
-                      ( currentarg == "-gmekt"       ) ||
-                      ( currentarg == "-gmektx"      ) ||
-                      ( currentarg == "-gmektk"      ) ||
-                      ( currentarg == "-gmekgg"      ) ||
-                      ( currentarg == "-gmekf"       ) ||
-                      ( currentarg == "-gmekr"       ) ||
-                      ( currentarg == "-gmekg"       ) ||
-                      ( currentarg == "-gmekd"       ) ||
-                      ( currentarg == "-gmekG"       ) ||
-                      ( currentarg == "-gmekrlb"     ) ||
-                      ( currentarg == "-gmekglb"     ) ||
-                      ( currentarg == "-gmekdlb"     ) ||
-                      ( currentarg == "-gmekGlb"     ) ||
-                      ( currentarg == "-gmekrub"     ) ||
-                      ( currentarg == "-gmekgub"     ) ||
-                      ( currentarg == "-gmekdub"     ) ||
-                      ( currentarg == "-gmekGub"     ) ||
-                      ( currentarg == "-gmekI"       ) ||
+                      ( currentarg == "-gmeks"       ) || ( currentarg == "-gmeki"       ) || ( currentarg == "-gmeka"       ) ||
+                      ( currentarg == "-gmekb"       ) || ( currentarg == "-gmeke"       ) || ( currentarg == "-gmekw"       ) ||
+                      ( currentarg == "-gmekwlb"     ) || ( currentarg == "-gmekwub"     ) || ( currentarg == "-gmekt"       ) ||
+                      ( currentarg == "-gmektx"      ) || ( currentarg == "-gmektk"      ) || ( currentarg == "-gmekrn"      ) ||
+                      ( currentarg == "-gmekgg"      ) || ( currentarg == "-gmekf"       ) || ( currentarg == "-gmekr"       ) ||
+                      ( currentarg == "-gmekg"       ) || ( currentarg == "-gmekd"       ) || ( currentarg == "-gmekG"       ) ||
+                      ( currentarg == "-gmekrlb"     ) || ( currentarg == "-gmekglb"     ) || ( currentarg == "-gmekdlb"     ) ||
+                      ( currentarg == "-gmekGlb"     ) || ( currentarg == "-gmekrub"     ) || ( currentarg == "-gmekgub"     ) ||
+                      ( currentarg == "-gmekdub"     ) || ( currentarg == "-gmekGub"     ) || ( currentarg == "-gmekI"       ) ||
                       ( currentarg == "-gmekan"      ) ||
-                      ( currentarg == "-gmrks"       ) ||
-                      ( currentarg == "-gmrki"       ) ||
-                      ( currentarg == "-gmrka"       ) ||
-                      ( currentarg == "-gmrkb"       ) ||
-                      ( currentarg == "-gmrke"       ) ||
-                      ( currentarg == "-gmrkw"       ) ||
-                      ( currentarg == "-gmrkwlb"     ) ||
-                      ( currentarg == "-gmrkwub"     ) ||
-                      ( currentarg == "-gmrkt"       ) ||
-                      ( currentarg == "-gmrktx"      ) ||
-                      ( currentarg == "-gmrktk"      ) ||
-                      ( currentarg == "-gmrkgg"      ) ||
-                      ( currentarg == "-gmrkf"       ) ||
-                      ( currentarg == "-gmrkr"       ) ||
-                      ( currentarg == "-gmrkg"       ) ||
-                      ( currentarg == "-gmrkd"       ) ||
-                      ( currentarg == "-gmrkG"       ) ||
-                      ( currentarg == "-gmrkrlb"     ) ||
-                      ( currentarg == "-gmrkglb"     ) ||
-                      ( currentarg == "-gmrkdlb"     ) ||
-                      ( currentarg == "-gmrkGlb"     ) ||
-                      ( currentarg == "-gmrkrub"     ) ||
-                      ( currentarg == "-gmrkgub"     ) ||
-                      ( currentarg == "-gmrkdub"     ) ||
-                      ( currentarg == "-gmrkGub"     ) ||
-                      ( currentarg == "-gmrkI"       ) ||
+                      ( currentarg == "-gmrks"       ) || ( currentarg == "-gmrki"       ) || ( currentarg == "-gmrka"       ) ||
+                      ( currentarg == "-gmrkb"       ) || ( currentarg == "-gmrke"       ) || ( currentarg == "-gmrkw"       ) ||
+                      ( currentarg == "-gmrkwlb"     ) || ( currentarg == "-gmrkwub"     ) || ( currentarg == "-gmrkt"       ) ||
+                      ( currentarg == "-gmrktx"      ) || ( currentarg == "-gmrktk"      ) || ( currentarg == "-gmrkrn"      ) ||
+                      ( currentarg == "-gmrkgg"      ) || ( currentarg == "-gmrkf"       ) || ( currentarg == "-gmrkr"       ) ||
+                      ( currentarg == "-gmrkg"       ) || ( currentarg == "-gmrkd"       ) || ( currentarg == "-gmrkG"       ) ||
+                      ( currentarg == "-gmrkrlb"     ) || ( currentarg == "-gmrkglb"     ) || ( currentarg == "-gmrkdlb"     ) ||
+                      ( currentarg == "-gmrkGlb"     ) || ( currentarg == "-gmrkrub"     ) || ( currentarg == "-gmrkgub"     ) ||
+                      ( currentarg == "-gmrkdub"     ) || ( currentarg == "-gmrkGub"     ) || ( currentarg == "-gmrkI"       ) ||
                       ( currentarg == "-gmrkan"      ) ||
-                      ( currentarg == "-gmsks"       ) ||
-                      ( currentarg == "-gmski"       ) ||
-                      ( currentarg == "-gmska"       ) ||
-                      ( currentarg == "-gmskb"       ) ||
-                      ( currentarg == "-gmske"       ) ||
-                      ( currentarg == "-gmskw"       ) ||
-                      ( currentarg == "-gmskwlb"     ) ||
-                      ( currentarg == "-gmskwub"     ) ||
-                      ( currentarg == "-gmskt"       ) ||
-                      ( currentarg == "-gmsktx"      ) ||
-                      ( currentarg == "-gmsktk"      ) ||
-                      ( currentarg == "-gmskgg"      ) ||
-                      ( currentarg == "-gmskf"       ) ||
-                      ( currentarg == "-gmskr"       ) ||
-                      ( currentarg == "-gmskg"       ) ||
-                      ( currentarg == "-gmskd"       ) ||
-                      ( currentarg == "-gmskG"       ) ||
-                      ( currentarg == "-gmskrlb"     ) ||
-                      ( currentarg == "-gmskglb"     ) ||
-                      ( currentarg == "-gmskdlb"     ) ||
-                      ( currentarg == "-gmskGlb"     ) ||
-                      ( currentarg == "-gmskrub"     ) ||
-                      ( currentarg == "-gmskgub"     ) ||
-                      ( currentarg == "-gmskdub"     ) ||
-                      ( currentarg == "-gmskGub"     ) ||
-                      ( currentarg == "-gmskI"       ) ||
+                      ( currentarg == "-gmsks"       ) || ( currentarg == "-gmski"       ) || ( currentarg == "-gmska"       ) ||
+                      ( currentarg == "-gmskb"       ) || ( currentarg == "-gmske"       ) || ( currentarg == "-gmskw"       ) ||
+                      ( currentarg == "-gmskwlb"     ) || ( currentarg == "-gmskwub"     ) || ( currentarg == "-gmskt"       ) ||
+                      ( currentarg == "-gmsktx"      ) || ( currentarg == "-gmsktk"      ) || ( currentarg == "-gmskrn"      ) ||
+                      ( currentarg == "-gmskgg"      ) || ( currentarg == "-gmskf"       ) || ( currentarg == "-gmskr"       ) ||
+                      ( currentarg == "-gmskg"       ) || ( currentarg == "-gmskd"       ) || ( currentarg == "-gmskG"       ) ||
+                      ( currentarg == "-gmskrlb"     ) || ( currentarg == "-gmskglb"     ) || ( currentarg == "-gmskdlb"     ) ||
+                      ( currentarg == "-gmskGlb"     ) || ( currentarg == "-gmskrub"     ) || ( currentarg == "-gmskgub"     ) ||
+                      ( currentarg == "-gmskdub"     ) || ( currentarg == "-gmskGub"     ) || ( currentarg == "-gmskI"       ) ||
                       ( currentarg == "-gmskan"      ) ||
-                      ( currentarg == "-gmseks"      ) ||
-                      ( currentarg == "-gmseki"      ) ||
-                      ( currentarg == "-gmseka"      ) ||
-                      ( currentarg == "-gmsekb"      ) ||
-                      ( currentarg == "-gmseke"      ) ||
-                      ( currentarg == "-gmsekw"      ) ||
-                      ( currentarg == "-gmsekwlb"    ) ||
-                      ( currentarg == "-gmsekwub"    ) ||
-                      ( currentarg == "-gmsekt"      ) ||
-                      ( currentarg == "-gmsektx"     ) ||
-                      ( currentarg == "-gmsektk"     ) ||
-                      ( currentarg == "-gmsekgg"     ) ||
-                      ( currentarg == "-gmsekf"      ) ||
-                      ( currentarg == "-gmsekr"      ) ||
-                      ( currentarg == "-gmsekg"      ) ||
-                      ( currentarg == "-gmsekd"      ) ||
-                      ( currentarg == "-gmsekG"      ) ||
-                      ( currentarg == "-gmsekrlb"    ) ||
-                      ( currentarg == "-gmsekglb"    ) ||
-                      ( currentarg == "-gmsekdlb"    ) ||
-                      ( currentarg == "-gmsekGlb"    ) ||
-                      ( currentarg == "-gmsekrub"    ) ||
-                      ( currentarg == "-gmsekgub"    ) ||
-                      ( currentarg == "-gmsekdub"    ) ||
-                      ( currentarg == "-gmsekGub"    ) ||
-                      ( currentarg == "-gmsekI"      ) ||
+                      ( currentarg == "-gmseks"      ) || ( currentarg == "-gmseki"      ) || ( currentarg == "-gmseka"      ) ||
+                      ( currentarg == "-gmsekb"      ) || ( currentarg == "-gmseke"      ) || ( currentarg == "-gmsekw"      ) ||
+                      ( currentarg == "-gmsekwlb"    ) || ( currentarg == "-gmsekwub"    ) || ( currentarg == "-gmsekt"      ) ||
+                      ( currentarg == "-gmsektx"     ) || ( currentarg == "-gmsektk"     ) || ( currentarg == "-gmsekrn"     ) ||
+                      ( currentarg == "-gmsekgg"     ) || ( currentarg == "-gmsekf"      ) || ( currentarg == "-gmsekr"      ) ||
+                      ( currentarg == "-gmsekg"      ) || ( currentarg == "-gmsekd"      ) || ( currentarg == "-gmsekG"      ) ||
+                      ( currentarg == "-gmsekrlb"    ) || ( currentarg == "-gmsekglb"    ) || ( currentarg == "-gmsekdlb"    ) ||
+                      ( currentarg == "-gmsekGlb"    ) || ( currentarg == "-gmsekrub"    ) || ( currentarg == "-gmsekgub"    ) ||
+                      ( currentarg == "-gmsekdub"    ) || ( currentarg == "-gmsekGub"    ) || ( currentarg == "-gmsekI"      ) ||
                       ( currentarg == "-gmsekan"     ) ||
-                      ( currentarg == "-gmsrks"      ) ||
-                      ( currentarg == "-gmsrki"      ) ||
-                      ( currentarg == "-gmsrka"      ) ||
-                      ( currentarg == "-gmsrkb"      ) ||
-                      ( currentarg == "-gmsrke"      ) ||
-                      ( currentarg == "-gmsrkw"      ) ||
-                      ( currentarg == "-gmsrkwlb"    ) ||
-                      ( currentarg == "-gmsrkwub"    ) ||
-                      ( currentarg == "-gmsrkt"      ) ||
-                      ( currentarg == "-gmsrktx"     ) ||
-                      ( currentarg == "-gmsrktk"     ) ||
-                      ( currentarg == "-gmsrkgg"     ) ||
-                      ( currentarg == "-gmsrkf"      ) ||
-                      ( currentarg == "-gmsrkr"      ) ||
-                      ( currentarg == "-gmsrkg"      ) ||
-                      ( currentarg == "-gmsrkd"      ) ||
-                      ( currentarg == "-gmsrkG"      ) ||
-                      ( currentarg == "-gmsrkrlb"    ) ||
-                      ( currentarg == "-gmsrkglb"    ) ||
-                      ( currentarg == "-gmsrkdlb"    ) ||
-                      ( currentarg == "-gmsrkGlb"    ) ||
-                      ( currentarg == "-gmsrkrub"    ) ||
-                      ( currentarg == "-gmsrkgub"    ) ||
-                      ( currentarg == "-gmsrkdub"    ) ||
-                      ( currentarg == "-gmsrkGub"    ) ||
-                      ( currentarg == "-gmsrkI"      ) ||
+                      ( currentarg == "-gmsrks"      ) || ( currentarg == "-gmsrki"      ) || ( currentarg == "-gmsrka"      ) ||
+                      ( currentarg == "-gmsrkb"      ) || ( currentarg == "-gmsrke"      ) || ( currentarg == "-gmsrkw"      ) ||
+                      ( currentarg == "-gmsrkwlb"    ) || ( currentarg == "-gmsrkwub"    ) || ( currentarg == "-gmsrkt"      ) ||
+                      ( currentarg == "-gmsrktx"     ) || ( currentarg == "-gmsrktk"     ) || ( currentarg == "-gmsrkrn"     ) ||
+                      ( currentarg == "-gmsrkgg"     ) || ( currentarg == "-gmsrkf"      ) || ( currentarg == "-gmsrkr"      ) ||
+                      ( currentarg == "-gmsrkg"      ) || ( currentarg == "-gmsrkd"      ) || ( currentarg == "-gmsrkG"      ) ||
+                      ( currentarg == "-gmsrkrlb"    ) || ( currentarg == "-gmsrkglb"    ) || ( currentarg == "-gmsrkdlb"    ) ||
+                      ( currentarg == "-gmsrkGlb"    ) || ( currentarg == "-gmsrkrub"    ) || ( currentarg == "-gmsrkgub"    ) ||
+                      ( currentarg == "-gmsrkdub"    ) || ( currentarg == "-gmsrkGub"    ) || ( currentarg == "-gmsrkI"      ) ||
                       ( currentarg == "-gmsrkan"     ) ||
-                      ( currentarg == "-gmgtks"      ) ||
-                      ( currentarg == "-gmgtki"      ) ||
-                      ( currentarg == "-gmgtka"      ) ||
-                      ( currentarg == "-gmgtkb"      ) ||
-                      ( currentarg == "-gmgtke"      ) ||
-                      ( currentarg == "-gmgtkw"      ) ||
-                      ( currentarg == "-gmgtkwlb"    ) ||
-                      ( currentarg == "-gmgtkwub"    ) ||
-                      ( currentarg == "-gmgtkt"      ) ||
-                      ( currentarg == "-gmgtktx"     ) ||
-                      ( currentarg == "-gmgtktk"     ) ||
-                      ( currentarg == "-gmgtkgg"     ) ||
-                      ( currentarg == "-gmgtkf"      ) ||
-                      ( currentarg == "-gmgtkr"      ) ||
-                      ( currentarg == "-gmgtkg"      ) ||
-                      ( currentarg == "-gmgtkd"      ) ||
-                      ( currentarg == "-gmgtkG"      ) ||
-                      ( currentarg == "-gmgtkrlb"    ) ||
-                      ( currentarg == "-gmgtkglb"    ) ||
-                      ( currentarg == "-gmgtkdlb"    ) ||
-                      ( currentarg == "-gmgtkGlb"    ) ||
-                      ( currentarg == "-gmgtkrub"    ) ||
-                      ( currentarg == "-gmgtkgub"    ) ||
-                      ( currentarg == "-gmgtkdub"    ) ||
-                      ( currentarg == "-gmgtkGub"    ) ||
-                      ( currentarg == "-gmgtkI"      ) ||
+                      ( currentarg == "-gmgtks"      ) || ( currentarg == "-gmgtki"      ) || ( currentarg == "-gmgtka"      ) ||
+                      ( currentarg == "-gmgtkb"      ) || ( currentarg == "-gmgtke"      ) || ( currentarg == "-gmgtkw"      ) ||
+                      ( currentarg == "-gmgtkwlb"    ) || ( currentarg == "-gmgtkwub"    ) || ( currentarg == "-gmgtkt"      ) ||
+                      ( currentarg == "-gmgtktx"     ) || ( currentarg == "-gmgtktk"     ) || ( currentarg == "-gmgtkrn"     ) ||
+                      ( currentarg == "-gmgtkgg"     ) || ( currentarg == "-gmgtkf"      ) || ( currentarg == "-gmgtkr"      ) ||
+                      ( currentarg == "-gmgtkg"      ) || ( currentarg == "-gmgtkd"      ) || ( currentarg == "-gmgtkG"      ) ||
+                      ( currentarg == "-gmgtkrlb"    ) || ( currentarg == "-gmgtkglb"    ) || ( currentarg == "-gmgtkdlb"    ) ||
+                      ( currentarg == "-gmgtkGlb"    ) || ( currentarg == "-gmgtkrub"    ) || ( currentarg == "-gmgtkgub"    ) ||
+                      ( currentarg == "-gmgtkdub"    ) || ( currentarg == "-gmgtkGub"    ) || ( currentarg == "-gmgtkI"      ) ||
                       ( currentarg == "-gmgtkan"     ) ||
-                      ( currentarg == "-gmgteks"     ) ||
-                      ( currentarg == "-gmgteki"     ) ||
-                      ( currentarg == "-gmgteka"     ) ||
-                      ( currentarg == "-gmgtekb"     ) ||
-                      ( currentarg == "-gmgteke"     ) ||
-                      ( currentarg == "-gmgtekw"     ) ||
-                      ( currentarg == "-gmgtekwlb"   ) ||
-                      ( currentarg == "-gmgtekwub"   ) ||
-                      ( currentarg == "-gmgtekt"     ) ||
-                      ( currentarg == "-gmgtektx"    ) ||
-                      ( currentarg == "-gmgtektk"    ) ||
-                      ( currentarg == "-gmgtekgg"    ) ||
-                      ( currentarg == "-gmgtekf"     ) ||
-                      ( currentarg == "-gmgtekr"     ) ||
-                      ( currentarg == "-gmgtekg"     ) ||
-                      ( currentarg == "-gmgtekd"     ) ||
-                      ( currentarg == "-gmgtekG"     ) ||
-                      ( currentarg == "-gmgtekrlb"   ) ||
-                      ( currentarg == "-gmgtekglb"   ) ||
-                      ( currentarg == "-gmgtekdlb"   ) ||
-                      ( currentarg == "-gmgtekGlb"   ) ||
-                      ( currentarg == "-gmgtekrub"   ) ||
-                      ( currentarg == "-gmgtekgub"   ) ||
-                      ( currentarg == "-gmgtekdub"   ) ||
-                      ( currentarg == "-gmgtekGub"   ) ||
-                      ( currentarg == "-gmgtekI"     ) ||
+                      ( currentarg == "-gmgteks"     ) || ( currentarg == "-gmgteki"     ) || ( currentarg == "-gmgteka"     ) ||
+                      ( currentarg == "-gmgtekb"     ) || ( currentarg == "-gmgteke"     ) || ( currentarg == "-gmgtekw"     ) ||
+                      ( currentarg == "-gmgtekwlb"   ) || ( currentarg == "-gmgtekwub"   ) || ( currentarg == "-gmgtekt"     ) ||
+                      ( currentarg == "-gmgtektx"    ) || ( currentarg == "-gmgtektk"    ) || ( currentarg == "-gmgtekrn"    ) ||
+                      ( currentarg == "-gmgtekgg"    ) || ( currentarg == "-gmgtekf"     ) || ( currentarg == "-gmgtekr"     ) ||
+                      ( currentarg == "-gmgtekg"     ) || ( currentarg == "-gmgtekd"     ) || ( currentarg == "-gmgtekG"     ) ||
+                      ( currentarg == "-gmgtekrlb"   ) || ( currentarg == "-gmgtekglb"   ) || ( currentarg == "-gmgtekdlb"   ) ||
+                      ( currentarg == "-gmgtekGlb"   ) || ( currentarg == "-gmgtekrub"   ) || ( currentarg == "-gmgtekgub"   ) ||
+                      ( currentarg == "-gmgtekdub"   ) || ( currentarg == "-gmgtekGub"   ) || ( currentarg == "-gmgtekI"     ) ||
                       ( currentarg == "-gmgtekan"    ) ||
-                      ( currentarg == "-gmgtrks"     ) ||
-                      ( currentarg == "-gmgtrki"     ) ||
-                      ( currentarg == "-gmgtrka"     ) ||
-                      ( currentarg == "-gmgtrkb"     ) ||
-                      ( currentarg == "-gmgtrke"     ) ||
-                      ( currentarg == "-gmgtrkw"     ) ||
-                      ( currentarg == "-gmgtrkwlb"   ) ||
-                      ( currentarg == "-gmgtrkwub"   ) ||
-                      ( currentarg == "-gmgtrkt"     ) ||
-                      ( currentarg == "-gmgtrktx"    ) ||
-                      ( currentarg == "-gmgtrktk"    ) ||
-                      ( currentarg == "-gmgtrkgg"    ) ||
-                      ( currentarg == "-gmgtrkf"     ) ||
-                      ( currentarg == "-gmgtrkr"     ) ||
-                      ( currentarg == "-gmgtrkg"     ) ||
-                      ( currentarg == "-gmgtrkd"     ) ||
-                      ( currentarg == "-gmgtrkG"     ) ||
-                      ( currentarg == "-gmgtrkrlb"   ) ||
-                      ( currentarg == "-gmgtrkglb"   ) ||
-                      ( currentarg == "-gmgtrkdlb"   ) ||
-                      ( currentarg == "-gmgtrkGlb"   ) ||
-                      ( currentarg == "-gmgtrkrub"   ) ||
-                      ( currentarg == "-gmgtrkgub"   ) ||
-                      ( currentarg == "-gmgtrkdub"   ) ||
-                      ( currentarg == "-gmgtrkGub"   ) ||
-                      ( currentarg == "-gmgtrkI"     ) ||
+                      ( currentarg == "-gmgtrks"     ) || ( currentarg == "-gmgtrki"     ) || ( currentarg == "-gmgtrka"     ) ||
+                      ( currentarg == "-gmgtrkb"     ) || ( currentarg == "-gmgtrke"     ) || ( currentarg == "-gmgtrkw"     ) ||
+                      ( currentarg == "-gmgtrkwlb"   ) || ( currentarg == "-gmgtrkwub"   ) || ( currentarg == "-gmgtrkt"     ) ||
+                      ( currentarg == "-gmgtrktx"    ) || ( currentarg == "-gmgtrktk"    ) || ( currentarg == "-gmgtrkrn"    ) ||
+                      ( currentarg == "-gmgtrkgg"    ) || ( currentarg == "-gmgtrkf"     ) || ( currentarg == "-gmgtrkr"     ) ||
+                      ( currentarg == "-gmgtrkg"     ) || ( currentarg == "-gmgtrkd"     ) || ( currentarg == "-gmgtrkG"     ) ||
+                      ( currentarg == "-gmgtrkrlb"   ) || ( currentarg == "-gmgtrkglb"   ) || ( currentarg == "-gmgtrkdlb"   ) ||
+                      ( currentarg == "-gmgtrkGlb"   ) || ( currentarg == "-gmgtrkrub"   ) || ( currentarg == "-gmgtrkgub"   ) ||
+                      ( currentarg == "-gmgtrkdub"   ) || ( currentarg == "-gmgtrkGub"   ) || ( currentarg == "-gmgtrkI"     ) ||
                       ( currentarg == "-gmgtrkan"    ) ||
-                      ( currentarg == "-gmmu"        ) ||
-                      ( currentarg == "-gmmugt"      ) ||
-                      ( currentarg == "-gmft"        ) ||
-                      ( currentarg == "-gmmuml"      ) ||
-                      ( currentarg == "-gmsmu"       ) ||
-                      ( currentarg == "-gmsmugt"     ) ||
-                      ( currentarg == "-gmsmuml"     ) ||
-                      ( currentarg == "-gmgtmu"      ) ||
-                      ( currentarg == "-gmgtmugt"    ) ||
-                      ( currentarg == "-gmgtmuml"    )    )
+                      ( currentarg == "-gmmu"        ) || ( currentarg == "-gmmugt"      ) || ( currentarg == "-gmft"        ) ||
+                      ( currentarg == "-gmmuml"      ) || ( currentarg == "-gmsmu"       ) || ( currentarg == "-gmsmugt"     ) ||
+                      ( currentarg == "-gmsmuml"     ) || ( currentarg == "-gmgtmu"      ) || ( currentarg == "-gmgtmugt"    ) ||
+                      ( currentarg == "-gmgtmuml"    ) )
             {
                 // Gridsearch options
 
-                if ( grabargs(2,gridopt,commstack,currentarg) )
-                {
-                    retval  = 74;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,gridopt,commstack,currentarg) ) { retval = 74; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-gphkv"     ) ||
-                      ( currentarg == "-gphkV"     ) ||
-                      ( currentarg == "-gphkvlb"   ) ||
-                      ( currentarg == "-gphkVlb"   ) ||
-                      ( currentarg == "-gphkvub"   ) ||
-                      ( currentarg == "-gphkVub"   ) ||
-                      ( currentarg == "-gphko"     ) ||
-                      ( currentarg == "-gphkO"     ) ||
-                      ( currentarg == "-gphkx"     ) ||
+            else if ( ( currentarg == "-gphkv"     ) || ( currentarg == "-gphkV"     ) || ( currentarg == "-gphkvlb"   ) ||
+                      ( currentarg == "-gphkVlb"   ) || ( currentarg == "-gphkvub"   ) || ( currentarg == "-gphkVub"   ) ||
+                      ( currentarg == "-gphko"     ) || ( currentarg == "-gphkO"     ) || ( currentarg == "-gphkx"     ) ||
                       ( currentarg == "-gphkX"     ) ||
-                      ( currentarg == "-gPkv"      ) ||
-                      ( currentarg == "-gPkV"      ) ||
-                      ( currentarg == "-gPkvlb"    ) ||
-                      ( currentarg == "-gPkVlb"    ) ||
-                      ( currentarg == "-gPkvub"    ) ||
-                      ( currentarg == "-gPkVub"    ) ||
-                      ( currentarg == "-gPko"      ) ||
-                      ( currentarg == "-gPkO"      ) ||
-                      ( currentarg == "-gPkx"      ) ||
-                      ( currentarg == "-gPkX"      ) ||
-                      ( currentarg == "-gmkv"      ) ||
-                      ( currentarg == "-gmkV"      ) ||
-                      ( currentarg == "-gmkvlb"    ) ||
-                      ( currentarg == "-gmkVlb"    ) ||
-                      ( currentarg == "-gmkvub"    ) ||
-                      ( currentarg == "-gmkVub"    ) ||
-                      ( currentarg == "-gmko"      ) ||
-                      ( currentarg == "-gmkO"      ) ||
-                      ( currentarg == "-gmkx"      ) ||
+                      ( currentarg == "-gmkv"      ) || ( currentarg == "-gmkV"      ) || ( currentarg == "-gmkvlb"    ) ||
+                      ( currentarg == "-gmkVlb"    ) || ( currentarg == "-gmkvub"    ) || ( currentarg == "-gmkVub"    ) ||
+                      ( currentarg == "-gmko"      ) || ( currentarg == "-gmkO"      ) || ( currentarg == "-gmkx"      ) ||
                       ( currentarg == "-gmkX"      ) ||
-                      ( currentarg == "-gmekv"     ) ||
-                      ( currentarg == "-gmekV"     ) ||
-                      ( currentarg == "-gmekvlb"   ) ||
-                      ( currentarg == "-gmekVlb"   ) ||
-                      ( currentarg == "-gmekvub"   ) ||
-                      ( currentarg == "-gmekVub"   ) ||
-                      ( currentarg == "-gmeko"     ) ||
-                      ( currentarg == "-gmekO"     ) ||
-                      ( currentarg == "-gmekx"     ) ||
+                      ( currentarg == "-gmekv"     ) || ( currentarg == "-gmekV"     ) || ( currentarg == "-gmekvlb"   ) ||
+                      ( currentarg == "-gmekVlb"   ) || ( currentarg == "-gmekvub"   ) || ( currentarg == "-gmekVub"   ) ||
+                      ( currentarg == "-gmeko"     ) || ( currentarg == "-gmekO"     ) || ( currentarg == "-gmekx"     ) ||
                       ( currentarg == "-gmekX"     ) ||
-                      ( currentarg == "-gmrkv"     ) ||
-                      ( currentarg == "-gmrkV"     ) ||
-                      ( currentarg == "-gmrkvlb"   ) ||
-                      ( currentarg == "-gmrkVlb"   ) ||
-                      ( currentarg == "-gmrkvub"   ) ||
-                      ( currentarg == "-gmrkVub"   ) ||
-                      ( currentarg == "-gmrko"     ) ||
-                      ( currentarg == "-gmrkO"     ) ||
-                      ( currentarg == "-gmrkx"     ) ||
+                      ( currentarg == "-gmrkv"     ) || ( currentarg == "-gmrkV"     ) || ( currentarg == "-gmrkvlb"   ) ||
+                      ( currentarg == "-gmrkVlb"   ) || ( currentarg == "-gmrkvub"   ) || ( currentarg == "-gmrkVub"   ) ||
+                      ( currentarg == "-gmrko"     ) || ( currentarg == "-gmrkO"     ) || ( currentarg == "-gmrkx"     ) ||
                       ( currentarg == "-gmrkX"     ) ||
-                      ( currentarg == "-gmskv"     ) ||
-                      ( currentarg == "-gmskV"     ) ||
-                      ( currentarg == "-gmskvlb"   ) ||
-                      ( currentarg == "-gmskVlb"   ) ||
-                      ( currentarg == "-gmskvub"   ) ||
-                      ( currentarg == "-gmskVub"   ) ||
-                      ( currentarg == "-gmsko"     ) ||
-                      ( currentarg == "-gmskO"     ) ||
-                      ( currentarg == "-gmskx"     ) ||
+                      ( currentarg == "-gmskv"     ) || ( currentarg == "-gmskV"     ) || ( currentarg == "-gmskvlb"   ) ||
+                      ( currentarg == "-gmskVlb"   ) || ( currentarg == "-gmskvub"   ) || ( currentarg == "-gmskVub"   ) ||
+                      ( currentarg == "-gmsko"     ) || ( currentarg == "-gmskO"     ) || ( currentarg == "-gmskx"     ) ||
                       ( currentarg == "-gmskX"     ) ||
-                      ( currentarg == "-gmsekv"    ) ||
-                      ( currentarg == "-gmsekV"    ) ||
-                      ( currentarg == "-gmsekvlb"  ) ||
-                      ( currentarg == "-gmsekVlb"  ) ||
-                      ( currentarg == "-gmsekvub"  ) ||
-                      ( currentarg == "-gmsekVub"  ) ||
-                      ( currentarg == "-gmseko"    ) ||
-                      ( currentarg == "-gmsekO"    ) ||
-                      ( currentarg == "-gmsekx"    ) ||
+                      ( currentarg == "-gmsekv"    ) || ( currentarg == "-gmsekV"    ) || ( currentarg == "-gmsekvlb"  ) ||
+                      ( currentarg == "-gmsekVlb"  ) || ( currentarg == "-gmsekvub"  ) || ( currentarg == "-gmsekVub"  ) ||
+                      ( currentarg == "-gmseko"    ) || ( currentarg == "-gmsekO"    ) || ( currentarg == "-gmsekx"    ) ||
                       ( currentarg == "-gmsekX"    ) ||
-                      ( currentarg == "-gmsrkv"    ) ||
-                      ( currentarg == "-gmsrkV"    ) ||
-                      ( currentarg == "-gmsrkvlb"  ) ||
-                      ( currentarg == "-gmsrkVlb"  ) ||
-                      ( currentarg == "-gmsrkvub"  ) ||
-                      ( currentarg == "-gmsrkVub"  ) ||
-                      ( currentarg == "-gmsrko"    ) ||
-                      ( currentarg == "-gmsrkO"    ) ||
-                      ( currentarg == "-gmsrkx"    ) ||
+                      ( currentarg == "-gmsrkv"    ) || ( currentarg == "-gmsrkV"    ) || ( currentarg == "-gmsrkvlb"  ) ||
+                      ( currentarg == "-gmsrkVlb"  ) || ( currentarg == "-gmsrkvub"  ) || ( currentarg == "-gmsrkVub"  ) ||
+                      ( currentarg == "-gmsrko"    ) || ( currentarg == "-gmsrkO"    ) || ( currentarg == "-gmsrkx"    ) ||
                       ( currentarg == "-gmsrkX"    ) ||
-                      ( currentarg == "-gmgtkv"    ) ||
-                      ( currentarg == "-gmgtkV"    ) ||
-                      ( currentarg == "-gmgtkvlb"  ) ||
-                      ( currentarg == "-gmgtkVlb"  ) ||
-                      ( currentarg == "-gmgtkvub"  ) ||
-                      ( currentarg == "-gmgtkVub"  ) ||
-                      ( currentarg == "-gmgtko"    ) ||
-                      ( currentarg == "-gmgtkO"    ) ||
-                      ( currentarg == "-gmgtkx"    ) ||
+                      ( currentarg == "-gmgtkv"    ) || ( currentarg == "-gmgtkV"    ) || ( currentarg == "-gmgtkvlb"  ) ||
+                      ( currentarg == "-gmgtkVlb"  ) || ( currentarg == "-gmgtkvub"  ) || ( currentarg == "-gmgtkVub"  ) ||
+                      ( currentarg == "-gmgtko"    ) || ( currentarg == "-gmgtkO"    ) || ( currentarg == "-gmgtkx"    ) ||
                       ( currentarg == "-gmgtkX"    ) ||
-                      ( currentarg == "-gmgtekv"   ) ||
-                      ( currentarg == "-gmgtekV"   ) ||
-                      ( currentarg == "-gmgtekvlb" ) ||
-                      ( currentarg == "-gmgtekVlb" ) ||
-                      ( currentarg == "-gmgtekvub" ) ||
-                      ( currentarg == "-gmgtekVub" ) ||
-                      ( currentarg == "-gmgteko"   ) ||
-                      ( currentarg == "-gmgtekO"   ) ||
-                      ( currentarg == "-gmgtekx"   ) ||
+                      ( currentarg == "-gmgtekv"   ) || ( currentarg == "-gmgtekV"   ) || ( currentarg == "-gmgtekvlb" ) ||
+                      ( currentarg == "-gmgtekVlb" ) || ( currentarg == "-gmgtekvub" ) || ( currentarg == "-gmgtekVub" ) ||
+                      ( currentarg == "-gmgteko"   ) || ( currentarg == "-gmgtekO"   ) || ( currentarg == "-gmgtekx"   ) ||
                       ( currentarg == "-gmgtekX"   ) ||
-                      ( currentarg == "-gmgtrkv"   ) ||
-                      ( currentarg == "-gmgtrkV"   ) ||
-                      ( currentarg == "-gmgtrkvlb" ) ||
-                      ( currentarg == "-gmgtrkVlb" ) ||
-                      ( currentarg == "-gmgtrkvub" ) ||
-                      ( currentarg == "-gmgtrkVub" ) ||
-                      ( currentarg == "-gmgtrko"   ) ||
-                      ( currentarg == "-gmgtrkO"   ) ||
-                      ( currentarg == "-gmgtrkx"   ) ||
-                      ( currentarg == "-gmgtrkX"   )    )
+                      ( currentarg == "-gmgtrkv"   ) || ( currentarg == "-gmgtrkV"   ) || ( currentarg == "-gmgtrkvlb" ) ||
+                      ( currentarg == "-gmgtrkVlb" ) || ( currentarg == "-gmgtrkvub" ) || ( currentarg == "-gmgtrkVub" ) ||
+                      ( currentarg == "-gmgtrko"   ) || ( currentarg == "-gmgtrkO"   ) || ( currentarg == "-gmgtrkx"   ) ||
+                      ( currentarg == "-gmgtrkX"   ) )
             {
                 // Gridsearch options
 
-                if ( grabargs(3,gridopt,commstack,currentarg) )
-                {
-                    retval  = 74;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,gridopt,commstack,currentarg) ) { retval  = 74; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-gmmm"   ) ||
-                      ( currentarg == "-gmsmm"  ) ||
-                      ( currentarg == "-gmgtmm" )    )
+            else if ( ( currentarg == "-gmmm" ) || ( currentarg == "-gmsmm" ) || ( currentarg == "-gmgtmm" ) )
             {
-                // Preload options
+                // Gridsearch options
 
-                if ( grabargs(8,gridopt,commstack,currentarg) )
-                {
-                    retval  = 74;
-                    stopnow = 1;
-                }
+                if ( grabargs(8,gridopt,commstack,currentarg) ) { retval = 74; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-xi"  ) ||
-                      ( currentarg == "-xo"  ) ||
-                      ( currentarg == "-xh"  ) ||
-                      ( currentarg == "-xC"  ) ||
-                      ( currentarg == "-xR"  ) ||
-                      ( currentarg == "-xt"  ) ||
-                      ( currentarg == "-xr"  ) ||
-                      ( currentarg == "-xrv" ) ||
-                      ( currentarg == "-xs"  ) ||
-                      ( currentarg == "-xa"  ) ||
-                      ( currentarg == "-xl"  )    )
+            else if ( ( currentarg == "-xi"  ) || ( currentarg == "-xo"  ) || ( currentarg == "-xh"  ) ||
+                      ( currentarg == "-xC"  ) || ( currentarg == "-xR"  ) || ( currentarg == "-xt"  ) ||
+                      ( currentarg == "-xr"  ) || ( currentarg == "-xrv" ) || ( currentarg == "-xs"  ) ||
+                      ( currentarg == "-xa"  ) || ( currentarg == "-xl"  ) )
             {
                 // Kernel transfer options
 
-                if ( grabargs(2,xferopt,commstack,currentarg) )
-                {
-                    retval  = 75;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,xferopt,commstack,currentarg) ) { retval = 75; stopnow = 1; }
 
                 updateargvars = 1;
             }
@@ -4177,394 +3148,172 @@ int runsvmint(SVMThreadContext *svmContext,
             {
                 // Kernel transfer options
 
-                if ( grabargs(4,xferopt,commstack,currentarg) )
-                {
-                    retval  = 75;
-                    stopnow = 1;
-                }
+                if ( grabargs(4,xferopt,commstack,currentarg) ) { retval = 75; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fsx"   ) ||
-                      ( currentarg == "-fsxz"  ) ||
-                      ( currentarg == "-fsxB"  ) ||
-                      ( currentarg == "-fsxzB" ) ||
-                      ( currentarg == "-fsr"   ) ||
-                      ( currentarg == "-fsrB"  ) ||
-                      ( currentarg == "-fSx"   ) ||
-                      ( currentarg == "-fSxz"  ) ||
-                      ( currentarg == "-fSxB"  ) ||
-                      ( currentarg == "-fSxzB" ) ||
-                      ( currentarg == "-fSr"   ) ||
-                      ( currentarg == "-fSrB"  ) ||
-                      ( currentarg == "-fsd"   ) ||
-                      ( currentarg == "-fsD"   )    )
+            else if ( ( currentarg == "-fsx"   ) || ( currentarg == "-fsxz"  ) || ( currentarg == "-fsxB"  ) ||
+                      ( currentarg == "-fsxzB" ) || ( currentarg == "-fsr"   ) || ( currentarg == "-fsrB"  ) ||
+                      ( currentarg == "-fSx"   ) || ( currentarg == "-fSxz"  ) || ( currentarg == "-fSxB"  ) ||
+                      ( currentarg == "-fSxzB" ) || ( currentarg == "-fSr"   ) || ( currentarg == "-fSrB"  ) ||
+                      ( currentarg == "-fsd"   ) || ( currentarg == "-fsD"   ) )
             {
                 // Feature selection options
 
-                if ( grabargs(1,featureopt,commstack,currentarg) )
-                {
-                    retval  = 75;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,featureopt,commstack,currentarg) ) { retval = 75; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fsc"    ) ||
-                      ( currentarg == "-fscz"   ) ||
-                      ( currentarg == "-fscB"   ) ||
-                      ( currentarg == "-fsczB"  ) ||
-                      ( currentarg == "-fSc"    ) ||
-                      ( currentarg == "-fScz"   ) ||
-                      ( currentarg == "-fScB"   ) ||
-                      ( currentarg == "-fSczB"  ) ||
-                      ( currentarg == "-fsf"    ) ||
-                      ( currentarg == "-fsfe"   ) ||
-                      ( currentarg == "-fsfi"   ) ||
-                      ( currentarg == "-fsfI"   ) ||
-                      ( currentarg == "-fsfu"   ) ||
-                      ( currentarg == "-fsfeu"  ) ||
-                      ( currentarg == "-fsfiu"  ) ||
-                      ( currentarg == "-fsfIu"  ) ||
-                      ( currentarg == "-fsfB"   ) ||
-                      ( currentarg == "-fsfeB"  ) ||
-                      ( currentarg == "-fsfiB"  ) ||
-                      ( currentarg == "-fsfIB"  ) ||
-                      ( currentarg == "-fsfuB"  ) ||
-                      ( currentarg == "-fsfeuB" ) ||
-                      ( currentarg == "-fsfiuB" ) ||
-                      ( currentarg == "-fsfIuB" ) ||
-                      ( currentarg == "-fSf"    ) ||
-                      ( currentarg == "-fSfe"   ) ||
-                      ( currentarg == "-fSfi"   ) ||
-                      ( currentarg == "-fSfI"   ) ||
-                      ( currentarg == "-fSfu"   ) ||
-                      ( currentarg == "-fSfeu"  ) ||
-                      ( currentarg == "-fSfiu"  ) ||
-                      ( currentarg == "-fSfIu"  ) ||
-                      ( currentarg == "-fSfB"   ) ||
-                      ( currentarg == "-fSfeB"  ) ||
-                      ( currentarg == "-fSfiB"  ) ||
-                      ( currentarg == "-fSfIB"  ) ||
-                      ( currentarg == "-fSfuB"  ) ||
-                      ( currentarg == "-fSfeuB" ) ||
-                      ( currentarg == "-fSfiuB" ) ||
-                      ( currentarg == "-fSfIuB" ) ||
-                      ( currentarg == "-fss"    )    )
+            else if ( ( currentarg == "-fsc"    ) || ( currentarg == "-fscz"   ) || ( currentarg == "-fscB"   ) ||
+                      ( currentarg == "-fsczB"  ) || ( currentarg == "-fSc"    ) || ( currentarg == "-fScz"   ) ||
+                      ( currentarg == "-fScB"   ) || ( currentarg == "-fSczB"  ) || ( currentarg == "-fsf"    ) ||
+                      ( currentarg == "-fsfe"   ) || ( currentarg == "-fsfi"   ) || ( currentarg == "-fsfI"   ) ||
+                      ( currentarg == "-fsfu"   ) || ( currentarg == "-fsfeu"  ) || ( currentarg == "-fsfiu"  ) ||
+                      ( currentarg == "-fsfIu"  ) || ( currentarg == "-fsfB"   ) || ( currentarg == "-fsfeB"  ) ||
+                      ( currentarg == "-fsfiB"  ) || ( currentarg == "-fsfIB"  ) || ( currentarg == "-fsfuB"  ) ||
+                      ( currentarg == "-fsfeuB" ) || ( currentarg == "-fsfiuB" ) || ( currentarg == "-fsfIuB" ) ||
+                      ( currentarg == "-fSf"    ) || ( currentarg == "-fSfe"   ) || ( currentarg == "-fSfi"   ) ||
+                      ( currentarg == "-fSfI"   ) || ( currentarg == "-fSfu"   ) || ( currentarg == "-fSfeu"  ) ||
+                      ( currentarg == "-fSfiu"  ) || ( currentarg == "-fSfIu"  ) || ( currentarg == "-fSfB"   ) ||
+                      ( currentarg == "-fSfeB"  ) || ( currentarg == "-fSfiB"  ) || ( currentarg == "-fSfIB"  ) ||
+                      ( currentarg == "-fSfuB"  ) || ( currentarg == "-fSfeuB" ) || ( currentarg == "-fSfiuB" ) ||
+                      ( currentarg == "-fSfIuB" ) || ( currentarg == "-fss"    ) )
             {
                 // Feature selection options
 
-                if ( grabargs(2,featureopt,commstack,currentarg) )
-                {
-                    retval  = 76;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,featureopt,commstack,currentarg) ) { retval = 76; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fsC"    ) ||
-                      ( currentarg == "-fsCz"   ) ||
-                      ( currentarg == "-fsCB"   ) ||
-                      ( currentarg == "-fsCzB"  ) ||
-                      ( currentarg == "-fsfl"   ) ||
-                      ( currentarg == "-fsfel"  ) ||
-                      ( currentarg == "-fsfil"  ) ||
-                      ( currentarg == "-fsfIl"  ) ||
-                      ( currentarg == "-fsflB"  ) ||
-                      ( currentarg == "-fsfelB" ) ||
-                      ( currentarg == "-fsfilB" ) ||
-                      ( currentarg == "-fsfIlB" ) ||
-                      ( currentarg == "-fSC"    ) ||
-                      ( currentarg == "-fSCz"   ) ||
-                      ( currentarg == "-fSCB"   ) ||
-                      ( currentarg == "-fSCzB"  ) ||
-                      ( currentarg == "-fSfl"   ) ||
-                      ( currentarg == "-fSfel"  ) ||
-                      ( currentarg == "-fSfil"  ) ||
-                      ( currentarg == "-fSfIl"  ) ||
-                      ( currentarg == "-fSflB"  ) ||
-                      ( currentarg == "-fSfelB" ) ||
-                      ( currentarg == "-fSfilB" ) ||
-                      ( currentarg == "-fSfIlB" )    )
+            else if ( ( currentarg == "-fsC"    ) || ( currentarg == "-fsCz"   ) || ( currentarg == "-fsCB"   ) ||
+                      ( currentarg == "-fsCzB"  ) || ( currentarg == "-fsfl"   ) || ( currentarg == "-fsfel"  ) ||
+                      ( currentarg == "-fsfil"  ) || ( currentarg == "-fsfIl"  ) || ( currentarg == "-fsflB"  ) ||
+                      ( currentarg == "-fsfelB" ) || ( currentarg == "-fsfilB" ) || ( currentarg == "-fsfIlB" ) ||
+                      ( currentarg == "-fSC"    ) || ( currentarg == "-fSCz"   ) || ( currentarg == "-fSCB"   ) ||
+                      ( currentarg == "-fSCzB"  ) || ( currentarg == "-fSfl"   ) || ( currentarg == "-fSfel"  ) ||
+                      ( currentarg == "-fSfil"  ) || ( currentarg == "-fSfIl"  ) || ( currentarg == "-fSflB"  ) ||
+                      ( currentarg == "-fSfelB" ) || ( currentarg == "-fSfilB" ) || ( currentarg == "-fSfIlB" ) )
             {
                 // Feature selection options
 
-                if ( grabargs(3,featureopt,commstack,currentarg) )
-                {
-                    retval  = 77;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,featureopt,commstack,currentarg) ) { retval = 77; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fsF"    ) ||
-                      ( currentarg == "-fsFe"   ) ||
-                      ( currentarg == "-fsFi"   ) ||
-                      ( currentarg == "-fsFI"   ) ||
-                      ( currentarg == "-fsFr"   ) ||
-                      ( currentarg == "-fsFR"   ) ||
-                      ( currentarg == "-fsFu"   ) ||
-                      ( currentarg == "-fsFeu"  ) ||
-                      ( currentarg == "-fsFiu"  ) ||
-                      ( currentarg == "-fsFIu"  ) ||
-                      ( currentarg == "-fsFru"  ) ||
-                      ( currentarg == "-fsFRu"  ) ||
-                      ( currentarg == "-fsFB"   ) ||
-                      ( currentarg == "-fsFeB"  ) ||
-                      ( currentarg == "-fsFiB"  ) ||
-                      ( currentarg == "-fsFIB"  ) ||
-                      ( currentarg == "-fsFrB"  ) ||
-                      ( currentarg == "-fsFRB"  ) ||
-                      ( currentarg == "-fsFuB"  ) ||
-                      ( currentarg == "-fsFeuB" ) ||
-                      ( currentarg == "-fsFiuB" ) ||
-                      ( currentarg == "-fsFIuB" ) ||
-                      ( currentarg == "-fsFruB" ) ||
-                      ( currentarg == "-fsFRuB" ) ||
-                      ( currentarg == "-fSF"    ) ||
-                      ( currentarg == "-fSFe"   ) ||
-                      ( currentarg == "-fSFi"   ) ||
-                      ( currentarg == "-fSFI"   ) ||
-                      ( currentarg == "-fSFr"   ) ||
-                      ( currentarg == "-fSFR"   ) ||
-                      ( currentarg == "-fSFu"   ) ||
-                      ( currentarg == "-fSFeu"  ) ||
-                      ( currentarg == "-fSFiu"  ) ||
-                      ( currentarg == "-fSFIu"  ) ||
-                      ( currentarg == "-fSFru"  ) ||
-                      ( currentarg == "-fSFRu"  ) ||
-                      ( currentarg == "-fSFB"   ) ||
-                      ( currentarg == "-fSFeB"  ) ||
-                      ( currentarg == "-fSFiB"  ) ||
-                      ( currentarg == "-fSFIB"  ) ||
-                      ( currentarg == "-fSFrB"  ) ||
-                      ( currentarg == "-fSFRB"  ) ||
-                      ( currentarg == "-fSFuB"  ) ||
-                      ( currentarg == "-fSFeuB" ) ||
-                      ( currentarg == "-fSFiuB" ) ||
-                      ( currentarg == "-fSFIuB" ) ||
-                      ( currentarg == "-fSFruB" ) ||
-                      ( currentarg == "-fSFRuB" )    )
+            else if ( ( currentarg == "-fsF"    ) || ( currentarg == "-fsFe"   ) || ( currentarg == "-fsFi"   ) ||
+                      ( currentarg == "-fsFI"   ) || ( currentarg == "-fsFr"   ) || ( currentarg == "-fsFR"   ) ||
+                      ( currentarg == "-fsFu"   ) || ( currentarg == "-fsFeu"  ) || ( currentarg == "-fsFiu"  ) ||
+                      ( currentarg == "-fsFIu"  ) || ( currentarg == "-fsFru"  ) || ( currentarg == "-fsFRu"  ) ||
+                      ( currentarg == "-fsFB"   ) || ( currentarg == "-fsFeB"  ) || ( currentarg == "-fsFiB"  ) ||
+                      ( currentarg == "-fsFIB"  ) || ( currentarg == "-fsFrB"  ) || ( currentarg == "-fsFRB"  ) ||
+                      ( currentarg == "-fsFuB"  ) || ( currentarg == "-fsFeuB" ) || ( currentarg == "-fsFiuB" ) ||
+                      ( currentarg == "-fsFIuB" ) || ( currentarg == "-fsFruB" ) || ( currentarg == "-fsFRuB" ) ||
+                      ( currentarg == "-fSF"    ) || ( currentarg == "-fSFe"   ) || ( currentarg == "-fSFi"   ) ||
+                      ( currentarg == "-fSFI"   ) || ( currentarg == "-fSFr"   ) || ( currentarg == "-fSFR"   ) ||
+                      ( currentarg == "-fSFu"   ) || ( currentarg == "-fSFeu"  ) || ( currentarg == "-fSFiu"  ) ||
+                      ( currentarg == "-fSFIu"  ) || ( currentarg == "-fSFru"  ) || ( currentarg == "-fSFRu"  ) ||
+                      ( currentarg == "-fSFB"   ) || ( currentarg == "-fSFeB"  ) || ( currentarg == "-fSFiB"  ) ||
+                      ( currentarg == "-fSFIB"  ) || ( currentarg == "-fSFrB"  ) || ( currentarg == "-fSFRB"  ) ||
+                      ( currentarg == "-fSFuB"  ) || ( currentarg == "-fSFeuB" ) || ( currentarg == "-fSFiuB" ) ||
+                      ( currentarg == "-fSFIuB" ) || ( currentarg == "-fSFruB" ) || ( currentarg == "-fSFRuB" ) )
             {
                 // Feature selection options
 
-                if ( grabargs(4,featureopt,commstack,currentarg) )
-                {
-                    retval  = 78;
-                    stopnow = 1;
-                }
+                if ( grabargs(4,featureopt,commstack,currentarg) ) { retval = 78; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fsFl"   ) ||
-                      ( currentarg == "-fsFel"  ) ||
-                      ( currentarg == "-fsFil"  ) ||
-                      ( currentarg == "-fsFIl"  ) ||
-                      ( currentarg == "-fsFrl"  ) ||
-                      ( currentarg == "-fsFRl"  ) ||
-                      ( currentarg == "-fsFlB"  ) ||
-                      ( currentarg == "-fsFelB" ) ||
-                      ( currentarg == "-fsFilB" ) ||
-                      ( currentarg == "-fsFIlB" ) ||
-                      ( currentarg == "-fsFrlB" ) ||
-                      ( currentarg == "-fsFRlB" ) ||
-                      ( currentarg == "-fSFl"   ) ||
-                      ( currentarg == "-fSFel"  ) ||
-                      ( currentarg == "-fSFil"  ) ||
-                      ( currentarg == "-fSFIl"  ) ||
-                      ( currentarg == "-fSFrl"  ) ||
-                      ( currentarg == "-fSFRl"  ) ||
-                      ( currentarg == "-fSFlB"  ) ||
-                      ( currentarg == "-fSFelB" ) ||
-                      ( currentarg == "-fSFilB" ) ||
-                      ( currentarg == "-fSFIlB" ) ||
-                      ( currentarg == "-fSFrlB" ) ||
-                      ( currentarg == "-fSFRlB" )    )
+            else if ( ( currentarg == "-fsFl"   ) || ( currentarg == "-fsFel"  ) || ( currentarg == "-fsFil"  ) ||
+                      ( currentarg == "-fsFIl"  ) || ( currentarg == "-fsFrl"  ) || ( currentarg == "-fsFRl"  ) ||
+                      ( currentarg == "-fsFlB"  ) || ( currentarg == "-fsFelB" ) || ( currentarg == "-fsFilB" ) ||
+                      ( currentarg == "-fsFIlB" ) || ( currentarg == "-fsFrlB" ) || ( currentarg == "-fsFRlB" ) ||
+                      ( currentarg == "-fSFl"   ) || ( currentarg == "-fSFel"  ) || ( currentarg == "-fSFil"  ) ||
+                      ( currentarg == "-fSFIl"  ) || ( currentarg == "-fSFrl"  ) || ( currentarg == "-fSFRl"  ) ||
+                      ( currentarg == "-fSFlB"  ) || ( currentarg == "-fSFelB" ) || ( currentarg == "-fSFilB" ) ||
+                      ( currentarg == "-fSFIlB" ) || ( currentarg == "-fSFrlB" ) || ( currentarg == "-fSFRlB" ) )
             {
                 // Feature selection options
 
-                if ( grabargs(5,featureopt,commstack,currentarg) )
-                {
-                    retval  = 79;
-                    stopnow = 1;
-                }
+                if ( grabargs(5,featureopt,commstack,currentarg) ) { retval = 79; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fzt"    ) ||
-                      ( currentarg == "-fzs"    ) ||
-                      ( currentarg == "-fztf"   ) ||
-                      ( currentarg == "-fztm"   ) ||
-                      ( currentarg == "-fztNlA" ) ||
-                      ( currentarg == "-fzsf"   ) ||
-                      ( currentarg == "-fzsm"   ) ||
-                      ( currentarg == "-fzsNlA" )    )
+            else if ( ( currentarg == "-fzt"    ) || ( currentarg == "-fzs"    ) || ( currentarg == "-fztf"   ) ||
+                      ( currentarg == "-fztm"   ) || ( currentarg == "-fztNlA" ) || ( currentarg == "-fzsf"   ) ||
+                      ( currentarg == "-fzsm"   ) || ( currentarg == "-fzsNlA" ) )
             {
                 // Fuzzy options
 
-                if ( grabargs(2,fuzzyopt,commstack,currentarg) )
-                {
-                    retval  = 80;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,fuzzyopt,commstack,currentarg) ) { retval = 80; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fztkn"   ) ||
-                      ( currentarg == "-fztku"   ) ||
-                      ( currentarg == "-fztkss"  ) ||
-                      ( currentarg == "-fztkus"  ) ||
-                      ( currentarg == "-fztknn"  ) ||
-                      ( currentarg == "-fztkuu"  ) ||
-                      ( currentarg == "-fztkc"   ) ||
-                      ( currentarg == "-fztkuc"  ) ||
-                      ( currentarg == "-fztkm"   ) ||
-                      ( currentarg == "-fztkum"  ) ||
-                      ( currentarg == "-fztkS"   ) ||
-                      ( currentarg == "-fztkA"   ) ||
-                      ( currentarg == "-fztkuS"  ) ||
-                      ( currentarg == "-fztkMS"  ) ||
-                      ( currentarg == "-fztkMA"  ) ||
-                      ( currentarg == "-fztkMuS" ) ||
-                      ( currentarg == "-fztkU"   ) ||
-                      ( currentarg == "-fztkoz"  ) ||
-                      ( currentarg == "-fztkmtb" ) ||
-                      ( currentarg == "-fztkbmx" ) ||
-                      ( currentarg == "-fztkOz"  ) ||
-                      ( currentarg == "-fzskn"   ) ||
-                      ( currentarg == "-fzsku"   ) ||
-                      ( currentarg == "-fzskns"  ) ||
-                      ( currentarg == "-fzskus"  ) ||
-                      ( currentarg == "-fzsknn"  ) ||
-                      ( currentarg == "-fzskuu"  ) ||
-                      ( currentarg == "-fzskc"   ) ||
-                      ( currentarg == "-fzskuc"  ) ||
-                      ( currentarg == "-fzskm"   ) ||
-                      ( currentarg == "-fzskum"  ) ||
-                      ( currentarg == "-fzskS"   ) ||
-                      ( currentarg == "-fzskA"   ) ||
-                      ( currentarg == "-fzskuS"  ) ||
-                      ( currentarg == "-fzskMS"  ) ||
-                      ( currentarg == "-fzskMA"  ) ||
-                      ( currentarg == "-fzskMuS" ) ||
-                      ( currentarg == "-fzskU"   ) ||
-                      ( currentarg == "-fzskoz"  ) ||
-                      ( currentarg == "-fzskmtb" ) ||
-                      ( currentarg == "-fzskbmx" ) ||
-                      ( currentarg == "-fzskOz"  )    )
+            else if ( ( currentarg == "-fztkn"   ) || ( currentarg == "-fztku"   ) || ( currentarg == "-fztkss"  ) ||
+                      ( currentarg == "-fztkus"  ) || ( currentarg == "-fztknn"  ) || ( currentarg == "-fztkuu"  ) ||
+                      ( currentarg == "-fztkc"   ) || ( currentarg == "-fztkuc"  ) || ( currentarg == "-fztkm"   ) ||
+                      ( currentarg == "-fztkum"  ) || ( currentarg == "-fztkS"   ) || ( currentarg == "-fztkA"   ) ||
+                      ( currentarg == "-fztkuS"  ) || ( currentarg == "-fztkMS"  ) || ( currentarg == "-fztkMA"  ) ||
+                      ( currentarg == "-fztkMuS" ) || ( currentarg == "-fztkU"   ) || ( currentarg == "-fztkoz"  ) ||
+                      ( currentarg == "-fztkmtb" ) || ( currentarg == "-fztkbmx" ) || ( currentarg == "-fztkOz"  ) ||
+                      ( currentarg == "-fzskn"   ) || ( currentarg == "-fzsku"   ) || ( currentarg == "-fzskns"  ) ||
+                      ( currentarg == "-fzskus"  ) || ( currentarg == "-fzsknn"  ) || ( currentarg == "-fzskuu"  ) ||
+                      ( currentarg == "-fzskc"   ) || ( currentarg == "-fzskuc"  ) || ( currentarg == "-fzskm"   ) ||
+                      ( currentarg == "-fzskum"  ) || ( currentarg == "-fzskS"   ) || ( currentarg == "-fzskA"   ) ||
+                      ( currentarg == "-fzskuS"  ) || ( currentarg == "-fzskMS"  ) || ( currentarg == "-fzskMA"  ) ||
+                      ( currentarg == "-fzskMuS" ) || ( currentarg == "-fzskU"   ) || ( currentarg == "-fzskoz"  ) ||
+                      ( currentarg == "-fzskmtb" ) || ( currentarg == "-fzskbmx" ) || ( currentarg == "-fzskOz"  ) )
             {
                 // Fuzzy options
 
-                if ( grabargs(1,fuzzyopt,commstack,currentarg) )
-                {
-                    retval  = 81;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,fuzzyopt,commstack,currentarg) ) { retval = 81; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fztks"   ) ||
-                      ( currentarg == "-fztki"   ) ||
-                      ( currentarg == "-fztka"   ) ||
-                      ( currentarg == "-fztkb"   ) ||
-                      ( currentarg == "-fztke"   ) ||
-                      ( currentarg == "-fztkw"   ) ||
-                      ( currentarg == "-fztkwlb" ) ||
-                      ( currentarg == "-fztkwub" ) ||
-                      ( currentarg == "-fztkt"   ) ||
-                      ( currentarg == "-fztktx"  ) ||
-                      ( currentarg == "-fztktk"  ) ||
-                      ( currentarg == "-fztkgg"  ) ||
-                      ( currentarg == "-fztkf"   ) ||
-                      ( currentarg == "-fztkr"   ) ||
-                      ( currentarg == "-fztkg"   ) ||
-                      ( currentarg == "-fztkd"   ) ||
-                      ( currentarg == "-fztkG"   ) ||
-                      ( currentarg == "-fztkrlb" ) ||
-                      ( currentarg == "-fztkglb" ) ||
-                      ( currentarg == "-fztkdlb" ) ||
-                      ( currentarg == "-fztkGlb" ) ||
-                      ( currentarg == "-fztkrub" ) ||
-                      ( currentarg == "-fztkgub" ) ||
-                      ( currentarg == "-fztkdub" ) ||
-                      ( currentarg == "-fztkGub" ) ||
-                      ( currentarg == "-fztkI"   ) ||
-                      ( currentarg == "-fztkan"  ) ||
-                      ( currentarg == "-fzsks"   ) ||
-                      ( currentarg == "-fzski"   ) ||
-                      ( currentarg == "-fzska"   ) ||
-                      ( currentarg == "-fzskb"   ) ||
-                      ( currentarg == "-fzske"   ) ||
-                      ( currentarg == "-fzskw"   ) ||
-                      ( currentarg == "-fzskwlb" ) ||
-                      ( currentarg == "-fzskwub" ) ||
-                      ( currentarg == "-fzskt"   ) ||
-                      ( currentarg == "-fzsktx"  ) ||
-                      ( currentarg == "-fzsktk"  ) ||
-                      ( currentarg == "-fzskgg"  ) ||
-                      ( currentarg == "-fzskf"   ) ||
-                      ( currentarg == "-fzskr"   ) ||
-                      ( currentarg == "-fzskg"   ) ||
-                      ( currentarg == "-fzskd"   ) ||
-                      ( currentarg == "-fzskG"   ) ||
-                      ( currentarg == "-fzskrlb" ) ||
-                      ( currentarg == "-fzskglb" ) ||
-                      ( currentarg == "-fzskdlb" ) ||
-                      ( currentarg == "-fzskGlb" ) ||
-                      ( currentarg == "-fzskrub" ) ||
-                      ( currentarg == "-fzskgub" ) ||
-                      ( currentarg == "-fzskdub" ) ||
-                      ( currentarg == "-fzskGub" ) ||
-                      ( currentarg == "-fzskI"   ) ||
-                      ( currentarg == "-fzskan"  )    )
+            else if ( ( currentarg == "-fztks"   ) || ( currentarg == "-fztki"   ) || ( currentarg == "-fztka"   ) ||
+                      ( currentarg == "-fztkb"   ) || ( currentarg == "-fztke"   ) || ( currentarg == "-fztkw"   ) ||
+                      ( currentarg == "-fztkwlb" ) || ( currentarg == "-fztkwub" ) || ( currentarg == "-fztkt"   ) ||
+                      ( currentarg == "-fztktx"  ) || ( currentarg == "-fztktk"  ) || ( currentarg == "-fztkgg"  ) ||
+                      ( currentarg == "-fztkf"   ) || ( currentarg == "-fztkr"   ) || ( currentarg == "-fztkg"   ) ||
+                      ( currentarg == "-fztkd"   ) || ( currentarg == "-fztkG"   ) || ( currentarg == "-fztkrlb" ) ||
+                      ( currentarg == "-fztkglb" ) || ( currentarg == "-fztkdlb" ) || ( currentarg == "-fztkGlb" ) ||
+                      ( currentarg == "-fztkrub" ) || ( currentarg == "-fztkgub" ) || ( currentarg == "-fztkdub" ) ||
+                      ( currentarg == "-fztkGub" ) || ( currentarg == "-fztkI"   ) || ( currentarg == "-fztkan"  ) ||
+                      ( currentarg == "-fzsks"   ) || ( currentarg == "-fzski"   ) || ( currentarg == "-fzska"   ) ||
+                      ( currentarg == "-fzskb"   ) || ( currentarg == "-fzske"   ) || ( currentarg == "-fzskw"   ) ||
+                      ( currentarg == "-fzskwlb" ) || ( currentarg == "-fzskwub" ) || ( currentarg == "-fzskt"   ) ||
+                      ( currentarg == "-fzsktx"  ) || ( currentarg == "-fzsktk"  ) || ( currentarg == "-fzskgg"  ) ||
+                      ( currentarg == "-fzskf"   ) || ( currentarg == "-fzskr"   ) || ( currentarg == "-fzskg"   ) ||
+                      ( currentarg == "-fzskd"   ) || ( currentarg == "-fzskG"   ) || ( currentarg == "-fzskrlb" ) ||
+                      ( currentarg == "-fzskglb" ) || ( currentarg == "-fzskdlb" ) || ( currentarg == "-fzskGlb" ) ||
+                      ( currentarg == "-fzskrub" ) || ( currentarg == "-fzskgub" ) || ( currentarg == "-fzskdub" ) ||
+                      ( currentarg == "-fzskGub" ) || ( currentarg == "-fzskI"   ) || ( currentarg == "-fzskan"  ) )
             {
                 // Fuzzy options
 
-                if ( grabargs(2,fuzzyopt,commstack,currentarg) )
-                {
-                    retval  = 82;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,fuzzyopt,commstack,currentarg) ) { retval = 82; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-fztkv"   ) ||
-                      ( currentarg == "-fztkV"   ) ||
-                      ( currentarg == "-fztkvlb" ) ||
-                      ( currentarg == "-fztkVlb" ) ||
-                      ( currentarg == "-fztkvub" ) ||
-                      ( currentarg == "-fztkVub" ) ||
-                      ( currentarg == "-fztko"   ) ||
-                      ( currentarg == "-fztkO"   ) ||
-                      ( currentarg == "-fztkx"   ) ||
-                      ( currentarg == "-fztkX"   ) ||
-                      ( currentarg == "-fzskv"   ) ||
-                      ( currentarg == "-fzskV"   ) ||
-                      ( currentarg == "-fzskvlb" ) ||
-                      ( currentarg == "-fzskVlb" ) ||
-                      ( currentarg == "-fzskvub" ) ||
-                      ( currentarg == "-fzskVub" ) ||
-                      ( currentarg == "-fzsko"   ) ||
-                      ( currentarg == "-fzskO"   ) ||
-                      ( currentarg == "-fzskx"   ) ||
-                      ( currentarg == "-fzskX"   )    )
+            else if ( ( currentarg == "-fztkv"   ) || ( currentarg == "-fztkV"   ) || ( currentarg == "-fztkvlb" ) ||
+                      ( currentarg == "-fztkVlb" ) || ( currentarg == "-fztkvub" ) || ( currentarg == "-fztkVub" ) ||
+                      ( currentarg == "-fztko"   ) || ( currentarg == "-fztkO"   ) || ( currentarg == "-fztkx"   ) ||
+                      ( currentarg == "-fztkX"   ) || ( currentarg == "-fzskv"   ) || ( currentarg == "-fzskV"   ) ||
+                      ( currentarg == "-fzskvlb" ) || ( currentarg == "-fzskVlb" ) || ( currentarg == "-fzskvub" ) ||
+                      ( currentarg == "-fzskVub" ) || ( currentarg == "-fzsko"   ) || ( currentarg == "-fzskO"   ) ||
+                      ( currentarg == "-fzskx"   ) || ( currentarg == "-fzskX"   ) )
             {
                 // Fuzzy options
 
-                if ( grabargs(3,fuzzyopt,commstack,currentarg) )
-                {
-                    retval  = 84;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,fuzzyopt,commstack,currentarg) ) { retval = 84; stopnow = 1; }
 
                 updateargvars = 1;
             }
@@ -4573,373 +3322,176 @@ int runsvmint(SVMThreadContext *svmContext,
             {
                 // Bootstrap options
 
-                if ( grabargs(1,bootopt,commstack,currentarg) )
-                {
-                    retval  = 85;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,bootopt,commstack,currentarg) ) { retval = 85; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-tx"   ) ||
-                      ( currentarg == "-tl"   ) ||
-                      ( currentarg == "-tmg"  ) ||
-                      ( currentarg == "-ta"   ) ||
-                      ( currentarg == "-tQ"   ) ||
-                      ( currentarg == "-tnQ"  ) ||
-                      ( currentarg == "-tQx"  ) ||
-                      ( currentarg == "-tnQx" ) ||
-                      ( currentarg == "-tvar" ) ||
-                      ( currentarg == "-txz"  ) ||
-                      ( currentarg == "-txf"  ) ||
-                      ( currentarg == "-txB"  ) ||
-                      ( currentarg == "-txzB" ) ||
-                      ( currentarg == "-txfB" ) ||
-                      ( currentarg == "-tr"   ) ||
-                      ( currentarg == "-trB"  )    )
+            else if ( ( currentarg == "-tx"   ) || ( currentarg == "-tl"   ) || ( currentarg == "-tmg"  ) ||
+                      ( currentarg == "-ta"   ) || ( currentarg == "-tQ"   ) || ( currentarg == "-tnQ"  ) ||
+                      ( currentarg == "-tQx"  ) || ( currentarg == "-tnQx" ) || ( currentarg == "-tvar" ) ||
+                      ( currentarg == "-txz"  ) || ( currentarg == "-txf"  ) || ( currentarg == "-txB"  ) ||
+                      ( currentarg == "-txzB" ) || ( currentarg == "-txfB" ) || ( currentarg == "-tr"   ) ||
+                      ( currentarg == "-trB"  ) )
             {
                 // Testing options
 
-                if ( grabargs(1,performopt,commstack,currentarg) )
-                {
-                    retval  = 89;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,performopt,commstack,currentarg) ) { retval = 89; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-tm"     ) ||
-                      ( currentarg == "-tn"     ) ||
-                      ( currentarg == "-tT"     ) ||
-                      ( currentarg == "-tM"     ) ||
-                      ( currentarg == "-tMv"    ) ||
-                      ( currentarg == "-tMx"    ) ||
-                      ( currentarg == "-tc"     ) ||
-                      ( currentarg == "-tcZ"    ) ||
-                      ( currentarg == "-tcz"    ) ||
-                      ( currentarg == "-tcF"    ) ||
-                      ( currentarg == "-tcf"    ) ||
-                      ( currentarg == "-tcB"    ) ||
-                      ( currentarg == "-tczB"   ) ||
-                      ( currentarg == "-tcfB"   ) ||
-                      ( currentarg == "-tf"     ) ||
-                      ( currentarg == "-tfe"    ) ||
-                      ( currentarg == "-tfi"    ) ||
-                      ( currentarg == "-tfI"    ) ||
-                      ( currentarg == "-tfr"    ) ||
-                      ( currentarg == "-tfR"    ) ||
-                      ( currentarg == "-tfu"    ) ||
-                      ( currentarg == "-tfeu"   ) ||
-                      ( currentarg == "-tfei"   ) ||
-                      ( currentarg == "-tfeI"   ) ||
-                      ( currentarg == "-tfer"   ) ||
-                      ( currentarg == "-tfeR"   ) ||
-                      ( currentarg == "-tfiu"   ) ||
-                      ( currentarg == "-tfIu"   ) ||
-                      ( currentarg == "-tfru"   ) ||
-                      ( currentarg == "-tfRu"   ) ||
-                      ( currentarg == "-tfeiu"  ) ||
-                      ( currentarg == "-tfeIu"  ) ||
-                      ( currentarg == "-tferu"  ) ||
-                      ( currentarg == "-tfeRu"  ) ||
-                      ( currentarg == "-tfB"    ) ||
-                      ( currentarg == "-tfeB"   ) ||
-                      ( currentarg == "-tfiB"   ) ||
-                      ( currentarg == "-tfIB"   ) ||
-                      ( currentarg == "-tfrB"   ) ||
-                      ( currentarg == "-tfRB"   ) ||
-                      ( currentarg == "-tfuB"   ) ||
-                      ( currentarg == "-tfeiB"  ) ||
-                      ( currentarg == "-tfeIB"  ) ||
-                      ( currentarg == "-tferB"  ) ||
-                      ( currentarg == "-tfeRB"  ) ||
-                      ( currentarg == "-tfeuB"  ) ||
-                      ( currentarg == "-tfiuB"  ) ||
-                      ( currentarg == "-tfIuB"  ) ||
-                      ( currentarg == "-tfruB"  ) ||
-                      ( currentarg == "-tfRuB"  ) ||
-                      ( currentarg == "-tfeiuB" ) ||
-                      ( currentarg == "-tfeIuB" ) ||
-                      ( currentarg == "-tferuB" ) ||
-                      ( currentarg == "-tfeRuB" )    )
+            else if ( ( currentarg == "-tm"     ) || ( currentarg == "-tn"     ) || ( currentarg == "-tT"     ) ||
+                      ( currentarg == "-tM"     ) || ( currentarg == "-tMv"    ) || ( currentarg == "-tMx"    ) ||
+                      ( currentarg == "-tc"     ) || ( currentarg == "-tcZ"    ) || ( currentarg == "-tcz"    ) ||
+                      ( currentarg == "-tcF"    ) || ( currentarg == "-tcf"    ) || ( currentarg == "-tcB"    ) ||
+                      ( currentarg == "-tczB"   ) || ( currentarg == "-tcfB"   ) || ( currentarg == "-tf"     ) ||
+                      ( currentarg == "-tfe"    ) || ( currentarg == "-tfi"    ) || ( currentarg == "-tfI"    ) ||
+                      ( currentarg == "-tfr"    ) || ( currentarg == "-tfR"    ) || ( currentarg == "-tfu"    ) ||
+                      ( currentarg == "-tfeu"   ) || ( currentarg == "-tfei"   ) || ( currentarg == "-tfeI"   ) ||
+                      ( currentarg == "-tfer"   ) || ( currentarg == "-tfeR"   ) || ( currentarg == "-tfiu"   ) ||
+                      ( currentarg == "-tfIu"   ) || ( currentarg == "-tfru"   ) || ( currentarg == "-tfRu"   ) ||
+                      ( currentarg == "-tfeiu"  ) || ( currentarg == "-tfeIu"  ) || ( currentarg == "-tferu"  ) ||
+                      ( currentarg == "-tfeRu"  ) || ( currentarg == "-tfB"    ) || ( currentarg == "-tfeB"   ) ||
+                      ( currentarg == "-tfiB"   ) || ( currentarg == "-tfIB"   ) || ( currentarg == "-tfrB"   ) ||
+                      ( currentarg == "-tfRB"   ) || ( currentarg == "-tfuB"   ) || ( currentarg == "-tfeiB"  ) ||
+                      ( currentarg == "-tfeIB"  ) || ( currentarg == "-tferB"  ) || ( currentarg == "-tfeRB"  ) ||
+                      ( currentarg == "-tfeuB"  ) || ( currentarg == "-tfiuB"  ) || ( currentarg == "-tfIuB"  ) ||
+                      ( currentarg == "-tfruB"  ) || ( currentarg == "-tfRuB"  ) || ( currentarg == "-tfeiuB" ) ||
+                      ( currentarg == "-tfeIuB" ) || ( currentarg == "-tferuB" ) || ( currentarg == "-tfeRuB" ) )
             {
                 // Testing options
 
-                if ( grabargs(2,performopt,commstack,currentarg) )
-                {
-                    retval  = 90;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,performopt,commstack,currentarg) ) { retval = 90; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-tC"     ) ||
-                      ( currentarg == "-tCZ"    ) ||
-                      ( currentarg == "-tCz"    ) ||
-                      ( currentarg == "-tCF"    ) ||
-                      ( currentarg == "-tCf"    ) ||
-                      ( currentarg == "-tCB"    ) ||
-                      ( currentarg == "-tCzB"   ) ||
-                      ( currentarg == "-tCfB"   ) ||
-                      ( currentarg == "-tMMv"   ) ||
-                      ( currentarg == "-tMMx"   ) ||
-                      ( currentarg == "-tfl"    ) ||
-                      ( currentarg == "-tfel"   ) ||
-                      ( currentarg == "-tfil"   ) ||
-                      ( currentarg == "-tfIl"   ) ||
-                      ( currentarg == "-tfrl"   ) ||
-                      ( currentarg == "-tfRl"   ) ||
-                      ( currentarg == "-tfeil"  ) ||
-                      ( currentarg == "-tfeIl"  ) ||
-                      ( currentarg == "-tferl"  ) ||
-                      ( currentarg == "-tfeRl"  ) ||
-                      ( currentarg == "-tflB"   ) ||
-                      ( currentarg == "-tfelB"  ) ||
-                      ( currentarg == "-tfilB"  ) ||
-                      ( currentarg == "-tfIlB"  ) ||
-                      ( currentarg == "-tfrlB"  ) ||
-                      ( currentarg == "-tfRlB"  ) ||
-                      ( currentarg == "-tfeilB" ) ||
-                      ( currentarg == "-tfeIlB" ) ||
-                      ( currentarg == "-tferlB" ) ||
-                      ( currentarg == "-tfeRlB" ) ||
-                      ( currentarg == "-tMvx"   ) ||
-                      ( currentarg == "-tV"     ) ||
-                      ( currentarg == "-tU"     ) ||
-                      ( currentarg == "-tW"     )    )
+            else if ( ( currentarg == "-tC"     ) || ( currentarg == "-tCZ"    ) || ( currentarg == "-tCz"    ) ||
+                      ( currentarg == "-tCF"    ) || ( currentarg == "-tCf"    ) || ( currentarg == "-tCB"    ) ||
+                      ( currentarg == "-tCzB"   ) || ( currentarg == "-tCfB"   ) || ( currentarg == "-tMMv"   ) ||
+                      ( currentarg == "-tMMx"   ) || ( currentarg == "-tfl"    ) || ( currentarg == "-tfel"   ) ||
+                      ( currentarg == "-tfil"   ) || ( currentarg == "-tfIl"   ) || ( currentarg == "-tfrl"   ) ||
+                      ( currentarg == "-tfRl"   ) || ( currentarg == "-tfeil"  ) || ( currentarg == "-tfeIl"  ) ||
+                      ( currentarg == "-tferl"  ) || ( currentarg == "-tfeRl"  ) || ( currentarg == "-tflB"   ) ||
+                      ( currentarg == "-tfelB"  ) || ( currentarg == "-tfilB"  ) || ( currentarg == "-tfIlB"  ) ||
+                      ( currentarg == "-tfrlB"  ) || ( currentarg == "-tfRlB"  ) || ( currentarg == "-tfeilB" ) ||
+                      ( currentarg == "-tfeIlB" ) || ( currentarg == "-tferlB" ) || ( currentarg == "-tfeRlB" ) ||
+                      ( currentarg == "-tMvx"   ) || ( currentarg == "-tV"     ) || ( currentarg == "-tU"     ) ||
+                      ( currentarg == "-tW"     ) )
             {
                 // Testing options
 
-                if ( grabargs(3,performopt,commstack,currentarg) )
-                {
-                    retval  = 91;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,performopt,commstack,currentarg) ) { retval = 91; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-tMd"    ) ||
-                      ( currentarg == "-tMD"    ) ||
-                      ( currentarg == "-tMMvx"  ) ||
-                      ( currentarg == "-tF"     ) ||
-                      ( currentarg == "-tFe"    ) ||
-                      ( currentarg == "-tFi"    ) ||
-                      ( currentarg == "-tFI"    ) ||
-                      ( currentarg == "-tFr"    ) ||
-                      ( currentarg == "-tFR"    ) ||
-                      ( currentarg == "-tFu"    ) ||
-                      ( currentarg == "-tFei"   ) ||
-                      ( currentarg == "-tFeI"   ) ||
-                      ( currentarg == "-tFer"   ) ||
-                      ( currentarg == "-tFeR"   ) ||
-                      ( currentarg == "-tFeu"   ) ||
-                      ( currentarg == "-tFiu"   ) ||
-                      ( currentarg == "-tFIu"   ) ||
-                      ( currentarg == "-tFru"   ) ||
-                      ( currentarg == "-tFRu"   ) ||
-                      ( currentarg == "-tFeiu"  ) ||
-                      ( currentarg == "-tFeIu"  ) ||
-                      ( currentarg == "-tFeru"  ) ||
-                      ( currentarg == "-tFeRu"  ) ||
-                      ( currentarg == "-tFB"    ) ||
-                      ( currentarg == "-tFeB"   ) ||
-                      ( currentarg == "-tFiB"   ) ||
-                      ( currentarg == "-tFIB"   ) ||
-                      ( currentarg == "-tFrB"   ) ||
-                      ( currentarg == "-tFRB"   ) ||
-                      ( currentarg == "-tFuB"   ) ||
-                      ( currentarg == "-tFeiB"  ) ||
-                      ( currentarg == "-tFeIB"  ) ||
-                      ( currentarg == "-tFerB"  ) ||
-                      ( currentarg == "-tFeRB"  ) ||
-                      ( currentarg == "-tFeuB"  ) ||
-                      ( currentarg == "-tFiuB"  ) ||
-                      ( currentarg == "-tFIuB"  ) ||
-                      ( currentarg == "-tFruB"  ) ||
-                      ( currentarg == "-tFRuB"  ) ||
-                      ( currentarg == "-tFeiuB" ) ||
-                      ( currentarg == "-tFeIuB" ) ||
-                      ( currentarg == "-tFeruB" ) ||
-                      ( currentarg == "-tFeRuB" )    )
+            else if ( ( currentarg == "-tMd"    ) || ( currentarg == "-tMD"    ) || ( currentarg == "-tMMvx"  ) ||
+                      ( currentarg == "-tF"     ) || ( currentarg == "-tFe"    ) || ( currentarg == "-tFi"    ) ||
+                      ( currentarg == "-tFI"    ) || ( currentarg == "-tFr"    ) || ( currentarg == "-tFR"    ) ||
+                      ( currentarg == "-tFu"    ) || ( currentarg == "-tFei"   ) || ( currentarg == "-tFeI"   ) ||
+                      ( currentarg == "-tFer"   ) || ( currentarg == "-tFeR"   ) || ( currentarg == "-tFeu"   ) ||
+                      ( currentarg == "-tFiu"   ) || ( currentarg == "-tFIu"   ) || ( currentarg == "-tFru"   ) ||
+                      ( currentarg == "-tFRu"   ) || ( currentarg == "-tFeiu"  ) || ( currentarg == "-tFeIu"  ) ||
+                      ( currentarg == "-tFeru"  ) || ( currentarg == "-tFeRu"  ) || ( currentarg == "-tFB"    ) ||
+                      ( currentarg == "-tFeB"   ) || ( currentarg == "-tFiB"   ) || ( currentarg == "-tFIB"   ) ||
+                      ( currentarg == "-tFrB"   ) || ( currentarg == "-tFRB"   ) || ( currentarg == "-tFuB"   ) ||
+                      ( currentarg == "-tFeiB"  ) || ( currentarg == "-tFeIB"  ) || ( currentarg == "-tFerB"  ) ||
+                      ( currentarg == "-tFeRB"  ) || ( currentarg == "-tFeuB"  ) || ( currentarg == "-tFiuB"  ) ||
+                      ( currentarg == "-tFIuB"  ) || ( currentarg == "-tFruB"  ) || ( currentarg == "-tFRuB"  ) ||
+                      ( currentarg == "-tFeiuB" ) || ( currentarg == "-tFeIuB" ) || ( currentarg == "-tFeruB" ) ||
+                      ( currentarg == "-tFeRuB" ) )
             {
                 // Testing options
 
-                if ( grabargs(4,performopt,commstack,currentarg) )
-                {
-                    retval  = 92;
-                    stopnow = 1;
-                }
+                if ( grabargs(4,performopt,commstack,currentarg) ) { retval = 92; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-tFl"    ) ||
-                      ( currentarg == "-tFel"   ) ||
-                      ( currentarg == "-tFil"   ) ||
-                      ( currentarg == "-tFIl"   ) ||
-                      ( currentarg == "-tFrl"   ) ||
-                      ( currentarg == "-tFRl"   ) ||
-                      ( currentarg == "-tFeil"  ) ||
-                      ( currentarg == "-tFeIl"  ) ||
-                      ( currentarg == "-tFerl"  ) ||
-                      ( currentarg == "-tFeRl"  ) ||
-                      ( currentarg == "-tFlB"   ) ||
-                      ( currentarg == "-tFelB"  ) ||
-                      ( currentarg == "-tFilB"  ) ||
-                      ( currentarg == "-tFIlB"  ) ||
-                      ( currentarg == "-tFrlB"  ) ||
-                      ( currentarg == "-tFRlB"  ) ||
-                      ( currentarg == "-tFeilB" ) ||
-                      ( currentarg == "-tFeIlB" ) ||
-                      ( currentarg == "-tFerlB" ) ||
-                      ( currentarg == "-tFeRlB" ) ||
-                      ( currentarg == "-tb"     ) ||
-                      ( currentarg == "-tg"     ) ||
-                      ( currentarg == "-tG"     )    )
+            else if ( ( currentarg == "-tFl"    ) || ( currentarg == "-tFel"   ) || ( currentarg == "-tFil"   ) ||
+                      ( currentarg == "-tFIl"   ) || ( currentarg == "-tFrl"   ) || ( currentarg == "-tFRl"   ) ||
+                      ( currentarg == "-tFeil"  ) || ( currentarg == "-tFeIl"  ) || ( currentarg == "-tFerl"  ) ||
+                      ( currentarg == "-tFeRl"  ) || ( currentarg == "-tFlB"   ) || ( currentarg == "-tFelB"  ) ||
+                      ( currentarg == "-tFilB"  ) || ( currentarg == "-tFIlB"  ) || ( currentarg == "-tFrlB"  ) ||
+                      ( currentarg == "-tFRlB"  ) || ( currentarg == "-tFeilB" ) || ( currentarg == "-tFeIlB" ) ||
+                      ( currentarg == "-tFerlB" ) || ( currentarg == "-tFeRlB" ) || ( currentarg == "-tb"     ) ||
+                      ( currentarg == "-tg"     ) || ( currentarg == "-tG"     ) )
             {
                 // Testing options
 
-                if ( grabargs(5,performopt,commstack,currentarg) )
-                {
-                    retval  = 93;
-                    stopnow = 1;
-                }
+                if ( grabargs(5,performopt,commstack,currentarg) ) { retval = 93; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-tgc" ) ||
-                      ( currentarg == "-tGc" )    )
+            else if ( ( currentarg == "-tgc" ) || ( currentarg == "-tGc" ) )
             {
                 // Testing options
 
-                if ( grabargs(6,performopt,commstack,currentarg) )
-                {
-                    retval  = 93;
-                    stopnow = 1;
-                }
+                if ( grabargs(6,performopt,commstack,currentarg) ) { retval = 93; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-hX"  ) ||
-                      ( currentarg == "-K0"  ) ||
-                      ( currentarg == "-hhX" ) ||
-                      ( currentarg == "-hXv" )    )
+            else if ( ( currentarg == "-hX"  ) || ( currentarg == "-K0"  ) || ( currentarg == "-hhX" ) ||
+                      ( currentarg == "-hXv" ) )
 
             {
                 // Reporting options
 
-                if ( grabargs(1,reportopt,commstack,currentarg) )
-                {
-                    retval  = 94;
-                    stopnow = 1;
-                }
+                if ( grabargs(1,reportopt,commstack,currentarg) ) { retval = 94; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-a"    ) ||
-                      ( currentarg == "-b"    ) ||
-                      ( currentarg == "-s"    ) ||
-                      ( currentarg == "-hpln" ) ||
-                      ( currentarg == "-hpld" ) ||
-                      ( currentarg == "-hplt" ) ||
-                      ( currentarg == "-hpls" ) ||
-                      ( currentarg == "-hplD" ) ||
-                      ( currentarg == "-hplv" ) ||
-                      ( currentarg == "-hplb" ) ||
-                      ( currentarg == "-hplm" ) ||
-                      ( currentarg == "-hplM" ) ||
-                      ( currentarg == "-hplx" ) ||
-                      ( currentarg == "-hU"   ) ||
-                      ( currentarg == "-hhU"  ) ||
-                      ( currentarg == "-ak"   ) ||
-                      ( currentarg == "-K1"   ) ||
-                      ( currentarg == "-phi2" ) ||
-                      ( currentarg == "-hY"   ) ||
-                      ( currentarg == "-hhY"  ) ||
-                      ( currentarg == "-hV"   ) ||
-                      ( currentarg == "-hhV"  ) ||
-                      ( currentarg == "-hW"   ) ||
-                      ( currentarg == "-hhW"  ) ||
-                      ( currentarg == "-hWe"  ) ||
-                      ( currentarg == "-hWE"  ) ||
-                      ( currentarg == "-hUv"  ) ||
-                      ( currentarg == "-hYv"  ) ||
-                      ( currentarg == "-hVv"  ) ||
-                      ( currentarg == "-hVV"  ) ||
-                      ( currentarg == "-hWv"  ) ||
-                      ( currentarg == "-echo" ) ||
-                      ( currentarg == "-ECHO" )    )
+            else if ( ( currentarg == "-a"    ) || ( currentarg == "-b"    ) || ( currentarg == "-s"    ) ||
+                      ( currentarg == "-hpln" ) || ( currentarg == "-hpld" ) || ( currentarg == "-hplt" ) ||
+                      ( currentarg == "-hpls" ) || ( currentarg == "-hplD" ) || ( currentarg == "-hplv" ) ||
+                      ( currentarg == "-hplb" ) || ( currentarg == "-hplm" ) || ( currentarg == "-hplM" ) ||
+                      ( currentarg == "-hplx" ) || ( currentarg == "-hU"   ) || ( currentarg == "-hhU"  ) ||
+                      ( currentarg == "-ak"   ) || ( currentarg == "-K1"   ) || ( currentarg == "-phi2" ) ||
+                      ( currentarg == "-hY"   ) || ( currentarg == "-hhY"  ) || ( currentarg == "-hV"   ) ||
+                      ( currentarg == "-hhV"  ) || ( currentarg == "-hW"   ) || ( currentarg == "-hhW"  ) ||
+                      ( currentarg == "-hWe"  ) || ( currentarg == "-hWE"  ) || ( currentarg == "-hUv"  ) ||
+                      ( currentarg == "-hYv"  ) || ( currentarg == "-hVv"  ) || ( currentarg == "-hVV"  ) ||
+                      ( currentarg == "-hWv"  ) || ( currentarg == "-echo" ) || ( currentarg == "-ECHO" ) )
             {
                 // Reporting options
 
-                if ( grabargs(2,reportopt,commstack,currentarg) )
-                {
-                    retval  = 95;
-                    stopnow = 1;
-                }
+                if ( grabargs(2,reportopt,commstack,currentarg) ) { retval = 95; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-hM"   ) ||
-                      ( currentarg == "-hYvn" ) ||
-                      ( currentarg == "-hUe"  ) ||
-                      ( currentarg == "-hUE"  ) ||
-                      ( currentarg == "-hYe"  ) ||
-                      ( currentarg == "-hYE"  ) ||
-                      ( currentarg == "-hN"   ) ||
-                      ( currentarg == "-hZ"   ) ||
-                      ( currentarg == "-hhZ"  ) ||
-                      ( currentarg == "-hUc"  ) ||
-                      ( currentarg == "-K2"   ) ||
-                      ( currentarg == "-hYc"  ) ||
-                      ( currentarg == "-hWc"  ) ||
-                      ( currentarg == "-hZv"  )    )
+            else if ( ( currentarg == "-hM"   ) || ( currentarg == "-hYvn" ) || ( currentarg == "-hUe"  ) ||
+                      ( currentarg == "-hUE"  ) || ( currentarg == "-hYe"  ) || ( currentarg == "-hYE"  ) ||
+                      ( currentarg == "-hN"   ) || ( currentarg == "-hZ"   ) || ( currentarg == "-hhZ"  ) ||
+                      ( currentarg == "-hUc"  ) || ( currentarg == "-K2"   ) || ( currentarg == "-hYc"  ) ||
+                      ( currentarg == "-hWc"  ) || ( currentarg == "-hZv"  ) )
             {
                 // Reporting options
 
-                if ( grabargs(3,reportopt,commstack,currentarg) )
-                {
-                    retval  = 96;
-                    stopnow = 1;
-                }
+                if ( grabargs(3,reportopt,commstack,currentarg) ) { retval = 96; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-hZc"  ) ||
-                      ( currentarg == "-plot" ) ||
-                      ( currentarg == "-K3"   )    )
+            else if ( ( currentarg == "-hZc" ) || ( currentarg == "-plot" ) || ( currentarg == "-K3" ) )
             {
                 // Reporting options
 
-                if ( grabargs(4,reportopt,commstack,currentarg) )
-                {
-                    retval  = 97;
-                    stopnow = 1;
-                }
+                if ( grabargs(4,reportopt,commstack,currentarg) ) { retval = 97; stopnow = 1; }
 
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-K4"   ) ||
-                      ( currentarg == "-hp"   ) ||
-                      ( currentarg == "-hpi"  )    )
+            else if ( ( currentarg == "-K4" ) || ( currentarg == "-hp" ) || ( currentarg == "-hpi" ) )
             {
                 // Reporting options
 
-                if ( grabargs(5,reportopt,commstack,currentarg) )
-                {
-                    retval  = 97;
-                    stopnow = 1;
-                }
+                if ( grabargs(5,reportopt,commstack,currentarg) ) { retval = 97; stopnow = 1; }
 
                 updateargvars = 1;
             }
@@ -4948,11 +3500,7 @@ int runsvmint(SVMThreadContext *svmContext,
             {
                 // Reporting options
 
-                if ( grabargs(7,reportopt,commstack,currentarg) )
-                {
-                    retval  = 97;
-                    stopnow = 1;
-                }
+                if ( grabargs(7,reportopt,commstack,currentarg) ) { retval = 97; stopnow = 1; }
 
                 updateargvars = 1;
             }
@@ -4961,11 +3509,7 @@ int runsvmint(SVMThreadContext *svmContext,
             {
                 // Reporting options
 
-                if ( grabargs(9,reportopt,commstack,currentarg) )
-                {
-                    retval  = 97;
-                    stopnow = 1;
-                }
+                if ( grabargs(9,reportopt,commstack,currentarg) ) { retval = 97; stopnow = 1; }
 
                 updateargvars = 1;
             }
@@ -4974,11 +3518,7 @@ int runsvmint(SVMThreadContext *svmContext,
             {
                 // Reporting options
 
-                if ( grabargs(12,reportopt,commstack,currentarg) )
-                {
-                    retval  = 97;
-                    stopnow = 1;
-                }
+                if ( grabargs(12,reportopt,commstack,currentarg) ) { retval = 97; stopnow = 1; }
 
                 updateargvars = 1;
             }
@@ -5034,16 +3574,11 @@ int runsvmint(SVMThreadContext *svmContext,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-hP"   ) ||
-                      ( currentarg == "-hPi"  )    )
+            else if ( ( currentarg == "-hP"   ) || ( currentarg == "-hPi"  ) )
             {
                 // Reporting options
 
-                if ( grabargs(6,reportopt,commstack,currentarg) )
-                {
-                    retval  = 97;
-                    stopnow = 1;
-                }
+                if ( grabargs(6,reportopt,commstack,currentarg) ) { retval = 97; stopnow = 1; }
 
                 updateargvars = 1;
             }
@@ -5326,6 +3861,9 @@ int runsvmint(SVMThreadContext *svmContext,
             {
                 time_used begintime = TIMECALL;
 
+                int nInd = 0;
+                int mInd = 0;
+
                 errstream() << "Processing multi-run setup operations... ";
 
                 while ( multirunopt.size() )
@@ -5337,12 +3875,9 @@ int runsvmint(SVMThreadContext *svmContext,
                     {
                         // Delete SVM completely
 
-                        int nInd = safeatoi(currcommand(1),argvariables);
+                        nInd = safeatoi(currcommand(1),argvariables);
 
-                        if ( nInd <= 0 )
-                        {
-                            STRTHROW("Non-positive SVM index "+currcommand(1)+" in -qR");
-                        }
+                        if ( nInd <= 0 ) { STRTHROW("Non-positive SVM index "+currcommand(1)+" in -qR"); }
 
                         // First claim the ML in question for the current thread...
 
@@ -5356,32 +3891,22 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         getMLmodels().zero(nInd);
 
-                        // NB: if nInd = svmInd then the SVM will be automatically
+                        // NB: if nInd = MLInd then the SVM will be automatically
                         // re-created in restarted state on first dereference
-                        // using svmbase(svmInd).
+                        // using svmbase(MLInd).
 
-                        if ( nInd == svmInd )
-                        {
-                            argvariables("&",42)("&",42) = svmInd;
-                        }
+                        if ( nInd == MLInd ) { argvariables("&",42)("&",42) = MLInd; }
                     }
 
                     else if ( currcommand(0) == "-qc" )
                     {
                         // copy SVM - overwrite n with m
 
-                        int nInd = safeatoi(currcommand(1),argvariables);
-                        int mInd = safeatoi(currcommand(2),argvariables);
+                        nInd = safeatoi(currcommand(1),argvariables);
+                        mInd = safeatoi(currcommand(2),argvariables);
 
-                        if ( nInd <= 0 )
-                        {
-                            STRTHROW("Non-positive first SVM index "+currcommand(1)+" in -qs");
-                        }
-
-                        if ( mInd <= 0 )
-                        {
-                            STRTHROW("Non-positive second SVM index "+currcommand(2)+" in -qs");
-                        }
+                        if ( nInd <= 0 ) { STRTHROW("Non-positive first SVM index "+currcommand(1)+" in -qs"); }
+                        if ( mInd <= 0 ) { STRTHROW("Non-positive second SVM index "+currcommand(2)+" in -qs"); }
 
                         if ( nInd != mInd )
                         {
@@ -5392,11 +3917,11 @@ int runsvmint(SVMThreadContext *svmContext,
 
                             // ...overwrite...
 
-                            getMLref(getMLmodels(),nInd) = getMLrefconst(getMLmodels(),mInd);
+                            getMLref(nInd) = getMLrefconst(mInd);
 
-                            if ( nInd == svmInd )
+                            if ( nInd == MLInd )
                             {
-                                argvariables("&",42)("&",42) = svmInd;
+                                argvariables("&",42)("&",42) = MLInd;
                             }
                         }
                     }
@@ -5405,12 +3930,9 @@ int runsvmint(SVMThreadContext *svmContext,
                     {
                         // copy SVM - overwrite n with m
 
-                        int mInd = safeatoi(currcommand(1),argvariables);
-
+                        mInd = safeatoi(currcommand(1),argvariables);
                         std::ofstream savefile(currcommand(2).c_str());
-
-                        savefile << getMLrefconst(getMLmodels(),mInd);
-
+                        savefile << getMLrefconst(mInd);
                         savefile.close();
                     }
 
@@ -5418,18 +3940,11 @@ int runsvmint(SVMThreadContext *svmContext,
                     {
                         // swap SVMs
 
-                        int nInd = safeatoi(currcommand(1),argvariables);
-                        int mInd = safeatoi(currcommand(2),argvariables);
+                        nInd = safeatoi(currcommand(1),argvariables);
+                        mInd = safeatoi(currcommand(2),argvariables);
 
-                        if ( nInd <= 0 )
-                        {
-                            STRTHROW("Non-positive first SVM index "+currcommand(1)+" in -qs");
-                        }
-
-                        if ( mInd <= 0 )
-                        {
-                            STRTHROW("Non-positive second SVM index "+currcommand(2)+" in -qs");
-                        }
+                        if ( nInd <= 0 ) { STRTHROW("Non-positive first SVM index "+currcommand(1)+" in -qs"); }
+                        if ( mInd <= 0 ) { STRTHROW("Non-positive second SVM index "+currcommand(2)+" in -qs"); }
 
                         if ( nInd != mInd )
                         {
@@ -5442,62 +3957,55 @@ int runsvmint(SVMThreadContext *svmContext,
 
                             getMLmodels().squareswap(nInd,mInd);
 
-                            if ( ( nInd == svmInd ) || ( mInd == svmInd ) )
+                            if ( ( nInd == MLInd ) || ( mInd == MLInd ) )
                             {
-                                argvariables("&",42)("&",42) = svmInd;
+                                argvariables("&",42)("&",42) = MLInd;
                             }
                         }
                     }
 
-                    else if ( currcommand(0) == "-qw" )
-                    {
-                        // set working SVM
+                    else if ( currcommand(0) == "-qw"   ) { MLInd         = safeatoi(currcommand(1),argvariables); StrucAssert( MLInd         > 0 ); grabML        (getMLmodels       (),MLInd        ); argvariables("&",42)("&",42) = MLInd; }
+                    else if ( currcommand(0) == "-gqw"  ) { gridInd       = safeatoi(currcommand(1),argvariables); StrucAssert( gridInd       > 0 ); grabgrid      (getgridOptim      (),gridInd      ); }
+                    else if ( currcommand(0) == "-gdqw" ) { DIRectInd     = safeatoi(currcommand(1),argvariables); StrucAssert( DIRectInd     > 0 ); grabDIRect    (getDIRectOptim    (),DIRectInd    ); }
+                    else if ( currcommand(0) == "-gNqw" ) { NelderMeadInd = safeatoi(currcommand(1),argvariables); StrucAssert( NelderMeadInd > 0 ); grabNelderMead(getNelderMeadOptim(),NelderMeadInd); }
+                    else if ( currcommand(0) == "-gbqw" ) { BayesianInd   = safeatoi(currcommand(1),argvariables); StrucAssert( BayesianInd   > 0 ); grabBayesian  (getBayesianOptim  (),BayesianInd  ); }
 
-                        int nInd = safeatoi(currcommand(1),argvariables);
+                    else if ( currcommand(0) == "-gbqwsigma" ) { BayesianInd = safeatoi(currcommand(1),argvariables); StrucAssert( BayesianInd > 0 ); grabBayesian(getBayesianOptim(),BayesianInd); MLInd = MLIndForBayesian_sigmaapprox(BayesianInd);                                       argvariables("&",42)("&",42) = MLInd; }
+                    else if ( currcommand(0) == "-gbqwdiff"  ) { BayesianInd = safeatoi(currcommand(1),argvariables); StrucAssert( BayesianInd > 0 ); grabBayesian(getBayesianOptim(),BayesianInd); MLInd = MLIndForBayesian_diffmodel  (BayesianInd);                                       argvariables("&",42)("&",42) = MLInd; }
+                    else if ( currcommand(0) == "-gbqwsrc"   ) { BayesianInd = safeatoi(currcommand(1),argvariables); StrucAssert( BayesianInd > 0 ); grabBayesian(getBayesianOptim(),BayesianInd); MLInd = MLIndForBayesian_srcmodel   (BayesianInd);                                       argvariables("&",42)("&",42) = MLInd; }
+                    else if ( currcommand(0) == "-gbqwmu"    ) { BayesianInd = safeatoi(currcommand(1),argvariables); StrucAssert( BayesianInd > 0 ); grabBayesian(getBayesianOptim(),BayesianInd); MLInd = MLIndForBayesian_muapprox   (BayesianInd,safeatoi(currcommand(2),argvariables)); argvariables("&",42)("&",42) = MLInd; }
+                    else if ( currcommand(0) == "-gbqwgt"    ) { BayesianInd = safeatoi(currcommand(1),argvariables); StrucAssert( BayesianInd > 0 ); grabBayesian(getBayesianOptim(),BayesianInd); MLInd = MLIndForBayesian_cgtapprox  (BayesianInd,safeatoi(currcommand(2),argvariables)); argvariables("&",42)("&",42) = MLInd; }
+                    else if ( currcommand(0) == "-gbqwaugx"  ) { BayesianInd = safeatoi(currcommand(1),argvariables); StrucAssert( BayesianInd > 0 ); grabBayesian(getBayesianOptim(),BayesianInd); MLInd = MLIndForBayesian_augxapprox (BayesianInd,safeatoi(currcommand(2),argvariables)); argvariables("&",42)("&",42) = MLInd; }
 
-                        if ( nInd <= 0 )
-                        {
-                            STRTHROW("Non-positive SVM index "+currcommand(1)+" in -qw");
-                        }
+                    else if ( currcommand(0) == "-gbqwsigmap" ) { BayesianInd = safeatoi(currcommand(1),argvariables); StrucAssert( BayesianInd > 0 ); grabBayesian(getBayesianOptim(),BayesianInd); MLInd = MLIndForBayesian_sigmaapprox_prior(BayesianInd); argvariables("&",42)("&",42) = MLInd; }
+                    else if ( currcommand(0) == "-gbqwdiffp"  ) { BayesianInd = safeatoi(currcommand(1),argvariables); StrucAssert( BayesianInd > 0 ); grabBayesian(getBayesianOptim(),BayesianInd); MLInd = MLIndForBayesian_diffmodel_prior  (BayesianInd); argvariables("&",42)("&",42) = MLInd; }
+                    else if ( currcommand(0) == "-gbqwsrcp"   ) { BayesianInd = safeatoi(currcommand(1),argvariables); StrucAssert( BayesianInd > 0 ); grabBayesian(getBayesianOptim(),BayesianInd); MLInd = MLIndForBayesian_srcmodel_prior   (BayesianInd); argvariables("&",42)("&",42) = MLInd; }
+                    else if ( currcommand(0) == "-gbqwmup"    ) { BayesianInd = safeatoi(currcommand(1),argvariables); StrucAssert( BayesianInd > 0 ); grabBayesian(getBayesianOptim(),BayesianInd); MLInd = MLIndForBayesian_muapprox_prior   (BayesianInd); argvariables("&",42)("&",42) = MLInd; }
+                    else if ( currcommand(0) == "-gbqwgtp"    ) { BayesianInd = safeatoi(currcommand(1),argvariables); StrucAssert( BayesianInd > 0 ); grabBayesian(getBayesianOptim(),BayesianInd); MLInd = MLIndForBayesian_cgtapprox_prior  (BayesianInd); argvariables("&",42)("&",42) = MLInd; }
+                    else if ( currcommand(0) == "-gbqwaugxp"  ) { BayesianInd = safeatoi(currcommand(1),argvariables); StrucAssert( BayesianInd > 0 ); grabBayesian(getBayesianOptim(),BayesianInd); MLInd = MLIndForBayesian_augxapprox_prior (BayesianInd); argvariables("&",42)("&",42) = MLInd; }
 
-                        if ( nInd != svmInd )
-                        {
-                            // ...claim new ML...
-
-                            grabML(getMLmodels(),nInd);
-
-                            // ...and update indexes
-
-                            svmInd = nInd;
-
-                            argvariables("&",42)("&",42) = svmInd;
-                        }
-                    }
+                    else if ( currcommand(0) == "-gqwrandp"  ) { gridInd       = safeatoi(currcommand(1),argvariables); StrucAssert( gridInd       > 0 ); grabgrid      (getgridOptim(),      gridInd      ); MLInd = MLIndForgrid_randDirtemplate_prior      (gridInd      ); argvariables("&",42)("&",42) = MLInd; }
+                    else if ( currcommand(0) == "-gdqwrandp" ) { DIRectInd     = safeatoi(currcommand(1),argvariables); StrucAssert( DIRectInd     > 0 ); grabDIRect    (getDIRectOptim(),    DIRectInd    ); MLInd = MLIndForDIRect_randDirtemplate_prior    (DIRectInd    ); argvariables("&",42)("&",42) = MLInd; }
+                    else if ( currcommand(0) == "-gNqwrandp" ) { NelderMeadInd = safeatoi(currcommand(1),argvariables); StrucAssert( NelderMeadInd > 0 ); grabNelderMead(getNelderMeadOptim(),NelderMeadInd); MLInd = MLIndForNelderMead_randDirtemplate_prior(NelderMeadInd); argvariables("&",42)("&",42) = MLInd; }
+                    else if ( currcommand(0) == "-gbqwrandp" ) { BayesianInd   = safeatoi(currcommand(1),argvariables); StrucAssert( BayesianInd   > 0 ); grabBayesian  (getBayesianOptim(),  BayesianInd  ); MLInd = MLIndForBayesian_randDirtemplate_prior  (BayesianInd  ); argvariables("&",42)("&",42) = MLInd; }
 
                     else if ( currcommand(0) == "-qpush" )
                     {
                         // set working SVM after pushing old one onto the stack
 
-                        MLindstack.push(svmInd);
+                        MLindstack.push(MLInd);
 
-                        int nInd = safeatoi(currcommand(1),argvariables);
+                        nInd = safeatoi(currcommand(1),argvariables);
 
-                        if ( nInd <= 0 )
-                        {
-                            STRTHROW("Non-positive SVM index "+currcommand(1)+" in -qpush");
-                        }
+                        if ( nInd <= 0 ) { STRTHROW("Non-positive SVM index "+currcommand(1)+" in -qpush"); }
 
-                        if ( nInd != svmInd )
+                        if ( nInd != MLInd )
                         {
                             // ...claim new ML...
-
                             grabML(getMLmodels(),nInd);
-
                             // ...and update indexes
-
-                            svmInd = nInd;
-
-                            argvariables("&",42)("&",42) = svmInd;
+                            MLInd = nInd;
+                            argvariables("&",42)("&",42) = MLInd;
                         }
                     }
 
@@ -5505,26 +4013,19 @@ int runsvmint(SVMThreadContext *svmContext,
                     {
                         // set working SVM to one popped off stack
 
-                        int nInd = -1;
+                        nInd = -1;
 
                         MLindstack.pop(nInd);
 
-                        if ( nInd <= 0 )
-                        {
-                            STRTHROW("Non-positive SVM index "+currcommand(1)+" in -qpush");
-                        }
+                        if ( nInd <= 0 ) { STRTHROW("Non-positive SVM index "+currcommand(1)+" in -qpush"); }
 
-                        if ( nInd != svmInd )
+                        if ( nInd != MLInd )
                         {
                             // ...claim new ML...
-
                             grabML(getMLmodels(),nInd);
-
                             // ...and update indexes
-
-                            svmInd = nInd;
-
-                            argvariables("&",42)("&",42) = svmInd;
+                            MLInd = nInd;
+                            argvariables("&",42)("&",42) = MLInd;
                         }
                     }
                 }
@@ -5551,23 +4052,23 @@ int runsvmint(SVMThreadContext *svmContext,
                     currcommand = svmpresetupopt(0);
                     svmpresetupopt.remove(0);
 
-                         if ( currcommand(0) == "-z"  ) { if ( getMLref(getMLmodels(),svmInd).ssetMLTypeClean(currcommand(1)) ) { STRTHROW("Syntax error: -z  options are many, but this is not one of them"); } }
-                    else if ( currcommand(0) == "-zd" ) { if ( getMLref(getMLmodels(),svmInd).ssetMLTypeMorph(currcommand(1)) ) { STRTHROW("Syntax error: -zd options are many, but this is not one of them"); } }
-                    else if ( currcommand(0) == "-zv" ) { if ( getMLref(getMLmodels(),svmInd).setVmethod(currcommand(1))      ) { STRTHROW("Syntax error: -zv options are many, but this is not one of them"); } }
-                    else if ( currcommand(0) == "-zc" ) { if ( getMLref(getMLmodels(),svmInd).setCmethod(currcommand(1))      ) { STRTHROW("Syntax error: -zc options are many, but this is not one of them"); } }
-                    else if ( currcommand(0) == "-zo" ) { if ( getMLref(getMLmodels(),svmInd).setOmethod(currcommand(1))      ) { STRTHROW("Syntax error: -zo options are many, but this is not one of them"); } }
-                    else if ( currcommand(0) == "-ac" ) { if ( getMLref(getMLmodels(),svmInd).setAmethod(currcommand(1))      ) { STRTHROW("Syntax error: -ac options are many, but this is not one of them"); } }
-                    else if ( currcommand(0) == "-R"  ) { if ( getMLref(getMLmodels(),svmInd).setRmethod(currcommand(1))      ) { STRTHROW("Syntax error: -R options are many, but this is not one of them"); } }
-                    else if ( currcommand(0) == "-T"  ) { if ( getMLref(getMLmodels(),svmInd).setTmethod(currcommand(1))      ) { STRTHROW("Syntax error: -T options are many, but this is not one of them"); } }
+                         if ( currcommand(0) == "-z"  ) { if ( getMLref(MLInd).ssetMLTypeClean(currcommand(1)) ) { STRTHROW("Syntax error: -z  options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-zd" ) { if ( getMLref(MLInd).ssetMLTypeMorph(currcommand(1)) ) { STRTHROW("Syntax error: -zd options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-zv" ) { if ( getMLref(MLInd).setVmethod(currcommand(1))      ) { STRTHROW("Syntax error: -zv options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-zc" ) { if ( getMLref(MLInd).setCmethod(currcommand(1))      ) { STRTHROW("Syntax error: -zc options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-zo" ) { if ( getMLref(MLInd).setOmethod(currcommand(1))      ) { STRTHROW("Syntax error: -zo options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-ac" ) { if ( getMLref(MLInd).setAmethod(currcommand(1))      ) { STRTHROW("Syntax error: -ac options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-R"  ) { if ( getMLref(MLInd).setRmethod(currcommand(1))      ) { STRTHROW("Syntax error: -R options are many, but this is not one of them"); } }
+                    else if ( currcommand(0) == "-T"  ) { if ( getMLref(MLInd).setTmethod(currcommand(1))      ) { STRTHROW("Syntax error: -T options are many, but this is not one of them"); } }
 
-                    else if ( currcommand(0) == "-TT" ) { getMLref(getMLmodels(),svmInd).setkconstWeights(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-TT" ) { getMLref(MLInd).setkconstWeights(safeatoi(currcommand(1),argvariables)); }
 
                     else if ( currcommand(0) == "-mlR" )
                     {
                         // Set empirical risk type
 
-                        if      ( currcommand(2) == "l" ) { getMLref(getMLmodels(),svmInd).setregtype(safeatoi(currcommand(1),argvariables),1); }
-                        else if ( currcommand(2) == "q" ) { getMLref(getMLmodels(),svmInd).setregtype(safeatoi(currcommand(1),argvariables),2); }
+                        if      ( currcommand(2) == "l" ) { getMLref(MLInd).setregtype(safeatoi(currcommand(1),argvariables),1); }
+                        else if ( currcommand(2) == "q" ) { getMLref(MLInd).setregtype(safeatoi(currcommand(1),argvariables),2); }
                         else { STRTHROW("Error: "+currentarg+" is not a valid -mlR mode."); }
                     }
 
@@ -5576,16 +4077,11 @@ int runsvmint(SVMThreadContext *svmContext,
                         // Load SVM from file
 
                         argvariables("&",1)("&",14).makeString(currcommand(1));
-
                         std::ifstream loadfile(currcommand(1).c_str());
 
-                        if ( !loadfile.is_open() )
-                        {
-                            STRTHROW("Unable to open SVM file "+currcommand(1));
-                        }
+                        if ( !loadfile.is_open() ) { STRTHROW("Unable to open SVM file "+currcommand(1)); }
 
-                        loadfile >> getMLref(getMLmodels(),svmInd);
-
+                        loadfile >> getMLref(MLInd);
                         loadfile.close();
                     }
                 }
@@ -5617,29 +4113,29 @@ int runsvmint(SVMThreadContext *svmContext,
                     gentype tmpg;
                     Vector<gentype> tmpv;
 
-                         if ( currcommand(0) == "-mc"   ) { getMLref(getMLmodels(),svmInd).setmercachesize(safeatoi(currcommand(1),argvariables));           }
-                    else if ( currcommand(0) == "-mcn"  ) { getMLref(getMLmodels(),svmInd).setmercachenorm(safeatoi(currcommand(1),argvariables));           }
-                    else if ( currcommand(0) == "-mba"  ) { getMLref(getMLmodels(),svmInd).setmlqlist(safeatoi(currcommand(1),argvariables),getMLref(getMLmodels(),safeatoi(currcommand(2),argvariables))); }
-                    else if ( currcommand(0) == "-mbw"  ) { getMLref(getMLmodels(),svmInd).setmlqweight(safeatoi(currcommand(1),argvariables),safeatowhatever(tmpg,currcommand(2),argvariables));     }
-                    else if ( currcommand(0) == "-mbm"  ) { getMLref(getMLmodels(),svmInd).setmlqmode(safeatoi(currcommand(1),argvariables));                }
-                    else if ( currcommand(0) == "-mbA"  ) { getMLref(getMLmodels(),svmInd).removemlqlist(safeatoi(currcommand(1),argvariables));             }
-                    else if ( currcommand(0) == "-mbI"  ) { getMLref(getMLmodels(),svmInd).addmlqlist(safeatoi(currcommand(1),argvariables),getMLref(getMLmodels(),safeatoi(currcommand(2),argvariables))); }
-                    else if ( currcommand(0) == "-msn"  ) { getMLref(getMLmodels(),svmInd).setBernDegree(safeatowhatever(tmpg,currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-msw"  ) { getMLref(getMLmodels(),svmInd).setBernIndex(safeatowhatever(tmpg,currcommand(1),argvariables));  }
-                    else if ( currcommand(0) == "-bat"  ) { getMLref(getMLmodels(),svmInd).setbattparam(safeatowhatever(tmpv,currcommand(1),argvariables));  }
-                    else if ( currcommand(0) == "-bam"  ) { getMLref(getMLmodels(),svmInd).setbatttmax(safeatof(currcommand(1),argvariables));               }
-                    else if ( currcommand(0) == "-bac"  ) { getMLref(getMLmodels(),svmInd).setbattImax(safeatof(currcommand(1),argvariables));               }
-                    else if ( currcommand(0) == "-bad"  ) { getMLref(getMLmodels(),svmInd).setbatttdelta(safeatof(currcommand(1),argvariables));             }
-                    else if ( currcommand(0) == "-bav"  ) { getMLref(getMLmodels(),svmInd).setbattVstart(safeatof(currcommand(1),argvariables));             }
-                    else if ( currcommand(0) == "-baT"  ) { getMLref(getMLmodels(),svmInd).setbattthetaStart(safeatof(currcommand(1),argvariables));         }
-                    else if ( currcommand(0) == "-bv"   ) { getMLref(getMLmodels(),svmInd).setVardelta();                                                    }
-                    else if ( currcommand(0) == "-bz"   ) { getMLref(getMLmodels(),svmInd).setZerodelta();                                                   }
-                    else if ( currcommand(0) == "-bgv"  ) { getMLref(getMLmodels(),svmInd).setVarmuBias();                                                   }
-                    else if ( currcommand(0) == "-bgz"  ) { getMLref(getMLmodels(),svmInd).setZeromuBias();                                                  }
-                    else if ( currcommand(0) == "-bgla" ) { getMLref(getMLmodels(),svmInd).setLaplaceConst();                                                }
-                    else if ( currcommand(0) == "-bgep" ) { getMLref(getMLmodels(),svmInd).setEPConst();                                                     }
-                    else if ( currcommand(0) == "-bgnc" ) { getMLref(getMLmodels(),svmInd).setNaiveConst();                                                  }
-                    else if ( currcommand(0) == "-mls"  ) { getMLref(getMLmodels(),svmInd).settsize(safeatoi(currcommand(1),argvariables));                  }
+                         if ( currcommand(0) == "-mc"   ) { getMLref(MLInd).setmercachesize(safeatoi(currcommand(1),argvariables));           }
+                    else if ( currcommand(0) == "-mcn"  ) { getMLref(MLInd).setmercachenorm(safeatoi(currcommand(1),argvariables));           }
+                    else if ( currcommand(0) == "-mba"  ) { getMLref(MLInd).setmlqlist(safeatoi(currcommand(1),argvariables),getMLref(safeatoi(currcommand(2),argvariables))); }
+                    else if ( currcommand(0) == "-mbw"  ) { getMLref(MLInd).setmlqweight(safeatoi(currcommand(1),argvariables),safeatowhatever(tmpg,currcommand(2),argvariables));     }
+                    else if ( currcommand(0) == "-mbm"  ) { getMLref(MLInd).setmlqmode(safeatoi(currcommand(1),argvariables));                }
+                    else if ( currcommand(0) == "-mbA"  ) { getMLref(MLInd).removemlqlist(safeatoi(currcommand(1),argvariables));             }
+                    else if ( currcommand(0) == "-mbI"  ) { getMLref(MLInd).addmlqlist(safeatoi(currcommand(1),argvariables),getMLref(safeatoi(currcommand(2),argvariables))); }
+                    else if ( currcommand(0) == "-msn"  ) { getMLref(MLInd).setBernDegree(safeatowhatever(tmpg,currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-msw"  ) { getMLref(MLInd).setBernIndex(safeatowhatever(tmpg,currcommand(1),argvariables));  }
+                    else if ( currcommand(0) == "-bat"  ) { getMLref(MLInd).setbattparam(safeatowhatever(tmpv,currcommand(1),argvariables));  }
+                    else if ( currcommand(0) == "-bam"  ) { getMLref(MLInd).setbatttmax(safeatof(currcommand(1),argvariables));               }
+                    else if ( currcommand(0) == "-bac"  ) { getMLref(MLInd).setbattImax(safeatof(currcommand(1),argvariables));               }
+                    else if ( currcommand(0) == "-bad"  ) { getMLref(MLInd).setbatttdelta(safeatof(currcommand(1),argvariables));             }
+                    else if ( currcommand(0) == "-bav"  ) { getMLref(MLInd).setbattVstart(safeatof(currcommand(1),argvariables));             }
+                    else if ( currcommand(0) == "-baT"  ) { getMLref(MLInd).setbattthetaStart(safeatof(currcommand(1),argvariables));         }
+                    else if ( currcommand(0) == "-bv"   ) { getMLref(MLInd).setVardelta();                                                    }
+                    else if ( currcommand(0) == "-bz"   ) { getMLref(MLInd).setZerodelta();                                                   }
+                    else if ( currcommand(0) == "-bgv"  ) { getMLref(MLInd).setVarmuBias();                                                   }
+                    else if ( currcommand(0) == "-bgz"  ) { getMLref(MLInd).setZeromuBias();                                                  }
+                    else if ( currcommand(0) == "-bgla" ) { getMLref(MLInd).setLaplaceConst();                                                }
+                    else if ( currcommand(0) == "-bgep" ) { getMLref(MLInd).setEPConst();                                                     }
+                    else if ( currcommand(0) == "-bgnc" ) { getMLref(MLInd).setNaiveConst();                                                  }
+                    else if ( currcommand(0) == "-mls"  ) { getMLref(MLInd).settsize(safeatoi(currcommand(1),argvariables));                  }
 
                     else if ( currcommand(0) == "-fV"   ) { argvariables("&",0)("&",safeatoi(currcommand(1),argvariables)) = currcommand(2); }
                     else if ( currcommand(0) == "-fW"   ) { safeatowhatever(argvariables("&",0)("&",safeatoi(currcommand(1),argvariables)),currcommand(2),argvariables); argvariables("&",0)("&",safeatoi(currcommand(1),argvariables)).finalise(); }
@@ -5655,26 +4151,19 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-B" )
                     {
                         // Set bias type
-
-                        if      ( currcommand(1) == "f" ) { getMLref(getMLmodels(),svmInd).setFixedBias(biasdefault); }
-                        else if ( currcommand(1) == "v" ) { getMLref(getMLmodels(),svmInd).setVarBias(); }
-                        else if ( currcommand(1) == "p" ) { getMLref(getMLmodels(),svmInd).setPosBias(); }
-                        else if ( currcommand(1) == "n" ) { getMLref(getMLmodels(),svmInd).setNegBias(); }
+                        if      ( currcommand(1) == "f" ) { getMLref(MLInd).setFixedBias(biasdefault); }
+                        else if ( currcommand(1) == "v" ) { getMLref(MLInd).setVarBias(); }
+                        else if ( currcommand(1) == "p" ) { getMLref(MLInd).setPosBias(); }
+                        else if ( currcommand(1) == "n" ) { getMLref(MLInd).setNegBias(); }
                         else { STRTHROW("Error: "+currentarg+" is not a valid -B mode."); }
                     }
 
                     else if ( currcommand(0) == "-N" )
                     {
                         int pssize = safeatoi(currcommand(1),argvariables);
-
                         pssize = ( pssize >= 0 ) ? pssize : INT_MAX-1;
-
-                        getMLref(getMLmodels(),svmInd).prealloc(pssize);
-
-                        if ( pssize > ((int) (1.5*LARGE_TRAIN_BOUNDARY)) )
-                        {
-                            disableAltContent();
-                        }
+                        getMLref(MLInd).prealloc(pssize);
+                        if ( pssize > ((int) (1.5*LARGE_TRAIN_BOUNDARY)) ) { disableAltContent(); }
                     }
 
                     else if ( ( currcommand(0) == "-fo" ) || ( currcommand(0) == "-foe" ) )
@@ -5683,26 +4172,15 @@ int runsvmint(SVMThreadContext *svmContext,
                         int targpos = ( currcommand(0) == "-foe" ) ? 1 : 0;
 
                         filenum = safeatoi(currcommand(1),argvariables);
-
-                        if ( filenum < 0 )
-                        {
-                            STRTHROW("Syntax error: file number in -fo must be non-negative.");
-                        }
+                        if ( filenum < 0 ) { STRTHROW("Syntax error: file number in -fo must be non-negative."); }
 
                         // Open the file
 
                         std::ifstream datfile(currcommand(2).c_str());
-
-                        if ( !datfile.is_open() )
-                        {
-                            STRTHROW("Unable to open file -fo "+currcommand(2));
-                        }
-
+                        if ( !datfile.is_open() ) { STRTHROW("Unable to open file -fo "+currcommand(2)); }
                         ofiletype templace(filenum,currcommand(2),targpos,datfile);
                         filevariables("&",filenum) = templace;
-
                         datfile.close();
-
                         argvariables("&",0)("&",filenum) = templace.getlinecnt();
                     }
 
@@ -5715,9 +4193,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         safeatowhatever(srcvar,currcommand(3),argvariables);
                         gentype &resvar = argvariables("&",0)("&",nn);
-
                         resvar.makeString(currcommand(2));
-
                         (*getsetExtVar)(resvar,srcvar,-3);
                     }
 
@@ -5731,7 +4207,6 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         safeatowhatever(srcvar,currcommand(3),argvariables);
                         gentype &resvar = argvariables("&",0)("&",nn);
-
                         (*getsetExtVar)(resvar,srcvar,ii);
                     }
 
@@ -5742,14 +4217,11 @@ int runsvmint(SVMThreadContext *svmContext,
                         int nn = safeatoi(currcommand(1),argvariables);
                         int fnnum = safeatoi(currcommand(2),argvariables);
 
+                        double rrr;
                         Vector<double> xxx;
 
                         safeatowhatever(xxx,currcommand(3),argvariables);
-
-                        double rrr;
-
                         evalTestFn(fnnum,rrr,xxx);
-
                         argvariables("&",0)("&",nn) = rrr;
                     }
 
@@ -5760,16 +4232,13 @@ int runsvmint(SVMThreadContext *svmContext,
                         int nn = safeatoi(currcommand(1),argvariables);
                         int fnnum = safeatoi(currcommand(2),argvariables);
 
+                        double rrr;
                         Vector<double> xxx;
                         Matrix<double> aaa;
 
                         safeatowhatever(xxx,currcommand(3),argvariables);
                         safeatowhatever(aaa,currcommand(4),argvariables);
-
-                        double rrr;
-
                         evalTestFn(fnnum,rrr,xxx,&aaa);
-
                         argvariables("&",0)("&",nn) = rrr;
                     }
 
@@ -5782,76 +4251,28 @@ int runsvmint(SVMThreadContext *svmContext,
                         int MM = safeatoi(currcommand(3),argvariables);
 
                         Vector<double> xxx;
-
                         safeatowhatever(xxx,currcommand(4),argvariables);
-
                         Vector<double> rrr(MM);
-
                         evalTestFn(fnnum,xxx.size(),MM,rrr,xxx,mooalpha);
-
                         argvariables("&",0)("&",nn) = rrr;
                     }
 
-                    else if ( currcommand(0) == "-fat" )
-                    {
-                        // Set something
-
-                        mooalpha = safeatof(currcommand(1),argvariables);
-                    }
-
-                    else if ( currcommand(0) == "-fVg" )
-                    {
-                        // Set integer variable
-
-                        int nn = safeatoi(currcommand(1),argvariables);
-
-                        argvariables("&",0)("&",nn) = currcommand(2);
-                    }
-
-                    else if ( currcommand(0) == "-fWg" )
-                    {
-                        // Set integer variable
-
-                        int nn = safeatoi(currcommand(1),argvariables);
-
-                        safeatowhatever(argvariables("&",0)("&",nn),currcommand(2),const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables));
-                        argvariables("&",0)("&",nn).finalise();
-                    }
-
-                    else if ( currcommand(0) == "-fVG" )
-                    {
-                        // Set integer variable
-
-                        int nn = safeatoi(currcommand(1),argvariables);
-
-                        const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn) = currcommand(2);
-                    }
-
-                    else if ( currcommand(0) == "-fWG" )
-                    {
-                        // Set integer variable
-
-                        int nn = safeatoi(currcommand(1),argvariables);
-
-                        safeatowhatever(const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn),currcommand(2),argvariables);
-                        const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn).finalise();
-                    }
+                    else if ( currcommand(0) == "-fat" ) { mooalpha = safeatof(currcommand(1),argvariables); } // Set something
+                    else if ( currcommand(0) == "-fVg" ) { int nn = safeatoi(currcommand(1),argvariables); argvariables("&",0)("&",nn) = currcommand(2); } // Set integer variable
+                    else if ( currcommand(0) == "-fWg" ) { int nn = safeatoi(currcommand(1),argvariables); safeatowhatever(argvariables("&",0)("&",nn),currcommand(2),const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)); argvariables("&",0)("&",nn).finalise(); } // Set integer variable
+                    else if ( currcommand(0) == "-fVG" ) { int nn = safeatoi(currcommand(1),argvariables); const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn) = currcommand(2); } // Set integer variable
+                    else if ( currcommand(0) == "-fWG" ) { int nn = safeatoi(currcommand(1),argvariables); safeatowhatever(const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn),currcommand(2),argvariables); const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn).finalise(); } // Set integer variable
 
                     else if ( currcommand(0) == "-fuG" )
                     {
                         // Single-objective test function evaluation
 
+                        double rrr;
                         int nn = safeatoi(currcommand(1),argvariables);
                         int fnnum = safeatoi(currcommand(2),argvariables);
-
                         Vector<double> xxx;
-
                         safeatowhatever(xxx,currcommand(3),argvariables);
-
-                        double rrr;
-
                         evalTestFn(fnnum,rrr,xxx);
-
                         const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn) = rrr;
                     }
 
@@ -5859,6 +4280,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     {
                         // Single-objective test function evaluation
 
+                        double rrr;
                         int nn = safeatoi(currcommand(1),argvariables);
                         int fnnum = safeatoi(currcommand(2),argvariables);
 
@@ -5867,11 +4289,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         safeatowhatever(xxx,currcommand(3),argvariables);
                         safeatowhatever(aaa,currcommand(3),argvariables);
-
-                        double rrr;
-
                         evalTestFn(fnnum,rrr,xxx,&aaa);
-
                         const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn) = rrr;
                     }
 
@@ -5884,13 +4302,9 @@ int runsvmint(SVMThreadContext *svmContext,
                         int MM = safeatoi(currcommand(3),argvariables);
 
                         Vector<double> xxx;
-
                         safeatowhatever(xxx,currcommand(4),argvariables);
-
                         Vector<double> rrr(MM);
-
                         evalTestFn(fnnum,xxx.size(),MM,rrr,xxx,mooalpha);
-
                         const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn) = rrr;
                     }
 
@@ -5901,7 +4315,6 @@ int runsvmint(SVMThreadContext *svmContext,
                         int nn = safeatoi(currcommand(1),argvariables);
 
                         std::string newmacro = currcommand(2);
-
                         // Curly brackets already stripped at this point
                         argvariables("&",130)("&",nn).makeString(newmacro);
                     }
@@ -5933,27 +4346,27 @@ int runsvmint(SVMThreadContext *svmContext,
                              if ( currcommand(0) == "-oo"   ) { doopt = 0; }
                         else if ( currcommand(0) == "-oO"   ) { doopt = 1; }
 
-                        else if ( currcommand(0) == "-oz"   ) { getMLref(getMLmodels(),svmInd).setzerotol(safeatof(currcommand(1),argvariables));       }
-                        else if ( currcommand(0) == "-ot"   ) { getMLref(getMLmodels(),svmInd).setmaxitcnt(safeatoi(currcommand(1),argvariables));      }
-                        else if ( currcommand(0) == "-oy"   ) { getMLref(getMLmodels(),svmInd).setmaxtraintime(safeatof(currcommand(1),argvariables));  }
-                        else if ( currcommand(0) == "-oY"   ) { getMLref(getMLmodels(),svmInd).settraintimeend(safeatof(currcommand(1),argvariables));  }
-                        else if ( currcommand(0) == "-olr"  ) { getMLref(getMLmodels(),svmInd).setlr(safeatof(currcommand(1),argvariables));            }
-                        else if ( currcommand(0) == "-olrb" ) { getMLref(getMLmodels(),svmInd).setlrb(safeatof(currcommand(1),argvariables));           }
-                        else if ( currcommand(0) == "-olrc" ) { getMLref(getMLmodels(),svmInd).setlrc(safeatof(currcommand(1),argvariables));           }
-                        else if ( currcommand(0) == "-olrd" ) { getMLref(getMLmodels(),svmInd).setlrd(safeatof(currcommand(1),argvariables));           }
-                        else if ( currcommand(0) == "-oM"   ) { getMLref(getMLmodels(),svmInd).setmemsize(safeatoi(currcommand(1),argvariables));       }
-                        else if ( currcommand(0) == "-ofa"  ) { getMLref(getMLmodels(),svmInd).setoutermethod(safeatoi(currcommand(1),argvariables));   }
-                        else if ( currcommand(0) == "-ofe"  ) { getMLref(getMLmodels(),svmInd).setoutertol(safeatof(currcommand(1),argvariables));      }
-                        else if ( currcommand(0) == "-ofm"  ) { getMLref(getMLmodels(),svmInd).setoutermom(safeatof(currcommand(1),argvariables));      }
-                        else if ( currcommand(0) == "-ofr"  ) { getMLref(getMLmodels(),svmInd).setouterlr(safeatof(currcommand(1),argvariables));       }
-                        else if ( currcommand(0) == "-ofs"  ) { getMLref(getMLmodels(),svmInd).setouterovsc(safeatof(currcommand(1),argvariables));     }
-                        else if ( currcommand(0) == "-oft"  ) { getMLref(getMLmodels(),svmInd).setoutermaxitcnt(safeatoi(currcommand(1),argvariables)); }
-                        else if ( currcommand(0) == "-ofM"  ) { getMLref(getMLmodels(),svmInd).setoutermaxcache(safeatoi(currcommand(1),argvariables)); }
-                        else if ( currcommand(0) == "-ofy"  ) { getMLref(getMLmodels(),svmInd).fudgeOn();                                               }
-                        else if ( currcommand(0) == "-ofn"  ) { getMLref(getMLmodels(),svmInd).fudgeOff();                                              }
-                        else if ( currcommand(0) == "-omr"  ) { getMLref(getMLmodels(),svmInd).setmlmlr(safeatof(currcommand(1),argvariables));         }
-                        else if ( currcommand(0) == "-ome"  ) { getMLref(getMLmodels(),svmInd).setdiffstop(safeatof(currcommand(1),argvariables));      }
-                        else if ( currcommand(0) == "-oms"  ) { getMLref(getMLmodels(),svmInd).setlsparse(safeatof(currcommand(1),argvariables));       }
+                        else if ( currcommand(0) == "-oz"   ) { getMLref(MLInd).setzerotol(safeatof(currcommand(1),argvariables));       }
+                        else if ( currcommand(0) == "-ot"   ) { getMLref(MLInd).setmaxitcnt(safeatoi(currcommand(1),argvariables));      }
+                        else if ( currcommand(0) == "-oy"   ) { getMLref(MLInd).setmaxtraintime(safeatof(currcommand(1),argvariables));  }
+                        else if ( currcommand(0) == "-oY"   ) { getMLref(MLInd).settraintimeend(safeatof(currcommand(1),argvariables));  }
+                        else if ( currcommand(0) == "-olr"  ) { getMLref(MLInd).setlr(safeatof(currcommand(1),argvariables));            }
+                        else if ( currcommand(0) == "-olrb" ) { getMLref(MLInd).setlrb(safeatof(currcommand(1),argvariables));           }
+                        else if ( currcommand(0) == "-olrc" ) { getMLref(MLInd).setlrc(safeatof(currcommand(1),argvariables));           }
+                        else if ( currcommand(0) == "-olrd" ) { getMLref(MLInd).setlrd(safeatof(currcommand(1),argvariables));           }
+                        else if ( currcommand(0) == "-oM"   ) { getMLref(MLInd).setmemsize(safeatoi(currcommand(1),argvariables));       }
+                        else if ( currcommand(0) == "-ofa"  ) { getMLref(MLInd).setoutermethod(safeatoi(currcommand(1),argvariables));   }
+                        else if ( currcommand(0) == "-ofe"  ) { getMLref(MLInd).setoutertol(safeatof(currcommand(1),argvariables));      }
+                        else if ( currcommand(0) == "-ofm"  ) { getMLref(MLInd).setoutermom(safeatof(currcommand(1),argvariables));      }
+                        else if ( currcommand(0) == "-ofr"  ) { getMLref(MLInd).setouterlr(safeatof(currcommand(1),argvariables));       }
+                        else if ( currcommand(0) == "-ofs"  ) { getMLref(MLInd).setouterovsc(safeatof(currcommand(1),argvariables));     }
+                        else if ( currcommand(0) == "-oft"  ) { getMLref(MLInd).setoutermaxitcnt(safeatoi(currcommand(1),argvariables)); }
+                        else if ( currcommand(0) == "-ofM"  ) { getMLref(MLInd).setoutermaxcache(safeatoi(currcommand(1),argvariables)); }
+                        else if ( currcommand(0) == "-ofy"  ) { getMLref(MLInd).fudgeOn();                                               }
+                        else if ( currcommand(0) == "-ofn"  ) { getMLref(MLInd).fudgeOff();                                              }
+                        else if ( currcommand(0) == "-omr"  ) { getMLref(MLInd).setmlmlr(safeatof(currcommand(1),argvariables));         }
+                        else if ( currcommand(0) == "-ome"  ) { getMLref(MLInd).setdiffstop(safeatof(currcommand(1),argvariables));      }
+                        else if ( currcommand(0) == "-oms"  ) { getMLref(MLInd).setlsparse(safeatof(currcommand(1),argvariables));       }
 
                         else if ( currcommand(0) == "-oe" )
                         {
@@ -5961,15 +4374,15 @@ int runsvmint(SVMThreadContext *svmContext,
 
                             if ( currcommand(1) == "A" )
                             {
-                                if ( isSVM(getMLrefconst(getMLmodels(),svmInd)) )
+                                if ( isSVM(getMLrefconst(MLInd)) )
                                 {
-                                    etol = ( 0.01*(getMLrefconst(getMLmodels(),svmInd).eps()) > 100*(getMLrefconst(getMLmodels(),svmInd).zerotol()) ) ? 0.01*(getMLrefconst(getMLmodels(),svmInd).eps()) : 100*(getMLrefconst(getMLmodels(),svmInd).zerotol());
+                                    etol = ( 0.01*(getMLrefconst(MLInd).eps()) > 100*(getMLrefconst(MLInd).zerotol()) ) ? 0.01*(getMLrefconst(MLInd).eps()) : 100*(getMLrefconst(MLInd).zerotol());
                                 }
 
 
                                 else
                                 {
-                                    etol = 100*getMLrefconst(getMLmodels(),svmInd).zerotol();
+                                    etol = 100*getMLrefconst(MLInd).zerotol();
                                 }
                             }
 
@@ -5978,8 +4391,8 @@ int runsvmint(SVMThreadContext *svmContext,
                                 etol = safeatof(currcommand(1),argvariables);
                             }
 
-                            getMLref(getMLmodels(),svmInd).setOpttol(etol);
-                            getMLref(getMLmodels(),svmInd).setOpttolb(etol);
+                            getMLref(MLInd).setOpttol(etol);
+                            getMLref(MLInd).setOpttolb(etol);
                         }
 
                         else if ( currcommand(0) == "-oea" )
@@ -5988,15 +4401,15 @@ int runsvmint(SVMThreadContext *svmContext,
 
                             if ( currcommand(1) == "A" )
                             {
-                                if ( isSVM(getMLrefconst(getMLmodels(),svmInd)) )
+                                if ( isSVM(getMLrefconst(MLInd)) )
                                 {
-                                    etol = ( 0.01*(getMLrefconst(getMLmodels(),svmInd).eps()) > 100*(getMLrefconst(getMLmodels(),svmInd).zerotol()) ) ? 0.01*(getMLrefconst(getMLmodels(),svmInd).eps()) : 100*(getMLrefconst(getMLmodels(),svmInd).zerotol());
+                                    etol = ( 0.01*(getMLrefconst(MLInd).eps()) > 100*(getMLrefconst(MLInd).zerotol()) ) ? 0.01*(getMLrefconst(MLInd).eps()) : 100*(getMLrefconst(MLInd).zerotol());
                                 }
 
 
                                 else
                                 {
-                                    etol = 100*getMLrefconst(getMLmodels(),svmInd).zerotol();
+                                    etol = 100*getMLrefconst(MLInd).zerotol();
                                 }
                             }
 
@@ -6005,7 +4418,7 @@ int runsvmint(SVMThreadContext *svmContext,
                                 etol = safeatof(currcommand(1),argvariables);
                             }
 
-                            getMLref(getMLmodels(),svmInd).setOpttol(etol);
+                            getMLref(MLInd).setOpttol(etol);
                         }
 
                         else if ( currcommand(0) == "-oeb" )
@@ -6014,15 +4427,15 @@ int runsvmint(SVMThreadContext *svmContext,
 
                             if ( currcommand(1) == "A" )
                             {
-                                if ( isSVM(getMLrefconst(getMLmodels(),svmInd)) )
+                                if ( isSVM(getMLrefconst(MLInd)) )
                                 {
-                                    etol = ( 0.01*(getMLrefconst(getMLmodels(),svmInd).eps()) > 100*(getMLrefconst(getMLmodels(),svmInd).zerotol()) ) ? 0.01*(getMLrefconst(getMLmodels(),svmInd).eps()) : 100*(getMLrefconst(getMLmodels(),svmInd).zerotol());
+                                    etol = ( 0.01*(getMLrefconst(MLInd).eps()) > 100*(getMLrefconst(MLInd).zerotol()) ) ? 0.01*(getMLrefconst(MLInd).eps()) : 100*(getMLrefconst(MLInd).zerotol());
                                 }
 
 
                                 else
                                 {
-                                    etol = 100*getMLrefconst(getMLmodels(),svmInd).zerotol();
+                                    etol = 100*getMLrefconst(MLInd).zerotol();
                                 }
                             }
 
@@ -6031,15 +4444,15 @@ int runsvmint(SVMThreadContext *svmContext,
                                 etol = safeatof(currcommand(1),argvariables);
                             }
 
-                            getMLref(getMLmodels(),svmInd).setOpttolb(etol);
+                            getMLref(MLInd).setOpttolb(etol);
                         }
 
                         else if ( currcommand(0) == "-om" )
                         {
-                            if      ( currcommand(1) == "a" ) { getMLref(getMLmodels(),svmInd).setOptActive(); }
-                            else if ( currcommand(1) == "s" ) { getMLref(getMLmodels(),svmInd).setOptSMO();    }
-                            else if ( currcommand(1) == "d" ) { getMLref(getMLmodels(),svmInd).setOptD2C();    }
-                            else if ( currcommand(1) == "g" ) { getMLref(getMLmodels(),svmInd).setOptGrad();   }
+                            if      ( currcommand(1) == "a" ) { getMLref(MLInd).setOptActive(); }
+                            else if ( currcommand(1) == "s" ) { getMLref(MLInd).setOptSMO();    }
+                            else if ( currcommand(1) == "d" ) { getMLref(MLInd).setOptD2C();    }
+                            else if ( currcommand(1) == "g" ) { getMLref(MLInd).setOptGrad();   }
 
                             else
                             {
@@ -6074,23 +4487,23 @@ int runsvmint(SVMThreadContext *svmContext,
 
                     gentype tmpg;
 
-                    if      ( currcommand(0) == "-pr"  ) { getMLref(getMLmodels(),svmInd).removeTrainingVector(safeatoi(currcommand(1),argvariables));                       }
-                    else if ( currcommand(0) == "-pcw" ) { getMLref(getMLmodels(),svmInd).setCweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-pcs" ) { getMLref(getMLmodels(),svmInd).scaleCweight(safeatof(currcommand(1),argvariables));                               }
-                    else if ( currcommand(0) == "-pww" ) { getMLref(getMLmodels(),svmInd).setepsweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-pws" ) { getMLref(getMLmodels(),svmInd).scaleepsweight(safeatof(currcommand(1),argvariables));                             }
-                    else if ( currcommand(0) == "-pS"  ) { getMLref(getMLmodels(),svmInd).scale(1/abs2(getMLref(getMLmodels(),svmInd).alpha()));                                   }
-                    else if ( currcommand(0) == "-ps"  ) { getMLref(getMLmodels(),svmInd).scale(safeatof(currcommand(1),argvariables));                                      }
-                    else if ( currcommand(0) == "-psz" ) { getMLref(getMLmodels(),svmInd).sety(safeatoi(currcommand(1),argvariables),safeatowhatever(tmpg,currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-pR"  ) { getMLref(getMLmodels(),svmInd).reset();                                                                           }
-                    else if ( currcommand(0) == "-pRR" ) { getMLref(getMLmodels(),svmInd).restart();                                                                         }
-                    else if ( currcommand(0) == "-pro" ) { getMLref(getMLmodels(),svmInd).removeTrainingVector(0,safeatoi(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-fic" ) { getMLref(getMLmodels(),svmInd).fillCache();                                                                       }
-                    else if ( currcommand(0) == "-pdw" ) { getMLref(getMLmodels(),svmInd).setsigmaweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-pds" ) { getMLref(getMLmodels(),svmInd).scalesigmaweight(safeatof(currcommand(1),argvariables));                           }
-                    else if ( currcommand(0) == "-prz" ) { getMLref(getMLmodels(),svmInd).removeNonSupports();                                                               }
-                    else if ( currcommand(0) == "-prm" ) { getMLref(getMLmodels(),svmInd).trimTrainingSet(safeatoi(currcommand(1),argvariables));                            }
-                    else if ( currcommand(0) == "-psd" ) { getMLref(getMLmodels(),svmInd).setd(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
+                    if      ( currcommand(0) == "-pr"  ) { getMLref(MLInd).removeTrainingVector(safeatoi(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-pcw" ) { getMLref(MLInd).setCweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-pcs" ) { getMLref(MLInd).scaleCweight(safeatof(currcommand(1),argvariables));                               }
+                    else if ( currcommand(0) == "-pww" ) { getMLref(MLInd).setepsweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-pws" ) { getMLref(MLInd).scaleepsweight(safeatof(currcommand(1),argvariables));                             }
+                    else if ( currcommand(0) == "-pS"  ) { getMLref(MLInd).scale(1/abs2(getMLref(MLInd).alpha()));                                   }
+                    else if ( currcommand(0) == "-ps"  ) { getMLref(MLInd).scale(safeatof(currcommand(1),argvariables));                                      }
+                    else if ( currcommand(0) == "-psz" ) { getMLref(MLInd).sety(safeatoi(currcommand(1),argvariables),safeatowhatever(tmpg,currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-pR"  ) { getMLref(MLInd).reset();                                                                           }
+                    else if ( currcommand(0) == "-pRR" ) { getMLref(MLInd).restart();                                                                         }
+                    else if ( currcommand(0) == "-pro" ) { getMLref(MLInd).removeTrainingVector(0,safeatoi(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-fic" ) { getMLref(MLInd).fillCache();                                                                       }
+                    else if ( currcommand(0) == "-pdw" ) { getMLref(MLInd).setsigmaweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-pds" ) { getMLref(MLInd).scalesigmaweight(safeatof(currcommand(1),argvariables));                           }
+                    else if ( currcommand(0) == "-prz" ) { getMLref(MLInd).removeNonSupports();                                                               }
+                    else if ( currcommand(0) == "-prm" ) { getMLref(MLInd).trimTrainingSet(safeatoi(currcommand(1),argvariables));                            }
+                    else if ( currcommand(0) == "-psd" ) { getMLref(MLInd).setd(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
 
                     else if ( currcommand(0) == "-pk" )
                     {
@@ -6107,7 +4520,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         datfile.close();
 
-                        getMLref(getMLmodels(),svmInd).K2bypass(kernmat);
+                        getMLref(MLInd).K2bypass(kernmat);
                     }
 
                     else if ( currcommand(0) == "-pmm" )
@@ -6130,7 +4543,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         int d = safeatoi(currcommand(6),argvariables);
                         gentype y = safeatog(currcommand(7),argvariables);
 
-                        makeMonotone(getMLref(getMLmodels(),svmInd),n,t,xb,xlb,xub,d,y);
+                        makeMonotone(getMLref(MLInd),n,t,xb,xlb,xub,d,y);
                     }
                 }
 
@@ -6174,23 +4587,23 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-AGl"  ) { safeatowhatever(AGlb,currcommand(1),argvariables);    }
                     else if ( currcommand(0) == "-AGu"  ) { safeatowhatever(AGub,currcommand(1),argvariables);    }
 
-                    else if ( currcommand(0) == "-Ad"   ) { getMLref(getMLmodels(),svmInd).settspaceDim(safeatoi(currcommand(1),argvariables));      }
-                    else if ( currcommand(0) == "-AD"   ) { getMLref(getMLmodels(),svmInd).setorder(safeatoi(currcommand(1),argvariables));          }
-                    else if ( currcommand(0) == "-Ac"   ) { getMLref(getMLmodels(),svmInd).addclass(safeatoi(currcommand(1),argvariables));          }
-                    else if ( currcommand(0) == "-As"   ) { getMLref(getMLmodels(),svmInd).setanomalyclass(safeatoi(currcommand(1),argvariables));   }
-                    else if ( currcommand(0) == "-Acz"  ) { getMLref(getMLmodels(),svmInd).addclass(safeatoi(currcommand(1),argvariables),1);        }
-                    else if ( currcommand(0) == "-Aca"  ) { getMLref(getMLmodels(),svmInd).anomalyOn(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-Acd"  ) { getMLref(getMLmodels(),svmInd).anomalyOff();                                             }
-                    else if ( currcommand(0) == "-Aby"  ) { getMLref(getMLmodels(),svmInd).setBasisYUU();                                            }
-                    else if ( currcommand(0) == "-Abu"  ) { getMLref(getMLmodels(),svmInd).setBasisUUU();                                            }
-                    else if ( currcommand(0) == "-AeU"  ) { getMLref(getMLmodels(),svmInd).addToBasisUU(getMLrefconst(getMLmodels(),svmInd).NbasisUU(),safeatowhatever(tmpg,currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-AeR"  ) { getMLref(getMLmodels(),svmInd).setBasisUU(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-Ar"   ) { getMLref(getMLmodels(),svmInd).removeFromBasisUU(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-ABy"  ) { getMLref(getMLmodels(),svmInd).setBasisYVV();                                            }
-                    else if ( currcommand(0) == "-ABu"  ) { getMLref(getMLmodels(),svmInd).setBasisUVV();                                            }
-                    else if ( currcommand(0) == "-AEU"  ) { getMLref(getMLmodels(),svmInd).addToBasisVV(getMLrefconst(getMLmodels(),svmInd).NbasisVV(),safeatowhatever(tmpg,currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-AER"  ) { getMLref(getMLmodels(),svmInd).setBasisVV(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-AR"   ) { getMLref(getMLmodels(),svmInd).removeFromBasisVV(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-Ad"   ) { getMLref(MLInd).settspaceDim(safeatoi(currcommand(1),argvariables));      }
+                    else if ( currcommand(0) == "-AD"   ) { getMLref(MLInd).setorder(safeatoi(currcommand(1),argvariables));          }
+                    else if ( currcommand(0) == "-Ac"   ) { getMLref(MLInd).addclass(safeatoi(currcommand(1),argvariables));          }
+                    else if ( currcommand(0) == "-As"   ) { getMLref(MLInd).setanomalyclass(safeatoi(currcommand(1),argvariables));   }
+                    else if ( currcommand(0) == "-Acz"  ) { getMLref(MLInd).addclass(safeatoi(currcommand(1),argvariables),1);        }
+                    else if ( currcommand(0) == "-Aca"  ) { getMLref(MLInd).anomalyOn(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Acd"  ) { getMLref(MLInd).anomalyOff();                                             }
+                    else if ( currcommand(0) == "-Aby"  ) { getMLref(MLInd).setBasisYUU();                                            }
+                    else if ( currcommand(0) == "-Abu"  ) { getMLref(MLInd).setBasisUUU();                                            }
+                    else if ( currcommand(0) == "-AeU"  ) { getMLref(MLInd).addToBasisUU(getMLrefconst(MLInd).NbasisUU(),safeatowhatever(tmpg,currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-AeR"  ) { getMLref(MLInd).setBasisUU(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Ar"   ) { getMLref(MLInd).removeFromBasisUU(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-ABy"  ) { getMLref(MLInd).setBasisYVV();                                            }
+                    else if ( currcommand(0) == "-ABu"  ) { getMLref(MLInd).setBasisUVV();                                            }
+                    else if ( currcommand(0) == "-AEU"  ) { getMLref(MLInd).addToBasisVV(getMLrefconst(MLInd).NbasisVV(),safeatowhatever(tmpg,currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-AER"  ) { getMLref(MLInd).setBasisVV(safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-AR"   ) { getMLref(MLInd).removeFromBasisVV(safeatoi(currcommand(1),argvariables)); }
 
                     else if ( ( currcommand(0) == "-Ag" ) || ( currcommand(0) == "-AG" ) || ( currcommand(0) == "-Agc" ) || ( currcommand(0) == "-AGc" ) )
                     {
@@ -6275,7 +4688,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         addtemptox(xdata,xtemplate);
 
-                        getMLref(getMLmodels(),svmInd).addTrainingVector(getMLref(getMLmodels(),svmInd).N(),ydata,xdata,Qweight,Qweight);
+                        getMLref(MLInd).addTrainingVector(getMLref(MLInd).N(),ydata,xdata,Qweight,Qweight);
                     }
 
                     else if ( currcommand(0) == "-Aq" )
@@ -6288,11 +4701,11 @@ int runsvmint(SVMThreadContext *svmContext,
                         double nvadd;
 
                         int jj,kk;
-                        int xdim = (getMLref(getMLmodels(),svmInd).indKey())(getMLref(getMLmodels(),svmInd).indKey().size()-1)+1;
+                        int xdim = (getMLref(MLInd).indKey())(getMLref(MLInd).indKey().size()-1)+1;
 
-                        for ( jj = 0 ; jj < getMLref(getMLmodels(),svmInd).N() ; ++jj )
+                        for ( jj = 0 ; jj < getMLref(MLInd).N() ; ++jj )
                         {
-                            SparseVector<gentype> xj = (getMLref(getMLmodels(),svmInd).x(jj));
+                            SparseVector<gentype> xj = (getMLref(MLInd).x(jj));
 
                             for ( kk = 0 ; kk < nbad ; ++kk )
                             {
@@ -6301,7 +4714,7 @@ int runsvmint(SVMThreadContext *svmContext,
                                 xj("[]",xdim+kk) = nmean+(nvadd*nvar);
                             }
 
-                            getMLref(getMLmodels(),svmInd).setx(jj,xj);
+                            getMLref(MLInd).setx(jj,xj);
                         }
                     }
 
@@ -6344,7 +4757,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::string savefiledummy("");
 
-                        int pointsadded = addtrainingdata(getMLref(getMLmodels(),svmInd),xtemplate,trainfile,reverse,ignoreStart,imax,ibase,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,savefiledummy);
+                        int pointsadded = addtrainingdata(getMLref(MLInd),xtemplate,trainfile,reverse,ignoreStart,imax,ibase,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,savefiledummy);
 
                         errstream() << "Added " << pointsadded << " training vectors/";
                     }
@@ -6396,8 +4809,8 @@ int runsvmint(SVMThreadContext *svmContext,
                         Vector<int> anomVect;
                         Vector<int> addVect;
 
-                        loadFileForHillClimb(getMLref(getMLmodels(),svmInd),xtemplate,trainfile,reverse,ignoreStart,imax,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,xxx,yyy);
-                        anomaliesRelabelled = anAnomalyCreate(getMLref(getMLmodels(),svmInd).getSVM(),xxx,zassign,trigVect,anomVect,addVect,Nantrig,adist,nadist,daclass,addVectsToML,0);
+                        loadFileForHillClimb(getMLref(MLInd),xtemplate,trainfile,reverse,ignoreStart,imax,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,xxx,yyy);
+                        anomaliesRelabelled = anAnomalyCreate(getMLref(MLInd).getSVM(),xxx,zassign,trigVect,anomVect,addVect,Nantrig,adist,nadist,daclass,addVectsToML,0);
 
                         errstream() << "Added " << addVect.size() << " out of " << xxx.size() << " training vectors (" << anomaliesRelabelled << " relabels, " << anomVect.size() << " ignored)/";
                     }
@@ -6414,7 +4827,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         streamItIn(xstr,x("&",0),0);
                         safeatowhatever(dz("&",0),currcommand(1),argvariables);
 
-                        addtrainingdata(getMLref(getMLmodels(),svmInd),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(MLInd),xtemplate,x,dz,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AY" )
@@ -6426,7 +4839,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         safeatowhatever(dz("&",0),currcommand(1),argvariables);
                         x("&",0) = safeatowhatever(tmpg,currcommand(2),argvariables).cast_vector(1);
 
-                        addtrainingdata(getMLref(getMLmodels(),svmInd),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(MLInd),xtemplate,x,dz,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AZ" )
@@ -6444,7 +4857,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         safeatowhatever(dz("&",0),currcommand(1),argvariables);
                         x("&",0) = safeatowhatever(tmpg,currcommand(2),argvariables).cast_vector(1);
 
-                        addtrainingdata(getMLref(getMLmodels(),nInd),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(nInd),xtemplate,x,dz,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AV" )
@@ -6459,7 +4872,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         dstr >> dz;
                         streamItIn(xstr,x,0);
 
-                        addtrainingdata(getMLref(getMLmodels(),svmInd),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(MLInd),xtemplate,x,dz,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AVv" )
@@ -6482,7 +4895,7 @@ int runsvmint(SVMThreadContext *svmContext,
                              x("&",ij) = ghgh(ij);
                         }
 
-                        addtrainingdata(getMLref(getMLmodels(),svmInd),xtemplate,x,(const Vector<gentype> &) dd,-1,0,0,temp);
+                        addtrainingdata(getMLref(MLInd),xtemplate,x,(const Vector<gentype> &) dd,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AVV" )
@@ -6507,7 +4920,7 @@ int runsvmint(SVMThreadContext *svmContext,
                              x("&",ij) = (const Vector<gentype> &) ghgh(ij);
                         }
 
-                        addtrainingdata(getMLref(getMLmodels(),svmInd),xtemplate,x,(const Vector<gentype> &) dd,(const Vector<gentype> &) ss,-1,0,0,temp);
+                        addtrainingdata(getMLref(MLInd),xtemplate,x,(const Vector<gentype> &) dd,(const Vector<gentype> &) ss,-1,0,0,temp);
                     }
 
                     else if ( currcommand(0) == "-AW" )
@@ -6516,24 +4929,22 @@ int runsvmint(SVMThreadContext *svmContext,
                         Vector<SparseVector<gentype> > x;
                         gentype temp;
 
-                        int pointsadded = loadDataFromMatlab(currcommand(2),currcommand(1),x,dz,getMLrefconst(getMLmodels(),svmInd).targType(),getsetExtVar);
+                        int pointsadded = loadDataFromMatlab(currcommand(2),currcommand(1),x,dz,getMLrefconst(MLInd).targType(),getsetExtVar);
 
-                        addtrainingdata(getMLref(getMLmodels(),svmInd),xtemplate,x,dz,-1,0,0,temp);
+                        addtrainingdata(getMLref(MLInd),xtemplate,x,dz,-1,0,0,temp);
 
                         errstream() << "Added " << pointsadded << " vectors from Matlab/";
                     }
 
-                    else if ( currcommand(0) == "-AeA" ) 
+                    else if ( currcommand(0) == "-AeA" )
                     {
-                        int pointsadded = addbasisdataUU(getMLref(getMLmodels(),svmInd),currcommand(1));
-
+                        int pointsadded = addbasisdataUU(getMLref(MLInd),currcommand(1));
                         errstream() << "Added " << pointsadded << " U basis vectors/";
                     }
 
-                    else if ( currcommand(0) == "-AEA" ) 
+                    else if ( currcommand(0) == "-AEA" )
                     {
-                        int pointsadded = addbasisdataVV(getMLref(getMLmodels(),svmInd),currcommand(1));
-
+                        int pointsadded = addbasisdataVV(getMLref(MLInd),currcommand(1));
                         errstream() << "Added " << pointsadded << " V basis vectors/";
                     }
                 }
@@ -6581,28 +4992,28 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-Stc"  ) { samScale  = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-Stq"  ) { samSlack  = safeatof(currcommand(1),argvariables); }
 
-                    else if ( currcommand(0) == "-Snx"  ) { getMLref(getMLmodels(),svmInd).normKernelNone();                                                             }
-                    else if ( currcommand(0) == "-Sna"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMeanUnitVariance();                                             }
-                    else if ( currcommand(0) == "-Snb"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMedianUnitVariance();                                           }
-                    else if ( currcommand(0) == "-Snc"  ) { getMLref(getMLmodels(),svmInd).normKernelUnitRange();                                                        }
-                    else if ( currcommand(0) == "-SNa"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMeanUnitVariance(0,1);                                          }
-                    else if ( currcommand(0) == "-SNb"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMedianUnitVariance(0,1);                                        }
-                    else if ( currcommand(0) == "-SNc"  ) { getMLref(getMLmodels(),svmInd).normKernelUnitRange(0,1);                                                     }
-                    else if ( currcommand(0) == "-SnA"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMeanUnitVariance(1,0);                                          }
-                    else if ( currcommand(0) == "-SnB"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMedianUnitVariance(1,0);                                        }
-                    else if ( currcommand(0) == "-SnC"  ) { getMLref(getMLmodels(),svmInd).normKernelUnitRange(1,0);                                                     }
-                    else if ( currcommand(0) == "-SNA"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMeanUnitVariance(1,1);                                          }
-                    else if ( currcommand(0) == "-SNB"  ) { getMLref(getMLmodels(),svmInd).normKernelZeroMedianUnitVariance(1,1);                                        }
-                    else if ( currcommand(0) == "-SNC"  ) { getMLref(getMLmodels(),svmInd).normKernelUnitRange(1,1);                                                     }
-                    else if ( currcommand(0) == "-Sra"  ) { getMLref(getMLmodels(),svmInd).randomise(safeatof(currcommand(1),argvariables));                             }
-                    else if ( currcommand(0) == "-Snt"  ) { getMLref(getMLmodels(),svmInd).setSampleMode(0,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-St"   ) { getMLref(getMLmodels(),svmInd).setSampleMode(1,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Spt"  ) { getMLref(getMLmodels(),svmInd).setSampleMode(2,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Sjt"  ) { getMLref(getMLmodels(),svmInd).setSampleMode(3,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Sjt+" ) { getMLref(getMLmodels(),svmInd).setSampleMode(4,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Sjt-" ) { getMLref(getMLmodels(),svmInd).setSampleMode(5,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
-                    else if ( currcommand(0) == "-Svc"  ) { getMLref(getMLmodels(),svmInd).setsigma_cut(safeatof(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-Sdi"  ) { getMLref(getMLmodels(),svmInd).disable(-safeatoi(currcommand(1),argvariables)-1);                            }
+                    else if ( currcommand(0) == "-Snx"  ) { getMLref(MLInd).normKernelNone();                                                             }
+                    else if ( currcommand(0) == "-Sna"  ) { getMLref(MLInd).normKernelZeroMeanUnitVariance();                                             }
+                    else if ( currcommand(0) == "-Snb"  ) { getMLref(MLInd).normKernelZeroMedianUnitVariance();                                           }
+                    else if ( currcommand(0) == "-Snc"  ) { getMLref(MLInd).normKernelUnitRange();                                                        }
+                    else if ( currcommand(0) == "-SNa"  ) { getMLref(MLInd).normKernelZeroMeanUnitVariance(0,1);                                          }
+                    else if ( currcommand(0) == "-SNb"  ) { getMLref(MLInd).normKernelZeroMedianUnitVariance(0,1);                                        }
+                    else if ( currcommand(0) == "-SNc"  ) { getMLref(MLInd).normKernelUnitRange(0,1);                                                     }
+                    else if ( currcommand(0) == "-SnA"  ) { getMLref(MLInd).normKernelZeroMeanUnitVariance(1,0);                                          }
+                    else if ( currcommand(0) == "-SnB"  ) { getMLref(MLInd).normKernelZeroMedianUnitVariance(1,0);                                        }
+                    else if ( currcommand(0) == "-SnC"  ) { getMLref(MLInd).normKernelUnitRange(1,0);                                                     }
+                    else if ( currcommand(0) == "-SNA"  ) { getMLref(MLInd).normKernelZeroMeanUnitVariance(1,1);                                          }
+                    else if ( currcommand(0) == "-SNB"  ) { getMLref(MLInd).normKernelZeroMedianUnitVariance(1,1);                                        }
+                    else if ( currcommand(0) == "-SNC"  ) { getMLref(MLInd).normKernelUnitRange(1,1);                                                     }
+                    else if ( currcommand(0) == "-Sra"  ) { getMLref(MLInd).randomise(safeatof(currcommand(1),argvariables));                             }
+                    else if ( currcommand(0) == "-Snt"  ) { getMLref(MLInd).setSampleMode(0,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-St"   ) { getMLref(MLInd).setSampleMode(1,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Spt"  ) { getMLref(MLInd).setSampleMode(2,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Sjt"  ) { getMLref(MLInd).setSampleMode(3,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Sjt+" ) { getMLref(MLInd).setSampleMode(4,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Sjt-" ) { getMLref(MLInd).setSampleMode(5,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
+                    else if ( currcommand(0) == "-Svc"  ) { getMLref(MLInd).setsigma_cut(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-Sdi"  ) { getMLref(MLInd).disable(-safeatoi(currcommand(1),argvariables)-1);                            }
 
                     else if ( currcommand(0) == "-SdI"  )
                     {
@@ -6616,7 +5027,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         iii *= -1;
                         iii -= -1;
 
-                        getMLref(getMLmodels(),svmInd).disable(iii);
+                        getMLref(MLInd).disable(iii);
                     }
 
                     if ( currcommand(0) == "-Sa" )
@@ -6630,32 +5041,32 @@ int runsvmint(SVMThreadContext *svmContext,
                             STRTHROW("Unable to open file -Sa "+currcommand(1));
                         }
 
-                        Vector<gentype> alpha(getMLref(getMLmodels(),svmInd).alpha());
+                        Vector<gentype> alpha(getMLref(MLInd).alpha());
 
                         datfile >> alpha;
                         datfile.close();
 
-                        getMLref(getMLmodels(),svmInd).setAlpha(alpha);
+                        getMLref(MLInd).setAlpha(alpha);
                     }
 
                     else if ( currcommand(0) == "-Sai" )
                     {
-                        Vector<gentype> alpha(getMLref(getMLmodels(),svmInd).alpha());
+                        Vector<gentype> alpha(getMLref(MLInd).alpha());
 
                         safeatowhatever(alpha("&",safeatoi(currcommand(1),argvariables)),currcommand(2),argvariables);
 
-                        getMLref(getMLmodels(),svmInd).setAlpha(alpha);
+                        getMLref(MLInd).setAlpha(alpha);
                     }
 
                     else if ( currcommand(0) == "-Saa" )
                     {
                         std::stringstream xstr(currcommand(1));
 
-                        Vector<gentype> alpha(getMLref(getMLmodels(),svmInd).alpha());
+                        Vector<gentype> alpha(getMLref(MLInd).alpha());
 
                         streamItIn(xstr,alpha,0);
 
-                        getMLref(getMLmodels(),svmInd).setAlpha(alpha);
+                        getMLref(MLInd).setAlpha(alpha);
                     }
 
                     else if ( currcommand(0) == "-Sb" )
@@ -6672,14 +5083,14 @@ int runsvmint(SVMThreadContext *svmContext,
                         gentype bias;
                         datfile >> bias;
                         datfile.close();
-                        getMLref(getMLmodels(),svmInd).setBias(bias);
+                        getMLref(MLInd).setBias(bias);
                     }
 
                     else if ( currcommand(0) == "-Sbb" )
                     {
                         gentype tmpg;
 
-                        getMLref(getMLmodels(),svmInd).setBias(safeatowhatever(tmpg,currcommand(1),argvariables));
+                        getMLref(MLInd).setBias(safeatowhatever(tmpg,currcommand(1),argvariables));
                     }
 
                     else if ( currcommand(0) == "-SA" )
@@ -6693,37 +5104,37 @@ int runsvmint(SVMThreadContext *svmContext,
                             STRTHROW("Unable to open file -SA "+currcommand(1));
                         }
 
-                        Matrix<double> lambda(getMLref(getMLmodels(),svmInd).lambdaKB());
+                        Matrix<double> lambda(getMLref(MLInd).lambdaKB());
 
                         datfile >> lambda;
                         datfile.close();
 
-                        getMLref(getMLmodels(),svmInd).setlambdaKB(lambda);
+                        getMLref(MLInd).setlambdaKB(lambda);
                     }
 
                     else if ( currcommand(0) == "-SAi" )
                     {
-                        Matrix<double> lambda(getMLref(getMLmodels(),svmInd).lambdaKB());
+                        Matrix<double> lambda(getMLref(MLInd).lambdaKB());
 
                         safeatowhatever(lambda("&",safeatoi(currcommand(1),argvariables),safeatoi(currcommand(2),argvariables)),currcommand(3),argvariables);
 
-                        getMLref(getMLmodels(),svmInd).setlambdaKB(lambda);
+                        getMLref(MLInd).setlambdaKB(lambda);
                     }
 
                     else if ( currcommand(0) == "-SAA" )
                     {
                         std::stringstream xstr(currcommand(1));
 
-                        Matrix<double> lambda(getMLref(getMLmodels(),svmInd).lambdaKB());
+                        Matrix<double> lambda(getMLref(MLInd).lambdaKB());
 
                         streamItIn(xstr,lambda,0);
 
-                        getMLref(getMLmodels(),svmInd).setlambdaKB(lambda);
+                        getMLref(MLInd).setlambdaKB(lambda);
                     }
 
                     else if ( currcommand(0) == "-Sx"  )
                     {
-                        ML_Base &model = getMLref(getMLmodels(),svmInd);
+                        ML_Base &model = getMLref(MLInd);
 
                         gentype f;
 
@@ -6765,120 +5176,100 @@ int runsvmint(SVMThreadContext *svmContext,
                     currcommand = learningopt(0);
                     learningopt.remove(0);
 
-                         if ( currcommand(0) == "-c"    ) { getMLref(getMLmodels(),svmInd).setC(safeatof(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-dc"   ) { getMLref(getMLmodels(),svmInd).setD(safeatof(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-ec"   ) { getMLref(getMLmodels(),svmInd).setE(safeatof(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-fc"   ) { getMLref(getMLmodels(),svmInd).setF(safeatof(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-Gc"   ) { getMLref(getMLmodels(),svmInd).setG(safeatof(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-dcs"  ) { getMLref(getMLmodels(),svmInd).setsigmaD(safeatof(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-ecs"  ) { getMLref(getMLmodels(),svmInd).setsigmaE(safeatof(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-fcs"  ) { getMLref(getMLmodels(),svmInd).setsigmaF(safeatof(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-Gcs"  ) { getMLref(getMLmodels(),svmInd).setsigmaG(safeatof(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-trf"  ) { getMLref(getMLmodels(),svmInd).settunev(safeatoi(currcommand(1),argvariables));                      }
-                    else if ( currcommand(0) == "-trk"  ) { getMLref(getMLmodels(),svmInd).setpegk(safeatoi(currcommand(1),argvariables));                       }
-                    else if ( currcommand(0) == "-tmv"  ) { getMLref(getMLmodels(),svmInd).setminv(safeatof(currcommand(1),argvariables));                       }
-                    else if ( currcommand(0) == "-rfs"  ) { getMLref(getMLmodels(),svmInd).setReOnly(safeatoi(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-dia"  ) { getMLref(getMLmodels(),svmInd).setinAdam(safeatoi(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-dog"  ) { getMLref(getMLmodels(),svmInd).setoutGrad(safeatoi(currcommand(1),argvariables));                    }
-                    else if ( currcommand(0) == "-nN"   ) { getMLref(getMLmodels(),svmInd).setNRff(safeatoi(currcommand(1),argvariables));                       }
-                    else if ( currcommand(0) == "-mtl"  ) { getMLref(getMLmodels(),svmInd).setNRffRep(safeatoi(currcommand(1),argvariables));                    }
-                    else if ( currcommand(0) == "-th"   ) { getMLref(getMLmodels(),svmInd).settheta(safeatof(currcommand(1),argvariables));                      }
-                    else if ( currcommand(0) == "-thn"  ) { getMLref(getMLmodels(),svmInd).setsimnorm(safeatoi(currcommand(1),argvariables));                    }
-                    else if ( currcommand(0) == "-c+"   ) { getMLref(getMLmodels(),svmInd).setCclass(+1,safeatof(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-c-"   ) { getMLref(getMLmodels(),svmInd).setCclass(-1,safeatof(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-c="   ) { getMLref(getMLmodels(),svmInd).setCclass(2,safeatof(currcommand(1),argvariables));                   }
-                    else if ( currcommand(0) == "-cd"   ) { getMLref(getMLmodels(),svmInd).setCclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-cs"   ) { getMLref(getMLmodels(),svmInd).setC(getMLrefconst(getMLmodels(),svmInd).C()*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-c+s"  ) { getMLref(getMLmodels(),svmInd).setCclass(+1,getMLrefconst(getMLmodels(),svmInd).Cclass(+1)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-c-s"  ) { getMLref(getMLmodels(),svmInd).setCclass(-1,getMLrefconst(getMLmodels(),svmInd).Cclass(-1)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-c=s"  ) { getMLref(getMLmodels(),svmInd).setCclass(2,getMLrefconst(getMLmodels(),svmInd).Cclass(2)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-cds"  ) { getMLref(getMLmodels(),svmInd).setCclass(safeatoi(currcommand(1),argvariables),getMLrefconst(getMLmodels(),svmInd).Cclass(safeatoi(currcommand(1),argvariables))*safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-j"    ) { getMLref(getMLmodels(),svmInd).setCclass(+1,safeatof(currcommand(1),argvariables)); getMLref(getMLmodels(),svmInd).setCclass(-1,1); }
-                    else if ( currcommand(0) == "-jc"   ) { getMLref(getMLmodels(),svmInd).setCclass(+1,safeatof(currcommand(1),argvariables)); getMLref(getMLmodels(),svmInd).setCclass(-1,1); }
-                    else if ( currcommand(0) == "-dd"   ) { getMLref(getMLmodels(),svmInd).setRejectThreshold(safeatof(currcommand(1),argvariables));            }
-                    else if ( currcommand(0) == "-w"    ) { getMLref(getMLmodels(),svmInd).seteps(safeatof(currcommand(1),argvariables));                        }
-                    else if ( currcommand(0) == "-w+"   ) { getMLref(getMLmodels(),svmInd).setepsclass(+1,safeatof(currcommand(1),argvariables));                }
-                    else if ( currcommand(0) == "-w-"   ) { getMLref(getMLmodels(),svmInd).setepsclass(-1,safeatof(currcommand(1),argvariables));                }
-                    else if ( currcommand(0) == "-w="   ) { getMLref(getMLmodels(),svmInd).setepsclass(2,safeatof(currcommand(1),argvariables));                 }
-                    else if ( currcommand(0) == "-wd"   ) { getMLref(getMLmodels(),svmInd).setepsclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-ws"   ) { getMLref(getMLmodels(),svmInd).seteps(getMLrefconst(getMLmodels(),svmInd).eps()*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-w+s"  ) { getMLref(getMLmodels(),svmInd).setepsclass(+1,getMLrefconst(getMLmodels(),svmInd).epsclass(+1)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-w-s"  ) { getMLref(getMLmodels(),svmInd).setepsclass(-1,getMLrefconst(getMLmodels(),svmInd).epsclass(-1)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-w=s"  ) { getMLref(getMLmodels(),svmInd).setepsclass(2,getMLrefconst(getMLmodels(),svmInd).epsclass(2)*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-wds"  ) { getMLref(getMLmodels(),svmInd).setepsclass(safeatoi(currcommand(1),argvariables),getMLrefconst(getMLmodels(),svmInd).Cclass(safeatoi(currcommand(1),argvariables))*safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-jw"   ) { getMLref(getMLmodels(),svmInd).setepsclass(+1,safeatof(currcommand(1),argvariables)); getMLref(getMLmodels(),svmInd).setepsclass(-1,1); }
-                    else if ( currcommand(0) == "-cw"   ) { getMLref(getMLmodels(),svmInd).setCweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-ww"   ) { getMLref(getMLmodels(),svmInd).setepsweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-mvb"  ) { getMLref(getMLmodels(),svmInd).setbetarank(safeatof(currcommand(1),argvariables));                   }
-                    else if ( currcommand(0) == "-ds"   ) { getMLref(getMLmodels(),svmInd).setsigma(getMLrefconst(getMLmodels(),svmInd).sigma()*safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-dw"   ) { getMLref(getMLmodels(),svmInd).setsigmaweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-mlc"  ) { getMLref(getMLmodels(),svmInd).setregC(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-Mn"   ) { getMLref(getMLmodels(),svmInd).setNoMonotonicConstraints();                                          }
-                    else if ( currcommand(0) == "-Mi"   ) { getMLref(getMLmodels(),svmInd).setForcedMonotonicIncreasing();                                       }
-                    else if ( currcommand(0) == "-Md"   ) { getMLref(getMLmodels(),svmInd).setForcedMonotonicDecreasing();                                       }
-                    else if ( currcommand(0) == "-nm"   ) { getMLref(getMLmodels(),svmInd).setm(safeatoi(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-Tl"   ) { getMLref(getMLmodels(),svmInd).setnu(safeatof(currcommand(1),argvariables));                         }
-                    else if ( currcommand(0) == "-Tq"   ) { getMLref(getMLmodels(),svmInd).setnuQuad(safeatof(currcommand(1),argvariables));                     }
-                    else if ( currcommand(0) == "-Nl"   ) { getMLref(getMLmodels(),svmInd).setLinBiasForceclass(-2,safeatof(currcommand(1),argvariables));       }
-                    else if ( currcommand(0) == "-Nq"   ) { getMLref(getMLmodels(),svmInd).setQuadBiasForceclass(-2,safeatof(currcommand(1),argvariables));      }
-                    else if ( currcommand(0) == "-Nld"  ) { getMLref(getMLmodels(),svmInd).setLinBiasForceclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-Nqd"  ) { getMLref(getMLmodels(),svmInd).setQuadBiasForceclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-mvi"  ) { getMLref(getMLmodels(),svmInd).setmaxitermvrank(safeatoi(currcommand(1),argvariables));              }
-                    else if ( currcommand(0) == "-mvlr" ) { getMLref(getMLmodels(),svmInd).setlrmvrank(safeatof(currcommand(1),argvariables));                   }
-                    else if ( currcommand(0) == "-mvzt" ) { getMLref(getMLmodels(),svmInd).setztmvrank(safeatof(currcommand(1),argvariables));                   }
-                    else if ( currcommand(0) == "-Fi"   ) { getMLref(getMLmodels(),svmInd).setmaxiterfuzzt(safeatoi(currcommand(1),argvariables));               }
-                    else if ( currcommand(0) == "-Flr"  ) { getMLref(getMLmodels(),svmInd).setlrfuzzt(safeatof(currcommand(1),argvariables));                    }
-                    else if ( currcommand(0) == "-Fzt"  ) { getMLref(getMLmodels(),svmInd).setztfuzzt(safeatof(currcommand(1),argvariables));                    }
-                    else if ( currcommand(0) == "-Fc"   ) { getMLref(getMLmodels(),svmInd).setcostfnfuzzt(currcommand(1));                                       }
-                    else if ( currcommand(0) == "-blx"  ) { getMLref(getMLmodels(),svmInd).setoutfn(currcommand(1));                                             }
-                    else if ( currcommand(0) == "-bly"  ) { getMLref(getMLmodels(),svmInd).setmexcall(currcommand(1));                                           }
-                    else if ( currcommand(0) == "-blz"  ) { getMLref(getMLmodels(),svmInd).setmexcallid(safeatoi(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-bls"  ) { getMLref(getMLmodels(),svmInd).setsyscall(currcommand(1));                                           }
-                    else if ( currcommand(0) == "-bfx"  ) { getMLref(getMLmodels(),svmInd).setxfilename(currcommand(1));                                         }
-                    else if ( currcommand(0) == "-bfy"  ) { getMLref(getMLmodels(),svmInd).setyfilename(currcommand(1));                                         }
-                    else if ( currcommand(0) == "-bfxy" ) { getMLref(getMLmodels(),svmInd).setxyfilename(currcommand(1));                                        }
-                    else if ( currcommand(0) == "-bfyx" ) { getMLref(getMLmodels(),svmInd).setyxfilename(currcommand(1));                                        }
-                    else if ( currcommand(0) == "-bfr"  ) { getMLref(getMLmodels(),svmInd).setrfilename(currcommand(1));                                         }
-                    else if ( currcommand(0) == "-k"    ) { getMLref(getMLmodels(),svmInd).setk(safeatoi(currcommand(1),argvariables));                          }
-                    else if ( currcommand(0) == "-K"    ) { getMLref(getMLmodels(),svmInd).setktp(safeatoi(currcommand(1),argvariables));                        }
-                    else if ( currcommand(0) == "-d"    ) { getMLref(getMLmodels(),svmInd).setsigma(safeatof(currcommand(1),argvariables));                      }
-                    else if ( currcommand(0) == "-ccs"  ) { getMLref(getMLmodels(),svmInd).setsigma(safeatof(currcommand(1),argvariables));                      }
-                    else if ( currcommand(0) == "-iz"   ) { getMLref(getMLmodels(),svmInd).setzref(safeatof(currcommand(1),argvariables));                       }
-                    else if ( currcommand(0) == "-ie"   ) { getMLref(getMLmodels(),svmInd).setehimethod(safeatoi(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-is"   ) { getMLref(getMLmodels(),svmInd).setscaltype (safeatoi(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-ia"   ) { getMLref(getMLmodels(),svmInd).setscalalpha(safeatof(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-in"   ) { getMLref(getMLmodels(),svmInd).setNsamp    (safeatoi(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-il"   ) { getMLref(getMLmodels(),svmInd).setsampSlack(safeatof(currcommand(1),argvariables));                  }
-                    else if ( currcommand(0) == "-mu"   ) { getMLref(getMLmodels(),svmInd).setprim(safeatoi(currcommand(1),argvariables));                       }
-                    else if ( currcommand(0) == "-mugt" ) { gentype mudef(currcommand(1)); getMLref(getMLmodels(),svmInd).setprival(mudef);                      }
-                    else if ( currcommand(0) == "-muml" ) { getMLref(getMLmodels(),svmInd).setpriml(&(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables)))); }
-
-                    else if ( currcommand(0) == "-Bf"   )
-                    {
-                        safeatowhatever(biasdefault,currcommand(1),argvariables);
-
-                        if ( getMLrefconst(getMLmodels(),svmInd).isFixedBias() )
-                        {
-                            getMLref(getMLmodels(),svmInd).setFixedBias(biasdefault);
-                        }
-                    }
+                         if ( currcommand(0) == "-c"    ) { getMLref(MLInd).setC(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-dc"   ) { getMLref(MLInd).setD(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-ec"   ) { getMLref(MLInd).setE(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-fc"   ) { getMLref(MLInd).setF(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-Gc"   ) { getMLref(MLInd).setG(safeatof(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-dcs"  ) { getMLref(MLInd).setsigmaD(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-ecs"  ) { getMLref(MLInd).setsigmaE(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-fcs"  ) { getMLref(MLInd).setsigmaF(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-Gcs"  ) { getMLref(MLInd).setsigmaG(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-trf"  ) { getMLref(MLInd).settunev(safeatoi(currcommand(1),argvariables));                      }
+                    else if ( currcommand(0) == "-trk"  ) { getMLref(MLInd).setpegk(safeatoi(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-tmv"  ) { getMLref(MLInd).setminv(safeatof(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-rfs"  ) { getMLref(MLInd).setReOnly(safeatoi(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-dia"  ) { getMLref(MLInd).setinAdam(safeatoi(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-dog"  ) { getMLref(MLInd).setoutGrad(safeatoi(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-nN"   ) { getMLref(MLInd).setNRff(safeatoi(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-mtl"  ) { getMLref(MLInd).setNRffRep(safeatoi(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-th"   ) { getMLref(MLInd).settheta(safeatof(currcommand(1),argvariables));                      }
+                    else if ( currcommand(0) == "-thn"  ) { getMLref(MLInd).setsimnorm(safeatoi(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-c+"   ) { getMLref(MLInd).setCclass(+1,safeatof(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-c-"   ) { getMLref(MLInd).setCclass(-1,safeatof(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-c="   ) { getMLref(MLInd).setCclass(2,safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-cd"   ) { getMLref(MLInd).setCclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-cs"   ) { getMLref(MLInd).setC(getMLrefconst(MLInd).C()*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-c+s"  ) { getMLref(MLInd).setCclass(+1,getMLrefconst(MLInd).Cclass(+1)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-c-s"  ) { getMLref(MLInd).setCclass(-1,getMLrefconst(MLInd).Cclass(-1)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-c=s"  ) { getMLref(MLInd).setCclass(2,getMLrefconst(MLInd).Cclass(2)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-cds"  ) { getMLref(MLInd).setCclass(safeatoi(currcommand(1),argvariables),getMLrefconst(MLInd).Cclass(safeatoi(currcommand(1),argvariables))*safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-j"    ) { getMLref(MLInd).setCclass(+1,safeatof(currcommand(1),argvariables)); getMLref(MLInd).setCclass(-1,1); }
+                    else if ( currcommand(0) == "-jc"   ) { getMLref(MLInd).setCclass(+1,safeatof(currcommand(1),argvariables)); getMLref(MLInd).setCclass(-1,1); }
+                    else if ( currcommand(0) == "-dd"   ) { getMLref(MLInd).setRejectThreshold(safeatof(currcommand(1),argvariables));            }
+                    else if ( currcommand(0) == "-w"    ) { getMLref(MLInd).seteps(safeatof(currcommand(1),argvariables));                        }
+                    else if ( currcommand(0) == "-w+"   ) { getMLref(MLInd).setepsclass(+1,safeatof(currcommand(1),argvariables));                }
+                    else if ( currcommand(0) == "-w-"   ) { getMLref(MLInd).setepsclass(-1,safeatof(currcommand(1),argvariables));                }
+                    else if ( currcommand(0) == "-w="   ) { getMLref(MLInd).setepsclass(2,safeatof(currcommand(1),argvariables));                 }
+                    else if ( currcommand(0) == "-wd"   ) { getMLref(MLInd).setepsclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-ws"   ) { getMLref(MLInd).seteps(getMLrefconst(MLInd).eps()*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-w+s"  ) { getMLref(MLInd).setepsclass(+1,getMLrefconst(MLInd).epsclass(+1)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-w-s"  ) { getMLref(MLInd).setepsclass(-1,getMLrefconst(MLInd).epsclass(-1)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-w=s"  ) { getMLref(MLInd).setepsclass(2,getMLrefconst(MLInd).epsclass(2)*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-wds"  ) { getMLref(MLInd).setepsclass(safeatoi(currcommand(1),argvariables),getMLrefconst(MLInd).Cclass(safeatoi(currcommand(1),argvariables))*safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-jw"   ) { getMLref(MLInd).setepsclass(+1,safeatof(currcommand(1),argvariables)); getMLref(MLInd).setepsclass(-1,1); }
+                    else if ( currcommand(0) == "-cw"   ) { getMLref(MLInd).setCweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-ww"   ) { getMLref(MLInd).setepsweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-mvb"  ) { getMLref(MLInd).setbetarank(safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-ds"   ) { getMLref(MLInd).setsigma(getMLrefconst(MLInd).sigma()*safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-dw"   ) { getMLref(MLInd).setsigmaweight(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-mlc"  ) { getMLref(MLInd).setregC(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Mn"   ) { getMLref(MLInd).setNoMonotonicConstraints();                                          }
+                    else if ( currcommand(0) == "-Mi"   ) { getMLref(MLInd).setForcedMonotonicIncreasing();                                       }
+                    else if ( currcommand(0) == "-Md"   ) { getMLref(MLInd).setForcedMonotonicDecreasing();                                       }
+                    else if ( currcommand(0) == "-nm"   ) { getMLref(MLInd).setm(safeatoi(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-Tl"   ) { getMLref(MLInd).setnu(safeatof(currcommand(1),argvariables));                         }
+                    else if ( currcommand(0) == "-Tq"   ) { getMLref(MLInd).setnuQuad(safeatof(currcommand(1),argvariables));                     }
+                    else if ( currcommand(0) == "-Nl"   ) { getMLref(MLInd).setLinBiasForceclass(-2,safeatof(currcommand(1),argvariables));       }
+                    else if ( currcommand(0) == "-Nq"   ) { getMLref(MLInd).setQuadBiasForceclass(-2,safeatof(currcommand(1),argvariables));      }
+                    else if ( currcommand(0) == "-Nld"  ) { getMLref(MLInd).setLinBiasForceclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Nqd"  ) { getMLref(MLInd).setQuadBiasForceclass(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-mvi"  ) { getMLref(MLInd).setmaxitermvrank(safeatoi(currcommand(1),argvariables));              }
+                    else if ( currcommand(0) == "-mvlr" ) { getMLref(MLInd).setlrmvrank(safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-mvzt" ) { getMLref(MLInd).setztmvrank(safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-Fi"   ) { getMLref(MLInd).setmaxiterfuzzt(safeatoi(currcommand(1),argvariables));               }
+                    else if ( currcommand(0) == "-Flr"  ) { getMLref(MLInd).setlrfuzzt(safeatof(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-Fzt"  ) { getMLref(MLInd).setztfuzzt(safeatof(currcommand(1),argvariables));                    }
+                    else if ( currcommand(0) == "-Fc"   ) { getMLref(MLInd).setcostfnfuzzt(currcommand(1));                                       }
+                    else if ( currcommand(0) == "-blx"  ) { getMLref(MLInd).setoutfn(currcommand(1));                                             }
+                    else if ( currcommand(0) == "-bly"  ) { getMLref(MLInd).setmexcall(currcommand(1));                                           }
+                    else if ( currcommand(0) == "-blz"  ) { getMLref(MLInd).setmexcallid(safeatoi(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-bls"  ) { getMLref(MLInd).setsyscall(currcommand(1));                                           }
+                    else if ( currcommand(0) == "-bfx"  ) { getMLref(MLInd).setxfilename(currcommand(1));                                         }
+                    else if ( currcommand(0) == "-bfy"  ) { getMLref(MLInd).setyfilename(currcommand(1));                                         }
+                    else if ( currcommand(0) == "-bfxy" ) { getMLref(MLInd).setxyfilename(currcommand(1));                                        }
+                    else if ( currcommand(0) == "-bfyx" ) { getMLref(MLInd).setyxfilename(currcommand(1));                                        }
+                    else if ( currcommand(0) == "-bfr"  ) { getMLref(MLInd).setrfilename(currcommand(1));                                         }
+                    else if ( currcommand(0) == "-k"    ) { getMLref(MLInd).setk(safeatoi(currcommand(1),argvariables));                          }
+                    else if ( currcommand(0) == "-K"    ) { getMLref(MLInd).setktp(safeatoi(currcommand(1),argvariables));                        }
+                    else if ( currcommand(0) == "-d"    ) { getMLref(MLInd).setsigma(safeatof(currcommand(1),argvariables));                      }
+                    else if ( currcommand(0) == "-ccs"  ) { getMLref(MLInd).setsigma(safeatof(currcommand(1),argvariables));                      }
+                    else if ( currcommand(0) == "-iz"   ) { getMLref(MLInd).setzref(safeatof(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-ie"   ) { getMLref(MLInd).setehimethod(safeatoi(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-is"   ) { getMLref(MLInd).setscaltype (safeatoi(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-ia"   ) { getMLref(MLInd).setscalalpha(safeatof(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-in"   ) { getMLref(MLInd).setNsamp    (safeatoi(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-il"   ) { getMLref(MLInd).setsampSlack(safeatof(currcommand(1),argvariables));                  }
+                    else if ( currcommand(0) == "-mu"   ) { getMLref(MLInd).setprim(safeatoi(currcommand(1),argvariables));                       }
+                    else if ( currcommand(0) == "-mugt" ) { gentype mudef(currcommand(1)); getMLref(MLInd).setprival(mudef);                      }
+                    else if ( currcommand(0) == "-muml" ) { getMLref(MLInd).setpriml(&(getMLref(safeatoi(currcommand(1),argvariables)))); }
+                    else if ( currcommand(0) == "-Bf"   ) { safeatowhatever(biasdefault,currcommand(1),argvariables); if ( getMLrefconst(MLInd).isFixedBias() ) { getMLref(MLInd).setFixedBias(biasdefault); } }
 
                     else if ( currcommand(0) == "-m"    )
                     {
-                        if ( currcommand(1) == "r" )
-                        {
-                            getMLref(getMLmodels(),svmInd).setKreal();
-                        }
-
-                        else if ( currcommand(1) == "m" )
-                        {
-                            getMLref(getMLmodels(),svmInd).setKunreal();
-                        }
-
-                        else
-                        {
-                            STRTHROW("Error: -m arguments are {r,m}");
-                        }
+                        if      ( currcommand(1) == "r" ) { getMLref(MLInd).setKreal();   }
+                        else if ( currcommand(1) == "m" ) { getMLref(MLInd).setKunreal(); }
+                        else                              { STRTHROW("Error: -m arguments are {r,m}");   }
                     }
                 }
 
@@ -6919,10 +5310,10 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::string currcommandis = "-" + ((currcommand(0)).substr(2));
 
-                        ML_Base &kernML = getMLref(getMLmodels(),svmInd);
+                        ML_Base &kernML = getMLref(MLInd);
                         MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,ekernnum,efirstcall,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,ekernnum,efirstcall);
 
                         efirstcall = 0;
                     }
@@ -6933,10 +5324,10 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::string currcommandis = "-" + ((currcommand(0)).substr(2));
 
-                        ML_Base &kernML = getMLref(getMLmodels(),svmInd);
+                        ML_Base &kernML = getMLref(MLInd);
                         MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,rkernnum,rfirstcall,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,rkernnum,rfirstcall);
 
                         rfirstcall = 0;
                     }
@@ -6947,10 +5338,10 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::string currcommandis = currcommand(0);
 
-                        ML_Base &kernML = getMLref(getMLmodels(),svmInd);
+                        ML_Base &kernML = getMLref(MLInd);
                         MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,kernnum,firstcall,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,kernnum,firstcall);
 
                         firstcall = 0;
                     }
@@ -6980,36 +5371,35 @@ int runsvmint(SVMThreadContext *svmContext,
                     currcommand = tuningopt(0);
                     tuningopt.remove(0);
 
-                         if ( currcommand(0) == "-bal"     ) { balc(getMLref(getMLmodels(),svmInd));                                                                                            }
-
-                    else if ( currcommand(0) == "-NlA"     ) { getMLref(getMLmodels(),svmInd).autosetLinBiasForce(safeatof(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
-                    else if ( currcommand(0) == "-cA"      ) { getMLref(getMLmodels(),svmInd).autosetCNKmean();                                                        }
-                    else if ( currcommand(0) == "-cB"      ) { getMLref(getMLmodels(),svmInd).autosetCNKmedian();                                                      }
-                    else if ( currcommand(0) == "-cAN"     ) { getMLref(getMLmodels(),svmInd).autosetCKmean();                                                         }
-                    else if ( currcommand(0) == "-cBN"     ) { getMLref(getMLmodels(),svmInd).autosetCKmedian();                                                       }
-                    else if ( currcommand(0) == "-cX"      ) { getMLref(getMLmodels(),svmInd).autosetCscaled(safeatof(currcommand(1),argvariables));                   }
-                    else if ( currcommand(0) == "-cua"     ) { getMLref(getMLmodels(),svmInd).autosetOff();                                                            }
-                    else if ( currcommand(0) == "-tkL"     ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,0,nullptr); }
-                    else if ( currcommand(0) == "-tkloo"   ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,0,nullptr); }
-                    else if ( currcommand(0) == "-tkrec"   ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,0,nullptr); }
-                    else if ( currcommand(0) == "-tcL"     ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,1,nullptr); }
-                    else if ( currcommand(0) == "-tcloo"   ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,1,nullptr); }
-                    else if ( currcommand(0) == "-tcrec"   ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,1,nullptr); }
-                    else if ( currcommand(0) == "-teL"     ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,2,nullptr); }
-                    else if ( currcommand(0) == "-teloo"   ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,2,nullptr); }
-                    else if ( currcommand(0) == "-terec"   ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,2,nullptr); }
-                    else if ( currcommand(0) == "-tceL"    ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,3,nullptr); }
-                    else if ( currcommand(0) == "-tceloo"  ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,3,nullptr); }
-                    else if ( currcommand(0) == "-tcerec"  ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,3,nullptr); }
-                    else if ( currcommand(0) == "-tkcL"    ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,1,nullptr); }
-                    else if ( currcommand(0) == "-tkcloo"  ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,1,nullptr); }
-                    else if ( currcommand(0) == "-tkcrec"  ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,1,nullptr); }
-                    else if ( currcommand(0) == "-tkeL"    ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,2,nullptr); }
-                    else if ( currcommand(0) == "-tkeloo"  ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,2,nullptr); }
-                    else if ( currcommand(0) == "-tkerec"  ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,2,nullptr); }
-                    else if ( currcommand(0) == "-tkceL"   ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,3,nullptr); }
-                    else if ( currcommand(0) == "-tkceloo" ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,3,nullptr); }
-                    else if ( currcommand(0) == "-tkcerec" ) { getMLref(getMLmodels(),svmInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,3,nullptr); }
+                    if      ( currcommand(0) == "-bal"     ) { balc(getMLref(MLInd));                                                                                            }
+                    else if ( currcommand(0) == "-NlA"     ) { getMLref(MLInd).autosetLinBiasForce(safeatof(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-cA"      ) { getMLref(MLInd).autosetCNKmean();                                                        }
+                    else if ( currcommand(0) == "-cB"      ) { getMLref(MLInd).autosetCNKmedian();                                                      }
+                    else if ( currcommand(0) == "-cAN"     ) { getMLref(MLInd).autosetCKmean();                                                         }
+                    else if ( currcommand(0) == "-cBN"     ) { getMLref(MLInd).autosetCKmedian();                                                       }
+                    else if ( currcommand(0) == "-cX"      ) { getMLref(MLInd).autosetCscaled(safeatof(currcommand(1),argvariables));                   }
+                    else if ( currcommand(0) == "-cua"     ) { getMLref(MLInd).autosetOff();                                                            }
+                    else if ( currcommand(0) == "-tkL"     ) { getMLref(MLInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,0,nullptr); }
+                    else if ( currcommand(0) == "-tkloo"   ) { getMLref(MLInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,0,nullptr); }
+                    else if ( currcommand(0) == "-tkrec"   ) { getMLref(MLInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,0,nullptr); }
+                    else if ( currcommand(0) == "-tcL"     ) { getMLref(MLInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,1,nullptr); }
+                    else if ( currcommand(0) == "-tcloo"   ) { getMLref(MLInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,1,nullptr); }
+                    else if ( currcommand(0) == "-tcrec"   ) { getMLref(MLInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,1,nullptr); }
+                    else if ( currcommand(0) == "-teL"     ) { getMLref(MLInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,2,nullptr); }
+                    else if ( currcommand(0) == "-teloo"   ) { getMLref(MLInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,2,nullptr); }
+                    else if ( currcommand(0) == "-terec"   ) { getMLref(MLInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,2,nullptr); }
+                    else if ( currcommand(0) == "-tceL"    ) { getMLref(MLInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),0,3,nullptr); }
+                    else if ( currcommand(0) == "-tceloo"  ) { getMLref(MLInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),0,3,nullptr); }
+                    else if ( currcommand(0) == "-tcerec"  ) { getMLref(MLInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),0,3,nullptr); }
+                    else if ( currcommand(0) == "-tkcL"    ) { getMLref(MLInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,1,nullptr); }
+                    else if ( currcommand(0) == "-tkcloo"  ) { getMLref(MLInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,1,nullptr); }
+                    else if ( currcommand(0) == "-tkcrec"  ) { getMLref(MLInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,1,nullptr); }
+                    else if ( currcommand(0) == "-tkeL"    ) { getMLref(MLInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,2,nullptr); }
+                    else if ( currcommand(0) == "-tkeloo"  ) { getMLref(MLInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,2,nullptr); }
+                    else if ( currcommand(0) == "-tkerec"  ) { getMLref(MLInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,2,nullptr); }
+                    else if ( currcommand(0) == "-tkceL"   ) { getMLref(MLInd).getML().tuneKernel(1,safeatof(currcommand(1),argvariables),1,3,nullptr); }
+                    else if ( currcommand(0) == "-tkceloo" ) { getMLref(MLInd).getML().tuneKernel(2,safeatof(currcommand(1),argvariables),1,3,nullptr); }
+                    else if ( currcommand(0) == "-tkcerec" ) { getMLref(MLInd).getML().tuneKernel(3,safeatof(currcommand(1),argvariables),1,3,nullptr); }
                 }
 
                 time_used endtime = TIMECALL;
@@ -7035,16 +5425,6 @@ int runsvmint(SVMThreadContext *svmContext,
 
                 // NB: these are rather large, so don't put them on the stack!
 
-                GridOptions   *xgopts = nullptr;
-                DIRectOptions *xdopts = nullptr;
-                NelderOptions *xnopts = nullptr;
-                BayesOptions  *xbopts = nullptr;
-
-                MEMNEW(xgopts,GridOptions );
-                MEMNEW(xdopts,DIRectOptions);
-                MEMNEW(xnopts,NelderOptions);
-                MEMNEW(xbopts,BayesOptions );
-
                 gentype xfnis; xfnis.makeNull();
 
                 int bayesModelNum = -1;
@@ -7069,15 +5449,6 @@ int runsvmint(SVMThreadContext *svmContext,
                 int grkkernnum   = 0;
                 int grkfirstcall = 1;
 
-                int gkkernnum_rff   = 0;
-                int gkfirstcall_rff = 1;
-
-                int gekkernnum_rff   = 0;
-                int gekfirstcall_rff = 1;
-
-                int grkkernnum_rff   = 0;
-                int grkfirstcall_rff = 1;
-
                 int gskkernnum   = 0;
                 int gskfirstcall = 1;
 
@@ -7086,7 +5457,6 @@ int runsvmint(SVMThreadContext *svmContext,
 
                 int gsrkkernnum   = 0;
                 int gsrkfirstcall = 1;
-
 
                 std::string optname = "";
 
@@ -7136,63 +5506,60 @@ int runsvmint(SVMThreadContext *svmContext,
                     currcommand = gridopt(0);
                     gridopt.remove(0);
 
-                         if ( currcommand(0) == "-gy"   ) { (*xbopts).extgoptssingleobj.maxtraintime  = ( (*xnopts).maxtraintime  = ( (*xgopts).maxtraintime  = ( (*xdopts).maxtraintime  = ( (*xbopts).maxtraintime  = safeatof(currcommand(1),argvariables) ) ) ) ); }
-                    else if ( currcommand(0) == "-gfm"  ) { (*xbopts).extgoptssingleobj.hardmin       = ( (*xnopts).hardmin       = ( (*xgopts).hardmin       = ( (*xdopts).hardmin       = ( (*xbopts).hardmin       = safeatof(currcommand(1),argvariables) ) ) ) ); }
-                    else if ( currcommand(0) == "-gfM"  ) { (*xbopts).extgoptssingleobj.softmin       = ( (*xnopts).softmin       = ( (*xgopts).softmin       = ( (*xdopts).softmin       = ( (*xbopts).softmin       = safeatof(currcommand(1),argvariables) ) ) ) ); }
-                    else if ( currcommand(0) == "-gfu"  ) { (*xbopts).extgoptssingleobj.hardmax       = ( (*xnopts).hardmax       = ( (*xgopts).hardmax       = ( (*xdopts).hardmax       = ( (*xbopts).hardmax       = safeatof(currcommand(1),argvariables) ) ) ) ); }
-                    else if ( currcommand(0) == "-gfU"  ) { (*xbopts).extgoptssingleobj.softmax       = ( (*xnopts).softmax       = ( (*xgopts).softmax       = ( (*xdopts).softmax       = ( (*xbopts).softmax       = safeatof(currcommand(1),argvariables) ) ) ) ); }
+                    if      ( currcommand(0) == "-gy"   ) { getBayesianref(BayesianInd).goptssingleobj.maxtraintime  = ( getNelderMeadref(NelderMeadInd).maxtraintime  = ( getgridref(gridInd).maxtraintime  = ( getDIRectref(DIRectInd).maxtraintime  = ( getBayesianref(BayesianInd).maxtraintime  = safeatof(currcommand(1),argvariables) ) ) ) ); }
+                    else if ( currcommand(0) == "-gfm"  ) { getBayesianref(BayesianInd).goptssingleobj.hardmin       = ( getNelderMeadref(NelderMeadInd).hardmin       = ( getgridref(gridInd).hardmin       = ( getDIRectref(DIRectInd).hardmin       = ( getBayesianref(BayesianInd).hardmin       = safeatof(currcommand(1),argvariables) ) ) ) ); }
+                    else if ( currcommand(0) == "-gfM"  ) { getBayesianref(BayesianInd).goptssingleobj.softmin       = ( getNelderMeadref(NelderMeadInd).softmin       = ( getgridref(gridInd).softmin       = ( getDIRectref(DIRectInd).softmin       = ( getBayesianref(BayesianInd).softmin       = safeatof(currcommand(1),argvariables) ) ) ) ); }
+                    else if ( currcommand(0) == "-gfu"  ) { getBayesianref(BayesianInd).goptssingleobj.hardmax       = ( getNelderMeadref(NelderMeadInd).hardmax       = ( getgridref(gridInd).hardmax       = ( getDIRectref(DIRectInd).hardmax       = ( getBayesianref(BayesianInd).hardmax       = safeatof(currcommand(1),argvariables) ) ) ) ); }
+                    else if ( currcommand(0) == "-gfU"  ) { getBayesianref(BayesianInd).goptssingleobj.softmax       = ( getNelderMeadref(NelderMeadInd).softmax       = ( getgridref(gridInd).softmax       = ( getDIRectref(DIRectInd).softmax       = ( getBayesianref(BayesianInd).softmax       = safeatof(currcommand(1),argvariables) ) ) ) ); }
 
                     else if ( currcommand(0) == "-gpln"  ) { optplotname      = currcommand(1);                        }
                     else if ( currcommand(0) == "-gpld"  ) { optplotdataname  = currcommand(1);                        }
                     else if ( currcommand(0) == "-gplT"  ) { optplottitle     = currcommand(1);                        }
-                    else if ( currcommand(0) == "-gplt"  ) { optplotoutformat = safeatoi(currcommand(1),argvariables); (*xbopts).modeloutformat = optplotoutformat; }
+                    else if ( currcommand(0) == "-gplt"  ) { optplotoutformat = safeatoi(currcommand(1),argvariables); getBayesianref(BayesianInd).modeloutformat = optplotoutformat; }
                     else if ( currcommand(0) == "-gplm"  ) { optplotymin      = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gplM"  ) { optplotymax      = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gplot" ) { plotoptres       = 1;                                     }
 
-                    else if ( currcommand(0) == "-gBy"  ) { (*xbopts).goptsmultiobj.maxtraintime = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gBfm" ) { (*xbopts).goptsmultiobj.hardmin      = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gBfN" ) { (*xbopts).goptsmultiobj.softmin      = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gBfU" ) { (*xbopts).goptsmultiobj.softmax      = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gBy"  ) { getBayesianref(BayesianInd).goptsmultiobj.maxtraintime = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gBfm" ) { getBayesianref(BayesianInd).goptsmultiobj.hardmin      = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gBfN" ) { getBayesianref(BayesianInd).goptsmultiobj.softmin      = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gBfU" ) { getBayesianref(BayesianInd).goptsmultiobj.softmax      = safeatof(currcommand(1),argvariables); }
 
-                    else if ( currcommand(0) == "-gpr"  ) { (*xnopts).randReproject = ( (*xgopts).randReproject = ( (*xdopts).randReproject = ( (*xbopts).randReproject = safeatoi(currcommand(1),argvariables) ) ) ); }
-                    else if ( currcommand(0) == "-gnp"  ) { (*xnopts).isProjection  = ( (*xgopts).isProjection  = ( (*xdopts).isProjection  = ( (*xbopts).isProjection  = 0                                     ) ) ); }
-                    else if ( currcommand(0) == "-gpb"  ) { (*xnopts).isProjection  = ( (*xgopts).isProjection  = ( (*xdopts).isProjection  = ( (*xbopts).isProjection  = 3                                     ) ) ); }
-                    else if ( currcommand(0) == "-gpB"  ) { (*xnopts).isProjection  = ( (*xgopts).isProjection  = ( (*xdopts).isProjection  = ( (*xbopts).isProjection  = 4                                     ) ) );
-                                                            (*xnopts).bernstart     = ( (*xgopts).bernstart     = ( (*xdopts).bernstart     = ( (*xbopts).bernstart     = safeatoi(currcommand(1),argvariables) ) ) ); }
-                    else if ( currcommand(0) == "-gph"  ) { (*xnopts).isProjection  = ( (*xgopts).isProjection  = ( (*xdopts).isProjection  = ( (*xbopts).isProjection  = 5                                     ) ) ); }
-                    else if ( currcommand(0) == "-gpd"  ) { (*xnopts).fnDim         = ( (*xgopts).fnDim         = ( (*xdopts).fnDim         = ( (*xbopts).fnDim         = safeatoi(currcommand(1),argvariables) ) ) ); }
-                    else if ( currcommand(0) == "-gf"   ) { (*xnopts).useScalarFn   = ( (*xgopts).useScalarFn   = ( (*xdopts).useScalarFn   = ( (*xbopts).useScalarFn   = safeatoi(currcommand(1),argvariables) ) ) ); }
-                    else if ( currcommand(0) == "-gc"   ) { (*xnopts).includeConst  = ( (*xgopts).includeConst  = ( (*xdopts).includeConst  = ( (*xbopts).includeConst  = safeatoi(currcommand(1),argvariables) ) ) ); }
-                    else if ( currcommand(0) == "-gC"   ) { (*xnopts).whatConst     = ( (*xgopts).whatConst     = ( (*xdopts).whatConst     = ( (*xbopts).whatConst     = safeatoi(currcommand(1),argvariables) ) ) ); }
-                    else if ( currcommand(0) == "-gns"  ) { (*xnopts).xNsamp        = ( (*xgopts).xNsamp        = ( (*xdopts).xNsamp        = ( (*xbopts).xNsamp        = safeatoi(currcommand(1),argvariables) ) ) ); }
-                    else if ( currcommand(0) == "-gkm"  ) { (*xnopts).xSampSplit    = ( (*xgopts).xSampSplit    = ( (*xdopts).xSampSplit    = ( (*xbopts).xSampSplit    = safeatoi(currcommand(1),argvariables) ) ) ); }
-                    else if ( currcommand(0) == "-gkt"  ) { (*xnopts).xSampType     = ( (*xgopts).xSampType     = ( (*xdopts).xSampType     = ( (*xbopts).xSampType     = safeatoi(currcommand(1),argvariables) ) ) ); }
-                    else if ( currcommand(0) == "-gao"  ) { (*xnopts).usealtoptfn   = ( (*xgopts).usealtoptfn   = ( (*xdopts).usealtoptfn   = ( (*xbopts).usealtoptfn   = 1                                     ) ) );
-                                                            (*xnopts).altoptfn      = ( (*xgopts).altoptfn      = ( (*xdopts).altoptfn      = ( (*xbopts).altoptfn      = safeatog(currcommand(1),argvariables) ) ) ); }
-                    else if ( currcommand(0) == "-gan"  ) { (*xnopts).usealtoptfn   = ( (*xgopts).usealtoptfn   = ( (*xdopts).usealtoptfn   = ( (*xbopts).usealtoptfn   = 0                                     ) ) ); }
+                    else if ( currcommand(0) == "-gpr"  ) { getNelderMeadref(NelderMeadInd).randReproject = ( getgridref(gridInd).randReproject = ( getDIRectref(DIRectInd).randReproject = ( getBayesianref(BayesianInd).randReproject = safeatoi(currcommand(1),argvariables) ) ) ); }
+                    else if ( currcommand(0) == "-gnp"  ) { getNelderMeadref(NelderMeadInd).isProjection  = ( getgridref(gridInd).isProjection  = ( getDIRectref(DIRectInd).isProjection  = ( getBayesianref(BayesianInd).isProjection  = 0                                     ) ) ); }
+                    else if ( currcommand(0) == "-gpb"  ) { getNelderMeadref(NelderMeadInd).isProjection  = ( getgridref(gridInd).isProjection  = ( getDIRectref(DIRectInd).isProjection  = ( getBayesianref(BayesianInd).isProjection  = 3                                     ) ) ); }
+                    else if ( currcommand(0) == "-gpB"  ) { getNelderMeadref(NelderMeadInd).isProjection  = ( getgridref(gridInd).isProjection  = ( getDIRectref(DIRectInd).isProjection  = ( getBayesianref(BayesianInd).isProjection  = 4                                     ) ) );
+                                                            getNelderMeadref(NelderMeadInd).bernstart     = ( getgridref(gridInd).bernstart     = ( getDIRectref(DIRectInd).bernstart     = ( getBayesianref(BayesianInd).bernstart     = safeatoi(currcommand(1),argvariables) ) ) ); }
+                    else if ( currcommand(0) == "-gph"  ) { getNelderMeadref(NelderMeadInd).isProjection  = ( getgridref(gridInd).isProjection  = ( getDIRectref(DIRectInd).isProjection  = ( getBayesianref(BayesianInd).isProjection  = 5                                     ) ) ); }
+                    else if ( currcommand(0) == "-gpd"  ) { getNelderMeadref(NelderMeadInd).fnDim         = ( getgridref(gridInd).fnDim         = ( getDIRectref(DIRectInd).fnDim         = ( getBayesianref(BayesianInd).fnDim         = safeatoi(currcommand(1),argvariables) ) ) ); }
+                    else if ( currcommand(0) == "-gf"   ) { getNelderMeadref(NelderMeadInd).useScalarFn   = ( getgridref(gridInd).useScalarFn   = ( getDIRectref(DIRectInd).useScalarFn   = ( getBayesianref(BayesianInd).useScalarFn   = safeatoi(currcommand(1),argvariables) ) ) ); }
+                    else if ( currcommand(0) == "-gc"   ) { getNelderMeadref(NelderMeadInd).includeConst  = ( getgridref(gridInd).includeConst  = ( getDIRectref(DIRectInd).includeConst  = ( getBayesianref(BayesianInd).includeConst  = safeatoi(currcommand(1),argvariables) ) ) ); }
+                    else if ( currcommand(0) == "-gC"   ) { getNelderMeadref(NelderMeadInd).whatConst     = ( getgridref(gridInd).whatConst     = ( getDIRectref(DIRectInd).whatConst     = ( getBayesianref(BayesianInd).whatConst     = safeatoi(currcommand(1),argvariables) ) ) ); }
+                    else if ( currcommand(0) == "-gns"  ) { getNelderMeadref(NelderMeadInd).xNsamp        = ( getgridref(gridInd).xNsamp        = ( getDIRectref(DIRectInd).xNsamp        = ( getBayesianref(BayesianInd).xNsamp        = safeatoi(currcommand(1),argvariables) ) ) ); }
+                    else if ( currcommand(0) == "-gkm"  ) { getNelderMeadref(NelderMeadInd).xSampSplit    = ( getgridref(gridInd).xSampSplit    = ( getDIRectref(DIRectInd).xSampSplit    = ( getBayesianref(BayesianInd).xSampSplit    = safeatoi(currcommand(1),argvariables) ) ) ); }
+                    else if ( currcommand(0) == "-gkt"  ) { getNelderMeadref(NelderMeadInd).xSampType     = ( getgridref(gridInd).xSampType     = ( getDIRectref(DIRectInd).xSampType     = ( getBayesianref(BayesianInd).xSampType     = safeatoi(currcommand(1),argvariables) ) ) ); }
 
                     else if ( currcommand(0) == "-gp"  )
                     {
-                        (*xnopts).isProjection = 1; (*xnopts).defrandDirtemplateVec.setoutfn(currcommand(1));
-                        (*xgopts).isProjection = 1; (*xgopts).defrandDirtemplateVec.setoutfn(currcommand(1));
-                        (*xdopts).isProjection = 1; (*xdopts).defrandDirtemplateVec.setoutfn(currcommand(1));
-                        (*xbopts).isProjection = 1; (*xbopts).defrandDirtemplateVec.setoutfn(currcommand(1));
+                        getNelderMeadref(NelderMeadInd).isProjection = 1; getNelderMeadref(NelderMeadInd).priorrandDirtemplateVec.setoutfn(currcommand(1));
+                        getgridref(gridInd).isProjection             = 1; getgridref(gridInd).priorrandDirtemplateVec.setoutfn(currcommand(1));
+                        getDIRectref(DIRectInd).isProjection         = 1; getDIRectref(DIRectInd).priorrandDirtemplateVec.setoutfn(currcommand(1));
+                        getBayesianref(BayesianInd).isProjection     = 1; getBayesianref(BayesianInd).priorrandDirtemplateVec.setoutfn(currcommand(1));
                     }
 
                     else if ( currcommand(0) == "-gP"  )
                     {
-                        (*xnopts).isProjection = 2;
-                        (*xgopts).isProjection = 2;
-                        (*xdopts).isProjection = 2;
-                        (*xbopts).isProjection = 2;
+                        getNelderMeadref(NelderMeadInd).isProjection = 2;
+                        getgridref(gridInd).isProjection             = 2;
+                        getDIRectref(DIRectInd).isProjection         = 2;
+                        getBayesianref(BayesianInd).isProjection     = 2;
 
                         int kernnum = 0;
 
-                        Vector<gentype> nkernRealConsts((*xnopts).defrandDirtemplateFnGP.getKernel().cRealConstants(kernnum));
-                        Vector<gentype> gkernRealConsts((*xgopts).defrandDirtemplateFnGP.getKernel().cRealConstants(kernnum));
-                        Vector<gentype> dkernRealConsts((*xdopts).defrandDirtemplateFnGP.getKernel().cRealConstants(kernnum));
-                        Vector<gentype> bkernRealConsts((*xbopts).defrandDirtemplateFnGP.getKernel().cRealConstants(kernnum));
+                        Vector<gentype> nkernRealConsts(getNelderMeadref(NelderMeadInd).priorrandDirtemplateFnGP.getKernel().cRealConstants(kernnum));
+                        Vector<gentype> gkernRealConsts(getgridref(gridInd).priorrandDirtemplateFnGP.getKernel().cRealConstants(kernnum));
+                        Vector<gentype> dkernRealConsts(getDIRectref(DIRectInd).priorrandDirtemplateFnGP.getKernel().cRealConstants(kernnum));
+                        Vector<gentype> bkernRealConsts(getBayesianref(BayesianInd).priorrandDirtemplateFnGP.getKernel().cRealConstants(kernnum));
 
                         gentype temparg;
 
@@ -7203,31 +5570,15 @@ int runsvmint(SVMThreadContext *svmContext,
                         dkernRealConsts("&",0) = temparg;
                         bkernRealConsts("&",0) = temparg;
 
-                        (*xnopts).defrandDirtemplateFnGP.getKernel_unsafe().setRealConstants(nkernRealConsts,kernnum);
-                        (*xgopts).defrandDirtemplateFnGP.getKernel_unsafe().setRealConstants(gkernRealConsts,kernnum);
-                        (*xdopts).defrandDirtemplateFnGP.getKernel_unsafe().setRealConstants(dkernRealConsts,kernnum);
-                        (*xbopts).defrandDirtemplateFnGP.getKernel_unsafe().setRealConstants(bkernRealConsts,kernnum);
+                        getNelderMeadref(NelderMeadInd).priorrandDirtemplateFnGP.getKernel_unsafe().setRealConstants(nkernRealConsts,kernnum);
+                        getgridref(gridInd).priorrandDirtemplateFnGP.getKernel_unsafe().setRealConstants(gkernRealConsts,kernnum);
+                        getDIRectref(DIRectInd).priorrandDirtemplateFnGP.getKernel_unsafe().setRealConstants(dkernRealConsts,kernnum);
+                        getBayesianref(BayesianInd).priorrandDirtemplateFnGP.getKernel_unsafe().setRealConstants(bkernRealConsts,kernnum);
 
-                        (*xnopts).defrandDirtemplateFnGP.resetKernel(0);
-                        (*xgopts).defrandDirtemplateFnGP.resetKernel(0);
-                        (*xdopts).defrandDirtemplateFnGP.resetKernel(0);
-                        (*xbopts).defrandDirtemplateFnGP.resetKernel(0);
-                    }
-
-                    else if ( ( currcommand(0).substr(0,4) == "-gPk" ) || ( currcommand(0) == "-gPmtb" ) || ( currcommand(0) == "-gPbmx" ) )
-                    {
-                        std::string currcommandis = "-" + ((currcommand(0)).substr(3));
-
-                        ML_Base &kernML = (*xbopts).defrandDirtemplateFnGP;
-                        MercerKernel &theKern = kernML.getKernel_unsafe();
-
-                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gPkernnum,gPfirstcall,svmInd);
-
-                        (*xnopts).defrandDirtemplateFnGP.getKernel_unsafe() = theKern;
-                        (*xgopts).defrandDirtemplateFnGP.getKernel_unsafe() = theKern;
-                        (*xdopts).defrandDirtemplateFnGP.getKernel_unsafe() = theKern;
-
-                        gPfirstcall = 0;
+                        getNelderMeadref(NelderMeadInd).priorrandDirtemplateFnGP.resetKernel(0);
+                        getgridref(gridInd).priorrandDirtemplateFnGP.resetKernel(0);
+                        getDIRectref(DIRectInd).priorrandDirtemplateFnGP.resetKernel(0);
+                        getBayesianref(BayesianInd).priorrandDirtemplateFnGP.resetKernel(0);
                     }
 
                     else if ( ( currcommand(0).substr(0,5) == "-gphk" ) || ( currcommand(0) == "-gphmtb" ) || ( currcommand(0) == "-gphbmx" ) )
@@ -7238,11 +5589,11 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         ML_Base dummyML;
 
-                        processKernel(dummyML,(*xbopts).defrandDirtemplateFnRKHS.kern("&"),currcommandis,currcommand,2,argvariables,gphkernnum,gphfirstcall,svmInd);
+                        processKernel(dummyML,getBayesianref(BayesianInd).priorrandDirtemplateFnRKHS.kern("&"),currcommandis,currcommand,2,argvariables,gphkernnum,gphfirstcall);
 
-                        (*xnopts).defrandDirtemplateFnRKHS.kern("&") = (*xbopts).defrandDirtemplateFnRKHS.kern();
-                        (*xgopts).defrandDirtemplateFnRKHS.kern("&") = (*xbopts).defrandDirtemplateFnRKHS.kern();
-                        (*xdopts).defrandDirtemplateFnRKHS.kern("&") = (*xbopts).defrandDirtemplateFnRKHS.kern();
+                        getNelderMeadref(NelderMeadInd).priorrandDirtemplateFnRKHS.kern("&") = getBayesianref(BayesianInd).priorrandDirtemplateFnRKHS.kern();
+                        getgridref(gridInd).priorrandDirtemplateFnRKHS.kern("&") = getBayesianref(BayesianInd).priorrandDirtemplateFnRKHS.kern();
+                        getDIRectref(DIRectInd).priorrandDirtemplateFnRKHS.kern("&") = getBayesianref(BayesianInd).priorrandDirtemplateFnRKHS.kern();
 
                         gphfirstcall = 0;
                     }
@@ -7268,10 +5619,10 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         errstream() << "Setting p(x) penalty " << penterm << "\n";
 
-                        (*xnopts).penterm = penterm;
-                        (*xgopts).penterm = penterm;
-                        (*xdopts).penterm = penterm;
-                        (*xbopts).penterm = penterm;
+                        getNelderMeadref(NelderMeadInd).penterm = penterm;
+                        getgridref(gridInd).penterm = penterm;
+                        getDIRectref(DIRectInd).penterm = penterm;
+                        getBayesianref(BayesianInd).penterm = penterm;
                     }
 
 
@@ -7280,93 +5631,89 @@ int runsvmint(SVMThreadContext *svmContext,
 
 
 
-                    else if ( currcommand(0) == "-ggm" ) { (*xgopts).numZooms = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-ggi" ) { (*xgopts).zoomFact = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-ggm" ) { getgridref(gridInd).numZooms = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-ggi" ) { getgridref(gridInd).zoomFact = safeatof(currcommand(1),argvariables); }
 
 
 
 
 
-                    else if ( currcommand(0) == "-gdc"  ) { (*xbopts).extgoptssingleobj.maxits            = ( (*xdopts).maxits            = safeatoi(currcommand(1),argvariables)                                      ); }
-                    else if ( currcommand(0) == "-gdf"  ) { (*xbopts).extgoptssingleobj.maxevals          = ( (*xdopts).maxevals          = safeatoi(currcommand(1),argvariables)                                      ); }
-                    else if ( currcommand(0) == "-gde"  ) { (*xbopts).extgoptssingleobj.eps               = ( (*xdopts).eps               = safeatof(currcommand(1),argvariables)                                      ); }
-                    else if ( currcommand(0) == "-gda"  ) { (*xbopts).extgoptssingleobj.algorithm         = ( (*xdopts).algorithm         = safeatoi(currcommand(1),argvariables) ? DIRECT_ORIGINAL : DIRECT_GABLONSKY ); }
-                    else if ( currcommand(0) == "-gdy"  ) { (*xbopts).extgoptssingleobj.traintimeoverride = ( (*xdopts).traintimeoverride = safeatof(currcommand(1),argvariables)                                      ); }
+                    else if ( currcommand(0) == "-gdc"  ) { getBayesianref(BayesianInd).goptssingleobj.maxits            = ( getDIRectref(DIRectInd).maxits            = safeatoi(currcommand(1),argvariables)                                      ); }
+                    else if ( currcommand(0) == "-gdf"  ) { getBayesianref(BayesianInd).goptssingleobj.maxevals          = ( getDIRectref(DIRectInd).maxevals          = safeatoi(currcommand(1),argvariables)                                      ); }
+                    else if ( currcommand(0) == "-gde"  ) { getBayesianref(BayesianInd).goptssingleobj.eps               = ( getDIRectref(DIRectInd).eps               = safeatof(currcommand(1),argvariables)                                      ); }
+                    else if ( currcommand(0) == "-gda"  ) { getBayesianref(BayesianInd).goptssingleobj.algorithm         = ( getDIRectref(DIRectInd).algorithm         = safeatoi(currcommand(1),argvariables) ? DIRECT_ORIGINAL : DIRECT_GABLONSKY ); }
+                    else if ( currcommand(0) == "-gdy"  ) { getBayesianref(BayesianInd).goptssingleobj.traintimeoverride = ( getDIRectref(DIRectInd).traintimeoverride = safeatof(currcommand(1),argvariables)                                      ); }
 
-                    else if ( currcommand(0) == "-gBdc" ) { (*xbopts).goptsmultiobj.maxits            = safeatoi(currcommand(1),argvariables);                                      }
-                    else if ( currcommand(0) == "-gBdf" ) { (*xbopts).goptsmultiobj.maxevals          = safeatoi(currcommand(1),argvariables);                                      }
-                    else if ( currcommand(0) == "-gBde" ) { (*xbopts).goptsmultiobj.eps               = safeatof(currcommand(1),argvariables);                                      }
-                    else if ( currcommand(0) == "-gBda" ) { (*xbopts).goptsmultiobj.algorithm         = safeatoi(currcommand(1),argvariables) ? DIRECT_ORIGINAL : DIRECT_GABLONSKY; }
-                    else if ( currcommand(0) == "-gBdy" ) { (*xbopts).goptsmultiobj.traintimeoverride = safeatof(currcommand(1),argvariables);                                      }
-
-
+                    else if ( currcommand(0) == "-gBdc" ) { getBayesianref(BayesianInd).goptsmultiobj.maxits            = safeatoi(currcommand(1),argvariables);                                      }
+                    else if ( currcommand(0) == "-gBdf" ) { getBayesianref(BayesianInd).goptsmultiobj.maxevals          = safeatoi(currcommand(1),argvariables);                                      }
+                    else if ( currcommand(0) == "-gBde" ) { getBayesianref(BayesianInd).goptsmultiobj.eps               = safeatof(currcommand(1),argvariables);                                      }
+                    else if ( currcommand(0) == "-gBda" ) { getBayesianref(BayesianInd).goptsmultiobj.algorithm         = safeatoi(currcommand(1),argvariables) ? DIRECT_ORIGINAL : DIRECT_GABLONSKY; }
+                    else if ( currcommand(0) == "-gBdy" ) { getBayesianref(BayesianInd).goptsmultiobj.traintimeoverride = safeatof(currcommand(1),argvariables);                                      }
 
 
 
 
 
-                    else if ( currcommand(0) == "-gNa"  ) { (*xnopts).minf_max = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gNb"  ) { (*xnopts).ftol_rel = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gNc"  ) { (*xnopts).ftol_abs = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gNd"  ) { (*xnopts).xtol_rel = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gNg"  ) { (*xnopts).xtol_abs = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gNe"  ) { (*xnopts).maxeval  = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gNf"  ) { (*xnopts).method   = safeatoi(currcommand(1),argvariables); }
 
-                    else if ( currcommand(0) == "-gmn"      ) { (*xbopts).sigmuseparate = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmt"      ) { (*xbopts).modeltype     = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmrff"    ) { (*xbopts).modelrff      = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmq"      ) { (*xbopts).oracleMode    = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmw"      ) { ((*xbopts).extmuapprox).resize(1)   = &(getMLref(getMLmodels(),( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) ))); }
-                    else if ( currcommand(0) == "-gmwcgt"   ) { ((*xbopts).extcgtapprox).resize(1)  = &(getMLref(getMLmodels(),( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) ))); }
-                    else if ( currcommand(0) == "-gmo"      ) { (*xbopts).ismoo         = 1; }
-                    else if ( currcommand(0) == "-gms"      ) { (*xbopts).ismoo         = 0; }
-                    else if ( currcommand(0) == "-gmr"      ) { (*xbopts).makenoise     = 1; }
-                    else if ( currcommand(0) == "-gmR"      ) { (*xbopts).makenoise     = 0; }
-                    else if ( currcommand(0) == "-gma"      ) { (*xbopts).moodim        = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmT"      ) { std::stringstream xstr(currcommand(1)); SparseVector<gentype> xt; streamItIn(xstr,xt,0); (*xbopts).xtemplate = xt; }
-                    else if ( currcommand(0) == "-gmd"      ) { (*xbopts).default_model_setsigma(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-gmg"      ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_model_setkernelg(temp); }
-                    else if ( currcommand(0) == "-gmgg"     ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_model_setkernelgg(xscale); }
-                    else if ( currcommand(0) == "-gmma"     ) { (*xbopts).tunemu        = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmmb"     ) { (*xbopts).tunesigma     = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmmc"     ) { (*xbopts).tunesrcmod    = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmmd"     ) { (*xbopts).tunediffmod   = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmx"      ) { (*xbopts).tranmeth      = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmxa"     ) { (*xbopts).alpha0        = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmxb"     ) { (*xbopts).beta0         = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmy"      ) { (*xbopts).kernapprox    = &(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables))); }
-                    else if ( currcommand(0) == "-gmya"     ) { (*xbopts).kxfnum        = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmyb"     ) { (*xbopts).kxfnorm       = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmsc"     ) { (*xbopts).usemodelaugx  = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmsn"     ) { (*xbopts).modelnaive    = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmsy"     ) { (*xbopts).ennornaive    = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmsa"     ) { (*xbopts).default_modelaugx_settspaceDim(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-gmsd"     ) { (*xbopts).default_modelaugx_setsigma(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-gmsg"     ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_modelaugx_setkernelg(temp); }
-                    else if ( currcommand(0) == "-gmsgg"    ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_modelaugx_setkernelgg(xscale); }
-                    else if ( currcommand(0) == "-gmsmd"    ) { (*xbopts).tuneaugxmod   = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmgtc"    ) { (*xbopts).numcgt    = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmgtcv"   ) { (*xbopts).cgtmethod = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmgtcz"   ) { (*xbopts).cgtmargin = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmgtd"    ) { (*xbopts).default_modelcgt_setsigma(safeatof(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-gmgtg"    ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); (*xbopts).default_modelcgt_setkernelg(temp); }
-                    else if ( currcommand(0) == "-gmgtgg"   ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); (*xbopts).default_modelcgt_setkernelgg(xscale); }
-                    else if ( currcommand(0) == "-gmgtmd"   ) { (*xbopts).tunecgt       = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmLf"     ) { (*xbopts).plotfreq      = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmLF"     ) { (*xbopts).modeloutformat= safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmLn"     ) { (*xbopts).modelname     = currcommand(1); }
-                    else if ( currcommand(0) == "-gmhplb"   ) { (*xbopts).modelbaseline = currcommand(1); }
-                    else if ( currcommand(0) == "-gmmu"     ) { ((*xbopts).altmuapprox).setprim(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-gmmugt"   ) { gentype mudef(currcommand(1)); ((*xbopts).altmuapprox).setprival(mudef); }
-                    else if ( currcommand(0) == "-gmft"     ) { (*xbopts).PIscale      = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gmmuml"   ) { ((*xbopts).altmuapprox).setpriml(&(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables)))); }
-                    else if ( currcommand(0) == "-gmsmu"    ) { ((*xbopts).altaugxapprox).setprim(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-gmsmugt"  ) { gentype mudef(currcommand(1)); ((*xbopts).altaugxapprox).setprival(mudef); }
-                    else if ( currcommand(0) == "-gmsmuml"  ) { ((*xbopts).altaugxapprox).setpriml(&(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables)))); }
-                    else if ( currcommand(0) == "-gmgtmu"   ) { ((*xbopts).altcgtapprox).setprim(safeatoi(currcommand(1),argvariables)); }
-                    else if ( currcommand(0) == "-gmgtmugt" ) { gentype mudef(currcommand(1)); ((*xbopts).altcgtapprox).setprival(mudef); }
-                    else if ( currcommand(0) == "-gmgtmuml" ) { ((*xbopts).altcgtapprox).setpriml(&(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables)))); }
+
+                    else if ( currcommand(0) == "-gNa"  ) { getNelderMeadref(NelderMeadInd).minf_max = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gNb"  ) { getNelderMeadref(NelderMeadInd).ftol_rel = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gNc"  ) { getNelderMeadref(NelderMeadInd).ftol_abs = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gNd"  ) { getNelderMeadref(NelderMeadInd).xtol_rel = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gNg"  ) { getNelderMeadref(NelderMeadInd).xtol_abs = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gNe"  ) { getNelderMeadref(NelderMeadInd).maxeval  = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gNf"  ) { getNelderMeadref(NelderMeadInd).method   = safeatoi(currcommand(1),argvariables); }
+
+                    else if ( currcommand(0) == "-gmn"      ) { getBayesianref(BayesianInd).sigmuseparate = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmt"      ) { getBayesianref(BayesianInd).modeltype     = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmq"      ) { getBayesianref(BayesianInd).oracleMode    = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmw"      ) { getBayesianref(BayesianInd).priormuapprox = getMLref(( ( bayesModelNum = safeatoi(currcommand(1),argvariables) ) )); }
+                    else if ( currcommand(0) == "-gmr"      ) { getBayesianref(BayesianInd).makenoise     = 1; }
+                    else if ( currcommand(0) == "-gmR"      ) { getBayesianref(BayesianInd).makenoise     = 0; }
+                    else if ( currcommand(0) == "-gma"      ) { getBayesianref(BayesianInd).moodim        = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmT"      ) { std::stringstream xstr(currcommand(1)); SparseVector<gentype> xt; streamItIn(xstr,xt,0); getBayesianref(BayesianInd).xtemplate = xt; }
+                    else if ( currcommand(0) == "-gmd"      ) { getBayesianref(BayesianInd).default_model_setsigma(safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmg"      ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); getBayesianref(BayesianInd).default_model_setkernelg(temp); }
+                    else if ( currcommand(0) == "-gmgg"     ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); getBayesianref(BayesianInd).default_model_setkernelgg(xscale); }
+                    else if ( currcommand(0) == "-gmma"     ) { getBayesianref(BayesianInd).tunemu        = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmmb"     ) { getBayesianref(BayesianInd).tunesigma     = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmmc"     ) { getBayesianref(BayesianInd).tunesrcmod    = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmmd"     ) { getBayesianref(BayesianInd).tunediffmod   = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmx"      ) { getBayesianref(BayesianInd).tranmeth      = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmxa"     ) { getBayesianref(BayesianInd).alpha0        = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmxb"     ) { getBayesianref(BayesianInd).beta0         = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmy"      ) { getBayesianref(BayesianInd).kernapprox    = &(getMLref(safeatoi(currcommand(1),argvariables))); }
+                    else if ( currcommand(0) == "-gmya"     ) { getBayesianref(BayesianInd).kxfnum        = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmyb"     ) { getBayesianref(BayesianInd).kxfnorm       = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmsc"     ) { getBayesianref(BayesianInd).usemodelaugx  = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmsn"     ) { getBayesianref(BayesianInd).modelnaive    = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmsy"     ) { getBayesianref(BayesianInd).ennornaive    = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmsa"     ) { getBayesianref(BayesianInd).default_modelaugx_settspaceDim(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmsd"     ) { getBayesianref(BayesianInd).default_modelaugx_setsigma(safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmsg"     ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); getBayesianref(BayesianInd).default_modelaugx_setkernelg(temp); }
+                    else if ( currcommand(0) == "-gmsgg"    ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); getBayesianref(BayesianInd).default_modelaugx_setkernelgg(xscale); }
+                    else if ( currcommand(0) == "-gmsmd"    ) { getBayesianref(BayesianInd).tuneaugxmod   = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmgtc"    ) { getBayesianref(BayesianInd).numcgt    = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmgtcv"   ) { getBayesianref(BayesianInd).cgtmethod = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmgtcz"   ) { getBayesianref(BayesianInd).cgtmargin = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmgtd"    ) { getBayesianref(BayesianInd).default_modelcgt_setsigma(safeatof(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmgtg"    ) { gentype temp; safeatowhatever(temp,currcommand(1),argvariables); getBayesianref(BayesianInd).default_modelcgt_setkernelg(temp); }
+                    else if ( currcommand(0) == "-gmgtgg"   ) { Vector<gentype> xxscale; SparseVector<gentype> xscale; xscale = safeatowhatever(xxscale,currcommand(1),argvariables); getBayesianref(BayesianInd).default_modelcgt_setkernelgg(xscale); }
+                    else if ( currcommand(0) == "-gmgtmd"   ) { getBayesianref(BayesianInd).tunecgt       = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmLf"     ) { getBayesianref(BayesianInd).plotfreq      = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmLF"     ) { getBayesianref(BayesianInd).modeloutformat= safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmLn"     ) { getBayesianref(BayesianInd).modelname     = currcommand(1); }
+                    else if ( currcommand(0) == "-gmhplb"   ) { getBayesianref(BayesianInd).modelbaseline = currcommand(1); }
+                    else if ( currcommand(0) == "-gmmu"     ) { (getBayesianref(BayesianInd).priormuapprox).setprim(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmmugt"   ) { gentype mudef(currcommand(1)); (getBayesianref(BayesianInd).priormuapprox).setprival(mudef); }
+                    else if ( currcommand(0) == "-gmft"     ) { getBayesianref(BayesianInd).PIscale      = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gmmuml"   ) { (getBayesianref(BayesianInd).priormuapprox).setpriml(&(getMLref(safeatoi(currcommand(1),argvariables)))); }
+                    else if ( currcommand(0) == "-gmsmu"    ) { (getBayesianref(BayesianInd).prioraugxapprox).setprim(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmsmugt"  ) { gentype mudef(currcommand(1)); (getBayesianref(BayesianInd).prioraugxapprox).setprival(mudef); }
+                    else if ( currcommand(0) == "-gmsmuml"  ) { (getBayesianref(BayesianInd).prioraugxapprox).setpriml(&(getMLref(safeatoi(currcommand(1),argvariables)))); }
+                    else if ( currcommand(0) == "-gmgtmu"   ) { (getBayesianref(BayesianInd).priorcgtapprox).setprim(safeatoi(currcommand(1),argvariables)); }
+                    else if ( currcommand(0) == "-gmgtmugt" ) { gentype mudef(currcommand(1)); (getBayesianref(BayesianInd).priorcgtapprox).setprival(mudef); }
+                    else if ( currcommand(0) == "-gmgtmuml" ) { (getBayesianref(BayesianInd).priorcgtapprox).setpriml(&(getMLref(safeatoi(currcommand(1),argvariables)))); }
 
                     else if ( currcommand(0) == "-gmmm" )
                     {
@@ -7388,7 +5735,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         int d = safeatoi(currcommand(6),argvariables);
                         gentype y = safeatog(currcommand(7),argvariables);
 
-                        makeMonotone((*xbopts).altmuapprox,n,t,xb,xlb,xub,d,y);
+                        makeMonotone(getBayesianref(BayesianInd).priormuapprox,n,t,xb,xlb,xub,d,y);
                     }
 
                     else if ( currcommand(0) == "-gmsmm" )
@@ -7411,7 +5758,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         int d = safeatoi(currcommand(6),argvariables);
                         gentype y = safeatog(currcommand(7),argvariables);
 
-                        makeMonotone((*xbopts).altaugxapprox,n,t,xb,xlb,xub,d,y);
+                        makeMonotone(getBayesianref(BayesianInd).prioraugxapprox,n,t,xb,xlb,xub,d,y);
                     }
 
                     else if ( currcommand(0) == "-gmgtmm" )
@@ -7434,21 +5781,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         int d = safeatoi(currcommand(6),argvariables);
                         gentype y = safeatog(currcommand(7),argvariables);
 
-                        makeMonotone((*xbopts).altcgtapprox,n,t,xb,xlb,xub,d,y);
-                    }
-
-                    else if ( currcommand(0) == "-gmsw" )
-                    {
-                        Vector<int> augxapproxInd;
-
-                        safeatowhatever(augxapproxInd,currcommand(1),argvariables);
-
-                        int ifr;
-
-                        for ( ifr = 0 ; ifr < augxapproxInd.size() ; ++ifr )
-                        {
-                            (*xbopts).extaugxapprox = &(getMLref(getMLmodels(),augxapproxInd(ifr)));
-                        }
+                        makeMonotone(getBayesianref(BayesianInd).priorcgtapprox,n,t,xb,xlb,xub,d,y);
                     }
 
                     else if ( ( currcommand(0).substr(0,5) == "-gmek" ) || ( currcommand(0) == "-gmemtb" ) || ( currcommand(0) == "-gmebmx" ) )
@@ -7458,21 +5791,12 @@ int runsvmint(SVMThreadContext *svmContext,
                         std::string currcommandis = "-" + ((currcommand(0)).substr(4));
 
                         {
-                            ML_Base &kernML = (*xbopts).altmuapprox;
+                            ML_Base &kernML = getBayesianref(BayesianInd).priormuapprox;
                             MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gekkernnum,gekfirstcall,svmInd);
+                            processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gekkernnum,gekfirstcall);
 
                             gekfirstcall = 0;
-                        }
-
-                        {
-                            ML_Base &kernML = (*xbopts).altmuapprox_rff;
-                            MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
-
-                            processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gekkernnum_rff,gekfirstcall_rff,svmInd);
-
-                            gekfirstcall_rff = 0;
                         }
                     }
 
@@ -7483,21 +5807,12 @@ int runsvmint(SVMThreadContext *svmContext,
                         std::string currcommandis = "-" + ((currcommand(0)).substr(4));
 
                         {
-                            ML_Base &kernML = (*xbopts).altmuapprox;
+                            ML_Base &kernML = getBayesianref(BayesianInd).priormuapprox;
                             MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,grkkernnum,grkfirstcall,svmInd);
+                            processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,grkkernnum,grkfirstcall);
 
                             grkfirstcall = 0;
-                        }
-
-                        {
-                            ML_Base &kernML = (*xbopts).altmuapprox_rff;
-                            MercerKernel &theKern = kernML.getRFFKernel_unsafe();
-
-                            processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,grkkernnum_rff,grkfirstcall_rff,svmInd);
-
-                            grkfirstcall_rff = 0;
                         }
                     }
 
@@ -7506,21 +5821,12 @@ int runsvmint(SVMThreadContext *svmContext,
                         std::string currcommandis = "-" + ((currcommand(0)).substr(3));
 
                         {
-                            ML_Base &kernML = (*xbopts).altmuapprox;
+                            ML_Base &kernML = getBayesianref(BayesianInd).priormuapprox;
                             MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                            processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gkkernnum,gkfirstcall,svmInd);
+                            processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gkkernnum,gkfirstcall);
 
                             gkfirstcall = 0;
-                        }
-
-                        {
-                            ML_Base &kernML = (*xbopts).altmuapprox_rff;
-                            MercerKernel &theKern = kernML.getKernel_unsafe();
-
-                            processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gkkernnum_rff,gkfirstcall_rff,svmInd);
-
-                            gkfirstcall_rff = 0;
                         }
                     }
 
@@ -7530,10 +5836,10 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::string currcommandis = "-" + ((currcommand(0)).substr(5));
 
-                        ML_Base &kernML = (*xbopts).altaugxapprox;
+                        ML_Base &kernML = getBayesianref(BayesianInd).prioraugxapprox;
                         MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gsekkernnum,gsekfirstcall,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gsekkernnum,gsekfirstcall);
 
                         gsekfirstcall = 0;
                     }
@@ -7544,10 +5850,10 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::string currcommandis = "-" + ((currcommand(0)).substr(5));
 
-                        ML_Base &kernML = (*xbopts).altaugxapprox;
+                        ML_Base &kernML = getBayesianref(BayesianInd).prioraugxapprox;
                         MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,gsrkkernnum,gsrkfirstcall,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,gsrkkernnum,gsrkfirstcall);
 
                         gsrkfirstcall = 0;
                     }
@@ -7556,10 +5862,10 @@ int runsvmint(SVMThreadContext *svmContext,
                     {
                         std::string currcommandis = "-" + ((currcommand(0)).substr(4));
 
-                        ML_Base &kernML = (*xbopts).altaugxapprox;
+                        ML_Base &kernML = getBayesianref(BayesianInd).prioraugxapprox;
                         MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall);
 
 //errstream() << "phantomxyznlp " << theKern << "\n";
                         gskfirstcall = 0;
@@ -7571,10 +5877,10 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::string currcommandis = "-" + ((currcommand(0)).substr(6));
 
-                        ML_Base &kernML = (*xbopts).altcgtapprox;
+                        ML_Base &kernML = getBayesianref(BayesianInd).priorcgtapprox;
                         MercerKernel &theKern = kernML.getUUOutputKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gsekkernnum,gsekfirstcall,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,1,argvariables,gsekkernnum,gsekfirstcall);
 
                         gsekfirstcall = 0;
                     }
@@ -7585,10 +5891,10 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         std::string currcommandis = "-" + ((currcommand(0)).substr(6));
 
-                        ML_Base &kernML = (*xbopts).altcgtapprox;
+                        ML_Base &kernML = getBayesianref(BayesianInd).priorcgtapprox;
                         MercerKernel &theKern = kernML.getRFFKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,gsrkkernnum,gsrkfirstcall,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,3,argvariables,gsrkkernnum,gsrkfirstcall);
 
                         gsrkfirstcall = 0;
                     }
@@ -7597,90 +5903,71 @@ int runsvmint(SVMThreadContext *svmContext,
                     {
                         std::string currcommandis = "-" + ((currcommand(0)).substr(5));
 
-                        ML_Base &kernML = (*xbopts).altcgtapprox;
+                        ML_Base &kernML = getBayesianref(BayesianInd).priorcgtapprox;
                         MercerKernel &theKern = kernML.getKernel_unsafe();
 
-                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall,svmInd);
+                        processKernel(kernML,theKern,currcommandis,currcommand,0,argvariables,gskkernnum,gskfirstcall);
 
 //errstream() << "phantomxyznlp " << theKern << "\n";
                         gskfirstcall = 0;
                     }
 
-                    else if ( currcommand(0) == "-gbH"    ) { (*xbopts).method              = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbs"    ) { (*xbopts).intrinbatch         = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbm"    ) { (*xbopts).intrinbatchmethod   = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbj"    ) { (*xbopts).startpoints         = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbTv"   ) { (*xbopts).sigma_cut           = safeatof(currcommand(1),argvariables); }
-                    //else if ( currcommand(0) == "-gbeu"   ) { (*xbopts).evaluse             = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbTs"   ) { (*xbopts).TSsampType          = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbTx"   ) { (*xbopts).TSxsampType         = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbTm"   ) { (*xbopts).TSmode              = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbTn"   ) { (*xbopts).TSNsamp             = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gba"    ) { (*xbopts).startseed           = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbb"    ) { (*xbopts).algseed             = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbt"    ) { (*xbopts).totiters            = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbe"    ) { (*xbopts).err                 = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbz"    ) { (*xbopts).ztol                = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbZ"    ) { (*xbopts).minstdev            = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbD"    ) { (*xbopts).delta               = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbzz"   ) { (*xbopts).zeta                = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbH"    ) { getBayesianref(BayesianInd).method              = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbs"    ) { getBayesianref(BayesianInd).intrinbatch         = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbm"    ) { getBayesianref(BayesianInd).intrinbatchmethod   = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbj"    ) { getBayesianref(BayesianInd).startpoints         = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbTv"   ) { getBayesianref(BayesianInd).sigma_cut           = safeatof(currcommand(1),argvariables); }
+                    //else if ( currcommand(0) == "-gbeu"   ) { getBayesianref(BayesianInd).evaluse             = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbTs"   ) { getBayesianref(BayesianInd).TSsampType          = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbTx"   ) { getBayesianref(BayesianInd).TSxsampType         = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbTm"   ) { getBayesianref(BayesianInd).TSmode              = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbTn"   ) { getBayesianref(BayesianInd).TSNsamp             = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gba"    ) { getBayesianref(BayesianInd).startseed           = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbb"    ) { getBayesianref(BayesianInd).algseed             = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbt"    ) { getBayesianref(BayesianInd).totiters            = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbe"    ) { getBayesianref(BayesianInd).err                 = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbz"    ) { getBayesianref(BayesianInd).ztol                = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbZ"    ) { getBayesianref(BayesianInd).minstdev            = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbD"    ) { getBayesianref(BayesianInd).delta               = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbzz"   ) { getBayesianref(BayesianInd).zeta                = safeatof(currcommand(1),argvariables); }
 
-                    if      ( currcommand(0) == "-gbk"   ) { (*xbopts).nu                  = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbx"   ) { (*xbopts).modD                = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbo"   ) { (*xbopts).a                   = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbB"   ) { (*xbopts).b                   = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbr"   ) { (*xbopts).r                   = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbRR"  ) { (*xbopts).R                   = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbBB"  ) { (*xbopts).B                   = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbu"   ) { (*xbopts).p                   = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbv"   ) { (*xbopts).betafn              = currcommand(1); }
-                    else if ( currcommand(0) == "-gbim"  ) { (*xbopts).itcntmethod         = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbpd"  ) { (*xbopts).direcdim            = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbq"   ) { (*xbopts).impmeasu            = &(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables)).getIMP()); }
-                    else if ( currcommand(0) == "-gbpp"  ) { (*xbopts).direcpre            = &(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables)).getML()); }
-                    else if ( currcommand(0) == "-gbmm"  ) { (*xbopts).direcsubseqpre      = &(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables)).getML()); }
-                    else if ( currcommand(0) == "-gbG"   ) { (*xbopts).gridsource          = &(getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables))); }
-                    else if ( currcommand(0) == "-gbsp"  ) { (*xbopts).stabpmax            = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbsP"  ) { (*xbopts).stabpmin            = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbsA"  ) { (*xbopts).stabA               = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbsB"  ) { (*xbopts).stabB               = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbsF"  ) { (*xbopts).stabF               = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbsr"  ) { (*xbopts).stabbal             = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbsz"  ) { (*xbopts).stabZeroPt          = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbss"  ) { (*xbopts).stabUseSig          = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbst"  ) { (*xbopts).stabThresh          = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbuu"  ) { (*xbopts).unscentUse          = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbuk"  ) { (*xbopts).unscentK            = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbfid" ) { (*xbopts).numfids             = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbfn"  ) { (*xbopts).dimfid              = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbfb"  ) { (*xbopts).fidbudget           = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbfp"  ) { (*xbopts).fidpenalty          = currcommand(1); }
-                    else if ( currcommand(0) == "-gbfo"  ) { (*xbopts).fidover             = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gBbj"  ) { (*xbopts).startpointsmultiobj = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gBbt"  ) { (*xbopts).totitersmultiobj    = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gBbH"  ) { (*xbopts).ehimethodmultiobj   = safeatoi(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbpl"  ) { safeatowhatever((*xbopts).direcmin,currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbpu"  ) { safeatowhatever((*xbopts).direcmax,currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbuS"  ) { safeatowhatever((*xbopts).unscentSqrtSigma,currcommand(1),argvariables); }
-
-                    else if ( currcommand(0) == "-gbp"  )
-                    {
-                        Vector<int> penaltyrefs;
-
-                        safeatowhatever(penaltyrefs,currcommand(1),argvariables);
-
-                        ((*xbopts).penalty).resize(penaltyrefs.size());
-
-                        if ( penaltyrefs.size() )
-                        {
-                            int ij;
-
-                            for ( ij = 0 ; ij < penaltyrefs.size() ; ++ij )
-                            {
-                                ((*xbopts).penalty)("&",ij) = &(getMLref(getMLmodels(),penaltyrefs(ij)));
-                            }
-                        }
-                    }
+                    if      ( currcommand(0) == "-gbk"   ) { getBayesianref(BayesianInd).nu                  = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbx"   ) { getBayesianref(BayesianInd).modD                = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbo"   ) { getBayesianref(BayesianInd).a                   = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbB"   ) { getBayesianref(BayesianInd).b                   = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbr"   ) { getBayesianref(BayesianInd).r                   = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbRR"  ) { getBayesianref(BayesianInd).R                   = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbBB"  ) { getBayesianref(BayesianInd).B                   = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbu"   ) { getBayesianref(BayesianInd).p                   = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbv"   ) { getBayesianref(BayesianInd).betafn              = currcommand(1); }
+                    else if ( currcommand(0) == "-gbim"  ) { getBayesianref(BayesianInd).itcntmethod         = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbpd"  ) { getBayesianref(BayesianInd).direcdim            = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbq"   ) { getBayesianref(BayesianInd).impmeasu            = &(getMLref(safeatoi(currcommand(1),argvariables)).getIMP()); }
+                    else if ( currcommand(0) == "-gbpp"  ) { getBayesianref(BayesianInd).direcpre            = &(getMLref(safeatoi(currcommand(1),argvariables)).getML()); }
+                    else if ( currcommand(0) == "-gbmm"  ) { getBayesianref(BayesianInd).direcsubseqpre      = &(getMLref(safeatoi(currcommand(1),argvariables)).getML()); }
+                    else if ( currcommand(0) == "-gbG"   ) { getBayesianref(BayesianInd).gridsource          = &(getMLref(safeatoi(currcommand(1),argvariables))); }
+                    else if ( currcommand(0) == "-gbsp"  ) { getBayesianref(BayesianInd).stabpmax            = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbsP"  ) { getBayesianref(BayesianInd).stabpmin            = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbsA"  ) { getBayesianref(BayesianInd).stabA               = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbsB"  ) { getBayesianref(BayesianInd).stabB               = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbsF"  ) { getBayesianref(BayesianInd).stabF               = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbsr"  ) { getBayesianref(BayesianInd).stabbal             = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbsz"  ) { getBayesianref(BayesianInd).stabZeroPt          = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbss"  ) { getBayesianref(BayesianInd).stabUseSig          = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbst"  ) { getBayesianref(BayesianInd).stabThresh          = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbuu"  ) { getBayesianref(BayesianInd).unscentUse          = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbuk"  ) { getBayesianref(BayesianInd).unscentK            = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbfid" ) { getBayesianref(BayesianInd).numfids             = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbfn"  ) { getBayesianref(BayesianInd).dimfid              = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbfb"  ) { getBayesianref(BayesianInd).fidbudget           = safeatof(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbfp"  ) { getBayesianref(BayesianInd).fidpenalty          = currcommand(1); }
+                    else if ( currcommand(0) == "-gbfo"  ) { getBayesianref(BayesianInd).fidover             = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gBbj"  ) { getBayesianref(BayesianInd).startpointsmultiobj = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gBbt"  ) { getBayesianref(BayesianInd).totitersmultiobj    = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gBbH"  ) { getBayesianref(BayesianInd).ehimethodmultiobj   = safeatoi(currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbpl"  ) { safeatowhatever(getBayesianref(BayesianInd).direcmin,currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbpu"  ) { safeatowhatever(getBayesianref(BayesianInd).direcmax,currcommand(1),argvariables); }
+                    else if ( currcommand(0) == "-gbuS"  ) { safeatowhatever(getBayesianref(BayesianInd).unscentSqrtSigma,currcommand(1),argvariables); }
 
 
 
@@ -7696,7 +5983,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gtx"  ) { xfnis       = currcommand(1); }
                     else if ( currcommand(0) == "-gr"   ) { numOptReps  = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gref" ) { optname     = currcommand(1); }
-                    else if ( currcommand(0) == "-gpd"  ) { optname = ( (*xnopts).optname = ( (*xgopts).optname = ( (*xdopts).optname = ( (*xbopts).optname = currcommand(1) ) ) ) ); }
+                    else if ( currcommand(0) == "-gpd"  ) { optname = ( getNelderMeadref(NelderMeadInd).optname = ( getgridref(gridInd).optname = ( getDIRectref(DIRectInd).optname = ( getBayesianref(BayesianInd).optname = currcommand(1) ) ) ) ); }
 
                     else if ( ( currcommand(0) == "-g"  ) ||
                               ( currcommand(0) == "-gd" ) ||
@@ -7705,9 +5992,9 @@ int runsvmint(SVMThreadContext *svmContext,
                     {
                         std::string opttypestring(currcommand(0));
 
-                        GlobalOptions &xopts = *(   ( currcommand(0) == "-gd" ) ? &static_cast<GlobalOptions &>((*xdopts)) :
-                                                  ( ( currcommand(0) == "-gb" ) ? &static_cast<GlobalOptions &>((*xbopts)) :
-                                                  ( ( currcommand(0) == "-gN" ) ? &static_cast<NelderOptions &>((*xnopts)) :  &static_cast<GlobalOptions &>((*xgopts)) ) ) );
+                        GlobalOptions &xopts = *(   ( currcommand(0) == "-gd" ) ? &static_cast<GlobalOptions &>(getDIRectref(DIRectInd)) :
+                                                  ( ( currcommand(0) == "-gb" ) ? &static_cast<GlobalOptions &>(getBayesianref(BayesianInd)) :
+                                                  ( ( currcommand(0) == "-gN" ) ? &static_cast<NelderOptions &>(getNelderMeadref(NelderMeadInd)) :  &static_cast<GlobalOptions &>(getgridref(gridInd)) ) ) );
 
                         {
                             // 1. Construct vector of arguments
@@ -7868,12 +6155,6 @@ int runsvmint(SVMThreadContext *svmContext,
                                 Vector<gentype> cres;
                                 int ires = 0;
                                 int mInd = 0;
-                                Vector<int> muInd;
-                                Vector<int> augxInd;
-                                Vector<int> cgtInd;
-                                int sigInd = 0;
-                                int srcmodInd = 0;
-                                int diffmodInd = 0;
                                 gentype sres;
                                 double hres = 0.0;
                                 int rawitcnt = 0;
@@ -7942,25 +6223,6 @@ int runsvmint(SVMThreadContext *svmContext,
                                     optname = "sim "+ssj.str();
                                 }
 
-//NB: if you change this you'll also need to change it in globalopt.h!
-                                Vector<int> MLnumbers(9); // 0 = ML model (mu), -1 if none (smboopt)
-                                                          // 1 = ML model (sigma), -1 if none or same as mu (smboopt)
-                                                          // 2 = functional analysis model, -1 if not relevant (globalopt)
-                                                          // 3 = random direction model (GPR or distribution) (globalopt)
-                                                          // 4 = source model (env-GP,diff-GP) (smboopt)
-                                                          // 5 = difference model (diff-GP) (smboopt)
-                                                          // 6 = augx model, -1 if not defined (smboopt)
-                                                          // 7 = cgt model, -1 if not defined (smboopt)
-
-                                MLnumbers("&",0) = bayesModelNum;
-                                MLnumbers("&",1) = -1;
-                                MLnumbers("&",2) = -1;
-                                MLnumbers("&",3) = -1;
-                                MLnumbers("&",4) = -1;
-                                MLnumbers("&",5) = -1;
-                                MLnumbers("&",6) = -1;
-                                MLnumbers("&",7) = -1;
-
                                 void *fnarg[21];
 
                                 fnarg[0]  = (void *) &(currcommand("&",1));
@@ -7976,7 +6238,7 @@ int runsvmint(SVMThreadContext *svmContext,
                                 fnarg[11] = (void *) &getMLmodels();
                                 fnarg[13] = (void *) &interstring;
                                 fnarg[14] = (void *) &xfnis;
-                                fnarg[15] = (void *) &MLnumbers; // IMPORTANT: this number must be fixed!
+                                fnarg[15] = nullptr; //(void *) &MLnumbers; // IMPORTANT: this number must be fixed!
                                 fnarg[16] = (void *) &prestring;
                                 fnarg[17] = (void *) &midstring;
                                 fnarg[18] = (void *) &rawitcnt;
@@ -7984,10 +6246,8 @@ int runsvmint(SVMThreadContext *svmContext,
 
                                 int dummy = 0;
 
-                                (*xgopts).numPts = incrtot;
+                                getgridref(gridInd).numPts = incrtot;
                                 xopts.MLregfn = gridelmMLreg;
-
-                                xopts.MLdefined = 1;
 
                                 xopts.reset();
 
@@ -7997,12 +6257,6 @@ int runsvmint(SVMThreadContext *svmContext,
                                                           fres,
                                                           ires,
                                                           mInd,
-                                                          muInd,
-                                                          augxInd,
-                                                          cgtInd,
-                                                          sigInd,
-                                                          srcmodInd,
-                                                          diffmodInd,
                                                           allxres,
                                                           allrawxres,
                                                           allfres,
@@ -8217,17 +6471,11 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                         gridargvars("&",85)("&",0) = meanallfres; gridargvars("&",75)("&",65536) = varallfres;
                                         gridargvars("&",86)("&",0) = meanallmres; gridargvars("&",76)("&",65536) = varallmres;
 
-                                        gridargvars("&",90)("&",0)         = muInd;
-                                        gridargvars("&",90)("&",1)         = sigInd;
                                         gridargvars("&",90)("&",2)         = mInd;
                                         //gridargvars("&",90)("&",3)         = randDirtemplateInd; // Not relevant here!
                                         //gridargvars("&",90)("&",4)         = itnum; // Not relevant here!
-                                        gridargvars("&",90)("&",5)         = srcmodInd;
-                                        gridargvars("&",90)("&",6)         = diffmodInd;
                                         //gridargvars("&",90)("&",7)         = raw iteration count not relevant here!
                                         //gridargvars("&",90)("&",8)         = raw start time not relevant here!
-                                        gridargvars("&",90)("&",9)         = augxInd;
-                                        gridargvars("&",90)("&",10)        = cgtInd;
 
 //phantomxyzxyz
                                         int locverblevel = verblevel;
@@ -8410,14 +6658,9 @@ errstream() << "phantomabc ires = " << ires << "\n";
 //(also in the 3-objective case too, ideally)
 //
 //                                        writeLog(allfres(optvarind,tmpvc),fparetofilenamefull,getsetExtVar);
-//./svmheavyv7.exe -qw 10 -z rls -ia 0   -Zx -gbq 10 -gmd 0.01 -gmLf 5 -L testrls -gbH 0 -gmo -gma 2 -gb 2 "-ft 123 2 2 [ y z ] -tM var(0,123)" "-echo y -echo z" fb 1 0 1 1 fb 2 0 1 1                }
+//./svmheavyv7.exe -qw 10 -z rls -ia 0   -Zx -gbq 10 -gmd 0.01 -gmLf 5 -L testrls -gbH 0 -gma 2 -gb 2 "-ft 123 2 2 [ y z ] -tM var(0,123)" "-echo y -echo z" fb 1 0 1 1 fb 2 0 1 1                }
                     }
                 }
-
-                MEMDEL(xgopts);
-                MEMDEL(xdopts);
-                MEMDEL(xnopts);
-                MEMDEL(xbopts);
 
                 time_used endtime = TIMECALL;
                 gridtime = TIMEDIFFSEC(endtime,begintime);
@@ -8473,17 +6716,17 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         NiceAssert( mln.size() == caseweight.size() );
 
-                        SVM_Generic &core = dynamic_cast<SVM_Generic &>(getMLref(getMLmodels(),svmInd).getSVM());
+                        SVM_Generic &core = dynamic_cast<SVM_Generic &>(getMLref(MLInd).getSVM());
                         Vector<ML_Base *> cases(mln.size());
 
                         for ( i = 0 ; i < mln.size() ; ++i )
                         {
-                            cases("&",i) = &(getMLref(getMLmodels(),( mln(i) < 0 ) ? -mln(i) : mln(i)).getML());
+                            cases("&",i) = &(getMLref(( mln(i) < 0 ) ? -mln(i) : mln(i)).getML());
                         }
 
                         xferMLtrain(thread_killswitch,core,cases,n,maxiter,maxtime,soltol,caseweight,( llrr < 0 ) ? 1 : 0,( llrr < 0 ) ? 0 : llrr,randtype,method,mlCval,regtype,randvari,alphaRange,useH01);
 //errstream() << "phantomxyz -42: " << core << "\n";
-//errstream() << "phantomxyz -43: " << getMLref(svmbase,svmInd) << "\n";
+//errstream() << "phantomxyz -43: " << getMLref(svmbase,MLInd) << "\n";
 //for ( i = 0 ; i < mln.size() ; ++i ) { errstream() << "phantomxyz -43b: " << *(cases(i)) << "\n"; }
                     }
                 }
@@ -8564,14 +6807,14 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         if ( (currcommand(0)).substr(0,4) == "-fsx" )
                         {
-                            bestres = optFeatHillClimb(getMLref(getMLmodels(),svmInd),-1,0,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
+                            bestres = optFeatHillClimb(getMLref(MLInd),-1,0,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
 
                             errstream() << "Hill climbing best error: " << bestres << "\n";
                         }
 
                         else if ( (currcommand(0)).substr(0,4) == "-fsr" )
                         {
-                            bestres = optFeatHillClimb(getMLref(getMLmodels(),svmInd),-2,0,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
+                            bestres = optFeatHillClimb(getMLref(MLInd),-2,0,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
 
                             errstream() << "Hill climbing best error: " << bestres << "\n";
                         }
@@ -8582,7 +6825,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                             randcross  = ( (currcommand(0)).substr(0,4) == "-fsC" ) ? 1 : 0;
                             numfolds   = ( (currcommand(0)).substr(0,4) == "-fsC" ) ? safeatoi(currcommand(2),argvariables) : safeatoi(currcommand(1),argvariables);
 
-                            bestres = optFeatHillClimb(getMLref(getMLmodels(),svmInd),numfolds,numreps,randcross,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
+                            bestres = optFeatHillClimb(getMLref(MLInd),numfolds,numreps,randcross,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
 
                             errstream() << "Hill climbing best error: " << bestres << "\n";
                         }
@@ -8591,9 +6834,9 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         {
                             trainfile = currcommand(1);
 
-                            loadFileForHillClimb(getMLrefconst(getMLmodels(),svmInd),xtemplate,trainfile,reverse,ignoreStart,imax,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,xtest,ytest);
+                            loadFileForHillClimb(getMLrefconst(MLInd),xtemplate,trainfile,reverse,ignoreStart,imax,coercetosingle,coercefromsingle,fromsingletarget,binaryRelabel,singleDrop,uselinesvector,linesread,xtest,ytest);
 
-                            bestres = optFeatHillClimb(getMLref(getMLmodels(),svmInd),-3,1,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
+                            bestres = optFeatHillClimb(getMLref(MLInd),-3,1,0,usedfeats,errstream(),useDescent,xtest,ytest,startpoint,traverse,startdirty);
 
                             errstream() << "Hill climbing best error: " << bestres << "\n";
                         }
@@ -8657,7 +6900,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         if ( !tdistkernstarted )
                         {
                             tdistkernstarted = 1;
-                            tdistkern = getMLrefconst(getMLmodels(),svmInd).getKernel();
+                            tdistkern = getMLrefconst(MLInd).getKernel();
                         }
 
                         dotfuzz = 1;
@@ -8670,7 +6913,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         if ( !sdistkernstarted )
                         {
                             sdistkernstarted = 1;
-                            sdistkern = getMLrefconst(getMLmodels(),svmInd).getKernel();
+                            sdistkern = getMLrefconst(MLInd).getKernel();
                         }
 
                         dosfuzz = 1;
@@ -8698,12 +6941,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         if ( !tdistkernstarted )
                         {
                             tdistkernstarted = 1;
-                            tdistkern = getMLrefconst(getMLmodels(),svmInd).getKernel();
+                            tdistkern = getMLrefconst(MLInd).getKernel();
                         }
 
                         ML_Base dummyML;
 
-                        processKernel(dummyML,tdistkern,currcommandis,currcommand,2,argvariables,tkernnum,tkernfirstcall,svmInd);
+                        processKernel(dummyML,tdistkern,currcommandis,currcommand,2,argvariables,tkernnum,tkernfirstcall);
 
                         tkernfirstcall = 0;
                     }
@@ -8730,12 +6973,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         if ( !sdistkernstarted )
                         {
                             sdistkernstarted = 1;
-                            sdistkern = getMLrefconst(getMLmodels(),svmInd).getKernel();
+                            sdistkern = getMLrefconst(MLInd).getKernel();
                         }
 
                         ML_Base dummyML;
 
-                        processKernel(dummyML,sdistkern,currcommandis,currcommand,2,argvariables,skernnum,skernfirstcall,svmInd);
+                        processKernel(dummyML,sdistkern,currcommandis,currcommand,2,argvariables,skernnum,skernfirstcall);
 
                         skernfirstcall = 0;
                     }
@@ -8743,7 +6986,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                 if ( dotfuzz )
                 {
-                    if ( calcFuzzML(getMLref(getMLmodels(),svmInd),tfuzzfn,argvariables,tdistkern,tfuzzf,tfuzzm,tfuzznu,1) )
+                    if ( calcFuzzML(getMLref(MLInd),tfuzzfn,argvariables,tdistkern,tfuzzf,tfuzzm,tfuzznu,1) )
                     {
                         STRTHROW("Unknown error during "+currcommand(0)+" operation.");
                     }
@@ -8751,7 +6994,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                 if ( dosfuzz )
                 {
-                    if ( calcFuzzML(getMLref(getMLmodels(),svmInd),sfuzzfn,argvariables,sdistkern,sfuzzf,sfuzzm,sfuzznu,0) )
+                    if ( calcFuzzML(getMLref(MLInd),sfuzzfn,argvariables,sdistkern,sfuzzf,sfuzzm,sfuzznu,0) )
                     {
                         STRTHROW("Unknown error during "+currcommand(0)+" operation.");
                     }
@@ -8781,7 +7024,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                     if ( currcommand(0) == "-boot" )
                     {
-                         bootstrapML(getMLref(getMLmodels(),svmInd));
+                         bootstrapML(getMLref(MLInd));
                     }
                 }
 
@@ -8805,10 +7048,10 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                 int res = 0;
 
-                if ( isSVM(getMLref(getMLmodels(),svmInd)) )
+                if ( isSVM(getMLref(MLInd)) )
                 {
                     errstream() << "Start pretraining...";
-                    getMLref(getMLmodels(),svmInd).pretrain();
+                    getMLref(MLInd).pretrain();
                     errstream() << " done, proceed with training if required....";
                 }
 
@@ -8817,7 +7060,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     errstream() << "Training SVM... ";
 
                     res = 0;
-                    getMLref(getMLmodels(),svmInd).train(res,thread_killswitch);
+                    getMLref(MLInd).train(res,thread_killswitch);
                 }
 
                 time_used endtime = TIMECALL;
@@ -9070,7 +7313,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        testTest(logfile,getMLrefconst(getMLmodels(),svmInd),x,dz,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
+                        testTest(logfile,getMLrefconst(MLInd),x,dz,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
 
                         argvariables("&",1)("&",1) = finalresult;
                     }
@@ -9082,11 +7325,11 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         Vector<SparseVector<gentype> > x;
                         gentype temp;
 
-                        loadDataFromMatlab(currcommand(2),currcommand(1),x,dz,getMLrefconst(getMLmodels(),svmInd).targType(),getsetExtVar);
+                        loadDataFromMatlab(currcommand(2),currcommand(1),x,dz,getMLrefconst(MLInd).targType(),getsetExtVar);
 
                         addtemptox(x,xtemplate);
 
-                        testTest(logfile,getMLrefconst(getMLmodels(),svmInd),x,dz,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
+                        testTest(logfile,getMLrefconst(MLInd),x,dz,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
 
                         argvariables("&",1)("&",1) = finalresult;
                     }
@@ -9100,7 +7343,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double nmean = safeatof(currcommand(3),argvariables);
                         double nvar  = safeatof(currcommand(4),argvariables);
 
-                        testSparSens(logfile,getMLrefconst(getMLmodels(),svmInd),firstsum,minbad,maxbad,nmean,nvar,0,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
+                        testSparSens(logfile,getMLrefconst(MLInd),firstsum,minbad,maxbad,nmean,nvar,0,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
                     }
 
                     else if ( ( currcommand(0) == "-tg" ) || ( currcommand(0) == "-tG" ) || ( currcommand(0) == "-tgc" ) || ( currcommand(0) == "-tGc" ) )
@@ -9165,7 +7408,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(xdata,xtemplate);
 
-                        testTest(logfile,getMLrefconst(getMLmodels(),svmInd),xdata,ydata,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
+                        testTest(logfile,getMLrefconst(MLInd),xdata,ydata,firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,0,0,useThreads);
 
                         argvariables("&",1)("&",1) = finalresult;
                     }
@@ -9206,27 +7449,27 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         if ( (currcommand(0)).substr(0,3) == "-tx" )
                         {
-                            testLOO(logfile,getMLrefconst(getMLmodels(),svmInd),firstsum,startpoint,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
+                            testLOO(logfile,getMLrefconst(MLInd),firstsum,startpoint,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
                         }
 
                         else if ( (currcommand(0)).substr(0,3) == "-tl" )
                         {
-                            testnegloglike(logfile,getMLrefconst(getMLmodels(),svmInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
+                            testnegloglike(logfile,getMLrefconst(MLInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
                         }
 
                         else if ( (currcommand(0)).substr(0,4) == "-tmg" )
                         {
-                            testmaxinfogain(logfile,getMLrefconst(getMLmodels(),svmInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
+                            testmaxinfogain(logfile,getMLrefconst(MLInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
                         }
 
                         else if ( (currcommand(0)).substr(0,6) == "-ta" )
                         {
-                            testRKHSnorm(logfile,getMLrefconst(getMLmodels(),svmInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
+                            testRKHSnorm(logfile,getMLrefconst(MLInd),firstsum,finalresult,resfilter,argvariables,getsetExtVar,useThreads);
                         }
 
                         else if ( (currcommand(0)).substr(0,3) == "-tr" )
                         {
-                            testRecall(logfile,getMLrefconst(getMLmodels(),svmInd),firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
+                            testRecall(logfile,getMLrefconst(MLInd),firstsum,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
                         }
 
                         else if ( ( (currcommand(0)).substr(0,3) == "-tc" ) || ( (currcommand(0)).substr(0,3) == "-tC" ) )
@@ -9235,12 +7478,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
                             randcross  = ( (currcommand(0)).substr(0,3) == "-tC" ) ? 1 : 0;
                             numfolds   = ( (currcommand(0)).substr(0,3) == "-tC" ) ? safeatoi(currcommand(2),argvariables) : safeatoi(currcommand(1),argvariables);
 
-                            testCross(logfile,getMLrefconst(getMLmodels(),svmInd),firstsum,numreps,startpoint,randcross,numfolds,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
+                            testCross(logfile,getMLrefconst(MLInd),firstsum,numreps,startpoint,randcross,numfolds,finalresult,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,useThreads);
                         }
 
                         else if ( ( (currcommand(0)).substr(0,3) == "-tf" ) || ( (currcommand(0)).substr(0,3) == "-tF" ) )
                         {
-                            testFileVectors(binaryRelabel,singleDrop,logfile,getMLrefconst(getMLmodels(),svmInd),trainfile,reverse,ignoreStart,imax,firstsum,coercetosingle,coercefromsingle,fromsingletarget,finalresult,uselinesvector,linesread,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,xtemplate);
+                            testFileVectors(binaryRelabel,singleDrop,logfile,getMLrefconst(MLInd),trainfile,reverse,ignoreStart,imax,firstsum,coercetosingle,coercefromsingle,fromsingletarget,finalresult,uselinesvector,linesread,resfilter,argvariables,recordres,logres,recordxvar,getsetExtVar,xtemplate);
                         }
                     }
 
@@ -9315,13 +7558,13 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         gentype sumtot(0.0);
 
-                        for ( ii = 0 ; ii < getMLrefconst(getMLmodels(),svmInd).N() ; ii++ )
+                        for ( ii = 0 ; ii < getMLrefconst(MLInd).N() ; ii++ )
                         {
                             gentype Kxx,Kii,Kxi;
 
-                            getMLrefconst(getMLmodels(),svmInd).K2(Kxx,xa,xa);
-                            getMLrefconst(getMLmodels(),svmInd).K2(Kii,getMLrefconst(getMLmodels(),svmInd).x(ii),getMLrefconst(getMLmodels(),svmInd).x(ii));
-                            getMLrefconst(getMLmodels(),svmInd).K2(Kxi,xa,getMLrefconst(getMLmodels(),svmInd).x(ii));
+                            getMLrefconst(MLInd).K2(Kxx,xa,xa);
+                            getMLrefconst(MLInd).K2(Kii,getMLrefconst(MLInd).x(ii),getMLrefconst(MLInd).x(ii));
+                            getMLrefconst(MLInd).K2(Kxi,xa,getMLrefconst(MLInd).x(ii));
 
                             sumtot += ((Kxx*Kii)-(Kxi*Kxi));
 
@@ -9343,7 +7586,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).gh(resh,resg,x);
+                        getMLrefconst(MLInd).gh(resh,resg,x);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9366,7 +7609,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).gh(resh,resg,x,2);
+                        getMLrefconst(MLInd).gh(resh,resg,x,2);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9386,7 +7629,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        double res = getMLrefconst(getMLmodels(),svmInd).e(y,x);
+                        double res = getMLrefconst(MLInd).e(y,x);
 
                         errstream() << "error(x) = " << res << "\n";
                     }
@@ -9404,7 +7647,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         gentype res;
 
-                        getMLrefconst(getMLmodels(),svmInd).dedg(res,y,x);
+                        getMLrefconst(MLInd).dedg(res,y,x);
 
                         errstream() << "error gradient(x) = " << res << "\n";
                     }
@@ -9425,7 +7668,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).stabProb(res,x,p,pnrm,rot,mu,B);
+                        getMLrefconst(MLInd).stabProb(res,x,p,pnrm,rot,mu,B);
 
                         errstream() << "Pr(x) = " << res << "\n";
                     }
@@ -9446,7 +7689,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).stabProb(res,x,p,pnrm,rot,mu,B);
+                        getMLrefconst(MLInd).stabProb(res,x,p,pnrm,rot,mu,B);
 
                         errstream() << "Pr(x) = " << res << "\n";
                     }
@@ -9462,7 +7705,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double pnrm = safeatof(currcommand(5),argvariables);
                         int rot = 0;
 
-                        getMLrefconst(getMLmodels(),svmInd).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B);
+                        getMLrefconst(MLInd).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B);
 
                         errstream() << "Pr(x) = " << res << "\n";
                     }
@@ -9478,7 +7721,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double pnrm = 1;
                         int rot = 1;
 
-                        getMLrefconst(getMLmodels(),svmInd).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B);
+                        getMLrefconst(MLInd).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B);
 
                         errstream() << "Pr(x) = " << res << "\n";
                     }
@@ -9520,7 +7763,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     {
                         gentype res;
 
-                        getMLrefconst(getMLmodels(),svmInd).K0(res);
+                        getMLrefconst(MLInd).K0(res);
 
                         errstream() << "K0() = " << res << "\n";
                     }
@@ -9537,7 +7780,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(xa,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).K1(res,xa);
+                        getMLrefconst(MLInd).K1(res,xa);
 
                         errstream() << "K1(x) = " << res << "\n";
                     }
@@ -9554,7 +7797,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(xa,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).phi2(res,xa);
+                        getMLrefconst(MLInd).phi2(res,xa);
 
                         errstream() << "phi2(x) = " << res << "\n";
                     }
@@ -9575,7 +7818,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xa,xtemplate);
                         addtemptox(xb,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).K2(res,xa,xb);
+                        getMLrefconst(MLInd).K2(res,xa,xb);
 
                         errstream() << "K2(x,y) = " << res << "\n";
                     }
@@ -9600,7 +7843,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xb,xtemplate);
                         addtemptox(xc,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).K3(res,xa,xb,xc);
+                        getMLrefconst(MLInd).K3(res,xa,xb,xc);
 
                         errstream() << "K3(x,y,u) = " << res << "\n";
                     }
@@ -9629,7 +7872,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xc,xtemplate);
                         addtemptox(xd,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).K4(res,xa,xb,xc,xd);
+                        getMLrefconst(MLInd).K4(res,xa,xb,xc,xd);
 
                         errstream() << "K4(x,y,u,v) = " << res << "\n";
                     }
@@ -9650,7 +7893,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(xx,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).Km(res,xx);
+                        getMLrefconst(MLInd).Km(res,xx);
 
                         errstream() << "Km(...) = " << res << "\n";
                     }
@@ -9670,7 +7913,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).gh(resh,resg,x);
+                        getMLrefconst(MLInd).gh(resh,resg,x);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9694,7 +7937,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).gh(resh,resg,x,2);
+                        getMLrefconst(MLInd).gh(resh,resg,x,2);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9714,7 +7957,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                          addtemptox(x,xtemplate);
 
-                         double res = getMLrefconst(getMLmodels(),svmInd).e(y,x);
+                         double res = getMLrefconst(MLInd).e(y,x);
 
                          errstream() << "error(x) = " << res << "\n";
                     }
@@ -9732,7 +7975,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                          gentype res;
 
-                         getMLrefconst(getMLmodels(),svmInd).dedg(res,y,x);
+                         getMLrefconst(MLInd).dedg(res,y,x);
 
                          errstream() << "error gradient(x) = " << res << "\n";
                     }
@@ -9758,7 +8001,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLref(getMLmodels(),nInd).gh(resh,resg,x);
+                        getMLref(nInd).gh(resh,resg,x);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9788,7 +8031,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLref(getMLmodels(),nInd).gh(resh,resg,x,2);
+                        getMLref(nInd).gh(resh,resg,x,2);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9816,7 +8059,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         {
                             for ( i = 0 ; i < x.size() ; ++i )
                             {
-                                getMLrefconst(getMLmodels(),svmInd).gh(resh("&",i),resg("&",i),x("&",i));
+                                getMLrefconst(MLInd).gh(resh("&",i),resg("&",i),x("&",i));
                             }
 
                             argvariables("&",1)("&",8) = resh;
@@ -9846,7 +8089,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         {
                             for ( i = 0 ; i < x.size() ; ++i )
                             {
-                                getMLrefconst(getMLmodels(),svmInd).gh(resh("&",i),resg("&",i),x("&",i),2);
+                                getMLrefconst(MLInd).gh(resh("&",i),resg("&",i),x("&",i),2);
                             }
 
                             argvariables("&",1)("&",8) = resh;
@@ -9866,7 +8109,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
 
-                        getMLrefconst(getMLmodels(),svmInd).ghTrainingVector(resh,resg,i);
+                        getMLrefconst(MLInd).ghTrainingVector(resh,resg,i);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9884,7 +8127,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
 
-                        getMLrefconst(getMLmodels(),svmInd).ghTrainingVector(resh,resg,i,2);
+                        getMLrefconst(MLInd).ghTrainingVector(resh,resg,i,2);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -9897,7 +8140,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     {
                         int i = safeatoi(currcommand(1),argvariables);
 
-                        double res = getMLrefconst(getMLmodels(),svmInd).eTrainingVector(i);
+                        double res = getMLrefconst(MLInd).eTrainingVector(i);
 
                         errstream() << "error(x) = " << res << "\n";
                     }
@@ -9908,7 +8151,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         gentype res;
 
-                        getMLrefconst(getMLmodels(),svmInd).dedgTrainingVector(res,i);
+                        getMLrefconst(MLInd).dedgTrainingVector(res,i);
 
                         errstream() << "error gradient(x) = " << res << "\n";
                     }
@@ -9916,17 +8159,17 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     else if ( currcommand(0) == "-hX" )
                     {
                         int i;
-                        Vector<gentype> resh(getMLrefconst(getMLmodels(),svmInd).N());
-                        Vector<gentype> resg(getMLrefconst(getMLmodels(),svmInd).N());
+                        Vector<gentype> resh(getMLrefconst(MLInd).N());
+                        Vector<gentype> resg(getMLrefconst(MLInd).N());
 
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
 
-                        if ( getMLrefconst(getMLmodels(),svmInd).N() )
+                        if ( getMLrefconst(MLInd).N() )
                         {
-                            for ( i = 0 ; i < getMLrefconst(getMLmodels(),svmInd).N() ; ++i )
+                            for ( i = 0 ; i < getMLrefconst(MLInd).N() ; ++i )
                             {
-                                getMLrefconst(getMLmodels(),svmInd).ghTrainingVector(resh("&",i),resg("&",i),i);
+                                getMLrefconst(MLInd).ghTrainingVector(resh("&",i),resg("&",i),i);
                             }
                         }
 
@@ -9940,17 +8183,17 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     else if ( currcommand(0) == "-hhX" )
                     {
                         int i;
-                        Vector<gentype> resh(getMLrefconst(getMLmodels(),svmInd).N());
-                        Vector<gentype> resg(getMLrefconst(getMLmodels(),svmInd).N());
+                        Vector<gentype> resh(getMLrefconst(MLInd).N());
+                        Vector<gentype> resg(getMLrefconst(MLInd).N());
 
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
 
-                        if ( getMLrefconst(getMLmodels(),svmInd).N() )
+                        if ( getMLrefconst(MLInd).N() )
                         {
-                            for ( i = 0 ; i < getMLrefconst(getMLmodels(),svmInd).N() ; ++i )
+                            for ( i = 0 ; i < getMLrefconst(MLInd).N() ; ++i )
                             {
-                                getMLrefconst(getMLmodels(),svmInd).ghTrainingVector(resh("&",i),resg("&",i),i,2);
+                                getMLrefconst(MLInd).ghTrainingVector(resh("&",i),resg("&",i),i,2);
                             }
                         }
 
@@ -9975,7 +8218,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xa,xtemplate);
                         addtemptox(xb,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).cov(resh,dummy,xa,xb);
+                        getMLrefconst(MLInd).cov(resh,dummy,xa,xb);
 
                         errstream() << "cov(x,y) = " << resh << "\n";
                     }
@@ -9994,7 +8237,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xa,xtemplate);
                         addtemptox(xb,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).cov(resh,dummy,xa,xb);
+                        getMLrefconst(MLInd).cov(resh,dummy,xa,xb);
 
                         errstream() << "cov(x,y) = " << resh << "\n";
                     }
@@ -10019,7 +8262,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         addtemptox(xa,xtemplate);
                         addtemptox(xb,xtemplate);
 
-                        getMLref(getMLmodels(),nInd).cov(resh,dummy,xa,xb);
+                        getMLref(nInd).cov(resh,dummy,xa,xb);
 
                         errstream() << "cov(x,y) = " << resh << "\n";
                     }
@@ -10030,7 +8273,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         int ib = safeatoi(currcommand(2),argvariables);
                         gentype resh,dummy;
 
-                        getMLrefconst(getMLmodels(),svmInd).covTrainingVector(resh,dummy,ia,ib);
+                        getMLrefconst(MLInd).covTrainingVector(resh,dummy,ia,ib);
 
                         errstream() << "cov(x,y) = " << resh << "\n";
                     }
@@ -10045,7 +8288,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).var(resh,dummy,x);
+                        getMLrefconst(MLInd).var(resh,dummy,x);
 
                         errstream() << "var(x) = " << resh << "\n";
                     }
@@ -10060,7 +8303,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).var(resh,dummy,x);
+                        getMLrefconst(MLInd).var(resh,dummy,x);
 
                         errstream() << "var(x) = " << resh << "\n";
                     }
@@ -10080,7 +8323,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         xv = safeatowhatever(tmpga,currcommand(2),argvariables).cast_vector(1);
 
-                        getMLrefconst(getMLmodels(),svmInd).noisevar(resh,dummy,x,xv);
+                        getMLrefconst(MLInd).noisevar(resh,dummy,x,xv);
 
                         errstream() << "noisevar(x) = " << resh << "\n";
                     }
@@ -10101,7 +8344,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLref(getMLmodels(),nInd).var(resh,dummy,x);
+                        getMLref(nInd).var(resh,dummy,x);
 
                         errstream() << "var(x) = " << resh << "\n";
                     }
@@ -10111,7 +8354,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         int i = safeatoi(currcommand(1),argvariables);
                         gentype resh,dummy;
 
-                        getMLrefconst(getMLmodels(),svmInd).varTrainingVector(resh,dummy,i);
+                        getMLrefconst(MLInd).varTrainingVector(resh,dummy,i);
 
                         errstream() << "var(x) = " << resh << "\n";
                     }
@@ -10132,7 +8375,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         {
                             for ( i = 0 ; i < x.size() ; ++i )
                             {
-                                getMLrefconst(getMLmodels(),svmInd).var(resh("&",i),dummy,x("&",i));
+                                getMLrefconst(MLInd).var(resh("&",i),dummy,x("&",i));
                             }
 
                             errstream() << "var(x) = " << resh(i) << "\n";
@@ -10149,7 +8392,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         addtemptox(x,xtemplate);
 
-                        getMLrefconst(getMLmodels(),svmInd).covar(resh,x);
+                        getMLrefconst(MLInd).covar(resh,x);
 
                         errstream() << "covar(x) = " << resh << "\n";
                     }
@@ -10158,13 +8401,13 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     {
                         int i;
                         gentype dummy;
-                        Vector<gentype> resh(getMLrefconst(getMLmodels(),svmInd).N());
+                        Vector<gentype> resh(getMLrefconst(MLInd).N());
 
-                        if ( getMLrefconst(getMLmodels(),svmInd).N() )
+                        if ( getMLrefconst(MLInd).N() )
                         {
-                            for ( i = 0 ; i < getMLrefconst(getMLmodels(),svmInd).N() ; ++i )
+                            for ( i = 0 ; i < getMLrefconst(MLInd).N() ; ++i )
                             {
-                                getMLrefconst(getMLmodels(),svmInd).varTrainingVector(resh("&",i),dummy,i);
+                                getMLrefconst(MLInd).varTrainingVector(resh("&",i),dummy,i);
                             }
                         }
 
@@ -10199,22 +8442,22 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                     else if ( currcommand(0) == "-a" )
                     {
-                        NiceAssert( isSVM(getMLrefconst(getMLmodels(),svmInd)) );
+                        NiceAssert( isSVM(getMLrefconst(MLInd)) );
 
                         argvariables("&",1)("&",18).makeString(currcommand(1));
 
-                        writeLog(getMLrefconst(getMLmodels(),svmInd).alpha(),currcommand(1),getsetExtVar);
+                        writeLog(getMLrefconst(MLInd).alpha(),currcommand(1),getsetExtVar);
                     }
 
                     else if ( currcommand(0) == "-b" )
                     {
-                        NiceAssert( isSVM(getMLrefconst(getMLmodels(),svmInd)) );
+                        NiceAssert( isSVM(getMLrefconst(MLInd)) );
 
                         argvariables("&",1)("&",19).makeString(currcommand(1));
 
                         Vector<gentype> biasfill(1);
 
-                        biasfill("&",0) = getMLrefconst(getMLmodels(),svmInd).bias();
+                        biasfill("&",0) = getMLrefconst(MLInd).bias();
 
                         writeLog(biasfill,currcommand(1),getsetExtVar);
                     }
@@ -10233,7 +8476,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                             STRTHROW("Unable to open svm file "+currcommand(0)+" "+svmfile);
                         }
 
-                        sfile << getMLrefconst(getMLmodels(),svmInd);
+                        sfile << getMLrefconst(MLInd);
                         sfile.close();
                     }
 
@@ -10255,7 +8498,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double xmin = safeatof(currcommand(2),argvariables);
                         double xmax = safeatof(currcommand(3),argvariables);
 
-                        plotml(getMLrefconst(getMLmodels(),svmInd),index,xmin,xmax,plotymin,plotymax,plotname,plotdataname,plotoutformat,plotincdata,plotbaseline,plotincvar,0,plotxtemplate,plotoutsquare);
+                        plotml(getMLrefconst(MLInd),index,xmin,xmax,plotymin,plotymax,plotname,plotdataname,plotoutformat,plotincdata,plotbaseline,plotincvar,0,plotxtemplate,plotoutsquare);
                     }
 
                     else if ( currcommand(0) == "-surf" )
@@ -10270,7 +8513,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         double ymin = safeatof(currcommand(5),argvariables);
                         double ymax = safeatof(currcommand(6),argvariables);
 
-                        plotml(getMLrefconst(getMLmodels(),svmInd),xindex,yindex,xmin,xmax,ymin,ymax,plotymin,plotymax,plotname,plotdataname,plotoutformat,plotincdata,plotbaseline,plotincvar,0,1,plotxtemplate,plotoutsquare);
+                        plotml(getMLrefconst(MLInd),xindex,yindex,xmin,xmax,ymin,ymax,plotymin,plotymax,plotname,plotdataname,plotoutformat,plotincdata,plotbaseline,plotincvar,0,1,plotxtemplate,plotoutsquare);
                     }
                 }
 
@@ -10323,47 +8566,47 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     loggerfile << "Performance evaluation time (sec): " << performtime     << "\n";
                     loggerfile << "Report time (sec):                 " << reporttime      << "\n\n";
 
-                    loggerfile << "Trained: " << getMLrefconst(getMLmodels(),svmInd).isTrained() << "\n\n";
+                    loggerfile << "Trained: " << getMLrefconst(MLInd).isTrained() << "\n\n";
 
-                    loggerfile << "N:       " << getMLrefconst(getMLmodels(),svmInd).N()     << "\n";
-                    loggerfile << "NNC(0):  " << getMLrefconst(getMLmodels(),svmInd).NNC(0)  << "\n\n";
+                    loggerfile << "N:       " << getMLrefconst(MLInd).N()     << "\n";
+                    loggerfile << "NNC(0):  " << getMLrefconst(MLInd).NNC(0)  << "\n\n";
 
-                    loggerfile << "Target space dimension: " << getMLrefconst(getMLmodels(),svmInd).tspaceDim()  << "\n";
-                    loggerfile << "Classes:                " << getMLrefconst(getMLmodels(),svmInd).numClasses() << "\n";
-                    loggerfile << "SVM type:               " << getMLrefconst(getMLmodels(),svmInd).type()       << "\n\n";
+                    loggerfile << "Target space dimension: " << getMLrefconst(MLInd).tspaceDim()  << "\n";
+                    loggerfile << "Classes:                " << getMLrefconst(MLInd).numClasses() << "\n";
+                    loggerfile << "SVM type:               " << getMLrefconst(MLInd).type()       << "\n\n";
 
-                    loggerfile << "Class labels:         " << getMLrefconst(getMLmodels(),svmInd).ClassLabels() << "\n";
+                    loggerfile << "Class labels:         " << getMLrefconst(MLInd).ClassLabels() << "\n";
 
-                    loggerfile << "Zero tolerance:      " << getMLrefconst(getMLmodels(),svmInd).zerotol()      << "\n";
-                    loggerfile << "Optimal tolerance:   " << getMLrefconst(getMLmodels(),svmInd).Opttol()       << "\n";
-                    loggerfile << "Max iterations:      " << getMLrefconst(getMLmodels(),svmInd).maxitcnt()     << "\n";
-                    loggerfile << "Max training time:   " << getMLrefconst(getMLmodels(),svmInd).maxtraintime() << "\n\n";
+                    loggerfile << "Zero tolerance:      " << getMLrefconst(MLInd).zerotol()      << "\n";
+                    loggerfile << "Optimal tolerance:   " << getMLrefconst(MLInd).Opttol()       << "\n";
+                    loggerfile << "Max iterations:      " << getMLrefconst(MLInd).maxitcnt()     << "\n";
+                    loggerfile << "Max training time:   " << getMLrefconst(MLInd).maxtraintime() << "\n\n";
 
-                    loggerfile << "Underlying scalar:    " << getMLrefconst(getMLmodels(),svmInd).isUnderlyingScalar() << "\n";
-                    loggerfile << "Underlying vectorial: " << getMLrefconst(getMLmodels(),svmInd).isUnderlyingVector() << "\n\n";
-                    loggerfile << "Underlying anionic:   " << getMLrefconst(getMLmodels(),svmInd).isUnderlyingAnions() << "\n\n";
+                    loggerfile << "Underlying scalar:    " << getMLrefconst(MLInd).isUnderlyingScalar() << "\n";
+                    loggerfile << "Underlying vectorial: " << getMLrefconst(MLInd).isUnderlyingVector() << "\n\n";
+                    loggerfile << "Underlying anionic:   " << getMLrefconst(MLInd).isUnderlyingAnions() << "\n\n";
 
-                    loggerfile << "Kernel dictionary size: " << getMLrefconst(getMLmodels(),svmInd).getKernel().size()      << "\n";
-                    loggerfile << "Kernel indexed:         " << getMLrefconst(getMLmodels(),svmInd).getKernel().isIndex()   << "\n";
-                    loggerfile << "Kernel indices:         " << getMLrefconst(getMLmodels(),svmInd).getKernel().cIndexes()  << "\n\n";
+                    loggerfile << "Kernel dictionary size: " << getMLrefconst(MLInd).getKernel().size()      << "\n";
+                    loggerfile << "Kernel indexed:         " << getMLrefconst(MLInd).getKernel().isIndex()   << "\n";
+                    loggerfile << "Kernel indices:         " << getMLrefconst(MLInd).getKernel().cIndexes()  << "\n\n";
 
-                    if ( getMLrefconst(getMLmodels(),svmInd).getKernel().size() )
+                    if ( getMLrefconst(MLInd).getKernel().size() )
                     {
-                        for ( i = 0 ; i < getMLrefconst(getMLmodels(),svmInd).getKernel().size() ; ++i )
+                        for ( i = 0 ; i < getMLrefconst(MLInd).getKernel().size() ; ++i )
                         {
-                            loggerfile << "Kernel type       (" << i << "): " << getMLrefconst(getMLmodels(),svmInd).getKernel().cType(i)          << "\n";
-                            loggerfile << "Kernel weight     (" << i << "): " << getMLrefconst(getMLmodels(),svmInd).getKernel().cWeight(i)        << "\n";
-                            loggerfile << "Normalised        (" << i << "): " << getMLrefconst(getMLmodels(),svmInd).getKernel().isNormalised(i)   << "\n";
-                            loggerfile << "Integer constants (" << i << "): " << getMLrefconst(getMLmodels(),svmInd).getKernel().cIntConstants(i)  << "\n";
-                            loggerfile << "Real constants    (" << i << "): " << getMLrefconst(getMLmodels(),svmInd).getKernel().cRealConstants(i) << "\n\n";
+                            loggerfile << "Kernel type       (" << i << "): " << getMLrefconst(MLInd).getKernel().cType(i)          << "\n";
+                            loggerfile << "Kernel weight     (" << i << "): " << getMLrefconst(MLInd).getKernel().cWeight(i)        << "\n";
+                            loggerfile << "Normalised        (" << i << "): " << getMLrefconst(MLInd).getKernel().isNormalised(i)   << "\n";
+                            loggerfile << "Integer constants (" << i << "): " << getMLrefconst(MLInd).getKernel().cIntConstants(i)  << "\n";
+                            loggerfile << "Real constants    (" << i << "): " << getMLrefconst(MLInd).getKernel().cRealConstants(i) << "\n\n";
                         }
 
                         loggerfile << "\n";
                     }
 
-                    if ( isSVM(getMLrefconst(getMLmodels(),svmInd)) )
+                    if ( isSVM(getMLrefconst(MLInd)) )
                     {
-                        const SVM_Generic &locsvmref = getMLrefconst(getMLmodels(),svmInd).getSVMconst();
+                        const SVM_Generic &locsvmref = getMLrefconst(MLInd).getSVMconst();
 
                         loggerfile << "SVM specifics:\n\n";
 
@@ -10635,7 +8878,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
     //SparseVector<ML_Mutable *> &svmbase                                = *((SparseVector<ML_Mutable *>            *) ((void **) arg)[11]);
     std::string &interstring                                           = *((std::string                           *) ((void **) arg)[13]);
     gentype &xfnis                                                     = *((gentype                               *) ((void **) arg)[14]);
-    Vector<int> &MLnumbers                                             = *((Vector<int>                           *) ((void **) arg)[15]);
+    //Vector<int> &MLnumbers                                             = *((Vector<int>                           *) ((void **) arg)[15]);
     std::string &prestring                                             = *((std::string                           *) ((void **) arg)[16]);
     std::string &midstring                                             = *((std::string                           *) ((void **) arg)[17]);
     int &rawitcnt                                                      = *((int                                   *) ((void **) arg)[18]);
@@ -10667,17 +8910,17 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
     // MLnumbers is a curious case.  It is *shared* with the optimiser, so these variables
     // can (are) used to pass arguments back to the grid run!
 
-    gridargvars("&",90)("&",0)  = MLnumbers(0);
-    gridargvars("&",90)("&",1)  = MLnumbers(1);
-    gridargvars("&",90)("&",2)  = MLnumbers(2);
-    gridargvars("&",90)("&",3)  = MLnumbers(3);
+    //gridargvars("&",90)("&",0)  = MLnumbers(0);
+    //gridargvars("&",90)("&",1)  = MLnumbers(1);
+    //gridargvars("&",90)("&",2)  = MLnumbers(2);
+    //gridargvars("&",90)("&",3)  = MLnumbers(3);
     gridargvars("&",90)("&",4)  = ( itnum >= 0 ) ? itnum : itnumalt;
-    gridargvars("&",90)("&",5)  = MLnumbers(4);
-    gridargvars("&",90)("&",6)  = MLnumbers(5);
+    //gridargvars("&",90)("&",5)  = MLnumbers(4);
+    //gridargvars("&",90)("&",6)  = MLnumbers(5);
     gridargvars("&",90)("&",7)  = ++rawitcnt;
     gridargvars("&",90)("&",8)  = rawstarttime;
-    gridargvars("&",90)("&",9)  = MLnumbers(6);
-    gridargvars("&",90)("&",10) = MLnumbers(7);
+    //gridargvars("&",90)("&",9)  = MLnumbers(6);
+    //gridargvars("&",90)("&",10) = MLnumbers(7);
 
     if ( x.size() )
     {
@@ -11530,10 +9773,8 @@ void preExtractLinesFromFile(ofiletype &filelines, gentype &linesleft, std::stri
 
 
 void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &currcommandis, const Vector<std::string> &currcommand, int ktype,
-                   SparseVector<SparseVector<gentype> > &argvariables, int &kernnum, int firstcall, int svmInd)
+                   SparseVector<SparseVector<gentype> > &argvariables, int &kernnum, int firstcall)
 {
-    (void) svmInd;
-
     // Process this first
 
     if ( ( ktype == 0 ) && ( currcommand(0) == "-ktk" ) )
@@ -11671,7 +9912,7 @@ void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &cu
 //                        else if ( currcommandis == "-kcy " ) { theKern.setChurnInner(1); }
 //                        else if ( currcommandis == "-kcn"  ) { theKern.setChurnInner(0); }
                         else if ( currcommandis == "-kan"  ) { theKern.setAltDiff(safeatoi(currcommand(1),argvariables)); }
-                        else if ( currcommandis == "-ktx"  ) { theKern.setAltCall((getMLref(getMLmodels(),safeatoi(currcommand(1),argvariables))).MLid(),kernnum); }
+                        else if ( currcommandis == "-ktx"  ) { theKern.setAltCall((getMLref(safeatoi(currcommand(1),argvariables))).MLid(),kernnum); }
 
                         else if ( currcommandis == "-kI" ) 
                         { 
@@ -13184,101 +11425,73 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "following general format (where  values in {} are  optional; and != and  ! are\n" : "" );
     output << ( ( basic || advanced ) ? "functionally equivalent):                                                     \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "{>,=,!=,!,<} {y} {tVAL} {TVAL} {eVAL} {EVAL} {sVAL} {SVAL} x                  \n" : "" );
+    output << ( ( basic || advanced ) ? "Classification: y {tVAL} {TVAL} {eVAL} {EVAL} {sVAL} {SVAL} x                 \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "Classification:                                                               \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {>,=,!=,!,<} must not be included.                                   \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y must be included.                                                  \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y=-1,0,+1,+2,... is classification (0 for test/unknown).             \n" : "" );
+    output << ( ( basic || advanced ) ? "       - y=-1,0,+1,+2,... is the class (0 for test/unknown).                  \n" : "" );
     output << ( ( basic || advanced ) ? "       - {tVAL} or {TVAL} sets the empirical risk scale.                      \n" : "" );
     output << ( ( basic || advanced ) ? "       - {eVAL} or {EVAL} sets the distance to surface scale.                 \n" : "" );
     output << ( ( basic || advanced ) ? "       - {sVAL} or {SVAL} sets the empirical sigma scale.                     \n" : "" );
     output << ( ( basic || advanced ) ? "       - x is the training vector.                                            \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "Regression:                                                                   \n" : "" );
+    output << ( ( basic || advanced ) ? "Regression: {>,=,!=,!,<} y {tVAL} {TVAL} {eVAL} {EVAL} {sVAL} {SVAL} x        \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "       - {>,=,!=,!,<} defines constraint type (optional, default is =):       \n" : "" );
-    output << ( ( basic || advanced ) ? "         o >: g(x) > y                                                        \n" : "" );
     output << ( ( basic || advanced ) ? "         o =: g(x) = y                                                        \n" : "" );
-    output << ( ( basic || advanced ) ? "         o <: g(x) < y                                                        \n" : "" );
+    output << ( ( basic || advanced ) ? "         o >: g(x) > y  (not allowed for anion, vector or gentype)            \n" : "" );
+    output << ( ( basic || advanced ) ? "         o <: g(x) < y  (not allowed for anion, vector or gentype)            \n" : "" );
     output << ( ( basic || advanced ) ? "         o ! or !=: ignore this vector (it may be referenced elsewhere).      \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y must be included.                                                  \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y gives the target value for this point.                             \n" : "" );
-    output << ( ( basic || advanced ) ? "       - if y is anion, vector or gentype then >,< not defined.               \n" : "" );
+    output << ( ( basic || advanced ) ? "       - y is the target.                                                     \n" : "" );
     output << ( ( basic || advanced ) ? "       - if y is gentype then it must lie in the basis set u_i.               \n" : "" );
     output << ( ( basic || advanced ) ? "       - {tVAL} or {TVAL} sets the empirical risk scale.                      \n" : "" );
     output << ( ( basic || advanced ) ? "       - {eVAL} or {EVAL} sets the epsilon insensitivity scale.               \n" : "" );
+    output << ( ( basic || advanced ) ? "       - {sVAL} or {SVAL} sets the empirical sigma scale.                     \n" : "" );
     output << ( ( basic || advanced ) ? "       - x is the training vector.                                            \n" : "" );
     output << ( ( basic || advanced ) ? "       - For  some SVM,  GP and  LS-SVM  models you  can use  negative epsilon\n" : "" );
     output << ( ( basic || advanced ) ? "         scales to indicate that g(x)  lies *outside* of [y-e,y+e] - that  is,\n" : "" );
     output << ( ( basic || advanced ) ? "         g(x) in (-inf,y-e] cup [y+e,inf).                                    \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "Similarity learning:                                                          \n" : "" );
+    output << ( ( basic || advanced ) ? "Classification with Scoring: y {...VAL} x                                     \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - Format as for  regression, except that x takes  the form xa ~ xb (the\n" : "" );
-    output << ( ( basic || advanced ) ? "         character ~ acts as a separator), so the constraint is on g({xa,xb}).\n" : "" );
+    output << ( ( basic || advanced ) ? "       - as for classification.                                               \n" : "" );
+    output << ( ( basic || advanced ) ? "       - y = integer: a standard class membership constraint.                 \n" : "" );
+    output << ( ( basic || advanced ) ? "       - y = vector: a score.  Each element of the vector indicates a score on\n" : "" );
+    output << ( ( basic || advanced ) ? "         an  \"axis\",  where   each  axis is  used   to  derive a  set of  rank\n" : "" );
+    output << ( ( basic || advanced ) ? "         constraints g(x_i) - g(x_j) > 1.  Use null  as a  placeholder if x is\n" : "" );
+    output << ( ( basic || advanced ) ? "         not scored on a given axis.                                          \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "Multi-instance learning:                                                      \n" : "" );
+    output << ( ( basic || advanced ) ? "Regression with Scoring: {>,=,!=,!,<} y {...VAL} x                            \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - Format as for regression,  but in this case x has  the general format\n" : "" );
-    output << ( ( basic || advanced ) ? "         xa ~ xb ~ ... ~ xn  (the   character  ~  acts  as  a  separator),  so\n" : "" );
+    output << ( ( basic || advanced ) ? "       - as for classification (<, > only for scalar y).                      \n" : "" );
+    output << ( ( basic || advanced ) ? "       - y = scalar: a standard regression g(x) ? y.                          \n" : "" );
+    output << ( ( basic || advanced ) ? "       - y = vector: a score as per classification with scoring.              \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "One-class: {...VAL} x                                                         \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "       - {...VAL} as per classification.                                      \n" : "" );
+    output << ( ( basic || advanced ) ? "       - x is the training vector.                                            \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "Similarity: {>,=,!=,!,<} y {...VAL} x                                         \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "       - as for regression.                                                   \n" : "" );
+    output << ( ( basic || advanced ) ? "       - x takes the form xa ~ xb (where ~ is a separator), and the constraint\n" : "" );
+    output << ( ( basic || advanced ) ? "         is on g({xa,xb}).                                                    \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "Multi-instance: {>,=,!=,!,<} y {...VAL} x                                     \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "       - as for regression.                                                   \n" : "" );
+    output << ( ( basic || advanced ) ? "       - x takes the form xa ~ xb ~ xc ~ ... (where ~ is a separator), and the\n" : "" );
     output << ( ( basic || advanced ) ? "         constraint is on g({xa,xb,...,xn}).                                  \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "Single class:                                                                 \n" : "" );
+    output << ( ( basic || advanced ) ? "Gentype regression: y {...VAL} x                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {>,=,!=,!,<} must not be included.                                   \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y must not be included.                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {tVAL} or {TVAL} sets the empirical risk scale.                      \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {eVAL} or {EVAL} sets the distance to surface scale.                 \n" : "" );
-    output << ( ( basic || advanced ) ? "       - x is the training vector.                                            \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "Classification with Scoring:                                                  \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {>,=,!=,!,<} must not be included.                                   \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y must be included.                                                  \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y = integer indicates a standard class membership constraint.        \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y = vector indicates a score.  Each element of the vector indicates a\n" : "" );
-    output << ( ( basic || advanced ) ? "         score on a different \"axis\",  where each axis is used to derive a set\n" : "" );
-    output << ( ( basic || advanced ) ? "         of rank constraints g(x_i) - g(x_j) > 1. Use null as a placeholder if\n" : "" );
-    output << ( ( basic || advanced ) ? "         the x is not scored on a given axis.                                 \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {tVAL} or {TVAL} sets the empirical risk scale.                      \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {eVAL} or {EVAL} sets the distance to surface scale.                 \n" : "" );
-    output << ( ( basic || advanced ) ? "       - x is the training vector.                                            \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "Regression with Scoring:                                                      \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {>,=,!=,!,<} may be included for scalar constraints.                 \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {=,!} only for scoring constraints.                                  \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y must be included.                                                  \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y = scalar indicates a standard constraint g(x) ? y.                 \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y = vector indicates a score as per classification with scoring.     \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {tVAL} or {TVAL} sets the empirical risk scale.                      \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {eVAL} or {EVAL} sets the distance to surface scale.                 \n" : "" );
-    output << ( ( basic || advanced ) ? "       - x is the training vector.                                            \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "Gentype regression:                                                           \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {>,=,!=,!,<} must not be included.                                   \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y must be included.                                                  \n" : "" );
+    output << ( ( basic || advanced ) ? "       - as for regression.                                                   \n" : "" );
     output << ( ( basic || advanced ) ? "       - y can be real, vector, anion, string, equation, set or graph (as long\n" : "" );
     output << ( ( basic || advanced ) ? "         as the concept of (inner) product (possibly numeric) can be defined).\n" : "" );
-    output << ( ( basic || advanced ) ? "       - y is projected onto the \"u\" basis (see -Aby etc below).              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {tVAL} or {TVAL} sets the empirical risk scale.                      \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {eVAL} or {EVAL} sets the distance to surface scale.                 \n" : "" );
-    output << ( ( basic || advanced ) ? "       - x is the training vector.                                            \n" : "" );
+    output << ( ( basic || advanced ) ? "         y is projected onto the \"u\" basis (see -Aby etc below).              \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "Planar regression and multi-task:                                             \n" : "" );
+    output << ( ( basic || advanced ) ? "Planar regression and multi-task: {>,=,!=,!,<} y {...VAL} x                   \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {>,=,!=,!,<} defines constraint type:                                \n" : "" );
-    output << ( ( basic || advanced ) ? "         o >: v'.g(x) > y                                                     \n" : "" );
-    output << ( ( basic || advanced ) ? "         o =: v'.g(x) = y                                                     \n" : "" );
-    output << ( ( basic || advanced ) ? "         o <: v'.g(x) < y                                                     \n" : "" );
-    output << ( ( basic || advanced ) ? "         o ! or !=: ignore this vector (it may be referenced elsewhere).      \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y must be included.                                                  \n" : "" );
-    output << ( ( basic || advanced ) ? "       - y is the scalar-valued target.                                       \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {tVAL} or {TVAL} sets the empirical risk scale.                      \n" : "" );
-    output << ( ( basic || advanced ) ? "       - {eVAL} or {EVAL} sets the distance to surface scale.                 \n" : "" );
+    output << ( ( basic || advanced ) ? "       - as for regression.                                                   \n" : "" );
     output << ( ( basic || advanced ) ? "       - x is the training vector of form x :::: 7:v. v may either be a vector\n" : "" );
     output << ( ( basic || advanced ) ? "         or an integer index to an (output) basis vector u_i. If v is a vector\n" : "" );
     output << ( ( basic || advanced ) ? "         then it must lie in the space spanned by the output basis vectors.   \n" : "" );
@@ -13291,19 +11504,19 @@ void printhelp(std::ostream &output, int basic, int advanced)
 //    output << ( ( basic || advanced ) ? "         tuning, features etc affects all  tasks but otherwise they don't tend\n" : "" );
 //    output << ( ( basic || advanced ) ? "         to interfere (depending on model, obviously).                        \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "Multi-expert ranking:                                                         \n" : "" );
+    output << ( ( basic || advanced ) ? "Multi-expert ranking: {>,=,!=,!,<} y {...VAL} x                               \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - Like planar  regression but automatically  tunes basis u_i.  The idea\n" : "" );
-    output << ( ( basic || advanced ) ? "         is  that  many   \"experts\"  give  their  opinions   (usually  ranking\n" : "" );
-    output << ( ( basic || advanced ) ? "         constraints, but not necessarily)  and we want to construct a machine\n" : "" );
-    output << ( ( basic || advanced ) ? "         that synthesises these (not  always compatible) sources.  Each expert\n" : "" );
-    output << ( ( basic || advanced ) ? "         is assigned to a  particular basis vector u_i, and  the inner product\n" : "" );
-    output << ( ( basic || advanced ) ? "         between two such vectors <u_i,u_j> reflects how similar experts i and\n" : "" );
-    output << ( ( basic || advanced ) ? "         j are in  their assessments.  The  machine attempts to  automatically\n" : "" );
-    output << ( ( basic || advanced ) ? "         tune these basis vectors - that is,  to learn expert similarity - and\n" : "" );
-    output << ( ( basic || advanced ) ? "         thereby  combine them  (essentially transfer  learning).   Evaluating\n" : "" );
-    output << ( ( basic || advanced ) ? "         g can  either define  which  \"expert\"  x is  aligned with -  that is,\n" : "" );
-    output << ( ( basic || advanced ) ? "         g(x :::: 7:i) for expert i - or give all alignments - that is, g(x). \n" : "" );
+    output << ( ( basic || advanced ) ? "       - as for planar regression with multitask.                             \n" : "" );
+    output << ( ( basic || advanced ) ? "       - automatically tunes  the basis u_i.  The idea is  that many \"experts\"\n" : "" );
+    output << ( ( basic || advanced ) ? "         give their opinions (usually but  not always ranking constraints) and\n" : "" );
+    output << ( ( basic || advanced ) ? "         we want  to construct  a machine  that synthesises  these (not always\n" : "" );
+    output << ( ( basic || advanced ) ? "         compatible) sources.  Each expert is assigned to  a basis vector u_i,\n" : "" );
+    output << ( ( basic || advanced ) ? "         and the inner product between two such vectors <u_i,u_j> reflects how\n" : "" );
+    output << ( ( basic || advanced ) ? "         similar experts i and j are in  their assessments.  The machine tries\n" : "" );
+    output << ( ( basic || advanced ) ? "         to tune  these basis  vectors (learn  expert similarity)  and thereby\n" : "" );
+    output << ( ( basic || advanced ) ? "         combine them (essentially transfer learning). Evaluating g can either\n" : "" );
+    output << ( ( basic || advanced ) ? "         define which \"expert\" x is aligned to - g(x :::: 7:i) for expert i - \n" : "" );
+    output << ( ( basic || advanced ) ? "         or give all alignments - g(x).                                       \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "The format of the x vector may be  either sparse or nonsparse.  Sparse vectors\n" : "" );
     output << ( ( basic || advanced ) ? "vectors have the form  (noting that commas can be  used instead of or combined\n" : "" );
@@ -13311,7 +11524,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "<feature1>:<valueF1> <feature2>:<valueF2> ... <featureN>:<valueFN>            \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "with all other values being assumed zero.  Sparse vectors have the form:      \n" : "" );
+    output << ( ( basic || advanced ) ? "with all other values being assumed zero.  Nonsparse vectors have the form:   \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "<value1> <value2> ... <valueN>                                                \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
@@ -13322,9 +11535,9 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "       - The product of two vectors is the inner-product of the vectors.      \n" : "" );
     output << ( ( basic || advanced ) ? "       - The product of two strings is 1 if they are identical, 0 otherwise.  \n" : "" );
-    output << ( ( basic || advanced ) ? "       - The sum of two strings is the concatenation of them.                 \n" : "" );
     output << ( ( basic || advanced ) ? "       - The product of two sets is the number of elements in common.         \n" : "" );
-    output << ( ( basic || advanced ) ? "       - The sum of two sets is the union, the difference the intersection.   \n" : "" );
+    output << ( ( basic || advanced ) ? "       - The sum of two strings is their concatenation.                       \n" : "" );
+    output << ( ( basic || advanced ) ? "       - The sum of two sets is the union, the difference their intersection. \n" : "" );
     output << ( ( basic || advanced ) ? "       - Simple equations like sqrt(20) will be evaluated directly.           \n" : "" );
     output << ( ( basic || advanced ) ? "       - Distributions  (eg grand(0,1)) are  processed by the kernel  and then\n" : "" );
     output << ( ( basic || advanced ) ? "         sampled as per Muandet et al, Learning from Distributions via Support\n" : "" );
@@ -13352,50 +11565,50 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "         sampled version of the function on [0,1].  Default values for i,j and\n" : "" );
     output << ( ( basic || advanced ) ? "         n are 0,0 and 100, respectively.                                     \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "For example the following training sets all define variants of the classic XOR\n" : "" );
-    output << ( ( basic || advanced ) ? "problem:                                                                      \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - Standard (y x format):                                               \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -1   -1 -1                                                           \n" : "" );
-    output << ( ( basic || advanced ) ? "         1    -1 1                                                            \n" : "" );
-    output << ( ( basic || advanced ) ? "         1    1  -1                                                           \n" : "" );
-    output << ( ( basic || advanced ) ? "         -1   1  1                                                            \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - Vector x (y x format):                                               \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -1    [ -1 1 ] [ -1 1 ]                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         1     [ -1 1 ] [ 1 -1 ]                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         1     [ 1 -1 ] [ -1 1 ]                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -1    [ 1 -1 ] [ 1 -1 ]                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - Symbolic x (y x format):                                             \n" : "" );
-    output << ( ( basic || advanced ) ? "         -1    \"a\" \"a\"                                                        \n" : "" );
-    output << ( ( basic || advanced ) ? "         1     \"a\" \"b\"                                                        \n" : "" );
-    output << ( ( basic || advanced ) ? "         1     \"b\" \"a\"                                                        \n" : "" );
-    output << ( ( basic || advanced ) ? "         -1    \"b\" \"b\"                                                        \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - Set x with symbolic elements (y x format):                           \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -1    { \"cat\" \"horse\" }     { \"car\" }                                \n" : "" );
-    output << ( ( basic || advanced ) ? "         1     { \"cat\" \"chicken\" }   { \"lemons\" \"x\"  }                        \n" : "" );
-    output << ( ( basic || advanced ) ? "         1     { \"wallaby\" \"mouse\" } { \"walrus\" \"car\" }                       \n" : "" );
-    output << ( ( basic || advanced ) ? "         -1    { \"mouse\" \"wombat\" }  { \"q\" \"lemons\" }                         \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - Distribution x (y x format):                                         \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -1    grand(-1,0.1) grand(-1,0.1)                                    \n" : "" );
-    output << ( ( basic || advanced ) ? "         1     grand(-1,0.1) grand(1,0.1)                                     \n" : "" );
-    output << ( ( basic || advanced ) ? "         1     grand(1,0.1)  grand(-1,0.1)                                    \n" : "" );
-    output << ( ( basic || advanced ) ? "         -1    grand(1,0.1)  grand(1,0.1)                                     \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - Scalar function x (y x format):                                      \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -1    @():sin(2*pi()*x) @():sin(2*pi()*x)                            \n" : "" );
-    output << ( ( basic || advanced ) ? "         1     @():sin(2*pi()*x) @():cos(2*pi()*x)                            \n" : "" );
-    output << ( ( basic || advanced ) ? "         1     @():cos(2*pi()*x) @():sin(2*pi()*x)                            \n" : "" );
-    output << ( ( basic || advanced ) ? "         -1    @():cos(2*pi()*x) @():cos(2*pi()*x)                            \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "For example the following training sets all define variants of the classic XOR\n" : "" );
+//    output << ( ( basic || advanced ) ? "problem:                                                                      \n" : "" );
+//    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "       - Standard (y x format):                                               \n" : "" );
+//    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "         -1   -1 -1                                                           \n" : "" );
+//    output << ( ( basic || advanced ) ? "         1    -1 1                                                            \n" : "" );
+//    output << ( ( basic || advanced ) ? "         1    1  -1                                                           \n" : "" );
+//    output << ( ( basic || advanced ) ? "         -1   1  1                                                            \n" : "" );
+//    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "       - Vector x (y x format):                                               \n" : "" );
+//    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "         -1    [ -1 1 ] [ -1 1 ]                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "         1     [ -1 1 ] [ 1 -1 ]                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "         1     [ 1 -1 ] [ -1 1 ]                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "         -1    [ 1 -1 ] [ 1 -1 ]                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "       - Symbolic x (y x format):                                             \n" : "" );
+//    output << ( ( basic || advanced ) ? "         -1    \"a\" \"a\"                                                        \n" : "" );
+//    output << ( ( basic || advanced ) ? "         1     \"a\" \"b\"                                                        \n" : "" );
+//    output << ( ( basic || advanced ) ? "         1     \"b\" \"a\"                                                        \n" : "" );
+//    output << ( ( basic || advanced ) ? "         -1    \"b\" \"b\"                                                        \n" : "" );
+//    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "       - Set x with symbolic elements (y x format):                           \n" : "" );
+//    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "         -1    { \"cat\" \"horse\" }     { \"car\" }                                \n" : "" );
+//    output << ( ( basic || advanced ) ? "         1     { \"cat\" \"chicken\" }   { \"lemons\" \"x\"  }                        \n" : "" );
+//    output << ( ( basic || advanced ) ? "         1     { \"wallaby\" \"mouse\" } { \"walrus\" \"car\" }                       \n" : "" );
+//    output << ( ( basic || advanced ) ? "         -1    { \"mouse\" \"wombat\" }  { \"q\" \"lemons\" }                         \n" : "" );
+//    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "       - Distribution x (y x format):                                         \n" : "" );
+//    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "         -1    grand(-1,0.1) grand(-1,0.1)                                    \n" : "" );
+//    output << ( ( basic || advanced ) ? "         1     grand(-1,0.1) grand(1,0.1)                                     \n" : "" );
+//    output << ( ( basic || advanced ) ? "         1     grand(1,0.1)  grand(-1,0.1)                                    \n" : "" );
+//    output << ( ( basic || advanced ) ? "         -1    grand(1,0.1)  grand(1,0.1)                                     \n" : "" );
+//    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "       - Scalar function x (y x format):                                      \n" : "" );
+//    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "         -1    @():sin(2*pi()*x) @():sin(2*pi()*x)                            \n" : "" );
+//    output << ( ( basic || advanced ) ? "         1     @():sin(2*pi()*x) @():cos(2*pi()*x)                            \n" : "" );
+//    output << ( ( basic || advanced ) ? "         1     @():cos(2*pi()*x) @():sin(2*pi()*x)                            \n" : "" );
+//    output << ( ( basic || advanced ) ? "         -1    @():cos(2*pi()*x) @():cos(2*pi()*x)                            \n" : "" );
+//    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "More generally x has the form (using {...} to denote optional arguments here):\n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "xa0 {~ xa1 {~ xa2 ...}} {: xb0 {~ xb1 {~ xb2 ...}}} {:: e} {:::: a}           \n" : "" );
@@ -13409,15 +11622,10 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "         (e'.d/dx) g(x) ? y                                                   \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         making this a  constraint on the direction  derivative of the trained\n" : "" );
-    output << ( ( basic || advanced ) ? "         machine.  In the training file these have the form:                  \n" : "" );
+    output << ( ( basic || advanced ) ? "         machine.  Constraints on  higher  derivatives  may be  applied  using\n" : "" );
+    output << ( ( basic || advanced ) ? "         augmented data (a_6) as described shortly.  When evaluating:         \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         {>,=,!=,!,<} {y} {tVAL} {TVAL} {eVAL} {EVAL} x :: e                  \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         where e has the same format as x.   Constraints on higher derivatives\n" : "" );
-    output << ( ( basic || advanced ) ? "         may also be applied using  augmented data (a_6) as described shortly.\n" : "" );
-    output << ( ( basic || advanced ) ? "         Note that:                                                           \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - when evaluating the model g(x :: e) = (e'.d/dx) g(x).                \n" : "" );
+    output << ( ( basic || advanced ) ? "         g(x :: e) = (e'.d/dx) g(x).                                          \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "Rank constraints: some  models (SVMs, GPs,  LSVs) allow the  inclusion of rank\n" : "" );
     output << ( ( basic || advanced ) ? "         constraints - basically rather then enforcing g(x) ? y, they enforce:\n" : "" );
@@ -13425,42 +11633,40 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "         g(xa) - g(xb) ? y      (by default, -krn 0)                          \n" : "" );
     output << ( ( basic || advanced ) ? "         g(xa) + g(xb) ? y      (alternative variant, -krn 1)                 \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         (where ? depends on model). In the training file these have the form:\n" : "" );
+    output << ( ( basic || advanced ) ? "         (where ? depends  on model). This enables ordinal  regression and can\n" : "" );
+    output << ( ( basic || advanced ) ? "         be combined with gradients.  For example (assuming -krn 0):          \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         {>,=,!=,!,<} {y} {tVAL} {TVAL} {eVAL} {EVAL} xa : xb                 \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         where xa and xb have the same format as x above.  Note that:         \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - this enables ordinal regression.                                     \n" : "" );
-    output << ( ( basic || advanced ) ? "       - You can combine with gradients.  For example (assume -krn 0):        \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         (ea'.d/dxa) g(xa) - g(xb) ? y                                        \n" : "" );
-    output << ( ( basic || advanced ) ? "         g(xa) - (eb'.d/dxb) g(xb) ? y                                        \n" : "" );
-    output << ( ( basic || advanced ) ? "         (ea'.d/dxa) g(xa) - (eb'.d/dxb) g(xb) ? y                            \n" : "" );
+    output << ( ( basic || advanced ) ? "         (ea'.d/dxa) g(xa) - g(xb) = y                                        \n" : "" );
+    output << ( ( basic || advanced ) ? "         g(xa) - (eb'.d/dxb) g(xb) >= y                                       \n" : "" );
+    output << ( ( basic || advanced ) ? "         (ea'.d/dxa) g(xa) - (eb'.d/dxb) g(xb) <= y                           \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         correspond, respectively, to:                                        \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         {>,=,!=,!,<} {y} {tVAL} {TVAL} {eVAL} {EVAL} xa : xb :: ea           \n" : "" );
-    output << ( ( basic || advanced ) ? "         {>,=,!=,!,<} {y} {tVAL} {TVAL} {eVAL} {EVAL} xa : xb ::: eb          \n" : "" );
-    output << ( ( basic || advanced ) ? "         {>,=,!=,!,<} {y} {tVAL} {TVAL} {eVAL} {EVAL} xa : xb :: ea ::: eb    \n" : "" );
+    output << ( ( basic || advanced ) ? "         y {tVAL} {TVAL} {eVAL} {EVAL} xa : xb :: ea                          \n" : "" );
+    output << ( ( basic || advanced ) ? "         > y {tVAL} {TVAL} {eVAL} {EVAL} xa : xb ::: eb                       \n" : "" );
+    output << ( ( basic || advanced ) ? "         < y {tVAL} {TVAL} {eVAL} {EVAL} xa : xb :: ea ::: eb                 \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - when evaluating model g(xa : xb) = g(xa) - g(xb) (by default -krn 0).\n" : "" );
-    output << ( ( basic || advanced ) ? "         alternatively g(xa : xb) = g(xa) + g(xb) using -krn 1.               \n" : "" );
-    output << ( ( basic || advanced ) ? "       - there are two other modes  available that don't  even define a latent\n" : "" );
-    output << ( ( basic || advanced ) ? "         function  g(x), so  always require  g(xa : xb) in  both training  and\n" : "" );
-    output << ( ( basic || advanced ) ? "         evaluation.  These are:                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "         When evaluating:                                                     \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "         g(xa : xb) = g(xa) - g(xb)      (assuming -krn 0, default)           \n" : "" );
+    output << ( ( basic || advanced ) ? "         g(xa : xb) = g(xa) + g(xb)      (assuming -krn 1)                    \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "         There are two other modes available  that don't define a latent g(x)\n" : "" );
+    output << ( ( basic || advanced ) ? "         and thus always require g(xa : xb) in training and evaluation.  These\n" : "" );
+    output << ( ( basic || advanced ) ? "         are:                                                                 \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "               -krn 2:  g(xa : xb) = -g(xb : xa) (but non-transisitve)        \n" : "" );
     output << ( ( basic || advanced ) ? "               -krn 3:  g(xa : xb) = +g(xb : xa)                              \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - use a_13:v to instead use v.g(xa) -   g(xb) ? y                      \n" : "" );
-    output << ( ( basic || advanced ) ? "       - use a_14:w to instead use   g(xa) - w.g(xb) ? y                      \n" : "" );
-    output << ( ( basic || advanced ) ? "       - use both to instead use   v.g(xa) - w.g(xb) ? y                      \n" : "" );
+    output << ( ( basic || advanced ) ? "         Notes:                                                               \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "Multi-Instance  format:  most  models  can  be  used  for  multi-instance  and\n" : "" );
-    output << ( ( basic || advanced ) ? "         similarity (kernel function)  learning.   In this case  vectors x are\n" : "" );
-    output << ( ( basic || advanced ) ? "         replaced by  sets {xa0,xa1,...},  and g(x) becomes  g({xa0,xa1,...}).\n" : "" );
-    output << ( ( basic || advanced ) ? "         In this case the training file has the form:                         \n" : "" );
+    output << ( ( basic || advanced ) ? "       - use a_13:v to define:   v.g(xa) -   g(xb) ? y                        \n" : "" );
+    output << ( ( basic || advanced ) ? "       - use a_14:w to define:     g(xa) - w.g(xb) ? y                        \n" : "" );
+    output << ( ( basic || advanced ) ? "       - use both to define:     v.g(xa) - w.g(xb) ? y                        \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "Multi-Instance format: most models allow multi-instance and similarity (kernel\n" : "" );
+    output << ( ( basic || advanced ) ? "         function) learning. In this case vectors x are replaced by sets {xa0,\n" : "" );
+    output << ( ( basic || advanced ) ? "         xa1,...}, g(x) becomes g({xa0,xa1,...}), and training files use:     \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         {>,=,!=,!,<} {y} {tVAL} {TVAL} {eVAL} {EVAL} xa0 ~ xa1 ~ ...         \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
@@ -13474,23 +11680,23 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "Multi-Task format: multi-task learning  via ICM kernels is  possible using the\n" : "" );
     output << ( ( basic || advanced ) ? "         same format  as multi-instance  learning.  See -XT  for  information.\n" : "" );
     output << ( ( basic || advanced ) ? "         Multi-task and multi-instance can be  combined, but interpretation is\n" : "" );
-    output << ( ( basic || advanced ) ? "         non-trivial: see code for details.                                   \n" : "" );
+    output << ( ( basic || advanced ) ? "         non-trivial (see code for details).                                  \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "Augmented data: in some cases additional data may be included using the form: \n" : "" );
+    output << ( ( basic || advanced ) ? "Augmented format: in some cases additional data may be included using:        \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         {>,=,!=,!,<} {y} {tVAL} {TVAL} {eVAL} {EVAL} x :::: a                \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         where elements in a have the following interpretation:               \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "       - a_0:  replace x with  vector x_{a_0}.  If this is a vector  then x is\n" : "" );
-    output << ( ( basic || advanced ) ? "               replaced  by a tuple [ x_{a_0_0} ~ x_{a_0_1} .. ]. nul for dft.\n" : "" );
+    output << ( ( basic || advanced ) ? "       - a_0:  replace xa with vector x_{a_0}.  If this is a vector  then x is\n" : "" );
+    output << ( ( basic || advanced ) ? "               replaced by a tuple [ x_{a_0_0} ~ x_{a_0_1} .. ]. null for dft.\n" : "" );
     output << ( ( basic || advanced ) ? "       - a_1:  replace xb with vector x_{a_1}.  If this is a vector then xb is\n" : "" );
-    output << ( ( basic || advanced ) ? "               replaced  by a tuple [ x_{a_1_0} ~ x_{a_1_1} .. ]. nul for dft.\n" : "" );
-    output << ( ( basic || advanced ) ? "       - a_2:  replace e with  vector x_{a_2}.  null for default.             \n" : "" );
+    output << ( ( basic || advanced ) ? "               replaced by a tuple [ x_{a_1_0} ~ x_{a_1_1} .. ]. null for dft.\n" : "" );
+    output << ( ( basic || advanced ) ? "       - a_2:  replace ea with vector x_{a_2}.  null for default.             \n" : "" );
     output << ( ( basic || advanced ) ? "       - a_15: replace eb with vector x_{a_12}. null for default.             \n" : "" );
-    output << ( ( basic || advanced ) ? "       - a_3:  reserved (like a_7, but refers to gentype regr basis. nul dft).\n" : "" );
+    output << ( ( basic || advanced ) ? "       - a_3:  reserved (like a_7, but refers to gentype basis. null for dft).\n" : "" );
     output << ( ( basic || advanced ) ? "       - a_4:  diagonal kernel over-ride.  If  present in x1,x2 then kernel is\n" : "" );
-    output << ( ( basic || advanced ) ? "               replaced by delta_{x_1(a_4), x_2(a_4)} (0 if only one,nul dft).\n" : "" );
+    output << ( ( basic || advanced ) ? "               replaced by delta_{x_1(a_4),x_2(a_4)} (0 if only one,null dft).\n" : "" );
     output << ( ( basic || advanced ) ? "       - a_19: include diagonal offset a_19 to kernel.                        \n" : "" );
     output << ( ( basic || advanced ) ? "       - a_20: secondary nulling.  The kernel evaluated between x's with diff.\n" : "" );
     output << ( ( basic || advanced ) ? "               a_20 values will be 0.  null for default (which is same as 0). \n" : "" );
@@ -13554,21 +11760,17 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "               for a given training pair use  this, specifically a_{100q} = -1\n" : "" );
     output << ( ( basic || advanced ) ? "               means <, 0 means !,+1 means > and +2 means =.                  \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "Pipes: - Most output sent to standard error.                                  \n" : "" );
-    output << ( (          advanced ) ? "       - Help sent to standard out.                                           \n" : "" );
-    output << ( (          advanced ) ? "       - All other output sent direct to files.                               \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "Matlab/mex: - Standard out and standard error redirected to mexprintf.        \n" : "" );
-    output << ( (          advanced ) ? "       - Logfiles written and contents mirrored by matlab variables.          \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
+//    output << ( ( basic || advanced ) ? "Pipes: - Most output sent to standard error.                                  \n" : "" );
+//    output << ( ( basic || advanced ) ? "       - Help sent to standard out.                                           \n" : "" );
+//    output << ( ( basic || advanced ) ? "       - All other output sent direct to files.                               \n" : "" );
+//    output << ( (          advanced ) ? "                                                                              \n" : "" );
+//    output << ( (          advanced ) ? "Matlab/mex: - Standard out and standard error redirected to mexprintf.        \n" : "" );
+//    output << ( (          advanced ) ? "       - Logfiles written and contents mirrored by matlab variables.          \n" : "" );
+//    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "Arguments: in the descriptions below there are three types of arguments:      \n" : "" );
-    output << ( (          advanced ) ? "       - Strings:  indicated by  leading $  (eg $file,  $fn).  These  must not\n" : "" );
-    output << ( (          advanced ) ? "         contain whitespace.                                                  \n" : "" );
-    output << ( (          advanced ) ? "       - Sets: held in curly  brackets {} (eg {0,1,2}).  The  argument must be\n" : "" );
-    output << ( (          advanced ) ? "         one of the options in the list.                                      \n" : "" );
-    output << ( (          advanced ) ? "       - Variables: everything  else.  These  may be integers,  reals, vectors\n" : "" );
-    output << ( (          advanced ) ? "         (eg [ 1 2 3.2 ] or [ 0:0.12 1:39 5:2 ]) or anions (eg 1.0i) depending\n" : "" );
-    output << ( (          advanced ) ? "         on context.                                                          \n" : "" );
+    output << ( (          advanced ) ? "       - Strings: denoted eg $file, $fn, must not contain whitespace.         \n" : "" );
+    output << ( (          advanced ) ? "       - Sets: denoted eg {0,1,2}, argument must be one of the options given. \n": "" );
+    output << ( (          advanced ) ? "       - Variables: everything else, depending on context.                    \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "Variable evaluation: a useful feature here  is that all variable arguments are\n" : "" );
     output << ( (          advanced ) ? "         evaluated.  That is,  you can enter them as  equations - for example,\n" : "" );
@@ -13643,17 +11845,47 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                  ** be very  slow for large MLs.  The  current ML **         \n" : "" );
     output << ( (          advanced ) ? "                  ** is h.                                         **         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -qR  n          - delete ML  n completely.  If  n is working  ML then\n" : "" );
-    output << ( (          advanced ) ? "                           return to  clean-slate state (no  data, all default\n" : "" );
-    output << ( (          advanced ) ? "                           settings).                                         \n" : "" );
+    output << ( (          advanced ) ? "         -qw  n          - set ML n as current (working) ML. If n was not used\n" : "" );
+    output << ( (          advanced ) ? "                           previously then create clean-slate ML first.       \n" : "" );
+    output << ( (          advanced ) ? "         -qR  n          - delete ML n.  If n is the working ML then return to\n" : "" );
+    output << ( (          advanced ) ? "                           clean-slate state (no data, all default settings). \n" : "" );
     output << ( (          advanced ) ? "         -qc  n m        - overwrite ML n with copy of ML m.                  \n" : "" );
     output << ( (          advanced ) ? "         -qs  n m        - swap ML n and ML m.                                \n" : "" );
-    output << ( (          advanced ) ? "         -qw  n          - set ML n  as current (working) ML.   If n  not used\n" : "" );
-    output << ( (          advanced ) ? "                           previously then create clean-slate ML first.       \n" : "" );
     output << ( (          advanced ) ? "         -qpush n        - push current ML index onto stack, run -qw n.       \n" : "" );
     output << ( (          advanced ) ? "         -qpop           - push ML index n off stack, run -qw n.              \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -qsave n file   - save ML n to filename file.                        \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                  ** Global  optimisers (grid,  Bayesian etc)  are **         \n" : "" );
+    output << ( (          advanced ) ? "                  ** also indexed,  and moreover the ML  models in **         \n" : "" );
+    output << ( (          advanced ) ? "                  ** a BO can be selected like any other ML.       **         \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -gqw  n         - set grid optimiser n (for -g). Default 1.          \n" : "" );
+    output << ( (          advanced ) ? "         -gdqw n         - set DIRect optimiser n (for -gd). Default 1.       \n" : "" );
+    output << ( (          advanced ) ? "         -gNqw n         - set Nelder-Mead optimiser n (for -gN). Default 1.  \n" : "" );
+    output << ( (          advanced ) ? "         -gbqw n         - set Bayesian optimiser n (for -gb). Default 1.     \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "                  ** The following *imply* -gbqw n                 **         \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -gbqwmu     n k - set BO n objective model k as current ML.          \n" : "" );
+    output << ( (          advanced ) ? "         -gbqwgt     n k - set BO n constraint model k as current ML.         \n" : "" );
+    output << ( (          advanced ) ? "         -gbqwaugx   n k - set BO n side-channel model k as current ML.       \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -gbqwsigma  n   - set BO n variance model k as current ML.           \n" : "" );
+    output << ( (          advanced ) ? "         -gbqwdiff   n   - set BO n difference model k as current ML.         \n" : "" );
+    output << ( (          advanced ) ? "         -gbqwsrc    n   - set BO n source model k as current ML.             \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -gbqwmup    n   - set BO n prior objective model k as current ML.    \n" : "" );
+    output << ( (          advanced ) ? "         -gbqwgtp    n   - set BO n prior constraint model k as current ML.   \n" : "" );
+    output << ( (          advanced ) ? "         -gbqwaugxp  n   - set BO n prior side-channel model k as current ML. \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -gbqwsigmap n   - set BO n prior variance model k as current ML.     \n" : "" );
+    output << ( (          advanced ) ? "         -gbqwdiffp  n   - set BO n prior difference model k as current ML.   \n" : "" );
+    output << ( (          advanced ) ? "         -gbqwsrcp   n   - set BO n prior source model k as current ML.       \n" : "" );
+    output << ( (          advanced ) ? "                                                                              \n" : "" );
+    output << ( (          advanced ) ? "         -gqwrandp   n   - set BO n prior projection model for grid opt.      \n" : "" );
+    output << ( (          advanced ) ? "         -gdqwrandp  n   - set BO n prior projection model for DIRect opt.    \n" : "" );
+    output << ( (          advanced ) ? "         -gNqwrandp  n   - set BO n prior projection model for NelderMead opt.\n" : "" );
+    output << ( (          advanced ) ? "         -gbqwrandp  n   - set BO n prior projection model for Bayesian opt.  \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "Pre-Setup options (after multi-ML options):                                   \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
@@ -13700,17 +11932,26 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                         lsh - LSV: multi-expert ranking.                     \n" : "" );
     output << ( ( basic || advanced ) ? "                         lsR - LSV: scalar regression random FF.#             \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "                               #Kernel choice is limited to 3,4,13,19.        \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                               Gaussian processes (GPR):                      \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                         gpr - GPR: gaussian process scalar regression.       \n" : "" );
-    output << ( ( basic || advanced ) ? "                         gpv - GPR: gaussian process vector regression.****   \n" : "" );
+    output << ( ( basic || advanced ) ? "                         gpv - GPR: gaussian process vector regression.@      \n" : "" );
     output << ( ( basic || advanced ) ? "                         gpa - GPR: gaussian process anionic regression.      \n" : "" );
     output << ( ( basic || advanced ) ? "                         gpg - GPR: gaussian process gentype regression.      \n" : "" );
     output << ( ( basic || advanced ) ? "                         gpc - GPR: gaussian process binary classification.*  \n" : "" );
     output << ( ( basic || advanced ) ? "                         gpR - GPR: gaussian process scalar regression RFF.#  \n" : "" );
     output << ( ( basic || advanced ) ? "                         gpC - GPR: gaussian process binary classify RFF.#*   \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                               *Uses expectation propagation (EP).            \n" : "" );
+    output << ( ( basic || advanced ) ? "                               *Uses Laplace propagation.                     \n" : "" );
+    output << ( ( basic || advanced ) ? "                               #Kernel choice is limited to 3,4,13,19.        \n" : "" );
+    output << ( ( basic || advanced ) ? "                               @For some reason with vectorial GPs you need to\n" : "" );
+    output << ( ( basic || advanced ) ? "                                do full setup *before* adding data - e.g.:    \n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "        ./svmheavyv7.exe -z gpv -m m -Ad 2 -c 1 -kt 2 -kd 2 -Zx -AA xorand.txt\n" : "" );
+    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
+    output << ( ( basic || advanced ) ? "                                where we have -Zx before adding data here.    \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                               Type-II Multi-Layer Kernel Machines (MLM):     \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
@@ -13806,16 +12047,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                                where lambda  can be set (eg by  Bayesian opt)\n" : "" );
     output << ( ( basic || advanced ) ? "                                using -SAA.                                   \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                            ****For some reason with vectorial GPs you need to\n" : "" );
-    output << ( ( basic || advanced ) ? "                                do full setup *before* adding data - e.g.:    \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                                 ./svmheavyv7.exe -z gpv -m m -Ad 2 -c 1 -kt 2\n" : "" );
-    output << ( ( basic || advanced ) ? "                                                      -kd 2 -Zx -AA xorand.txt\n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "                                (note the -Zx before adding data here, and the\n" : "" );
-    output << ( ( basic || advanced ) ? "                                -Ad to  set the  target space  dimension right\n" : "" );
-    output << ( ( basic || advanced ) ? "                                after defining type).                         \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                           Using this  function at  any point  will completely\n" : "" );
     output << ( ( basic || advanced ) ? "                           remove any existing ML.                            \n" : "" );
@@ -15656,32 +13887,10 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                           2. Run $pstring defined by -gtp.   This can be used\n" : "" );
     output << ( (          advanced ) ? "                              to set  non-standard  kernels  etc for  Bayesian\n" : "" );
-    output << ( (          advanced ) ? "                              optimisation and  functional optimisation.   The\n" : "" );
-    output << ( (          advanced ) ? "                              following indices are set (-1 where/if n/a):    \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,0): model for Bayesian optimisation.   \n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,1): noise model for Bayesian optim..   \n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,2): weighting projection template.     \n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,5): source data model (env-GP,diff-GP).\n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,6): difference data model (diff-GP).   \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                              var(90,2)  and  var(90,3) are  used  for  random\n" : "" );
-    output << ( (          advanced ) ? "                              projection and functional  analysis, where q has\n" : "" );
-    output << ( (          advanced ) ? "                              the form:                                       \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                              - q(x)(t) = [ x_0.q_0(t) + x_1.q_1(t) + ... ]   \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                              where:                                          \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                              - x is the vector p(x) in R^d.                  \n" : "" );
-    output << ( (          advanced ) ? "                              - q_i is a draw from ML var(90,3).              \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                              Typically ML  var(90,3) will be  a random vector\n" : "" );
-    output << ( (          advanced ) ? "                              distribution, a GP  (function distribution) or a\n" : "" );
-    output << ( (          advanced ) ? "                              set of basis functions (eg Bernstein polys).    \n" : "" );
+    output << ( (          advanced ) ? "                              optimisation and functional optimisation.       \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                           3. Random  projection:  draw  q_0,  q_1,  ...  from\n" : "" );
-    output << ( (          advanced ) ? "                              defined distribution (template ML var(90,3)).   \n" : "" );
+    output << ( (          advanced ) ? "                              defined distribution.                           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                           4. Run $mstring defined by  -gtP.  This can be used\n" : "" );
     output << ( (          advanced ) ? "                              used  for  things  like  tweaking  the  template\n" : "" );
@@ -15690,22 +13899,14 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                              gradually make  it sharper.  The  following vars\n" : "" );
     output << ( (          advanced ) ? "                              are defined here (-1 if n/a):                   \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,0): model for Bayesian optimisation.   \n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,1): noise model for Bayesian optim.    \n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,2): weighting projection template.     \n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,3): current q(t) function.             \n" : "" );
     output << ( (          advanced ) ? "                              - var(90,4): iteration  count  (0 first  time, 1\n" : "" );
     output << ( (          advanced ) ? "                                           second time etc... up to -gpr).    \n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,5): source data model (env,diff-GP).   \n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,6): difference data model (diff-GP).   \n" : "" );
     output << ( (          advanced ) ? "                              - var(90,7): raw   iteration   counter   (unlike\n" : "" );
     output << ( (          advanced ) ? "                                           var(90,4)  this  starts  at  1  and\n" : "" );
     output << ( (          advanced ) ? "                                           increments  for  every  evaluation,\n" : "" );
     output << ( (          advanced ) ? "                                           including random initial tests etc)\n" : "" );
     output << ( (          advanced ) ? "                              - var(90,8): raw start  time (seconds,  with ref\n" : "" );
     output << ( (          advanced ) ? "                                           to some arbitrary point in time.   \n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,9): x augmentation model (if used).    \n" : "" );
-    output << ( (          advanced ) ? "                              - var(90,10): inequality constraint model (\").  \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                              Note  that   changes  here  affect   the  *next*\n" : "" );
     output << ( (          advanced ) ? "                              projection step 3, not the current one.         \n" : "" );
@@ -15879,13 +14080,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                                                 results are included.        \n" : "" );
     output << ( (          advanced ) ? "                                    var(8x,0): as for var(7x,...) in one.     \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "                                    var(90,0): SMBO model index (or -1).      \n" : "" );
-    output << ( (          advanced ) ? "                                    var(90,1): SMBO sigma model index (or -1).\n" : "" );
-    output << ( (          advanced ) ? "                                    var(90,2): optimal function index (or -1).\n" : "" );
-    output << ( (          advanced ) ? "                                    var(90,3): functional model.              \n" : "" );
     output << ( (          advanced ) ? "                                    var(90,4): iteration count.               \n" : "" );
-    output << ( (          advanced ) ? "                                    var(90,5): source data model (env,dif-GP).\n" : "" );
-    output << ( (          advanced ) ? "                                    var(90,6): difference data model (dif-GP).\n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                             Note that var(50,0) and var(53,0) are expanded.  \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
@@ -15976,19 +14171,12 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                  ** Generic parameter search options.             **         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -gao fn         - rather than define the function above just use this\n" : "" );
-    output << ( (          advanced ) ? "                           function.  Note that  the arguments  here are  just\n" : "" );
-    output << ( (          advanced ) ? "                           x,y,z,..., in the order defined.                   \n" : "" );
-    output << ( (          advanced ) ? "         -gan            - normal operation (reverses -gao).  This is default.\n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -gy  t          - max training  time for  search alg (in  seconds - 0\n" : "" );
-    output << ( (          advanced ) ? "                           for no limit, default).                            \n" : "" );
-    output << ( (          advanced ) ? "         -gxs [...]      - initial value of x vector (default []).            \n" : "" );
+    output << ( (          advanced ) ? "         -gy  t          - max training time (secs - 0 for no limit, default).\n" : "" );
+    output << ( (          advanced ) ? "         -gxs [...]      - initial value of x vector, if needed (default []). \n" : "" );
     output << ( (          advanced ) ? "         -gfm l          - min value for function, stop if f<=l (deflt -inf). \n" : "" );
     output << ( (          advanced ) ? "         -gfu m          - max value of function, stop if f>=l (deflt +inf).  \n" : "" );
     output << ( (          advanced ) ? "         -gfM l          - soft (clipping) min value for function (dflt -inf).\n" : "" );
     output << ( (          advanced ) ? "         -gfU l          - soft (clipping) max value for function (dflt +inf).\n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gr  n          - number of repeats (default 1).  If > 1 then results\n" : "" );
     output << ( (          advanced ) ? "                           for the  final repeat  are  returned,  except fgrid\n" : "" );
     output << ( (          advanced ) ? "                           values are replaced by [ fmean, fvar ], and fres is\n" : "" );
@@ -16013,7 +14201,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           in the example).                                   \n" : "" );
     output << ( (          advanced ) ? "         -gP  g          - like -gp but in this case p_i are functions sampled\n" : "" );
     output << ( (          advanced ) ? "                           from a GP with RBF kernel of lengthscale g.        \n" : "" );
-    output << ( (          advanced ) ? "         -gPk...         - set kernel parameters on GP for -gP.               \n" : "" );
     output << ( (          advanced ) ? "         -gpb            - like -gp, but p_i are Bernstein basis polynomials. \n" : "" );
     output << ( (          advanced ) ? "         -gpB n          - like -gpb, but with  schedule.  Degree of Bernstein\n" : "" );
     output << ( (          advanced ) ? "                           starts at n, then increases  with every repeat (set\n" : "" );
@@ -16059,11 +14246,8 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           4: negative (def) function (kernel) by spectr flip.\n" : "" );
     output << ( (          advanced ) ? "                           5: symmetric indefinite kernel (otherwise like 0). \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -gtp  $pstring  - string  to be  evaluated  at start  of  optim.  Put\n" : "" );
-    output << ( (          advanced ) ? "                           fancy kernel setups etc here.  Evaluated once, just\n" : "" );
-    output << ( (          advanced ) ? "                           before random projection (c/f -gpr).               \n" : "" );
-    output << ( (          advanced ) ? "         -gtP  $mstring  - to be evaluated after  each random projection.  Put\n" : "" );
-    output << ( (          advanced ) ? "                           kernel tweaking steps here.   Evaluated after inner\n" : "" );
+    output << ( (          advanced ) ? "         -gtp  $pstring  - string to be evaluated at start, before projection.\n" : "" );
+    output << ( (          advanced ) ? "         -gtP  $mstring  - to be evaluated after each  projection, after inner\n" : "" );
     output << ( (          advanced ) ? "                           optimisation and random projections (c/f -gpr).    \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gtx $xfn       - if set, the x  stored and logged is  not the x that\n" : "" );
@@ -16077,7 +14261,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           constraining projected searches.                   \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gref $name     - name of this search (used when plotting results).  \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gplot          - plot graph of all grid-searches in this batch.     \n" : "" );
     output << ( (          advanced ) ? "         -gpln name      - name of output of plot (deflt logfile.opt.ps/pdf). \n" : "" );
     output << ( (          advanced ) ? "         -gpld name      - name of datafile of plot (default logfile.opt....).\n" : "" );
@@ -16145,8 +14328,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                  ** Model-based optimisation options.             **         \n" : "" );
     output << ( (          advanced ) ? "                  ** (this includes Bayesian optimisation)         **         \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -gms            - Select single-objective optimisation model (dflt). \n" : "" );
-    output << ( (          advanced ) ? "         -gmo            - Select multi-objective optimisation model.         \n" : "" );
     output << ( (          advanced ) ? "         -gma n          - set dim of default GPR for multi-objective optim.  \n" : "" );
     output << ( (          advanced ) ? "         -gmr            - add noise to model observations.                   \n" : "" );
     output << ( (          advanced ) ? "         -gmR            - don't add noise to model observations (default).   \n" : "" );
@@ -16188,7 +14369,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           n = convert [ x ~  x' ~ x'' ~ ... ] to  the \"naive\"\n" : "" );
     output << ( (          advanced ) ? "                               form  [ x n:x' 2n:x''  ... ],  so  side-channel\n" : "" );
     output << ( (          advanced ) ? "                               data is naively treated as normal data.        \n" : "" );
-    output << ( (          advanced ) ? "         -gmsw [ n ]     - change default models for the side-channels q(x).  \n" : "" );
     output << ( (          advanced ) ? "         -gmsa n         - set dim for default q(x) model.                    \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmT [ xt ]     - set (sparse vector) template  for model data.  Data\n" : "" );
@@ -16314,15 +14494,12 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           already in this model is treated as observations of\n" : "" );
     output << ( (          advanced ) ? "                           y = -f(x) (NOTE THE NEGATIVE SIGN THERE).  See also\n" : "" );
     output << ( (          advanced ) ? "                           -gmx for more on transfer learning.                \n" : "" );
-    output << ( (          advanced ) ? "         -gmwcgt n       - like -gmw for cgt model.                           \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmt n          - model basis:                                       \n" : "" );
     output << ( (          advanced ) ? "                           0 - model f(p(x)) using p(x) (default).            \n" : "" );
     output << ( (          advanced ) ? "                           1 - model f(p(x)) using p(x), clear after subspace.\n" : "" );
     output << ( (          advanced ) ? "                           2 - model f(p(x)) using x, clear after subspace.   \n" : "" );
     output << ( (          advanced ) ? "                           3 - model f(p(x)) using x.                         \n" : "" );
-    output << ( (          advanced ) ? "         -gmrff N        - use RFF for model.  If N = 0 then no rff; otherwise\n" : "" );
-    output << ( (          advanced ) ? "                           we use random fourier features model with N feats. \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gmq n          - direction oracle mode (for -gp, -gP, -gpr):        \n" : "" );
     output << ( (          advanced ) ? "                           0 - direction is sample from gradient GP at current\n" : "" );
@@ -16477,15 +14654,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                              batch_method,R                                  \n" : "" );
     output << ( (          advanced ) ? "                           For multi-rec, multi-obj, use eg:                  \n" : "" );
     output << ( (          advanced ) ? "                              -gbv [ betafn1 betafn2 ... ]                    \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -gbp [ n0 n1 ... ]- Add penalty  terms to  the acquisition  function.\n" : "" );
-    output << ( (          advanced ) ? "                           This is helpful if there are non-linear constraints\n" : "" );
-    output << ( (          advanced ) ? "                           on the feasible region.  Each element of the vector\n" : "" );
-    output << ( (          advanced ) ? "                           should be an  ML.  The total penalty  is the sum of\n" : "" );
-    output << ( (          advanced ) ? "                           the  outputs of  all MLs.  Penalty  should  be near\n" : "" );
-    output << ( (          advanced ) ? "                           zero  in the  feasible region,  very large  outside\n" : "" );
-    output << ( (          advanced ) ? "                           (that  is, a  penalty for  a minimisation problem).\n" : "" );
-    output << ( (          advanced ) ? "                           Default value is an empty vector.                  \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -gbts $estring  - string  to be evaluated  before each (inner)  iter.\n" : "" );
     output << ( (          advanced ) ? "                           var(90,4) is the inner iteration count.            \n" : "" );
@@ -17388,7 +15556,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -plot i l u     - graph g(x), x(i) in [ l u ].  Works via system call\n" : "" );
     output << ( (          advanced ) ? "                           to gnuplot (eps2pdf, pdfcrop if plot type is pdf). \n" : "" );
-    output << ( (          advanced ) ? "         -surf i lx ux j ly uy - garph g(x), x(i) in [lx ux], x(j) in [ly uy].\n" : "" );
+    output << ( (          advanced ) ? "         -surf i lx ux j ly uy - graph g(x), x(i) in [lx ux], x(j) in [ly uy].\n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "         -hpln name      - name of output of plot (default logfile.ps/pdf).   \n" : "" );
     output << ( (          advanced ) ? "         -hpld name      - name of datafile of plot (default logfile.pdat).   \n" : "" );

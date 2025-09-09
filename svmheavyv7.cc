@@ -185,6 +185,10 @@ int main(int argc, char *argv[])
         errstream() << "Clearing memory.\n";
 
         deleteMLs();
+        deletegrids();
+        deleteDIRects();
+        deleteNelderMeads();
+        deleteBayess();
 
         cliPrintToOutLog('*',1);
         cliPrintToErrLog('*',1);

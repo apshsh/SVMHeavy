@@ -84,42 +84,21 @@ void killallthreads(SVMThreadContext *svmContext);
 
 // Direct access to MLs
 //
-// grabML:        make ML mlInd exist
 // getMLref:      get reference to requested ML
 // getMLrefconst: get constant reference to requested ML
 // deleteMLs:     delete all MLs
-//
-// regML:         register SVM whattoreg at first available index >= svmInd (returns index where registered)
 
-int glob_MLInd        (int i = 0, int seti = 0);
-int glob_gridInd      (int i = 0, int seti = 0);
-int glob_DIRectInd    (int i = 0, int seti = 0);
-int glob_NelderMeadInd(int i = 0, int seti = 0);
-int glob_BayesianInd  (int i = 0, int seti = 0);
+const ML_Mutable    &getMLrefconst        (int MLInd        );
+const GridOptions   &getgridrefconst      (int gridInd      );
+const DIRectOptions &getDIRectrefconst    (int DIRectInd    );
+const NelderOptions &getNelderMeadrefconst(int NelderMeadInd);
+const BayesOptions  &getBayesianrefconst  (int BayesianInd  );
 
-void grabML        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        );
-void grabgrid      (SparseVector<GridOptions   *> &gridbase,       int gridInd      );
-void grabDIRect    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    );
-void grabNelderMead(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd);
-void grabBayesian  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  );
-
-const ML_Mutable    &getMLrefconst        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        );
-const GridOptions   &getgridrefconst      (SparseVector<GridOptions   *> &gridbase,       int gridInd      );
-const DIRectOptions &getDIRectrefconst    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    );
-const NelderOptions &getNelderMeadrefconst(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd);
-const BayesOptions  &getBayesianrefconst  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  );
-
-ML_Mutable    &getMLref        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        );
-GridOptions   &getgridref      (SparseVector<GridOptions   *> &gridbase,       int gridInd      );
-DIRectOptions &getDIRectref    (SparseVector<DIRectOptions *> &DIRectbase,     int DIRectInd    );
-NelderOptions &getNelderMeadref(SparseVector<NelderOptions *> &NelderMeadbase, int NelderMeadInd);
-BayesOptions  &getBayesianref  (SparseVector<BayesOptions  *> &Bayesianbase,   int BayesianInd  );
-
-SparseVector<ML_Mutable    *> &getMLmodels       (void);
-SparseVector<GridOptions   *> &getgridOptim      (void);
-SparseVector<DIRectOptions *> &getDIRectOptim    (void);
-SparseVector<NelderOptions *> &getNelderMeadOptim(void);
-SparseVector<BayesOptions  *> &getBayesianOptim  (void);
+ML_Mutable    &getMLref        (int MLInd        );
+GridOptions   &getgridref      (int gridInd      );
+DIRectOptions &getDIRectref    (int DIRectInd    );
+NelderOptions &getNelderMeadref(int NelderMeadInd);
+BayesOptions  &getBayesianref  (int BayesianInd  );
 
 void deleteMLs        (void);
 void deletegrids      (void);
@@ -127,7 +106,28 @@ void deleteDIRects    (void);
 void deleteNelderMeads(void);
 void deleteBayess     (void);
 
-int regML(int svmInd, ML_Mutable &whattoreg);
+// Get ML pseudo-indexes for elements in Bayesian optimization block
+
+int MLIndForBayesian_muapprox   (int i, int k);
+int MLIndForBayesian_cgtapprox  (int i, int k);
+int MLIndForBayesian_augxapprox (int i, int k);
+int MLIndForBayesian_sigmaapprox(int i);
+int MLIndForBayesian_srcmodel   (int i);
+int MLIndForBayesian_diffmodel  (int i);
+
+int MLIndForBayesian_muapprox_prior   (int i);
+int MLIndForBayesian_cgtapprox_prior  (int i);
+int MLIndForBayesian_augxapprox_prior (int i);
+int MLIndForBayesian_sigmaapprox_prior(int i);
+int MLIndForBayesian_srcmodel_prior   (int i);
+int MLIndForBayesian_diffmodel_prior  (int i);
+
+int MLIndForgrid_randDirtemplate_prior      (int i);
+int MLIndForDIRect_randDirtemplate_prior    (int i);
+int MLIndForNelderMead_randDirtemplate_prior(int i);
+int MLIndForBayesian_randDirtemplate_prior  (int i);
+
+
 
 
 
@@ -148,11 +148,15 @@ inline SVMThreadContext *&postProInnerProd(SVMThreadContext *&x);
 class SVMThreadContext
 {
 public:
-    SVMThreadContext(int xsvmInd = 1)
+    SVMThreadContext(int xMLInd = 1, int xgridInd = 1, int xDIRectInd = 1, int xNelderMeadInd = 1, int xBayesianInd = 1)
     {
         verblevel        = 1;
         finalresult      = 0.0;
-        svmInd           = xsvmInd;
+        MLInd            = xMLInd;
+        gridInd          = xgridInd;
+        DIRectInd        = xDIRectInd;
+        NelderMeadInd    = xNelderMeadInd;
+        BayesianInd      = xBayesianInd;
         biasdefault      = 0.0;
         filevariables.zero();
         xtemplate.zero();
@@ -163,7 +167,7 @@ public:
         updateargvars    = 1;
         killswitch       = 0;
 
-        argvariables("&",1)("&",45) = svmInd;
+        argvariables("&",1)("&",45) = MLInd;
     }
 
     SVMThreadContext(const SVMThreadContext &src)
@@ -175,7 +179,11 @@ public:
     {
         verblevel        = src.verblevel;
         finalresult      = src.finalresult;
-        svmInd           = src.svmInd;
+        MLInd            = src.MLInd;
+        gridInd          = src.gridInd;
+        DIRectInd        = src.DIRectInd;
+        NelderMeadInd    = src.NelderMeadInd;
+        BayesianInd      = src.BayesianInd;
         biasdefault      = src.biasdefault;
         argvariables     = src.argvariables;
         filevariables    = src.filevariables;
@@ -201,7 +209,11 @@ public:
     //                results mean better performance, though the exact meaning
     //                depends on the SVM type and the resfilter (if any) used.  This
     //                argument is used by gridsearch.
-    // svmInd:        decides which ML in svmbase is currently being operated on.
+    // MLInd:         decides which ML in svmbase is currently being operated on.
+    // gridInd:       ditto for grid optimizers
+    // DIRectInd:     ditto for DIRect optimizers
+    // NelderMeadInd: ditto for Nelder-Mead optimizers
+    // BayesianInd:   ditto for Bayesian optimizers
     // biasdefault:   default bias used by the SVM, for use when needed
     // argvariables:  this sparse matrix contains all relevant running variables
     //                for the SVM, which can be directly accessed in commands as
@@ -226,7 +238,11 @@ public:
 
     int verblevel;
     gentype finalresult;
-    int svmInd;
+    int MLInd;
+    int gridInd;
+    int DIRectInd;
+    int NelderMeadInd;
+    int BayesianInd;
     gentype biasdefault;
     SparseVector<SparseVector<gentype> > argvariables;
     SparseVector<ofiletype> filevariables;

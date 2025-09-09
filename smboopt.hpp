@@ -12,7 +12,6 @@
 #include "ml_base.hpp"
 #include "ml_mutable.hpp"
 #include "gpr_scalar.hpp"
-#include "gpr_scalar_rff.hpp"
 #include "gpr_vector.hpp"
 #include "globalopt.hpp"
 #include "gridopt.hpp"
@@ -29,10 +28,13 @@ class SMBOOptions : public GlobalOptions
 public:
     // Default models
 
-    ML_Mutable altmuapprox;        // Default (GPR_Scalar) model(s) for objective (objectives for MOO)
-    ML_Mutable altcgtapprox;       // Default (GPR_Scalar) model(s) for >= constraints (objectives for MOO)
-    ML_Mutable altaugxapprox;      // Default (GPR_Scalar) model(s) for augmented channel(s)
-    ML_Mutable altmuapprox_rff;    // Default (GPR_Scalar_rff) model for RFFs
+    ML_Mutable priormuapprox;        // Default (GPR_Scalar) model(s) for objective (objectives for MOO)
+    ML_Mutable priorcgtapprox;       // Default (GPR_Scalar) model(s) for >= constraints (objectives for MOO)
+    ML_Mutable prioraugxapprox;      // Default (GPR_Scalar) model(s) for augmented channel(s)
+
+    ML_Mutable priorsigmaapprox;
+    ML_Mutable priorsrcmodel;
+    ML_Mutable priordiffmodel;
 
     // Actual models. These are set up by the optimiser for later inspection by the user, so don't set them directly!
 
@@ -40,15 +42,9 @@ public:
     Vector<ML_Mutable *> cgtapproxRaw;
     Vector<ML_Mutable *> augxapproxRaw;
 
-    ML_Mutable *sigmaapproxRaw;
-    ML_Mutable *srcmodel;
-    ML_Mutable *diffmodel;
-
-    // External models (moo == multi-objective), fx = model for q (see below), if used
-
-    Vector<ML_Base *> extmuapprox;      // Use this to give alternative model(s) for objective(s).
-    Vector<ML_Base *> extaugxapprox;    // Use this to give alternative models for augmented channels.
-    Vector<ML_Base *> extcgtapprox;     // Use this to give alternative model(s) for >= constraints.
+    ML_Mutable sigmaapprox;
+    ML_Mutable srcmodel;
+    ML_Mutable diffmodel;
 
     // sigmuseparate: for multi-recommendation by default both sigma and mu
     //         are approximated by the same ML.  Alternatively you can do
@@ -56,7 +52,6 @@ public:
     //         independently for each point selected.
     //         0 = use the same ML.
     //         1 = use separate MLs.
-    // ismoo:  set 1 for multi-objective optimisation
     // moodim: number of objectives
     // numcgt: number of inequality constraints
     // sampleNsamp: number of grid points in scalarisor (for TS, default -20)
@@ -65,8 +60,6 @@ public:
     //             1 = model f(p(x)) using p(x), model_clear resets model
     //             2 = model f(p(x)) using x, model_clear resets model
     //             3 = model f(p(x)) using x
-    // modelrff:   0 = normal
-    //            >0 = use this many random features
     // oracleMode: 0 = oracle uses GP model derivative to find mean/variance
     //                 descent direction at current best solution, samples that
     //             1 = oracle uses GP model derivative to find mean descent
@@ -154,11 +147,9 @@ public:
     std::string modelbaseline;
 
     int sigmuseparate;
-    int ismoo;
     int moodim;
     int numcgt;
     int modeltype;
-    int modelrff;
     int oracleMode;
 
     int TSmode;
@@ -201,118 +192,16 @@ public:
 
     // Reset function so that the next simulation can run
 
-    virtual void reset(void) override
-    {
-        GlobalOptions::reset();
-
-        indpremu.resize(0);
-        presigweightmu.resize(0);
-
-        Nbasemu = 0;
-        resdiff = 9;
-
-        alpha = 0;
-        beta  = 0;
-
-        if ( srcmodel )
-        {
-            (*srcmodel).restart();
-        }
-
-        if ( diffmodel )
-        {
-            (*diffmodel).restart();
-        }
-
-        srcmodel  = nullptr;
-        diffmodel = nullptr;
-
-        srcmodelInd  = -1;
-        diffmodelInd = -1;
-
-        diffval  = 0;
-        predval  = 0;
-        storevar = 0;
-
-        firsttrain = 1;
-
-        xmodprod.resize(0,0);
-        xshortcutenabled = 0;
-        xsp.resize(0);
-        xspp.resize(0);
-
-        model_unsample();
-
-        int i;
-
-        for ( i = 0 ; i < muapprox.size() ; i++ )
-        {
-            if ( muapprox(i) )
-            {
-                (*(muapprox("&",i))).restart();
-            }
-        }
-
-        for ( i = 0 ; i < cgtapprox.size() ; i++ )
-        {
-            if ( cgtapprox(i) )
-            {
-                (*(cgtapprox("&",i))).restart();
-            }
-        }
-
-        if ( sigmaapprox )
-        {
-            getsigmaapprox("&").restart();
-        }
-
-        for ( i = 0 ; i < augxapprox.size() ; ++i )
-        {
-            if ( augxapprox(i) )
-            {
-                (*(augxapprox("&",i))).restart();
-            }
-        }
-
-        locires.resize(0);
-        locxres.resize(0);
-        locxresunconv.resize(0);
-        locyres.resize(0);
-
-        modelErrOptim = nullptr;
-        ismodelErrLocal = 1;
-
-        locdim = 0;
-
-        xx.zero();
-        xxvar.zero();
-
-        for ( i = 0 ; i < augxapprox.size() ; ++i )
-        {
-            if ( augxapprox(i) )
-            {
-                getaugxapprox("&",i).restart();
-            }
-        }
-
-        //muapprox.resize(0);
-        //augxapprox.resize(0);
-
-        //muapproxInd.resize(0);
-
-        return;
-    }
+    virtual void reset(void) override;
 
     // Generate a copy of the relevant optimisation class.
 
-    virtual GlobalOptions *makeDup(void) const;
+//    virtual GlobalOptions *makeDup(void) const;
 
     // virtual Destructor to get rid of annoying warnings
 
-    virtual ~SMBOOptions()
-    {
-        killModelErrOptim();
-    }
+    virtual ~SMBOOptions();
+    void delreps(void);
 
     // Oracles
 
@@ -345,12 +234,6 @@ public:
                       gentype &fres,
                       int &ires,
                       int &mInd,
-                      Vector<int> &muInd,
-                      Vector<int> &augxInd,
-                      Vector<int> &cgtInd,
-                      int &sigInd,
-                      int &srcmodInd,
-                      int &diffmodInd,
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
                       Vector<gentype> &allfres,
@@ -373,7 +256,7 @@ public:
                       Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
                       Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
     {
-        int res = GlobalOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
+        int res = GlobalOptions::optim(dim,xres,Xres,fres,ires,mInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
 
         return res;
     }
@@ -384,12 +267,6 @@ public:
                       gentype &fres,
                       int &ires,
                       int &mres,
-                      Vector<int> &muInd,
-                      Vector<int> &augxInd,
-                      Vector<int> &cgtInd,
-                      int &sigInd,
-                      int &srcmodInd,
-                      int &diffmodInd,
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allrawxres,
                       Vector<gentype> &allfres,
@@ -445,7 +322,7 @@ public:
 
     double getfnnoise(void)
     {
-        return ( makenoise && sigmaapprox ) ? getsigmaapprox().sigma() : 0.0;
+        return ( makenoise && sigmuseparate ) ? sigmaapprox.sigma() : 0.0;
     }
 
     const Vector<double> &getfxnoise(Vector<double> &res)
@@ -482,6 +359,8 @@ public:
     //                effectively cancels out the "x" part of the kernel evaluation.
     //              - the kernel is decreasing in ||x-x'||, so the inf-norm is as stated
 
+    int ismoo(void) const { return ( moodim > 1 ) ? 1 : 0; }
+
     template <class S> int model_mu   (                 gentype &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr               ) const;
     template <class S> int model_muvar(gentype &resvar, gentype &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr, int debug = 0) const;
 
@@ -509,18 +388,18 @@ public:
     template <class S> int  model_covar(Matrix<gentype> &rescov, const Vector<SparseVector<S> > &x) const;
     template <class S> void model_stabProb(double &res, const SparseVector<S> &x, int p, double pnrm, int rot, double mu, double B) const;
 
-    int  model_covarTrainingVector(Matrix<gentype> &rescov, const Vector<int> &i) const { return getsigmaapprox().covarTrainingVector(rescov,i); }
+    int  model_covarTrainingVector(Matrix<gentype> &rescov, const Vector<int> &i, int q = 0) const { return getsigmaapprox(q).covarTrainingVector(rescov,i); }
     void model_stabProbTrainingVector(double &res, int i, int p, double pnrm, int rot, double mu, double B, int q = 0) const { (getmuapprox(q)).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B); }
 
     int model_addTrainingVector_sigmaifsep    (const gentype &y,                       const SparseVector<gentype> &x,                                                     double varadd = 0);
     int model_addTrainingVector_mu_sigmaifsame(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, int xobstype = 2, double varadd = 0);
 
-    int model_N_mu   (int q = 0) const { return getmuapprox(q).N();  }
-    int model_N_sigma(void)      const { return getsigmaapprox().N();    }
+    int model_N_mu   (int q = 0) const { return getmuapprox(q).N();               }
+    int model_N_sigma(void)      const { return sigmaapprox.N();                  }
     int model_N_cgt  (int q = 0) const { return numcgt ? getcgtapprox(q).N() : 0; }
 
-    int model_NNCz_mu   (int q) const { return getmuapprox(q).NNC(0); }
-    int model_NNCz_sigma(void)  const { return getsigmaapprox().NNC(0);   }
+    int model_NNCz_mu   (int q) const { return getmuapprox(q).NNC(0);               }
+    int model_NNCz_sigma(void)  const { return sigmaapprox.NNC(0);                  }
     int model_NNCz_cgt  (int q) const { return numcgt ? getcgtapprox(q).NNC(0) : 0; }
 
     template <class S> double inf_dist(const SparseVector<S> &xz) const;
@@ -530,7 +409,7 @@ public:
     const MercerKernel &model_getKernel(int q) const { return getmuapprox(q).getKernel(); }
 
     const SparseVector<gentype> &model_x(int i, int q = 0) const { return getmuapprox(q).x(i); }
-    const Vector<gentype>       &model_y(int q = -1)       const { return ( q == -1 ) ? ( ismoo ? locyres : getmuapprox(0).y() ) : getmuapprox(q).y();  }
+    const Vector<gentype>       &model_y(int q = -1)       const { return ( q == -1 ) ? ( ismoo() ? locyres : getmuapprox(0).y() ) : getmuapprox(q).y();  }
     const Vector<int>           &model_d(int q = 0)        const { return getmuapprox(q).d();  }
 
     const SparseVector<gentype> &model_x_cgt(int i, int q = 0) const { return getcgtapprox(q).x(i); }
@@ -571,18 +450,18 @@ public:
 
     // Simple default-model adjustments
 
-    int default_model_settspaceDim  (int                          nv) { return altmuapprox.settspaceDim(nv);   }
-    int default_model_setsigma      (double                       nv) { return altmuapprox.setsigma(nv);       }
+    int default_model_settspaceDim  (int                          nv) { return priormuapprox.settspaceDim(nv);   }
+    int default_model_setsigma      (double                       nv) { return priormuapprox.setsigma(nv);       }
     int default_model_setkernelg    (const gentype               &nv);
     int default_model_setkernelgg   (const SparseVector<gentype> &nv);
 
-    int default_modelaugx_settspaceDim  (int                          nv) { return altaugxapprox.settspaceDim(nv); }
-    int default_modelaugx_setsigma      (double                       nv) { return altaugxapprox.setsigma(nv);     }
+    int default_modelaugx_settspaceDim  (int                          nv) { return prioraugxapprox.settspaceDim(nv); }
+    int default_modelaugx_setsigma      (double                       nv) { return prioraugxapprox.setsigma(nv);     }
     int default_modelaugx_setkernelg    (const gentype               &nv);
     int default_modelaugx_setkernelgg   (const SparseVector<gentype> &nv);
 
-    int default_modelcgt_settspaceDim  (int                          nv) { return altcgtapprox.settspaceDim(nv);   }
-    int default_modelcgt_setsigma      (double                       nv) { return altcgtapprox.setsigma(nv);       }
+    int default_modelcgt_settspaceDim  (int                          nv) { return priorcgtapprox.settspaceDim(nv);   }
+    int default_modelcgt_setsigma      (double                       nv) { return priorcgtapprox.setsigma(nv);       }
     int default_modelcgt_setkernelg    (const gentype               &nv);
     int default_modelcgt_setkernelgg   (const SparseVector<gentype> &nv);
 
@@ -607,13 +486,6 @@ public:
     template <class S> int modelaugx_int_mu   (                         Vector<gentype> &resmu, const SparseVector<S> &x) const;
     template <class S> int modelaugx_int_muvar(Vector<gentype> &resvar, Vector<gentype> &resmu, const SparseVector<S> &x) const;
 
-    // Optimiser for model_err calculation
-    //
-    // JIT allocation, DIRect by default, set src to use alternative
-
-    GlobalOptions &getModelErrOptim(GlobalOptions *src = nullptr) const;
-    void killModelErrOptim(void) const;
-
     // Convert [ x ~ x' ~ ... ] to naive format that doesn't use upsize stuff, if ennornaive > 0
 
     const SparseVector<gentype> &convnearuptonaive(SparseVector<gentype> &res, const SparseVector<gentype> &x) const;
@@ -632,9 +504,6 @@ public:
     // srcmodel:  for diff-GP, this is used to store the source and model data in "raw form"
     // diffmodel: for diff-GP, this is used to model the difference between source and target models
     //
-    // srcmodelInd:  index for srcmodel
-    // diffmodelInd: index for diffmodel
-    //
     // diffval: used for diff-GP
     // predval: used for diff-GP
     //
@@ -648,12 +517,6 @@ public:
 
     double alpha;
     double beta;
-
-//    ML_Mutable *srcmodel;
-//    ML_Mutable *diffmodel;
-
-    int srcmodelInd;
-    int diffmodelInd;
 
     gentype diffval;
     gentype predval;
@@ -672,7 +535,6 @@ public:
 
     Vector<ML_Base *> muapprox;
     Vector<ML_Base *> muapprox_sample;
-    ML_Base *sigmaapprox;
     Vector<ML_Base *> augxapprox;
     Vector<ML_Base *> cgtapprox;
 
@@ -685,13 +547,11 @@ public:
     const ML_Base &getcgtapprox(                   int i) const { NiceAssert( i >= 0 ); NiceAssert( i < cgtapprox.size() ); NiceAssert( cgtapprox(      i) ); return *cgtapprox(      i); }
           ML_Base &getcgtapprox(const char *dummy, int i)       { NiceAssert( i >= 0 ); NiceAssert( i < cgtapprox.size() ); NiceAssert( cgtapprox(dummy,i) ); return *cgtapprox(dummy,i); }
 
-    const ML_Base &getsigmaapprox(                 ) const {               NiceAssert( sigmaapprox ); return *sigmaapprox; }
-          ML_Base &getsigmaapprox(const char *dummy)       { (void) dummy; NiceAssert( sigmaapprox ); return *sigmaapprox; }
+    const ML_Base &getsigmaapprox(                   int i) const { return sigmuseparate ? sigmaapprox : getmuapprox(      i); }
+          ML_Base &getsigmaapprox(const char *dummy, int i)       { return sigmuseparate ? sigmaapprox : getmuapprox(dummy,i); }
 
     const ML_Base &getmuapprox(                   int i) const { NiceAssert( i >= 0 ); NiceAssert( i < muapprox.size() ); NiceAssert( muapprox(      i) ); return *muapprox(      i); }
           ML_Base &getmuapprox(const char *dummy, int i)       { NiceAssert( i >= 0 ); NiceAssert( i < muapprox.size() ); NiceAssert( muapprox(dummy,i) ); return *muapprox(dummy,i); }
-
-    Vector<int> muapproxInd;
 
     // Local store for x vectors
 
@@ -699,13 +559,6 @@ public:
     Vector<SparseVector<gentype> > locxres;
     Vector<SparseVector<gentype> > locxresunconv;
     Vector<gentype> locyres;
-
-    // Optimiser for model_err calculation
-    //
-    // JIT allocation, DIRect by default, set src to use alternative
-
-    mutable GlobalOptions *modelErrOptim;
-    mutable int ismodelErrLocal;
 
     // Other stuff for speed
 
@@ -1911,12 +1764,12 @@ bailout:
                 {
                     SparseVector<gentype> tempx,tempv;
 
-                    ires |= getsigmaapprox().noisevar(resscalarv,dummy,convnearuptonaive(tempx,*xxx),convnearuptonaive(tempv,xxvar),-1);
+                    ires |= getsigmaapprox(0).noisevar(resscalarv,dummy,convnearuptonaive(tempx,*xxx),convnearuptonaive(tempv,xxvar),-1);
                 }
 
                 else
                 {
-                    ires |= getsigmaapprox().noisevar(resscalarv,dummy,*xxx,xxvar,-2,xinf,pxyprodx,pxyprodxx);
+                    ires |= getsigmaapprox(0).noisevar(resscalarv,dummy,*xxx,xxvar,-2,xinf,pxyprodx,pxyprodxx);
                 }
 
                 if ( !muapprox.size() )
@@ -1943,12 +1796,12 @@ bailout:
                 {
                     SparseVector<gentype> tempx;
 
-                    ires |= getsigmaapprox().var(resscalarv,dummy,convnearuptonaive(tempx,*xxx));
+                    ires |= getsigmaapprox(0).var(resscalarv,dummy,convnearuptonaive(tempx,*xxx));
                 }
 
                 else
                 {
-                    ires |= getsigmaapprox().var(resscalarv,dummy,*xxx,xinf,pxyprodx,pxyprodxx);
+                    ires |= getsigmaapprox(0).var(resscalarv,dummy,*xxx,xinf,pxyprodx,pxyprodxx);
                 }
 
                 if ( !muapprox.size() )
@@ -1983,7 +1836,7 @@ int SMBOOptions::model_covar(Matrix<gentype> &resv, const Vector<SparseVector<S>
 
     model_convertx(xxx,x);
 
-    return getsigmaapprox().covar(resv,xxx);
+    return getsigmaapprox(0).covar(resv,xxx);
 }
 
 template <class S>

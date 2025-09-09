@@ -13,240 +13,365 @@
 
 
 SMBOOptions::SMBOOptions() : GlobalOptions()
-    {
-        locdim = 0;
+{
+    optname = "SMBO Optimisation"; // in GlobalOptions
 
-        PIscale = 0;
+    priormuapprox.ssetMLTypeClean("gpr");
+    priorcgtapprox.ssetMLTypeClean("gpr");
+    prioraugxapprox.ssetMLTypeClean("gpr");
 
-        altmuapprox.ssetMLTypeClean("gpr");
-        altcgtapprox.ssetMLTypeClean("gpr");
-        altaugxapprox.ssetMLTypeClean("gpr");
-        altmuapprox_rff.ssetMLTypeClean("gpR");
+    priordiffmodel.ssetMLTypeClean("gpr");
+    priorsrcmodel.ssetMLTypeClean("gpr");
+    priorsigmaapprox.ssetMLTypeClean("gpr");
 
-        optname = "SMBO Optimisation";
+    diffmodel.ssetMLTypeClean("gpr");
+    srcmodel.ssetMLTypeClean("gpr");
+    sigmaapprox.ssetMLTypeClean("gpr");
 
-        locires.useTightAllocation();
-        locxres.useTightAllocation();
-        locxresunconv.useTightAllocation();
-        locyres.useTightAllocation();
-
-        //muapproxInd = -1;
-
-        sigmuseparate = 0;
-        ismoo         = 0;
-        moodim        = 1;
-        numcgt        = 0;
-        modeltype     = 0;
-        modelrff      = 0;
-        oracleMode    = 0;
-
-        TSmode      = 3;
-        TSNsamp     = 0; //DEFAULT_SAMPLES_SAMPLE;
-        TSsampType  = 0;
-        TSxsampType = 0;
-        sigma_cut   = DEFAULT_SIGMA_CUT;
-
-        modelname      = "smbomodel";
 #ifndef USE_MEX
-        modeloutformat = 2; // pdf by default
+    modelname      = "smbomodel";
+    modeloutformat = 2; // pdf by default
+    plotfreq       = 0; // don't plot by default
+    modelbaseline  = "null";
 #endif
+
 #ifdef USE_MEX
-        modeloutformat = 3; // matlab plot if system is matlab
+    modelname      = "smbomodel";
+    modeloutformat = 3; // matlab plot if system is matlab
+    plotfreq       = 0; // don't plot by default
+    modelbaseline  = "null";
 #endif
-        plotfreq       = 0; // don't plot by default
-        modelbaseline  = "null";
 
-        tranmeth = 0;
-        alpha0   = 0.1;
-        beta0    = 1;
+    sigmuseparate = 0;
+    moodim        = 1;
+    numcgt        = 0;
+    modeltype     = 0;
+    oracleMode    = 0;
 
-        alpha = alpha0;
-        beta  = beta0;
+    TSmode      = 3;
+    TSNsamp     = 0; //DEFAULT_SAMPLES_SAMPLE;
+    TSsampType  = 0;
+    TSxsampType = 0;
+    sigma_cut   = DEFAULT_SIGMA_CUT;
 
-        kernapprox = nullptr;
-        kxfnum     = 801;
-        kxfnorm    = 1;
+    tranmeth = 0;
+    alpha0   = 0.1;
+    beta0    = 1;
 
-        tunemu      = 1; //2;
-        tunesigma   = 1; //2;
-        tunecgt     = 1; //2;
-        tunesrcmod  = 1; //2;
-        tunediffmod = 1; //2;
-        tuneaugxmod = 1; //2;
+    kernapprox = nullptr;
+    kxfnum     = 801;
+    kxfnorm    = 1;
 
-        usemodelaugx = 0;
-        modelnaive   = 0;
-        makenoise    = 0;
-        ennornaive   = 0;
+    tunemu      = 1; //2;
+    tunesigma   = 1; //2;
+    tunecgt     = 1; //2;
+    tunesrcmod  = 1; //2;
+    tunediffmod = 1; //2;
+    tuneaugxmod = 1; //2;
 
-        srcmodel  = nullptr;
-        diffmodel = nullptr;
+    usemodelaugx = 0;
+    modelnaive   = 0;
+    makenoise    = 0;
+    ennornaive   = 0;
 
-        srcmodelInd  = -1;
-        diffmodelInd = -1;
+    PIscale = 0;
 
-        //augxapprox = nullptr;
+    Nbasemu = 0;
 
-        //extmuapprox = nullptr;
-        //extaugxapprox = nullptr;
+    alpha = alpha0;
+    beta  = beta0;
 
-        //muapprox        = nullptr;
-        //sigmaapprox     = nullptr;
-        //muapprox_sample = nullptr;
-        //augxapprox      = nullptr;
+    firsttrain = 0;
 
-        modelErrOptim   = nullptr;
-        ismodelErrLocal = 1;
+    xshortcutenabled = 0;
 
-        sigmaapprox    = nullptr;
-        sigmaapproxRaw = nullptr;
+    locdim = 0;
 
-        Nbasemu    = 0;
-        firsttrain = 0;
-
-        xshortcutenabled = 0;
-    }
+    locires.useTightAllocation();
+    locxres.useTightAllocation();
+    locxresunconv.useTightAllocation();
+    locyres.useTightAllocation();
+}
 
 SMBOOptions::SMBOOptions(const SMBOOptions &src) : GlobalOptions(src)
+{
+    locires.useTightAllocation();
+    locxres.useTightAllocation();
+    locxresunconv.useTightAllocation();
+    locyres.useTightAllocation();
+
+    *this = src;
+}
+
+SMBOOptions::~SMBOOptions()
+{
+    delreps();
+}
+
+void SMBOOptions::delreps(void)
+{
+    if ( muapproxRaw.size() )
     {
-        modelErrOptim   = nullptr;
-        ismodelErrLocal = 1;
-
-        locires.useTightAllocation();
-        locxres.useTightAllocation();
-        locxresunconv.useTightAllocation();
-        locyres.useTightAllocation();
-
-        *this = src;
-    }
-
-SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
-    {
-        GlobalOptions::operator=(src);
-
-        killModelErrOptim();
-
-        locdim = src.locdim;
-
-        PIscale = src.PIscale;
-
-        augxapprox = src.augxapprox;
-
-        muapproxInd   = src.muapproxInd;
-
-        extmuapprox   = src.extmuapprox;
-        extaugxapprox = src.extaugxapprox;
-        extcgtapprox  = src.extcgtapprox;
-
-        sigmuseparate = src.sigmuseparate;
-        ismoo         = src.ismoo;
-        moodim        = src.moodim;
-        numcgt        = src.numcgt;
-        modeltype     = src.modeltype;
-        modelrff      = src.modelrff;
-        oracleMode    = src.oracleMode;
-
-        TSmode      = src.TSmode;
-        TSNsamp     = src.TSNsamp;
-        TSsampType  = src.TSsampType;
-        TSxsampType = src.TSxsampType;
-        sigma_cut   = src.sigma_cut;
-
-        modelname      = src.modelname;
-        modeloutformat = src.modeloutformat;
-        plotfreq       = src.plotfreq;
-        modelbaseline  = src.modelbaseline;
-
-        tranmeth = src.tranmeth;
-        alpha0   = src.alpha0;
-        beta0    = src.beta0;
-
-        kernapprox = src.kernapprox;
-        kxfnum     = src.kxfnum;
-        kxfnorm    = src.kxfnorm;
-
-        tunemu      = src.tunemu;
-        tunesigma   = src.tunesigma;
-        tunecgt     = src.tunecgt;
-        tunesrcmod  = src.tunesrcmod;
-        tunediffmod = src.tunediffmod;
-        tuneaugxmod = src.tuneaugxmod;
-
-        usemodelaugx = src.usemodelaugx;
-        modelnaive   = src.modelnaive;
-        makenoise    = src.makenoise;
-        ennornaive   = src.ennornaive;
-
-        xtemplate = src.xtemplate;
-
-        // ======================================
-
-        (xmodprod)         = (src.xmodprod);
-        xshortcutenabled = src.xshortcutenabled;
-        (xsp)              = (src.xsp);
-        (xspp)             = (src.xspp);
-        indpremu         = src.indpremu;
-        presigweightmu   = src.presigweightmu;
-
-        Nbasemu = src.Nbasemu;
-        resdiff = src.resdiff;
-
-        alpha = src.alpha;
-        beta  = src.beta;
-
-        srcmodel  = src.srcmodel;
-        diffmodel = src.diffmodel;
-
-        srcmodelInd  = src.srcmodelInd;
-        diffmodelInd = src.diffmodelInd;
-
-        diffval  = src.diffval;
-        predval  = src.predval;
-        storevar = src.storevar;
-
-        firsttrain = src.firsttrain;
-
-        (xx) = (src.xx);
-
-        muapprox    = src.muapprox;
-        sigmaapprox = src.sigmaapprox;
-        augxapprox  = src.augxapprox;
-        cgtapprox   = src.cgtapprox;
-
-        muapprox_sample.resize(0);
-
-        altmuapprox         = src.altmuapprox;
-        altmuapprox_rff     = src.altmuapprox_rff;
-        altaugxapprox       = src.altaugxapprox;
-        altcgtapprox        = src.altcgtapprox;
-
-        locires       = src.locires;
-        locxres       = src.locxres;
-        locxresunconv = src.locxresunconv;
-        locyres       = src.locyres;
-
-        if ( src.modelErrOptim )
+        for ( int i = 0 ; i < muapproxRaw.size() ; ++i )
         {
-            modelErrOptim   = (*((src.modelErrOptim))).makeDup();
-            ismodelErrLocal = 1;
+            if ( muapproxRaw(i) )
+            {
+                MEMDEL(muapproxRaw("&",i));
+                muapproxRaw("&",i) = nullptr;
+            }
         }
 
-        return *this;
+        muapproxRaw.resize(0);
     }
 
-GlobalOptions *SMBOOptions::makeDup(void) const
+    if ( muapprox_sample.size() )
     {
-        SMBOOptions *newver;
+        for ( int i = 0 ; i < muapprox_sample.size() ; ++i )
+        {
+            if ( muapprox_sample(i) )
+            {
+                MEMDEL(muapprox_sample("&",i));
+                muapprox_sample("&",i) = nullptr;
+            }
+        }
 
-        MEMNEW(newver,SMBOOptions(*this));
-
-        return newver;
+        muapprox_sample.resize(0);
     }
+
+    if ( cgtapproxRaw.size() )
+    {
+        for ( int i = 0 ; i < cgtapproxRaw.size() ; ++i )
+        {
+            if ( cgtapproxRaw(i) )
+            {
+                MEMDEL(cgtapproxRaw("&",i));
+                cgtapproxRaw("&",i) = nullptr;
+            }
+        }
+
+        cgtapproxRaw.resize(0);
+    }
+
+    if ( augxapproxRaw.size() )
+    {
+        for ( int i = 0 ; i < augxapproxRaw.size() ; ++i )
+        {
+            if ( augxapproxRaw(i) )
+            {
+                MEMDEL(augxapproxRaw("&",i));
+                augxapproxRaw("&",i) = nullptr;
+            }
+        }
+
+        augxapproxRaw.resize(0);
+    }
+}
+
+SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
+{
+    GlobalOptions::operator=(src);
+
+    delreps();
+
+    priormuapprox.setMLTypeClean(src.priormuapprox.type());
+    priormuapprox.getML() = src.priormuapprox;
+
+    if ( src.muapproxRaw.size() )
+    {
+        muapproxRaw.resize(src.muapproxRaw.size()) = nullptr;
+
+        for ( int i = 0 ; i < src.muapproxRaw.size() ; ++i )
+        {
+            MEMNEW(muapproxRaw("&",i),ML_Mutable);
+            (*(muapproxRaw("&",i))).setMLTypeClean((*(src.muapproxRaw(i))).type());
+            (*(muapproxRaw("&",i))).getML() = (*(src.muapproxRaw(i)));
+            muapprox("&",i) = &((*(muapproxRaw("&",i))).getML());
+        }
+    }
+
+    priorcgtapprox.setMLTypeClean(src.priorcgtapprox.type());
+    priorcgtapprox.getML() = src.priorcgtapprox;
+
+    if ( src.cgtapproxRaw.size() )
+    {
+        cgtapproxRaw.resize(src.cgtapproxRaw.size()) = nullptr;
+
+        for ( int i = 0 ; i < src.cgtapproxRaw.size() ; ++i )
+        {
+            MEMNEW(cgtapproxRaw("&",i),ML_Mutable);
+            (*(cgtapproxRaw("&",i))).setMLTypeClean((*(src.cgtapproxRaw(i))).type());
+            (*(cgtapproxRaw("&",i))).getML() = (*(src.cgtapproxRaw(i)));
+            cgtapprox("&",i) = &((*(cgtapproxRaw("&",i))).getML());
+        }
+    }
+
+    prioraugxapprox.setMLTypeClean(src.prioraugxapprox.type());
+    prioraugxapprox.getML() = src.prioraugxapprox;
+
+    if ( src.augxapproxRaw.size() )
+    {
+        augxapproxRaw.resize(src.augxapproxRaw.size()) = nullptr;
+
+        for ( int i = 0 ; i < src.augxapproxRaw.size() ; ++i )
+        {
+            MEMNEW(augxapproxRaw("&",i),ML_Mutable);
+            (*(augxapproxRaw("&",i))).setMLTypeClean((*(src.augxapproxRaw(i))).type());
+            (*(augxapproxRaw("&",i))).getML() = (*(src.augxapproxRaw(i)));
+            augxapprox("&",i) = &((*(augxapproxRaw("&",i))).getML());
+        }
+    }
+
+    priorsigmaapprox.setMLTypeClean(src.priorsigmaapprox.type());
+    priorsigmaapprox.getML() = src.priorsigmaapprox;
+
+    priorsrcmodel.setMLTypeClean(src.priorsrcmodel.type());
+    priorsrcmodel.getML() = src.priorsrcmodel;
+
+    priordiffmodel.setMLTypeClean(src.priordiffmodel.type());
+    priordiffmodel.getML() = src.priordiffmodel;
+
+    sigmaapprox.setMLTypeClean(src.sigmaapprox.type());
+    sigmaapprox.getML() = src.sigmaapprox;
+
+    srcmodel.setMLTypeClean(src.srcmodel.type());
+    srcmodel.getML() = src.srcmodel;
+
+    diffmodel.setMLTypeClean(src.diffmodel.type());
+    diffmodel.getML() = src.diffmodel;
+
+    modelname      = src.modelname;
+    modeloutformat = src.modeloutformat;
+    plotfreq       = src.plotfreq;
+    modelbaseline  = src.modelbaseline;
+
+    sigmuseparate = src.sigmuseparate;
+    moodim        = src.moodim;
+    numcgt        = src.numcgt;
+    modeltype     = src.modeltype;
+    oracleMode    = src.oracleMode;
+
+    TSmode      = src.TSmode;
+    TSNsamp     = src.TSNsamp;
+    TSsampType  = src.TSsampType;
+    TSxsampType = src.TSxsampType;
+    sigma_cut   = src.sigma_cut;
+
+    tranmeth = src.tranmeth;
+    alpha0   = src.alpha0;
+    beta0    = src.beta0;
+
+    kernapprox = src.kernapprox;
+    kxfnum     = src.kxfnum;
+    kxfnorm    = src.kxfnorm;
+
+    tunemu      = src.tunemu;
+    tunesigma   = src.tunesigma;
+    tunesrcmod  = src.tunesrcmod;
+    tunecgt     = src.tunecgt;
+    tunediffmod = src.tunediffmod;
+    tuneaugxmod = src.tuneaugxmod;
+
+    xtemplate = src.xtemplate;
+
+    usemodelaugx = src.usemodelaugx;
+    modelnaive   = src.modelnaive;
+    makenoise    = src.makenoise;
+    ennornaive   = src.ennornaive;
+
+    PIscale = src.PIscale;
+
+    // ======================================
+
+    indpremu         = src.indpremu;
+    presigweightmu   = src.presigweightmu;
+
+    Nbasemu = src.Nbasemu;
+    resdiff = src.resdiff;
+
+    alpha = src.alpha;
+    beta  = src.beta;
+
+    diffval  = src.diffval;
+    predval  = src.predval;
+    storevar = src.storevar;
+
+    firsttrain = src.firsttrain;
+
+    xmodprod.resize(0,0);
+    xshortcutenabled = 0;
+    xsp.resize(0);
+    xspp.resize(0);
+
+    locires       = src.locires;
+    locxres       = src.locxres;
+    locxresunconv = src.locxresunconv;
+    locyres       = src.locyres;
+
+    locdim = src.locdim;
+
+    xx.zero();
+    xxvar.zero();
+
+    return *this;
+}
+
+void SMBOOptions::reset(void)
+{
+    GlobalOptions::reset();
+
+    delreps();
+
+    indpremu.resize(0);
+    presigweightmu.resize(0);
+
+    Nbasemu = 0;
+    resdiff = 9;
+
+    alpha = alpha0;
+    beta  = beta0;
+
+    diffval  = 0;
+    predval  = 0;
+    storevar = 0;
+
+    firsttrain = 1;
+
+    //
+
+    xmodprod.resize(0,0);
+    xshortcutenabled = 0;
+    xsp.resize(0);
+    xspp.resize(0);
+
+    model_unsample();
+
+    locires.resize(0);
+    locxres.resize(0);
+    locxresunconv.resize(0);
+    locyres.resize(0);
+
+    locdim = 0;
+
+    xx.zero();
+    xxvar.zero();
+
+    return;
+}
+
+
+//GlobalOptions *SMBOOptions::makeDup(void) const
+//    {
+//        SMBOOptions *newver;
+//
+//        MEMNEW(newver,SMBOOptions(*this));
+//
+//        return newver;
+//    }
 
 
 void SMBOOptions::consultTheOracle(ML_Mutable &randDir, int dim, const SparseVector<gentype> &locxres, int isFirstAxis)
-    {
-        if ( ( ( oracleMode == 0 ) || ( ( oracleMode == 3 ) && isFirstAxis ) ) && ( isProjection == 2 ) && useScalarFn && isGPRScalar(randDir) && ( ( modeltype == 0 ) || ( modeltype == 1 ) ) && !sigmuseparate && !ismoo )
+{
+        if ( ( ( oracleMode == 0 ) || ( ( oracleMode == 3 ) && isFirstAxis ) ) && ( isProjection == 2 ) && useScalarFn && isGPRScalar(randDir) && ( ( modeltype == 0 ) || ( modeltype == 1 ) ) && !sigmuseparate && !ismoo() )
         {
             // Construct vector to calculate gradient at locxres
 
@@ -290,7 +415,7 @@ void SMBOOptions::consultTheOracle(ML_Mutable &randDir, int dim, const SparseVec
             randDir.getGPR().train(dummy);
         }
 
-        else if ( ( ( oracleMode == 1 ) || ( ( oracleMode == 4 ) && isFirstAxis ) ) && ( isProjection == 2 ) && useScalarFn && isGPRScalar(randDir) && ( ( modeltype == 0 ) || ( modeltype == 1 ) ) && !sigmuseparate && !ismoo )
+        else if ( ( ( oracleMode == 1 ) || ( ( oracleMode == 4 ) && isFirstAxis ) ) && ( isProjection == 2 ) && useScalarFn && isGPRScalar(randDir) && ( ( modeltype == 0 ) || ( modeltype == 1 ) ) && !sigmuseparate && !ismoo() )
         {
             // Construct vector to calculate gradient at locxres
 
@@ -338,7 +463,7 @@ void SMBOOptions::consultTheOracle(ML_Mutable &randDir, int dim, const SparseVec
 //RKHSFIXME
             GlobalOptions::consultTheOracle(randDir,dim,locxres,isFirstAxis);
         }
-    }
+}
 
 int SMBOOptions::realOptim(int dim,
                       Vector<gentype> &xres,
@@ -346,12 +471,6 @@ int SMBOOptions::realOptim(int dim,
                       gentype &fres,
                       int &ires,
                       int &mres,
-                      Vector<int> &muInd,
-                      Vector<int> &augxInd,
-                      Vector<int> &cgtInd,
-                      int &sigInd,
-                      int &srcmodInd,
-                      int &diffmodInd,
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allrawxres,
                       Vector<gentype> &allfres,
@@ -369,246 +488,77 @@ int SMBOOptions::realOptim(int dim,
     {
         // Create and register models
 
-        //int muapproxInd    = -1;
-
         locdim = dim;
 
-        // These need to be passed back
+        // Construct models
 
-        Vector<int> dummyMLnumbers(9);
-        Vector<int> &MLnumbers = MLdefined ? (*((Vector<int> *) ((void **) fnarg)[15])) : dummyMLnumbers;
+        int nummu = ismoo() ? moodim : 1;
 
-        // Construct models and register them
-
-        if ( !ismoo )
-        {
-            muapproxRaw.resize(1);
-            muapprox.resize(1);
-            muapproxInd.resize(1);
-            muInd.resize(1);
-
-            muapproxRaw = nullptr;
-            muapprox    = nullptr;
-            muapproxInd = -1;
-            muInd       = -1;
-
-            if ( extmuapprox.size() && extmuapprox(0) )
-            {
-                MEMNEW(muapproxRaw("&",0),ML_Mutable);
-                (*(muapproxRaw("&",0))).setMLTypeClean((*(extmuapprox(0))).type());
-
-                (*(muapproxRaw("&",0))).getML() = *(extmuapprox(0));
-                muapproxInd("&",0) = regMLloc(muapproxRaw("&",0),fnarg,5);
-
-                muapprox("&",0) = &((*(muapproxRaw("&",0))).getML());
-            }
-
-            else if ( ( isProjection != 2 ) && !modelrff )
-            {
-//RKHSFIXME
-                MEMNEW(muapproxRaw("&",0),ML_Mutable);
-                (*(muapproxRaw("&",0))).setMLTypeClean(altmuapprox.type());
-
-                (*(muapproxRaw("&",0))).getML() = altmuapprox;
-                muapproxInd("&",0) = regMLloc(muapproxRaw("&",0),fnarg,5);
-
-                muapprox("&",0) = &((*(muapproxRaw("&",0))).getML());
-//RKHSFIXME
-                //(*muapprox).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
-            }
-
-            else if ( isProjection != 2 )
-            {
-//RKHSFIXME
-                MEMNEW(muapproxRaw("&",0),ML_Mutable);
-                (*(muapproxRaw("&",0))).setMLTypeClean(altmuapprox_rff.type());
-
-                (*(muapproxRaw("&",0))).getML() = altmuapprox_rff;
-                muapproxInd("&",0) = regMLloc(muapproxRaw("&",0),fnarg,5);
-
-                muapprox("&",0) = &((*(muapproxRaw("&",0))).getML());
-
-                if ( ( modelrff != (*(muapprox(0))).NRff() ) && (*(muapprox(0))).xspaceDim() )
-                {
-                    (*(muapprox("&",0))).setNRff(modelrff); // needs to be delayed until there are training vectors or RFF will have dim 0, which is wrong)
-                }
-//RKHSFIXME
-                //(*muapprox).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
-            }
-
-            else
-            {
-                MEMNEW(muapproxRaw("&",0),ML_Mutable);
-                (*(muapproxRaw("&",0))).setMLTypeClean(altmuapprox.type());
-
-                (*(muapproxRaw("&",0))).getML() = altmuapprox;
-                muapproxInd("&",0) = regMLloc(muapproxRaw("&",0),fnarg,5);
-
-                muapprox("&",0) = &((*(muapproxRaw("&",0))).getML());
-            }
-
-            muInd = muapproxInd;
-
-            MLnumbers("&",0) = muapproxInd("&",0);
-        }
-
-        else
         {
             muapproxRaw.resize(moodim);
             muapprox.resize(moodim);
-            muapproxInd.resize(moodim);
-            muInd.resize(moodim);
 
             muapproxRaw = nullptr;
             muapprox    = nullptr;
-            muapproxInd = -1;
-            muInd       = -1;
 
-            int ii;
-
-            for ( ii = 0 ; ii < moodim ; ii++ )
+            for ( int ii = 0 ; ii < nummu ; ii++ )
             {
-                if ( ( extmuapprox.size() > ii ) && extmuapprox(ii) )
-                {
-                    MEMNEW(muapproxRaw("&",ii),ML_Mutable);
-                    (*(muapproxRaw("&",ii))).setMLTypeClean((*(extmuapprox(ii))).type());
-
-                    (*(muapproxRaw("&",ii))).getML() = *(extmuapprox(ii));
-                    muapproxInd("&",ii) = regMLloc(muapproxRaw("&",ii),fnarg,6);
-
-                    muapprox("&",ii) = &((*(muapproxRaw("&",ii))).getML());
-                }
-
-                else
-                {
-                    MEMNEW(muapproxRaw("&",ii),ML_Mutable);
-                    (*(muapproxRaw("&",ii))).setMLTypeClean(altmuapprox.type());
-
-                    (*(muapproxRaw("&",ii))).getML() = altmuapprox;
-                    muapproxInd("&",ii) = regMLloc(muapproxRaw("&",ii),fnarg,6);
-
-                    muapprox("&",ii) = &((*(muapproxRaw("&",ii))).getML());
-//RKHSFIXME
-                    //(*muapprox).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
-                }
+                MEMNEW(muapproxRaw("&",ii),ML_Mutable);
+                (*(muapproxRaw("&",ii))).setMLTypeClean(priormuapprox.type());
+                (*(muapproxRaw("&",ii))).getML() = priormuapprox;
+                muapprox("&",ii) = &((*(muapproxRaw("&",ii))).getML());
             }
-
-            muInd = muapproxInd;
-
-            MLnumbers("&",0) = muapproxInd(0); //FIXME
         }
 
-        if ( numcgt )
         {
             cgtapproxRaw.resize(numcgt);
             cgtapprox.resize(numcgt);
-            cgtInd.resize(numcgt);
 
             cgtapproxRaw = nullptr;
             cgtapprox    = nullptr;
-            cgtInd       = -1;
 
             for ( int ii = 0 ; ii < numcgt ; ii++ )
             {
-                if ( ( extcgtapprox.size() > ii ) && extcgtapprox(ii) )
-                {
-//errstream() << "rawset\n";
-                    MEMNEW(cgtapproxRaw("&",ii),ML_Mutable);
-                    (*(cgtapproxRaw("&",ii))).setMLTypeClean((*(extcgtapprox(ii))).type());
-
-                    (*(cgtapproxRaw("&",ii))).getML() = *(extcgtapprox(ii));
-                    cgtInd("&",ii) = regMLloc(cgtapproxRaw("&",ii),fnarg,14);
-
-                    cgtapprox("&",ii) = &((*(cgtapproxRaw("&",ii))).getML());
-                }
-
-                else
-                {
-//errstream() << "inset: " << altcgtapprox << "\n";
-                    MEMNEW(cgtapproxRaw("&",ii),ML_Mutable);
-                    (*(cgtapproxRaw("&",ii))).setMLTypeClean(altcgtapprox.type());
-
-                    (*(cgtapproxRaw("&",ii))).getML() = altcgtapprox;
-                    cgtInd("&",ii) = regMLloc(cgtapproxRaw("&",ii),fnarg,14);
-
-                    cgtapprox("&",ii) = &((*(cgtapproxRaw("&",ii))).getML());
-//errstream() << "outset: " << (*(cgtapprox(ii))) << "\n";
-                }
-
-                MLnumbers("&",7) = cgtInd(0);
+                MEMNEW(cgtapproxRaw("&",ii),ML_Mutable);
+                (*(cgtapproxRaw("&",ii))).setMLTypeClean(priorcgtapprox.type());
+                (*(cgtapproxRaw("&",ii))).getML() = priorcgtapprox;
+                cgtapprox("&",ii) = &((*(cgtapproxRaw("&",ii))).getML());
             }
         }
 
-
         {
-            NiceAssert( !extaugxapprox.size() || ( extaugxapprox.size() == usemodelaugx ) );
-
             augxapproxRaw.resize(usemodelaugx);
             augxapprox.resize(usemodelaugx);
-            augxInd.resize(usemodelaugx);
 
             augxapproxRaw = nullptr;
             augxapprox    = nullptr;
-            augxInd       = -1;
 
-            int i;
-
-            for ( i = 0 ; i < usemodelaugx ; ++i )
+            for ( int ii = 0 ; ii < usemodelaugx ; ++ii )
             {
-                if ( extaugxapprox.size() && extaugxapprox(i) )
-                {
-                    MEMNEW(augxapproxRaw("&",i),ML_Mutable);
-                    (*(augxapproxRaw("&",i))).setMLTypeClean((*(extaugxapprox(i))).type());
-
-                    (*(augxapproxRaw("&",i))).getML() = *(extaugxapprox(i));
-                    augxInd("&",i) = regMLloc(augxapproxRaw("&",i),fnarg,12);
-
-                    augxapprox("&",i) = &((*(augxapproxRaw("&",i))).getML());
-                }
-
-                else
-                {
-                    MEMNEW(augxapproxRaw("&",i),ML_Mutable);
-                    (*(augxapproxRaw("&",i))).setMLTypeClean(altaugxapprox.type());
-
-                    (*(augxapproxRaw("&",i))).getML() = altaugxapprox;
-                    augxInd("&",i) = regMLloc(augxapproxRaw("&",i),fnarg,12);
-
-                    augxapprox("&",i) = &((*(augxapproxRaw("&",i))).getML());
-                }
-
-                MLnumbers("&",6) = augxInd(0);
+                MEMNEW(augxapproxRaw("&",ii),ML_Mutable);
+                (*(augxapproxRaw("&",ii))).setMLTypeClean(prioraugxapprox.type());
+                (*(augxapproxRaw("&",ii))).getML() = prioraugxapprox;
+                augxapprox("&",ii) = &((*(augxapproxRaw("&",ii))).getML());
             }
+        }
+
+        {
+            sigmaapprox.setMLTypeClean(priorsigmaapprox.type());
+            sigmaapprox.getML() = priorsigmaapprox;
+        }
+
+        {
+            srcmodel.setMLTypeClean(priorsrcmodel.type());
+            srcmodel.getML() = priorsrcmodel;
+        }
+
+        {
+            diffmodel.setMLTypeClean(priordiffmodel.type());
+            diffmodel.getML() = priordiffmodel;
         }
 
 //RKHSFIXME
         //(*muapprox).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
-
-        sigmaapproxRaw = nullptr;
-
-        if ( sigmuseparate )
-        {
-            MEMNEW(sigmaapproxRaw ,ML_Mutable);
-            (*sigmaapproxRaw).setMLTypeClean(getmuapprox(0).type());
-
-            (*sigmaapproxRaw).getML() = getmuapprox(0);
-            sigInd = regMLloc(sigmaapproxRaw,fnarg,7);
-
-            sigmaapprox = &((*sigmaapproxRaw).getML());
-
-            MLnumbers("&",1) = sigInd;
-
-//RKHSFIXME
-            //(*sigmaapprox).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
-        }
-
-        else
-        {
-            sigmaapprox = muapprox(0);
-            sigInd      = muInd(0);
-
-            MLnumbers("&",1) = -1; //MLnumbers(0);
-        }
 
         // Kernel transfer (must occur before we make copies etc)
 
@@ -631,12 +581,11 @@ int SMBOOptions::realOptim(int dim,
             for ( int i = 0 ; i < muapprox.size() ; i++ )
             {
                 getmuapprox("&",i).setKernel(newkern);
-                getcgtapprox("&",i).setKernel(newkern);
             }
 
             if ( sigmuseparate )
             {
-                getsigmaapprox("&").setKernel(newkern);
+                sigmaapprox.setKernel(newkern);
             }
         }
 
@@ -644,13 +593,7 @@ int SMBOOptions::realOptim(int dim,
 
         Nbasemu = model_N_mu();
 
-        MLnumbers("&",4) = -1;
-        MLnumbers("&",5) = -1;
-
         // Setup helper variables for env-GP transfer learning
-
-        srcmodel  = nullptr;
-        diffmodel = nullptr;
 
         if ( ( tranmeth == 1 ) && Nbasemu )
         {
@@ -664,50 +607,19 @@ int SMBOOptions::realOptim(int dim,
             alpha = alpha0;
             beta  = beta0;
 
-            MEMNEW(srcmodel,ML_Mutable);
-            (*srcmodel).setMLTypeClean(getmuapprox(0).type());
-            (*srcmodel).getML() = getmuapprox(0);
-            srcmodelInd = regMLloc(srcmodel ,fnarg,10);
-
 //RKHSFIXME
             //(*srcmodel).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
 
-            errstream() << "realOptim: 501 env-GP: type = " << (*srcmodel).type() << "\n";
-
-            MLnumbers("&",4) = srcmodelInd;
+            errstream() << "realOptim: 501 env-GP: type = " << srcmodel.type() << "\n";
         }
 
         // Setup helper variables for diff-GP transfer learning
-
-        if ( ( tranmeth == 2 ) && Nbasemu )
-        {
-            MEMNEW(srcmodel ,ML_Mutable);
-            MEMNEW(diffmodel,ML_Mutable);
-
-            (*srcmodel ).setMLTypeClean(getmuapprox(0).type());
-            (*diffmodel).setMLTypeClean(getmuapprox(0).type());
-
-            (*srcmodel).getML() = getmuapprox(0);
-
-//RKHSFIXME
-            //(*srcmodel).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
-            //(*diffmodel).getKernel_unsafe().setAssumeReal( ( isProjection == 5 ) ? 0 : 1 );
-
-            srcmodelInd  = regMLloc(srcmodel ,fnarg,10);
-            diffmodelInd = regMLloc(diffmodel,fnarg,11);
-
-            MLnumbers("&",4) = srcmodelInd;
-            MLnumbers("&",5) = diffmodelInd;
-        }
-
-        srcmodInd  = srcmodelInd;
-        diffmodInd = diffmodelInd;
 
         firsttrain = 1;
 
         // Optimise
 
-        int res = GlobalOptions::realOptim(dim,xres,rawxres,fres,ires,mres,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allrawxres,allfres,allcres,allmres,supres,sscore,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+        int res = GlobalOptions::realOptim(dim,xres,rawxres,fres,ires,mres,allxres,allrawxres,allfres,allcres,allmres,supres,sscore,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
 
         return res;
     }
@@ -821,19 +733,19 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
         }
     }
 
-    if ( sigmaapprox && ( sigmaapprox != muapprox(0) ) )
+    if ( sigmaapprox.N() )
     {
-        //errstream() << ", " << calcnegloglikelihood(*sigmaapprox,1) << " (sigma)";
+        errstream() << ", " << calcnegloglikelihood(sigmaapprox,1) << " (sigma)";
     }
 
-    if ( srcmodel )
+    if ( srcmodel.N() )
     {
-        //errstream() << ", " << calcnegloglikelihood(*srcmodel,1) << " (src)";
+        errstream() << ", " << calcnegloglikelihood(srcmodel,1) << " (src)";
     }
 
-    if ( diffmodel )
+    if ( diffmodel.N() )
     {
-        //errstream() << ", " << calcnegloglikelihood(*diffmodel,1) << " (diff)";
+        errstream() << ", " << calcnegloglikelihood(diffmodel,1) << " (diff)";
     }
 
     if ( ismodelaug() && augxapprox.size() )
@@ -900,7 +812,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
         //int i;
         //double xindval;
 
-        int ydim = ismoo ? moodim : 1;
+        int ydim = moodim; //ismoo() ? moodim : 1;
 
         for ( j = 0 ; j < ydim ; j++ )
         {
@@ -1442,12 +1354,12 @@ void SMBOOptions::model_clear(void)
             getcgtapprox("&",i).removeTrainingVector(0,getcgtapprox(i).N());
         }
 
-        getsigmaapprox("&").removeTrainingVector(0,getsigmaapprox().N());
-
         for ( i = 0 ; i < augxapprox.size() ; ++i )
         {
             getaugxapprox("&",i).removeTrainingVector(0,getaugxapprox(i).N());
         }
+
+        sigmaapprox.removeTrainingVector(0,sigmaapprox.N());
     }
 }
 
@@ -1456,7 +1368,7 @@ void SMBOOptions::model_update(void)
 #ifndef TURNOFFSHORTCUT
     if ( !ismodelaug() && ( ( modeltype == 0 ) || ( modeltype == 1 ) ) )
     {
-        NiceAssert( muapprox == sigmaapprox );
+        NiceAssert( !sigmuseparate );
 
         int N = getmuapprox(0).N();
         int m = getxbasis().size();
@@ -1577,9 +1489,9 @@ int SMBOOptions::initModelDistr(const Vector<int> &sampleInd, const Vector<genty
 
     if ( sigmuseparate )
     {
-        getsigmaapprox("&").getKernel_unsafe().setSampleDistribution(sampleDist);
-        getsigmaapprox("&").getKernel_unsafe().setSampleIndices(sampleInd);
-        getsigmaapprox("&").resetKernel();
+        sigmaapprox.getKernel_unsafe().setSampleDistribution(sampleDist);
+        sigmaapprox.getKernel_unsafe().setSampleIndices(sampleInd);
+        sigmaapprox.resetKernel();
     }
 
     return 1;
@@ -1645,7 +1557,7 @@ int SMBOOptions::model_muvarTrainingVector(gentype &resvar, gentype &resmu, int 
             gentype dummy;
 
             resi |= getmuapprox_sample(0).ggTrainingVector(resmu,imu);
-            resi |= getsigmaapprox().varTrainingVector(resvar,dummy,ivar);
+            resi |= getsigmaapprox(0).varTrainingVector(resvar,dummy,ivar);
         }
     }
 
@@ -1666,7 +1578,7 @@ int SMBOOptions::model_muvarTrainingVector(gentype &resvar, gentype &resmu, int 
                 gentype dummy;
 
                 resi |= getmuapprox_sample(i).ggTrainingVector(resmuvec("&",i),imu);
-                resi |= getsigmaapprox().varTrainingVector(resvarvec("&",i),dummy,ivar);
+                resi |= getsigmaapprox(i).varTrainingVector(resvarvec("&",i),dummy,ivar);
             }
         }
     }
@@ -1696,7 +1608,7 @@ int SMBOOptions::model_varTrainingVector(gentype &resv, int imu) const
         {
             gentype dummy;
 
-            resi |= getsigmaapprox().varTrainingVector(resv,dummy,imu);
+            resi |= getsigmaapprox(0).varTrainingVector(resv,dummy,imu);
         }
     }
 
@@ -1717,7 +1629,7 @@ int SMBOOptions::model_varTrainingVector(gentype &resv, int imu) const
             {
                 gentype dummy;
 
-                resi |= getsigmaapprox().varTrainingVector(resvarvec("&",i),dummy,imu);
+                resi |= getsigmaapprox(i).varTrainingVector(resvarvec("&",i),dummy,imu);
             }
         }
     }
@@ -1761,10 +1673,10 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
 
         ires |= modeldiff_int_train(res,killSwitch);
 
-        if ( tunediffmod && diffmodel )
+        if ( tunediffmod && diffmodel.N() )
         {
 //errstrean() << "phantomxyziii diffmodel\n";
-            (*diffmodel).tuneKernel(tunediffmod,getxwidth(),1,0,nullptr);
+            diffmodel.tuneKernel(tunediffmod,getxwidth(),1,0,nullptr);
         }
 
         ires |= modelaugx_int_train(res,killSwitch);
@@ -1859,7 +1771,7 @@ errstream() << "!:";
         if ( tunesigma && sigmuseparate )
         {
 //errstrean() << "phantomxyziii sigapprox\n";
-            getsigmaapprox("&").tuneKernel(tunesigma,getxwidth(),1,0,nullptr);
+            sigmaapprox.tuneKernel(tunesigma,getxwidth(),1,0,nullptr);
         }
 
         return ires;
@@ -1885,7 +1797,7 @@ int SMBOOptions::model_setd(int imu, int isigma, int nd)
 
     if ( sigmuseparate )
     {
-        res += getsigmaapprox("&").setd(isigma,nd);
+        res += sigmaapprox.setd(isigma,nd);
     }
 
     return res;
@@ -1929,7 +1841,7 @@ int SMBOOptions::model_setd_sigma(int isigma, int nd)
 
     if ( sigmuseparate )
     {
-        res += getsigmaapprox("&").setd(isigma,nd);
+        res += sigmaapprox.setd(isigma,nd);
     }
 
     return res;
@@ -1956,12 +1868,12 @@ int SMBOOptions::model_setyd(int imu, int isigma, int nd, const gentype &ny, dou
 
     if ( sigmuseparate )
     {
-        res += getsigmaapprox("&").sety(isigma,ny);
-        res += getsigmaapprox("&").setd(isigma,nd);
+        res += sigmaapprox.sety(isigma,ny);
+        res += sigmaapprox.setd(isigma,nd);
 
         if ( varadd )
         {
-            res |= getsigmaapprox("&").setsigmaweight(getsigmaapprox().N()-1,1+(varadd/(getsigmaapprox().sigma())));
+            res |= sigmaapprox.setsigmaweight(sigmaapprox.N()-1,1+(varadd/(sigmaapprox.sigma())));
         }
     }
 
@@ -2018,12 +1930,12 @@ int SMBOOptions::model_setyd_sigma(int isigma, int nd, const gentype &ny, double
 
     if ( sigmuseparate )
     {
-        res += getsigmaapprox("&").sety(isigma,ny);
-        res += getsigmaapprox("&").setd(isigma,nd);
+        res += sigmaapprox.sety(isigma,ny);
+        res += sigmaapprox.setd(isigma,nd);
 
         if ( varadd )
         {
-            res |= getsigmaapprox("&").setsigmaweight(getsigmaapprox().N()-1,1+(varadd/(getsigmaapprox().sigma())));
+            res |= sigmaapprox.setsigmaweight(sigmaapprox.N()-1,1+(varadd/(sigmaapprox.sigma())));
         }
     }
 
@@ -2062,7 +1974,7 @@ int SMBOOptions::modelsigma_int_train(int &res, svmvolatile int &killSwitch)
 
     if ( sigmuseparate )
     {
-        ires += getsigmaapprox("&").train(res,killSwitch);
+        ires += sigmaapprox.train(res,killSwitch);
     }
 
     return ires;
@@ -2079,7 +1991,7 @@ int SMBOOptions::model_setsigmaweight_addvar(int imu, int isigma, double addvar)
 
     if ( sigmuseparate )
     {
-        res += getsigmaapprox("&").setsigmaweight(isigma,(getsigmaapprox().sigma()+addvar)/getsigmaapprox().sigma());
+        res += sigmaapprox.setsigmaweight(isigma,(sigmaapprox.sigma()+addvar)/sigmaapprox.sigma());
     }
 
     return res;
@@ -2315,23 +2227,14 @@ int SMBOOptions::default_model_setkernelg(const gentype &nv)
         int res = 0;
         int lockernnum = 0;
 
-        Vector<gentype> kernRealConstsa(altmuapprox.getKernel().cRealConstants(lockernnum));
-        Vector<gentype> kernRealConstsb(altmuapprox_rff.getKernel().cRealConstants(lockernnum));
+        Vector<gentype> kernRealConstsa(priormuapprox.getKernel().cRealConstants(lockernnum));
 
         if ( kernRealConstsa(0) != nv )
 	{
             kernRealConstsa("&",0) = nv;
 
-            altmuapprox.getKernel_unsafe().setRealConstants(kernRealConstsa,lockernnum);
-            altmuapprox.resetKernel(0);
-	}
-
-        if ( kernRealConstsb(0) != nv )
-	{
-            kernRealConstsb("&",0) = nv;
-
-            altmuapprox_rff.getKernel_unsafe().setRealConstants(kernRealConstsb,lockernnum);
-            altmuapprox_rff.resetKernel(0);
+            priormuapprox.getKernel_unsafe().setRealConstants(kernRealConstsa,lockernnum);
+            priormuapprox.resetKernel(0);
 	}
 
         return res;
@@ -2341,11 +2244,8 @@ int SMBOOptions::default_model_setkernelgg(const SparseVector<gentype> &nv)
 {
     int res = 0;
 
-    altmuapprox.getKernel_unsafe().setScale(nv);
-    altmuapprox.resetKernel(0);
-
-    altmuapprox_rff.getKernel_unsafe().setScale(nv);
-    altmuapprox_rff.resetKernel(0);
+    priormuapprox.getKernel_unsafe().setScale(nv);
+    priormuapprox.resetKernel(0);
 
     return res;
 }
@@ -2355,14 +2255,14 @@ int SMBOOptions::default_modelcgt_setkernelg(const gentype &nv)
         int res = 0;
         int lockernnum = 0;
 
-        Vector<gentype> kernRealConstsa(altcgtapprox.getKernel().cRealConstants(lockernnum));
+        Vector<gentype> kernRealConstsa(priorcgtapprox.getKernel().cRealConstants(lockernnum));
 
         if ( kernRealConstsa(0) != nv )
 	{
             kernRealConstsa("&",0) = nv;
 
-            altcgtapprox.getKernel_unsafe().setRealConstants(kernRealConstsa,lockernnum);
-            altcgtapprox.resetKernel(0);
+            priorcgtapprox.getKernel_unsafe().setRealConstants(kernRealConstsa,lockernnum);
+            priorcgtapprox.resetKernel(0);
 	}
 
         return res;
@@ -2372,8 +2272,8 @@ int SMBOOptions::default_modelcgt_setkernelgg(const SparseVector<gentype> &nv)
 {
     int res = 0;
 
-    altcgtapprox.getKernel_unsafe().setScale(nv);
-    altcgtapprox.resetKernel(0);
+    priorcgtapprox.getKernel_unsafe().setScale(nv);
+    priorcgtapprox.resetKernel(0);
 
     return res;
 }
@@ -2383,14 +2283,14 @@ int SMBOOptions::default_modelaugx_setkernelg(const gentype &nv)
     int res = 0;
     int lockernnum = 0;
 
-    Vector<gentype> kernRealConstsa(altaugxapprox.getKernel().cRealConstants(lockernnum));
+    Vector<gentype> kernRealConstsa(prioraugxapprox.getKernel().cRealConstants(lockernnum));
 
     if ( kernRealConstsa(0) != nv )
     {
         kernRealConstsa("&",0) = nv;
 
-        altaugxapprox.getKernel_unsafe().setRealConstants(kernRealConstsa,lockernnum);
-        altaugxapprox.resetKernel(0);
+        prioraugxapprox.getKernel_unsafe().setRealConstants(kernRealConstsa,lockernnum);
+        prioraugxapprox.resetKernel(0);
     }
 
     return res;
@@ -2400,8 +2300,8 @@ int SMBOOptions::default_modelaugx_setkernelgg (const SparseVector<gentype> &nv)
 {
     int res = 0;
 
-    altaugxapprox.getKernel_unsafe().setScale(nv);
-    altaugxapprox.resetKernel(0);
+    prioraugxapprox.getKernel_unsafe().setScale(nv);
+    prioraugxapprox.resetKernel(0);
 
     return res;
 }
@@ -2586,14 +2486,6 @@ int SMBOOptions::modelmu_int_addTrainingVector(const gentype &y, const SparseVec
         }
 */
 
-        for ( i = 0 ; i < muapprox.size() ; ++i )
-        {
-            if ( modelrff && ( modelrff != getmuapprox(i).NRff() ) )
-            {
-                ires |= getmuapprox("&",i).setNRff(modelrff); // needs to be delayed until there are training vectors or RFF will have dim 0, which is wrong)
-            }
-        }
-
         return ires;
 }
 
@@ -2683,16 +2575,16 @@ int SMBOOptions::modelsigma_int_addTrainingVector(const gentype &y, const Sparse
 
     SparseVector<gentype> tempx;
 
-    int ires = getsigmaapprox("&").addTrainingVector(getsigmaapprox().N(),y,convnearuptonaive(tempx,xxx));
+    int ires = sigmaapprox.addTrainingVector(sigmaapprox.N(),y,convnearuptonaive(tempx,xxx));
 
     if ( varadd )
     {
-        ires |= getsigmaapprox("&").setsigmaweight(getsigmaapprox().N()-1,1+(varadd/(getsigmaapprox().sigma())));
+        ires |= sigmaapprox.setsigmaweight(sigmaapprox.N()-1,1+(varadd/(sigmaapprox.sigma())));
     }
 
     if ( xobstype != 2 )
     {
-        ires |= getsigmaapprox("&").setd(getsigmaapprox().N()-1,xobstype);
+        ires |= sigmaapprox.setd(sigmaapprox.N()-1,xobstype);
     }
 
     return ires;
@@ -2709,20 +2601,20 @@ int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype
         {
             NiceAssert( xobstype == 2 );
 
-            if ( firsttrain && srcmodel && tunesrcmod )
+            if ( firsttrain && srcmodel.N() && tunesrcmod )
             {
 //outstream() << "Tuning source model\n";
-                (*srcmodel).tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
+                srcmodel.tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
                 firsttrain = 0;
                 int dummy = 0;
-                (*srcmodel).train(dummy);
+                srcmodel.train(dummy);
             }
 
             xx.makealtcontent();
 
             SparseVector<gentype> tempx;
 
-            (*srcmodel).gg(predval,convnearuptonaive(tempx,xx));
+            srcmodel.gg(predval,convnearuptonaive(tempx,xx));
 
             resdiff =  y;
             resdiff -= predval;
@@ -2736,12 +2628,12 @@ int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype
         {
             NiceAssert( xobstype == 2 );
 
-            if ( firsttrain && srcmodel && tunesrcmod )
+            if ( firsttrain && srcmodel.N() && tunesrcmod )
             {
-                (*srcmodel).tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
+                srcmodel.tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
                 firsttrain = 0;
                 int dummy = 0;
-                (*srcmodel).train(dummy);
+                srcmodel.train(dummy);
             }
 
             // Predict y based on target (and noise)
@@ -2750,8 +2642,8 @@ int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype
 
             SparseVector<gentype> tempx;
 
-            //(*srcmodel).gg(predval,xx);
-            (*srcmodel).var(storevar,predval,convnearuptonaive(tempx,xx));
+            //srcmodel.gg(predval,xx);
+            srcmodel.var(storevar,predval,convnearuptonaive(tempx,xx));
 
             // Calculate difference between reality and model
 
@@ -2767,7 +2659,7 @@ int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype
 
             // Add to difference model
 
-            double sigmaweight = (sigmaval+varadd)/((*diffmodel).sigma());
+            double sigmaweight = (sigmaval+varadd)/(diffmodel.sigma());
             double Cweight = 1/sigmaweight;
 
             SparseVector<gentype> xxx(xx);
@@ -2776,7 +2668,7 @@ int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype
 
             SparseVector<gentype> temmpx;
 
-            ires |= (*diffmodel).addTrainingVector((*diffmodel).N(),diffval,convnearuptonaive(tempx,xxx),Cweight);
+            ires |= diffmodel.addTrainingVector(diffmodel.N(),diffval,convnearuptonaive(tempx,xxx),Cweight);
 
 //            if ( dval != 2 )
 //            {
@@ -2795,12 +2687,12 @@ int SMBOOptions::modeldiff_int_train(int &res, svmvolatile int &killSwitch)
         {
             NiceAssert( muapprox.size() == 1 );
 
-            if ( firsttrain && srcmodel && tunesrcmod )
+            if ( firsttrain && srcmodel.N() && tunesrcmod )
             {
-                (*srcmodel).tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
+                srcmodel.tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
                 firsttrain = 0;
                 int dummy = 0;
-                (*srcmodel).train(dummy);
+                srcmodel.train(dummy);
             }
 
             int Nmodel = getmuapprox(0).N();
@@ -2816,19 +2708,19 @@ int SMBOOptions::modeldiff_int_train(int &res, svmvolatile int &killSwitch)
         {
             NiceAssert( muapprox.size() == 1 );
 
-            if ( firsttrain && srcmodel && tunesrcmod )
+            if ( firsttrain && srcmodel.N() && tunesrcmod )
             {
-                (*srcmodel).tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
+                srcmodel.tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
                 firsttrain = 0;
                 int dummy = 0;
-                (*srcmodel).train(dummy);
+                srcmodel.train(dummy);
             }
 
             int i;
 
             // Train difference model
 
-            ires = (*diffmodel).train(res,killSwitch);
+            ires = diffmodel.train(res,killSwitch);
 
             // Update y and sigma in muapprox
 
@@ -2836,18 +2728,18 @@ int SMBOOptions::modeldiff_int_train(int &res, svmvolatile int &killSwitch)
             {
                 // Calc predicted difference and difference varian
 
-                (*diffmodel).var(storevar,diffval,(*srcmodel).x(i));
+                diffmodel.var(storevar,diffval,srcmodel.x(i));
 
                 // Calculate bias corrected source y
 
-                predval =  (*srcmodel).y()(i);
+                predval =  srcmodel.y()(i);
                 predval += diffval;
 
                 // Calculate bias corrected source y variance
 
                 double sigmaval;
 
-                sigmaval =  ((*srcmodel).sigma())*((*srcmodel).sigmaweight()(i));
+                sigmaval =  (srcmodel.sigma())*(srcmodel.sigmaweight()(i));
                 sigmaval += (double) storevar;
 
                 // Set bias corrected source y and variance in muapprox
@@ -2885,50 +2777,6 @@ int SMBOOptions::modeldiff_int_train(int &res, svmvolatile int &killSwitch)
 
 
 
-
-GlobalOptions &SMBOOptions::getModelErrOptim(GlobalOptions *src) const
-{
-    if ( src )
-    {
-        killModelErrOptim();
-    }
-
-    if ( !modelErrOptim )
-    {
-        if ( !src )
-        {
-            (ismodelErrLocal) = 1;
-
-            MEMNEW(modelErrOptim,DIRectOptions);
-
-            NiceAssert( modelErrOptim );
-
-            *(modelErrOptim) = static_cast<const GlobalOptions &>(*this);
-        }
-
-        else
-        {
-            ismodelErrLocal = 0;
-            modelErrOptim   = src;
-        }
-    }
-
-    return *(modelErrOptim);
-}
-
-void SMBOOptions::killModelErrOptim(void) const
-{
-    if ( modelErrOptim )
-    {
-        if ( ismodelErrLocal )
-        {
-            MEMDEL(modelErrOptim);
-        }
-
-        modelErrOptim   = nullptr;
-        ismodelErrLocal = 1;
-    }
-}
 
 
 
@@ -3244,13 +3092,8 @@ double SMBOOptions::model_err(int dim, const Vector<double> &xmin, const Vector<
     altxmin.castassign(xmin);
     altxmax.castassign(xmax);
 
-//    DIRectOptions &dopts = getModelErrOptim();
-//    static_cast<GlobalOptions &>(dopts) = static_cast<const GlobalOptions &>(*this);
-//
-//    int dresa = directOpt(dim,xdummy,minLCB,xmin,xmax,calcLCB,(void *) modelarg,dopts,killSwitch);
-//    int dresb = directOpt(dim,xdummy,minUCB,xmin,xmax,calcUCB,(void *) modelarg,dopts,killSwitch);
-
-    GlobalOptions &dopts = getModelErrOptim();
+    DIRectOptions dopts;
+    static_cast<GlobalOptions &>(dopts) = static_cast<const GlobalOptions &>(*this);
 
     int dresa = dopts.optim(dim,xdummy,minLCB,idummy,allxdummy,allfdummy,allcdummy,allmdummy,allsupdummy,allsdummy,altxmin,altxmax,altcalcLCB,modelarg,killSwitch);
     int dresb = dopts.optim(dim,xdummy,minUCB,idummy,allxdummy,allfdummy,allcdummy,allmdummy,allsupdummy,allsdummy,altxmin,altxmax,altcalcUCB,modelarg,killSwitch);

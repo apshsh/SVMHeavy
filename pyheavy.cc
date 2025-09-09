@@ -50,70 +50,18 @@ inline py::object *&postProInnerProd(py::object *&a) { return a; }
 
 void dostartup(void);
 
-#define OPTGLOBOFFSET 100000
-#define OPTGRIDSTEP   1000
 
-const GridOptions   &getgridrefconst      (int gridInd      ) { return getgridrefconst      (getgridOptim(),      gridInd      ); }
-const DIRectOptions &getDIRectrefconst    (int DIRectInd    ) { return getDIRectrefconst    (getDIRectOptim(),    DIRectInd    ); }
-const NelderOptions &getNelderMeadrefconst(int NelderMeadInd) { return getNelderMeadrefconst(getNelderMeadOptim(),NelderMeadInd); }
-const BayesOptions  &getBayesianrefconst  (int BayesianInd  ) { return getBayesianrefconst  (getBayesianOptim(),  BayesianInd  ); }
+int glob_MLInd        (int i = 0, int seti = 0);
+int glob_gridInd      (int i = 0, int seti = 0);
+int glob_DIRectInd    (int i = 0, int seti = 0);
+int glob_NelderMeadInd(int i = 0, int seti = 0);
+int glob_BayesianInd  (int i = 0, int seti = 0);
 
-GridOptions   &getgridref      (int gridInd      ) { return getgridref      (getgridOptim(),      gridInd      ); }
-DIRectOptions &getDIRectref    (int DIRectInd    ) { return getDIRectref    (getDIRectOptim(),    DIRectInd    ); }
-NelderOptions &getNelderMeadref(int NelderMeadInd) { return getNelderMeadref(getNelderMeadOptim(),NelderMeadInd); }
-BayesOptions  &getBayesianref  (int BayesianInd  ) { return getBayesianref  (getBayesianOptim(),  BayesianInd  ); }
-
-// For simplicity, we use indices -1,-2,...,-999 for altmuapprox in Bayesian optimizers 1,2,...,999, and similarly -1001,-1002,... for altcgtapprox etc
-
-const ML_Mutable &getMLrefconst(int MLInd)
-{
-    StrucAssert( MLInd >= -10*OPTGLOBOFFSET);
-
-    if      ( MLInd < -9*OPTGLOBOFFSET ) { StrucAssert(  getBayesianrefconst( -((9*OPTGLOBOFFSET)+MLInd)             ).srcmodel       ); }
-    else if ( MLInd < -8*OPTGLOBOFFSET ) { StrucAssert(  getBayesianrefconst( -((8*OPTGLOBOFFSET)+MLInd)             ).diffmodel      ); }
-    else if ( MLInd < -7*OPTGLOBOFFSET ) { StrucAssert(  getBayesianrefconst( -((7*OPTGLOBOFFSET)+MLInd)             ).sigmaapproxRaw ); }
-    else if ( MLInd < -6*OPTGLOBOFFSET ) { StrucAssert( (getBayesianrefconst((-((6*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).augxapproxRaw  )((-((6*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) ); }
-    else if ( MLInd < -5*OPTGLOBOFFSET ) { StrucAssert( (getBayesianrefconst((-((5*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).muapproxRaw    )((-((5*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) ); }
-    else if ( MLInd < -4*OPTGLOBOFFSET ) { StrucAssert( (getBayesianrefconst((-((4*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).cgtapproxRaw   )((-((4*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) ); }
-
-    if      ( MLInd < -9*OPTGLOBOFFSET ) { return *( getBayesianrefconst( -((9*OPTGLOBOFFSET)+MLInd)             ).srcmodel       ); }
-    else if ( MLInd < -8*OPTGLOBOFFSET ) { return *( getBayesianrefconst( -((8*OPTGLOBOFFSET)+MLInd)             ).diffmodel      ); }
-    else if ( MLInd < -7*OPTGLOBOFFSET ) { return *( getBayesianrefconst( -((7*OPTGLOBOFFSET)+MLInd)             ).sigmaapproxRaw ); }
-    else if ( MLInd < -6*OPTGLOBOFFSET ) { return *((getBayesianrefconst((-((6*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).augxapproxRaw  )((-((6*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
-    else if ( MLInd < -5*OPTGLOBOFFSET ) { return *((getBayesianrefconst((-((5*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).muapproxRaw    )((-((5*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
-    else if ( MLInd < -4*OPTGLOBOFFSET ) { return *((getBayesianrefconst((-((4*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).cgtapproxRaw   )((-((4*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
-    else if ( MLInd < -3*OPTGLOBOFFSET ) { return  ( getBayesianrefconst( -((3*OPTGLOBOFFSET)+MLInd)             ).altmuapprox_rff); }
-    else if ( MLInd < -2*OPTGLOBOFFSET ) { return  ( getBayesianrefconst( -((2*OPTGLOBOFFSET)+MLInd)             ).altaugxapprox  ); }
-    else if ( MLInd <   -OPTGLOBOFFSET ) { return  ( getBayesianrefconst( -(   OPTGLOBOFFSET +MLInd)             ).altmuapprox    ); }
-    else if ( MLInd < 0                ) { return  ( getBayesianrefconst(                    -MLInd              ).altcgtapprox   ); }
-
-    return getMLrefconst(getMLmodels(),MLInd);
-}
-
-ML_Mutable &getMLref(int MLInd)
-{
-    StrucAssert( MLInd >= -10*OPTGLOBOFFSET);
-
-    if      ( MLInd < -9*OPTGLOBOFFSET ) { StrucAssert(  getBayesianref( -((9*OPTGLOBOFFSET)+MLInd)             ).srcmodel       ); }
-    else if ( MLInd < -8*OPTGLOBOFFSET ) { StrucAssert(  getBayesianref( -((8*OPTGLOBOFFSET)+MLInd)             ).diffmodel      ); }
-    else if ( MLInd < -7*OPTGLOBOFFSET ) { StrucAssert(  getBayesianref( -((7*OPTGLOBOFFSET)+MLInd)             ).sigmaapproxRaw ); }
-    else if ( MLInd < -6*OPTGLOBOFFSET ) { StrucAssert( (getBayesianref((-((6*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).augxapproxRaw  )((-((6*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) ); }
-    else if ( MLInd < -5*OPTGLOBOFFSET ) { StrucAssert( (getBayesianref((-((5*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).muapproxRaw    )((-((5*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) ); }
-    else if ( MLInd < -4*OPTGLOBOFFSET ) { StrucAssert( (getBayesianref((-((4*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).cgtapproxRaw   )((-((4*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP) ); }
-
-    if      ( MLInd < -9*OPTGLOBOFFSET ) { return *( getBayesianref( -((9*OPTGLOBOFFSET)+MLInd)             ).srcmodel       ); }
-    else if ( MLInd < -8*OPTGLOBOFFSET ) { return *( getBayesianref( -((8*OPTGLOBOFFSET)+MLInd)             ).diffmodel      ); }
-    else if ( MLInd < -7*OPTGLOBOFFSET ) { return *( getBayesianref( -((7*OPTGLOBOFFSET)+MLInd)             ).sigmaapproxRaw ); }
-    else if ( MLInd < -6*OPTGLOBOFFSET ) { return *((getBayesianref((-((6*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).augxapproxRaw  )("&",(-((6*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
-    else if ( MLInd < -5*OPTGLOBOFFSET ) { return *((getBayesianref((-((5*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).muapproxRaw    )("&",(-((5*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
-    else if ( MLInd < -4*OPTGLOBOFFSET ) { return *((getBayesianref((-((4*OPTGLOBOFFSET)+MLInd))%OPTGRIDSTEP).cgtapproxRaw   )("&",(-((4*OPTGLOBOFFSET)+MLInd))/OPTGRIDSTEP)); }
-    else if ( MLInd < -3*OPTGLOBOFFSET ) { return  ( getBayesianref( -((3*OPTGLOBOFFSET)+MLInd)             ).altmuapprox_rff); }
-    else if ( MLInd < -2*OPTGLOBOFFSET ) { return  ( getBayesianref( -((2*OPTGLOBOFFSET)+MLInd)             ).altaugxapprox  ); }
-    else if ( MLInd <   -OPTGLOBOFFSET ) { return  ( getBayesianref( -(   OPTGLOBOFFSET +MLInd)             ).altmuapprox    ); }
-    else if ( MLInd < 0                ) { return  ( getBayesianref(                    -MLInd              ).altcgtapprox   ); }
-
-    return getMLref(getMLmodels(),MLInd);
-}
+int glob_MLInd        (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
+int glob_gridInd      (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
+int glob_DIRectInd    (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
+int glob_NelderMeadInd(int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
+int glob_BayesianInd  (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
 
 
 
@@ -235,16 +183,18 @@ template <class T> int convFromPy(SparseVector<T> &res, const py::object &src);
                                                    (modis ## _RFF).def(setname, &(mod_r ## setfn), "For ML, element q, set RFF kernel parameter: "    desc, py::arg("i") = 0, py::arg("q") = 0, py::arg(getname)); \
                                                    (modis ## _RFF).def(getname, &(mod_r ## getfn), "For ML, element q, set RFF kernel parameter: "    desc, py::arg("i") = 0, py::arg("q") = 0);
 
-#define QGETSETOPT(modis,varname,ty,desc) modis ## _ ## ty    .def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                          modis ## _ ## ty    .def("get" #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get: " desc, py::arg("i") = 0);
-#define QGETSETOPTALL(modis,varname,desc) modis ## _grid      .def("set" #varname, &(modoptset_grid_       ## varname), "For " "grid"       " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                          modis ## _DIRect    .def("set" #varname, &(modoptset_DIRect_     ## varname), "For " "DIRect"     " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                          modis ## _NelderMead.def("set" #varname, &(modoptset_NelderMead_ ## varname), "For " "NelderMead" " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                          modis ## _Bayesian  .def("set" #varname, &(modoptset_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                          modis ## _grid      .def("get" #varname, &(modoptget_grid_       ## varname), "For " "grid"       " optimiser, get: " desc, py::arg("i") = 0); \
-                                          modis ## _DIRect    .def("get" #varname, &(modoptget_DIRect_     ## varname), "For " "DIRect"     " optimiser, get: " desc, py::arg("i") = 0); \
-                                          modis ## _NelderMead.def("get" #varname, &(modoptget_NelderMead_ ## varname), "For " "NelderMead" " optimiser, get: " desc, py::arg("i") = 0); \
-                                          modis ## _Bayesian  .def("get" #varname, &(modoptget_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, get: " desc, py::arg("i") = 0);
+#define QGETSETOPT(modis,varname,ty,sub,desc) modis ## _ ## ty ## _ ## sub.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                              modis ## _ ## ty ## _ ## sub.def("get" #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get: " desc, py::arg("i") = 0);
+#define QGETSETOPTB(modis,varname,ty,desc   ) modis ## _ ##             ty.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                              modis ## _ ##             ty.def("get" #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get: " desc, py::arg("i") = 0);
+#define QGETSETOPTALL(modis,varname,desc)     modis ## _grid              .def("set" #varname, &(modoptset_grid_       ## varname), "For " "grid"       " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                              modis ## _DIRect            .def("set" #varname, &(modoptset_DIRect_     ## varname), "For " "DIRect"     " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                              modis ## _NelderMead        .def("set" #varname, &(modoptset_NelderMead_ ## varname), "For " "NelderMead" " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                              modis ## _Bayesian          .def("set" #varname, &(modoptset_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                              modis ## _grid              .def("get" #varname, &(modoptget_grid_       ## varname), "For " "grid"       " optimiser, get: " desc, py::arg("i") = 0); \
+                                              modis ## _DIRect            .def("get" #varname, &(modoptget_DIRect_     ## varname), "For " "DIRect"     " optimiser, get: " desc, py::arg("i") = 0); \
+                                              modis ## _NelderMead        .def("get" #varname, &(modoptget_NelderMead_ ## varname), "For " "NelderMead" " optimiser, get: " desc, py::arg("i") = 0); \
+                                              modis ## _Bayesian          .def("get" #varname, &(modoptget_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, get: " desc, py::arg("i") = 0);
 
 // Corresponding helper macros to auto-generate function definitions to be used by python module
 
@@ -320,8 +270,8 @@ template <class T> int convFromPy(SparseVector<T> &res, const py::object &src);
                                        py::object mod_r ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getRFFKernel(). getfn (q));  } \
                                        void       mod_r ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp,q); }
 
-#define OPTGETSETDEF(varname,ty,T) py::object modoptget_ ## ty ## _ ## varname(int i)               { dostartup(); i = glob_ ## ty ## Ind(i); return convToPy((T) get ## ty ## refconst(get ## ty ## Optim(),i).varname); } \
-                                   void       modoptset_ ## ty ## _ ## varname(int i, py::object p) { dostartup(); i = glob_ ## ty ## Ind(i); T altp; convFromPy(altp,p); get ## ty ## ref(get ## ty ## Optim(),i).varname = altp; }
+#define OPTGETSETDEF(varname,ty,T) py::object modoptget_ ## ty ## _ ## varname(int i)               { dostartup(); i = glob_ ## ty ## Ind(i); return convToPy((T) get ## ty ## refconst(i).varname); } \
+                                   void       modoptset_ ## ty ## _ ## varname(int i, py::object p) { dostartup(); i = glob_ ## ty ## Ind(i); T altp; convFromPy(altp,p); get ## ty ## ref(i).varname = altp; }
 #define OPTGETSETALLDEF(varname,T) py::object modoptget_grid_       ## varname(int i)               { dostartup(); i = glob_gridInd      (i); return convToPy(getgridrefconst      (i).varname); } \
                                    py::object modoptget_DIRect_     ## varname(int i)               { dostartup(); i = glob_DIRectInd    (i); return convToPy(getDIRectrefconst    (i).varname); } \
                                    py::object modoptget_NelderMead_ ## varname(int i)               { dostartup(); i = glob_NelderMeadInd(i); return convToPy(getNelderMeadrefconst(i).varname); } \
@@ -362,26 +312,30 @@ void logit(const std::string logstr); // print to errstream
 void callintercalc(void);
 void callsnakes   (void);
 
-int selml              (int i = 0);
-int selmlaltcgtapprox  (int i = 0);
-int selmlaltmuapprox   (int i = 0);
-int selmlaltaugxapprox (int i = 0);
-int selmlaltmuapproxrff(int i = 0);
-int selmlcgtapprox     (int i = 0, int k = 0);
-int selmlmuapprox      (int i = 0, int k = 0);
-int selmlaugxapprox    (int i = 0, int k = 0);
-int selmlsigmaapprox   (int i = 0);
-int selmldiffmodel     (int i = 0);
-int selmlsrcmodel      (int i = 0);
+int selml(int i = 0);
+
+int selmlmuapprox   (int i = 0, int k = 0);
+int selmlcgtapprox  (int i = 0, int k = 0);
+//int selmlaugxapprox (int i = 0, int k = 0);
+int selmlsigmaapprox(int i = 0);
+int selmldiffmodel  (int i = 0);
+int selmlsrcmodel   (int i = 0);
+
+int selmlmuapprox_prior   (int i = 0);
+int selmlcgtapprox_prior  (int i = 0);
+//int selmlaugxapprox_prior (int i = 0);
+int selmlsigmaapprox_prior(int i = 0);
+int selmldiffmodel_prior  (int i = 0);
+int selmlsrcmodel_prior   (int i = 0);
 
 void swapml  (int i = 0, int j = 0);
 void copyml  (int i = 0, int j = 0);
 void assignml(int i = 0, int j = 0);
 
-int selgridopt      (int i);
-int selDIRectopt    (int i);
-int selNelderMeadopt(int i);
-int selBayesianopt  (int i);
+int selgridopt      (int i, int rst);
+int selDIRectopt    (int i, int rst);
+int selNelderMeadopt(int i, int rst);
+int selBayesianopt  (int i, int rst);
 
 int setpriml(int i = 0, int j = 0);
 
@@ -418,6 +372,8 @@ py::object mlK3(int i, py::object xa, py::object xb, py::object xc);
 py::object mlK4(int i, py::object xa, py::object xb, py::object xc, py::object xd);
 
 void boSetgridsource(int i, int j);
+void boSetkernapproxsource(int i, int j);
+void boSetimpmeas(int i, int j);
 
 GETSETDEF(getMLType,ssetMLTypeClean,std::string);
 
@@ -635,6 +591,8 @@ OPTGETSETDEF(algseed,    Bayesian,int    );
 OPTGETSETDEF(itcntmethod,Bayesian,int    );
 OPTGETSETDEF(err,        Bayesian,double );
 OPTGETSETDEF(minstdev,   Bayesian,double );
+OPTGETSETDEF(moodim,     Bayesian,int    );
+OPTGETSETDEF(sigmuseparate,Bayesian,int    );
 OPTGETSETDEF(numcgt,     Bayesian,int    );
 OPTGETSETDEF(cgtmethod,  Bayesian,int    );
 OPTGETSETDEF(cgtmargin,  Bayesian,double );
@@ -651,19 +609,39 @@ OPTGETSETDEF(R,          Bayesian,double );
 OPTGETSETDEF(B,          Bayesian,double );
 OPTGETSETDEF(betafn,     Bayesian,gentype);
 OPTGETSETDEF(numfids,    Bayesian,int    );
+OPTGETSETDEF(fidover,    Bayesian,int    );
 OPTGETSETDEF(dimfid,     Bayesian,int    );
 OPTGETSETDEF(fidbudget,  Bayesian,double );
 OPTGETSETDEF(fidpenalty, Bayesian,gentype);
 OPTGETSETDEF(fidvar,     Bayesian,gentype);
 OPTGETSETDEF(PIscale,    Bayesian,int    );
+OPTGETSETDEF(TSmode,     Bayesian,int    );
+OPTGETSETDEF(TSNsamp,    Bayesian,int    );
+OPTGETSETDEF(TSsampType, Bayesian,int    );
+OPTGETSETDEF(TSxsampType,Bayesian,int    );
+OPTGETSETDEF(sigma_cut,  Bayesian,double );
+OPTGETSETDEF(tranmeth,   Bayesian,int    );
+OPTGETSETDEF(alpha0,     Bayesian,double );
+OPTGETSETDEF(beta0,      Bayesian,double );
+OPTGETSETDEF(kxfnum,     Bayesian,int    );
+OPTGETSETDEF(kxfnorm,    Bayesian,int    );
 
-OPTGETSETDEF(tunemu,        Bayesian,int        );
-OPTGETSETDEF(tunecgt,       Bayesian,int        );
-OPTGETSETDEF(modelname,     Bayesian,std::string);
-OPTGETSETDEF(modeloutformat,Bayesian,int        );
-OPTGETSETDEF(plotfreq,      Bayesian,int        );
-OPTGETSETDEF(modelbaseline, Bayesian,std::string);
+OPTGETSETDEF(intrinbatch,        Bayesian,int    );
+OPTGETSETDEF(intrinbatchmethod,  Bayesian,int    );
+OPTGETSETDEF(startpointsmultiobj,Bayesian,int    );
+OPTGETSETDEF(totitersmultiobj,   Bayesian,int    );
+OPTGETSETDEF(ehimethodmultiobj,  Bayesian,int    );
 
+OPTGETSETDEF(tunemu,          Bayesian,int        );
+OPTGETSETDEF(tunecgt,         Bayesian,int        );
+OPTGETSETDEF(tunesigma,       Bayesian,int        );
+OPTGETSETDEF(tunesrcmod,      Bayesian,int        );
+OPTGETSETDEF(tunediffmod,     Bayesian,int        );
+//OPTGETSETDEF(tuneaugxmod,     Bayesian,int        );
+OPTGETSETDEF(modelname,       Bayesian,std::string);
+OPTGETSETDEF(modeloutformat,  Bayesian,int        );
+OPTGETSETDEF(plotfreq,        Bayesian,int        );
+OPTGETSETDEF(modelbaseline,   Bayesian,std::string);
 
 
 
@@ -675,11 +653,22 @@ OPTGETSETDEF(modelbaseline, Bayesian,std::string);
 PYBIND11_MODULE(pyheavy, m) {
     m.doc() = "SVMHeavy Machine Learning Library.";
 
-    m.def("help",&svmheavya,"Display basic help-screen for CLI emulation."                 );
-    m.def("mode",&svmheavyb,"Set persistence mode (default 1, persistent).",py::arg("mode"));
-    m.def("exec",&svmheavyc,"Run with string given (mimics CLI).",          py::arg("str") );
-    m.def("log", &logit,    "Print to log.",                                py::arg("str") );
+    m.def("exec",&svmheavyc,"Run with string given (mimic CLI).", py::arg("str") );
 
+    // ---------------------------
+    // ---------------------------
+    // ---------------------------
+    // ---------------------------
+
+    auto m_cli = m.def_submodule("cli","Commandline Emulation.");
+
+    m_cli.def("help",&svmheavya,"Display basic help-screen for CLI emulation."                 );
+    m_cli.def("mode",&svmheavyb,"Set persistence mode (default 1, persistent).",py::arg("mode"));
+    m_cli.def("log", &logit,    "Print to log.",                                py::arg("str") );
+
+    // ---------------------------
+    // ---------------------------
+    // ---------------------------
     // ---------------------------
 
     auto m_int = m.def_submodule("internal","Internal use.");
@@ -694,6 +683,9 @@ PYBIND11_MODULE(pyheavy, m) {
     m_int.def("snakes",    &callsnakes,   "Snakes (test io, streams)."                                                                                 );
     m_int.def("calc",      &callintercalc,"Calculator (explore functions available in gentype expressions)."                                           );
 
+    // ---------------------------
+    // ---------------------------
+    // ---------------------------
     // ---------------------------
 
     auto m_maths = m.def_submodule("maths","Mathematics related.");
@@ -743,6 +735,25 @@ PYBIND11_MODULE(pyheavy, m) {
                                 py::arg("i"),py::arg("type")="norm");
     m_maths.def("calc",&callintercalc,"Calculator (explore functions available in gentype expressions).");
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // ---------------------------
+    // ---------------------------
+    // ---------------------------
     // ---------------------------
 
     auto m_ml = m.def_submodule("ml","Machine Learning Modules.");
@@ -824,9 +835,10 @@ PYBIND11_MODULE(pyheavy, m) {
                                  "- if i is negative then the ML is a member of a BO. See e.g. selaltmu etc. for\n"
                                  "  more information.\n"
                                  "\n"
-                                 "See also: selmlaltcgtapprox, selmlaltmuapprox, selmlaltaugxapprox,\n"
-                                 "          selmlaltmuapproxrff, selmlcgtapprox, selmlmuapprox, selmlaugxapprox,\n"
-                                 "          selmlsigmaapprox, selmldiffmodel, selmlsrcmodel", py::arg("i")=0               );
+                                 "See also: selmlmuapprox, selmlcgtapprox,\n"
+                                 "          selmlsigmaapprox, selmldiffmodel, selmlsrcmodel,\n"
+                                 "          selmlmuapprox_prior, selmlcgtapprox_prior,\n"
+                                 "          selmlsigmaapprox_prior, selmldiffmodel_prior, selmlsrcmodel_prior", py::arg("i")=0               );
     m_ml.def("swap",   &swapml,  "Swap ML and ML j.",   py::arg("i")=0,py::arg("j")=0);
     m_ml.def("copy",   &copyml,  "Let ML := ML j.",     py::arg("i")=0,py::arg("j")=0);
     m_ml.def("assign", &assignml,"Let ML j := ML.",     py::arg("i")=0,py::arg("j")=0);
@@ -1187,6 +1199,18 @@ PYBIND11_MODULE(pyheavy, m) {
 
 
 
+
+
+
+
+
+
+
+
+
+    // ---------------------------
+    // ---------------------------
+    // ---------------------------
     // ---------------------------
 
     auto m_opt = m.def_submodule("opt","Built-in Optimisation Methods.");
@@ -1196,18 +1220,22 @@ PYBIND11_MODULE(pyheavy, m) {
     auto m_opt_NelderMead = m_opt.def_submodule("NelderMead","Nelder-Mead Optimisation");
     auto m_opt_Bayesian   = m_opt.def_submodule("BO",        "Bayesian Optimisation"   );
 
-    auto m_opt_model_Bayesian = m_opt_Bayesian.def_submodule("model", "Bayesian Optimisation (SMBO) Model Options");
-
-    auto m_opt_model_kern_Bayesian         = m_opt_model_Bayesian.     def_submodule("kern",    "Kernel options for SMBO objective model"              );
-    auto m_opt_model_kern_obscure_Bayesian = m_opt_model_kern_Bayesian.def_submodule("obscure", "More Obscure Kernel Options for SMBO objective model.");
-
-    auto m_opt_model_kern_c_Bayesian         = m_opt_model_Bayesian.       def_submodule("kern_c",  "Kernel options for SMBO constraint model"              );
-    auto m_opt_model_kern_c_obscure_Bayesian = m_opt_model_kern_c_Bayesian.def_submodule("obscure", "More Obscure Kernel Options for SMBO constraint model.");
-
     m_opt_grid.def(      "opt", &mloptgrid,       "Optimise (minimise) fn : [0,1]^dim to [0,1] using grid optimiser i.",       py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
     m_opt_DIRect.def(    "opt", &mloptDIRect,     "Optimise (minimise) fn : [0,1]^dim to [0,1] using DIRect optimiser i.",     py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
     m_opt_NelderMead.def("opt", &mloptNelderMead, "Optimise (minimise) fn : [0,1]^dim to [0,1] using Nelder-Mead optimiser i.",py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
     m_opt_Bayesian.def(  "opt", &mloptBayesian,   "Optimise (minimise) fn : [0,1]^dim to [0,1] using Bayesian optimiser i.",   py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
+
+    auto m_opt_Bayesian_model = m_opt_Bayesian.def_submodule("models","Model Options"               );
+    auto m_opt_Bayesian_tune  = m_opt_Bayesian.def_submodule("models","Model Tuning"                );
+    auto m_opt_Bayesian_gpucb = m_opt_Bayesian.def_submodule("gpucb", "GP-UCB related constants"    );
+    auto m_opt_Bayesian_ei    = m_opt_Bayesian.def_submodule("ei",    "EI related constants"        );
+    auto m_opt_Bayesian_cgt   = m_opt_Bayesian.def_submodule("cgt",   "Constraints"                 );
+    auto m_opt_Bayesian_fid   = m_opt_Bayesian.def_submodule("fid",   "Multi-fidelity"              );
+    auto m_opt_Bayesian_vis   = m_opt_Bayesian.def_submodule("vis",   "Visualization and Plotting"  );
+    auto m_opt_Bayesian_ts    = m_opt_Bayesian.def_submodule("ts",    "Thompson Sampling"           );
+    auto m_opt_Bayesian_tl    = m_opt_Bayesian.def_submodule("tl",    "Transfer learning"           );
+    auto m_opt_Bayesian_moo   = m_opt_Bayesian.def_submodule("moo",   "Multi-objective learning"    );
+    auto m_opt_Bayesian_mr    = m_opt_Bayesian.def_submodule("mr",    "Multi-recommendation methods");
 
     // All optimisers
 
@@ -1223,156 +1251,273 @@ PYBIND11_MODULE(pyheavy, m) {
     m_opt_grid.def("selgridopt",&selgridopt,"Select grid optimiser i > 0. If i=0 then return current grid optimizer\n"
                                             "(default 1) without modification. You can have arbitrarily many grid\n"
                                             "optimizers at any given time. Note that you can select per-operation,\n"
-                                            "but like selml this is non-persistent.\n",py::arg("i")=0);
+                                            "but like selml this is non-persistent. Set rst = 1 to also reset.\n",py::arg("i")=0,py::arg("rst")=0);
 
-    QGETSETOPT(m_opt,numZooms,grid,"number of grid-zooms (default 0)"                                              );
-    QGETSETOPT(m_opt,zoomFact,grid,"scaling (zoom) factor for each grid-zoom (default 0.333)"                      );
-    QGETSETOPT(m_opt,numPts,  grid,"grid-definition vector. Each index gives the number of points along that axis.");
+    QGETSETOPTB(m_opt,numZooms,grid,"number of grid-zooms (default 0)"                                              );
+    QGETSETOPTB(m_opt,zoomFact,grid,"scaling (zoom) factor for each grid-zoom (default 0.333)"                      );
+    QGETSETOPTB(m_opt,numPts,  grid,"grid-definition vector. Each index gives the number of points along that axis.");
 
     // DIRect options
 
     m_opt_DIRect.def("selDIRectopt",&selDIRectopt,"Select DIRect optimiser i > 0. If i=0 then return current DIRect optimizer\n"
                                                   "(default 1) without modification. You can have arbitrarily many DIRect\n"
                                                   "optimizers at any given time. Note that you can select per-operation,\n"
-                                                  "but like selml this is non-persistent.\n",py::arg("i")=0);
+                                                  "but like selml this is non-persistent. Set rst = 1 to also reset.\n",py::arg("i")=0,py::arg("rst")=0);
 
-    QGETSETOPT(m_opt,maxits,  DIRect,"maximum cube divisions (default 1000)."      );
-    QGETSETOPT(m_opt,maxevals,DIRect,"maximum function evaluations (default 5000).");
-    QGETSETOPT(m_opt,eps,     DIRect,"epsilon factor (default 1e-4)."              );
+    QGETSETOPTB(m_opt,maxits,  DIRect,"maximum cube divisions (default 1000)."      );
+    QGETSETOPTB(m_opt,maxevals,DIRect,"maximum function evaluations (default 5000).");
+    QGETSETOPTB(m_opt,eps,     DIRect,"epsilon factor (default 1e-4)."              );
 
     // Nelder-Mead options
 
     m_opt_NelderMead.def("selNelderMeadopt",&selNelderMeadopt,"Select NelderMead optimiser i > 0. If i=0 then return current NelderMead optimizer\n"
                                                               "(default 1) without modification. You can have arbitrarily many NelderMead\n"
                                                               "optimizers at any given time. Note that you can select per-operation,\n"
-                                                              "but like selml this is non-persistent.\n",py::arg("i")=0);
+                                                              "but like selml this is non-persistent. Set rst = 1 to also reset.\n",py::arg("i")=0,py::arg("rst")=0);
 
-    QGETSETOPT(m_opt,minf_max,NelderMead,"maximum f val (default -HUGE_VAL)."                  );
-    QGETSETOPT(m_opt,ftol_rel,NelderMead,"relative tolerance of function value (default 0)."   );
-    QGETSETOPT(m_opt,ftol_abs,NelderMead,"abolute tolerance of function value (default 0)."    );
-    QGETSETOPT(m_opt,xtol_rel,NelderMead,"relative tolerance of x value (default 0)."          );
-    QGETSETOPT(m_opt,xtol_abs,NelderMead,"abolute tolerance of x value (default 0)."           );
-    QGETSETOPT(m_opt,maxeval, NelderMead,"max number of f evaluations (default 1000)."         );
-    QGETSETOPT(m_opt,method,  NelderMead,"0 is subplex, 1 is original Nelder-Mead (default 0).");
+    QGETSETOPTB(m_opt,minf_max,NelderMead,"maximum f val (default -HUGE_VAL)."                  );
+    QGETSETOPTB(m_opt,ftol_rel,NelderMead,"relative tolerance of function value (default 0)."   );
+    QGETSETOPTB(m_opt,ftol_abs,NelderMead,"abolute tolerance of function value (default 0)."    );
+    QGETSETOPTB(m_opt,xtol_rel,NelderMead,"relative tolerance of x value (default 0)."          );
+    QGETSETOPTB(m_opt,xtol_abs,NelderMead,"abolute tolerance of x value (default 0)."           );
+    QGETSETOPTB(m_opt,maxeval, NelderMead,"max number of f evaluations (default 1000)."         );
+    QGETSETOPTB(m_opt,method,  NelderMead,"0 is subplex, 1 is original Nelder-Mead (default 0).");
+
+
+
 
     // Bayesian options
 
     m_opt_Bayesian.def("selBOopt",&selBayesianopt,"Select BO optimiser i > 0. If i=0 then return current BO optimizer\n"
                                                   "(default 1) without modification. You can have arbitrarily many BO\n"
                                                   "optimizers at any given time. Note that you can select per-operation,\n"
-                                                  "but like selml this is non-persistent.\n",py::arg("i")=0);
+                                                  "but like selml this is non-persistent. Set rst = 1 to also reset.\n",py::arg("i")=0,py::arg("rst")=0);
 
-    QGETSETOPT(m_opt,method,   Bayesian,"Bayesian optimisation acquisition function:\n"
-                                        "\n"
-                                        " 0 - MO (pure exploitation, mean only minimisation).\n"
-                                        " 1 - EI (expected improvement - default).\n"
-                                        " 2 - PI (probability of improvement).\n"
-                                        " 3 - GP-UCB as per Brochu (recommended GP-UCB).*\n"
-                                        " 4 - GP-UCB |D| finite as per Srinivas.\n"
-                                        " 5 - GP-UCB |D| infinite as per Srinivas.\n"
-                                        " 6 - GP-UCB p based on Brochu.\n"
-                                        " 7 - GP-UCB p |D| finite based on Srinivas.\n"
-                                        " 8 - GP-UCB p |D| infinite based on Srinivas.\n"
-                                        " 9 - PE (variance-only maximisation).\n"
-                                        "10 - PEc (total variance-only, including constraints in variance maximisation).\n"
-                                        "11 - GP-UCB with user-defined beta_t (see -gbv).\n"
-                                        "12 - Thompson sampling.#\n"
-                                        "13 - GP-UCB RKHS as per Srinivas.\n"
-                                        "14 - GP-UCB RKHS as Chowdhury.#\n"
-                                        "15 - GP-UCB RKHS as Bogunovic.~\n"
-                                        "16 - Thompson sampling (unity scaling on variance).\n"
-                                        "17 - GP-UCB as per Kandasamy (multifidelity 2017).\n"
-                                        "18 - Human will be prompted to input x.\n"
-                                        "19 - HE (human-level exploitation beta = 0.01).\n"
-                                        "20 - GP-UCB as per BO-Muse (single AI).  Typically combined with human prompt\n"
-                                        "\n"
-                                        "* beta_n = 2.log((n^{2+dim/2}).(pi^2)/(3.delta))\n"
-                                        "$ variance of model only.\n"
-                                        "@ total variance of model and contraints.\n"
-                                        "# Chowdhury, On Kernelised Multi-Arm Bandits, Algorithm 2.\n"
-                                        "~ Bogunovic, Misspecified GP Bandit Optim., Lemma 1.\n"
-                                        "^ Intendid to be combined with human prompt.");
-    QGETSETOPT(m_opt,betafn,  Bayesian, "user-defined beta for method 11. You can make this a function with the vars:\n"
-                                        "\n"
-                                        "- var(0,1) (y) = iteration number.\n"
-                                        "- var(0,2) (z) = x dimension.\n"
-                                        "- var(0,3) (v) = delta.\n"
-                                        "- var(0,4) (w) = |D| specified by -gbx.\n"
-                                        "- var(0,5) (g) = a as specified by -gbo.\n"
-                                        "\n"
-                                        "You can also use [ [ f1 ] [ f2 ] ... ], where f1,f2,... define acquisition\n"
-                                        "function (see method variable). This will generate multiple recommendations\n"
-                                        "in a single iteration, one for each of the methods f1,f2,... given. For\n"
-                                        "other uses see -gbv.\n");
-    QGETSETOPT(m_opt,PIscale,  Bayesian,"PI scaling: set 0 for standard operation, 1 to scale aquisition function by\n"
-                                        "the PI acquisition function. For constrained optimisation with trivial objective\n"
-                                        "with the model specified as prior for a deterministic model (zero posterior\n"
-                                        "variance) this let's you avoid testing solutions that are trivially non-optimal.");
-    QGETSETOPT(m_opt,numcgt,   Bayesian,"number of constraints enforced (default 0).");
-    QGETSETOPT(m_opt,cgtmethod,Bayesian,"constraint method:\n"
-                                        "\n"
-                                        "0 - calculate P(c(x))>=0 and scale acquisition function by this (default).\n"
-                                        "1 - optimise f(x).ind(c(x)>=0), so that the mean/variance of c are built into\n"
-                                        "    the posterior mean/variance before calculating acquisition function.");
+    QGETSETOPTB(m_opt,method, Bayesian,"Bayesian optimisation acquisition function:\n"
+                                       "\n"
+                                       " 0 - MO (pure exploitation, mean only minimisation).\n"
+                                       " 1 - EI (expected improvement - default).\n"
+                                       " 2 - PI (probability of improvement).\n"
+                                       " 3 - GP-UCB as per Brochu (recommended GP-UCB).*\n"
+                                       " 4 - GP-UCB |D| finite as per Srinivas.\n"
+                                       " 5 - GP-UCB |D| infinite as per Srinivas.\n"
+                                       " 6 - GP-UCB p based on Brochu.\n"
+                                       " 7 - GP-UCB p |D| finite based on Srinivas.\n"
+                                       " 8 - GP-UCB p |D| infinite based on Srinivas.\n"
+                                       " 9 - PE (variance-only maximisation).\n"
+                                       "10 - PEc (total variance-only, including constraints in variance maximisation).\n"
+                                       "11 - Multi-strategy learning or user-defined.\n"
+                                       "12 - Thompson sampling.#\n"
+                                       "13 - GP-UCB RKHS as per Srinivas.\n"
+                                       "14 - GP-UCB RKHS as Chowdhury.#\n"
+                                       "15 - GP-UCB RKHS as Bogunovic.~\n"
+                                       "16 - Thompson sampling (unity scaling on variance).\n"
+                                       "17 - GP-UCB as per Kandasamy (multifidelity 2017).\n"
+                                       "18 - Human will be prompted to input x.\n"
+                                       "19 - HE (human-level exploitation beta = 0.01).\n"
+                                       "20 - GP-UCB as per BO-Muse (single AI).  Typically combined with human prompt\n"
+                                       "\n"
+                                       "* beta_n = 2.log((n^{2+dim/2}).(pi^2)/(3.delta))\n"
+                                       "$ variance of model only.\n"
+                                       "@ total variance of model and contraints.\n"
+                                       "# Chowdhury, On Kernelised Multi-Arm Bandits, Algorithm 2.\n"
+                                       "~ Bogunovic, Misspecified GP Bandit Optim., Lemma 1.\n"
+                                       "^ Intendid to be combined with human prompt.");
+    QGETSETOPTB(m_opt,betafn, Bayesian,"user-defined beta for method 11. You can make this a function with the vars:\n"
+                                       "\n"
+                                       "- var(0,1) (y) = iteration number.\n"
+                                       "- var(0,2) (z) = x dimension.\n"
+                                       "- var(0,3) (v) = delta.\n"
+                                       "- var(0,4) (w) = |D| specified by -gbx.\n"
+                                       "- var(0,5) (g) = a as specified by -gbo.\n"
+                                       "\n"
+                                       "You can also use [ [ f1 ] [ f2 ] ... ], where f1,f2,... define acquisition\n"
+                                       "function (see method variable). This will generate multiple recommendations\n"
+                                       "in a single iteration, one for each of the methods f1,f2,... given.\n");
+    QGETSETOPTB(m_opt,PIscale,Bayesian,"PI scaling: set 0 for standard operation, 1 to scale aquisition function by\n"
+                                       "the PI (probability of improvement) acquisition function.");
 
-    QGETSETOPT(m_opt,startpoints,Bayesian,"number of initial (random, uniform) seeds points. Use -1 (default) for d+1.");
-    QGETSETOPT(m_opt,totiters,   Bayesian,"number of iterations. Use 0 for unlimited, -1 (default) for 15d, -2 for\n"
-                                          "frequentist mode (stop when min_x err(x) < err).");
-    QGETSETOPT(m_opt,err,        Bayesian,"when totiters=-2, the stopping condition is min_x err(x) < err.");
-    QGETSETOPT(m_opt,minstdev,   Bayesian,"added to the posterior variance in acquisition function (default 0).");
-    QGETSETOPT(m_opt,cgtmargin,  Bayesian,"safety margin for enforcing inequality constraints in the acq fn (default 0.1)");
-    QGETSETOPT(m_opt,ztol,       Bayesian,"zero tolerance factor.");
+    QGETSETOPTB(m_opt,sigmuseparate,Bayesian,"posterior separation:\n"
+                                             "\n"
+                                             "0 - use same model for posterior mean and variance (default).\n"
+                                             "1 - use separate models. This is required e.g. for hallucinated samples in.\n"
+                                             "    some multi-recommendation methods, where the variance updates after\n"
+                                             "    each individual recommendation but the posterior mean updates only after\n"
+                                             "    the whole batch.");
 
-    QGETSETOPT(m_opt,delta,Bayesian,"delta factor used in GP-UCB method (default 0.1).");
-    QGETSETOPT(m_opt,nu,   Bayesian,"nu factor Srinivas GP-UCB (default 0.2, see Srivinas)");
-    QGETSETOPT(m_opt,modD, Bayesian,"|D| (size of search space grid) for GP-UCB finite (default -1, which means\n"
-                                    "size of grid if available, 10 if not)");
-    QGETSETOPT(m_opt,a,    Bayesian,"a constant for Srinivas |D|-infinite gpUCB (default 1)");
-    QGETSETOPT(m_opt,b,    Bayesian,"b constant for Srinivas |D|-infinite gpUCB (default 1)");
-    QGETSETOPT(m_opt,r,    Bayesian,"r constant for Srinivas |D|-infinite gpUCB (default 1)");
-    QGETSETOPT(m_opt,p,    Bayesian,"p value for GP-UCB p variants (default 2)");
-    QGETSETOPT(m_opt,R,    Bayesian,"R constant for acquisition functions 12,13,14 (default 1)");
-    QGETSETOPT(m_opt,B,    Bayesian,"B constant for acquisition functions 12,13,14 (default 1)");
-    QGETSETOPT(m_opt,zeta, Bayesian,"zeta factor in EI method (default 0). 0.01 works ok).");
+    QGETSETOPTB(m_opt,startpoints,Bayesian,"number of initial (random, uniform) seeds points. Use -1 (default) for d+1.");
+    QGETSETOPTB(m_opt,totiters,   Bayesian,"number of iterations. Use 0 for unlimited, -1 (default) for 15d, -2 for\n"
+                                           "frequentist mode (stop when min_x err(x) < err).");
+    QGETSETOPTB(m_opt,err,        Bayesian,"when totiters=-2, the frequentist stopping condition is min_x err(x) < err.");
+    QGETSETOPTB(m_opt,minstdev,   Bayesian,"added to the posterior variance in acquisition function (default 0).");
+    QGETSETOPTB(m_opt,ztol,       Bayesian,"zero tolerance factor.");
 
-    QGETSETOPT(m_opt,startseed,Bayesian,"seed for RNG immediately prior to generating random seeds. Use -1 for no"
-                                        "seeding, -2 to seed with time. If >=0 then this is incremented on each use"
-                                        "(default 42)");
-    QGETSETOPT(m_opt,algseed,  Bayesian,"seed for RNG immediately prior to the main algorithm loop. Use -1 for no"
-                                        "seeding, -2 to seed with time. If >=0 then this is incremented on each use"
-                                        "(default 42)");
-
-    QGETSETOPT(m_opt,numfids,   Bayesian,"number of fidelity levels per axis (default 0, no fidelity variables).");
-    QGETSETOPT(m_opt,dimfid,    Bayesian,"number of fidelity axis (default 1, but meaningless unless numfids>0).");
-    QGETSETOPT(m_opt,fidbudget, Bayesian,"fidelity budget (default -1, unlimited).");
-    QGETSETOPT(m_opt,fidpenalty,Bayesian,"fidelity penalty function f(z), where z is the fidelity vector.");
-    QGETSETOPT(m_opt,fidvar,    Bayesian,"fidelity additive variance function n(z), added to measurement vari (dflt 0).");
-
-    m_opt_model_Bayesian.def("setgridsrc",&boSetgridsource,"For BO, set grid source.",py::arg("i")=0,py::arg("j")=0);
-
-    m_opt_model_Bayesian.def("selaltmu", &selmlaltmuapprox,   "Select default objective model for BO i to use like any ML (see also selml).",py::arg("i")=0);
-    m_opt_model_Bayesian.def("selaltc",  &selmlaltcgtapprox,  "select default constraint model for BO i to use like any ML (see also selml).",py::arg("i")=0);
-    m_opt_model_Bayesian.def("selaltaug",&selmlaltaugxapprox, "select default x augmentation (side-channel) model for BO i to use like any ML (see also selml).",py::arg("i")=0);
-    m_opt_model_Bayesian.def("selaltmu", &selmlaltmuapproxrff,"select default RFF objective model for BO i to use like any ML (see also selml).",py::arg("i")=0);
-    m_opt_model_Bayesian.def("selmu",    &selmlmuapprox,      "select actual (post-optimization) objective model for BO i (if constructed) to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
-    m_opt_model_Bayesian.def("selc",     &selmlcgtapprox,     "select actual (post-optimization) constraint model for BO i (if constructed) to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
-    m_opt_model_Bayesian.def("selaug",   &selmlaugxapprox,    "select actual (post-optimization) x augmentation (side-channel) model for BO i (if constructed) to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
-    m_opt_model_Bayesian.def("selsigma", &selmlsigmaapprox,   "select actual (post-optimization) noise model (if separate) for BO i (if constructed) to use like any ML (see also selml).",py::arg("i")=0);
-    m_opt_model_Bayesian.def("selsrc",   &selmlsrcmodel,      "select actual (post-optimization) source model (transfer learning) for BO i (if constructed) to use like any ML (see also selml).",py::arg("i")=0);
-    m_opt_model_Bayesian.def("seldiff",  &selmldiffmodel,     "select actual (post-optimization) src->destination difference model (transfer learning) for BO i (if constructed) to use like any ML (see also selml).",py::arg("i")=0);
-
-    QGETSETOPT(m_opt_model,tunemu,        Bayesian,"tuning method for objective model hyper-parameters (0 none, 1 max-log-likely\n"
-                                                   "(default), 2 leave-one-out, 3 recall).");
-    QGETSETOPT(m_opt_model,tunecgt,       Bayesian,"tuning method for constraint model hyper-parameters (0 none, 1 max-log-likely\n"
-                                                   "(default), 2 leave-one-out, 3 recall).");
-    QGETSETOPT(m_opt_model,modelname,     Bayesian,"model basename when plotting/logging (default smbomodel).");
-    QGETSETOPT(m_opt_model,modeloutformat,Bayesian,"format for plotting (0 terminal, 1 ps, 2 pdf (default)).");
-    QGETSETOPT(m_opt_model,plotfreq,      Bayesian,"plotting frequency (0 none (default), -1 only on exit).");
-    QGETSETOPT(m_opt_model,modelbaseline, Bayesian,"baseline function f(x) for plots (empty for none).");
+    QGETSETOPTB(m_opt,startseed,Bayesian,"seed for RNG immediately prior to generating random seeds. -1 for no seed,"
+                                         "-2 to seed with time. If >=0 then this is incremented on each use (default 42).");
+    QGETSETOPTB(m_opt,algseed,  Bayesian,"seed for RNG immediately prior to the main algorithm loop. -1 for no seed,"
+                                         "-2 to seed with time. If >=0 then this is incremented on each use (default 42)");
 
 
+    QGETSETOPT(m_opt,delta,Bayesian,gpucb,"delta factor used in GP-UCB method (default 0.1).");
+    QGETSETOPT(m_opt,nu,   Bayesian,gpucb,"nu factor Srinivas GP-UCB (default 0.2, see Srivinas)");
+    QGETSETOPT(m_opt,modD, Bayesian,gpucb,"|D| (grid siez) for GP-UCB finite (deflt -1: size of grid or 10)");
+    QGETSETOPT(m_opt,a,    Bayesian,gpucb,"a constant for Srinivas |D|-infinite gpUCB (default 1)");
+    QGETSETOPT(m_opt,b,    Bayesian,gpucb,"b constant for Srinivas |D|-infinite gpUCB (default 1)");
+    QGETSETOPT(m_opt,r,    Bayesian,gpucb,"r constant for Srinivas |D|-infinite gpUCB (default 1)");
+    QGETSETOPT(m_opt,p,    Bayesian,gpucb,"p value for GP-UCB p variants (default 2)");
+    QGETSETOPT(m_opt,R,    Bayesian,gpucb,"R constant for acquisition functions 12,13,14 (default 1)");
+    QGETSETOPT(m_opt,B,    Bayesian,gpucb,"B constant for acquisition functions 12,13,14 (default 1)");
 
 
+    QGETSETOPT(m_opt,zeta, Bayesian,ei,"zeta factor in EI method (default 0). 0.01 works ok).");
+
+
+    QGETSETOPT(m_opt,TSmode,     Bayesian,ts,"Thompson sampling mode:\n"
+                                             "\n"
+                                             "1 - use regular grid or random samples.\n"
+                                             "3 - use JIT sampling (default).");
+    QGETSETOPT(m_opt,TSNsamp,    Bayesian,ts,"number of samples for sample mode 1. Set >0 for fixed grid,\n"
+                                             "<0 for random grid, 0 (default) for random grid of 10.j.dim^2\n"
+                                             "random points (here j is the number of prior samples in model).");
+    QGETSETOPT(m_opt,TSsampType, Bayesian,ts,"sample type for sample mode 1:\n"
+                                             "\n"
+                                             "0   - unbounded draw (default).\n"
+                                             "1   - positive (definite/symm) draw by clip max(0,y).\n"
+                                             "2   - positive (definite/symm) draw by flip |y|.\n"
+                                             "3   - negative (definite/symm) draw by clip min(0,y).\n"
+                                             "4   - negative (definite/symm) draw by flip -|-y|.\n"
+                                             "5   - unbounded (symmetric) draw.\n"
+                                             "1x  - As above, but force alpha >= 0 after sample.\n"
+                                             "2x  - As above, but force alpha <= 0 after sample.\n"
+                                             "1xx - As above, but square the function afterwards.\n"
+                                             "      Existing observations treated as observations\n"
+                                             "      on the function before squaring.\n"
+                                             "2xx - Like 1xx,  but existing observations  treated\n"
+                                             "      as observations on the squared function.\n"
+                                             "3xx - Like  2xx, but  return the  function *before*\n"
+                                             "      squaring occurs.");
+    QGETSETOPT(m_opt,TSxsampType,Bayesian,ts,"x sample type for sample mode 1:\n"
+                                             "\n"
+                                             "0 - \"True\" pseudo-random (default).\n"
+                                             "1 - pre-defined sequence, sequentially generated.\n"
+                                             "2 - pre-defined sequence, same every time.\n"
+                                             "3 - grid of Nsamp^dim samples\n");
+    QGETSETOPT(m_opt,sigma_cut,  Bayesian,ts,"variance scale for JIT TS (default 0.1).");
+
+
+    QGETSETOPT(m_opt,numcgt,   Bayesian,cgt,"number of constraints enforced (default 0).");
+    QGETSETOPT(m_opt,cgtmethod,Bayesian,cgt,"constraint method:\n"
+                                            "\n"
+                                            "0 - calculate P(c(x))>=0 and scale acquisition function by this (default).\n"
+                                            "1 - optimise f(x).ind(c(x)>=0), so that the mean/variance of c are built into\n"
+                                            "    the posterior mean/variance before calculating acquisition function.");
+    QGETSETOPT(m_opt,cgtmargin,Bayesian,cgt,"safety margin for enforcing inequality constraints in the acq fn (default 0.1)");
+
+
+    QGETSETOPT(m_opt,moodim,Bayesian,moo,"number of objectives (default 1, single-objective).");
+
+    m_opt_Bayesian_moo.def("setimp",&boSetimpmeas,"For BO, set improvement measure (IMP). This is required for multi-objective BO,\n"
+                                                  "and defines how improvement is measured (vector to scalar). Essentially,\n"
+                                                  "mean :=  imp(mean,var). Processing is done with the IMP given.  Note that the\n"
+                                                  "acquisition function defined by -gbH still be applied after this (to do passthrough\n"
+                                                  "use acquisition function 0. Some IMPs have a concept of posterior variance, some\n"
+                                                  "don't. For EHI use acquisition function 0, for SVM-type mono-surrogate use for\n"
+                                                  "for example acquition function 3.\n");
+
+
+    QGETSETOPT(m_opt,numfids,   Bayesian,fid,"number of fidelity levels per axis (default 0, no fidelity variables).");
+    QGETSETOPT(m_opt,dimfid,    Bayesian,fid,"number of fidelity axis (default 1, but meaningless unless numfids>0).");
+    QGETSETOPT(m_opt,fidbudget, Bayesian,fid,"fidelity budget (default -1, unlimited).");
+    QGETSETOPT(m_opt,fidpenalty,Bayesian,fid,"fidelity penalty function f(z), where z is the fidelity vector.");
+    QGETSETOPT(m_opt,fidvar,    Bayesian,fid,"fidelity additive variance function n(z), added to measurement vari (dflt 0).");
+    QGETSETOPT(m_opt,fidover,   Bayesian,fid,"optional fidelity overwrite:\n"
+                                             "\n"
+                                             "0 - use fidelity generated by algorithm.\n"
+                                             "2 - randomly select fidelity <= recommended fidelity.");
+
+
+    QGETSETOPT(m_opt,intrinbatch,      Bayesian,mr,"intrinsic batch size (default 1).");
+    QGETSETOPT(m_opt,intrinbatchmethod,Bayesian,mr,"intrinsic batch recommendation method:"
+                                                   "\n"
+                                                   "0 - use max mean, det(covar)^(1/(2*ibs)) (default).\n"
+                                                   "1 - use ave mean, det(covar)^(1/(2*ibs)).\n"
+                                                   "2 - use min mean, det(covar)^(1/(2*ibs)).\n"
+                                                   "3 - use max mean, sqrt(ibs/Tr(inv(covar))).\n"
+                                                   "4 - use ave mean, sqrt(ibs/Tr(inv(covar))).\n"
+                                                   "5 - use min mean, sqrt(ibs/Tr(inv(covar))).");
+
+
+    m_opt_Bayesian_tl.def("setkxfersrc",&boSetkernapproxsource,"kernel transfer learning source ML.",py::arg("i")=0,py::arg("j")=0);
+
+    QGETSETOPT(m_opt,tranmeth,Bayesian,tl,"Transfer learning data treatment:\n"
+                                          "\n"
+                                          "0 - assume data from target model (default).\n"
+                                          "1 - use env-GP as per Joy1/Shi21.\n"
+                                          "2 - use diff-GP as per Shi21.");
+    QGETSETOPT(m_opt,alpha0,  Bayesian,tl,"alpha0 value for env-GP.");
+    QGETSETOPT(m_opt,beta0,   Bayesian,tl,"beta0 value for env-GP.");
+    QGETSETOPT(m_opt,kxfnum,  Bayesian,tl,"kernel transfer learning method:\n"
+                                          "\n"
+                                          "800 - trivial K(x,y) = Kj(x,y).\n"
+                                          "801 - m-norm (free kernel) transfer (default).\n"
+                                          "802 - moment (Der and Lee) transfer.\n"
+                                          "804 - K-learn transfer.\n"
+                                          "805 - K2-learn transfer.\n"
+                                          "806 - Multi-layer transfer.");
+    QGETSETOPT(m_opt,kxfnorm, Bayesian,tl,"kernel transfer normalization:\n"
+                                          "\n"
+                                          "0 = no normalization.\n"
+                                          "0 = use normalization (default).");
+
+
+    QGETSETOPT(m_opt,modelname,     Bayesian,vis,"model basename when plotting/logging (default smbomodel)");
+    QGETSETOPT(m_opt,modeloutformat,Bayesian,vis,"format for plotting posterior (0 terminal, 1 ps, 2 pdf (default))");
+    QGETSETOPT(m_opt,plotfreq,      Bayesian,vis,"plotting frequency for posterior (0 none (default), -1 only on exit)");
+    QGETSETOPT(m_opt,modelbaseline, Bayesian,vis,"baseline function f(x) for posterior plots (empty for none)");
+
+    QGETSETOPT(m_opt,tunemu,     Bayesian,tune,"Tuning for objective model (0 none, 1 max-log-likelihood (default), 2 LOO, 3 recall.");
+    QGETSETOPT(m_opt,tunecgt,    Bayesian,tune,"Tuning for constraint model (0 none, 1 max-log-likelihood (default), 2 LOO, 3 recall.");
+    QGETSETOPT(m_opt,tunesigma,  Bayesian,tune,"Tuning for noise model (assuming separate) (0 none, 1 max-log-likelihood (default), 2 LOO, 3 recall.");
+    QGETSETOPT(m_opt,tunesrcmod, Bayesian,tune,"Tuning for source model (0 none, 1 max-log-likelihood (default), 2 LOO, 3 recall.");
+    QGETSETOPT(m_opt,tunediffmod,Bayesian,tune,"Tuning for difference model (0 none, 1 max-log-likelihood (default), 2 LOO, 3 recall.");
+//    QGETSETOPT(m_opt,tuneaugxmod,Bayesian,tune,"Tuning for x augmentation (side-channel) model (0 none, 1 max-log-likelihood (default), 2 LOO, 3 recall.");
+
+
+    m_opt_Bayesian_model.def("setgridsrc",&boSetgridsource,"For BO, set grid source.",py::arg("i")=0,py::arg("j")=0);
+    m_opt_Bayesian_model.def("selmu",    &selmlmuapprox,    "select objective model for BO i to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
+    m_opt_Bayesian_model.def("selcgt",   &selmlcgtapprox,   "select constraint model for BO i to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
+//    m_opt_Bayesian_model.def("selaug",   &selmlaugxapprox,  "select x augmentation (side-channel) model for BO i to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
+    m_opt_Bayesian_model.def("selsigma", &selmlsigmaapprox, "select noise model (assuming separate) for BO i to use like any ML (see also selml).",py::arg("i")=0);
+    m_opt_Bayesian_model.def("selsrc",   &selmlsrcmodel,    "select source model for BO i to use like any ML (see also selml).",py::arg("i")=0);
+    m_opt_Bayesian_model.def("seldiff",  &selmldiffmodel,   "select src->destination difference model (transfer learning) for BO i to use like any ML (see also selml).",py::arg("i")=0);
+
+    m_opt_Bayesian_model.def("selmu_prior",    &selmlmuapprox_prior,    "select prior objective model for BO i to use like any ML (see also selml).",py::arg("i")=0);
+    m_opt_Bayesian_model.def("selcgt_prior",   &selmlcgtapprox_prior,   "select prior constraint model for BO i to use like any ML (see also selml).",py::arg("i")=0);
+//    m_opt_Bayesian_model.def("selaug_prior",   &selmlaugxapprox_prior,  "select prior x augmentation (side-channel) model for BO i to use like any ML (see also selml).",py::arg("i")=0);
+    m_opt_Bayesian_model.def("selsigma_prior", &selmlsigmaapprox_prior, "select prior noise model (assuming separate) for BO i to use like any ML (see also selml).",py::arg("i")=0);
+    m_opt_Bayesian_model.def("selsrc_prior",   &selmlsrcmodel_prior,    "select prior source model for BO i to use like any ML (see also selml).",py::arg("i")=0);
+    m_opt_Bayesian_model.def("seldiff_prior",  &selmldiffmodel_prior,   "select prior src->destination difference model (transfer learning) for BO i to use like any ML (see also selml).",py::arg("i")=0);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // ---------------------------
+    // ---------------------------
+    // ---------------------------
     // ---------------------------
 
     auto m_ml_kern = m_ml.def_submodule("kern","Kernel Options for Model.");
@@ -1601,13 +1746,7 @@ errstream() << "optimiser addr: " << &optimiser << "\n";
     gentype         fres;
     int             ires = 0;
 
-    int         mInd = 0;       // ignore
-    Vector<int> muInd;          // ignore
-    Vector<int> augxInd;        // ignore
-    Vector<int> cgtInd;         // ignore
-    int         sigInd = 0;     // ignore
-    int         srcmodInd = 0;  // ignore
-    int         diffmodInd = 0; // ignore
+    int mInd = 0;       // ignore
 
     Vector<Vector<gentype> > allxres;
     Vector<Vector<gentype> > allrawxres;
@@ -1641,13 +1780,15 @@ errstream() << "optimiser addr: " << &optimiser << "\n";
 
     svmvolatile int dummy = 0;
 
+    optimiser.ispydirect = true;
     int retcode = optimiser.optim(dim,
                                   xres,rawxres,fres,ires,
-                                  mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,
+                                  mInd,
                                   allxres,allrawxres,allfres,allcres,allmres,allsres,s_score,
                                   xmin,xmax,distMode,varsType,
                                   &internobjfn,(void *) &fnarg,dummy,numreps,
                                   meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
+    optimiser.ispydirect = false;
 
     // Cleanup
 
@@ -1690,7 +1831,27 @@ void boSetgridsource(int i, int j)
     i = glob_BayesianInd(i);
     j = glob_MLInd(j);
 
-    getBayesianref(i).gridsource = &getMLref(i);
+    getBayesianref(i).gridsource = &getMLref(j);
+}
+
+void boSetkernapproxsource(int i, int j)
+{
+    dostartup();
+
+    i = glob_BayesianInd(i);
+    j = glob_MLInd(j);
+
+    getBayesianref(i).kernapprox = &getMLref(j);
+}
+
+void boSetimpmeas(int i, int j)
+{
+    dostartup();
+
+    i = glob_BayesianInd(i);
+    j = glob_MLInd(j);
+
+    getBayesianref(i).impmeasu = &getMLref(j).getIMP();
 }
 
 double mltuneKernel(int i, int method, double xwidth, int tuneK, int tuneP)
@@ -2338,22 +2499,24 @@ double mlcalcLOO   (int i)                                { dostartup(); i = glo
 double mlcalcRecall(int i)                                { dostartup(); i = glob_MLInd(i); return calcRecall(getMLref(i));                }
 double mlcalcCross (int i, int m, int rndit, int numreps) { dostartup(); i = glob_MLInd(i); return calcCross(getMLref(i),m,rndit,numreps); }
 
-int selgridopt      (int i) { dostartup(); return glob_gridInd      (i,1); }
-int selDIRectopt    (int i) { dostartup(); return glob_DIRectInd    (i,1); }
-int selNelderMeadopt(int i) { dostartup(); return glob_NelderMeadInd(i,1); }
-int selBayesianopt  (int i) { dostartup(); return glob_BayesianInd  (i,1); }
+int selgridopt      (int i, int rst) { dostartup(); int res = glob_gridInd      (i,1); if ( rst ) { getgridref      (i).reset(); } return res; }
+int selDIRectopt    (int i, int rst) { dostartup(); int res = glob_DIRectInd    (i,1); if ( rst ) { getDIRectref    (i).reset(); } return res; }
+int selNelderMeadopt(int i, int rst) { dostartup(); int res = glob_NelderMeadInd(i,1); if ( rst ) { getNelderMeadref(i).reset(); } return res; }
+int selBayesianopt  (int i, int rst) { dostartup(); int res = glob_BayesianInd  (i,1); if ( rst ) { getBayesianref  (i).reset(); } return res; }
 
-int selml              (int i)        { dostartup();                          return glob_MLInd( i,                  1);                 }
-int selmlaltcgtapprox  (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i,                  1);                 }
-int selmlaltmuapprox   (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-   OPTGLOBOFFSET, 1);                 }
-int selmlaltaugxapprox (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(2*OPTGLOBOFFSET),1);                 }
-int selmlaltmuapproxrff(int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(3*OPTGLOBOFFSET),1);                 }
-int selmlcgtapprox     (int i, int k) { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(4*OPTGLOBOFFSET)-(k*OPTGRIDSTEP),1); }
-int selmlmuapprox      (int i, int k) { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(5*OPTGLOBOFFSET)-(k*OPTGRIDSTEP),1); }
-int selmlaugxapprox    (int i, int k) { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(6*OPTGLOBOFFSET)-(k*OPTGRIDSTEP),1); }
-int selmlsigmaapprox   (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(7*OPTGLOBOFFSET),1);                 }
-int selmldiffmodel     (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(8*OPTGLOBOFFSET),1);                 }
-int selmlsrcmodel      (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(-i-(9*OPTGLOBOFFSET),1);                 }
+int selml                 (int i)        { dostartup();                          return glob_MLInd(                                   i,   1); }
+int selmlcgtapprox        (int i, int k) { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(MLIndForBayesian_cgtapprox        (i,k),1); }
+int selmlmuapprox         (int i, int k) { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(MLIndForBayesian_muapprox         (i,k),1); }
+//int selmlaugxapprox       (int i, int k) { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(MLIndForBayesian_augxapprox       (i,k),1); }
+int selmlsigmaapprox      (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(MLIndForBayesian_sigmaapprox      (i  ),1); }
+int selmldiffmodel        (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(MLIndForBayesian_diffmodel        (i  ),1); }
+int selmlsrcmodel         (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(MLIndForBayesian_srcmodel         (i  ),1); }
+int selmlcgtapprox_prior  (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(MLIndForBayesian_cgtapprox_prior  (i  ),1); }
+int selmlmuapprox_prior   (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(MLIndForBayesian_muapprox_prior   (i  ),1); }
+//int selmlaugxapprox_prior (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(MLIndForBayesian_augxapprox_prior (i  ),1); }
+int selmlsigmaapprox_prior(int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(MLIndForBayesian_sigmaapprox_prior(i  ),1); }
+int selmldiffmodel_prior  (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(MLIndForBayesian_diffmodel_prior  (i  ),1); }
+int selmlsrcmodel_prior   (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(MLIndForBayesian_srcmodel_prior   (i  ),1); }
 
 void swapml  (int i, int j) { dostartup(); i = glob_MLInd(i); j = glob_MLInd(j); StrucAssert(i != j); qswap(getMLref(i),getMLref(j)); }
 void copyml  (int i, int j) { dostartup(); i = glob_MLInd(i); j = glob_MLInd(j); StrucAssert(i != j); getMLref(i) = getMLrefconst(j); }
@@ -3870,6 +4033,10 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
             killallthreads(svmContext);
 
             deleteMLs();
+            deletegrids();
+            deleteDIRects();
+            deleteNelderMeads();
+            deleteBayess();
 
             cliPrintToOutLog('*',1);
             cliPrintToErrLog('*',1);

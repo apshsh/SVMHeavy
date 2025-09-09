@@ -12,6 +12,238 @@
 #include "randfun.hpp"
 
 
+GlobalOptions::GlobalOptions()
+{
+        ispydirect = false;
+
+        optname = "Global Optimisation";
+
+        altallxres = nullptr;
+
+        maxtraintime = 0;
+
+        softmin = valninf(); // 0;
+        softmax = valpinf(); // 1;
+        hardmin = valninf();
+        hardmax = valpinf();
+
+        penterm = 0.0;
+
+        isProjection  = 0;
+        includeConst  = 0;
+        whatConst     = 2.0;
+        randReproject = 0;
+        useScalarFn   = 1;
+        xxSampType    = 3;
+        xNsamp        = DEFAULT_SAMPLES_SAMPLE;
+        xSampSplit    = 1;
+        xSampType     = 0;
+        fnDim         = 1;
+        bernstart     = 1;
+
+        priorrandDirtemplateFnGP.ssetMLTypeClean("gpr");   // GPR_Scalar
+
+        MLregfn = nullptr;
+
+        xwidth = 0;
+
+        MLregind = DEFAULT_MLREGIND;
+
+        randDirtemplate    = nullptr;
+        randDirtemplateInd = -1;
+        projOp             = nullptr;
+        projOpRaw          = nullptr;
+        projOpInd          = -1;
+
+        randDirtemplate = nullptr;
+
+        overfnitcnt = 0;
+
+        ismodel_convertx_simple = false;
+}
+
+GlobalOptions::~GlobalOptions()
+{
+    delstuff();
+}
+
+void GlobalOptions::delstuff(void)
+{
+    if ( randDirtemplate )
+    {
+        MEMDEL(randDirtemplate);
+        randDirtemplate = nullptr;
+    }
+
+    if ( subDef.size() )
+    {
+        for ( int i = 0 ; i < subDef.size() ; ++i )
+        {
+            if ( subDef(i) )
+            {
+                MEMDEL(subDef("&",i));
+                subDef("&",i) = nullptr;
+            }
+        }
+
+        subDef.resize(0);
+    }
+
+    if ( projOpRaw )
+    {
+        MEMDEL(projOpRaw);
+        projOpRaw = nullptr;
+    }
+
+    projOp = nullptr;
+}
+
+GlobalOptions::GlobalOptions(const GlobalOptions &src)
+{
+    *this = src;
+}
+
+GlobalOptions &GlobalOptions::operator=(const GlobalOptions &src)
+{
+    delstuff();
+
+    ispydirect = src.ispydirect;
+
+    optname = src.optname;
+
+    altallxres = src.altallxres;
+
+    maxtraintime = src.maxtraintime;
+
+    softmin = src.softmin;
+    softmax = src.softmax;
+    hardmin = src.hardmin;
+    hardmax = src.hardmax;
+
+    penterm = src.penterm;
+
+    isProjection  = src.isProjection;
+    includeConst  = src.includeConst;
+    whatConst     = src.whatConst;
+    randReproject = src.randReproject;
+    useScalarFn   = src.useScalarFn;
+    xxSampType    = src.xxSampType;
+    xNsamp        = src.xNsamp;
+    xSampSplit    = src.xSampSplit;
+    xSampType     = src.xSampType;
+    fnDim         = src.fnDim;
+    bernstart     = src.bernstart;
+
+    priorrandDirtemplateVec    = src.priorrandDirtemplateVec;
+    priorrandDirtemplateFnGP   = src.priorrandDirtemplateFnGP;
+    priorrandDirtemplateFnBern = src.priorrandDirtemplateFnBern;
+    priorrandDirtemplateFnRKHS = src.priorrandDirtemplateFnRKHS;
+
+    MLregfn  = src.MLregfn;
+
+    xwidth = src.xwidth;
+
+    stopearly  = src.stopearly;
+    firsttest  = src.firsttest;
+    spOverride = src.spOverride;
+    berndim    = src.berndim;
+    bestyet    = src.bestyet;
+
+    MLregind = src.MLregind;
+
+    MLreglist = src.MLreglist;
+    MLregltyp = src.MLregltyp;
+
+    xpweight         = src.xpweight;
+    xpweightIsWeight = src.xpweightIsWeight;
+    xbasis           = src.xbasis;
+    xbasisprod       = src.xbasisprod;
+
+    a = src.a;
+    b = src.b;
+    c = src.c;
+
+    locdistMode = src.locdistMode;
+    locvarsType = src.locvarsType;
+
+    ismodel_convertx_simple = src.ismodel_convertx_simple;
+
+    projOptemplate    = src.projOptemplate;
+    projOp            = nullptr;
+    projOpRaw         = nullptr;
+    projOpInd         = src.projOpInd;
+
+    randDirtemplate    = nullptr;
+    randDirtemplateInd = src.randDirtemplateInd;
+    //subDef             = nullptr;
+    subDefInd          = src.subDefInd;
+
+    addSubDim = src.addSubDim;
+
+    locfnarg = src.locfnarg;
+
+    overfnitcnt = src.overfnitcnt;
+
+    return *this;
+}
+
+// Reset function so that the next simulation can run
+
+void GlobalOptions::reset(void)
+{
+    delstuff();
+
+    altallxres = nullptr;
+
+    xwidth = 0;
+
+    stopearly  = 0;
+    firsttest  = 1;
+    spOverride = 0;
+    berndim    = 0;
+    bestyet    = 0.0;
+
+    // We leave the following unchanged so that we don't get
+    // ML overwriting
+    //
+    // int MLregind;
+    //
+    // Vector<int> MLreglist;
+    // Vector<int> MLregltyp;
+
+    xpweight.resize(0);
+    xpweightIsWeight = 0;
+    xbasis.resize(0);
+    xbasisprod.resize(0,0);
+
+    a.resize(0);
+    b.resize(0);
+    c.resize(0);
+
+    locdistMode.resize(0);
+    locvarsType.resize(0);
+
+    randDirtemplate    = nullptr;
+    randDirtemplateInd = -1;
+    projOp             = nullptr;
+    projOpRaw          = nullptr;
+    projOpInd          = -1;
+
+    subDef = nullptr;
+    subDef.resize(0);
+    subDefInd.resize(0);
+
+    addSubDim = 0;
+
+    locfnarg = nullptr;
+
+    overfnitcnt = 0;
+
+    return;
+}
+
+
+
 //FIXME: polymorph in bayesopt for fidelity
 
 int GlobalOptions::isFeasible(const Vector<gentype> &cres, const Vector<gentype> &Xres) const
@@ -27,12 +259,6 @@ int GlobalOptions::optim(int dim,
                       gentype &fres,
                       int &ires,
                       int &mInd,
-                      Vector<int> &muInd,
-                      Vector<int> &augxInd,
-                      Vector<int> &cgtInd,
-                      int &sigInd,
-                      int &srcmodInd,
-                      int &diffmodInd,
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
                       Vector<gentype> &allfres,
@@ -68,7 +294,7 @@ int GlobalOptions::optim(int dim,
 
             gentype nullval('N');
 
-            res = realOptim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+            res = realOptim(dim,xres,Xres,fres,ires,mInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
 
             // Sort allmres to be strictly decreasing!
 
@@ -144,8 +370,8 @@ int GlobalOptions::optim(int dim,
                 allsres.resize(0);
                 s_score.resize(0);
 
-                //res += (*locopt).realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,vecallfres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
-                res += realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,vecallXres("&",static_cast<int>(j)),allXres,vecallfres("&",static_cast<int>(j)),vecallcres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+                //res += (*locopt).realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,allxres,allXres,vecallfres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+                res += realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,vecallXres("&",static_cast<int>(j)),allXres,vecallfres("&",static_cast<int>(j)),vecallcres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
 
                 // Sort vecallmres(j) to be strictly decreasing!
 
@@ -155,7 +381,8 @@ int GlobalOptions::optim(int dim,
                 {
                     if ( !startyet )
                     {
-                        if ( isFeasible(vecallcres(static_cast<int>(j))(k),vecallXres(static_cast<int>(j))(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
+                        //if ( isFeasible(vecallcres(static_cast<int>(j))(k),vecallXres(static_cast<int>(j))(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
+                        if ( isFeasible(vecallcres(static_cast<int>(j))(k),allXres(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
                         {
                             for ( int kk = k-1 ; kk >= 0 ; --kk )
                             {
@@ -173,7 +400,8 @@ int GlobalOptions::optim(int dim,
 
                     else
                     {
-                        if ( isFeasible(vecallcres(static_cast<int>(j))(k),vecallXres(static_cast<int>(j))(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
+                        //if ( isFeasible(vecallcres(static_cast<int>(j))(k),vecallXres(static_cast<int>(j))(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
+                        if ( isFeasible(vecallcres(static_cast<int>(j))(k),allXres(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
                         {
                             vecallmres("&",static_cast<int>(j))("&",k) = ( vecallmres(static_cast<int>(j))(k) < vecallmres(static_cast<int>(j))(k-1) ) ? vecallmres(static_cast<int>(j))(k) : vecallmres(static_cast<int>(j))(k-1);
                         }
@@ -241,12 +469,6 @@ int GlobalOptions::realOptim(int dim,
                       gentype &fres,
                       int &ires,
                       int &mInd,
-                      Vector<int> &muInd,
-                      Vector<int> &augxInd,
-                      Vector<int> &cgtInd,
-                      int &sigInd,
-                      int &srcmodInd,
-                      int &diffmodInd,
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
                       Vector<gentype> &allfres,
@@ -262,13 +484,6 @@ int GlobalOptions::realOptim(int dim,
                       void *fnarg,
                       svmvolatile int &killSwitch)
     {
-        (void) muInd;
-        (void) augxInd;
-        (void) cgtInd;
-        (void) sigInd;
-        (void) srcmodInd;
-        (void) diffmodInd;
-
         locfnarg = fnarg;
 
         // dim: dimension of problem
@@ -326,12 +541,6 @@ int GlobalOptions::realOptim(int dim,
 
         // These need to be passed back
 
-        Vector<int> dummyMLnumbers(9);
-        Vector<int> &MLnumbers = MLdefined ? (*((Vector<int> *) ((void **) fnarg)[15])) : dummyMLnumbers;
-        Vector<int> locMLnumbers(9); // See mlinter definition of MLnumbers
-
-        locMLnumbers = -1;
-
         // overfn setup
 
         Vector<gentype> xmod(dim);
@@ -339,7 +548,7 @@ int GlobalOptions::realOptim(int dim,
         void *backoverfnargs[19]; // It is very important that overfnargs[15] is defined here!
         void **overfnargs = backoverfnargs+3;
 
-        SparseVector<SparseVector<gentype> > altaltxmod;
+        //SparseVector<SparseVector<gentype> > altaltxmod;
 
         overfnargs[0] = (void *)  fnarg;
         overfnargs[1] = (void *) &dim;
@@ -347,19 +556,17 @@ int GlobalOptions::realOptim(int dim,
         overfnargs[3] = (void *)  this;
         overfnargs[4] = altallxres ? altallxres : ( (void *) &allxres );
         overfnargs[5] = (void *) &penterm;
-        overfnargs[15] = (void *) &locMLnumbers; // if the optimiser gets recursed (which only happens in gridOpt) then this is required to ensure thet MLnumbers is defined and doesn't overlap!
+        overfnargs[15] = nullptr; //(void *) &locMLnumbers; // if the optimiser gets recursed (which only happens in gridOpt) then this is required to ensure thet MLnumbers is defined and doesn't overlap!
 
         overfnargs[6] = (void *) fn;
 
-        backoverfnargs[0] = (void *) &altaltxmod;
-        backoverfnargs[1] = (void *) &usealtoptfn;
-        backoverfnargs[2] = (void *) &altoptfn;
+        backoverfnargs[0] = nullptr; //(void *) &altaltxmod;
+        backoverfnargs[1] = nullptr; //(void *) &usealtoptfn;
+        backoverfnargs[2] = nullptr; //(void *) &altoptfn;
 
         altallxres = overfnargs[4];
 
         // Projection templates
-
-        MLnumbers("&",3) = -1;
 
         if ( isProjection == 0 )
         {
@@ -375,14 +582,12 @@ int GlobalOptions::realOptim(int dim,
             ML_Mutable *temprandDirtemplate;
 
             MEMNEW(temprandDirtemplate,ML_Mutable);
-            (*temprandDirtemplate).setMLTypeClean(defrandDirtemplateVec.type());
+            (*temprandDirtemplate).setMLTypeClean(priorrandDirtemplateVec.type());
 
-            (*temprandDirtemplate).getML() = defrandDirtemplateVec;
+            (*temprandDirtemplate).getML() = priorrandDirtemplateVec;
             randDirtemplateInd = regMLloc(temprandDirtemplate,fnarg,0);
 
             randDirtemplate = &((*temprandDirtemplate).getML());
-
-            MLnumbers("&",3) = randDirtemplateInd;
         }
 
         else if ( isProjection == 2 )
@@ -392,14 +597,12 @@ int GlobalOptions::realOptim(int dim,
             ML_Mutable *temprandDirtemplate;
 
             MEMNEW(temprandDirtemplate,ML_Mutable);
-            (*temprandDirtemplate).setMLTypeClean(defrandDirtemplateFnGP.type());
+            (*temprandDirtemplate).setMLTypeClean(priorrandDirtemplateFnGP.type());
 
-            (*temprandDirtemplate).getML() = defrandDirtemplateFnGP;
+            (*temprandDirtemplate).getML() = priorrandDirtemplateFnGP;
             randDirtemplateInd = regMLloc(temprandDirtemplate,fnarg,1);
 
             randDirtemplate = &((*temprandDirtemplate).getML());
-
-            MLnumbers("&",3) = randDirtemplateInd;
 
             // Need to fill in x distributions.
 
@@ -431,14 +634,12 @@ int GlobalOptions::realOptim(int dim,
             ML_Mutable *temprandDirtemplate;
 
             MEMNEW(temprandDirtemplate,ML_Mutable);
-            (*temprandDirtemplate).setMLTypeClean(defrandDirtemplateFnBern.type());
+            (*temprandDirtemplate).setMLTypeClean(priorrandDirtemplateFnBern.type());
 
-            (*temprandDirtemplate).getML() = defrandDirtemplateFnBern;
+            (*temprandDirtemplate).getML() = priorrandDirtemplateFnBern;
             randDirtemplateInd = regMLloc(temprandDirtemplate,fnarg,1);
 
             randDirtemplate = &((*temprandDirtemplate).getML());
-
-            MLnumbers("&",3) = randDirtemplateInd;
 
             if ( isProjection == 4 )
             {
@@ -477,12 +678,20 @@ int GlobalOptions::realOptim(int dim,
             SparseVector<gentype> altlocxres;
 
             trigval.force_int() = (-ii*10000)-1; // -1,-10001,-20001,-30001,...
-            (*fn)(trigval,xdummy,fnarg);
 
-            MLnumbers("&",2) = makeSubspace(dim,fnarg,substatus,altlocxres); // until we actually have a projection, at least
+            if ( !ispydirect )
+            {
+                (*fn)(trigval,xdummy,fnarg);
+            }
+
+            makeSubspace(dim,fnarg,substatus,altlocxres); // until we actually have a projection, at least
 
             trigval.force_int() = (-ii*10000)-2; // -2,-10002,-20002,-30002,...
-            (*fn)(trigval,xdummy,fnarg);
+
+            if ( !ispydirect )
+            {
+                (*fn)(trigval,xdummy,fnarg);
+            }
         }
 
         int locrandReproject = randReproject;
@@ -661,7 +870,7 @@ int GlobalOptions::realOptim(int dim,
             {
                 if ( isProjection != 4 )
                 {
-                    MLnumbers("&",2) = makeSubspace(dim,fnarg,substatus,altlocxres);
+                    makeSubspace(dim,fnarg,substatus,altlocxres);
                 }
 
                 // Trigger intermediate (hyperparameter tuning) operations
@@ -670,7 +879,11 @@ int GlobalOptions::realOptim(int dim,
                 Vector<gentype> xdummy;
 
                 trigval.force_int() = (-(ii+1)*10000)-2; // -2,-10002,-20002,-30002,...
-                (*fn)(trigval,xdummy,fnarg);
+
+                if ( !ispydirect )
+                {
+                    (*fn)(trigval,xdummy,fnarg);
+                }
             }
         }
 
@@ -779,6 +992,11 @@ int GlobalOptions::makeSubspace(int dim, void *fnarg, int substatus, const Spars
                 randDir = projOpRaw;
                 subDefInd("&",dim) = projOpInd;
                 subDef("&",dim) = &((*randDir).getML());
+            }
+
+            else if ( projOpRaw )
+            {
+                MEMDEL(projOpRaw);
             }
 
             // Make projOp a projection onto this subspace
@@ -944,17 +1162,17 @@ int GlobalOptions::makeSubspace(int dim, void *fnarg, int substatus, const Spars
 
             addSubDim = 0;
 
-            defrandDirtemplateFnRKHS.resizeN(dim);
+            priorrandDirtemplateFnRKHS.resizeN(dim);
 
             int i,j;
 
             for ( i = 0 ; i < dim ; ++i )
             {
-                defrandDirtemplateFnRKHS.x("&",i).zero();
+                priorrandDirtemplateFnRKHS.x("&",i).zero();
 
                 for ( j = 0 ; j < fnDim ; ++j )
                 {
-                    randufill(defrandDirtemplateFnRKHS.x("&",i)("&",j));
+                    randufill(priorrandDirtemplateFnRKHS.x("&",i)("&",j));
                 }
             }
 
@@ -975,9 +1193,9 @@ int GlobalOptions::makeSubspace(int dim, void *fnarg, int substatus, const Spars
 
 void overfn(gentype &res, Vector<gentype> &x, void *arg)
 {
-    SparseVector<SparseVector<gentype> > &altaltxmod = *((SparseVector<SparseVector<gentype> > *) ((void **) arg)[-3]);
-    int &usealtoptfn                                 = *((int *)                                  ((void **) arg)[-2]);
-    gentype &altoptfn                                = *((gentype *)                              ((void **) arg)[-1]);
+    //SparseVector<SparseVector<gentype> > &altaltxmod = *((SparseVector<SparseVector<gentype> > *) ((void **) arg)[-3]);
+    //int &usealtoptfn                                 = *((int *)                                  ((void **) arg)[-2]);
+    //gentype &altoptfn                                = *((gentype *)                              ((void **) arg)[-1]);
     void *fnarg                                      = ((void *)                                  ((void **) arg)[0]);
     int &dim                                         = *((int *)                                  ((void **) arg)[1]);
     Vector<gentype> &xmod                            = *((Vector<gentype> *)                      ((void **) arg)[2]);
@@ -1007,25 +1225,22 @@ void overfn(gentype &res, Vector<gentype> &x, void *arg)
     }
 
 //errstream() << "what is xmod " << xmod << "\n";
-    if ( !usealtoptfn || !actualtest )
     {
         suppressallstreamcout();
 //errstream() << "and we call " << xmod << "\n";
-        (*fn)(res,xmod,fnarg);
+
+        if ( !gopts.ispydirect || actualtest )
+        {
+            (*fn)(res,xmod,fnarg);
+        }
+
         unsuppressallstreamcout();
     }
 
-    else
-    {
-        altaltxmod("&",0) = xmod;
-
-        res = altoptfn(altaltxmod);
-    }
-
     std::stringstream resbuffer;
-    resbuffer << "Evaluation: " << res << "\t= f(g(";
+    resbuffer << "Evaluation: " << res << "\t= f(";
     printoneline(resbuffer,xmod);
-    resbuffer << "))";
+    resbuffer << ")";
     //std::stringstream resbuffer;
     //resbuffer << "f(g(";
     //printoneline(resbuffer,xmod);

@@ -111,14 +111,14 @@ public:
 
     // Generate a copy of the relevant optimisation class.
 
-    virtual GlobalOptions *makeDup(void) const
-    {
-        DIRectOptions *newver;
-
-        MEMNEW(newver,DIRectOptions(*this));
-
-        return newver;
-    }
+//    virtual GlobalOptions *makeDup(void) const
+//    {
+//        DIRectOptions *newver;
+//
+//        MEMNEW(newver,DIRectOptions(*this));
+//
+//        return newver;
+//    }
 
     // supres: none
 
@@ -144,12 +144,6 @@ public:
                       gentype &fres,
                       int &ires,
                       int &mInd,
-                      Vector<int> &muInd,
-                      Vector<int> &augxInd,
-                      Vector<int> &cgtInd,
-                      int &sigInd,
-                      int &srcmodInd,
-                      int &diffmodInd,
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
                       Vector<gentype> &allfres,
@@ -172,7 +166,7 @@ public:
                       Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
                       Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
     {
-        return GlobalOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
+        return GlobalOptions::optim(dim,xres,Xres,fres,ires,mInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
     }
 
     virtual int optdefed(void)

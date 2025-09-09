@@ -25,6 +25,10 @@
 
 double &randfill(double &res, char disttype, int seedval = -1, double a = 0, double b = 1, int t = 10, double p = 0.5);
 
+// Seeding
+
+inline void randseed(int seedval);
+
 // Versions defined in randfill (using default parameters)
 
 inline double &randrfill(double &res, double p);                  // Rademacher
@@ -99,6 +103,11 @@ inline double &randCfill(double &res) { return randCfill(res,0,1);    }
 inline double &randffill(double &res) { return randffill(res,0.5,1);  }
 inline double &randtfill(double &res) { return randtfill(res,1);      }
 
+inline void randseed(int seedval)
+{
+    double dummy = 0;
+    randfill(dummy,'S',seedval);
+}
 
 
 #endif

@@ -162,13 +162,6 @@ public:
     //           if* the nulls were present in all x's.
     //           NULL by default.
     //
-    // penalty: this is a vector of (positive valued) penalty functions.  When
-    //           evaluating the acquisition function each of these will be
-    //           evaluated and subtracted from the acquisition function.  These
-    //           are used to enforce additional constraints on the ML.  Set them
-    //           very positive in forbidden areas, near zero in the feasible
-    //           region.
-    //
     // Multi-fidelity BO:
     //
     // numfids: 0 = nothing
@@ -348,8 +341,6 @@ public:
     Vector<double> direcmax;
     ML_Base *gridsource;
 
-    Vector<ML_Base *> penalty;
-
     int numfids;
     int dimfid;
     double fidbudget;
@@ -379,11 +370,11 @@ public:
 
     // DIRect options (note that global options in this are over-ridden by *this, so only DIRect parts matter)
 
-    DIRectOptions extgoptssingleobj;
+    DIRectOptions goptssingleobj;
 
     // Multi-objective, multi-recommendation part
 
-    DIRectOptions goptsmultiobj; // full over-ride
+    DIRectOptions goptsmultiobj; // this overwrites goptssingleobj when constructing the local optimizer
     int startpointsmultiobj;
     int totitersmultiobj;
     int ehimethodmultiobj;
@@ -512,8 +503,6 @@ public:
         direcmax       = src.direcmax;
         gridsource     = src.gridsource;
 
-        penalty           = src.penalty;
-
         stabpmax    = src.stabpmax;
         stabpmin    = src.stabpmin;
         stabUseSig  = src.stabUseSig;
@@ -530,8 +519,7 @@ public:
         unscentK         = src.unscentK;
         unscentSqrtSigma = src.unscentSqrtSigma;
 
-        goptssingleobj    = src.goptssingleobj;
-        extgoptssingleobj = src.extgoptssingleobj;
+        goptssingleobj = src.goptssingleobj;
 
         goptsmultiobj       = src.goptsmultiobj;
         startpointsmultiobj = src.startpointsmultiobj;
@@ -546,8 +534,6 @@ public:
     virtual void reset(void) override
     {
         SMBOOptions::reset();
-
-        goptssingleobj = extgoptssingleobj;
 
         return;
     }
@@ -625,14 +611,14 @@ public:
 
     // Generate a copy of the relevant optimisation class.
 
-    virtual GlobalOptions *makeDup(void) const
-    {
-        BayesOptions *newver;
-
-        MEMNEW(newver,BayesOptions(*this));
-
-        return newver;
-    }
+//    virtual GlobalOptions *makeDup(void) const
+//    {
+//        BayesOptions *newver;
+//
+//        MEMNEW(newver,BayesOptions(*this));
+//
+//        return newver;
+//    }
 
     // supres: [ see .cc file ] for each evaluation of (*fn),
     //         where beta is the value used to find the point being
@@ -660,12 +646,6 @@ public:
                       gentype &fres,
                       int &ires,
                       int &mInd,
-                      Vector<int> &muInd,
-                      Vector<int> &augxInd,
-                      Vector<int> &cgtInd,
-                      int &sigInd,
-                      int &srcmodInd,
-                      int &diffmodInd,
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
                       Vector<gentype> &allfres,
@@ -688,7 +668,7 @@ public:
                       Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
                       Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
     {
-        int res = SMBOOptions::optim(dim,xres,Xres,fres,ires,mInd,muInd,augxInd,cgtInd,sigInd,srcmodInd,diffmodInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
+        int res = SMBOOptions::optim(dim,xres,Xres,fres,ires,mInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
 
         return res;
     }
@@ -726,7 +706,7 @@ public:
 
         if ( isimphere() )
         {
-            (*impmeasu).setxdim(ismoo ? moodim : 1);
+            (*impmeasu).setxdim(moodim); //ismoo() ? moodim : 1);
 
             ires = (*impmeasu).train(res,killSwitch);
         }
@@ -756,12 +736,6 @@ public:
     }
 
     virtual int getdimfid(void) const override { return numfids ? dimfid : 0;  }
-
-//private:
-    // We actually work with this local version as it may need to be overwritten
-    // (reset restores from ext... copy)
-
-    DIRectOptions goptssingleobj;
 };
 
 #endif
