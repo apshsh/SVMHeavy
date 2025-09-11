@@ -1191,9 +1191,9 @@ public:
     int hasbeenset;
 };
 
-COMMONOPDEF(vecInfoBase);
-COMMONOPDEFPT(vecInfoBase);
-COMMONOPDEFPT(const vecInfoBase);
+COMMONOPDEF(vecInfoBase)
+COMMONOPDEFPT(vecInfoBase)
+COMMONOPDEFPT(const vecInfoBase)
 
 
 inline vecInfoBase &setzero(vecInfoBase &a)
@@ -1515,9 +1515,9 @@ public:
 
 inline vecInfo &setzero(vecInfo &a) { vecInfo b; return a = b; }
 
-COMMONOPDEF(vecInfo);
-COMMONOPDEFPT(vecInfo);
-COMMONOPDEFPT(const vecInfo);
+COMMONOPDEF(vecInfo)
+COMMONOPDEFPT(vecInfo)
+COMMONOPDEFPT(const vecInfo)
 
 inline void qswap(vecInfo &a, vecInfo &b)
 {
@@ -1538,7 +1538,7 @@ inline void qswap(vecInfo &a, vecInfo &b)
 
 class kernPrecursor;
 
-COMMONOPDEFPT(kernPrecursor);
+COMMONOPDEFPT(kernPrecursor)
 
 OVERLAYMAKEFNVECTOR(kernPrecursor)
 OVERLAYMAKEFNVECTOR(Vector<kernPrecursor>)
@@ -2209,9 +2209,9 @@ std::istream &operator>>(std::istream &input, kernInfo &dest);
 inline kernInfo &setzero(kernInfo &a);
 inline void qswap(kernInfo &a, kernInfo &b);
 
-COMMONOPDEF(kernInfo);
-COMMONOPDEFPT(kernInfo);
-COMMONOPDEFPT(const kernInfo);
+COMMONOPDEF(kernInfo)
+COMMONOPDEFPT(kernInfo)
+COMMONOPDEFPT(const kernInfo)
 
 inline kernInfo &setzero(kernInfo &a)
 {
@@ -2639,18 +2639,18 @@ public:
     //
     // getHyper: return weights and hyper-parameters: [ [ w_0 rp_{0,0} rp_{0,1} ... ] ; [ w_1 rp_{1,0} rp_{1,1} ... ] ; ... ]
 
-    MercerKernel &setTypes         (const Vector<int>               &nv) { resize(nv.size()); dtype          = nv; return *this; }
-    MercerKernel &setHyper         (const Vector<Vector<gentype>>   &nv) { resize(nv.size()); dRealConstants = nv; return *this; }
-    MercerKernel &setIntConstantss (const Vector<Vector<int>>       &nv) { resize(nv.size()); dIntConstants  = nv; return *this; }
-    MercerKernel &setRealOverwrites(const Vector<SparseVector<int>> &nv) { resize(nv.size()); dRealOverwrite = nv; return *this; }
-    MercerKernel &setIntOverwrites (const Vector<SparseVector<int>> &nv) { resize(nv.size()); dIntOverwrite  = nv; return *this; }
-    MercerKernel &setIsNormalised  (const Vector<int>               &nv) { resize(nv.size()); isnorm         = nv; return *this; }
-    MercerKernel &setIsMagTerm     (const Vector<int>               &nv) { resize(nv.size()); ismagterm      = nv; return *this; }
-    MercerKernel &setIsNomConst    (const Vector<int>               &nv) { resize(nv.size()); disNomConst    = nv; return *this; }
+    MercerKernel &setTypes         (const Vector<int>               &nv);
+    MercerKernel &setHyper         (const Vector<Vector<gentype>>   &nv);
+    MercerKernel &setIntConstantss (const Vector<Vector<int>>       &nv);
+    MercerKernel &setRealOverwrites(const Vector<SparseVector<int>> &nv);
+    MercerKernel &setIntOverwrites (const Vector<SparseVector<int>> &nv);
+    MercerKernel &setIsNormalised  (const Vector<int>               &nv);
+    MercerKernel &setIsMagTerm     (const Vector<int>               &nv);
+    MercerKernel &setIsNomConst    (const Vector<int>               &nv) { resize(nv.size()); disNomConst = nv; return *this; }
 
-    MercerKernel &setChained (const Vector<int> &nv) { resize(nv.size()); ischain  = nv; return *this; }
-    MercerKernel &setSplit   (const Vector<int> &nv) { resize(nv.size()); issplit  = nv; return *this; }
-    MercerKernel &setMulSplit(const Vector<int> &nv) { resize(nv.size()); mulsplit = nv; return *this; }
+    MercerKernel &setChained (const Vector<int> &nv);
+    MercerKernel &setSplit   (const Vector<int> &nv);
+    MercerKernel &setMulSplit(const Vector<int> &nv);
 
     MercerKernel &setHyperLB(const Vector<Vector<gentype>> &nv) { resize(nv.size()); dRealConstantsLB = nv; return *this; }
     MercerKernel &setHyperUB(const Vector<Vector<gentype>> &nv) { resize(nv.size()); dRealConstantsUB = nv; return *this; }

@@ -1839,7 +1839,7 @@ int int_solve_quadratic_program_hpzero(svmvolatile int &killSwitch, optState<dou
 	    // matter as we ignore it for these variables during training and fix any
             // incorrect labelling at exit.
 
-	    for ( int iP = (x.aNZ())-1 ; iP >= 0 ; --iP )
+	    for ( iP = (x.aNZ())-1 ; iP >= 0 ; --iP )
 	    {
 		if ( x.alphaRestrict(x.pivAlphaZ(iP)) == 0 )
 		{
@@ -3259,18 +3259,18 @@ exit(1);
 
         //if ( x.aNF() )
         {
-            for ( int iP = x.aNF()-1 ; iP >= 0 ; --iP )
+            for ( int iPq = x.aNF()-1 ; iPq >= 0 ; --iPq )
             {
-                if ( !(x.alphaRestrict(x.pivAlphaF(iP))) )
+                if ( !(x.alphaRestrict(x.pivAlphaF(iPq))) )
                 {
-                    if ( ( x.alphaState(x.pivAlphaF(iP)) == -1 ) && ( x.alpha(x.pivAlphaF(iP)) > 0 ) )
+                    if ( ( x.alphaState(x.pivAlphaF(iPq)) == -1 ) && ( x.alpha(x.pivAlphaF(iPq)) > 0 ) )
                     {
-                        x.modAlphaLFtoUFhpzero(iP,Gp,Gn,Gpn,gp,gn);
+                        x.modAlphaLFtoUFhpzero(iPq,Gp,Gn,Gpn,gp,gn);
                     }
 
-		    else if ( ( x.alphaState(x.pivAlphaF(iP)) == +1 ) && ( x.alpha(x.pivAlphaF(iP)) < 0 ) )
+		    else if ( ( x.alphaState(x.pivAlphaF(iPq)) == +1 ) && ( x.alpha(x.pivAlphaF(iPq)) < 0 ) )
 		    {
-			x.modAlphaUFtoLFhpzero(iP,Gp,Gn,Gpn,gp,gn);
+			x.modAlphaUFtoLFhpzero(iPq,Gp,Gn,Gpn,gp,gn);
 		    }
 		}
 	    }

@@ -1,3 +1,524 @@
+/*
+Assertion ires >= 0 failed at line 5090 in file bayesopt.cc - is there a better way to return nothing? What about none?
+
+FIXME: LINE 109 below
+
+import pyheavy
+import math
+f = lambda x : 1-(1-(0.1*(1-x[2])*math.exp(-1/(2*x[1]))))*(((2300*x[0]*x[0]*x[0])+(1900*x[0]*x[0])+(2092*x[0])+60)/((100*x[0]*x[0]*x[0])+(500*x[0]*x[0])+(4*x[0])+20))/14
+pyheavy.opt.BO.selBOopt(i=10,rst=1)
+pyheavy.opt.BO.setacq(acq=3)
+pyheavy.opt.BO.fid.setnumfids(numfids=10)
+# pyheavy.opt.BO.fid.setfidbudget(fidbudget=50*1.1)
+# pyheavy.opt.BO.fid.setfidpenalty(fidpenalty=lambda x : 0.1*x*x)
+pyheavy.opt.BO.vis.setmodelname(modelname="currinboac")
+pyheavy.opt.BO.vis.setplotfreq(plotfreq=1)
+pyheavy.opt.BO.models.selmu_prior()
+pyheavy.ml.gp.setsigma(sigma=0.5/(14*14))
+pyheavy.ml.kern.settypes(types=[3,3])
+pyheavy.ml.kern.obscure.setsplit(split=[1,0])
+res = pyheavy.opt.BO.opt(dim=3,fn=f)
+
+
+>>> res = pyheavy.opt.BO.opt(dim=3,fn=f)
+---
+Evaluation: 0.18689710757068478 = f([ 0.52458710179175383       ;   0.26330554078427826 ;   0     ]) (1)
+Evaluation: 0.21822523786080927 = f([ 0.1030405593134946        ;   0.76710712413159277 ;   0     ]) (2)
+Evaluation: 0.24054156306023511 = f([ 0.68149401730089665       ;   0.27090870701324599 ;   0     ]) (3)
+Evaluation: 0.075840839152828243        = f([ 0.25994747482263736       ;   0.77471029036056049 ;   0     ]) (4)
+***(acq 3)
+Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (5)
+Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (6)
+Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (7)
+Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (8)
+Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (9)
+Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (10)
+Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (11)
+Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (12)
+Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (13)
+Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (14)
+Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (15)
+Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (16)
+Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (17)
+^C
+Program received signal SIGINT, Interrupt.
+0x00007ffff64a5106 in SparseVector<gentype>::ind (this=0x240, pos=2) at sparsevector.hpp:347
+347         int ind(int pos)             const { return ((*indices).v(pos)); }
+(gdb) q
+
+
+fidelity is not being translated right!
+
+
+
+>>> pyheavy.ml.x()[1]
+[0.1030405593134946, 0.7671071241315928, '~', 0.1]
+>>> pyheavy.ml.x()[2]
+[0.6814940173008966, 0.270908707013246, '~', 0.6]
+>>> pyheavy.ml.x()[3]
+[0.25994747482263736, 0.7747102903605605, '~', 0.5]
+>>> pyheavy.ml.x()[4]
+[0.9999915324560957, 0.9999915324560957, '~', None, 1.0]
+>>> pyheavy.ml.x()[5]
+[0.9999915324560957, 0.9999915324560957, '~', None, 1.0]
+>>> pyheavy.ml.x()[6]
+[0.9999915324560957, 0.9999915324560957, '~', None, 1.0]
+
+
+Also why are the diagonals not 1?
+
+1.0
+>>> pyheavy.ml.d()
+[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+>>> pyheavy.ml.K2(xa=12,xb=12)
+0.36787944117144233
+>>> pyheavy.ml.gp.Gp()[12][12]
+0.3704304615796056
+
+line 31065 in mercer.cc makes no fucking sense!
+
+check this:
+
+>>> pyheavy.ml.kern.obscure.setsplit(split=[1,0])
+>>> pyheavy.ml.kern.obscure.setmulsplit(mulsplit=[0,0])
+>>> pyheavy.ml.K2(xa=[1,2,'~',2],xb=[1,2,'~',2])
+0.36787944117144233
+>>> pyheavy.ml.K2(xa=[1,2],xb=[1,2])
+1.0
+>>> pyheavy.ml.K1(xa=[1,2])
+1.0
+>>> pyheavy.ml.K1(xa=[1,2,'~',2])
+0.36787944117144233
+
+should end up at mercer.cc:32969, do we?, or do we diverge into unadorned land for some reason?
+
+HERE!!!!!!
+flow gets to 32969: what are xa,xc,xb,xd?
+
+res is calculated fine: 1
+atempres is wrong: its the 1-kernel result!!!!!
+
+in LL2, line 37463: why isn't needsaaprod set?
+line 37538: why needsdiff(0)? should be needsdiff(locindstart)?
+
+18049: res = 0
+18055: res = -1??????? what the fuck????
+and for some reason r1 = 1??  Why??
+
+Does block setTypes actually work ok?
+
+do any of the vector forms work right?
+
+PROBLEM: VEOTOR SETTYPE DOESN"T SET WHAT WE NEED SET!!!!!! USE LOOP INSTEAD!!!!
+*/
+
+//For some reason this:
+//
+//pyheavy.ml.addm(z = [None,None,None,None,None,None,None,None,None],x=[[0.1,None,0.3],[0.2,None,None],[0.3,None,None],[0.4,None,0.1],[0.5,None,None],[0.6,None,None],[0.7,None,None],[0.8,None,None],[0.9,None,0.9]])
+//
+//loses the None-ness of the Nones
+
+//    int startpointsmultiobj;
+//    int totitersmultiobj;
+//    int ehimethodmultiobj;
+
+
+// in mlinter, use these:
+//
+//    output << ( (          advanced ) ? "         -gqw  n         - set grid optimiser n (for -g). Default 1.          \n" : "" );
+//    output << ( (          advanced ) ? "         -gdqw n         - set DIRect optimiser n (for -gd). Default 1.       \n" : "" );
+//    output << ( (          advanced ) ? "         -gNqw n         - set Nelder-Mead optimiser n (for -gN). Default 1.  \n" : "" );
+//    output << ( (          advanced ) ? "         -gbqw n         - set Bayesian optimiser n (for -gb). Default 1.     \n" : "" );
+//    output << ( (          advanced ) ? "                                                                              \n" : "" );
+//    output << ( (          advanced ) ? "         -gbqwmu   n k   - set BO n objective model as  current ML (except for\n" : "" );
+//    output << ( (          advanced ) ? "                           MOO, k should be 0).                               \n" : "" );
+//    output << ( (          advanced ) ? "         -gbqwgt   n k   - set BO n constraint model k as current ML.         \n" : "" );
+//    output << ( (          advanced ) ? "         -gbqwaugx n k   - set BO n augment (side-chan) model k as current ML.\n" : "" );
+//    output << ( (          advanced ) ? "                                                                              \n" : "" );
+//    output << ( (          advanced ) ? "         -gbqwsigma n    - set BO n variance model k as current ML.           \n" : "" );
+//    output << ( (          advanced ) ? "         -gbqwdiff  n    - set BO n difference model k as current ML.         \n" : "" );
+//    output << ( (          advanced ) ? "         -gbqwsrc   n    - set BO n source model k as current ML.             \n" : "" );
+//
+// to get rid of a boat-load of options that you don't need now!
+
+// - simple intro examples to BO
+// DO: sort out spreadsheet from Dylan, start using
+// DO: Arun sims, and monotonic comparison - consider full kernel?
+
+// HOME: bag for 12v supply for good headlight on handlebar
+// HOME: print recipes - reciple tin pea and ham soup, pumpkin soup
+//                       bread recipe on phone
+//                       cut/paste cool dessert recipe from mag
+// TRANSITION LAPEOP
+// TRANSITION GMAIL ACCOUNT TO PHONE?
+
+//MONOTONIC: option to give grid or partial grid for enforcement, let it randomly fill nulls
+//WRITEUP: the theory behind GP regression with inequalities, logic and the general case
+//WRITE: tutorial stuff for code
+//SVM_Scalar: we need to set res in inintrain when optimization fails rathre than throwing!
+//DO: rerun Arun sims
+
+//TO DO: gpr_binary should return probability now that this is possible!
+//TO DO: for calcLOO etc, return a dictionary of the whole mess or results, not just the error
+//TO DO: when assessing error (calcLOO etc), >= 0 should count as +1, <= 0 as -1 (use d when working this out!)
+//?????: in mercer.cc, when diff_norm is called, include vectors. If elements are infinite then revert to direct calculation
+//       with vectors and return result of this.
+//TO DO: need to deal with *indecisive* constraint observations, like c(x) <= y > 0 (says nothing about whether c(x) >= 0) or c(x) >= y < 0 (same)
+//TO DO: Consider return field to change acquisition function and parameters on request? Currently only nu is done
+
+//From 6am meeting on 16.8.25
+//
+//- simple intro examples to BO
+//- plate build up add 1 plate every n iterations?
+//DONE - change beta interactively
+//DONE - multi-plate equivalents - ask Dylan to implement this at his end?
+
+//NEED TO TEST:
+//
+//LOGISTIC CDF: duplicate current one, but with different p
+
+/*
+Observation: if the cgt model is mispecified *and classification* then yes, it will be flat. obviously. If there is
+regression then it will be less flat. In other words... if you want a non-flat posterior on the constriant, you can
+either force the lengthscale *or* you can just do regression!
+
+import pyheavy,cmath,math,numpy,b,quad3,quad2,impetus
+
+diagonal kernel
+linear kernel
+ARD kernel
+
+-ks 3
+-ki 0 -kt 3
+-ki 1 -kt 1
+-ki 2 -kt 32
+
+-z gpr -pmm 100 0 [ :: 2:1 ] [ 0 0 0 ] [ 1 1 1 ] +1 0 -AA xorineqred.txt -tr -s temp.svm
+
+locisenabled
+getInternalClass
+
+addTrainingVector: make sure y is passed as a gentype to keep isNomConst!
+make sure isenabled checks isNomConst
+make -pmm set isNomConst
+
+svm_vector_atonce_template.hpp
+svm_vector_redbin.hpp
+blk_avevec.cc
+lsv_binary.cc
+svm_anions.cc
+svm_gentyp.cc
+svm_planar.cc
+svm_binary.cc
+svm_binary_rff.cc
+svm_mulbin.cc
+svm_multic.cc
+svm_multic_atonce.cc
+svm_multic_redbin.cc
+svm_scalar.cc
+svm_scalar_rff.cc
+svm_vector.cc
+svm_vector_mredbin.cc
+svm_vector_redbin.cc
+
+0.027087672949583919    ;   0.94563836813493873
+
+(0.40056845444743633*5)-2    ;   (0.49652266197000233*6)-2
+*/
+
+
+// 20/8/2025: fixed kernel tuning for GP with Laplace (wasn't calling outer layer)
+// 20/8/2025: fixed numerical issues where alpha is "too small"
+// 20/8/2025: there is an issue where you have *no* valid results. This leads to
+//            an extremely flat posterior which can (after 30 or so iterations in the
+//            Arun case) lead to the inner loop giving *NO VALID RESULTS TO TEST*...
+//            so the optimizer exits with nothing at all.
+//            FIX: if ires = -1 on inner loop then revert to pure exploration on cgt!
+//            OBSERVE: we can see this happen in the lengthscale! in arun/sim1/run2b/svmheavy.err.log.5
+//            the lengthscale is really big and eventually breaks everything, but in
+//            arun/sim1/run2b/svmheavy.err.log.6 it starts to grow, then drops off
+//            when it finds a feasible example.
+//            TAKEAWAY: you need to use PEc until you find a feasible solution, then
+//            you can go back to whatever else.
+// 18/8/2025: - added "nuscale" return field that let's you set a scale factor on beta to control exploitation/exploration directly
+//            - fixed scaling bug in gpr_scalar to prevent Laplace approximation making W so small that it triggers NaN!
+
+
+
+
+/*
+Set.hpp: have infinite sets - natural, real etc
+x-R = R
+x+R = R
+||R|| = infty
+
+Consider changing ||x-setX|| to max dist, but what is the inner product?
+
+Stable multi-fidelity BO
+*/
+
+
+/*
+probdef2py_mod2.txt quadgrid_null2.txt
+
+
+
+// Kernel setup
+-gmks 2
+-gmki 0
+-gmkS
+-gmkt 3
+-gmki 1
+-gmkt 3
+-gmki
+
+// Multi-fidelity options
+-gbfid 10
+-gbfp 0.1*(x*x)
+-gbfb 50*1.1
+
+
+
+FIXME: in bayesopt.cc:
+FIXME: consider removing method 18, ask a human - for this maybe just pass the null through to f(x) and let the machine detect this?
+FIXME: search for "Human fidelity override" (or bopts.fidover) - you should remove this and just let it happen through f(x) callback!
+FIXME: search bopts.evaluse - you should remove this and just let it happen through f(x) callback.
+*/
+
+
+/*
+29/7/25:
+
+Add option to increase epsilon for every "near but not good enough" c(x) result. Maybe try to target "most results at delta from barrier* by varying epsilon dynamically?
+*/
+
+/*
+12/8/2025:
+
+put makeMonotone stuff from mlinter into pyheavy
+*/
+
+
+//12/8/2025:
+//- implemented Laplace approximation for GP with inequalities. Tested and it seems to work
+//- added fidcost return option so the user can give an exact budgetary cost with each measurement of y (eg if you get multiple results for the price of one)
+//
+//7/8/2025:
+//- implemented multi-fidelity with constraints. Currently very heuristic but done
+//
+//5/8/2025:
+//- added support for empty and infinite sets. The inner-product between sets is the number
+//  of shared elements, so the inner product between a set and an infinite set is just the
+//  number of elements in the first set.
+//
+//25/7/2025:
+//- monotonic constraints on g(x) (-pmm). c(x) apparently is already increasing in index 0 so makes no
+//  difference here
+//- fixed bug with parity symmetry in the kernels (adding origin back to x)
+
+//when training a gp with prior mean, if there are inequalities, does the prior mean propogate
+//down through LSV to SVM to properly correct the targets y during training?
+
+/*
+If design x passes, (c(x) <= 0) then we can immediately expand to bounds on thicker plates,
+additional layers. - monotonicity constraints!
+These could be returned in the side-channel.
+Also in the kernel, should back-translate to the "actual" angle
+
+Paper idea: model constraints: c(x) <= 0 (or whatever) for all x satisfying y. How do you do this?
+Answer: monotonicity constaints for material width variables (and maybe others).
+
+
+REMEMBER: the modified GP-UCB should allows us to do multi-fidelity. That's why you needed it!
+
+
+Do paper stuff - sub-gauss proof for GP-UCB variant for publication
+Option to pull results?
+*/
+
+//Muliple results in one experiment
+//Build in existing results in sims
+
+//FIXME: slides with angle calculations
+//fix the definition of adjusted posterior mean/variance in modified gp-ucb method
+
+//TO DO: show slides 9 to Arun, possible solution to non-feasibility stuff
+/*
+TO DO: see NB below
+TO DO: see NEXT below
+
+SIMS: multi-fidelity, inequalities on max fidelity
+SIMS: GP-UCB with trivial objective, using full variance method
+
+SEE gpr_scalar.cc
+
+//FIXME: BO call seems to be working now, next up: test inequalities (impetus) - FIXME HAS SOME ANNOYING MEMORY BUG!
+//FIXME: get back posterior models (method to copy them to the ML stack?)
+
+//FIXME: for grid access    Vector<int> distMode(dim) - None for defaults
+//FIXME: for grid access    Vector<int> varsType(dim) - None for defaults
+*/
+
+/*
+BEFORE enforcing the constraint, you have a posterior distribution of c(x)
+REMEMBER you want to enforce the constraint c(x)>=0 whp >1-e
+MOREOVER you have the variance of c(x), so you actually want mean(c(x))>=m, where m is sufficiently positive to enforce the bound whp >1-e
+LEAVE THE CONSTRAINT on alpha sign. If the sign is positive then you're enforcing the constriant, if sign is negative you don't need it.
+NO! because posterior variance. Or maybe YES? Does is really matter so long as don't include alpha<0 in posterior variance?
+ALT the variance of c(x) gives us a lower bound on both m and the variance of c(x) we actually use? Stretch both if alpha<0 until alpha goes to 0? This is
+much smoother, if that's something we want?
+DETAIL: c(x) >= 0 -> c(x) >= m(sigma), c(x) <= 0 -> c(x) <= -m(sigma)
+*/
+
+/*
+-bgnc, -bgep
+
+
+
+DONE 23/7/2025:
+- return dict added, code made saner
+
+DONE 16/7/2025
+- have a mechanism to return additional xy pairs, but it's not tested yet (addexp)
+- added a "don't count me" flag that increments skipcnt (stopflags & 2), but haven't tested this
+
+TO DO 16/7/2025
+- addexp needs to be carried through to the experiments (currently only gridsource does it). Need to use addDataToModel for all cases where we do that
+
+DONE 15/7/2025
+- fixed problem with cgt alt method (was using sigma^2 rather than sigma when calculating overall variance)
+- added parity symmetry to the kernel, so you can map eg [ -1 -1 ] and [ 1 1 ] to [ 1 1 ] (multiply by sign of first element). This
+  will be helpful in incorporating the physical symmetry of the shield (rotational elements) that have this symmetry (sort of).
+- added margin (cgtmargin) of confindent to cgt methods, where the posterior mean of the cgt is offset by e.g. -0.1 as a margin of safety
+
+DONE 14/7/2025
+- added multiply by PI (on the objective only, not the constraint) to effectively "block" recommendations with worse AD than the best so far
+  (in the case where the objective is trivial, and thus represented by a prior built into a BLK module).
+
+
+
+DONE 3/7/25:
+- wrote a simple function to select the ML (or relevant optimizer) - that is, just set i
+- can now run BO etc straight from python without CLI emulation
+- FROM ARUN: if P(pen) is mostly flat away from observations, then it naturally favours very light designs that just won't work
+  MY IDEA: need to take the variance of the P(pen) into account, so the full acquisition should fix the problem!
+  SIMS: testcon, slides set 9 (9/7/25)
+
+DONE 3/7/25:
+Q: fix logging options in pyheavy.cc (by default std::err should only end up in a file, not on the screen)
+A: done
+Q: is in-grid variant just ignoring the constraint (ie lengthscale too long for model)? Double check that constraints and objective have all the same settings and sanity checks (including tuneKernel) to make sure that they are behaving themselves!
+A: see arun comment above.
+Q: like the ML stack, have a BO stack (and a grid stack, and direct etc). You can then fill in the parameters just like you do with the ML models and call optim when you're ready!
+A: done
+
+
+TO DO: 9/7/2025
+- run modified gp-ucb sims
+d add "if q(x)<0 then acquisition is zero" constraint to acquisition. q(x) is a python call from (call if feasibility check) Dylan that returns min_weight(x)-weight(x).
+  Null (none) by default for no such function.
+d add dynamic minimum on acquisition function to ensure min(a(x))>=0
+
+IDEA 3/7/25: if the highest fidelity is binary, we should treat it differently: like a correction factor for the second-highest fidelity? You could
+treat second-max fidelity is prior and do corrections on this, or if you could get rid of the "pull to zero" issue in the GP model you could just have
+inequalities at max fidelity.
+
+PUBLICATION 3/7/25:
+- above idea
+- also trivial problem, multi-fid constraints
+
+NB 3/7/25: in GP, setsigma (or sigma weight) also sets the inequalty offset (eps) for inequality constraints! So setsigma (and associates) must trigger seteps (and associates)
+
+TO DO: targets for week starting 3/7/2025
+d fix logging options in pyheavy.cc (by default std::err should only end up in a file, not on the screen)
+d is in-grid variant just ignoring the constraint (ie lengthscale too long for model)? Double check that constraints and objective have all the same settings and sanity checks (including tuneKernel) to make sure that they are behaving themselves!
+- you need a multi-fidelity algorithm!
+NEXT: - add extra observation insertion option (make sure this doesn't mess up the iteration counter though: "fake" observation counter that you take off the itcount?)
+NEXT: *to do this you could maybe return a set of sets, where each of the inner sets is an observation?)
+NEXT: *push multiple x onto a stack in the opetor() arount line 5354 of bayesopt.cc, set flag on return that asks to call back to grab multiple results
+d - add symmetry constraint g(x) ~ y, g(Ax) ~ y (or G(x : Ax) = 0, which we could set up as a filter).
+d - add inequality constraint support for GPs (just set sigma so that the 95 percentile touches the posterior mean, or something like that?). Note that the current EP algorithm seems to fail when you have a combination of inequality and equality constraints in the same problem.
+d - add monotonicity constraints on axis (planar for simplicity)
+d like the ML stack, have a BO stack (and a grid stack, and direct etc). You can then fill in the parameters just like you do with the ML models and call optim when you're ready!
+*/
+
+//FIXME: returning matrices from python to gentype doesn't really work as there is no way to distinguish
+//       between a matrix and a list of lists. If you export to numpy instead then this should be fixable,
+//       but I'm not sure how you actually achieve that!
+
+//TO DO: simple call function for BO (not CLI)!
+
+/*
+-use nop block for prior mean/kernel "fixed", acts like a function.
+
+TO DO: NOP type: kernel should be nominally-constant diagonal kernel by default. Weight is variance you want to add
+TO DO: sane log likelihood, rkhs norm etc for NOP type
+
+TO DO: BO kernel stuff?
+
+PLOT IN PLOTBASE:
+
+import pyheavy,cmath,math,numpy,b,quad3,quad2
+import numpy as np
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+f = pyheavy.maths.test(1)
+x1 = np.arange(0,1,0.001).tolist()
+y = list(map(pyheavy.maths.test(1),x1))
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.plot(x1,y)
+fig.savefig('temp.png')
+*/
+
+/*
+FOR PYHEAVY:
+
+SVM:
+** done?
+. to do as per others (M,E,X)
+
+    virtual const Matrix<double> &Gp(void) const { return getSVMconst().Gp(); }
+
+
+can be set
+    virtual int isanomalyOn(void)  const { return getSVMconst().isanomalyOn();  }
+    virtual int isanomalyOff(void) const { return getSVMconst().isanomalyOff(); }
+    virtual double anomalyNu(void)    const { return getSVMconst().anomalyNu();    }
+    virtual int    anomalyClass(void) const { return getSVMconst().anomalyClass(); }
+
+                    else if ( currcommand(0) == "-Ac"   ) { getMLref(svmbase,MLInd).addclass(safeatoi(currcommand(1),argvariables));          }
+                    else if ( currcommand(0) == "-Acz"  ) { getMLref(svmbase,MLInd).addclass(safeatoi(currcommand(1),argvariables),1);        }
+                    else if ( currcommand(0) == "-Aca"  ) { getMLref(svmbase,MLInd).anomalyOn(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Acd"  ) { getMLref(svmbase,MLInd).anomalyOff();                                             }
+                    else if ( currcommand(0) == "-As"   ) { getMLref(svmbase,MLInd).setanomalyclass(safeatoi(currcommand(1),argvariables));   }
+
+    output << ( ( basic || advanced ) ? "         -Ac  d          - add class to SVM  (multiclass only)  without adding\n" : "" );
+    output << ( ( basic || advanced ) ? "                           any vectors from that class.                       \n" : "" );
+    output << ( (          advanced ) ? "         -Acz d          - like -Ac d, but sets epsilon = 0 for this component\n" : "" );
+    output << ( (          advanced ) ? "                           if recursive division or max wins multiclass used. \n" : "" );
+    output << ( (          advanced ) ? "         -Aca d nu       - add anomaly detector to multiclass SVM with label d\n" : "" );
+    output << ( (          advanced ) ? "                           and anomaly detection parameter nu.                \n" : "" );
+    output << ( (          advanced ) ? "         -Acd            - remove anomaly detector.                           \n" : "" );
+    output << ( (          advanced ) ? "         -As  n          - set single-class  SVM non-anomaly  label (+1 or -1,\n" : "" );
+    output << ( (          advanced ) ? "                           +1 by defaulg).                                    \n" : "" );
+
+can be set
+    virtual       int      maxiterfuzzt(void) const { return getSVMconst().maxiterfuzzt(); }
+**    virtual       int      usefuzzt(void)     const { return getSVMconst().usefuzzt();     }
+    virtual       double   lrfuzzt(void)      const { return getSVMconst().lrfuzzt();      }
+    virtual       double   ztfuzzt(void)      const { return getSVMconst().ztfuzzt();      }
+    virtual const gentype &costfnfuzzt(void)  const { return getSVMconst().costfnfuzzt();  }
+
+can be set
+    virtual int anomclass(void)          const { return getSVMconst().anomclass();       }
+    virtual int singmethod(void)         const { return getSVMconst().singmethod();      }
+    virtual double rejectThreshold(void) const { return getSVMconst().rejectThreshold(); }
+
+can be set
+    virtual int kconstWeights(void) const { return getSVMconst().kconstWeights(); }
+*/
 
 //
 // SVMHeavyv7 Python CLI-like Interface
@@ -583,7 +1104,7 @@ OPTGETSETDEF(xtol_abs,NelderMead,double);
 OPTGETSETDEF(maxeval, NelderMead,int   );
 OPTGETSETDEF(method,  NelderMead,int   );
 
-OPTGETSETDEF(method,     Bayesian,int    );
+OPTGETSETDEF(acq,        Bayesian,int    );
 OPTGETSETDEF(startpoints,Bayesian,int    );
 OPTGETSETDEF(totiters,   Bayesian,int    );
 OPTGETSETDEF(startseed,  Bayesian,int    );
@@ -1293,7 +1814,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                                   "optimizers at any given time. Note that you can select per-operation,\n"
                                                   "but like selml this is non-persistent. Set rst = 1 to also reset.\n",py::arg("i")=0,py::arg("rst")=0);
 
-    QGETSETOPTB(m_opt,method, Bayesian,"Bayesian optimisation acquisition function:\n"
+    QGETSETOPTB(m_opt,acq,    Bayesian,"Bayesian optimisation acquisition function:\n"
                                        "\n"
                                        " 0 - MO (pure exploitation, mean only minimisation).\n"
                                        " 1 - EI (expected improvement - default).\n"
@@ -1323,7 +1844,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                        "# Chowdhury, On Kernelised Multi-Arm Bandits, Algorithm 2.\n"
                                        "~ Bogunovic, Misspecified GP Bandit Optim., Lemma 1.\n"
                                        "^ Intendid to be combined with human prompt.");
-    QGETSETOPTB(m_opt,betafn, Bayesian,"user-defined beta for method 11. You can make this a function with the vars:\n"
+    QGETSETOPTB(m_opt,betafn, Bayesian,"user-defined beta for acq 11. You can make this a function with the vars:\n"
                                        "\n"
                                        "- var(0,1) (y) = iteration number.\n"
                                        "- var(0,2) (z) = x dimension.\n"
@@ -1332,8 +1853,8 @@ PYBIND11_MODULE(pyheavy, m) {
                                        "- var(0,5) (g) = a as specified by -gbo.\n"
                                        "\n"
                                        "You can also use [ [ f1 ] [ f2 ] ... ], where f1,f2,... define acquisition\n"
-                                       "function (see method variable). This will generate multiple recommendations\n"
-                                       "in a single iteration, one for each of the methods f1,f2,... given.\n");
+                                       "function (see acq variable). This will generate multiple recommendations\n"
+                                       "in a single iteration, one for each of the acq f1,f2,... given.\n");
     QGETSETOPTB(m_opt,PIscale,Bayesian,"PI scaling: set 0 for standard operation, 1 to scale aquisition function by\n"
                                        "the PI (probability of improvement) acquisition function.");
 
@@ -1358,7 +1879,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                          "-2 to seed with time. If >=0 then this is incremented on each use (default 42)");
 
 
-    QGETSETOPT(m_opt,delta,Bayesian,gpucb,"delta factor used in GP-UCB method (default 0.1).");
+    QGETSETOPT(m_opt,delta,Bayesian,gpucb,"delta factor used in GP-UCB (default 0.1).");
     QGETSETOPT(m_opt,nu,   Bayesian,gpucb,"nu factor Srinivas GP-UCB (default 0.2, see Srivinas)");
     QGETSETOPT(m_opt,modD, Bayesian,gpucb,"|D| (grid siez) for GP-UCB finite (deflt -1: size of grid or 10)");
     QGETSETOPT(m_opt,a,    Bayesian,gpucb,"a constant for Srinivas |D|-infinite gpUCB (default 1)");
@@ -1369,7 +1890,7 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPT(m_opt,B,    Bayesian,gpucb,"B constant for acquisition functions 12,13,14 (default 1)");
 
 
-    QGETSETOPT(m_opt,zeta, Bayesian,ei,"zeta factor in EI method (default 0). 0.01 works ok).");
+    QGETSETOPT(m_opt,zeta, Bayesian,ei,"zeta factor in EI (default 0). 0.01 works ok).");
 
 
     QGETSETOPT(m_opt,TSmode,     Bayesian,ts,"Thompson sampling mode:\n"
@@ -2588,6 +3109,7 @@ int maddTrainingVectorml(int i, int j, py::object z, py::object x, py::object Cw
 
     errcode |= convFromPy(zz,z);
     errcode |= convFromPy(xx,x);
+errstream() << "phantomxyz xx = " << xx << "\n";
 
     if ( Cweigh.is_none()   || ( errcode |= convFromPy(cw,Cweigh)   ) ) { cw.resize(xx.size()) = 1.0; }
     if ( epsweigh.is_none() || ( errcode |= convFromPy(ew,epsweigh) ) ) { ew.resize(xx.size()) = 1.0; }

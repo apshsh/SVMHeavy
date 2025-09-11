@@ -1227,8 +1227,6 @@ int svm_atexit(void (*func)(void), const char *desc, int ring)
             desclist = new char *[allocsize];
             ringlist = new int[allocsize];
 
-            int i;
-
             for ( i = 0 ; i < listsize ; ++i )
             {
                 exitlist[i] = oldexitlist[i];

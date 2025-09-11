@@ -542,9 +542,9 @@ int fullOptStateGradDesc::solve(svmvolatile int &killSwitch)
                 recentreBias(aN,bN,x,beta,Gp,Gn,Gpn,gp,gn,hp);
             }
 
-            retMatrix<double> tmpma;
+            retMatrix<double> tmpmaa;
 
-            isopt = x.maxGradNonOpt(alphaCIndex,betaCIndex,stateChange,gradmag,Gp(0,1,aN-1,0,1,aN-1,tmpma),Gn,Gpn,gp,gn,hp,sc.outertol,1,1);
+            isopt = x.maxGradNonOpt(alphaCIndex,betaCIndex,stateChange,gradmag,Gp(0,1,aN-1,0,1,aN-1,tmpmaa),Gn,Gpn,gp,gn,hp,sc.outertol,1,1);
         }
 
         if ( !isopt )
@@ -575,11 +575,11 @@ int fullOptStateGradDesc::solve(svmvolatile int &killSwitch)
                     alpha.scaleAdd(currlr,xxx.alpha());
                     //beta.scaleAdd(currlr,xxx.beta());
 
-                    retMatrix<double> tmpma;
-                    retMatrix<double> tmpmb;
+                    retMatrix<double> tmpmaa;
+                    retMatrix<double> tmpmbb;
 
-                    x.setAlpha(alpha,Gp(0,1,aN-1,0,1,aN-1,tmpma),Gp(0,1,aN-1,0,1,aN-1,tmpmb),Gn,Gpn,gp,gn,hp,lb,ub,0);
-                    //x.setBeta(beta,Gp(0,1,aN-1,0,1,aN-1,tmpma),Gp(0,1,aN-1,0,1,aN-1,tmpmb),Gn,Gpn,gp,gn,hp,0);
+                    x.setAlpha(alpha,Gp(0,1,aN-1,0,1,aN-1,tmpmaa),Gp(0,1,aN-1,0,1,aN-1,tmpmbb),Gn,Gpn,gp,gn,hp,lb,ub,0);
+                    //x.setBeta(beta,Gp(0,1,aN-1,0,1,aN-1,tmpmaa),Gp(0,1,aN-1,0,1,aN-1,tmpmbb),Gn,Gpn,gp,gn,hp,0);
 
                     locGpBase      = ( useGpBase ? &Gpfull      : &idmat );
                     locGpsigmaBase = ( useGpBase ? &Gpsigmafull : &odmat );
@@ -615,11 +615,11 @@ int fullOptStateGradDesc::solve(svmvolatile int &killSwitch)
 
                         errstream() << "??" << gradmag << "," << beta << "??\n";
 
-                        retMatrix<double> tmpma;
-                        retMatrix<double> tmpmb;
+                        retMatrix<double> tmpmaaa;
+                        retMatrix<double> tmpmbbb;
 
-                        x.setAlpha(alpha,Gp(0,1,aN-1,0,1,aN-1,tmpma),Gp(0,1,aN-1,0,1,aN-1,tmpmb),Gn,Gpn,gp,gn,hp,lb,ub,0);
-                        //x.setBeta(beta,Gp(0,1,aN-1,0,1,aN-1,tmpma),Gp(0,1,aN-1,0,1,aN-1,tmpmb),Gn,Gpn,gp,gn,hp,0);
+                        x.setAlpha(alpha,Gp(0,1,aN-1,0,1,aN-1,tmpmaaa),Gp(0,1,aN-1,0,1,aN-1,tmpmbbb),Gn,Gpn,gp,gn,hp,lb,ub,0);
+                        //x.setBeta(beta,Gp(0,1,aN-1,0,1,aN-1,tmpmaaa),Gp(0,1,aN-1,0,1,aN-1,tmpmbbb),Gn,Gpn,gp,gn,hp,0);
 
                         locGpBase      = ( useGpBase ? &Gpfull      : &idmat );
                         locGpsigmaBase = ( useGpBase ? &Gpsigmafull : &odmat );
@@ -648,11 +648,11 @@ int fullOptStateGradDesc::solve(svmvolatile int &killSwitch)
                 alpha.scaleAdd(outlr,xxx.alpha());
                 //beta.scaleAdd(outlr,xxx.beta());
 
-                retMatrix<double> tmpma;
-                retMatrix<double> tmpmb;
+                retMatrix<double> tmpmax;
+                retMatrix<double> tmpmbx;
 
-                x.setAlpha(alpha,Gp(0,1,aN-1,0,1,aN-1,tmpma),Gp(0,1,aN-1,0,1,aN-1,tmpmb),Gn,Gpn,gp,gn,hp,lb,ub,0);
-                //x.setBeta(beta,Gp(0,1,aN-1,0,1,aN-1,tmpma),Gp(0,1,aN-1,0,1,aN-1,tmpmb),Gn,Gpn,gp,gn,hp,0);
+                x.setAlpha(alpha,Gp(0,1,aN-1,0,1,aN-1,tmpmax),Gp(0,1,aN-1,0,1,aN-1,tmpmbx),Gn,Gpn,gp,gn,hp,lb,ub,0);
+                //x.setBeta(beta,Gp(0,1,aN-1,0,1,aN-1,tmpmax),Gp(0,1,aN-1,0,1,aN-1,tmpmbx),Gn,Gpn,gp,gn,hp,0);
 
                 locGpBase      = ( useGpBase ? &Gpfull      : &idmat );
                 locGpsigmaBase = ( useGpBase ? &Gpsigmafull : &odmat );
@@ -670,10 +670,10 @@ int fullOptStateGradDesc::solve(svmvolatile int &killSwitch)
             }
         }
 
-        retMatrix<double> tmpma;
+        retMatrix<double> tmpmqa;
 
         int aerr,berr;
-        errstream() << fnnext << "(" << x.testGradInt(aerr,berr,Gp(0,1,aN-1,0,1,aN-1,tmpma),Gn,Gpn,gp,gn,hp) << ")";
+        errstream() << fnnext << "(" << x.testGradInt(aerr,berr,Gp(0,1,aN-1,0,1,aN-1,tmpmqa),Gn,Gpn,gp,gn,hp) << ")";
 
         if ( badstep )
         {

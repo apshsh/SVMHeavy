@@ -208,6 +208,115 @@ MercerKernel &MercerKernel::operator=(const MercerKernel &src)
 
 
 
+MercerKernel &MercerKernel::setTypes(const Vector<int> &nv)
+{
+    resize(nv.size());
+
+    for ( int q = 0 ; q < size() ; ++q )
+    {
+        setType(nv(q),q);
+    }
+
+    return *this;
+}
+
+MercerKernel &MercerKernel::setHyper(const Vector<Vector<gentype>> &nv)
+{
+    resize(nv.size());
+
+    dRealConstants = nv;
+    recalcRandFeats(-1);
+
+    return *this;
+}
+
+MercerKernel &MercerKernel::setIntConstantss(const Vector<Vector<int>> &nv)
+{
+    resize(nv.size());
+
+    dIntConstants = nv;
+    recalcRandFeats(-1);
+
+    return *this;
+}
+
+MercerKernel &MercerKernel::setRealOverwrites(const Vector<SparseVector<int>> &nv)
+{
+    resize(nv.size());
+
+    dRealOverwrite = nv;
+    fixcombinedOverwriteSrc();
+    recalcRandFeats(-1);
+
+    return *this;
+}
+
+MercerKernel &MercerKernel::setIntOverwrites(const Vector<SparseVector<int>> &nv)
+{
+    resize(nv.size());
+
+    dIntOverwrite = nv;
+    fixcombinedOverwriteSrc();
+    recalcRandFeats(-1);
+
+    return *this;
+}
+
+MercerKernel &MercerKernel::setIsNormalised(const Vector<int> &nv)
+{
+    resize(nv.size());
+
+    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1;
+    isnorm = nv;
+    recalcRandFeats(-1);
+
+    return *this;
+}
+
+MercerKernel &MercerKernel::setIsMagTerm(const Vector<int> &nv)
+{
+    resize(nv.size());
+
+    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1;
+    ismagterm = nv;
+    recalcRandFeats(-1);
+
+    return *this;
+}
+
+MercerKernel &MercerKernel::setChained(const Vector<int> &nv)
+{
+    resize(nv.size());
+
+    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1;
+    ischain = nv;
+    recalcRandFeats(-1);
+
+    return *this;
+}
+
+MercerKernel &MercerKernel::setSplit(const Vector<int> &nv)
+{
+    resize(nv.size());
+
+    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1;
+    issplit = nv;
+    xnumSplits  = calcnumSplits(); recalcRandFeats(-1);
+
+    return *this;
+}
+
+MercerKernel &MercerKernel::setMulSplit(const Vector<int> &nv)
+{
+    resize(nv.size());
+
+    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1;
+    mulsplit = nv;
+    xnumMulSplits = calcnumMulSplits(); recalcRandFeats(-1);
+
+    return *this;
+}
+
 
 
 
@@ -7751,8 +7860,6 @@ vecInfoBase &MercerKernel::getvecInfo(vecInfoBase &res, const SparseVector<genty
 
         aa = &x;
 
-        int i;
-
         for ( i = oldm/2 ; i < m/2 ; ++i )
         {
             retVector<const SparseVector<gentype> *> tmpva;
@@ -7763,6 +7870,8 @@ vecInfoBase &MercerKernel::getvecInfo(vecInfoBase &res, const SparseVector<genty
 
     return res;
 }
+
+
 
 void MercerKernel::processOverwrites(int q, const SparseVector<gentype> &x, const SparseVector<gentype> &y) const
 {
@@ -10122,8 +10231,6 @@ void MercerKernel::diffmnorm(int m, gentype &res, const Vector<int> &ii, const g
 
         if ( m )
         {
-            int i;
-
             for ( i = 0 ; i < m ; ++i )
             {
                 res += (*(xanorm(i)));
@@ -10138,8 +10245,6 @@ void MercerKernel::diffmnorm(int m, gentype &res, const Vector<int> &ii, const g
 
         if ( m )
         {
-            int i;
-
             for ( i = 0 ; i < m ; ++i )
             {
                 res += (*(xanorm(i)));
@@ -10367,8 +10472,6 @@ void MercerKernel::diffmnorm(int m, double &res, const Vector<int> &ii, double x
 
         if ( m )
         {
-            int i;
-
             for ( i = 0 ; i < m ; ++i )
             {
                 res += *(xanorm(i));
@@ -10382,8 +10485,6 @@ void MercerKernel::diffmnorm(int m, double &res, const Vector<int> &ii, double x
 
         if ( m )
         {
-            int i;
-
             for ( i = 0 ; i < m ; ++i )
             {
                 res += *(xanorm(i));
@@ -12397,7 +12498,7 @@ void MercerKernel::Kbase(gentype &res, int q, int typeis,
 
             res = 1.0;
 
-            for ( int j = 0 ; j < m ; ++j )
+            for ( j = 0 ; j < m ; ++j )
             {
                 res *= *(xnorm(j));
             }
@@ -12418,7 +12519,7 @@ void MercerKernel::Kbase(gentype &res, int q, int typeis,
 
             res = 1.0;
 
-            for ( int j = 0 ; j < m ; ++j )
+            for ( j = 0 ; j < m ; ++j )
             {
                 gentype tempres(*(xnorm(j)));
 
@@ -23518,13 +23619,13 @@ T &MercerKernel::yyyaaK2x2(T &res,
         SparseVector<gentype> xxa(xa);
         SparseVector<gentype> xxb(xb);
 
-        for ( int i = 0 ; i < linParity.size() ; i++ )
+        for ( int ii = 0 ; ii < linParity.size() ; ++ii )
         {
             if ( linParityOrig.size() )
             {
-                xx ("&",linParity(i)) -= linParityOrig(i);
-                xxa("&",linParity(i)) -= linParityOrig(i);
-                xxb("&",linParity(i)) -= linParityOrig(i);
+                xx ("&",linParity(ii)) -= linParityOrig(ii);
+                xxa("&",linParity(ii)) -= linParityOrig(ii);
+                xxb("&",linParity(ii)) -= linParityOrig(ii);
             }
         }
 
@@ -23532,20 +23633,20 @@ T &MercerKernel::yyyaaK2x2(T &res,
         double sa = ( (double) xxa(linParity(0)) < 0 ) ? -1 : +1;
         double sb = ( (double) xxb(linParity(0)) < 0 ) ? -1 : +1;
 
-        for ( int i = 0 ; i < linParity.size() ; i++ )
+        for ( int ii = 0 ; ii < linParity.size() ; ++ii )
         {
-            if ( s  < 0 ) { xx( "&",linParity(i)).negate(); }
-            if ( sa < 0 ) { xxa("&",linParity(i)).negate(); }
-            if ( sb < 0 ) { xxb("&",linParity(i)).negate(); }
+            if ( s  < 0 ) { xx( "&",linParity(ii)).negate(); }
+            if ( sa < 0 ) { xxa("&",linParity(ii)).negate(); }
+            if ( sb < 0 ) { xxb("&",linParity(ii)).negate(); }
         }
 
-        for ( int i = 0 ; i < linParity.size() ; i++ )
+        for ( int ii = 0 ; ii < linParity.size() ; ++ii )
         {
             if ( linParityOrig.size() )
             {
-                xx ("&",linParity(i)) += linParityOrig(i);
-                xxa("&",linParity(i)) += linParityOrig(i);
-                xxb("&",linParity(i)) += linParityOrig(i);
+                xx ("&",linParity(ii)) += linParityOrig(ii);
+                xxa("&",linParity(ii)) += linParityOrig(ii);
+                xxb("&",linParity(ii)) += linParityOrig(ii);
             }
         }
 
@@ -23702,26 +23803,26 @@ T &MercerKernel::yyyaaKm(int m, T &res,
             xx("&",j) = altx;
             xq("&",j) = altx;
 
-            for ( int i = 0 ; i < linParity.size() ; i++ )
+            for ( int ii = 0 ; ii < linParity.size() ; ++ii )
             {
                 if ( linParityOrig.size() )
                 {
-                    (*altx)("&",linParity(i)) -= linParityOrig(i);
+                    (*altx)("&",linParity(ii)) -= linParityOrig(ii);
                 }
             }
 
             double s = ( (double) (*altx)(linParity(0)) < 0 ) ? -1 : +1;
 
-            for ( int i = 0 ; i < linParity.size() ; i++ )
+            for ( int ii = 0 ; ii < linParity.size() ; ++ii )
             {
-                if ( s < 0 ) { (*altx)("&",linParity(i)).negate(); }
+                if ( s < 0 ) { (*altx)("&",linParity(ii)).negate(); }
             }
 
-            for ( int i = 0 ; i < linParity.size() ; i++ )
+            for ( int ii = 0 ; ii < linParity.size() ; ++ii )
             {
                 if ( linParityOrig.size() )
                 {
-                    (*altx)("&",linParity(i)) += linParityOrig(i);
+                    (*altx)("&",linParity(ii)) += linParityOrig(ii);
                 }
             }
         }
@@ -30041,7 +30142,6 @@ T &MercerKernel::yyyKKm(int m, T &res,
     NiceAssert( !isSymmSet() );
 
     int needpreproc = 0;
-    int ii;
 
     Vector<int> altiset;
 
@@ -30055,7 +30155,7 @@ T &MercerKernel::yyyKKm(int m, T &res,
 
     if ( m )
     {
-        for ( ii = 0 ; ii < m ; ++ii )
+        for ( int ii = 0 ; ii < m ; ++ii )
         {
             if ( xupm(ii) > 1 )
             {
@@ -37113,7 +37213,7 @@ T &MercerKernel::LL1(T &res, T &logres, int &logresvalid,
                 havexyprod = 1;
             }
 
-            else if ( needsInner(0,1) || ( isFastKernelSum() && needsInner(-1,1) ) || justcalcip )
+            else if ( needsInner(locindend,1) || ( isFastKernelSum() && needsInner(-1,1) ) || justcalcip )
             {
                 oneProductDiverted(xyprod,xa,xconsist,assumreal);
 
@@ -37142,14 +37242,14 @@ T &MercerKernel::LL1(T &res, T &logres, int &logresvalid,
                 diffis = *pxyprod[1];
             }
 
-            else if ( ( ( needsDiff(0) || ( isFastKernelSum() && needsDiff() ) ) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) ) && !justcalcip )
+            else if ( ( ( needsDiff(locindend) || ( isFastKernelSum() && needsDiff() ) ) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) ) && !justcalcip )
             {
                 // Calculate ||x-y||^2 only as required
 
                 diff1norm(diffis,ia,xyprod,getmnorm(xainfo,xa,1,xconsist,assumreal));
             }
 
-            else if ( ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
+            else if ( ( needsDiff(locindend) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
             {
                 goto badout;
             }
@@ -37496,7 +37596,7 @@ T &MercerKernel::LL2(int adensetype, int bdensetype, T &res, T &logres, int &log
                 yxprod = xyprod;
             }
 
-            else if ( needsInner(0,2) || ( isFastKernelSum() && needsInner(-1,2) ) || justcalcip )
+            else if ( needsInner(locindend,2) || ( isFastKernelSum() && needsInner(-1,2) ) || justcalcip )
             {
                 innerProductDiverted(xyprod,xa,xb,xconsist,assumreal);
                 innerProductDivertedRevConj(yxprod,xyprod,xa,xb,xconsist,assumreal);
@@ -37544,7 +37644,7 @@ T &MercerKernel::LL2(int adensetype, int bdensetype, T &res, T &logres, int &log
                 }
             }
 
-            if ( ( needsDiff(0) || ( isFastKernelSum() && needsDiff() ) ) && !justcalcip )
+            if ( ( needsDiff(locindend) || ( isFastKernelSum() && needsDiff() ) ) && !justcalcip )
             {
                 if ( pxyprod && pxyprod[1] )
                 {
@@ -37933,7 +38033,7 @@ T &MercerKernel::LL3(T &res, T &logres, int &logresvalid,
                 xyprod = *pxyprod[0];
             }
 
-            else if ( needsInner(0,3) || ( isFastKernelSum() && needsInner(-1,3) ) || justcalcip )
+            else if ( needsInner(locindend,3) || ( isFastKernelSum() && needsInner(-1,3) ) || justcalcip )
             {
                 threeProductDiverted(xyprod,xa,xb,xc,xconsist,assumreal);
 
@@ -37959,7 +38059,7 @@ T &MercerKernel::LL3(T &res, T &logres, int &logresvalid,
                 diffis = *pxyprod[1];
             }
 
-            else if ( ( ( needsDiff(0) || ( isFastKernelSum() && needsDiff() ) ) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) ) && !justcalcip )
+            else if ( ( ( needsDiff(locindend) || ( isFastKernelSum() && needsDiff() ) ) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) ) && !justcalcip )
             {
                 // Calculate ||x-y||^2 only as required
 
@@ -37975,7 +38075,7 @@ T &MercerKernel::LL3(T &res, T &logres, int &logresvalid,
                 diff3norm(diffis,ia,ib,ic,xyprod,getmnorm(xainfo,xa,3,xconsist,assumreal),getmnorm(xbinfo,xb,3,xconsist,assumreal),getmnorm(xcinfo,xc,3,xconsist,assumreal),altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,s);
             }
 
-            else if ( ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
+            else if ( ( needsDiff(locindend) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
             {
                 goto badout;
             }
@@ -38078,7 +38178,7 @@ T &MercerKernel::LL3(T &res, T &logres, int &logresvalid,
                 }
             }
 
-            else if ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) && !justcalcip )
+            else if ( needsDiff(locindend) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) && !justcalcip )
             {
                 goto badout;
             }
@@ -38396,7 +38496,7 @@ T &MercerKernel::LL4(T &res, T &logres, int &logresvalid,
                 xyprod = *pxyprod[0];
             }
 
-            else if ( needsInner(0,4) || ( isFastKernelSum() && needsInner(-1,4) ) || justcalcip )
+            else if ( needsInner(locindend,4) || ( isFastKernelSum() && needsInner(-1,4) ) || justcalcip )
             {
                 fourProductDiverted(xyprod,xa,xb,xc,xd,xconsist,assumreal);
 
@@ -38424,7 +38524,7 @@ T &MercerKernel::LL4(T &res, T &logres, int &logresvalid,
                 diffis = *pxyprod[1];
             }
 
-            else if ( ( ( needsDiff(0) || ( isFastKernelSum() && needsDiff() ) ) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) ) && !justcalcip )
+            else if ( ( ( needsDiff(locindend) || ( isFastKernelSum() && needsDiff() ) ) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) ) && !justcalcip )
             {
                 // Calculate ||x-y||^2 only as required
 
@@ -38444,7 +38544,7 @@ T &MercerKernel::LL4(T &res, T &logres, int &logresvalid,
                 diff4norm(diffis,ia,ib,ic,id,xyprod,getmnorm(xainfo,xa,4,xconsist,assumreal),getmnorm(xbinfo,xb,4,xconsist,assumreal),getmnorm(xcinfo,xc,4,xconsist,assumreal),getmnorm(xdinfo,xd,4,xconsist,assumreal),altxyr00,altxyr10,altxyr11,altxyr20,altxyr21,altxyr22,altxyr30,altxyr31,altxyr32,altxyr33,s);
             }
 
-            else if ( ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
+            else if ( ( needsDiff(locindend) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
             {
                 NiceAssert( !needxxprod );
 
@@ -38895,7 +38995,7 @@ T &MercerKernel::LL4(T &res, T &logres, int &logresvalid,
                 diffis = *pxyprod[1];
             }
 
-            else if ( ( size() >= 2 ) && needsDiff(1) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) && !justcalcip )
+            else if ( ( size() >= 2 ) && needsDiff(locindend) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) && !justcalcip )
             {
                 int dummyind = 0;
 
@@ -38982,7 +39082,7 @@ T &MercerKernel::LL4(T &res, T &logres, int &logresvalid,
                 }
             }
 
-            else if ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) && !justcalcip )
+            else if ( needsDiff(locindend) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) && !justcalcip )
             {
                 // At this point we need to calculate diffis using altdiffis method 2xx
                 // xyprod is not used by kernel
@@ -39656,7 +39756,7 @@ T &MercerKernel::LLm(int m, T &res, T &logres, int &logresvalid,
 
         else if ( isAltDiff() == 104 )
         {
-            Vector<int> ss(m);
+            //Vector<int> ss(m);
             int isdone = 0;
             int cnt = 0;
             int z = 0;
@@ -39865,7 +39965,7 @@ T &MercerKernel::LLm(int m, T &res, T &logres, int &logresvalid,
                 xyprod = *pxyprod[0];
             }
 
-            else if ( needsInner(0,m) || ( isFastKernelSum() && needsInner(-1,m) ) || justcalcip )
+            else if ( needsInner(locindend,m) || ( isFastKernelSum() && needsInner(-1,m) ) || justcalcip )
             {
                 mProductDiverted(m,xyprod,x,xconsist,assumreal);
 
@@ -39901,7 +40001,7 @@ T &MercerKernel::LLm(int m, T &res, T &logres, int &logresvalid,
                 diffis = *pxyprod[1];
             }
 
-            else if ( ( ( needsDiff(0) || ( isFastKernelSum() && needsDiff() ) ) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) ) && !justcalcip )
+            else if ( ( ( needsDiff(locindend) || ( isFastKernelSum() && needsDiff() ) ) && ( ( isAltDiff() <= 199 ) || ( isAltDiff() >= 300 ) ) ) && !justcalcip )
             {
                 Vector<T> xnormrr(x.size());
                 Vector<const T *> xnormde(x.size());
@@ -39922,7 +40022,7 @@ T &MercerKernel::LLm(int m, T &res, T &logres, int &logresvalid,
                 diffmnorm(m,diffis,iv,xyprod,xnormde,fillXYMatrix(m,altxy,x,xinfo,xy,0,assumreal),s);
             }
 
-            else if ( ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
+            else if ( ( needsDiff(locindend) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) && !justcalcip )
             {
                 // At this point we need to calculate diffis using altdiffis method 2xx
                 // xyprod is not used by kernel, but need to fill it in for use by rest of chain
@@ -40173,7 +40273,7 @@ T &MercerKernel::LLm(int m, T &res, T &logres, int &logresvalid,
                 diffis *= (const T &) cWeight(0);
             }
 
-            else if ( needsDiff(0) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) && !justcalcip )
+            else if ( needsDiff(locindend) && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) && !justcalcip )
             {
                 // At this point we need to calculate diffis using altdiffis method 2xx
                 // xyprod is not used by kernel
@@ -40195,7 +40295,7 @@ T &MercerKernel::LLm(int m, T &res, T &logres, int &logresvalid,
                 if ( m )
                 {
                     int ii,jj;
-                    int dummyind = 0;
+                    int ddummyind = 0;
 
                     for ( ii = 0 ; ii < m ; ++ii )
                     {
@@ -40205,7 +40305,7 @@ T &MercerKernel::LLm(int m, T &res, T &logres, int &logresvalid,
 
                         T zzz; zzz = 0.0;
 
-                        kernel8xx(0,xnormdex("&",ii),dummyind,cType(0),zzz,zzz,zzz,*x(ii),*x(ii),*xinfo(ii),*xinfo(ii),i(ii),i(ii),xdim,0,mlid);
+                        kernel8xx(0,xnormdex("&",ii),ddummyind,cType(0),zzz,zzz,zzz,*x(ii),*x(ii),*xinfo(ii),*xinfo(ii),i(ii),i(ii),xdim,0,mlid);
 
                         if ( needsMatDiff() )
                         {
@@ -40219,9 +40319,9 @@ T &MercerKernel::LLm(int m, T &res, T &logres, int &logresvalid,
                                     {
                                         if ( ( needsMatDiff() == +1 ) || ( ( jj == ii-1 ) && ( !(ii%2) ) ) )
                                         {
-                                            T zzz; zzz = 0.0;
+                                            T zzzz; zzzz = 0.0;
 
-                                            kernel8xx(0,altxy("&",ii,jj),dummyind,cType(0),zzz,zzz,zzz,*x(ii),*x(jj),*xinfo(ii),*xinfo(jj),i(ii),i(jj),xdim,0,mlid);
+                                            kernel8xx(0,altxy("&",ii,jj),ddummyind,cType(0),zzzz,zzzz,zzzz,*x(ii),*x(jj),*xinfo(ii),*xinfo(jj),i(ii),i(jj),xdim,0,mlid);
                                                 altxy("&",jj,ii) = altxy("&",ii,jj);
                                                 setconj(altxy("&",jj,ii));
                                         }
@@ -41579,12 +41679,12 @@ void MercerKernel::dLL2(T &xygrad, T &xnormgrad, int &minmaxind,
                 T xnorm; xnorm = 0.0;
                 T ynorm; ynorm = 0.0;
 
-                int dummyind;
+                int ddummyind = 0;
 
                 T zzz; zzz = 0.0;
 
-                kernel8xx(0,xnorm,dummyind,cType(0),zzz,zzz,zzz,x,x,xinfo,xinfo,i,i,xdim,0,mlid);
-                kernel8xx(0,ynorm,dummyind,cType(0),zzz,zzz,zzz,y,y,yinfo,yinfo,j,j,xdim,0,mlid);
+                kernel8xx(0,xnorm,ddummyind,cType(0),zzz,zzz,zzz,x,x,xinfo,xinfo,i,i,xdim,0,mlid);
+                kernel8xx(0,ynorm,ddummyind,cType(0),zzz,zzz,zzz,y,y,yinfo,yinfo,j,j,xdim,0,mlid);
 
                 if ( assumreal )
                 {
@@ -41879,12 +41979,12 @@ void MercerKernel::d2LL2(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T
                 T xnorm; xnorm = 0.0;
                 T ynorm; ynorm = 0.0;
 
-                int dummyind;
+                int ddummyind = 0;
 
                 T zzz; zzz = 0.0;
 
-                kernel8xx(0,xnorm,dummyind,cType(0),zzz,zzz,zzz,x,x,xinfo,xinfo,i,i,xdim,0,mlid);
-                kernel8xx(0,ynorm,dummyind,cType(0),zzz,zzz,zzz,y,y,yinfo,yinfo,j,j,xdim,0,mlid);
+                kernel8xx(0,xnorm,ddummyind,cType(0),zzz,zzz,zzz,x,x,xinfo,xinfo,i,i,xdim,0,mlid);
+                kernel8xx(0,ynorm,ddummyind,cType(0),zzz,zzz,zzz,y,y,yinfo,yinfo,j,j,xdim,0,mlid);
 
                 if ( assumreal )
                 {

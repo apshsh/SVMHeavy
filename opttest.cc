@@ -13,9 +13,9 @@
 #include "matrix.hpp"
 #include <math.h>
 
-int evalTestFn(int fnnum, double &res, const Vector<double> &xx, const Matrix<double> *a)
+int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<double> *a)
 {
-    Vector<double> x(xx);
+    Vector<double> x(xxx);
 
     int nonfeas = 0;
     int i;

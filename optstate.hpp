@@ -3570,7 +3570,7 @@ void optState<T,S>::changeAlphaRestrict(int i, int alphrestrict, const Matrix<do
 	fixGrad(GpGrad,Gn,Gpn,gp,gn,hp);
     }
 
-    int iP;
+    int iP = 0;
 
     switch ( alphaState(i) )
     {
@@ -3629,8 +3629,6 @@ void optState<T,S>::changeAlphaRestrict(int i, int alphrestrict, const Matrix<do
 	{
 	    if ( ( alphrestrict == 2 ) || ( alphrestrict == 3 ) )
 	    {
-		int iP;
-
 		for ( iP = 0 ; iP < aNF() ; ++iP )
 		{
 		    if ( pivAlphaF(iP) == i )
@@ -3657,8 +3655,6 @@ void optState<T,S>::changeAlphaRestrict(int i, int alphrestrict, const Matrix<do
 	{
 	    if ( ( alphrestrict == 2 ) || ( alphrestrict == 3 ) )
 	    {
-		int iP;
-
 		for ( iP = 0 ; iP < aNUB() ; ++iP )
 		{
 		    if ( pivAlphaUB(iP) == i )
@@ -3819,8 +3815,6 @@ void optState<T,S>::changeAlphaRestricthpzero(int i, int alphrestrict, const Mat
 	{
 	    if ( ( alphrestrict == 2 ) || ( alphrestrict == 3 ) )
 	    {
-		int iP;
-
 		for ( iP = 0 ; iP < aNF() ; ++iP )
 		{
 		    if ( pivAlphaF(iP) == i )
@@ -3847,8 +3841,6 @@ void optState<T,S>::changeAlphaRestricthpzero(int i, int alphrestrict, const Mat
 	{
 	    if ( ( alphrestrict == 2 ) || ( alphrestrict == 3 ) )
 	    {
-		int iP;
-
 		for ( iP = 0 ; iP < aNUB() ; ++iP )
 		{
 		    if ( pivAlphaUB(iP) == i )
@@ -10477,9 +10469,9 @@ int optState<T,S>::fact_calcStepbase(Vector<T> &stepAlpha, Vector<T> &stepBeta, 
 
         // Next construct the largest index subset of GpnGpn that is non-singular
 
-        retVector<int>    tmpva;
-        retVector<int>    tmpvc;
-        retVector<int>    tmpvd;
+        retVector<int>    tmpvaa;
+        retVector<int>    tmpvcc;
+        retVector<int>    tmpvdd;
         retVector<double> tmpve;
         retVector<T>      tmpvf;
         retVector<T>      tmpvg;
@@ -10526,8 +10518,8 @@ int optState<T,S>::fact_calcStepbase(Vector<T> &stepAlpha, Vector<T> &stepBeta, 
         p = 0.0;
         g = 0.0;
 
-        p.set(GpnInd(0,1,bsize-1,tmpva),dalphaGrad(pivAlphaF(),tmpvf)*Gpn(pivAlphaF(),pivBetaF()(GpnInd,tmpvd,0,1,bsize-1),tmpma));
-        p("&",GpnInd,0,1,bsize-1,tmpve) -= dbetaGrad(pivBetaF()(GpnInd,0,1,bsize-1,tmpvd),tmpvf);
+        p.set(GpnInd(0,1,bsize-1,tmpvaa),dalphaGrad(pivAlphaF(),tmpvf)*Gpn(pivAlphaF(),pivBetaF()(GpnInd,tmpvdd,0,1,bsize-1),tmpma));
+        p("&",GpnInd,0,1,bsize-1,tmpve) -= dbetaGrad(pivBetaF()(GpnInd,0,1,bsize-1,tmpvdd),tmpvf);
 
         Vector<double> bndummy;
         Vector<double> andummy;
@@ -10536,11 +10528,11 @@ int optState<T,S>::fact_calcStepbase(Vector<T> &stepAlpha, Vector<T> &stepBeta, 
 
         // Calculate step
 
-        stepBeta.set(pivBetaF()(GpnInd,tmpva),g(GpnInd,tmpve));
-        stepBeta("&",pivBetaF()(GpnInd,tmpva),tmpvf).negate();
+        stepBeta.set(pivBetaF()(GpnInd,tmpvaa),g(GpnInd,tmpve));
+        stepBeta("&",pivBetaF()(GpnInd,tmpvaa),tmpvf).negate();
 
         stepAlpha.set(pivAlphaF(),dalphaGrad(pivAlphaF(),tmpvg));
-        stepAlpha("&",pivAlphaF(),tmpvf) -= Gpn(pivAlphaF(),pivBetaF()(GpnInd,0,1,bsize-1,tmpvc),tmpma)*g(GpnInd,0,1,bsize-1,tmpve);
+        stepAlpha("&",pivAlphaF(),tmpvf) -= Gpn(pivAlphaF(),pivBetaF()(GpnInd,0,1,bsize-1,tmpvcc),tmpma)*g(GpnInd,0,1,bsize-1,tmpve);
         stepAlpha("&",pivAlphaF(),tmpvf).negate();
 
         // Line-search down to ensure max decrease in objective
@@ -10816,9 +10808,9 @@ template <> inline int optState<double,double>::fact_calcStepbase(Vector<double>
 
         // Next construct the largest index subset of GpnGpn that is non-singular
 
-        retVector<int>    tmpva;
-        retVector<int>    tmpvc;
-        retVector<int>    tmpvd;
+        retVector<int>    tmpvaa;
+        retVector<int>    tmpvcc;
+        retVector<int>    tmpvdd;
         retVector<double> tmpve;
         retVector<double> tmpvf;
         retVector<double> tmpvg;
@@ -10865,8 +10857,8 @@ template <> inline int optState<double,double>::fact_calcStepbase(Vector<double>
         p = 0.0;
         g = 0.0;
 
-        p.set(GpnInd(0,1,bsize-1,tmpva),dalphaGrad(pivAlphaF(),tmpvf)*Gpn(pivAlphaF(),pivBetaF()(GpnInd,0,1,bsize-1,tmpvd),tmpma));
-        p("&",GpnInd,0,1,bsize-1,tmpve) -= dbetaGrad(pivBetaF()(GpnInd,0,1,bsize-1,tmpvd),tmpvf);
+        p.set(GpnInd(0,1,bsize-1,tmpvaa),dalphaGrad(pivAlphaF(),tmpvf)*Gpn(pivAlphaF(),pivBetaF()(GpnInd,0,1,bsize-1,tmpvdd),tmpma));
+        p("&",GpnInd,0,1,bsize-1,tmpve) -= dbetaGrad(pivBetaF()(GpnInd,0,1,bsize-1,tmpvdd),tmpvf);
 
         Vector<double> bndummy;
         Vector<double> andummy;
@@ -10875,11 +10867,11 @@ template <> inline int optState<double,double>::fact_calcStepbase(Vector<double>
 
         // Calculate step
 
-        stepBeta.set(pivBetaF()(GpnInd,tmpva),g(GpnInd,tmpve));
-        stepBeta("&",pivBetaF()(GpnInd,tmpva),tmpvf).negate();
+        stepBeta.set(pivBetaF()(GpnInd,tmpvaa),g(GpnInd,tmpve));
+        stepBeta("&",pivBetaF()(GpnInd,tmpvaa),tmpvf).negate();
 
         stepAlpha.set(pivAlphaF(),dalphaGrad(pivAlphaF(),tmpvg));
-        stepAlpha("&",pivAlphaF(),tmpvf) -= Gpn(pivAlphaF(),pivBetaF()(GpnInd,0,1,bsize-1,tmpvc),tmpma)*g(GpnInd,0,1,bsize-1,tmpve);
+        stepAlpha("&",pivAlphaF(),tmpvf) -= Gpn(pivAlphaF(),pivBetaF()(GpnInd,0,1,bsize-1,tmpvcc),tmpma)*g(GpnInd,0,1,bsize-1,tmpve);
         stepAlpha("&",pivAlphaF(),tmpvf).negate();
 
         // Line-search down to ensure max decrease in objective

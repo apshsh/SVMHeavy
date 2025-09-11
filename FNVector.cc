@@ -1659,11 +1659,9 @@ gentype &FuncVector::operator()(gentype &res, const SparseVector<gentype> &i) co
 
     if ( NE() )
     {
-        int i;
-
-        for ( i = 0 ; i < NE() ; ++i )
+        for ( int iii = 0 ; iii < NE() ; ++iii )
         {
-            res += (dynamic_cast<const FuncVector &>(*extrapart(i)))(i);
+            res += (dynamic_cast<const FuncVector &>(*extrapart(iii)))(iii);
         }
     }
 
@@ -3316,11 +3314,11 @@ Vector<gentype> &RKHSVector::rdivit(const gentype &b)
     return *this;
 }
 
-gentype &RKHSVector::operator()(gentype &res, const SparseVector<gentype> &xx) const
+gentype &RKHSVector::operator()(gentype &res, const SparseVector<gentype> &xxp) const
 {
     if ( revertToFunc )
     {
-        return FuncVector::operator()(res,xx);
+        return FuncVector::operator()(res,xxp);
     }
 
     setzero(res);
@@ -3328,29 +3326,29 @@ gentype &RKHSVector::operator()(gentype &res, const SparseVector<gentype> &xx) c
     if ( N() && ( m() == 1 ) )
     {
         gentype zerobias;
-        vecInfo xxinfo;
+        vecInfo xxpinfo;
 
-        spKern.getvecInfo(xxinfo,xx);
+        spKern.getvecInfo(xxpinfo,xxp);
 
         setzero(zerobias);
 
-        spKern.K1(res,xx,xxinfo,zerobias);
+        spKern.K1(res,xxp,xxpinfo,zerobias);
     }
 
     else if ( N() && ( m() == 2 ) )
     {
         int i;
         gentype tmp,zerobias;
-        vecInfo xxinfo;
+        vecInfo xxpinfo;
 
-        spKern.getvecInfo(xxinfo,xx);
+        spKern.getvecInfo(xxpinfo,xxp);
 
         setzero(tmp);
         setzero(zerobias);
 
         for ( i = 0 ; i < N() ; ++i )
         {
-            spKern.K2(tmp,x(i),xx,xinfo(i),xxinfo,zerobias);
+            spKern.K2(tmp,x(i),xxp,xinfo(i),xxpinfo,zerobias);
 
             rightmult(al(i,0),tmp);
 
@@ -3362,9 +3360,9 @@ gentype &RKHSVector::operator()(gentype &res, const SparseVector<gentype> &xx) c
     {
         int i,j;
         gentype tmp,zerobias;
-        vecInfo xxinfo;
+        vecInfo xxpinfo;
 
-        spKern.getvecInfo(xxinfo,xx);
+        spKern.getvecInfo(xxpinfo,xxp);
 
         setzero(tmp);
         setzero(zerobias);
@@ -3373,7 +3371,7 @@ gentype &RKHSVector::operator()(gentype &res, const SparseVector<gentype> &xx) c
         {
             for ( j = 0 ; j < N() ; ++j )
             {
-                spKern.K3(tmp,x(i),x(j),xx,xinfo(i),xinfo(j),xxinfo,zerobias);
+                spKern.K3(tmp,x(i),x(j),xxp,xinfo(i),xinfo(j),xxpinfo,zerobias);
 
                 rightmult(al(i,0),tmp);
                 rightmult(al(j,1),tmp);
@@ -3387,9 +3385,9 @@ gentype &RKHSVector::operator()(gentype &res, const SparseVector<gentype> &xx) c
     {
         int i,j,k;
         gentype tmp,zerobias;
-        vecInfo xxinfo;
+        vecInfo xxpinfo;
 
-        spKern.getvecInfo(xxinfo,xx);
+        spKern.getvecInfo(xxpinfo,xxp);
 
         setzero(tmp);
         setzero(zerobias);
@@ -3400,7 +3398,7 @@ gentype &RKHSVector::operator()(gentype &res, const SparseVector<gentype> &xx) c
             {
                 for ( k = 0 ; k < N() ; ++k )
                 {
-                    spKern.K4(tmp,x(i),x(j),x(k),xx,xinfo(i),xinfo(j),xinfo(k),xxinfo,zerobias);
+                    spKern.K4(tmp,x(i),x(j),x(k),xxp,xinfo(i),xinfo(j),xinfo(k),xxpinfo,zerobias);
 
                     rightmult(al(i,0),tmp);
                     rightmult(al(j,1),tmp);
@@ -3417,9 +3415,9 @@ gentype &RKHSVector::operator()(gentype &res, const SparseVector<gentype> &xx) c
         Vector<int> i(m());
         int j;
         gentype tmp,zerobias;
-        vecInfo xxinfo;
+        vecInfo xxpinfo;
 
-        spKern.getvecInfo(xxinfo,xx);
+        spKern.getvecInfo(xxpinfo,xxp);
 
         setzero(tmp);
         setzero(zerobias);
@@ -3432,8 +3430,8 @@ gentype &RKHSVector::operator()(gentype &res, const SparseVector<gentype> &xx) c
         Vector<const vecInfo *> xxxinfo;
 
         i("&",m()-1)       = -1;
-        xxx("&",m()-1)     = &xx;
-        xxxinfo("&",m()-1) = &xxinfo;
+        xxx("&",m()-1)     = &xxp;
+        xxxinfo("&",m()-1) = &xxpinfo;
 
         while ( !isdone )
         {

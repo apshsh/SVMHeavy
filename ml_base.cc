@@ -7741,7 +7741,7 @@ tryagain:
                     double ub;
                     int steps;
 
-                    if ( ( j == -1 ) && ( kdim > 1 ) && !(kernel.cWeight(i).isNomConst) )
+                    if ( ( j == -1 ) && ( kdim > 1 ) && !(kernel.cWeight(i).isNomConst) && i && ( kernel.isSplit(i-1) != 1 ) )
                     {
                         lb    = 0.1;
                         ub    = 3;
@@ -7803,7 +7803,7 @@ tryagain:
                         }
                     }
 
-                    else if ( ( j == 0 ) && ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 32 ) && ( kernel.cType(i) != 48 ) && !(kernel.cRealConstants(i)(j).isNomConst) )
+                    else if ( ( j == 0 ) && ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 32 ) && ( kernel.cType(i) != 48 ) && ( kernel.cType(i) != 200 ) && !(kernel.cRealConstants(i)(j).isNomConst) )
                     {
                         int xdim = xspaceDim(uu(i));
 
@@ -7877,7 +7877,7 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
                     // Fixme: currently basically do lengthscale (r0) for "normal" kernels, need to extend
                     // NB: we only want to tune one "weight" per multiplicative kernel group
 
-                    if ( ( kdim > 1 ) && ( j == -1 ) && !(kernel.cWeight(i).isNomConst) )
+                    if ( ( kdim > 1 ) && ( j == -1 ) && !(kernel.cWeight(i).isNomConst) && i && ( kernel.isSplit(i-1) != 1 ) )
                     {
                         // This is weight (linear)
 
@@ -7944,7 +7944,7 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
                         }
                     }
 
-                    else if ( ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 32 ) && ( kernel.cType(i) != 48 ) && ( j == 0 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) //&& kernel.isAdjRealConstants(j,i) )
+                    else if ( ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 32 ) && ( kernel.cType(i) != 48 ) && ( kernel.cType(i) != 200 ) && ( j == 0 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) //&& kernel.isAdjRealConstants(j,i) )
                     {
                         // This is length-scale, always, with the single exception of kernels 0 and 48 where lengthscale is meaningless (log)
 
@@ -8183,7 +8183,9 @@ errstream() << lb << " to " << ub << "___";
                         else if ( method == 2 ) { evalval = calcLOO(model,0,1);            }
                         else if ( method == 3 ) { evalval = calcRecall(model,0,1);         }
 
-errstream() << "[[" << evalval << "," << ffull << "]]";
+errstream() << "[[" << evalval << ",";
+printoneline(errstream(),ffull);
+errstream() << "]]";
                         if ( testisvnan(evalval) || testisinf(evalval) )
                         {
                             isgood = false;

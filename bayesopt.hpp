@@ -50,7 +50,7 @@ public:
 
     // WARNING: some documentation may be out of date.  Check code.
     //
-    // method: 0  - MO (pure exploitation, mean only minimisation).
+    // acq:    0  - MO (pure exploitation, mean only minimisation).
     //         1  - EI (expected improvement - default).
     //         2  - PI (probability of improvement).
     //         3  - GP-UCB as per Brochu (recommended GP-UCB).*
@@ -195,7 +195,7 @@ public:
     //
     // Usage eg from Kandasamy with budget 100: ./svmheavyv7.exe -L res100
     // sigma value:            -gmd 0.5/14
-    // GP-UCB method:          -gbH 3
+    // GP-UCB:                 -gbH 3
     // fidelity gridsize:      -gbfid 10
     // budget cost:            -gbfp 0.1+\(6*x*x\)
     //                         -gbfb 100
@@ -278,13 +278,13 @@ public:
     //
     //
     //
-    // Multi-recommendation: choose method == 11 (gpUCB, user defined) and
+    // Multi-recommendation: choose acq == 11 (gpUCB, user defined) and
     // betafn a vector of functions to select multi-recommendation.  Note
     // that in this case the number of start points added is s*n, where
     // s = startpoints and n = multi-recommendation batch size.
     //
     // To reference internal methods in multi-recommendation (that is, other
-    // than method 11) replace the equation with a vector (where {} indicates
+    // than acq 11) replace the equation with a vector (where {} indicates
     // an optional element):
     //
     // [ method   ]
@@ -304,7 +304,7 @@ public:
     // For multi-objective based multi-recommendation use betafn = null
     // (or [ null null ... ] for multiple rounds of multi-objective multi-rec)
 
-    int method;
+    int acq;
     int intrinbatch;
     int intrinbatchmethod;
     //int evaluse;
@@ -383,7 +383,7 @@ public:
     {
         optname = "Bayesian Optimisation";
 
-        method            = 1;
+        acq               = 1;
         intrinbatch       = 1;
         intrinbatchmethod = 0;
         //evaluse           = 0;
@@ -460,7 +460,7 @@ public:
     {
         SMBOOptions::operator=(src);
 
-        method            = src.method;
+        acq               = src.acq;
         intrinbatch       = src.intrinbatch;
         intrinbatchmethod = src.intrinbatchmethod;
         //evaluse           = src.evaluse;

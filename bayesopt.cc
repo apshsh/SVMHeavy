@@ -151,7 +151,7 @@ class fninnerinnerArg
                     const double &_qBB,
                     const double &_mig,
                     gentype &_betafn,
-                    const int &_locmethod,
+                    const int &_locacq,
                     const int &_justreturnbeta,
                     Matrix<gentype> &_covarmatrix,
                     Vector<gentype> &_meanvector,
@@ -211,7 +211,7 @@ class fninnerinnerArg
                                                 _q_BB(_qBB),
                                                 _q_mig(_mig),
                                                 _q_betafn(&_betafn),
-                                                _q_locmethod(_locmethod),
+                                                _q_locacq(_locacq),
                                                 justreturnbeta(_justreturnbeta),
                                                 covarmatrix(_covarmatrix),
                                                 meanvector(_meanvector),
@@ -280,7 +280,7 @@ class fninnerinnerArg
                                                   _q_BB(src._q_BB),
                                                   _q_mig(src._q_mig),
                                                   _q_betafn(src._q_betafn),
-                                                  _q_locmethod(src._q_locmethod),
+                                                  _q_locacq(src._q_locacq),
                                                   justreturnbeta(src.justreturnbeta),
                                                   covarmatrix(src.covarmatrix),
                                                   meanvector(src.meanvector),
@@ -355,7 +355,7 @@ class fninnerinnerArg
     double _q_BB;
     double _q_mig;
     gentype *_q_betafn;
-    int _q_locmethod;
+    int _q_locacq;
     const int &justreturnbeta;
     Matrix<gentype> &covarmatrix;
     Vector<gentype> &meanvector;
@@ -464,7 +464,7 @@ class fninnerinnerArg
     double B       = _q_BB;
     double mig     = _q_mig;
 
-    int locmethod       = ( (bbopts.cgtapprox).size() && ( iires == -1 ) ) ? 100 : _q_locmethod;
+    int locacq          = ( (bbopts.cgtapprox).size() && ( iires == -1 ) ) ? 100 : _q_locacq;
     int thisbatchsize   = _q_thisbatchsize;
     int thisbatchmethod = _q_thisbatchmethod;
     int gridi           = _q_gridi;
@@ -490,8 +490,8 @@ class fninnerinnerArg
     double beta = 0;
 
     bool epspinf = false;
-    int betasgn  = ( locmethod >= 0 ) ? 1 : -1;
-    int method   = betasgn*locmethod;
+    int betasgn  = ( locacq >= 0 ) ? 1 : -1;
+    int acq      = betasgn*locacq;
     double eps   = 0;
     double nu    = 1;
 
@@ -507,7 +507,7 @@ class fninnerinnerArg
         double d        = (double) dim;
         double dvalreal = d-(bbopts.getdimfid()); // don't include fidelity variables in this scaling: it's not really a "feature" in the usual sense
 
-        switch ( method )
+        switch ( acq )
         {
             // TS-Kand: Thompson-sampling (Kandasamy version - actually Chowdhury version, On Kernelised Multiarm Bandits)
             // Human: ask a human (unreachable, kept as placeholder)
@@ -666,7 +666,7 @@ class fninnerinnerArg
 
         else if ( isgridopt && !iscontopt && ( gridi >= 0 ) )
         {
-            if ( ( ( method != 0 ) && ( method != 12 ) && ( method != 16 ) ) || bbopts.isimphere() || PIscale )
+            if ( ( ( acq != 0 ) && ( acq != 12 ) && ( acq != 16 ) ) || bbopts.isimphere() || PIscale )
             {
                 // Model requires sigma
 
@@ -685,7 +685,7 @@ class fninnerinnerArg
 
         else
         {
-            if ( ( ( method != 0 ) && ( method != 12 ) && ( method != 16 ) ) || bbopts.isimphere() || PIscale )
+            if ( ( ( acq != 0 ) && ( acq != 12 ) && ( acq != 16 ) ) || bbopts.isimphere() || PIscale )
             {
                 // Model requires sigma.
 
@@ -693,7 +693,7 @@ class fninnerinnerArg
                 OP_sqrt(sigmay); // works elementwise on vectors
             }
 
-            else if ( ( method == 12 ) || ( method == 16 ) )
+            else if ( ( acq == 12 ) || ( acq == 16 ) )
             {
                 // We don't *use* var, but we do need to call var to ensure that the point is properly sampled!
 
@@ -956,7 +956,7 @@ class fninnerinnerArg
             //stabscore = 1/(1+exp(-(stabscore-stabThresh)/(stabscore*(1-stabscore))));
         }
 
-        if ( firstevalinseq && ( method == 1 ) )
+        if ( firstevalinseq && ( acq == 1 ) )
         {
             firstevalinseq = 0;
 
@@ -1026,7 +1026,7 @@ class fninnerinnerArg
         muy.force_double() = ((double) res); // This is done so that passthrough will apply to IMP
         sigmay.force_double() = sqrt((double) altresv);
 
-        if ( ymax.isValVector() && ( ( method == 1 ) || ( method == 2 ) ) )
+        if ( ymax.isValVector() && ( ( acq == 1 ) || ( acq == 2 ) ) )
         {
             // EI and PI require ymax, which is a function of the scalarisation itself!
             // FIXME: this is a bit of a hack really.
@@ -1048,7 +1048,7 @@ class fninnerinnerArg
         }
     }
 
-    // else - Do this part anyhow to allow for standard GP-UCB.  Method 0 does passthrough of IMP, other methods will change things around
+    // else - Do this part anyhow to allow for standard GP-UCB.  acq 0 does passthrough of IMP, other methods will change things around
     {
 //FIXME - TS-MOO
         NiceAssert( !(muy.isValVector()) );
@@ -1057,7 +1057,7 @@ class fninnerinnerArg
 //errstream() << "phantomxyz yymaxcorrect = " << yymaxcorrect << "\n";
 //errstream() << "phantomxyz gridi = " << gridi << "\n";
 
-        switch ( method )
+        switch ( acq )
         {
             case 1:  // EI - BIG ASSUMPTION: sigmay > ztol
             {
@@ -1172,7 +1172,7 @@ class fninnerinnerArg
 
             default:
             {
-                // gpUCB variants, VO and MO, default method
+                // gpUCB variants, VO and MO, default acq
 
                 double locsigmay = (double) sigmay;
                 double locmuy = (double) muy;
@@ -1279,11 +1279,11 @@ locsigmay = stabscore*stabscore*locsigmay;
             }
         }
 
-        // Method 10 aims for exploration in constraints and objective
+        // acq 10 aims for exploration in constraints and objective
 
-        if      ( method == 10  ) { res += betasgn*totalconstraintvariance; }
-        else if ( method == 100 ) { res  = betasgn*totalconstraintvariance; }
-        else                      { res *= probofvalid;                     }
+        if      ( acq == 10  ) { res += betasgn*totalconstraintvariance; }
+        else if ( acq == 100 ) { res  = betasgn*totalconstraintvariance; }
+        else                   { res *= probofvalid;                     }
     }
 
     // =======================================================================
@@ -2033,154 +2033,188 @@ void SparsenearToNonsparse(Vector<double > &dest, const SparseVector<double > &s
 
 void SparsenearToSparsenonnear(SparseVector<gentype> &dest, const SparseVector<gentype> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j) = src(j);            }
-        else                  { dest("&",j) = src.n(j-dimfid,1); }
+        if ( j < dim-dimfid ) { dest("&",j) = src(j);                  }
+        else                  { dest("&",j) = src.n(j-(dim-dimfid),1); }
     }
 }
 
 void SparsenearToSparsenonnear(SparseVector<double> &dest, const SparseVector<gentype> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j) = (double) src(j);            }
-        else                  { dest("&",j) = (double) src.n(j-dimfid,1); }
+        if ( j < dim-dimfid ) { dest("&",j) = (double) src(j);                  }
+        else                  { dest("&",j) = (double) src.n(j-(dim-dimfid),1); }
     }
 }
 
 void SparsenearToSparsenonnear(SparseVector<gentype> &dest, const SparseVector<double> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { if ( testisvnan(src(j))            ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src(j);            } }
-        else                  { if ( testisvnan(src.n(j-dimfid,1)) ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src.n(j-dimfid,1); } }
+        if ( j < dim-dimfid ) { if ( testisvnan(src(j))                  ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src(j);                  } }
+        else                  { if ( testisvnan(src.n(j-(dim-dimfid),1)) ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src.n(j-(dim-dimfid),1); } }
     }
 }
 
 void SparsenearToSparsenonnear(SparseVector<double> &dest, const SparseVector<double> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j) = src(j);            }
-        else                  { dest("&",j) = src.n(j-dimfid,1); }
+        if ( j < dim-dimfid ) { dest("&",j) = src(j);                  }
+        else                  { dest("&",j) = src.n(j-(dim-dimfid),1); }
     }
 }
 
 
 void SparsenearToNonsparse(Vector<gentype> &dest, const SparseVector<gentype> &src, int dim, int dimfid)
 {
+    dest.resize(dim);
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j) = src(j);            }
-        else                  { dest("&",j) = src.n(j-dimfid,1); }
+        if ( j < dim-dimfid ) { dest("&",j) = src(j);                  }
+        else                  { dest("&",j) = src.n(j-(dim-dimfid),1); }
     }
 }
 
 void SparsenearToNonsparse(Vector<double> &dest, const SparseVector<gentype> &src, int dim, int dimfid)
 {
+    dest.resize(dim);
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j) = (double) src(j);            }
-        else                  { dest("&",j) = (double) src.n(j-dimfid,1); }
+        if ( j < dim-dimfid ) { dest("&",j) = (double) src(j);                  }
+        else                  { dest("&",j) = (double) src.n(j-(dim-dimfid),1); }
     }
 }
 
 void SparsenearToNonsparse(Vector<gentype> &dest, const SparseVector<double> &src, int dim, int dimfid)
 {
+    dest.resize(dim);
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { if ( testisvnan(src(j))            ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src(j);            } }
-        else                  { if ( testisvnan(src.n(j-dimfid,1)) ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src.n(j-dimfid,1); } }
+        if ( j < dim-dimfid ) { if ( testisvnan(src(j))                  ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src(j);                  } }
+        else                  { if ( testisvnan(src.n(j-(dim-dimfid),1)) ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src.n(j-(dim-dimfid),1); } }
     }
 }
 
 void SparsenearToNonsparse(Vector<double> &dest, const SparseVector<double> &src, int dim, int dimfid)
 {
+    dest.resize(dim);
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j) = src(j);            }
-        else                  { dest("&",j) = src.n(j-dimfid,1); }
+        if ( j < dim-dimfid ) { dest("&",j) = src(j);                  }
+        else                  { dest("&",j) = src.n(j-(dim-dimfid),1); }
     }
 }
 
 
 void SparsenonnearToSparsenear(SparseVector<gentype> &dest, const SparseVector<gentype> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j)            = src(j); }
-        else                  { dest.n("&",j-dimfid,1) = src(j); }
+        if ( j < dim-dimfid ) { dest("&",j)                  = src(j); }
+        else                  { dest.n("&",j-(dim-dimfid),1) = src(j); }
     }
 }
 
 void SparsenonnearToSparsenear(SparseVector<double> &dest, const SparseVector<gentype> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j)            = (double) src(j); }
-        else                  { dest.n("&",j-dimfid,1) = (double) src(j); }
+        if ( j < dim-dimfid ) { dest("&",j)                  = (double) src(j); }
+        else                  { dest.n("&",j-(dim-dimfid),1) = (double) src(j); }
     }
 }
 
 void SparsenonnearToSparsenear(SparseVector<gentype> &dest, const SparseVector<double> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { if ( testisvnan(src(j)) ) { dest("&",j)            = nullgentype(); } else { dest("&",j).force_double()            = src(j); } }
-        else                  { if ( testisvnan(src(j)) ) { dest.n("&",j-dimfid,1) = nullgentype(); } else { dest.n("&",j-dimfid,1).force_double() = src(j); } }
+        if ( j < dim-dimfid ) { if ( testisvnan(src(j)) ) { dest("&",j)                  = nullgentype(); } else { dest("&",j).force_double()                  = src(j); } }
+        else                  { if ( testisvnan(src(j)) ) { dest.n("&",j-(dim-dimfid),1) = nullgentype(); } else { dest.n("&",j-(dim-dimfid),1).force_double() = src(j); } }
     }
 }
 
 void SparsenonnearToSparsenear(SparseVector<double> &dest, const SparseVector<double> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j)            = src(j); }
-        else                  { dest.n("&",j-dimfid,1) = src(j); }
+        if ( j < dim-dimfid ) { dest("&",j)                  = src(j); }
+        else                  { dest.n("&",j-(dim-dimfid),1) = src(j); }
     }
 }
 
 
 void NonsparseToSparsenear(SparseVector<gentype> &dest, const Vector<gentype> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j)            = src(j); }
-        else                  { dest.n("&",j-dimfid,1) = src(j); }
+        if ( j < dim-dimfid ) { dest("&",j)                  = src(j); }
+        else                  { dest.n("&",j-(dim-dimfid),1) = src(j); }
     }
 }
 
 void NonsparseToSparsenear(SparseVector<double> &dest, const Vector<gentype> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j)            = (double) src(j); }
-        else                  { dest.n("&",j-dimfid,1) = (double) src(j); }
+        if ( j < dim-dimfid ) { dest("&",j)                  = (double) src(j); }
+        else                  { dest.n("&",j-(dim-dimfid),1) = (double) src(j); }
     }
 }
 
 void NonsparseToSparsenear(SparseVector<gentype> &dest, const Vector<double> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { if ( testisvnan(src(j)) ) { dest("&",j)            = nullgentype(); } else { dest("&",j).force_double()            = src(j); } }
-        else                  { if ( testisvnan(src(j)) ) { dest.n("&",j-dimfid,1) = nullgentype(); } else { dest.n("&",j-dimfid,1).force_double() = src(j); } }
+        if ( j < dim-dimfid ) { if ( testisvnan(src(j)) ) { dest("&",j)                  = nullgentype(); } else { dest("&",j).force_double()                  = src(j); } }
+        else                  { if ( testisvnan(src(j)) ) { dest.n("&",j-(dim-dimfid),1) = nullgentype(); } else { dest.n("&",j-(dim-dimfid),1).force_double() = src(j); } }
     }
 }
 
 void NonsparseToSparsenear(SparseVector<double> &dest, const Vector<double> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { dest("&",j)            = src(j); }
-        else                  { dest.n("&",j-dimfid,1) = src(j); }
+        if ( j < dim-dimfid ) { dest("&",j)                  = src(j); }
+        else                  { dest.n("&",j-(dim-dimfid),1) = src(j); }
     }
 }
 
 
 void NonsparseToSparsenonnear(SparseVector<gentype> &dest, const Vector<gentype> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
         if ( j < dim-dimfid ) { dest("&",j) = src(j); }
@@ -2190,6 +2224,8 @@ void NonsparseToSparsenonnear(SparseVector<gentype> &dest, const Vector<gentype>
 
 void NonsparseToSparsenonnear(SparseVector<double> &dest, const Vector<gentype> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
         if ( j < dim-dimfid ) { dest("&",j) = (double) src(j); }
@@ -2199,6 +2235,8 @@ void NonsparseToSparsenonnear(SparseVector<double> &dest, const Vector<gentype> 
 
 void NonsparseToSparsenonnear(SparseVector<gentype> &dest, const Vector<double> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
         if ( j < dim-dimfid ) { if ( testisvnan(src(j)) ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src(j); } }
@@ -2208,6 +2246,8 @@ void NonsparseToSparsenonnear(SparseVector<gentype> &dest, const Vector<double> 
 
 void NonsparseToSparsenonnear(SparseVector<double> &dest, const Vector<double> &src, int dim, int dimfid)
 {
+    dest.zero();
+
     for ( int j = 0 ; j < dim ; ++j )
     {
         if ( j < dim-dimfid ) { dest("&",j) = src(j); }
@@ -2351,7 +2391,7 @@ int bayesOpt(int dim,
     //
     // =======================================================================
 
-    int recBatchSize = ( ( bopts.method == 11 ) && (bopts.betafn).isValVector() ) ? (bopts.betafn).size() : 1;
+    int recBatchSize = ( ( bopts.acq == 11 ) && (bopts.betafn).isValVector() ) ? (bopts.betafn).size() : 1;
 
     int numRecs = 0;
     int newRecs = 0;
@@ -2719,6 +2759,8 @@ int bayesOpt(int dim,
 
                 isfullfid = true;
 
+                xxb("&",k).zero();
+
                 for ( j = 0 ; j < dim ; ++j )
                 {
                     if ( j < dim-bopts.getdimfid() )
@@ -2917,9 +2959,15 @@ int bayesOpt(int dim,
                             actfidel("&",0)("&",jij) = xxb(k).n(jij,1);
                         }
 
-                        fidtotcost += ( ( fidcost >= 0 ) ? fidcost : ( (double) bopts.fidpenalty(actfidel) ) );
+                        double locfidpenalty = (double) bopts.fidpenalty(actfidel);
+
+                        fidtotcost += ( ( fidcost >= 0 ) ? fidcost : locfidpenalty );
                         varscale    = (double) bopts.fidvar(actfidel);
                         firstinset = false;
+//errstream() << "fidpenalty: " << bopts.fidpenalty << "\n";
+//errstream() << "locfidpenalty: " << locfidpenalty << "\n";
+//errstream() << "fidtotcost: " << fidtotcost << "\n";
+//errstream() << "allocated budget: " << (bopts.fidbudget)/10 << "\n";
                     }
 
                     // ===========================================================
@@ -3441,7 +3489,7 @@ int bayesOpt(int dim,
                                B,
                                mig,
                                (bopts.betafn),
-                               (bopts.method),
+                               (bopts.acq),
                                justreturnbeta,
                                covarmatrix,
                                meanvector,
@@ -3540,8 +3588,8 @@ int bayesOpt(int dim,
     // =======================================================================
 
     errstream() << "Entering main optimisation loop.\n";
-    if ( bopts.method != 11 ) { outstream() << "***(method " << bopts.method << ")\n"; }
-    else                      { outstream() << "***(method " << bopts.method << "," << bopts.betafn << ")\n"; }
+    if ( bopts.acq != 11 ) { outstream() << "***(acq " << bopts.acq << ")\n"; }
+    else                   { outstream() << "***(acq " << bopts.acq << "," << bopts.betafn << ")\n"; }
 
     if ( algseed >= 0 )
     {
@@ -3624,9 +3672,9 @@ int bayesOpt(int dim,
             ismultitargrec      = 0;
             currintrinbatchsize = bopts.intrinbatch;
 
-            int locmethod = bopts.method;
+            int locacq = bopts.acq;
 
-            if ( ( bopts.method == 11 ) && (bopts.betafn).isValVector() )
+            if ( ( bopts.acq == 11 ) && (bopts.betafn).isValVector() )
             {
                 if ( ((bopts.betafn)(k)).isValVector() )
                 {
@@ -3649,7 +3697,7 @@ int bayesOpt(int dim,
 
                     // Note use of cast_ here (without finalisation) just in case any of these are functions.
 
-                    fnarginner._q_locmethod       = ((bopts.betafn)(k)(0)).cast_int(0);
+                    fnarginner._q_locacq          = ((bopts.betafn)(k)(0)).cast_int(0);
                     fnarginner._q_p               = ( ( ((bopts.betafn)(k)).size() >= 2 ) && !(((bopts.betafn)(k)(1 )).isValVector()) ) ?  (((bopts.betafn)(k)(1 )).cast_double(0)) :  (bopts.p);
                     fnarginner._q_betafn          = ( ( ((bopts.betafn)(k)).size() >= 3 ) && !(((bopts.betafn)(k)(2 )).isValVector()) ) ? &locbetafn                                : &(bopts.betafn);
                     fnarginner._q_modD            = ( ( ((bopts.betafn)(k)).size() >= 4 ) && !(((bopts.betafn)(k)(3 )).isValVector()) ) ?  (((bopts.betafn)(k)(3 )).cast_double(0)) :  bopts.modD;
@@ -3668,7 +3716,7 @@ int bayesOpt(int dim,
                         currintrinbatchsize = (int) ((bopts.betafn)(k)(9));
                     }
 
-                    locmethod = fnarginner._q_locmethod;
+                    locacq = fnarginner._q_locacq;
                 }
 
                 else
@@ -3680,7 +3728,7 @@ int bayesOpt(int dim,
                     // Single explicit strategy (beta function non-null)
                     // =======================================================
 
-                    fnarginner._q_locmethod       = (bopts.method);
+                    fnarginner._q_locacq          = (bopts.acq);
                     fnarginner._q_p               = (bopts.p);
                     fnarginner._q_betafn          = &(bopts.betafn);
                     fnarginner._q_modD            = bopts.modD;
@@ -3778,11 +3826,11 @@ int bayesOpt(int dim,
                     }
                 }
 
-                if ( ( locmethod == 12 ) || ( locmethod == 16 ) )
+                if ( ( locacq == 12 ) || ( locacq == 16 ) )
                 {
                     double R         = bopts.R;
                     double delta     = bopts.delta;
-                    double sampScale = ( locmethod == 12 ) ? ( B + (R*sqrt(2*(mig+1+log(2/delta)))) ) : 1.0;
+                    double sampScale = ( locacq == 12 ) ? ( B + (R*sqrt(2*(mig+1+log(2/delta)))) ) : 1.0;
 
                     bopts.model_sample(xmin,xmax,sampScale*sampScale);
                 }
@@ -3809,7 +3857,7 @@ int bayesOpt(int dim,
                     retVector<double> tmpvb;
                     retVector<double> tmpvc;
 
-                    if ( locmethod == 18 )
+                    if ( locacq == 18 )
                     {
                         // Fill with nulls/nans to indicate "human expert to fill"
 
@@ -3866,7 +3914,7 @@ int bayesOpt(int dim,
                     retVector<double> tmpvb;
                     retVector<double> tmpvc;
 
-                    if ( locmethod == 18 )
+                    if ( locacq == 18 )
                     {
                         // Fill with nulls/nans to indicate "human expert to fill"
 
@@ -3919,7 +3967,7 @@ int bayesOpt(int dim,
                     printrec = true;
                 }
 
-                if ( ( locmethod == 12 ) || ( locmethod == 16 ) )
+                if ( ( locacq == 12 ) || ( locacq == 16 ) )
                 {
                     bopts.model_unsample();
                 }
@@ -3932,7 +3980,7 @@ int bayesOpt(int dim,
 
                 // Put fidelity bounds back how they should be
 
-                if ( ( bopts.getdimfid() > 0 ) && ( locmethod != 18 ) )
+                if ( ( bopts.getdimfid() > 0 ) && ( locacq != 18 ) )
                 {
                     for ( int jij = 0 ; jij < bopts.getdimfid() ; jij++ )
                     {
@@ -4284,7 +4332,7 @@ int bayesOpt(int dim,
 
                 locbopts.moodim            = recBatchSize;
                 locbopts.impmeasu          = &(static_cast<IMP_Generic &>(locimpmeasu));
-                locbopts.method            = 1;
+                locbopts.acq               = 1;
                 locbopts.intrinbatch       = 1;
                 locbopts.intrinbatchmethod = 0;
                 locbopts.startpoints       = bopts.startpointsmultiobj;
@@ -5087,7 +5135,7 @@ int bayesOpt(int dim,
 
     xinf = nullptr;
 
-    NiceAssert( ires >= 0 );
+//    NiceAssert( ires >= 0 );
 
     // =======================================================================
     // Strip out unused pre-cached vectors
@@ -5129,7 +5177,16 @@ int bayesOpt(int dim,
     // Record minimum
     // =======================================================================
 
-    bopts.model_xcopy(xres,ires);
+    if ( ires == -1 )
+    {
+        fres.makeNull();
+        xres.resize(0);
+    }
+
+    else
+    {
+        bopts.model_xcopy(xres,ires);
+    }
     // This is OK.  The only case where xres is not locally stored is gridopt,
     // and in this case we have asserted !isXconvertNonTrivial(), so x and
     // x convert are the same and backconvert will succeed.

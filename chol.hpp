@@ -2966,7 +2966,7 @@ int Chol<T>::xadd(int ix, double Dix, const Matrix<T> &Gp, const Matrix<T> &Gn, 
 
         retVector<T> tmpva;
         retVector<T> tmpvb;
-        retVector<double> tmpvcc;
+        retVector<double> tmpvccc;
         retMatrix<T> tmpma;
 
 	if ( ix )
@@ -3005,7 +3005,7 @@ int Chol<T>::xadd(int ix, double Dix, const Matrix<T> &Gp, const Matrix<T> &Gn, 
 		{
 		    // lb = inv(Sa).inv(Da).gb
 
-                    g("&",0,1,ix-1,tmpva) *= d(0,1,ix-1,tmpvcc);
+                    g("&",0,1,ix-1,tmpva) *= d(0,1,ix-1,tmpvccc);
 
                     // Write lb to L matrix
 
@@ -3013,8 +3013,6 @@ int Chol<T>::xadd(int ix, double Dix, const Matrix<T> &Gp, const Matrix<T> &Gn, 
                     (g("&",0,1,ix-1,tmpva)).conj();
 		    L("&",ix,0,1,ix-1,tmpva) = g(0,1,ix-1,tmpvb);
 		}
-
-                retVector<double> tmpvcc;
 
 		for ( j = ix ; j < dsize-dnbad ; ++j )
 		{
@@ -3080,7 +3078,7 @@ int Chol<T>::xadd(int ix, double Dix, const Matrix<T> &Gp, const Matrix<T> &Gn, 
         // ld = gd/(dd.sd)
         // le = le/(dd.sd)
 
-        g("&",0,1,ix-1,tmpva) *= d(0,1,ix-1,tmpvcc);
+        g("&",0,1,ix-1,tmpva) *= d(0,1,ix-1,tmpvccc);
         g("&",ix,1,dsize-1,tmpva) *= d.v(ix);
 
 	// Set row/column lb,ld,le in L:
@@ -3272,8 +3270,6 @@ inline int Chol<double>::xadd(int ix, double Dix, const Matrix<double> &Gp, cons
 		    L("&",0,1,ix-1,ix,tmpma,"&") = g(0,1,ix-1,tmpva);
 		    L("&",ix,0,1,ix-1,tmpva,tmpvaa) = g(0,1,ix-1,tmpvb);
 		}
-
-                retVector<double> tmpvcc;
 
 		for ( j = ix ; j < dsize-dnbad ; ++j )
 		{

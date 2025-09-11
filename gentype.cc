@@ -221,7 +221,8 @@ std::istream &streamItIn(std::istream &input, eqninfoblock &dest, int processxyz
 std::istream &operator>>(std::istream &input, eqninfoblock &dest)                   { (void) dest;                      NiceThrow("Cant operator>> to eqninfoblock"); return input; }
 std::istream &streamItIn(std::istream &input, eqninfoblock &dest, int processxyzvw) { (void) dest; (void) processxyzvw; NiceThrow("Cant streamItIn to eqninfoblock"); return input; }
 
-STREAMINDUMMY(const eqninfoblock *); STREAMINDUMMY(eqninfoblock *);
+STREAMINDUMMY(const eqninfoblock *)
+STREAMINDUMMY(eqninfoblock *)
 
 
 
@@ -712,6 +713,8 @@ std::ostream &operator<<(std::ostream &output, const gentype &src )
     return output;
 }
 
+
+
 std::istream &streamItIn(std::istream &input, gentype &dest, int processxyzvw)
 {
     char tt;
@@ -751,8 +754,6 @@ std::istream &streamItIn(std::istream &input, gentype &dest, int processxyzvw)
     if ( input.peek() == '@' )
     {
         dest.scalarfn_setisscalarfn(1);
-
-        char tt;
 
         input.get(tt);
         NiceAssert( tt == '@' );
@@ -4543,8 +4544,7 @@ int gentype::loctoString(std::string &res, std::string &errstr) const
 	std::string closebracketis = ")";
 
         int qw = fnnameind;
-        int fnnameind = qw; // yep, you read that right.
-                            // shadow so we can overwrite sans changing
+        int fnnameind = qw; // yep, you read that right (deliberate shadow so we can overwrite sans changing)
 
     // 	            _ left to right                              x_i   -> derefv(x,i)
     // 	            - + ~ left to right                          -a    -> neg(a)
@@ -5235,10 +5235,10 @@ int gentype::realDeriv(const gentype &ix, const gentype &jx)
                 // vectors in limited cases (norms and such).
 
                 const static gentype tempres("kronDelta(x,y)*kronDelta(z,v)");
-                gentype res(tempres);
+                gentype rres(tempres);
 
-                res.substitute((*eqnargs)(0),ix,(*eqnargs)(1),jx);
-                fastcopy(res,1);
+                rres.substitute((*eqnargs)(0),ix,(*eqnargs)(1),jx);
+                fastcopy(rres,1);
                 //(*this) = res((*eqnargs)(0),ix,(*eqnargs)(1),jx);
 	    }
 
@@ -7211,9 +7211,9 @@ int gentype::makeEqnInternal(const std::string &src)
 
         if ( res != (*thisfninfo).numargs )
         {
-            std::string locfnname(getfnname(fnnameind));
+            std::string llocfnname(getfnname(fnnameind));
 
-            makeError("Syntax error: wrong number of arguments for "+locfnname+".");
+            makeError("Syntax error: wrong number of arguments for "+llocfnname+".");
 
             return -1;
         }
@@ -20919,16 +20919,16 @@ bool isopstartkey(int x)
                                                                                                                                       \
         SparseVector<SparseVector<gentype> > temp;                                                                                    \
                                                                                                                                       \
-        int iii = 0;                                                                                                                  \
+        int iiii = 0;                                                                                                                  \
                                                                                                                                       \
         while ( ( calcNest.XYdata.size() > 2 ) && isophigh(newoptype,calcNest.optype.accessTop()) )                                   \
         {                                                                                                                             \
             tempstring  = calcNest.optype.accessTop();                                                                                \
             tempstring += "var(100,";                                                                                                 \
-            tempstring += std::to_string(iii);                                                                                        \
+            tempstring += std::to_string(iiii);                                                                                        \
             tempstring += ")";                                                                                                        \
                                                                                                                                       \
-            temp("&",100)("&",iii) = GETX;                                                                                            \
+            temp("&",100)("&",iiii) = GETX;                                                                                            \
                                                                                                                                       \
             evalstring = tempstring+evalstring;                                                                                       \
                                                                                                                                       \
@@ -20937,14 +20937,14 @@ bool isopstartkey(int x)
             calcNest.fntype.pop();                                                                                                    \
             calcNest.fnname.pop();                                                                                                    \
                                                                                                                                       \
-            iii++;                                                                                                                    \
+            iiii++;                                                                                                                    \
         }                                                                                                                             \
                                                                                                                                       \
         tempstring  = "var(100,";                                                                                                     \
-        tempstring += std::to_string(iii);                                                                                            \
+        tempstring += std::to_string(iiii);                                                                                            \
         tempstring += ")";                                                                                                            \
                                                                                                                                       \
-        temp("&",100)("&",iii) = GETX;                                                                                                \
+        temp("&",100)("&",iiii) = GETX;                                                                                                \
                                                                                                                                       \
         evalstring = tempstring+evalstring;                                                                                           \
                                                                                                                                       \
@@ -21086,7 +21086,7 @@ bool isopstartkey(int x)
                                                                                                                                       \
         SparseVector<SparseVector<gentype> > temp;                                                                                    \
                                                                                                                                       \
-        int iii = 0;                                                                                                                  \
+        int iiii = 0;                                                                                                                  \
                                                                                                                                       \
         if ( calcNest.isK && !calcNest.argKset )                                                                                      \
         {                                                                                                                             \
@@ -21112,10 +21112,10 @@ bool isopstartkey(int x)
         {                                                                                                                             \
             tempstring  = calcNest.optype.accessTop();                                                                                \
             tempstring += "var(100,";                                                                                                 \
-            tempstring += std::to_string(iii);                                                                                        \
+            tempstring += std::to_string(iiii);                                                                                        \
             tempstring += ")";                                                                                                        \
                                                                                                                                       \
-            temp("&",100)("&",iii) = GETX;                                                                                            \
+            temp("&",100)("&",iiii) = GETX;                                                                                            \
                                                                                                                                       \
             evalstring = tempstring+evalstring;                                                                                       \
                                                                                                                                       \
@@ -21124,14 +21124,14 @@ bool isopstartkey(int x)
             calcNest.fntype.pop();                                                                                                    \
             calcNest.fnname.pop();                                                                                                    \
                                                                                                                                       \
-            iii++;                                                                                                                    \
+            iiii++;                                                                                                                    \
         }                                                                                                                             \
                                                                                                                                       \
         tempstring  = "var(100,";                                                                                                     \
-        tempstring += std::to_string(iii);                                                                                            \
+        tempstring += std::to_string(iiii);                                                                                            \
         tempstring += ")";                                                                                                            \
                                                                                                                                       \
-        temp("&",100)("&",iii) = GETX;                                                                                                \
+        temp("&",100)("&",iiii) = GETX;                                                                                                \
                                                                                                                                       \
         evalstring = tempstring+evalstring;                                                                                           \
                                                                                                                                       \
@@ -23794,11 +23794,11 @@ void intercalc(std::ostream &, std::istream &)
         //else if ( ( gridvert == 1 ) && ( gridhoriz > 2 ) && ( page == TESTFUNCIV__PAGE ) && isinv && ( keypress == ' ' ) )
         else if ( keypress == ' ' )
         {
-            int ii,jj,kk;
+            int iip,jj,kk;
 
-            time_used start_time = TIMECALL;
-            time_used curr_time = start_time;
-            double timetakensec;
+            time_used pstart_time = TIMECALL;
+            time_used pcurr_time = pstart_time;
+            double ptimetakensec;
             int usleeptime = 100000; //100000;
 
             keypress = svm_getch_nonblock();
@@ -23807,22 +23807,22 @@ void intercalc(std::ostream &, std::istream &)
             {
                 keypress = svm_getch_nonblock();
 
-                ii = static_cast<int>(rand()%calcwidth); //(datawidth+20);
+                iip = static_cast<int>(rand()%calcwidth); //(datawidth+20);
                 jj = static_cast<int>(rand()%calcheight); //dataheight;
                 kk = static_cast<int>(rand()%(126-32));
 
-                svmcurs(jj,ii);
+                svmcurs(jj,iip);
                 outstreamunlogged() << ((char) (kk+32));
 
-                curr_time = TIMECALL;
-                timetakensec = TIMEDIFFSEC(curr_time,start_time);
+                pcurr_time = TIMECALL;
+                ptimetakensec = TIMEDIFFSEC(pcurr_time,pstart_time);
 
-                if ( timetakensec < ((double) usleeptime)/1000000 )
+                if ( ptimetakensec < ((double) usleeptime)/1000000 )
                 {
-                    svm_usleep((int) std::round(((double) usleeptime)-(1000000*((double) timetakensec))));
+                    svm_usleep((int) std::round(((double) usleeptime)-(1000000*((double) ptimetakensec))));
                 }
 
-                start_time = TIMECALL;
+                pstart_time = TIMECALL;
             }
 
             refresh = 1;
@@ -24125,7 +24125,7 @@ int disableAltContent(bool justquery, int actuallyForceEnable)
     return disableAltCont;
 }
 
-; // saves memory by turning off altcontent, at the cost of speed.  Use 1 to force enable instead
+// saves memory by turning off altcontent, at the cost of speed.  Use 1 to force enable instead
 
 template <> gentype &oneProduct(gentype &gres, const SparseVector<gentype> &a)
 {

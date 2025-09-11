@@ -200,9 +200,9 @@ int evalTestFn(int fnnum, int n, int M, Vector<double> &res, const Vector<double
             x("&",0) *= 0.5;
             x("&",0) += 0.5;
 
-            retVector<double> tmpva;
+            retVector<double> tmpvaa;
 
-            x("&",1,1,M-1,tmpva) *= 5.0;
+            x("&",1,1,M-1,tmpvaa) *= 5.0;
 
             // where: z = [ xM xM+1 ... xn-1 ] in [-5,5]
             // g(z) = sum_i (zi-0.5)^2 <= ((n-M+1)*5.5)^2

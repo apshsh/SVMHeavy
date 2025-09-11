@@ -348,10 +348,10 @@ inline void qswap(std::complex<double> &a, std::complex<double> &b)
     std::complex<double> x = a; a = b; b = x;
 }
 
-COMMONOPDEFTEMP(std::vector<T>);
-COMMONOPDEFPT(std::string);
-COMMONOPDEFPT(std::complex<double>);
-COMMONOPDEFPT(double);
+COMMONOPDEFTEMP(std::vector<T>)
+COMMONOPDEFPT(std::string)
+COMMONOPDEFPT(std::complex<double>)
+COMMONOPDEFPT(double)
 
 
 

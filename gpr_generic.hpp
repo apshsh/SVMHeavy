@@ -106,7 +106,7 @@ public:
     virtual const Vector<int>             &d          (void) const override { return xd;           }
     virtual const Vector<double>          &Cweight    (void) const override { return dCweight;     }
     virtual const Vector<double>          &sigmaweight(void) const override { return dsigmaweight; }
-    virtual const Vector<double>          &epsweight  (void) const override { static thread_local Vector<double> xepsweight; xepsweight.resize(N()) = 1.0; return xepsweight;   }
+    virtual const Vector<double>          &epsweight  (void) const override { static thread_local Vector<double> xxepsweight; xxepsweight.resize(N()) = 1.0; return xxepsweight;   }
 
     virtual const gentype        &y (int i) const override { return ( i >= 0 ) ? y ()(i) : getQconst().y (i); }
     virtual       double          yR(int i) const override { return ( i >= 0 ) ? yR()(i) : getQconst().yR(i); }
