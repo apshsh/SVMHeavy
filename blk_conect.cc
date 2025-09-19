@@ -83,8 +83,10 @@ void BLK_Conect::fillCache(int Ns, int Ne)
     return;
 }
 
-double BLK_Conect::tuneKernel(int method, double xwidth, int, int, const tkBounds *)
+double BLK_Conect::tuneKernel(int method, double xwidth, int, int, const tkBounds *, paraDef *probbnd)
 {
+    StrucAssert(!probbnd);
+
     int ii;
     double res = 0;
 

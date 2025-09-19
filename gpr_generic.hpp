@@ -115,7 +115,8 @@ public:
 
     // Kernel tuning - you need this to jump straight to base because this needs to call GPR training (for inequalities at least), *NOT* LSV training
 
-    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr) override { return ML_Base::tuneKernel(method,xwidth,tuneK,tuneP,tunebounds); }
+    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr, paraDef *probbnd = nullptr) override { return ML_Base::tuneKernel(method,xwidth,tuneK,tuneP,tunebounds,probbnd); }
+    virtual double evalkernel(int method, const paraDef &probbnd, const Vector<double> &ffull) override { return ML_Base::evalkernel(method,probbnd,ffull); }
 
     // Training set modification:
 

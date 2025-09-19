@@ -353,7 +353,8 @@ public:
     //
     //
     // inf_dist: calculates (4) in Kamdasamy "Bayesian Optimisation with Continuous Approximations"
-    //           zeta(z) = sqrt( 1 - (K([x z],[x 1])/K(x,x)) )
+    //           zeta(z) = sqrt( 1 - (K([x z],[x 1])/K(x,x)) ). Sums over objective and constraint models
+    // inf_var:  variance, summed over objective and constraint models
     //
     // Assumptions: - the kernel is formed as per the paper, so the denominator in the second part
     //                effectively cancels out the "x" part of the kernel evaluation.
@@ -402,7 +403,8 @@ public:
     int model_NNCz_sigma(void)  const { return sigmaapprox.NNC(0);                  }
     int model_NNCz_cgt  (int q) const { return numcgt ? getcgtapprox(q).NNC(0) : 0; }
 
-    template <class S> double inf_dist(const SparseVector<S> &xz) const;
+    template <class S> double inf_dist(               const SparseVector<S> &xz) const;
+    template <class S> int    inf_var (gentype &resv, const SparseVector<S> &xz) const;
 
     double model_sigma(int q) const { return getmuapprox(q).sigma(); }
 
@@ -1106,6 +1108,38 @@ double SMBOOptions::inf_dist(const SparseVector<S> &xz) const
 //errstream() << "phantomxyz inf_dist calc:res " << res << "\n";
 
     return res;
+}
+
+template <class S>
+int SMBOOptions::inf_var(gentype &resv, const SparseVector<S> &xz) const
+{
+    int resi = 0;
+
+    for ( int q = 0 ; q < muapprox.size() ; ++q )
+    {
+        const ML_Base &modeltouse = getmuapprox_sample(q);
+
+        if ( isSVM(modeltouse) || isGPR(modeltouse) || isLSV(modeltouse) )
+        {
+            gentype restmp,dummy;
+            resi |= modeltouse.var(restmp,dummy,xz);
+            resv += restmp;
+        }
+    }
+
+    for ( int q = 0 ; q < numcgt ; ++q )
+    {
+        const ML_Base &modeltouse = getcgtapprox(q);
+
+        if ( isSVM(modeltouse) || isGPR(modeltouse) || isLSV(modeltouse) )
+        {
+            gentype restmp,dummy;
+            resi |= modeltouse.var(restmp,dummy,xz);
+            resv += restmp;
+        }
+    }
+
+    return resi;
 }
 
 template <class S>

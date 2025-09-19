@@ -286,10 +286,10 @@ inline T *&setconj  (T *&a) { throw("something"); return a; } \
 inline T *&setrand  (T *&a) { throw("something"); return a; } \
 inline T *&postProInnerProd(T *&a) { return a; }
 
-BOILER_PTR(GridOptions);
-BOILER_PTR(DIRectOptions);
-BOILER_PTR(NelderOptions);
-BOILER_PTR(BayesOptions);
+BOILER_PTR(GridOptions)
+BOILER_PTR(DIRectOptions)
+BOILER_PTR(NelderOptions)
+BOILER_PTR(BayesOptions)
 
 
 

@@ -2060,7 +2060,7 @@ int ML_Base::addTrainingVector(int i, const gentype &y, const SparseVector<genty
         isBasisUserVV = 1;
     }
 
-    xd.add(i);           xd("&",i)           = dval; //2;
+    x_d.add(i);          x_d("&",i)          = dval; //2;
     xCweight.add(i);     xCweight("&",i)     = nCweight;
     xCweightfuzz.add(i); xCweightfuzz("&",i) = 1.0;
     xepsweight.add(i);   xepsweight("&",i)   = nepsweight;
@@ -2149,7 +2149,7 @@ int ML_Base::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &
         isBasisUserVV = 1;
     }
 
-    xd.add(i);           xd("&",i)           = dval; //2;
+    x_d.add(i);          x_d("&",i)          = dval; //2;
     xCweight.add(i);     xCweight("&",i)     = nCweight;
     xCweightfuzz.add(i); xCweightfuzz("&",i) = 1.0;
     xepsweight.add(i);   xepsweight("&",i)   = nepsweight;
@@ -2247,7 +2247,7 @@ int ML_Base::addTrainingVector(int i, const Vector<gentype> &y, const Vector<Spa
     retVector<int> tmpvint;
     retVector<double> tmpvdbl;
 
-    xd.addpad(i,Nadd);           xd("&",i,1,i+Nadd-1,tmpvint)           = 2;
+    x_d.addpad(i,Nadd);          x_d("&",i,1,i+Nadd-1,tmpvint)          = 2;
     xCweight.addpad(i,Nadd);     xCweight("&",i,1,i+Nadd-1,tmpvdbl)     = nCweigh;
     xCweightfuzz.addpad(i,Nadd); xCweightfuzz("&",i,1,i+Nadd-1,tmpvdbl) = 1.0;
     xepsweight.addpad(i,Nadd);   xepsweight("&",i,1,i+Nadd-1,tmpvdbl)   = nepsweigh;
@@ -2348,7 +2348,7 @@ int ML_Base::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVe
     retVector<int> tmpvint;
     retVector<double> tmpvdbl;
 
-    xd.addpad(i,Nadd);           xd("&",i,1,i+Nadd-1,tmpvint)           = 2;
+    x_d.addpad(i,Nadd);          x_d("&",i,1,i+Nadd-1,tmpvint)          = 2;
     xCweight.addpad(i,Nadd);     xCweight("&",i,1,i+Nadd-1,tmpvdbl)     = nCweigh;
     xCweightfuzz.addpad(i,Nadd); xCweightfuzz("&",i,1,i+Nadd-1,tmpvdbl) = 1.0;
     xepsweight.addpad(i,Nadd);   xepsweight("&",i,1,i+Nadd-1,tmpvdbl)   = nepsweigh;
@@ -2431,7 +2431,7 @@ int ML_Base::removeTrainingVector(int i, gentype &y, SparseVector<gentype> &xx)
         isBasisUserVV = 1;
     }
 
-    xdzero -= xd(i) ? 0 : 1;
+    xdzero -= x_d(i) ? 0 : 1;
 
     if ( !isXAssumedConsistent() || !i )
     {
@@ -2467,7 +2467,7 @@ int ML_Base::removeTrainingVector(int i, gentype &y, SparseVector<gentype> &xx)
     traintang.remove(i);
     xalphaState.remove(i);
 
-    xd.remove(i);
+    x_d.remove(i);
     xCweight.remove(i);
     xCweightfuzz.remove(i);
     xepsweight.remove(i);
@@ -3276,9 +3276,9 @@ int ML_Base::scaleepsweight(double s)
 
 int ML_Base::setd(int i, int nd)
 {
-    xdzero -= xd(i) ? 0 : 1;
-    xd("&",i) = nd;
-    xdzero += xd(i) ? 0 : 1;
+    xdzero -= x_d(i) ? 0 : 1;
+    x_d("&",i) = nd;
+    xdzero += x_d(i) ? 0 : 1;
 
     return 0;
 }
@@ -3287,14 +3287,16 @@ int ML_Base::setd(const Vector<int> &i, const Vector<int> &nd)
 {
     retVector<int> tmpva;
 
-    xd("&",i,tmpva) = nd;
-
-    //if ( ML_Base::N() )
+    for ( int j = 0 ; j < i.size() ; ++j )
     {
-        for ( int j = 0 ; j < ML_Base::N() ; ++j )
-        {
-            xdzero += xd(j) ? 0 : 1;
-        }
+        xdzero -= x_d(i(j)) ? 0 : 1;
+    }
+
+    x_d("&",i,tmpva) = nd;
+
+    for ( int j = 0 ; j < i.size() ; ++j )
+    {
+        xdzero += x_d(i(j)) ? 0 : 1;
     }
 
     return 0;
@@ -3302,14 +3304,16 @@ int ML_Base::setd(const Vector<int> &i, const Vector<int> &nd)
 
 int ML_Base::setd(const Vector<int> &nd)
 {
-    xd = nd;
-
-    //if ( ML_Base::N() )
+    for ( int j = 0 ; j < ML_Base::N() ; ++j )
     {
-        for ( int j = 0 ; j < ML_Base::N() ; ++j )
-        {
-            xdzero += xd(j) ? 0 : 1;
-        }
+        xdzero -= x_d(j) ? 0 : 1;
+    }
+
+    x_d = nd;
+
+    for ( int j = 0 ; j < ML_Base::N() ; ++j )
+    {
+        xdzero += x_d(j) ? 0 : 1;
     }
 
     return 0;
@@ -3473,11 +3477,11 @@ void ML_Base::stabProbTrainingVector(double &res, int i, int p, double pnrm, int
                 {
                     xxmeanvec("&",r) = (double) ghgh(r);
 
-                    const Matrix<gentype> &ghgh = (const Matrix<gentype> &) xvarmat;
+                    const Matrix<gentype> &ghghgh = (const Matrix<gentype> &) xvarmat;
 
                     for ( s = 0 ; s < meandim ; ++s )
                     {
-                        xxvarmat("&",r,s) = (double) ghgh(r,s);
+                        xxvarmat("&",r,s) = (double) ghghgh(r,s);
                     }
                 }
 
@@ -3577,7 +3581,7 @@ std::ostream &ML_Base::printstream(std::ostream &output, int dep) const
     repPrint(output,'>',dep) << " Base training targets prior vect: " << alltraintargpV   << "\n";
     repPrint(output,'>',dep) << " Base training info:               " << traininfo        << "\n";
     repPrint(output,'>',dep) << " Base training tangles:            " << traintang        << "\n";
-    repPrint(output,'>',dep) << " Base d:                           " << xd               << "\n";
+    repPrint(output,'>',dep) << " Base d:                           " << x_d              << "\n";
     repPrint(output,'>',dep) << " Base dnz:                         " << xdzero           << "\n";
     repPrint(output,'>',dep) << " Base sigma:                       " << locsigma         << "\n";
     repPrint(output,'>',dep) << " Base learning rate:               " << loclr            << "\n";
@@ -3638,7 +3642,7 @@ std::istream &ML_Base::inputstream(std::istream &input)
     input >> dummy; input >> alltraintargpV;
     input >> dummy; input >> traininfo;
     input >> dummy; input >> traintang;
-    input >> dummy; input >> xd;
+    input >> dummy; input >> x_d;
     input >> dummy; input >> xdzero;
     input >> dummy; input >> locsigma;
     input >> dummy; input >> loclr;
@@ -3709,7 +3713,7 @@ int ML_Base::prealloc(int expectedN)
     traininfo.prealloc(expectedN);
     traintang.prealloc(expectedN);
 //FIXME    traininfop.prealloc(expectedN);
-    xd.prealloc(expectedN);
+    x_d.prealloc(expectedN);
     xCweight.prealloc(expectedN);
     xCweightfuzz.prealloc(expectedN);
     xepsweight.prealloc(expectedN);
@@ -4212,7 +4216,7 @@ void ML_Base::fastg(double &res,
     return;
 }
 
-void ML_Base::fastg(double &res, 
+void ML_Base::fastg(double &res,
                         int ia, int ib, int ic, int id,
                         const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd,
                         const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo) const
@@ -7622,25 +7626,58 @@ double ML_Base::getvalIfPresent_v(int numi, int numj, int &isgood) const
 
 
 
-double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, const tkBounds *tuneBounds)
+double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, const tkBounds *tuneBounds, paraDef *probbnd)
 {
+    paraDef altprobbnd;
+    paraDef &probbndref = probbnd ? *probbnd : altprobbnd;
+
     int    numzooms    = !tuneBounds ? ( tuneK ? NUMZOOMS : 1 ) : ((*tuneBounds).numzooms);
     int    numrestarts = !tuneBounds ? 1                        : ((*tuneBounds).numrestarts);
     double zoomfactor  = !tuneBounds ? ZOOMFACTOR               : ((*tuneBounds).zoomfactor);
     double xscale      = 1;
 
-    if ( ( !tuneK && !tuneP ) || ( type() == 200 ) )
+    if ( ( !tuneK && !tuneP ) || ( type() == 200 ) || !N() || ( N() <= NNC(0) ) )
     {
-        return 0;
+        return 1;
     }
 
     ML_Base &model = *this;
+    MercerKernel &lockernel = model.getKernel_unsafe();
+
+    int kdim = lockernel.size();
+    int Nval = model.N() - model.NNC(0);
+
+    int i,j,k;
+
+    // Gather data on lockernel
+
+    Vector<int> &kind = probbndref.kind;   // which element in lockernel dictionary
+    Vector<int> &kelm = probbndref.kelm;   // which element in cRealConstants
+    Vector<double> &kmin = probbndref.lb;  // range minimum
+    Vector<double> &kmax = probbndref.ub;  // range maximum
+
+    double Cval   = 1;
+    double epsval = 1;
+
+    Vector<Vector<gentype> > constVecs(kdim);
+    Vector<double>           weightval(kdim);
+
+    for ( i = 0 ; i < kdim ; ++i )
+    {
+        constVecs("&",i) = lockernel.cRealConstants(i);
+        weightval("&",i) = (double) lockernel.cWeight(i);
+    }
+
+    // Work out search bounds
+
+    int ddim = 0;
 
     if ( tuneK )
     {
         // If the data doesn't range 0->1 (unit hypercube) then our assumptions are off
         // Here we calculate the max gap, which will be used to rescale the lengthscale
-        // It's not perfect and it makes a bunch of assumptions (range same on all axis, data covers full range), but it's an ok approx I think?
+        // It's not perfect and it makes a bunch of assumptions (range same on all axis,
+        // data covers full range), but it's an ok approx I think?
 
         SparseVector<gentype> xtmpmax;
         SparseVector<gentype> xtmpmin;
@@ -7650,7 +7687,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 
         if ( xtmpmax.indsize() )
         {
-            for ( int i = 0 ; i < xtmpmax.indsize() ; i++ )
+            for ( i = 0 ; i < xtmpmax.indsize() ; i++ )
             {
                 if ( !xtmpmax.direref(i).isCastableToRealWithoutLoss() )
                 {
@@ -7672,223 +7709,46 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
                 }
             }
         }
-    }
 
-    if ( !model.N() || ( model.N() <= model.NNC(0) ) )
-    {
-        return 1;
-    }
+        Vector<int> uu(kdim,-1); // default to full dimension
 
-    MercerKernel &kernel = model.getKernel_unsafe();
-    int kdim = kernel.size();
-    int Nval = model.N() - model.NNC(0);
-
-    int i,j;
-
-    // Gather data on kernel
-
-    int ddim = 0;
-    int adim = 1;
-
-    Vector<int> kind;    // which element in kernel dictionary
-    Vector<int> kelm;    // which element in cRealConstants
-    Vector<double> kmin; // range minimum
-    Vector<double> kmax; // range maximum
-    Vector<double> kvar; // added noise variance
-    Vector<int> kstp;    // number of steps over range
-
-    Vector<int> uu(kdim);
-
-    uu = -1; // default to full dimension
-
-    if ( kernel.numSplits() || kernel.numMulSplits() )
-    {
-        int uuu = 0;
-
-        for ( i = 0 ; i < kdim ; ++i )
+        if ( lockernel.numSplits() || lockernel.numMulSplits() )
         {
-            uu("&",i) = uuu;
+            int uuu = 0;
 
-            if ( kernel.isSplit(i) || kernel.isMulSplit(i) )
+            for ( i = 0 ; i < kdim ; ++i )
             {
-                ++uuu;
-            }
-        }
-    }
+                uu("&",i) = uuu;
 
-    // Preliminary adim scaling
-
-    double trycount = 1;
-
-    double Cval   = 1;
-    double epsval = 1;
-
-    Vector<Vector<gentype> > constVecs(kdim);
-    Vector<double>           weightval(kdim);
-
-tryagain:
-    if ( kdim )
-    {
-        for ( i = 0 ; i < kdim ; ++i )
-        {
-            constVecs("&",i) = kernel.cRealConstants(i);
-
-            if ( constVecs(i).size() && !(kernel.isNomConst(i)) )
-            {
-                for ( j = -1 ; j < constVecs(i).size() ; ++j )
+                if ( lockernel.isSplit(i) || lockernel.isMulSplit(i) )
                 {
-                    double lb;
-                    double ub;
-                    int steps;
-
-                    if ( ( j == -1 ) && ( kdim > 1 ) && !(kernel.cWeight(i).isNomConst) && i && ( kernel.isSplit(i-1) != 1 ) )
-                    {
-                        lb    = 0.1;
-                        ub    = 3;
-                        steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 );
-
-                        lb = kernel.cWeightLB(i).isValNull() ? lb : ( (double) kernel.cWeightLB(i) );
-                        ub = kernel.cWeightUB(i).isValNull() ? ub : ( (double) kernel.cWeightUB(i) );
-
-                        lb = ( !tuneBounds || ( (((*tuneBounds).wlb)(i)) < lb ) ) ? lb : (((*tuneBounds).wlb)(i));
-                        ub = ( !tuneBounds || ( (((*tuneBounds).wub)(i)) > ub ) ) ? ub : (((*tuneBounds).wub)(i));
-
-                        if ( lb < ub )
-                        {
-                            ddim++;
-                            adim *= steps;
-                        }
-                    }
-
-                    else if ( j == -1 )
-                    {
-                        ;
-                    }
-
-                    else if ( ( j == 1 ) && ( kernel.cType(i) ==  5 ) && !(kernel.cRealConstants(i)(j).isNomConst) )
-                    {
-                        lb    = 1;
-                        ub    = 5;
-                        steps = 6;
-
-                        lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
-                        ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
-
-                        lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
-                        ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
-
-                        if ( lb < ub )
-                        {
-                            ddim++;
-                            adim *= steps;
-                        }
-                    }
-
-                    else if ( ( j == 1 ) && ( kernel.cType(i) == 48 ) && !(kernel.cRealConstants(i)(j).isNomConst) )
-                    {
-                        lb    = 0;
-                        ub    = 1;
-                        steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 );
-
-                        lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
-                        ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
-
-                        lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
-                        ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
-
-                        if ( lb < ub )
-                        {
-                            ddim++;
-                            adim *= steps;
-                        }
-                    }
-
-                    else if ( ( j == 0 ) && ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 32 ) && ( kernel.cType(i) != 48 ) && ( kernel.cType(i) != 200 ) && !(kernel.cRealConstants(i)(j).isNomConst) )
-                    {
-                        int xdim = xspaceDim(uu(i));
-
-                        double lencorrect = std::sqrt((double) xdim)/std::pow( (double) Nval,(double) xdim );
-
-                        lencorrect = ( lencorrect < 0.05 ) ? 0.05 : lencorrect;
-
-                        lb    = ( ( uu(i) == -1 ) ? xscale : 1.0 )*lencorrect*0.1*xwidth;
-                        ub    = ( ( uu(i) == -1 ) ? xscale : 1.0 )*1.5*sqrt((double) xdim)*xwidth;
-                        steps = ( ( ((int) (50/trycount)) > 5 ) ? ((int) (50/trycount)) : 5 );
-
-                        lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
-                        ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
-
-                        lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
-                        ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
-
-                        if ( lb < ub )
-                        {
-                            ddim++;
-                            adim *= steps;
-                        }
-                    }
+                    ++uuu;
                 }
             }
         }
-    }
 
-    if ( tuneP & 1 ) { ddim++; adim *= ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); }
-    if ( tuneP & 2 ) { ddim++; adim *= ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); }
-
-    adim *= numzooms;
-
-    if ( ( adim > MAXADIM ) && ( trycount == 1 ) )
-    {
-        // adim/trycount^ddim = MAXADIM
-        // adim = MAXADIM.trycount^ddim
-        // trycount^ddim = adim/MAXADIM
-        // trycount = (adim/MAXADIM)^(1/ddim)
-
-        trycount = std::pow(adim/((double) MAXADIM),1/((double) ddim));
-
-errstream() << "tuneKernel: trycount = " << trycount << "\n";
-        adim = 1;
-        ddim = 0;
-        goto tryagain;
-    }
-
-    // Now work out the (resized) grid
-
-    adim = 1;
-    ddim = 0;
-
-    if ( tuneK && kdim )
-    {
         for ( i = 0 ; i < kdim ; ++i )
         {
-            constVecs("&",i) = kernel.cRealConstants(i);
-
-            if ( constVecs(i).size() && !(kernel.isNomConst(i)) )
+            if ( constVecs(i).size() && !(lockernel.isNomConst(i)) )
             {
-                // Element -1 is the weight of the kernel in the sum
+                // Element -1 is the weight of the lockernel in the sum
 
                 for ( j = -1 ; j < constVecs(i).size() ; ++j )
                 {
-                    double lb;
-                    double ub;
-                    int steps;
+                    double lb = 0;
+                    double ub = 0;
+
                     int addit = 0;
 
-                    // Fixme: currently basically do lengthscale (r0) for "normal" kernels, need to extend
-                    // NB: we only want to tune one "weight" per multiplicative kernel group
+                    // Fixme: currently basically do lengthscale (r0) for "normal" lockernels, need to extend
+                    // NB: we only want to tune one "weight" per multiplicative lockernel group
 
-                    if ( ( kdim > 1 ) && ( j == -1 ) && !(kernel.cWeight(i).isNomConst) && i && ( kernel.isSplit(i-1) != 1 ) )
+                    if ( ( kdim > 1 ) && ( j == -1 ) && !(lockernel.cWeight(i).isNomConst) && i && ( lockernel.isSplit(i-1) != 1 ) )
                     {
                         // This is weight (linear)
 
-                        lb    = 0.1;
-                        ub    = 3;
-                        steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 );
-
-                        // Bound bounding
-
-                        lb = kernel.cWeightLB(i).isValNull() ? lb : ( (double) kernel.cWeightLB(i) );
-                        ub = kernel.cWeightUB(i).isValNull() ? ub : ( (double) kernel.cWeightUB(i) );
+                        lb = lockernel.cWeightLB(i).isValNull() ? 0.1 : ( (double) lockernel.cWeightLB(i) );
+                        ub = lockernel.cWeightUB(i).isValNull() ? 3.0 : ( (double) lockernel.cWeightUB(i) );
 
                         lb = ( !tuneBounds || ( (((*tuneBounds).wlb)(i)) < lb ) ) ? lb : (((*tuneBounds).wlb)(i));
                         ub = ( !tuneBounds || ( (((*tuneBounds).wub)(i)) > ub ) ) ? ub : (((*tuneBounds).wub)(i));
@@ -7904,49 +7764,9 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
                         ;
                     }
 
-                    else if ( ( kernel.cType(i) == 5 ) && ( j == 1 ) && !(kernel.cRealConstants(i)(j).isNomConst) )
+                    else if ( ( j == 0 ) && ( lockernel.cType(i) < 800 ) && ( lockernel.cType(i) != 0 ) && ( lockernel.cType(i) != 32 ) && ( lockernel.cType(i) != 48 ) && ( lockernel.cType(i) != 200 ) && !(lockernel.cRealConstants(i)(j).isNomConst) ) //&& lockernel.isAdjRealConstants(j,i) )
                     {
-                        // This is norm order (linear)
-
-                        lb    = 1;
-                        ub    = 5;
-                        steps = 6;
-
-                        lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
-                        ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
-
-                        lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
-                        ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
-
-                        if ( lb < ub )
-                        {
-                            addit = 1;
-                        }
-                    }
-
-                    else if ( ( kernel.cType(i) == 48 ) && ( j == 1 ) && !(kernel.cRealConstants(i)(j).isNomConst) )
-                    {
-                        // This is inter-task relatedness (linear)
-
-                        lb    = 0;
-                        ub    = 1;
-                        steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); //15;
-
-                        lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
-                        ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
-
-                        lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
-                        ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
-
-                        if ( lb < ub )
-                        {
-                            addit = 1;
-                        }
-                    }
-
-                    else if ( ( kernel.cType(i) < 800 ) && ( kernel.cType(i) != 0 ) && ( kernel.cType(i) != 32 ) && ( kernel.cType(i) != 48 ) && ( kernel.cType(i) != 200 ) && ( j == 0 ) && !(kernel.cRealConstants(i)(j).isNomConst) ) //&& kernel.isAdjRealConstants(j,i) )
-                    {
-                        // This is length-scale, always, with the single exception of kernels 0 and 48 where lengthscale is meaningless (log)
+                        // This is length-scale, always, with the single exception of lockernels 0 and 48 where lengthscale is meaningless (log)
 
                         // distance between points scales as the square-root of their dimension
                         // also correct for the 1/N^dim
@@ -7974,15 +7794,46 @@ errstream() << xwidth << ",";
 
                         //FIXME: consider increasing ub
 errstream() << lb << " to " << ub << ",";
-                        steps = ( ( ((int) (50/trycount)) > 5 ) ? ((int) (50/trycount)) : 5 ); //50/trycount; //30; //20; // 15; //20;
 
-                        lb = kernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) kernel.cRealConstantsLB(i)(j) );
-                        ub = kernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) kernel.cRealConstantsUB(i)(j) );
+                        lb = lockernel.cRealConstantsLB(i)(j).isValNull() ? lb : ( (double) lockernel.cRealConstantsLB(i)(j) );
+                        ub = lockernel.cRealConstantsUB(i)(j).isValNull() ? ub : ( (double) lockernel.cRealConstantsUB(i)(j) );
 errstream() << lb << " to " << ub << ",";
 
                         lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
                         ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
 errstream() << lb << " to " << ub << "___";
+
+                        if ( lb < ub )
+                        {
+                            addit = 1;
+                        }
+                    }
+
+                    else if ( ( j == 1 ) && ( lockernel.cType(i) == 5 ) && !(lockernel.cRealConstants(i)(j).isNomConst) )
+                    {
+                        // This is norm order (linear)
+
+                        lb = lockernel.cRealConstantsLB(i)(j).isValNull() ? 1 : ( (double) lockernel.cRealConstantsLB(i)(j) );
+                        ub = lockernel.cRealConstantsUB(i)(j).isValNull() ? 5 : ( (double) lockernel.cRealConstantsUB(i)(j) );
+
+                        lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
+                        ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
+
+                        if ( lb < ub )
+                        {
+                            addit = 1;
+                        }
+                    }
+
+                    else if ( ( j == 1 ) && ( lockernel.cType(i) == 48 ) && !(lockernel.cRealConstants(i)(j).isNomConst) )
+                    {
+                        // This is inter-task relatedness (linear)
+
+                        lb = lockernel.cRealConstantsLB(i)(j).isValNull() ? 0 : ( (double) lockernel.cRealConstantsLB(i)(j) );
+                        ub = lockernel.cRealConstantsUB(i)(j).isValNull() ? 1 : ( (double) lockernel.cRealConstantsUB(i)(j) );
+
+                        lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
+                        ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
 
                         if ( lb < ub )
                         {
@@ -7996,10 +7847,8 @@ errstream() << lb << " to " << ub << "___";
                         kelm.add(ddim); kelm("&",ddim) = j;
                         kmin.add(ddim); kmin("&",ddim) = lb;
                         kmax.add(ddim); kmax("&",ddim) = ub;
-                        kstp.add(ddim); kstp("&",ddim) = steps;
 
                         ++ddim;
-                        adim *= steps;
                     }
                 }
             }
@@ -8010,45 +7859,101 @@ errstream() << lb << " to " << ub << "___";
     {
         // tune C
 
-        double lb;
-        double ub;
-        int steps;
+        double lb = !tuneBounds ? DEFCMIN : ((*tuneBounds).Cmin);
+        double ub = !tuneBounds ? DEFCMAX : ((*tuneBounds).Cmax);
 
-        lb = !tuneBounds ? DEFCMIN : ((*tuneBounds).Cmin);
-        ub = !tuneBounds ? DEFCMAX : ((*tuneBounds).Cmax);
-        steps = ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); //20/trycount;
+        int addit = 0;
 
-        kind.add(ddim); kind("&",ddim) = -2;
-        kelm.add(ddim); kelm("&",ddim) = -2;
-        kmin.add(ddim); kmin("&",ddim) = lb;
-        kmax.add(ddim); kmax("&",ddim) = ub;
-        kstp.add(ddim); kstp("&",ddim) = steps;
+        if ( lb < ub )
+        {
+            addit = 1;
+        }
 
-        ++ddim;
-        adim *= steps;
+        if ( addit )
+        {
+            kind.add(ddim); kind("&",ddim) = -2;
+            kelm.add(ddim); kelm("&",ddim) = -2;
+            kmin.add(ddim); kmin("&",ddim) = lb;
+            kmax.add(ddim); kmax("&",ddim) = ub;
+
+            ++ddim;
+        }
     }
 
     if ( tuneP & 2 )
     {
         // tune eps
 
-        double lb;
-        double ub;
-        int steps;
+        double lb = !tuneBounds ? DEFEPSMIN : ((*tuneBounds).epsmin);
+        double ub = !tuneBounds ? DEFEPSMAX : ((*tuneBounds).epsmax);
 
-        lb = !tuneBounds ? DEFEPSMIN : ((*tuneBounds).epsmin);
-        ub = !tuneBounds ? DEFEPSMAX : ((*tuneBounds).epsmax);
-        steps = ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); //20/trycount;
+        int addit = 0;
 
-        kind.add(ddim); kind("&",ddim) = -3;
-        kelm.add(ddim); kelm("&",ddim) = -3;
-        kmin.add(ddim); kmin("&",ddim) = lb;
-        kmax.add(ddim); kmax("&",ddim) = ub;
-        kstp.add(ddim); kstp("&",ddim) = steps;
+        if ( lb < ub )
+        {
+            addit = 1;
+        }
 
-        ++ddim;
+        if ( addit )
+        {
+            kind.add(ddim); kind("&",ddim) = -3;
+            kelm.add(ddim); kelm("&",ddim) = -3;
+            kmin.add(ddim); kmin("&",ddim) = lb;
+            kmax.add(ddim); kmax("&",ddim) = ub;
+
+            ++ddim;
+        }
+    }
+
+    // Return if method 0
+
+    if ( !method )
+    {
+        return 1;
+    }
+
+    // Work out dimension and scale to bounds
+
+    Vector<int> kstp(ddim,1);    // number of steps over range
+
+    double trycount = 1;
+
+tryagain:
+    int adim = 1;
+    int altddim = ddim;
+
+    for ( k = 0 ; k < ddim ; ++k )
+    {
+        i = kind(k);
+        j = kelm(k);
+
+        int steps = 0;
+
+        if      ( j == -3 )                                    { steps = ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); }
+        else if ( j == -2 )                                    { steps = ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); }
+        else if ( j == -1 )                                    { steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); }
+        else if ( j == 0  )                                    { steps = ( ( ((int) (50/trycount)) > 5 ) ? ((int) (50/trycount)) : 5 ); }
+        else if ( ( j == 1 ) && ( lockernel.cType(i) == 5  ) ) { steps = 6; --altddim;                                                  }
+        else if ( ( j == 1 ) && ( lockernel.cType(i) == 48 ) ) { steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); }
+
+        kstp("&",k) = steps;
         adim *= steps;
     }
+
+    if ( ( adim*numzooms > MAXADIM ) && ( trycount == 1 ) )
+    {
+        // adim/trycount^ddim = MAXADIM
+        // adim = MAXADIM.trycount^ddim
+        // trycount^ddim = adim/MAXADIM
+        // trycount = (adim/MAXADIM)^(1/ddim)
+
+        trycount = std::pow(adim*numzooms/((double) MAXADIM),1/((double) altddim));
+
+errstream() << "tuneKernel: trycount = " << trycount << "\n";
+        goto tryagain;
+    }
+
+    // Begin optimization on grid
 
     double bestres = valpinf();
 
@@ -8058,14 +7963,17 @@ errstream() << lb << " to " << ub << "___";
         // and a reset point before the final training (to avoid cumulative numerical
         // errors).
 
-        MercerKernel backkernel;
+        MercerKernel &backkernel = probbndref.backkernel;
 
-        double backC   = 0.0;
-        double backeps = 0.0;
+        double &backC   = probbndref.backC;
+        double &backeps = probbndref.backeps;
 
-        if ( tuneK     ) { backkernel = kernel; }
-        if ( tuneP & 1 ) { backC      = C();    }
-        if ( tuneP & 2 ) { backeps    = eps();  }
+        backC   = 0.0;
+        backeps = 0.0;
+
+        if ( tuneK     ) { backkernel = lockernel; }
+        if ( tuneP & 1 ) { backC      = C();       }
+        if ( tuneP & 2 ) { backeps    = eps();     }
 
         // Store for optimal results
 
@@ -8133,96 +8041,41 @@ errstream() << lb << " to " << ub << "___";
 
                 for ( i = 0 ; i < adim ; ++i )
                 {
-                    weightval = 1.0;
+                    //weightval = 1.0;
 
                     for ( j = 0 ; j < ddim ; ++j )
                     {
-                        ffull("&",j) = 0.0;
-
 //errstream() << "stepgrid(" << i << ") = " << stepgrid(i) << "\n";
                         if ( restart ) { randufill(ffull("&",j),kmin(j),kmax(j)); } // random point in range (uniform distribution) for restarts
                         else           { ffull("&",j) = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1)); } // nice even grid
-
-                        if      ( kelm(j) >= 0  ) { constVecs("&",kind(j))("&",kelm(j)) = ffull(j); }
-                        else if ( kelm(j) == -1 ) { weightval("&",kind(j))              = ffull(j); }
-                        else if ( kelm(j) == -2 ) { Cval                                = ffull(j); }
-                        else if ( kelm(j) == -3 ) { epsval                              = ffull(j); }
                     }
 
-                    if ( tuneK )
-                    {
-                        for ( j = 0 ; j < kdim ; ++j )
-                        {
-                            gentype wv(weightval(j));
-
-                            kernel.setRealConstants(constVecs(j),j);
-                            kernel.setWeight(wv,j);
-                        }
-
-                        model.resetKernel();
-                    }
-
-                    if ( tuneP & 1 ) { setC(Cval);     }
-                    if ( tuneP & 2 ) { seteps(epsval); }
-
-                    bool isgood = true;
-                    double evalval = 0.0;
-
-//errstream() << ";" << model.type() << ";";
-                    {
-                        int rescode = 0;
-                        reset();
-                        model.train(rescode);
-
-//                        if ( rescode )
-//                        {
-//                            isgood = false;
-//                        }
-
-                        if      ( method == 1 ) { evalval = calcnegloglikelihood(model,1); }
-                        else if ( method == 2 ) { evalval = calcLOO(model,0,1);            }
-                        else if ( method == 3 ) { evalval = calcRecall(model,0,1);         }
+                    double evalval = evalkernel(method,probbndref,ffull);
 
 errstream() << "[[" << evalval << ",";
 printoneline(errstream(),ffull);
 errstream() << "]]";
-                        if ( testisvnan(evalval) || testisinf(evalval) )
-                        {
-                            isgood = false;
-                        }
-                    }
 
-                    if ( !isgood )
-                    {
-                        reset();
-
-                        if ( tuneK )     { kernel = backkernel; resetKernel(); }
-                        if ( tuneP & 1 ) { setC(backC);                        }
-                        if ( tuneP & 2 ) { seteps(backeps);                    }
-
-                        reset();
-                    }
-
-                    else if ( evalval < bestres )
+                    if ( !( testisvnan(evalval) || testisinf(evalval) ) && ( evalval < bestres ) )
                     {
                         if ( type() >= 400 ) { reset(); } // for some reason this helps!
 
 errstream() << "[[!!]]";
                         bestres   = evalval;
                         bestffull = ffull;
-
-                        bestconstVecs = constVecs;
-                        bestweightval = weightval;
-
-                        bestCval   = Cval;
-                        bestepsval = epsval;
-
-//                        if ( type() >= 400 ) { reset(); } // for some reason this helps!
                     }
 
 errstream() << "\n";
                 }
             }
+        }
+
+        for ( j = 0 ; j < ddim ; ++j )
+        {
+            if      ( kelm(j) >= 0  ) { bestconstVecs("&",kind(j))("&",kelm(j)) = bestffull(j); }
+            else if ( kelm(j) == -1 ) { bestweightval("&",kind(j))              = bestffull(j); }
+            else if ( kelm(j) == -2 ) { bestCval                                = bestffull(j); }
+            else if ( kelm(j) == -3 ) { bestepsval                              = bestffull(j); }
         }
 
         {
@@ -8246,8 +8099,8 @@ errstream() << "\n";
                     {
                         gentype wv(weightval(j));
 
-                        kernel.setRealConstants(constVecs(j),j);
-                        kernel.setWeight(wv,j);
+                        lockernel.setRealConstants(constVecs(j),j);
+                        lockernel.setWeight(wv,j);
                     }
 
                     model.resetKernel();
@@ -8259,9 +8112,9 @@ errstream() << "\n";
 
             else
             {
-                if ( tuneK )     { kernel = backkernel; resetKernel(); }
-                if ( tuneP & 1 ) { setC(backC);                        }
-                if ( tuneP & 2 ) { seteps(backeps);                    }
+                if ( tuneK )     { lockernel = backkernel; resetKernel(); }
+                if ( tuneP & 1 ) { setC(backC);                           }
+                if ( tuneP & 2 ) { seteps(backeps);                       }
             }
 
             int dummy;
@@ -8275,6 +8128,99 @@ errstream() << "\n";
 
 
 
+
+double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<double> &ffull)
+{
+    double evalval = 1;
+
+    const Vector<int> &kind = probbnd.kind;   // which element in kernel dictionary
+    const Vector<int> &kelm = probbnd.kelm;   // which element in cRealConstants
+    //const Vector<double> &kmin = probbnd.lb;  // range minimum
+    //const Vector<double> &kmax = probbnd.ub;  // range maximum
+
+    const MercerKernel &backkernel = probbnd.backkernel;
+
+    const double &backC   = probbnd.backC;
+    const double &backeps = probbnd.backeps;
+
+                    {
+                        ML_Base &model = *this;
+                        MercerKernel &lockernel = model.getKernel_unsafe();
+
+                        int lockdim = lockernel.size();
+                        int locddim = ffull.size();
+
+                        double locCval   = backC;
+                        double locepsval = backeps;
+
+                        Vector<Vector<gentype> > locconstVecs(lockdim);
+                        Vector<double>           locweightval(lockdim);
+
+                        int loctuneK = 0;
+                        int loctuneP = 0;
+
+                        for ( int j = 0 ; j < lockdim ; ++j )
+                        {
+                            locconstVecs("&",j) = backkernel.cRealConstants(j);
+                            locweightval("&",j) = (double) backkernel.cWeight(j);
+                        }
+
+                        for ( int j = 0 ; j < locddim ; ++j )
+                        {
+                            if      ( kelm(j) >= 0  ) { locconstVecs("&",kind(j))("&",kelm(j)) = ffull(j); loctuneK |= 1; }
+                            else if ( kelm(j) == -1 ) { locweightval("&",kind(j))              = ffull(j); loctuneK |= 1; }
+                            else if ( kelm(j) == -2 ) { locCval                                = ffull(j); loctuneP |= 1; }
+                            else if ( kelm(j) == -3 ) { locepsval                              = ffull(j); loctuneP |= 2; }
+                        }
+
+                        if ( loctuneK )
+                        {
+                            for ( int j = 0 ; j < lockdim ; ++j )
+                            {
+                                gentype wv(locweightval(j));
+
+                                lockernel.setRealConstants(locconstVecs(j),j);
+                                lockernel.setWeight(wv,j);
+                            }
+
+                            model.resetKernel();
+                        }
+
+                        if ( loctuneP & 1 ) { setC(locCval);     }
+                        if ( loctuneP & 2 ) { seteps(locepsval); }
+
+                        int rescode = 0;
+                        reset();
+                        model.train(rescode);
+
+                        if ( !method )
+                        {
+                            return 0;
+                        }
+
+//                        if ( rescode )
+//                        {
+//                            isgood = false;
+//                        }
+
+                        if      ( method == 1 ) { evalval = calcnegloglikelihood(model,1); }
+                        else if ( method == 2 ) { evalval = calcLOO(model,0,1);            }
+                        else if ( method == 3 ) { evalval = calcRecall(model,0,1);         }
+
+                        if ( testisvnan(evalval) || testisinf(evalval) )
+                        {
+                            reset();
+
+                            if ( loctuneK )     { lockernel = backkernel; resetKernel(); }
+                            if ( loctuneP & 1 ) { setC(backC);                           }
+                            if ( loctuneP & 2 ) { seteps(backeps);                       }
+
+                            reset();
+                        }
+                    }
+
+    return evalval;
+}
 
 
 
@@ -12763,7 +12709,6 @@ double ML_Base::Km(int m,
         int datamissing = 0;
         int needpreproc = 0;
         int ii,jj;
-        int z = 0;
         bool useRFFkernel = true;
 
         for ( ii = 0 ; ii < m ; ++ii )
@@ -13028,7 +12973,6 @@ T &ML_Base::Km(int m, T &res,
         int datamissing = 0;
         int needpreproc = 0;
         int ii,jj;
-        int z = 0;
         bool useRFFkernel = true;
 
         for ( ii = 0 ; ii < m ; ++ii )
@@ -15992,7 +15936,7 @@ int ML_Base::egetparam(int ind, Vector<gentype> &val, const Vector<gentype> &xa,
 
 int ML_Base::getparam(int ind, gentype &val, const gentype &xa, int ia, const gentype &xb, int ib, charptr &desc) const
 {
-    int res = 0;
+    int ires = 0;
 
     desc = "";
 
@@ -16089,10 +16033,10 @@ int ML_Base::getparam(int ind, gentype &val, const gentype &xa, int ia, const ge
             case 300: { ggTrainingVector(val,(int) xa); desc = "ML_Base::ggTrainingVector";                                                     break; }
             case 301: { hhTrainingVector(val,(int) xa); desc = "ML_Base::hhTrainingVector";                                                     break; }
             case 302: { varTrainingVector(val,dummy,(int) xa); desc = "ML_Base::varTrainingVector";                                             break; }
-            case 303: { Vector<double> res; dgTrainingVectorX(res,(int) xa); val = res;  desc = "ML_Base::dgTrainingVectorX";                   break; }
-            case 304: { Vector<gentype> res; gentype resn; dgTrainingVector(res,resn,(int) xa); val = res; desc = "ML_Base::dgTrainingVector";  break; }
-            case 305: { Vector<gentype> res; gentype resn; dgTrainingVector(res,resn,(int) xa); val = resn; desc = "ML_Base::dgTrainingVector"; break; }
-            case 306: { double res; int z = 0; stabProbTrainingVector(res, (int) xa, (int) xb(z), (double) xb(1), (int) xb(2), (double) xb(3), (double) xb(4)); val = res;  desc = "ML_Base::stabProfTrainingVector"; break; }
+            case 303: { Vector<double> vres; dgTrainingVectorX(vres,(int) xa); val = vres;  desc = "ML_Base::dgTrainingVectorX";                   break; }
+            case 304: { Vector<gentype> vres; gentype resn; dgTrainingVector(vres,resn,(int) xa); val = vres; desc = "ML_Base::dgTrainingVector";  break; }
+            case 305: { Vector<gentype> vres; gentype resn; dgTrainingVector(vres,resn,(int) xa); val = resn; desc = "ML_Base::dgTrainingVector"; break; }
+            case 306: { double dres; int z = 0; stabProbTrainingVector(dres, (int) xa, (int) xb(z), (double) xb(1), (int) xb(2), (double) xb(3), (double) xb(4)); val = dres;  desc = "ML_Base::stabProfTrainingVector"; break; }
 
             case 400: { covTrainingVector(val,dummy,(int) xa, (int) xb); desc = "ML_Base::covTrainingVector"; break; }
             case 401: { K2(val,(int) xa, (int) xb);                      desc = "ML_Base::K2";                break; }
@@ -16120,22 +16064,20 @@ int ML_Base::getparam(int ind, gentype &val, const gentype &xa, int ia, const ge
 
         if ( convertSetToSparse(xx,xa,ia) )
         {
-            res = 1;
+            ires = 1;
         }
 
         else
         {
-            gentype dummy;
-
             switch ( ind )
             {
                 case 500: { gg(val,xx); desc = "ML_Base::gg"; break; }
                 case 501: { hh(val,xx); desc = "ML_Base::hh"; break; }
                 case 502: { var(val,dummy,xx); desc = "ML_Base::var"; break; }
-                case 503: { Vector<double> res; dgX(res,xx); val = res;  desc = "ML_Base::dgX"; break; }
-                case 504: { Vector<gentype> res; gentype resn; dg(res,resn,xx); val = res;  desc = "ML_Base::dg"; break; }
-                case 505: { Vector<gentype> res; gentype resn; dg(res,resn,xx); val = resn; desc = "ML_Base::dg"; break; }
-                case 506: { double res; int z = 0; stabProb(res,xx,(int) xb(z),(double) xb(1),(int) xb(2),(double) xb(3),(double) xb(4)); val = res;  desc = "ML_Base::stabProb"; break; }
+                case 503: { Vector<double> vres; dgX(vres,xx); val = vres;  desc = "ML_Base::dgX"; break; }
+                case 504: { Vector<gentype> vres; gentype resn; dg(vres,resn,xx); val = vres;  desc = "ML_Base::dg"; break; }
+                case 505: { Vector<gentype> vres; gentype resn; dg(vres,resn,xx); val = resn; desc = "ML_Base::dg"; break; }
+                case 506: { double dres; int z = 0; stabProb(dres,xx,(int) xb(z),(double) xb(1),(int) xb(2),(double) xb(3),(double) xb(4)); val = dres;  desc = "ML_Base::stabProb"; break; }
 
                 case 9033: { val = isKreal();                     desc = "SVM_Scalar::isKreal"; break; }
                 case 9034: { val = isKunreal();                   desc = "SVM_Scalar::isKunreal"; break; }
@@ -16161,8 +16103,6 @@ int ML_Base::getparam(int ind, gentype &val, const gentype &xa, int ia, const ge
 
         convertSetToSparse(xx,xa,ia);
         convertSetToSparse(yy,xb,ib);
-
-        gentype dummy;
 
         switch ( ind )
         {
@@ -16211,12 +16151,12 @@ int ML_Base::getparam(int ind, gentype &val, const gentype &xa, int ia, const ge
 
     else if ( ind <= 899 )
     {
-        res = getKernel().getparam(ind-800,val,xa,ia,xb,ib,desc);
+        ires = getKernel().getparam(ind-800,val,xa,ia,xb,ib,desc);
     }
 
     else if ( ind <= 999 )
     {
-        res = getUUOutputKernel().getparam(ind-900,val,xa,ia,xb,ib,desc);
+        ires = getUUOutputKernel().getparam(ind-900,val,xa,ia,xb,ib,desc);
     }
 
     else
@@ -16224,6 +16164,6 @@ int ML_Base::getparam(int ind, gentype &val, const gentype &xa, int ia, const ge
         val.force_null();
     }
 
-    return res;
+    return ires;
 }
 

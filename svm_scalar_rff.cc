@@ -629,11 +629,11 @@ int SVM_Scalar_rff::covTrainingVector(gentype &resv, gentype &resmu, int ia, int
             resvv = 0.0;
 
             // Changes here too!
-            for ( int j = 0 ; j < wdim ; ++j )
+            for ( int cj = 0 ; cj < wdim ; ++cj )
             {
-                resvv += ( Kia(Nloc+j)* Kib(Nloc+j));
-                resvv -= ( Kia(Nloc+j)*BKib(Nloc+j))/ivl(j);
-                resvv += (BKia(Nloc+j)*Kres(Nloc+j))/ivl(j);
+                resvv += ( Kia(Nloc+cj)* Kib(Nloc+cj));
+                resvv -= ( Kia(Nloc+cj)*BKib(Nloc+cj))/ivl(cj);
+                resvv += (BKia(Nloc+cj)*Kres(Nloc+cj))/ivl(cj);
             }
 //errstream() << "phantomx 4: resvv = " << resvv << "\n";
         }
@@ -2937,7 +2937,7 @@ double SVM_Scalar_rff::K2(int ia, int ib, const gentype **pxyprod, const SparseV
         int j;
         double tmpx,tmpy;
 
-        double res = 0;
+        double dres = 0;
 
         // We do this elementwise to prevent caching outside of random features
 
@@ -2948,10 +2948,10 @@ double SVM_Scalar_rff::K2(int ia, int ib, const gentype **pxyprod, const SparseV
             tmpx = K2(ia,j+Nval,nullptr,xa,nullptr,xainfo,nullptr,resmode);
             tmpy = K2(j+Nval,ib,nullptr,nullptr,xb,nullptr,xbinfo,resmode);
 
-            res += (v(j)*tmpx*tmpy);
+            dres += (v(j)*tmpx*tmpy);
         }
 
-        return res;
+        return dres;
     }
 
     if ( ia < realN )
@@ -3401,11 +3401,11 @@ errstream("twm\n");
 
     if ( !(cholscratchcov) || !(covlogdetcalced) )
     {
-        const Vector<double> &vv  = locaw;
+        const Vector<double> &vvv  = locaw;
 
-        for ( int i = 0 ; i < wdim ; ++i )
+        for ( int ci = 0 ; ci < wdim ; ++ci )
         {
-            ivl("&",i)  = sigma() * ( ( vv(i) > locminv ) ? 1/vv(i) : 1/locminv );
+            ivl("&",ci)  = sigma() * ( ( vvv(ci) > locminv ) ? 1/vvv(ci) : 1/locminv );
         }
     }
 
@@ -3786,12 +3786,12 @@ public:
 
             int loc_kval = (itcnt%PEGASOS_FULLGRAD_CYCLE) ? k : N; // every PEGASOS_FULLGRAD_CYCLE iterations we work out the complete gradient
 
-            retVector<int> tmpva;
+            retVector<int> tmpvaa;
 
             int ii;
 
             {
-                Bt.resize(N) = cntintvec(N,tmpva);
+                Bt.resize(N) = cntintvec(N,tmpvaa);
                 At.resize(0);
 
                 for ( i = Bt.size()-1 ; i >= 0 ; --i )

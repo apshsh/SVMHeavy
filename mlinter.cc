@@ -5531,8 +5531,8 @@ int runsvmint(SVMThreadContext *svmContext,
                 int gphkernnum   = 0;
                 int gphfirstcall = 1;
 
-                int gPkernnum   = 0;
-                int gPfirstcall = 1;
+//                int gPkernnum   = 0;
+//                int gPfirstcall = 1;
 
                 int gkkernnum   = 0;
                 int gkfirstcall = 1;
@@ -8950,7 +8950,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 // Callback function used by Bayesian optimiser
 //
 
-int gridelmMLreg(int ind, ML_Mutable *MLreg, void *arg)
+int gridelmMLreg(int ind, ML_Mutable *MLreg, void *)
 {
     //SparseVector<ML_Mutable *> &svmbase = *((SparseVector<ML_Mutable *> *) ((void **) arg)[11]);
 

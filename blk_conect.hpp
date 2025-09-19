@@ -158,7 +158,8 @@ public:
     // (need to be implemented)
 
     virtual void fillCache(int Ns = 0, int Ne = -1) override;
-    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr) override;
+    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr, paraDef *probbnd = nullptr) override;
+    virtual double evalkernel(int, const paraDef &, const Vector<double> &) override { return 0; }
 
     // Training set modification:
 

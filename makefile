@@ -344,8 +344,9 @@ OBJS = $(SRC:.cc=.o)
 
 # Flags and stuff
 
-#BASEFLAGS = -W -Wall -Wextra -Wconversion
-BASEFLAGS = -W -Wall -Wextra -Wconversion -DDISABLE_KB_BY_DEF
+#Still working through to add -Wshadow
+#BASEFLAGS = -W -Wall -Wextra -Wconversion -Wpedantic
+BASEFLAGS = -W -Wall -Wextra -Wconversion -Wpedantic -DDISABLE_KB_BY_DEF
 #for noise, use -Weffc++
 MEHFLAGS = -DIGNOREMEM -DNDEBUG
 LIBFLAG = -lm
@@ -609,7 +610,7 @@ ML_BASEDEP = vector.hpp $(VECTORDEP) sparsevector.hpp $(SPARSEVECTORDEP) \
              matrix.hpp $(MATRIXDEP) mercer.hpp $(MERCERDEP) \
              set.hpp $(SETDEP) gentype.hpp $(GENTYPEDEP) \
              mlcommon.hpp $(MLCOMMONDEP) numbase.hpp $(NUMBASEDEP) \
-             FNVector.hpp $(FNVECTORDEP) basefn.hpp memdebug.hpp niceassert.hpp
+             FNVector.hpp $(FNVECTORDEP) basefn.hpp memdebug.hpp niceassert.hpp globalopt_base.hpp
 
 SVM_GENERICDEP = ml_base.hpp $(ML_BASEDEP)
 
@@ -743,7 +744,8 @@ HILLCLIMBDEP      = ml_base.hpp $(ML_BASEDEP)
 GLOBALOPTDEP = FNVector.hpp $(FNVECTORDEP) ml_base.hpp $(ML_BASEDEP) \
                ml_mutable.hpp $(ML_MUTABLE) $(ML_MUTABLEDEP) \
                mlcommon.hpp $(MLCOMMONDEP) blk_usrfnb.hpp $(BLK_USRFNBDEP) \
-               blk_bernst.hpp $(BLK_BERNSTDEP) blk_conect.hpp $(BLK_CONECTDEP)
+               blk_bernst.hpp $(BLK_BERNSTDEP) blk_conect.hpp $(BLK_CONECTDEP) \
+               globalopt_base.hpp
 GRIDOPTDEP   = globalopt.hpp $(GLOBALOPTDEP)
 DIRECTOPTDEP = globalopt.hpp $(GLOBALOPTDEP) nlopt_direct.hpp $(NLOPT_DIRECTDEP)
 NELDEROPTDEP = globalopt.hpp $(GLOBALOPTDEP) nlopt_neldermead.hpp $(NLOPT_NELDERMEADDEP)

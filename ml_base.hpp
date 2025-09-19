@@ -31,6 +31,7 @@
 #include "niceassert.hpp"
 #include "numbase.hpp"
 #include "FNVector.hpp"
+#include "globalopt_base.hpp"
 
 class ML_Base;
 class SVM_Planar;
@@ -177,6 +178,25 @@ public:
     double zoomfactor;
 };
 
+class paraDef
+{
+public:
+    // Known-good fallbacks
+
+    MercerKernel backkernel;
+    double backC;
+    double backeps;
+
+    // What the data represents
+
+    Vector<int> kind;
+    Vector<int> kelm;
+
+    // bounds
+
+    Vector<double> lb;
+    Vector<double> ub;
+};
 
 class ML_Base : public kernPrecursor
 {
@@ -416,7 +436,7 @@ public:
     virtual const Vector<Vector<double> >        &ypV        (void) const { return alltraintargpV;                           }
     virtual const Vector<vecInfo>                &xinfo      (void) const { return altxsrc ? (*altxsrc).xinfo() : traininfo; }
     virtual const Vector<int>                    &xtang      (void) const { return altxsrc ? (*altxsrc).xtang() : traintang; }
-    virtual const Vector<int>                    &d          (void) const { return xd;                                       }
+    virtual const Vector<int>                    &d          (void) const { return x_d;                                      }
     virtual const Vector<double>                 &Cweight    (void) const { return xCweight;                                 }
     virtual const Vector<double>                 &Cweightfuzz(void) const { return xCweightfuzz;                             }
     virtual const Vector<double>                 &sigmaweight(void) const;
@@ -615,7 +635,8 @@ public:
     //
     // tuneKernel: Generic kernel tuning function
     //
-    // method: 1 = max-likelihood
+    // method: 0 = just work out bounds and problems and return
+    //         1 = max-likelihood
     //         2 = loo error
     //         3 = recall
     // xwidth: maximum length-scale
@@ -626,17 +647,30 @@ public:
     //         2 = tune model parameter eps (NOT IMPLEMENTED YET)
     //         3 = tune model parameters C and eps (NOT IMPLEMENTED YET)
     // tunebounds: optional lower and upper bound overrides for tuning. See datatypes
+    // probbnd: if given, the bounds worked out are stored here
     //
     // Note that this is very basic.  It tunes continuous variables
     // only, parameter bounds are arbitrary, and grid sizes fixed
     //
     // Returns best error
+    //
+    // evalKernel: using the paraDef from tuneKernel, set the kernel parameters.
+    //
+    // To tune using your own algorith, you can call tuneKernel with method = 0
+    // and probbnd given. tuneKernel will ``fill out'' probbnd with the bounds
+    // of the search box (and implicitly the dim) as well as information to say
+    // what the parameters correspond to. Then in BO or whatever you can call
+    // evalkernel with method != 0, probbnd (the one that was filled in by
+    // tuneKernel) and ffull being the value that you're testing. Then, once you
+    // have maxed, call evalkernel with method == 0 to set and train the final
+    // values.
 
     virtual const MercerKernel &getKernel       (void) const { return kernel; }
     virtual       MercerKernel &getKernel_unsafe(void)       { return kernel; }
     virtual       void          prepareKernel   (void)       {                }
 
-    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr);
+    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr, paraDef *probbnd = nullptr);
+    virtual double evalkernel(int method, const paraDef &probbnd, const Vector<double> &ffull);
 
     virtual int resetKernel(                             int modind = 1, int onlyChangeRowI = -1, int updateInfo = 1);
     virtual int setKernel  (const MercerKernel &xkernel, int modind = 1, int onlyChangeRowI = -1                    );
@@ -659,7 +693,7 @@ public:
     virtual gentype &K1(gentype &res, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); K1(res,ia); resetInnerWildp(( xainf == nullptr )); return res; }
     virtual gentype &K2(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); K2(res,ia,ib); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
     virtual gentype &K3(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xcinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int ic = setInnerWildpc(&xc,xcinf); K3(res,ia,ib,ic);  resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr ),( xcinf == nullptr )); return res; }
-    virtual gentype &K4(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xdp, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xcinf = nullptr, const vecInfo *xdpinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int ic = setInnerWildpc(&xc,xcinf); int id = setInnerWildpd(&xdp,xdpinf); K4(res,ia,ib,ic,id); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr ),(xcinf == nullptr),(xdpinf == nullptr)); return res; }
+    virtual gentype &K4(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xcinf = nullptr, const vecInfo *xdinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int ic = setInnerWildpc(&xc,xcinf); int id = setInnerWildpd(&xd,xdinf); K4(res,ia,ib,ic,id); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr ),(xcinf == nullptr),(xdinf == nullptr)); return res; }
     virtual gentype &Km(gentype &res, const Vector<SparseVector<gentype> > &xx) const { int m = xx.size(); setInnerWildpx(&xx); retVector<int> tmpva; Vector<int> ii(cntintvec(m,tmpva)); ii += 1; ii *= -100; Km(m,res,ii); resetInnerWildp(); return res; }
 
     virtual double  K2ip(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); double res = K2ip(ia,ib,0.0); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
@@ -675,14 +709,14 @@ public:
     virtual double K1ip(int ia,                         const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr,                                                                                                                                  const vecInfo *xainfo = nullptr)                                                                                                    const { return KK1ip(ia,0.0,pxyprod,xa,xainfo);                                        }
     virtual double K2ip(int ia, int ib,                 const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr,                                                                                       const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr)                                                                   const { return KK2ip(ia,ib,0.0,pxyprod,xa,xb,xainfo,xbinfo);                           }
     virtual double K3ip(int ia, int ib, int ic,         const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr,                                            const vecInfo *xainfo = nullptr,           const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr)                        const { return KK3ip(ia,ib,ic,0.0,pxyprod,xa,xb,xc,xainfo,xbinfo,xcinfo);              }
-    virtual double K4ip(int ia, int ib, int ic, int id, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr, const SparseVector<gentype> *xdp = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr, const vecInfo *xdpinfo = nullptr) const { return KK4ip(ia,ib,ic,id,0.0,pxyprod,xa,xb,xc,xdp,xainfo,xbinfo,xcinfo,xdpinfo); }
+    virtual double K4ip(int ia, int ib, int ic, int id, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr, const SparseVector<gentype> *xd = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr, const vecInfo *xdinfo = nullptr) const { return KK4ip(ia,ib,ic,id,0.0,pxyprod,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo); }
     virtual double Kmip(int m, Vector<int> &i, const gentype **pxyprod = nullptr, Vector<const SparseVector<gentype> *> *xx = nullptr, Vector<const vecInfo *> *xzinfo = nullptr) const { return KKmip(m,i,0.0,pxyprod,xx,xzinfo); }
 
     virtual double K0ip(                                double bias, const gentype **pxyprod = nullptr)                                                                                                                                                                                                                                                                                                                 const { return KK0ip(bias,pxyprod); }
     virtual double K1ip(int ia,                         double bias, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr,                                                                                                                                  const vecInfo *xainfo = nullptr)                                                                                                    const { return KK1ip(ia,bias,pxyprod,xa,xainfo); }
     virtual double K2ip(int ia, int ib,                 double bias, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr,                                                                                       const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr)                                                                   const { return KK2ip(ia,ib,bias,pxyprod,xa,xb,xainfo,xbinfo); }
     virtual double K3ip(int ia, int ib, int ic,         double bias, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr,                                            const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr)                                  const { return KK3ip(ia,ib,ic,bias,pxyprod,xa,xb,xc,xainfo,xbinfo,xcinfo); }
-    virtual double K4ip(int ia, int ib, int ic, int id, double bias, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr, const SparseVector<gentype> *xdp = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr, const vecInfo *xdpinfo = nullptr) const { return KK4ip(ia,ib,ic,id,bias,pxyprod,xa,xb,xc,xdp,xainfo,xbinfo,xcinfo,xdpinfo); }
+    virtual double K4ip(int ia, int ib, int ic, int id, double bias, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr, const SparseVector<gentype> *xd = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr, const vecInfo *xdinfo = nullptr) const { return KK4ip(ia,ib,ic,id,bias,pxyprod,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo); }
     virtual double Kmip(int m, Vector<int> &i, double bias, const gentype **pxyprod = nullptr, Vector<const SparseVector<gentype> *> *xx = nullptr, Vector<const vecInfo *> *xzinfo = nullptr) const { return KKmip(m,i,bias,pxyprod,xx,xzinfo); }
 
     virtual gentype        &K0(              gentype        &res                          , const gentype **pxyprod = nullptr, int resmode = 0) const;
@@ -1986,7 +2020,7 @@ private:
     Vector<vecInfo> traininfo;
     Vector<int> traintang;
 //FIXME    Vector<const vecInfo *> traininfop;
-    Vector<int> xd;
+    Vector<int> x_d;
     Vector<double> xCweight;
     Vector<double> xCweightfuzz;
     Vector<double> xepsweight;
@@ -3002,7 +3036,7 @@ inline void ML_Base::qswapinternal(ML_Base &bb)
     qswap(alltraintargpR ,b.alltraintargpR );
     qswap(alltraintargpA ,b.alltraintargpA );
     qswap(alltraintargpV ,b.alltraintargpV );
-    qswap(xd             ,b.xd             );
+    qswap(x_d            ,b.x_d            );
     qswap(xdzero         ,b.xdzero         );
     qswap(locsigma       ,b.locsigma       );
     qswap(loclr          ,b.loclr          );
@@ -3102,7 +3136,7 @@ inline void ML_Base::semicopy(const ML_Base &bb)
     xmuprior_gt = b.xmuprior_gt;
     xmuprior_ml = b.xmuprior_ml;
 
-    xd             = b.xd;
+    x_d            = b.x_d;
     xdzero         = b.xdzero;
     locsigma       = b.locsigma;
     loclr          = b.loclr;
@@ -3184,7 +3218,7 @@ inline void ML_Base::assign(const ML_Base &bb, int onlySemiCopy)
         alltraintargpA = src.alltraintargpA;
         alltraintargpV = src.alltraintargpV;
 
-        xd           = src.xd;
+        x_d          = src.x_d;
         xdzero       = src.xdzero;
         locsigma     = src.locsigma;
         loclr        = src.loclr;
@@ -3228,7 +3262,7 @@ inline void ML_Base::assign(const ML_Base &bb, int onlySemiCopy)
         alltraintargpA = src.alltraintargpA;
         alltraintargpV = src.alltraintargpV;
 
-        xd           = src.xd;
+        x_d          = src.x_d;
         xdzero       = src.xdzero;
         locsigma     = src.locsigma;
         loclr        = src.loclr;
@@ -3263,7 +3297,7 @@ inline void ML_Base::assign(const ML_Base &bb, int onlySemiCopy)
         alltraintargpA = src.alltraintargpA;
         alltraintargpV = src.alltraintargpV;
 
-        xd           = src.xd;
+        x_d          = src.x_d;
         xdzero       = src.xdzero;
         locsigma     = src.locsigma;
         loclr        = src.loclr;

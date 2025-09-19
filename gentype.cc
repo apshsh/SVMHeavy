@@ -3027,7 +3027,7 @@ const SparseVector<gentype> &gentype::cast_sparsevector(int finalise) const
 
             if ( !issep )
             {
-                if ( vg(i).isValNull() ) { ; } // null means "there is no element here"
+                if ( vg(i).isValNull() && !vg(i).isNomConst ) { ; } // null means "there is no element here", !isNomConst means "wasn't a placeholder in the source"
                 else if ( fnum == 0 ) { vr.n ("&",iv,unum) = vg(i); }
                 else if ( fnum == 1 ) { vr.f1("&",iv,unum) = vg(i); }
                 else if ( fnum == 2 ) { vr.f2("&",iv,unum) = vg(i); }
@@ -3079,7 +3079,7 @@ const SparseVector<double> &gentype::cast_sparsevector_real(int finalise) const
 
             if ( !issep )
             {
-                if ( vg(i).isValNull() ) { ; } // null means "there is no element here"
+                if ( vg(i).isValNull() && !vg(i).isNomConst ) { ; } // null means "there is no element here", !isNomConst means "wasn't a placeholder in the source"
                 else if ( fnum == 0 ) { vr.n ("&",iv,unum) = (double) vg(i); }
                 else if ( fnum == 1 ) { vr.f1("&",iv,unum) = (double) vg(i); }
                 else if ( fnum == 2 ) { vr.f2("&",iv,unum) = (double) vg(i); }
@@ -18429,12 +18429,17 @@ gentype pycall(const gentype &c, const gentype &x)
 }
 
 #ifndef PYLOCAL
+void pycall(const std::string &fn, gentype &res,       int          x) { gentype xx(x); pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res,       double       x) { gentype xx(x); pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res, const d_anion     &x) { gentype xx(x); pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res, const std::string &x) { gentype xx(x); pycall(fn,res,xx); }
+
 // If not local python then we use a system call
-void pycall(const std::string &fn, gentype &res,       int               x) { gentype xx(x);      pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res,       double            x) { gentype xx(x);      pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res, const d_anion          &x) { gentype xx(x);      pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res, const std::string      &x) { gentype xx(x);      pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res, int size, const double *x) { gentype xx(size,x); pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res, int size, const double *x)
+{
+    gentype xx(size,x);
+    pycall(fn,res,xx);
+}
 
 void pycall(const std::string &evalstr, gentype &res, const gentype &x)
 {
@@ -25042,6 +25047,13 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
 	for ( int i = 0 ; i < size ; ++i )
 	{
             res.sv(i,src.direcref(i));
+
+
+
+            if ( res(i).isValNull() )
+            {
+                res("&",i).isNomConst = true;
+            }
         }
     }
 
@@ -25054,6 +25066,13 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
             if ( src.ind(i) == prevind+1 )
             {
                 res.append(-1,src.direcref(i));
+
+
+
+                if ( res(res.size()-1).isValNull() )
+                {
+                    res("&",res.size()-1).isNomConst = true;
+                }
             }
 
             else if ( ( baseind < INDF1OFFSTART ) && ( src.ind(i) >= INDF1OFFSTART ) && ( src.ind(i) <= INDF1OFFEND ) )
@@ -25075,6 +25094,13 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
 
                 {
                     res.append(-1,src.direcref(i));
+
+
+
+                    if ( res(res.size()-1).isValNull() )
+                    {
+                        res("&",res.size()-1).isNomConst = true;
+                    }
                 }
             }
 
@@ -25097,6 +25123,13 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
 
                 {
                     res.append(-1,src.direcref(i));
+
+
+
+                    if ( res(res.size()-1).isValNull() )
+                    {
+                        res("&",res.size()-1).isNomConst = true;
+                    }
                 }
             }
 
@@ -25119,6 +25152,13 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
 
                 {
                     res.append(-1,src.direcref(i));
+
+
+
+                    if ( res(res.size()-1).isValNull() )
+                    {
+                        res("&",res.size()-1).isNomConst = true;
+                    }
                 }
             }
 
@@ -25141,6 +25181,13 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
 
                 {
                     res.append(-1,src.direcref(i));
+
+
+
+                    if ( res(res.size()-1).isValNull() )
+                    {
+                        res("&",res.size()-1).isNomConst = true;
+                    }
                 }
             }
 
@@ -25170,12 +25217,19 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
 
                 {
                     res.append(-1,src.direcref(i));
+
+
+
+                    if ( res(res.size()-1).isValNull() )
+                    {
+                        res("&",res.size()-1).isNomConst = true;
+                    }
                 }
             }
 
             else
             {
-                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                for ( int ii = prevind+1 ; ii < src.ind(i) ; ++ii )
                 {
                     const static gentype tmp('N');
 
@@ -25184,6 +25238,13 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
 
                 {
                     res.append(-1,src.direcref(i));
+
+
+
+                    if ( res(res.size()-1).isValNull() )
+                    {
+                        res("&",res.size()-1).isNomConst = true;
+                    }
                 }
             }
 
@@ -25358,7 +25419,7 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<doub
 
             else
             {
-                for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
+                for ( int ii = prevind+1 ; ii < src.ind(i) ; ++ii )
                 {
                     const static gentype tmp('N');
 

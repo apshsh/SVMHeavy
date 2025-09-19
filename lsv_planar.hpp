@@ -195,7 +195,8 @@ public:
     virtual MercerKernel &getKernel_unsafe(void)       override { return getQ().getKernel_unsafe(); }
     virtual void prepareKernel            (void)       override {        getQ().prepareKernel();    }
 
-    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr) override { return getQ().tuneKernel(method,xwidth,tuneK,tuneP,tunebounds); }
+    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr, paraDef *probbnd = nullptr) override { return getQ().tuneKernel(method,xwidth,tuneK,tuneP,tunebounds,probbnd); }
+    virtual double evalkernel(int method, const paraDef &probbnd, const Vector<double> &ffull) override { return getQ().evalkernel(method,probbnd,ffull); }
 
     virtual int resetKernel(                             int modind = 1, int onlyChangeRowI = -1, int updateInfo = 1) override { return getQ().resetKernel(modind,onlyChangeRowI,updateInfo); }
     virtual int setKernel  (const MercerKernel &xkernel, int modind = 1, int onlyChangeRowI = -1                    ) override { return getQ().setKernel(xkernel,modind,onlyChangeRowI);      }

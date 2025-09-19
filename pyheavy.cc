@@ -1,122 +1,70 @@
+//FIXME: add feedback option to override budget function
+
 /*
-Assertion ires >= 0 failed at line 5090 in file bayesopt.cc - is there a better way to return nothing? What about none?
+FIXME: add a random method that randomly selects vectors as per initial random seeds
 
-FIXME: LINE 109 below
-
-import pyheavy
-import math
-f = lambda x : 1-(1-(0.1*(1-x[2])*math.exp(-1/(2*x[1]))))*(((2300*x[0]*x[0]*x[0])+(1900*x[0]*x[0])+(2092*x[0])+60)/((100*x[0]*x[0]*x[0])+(500*x[0]*x[0])+(4*x[0])+20))/14
-pyheavy.opt.BO.selBOopt(i=10,rst=1)
-pyheavy.opt.BO.setacq(acq=3)
-pyheavy.opt.BO.fid.setnumfids(numfids=10)
-# pyheavy.opt.BO.fid.setfidbudget(fidbudget=50*1.1)
-# pyheavy.opt.BO.fid.setfidpenalty(fidpenalty=lambda x : 0.1*x*x)
-pyheavy.opt.BO.vis.setmodelname(modelname="currinboac")
-pyheavy.opt.BO.vis.setplotfreq(plotfreq=1)
-pyheavy.opt.BO.models.selmu_prior()
-pyheavy.ml.gp.setsigma(sigma=0.5/(14*14))
-pyheavy.ml.kern.settypes(types=[3,3])
-pyheavy.ml.kern.obscure.setsplit(split=[1,0])
-res = pyheavy.opt.BO.opt(dim=3,fn=f)
-
-
->>> res = pyheavy.opt.BO.opt(dim=3,fn=f)
----
-Evaluation: 0.18689710757068478 = f([ 0.52458710179175383       ;   0.26330554078427826 ;   0     ]) (1)
-Evaluation: 0.21822523786080927 = f([ 0.1030405593134946        ;   0.76710712413159277 ;   0     ]) (2)
-Evaluation: 0.24054156306023511 = f([ 0.68149401730089665       ;   0.27090870701324599 ;   0     ]) (3)
-Evaluation: 0.075840839152828243        = f([ 0.25994747482263736       ;   0.77471029036056049 ;   0     ]) (4)
-***(acq 3)
-Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (5)
-Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (6)
-Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (7)
-Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (8)
-Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (9)
-Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (10)
-Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (11)
-Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (12)
-Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (13)
-Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (14)
-Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (15)
-Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (16)
-Evaluation: 0.27289330564220615 = f([ 0.99999153245609573       ;   0.99999153245609573 ;   1     ]) (17)
-^C
-Program received signal SIGINT, Interrupt.
-0x00007ffff64a5106 in SparseVector<gentype>::ind (this=0x240, pos=2) at sparsevector.hpp:347
-347         int ind(int pos)             const { return ((*indices).v(pos)); }
-(gdb) q
-
-
-fidelity is not being translated right!
+DYLAN: add multifidelity to probdef file he sent
+3 levels
+lowest: 20 minutes
+mid: 2 hours
+max: 6 hours
 
 
 
->>> pyheavy.ml.x()[1]
-[0.1030405593134946, 0.7671071241315928, '~', 0.1]
->>> pyheavy.ml.x()[2]
-[0.6814940173008966, 0.270908707013246, '~', 0.6]
->>> pyheavy.ml.x()[3]
-[0.25994747482263736, 0.7747102903605605, '~', 0.5]
->>> pyheavy.ml.x()[4]
-[0.9999915324560957, 0.9999915324560957, '~', None, 1.0]
->>> pyheavy.ml.x()[5]
-[0.9999915324560957, 0.9999915324560957, '~', None, 1.0]
->>> pyheavy.ml.x()[6]
-[0.9999915324560957, 0.9999915324560957, '~', None, 1.0]
 
 
-Also why are the diagonals not 1?
+import pyheavy,arunsim
+pyheavy.exec("-Zw probdef_regress.txt")
 
-1.0
->>> pyheavy.ml.d()
-[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
->>> pyheavy.ml.K2(xa=12,xb=12)
-0.36787944117144233
->>> pyheavy.ml.gp.Gp()[12][12]
-0.3704304615796056
+import pyheavy,arunsim
+pyheavy.exec("-Zw probdef_hybrid.txt")
 
-line 31065 in mercer.cc makes no fucking sense!
+import pyheavy,arunsim
+pyheavy.exec("-Zw probdef_classify.txt")
 
-check this:
+-gmgtcv 1             // optimise on modified acquisition to include constraint variance
 
->>> pyheavy.ml.kern.obscure.setsplit(split=[1,0])
->>> pyheavy.ml.kern.obscure.setmulsplit(mulsplit=[0,0])
->>> pyheavy.ml.K2(xa=[1,2,'~',2],xb=[1,2,'~',2])
-0.36787944117144233
->>> pyheavy.ml.K2(xa=[1,2],xb=[1,2])
-1.0
->>> pyheavy.ml.K1(xa=[1,2])
-1.0
->>> pyheavy.ml.K1(xa=[1,2,'~',2])
-0.36787944117144233
+regression :
 
-should end up at mercer.cc:32969, do we?, or do we diverge into unadorned land for some reason?
+ei       done
+ucb      done
+ei  tonc done
+ucb tonc done
 
-HERE!!!!!!
-flow gets to 32969: what are xa,xc,xb,xd?
+classify :
 
-res is calculated fine: 1
-atempres is wrong: its the 1-kernel result!!!!!
+ei       done
+ucb      running
+ei  tonc
+ucb tonc done
 
-in LL2, line 37463: why isn't needsaaprod set?
-line 37538: why needsdiff(0)? should be needsdiff(locindstart)?
+1712 is the exit!
 
-18049: res = 0
-18055: res = -1??????? what the fuck????
-and for some reason r1 = 1??  Why??
 
-Does block setTypes actually work ok?
 
-do any of the vector forms work right?
 
-PROBLEM: VEOTOR SETTYPE DOESN"T SET WHAT WE NEED SET!!!!!! USE LOOP INSTEAD!!!!
+Initialization: - pick toy problem of similar dim and experiment with number of random initial samples
+
+Paper - start on paper on ratchett tonc
+
+Multifid - talk to Dylan on thursday about starting multi-fidelity sims, work out details and go
+Python - talk to Dylan about moving to 100% python
+Code - upload tutorial along with Dylan
+
+Arun hybrid - replace above certain threshold with inequalities to make "clipped" emulation softer
+
+Shannon - would it be feasible to say "pay attention to those in the middle, but only say "bigger than x" for those on the extremes"
 */
 
-//For some reason this:
-//
-//pyheavy.ml.addm(z = [None,None,None,None,None,None,None,None,None],x=[[0.1,None,0.3],[0.2,None,None],[0.3,None,None],[0.4,None,0.1],[0.5,None,None],[0.6,None,None],[0.7,None,None],[0.8,None,None],[0.9,None,0.9]])
-//
-//loses the None-ness of the Nones
+//FIXME: put globalopt virtual class precursor in ML_Base, if not nullptr then use this to tuneKernel
+
+//FIXME: put fidelity after aug, have function that returns which n it is
+
+/*
+- Does block setTypes actually work ok?
+- do any of the vector forms work right?
+PROBLEM: VEOTOR SETTYPE DOESN"T SET WHAT WE NEED SET!!!!!! USE LOOP INSTEAD!!!!
+*/
 
 //    int startpointsmultiobj;
 //    int totitersmultiobj;
@@ -673,6 +621,8 @@ template <class T> int convFromPy(Dict<T,dictkey> &res, const py::object &src);
 template <class T> int convFromPy(SparseVector<T> &res, const py::object &src);
                    int convFromPy(gentype         &res, const py::object &src);
 
+template <> int convFromPy(SparseVector<gentype> &res, const py::object &src);
+
 
 // Helper macros for python module constructions
 
@@ -896,273 +846,273 @@ void boSetgridsource(int i, int j);
 void boSetkernapproxsource(int i, int j);
 void boSetimpmeas(int i, int j);
 
-GETSETDEF(getMLType,ssetMLTypeClean,std::string);
+GETSETDEF(getMLType,ssetMLTypeClean,std::string)
 
-GETSETDEF(getVmethod,setVmethod,std::string);
-GETSETDEF(getCmethod,setCmethod,std::string);
-GETSETDEF(getOmethod,setOmethod,std::string);
-GETSETDEF(getAmethod,setAmethod,std::string);
-GETSETDEF(getRmethod,setRmethod,std::string);
-GETSETDEF(getTmethod,setTmethod,std::string);
-GETSETDEF(getBmethod,setBmethod,std::string);
-GETSETDEF(getMmethod,setMmethod,std::string);
+GETSETDEF(getVmethod,setVmethod,std::string)
+GETSETDEF(getCmethod,setCmethod,std::string)
+GETSETDEF(getOmethod,setOmethod,std::string)
+GETSETDEF(getAmethod,setAmethod,std::string)
+GETSETDEF(getRmethod,setRmethod,std::string)
+GETSETDEF(getTmethod,setTmethod,std::string)
+GETSETDEF(getBmethod,setBmethod,std::string)
+GETSETDEF(getMmethod,setMmethod,std::string)
 
-GETSETDEF(prim,  setprim,  int    );
-GETSETDEF(prival,setprival,gentype);
+GETSETDEF(prim,  setprim,  int    )
+GETSETDEF(prival,setprival,gentype)
 
-DODEF(train            );
-DODEF(reset            );
-DODEF(restart          );
-DODEF(removeNonSupports);
+DODEF(train            )
+DODEF(reset            )
+DODEF(restart          )
+DODEF(removeNonSupports)
 
-DOARGDEF(scale,          double);
-DOARGDEF(randomise,      double);
-DOARGDEF(trimTrainingSet,int   );
+DOARGDEF(scale,          double)
+DOARGDEF(randomise,      double)
+DOARGDEF(trimTrainingSet,int   )
 
-GETSETDEF(C,        setC,        double);
-GETSETDEF(sigma,    setsigma,    double);
-GETSETDEF(sigma_cut,setsigma_cut,double);
-GETSETDEF(eps,      seteps,      double);
+GETSETDEF(C,        setC,        double)
+GETSETDEF(sigma,    setsigma,    double)
+GETSETDEF(sigma_cut,setsigma_cut,double)
+GETSETDEF(eps,      seteps,      double)
 
-GETSETDEF(LinBiasForce, setLinBiasForce, double);
-GETSETDEF(QuadBiasForce,setQuadBiasForce,double);
-GETSETDEF(nu,           setnu,           double);
-GETSETDEF(nuQuad,       setnuQuad,       double);
+GETSETDEF(LinBiasForce, setLinBiasForce, double)
+GETSETDEF(QuadBiasForce,setQuadBiasForce,double)
+GETSETDEF(nu,           setnu,           double)
+GETSETDEF(nuQuad,       setnuQuad,       double)
 
-GETSETDEF(k,  setk,  int);
-GETSETDEF(ktp,setktp,int);
+GETSETDEF(k,  setk,  int)
+GETSETDEF(ktp,setktp,int)
 
-GETSETCLADEF(Cclass,  setCclass,  double);
-GETSETCLADEF(epsclass,setepsclass,double);
+GETSETCLADEF(Cclass,  setCclass,  double)
+GETSETCLADEF(epsclass,setepsclass,double)
 
-GETSETCLADEF(LinBiasForceclass, setLinBiasForceclass, double);
-GETSETCLADEF(QuadBiasForceclass,setQuadBiasForceclass,double);
+GETSETCLADEF(LinBiasForceclass, setLinBiasForceclass, double)
+GETSETCLADEF(QuadBiasForceclass,setQuadBiasForceclass,double)
 
-GETSETDEF(tspaceDim,settspaceDim,int);
-GETSETDEF(order,    setorder,    int);
+GETSETDEF(tspaceDim,settspaceDim,int)
+GETSETDEF(order,    setorder,    int)
 
-GETSETDEF(m,      setm,      int   );
-GETSETDEF(theta,  settheta,  double);
-GETSETDEF(simnorm,setsimnorm,int   );
+GETSETDEF(m,      setm,      int   )
+GETSETDEF(theta,  settheta,  double)
+GETSETDEF(simnorm,setsimnorm,int   )
 
-GETDEF(loglikelihood);
-GETDEF(maxinfogain  );
-GETDEF(RKHSnorm     );
-GETDEF(RKHSabs      );
+GETDEF(loglikelihood)
+GETDEF(maxinfogain  )
+GETDEF(RKHSnorm     )
+GETDEF(RKHSabs      )
 
-GETDEF(N                 );
-GETDEF(type              );
-GETDEF(subtype           );
-GETDEF(xspaceDim         );
-GETDEF(fspaceDim         );
-GETDEF(tspaceSparse      );
-GETDEF(xspaceSparse      );
-GETDEF(numClasses        );
-GETDEF(ClassLabels       );
-GETDEF(isTrained         );
-GETDEF(isSolGlob         );
-GETDEF(isUnderlyingScalar);
-GETDEF(isUnderlyingVector);
-GETDEF(isUnderlyingAnions);
-GETDEF(isClassifier      );
-GETDEF(isRegression      );
-GETDEF(isPlanarType      );
+GETDEF(N                 )
+GETDEF(type              )
+GETDEF(subtype           )
+GETDEF(xspaceDim         )
+GETDEF(fspaceDim         )
+GETDEF(tspaceSparse      )
+GETDEF(xspaceSparse      )
+GETDEF(numClasses        )
+GETDEF(ClassLabels       )
+GETDEF(isTrained         )
+GETDEF(isSolGlob         )
+GETDEF(isUnderlyingScalar)
+GETDEF(isUnderlyingVector)
+GETDEF(isUnderlyingAnions)
+GETDEF(isClassifier      )
+GETDEF(isRegression      )
+GETDEF(isPlanarType      )
 
-GETDEF(NZ );
-GETDEF(NF );
-GETDEF(NS );
-GETDEF(NC );
-GETDEF(NLB);
-GETDEF(NLF);
-GETDEF(NUF);
-GETDEF(NUB);
+GETDEF(NZ )
+GETDEF(NF )
+GETDEF(NS )
+GETDEF(NC )
+GETDEF(NLB)
+GETDEF(NLF)
+GETDEF(NUF)
+GETDEF(NUB)
 
-GETDEF(Gp   );
-GETDEF(gprGp);
-GETDEF(lsvGp);
+GETDEF(Gp   )
+GETDEF(gprGp)
+GETDEF(lsvGp)
 
-GETCLADEF(NNC);
+GETCLADEF(NNC)
 
-GETDEF(x          );
-GETDEF(d          );
-GETDEF(y          );
-GETDEF(yp         );
-GETDEF(Cweight    );
-GETDEF(Cweightfuzz);
-GETDEF(sigmaweight);
-GETDEF(epsweight  );
-GETDEF(alphaState );
-GETDEF(xtang      );
+GETDEF(x          )
+GETDEF(d          )
+GETDEF(y          )
+GETDEF(yp         )
+GETDEF(Cweight    )
+GETDEF(Cweightfuzz)
+GETDEF(sigmaweight)
+GETDEF(epsweight  )
+GETDEF(alphaState )
+GETDEF(xtang      )
 
-GETDEF(kerndiag);
+GETDEF(kerndiag)
 
-GETSETDEF(alpha,setAlpha,Vector<gentype>);
-GETSETDEF(bias, setBias, gentype        );
+GETSETDEF(alpha,setAlpha,Vector<gentype>)
+GETSETDEF(bias, setBias, gentype        )
 
-GETSETDEF(gamma,setgamma,Vector<gentype>);
-GETSETDEF(delta,setdelta,gentype        );
+GETSETDEF(gamma,setgamma,Vector<gentype>)
+GETSETDEF(delta,setdelta,gentype        )
 
-GETSETDEF(muWeight,setmuWeight,Vector<gentype>);
-GETSETDEF(muBias,  setmuBias,  gentype        );
+GETSETDEF(muWeight,setmuWeight,Vector<gentype>)
+GETSETDEF(muBias,  setmuBias,  gentype        )
 
-GETSETKERAPDEF(isSymmSet, setSymmSet, int);
-GETSETKERAPDEF(isFullNorm,setFullNorm,int);
-GETSETKERAPDEF(isProd,    setProd,    int);
-GETSETKERBPDEF(isAltDiff, setAltDiff, int);
-GETSETKERAPDEF(rankType,  setrankType,int);
+GETSETKERAPDEF(isSymmSet, setSymmSet, int)
+GETSETKERAPDEF(isFullNorm,setFullNorm,int)
+GETSETKERAPDEF(isProd,    setProd,    int)
+GETSETKERBPDEF(isAltDiff, setAltDiff, int)
+GETSETKERAPDEF(rankType,  setrankType,int)
 
-GETSETKERANDEF(denseZeroPoint,setdenseZeroPoint,double);
+GETSETKERANDEF(denseZeroPoint,setdenseZeroPoint,double)
 
-GETSETKERAPDEF(getlinGradOrd, setlinGradOrd, Vector<int>           );
-GETSETKERAPDEF(getlinGradScal,setlinGradScal,Vector<Matrix<double>>);
+GETSETKERAPDEF(getlinGradOrd, setlinGradOrd, Vector<int>           )
+GETSETKERAPDEF(getlinGradScal,setlinGradScal,Vector<Matrix<double>>)
 
-GETSETKERAPDEF(getlinParity,    setlinParity,    Vector<int>    );
-GETSETKERAPDEF(getlinParityOrig,setlinParityOrig,Vector<gentype>);
+GETSETKERAPDEF(getlinParity,    setlinParity,    Vector<int>    )
+GETSETKERAPDEF(getlinParityOrig,setlinParityOrig,Vector<gentype>)
 
-GETSETKERAPDEF(numSamples,        setnumSamples,        int            );
-GETSETKERAPDEF(sampleDistribution,setSampleDistribution,Vector<gentype>);
-GETSETKERAPDEF(sampleIndices,     setSampleIndices,     Vector<int>    );
+GETSETKERAPDEF(numSamples,        setnumSamples,        int            )
+GETSETKERAPDEF(sampleDistribution,setSampleDistribution,Vector<gentype>)
+GETSETKERAPDEF(sampleIndices,     setSampleIndices,     Vector<int>    )
 
-GETSETKERAPDEF(getTypes,         setTypes,         Vector<int>              );
-GETSETKERAPDEF(getHyper,         setHyper,         Vector<Vector<gentype>>  );
-GETSETKERAPDEF(getIntConstants,  setIntConstantss, Vector<Vector<int>>      );
-GETSETKERBNDEF(getRealOverwrites,setRealOverwrites,Vector<SparseVector<int>>);
-GETSETKERBNDEF(getIntOverwrites, setIntOverwrites, Vector<SparseVector<int>>);
-GETSETKERAPDEF(getIsNormalised,  setIsNormalised,  Vector<int>              );
-GETSETKERAPDEF(getIsMagTerm,     setIsMagTerm,     Vector<int>              );
-GETSETKERAPDEF(getIsNomConst,    setIsNomConst,    Vector<int>              );
+GETSETKERAPDEF(getTypes,         setTypes,         Vector<int>              )
+GETSETKERAPDEF(getHyper,         setHyper,         Vector<Vector<gentype>>  )
+GETSETKERAPDEF(getIntConstants,  setIntConstantss, Vector<Vector<int>>      )
+GETSETKERBNDEF(getRealOverwrites,setRealOverwrites,Vector<SparseVector<int>>)
+GETSETKERBNDEF(getIntOverwrites, setIntOverwrites, Vector<SparseVector<int>>)
+GETSETKERAPDEF(getIsNormalised,  setIsNormalised,  Vector<int>              )
+GETSETKERAPDEF(getIsMagTerm,     setIsMagTerm,     Vector<int>              )
+GETSETKERAPDEF(getIsNomConst,    setIsNomConst,    Vector<int>              )
 
-GETSETKERAPDEF(getChained, setChained, Vector<int>);
-GETSETKERAPDEF(getSplit,   setSplit,   Vector<int>);
-GETSETKERAPDEF(getMulSplit,setMulSplit,Vector<int>);
+GETSETKERAPDEF(getChained, setChained, Vector<int>)
+GETSETKERAPDEF(getSplit,   setSplit,   Vector<int>)
+GETSETKERAPDEF(getMulSplit,setMulSplit,Vector<int>)
 
-GETSETKERAPDEF(getHyperLB,setHyperLB,Vector<Vector<gentype>>);
-GETSETKERAPDEF(getHyperUB,setHyperUB,Vector<Vector<gentype>>);
+GETSETKERAPDEF(getHyperLB,setHyperLB,Vector<Vector<gentype>>)
+GETSETKERAPDEF(getHyperUB,setHyperUB,Vector<Vector<gentype>>)
 
-GETSETKERAPDEF(getIntConstantsLB,setIntConstantssLB,Vector<Vector<int>>);
-GETSETKERAPDEF(getIntConstantsUB,setIntConstantssUB,Vector<Vector<int>>);
+GETSETKERAPDEF(getIntConstantsLB,setIntConstantssLB,Vector<Vector<int>>)
+GETSETKERAPDEF(getIntConstantsUB,setIntConstantssUB,Vector<Vector<int>>)
 
-GETSETKERAPQDEF(cWeight,     setWeight,      gentype);
-GETSETKERAPQDEF(cType,       setType,        int    );
-GETSETKERAPQDEF(isNormalised,setisNormalised,int    );
-GETSETKERAPQDEF(isMagTerm,   setisMagTerm,   int    );
-GETSETKERAPQDEF(isNomConst,  setisNomConst,  int    );
+GETSETKERAPQDEF(cWeight,     setWeight,      gentype)
+GETSETKERAPQDEF(cType,       setType,        int    )
+GETSETKERAPQDEF(isNormalised,setisNormalised,int    )
+GETSETKERAPQDEF(isMagTerm,   setisMagTerm,   int    )
+GETSETKERAPQDEF(isNomConst,  setisNomConst,  int    )
 
-GETSETKERAPQDEF(cRealConstants,setRealConstants,Vector<gentype>  );
-GETSETKERAPQDEF(cIntConstants, setIntConstants, Vector<int>      );
-GETSETKERBNQDEF(cRealOverwrite,setRealOverwrite,SparseVector<int>);
-GETSETKERBNQDEF(cIntOverwrite, setIntOverwrite, SparseVector<int>);
+GETSETKERAPQDEF(cRealConstants,setRealConstants,Vector<gentype>  )
+GETSETKERAPQDEF(cIntConstants, setIntConstants, Vector<int>      )
+GETSETKERBNQDEF(cRealOverwrite,setRealOverwrite,SparseVector<int>)
+GETSETKERBNQDEF(cIntOverwrite, setIntOverwrite, SparseVector<int>)
 
-GETSETKERAPQDEF(getRealConstZero,setRealConstZero,double);
-GETSETKERAPQDEF(getIntConstZero, setIntConstZero, int   );
+GETSETKERAPQDEF(getRealConstZero,setRealConstZero,double)
+GETSETKERAPQDEF(getIntConstZero, setIntConstZero, int   )
 
-GETSETKERAPQDEF(isChained, setisChained, int);
-GETSETKERAPQDEF(isSplit,   setisSplit,   int);
-GETSETKERAPQDEF(isMulSplit,setisMulSplit,int);
+GETSETKERAPQDEF(isChained, setisChained, int)
+GETSETKERAPQDEF(isSplit,   setisSplit,   int)
+GETSETKERAPQDEF(isMulSplit,setisMulSplit,int)
 
-GETSETKERCNQDEF(cWeightLB,setWeightLB,gentype);
+GETSETKERCNQDEF(cWeightLB,setWeightLB,gentype)
 
-GETSETKERCNQDEF(cRealConstantsLB,setRealConstantsLB,Vector<gentype>);
-GETSETKERCNQDEF(cIntConstantsLB, setIntConstantsLB, Vector<int>    );
+GETSETKERCNQDEF(cRealConstantsLB,setRealConstantsLB,Vector<gentype>)
+GETSETKERCNQDEF(cIntConstantsLB, setIntConstantsLB, Vector<int>    )
 
-GETSETKERCNQDEF(getRealConstZeroLB,setRealConstZeroLB,double);
-GETSETKERCNQDEF(getIntConstZeroLB, setIntConstZeroLB, int   );
+GETSETKERCNQDEF(getRealConstZeroLB,setRealConstZeroLB,double)
+GETSETKERCNQDEF(getIntConstZeroLB, setIntConstZeroLB, int   )
 
-GETSETKERCNQDEF(cWeightUB,setWeightUB,gentype);
+GETSETKERCNQDEF(cWeightUB,setWeightUB,gentype)
 
-GETSETKERCNQDEF(cRealConstantsUB,setRealConstantsUB,Vector<gentype>);
-GETSETKERCNQDEF(cIntConstantsUB, setIntConstantsUB, Vector<int>    );
+GETSETKERCNQDEF(cRealConstantsUB,setRealConstantsUB,Vector<gentype>)
+GETSETKERCNQDEF(cIntConstantsUB, setIntConstantsUB, Vector<int>    )
 
-GETSETKERCNQDEF(getRealConstZeroUB,setRealConstZeroUB,double);
-GETSETKERCNQDEF(getIntConstZeroUB, setIntConstZeroUB, int   );
+GETSETKERCNQDEF(getRealConstZeroUB,setRealConstZeroUB,double)
+GETSETKERCNQDEF(getIntConstZeroUB, setIntConstZeroUB, int   )
 
 // Optimisation options
 
-OPTGETSETALLDEF(optname,std::string);
+OPTGETSETALLDEF(optname,std::string)
 
-OPTGETSETALLDEF(maxtraintime,double);
+OPTGETSETALLDEF(maxtraintime,double)
 
-OPTGETSETALLDEF(softmin,double);
-OPTGETSETALLDEF(softmax,double);
-OPTGETSETALLDEF(hardmin,double);
-OPTGETSETALLDEF(hardmax,double);
+OPTGETSETALLDEF(softmin,double)
+OPTGETSETALLDEF(softmax,double)
+OPTGETSETALLDEF(hardmin,double)
+OPTGETSETALLDEF(hardmax,double)
 
-OPTGETSETDEF(numZooms,grid,int   );
-OPTGETSETDEF(zoomFact,grid,double);
+OPTGETSETDEF(numZooms,grid,int   )
+OPTGETSETDEF(zoomFact,grid,double)
 
-OPTGETSETDEF(numPts,grid,Vector<int>);
+OPTGETSETDEF(numPts,grid,Vector<int>)
 
-OPTGETSETDEF(maxits,   DIRect,int   );
-OPTGETSETDEF(maxevals, DIRect,int   );
-OPTGETSETDEF(eps,      DIRect,double);
+OPTGETSETDEF(maxits,   DIRect,int   )
+OPTGETSETDEF(maxevals, DIRect,int   )
+OPTGETSETDEF(eps,      DIRect,double)
 
-OPTGETSETDEF(minf_max,NelderMead,double);
-OPTGETSETDEF(ftol_rel,NelderMead,double);
-OPTGETSETDEF(ftol_abs,NelderMead,double);
-OPTGETSETDEF(xtol_rel,NelderMead,double);
-OPTGETSETDEF(xtol_abs,NelderMead,double);
-OPTGETSETDEF(maxeval, NelderMead,int   );
-OPTGETSETDEF(method,  NelderMead,int   );
+OPTGETSETDEF(minf_max,NelderMead,double)
+OPTGETSETDEF(ftol_rel,NelderMead,double)
+OPTGETSETDEF(ftol_abs,NelderMead,double)
+OPTGETSETDEF(xtol_rel,NelderMead,double)
+OPTGETSETDEF(xtol_abs,NelderMead,double)
+OPTGETSETDEF(maxeval, NelderMead,int   )
+OPTGETSETDEF(method,  NelderMead,int   )
 
-OPTGETSETDEF(acq,        Bayesian,int    );
-OPTGETSETDEF(startpoints,Bayesian,int    );
-OPTGETSETDEF(totiters,   Bayesian,int    );
-OPTGETSETDEF(startseed,  Bayesian,int    );
-OPTGETSETDEF(algseed,    Bayesian,int    );
-OPTGETSETDEF(itcntmethod,Bayesian,int    );
-OPTGETSETDEF(err,        Bayesian,double );
-OPTGETSETDEF(minstdev,   Bayesian,double );
-OPTGETSETDEF(moodim,     Bayesian,int    );
-OPTGETSETDEF(sigmuseparate,Bayesian,int    );
-OPTGETSETDEF(numcgt,     Bayesian,int    );
-OPTGETSETDEF(cgtmethod,  Bayesian,int    );
-OPTGETSETDEF(cgtmargin,  Bayesian,double );
-OPTGETSETDEF(ztol,       Bayesian,double );
-OPTGETSETDEF(delta,      Bayesian,double );
-OPTGETSETDEF(zeta,       Bayesian,double );
-OPTGETSETDEF(nu,         Bayesian,double );
-OPTGETSETDEF(modD,       Bayesian,double );
-OPTGETSETDEF(a,          Bayesian,double );
-OPTGETSETDEF(b,          Bayesian,double );
-OPTGETSETDEF(r,          Bayesian,double );
-OPTGETSETDEF(p,          Bayesian,double );
-OPTGETSETDEF(R,          Bayesian,double );
-OPTGETSETDEF(B,          Bayesian,double );
-OPTGETSETDEF(betafn,     Bayesian,gentype);
-OPTGETSETDEF(numfids,    Bayesian,int    );
-OPTGETSETDEF(fidover,    Bayesian,int    );
-OPTGETSETDEF(dimfid,     Bayesian,int    );
-OPTGETSETDEF(fidbudget,  Bayesian,double );
-OPTGETSETDEF(fidpenalty, Bayesian,gentype);
-OPTGETSETDEF(fidvar,     Bayesian,gentype);
-OPTGETSETDEF(PIscale,    Bayesian,int    );
-OPTGETSETDEF(TSmode,     Bayesian,int    );
-OPTGETSETDEF(TSNsamp,    Bayesian,int    );
-OPTGETSETDEF(TSsampType, Bayesian,int    );
-OPTGETSETDEF(TSxsampType,Bayesian,int    );
-OPTGETSETDEF(sigma_cut,  Bayesian,double );
-OPTGETSETDEF(tranmeth,   Bayesian,int    );
-OPTGETSETDEF(alpha0,     Bayesian,double );
-OPTGETSETDEF(beta0,      Bayesian,double );
-OPTGETSETDEF(kxfnum,     Bayesian,int    );
-OPTGETSETDEF(kxfnorm,    Bayesian,int    );
+OPTGETSETDEF(acq,        Bayesian,int    )
+OPTGETSETDEF(startpoints,Bayesian,int    )
+OPTGETSETDEF(totiters,   Bayesian,int    )
+OPTGETSETDEF(startseed,  Bayesian,int    )
+OPTGETSETDEF(algseed,    Bayesian,int    )
+OPTGETSETDEF(itcntmethod,Bayesian,int    )
+OPTGETSETDEF(err,        Bayesian,double )
+OPTGETSETDEF(minstdev,   Bayesian,double )
+OPTGETSETDEF(moodim,     Bayesian,int    )
+OPTGETSETDEF(sigmuseparate,Bayesian,int    )
+OPTGETSETDEF(numcgt,     Bayesian,int    )
+OPTGETSETDEF(cgtmethod,  Bayesian,int    )
+OPTGETSETDEF(cgtmargin,  Bayesian,double )
+OPTGETSETDEF(ztol,       Bayesian,double )
+OPTGETSETDEF(delta,      Bayesian,double )
+OPTGETSETDEF(zeta,       Bayesian,double )
+OPTGETSETDEF(nu,         Bayesian,double )
+OPTGETSETDEF(modD,       Bayesian,double )
+OPTGETSETDEF(a,          Bayesian,double )
+OPTGETSETDEF(b,          Bayesian,double )
+OPTGETSETDEF(r,          Bayesian,double )
+OPTGETSETDEF(p,          Bayesian,double )
+OPTGETSETDEF(R,          Bayesian,double )
+OPTGETSETDEF(B,          Bayesian,double )
+OPTGETSETDEF(betafn,     Bayesian,gentype)
+OPTGETSETDEF(numfids,    Bayesian,int    )
+OPTGETSETDEF(fidover,    Bayesian,int    )
+OPTGETSETDEF(dimfid,     Bayesian,int    )
+OPTGETSETDEF(fidbudget,  Bayesian,double )
+OPTGETSETDEF(fidpenalty, Bayesian,gentype)
+OPTGETSETDEF(fidvar,     Bayesian,gentype)
+OPTGETSETDEF(PIscale,    Bayesian,int    )
+OPTGETSETDEF(TSmode,     Bayesian,int    )
+OPTGETSETDEF(TSNsamp,    Bayesian,int    )
+OPTGETSETDEF(TSsampType, Bayesian,int    )
+OPTGETSETDEF(TSxsampType,Bayesian,int    )
+OPTGETSETDEF(sigma_cut,  Bayesian,double )
+OPTGETSETDEF(tranmeth,   Bayesian,int    )
+OPTGETSETDEF(alpha0,     Bayesian,double )
+OPTGETSETDEF(beta0,      Bayesian,double )
+OPTGETSETDEF(kxfnum,     Bayesian,int    )
+OPTGETSETDEF(kxfnorm,    Bayesian,int    )
 
-OPTGETSETDEF(intrinbatch,        Bayesian,int    );
-OPTGETSETDEF(intrinbatchmethod,  Bayesian,int    );
-OPTGETSETDEF(startpointsmultiobj,Bayesian,int    );
-OPTGETSETDEF(totitersmultiobj,   Bayesian,int    );
-OPTGETSETDEF(ehimethodmultiobj,  Bayesian,int    );
+OPTGETSETDEF(intrinbatch,        Bayesian,int    )
+OPTGETSETDEF(intrinbatchmethod,  Bayesian,int    )
+OPTGETSETDEF(startpointsmultiobj,Bayesian,int    )
+OPTGETSETDEF(totitersmultiobj,   Bayesian,int    )
+OPTGETSETDEF(ehimethodmultiobj,  Bayesian,int    )
 
-OPTGETSETDEF(tunemu,          Bayesian,int        );
-OPTGETSETDEF(tunecgt,         Bayesian,int        );
-OPTGETSETDEF(tunesigma,       Bayesian,int        );
-OPTGETSETDEF(tunesrcmod,      Bayesian,int        );
-OPTGETSETDEF(tunediffmod,     Bayesian,int        );
-//OPTGETSETDEF(tuneaugxmod,     Bayesian,int        );
-OPTGETSETDEF(modelname,       Bayesian,std::string);
-OPTGETSETDEF(modeloutformat,  Bayesian,int        );
-OPTGETSETDEF(plotfreq,        Bayesian,int        );
-OPTGETSETDEF(modelbaseline,   Bayesian,std::string);
+OPTGETSETDEF(tunemu,          Bayesian,int        )
+OPTGETSETDEF(tunecgt,         Bayesian,int        )
+OPTGETSETDEF(tunesigma,       Bayesian,int        )
+OPTGETSETDEF(tunesrcmod,      Bayesian,int        )
+OPTGETSETDEF(tunediffmod,     Bayesian,int        )
+//OPTGETSETDEF(tuneaugxmod,     Bayesian,int        )
+OPTGETSETDEF(modelname,       Bayesian,std::string)
+OPTGETSETDEF(modeloutformat,  Bayesian,int        )
+OPTGETSETDEF(plotfreq,        Bayesian,int        )
+OPTGETSETDEF(modelbaseline,   Bayesian,std::string)
 
 
 
@@ -2187,7 +2137,7 @@ PYBIND11_MODULE(pyheavy, m) {
 
     QGETSETKERQD(m_ml_kern,getRealConstZeroUB,setRealConstZeroUB,"lUB","setlUB","nominal upper bound for lengthscale");
     QGETSETKERQD(m_ml_kern,getIntConstZeroUB, setIntConstZeroUB, "dUB","setdUB","nominal upper bounds for order"     );
-};
+}
 
 void logit(const std::string logstr)
 {
@@ -3109,7 +3059,6 @@ int maddTrainingVectorml(int i, int j, py::object z, py::object x, py::object Cw
 
     errcode |= convFromPy(zz,z);
     errcode |= convFromPy(xx,x);
-errstream() << "phantomxyz xx = " << xx << "\n";
 
     if ( Cweigh.is_none()   || ( errcode |= convFromPy(cw,Cweigh)   ) ) { cw.resize(xx.size()) = 1.0; }
     if ( epsweigh.is_none() || ( errcode |= convFromPy(ew,epsweigh) ) ) { ew.resize(xx.size()) = 1.0; }
@@ -3118,6 +3067,12 @@ errstream() << "phantomxyz xx = " << xx << "\n";
     {
         return 0;
     }
+
+int addtrainingdata(ML_Base &mlbase, const char *trainfile, int reverse = 0, int ignoreStart = 0, int imax = -1, int ibase = -1, const char *savefile = nullptr);
+int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, const std::string &savefile);
+int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, Vector<SparseVector<gentype> > &x, const Vector<gentype> &y,                                     int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget);
+int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, Vector<SparseVector<gentype> > &x, const Vector<gentype> &y, const Vector<gentype> &sigmaweight, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget);
+int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread, const std::string &savefile);
 
     return getMLref(i).addTrainingVector(j,zz,xx,cw,ew);
 }
@@ -3685,10 +3640,10 @@ py::object convToPy(const gentype &src)
         return eval_function(fn);
     }
 
-    else if ( src.isValVectorReal() )
-    {
-        return convToPy((const Vector<double> &) src);
-    }
+//    else if ( src.isValVectorReal() ) - Nones are real according to gentype, but we want to retain structure in the result, so don't do this version!
+//    {
+//        return convToPy((const Vector<double> &) src);
+//    }
 
     else if ( src.isValVector() )
     {
@@ -3946,18 +3901,25 @@ int convFromPy(Dict<T,dictkey> &res, const py::object &src)
     return 32768;
 }
 
-template <class T>
-int convFromPy(SparseVector<T> &res, const py::object &src)
+template <>
+int convFromPy(SparseVector<gentype> &res, const py::object &src)
 {
+/* old version that relies on conversion from gentype.cc
+   this doesn't work right for eg [ 1.2 3.4 None ]. The final None is
+   converted to null, which is removed by gentype to leave [ 1.2 3.4 ],
+   which is not what we want when None could be a placedholder
+
     gentype altsrc;
 
     int errcode = convFromPy(altsrc,src); // sparsevector gets encoded into altres
+errstream() << "phantomxyz presparse: " << altsrc << "\n";
 
     if ( !errcode )
     {
         if ( altsrc.isCastableToVectorWithoutLoss() )
         {
             SparseVector<gentype> tmpres = (const SparseVector<gentype> &) altsrc;
+errstream() << "phantomxyz presparse conv: " << tmpres << "\n";
 
             res.zero();
 
@@ -3965,6 +3927,7 @@ int convFromPy(SparseVector<T> &res, const py::object &src)
             {
                 res("&",tmpres.ind(i)) = (T) tmpres.direcref(i);
             }
+errstream() << "phantomxyz presparse res: " << res << "\n";
         }
 
         else
@@ -3980,6 +3943,74 @@ int convFromPy(SparseVector<T> &res, const py::object &src)
     }
 
     return 0;
+*/
+
+    if ( py::isinstance<py::list>(src) )
+    {
+        py::list altsrc = py::cast<py::list>(src);
+
+        int errcode = 0;
+
+        res.zero();
+
+        int fnum = 0;
+        int unum = 0;
+        int iv = 0;
+        gentype tmpres;
+
+        for ( auto elm : altsrc )
+        {
+            bool issep = false;
+
+            errcode |= convFromPy(tmpres,elm);
+
+            if ( tmpres.isValString() )
+            {
+                     if ( ((const std::string &) tmpres) == "~"    ) { unum++;             iv = 0; issep = true; }
+                else if ( ((const std::string &) tmpres) == "::::" ) { unum = 0; fnum = 4; iv = 0; issep = true; }
+                else if ( ((const std::string &) tmpres) == ":::"  ) { unum = 0; fnum = 3; iv = 0; issep = true; }
+                else if ( ((const std::string &) tmpres) == "::"   ) { unum = 0; fnum = 2; iv = 0; issep = true; }
+                else if ( ((const std::string &) tmpres) == ":"    ) { unum = 0; fnum = 1; iv = 0; issep = true; }
+            }
+
+            if ( !issep )
+            {
+                if      ( fnum == 0 ) { res.n ("&",iv,unum) = tmpres; }
+                else if ( fnum == 1 ) { res.f1("&",iv,unum) = tmpres; }
+                else if ( fnum == 2 ) { res.f2("&",iv,unum) = tmpres; }
+                else if ( fnum == 3 ) { res.f3("&",iv,unum) = tmpres; }
+                else if ( fnum == 4 ) { res.f4("&",iv,unum) = tmpres; }
+
+                iv++;
+            }
+        }
+
+        if ( errcode )
+        {
+            return errcode+2048;
+        }
+
+        return 0;
+    }
+
+    return 2048;
+}
+
+template <class T>
+int convFromPy(SparseVector<T> &res, const py::object &src)
+{
+    SparseVector<gentype> altres;
+
+    int errcode = convFromPy(altres,src);
+
+    res.zero();
+
+    for ( int i = 0 ; i < altres.indsize() ; ++i )
+    {
+        res("&",altres.ind(i)) = (T) altres.direcref(i);
+    }
+
+    return errcode;
 }
 
 int convFromPy(gentype &res, const py::object &src)
@@ -4249,8 +4280,20 @@ template <class T> void pycall(const std::string &fn, gentype &res, const Matrix
 template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>           &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
 template <class T> void pycall(const std::string &fn, gentype &res, const Dict<T,dictkey>  &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
 template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T>  &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-                   void pycall(const std::string &fn, gentype &res, const gentype          &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-//                   void pycall(const std::string &fn, gentype &res, int size, const double *x) { dostartup(); py::object xx = convToPy(size,x);    pycall_x(fn,res,xx); }
+
+void pycall(const std::string &fn, gentype &res, const gentype &x)
+{
+    dostartup();
+    py::object xx = convToPy(x);
+    pycall_x(fn,res,xx);
+}
+
+//void pycall(const std::string &fn, gentype &res, int size, const double *x)
+//{
+//    dostartup();
+//    py::object xx = convToPy(size,x);
+//    pycall_x(fn,res,xx);
+//}
 
 
 

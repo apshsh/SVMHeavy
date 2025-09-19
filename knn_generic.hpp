@@ -90,7 +90,8 @@ public:
     virtual int resetKernel(int modind = 1, int onlyChangeRowI = -1, int updateInfo = 1) override;
     virtual int setKernel(const MercerKernel &xkernel, int modind = 1, int onlyChangeRowI = -1) override;
     virtual void prepareKernel(void) override { return; }
-    virtual double tuneKernel(int, double, int = 1, int = 0, const tkBounds * = nullptr) override { return 0; }
+    virtual double tuneKernel(int, double, int = 1, int = 0, const tkBounds * = nullptr, paraDef * = nullptr) override { return 0; }
+    virtual double evalkernel(int, const paraDef &, const Vector<double> &) override { return 0; }
 
     // Training set modification:
 

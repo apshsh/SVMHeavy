@@ -1699,7 +1699,7 @@ static void readres(gentype &res,
         if ( z.iskeypresent("d")       && !z("d").isValNull()       ) { xobstype     = (int)    z("d");                                    }
         if ( z.iskeypresent("dc")      && !z("dc").isValNull()      ) { xobstype_cgt =          z("dc").cast_vector_int();                 }
         if ( z.iskeypresent("fidcost") && !z("fidcost").isValNull() ) { fidcost      = (double) z("fidcost");                              }
-        if ( z.iskeypresent("nuscale") && !z("nuscale").isValNull() ) { fidcost      = (double) z("nuscale");                              }
+        if ( z.iskeypresent("nuscale") && !z("nuscale").isValNull() ) { nuscale      = (double) z("nuscale");                              }
 
         if ( !resSet )
         {
@@ -2761,6 +2761,7 @@ int bayesOpt(int dim,
 
                 xxb("&",k).zero();
 
+errstream() << "phantomxyzxyz model_x = " << bopts.model_x(Nbasemu+gridi) << "\n";
                 for ( j = 0 ; j < dim ; ++j )
                 {
                     if ( j < dim-bopts.getdimfid() )
@@ -2791,7 +2792,7 @@ int bayesOpt(int dim,
 
                         // Fidelity variables
 
-                        if ( !isgridopt || bopts.model_x(Nbasemu+gridi).n(j-(dim-bopts.getdimfid()),1).isValNull() ) // short-circuit means model_x only used for isgridopt case
+                        if ( !isgridopt || bopts.model_x(Nbasemu+gridi)(j).isValNull() ) // short-circuit means model_x only used for isgridopt case
                         {
                             qqq = 1+(rand()%(bopts.numfids));
 
@@ -2803,7 +2804,7 @@ int bayesOpt(int dim,
                             // Discrete approximation: values are chosen randomly from
                             // a finite grid.
 
-                            xxb("&",k).n("&",j-(dim-bopts.getdimfid()),1) = bopts.model_x(Nbasemu+gridi).n(j-(dim-bopts.getdimfid()),1); // ((*gridsource).x(gridi))(j);
+                            xxb("&",k).n("&",j-(dim-bopts.getdimfid()),1) = bopts.model_x(Nbasemu+gridi)(j); // ((*gridsource).x(gridi))(j);
 
                             qqq = (int) std::lround(((double) (xxb(k).n(j-(dim-bopts.getdimfid()),1)))*(bopts.numfids));
                         }
@@ -2821,7 +2822,9 @@ int bayesOpt(int dim,
                 // ===========================================================
                 // ===========================================================
 
+errstream() << "phantomxyzxyz xxb = " << xxb(k) << "\n";
                 SparsenearToSparsenonnear(xb("&",k),xxb(k),dim,bopts.getdimfid());
+errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
 
                 // ===========================================================
                 // ===========================================================
@@ -2950,7 +2953,8 @@ int bayesOpt(int dim,
 
                     varscale = 0;
 
-                    // DESIGN DECISIONS: all observations are counted in the budget!
+                    // DESIGN DECISIONS: only the first observation counts in budget
+                    if ( firstinset )
                     {
                         SparseVector<SparseVector<gentype> > actfidel;
 
@@ -4097,7 +4101,7 @@ int bayesOpt(int dim,
 
                             SparseVector<gentype> xxfidxloc; xxfidxloc.castassign(fidxloc);
 
-                            bopts.model_var(resvar,xxfidxloc);
+                            bopts.inf_var(resvar,xxfidxloc);
 
                             double fidtau = sqrt( ( ((double) resvar) >= 0 ) ? ((double) resvar) : 0.0 );
 
@@ -4791,7 +4795,8 @@ int bayesOpt(int dim,
 
                 varscale = 0;
 
-                // DESIGN DECISION: all experiments count in fidbudget, even if not the primary experiment
+                // DESIGN DECISIONS: only the first observation counts in budget
+                if ( firstinset )
                 {
                     SparseVector<SparseVector<gentype> > actfidel;
 
