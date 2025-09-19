@@ -2761,7 +2761,7 @@ int bayesOpt(int dim,
 
                 xxb("&",k).zero();
 
-errstream() << "phantomxyzxyz model_x = " << bopts.model_x(Nbasemu+gridi) << "\n";
+//errstream() << "phantomxyzxyz model_x = " << bopts.model_x(Nbasemu+gridi) << "\n";
                 for ( j = 0 ; j < dim ; ++j )
                 {
                     if ( j < dim-bopts.getdimfid() )
@@ -2822,9 +2822,9 @@ errstream() << "phantomxyzxyz model_x = " << bopts.model_x(Nbasemu+gridi) << "\n
                 // ===========================================================
                 // ===========================================================
 
-errstream() << "phantomxyzxyz xxb = " << xxb(k) << "\n";
+//errstream() << "phantomxyzxyz xxb = " << xxb(k) << "\n";
                 SparsenearToSparsenonnear(xb("&",k),xxb(k),dim,bopts.getdimfid());
-errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
+//errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
 
                 // ===========================================================
                 // ===========================================================
