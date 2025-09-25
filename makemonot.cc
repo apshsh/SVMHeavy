@@ -32,6 +32,10 @@ ML_Base &makeMonotone(ML_Base &ml,
 
     int dim = indref.indsize();
 
+    // Default n
+
+    n = ( n == -1 ) ? ((int) std::ceil(std::pow(10.0,(double) dim))) : n;
+
     // Number of points per axis (if relevant)
     // (m+1)^dim = n -> m = ceil(n^(1/dim)) - 1
     // Round up n if relevant

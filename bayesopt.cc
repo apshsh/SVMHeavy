@@ -2277,7 +2277,8 @@ void NonsparseToSparsenonnear(SparseVector<double> &dest, const Vector<double> &
 // ===========================================================================
 // ===========================================================================
 
-#define CONT_TEST ( !stopnow && !stopearly && !killSwitch && !isopt && ( ( itcnt-skipcnt < maxitcnt ) || !maxitcnt ) && !timeout && ( !isgridopt || ( gridind.size() > recBatchSize ) ) && ( !usefidbudget || ( fidtotcost < bopts.fidbudget ) ) )
+#define CONT_TEST ( !stopnow && !stopearly && !killSwitch && !isopt && ( ( itcnt-skipcnt < maxitcnt ) || !maxitcnt ) && !timeout && ( !isgridopt || ( gridind.size() > recBatchSize ) ) && ( !usefidbudget || maxitcnt || ( fidtotcost < bopts.fidbudget ) ) )
+
 
 int bayesOpt(int dim,
              Vector<double> &xres,
@@ -2654,8 +2655,8 @@ int bayesOpt(int dim,
     //          is standard practice.
     // =======================================================================
 
-    bool usefidbudget = ismultfid && ( bopts.fidbudget > 0 ) && ( bopts.startpoints < 0 ) && ( bopts.totiters < 0 ); // multi-fidelity as per Kandasamy with budget and no over-rides
-    int startpoints   = usefidbudget ? 0 : ( ( bopts.startpoints == -1 ) ? (effdim+1+(bopts.getdimfid())) : bopts.startpoints ); //( bopts.startpoints == -1 ) ? dim+1 : bopts.startpoints; - note use of effdim here!
+    bool usefidbudget = ismultfid && ( bopts.fidbudget > 0 ) && ( ( bopts.startpoints < 0 ) || ( bopts.totiters < 0 ) ); // multi-fidelity as per Kandasamy with budget and no over-rides
+    int startpoints   = ( bopts.startpoints == -1 ) ? ( usefidbudget ? 0 : (effdim+1+(bopts.getdimfid())) ) : bopts.startpoints; //( bopts.startpoints == -1 ) ? dim+1 : bopts.startpoints; - note use of effdim here!
     int &startseed    = bopts.startseed; // reference because we need to *persistently* update it!
     int &algseed      = bopts.algseed; // reference because we need to *persistently* update it!
     double modD       = ( bopts.modD == -1 ) ? ( isgridopt ? Ngrid : 10 ) : bopts.modD; // 10 is arbitrary here!
@@ -2719,7 +2720,10 @@ int bayesOpt(int dim,
 
             int skipcnt = 0;
 
-            for ( i = Nstart ; ( ( ( i-skipcnt < Nstart+startpoints ) || !startpoints ) && !killSwitch && ( !isgridopt || ( gridind.size() > recBatchSize ) ) && ( !usefidbudget || ( fidtotcost < (bopts.fidbudget)/10 ) ) ) ; ++i )
+            for ( i = Nstart ; (    ( ( i-skipcnt < Nstart+startpoints ) || !startpoints )
+                                 && !killSwitch
+                                 && ( !isgridopt || ( gridind.size() > recBatchSize ) )
+                                 && ( !usefidbudget || startpoints || ( fidtotcost < (bopts.fidbudget)/10 ) ) ) ; ++i )
             {
                 double varscale = 0;
 

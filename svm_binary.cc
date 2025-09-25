@@ -1205,12 +1205,12 @@ int SVM_Binary::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
         gentype negres(-tempresg);
         gentype posres(tempresg);
 
-        Vector<gentype> tempresg(2);
+        Vector<gentype> tempresgg(2);
 
-        tempresg("&",0) = negres;
-        tempresg("&",1) = posres;
+        tempresgg("&",0) = negres;
+        tempresgg("&",1) = posres;
 
-        resg = tempresg;
+        resg = tempresgg;
     }
 
     else

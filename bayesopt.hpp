@@ -310,6 +310,7 @@ public:
     //int evaluse;
     //int sigmuseparate;
     int startpoints;
+    int startpointsalt;
     int startseed;         // this changes during optimisation setup to ensure no repeats unless specified
     int algseed;           // ...as does this
     int totiters;
@@ -376,6 +377,7 @@ public:
 
     DIRectOptions goptsmultiobj; // this overwrites goptssingleobj when constructing the local optimizer
     int startpointsmultiobj;
+    int startpointsaltmultiobj;
     int totitersmultiobj;
     int ehimethodmultiobj;
 
@@ -389,6 +391,7 @@ public:
         //evaluse           = 0;
         //sigmuseparate     = 0;
         startpoints       = -1; //5; //500; //10;
+        startpointsalt    = 0; //5; //500; //10;
         startseed         = 42;
         algseed           = 69;
         totiters          = -1; //100; //200; //500;
@@ -431,9 +434,10 @@ public:
 
         gridsource = xgridsource;
 
-        startpointsmultiobj = startpoints;
-        totitersmultiobj    = totiters;
-        ehimethodmultiobj   = 0;
+        startpointsmultiobj    = startpoints;
+        startpointsaltmultiobj = startpointsalt;
+        totitersmultiobj       = totiters;
+        ehimethodmultiobj      = 0;
 
         stabpmax    = DEFAULT_BAYES_STABPMAX;
         stabpmin    = DEFAULT_BAYES_STABPMIN;
@@ -466,6 +470,7 @@ public:
         //evaluse           = src.evaluse;
         //sigmuseparate     = src.sigmuseparate;
         startpoints       = src.startpoints;
+        startpointsalt    = src.startpointsalt;
         startseed         = src.startseed;
         algseed           = src.algseed;
         totiters          = src.totiters;
@@ -521,10 +526,11 @@ public:
 
         goptssingleobj = src.goptssingleobj;
 
-        goptsmultiobj       = src.goptsmultiobj;
-        startpointsmultiobj = src.startpointsmultiobj;
-        totitersmultiobj    = src.totitersmultiobj;
-        ehimethodmultiobj   = src.ehimethodmultiobj;
+        goptsmultiobj          = src.goptsmultiobj;
+        startpointsmultiobj    = src.startpointsmultiobj;
+        startpointsaltmultiobj = src.startpointsaltmultiobj;
+        totitersmultiobj       = src.totitersmultiobj;
+        ehimethodmultiobj      = src.ehimethodmultiobj;
 
         return *this;
     }

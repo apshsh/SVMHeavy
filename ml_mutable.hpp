@@ -1318,9 +1318,9 @@ public:
     virtual int isEPConst     (void) const { return getGPRconst().isEPConst();      }
     virtual int isLaplaceConst(void) const { return getGPRconst().isLaplaceConst(); }
 
-    virtual int setNaiveConst  (void) { return getGPR().setNaiveConst();   }
-    virtual int setEPConst     (void) { return getGPR().setEPConst();      }
-    virtual int setLaplaceConst(void) { return getGPR().setLaplaceConst(); }
+    virtual int setNaiveConst  (void        ) { return getGPR().setNaiveConst();       }
+    virtual int setEPConst     (void        ) { return getGPR().setEPConst();          }
+    virtual int setLaplaceConst(int type = 1) { return getGPR().setLaplaceConst(type); }
 
 
 

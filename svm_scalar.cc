@@ -3276,15 +3276,79 @@ int SVM_Scalar::qaddTrainingVector(int i, double zi, SparseVector<gentype> &x, d
     return res;
 }
 
-int SVM_Scalar::addTrainingVector(int i, const gentype &zi, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
+int SVM_Scalar::addTrainingVector(int i, const gentype &zi, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int d)
 {
-    return SVM_Scalar::addTrainingVector(i,(double) zi,x,Cweigh,epsweigh,dval); //2);
-}
+    // NB: GpnExt must be extended before calling this.
 
-int SVM_Scalar::qaddTrainingVector(int i, const gentype &zi, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
-{
-    return SVM_Scalar::qaddTrainingVector(i,(double) zi,x,Cweigh,epsweigh,dval); //2);
+    NiceAssert( i >= 0 );
+    NiceAssert( i <= SVM_Scalar::N() );
+    NiceAssert( ( d == -1 ) || ( d == +1 ) || ( d == 0 ) || ( d == 2 ) );
+
+    int res = SVM_Generic::addTrainingVector(i,zi,x);
+
+    isStateOpt = 0;
+
+    isQuasiLogLikeCalced = 0;
+    isMaxInfGainCalced   = 0;
+
+    ++(Nnc("&",d+1));
+
+    iskip = i;
+
+    if ( kerncache.get_min_rowdim() <= SVM_Scalar::N() )
+    {
+        xycache.setmemsize(   MEMSHARE_XYCACHE   (memsize()),(int) (SVM_Scalar::N()*ROWDIMSTEPRATIO));
+        kerncache.setmemsize( MEMSHARE_KCACHE    (memsize()),(int) (SVM_Scalar::N()*ROWDIMSTEPRATIO));
+        sigmacache.setmemsize(MEMSHARE_SIGMACACHE(memsize()),(int) (SVM_Scalar::N()*ROWDIMSTEPRATIO));
+    }
+
+    iskip = -1;
+
+    res |= qtaddTrainingVector(i,(double) zi,Cweigh,epsweigh,d);
+    res |= SVM_Scalar::fixautosettings(0,1);
+
+    return res;
 }
+//{
+//    return SVM_Scalar::addTrainingVector(i,(double) zi,x,Cweigh,epsweigh,d); //2);
+//}
+
+int SVM_Scalar::qaddTrainingVector(int i, const gentype &zi, SparseVector<gentype> &x, double Cweigh, double epsweigh, int d)
+{
+    // NB: GpnExt must be extended before calling this.
+
+    NiceAssert( i >= 0 );
+    NiceAssert( i <= SVM_Scalar::N() );
+    NiceAssert( ( d == -1 ) || ( d == +1 ) || ( d == 0 ) || ( d == 2 ) );
+
+    int res = SVM_Generic::qaddTrainingVector(i,zi,x);
+
+    isStateOpt = 0;
+
+    isQuasiLogLikeCalced = 0;
+    isMaxInfGainCalced   = 0;
+
+    ++(Nnc("&",d+1));
+
+    iskip = i;
+
+    if ( kerncache.get_min_rowdim() <= SVM_Scalar::N() )
+    {
+        xycache.setmemsize(   MEMSHARE_XYCACHE   (memsize()),(int) (SVM_Scalar::N()*ROWDIMSTEPRATIO));
+        kerncache.setmemsize( MEMSHARE_KCACHE    (memsize()),(int) (SVM_Scalar::N()*ROWDIMSTEPRATIO));
+        sigmacache.setmemsize(MEMSHARE_SIGMACACHE(memsize()),(int) (SVM_Scalar::N()*ROWDIMSTEPRATIO));
+    }
+
+    iskip = -1;
+
+    res |= qtaddTrainingVector(i,(double) zi,Cweigh,epsweigh,d);
+    res |= SVM_Scalar::fixautosettings(0,1);
+
+    return res;
+}
+//{
+//    return SVM_Scalar::qaddTrainingVector(i,(double) zi,x,Cweigh,epsweigh,d); //2);
+//}
 
 int SVM_Scalar::addTrainingVector(int i, const Vector<double> &zi, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
@@ -3406,37 +3470,139 @@ int SVM_Scalar::qaddTrainingVector(int i, const Vector<double> &zi, Vector<Spars
     return res;
 }
 
-int SVM_Scalar::addTrainingVector(int i, const Vector<gentype> &zi, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Scalar::addTrainingVector(int i, const Vector<gentype> &zi, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
+    // NB: GpnExt must be extended before calling this.
+
     int Nadd = zi.size();
 
-    Vector<int> ddd(Nadd);
-    Vector<double> zzi(Nadd);
+    NiceAssert( i >= 0 );
+    NiceAssert( i <= SVM_Scalar::N() );
+    NiceAssert( Nadd == xx.size() );
+    NiceAssert( Nadd == Cweigh.size() );
+    NiceAssert( Nadd == epsweigh.size() );
+//    NiceAssert( Nadd == d.size() );
+
+    Vector<double> zid(Nadd);
+
+    for ( int j = 0 ; j < Nadd ; j++ )
+    {
+        zid("&",j) = (double) zi(j);
+    }
+
+    retVector<double> tmpva,tmpvb;
+
+    int res = SVM_Generic::addTrainingVector(i,zi,xx,onedoublevec(zi.size(),tmpva),onedoublevec(zi.size(),tmpvb));
+
+    isStateOpt = 0;
+
+    isQuasiLogLikeCalced = 0;
+    isMaxInfGainCalced   = 0;
 
     for ( int j = 0 ; j < Nadd ; ++j )
     {
-        ddd("&",j) = 2;
-        zzi("&",j) = (double) zi(j);
+        ++(Nnc("&",2+1)); //d(j)+1));
+
+        iskip = i+j;
+
+        if ( kerncache.get_min_rowdim() <= SVM_Scalar::N() )
+        {
+            xycache.setmemsize(   MEMSHARE_XYCACHE(   memsize()),SVM_Scalar::N()+zi.size()+1);
+            kerncache.setmemsize( MEMSHARE_KCACHE(    memsize()),SVM_Scalar::N()+zi.size()+1);
+            sigmacache.setmemsize(MEMSHARE_SIGMACACHE(memsize()),SVM_Scalar::N()+zi.size()+1);
+        }
+
+        iskip = -1;
+
+        res |= qtaddTrainingVector(i+j,zid(j),Cweigh(j),epsweigh(j),2); //d(j));
     }
 
-    return SVM_Scalar::addTrainingVector(i,zzi,x,Cweigh,epsweigh,ddd);
-}
+    res |= SVM_Scalar::fixautosettings(0,1);
 
-int SVM_Scalar::qaddTrainingVector(int i, const Vector<gentype> &zi, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+    return res;
+}
+//{
+//    int Nadd = zi.size();
+//
+//    Vector<int> ddd(Nadd);
+//    Vector<double> zzi(Nadd);
+//
+//    for ( int j = 0 ; j < Nadd ; ++j )
+//    {
+//        ddd("&",j) = 2;
+//        zzi("&",j) = (double) zi(j);
+//    }
+//
+//    return SVM_Scalar::addTrainingVector(i,zzi,x,Cweigh,epsweigh,ddd);
+//}
+
+int SVM_Scalar::qaddTrainingVector(int i, const Vector<gentype> &zi, Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
+    // NB: GpnExt must be extended before calling this.
+
     int Nadd = zi.size();
 
-    Vector<int> ddd(zi.size());
-    Vector<double> zzi(zi.size());
+    NiceAssert( i >= 0 );
+    NiceAssert( i <= SVM_Scalar::N() );
+    NiceAssert( Nadd == xx.size() );
+    NiceAssert( Nadd == Cweigh.size() );
+    NiceAssert( Nadd == epsweigh.size() );
+//    NiceAssert( Nadd == d.size() );
 
-    for ( int j = 0 ; j < Nadd ; ++j )
+    int res = 0;
+
+    Vector<gentype> zid(Nadd);
+
+    for ( int j = 0 ; j < Nadd ; j++ )
     {
-        zzi("&",j) = (double) zi(j);
-        ddd("&",j) = 2;
+        zid("&",j) = (double) zi(j);
     }
 
-    return SVM_Scalar::qaddTrainingVector(i,zzi,x,Cweigh,epsweigh,ddd);
+    retVector<double> tmpva,tmpvb;
+
+    res |= SVM_Generic::qaddTrainingVector(i,zi,xx,onedoublevec(zi.size(),tmpva),onedoublevec(zi.size(),tmpvb));
+
+    isStateOpt = 0;
+
+    isQuasiLogLikeCalced = 0;
+    isMaxInfGainCalced   = 0;
+
+    for ( int j = 0 ; j < zi.size() ; ++j )
+    {
+        ++(Nnc("&",2+1)); //d(j)+1));
+
+        iskip = i+j;
+
+        if ( kerncache.get_min_rowdim() <= SVM_Scalar::N() )
+        {
+            xycache.setmemsize(   MEMSHARE_XYCACHE(   memsize()),SVM_Scalar::N()+zi.size()+1);
+            kerncache.setmemsize( MEMSHARE_KCACHE(    memsize()),SVM_Scalar::N()+zi.size()+1);
+            sigmacache.setmemsize(MEMSHARE_SIGMACACHE(memsize()),SVM_Scalar::N()+zi.size()+1);
+        }
+
+        iskip = -1;
+
+        res |= qtaddTrainingVector(i+j,zid(j),Cweigh(j),epsweigh(j),2); //d(j));
+    }
+
+    res |= SVM_Scalar::fixautosettings(0,1);
+
+    return res;
 }
+//{
+//    int Nadd = zi.size();
+//
+//    Vector<int> ddd(zi.size());
+//    Vector<double> zzi(zi.size());
+//
+//    for ( int j = 0 ; j < Nadd ; ++j )
+//    {
+//        zzi("&",j) = (double) zi(j);
+//        ddd("&",j) = 2;
+//    }
+//
+//    return SVM_Scalar::qaddTrainingVector(i,zzi,x,Cweigh,epsweigh,ddd);
+//}
 
 int SVM_Scalar::qtaddTrainingVector(int i, double zi, double Cweigh, double epsweigh, int d)
 {

@@ -47,6 +47,7 @@ inline py::object *&postProInnerProd(py::object *&a) { return a; }
 #include "directopt.hpp"
 #include "nelderopt.hpp"
 #include "bayesopt.hpp"
+#include "makemonot.hpp"
 
 void dostartup(void);
 
@@ -185,6 +186,7 @@ template <> int convFromPy(SparseVector<gentype> &res, const py::object &src);
                                                    (modis ## _RFF).def(setname, &(mod_r ## setfn), "For ML, element q, set RFF kernel parameter: "    desc, py::arg("i") = 0, py::arg("q") = 0, py::arg(getname)); \
                                                    (modis ## _RFF).def(getname, &(mod_r ## getfn), "For ML, element q, set RFF kernel parameter: "    desc, py::arg("i") = 0, py::arg("q") = 0);
 
+/*
 #define QGETSETOPT(modis,varname,ty,sub,desc) modis ## _ ## ty ## _ ## sub.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
                                               modis ## _ ## ty ## _ ## sub.def("get" #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get: " desc, py::arg("i") = 0);
 #define QGETSETOPTB(modis,varname,ty,desc   ) modis ## _ ##             ty.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
@@ -197,6 +199,20 @@ template <> int convFromPy(SparseVector<gentype> &res, const py::object &src);
                                               modis ## _DIRect            .def("get" #varname, &(modoptget_DIRect_     ## varname), "For " "DIRect"     " optimiser, get: " desc, py::arg("i") = 0); \
                                               modis ## _NelderMead        .def("get" #varname, &(modoptget_NelderMead_ ## varname), "For " "NelderMead" " optimiser, get: " desc, py::arg("i") = 0); \
                                               modis ## _Bayesian          .def("get" #varname, &(modoptget_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, get: " desc, py::arg("i") = 0);
+*/
+
+#define QGETSETOPT(modis,varname,ty,sub,desc) modis ## _ ## ty ## _ ## sub.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                              modis ## _ ## ty ## _ ## sub.def(      #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get: " desc, py::arg("i") = 0);
+#define QGETSETOPTB(modis,varname,ty,desc   ) modis ## _ ##             ty.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                              modis ## _ ##             ty.def(      #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get: " desc, py::arg("i") = 0);
+#define QGETSETOPTALL(modis,varname,desc)     modis ## _grid              .def("set" #varname, &(modoptset_grid_       ## varname), "For " "grid"       " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                              modis ## _DIRect            .def("set" #varname, &(modoptset_DIRect_     ## varname), "For " "DIRect"     " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                              modis ## _NelderMead        .def("set" #varname, &(modoptset_NelderMead_ ## varname), "For " "NelderMead" " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                              modis ## _Bayesian          .def("set" #varname, &(modoptset_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
+                                              modis ## _grid              .def(      #varname, &(modoptget_grid_       ## varname), "For " "grid"       " optimiser, get: " desc, py::arg("i") = 0); \
+                                              modis ## _DIRect            .def(      #varname, &(modoptget_DIRect_     ## varname), "For " "DIRect"     " optimiser, get: " desc, py::arg("i") = 0); \
+                                              modis ## _NelderMead        .def(      #varname, &(modoptget_NelderMead_ ## varname), "For " "NelderMead" " optimiser, get: " desc, py::arg("i") = 0); \
+                                              modis ## _Bayesian          .def(      #varname, &(modoptget_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, get: " desc, py::arg("i") = 0);
 
 // Corresponding helper macros to auto-generate function definitions to be used by python module
 
@@ -343,6 +359,8 @@ int setpriml(int i = 0, int j = 0);
 
 py::object svmeval(std::string fn, py::object arg);
 
+int makeMonot(int i, int n, int t, py::object xb, py::object xlb, py::object xub, int d, py::object y);
+
 int addTrainingVectorml (int i, int j, py::object z, py::object x, py::object Cweigh, py::object epsweigh, py::object d);
 int maddTrainingVectorml(int i, int j, py::object z, py::object x, py::object Cweigh, py::object epsweigh);
 int faddTrainingVectorml(int i, int ignoreStart, int imax, int reverse, int j, const std::string &fname);
@@ -354,12 +372,13 @@ double mlcalcCross (int i, int m, int rndit = 0, int numreps = 1);
 int removeTrainingVectorml(int i, int j, int num);
 
 py::object muml (int i, py::object x);
-py::object mugml(int i, py::object x);
+py::object mugml(int i, py::object x, int fmt);
 py::object varml(int i, py::object x);
 py::object covml(int i, py::object x, py::object y);
 
 py::object mlalpha(int i);
 py::object mlbias (int i);
+py::object mlGp   (int i);
 
 int mlsetalpha(int i, py::object src);
 int mlsetbias (int i, py::object src);
@@ -430,6 +449,14 @@ GETDEF(loglikelihood)
 GETDEF(maxinfogain  )
 GETDEF(RKHSnorm     )
 GETDEF(RKHSabs      )
+
+GETDEF(isNaiveConst  )
+GETDEF(isEPConst     )
+GETDEF(isLaplaceConst)
+
+DODEF(setNaiveConst)
+DODEF(setEPConst   )
+DOARGDEF(setLaplaceConst,int)
 
 GETDEF(N                 )
 GETDEF(type              )
@@ -897,8 +924,34 @@ PYBIND11_MODULE(pyheavy, m) {
     m_ml.def("alpha",&mlalpha,"For ML, get training alpha.",py::arg("i")=0);
     m_ml.def("bias", &mlbias, "For ML, get training bias.", py::arg("i")=0);
 
-    m_ml.def("setalpha",&mlsetalpha,"For ML, get set alpha.",py::arg("i")=0,py::arg("alpha"));
-    m_ml.def("setbias", &mlsetbias, "For ML, get set bias.", py::arg("i")=0,py::arg("bias") );
+    m_ml.def("setalpha",&mlsetalpha,"For ML, set training alpha.",py::arg("i")=0,py::arg("alpha"));
+    m_ml.def("setbias", &mlsetbias, "For ML, set training bias.", py::arg("i")=0,py::arg("bias") );
+
+    m_ml.def("Gp",&mlGp,"For ML, get the Gp matrix (if it is defined).", py::arg("i")=0);
+
+    m_ml.def("constrain",&makeMonot,"For ML, constrain the posterior mean / trained ML using inducing-point method.\n"
+                                    "This adds n training observations (either in a uniform grid if t=0 or a random\n"
+                                    "scatter from a uniform distribution if t=1) of the form g(x+xb)?y, where ? is\n"
+                                    "either = (d=2), >= (d=+1), <= (d=-1) or not enforced (d=0). For example:\n"
+                                    "\n"
+                                    "     xb  = ['::',e1,e2]\n"
+                                    "     xlb = [0,0]\n"
+                                    "     xub = [1,1]\n"
+                                    "     y   = 0\n"
+                                    "     d   = +1\n"
+                                    "\n"
+                                    "will enforce\n"
+                                    "\n"
+                                    "     g([x1 x2 :: e1 e2]) = e1.d/dx1 g(x) + e2.d/dx2 g(x) >= 0\n"
+                                    "\n"
+                                    "for n points in the range 0 <= x1,x2 <= 1. For a sufficiently fine grid (n\n"
+                                    "sufficiently large relative to the lengthscale) this is approximately the same\n"
+                                    "as enforcing monotonicity on the posterior mean.\n"
+                                    "\n"
+                                    "Default: n=10^d,t=1,d=1\n",py::arg("i")=0,
+                                    py::arg("n")=-1,py::arg("t")=1,py::arg("xb")=py::none(),py::arg("xlb")=py::none(),
+                                    py::arg("xub")=py::none(),py::arg("d")=1,py::arg("y")=py::none());
+
 
     m_ml.def("add", &addTrainingVectorml, "For ML, add a single training vector pair [z,x,Cweight,epsweight,d] at\n"
                                           "position j (j=-1 (default) to add at end).\n"
@@ -926,7 +979,9 @@ PYBIND11_MODULE(pyheavy, m) {
     m_ml.def("mu", &muml, "For ML, calculate the posterior mean (output) given input x, which is either a\n"
                           "sparse vector or a training vector number.",py::arg("i")=0,py::arg("x"));
     m_ml.def("g",  &mugml,"For ML, calculate the underlying (ie continuous) output given input x, which is\n"
-                           "either a sparse vector or a training vector number.",py::arg("i")=0,py::arg("x"));
+                           "either a sparse vector or a training vector number. Use fmt=1 to return alternative\n"
+                           "format (either vector of outputs if the ML is (nominally) a vector type at base, or\n"
+                           "a vector of probabilities for the GP binary classifier).",py::arg("i")=0,py::arg("x")=py::none(),py::arg("fmt")=0);
     m_ml.def("var",&varml,"For ML, calculate the posterior variance given input x, which is either a\n"
                           "sparse vector or an integer (training vector number).",py::arg("i")=0,py::arg("x"));
     m_ml.def("cov",&covml,"For ML, Calculate the posterior covariance given inputs x,y, which are either\n"
@@ -1137,6 +1192,14 @@ PYBIND11_MODULE(pyheavy, m) {
 
     QGETSETD(m_ml_gp,muWeight,setmuWeight,"alpha","setalpha","alpha");
     QGETSETD(m_ml_gp,muBias,  setmuBias,  "bias", "setbias", "bias" );
+
+    QGET(m_ml_gp,isNaiveConst,  "nz if naive method (alpha sign restriction) is used for inequalities"                );
+    QGET(m_ml_gp,isEPConst,     "nz if Expectation Propagation is used for inequalities (not working at present)"     );
+    QGET(m_ml_gp,isLaplaceConst,"nz if Laplace approximation is used for inequalities (1 for normal cdf, 2 for logit)");
+
+    QDO(m_ml_gp,setNaiveConst,"set naive method (alpha sign restriction) for inequalities."           );
+    QDO(m_ml_gp,setEPConst,   "set expectation propagation for inequalities (not working at present).");
+    QDOARG(m_ml_gp,setLaplaceConst,"set Laplace approximation for inequalities (type=1 for normal cdf, 2 for logit).","type");
 
     // ---------------------------
 
@@ -2536,6 +2599,36 @@ int setpriml(int i, int j)
     return getMLref(i).setpriml(&(getMLrefconst(j).getMLconst()));
 }
 
+int makeMonot(int i, int n, int t, py::object xb, py::object xlb, py::object xub, int d, py::object y)
+{
+    dostartup();
+
+    i = glob_MLInd(i);
+
+    SparseVector<gentype> zxb;
+    SparseVector<double> zxlb;
+    SparseVector<double> zxub;
+
+    gentype zy;
+
+    int errcode = 0;
+
+    errcode |= convFromPy(zxb,xb);
+    errcode |= convFromPy(zxlb,xlb);
+    errcode |= convFromPy(zxub,xub);
+
+    errcode |= convFromPy(zy,y);
+
+    if ( errcode )
+    {
+        return errcode;
+    }
+
+    makeMonotone(getMLref(i),n,t,zxb,zxlb,zxub,d,zy);
+
+    return 0;
+}
+
 int addTrainingVectorml(int i, int j, py::object z, py::object x, py::object Cweigh, py::object epsweigh, py::object d)
 {
     dostartup();
@@ -2666,7 +2759,7 @@ py::object muml(int i, py::object x)
     return convToPy(resh);
 }
 
-py::object mugml(int i, py::object x)
+py::object mugml(int i, py::object x, int fmt)
 {
     dostartup();
 
@@ -2678,7 +2771,7 @@ py::object mugml(int i, py::object x)
     {
         int j = py::cast<py::int_>(x);
 
-        getMLref(i).ghTrainingVector(resh,resg,j);
+        getMLref(i).ghTrainingVector(resh,resg,j,fmt);
     }
 
     else
@@ -2690,7 +2783,7 @@ py::object mugml(int i, py::object x)
             return py::none();
         }
 
-        getMLref(i).gh(resh,resg,xx);
+        getMLref(i).gh(resh,resg,xx,fmt);
     }
 
     return convToPy(resg); // this is the difference from muml
@@ -2818,6 +2911,23 @@ py::object mlbias(int i)
          if ( ( type >= 0   ) && ( type <= 99  ) ) { res = getMLref(i).bias  (); }
     else if ( ( type >= 400 ) && ( type <= 499 ) ) { res = getMLref(i).muBias(); }
     else if ( ( type >= 500 ) && ( type <= 599 ) ) { res = getMLref(i).delta (); }
+
+    return convToPy(res);
+}
+
+py::object mlGp(int i)
+{
+    dostartup();
+
+    i = glob_MLInd(i);
+
+    gentype res('N');
+
+    int type = getMLref(i).type();
+
+         if ( ( type >= 0   ) && ( type <= 99  ) ) { res = getMLref(i).Gp   (); }
+    else if ( ( type >= 400 ) && ( type <= 499 ) ) { res = getMLref(i).gprGp(); }
+    else if ( ( type >= 500 ) && ( type <= 599 ) ) { res = getMLref(i).lsvGp(); }
 
     return convToPy(res);
 }

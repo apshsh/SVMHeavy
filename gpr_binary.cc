@@ -19,12 +19,16 @@ GPR_Binary::GPR_Binary() : GPR_Scalar()
 {
     setaltx(nullptr);
 
+    GPR_Scalar::setsigma(1);
+
     return;
 }
 
 GPR_Binary::GPR_Binary(const GPR_Binary &src) : GPR_Scalar()
 {
     setaltx(nullptr);
+
+    GPR_Scalar::setsigma(1);
 
     assign(src,0);
 
@@ -34,6 +38,8 @@ GPR_Binary::GPR_Binary(const GPR_Binary &src) : GPR_Scalar()
 GPR_Binary::GPR_Binary(const GPR_Binary &src, const ML_Base *xsrc) : GPR_Scalar()
 {
     setaltx(xsrc);
+
+    GPR_Scalar::setsigma(1);
 
     assign(src,-1);
 
@@ -200,6 +206,7 @@ int GPR_Binary::addTrainingVector(int i, const gentype &y, const SparseVector<ge
     int res = 0;
 
     res |= GPR_Scalar::addTrainingVector(i,zeroy,x,Cweigh,epsweigh);
+//    res |= GPR_Scalar::addTrainingVector(i,y,x,Cweigh,epsweigh);
     res |= GPR_Scalar::setd(i,(int) y);
 
     return res;
@@ -214,12 +221,13 @@ int GPR_Binary::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype
     bintraintarg.add(i);
     bintraintarg("&",i) = (int) y;
 
-    int res = 0;
-
     gentype zeroy = 0.0_gent;
     zeroy.isNomConst = y.isNomConst;
 
+    int res = 0;
+
     res |= GPR_Scalar::qaddTrainingVector(i,zeroy,x,Cweigh,epsweigh);
+//    res |= GPR_Scalar::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
     res |= GPR_Scalar::setd(i,(int) y);
 
     return res;
@@ -237,26 +245,78 @@ int GPR_Binary::removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x
 
 int GPR_Binary::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
+    NiceAssert( !( retaltg & 2 ) );
+
     int tempresh = GPR_Scalar::ghTrainingVector(resh,resg,i,retaltg,pxyprodi);
-    double resgd = (double) resg;
+    double tempresg = (double) resg;
 
     resh = 0;
 
-    if ( resgd > 0 ) { resh = 1; }
-    if ( resgd < 0 ) { resh = -1; }
+    if ( tempresg > 0 ) { resh = 1; }
+    if ( tempresg < 0 ) { resh = -1; }
+
+    if ( retaltg & 1 )
+    {
+        if ( isLaplaceConst() == 1 )
+        {
+            tempresg = normPhi(tempresg/sigma());
+            //tempresg = normPhi((tempresg-GPR_Scalar::y(i))/(sigma()*sigmaweight().v(i)*sigmaclass(d().v(i))));
+        }
+
+        else
+        {
+            tempresg = 1/(1+exp(-tempresg/sigma()));
+            //tempresg = 1/(1+exp(-(tempresg-GPR_Scalar::y(i))/(sigma()*sigmaweight().v(i)*sigmaclass(d().v(i)))));
+        }
+
+        gentype negres(1-tempresg);
+        gentype posres(tempresg);
+
+        Vector<gentype> tempresgg(2);
+
+        tempresgg("&",0) = negres;
+        tempresgg("&",1) = posres;
+
+        resg = tempresgg;
+    }
 
     return tempresh;
 }
 
 int GPR_Binary::gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg, const vecInfo *xinf, gentype ***pxyprodx) const
 {
+    NiceAssert( !( retaltg & 2 ) );
+
     int tempresh = GPR_Scalar::gh(resh,resg,x,retaltg,xinf,pxyprodx);
-    double resgd = (double) resg;
+    double tempresg = (double) resg;
 
     resh = 0;
 
-    if ( resgd > 0 ) { resh = 1; }
-    if ( resgd < 0 ) { resh = -1; }
+    if ( tempresg > 0 ) { resh = 1; }
+    if ( tempresg < 0 ) { resh = -1; }
+
+    if ( retaltg & 1 )
+    {
+        if ( isLaplaceConst() == 1 )
+        {
+            tempresg = normPhi(tempresg/sigma());
+        }
+
+        else
+        {
+            tempresg = 1/(1+exp(-tempresg/sigma()));
+        }
+
+        gentype negres(1-tempresg);
+        gentype posres(tempresg);
+
+        Vector<gentype> tempresgg(2);
+
+        tempresgg("&",0) = negres;
+        tempresgg("&",1) = posres;
+
+        resg = tempresgg;
+    }
 
     return tempresh;
 }

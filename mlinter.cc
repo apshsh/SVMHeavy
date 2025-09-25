@@ -11752,7 +11752,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "               set for x will be replaced with d/d{x_0} d/d{x_1}... K2(x,y).  \n" : "" );
     output << ( ( basic || advanced ) ? "               This works for kernels 400-599, 3 and 55.                      \n" : "" );
     output << ( ( basic || advanced ) ? "       - a_13: left-side weight for rank constraint (see above, def 1 (null)).\n" : "" );
-    output << ( ( basic || advanced ) ? "       - a_14: right-side weight for rank constrain (see above, def 1 (null)).\n" : "" );
+    output << ( ( basic || advanced ) ? "       - a_14: rightside weight for rank constraint (see above, def 1 (null)).\n" : "" );
     output << ( ( basic || advanced ) ? "    - a_17,18: using xa = [ :::: 17:[ ia ib ... ] 18:[ wa wb .. ] you replaces\n" : "" );
     output << ( ( basic || advanced ) ? "               K(xa,x) with wa.K(x_ia,x) + wb.K(x_ib,x) + ....                \n" : "" );
     output << ( ( basic || advanced ) ? "       - a_{100q}: for ranking constraints in the vector-target case {>,=,...}\n" : "" );
@@ -12587,8 +12587,8 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           for example monotonicity. Here:                    \n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
     output << ( (          advanced ) ? "                           n: number of inducing points.                      \n" : "" );
-    output << ( (          advanced ) ? "                           t = 0: inducing point on a grid.                   \n" : "" );
-    output << ( (          advanced ) ? "                           t = 1: uniform random inducing points.             \n" : "" );
+    output << ( (          advanced ) ? "                           t: 0 for inducing point on a grid.                 \n" : "" );
+    output << ( (          advanced ) ? "                              1 for uniformly distr. random inducing points.  \n" : "" );
     output << ( (          advanced ) ? "                           xb: base for inducing points.                      \n" : "" );
     output << ( (          advanced ) ? "                           xlb: lower bound for x.                            \n" : "" );
     output << ( (          advanced ) ? "                           xub: upper bound for x.                            \n" : "" );

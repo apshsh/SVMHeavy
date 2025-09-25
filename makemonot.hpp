@@ -21,19 +21,25 @@
 // t:  0 grid of points (n rounded up)
 //     1 random points
 // xb: x template for constraint to enforce. For example [ :: e ]
-//     will place constraint on e'd/dx g(x)
+//     will place constraint on g(x \oplus xb) = e'd/dx g(x)
 // xlb: lower x bound
 // xub: upper x bound
 // d:   constraint type
 // y:   constraint level
 //
-// xlb <= x-xb <= xub
+// xlb <= x <= xub
 //
 // d=-1: g(x) <= y
 // d=+1: g(x) >= y
 // d=+2: g(x) == y
 //
-// so eg if xb = [ :: e ] then g(x) = e'.d/dx g(x-xb)
+// so eg if xb = [ :: e ] then g(x \oplus xb) = e'.d/dx g(x)
+//
+// Notation: x = y \oplus z means first construct x from z, then add/set
+// elements defined in xlb and xub. So for example if xlb = [ 0 0 ] and
+// xub = [ 1 1 ] then x = [ .5 .5 ] fits in the range, and for example:
+//
+// [ .5 .5 ] \oplus [ :: e ] = [ .5 .5 :: e ]
 
 ML_Base &makeMonotone(ML_Base &ml,
                       int n,
