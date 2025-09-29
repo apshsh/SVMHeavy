@@ -16,7 +16,7 @@
 #include "blk_bernst.hpp"
 #include "gpr_generic.hpp"
 
-BLK_Bernst::BLK_Bernst(int isIndPrune) : BLK_Generic(isIndPrune)
+BLK_Bernst::BLK_Bernst(int xisIndPrune) : BLK_Generic(xisIndPrune)
 {
     setaltx(nullptr);
 
@@ -149,17 +149,15 @@ int BLK_Bernst::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
 
         resg = 1.0;
 
-        int i;
-
-        for ( i = 0 ; i < xx.size() ; ++i )
+        for ( int xi = 0 ; xi < xx.size() ; ++xi )
         {
-            const gentype &nnn = nn(i);
-            const gentype &jjj = jj(i);
+            const gentype &nnn = nn(xi);
+            const gentype &jjj = jj(xi);
 
             NiceAssert( (int) nnn >= 0 );
             NiceAssert( (int) jjj <= (int) nnn );
 
-            const gentype &xxx = xx(i);
+            const gentype &xxx = xx(xi);
             const gentype ov(1.0);
 
             resg *= (pow(xxx,jjj)*pow(ov-xxx,nnn-jjj)*((double) xnCr((int) nnn,(int) jjj)));

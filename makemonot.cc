@@ -21,7 +21,8 @@ ML_Base &makeMonotone(ML_Base &ml,
                       int d,
                       gentype y,
                       double Cweigh,
-                      double epsweigh)
+                      double epsweigh,
+                      const ML_Base *gridsrc)
 {
     // Generate index vector
 
@@ -42,7 +43,7 @@ ML_Base &makeMonotone(ML_Base &ml,
 
     int m = (int) std::ceil(std::pow(((double) n),1.0/((double) dim))) - 1;
 
-    if ( !t )
+    if ( t == 0 )
     {
         n = (int) std::pow(m+1,dim);
     }
@@ -53,7 +54,7 @@ ML_Base &makeMonotone(ML_Base &ml,
 
     Vector<SparseVector<gentype>> x(n,xtemp);
 
-    if ( !t )
+    if ( t == 0 )
     {
         // Working on a grid
 
@@ -78,7 +79,7 @@ ML_Base &makeMonotone(ML_Base &ml,
         }
     }
 
-    else
+    else if ( t == 1 )
     {
         // Random spread
 
@@ -87,6 +88,47 @@ ML_Base &makeMonotone(ML_Base &ml,
             for ( int j = 0 ; j < dim ; ++j )
             {
                 randufill(x("&",i)("&",indref.ind(j)).force_double(),lb(indref.ind(j)),ub(indref.ind(j)));
+            }
+        }
+    }
+
+    else
+    {
+        StrucAssert( t == 2 );
+        StrucAssert( gridsrc );
+
+        // Based on grid
+
+        const ML_Base &gridxsrc = *gridsrc;
+
+        int N = gridxsrc.N();
+        Vector<int> inds(N);
+
+        for ( int i = N-1 ; i >= 0 ; --i )
+        {
+            inds("&",i) = i;
+
+            if ( !gridxsrc.d()(i) )
+            {
+                inds.remove(i);
+            }
+        }
+
+        for ( int i = 0 ; i < n ; ++i )
+        {
+            int k = inds(rand()%(inds.size()));
+
+            for ( int j = 0 ; j < indref.indsize() ; ++j )
+            {
+                if ( gridxsrc.x()(k)(indref.ind(j)).isValNull() )
+                {
+                    randufill(x("&",i)("&",indref.ind(j)).force_double(),lb(indref.ind(j)),ub(indref.ind(j)));
+                }
+
+                else
+                {
+                    x("&",i)("&",indref.ind(j)) = gridxsrc.x()(k)(indref.ind(j));
+                }
             }
         }
     }

@@ -2107,7 +2107,7 @@ int SVM_Scalar::setCweightfuzz(int i, double xC)
     return 1;
 }
 
-int SVM_Scalar::setepsweight(int i, double xepsweight)
+int SVM_Scalar::setepsweight(int i, double xxepsweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < SVM_Scalar::N() );
@@ -2117,7 +2117,7 @@ int SVM_Scalar::setepsweight(int i, double xepsweight)
     isQuasiLogLikeCalced = 0;
     isMaxInfGainCalced   = 0;
 
-    epsweightval("&",i) = xepsweight;
+    epsweightval("&",i) = xxepsweight;
 
     Vector<double> hpnew(hp);
 
@@ -2189,15 +2189,15 @@ int SVM_Scalar::sety(const Vector<int> &j, const Vector<double> &zn)
     return res;
 }
 
-int SVM_Scalar::setCweight(const Vector<int> &j, const Vector<double> &xCweight)
+int SVM_Scalar::setCweight(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( j.size() == xCweight.size() );
+    NiceAssert( j.size() == xxCweight.size() );
 
     if ( j.size() )
     {
         retVector<double> tmpva;
 
-        Cweightval("&",j,tmpva) = xCweight;
+        Cweightval("&",j,tmpva) = xxCweight;
 
 	isStateOpt = 0;
 
@@ -2252,9 +2252,9 @@ int SVM_Scalar::setLweight(const Vector<int> &j, const Vector<double> &xLweight)
     return ires;
 }
 
-int SVM_Scalar::setepsweight(const Vector<int> &j, const Vector<double> &xepsweight)
+int SVM_Scalar::setepsweight(const Vector<int> &j, const Vector<double> &xxepsweight)
 {
-    NiceAssert( j.size() == xepsweight.size() );
+    NiceAssert( j.size() == xxepsweight.size() );
 
     int res = 0;
 
@@ -2262,7 +2262,7 @@ int SVM_Scalar::setepsweight(const Vector<int> &j, const Vector<double> &xepswei
     {
         for ( int i = 0 ; i < j.size() ; ++i )
 	{
-            res |= SVM_Scalar::setepsweight(j(i),xepsweight(i));
+            res |= SVM_Scalar::setepsweight(j(i),xxepsweight(i));
 	}
     }
 
@@ -2325,11 +2325,11 @@ int SVM_Scalar::sety(const Vector<double> &zn)
     return res;
 }
 
-int SVM_Scalar::setCweight(const Vector<double> &xCweight)
+int SVM_Scalar::setCweight(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == SVM_Scalar::N() );
+    NiceAssert( xxCweight.size() == SVM_Scalar::N() );
 
-    Cweightval = xCweight;
+    Cweightval = xxCweight;
 
     if ( SVM_Scalar::N() )
     {
@@ -2385,13 +2385,13 @@ int SVM_Scalar::setLweight(const Vector<double> &xLweight)
     return ires;
 }
 
-int SVM_Scalar::setCweightfuzz(const Vector<double> &xCweight)
+int SVM_Scalar::setCweightfuzz(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == SVM_Scalar::N() );
+    NiceAssert( xxCweight.size() == SVM_Scalar::N() );
 
-    int isdiff = ( Cweightfuzzval != xCweight );
+    int isdiff = ( Cweightfuzzval != xxCweight );
 
-    Cweightfuzzval = xCweight;
+    Cweightfuzzval = xxCweight;
 
     if ( SVM_Scalar::N() && isdiff )
     {
@@ -2419,13 +2419,13 @@ int SVM_Scalar::setCweightfuzz(const Vector<double> &xCweight)
     return 1;
 }
 
-int SVM_Scalar::setCweightfuzz(const Vector<int> &i, const Vector<double> &xCweight)
+int SVM_Scalar::setCweightfuzz(const Vector<int> &i, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == i.size() );
+    NiceAssert( xxCweight.size() == i.size() );
 
     retVector<double> tmpva;
 
-    Cweightfuzzval("&",i,tmpva) = xCweight;
+    Cweightfuzzval("&",i,tmpva) = xxCweight;
 
     if ( SVM_Scalar::N() )
     {
@@ -2453,9 +2453,9 @@ int SVM_Scalar::setCweightfuzz(const Vector<int> &i, const Vector<double> &xCwei
     return 1;
 }
 
-int SVM_Scalar::setepsweight(const Vector<double> &xepsweight)
+int SVM_Scalar::setepsweight(const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == SVM_Scalar::N() );
+    NiceAssert( xxepsweight.size() == SVM_Scalar::N() );
 
     int i;
 
@@ -2465,7 +2465,7 @@ int SVM_Scalar::setepsweight(const Vector<double> &xepsweight)
     {
         for ( i = 0 ; i < SVM_Scalar::N() ; ++i )
 	{
-            res |= SVM_Scalar::setepsweight(i,xepsweight(i));
+            res |= SVM_Scalar::setepsweight(i,xxepsweight(i));
 	}
     }
 
@@ -4483,7 +4483,7 @@ int SVM_Scalar::gTrainingVector(double &res, int &unusedvar, int i, int retaltg,
 
         {
             int jaP,jbP,ja,jb;
-            double Kxj;
+            //double Kxj;
 
             {
                 for ( jaP = 0 ; jaP < NLB() ; ++jaP )
@@ -5726,21 +5726,21 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
 
             for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
             {
-                int j = pivAlphaF()(jP);
+                j = pivAlphaF()(jP);
 
                 resgg += Kia(j)*alphaR()(j);
             }
 
             for ( int jP = 0 ; jP < pivAlphaLB().size() ; ++jP )
             {
-                int j = pivAlphaLB()(jP);
+                j = pivAlphaLB()(jP);
 
                 resgg += Kia(j)*alphaR()(j);
             }
 
             for ( int jP = 0 ; jP < pivAlphaUB().size() ; ++jP )
             {
-                int j = pivAlphaUB()(jP);
+                j = pivAlphaUB()(jP);
 
                 resgg += Kia(j)*alphaR()(j);
             }
@@ -7843,6 +7843,7 @@ void SVM_Scalar::setbiasdim(int xbiasdim, int addpos, double addval, int rempos)
 	// Allow for any changes in the value of existing elements of GpnExt
 
         retVector<double> tmpva;
+        retVector<double> tmpvb;
         retMatrix<double> tmpma;
         retMatrix<double> tmpmb;
 
@@ -7894,10 +7895,9 @@ void SVM_Scalar::setbiasdim(int xbiasdim, int addpos, double addval, int rempos)
 
 		int xaddpos;
 
-                retVector<double> tmpva;
-                retVector<double> tmpvb;
-                retMatrix<double> tmpma;
-                retMatrix<double> tmpmb;
+                //retVector<double> tmpva;
+                //retMatrix<double> tmpma;
+                //retMatrix<double> tmpmb;
 
 		while ( biasdim < ybiasdim )
 		{
@@ -7970,7 +7970,7 @@ void SVM_Scalar::setbiasdim(int xbiasdim, int addpos, double addval, int rempos)
 	    {
 		int iv,xrempos;
 
-                retMatrix<double> tmpma;
+                //retMatrix<double> tmpma;
 
 		while ( biasdim > ybiasdim )
 		{

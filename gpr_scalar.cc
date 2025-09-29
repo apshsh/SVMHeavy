@@ -90,7 +90,7 @@ int GPR_Scalar::setEPConst(void)
 {
     int res = 0;
 
-    if ( xNaiveConst )
+    if ( xNaiveConst || ( xEPorLaplace != 0 ) )
     {
         res = 1;
 
@@ -114,7 +114,7 @@ int GPR_Scalar::setLaplaceConst(int type)
 {
     int res = 0;
 
-    if ( xNaiveConst )
+    if ( xNaiveConst || ( xEPorLaplace != type ) )
     {
         res = 1;
 

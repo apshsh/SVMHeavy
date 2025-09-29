@@ -152,18 +152,18 @@ int SVM_Cyclic::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype
 
     int j;
     gentype vij;
-    double qval;
+    double xqval;
 
     for ( j = 0 ; j < SVM_Cyclic::tspaceDim() ; ++j )
     {
-        calcvij(vij,qval,i,j);
+        calcvij(vij,xqval,i,j);
 
         SparseVector<gentype> tempx;
 
         tempx.f4("&",0) = i;
         tempx.f4("&",7) = vij;
 
-        res |= SVM_Planar::qaddTrainingVector(i+((j+1)*(SVM_Cyclic::N())),qval,tempx,Cweigh,1.0);
+        res |= SVM_Planar::qaddTrainingVector(i+((j+1)*(SVM_Cyclic::N())),xqval,tempx,Cweigh,1.0);
         res |= SVM_Planar::setd(i+((j+1)*SVM_Cyclic::N()),1);
     }
 
@@ -218,11 +218,11 @@ int SVM_Cyclic::sety(int i, const gentype &z)
     gentype vij;
 
     SparseVector<gentype> tempx;
-    double qval;
+    double xqval;
 
     for ( j = 0 ; j < SVM_Cyclic::tspaceDim() ; ++j )
     {
-        calcvij(vij,qval,i,j);
+        calcvij(vij,xqval,i,j);
 
         tempx.f4("&",0) = i;
         tempx.f4("&",7) = vij;
@@ -307,56 +307,56 @@ int SVM_Cyclic::seteps(double xeps)
     gentype vij;
 
     SparseVector<gentype> tempx;
-    double qval;
+    double xqval;
 
     for ( i = 0 ; i < SVM_Cyclic::N() ; ++i )
     {
         for ( j = 0 ; j < SVM_Cyclic::tspaceDim() ; ++j )
         {
-            calcvij(vij,qval,i,j);
+            calcvij(vij,xqval,i,j);
 
             tempx.f4("&",0) = i;
             tempx.f4("&",7) = vij;
 
             res |= SVM_Planar::setx(i+((j+1)*SVM_Cyclic::N()),tempx);
-            res |= SVM_Planar::sety(i+((j+1)*SVM_Cyclic::N()),qval);
+            res |= SVM_Planar::sety(i+((j+1)*SVM_Cyclic::N()),xqval);
         }
     }
 
     return res;
 }
 
-int SVM_Cyclic::setepsweight(int i, double xepsweight)
+int SVM_Cyclic::setepsweight(int i, double xxepsweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < SVM_Cyclic::N() );
-    NiceAssert( xepsweight >= 0 );
-    NiceAssert( xepsweight <= 1 );
+    NiceAssert( xxepsweight >= 0 );
+    NiceAssert( xxepsweight <= 1 );
 
-    cycepsweight("&",i) = xepsweight;
+    cycepsweight("&",i) = xxepsweight;
 
     int res = 0;
     int j;
     gentype vij;
 
     SparseVector<gentype> tempx;
-    double qval;
+    double xqval;
 
     for ( j = 0 ; j < SVM_Cyclic::tspaceDim() ; ++j )
     {
-        calcvij(vij,qval,i,j);
+        calcvij(vij,xqval,i,j);
 
         tempx.f4("&",0) = i;
         tempx.f4("&",7) = vij;
 
         res |= SVM_Planar::setx(i+((j+1)*SVM_Cyclic::N()),tempx);
-        res |= SVM_Planar::sety(i+((j+1)*SVM_Cyclic::N()),qval);
+        res |= SVM_Planar::sety(i+((j+1)*SVM_Cyclic::N()),xqval);
     }
 
     return res;
 }
 
-gentype &SVM_Cyclic::calcvij(gentype &res, double &qval, int i, int j)
+gentype &SVM_Cyclic::calcvij(gentype &res, double &xqval, int i, int j)
 {
     Vector<double> yval(SVM_Cyclic::tspaceDim());
     Vector<double> tval(SVM_Cyclic::tspaceDim());
@@ -402,7 +402,7 @@ gentype &SVM_Cyclic::calcvij(gentype &res, double &qval, int i, int j)
 
     // q = sum(vj)/sqrt(n)
 
-    qval = sum(vj)/sqrt(SVM_Cyclic::tspaceDim());
+    xqval = sum(vj)/sqrt(SVM_Cyclic::tspaceDim());
 
     // v_ij = ( I - 2.( y - (1,1,...,1)/sqrt(n) ).( y - (1,1,...,1)/sqrt(n) )'/|| y - (1,1,...,1)/sqrt(n) ||_2^2 ).v_j (which is already normalised)
 

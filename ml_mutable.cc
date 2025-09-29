@@ -576,6 +576,19 @@ int ML_Mutable::setTmethod(const std::string &method)
     return 1;
 }
 
+int ML_Mutable::setEmethod(const std::string &method)
+{
+    if ( isGPR(*this) )
+    {
+             if ( method == "Naive"   ) { setNaiveConst();    return 0; }
+        else if ( method == "EP"      ) { setEPConst();       return 0; }
+        else if ( method == "LapNorm" ) { setLaplaceConst(1); return 0; }
+        else if ( method == "LapLog"  ) { setLaplaceConst(2); return 0; }
+    }
+
+    return 1;
+}
+
 int ML_Mutable::setBmethod(const std::string &method)
 {
     if ( isSVM(*this) )
@@ -688,6 +701,20 @@ const std::string &ML_Mutable::getTmethod(void) const
     {
              if ( isFixedTube()  ) { const static std::string res("f"); return res; }
         else if ( isShrinkTube() ) { const static std::string res("s"); return res; }
+    }
+
+    const static std::string res("?");
+    return res;
+}
+
+const std::string &ML_Mutable::getEmethod(void) const
+{
+    if ( isGPR(*this) )
+    {
+             if ( isNaiveConst()        ) { const static std::string res("Naive");   return res; }
+        else if ( isEPConst()           ) { const static std::string res("EP");      return res; }
+        else if ( isLaplaceConst() == 1 ) { const static std::string res("LapNorm"); return res; }
+        else if ( isLaplaceConst() == 2 ) { const static std::string res("LapLog");  return res; }
     }
 
     const static std::string res("?");

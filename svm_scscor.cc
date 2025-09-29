@@ -390,14 +390,14 @@ int SVM_ScScor::setd(int i, int dd)
     return res;
 }
 
-int SVM_ScScor::setCweight(int i, double xCweight)
+int SVM_ScScor::setCweight(int i, double xxCweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < N() );
 
     int res = 0;
 
-    res = SVM_Scalar::setCweight(i,xCweight);
+    res = SVM_Scalar::setCweight(i,xxCweight);
 
     if ( N() < SVM_Scalar::N() )
     {
@@ -420,14 +420,14 @@ int SVM_ScScor::setCweight(int i, double xCweight)
     return res;
 }
 
-int SVM_ScScor::setCweightfuzz(int i, double xCweight)
+int SVM_ScScor::setCweightfuzz(int i, double xxCweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < N() );
 
     int res = 0;
 
-    res = SVM_Scalar::setCweightfuzz(i,xCweight);
+    res = SVM_Scalar::setCweightfuzz(i,xxCweight);
 
     if ( N() < SVM_Scalar::N() )
     {
@@ -450,14 +450,14 @@ int SVM_ScScor::setCweightfuzz(int i, double xCweight)
     return res;
 }
 
-int SVM_ScScor::setepsweight(int i, double xepsweight)
+int SVM_ScScor::setepsweight(int i, double xxepsweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < N() );
 
     int res = 0;
 
-    res = SVM_Scalar::setepsweight(i,xepsweight);
+    res = SVM_Scalar::setepsweight(i,xxepsweight);
 
     if ( N() < SVM_Scalar::N() )
     {
@@ -833,9 +833,9 @@ int SVM_ScScor::setd(const Vector<int> &d)
     return setd(cntintvec(N(),tmpva),d);
 }
 
-int SVM_ScScor::setCweight(const Vector<int> &i, const Vector<double> &xCweight)
+int SVM_ScScor::setCweight(const Vector<int> &i, const Vector<double> &xxCweight)
 {
-    NiceAssert( i.size() == xCweight.size() );
+    NiceAssert( i.size() == xxCweight.size() );
 
     int res = 0;
 
@@ -845,23 +845,23 @@ int SVM_ScScor::setCweight(const Vector<int> &i, const Vector<double> &xCweight)
 
         for ( j = 0 ; j < i.size() ; ++j )
         {
-            res |= setCweight(i(j),xCweight(j));
+            res |= setCweight(i(j),xxCweight(j));
         }
     }
 
     return res;
 }
 
-int SVM_ScScor::setCweight(const Vector<double> &xCweight)
+int SVM_ScScor::setCweight(const Vector<double> &xxCweight)
 {
     retVector<int> tmpva;
 
-    return setCweight(cntintvec(N(),tmpva),xCweight);
+    return setCweight(cntintvec(N(),tmpva),xxCweight);
 }
 
-int SVM_ScScor::setCweightfuzz(const Vector<int> &i, const Vector<double> &xCweight)
+int SVM_ScScor::setCweightfuzz(const Vector<int> &i, const Vector<double> &xxCweight)
 {
-    NiceAssert( i.size() == xCweight.size() );
+    NiceAssert( i.size() == xxCweight.size() );
 
     int res = 0;
 
@@ -871,23 +871,23 @@ int SVM_ScScor::setCweightfuzz(const Vector<int> &i, const Vector<double> &xCwei
 
         for ( j = 0 ; j < i.size() ; ++j )
         {
-            res |= setCweightfuzz(i(j),xCweight(j));
+            res |= setCweightfuzz(i(j),xxCweight(j));
         }
     }
 
     return res;
 }
 
-int SVM_ScScor::setCweightfuzz(const Vector<double> &xCweight)
+int SVM_ScScor::setCweightfuzz(const Vector<double> &xxCweight)
 {
     retVector<int> tmpva;
 
-    return setCweightfuzz(cntintvec(N(),tmpva),xCweight);
+    return setCweightfuzz(cntintvec(N(),tmpva),xxCweight);
 }
 
-int SVM_ScScor::setepsweight(const Vector<int> &i, const Vector<double> &xepsweight)
+int SVM_ScScor::setepsweight(const Vector<int> &i, const Vector<double> &xxepsweight)
 {
-    NiceAssert( i.size() == xepsweight.size() );
+    NiceAssert( i.size() == xxepsweight.size() );
 
     int res = 0;
 
@@ -897,18 +897,18 @@ int SVM_ScScor::setepsweight(const Vector<int> &i, const Vector<double> &xepswei
 
         for ( j = 0 ; j < i.size() ; ++j )
         {
-            res |= setepsweight(i(j),xepsweight(j));
+            res |= setepsweight(i(j),xxepsweight(j));
         }
     }
 
     return res;
 }
 
-int SVM_ScScor::setepsweight(const Vector<double> &xepsweight)
+int SVM_ScScor::setepsweight(const Vector<double> &xxepsweight)
 {
     retVector<int> tmpva;
 
-    return setepsweight(cntintvec(N(),tmpva),xepsweight);
+    return setepsweight(cntintvec(N(),tmpva),xxepsweight);
 }
 
 

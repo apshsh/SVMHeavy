@@ -14562,9 +14562,10 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           15 - GP-UCB RKHS as Bogunovic.~                    \n" : "" );
     output << ( (          advanced ) ? "                           16 - Thompson sampling (unity scaling on variance).\n" : "" );
     output << ( (          advanced ) ? "                           17 - GP-UCB as per Kandasamy (multifidelity 2017). \n" : "" );
-    output << ( (          advanced ) ? "                           18 - Human will be prompted to input x.            \n" : "" );
+    output << ( (          advanced ) ? "                           18 - Human will be prompted to input x (x=NaN).    \n" : "" );
     output << ( (          advanced ) ? "                           19 - HE (human-level exploitation beta = 0.01).    \n" : "" );
     output << ( (          advanced ) ? "                           20 - GP-UCB as per BO-Muse (single AI).^           \n" : "" );
+    output << ( (          advanced ) ? "                           21 - Random experiments.                           \n" : "" );
     output << ( (          advanced ) ? "                           * beta_n = 2.log((n^{2+dim/2}).(pi^2)/(3.delta))   \n" : "" );
     output << ( (          advanced ) ? "                           $ variance of model only.                          \n" : "" );
     output << ( (          advanced ) ? "                           @ total variance of model and contraints.          \n" : "" );

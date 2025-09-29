@@ -882,13 +882,13 @@ SVM_Vector_redbin<BaseRegressorClass>::~SVM_Vector_redbin()
 }
 
 template <class BaseRegressorClass>
-double SVM_Vector_redbin<BaseRegressorClass>::calcDist(const gentype &ha, const gentype &hb, int ia, int db) const
+double SVM_Vector_redbin<BaseRegressorClass>::calcDist(const gentype &ha, const gentype &hb, int ia, int ddb) const
 {
     (void) ia;
 
     double res = 0;
 
-    if ( db )
+    if ( ddb )
     {
         res = (double) norm2(ha-hb);
     }
@@ -1159,12 +1159,12 @@ int SVM_Vector_redbin<BaseRegressorClass>::setKernel(const MercerKernel &xkernel
 }
 
 template <class BaseRegressorClass>
-void SVM_Vector_redbin<BaseRegressorClass>::fillCache(int Ns, int Ne)
+void SVM_Vector_redbin<BaseRegressorClass>::fillCache(int xNs, int xNe)
 {
     {
         for ( int i = 0 ; i < Q.size() ; ++i )
         {
-            Q("&",i).fillCache(Ns,Ne);
+            Q("&",i).fillCache(xNs,xNe);
         }
     }
 
@@ -1172,11 +1172,11 @@ void SVM_Vector_redbin<BaseRegressorClass>::fillCache(int Ns, int Ne)
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::setCweight(int i, double xCweight)
+int SVM_Vector_redbin<BaseRegressorClass>::setCweight(int i, double xxCweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < N() );
-    NiceAssert( xCweight > 0 );
+    NiceAssert( xxCweight > 0 );
 
     isStateOpt = 0;
 
@@ -1189,7 +1189,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::setCweight(int i, double xCweight)
     {
         for ( int q = 0 ; q < Q.size() ; ++q )
 	{
-            Q("&",q).setCweight(i,xCweight);
+            Q("&",q).setCweight(i,xxCweight);
 
             if ( q < tspaceDim() )
             {
@@ -1204,11 +1204,11 @@ int SVM_Vector_redbin<BaseRegressorClass>::setCweight(int i, double xCweight)
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::setCweightfuzz(int i, double xCweight)
+int SVM_Vector_redbin<BaseRegressorClass>::setCweightfuzz(int i, double xxCweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < N() );
-    NiceAssert( xCweight > 0 );
+    NiceAssert( xxCweight > 0 );
 
     isStateOpt = 0;
 
@@ -1221,7 +1221,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::setCweightfuzz(int i, double xCweight
     {
         for ( int q = 0 ; q < Q.size() ; ++q )
 	{
-            Q("&",q).setCweightfuzz(i,xCweight);
+            Q("&",q).setCweightfuzz(i,xxCweight);
 
             if ( q < tspaceDim() )
             {
@@ -1236,11 +1236,11 @@ int SVM_Vector_redbin<BaseRegressorClass>::setCweightfuzz(int i, double xCweight
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::setepsweight(int i, double xepsweight)
+int SVM_Vector_redbin<BaseRegressorClass>::setepsweight(int i, double xxepsweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < N() );
-    NiceAssert( xepsweight > 0 );
+    NiceAssert( xxepsweight > 0 );
 
     isStateOpt = 0;
 
@@ -1248,7 +1248,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::setepsweight(int i, double xepsweight
 
     for ( int q = 0 ; q < Q.size() ; ++q )
     {
-        res |= Q("&",q).setepsweight(i,xepsweight);
+        res |= Q("&",q).setepsweight(i,xxepsweight);
     }
 
     return res;
@@ -1275,9 +1275,9 @@ int SVM_Vector_redbin<BaseRegressorClass>::setd(const Vector<int> &j, const Vect
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::setCweight(const Vector<int> &j, const Vector<double> &xCweight)
+int SVM_Vector_redbin<BaseRegressorClass>::setCweight(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == j.size() );
+    NiceAssert( xxCweight.size() == j.size() );
 
     int res = 0;
 
@@ -1285,7 +1285,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::setCweight(const Vector<int> &j, cons
     {
         for ( int i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setCweight(j(i),xCweight(i));
+            res |= setCweight(j(i),xxCweight(i));
 	}
     }
 
@@ -1293,9 +1293,9 @@ int SVM_Vector_redbin<BaseRegressorClass>::setCweight(const Vector<int> &j, cons
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::setCweightfuzz(const Vector<int> &j, const Vector<double> &xCweight)
+int SVM_Vector_redbin<BaseRegressorClass>::setCweightfuzz(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == j.size() );
+    NiceAssert( xxCweight.size() == j.size() );
 
     int res = 0;
 
@@ -1303,7 +1303,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::setCweightfuzz(const Vector<int> &j, 
     {
         for ( int i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setCweightfuzz(j(i),xCweight(i));
+            res |= setCweightfuzz(j(i),xxCweight(i));
 	}
     }
 
@@ -1311,9 +1311,9 @@ int SVM_Vector_redbin<BaseRegressorClass>::setCweightfuzz(const Vector<int> &j, 
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::setepsweight(const Vector<int> &j, const Vector<double> &xepsweight)
+int SVM_Vector_redbin<BaseRegressorClass>::setepsweight(const Vector<int> &j, const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == j.size() );
+    NiceAssert( xxepsweight.size() == j.size() );
 
     int res = 0;
 
@@ -1321,7 +1321,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::setepsweight(const Vector<int> &j, co
     {
         for ( int i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setepsweight(j(i),xepsweight(i));
+            res |= setepsweight(j(i),xxepsweight(i));
 	}
     }
 
@@ -1350,16 +1350,16 @@ int SVM_Vector_redbin<BaseRegressorClass>::setd(const Vector<int> &d)
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::setCweight(const Vector<double> &xCweight)
+int SVM_Vector_redbin<BaseRegressorClass>::setCweight(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == N() );
+    NiceAssert( xxCweight.size() == N() );
 
     int res = 0;
 
     {
 	for ( int i = 0 ; i < N() ; ++i )
 	{
-            res |= setCweight(i,xCweight(i));
+            res |= setCweight(i,xxCweight(i));
 	}
     }
 
@@ -1367,16 +1367,16 @@ int SVM_Vector_redbin<BaseRegressorClass>::setCweight(const Vector<double> &xCwe
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::setCweightfuzz(const Vector<double> &xCweight)
+int SVM_Vector_redbin<BaseRegressorClass>::setCweightfuzz(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == N() );
+    NiceAssert( xxCweight.size() == N() );
 
     int res = 0;
 
     {
 	for ( int i = 0 ; i < N() ; ++i )
 	{
-            res |= setCweightfuzz(i,xCweight(i));
+            res |= setCweightfuzz(i,xxCweight(i));
 	}
     }
 
@@ -1384,16 +1384,16 @@ int SVM_Vector_redbin<BaseRegressorClass>::setCweightfuzz(const Vector<double> &
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::setepsweight(const Vector<double> &xepsweight)
+int SVM_Vector_redbin<BaseRegressorClass>::setepsweight(const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == N() );
+    NiceAssert( xxepsweight.size() == N() );
 
     int res = 0;
 
     {
 	for ( int i = 0 ; i < N() ; ++i )
 	{
-            res |= setepsweight(i,xepsweight(i));
+            res |= setepsweight(i,xxepsweight(i));
 	}
     }
 

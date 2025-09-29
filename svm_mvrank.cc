@@ -170,11 +170,11 @@ int SVM_MvRank::train(int &res, svmvolatile int &killSwitch)
     time_used curr_time = start_time;
     double xmtrtime = maxtraintime();
     double xmtrtimeend = traintimeend();
-    double maxitcntval = maxitermvrank();
+    double xmaxitcntval = maxitermvrank();
     double beta = betarank();
     double stepscalefactor = lrmvrank();
     double outertol = ztmvrank();
-    double *uservars[] = { &maxitcntval, &xmtrtime, &xmtrtimeend, &stepscalefactor, &beta, &outertol, nullptr };
+    double *uservars[] = { &xmaxitcntval, &xmtrtime, &xmtrtimeend, &stepscalefactor, &beta, &outertol, nullptr };
     const char *varnames[] = { "itercount", "traintime", "traintimeend", "stepscale", "beta", "outertol", nullptr };
     const char *vardescr[] = { "Maximum iteration count (0 for unlimited)", "Maximum training time (seconds, 0 for unlimited)", "Absolute training time end (seconds, relative, -1 for end)", "Step scale", "beta factor", "Outer optimality tolerance", nullptr };
 
@@ -231,7 +231,7 @@ int SVM_MvRank::train(int &res, svmvolatile int &killSwitch)
 
     // Main training loop
 
-    while ( !killSwitch && !res && !isopt && ( ( itcnt < (size_t) maxitcntval ) || !maxitcntval ) && !timeout )
+    while ( !killSwitch && !res && !isopt && ( ( itcnt < (size_t) xmaxitcntval ) || !xmaxitcntval ) && !timeout )
     {
         // Train inner loop for alpha calculation
 

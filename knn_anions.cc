@@ -230,11 +230,11 @@ int KNN_Anions::sety(const Vector<gentype> &y)
     return 1;
 }
 
-int KNN_Anions::setd(int i, int dd)
+int KNN_Anions::setd(int i, int xdd)
 {
-    NiceAssert( ( dd == +2 ) || ( dd == 0 ) );
+    NiceAssert( ( xdd == +2 ) || ( xdd == 0 ) );
 
-    KNN_Generic::setd(i,dd);
+    KNN_Generic::setd(i,xdd);
 
     return 1;
 }

@@ -42,9 +42,9 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    BLK_UsrFnA(int isIndPrune = 0)                                             : BLK_Generic(isIndPrune) { setaltx(nullptr);                 return; }
-    BLK_UsrFnA(const BLK_UsrFnA &src, int isIndPrune = 0)                      : BLK_Generic(isIndPrune) { setaltx(nullptr); assign(src,0);  return; }
-    BLK_UsrFnA(const BLK_UsrFnA &src, const ML_Base *xsrc, int isIndPrune = 0) : BLK_Generic(isIndPrune) { setaltx(xsrc); assign(src,-1); return; }
+    BLK_UsrFnA(int xisIndPrune = 0)                                             : BLK_Generic(xisIndPrune) { setaltx(nullptr);                 return; }
+    BLK_UsrFnA(const BLK_UsrFnA &src, int xisIndPrune = 0)                      : BLK_Generic(xisIndPrune) { setaltx(nullptr); assign(src,0);  return; }
+    BLK_UsrFnA(const BLK_UsrFnA &src, const ML_Base *xsrc, int xisIndPrune = 0) : BLK_Generic(xisIndPrune) { setaltx(xsrc); assign(src,-1); return; }
     BLK_UsrFnA &operator=(const BLK_UsrFnA &src) { assign(src); return *this; }
     virtual ~BLK_UsrFnA() { return; }
 

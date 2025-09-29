@@ -271,12 +271,12 @@ int SVM_Single::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
         gentype negres(-tempresg);
         gentype posres(tempresg);
 
-        Vector<gentype> tempresg(2);
+        Vector<gentype> temprresg(2);
 
-        tempresg("&",0) = negres;
-        tempresg("&",1) = posres;
+        temprresg("&",0) = negres;
+        temprresg("&",1) = posres;
 
-        resg = tempresg;
+        resg = temprresg;
     }
 
     else
@@ -287,26 +287,18 @@ int SVM_Single::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
     return tempresh;
 }
 
-int SVM_Single::addTrainingVector(int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
+int SVM_Single::addTrainingVector(int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh, double epsweigh, int)
 {
-    (void) z;
-    (void) dval;
-
-    return SVM_Single::addTrainingVector(i,x,Cweigh,epsweigh);
+    return SVM_Single::addTrainingVector(i,x,Cweigh,epsweigh,(double) z);
 }
 
-int SVM_Single::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
+int SVM_Single::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype> &x, double Cweigh, double epsweigh, int)
 {
-    (void) z;
-    (void) dval;
-
-    return SVM_Single::qaddTrainingVector(i,x,Cweigh,epsweigh);
+    return SVM_Single::qaddTrainingVector(i,x,Cweigh,epsweigh,(double) z);
 }
 
 int SVM_Single::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
-    (void) z;
-
     Vector<double> zz(z.size());
 
     zz = 0.0;
@@ -316,8 +308,6 @@ int SVM_Single::addTrainingVector(int i, const Vector<gentype> &z, const Vector<
 
 int SVM_Single::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
-    (void) z;
-
     Vector<double> zz(z.size());
 
     zz = 0.0;

@@ -201,13 +201,13 @@ SVM_Anions::~SVM_Anions()
     return;
 }
 
-double SVM_Anions::calcDist(const gentype &ha, const gentype &hb, int ia, int db) const
+double SVM_Anions::calcDist(const gentype &ha, const gentype &hb, int ia, int ddb) const
 {
     (void) ia;
 
     double res = 0;
 
-    if ( db )
+    if ( ddb )
     {
         res = (double) norm2(ha-hb);
     }
@@ -647,44 +647,44 @@ int SVM_Anions::setd(int i, int d)
     return res;
 }
 
-int SVM_Anions::setCweight(int i, double xCweight)
+int SVM_Anions::setCweight(int i, double xxCweight)
 {
-    int res = SVM_Vector::setCweight(i,xCweight);
+    int res = SVM_Vector::setCweight(i,xxCweight);
     grabalpha();
     return res;
 }
 
-int SVM_Anions::setCweight(const Vector<int> &i, const Vector<double> &xCweight)
+int SVM_Anions::setCweight(const Vector<int> &i, const Vector<double> &xxCweight)
 {
-    int res = SVM_Vector::setCweight(i,xCweight);
+    int res = SVM_Vector::setCweight(i,xxCweight);
     grabalpha();
     return res;
 }
 
-int SVM_Anions::setCweight(const Vector<double> &xCweight)
+int SVM_Anions::setCweight(const Vector<double> &xxCweight)
 {
-    int res = SVM_Vector::setCweight(xCweight);
+    int res = SVM_Vector::setCweight(xxCweight);
     grabalpha();
     return res;
 }
 
-int SVM_Anions::setCweightfuzz(int i, double xCweight)
+int SVM_Anions::setCweightfuzz(int i, double xxCweight)
 {
-    int res = SVM_Vector::setCweightfuzz(i,xCweight);
+    int res = SVM_Vector::setCweightfuzz(i,xxCweight);
     grabalpha();
     return res;
 }
 
-int SVM_Anions::setCweightfuzz(const Vector<int> &i, const Vector<double> &xCweight)
+int SVM_Anions::setCweightfuzz(const Vector<int> &i, const Vector<double> &xxCweight)
 {
-    int res = SVM_Vector::setCweightfuzz(i,xCweight);
+    int res = SVM_Vector::setCweightfuzz(i,xxCweight);
     grabalpha();
     return res;
 }
 
-int SVM_Anions::setCweightfuzz(const Vector<double> &xCweight)
+int SVM_Anions::setCweightfuzz(const Vector<double> &xxCweight)
 {
-    int res = SVM_Vector::setCweightfuzz(xCweight);
+    int res = SVM_Vector::setCweightfuzz(xxCweight);
     grabalpha();
     return res;
 }

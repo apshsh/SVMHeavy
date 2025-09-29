@@ -41,9 +41,9 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    BLK_Nopnop(int isIndPrune = 0)                                             : BLK_Generic(isIndPrune) { setaltx(nullptr);                 return; }
-    BLK_Nopnop(const BLK_Nopnop &src, int isIndPrune = 0)                      : BLK_Generic(isIndPrune) { setaltx(nullptr); assign(src,0);  return; }
-    BLK_Nopnop(const BLK_Nopnop &src, const ML_Base *xsrc, int isIndPrune = 0) : BLK_Generic(isIndPrune) { setaltx(xsrc); assign(src,-1); return; }
+    BLK_Nopnop(int xisIndPrune = 0)                                             : BLK_Generic(xisIndPrune) { setaltx(nullptr);                 return; }
+    BLK_Nopnop(const BLK_Nopnop &src, int xisIndPrune = 0)                      : BLK_Generic(xisIndPrune) { setaltx(nullptr); assign(src,0);  return; }
+    BLK_Nopnop(const BLK_Nopnop &src, const ML_Base *xsrc, int xisIndPrune = 0) : BLK_Generic(xisIndPrune) { setaltx(xsrc); assign(src,-1); return; }
     BLK_Nopnop &operator=(const BLK_Nopnop &src) { assign(src); return *this; }
     virtual ~BLK_Nopnop() { return; }
 

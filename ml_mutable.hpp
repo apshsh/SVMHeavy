@@ -72,6 +72,7 @@ public:
     int setTmethod(const std::string &method);
     int setBmethod(const std::string &method);
     int setMmethod(const std::string &method);
+    int setEmethod(const std::string &method);
 
     const std::string &getVmethod(void) const;
     const std::string &getCmethod(void) const;
@@ -81,6 +82,7 @@ public:
     const std::string &getTmethod(void) const;
     const std::string &getBmethod(void) const;
     const std::string &getMmethod(void) const;
+    const std::string &getEmethod(void) const;
 
 
     // ================================================================

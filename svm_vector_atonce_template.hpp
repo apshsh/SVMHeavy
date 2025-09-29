@@ -1324,14 +1324,14 @@ int SVM_Vector_atonce_temp<T>::setCweightfuzz(int i, double xC)
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::setepsweight(int i, double xepsweight)
+int SVM_Vector_atonce_temp<T>::setepsweight(int i, double xxepsweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < N() );
 
     isStateOpt = 0;
 
-    epsweightval("&",i) = xepsweight;
+    epsweightval("&",i) = xxepsweight;
     hp("&",i) = HPCALC(epsval,epsweightval(i));
 
     return 0;
@@ -1395,15 +1395,15 @@ int SVM_Vector_atonce_temp<T>::sety(const Vector<int> &j, const Vector<Vector<do
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::setCweight(const Vector<int> &j, const Vector<double> &xCweight)
+int SVM_Vector_atonce_temp<T>::setCweight(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == j.size() );
+    NiceAssert( xxCweight.size() == j.size() );
 
     if ( j.size() )
     {
         retVector<double> tmpva;
 
-        Cweightval("&",j,tmpva) = xCweight;
+        Cweightval("&",j,tmpva) = xxCweight;
 
 	isStateOpt = 0;
 
@@ -1422,15 +1422,15 @@ int SVM_Vector_atonce_temp<T>::setCweight(const Vector<int> &j, const Vector<dou
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::setCweightfuzz(const Vector<int> &j, const Vector<double> &xCweight)
+int SVM_Vector_atonce_temp<T>::setCweightfuzz(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == j.size() );
+    NiceAssert( xxCweight.size() == j.size() );
 
     if ( j.size() )
     {
         retVector<double> tmpva;
 
-        Cweightvalfuzz("&",j,tmpva) = xCweight;
+        Cweightvalfuzz("&",j,tmpva) = xxCweight;
 
 	isStateOpt = 0;
 
@@ -1449,9 +1449,9 @@ int SVM_Vector_atonce_temp<T>::setCweightfuzz(const Vector<int> &j, const Vector
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::setepsweight(const Vector<int> &j, const Vector<double> &xepsweight)
+int SVM_Vector_atonce_temp<T>::setepsweight(const Vector<int> &j, const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == j.size() );
+    NiceAssert( xxepsweight.size() == j.size() );
 
     int res = 0;
 
@@ -1461,7 +1461,7 @@ int SVM_Vector_atonce_temp<T>::setepsweight(const Vector<int> &j, const Vector<d
 
         for ( i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setepsweight(j(i),xepsweight(i));
+            res |= setepsweight(j(i),xxepsweight(i));
 	}
     }
 
@@ -1523,11 +1523,11 @@ int SVM_Vector_atonce_temp<T>::sety(const Vector<Vector<double> > &z)
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::setCweight(const Vector<double> &xCweight)
+int SVM_Vector_atonce_temp<T>::setCweight(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == N() );
+    NiceAssert( xxCweight.size() == N() );
 
-    Cweightval = xCweight;
+    Cweightval = xxCweight;
 
     if ( N() )
     {
@@ -1548,11 +1548,11 @@ int SVM_Vector_atonce_temp<T>::setCweight(const Vector<double> &xCweight)
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::setCweightfuzz(const Vector<double> &xCweight)
+int SVM_Vector_atonce_temp<T>::setCweightfuzz(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == N() );
+    NiceAssert( xxCweight.size() == N() );
 
-    Cweightvalfuzz = xCweight;
+    Cweightvalfuzz = xxCweight;
 
     if ( N() )
     {
@@ -1573,9 +1573,9 @@ int SVM_Vector_atonce_temp<T>::setCweightfuzz(const Vector<double> &xCweight)
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::setepsweight(const Vector<double> &xepsweight)
+int SVM_Vector_atonce_temp<T>::setepsweight(const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == N() );
+    NiceAssert( xxepsweight.size() == N() );
 
     int i;
     int res = 0;
@@ -1584,7 +1584,7 @@ int SVM_Vector_atonce_temp<T>::setepsweight(const Vector<double> &xepsweight)
     {
 	for ( i = 0 ; i < N() ; ++i )
 	{
-            res |= setepsweight(i,xepsweight(i));
+            res |= setepsweight(i,xxepsweight(i));
 	}
     }
 
@@ -1809,16 +1809,16 @@ int SVM_Vector_atonce_temp<T>::addTrainingVector (int i, const gentype &z, const
 
     if ( zz.size() )
     {
-        int i;
-
-        for ( i = 0 ; i < zz.size() ; ++i )
+        for ( int j = 0 ; j < zz.size() ; ++j )
         {
-            zd("&",i) = (double) zz(i);
+            zd("&",j) = (double) zz(j);
         }
     }
 
     return SVM_Vector_atonce_temp<T>::addTrainingVector(i,zd,x,Cweigh,epsweigh,dval); //2);
 }
+
+
 
 template <class T>
 int SVM_Vector_atonce_temp<T>::qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh, double epsweigh, int dval)
@@ -1830,16 +1830,16 @@ int SVM_Vector_atonce_temp<T>::qaddTrainingVector(int i, const gentype &z,      
 
     if ( zz.size() )
     {
-        int i;
-
-        for ( i = 0 ; i < zz.size() ; ++i )
+        for ( int j = 0 ; j < zz.size() ; ++j )
         {
-            zd("&",i) = (double) zz(i);
+            zd("&",j) = (double) zz(j);
         }
     }
 
     return SVM_Vector_atonce_temp<T>::qaddTrainingVector(i,zd,x,Cweigh,epsweigh,dval); //2);
 }
+
+
 
 template <class T>
 int SVM_Vector_atonce_temp<T>::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)

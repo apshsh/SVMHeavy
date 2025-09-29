@@ -20,7 +20,7 @@
 #include "gpr_generic.hpp"
 
 
-BLK_Conect::BLK_Conect(int isIndPrune) : BLK_Generic(isIndPrune)
+BLK_Conect::BLK_Conect(int xisIndPrune) : BLK_Generic(xisIndPrune)
 {
     localygood = 0;
 

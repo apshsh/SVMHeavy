@@ -371,11 +371,9 @@ int SVM_Vector::addTrainingVector (int i, const gentype &z, const SparseVector<g
 
     if ( zz.size() )
     {
-        int i;
-
-        for ( i = 0 ; i < zz.size() ; ++i )
+        for ( int j = 0 ; j < zz.size() ; ++j )
         {
-            zd("&",i) = (double) zz(i);
+            zd("&",j) = (double) zz(j);
         }
     }
 
@@ -388,13 +386,11 @@ int SVM_Vector::qaddTrainingVector(int i, const gentype &z,       SparseVector<g
 
     if ( z.size() )
     {
-        int i;
-
         const Vector<gentype> &zz = (const Vector<gentype> &) z;
 
-        for ( i = 0 ; i < z.size() ; ++i )
+        for ( int j = 0 ; j < z.size() ; ++j )
         {
-            zd("&",i) = (double) zz(i);
+            zd("&",j) = (double) zz(j);
         }
     }
 

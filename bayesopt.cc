@@ -55,7 +55,8 @@ int bayesOpt(int dim,
 // - Max/min decisions:
 //   o Code was originally written to maximise function fn.
 //   o All expressions for EI, PI etc were written with this in mind.
-//   o To bring it in line with DIRect I decided to change this to min.
+//   o To bring it in line with DIRect (and non-Bayesian optimization)
+//     I decided to change this to min.
 //   o Rather than re-write various negations have been introduced.
 // - Returning beta:
 //   o We need to return beta in supres.
@@ -538,10 +539,11 @@ class fninnerinnerArg
             case 17:  /* gpUCB MultiFid      */ { nu = 1;     double ell1 = dvalreal/(bbopts.model_lenscale(0)); eps = 0.5*dvalreal*log((2*ell1*altiters)+1); break; }
             case 20:  /* gpUCB as in BO-Muse */ { nu = 1;     eps = sqrt(bbopts.model_sigma(0)*((2*log(1/delta))+1+mig))+B; eps = 7*eps*eps;                  break; }
             case 18:  /* Human               */ { nu = 1;     eps = valvnan();                                                                                break; }
+            case 21:  /* Random              */ { nu = 1;     eps = valvnan();                                                                                break; }
             default:  /* fallback trigger    */ { nu = 1;     eps = valvnan();                                                                                break; }
         }
 
-        StrucAssert( !testisvnan(eps) ); // Human and fallback will trigger this, but if either reaches here then that's an error
+        StrucAssert( justreturnbeta || !testisvnan(eps) ); // Human and fallback will trigger this, but if either reaches here then that's an error
 
         storeeps = eps;
         storenu  = nu;
@@ -1870,7 +1872,7 @@ bool addDataToModel(int &ii,
 
         else
         {
-            if ( xtoadd.n(aa-bopts.getdimfid(),1).isValNull() )
+            if ( xtoadd.n(aa-(dim-bopts.getdimfid()),1).isValNull() )
             {
                 locxhasnulls = true;
                 isfullfid = false;
@@ -2796,9 +2798,12 @@ int bayesOpt(int dim,
 
                         // Fidelity variables
 
-                        if ( !isgridopt || bopts.model_x(Nbasemu+gridi)(j).isValNull() ) // short-circuit means model_x only used for isgridopt case
+errstream() << "phantomxyzxyz x source = " << bopts.model_x(Nbasemu+gridi) << "\n";
+errstream() << "phantomxyzxyz x sub source = " << bopts.model_x(Nbasemu+gridi).n(j-(dim-bopts.getdimfid()),1) << "\n";
+                        if ( !isgridopt || bopts.model_x(Nbasemu+gridi).n(j-(dim-bopts.getdimfid()),1).isValNull() ) // short-circuit means model_x only used for isgridopt case
                         {
                             qqq = 1+(rand()%(bopts.numfids));
+errstream() << "phantomxyzxyz qqq rand = " << qqq << "\n";
 
                             xxb("&",k).n("&",j-(dim-bopts.getdimfid()),1).dir_double() = ((double) qqq)/((double) bopts.numfids);
                         }
@@ -2808,9 +2813,10 @@ int bayesOpt(int dim,
                             // Discrete approximation: values are chosen randomly from
                             // a finite grid.
 
-                            xxb("&",k).n("&",j-(dim-bopts.getdimfid()),1) = bopts.model_x(Nbasemu+gridi)(j); // ((*gridsource).x(gridi))(j);
+                            xxb("&",k).n("&",j-(dim-bopts.getdimfid()),1) = bopts.model_x(Nbasemu+gridi).n(j-(dim-bopts.getdimfid()),1); //bopts.model_x(Nbasemu+gridi)(j); // ((*gridsource).x(gridi))(j);
 
                             qqq = (int) std::lround(((double) (xxb(k).n(j-(dim-bopts.getdimfid()),1)))*(bopts.numfids));
+errstream() << "phantomxyzxyz qqq fixed = " << qqq << "\n";
                         }
 
                         if ( qqq != bopts.numfids )
@@ -2826,9 +2832,9 @@ int bayesOpt(int dim,
                 // ===========================================================
                 // ===========================================================
 
-//errstream() << "phantomxyzxyz xxb = " << xxb(k) << "\n";
+errstream() << "phantomxyzxyz xxb = " << xxb(k) << "\n";
                 SparsenearToSparsenonnear(xb("&",k),xxb(k),dim,bopts.getdimfid());
-//errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
+errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
 
                 // ===========================================================
                 // ===========================================================
@@ -3869,9 +3875,35 @@ int bayesOpt(int dim,
                     {
                         // Fill with nulls/nans to indicate "human expert to fill"
 
-                        for ( int jij = 0 ; jij < n-bopts.getdimfid() ; jij++ )
+                        for ( int jij = 0 ; jij < n ; jij++ )
                         {
-                            xa("&",jij) = valvnan();
+                            if ( jij < n-bopts.getdimfid() )
+                            {
+                                xa("&",jij) = valvnan();
+                            }
+
+                            else
+                            {
+                                xa("&",jij) = 1;
+                            }
+                        }
+                    }
+
+                    else if ( locacq == 21 )
+                    {
+                        // Random fill as per initial points
+
+                        for ( int jij = 0 ; jij < n ; jij++ )
+                        {
+                            if ( jij < n-bopts.getdimfid() )
+                            {
+                                randufill(xa("&",jij),direcmin(jij),direcmax(jij));
+                            }
+
+                            else
+                            {
+                                xa("&",jij) = 1;
+                            }
                         }
                     }
 
@@ -3926,9 +3958,46 @@ int bayesOpt(int dim,
                     {
                         // Fill with nulls/nans to indicate "human expert to fill"
 
-                        for ( int jij = 0 ; jij < n-bopts.getdimfid() ; jij++ )
+                        for ( int jij = 0 ; jij < n ; jij++ )
                         {
-                            xa("&",jij) = valvnan();
+                            if ( jij < n-bopts.getdimfid() )
+                            {
+                                xa("&",jij) = valvnan();
+                            }
+
+                            else
+                            {
+                                xa("&",jij) = 1;
+                            }
+                        }
+                    }
+
+                    else if ( locacq == 21 )
+                    {
+                        // Random fill as per initial points
+
+                        itorem    = rand()%(gridind.size());
+                        gridires  = gridind(gridref);
+
+                        for ( int jij = 0 ; jij < n ; jij++ )
+                        {
+                            if ( jij < n-bopts.getdimfid() )
+                            {
+                                if ( bopts.model_x(Nbasemu+gridires)(jij).isValNull() )
+                                {
+                                    randufill(xa("&",jij),direcmin(jij),direcmax(jij));
+                                }
+
+                                else
+                                {
+                                    xa("&",jij) = (double) bopts.model_x(Nbasemu+gridires)(jij);
+                                }
+                            }
+
+                            else
+                            {
+                                xa("&",jij) = 1;
+                            }
                         }
                     }
 

@@ -40,9 +40,9 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    BLK_Consen(int isIndPrune = 0);
-    BLK_Consen(const BLK_Consen &src, int isIndPrune = 0);
-    BLK_Consen(const BLK_Consen &src, const ML_Base *xsrc, int isIndPrune = 0);
+    BLK_Consen(int xisIndPrune = 0);
+    BLK_Consen(const BLK_Consen &src, int xisIndPrune = 0);
+    BLK_Consen(const BLK_Consen &src, const ML_Base *xsrc, int xisIndPrune = 0);
     BLK_Consen &operator=(const BLK_Consen &src) { assign(src); return *this; }
     virtual ~BLK_Consen();
 

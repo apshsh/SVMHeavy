@@ -201,9 +201,9 @@ int SVM_Binary_rff::setepsclass(int d, double xeps)
     return res;
 }
 
-void SVM_Binary_rff::setalleps(double xeps, const Vector<double> &xepsclass)
+void SVM_Binary_rff::setalleps(double xeps, const Vector<double> &xxepsclass)
 {
-    NiceAssert( xepsclass.size() == 3 );
+    NiceAssert( xxepsclass.size() == 3 );
 
     int i;
 
@@ -211,7 +211,7 @@ void SVM_Binary_rff::setalleps(double xeps, const Vector<double> &xepsclass)
 
     for ( i = 0 ; i < 3 ; ++i )
     {
-        setepsclass(i,xepsclass(i));
+        setepsclass(i,xxepsclass(i));
     }
 
     return;
@@ -400,34 +400,34 @@ int SVM_Binary_rff::sety(int i, double xz)
     return res;
 }
 
-int SVM_Binary_rff::setCweight(int i, double xCweight)
+int SVM_Binary_rff::setCweight(int i, double xxCweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < SVM_Binary_rff::N() );
 
-    binCweight("&",i) = xCweight;
+    binCweight("&",i) = xxCweight;
 
     return SVM_Scalar_rff::setCweight(i,CWCALC(bintrainclass(i),binCweight(i),binCweightfuzz(i),dthres));
 }
 
-int SVM_Binary_rff::setCweightfuzz(int i, double xCweight)
+int SVM_Binary_rff::setCweightfuzz(int i, double xxCweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < SVM_Binary_rff::N() );
 
-    binCweightfuzz("&",i) = xCweight;
+    binCweightfuzz("&",i) = xxCweight;
 
     return SVM_Scalar_rff::setCweight(i,CWCALC(bintrainclass(i),binCweight(i),binCweightfuzz(i),dthres));
 }
 
-int SVM_Binary_rff::setepsweight(int i, double xepsweight)
+int SVM_Binary_rff::setepsweight(int i, double xxepsweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < SVM_Binary_rff::N() );
 
-    binepsweight("&",i) = xepsweight;
+    binepsweight("&",i) = xxepsweight;
 
-    int res = SVM_Scalar_rff::setepsweight(i,xepsweight);
+    int res = SVM_Scalar_rff::setepsweight(i,xxepsweight);
 
     if ( isFixedTube() )
     {
@@ -487,9 +487,9 @@ int SVM_Binary_rff::sety(const Vector<int> &j, const Vector<double> &xz)
     return res;
 }
 
-int SVM_Binary_rff::setCweight(const Vector<int> &j, const Vector<double> &xCweight)
+int SVM_Binary_rff::setCweight(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == j.size() );
+    NiceAssert( xxCweight.size() == j.size() );
 
     int res = 0;
 
@@ -499,16 +499,16 @@ int SVM_Binary_rff::setCweight(const Vector<int> &j, const Vector<double> &xCwei
 
         for ( i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setCweight(j(i),xCweight(i));
+            res |= setCweight(j(i),xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int SVM_Binary_rff::setCweightfuzz(const Vector<int> &j, const Vector<double> &xCweight)
+int SVM_Binary_rff::setCweightfuzz(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == j.size() );
+    NiceAssert( xxCweight.size() == j.size() );
 
     int res = 0;
 
@@ -518,16 +518,16 @@ int SVM_Binary_rff::setCweightfuzz(const Vector<int> &j, const Vector<double> &x
 
         for ( i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setCweightfuzz(j(i),xCweight(i));
+            res |= setCweightfuzz(j(i),xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int SVM_Binary_rff::setepsweight(const Vector<int> &j, const Vector<double> &xepsweight)
+int SVM_Binary_rff::setepsweight(const Vector<int> &j, const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == j.size() );
+    NiceAssert( xxepsweight.size() == j.size() );
 
     int res = 0;
 
@@ -537,7 +537,7 @@ int SVM_Binary_rff::setepsweight(const Vector<int> &j, const Vector<double> &xep
 
         for ( i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setepsweight(j(i),xepsweight(i));
+            res |= setepsweight(j(i),xxepsweight(i));
 	}
     }
 
@@ -587,9 +587,9 @@ int SVM_Binary_rff::sety(const Vector<double> &xz)
     return res;
 }
 
-int SVM_Binary_rff::setCweight(const Vector<double> &xCweight)
+int SVM_Binary_rff::setCweight(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == SVM_Binary_rff::N() );
+    NiceAssert( xxCweight.size() == SVM_Binary_rff::N() );
 
     int res = 0;
 
@@ -599,16 +599,16 @@ int SVM_Binary_rff::setCweight(const Vector<double> &xCweight)
     {
         for ( i = 0 ; i < SVM_Binary_rff::N() ; ++i )
 	{
-            res |= setCweight(i,xCweight(i));
+            res |= setCweight(i,xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int SVM_Binary_rff::setCweightfuzz(const Vector<double> &xCweight)
+int SVM_Binary_rff::setCweightfuzz(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == SVM_Binary_rff::N() );
+    NiceAssert( xxCweight.size() == SVM_Binary_rff::N() );
 
     int res = 0;
 
@@ -618,16 +618,16 @@ int SVM_Binary_rff::setCweightfuzz(const Vector<double> &xCweight)
     {
         for ( i = 0 ; i < SVM_Binary_rff::N() ; ++i )
 	{
-            res |= setCweightfuzz(i,xCweight(i));
+            res |= setCweightfuzz(i,xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int SVM_Binary_rff::setepsweight(const Vector<double> &xepsweight)
+int SVM_Binary_rff::setepsweight(const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == SVM_Binary_rff::N() );
+    NiceAssert( xxepsweight.size() == SVM_Binary_rff::N() );
 
     int i;
     int res = 0;
@@ -636,7 +636,7 @@ int SVM_Binary_rff::setepsweight(const Vector<double> &xepsweight)
     {
         for ( i = 0 ; i < SVM_Binary_rff::N() ; ++i )
 	{
-            res |= setepsweight(i,xepsweight(i));
+            res |= setepsweight(i,xxepsweight(i));
 	}
     }
 
@@ -1235,12 +1235,12 @@ int SVM_Binary_rff::ghTrainingVector(gentype &resh, gentype &resg, int i, int re
         gentype negres(-tempresg);
         gentype posres(tempresg);
 
-        Vector<gentype> tempresg(2);
+        Vector<gentype> temprresg(2);
 
-        tempresg("&",0) = negres;
-        tempresg("&",1) = posres;
+        temprresg("&",0) = negres;
+        temprresg("&",1) = posres;
 
-        resg = tempresg;
+        resg = temprresg;
     }
 
     else

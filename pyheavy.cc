@@ -136,8 +136,8 @@ template <class T> py::object convToPy(          const Set<T>           &src);
 template <class T> py::object convToPy(          const Dict<T,dictkey>  &src);
 template <class T> py::object convToPy(          const SparseVector<T>  &src);
                    py::object convToPy(          const gentype          &src);
-                   py::object convToPy(int size, const double *src);
 
+template <class T> py::object convToPy(int size, const T *src);
 template <> py::object convToPy(const Vector<double> &src);
 
 // These return 1 if conversion fails
@@ -158,146 +158,131 @@ template <> int convFromPy(SparseVector<gentype> &res, const py::object &src);
 
 // Helper macros for python module constructions
 
-#define        QDO(modis,dofn,desc)        modis.def(#dofn,  &(mod_ ## dofn),  "For ML, do: "           desc, py::arg("i") = 0);
-#define     QDOARG(modis,dofn,desc,pname)  modis.def(#dofn,  &(mod_ ## dofn),  "For ML, do: "           desc, py::arg("i") = 0, py::arg(pname));
-#define       QGET(modis,getfn,desc)       modis.def(#getfn, &(mod_ ## getfn), "For ML, get: "          desc, py::arg("i") = 0);
-#define    QGETCLA(modis,getfn,desc)       modis.def(#getfn, &(mod_ ## getfn), "For ML, class d, get: " desc, py::arg("i") = 0, py::arg("d"));
-#define    QGETSET(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), "For ML, set: "          desc, py::arg("i") = 0, py::arg(#getfn)); \
-                                           modis.def(#getfn, &(mod_ ## getfn), "For ML, get: "          desc, py::arg("i") = 0);
-#define QGETSETCLA(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), "For ML, class d, set: " desc, py::arg("i") = 0, py::arg("d"), py::arg(#getfn)); \
-                                           modis.def(#getfn, &(mod_ ## getfn), "For ML, class d, get: " desc, py::arg("i") = 0, py::arg("d"));
+#define        QDO(modis,dofn,desc)        modis.def(#dofn,  &(mod_ ## dofn),  "For ML, do: "           desc);
+#define     QDOARG(modis,dofn,desc,pname)  modis.def(#dofn,  &(mod_ ## dofn),  "For ML, do: "           desc, py::arg(pname));
+#define       QGET(modis,getfn,desc)       modis.def(#getfn, &(mod_ ## getfn), "For ML, get: "          desc);
+#define    QGETCLA(modis,getfn,desc)       modis.def(#getfn, &(mod_ ## getfn), "For ML, class d, get: " desc, py::arg("d"));
+#define    QGETSET(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), "For ML, set: "          desc, py::arg(#getfn)); \
+                                           modis.def(#getfn, &(mod_ ## getfn), "For ML, get: "          desc);
+#define QGETSETCLA(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), "For ML, class d, set: " desc, py::arg("d"), py::arg(#getfn)); \
+                                           modis.def(#getfn, &(mod_ ## getfn), "For ML, class d, get: " desc, py::arg("d"));
 
-#define       QGETD(modis,getfn,getname,desc)               modis.def(getname, &(mod_ ## getfn), "For ML, get: "          desc, py::arg("i") = 0);
-#define    QGETSETD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), "For ML, do: "           desc, py::arg("i") = 0, py::arg(getname)); \
-                                                            modis.def(getname, &(mod_ ## getfn), "For ML, get: "          desc, py::arg("i") = 0);
-#define QGETSETCLAD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), "For ML, class d, set: " desc, py::arg("i") = 0, py::arg("d"), py::arg(getname)); \
-                                                            modis.def(getname, &(mod_ ## getfn), "For ML, class d, get: " desc, py::arg("i") = 0, py::arg("d"));
+#define       QGETD(modis,getfn,getname,desc)               modis.def(getname, &(mod_ ## getfn), "For ML, get: "          desc);
+#define    QGETSETD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), "For ML, do: "           desc, py::arg(getname)); \
+                                                            modis.def(getname, &(mod_ ## getfn), "For ML, get: "          desc);
+#define QGETSETCLAD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), "For ML, class d, set: " desc, py::arg("d"), py::arg(getname)); \
+                                                            modis.def(getname, &(mod_ ## getfn), "For ML, class d, get: " desc, py::arg("d"));
 
-#define QGETSETKERD(modis,getfn,setfn,getname,setname,desc)  modis.def(setname, &(mod_k ## setfn), "For ML, set kernel parameter: "                   desc, py::arg("i") = 0, py::arg(getname)); \
-                                                             modis.def(getname, &(mod_k ## getfn), "For ML, get kernel parameter: "                   desc, py::arg("i") = 0); \
-                                                   (modis ##  _UU).def(setname, &(mod_e ## setfn), "For ML, set output kernel parameter: "            desc, py::arg("i") = 0, py::arg(getname)); \
-                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "For ML, get output kernel parameter: "            desc, py::arg("i") = 0); \
-                                                   (modis ## _RFF).def(setname, &(mod_r ## setfn), "For ML, set RFF kernel parameter: "               desc, py::arg("i") = 0, py::arg(getname)); \
-                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "For ML, get RFF kernel parameter: "               desc, py::arg("i") = 0);
-#define QGETSETKERQD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_k ## setfn), "For ML, element q, set kernel parameter: "        desc, py::arg("i") = 0, py::arg("q") = 0, py::arg(getname)); \
-                                                             modis.def(getname, &(mod_k ## getfn), "For ML, element q, set kernel parameter: "        desc, py::arg("i") = 0, py::arg("q") = 0); \
-                                                   (modis ##  _UU).def(setname, &(mod_e ## setfn), "For ML, element q, set output kernel parameter: " desc, py::arg("i") = 0, py::arg("q") = 0, py::arg(getname)); \
-                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "For ML, element q, set output kernel parameter: " desc, py::arg("i") = 0, py::arg("q") = 0); \
-                                                   (modis ## _RFF).def(setname, &(mod_r ## setfn), "For ML, element q, set RFF kernel parameter: "    desc, py::arg("i") = 0, py::arg("q") = 0, py::arg(getname)); \
-                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "For ML, element q, set RFF kernel parameter: "    desc, py::arg("i") = 0, py::arg("q") = 0);
+#define QGETSETOPT(modis,varname,ty,sub,desc) modis ## _ ## ty ## _ ## sub.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set: " desc, py::arg(#varname)); \
+                                              modis ## _ ## ty ## _ ## sub.def(      #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get: " desc);
+#define QGETSETOPTB(modis,varname,ty,desc   ) modis ## _ ##             ty.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set: " desc, py::arg(#varname)); \
+                                              modis ## _ ##             ty.def(      #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get: " desc);
+#define QGETSETOPTALL(modis,varname,desc)     modis ## _grid              .def("set" #varname, &(modoptset_grid_       ## varname), "For " "grid"       " optimiser, set: " desc, py::arg(#varname)); \
+                                              modis ## _DIRect            .def("set" #varname, &(modoptset_DIRect_     ## varname), "For " "DIRect"     " optimiser, set: " desc, py::arg(#varname)); \
+                                              modis ## _NelderMead        .def("set" #varname, &(modoptset_NelderMead_ ## varname), "For " "NelderMead" " optimiser, set: " desc, py::arg(#varname)); \
+                                              modis ## _Bayesian          .def("set" #varname, &(modoptset_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, set: " desc, py::arg(#varname)); \
+                                              modis ## _grid              .def(      #varname, &(modoptget_grid_       ## varname), "For " "grid"       " optimiser, get: " desc); \
+                                              modis ## _DIRect            .def(      #varname, &(modoptget_DIRect_     ## varname), "For " "DIRect"     " optimiser, get: " desc); \
+                                              modis ## _NelderMead        .def(      #varname, &(modoptget_NelderMead_ ## varname), "For " "NelderMead" " optimiser, get: " desc); \
+                                              modis ## _Bayesian          .def(      #varname, &(modoptget_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, get: " desc);
 
-/*
-#define QGETSETOPT(modis,varname,ty,sub,desc) modis ## _ ## ty ## _ ## sub.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                              modis ## _ ## ty ## _ ## sub.def("get" #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get: " desc, py::arg("i") = 0);
-#define QGETSETOPTB(modis,varname,ty,desc   ) modis ## _ ##             ty.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                              modis ## _ ##             ty.def("get" #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get: " desc, py::arg("i") = 0);
-#define QGETSETOPTALL(modis,varname,desc)     modis ## _grid              .def("set" #varname, &(modoptset_grid_       ## varname), "For " "grid"       " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                              modis ## _DIRect            .def("set" #varname, &(modoptset_DIRect_     ## varname), "For " "DIRect"     " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                              modis ## _NelderMead        .def("set" #varname, &(modoptset_NelderMead_ ## varname), "For " "NelderMead" " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                              modis ## _Bayesian          .def("set" #varname, &(modoptset_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                              modis ## _grid              .def("get" #varname, &(modoptget_grid_       ## varname), "For " "grid"       " optimiser, get: " desc, py::arg("i") = 0); \
-                                              modis ## _DIRect            .def("get" #varname, &(modoptget_DIRect_     ## varname), "For " "DIRect"     " optimiser, get: " desc, py::arg("i") = 0); \
-                                              modis ## _NelderMead        .def("get" #varname, &(modoptget_NelderMead_ ## varname), "For " "NelderMead" " optimiser, get: " desc, py::arg("i") = 0); \
-                                              modis ## _Bayesian          .def("get" #varname, &(modoptget_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, get: " desc, py::arg("i") = 0);
-*/
-
-#define QGETSETOPT(modis,varname,ty,sub,desc) modis ## _ ## ty ## _ ## sub.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                              modis ## _ ## ty ## _ ## sub.def(      #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get: " desc, py::arg("i") = 0);
-#define QGETSETOPTB(modis,varname,ty,desc   ) modis ## _ ##             ty.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                              modis ## _ ##             ty.def(      #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get: " desc, py::arg("i") = 0);
-#define QGETSETOPTALL(modis,varname,desc)     modis ## _grid              .def("set" #varname, &(modoptset_grid_       ## varname), "For " "grid"       " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                              modis ## _DIRect            .def("set" #varname, &(modoptset_DIRect_     ## varname), "For " "DIRect"     " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                              modis ## _NelderMead        .def("set" #varname, &(modoptset_NelderMead_ ## varname), "For " "NelderMead" " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                              modis ## _Bayesian          .def("set" #varname, &(modoptset_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, set: " desc, py::arg("i") = 0, py::arg(#varname)); \
-                                              modis ## _grid              .def(      #varname, &(modoptget_grid_       ## varname), "For " "grid"       " optimiser, get: " desc, py::arg("i") = 0); \
-                                              modis ## _DIRect            .def(      #varname, &(modoptget_DIRect_     ## varname), "For " "DIRect"     " optimiser, get: " desc, py::arg("i") = 0); \
-                                              modis ## _NelderMead        .def(      #varname, &(modoptget_NelderMead_ ## varname), "For " "NelderMead" " optimiser, get: " desc, py::arg("i") = 0); \
-                                              modis ## _Bayesian          .def(      #varname, &(modoptget_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, get: " desc, py::arg("i") = 0);
+#define QGETSETKERD(modis,getfn,setfn,getname,setname,desc)  modis.def(setname, &(mod_k ## setfn), "For ML, set kernel parameter: "                   desc, py::arg(getname)); \
+                                                             modis.def(getname, &(mod_k ## getfn), "For ML, get kernel parameter: "                   desc); \
+                                                   (modis ##  _UU).def(setname, &(mod_e ## setfn), "For ML, set output kernel parameter: "            desc, py::arg(getname)); \
+                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "For ML, get output kernel parameter: "            desc); \
+                                                   (modis ## _RFF).def(setname, &(mod_r ## setfn), "For ML, set RFF kernel parameter: "               desc, py::arg(getname)); \
+                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "For ML, get RFF kernel parameter: "               desc);
+#define QGETSETKERQD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_k ## setfn), "For ML, element q, set kernel parameter: "        desc, py::arg("q") = 0, py::arg(getname)); \
+                                                             modis.def(getname, &(mod_k ## getfn), "For ML, element q, set kernel parameter: "        desc, py::arg("q") = 0); \
+                                                   (modis ##  _UU).def(setname, &(mod_e ## setfn), "For ML, element q, set output kernel parameter: " desc, py::arg("q") = 0, py::arg(getname)); \
+                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "For ML, element q, set output kernel parameter: " desc, py::arg("q") = 0); \
+                                                   (modis ## _RFF).def(setname, &(mod_r ## setfn), "For ML, element q, set RFF kernel parameter: "    desc, py::arg("q") = 0, py::arg(getname)); \
+                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "For ML, element q, set RFF kernel parameter: "    desc, py::arg("q") = 0);
 
 // Corresponding helper macros to auto-generate function definitions to be used by python module
 
-#define        DODEF(dofn)          py::object mod_ ##  dofn(int i)                      { dostartup(); i = glob_MLInd(i);                             return convToPy(getMLref(i). dofn ());        }
-#define     DOARGDEF(dofn,T)        int        mod_ ##  dofn(int i,        py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); return getMLref(i). dofn (altp);              }
-#define       GETDEF(getfn)         py::object mod_ ## getfn(int i)                      { dostartup(); i = glob_MLInd(i);                             return convToPy(getMLrefconst(i). getfn ());  }
-#define    GETCLADEF(getfn)         py::object mod_ ## getfn(int i, int d)               { dostartup(); i = glob_MLInd(i);                             return convToPy(getMLrefconst(i). getfn (d)); }
-#define    SETCLADEF(setfn,T)       int        mod_ ## setfn(int i, int d, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); return getMLref(i). setfn (d,altp);           }
-#define    GETSETDEF(getfn,setfn,T) py::object mod_ ## getfn(int i)                      { dostartup(); i = glob_MLInd(i);                             return convToPy(getMLrefconst(i). getfn ());  } \
-                                    int        mod_ ## setfn(int i,        py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); return getMLref(i). setfn (altp);             }
-#define GETSETCLADEF(getfn,setfn,T) py::object mod_ ## getfn(int i, int d)               { dostartup(); i = glob_MLInd(i);                             return convToPy(getMLrefconst(i). getfn (d)); } \
-                                    int        mod_ ## setfn(int i, int d, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); return getMLref(i). setfn (d,altp);           }
+#define        DODEF(dofn)          py::object mod_ ##  dofn(void)                { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLref(i). dofn ());        }
+#define     DOARGDEF(dofn,T)        int        mod_ ##  dofn(       py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); return getMLref(i). dofn (altp);              }
+#define       GETDEF(getfn)         py::object mod_ ## getfn(void)                { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn ());  }
+#define    GETCLADEF(getfn)         py::object mod_ ## getfn(int d)               { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn (d)); }
+#define    SETCLADEF(setfn,T)       int        mod_ ## setfn(int d, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); return getMLref(i). setfn (d,altp);           }
+#define    GETSETDEF(getfn,setfn,T) py::object mod_ ## getfn(void)                { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn ());  } \
+                                    int        mod_ ## setfn(       py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); return getMLref(i). setfn (altp);             }
+#define GETSETCLADEF(getfn,setfn,T) py::object mod_ ## getfn(int d)               { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn (d)); } \
+                                    int        mod_ ## setfn(int d, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); return getMLref(i). setfn (d,altp);           }
 
-#define GETSETKERAPDEF(getfn,setfn,T) py::object mod_k ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getKernel(). getfn ());  } \
-                                      void       mod_k ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getKernel_unsafe(). setfn (altp); getMLref(i).resetKernel(0,-1,0); } \
-                                      py::object mod_e ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn ());  } \
-                                      void       mod_e ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp); getMLref(i).resetUUOutputKernel(0); } \
-                                      py::object mod_r ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getRFFKernel(). getfn ());  } \
-                                      void       mod_r ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getRFFKernel_unsafe(). setfn (altp); getMLref(i).resetRFFKernel(0); }
-#define GETSETKERBPDEF(getfn,setfn,T) py::object mod_k ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getKernel(). getfn ());  } \
-                                      void       mod_k ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getKernel_unsafe(). setfn (altp); getMLref(i).resetKernel(0); } \
-                                      py::object mod_e ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn ());  } \
-                                      void       mod_e ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp); getMLref(i).resetUUOutputKernel(0); } \
-                                      py::object mod_r ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getRFFKernel(). getfn ());  } \
-                                      void       mod_r ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getRFFKernel_unsafe(). setfn (altp); getMLref(i).resetRFFKernel(0); }
-#define GETSETKERANDEF(getfn,setfn,T) py::object mod_k ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getKernel(). getfn ());  } \
-                                      void       mod_k ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getKernel_unsafe(). setfn (altp); getMLref(i).resetKernel(0,-1,0); } \
-                                      py::object mod_e ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn ());  } \
-                                      void       mod_e ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp); getMLref(i).resetUUOutputKernel(0); } \
-                                      py::object mod_r ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getRFFKernel(). getfn ());  } \
-                                      void       mod_r ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp); getMLref(i).resetRFFKernel(0); }
-#define GETSETKERBNDEF(getfn,setfn,T) py::object mod_k ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getKernel(). getfn ());  } \
-                                      void       mod_k ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getKernel_unsafe(). setfn (altp); getMLref(i).resetKernel(0); } \
-                                      py::object mod_e ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn ());  } \
-                                      void       mod_e ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp); getMLref(i).resetUUOutputKernel(0); } \
-                                      py::object mod_r ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getRFFKernel(). getfn ());  } \
-                                      void       mod_r ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp); getMLref(i).resetRFFKernel(0); }
-#define GETSETKERCNDEF(getfn,setfn,T) py::object mod_k ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getKernel(). getfn ());  } \
-                                      void       mod_k ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getKernel_unsafe(). setfn (altp); } \
-                                      py::object mod_e ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn ());  } \
-                                      void       mod_e ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp); } \
-                                      py::object mod_r ## getfn(int i)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getRFFKernel(). getfn ());  } \
-                                      void       mod_r ## setfn(int i, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp); }
+#define OPTGETSETDEF(varname,ty,T) py::object modoptget_ ## ty ## _ ## varname(void)         { dostartup(); int i = glob_ ## ty ## Ind(0); return convToPy((T) get ## ty ## refconst(i).varname); } \
+                                   void       modoptset_ ## ty ## _ ## varname(py::object p) { dostartup(); int i = glob_ ## ty ## Ind(0); T altp; convFromPy(altp,p); get ## ty ## ref(i).varname = altp; }
+#define OPTGETSETALLDEF(varname,T) py::object modoptget_grid_       ## varname(void)         { dostartup(); int i = glob_gridInd      (0); return convToPy(getgridrefconst      (i).varname); } \
+                                   py::object modoptget_DIRect_     ## varname(void)         { dostartup(); int i = glob_DIRectInd    (0); return convToPy(getDIRectrefconst    (i).varname); } \
+                                   py::object modoptget_NelderMead_ ## varname(void)         { dostartup(); int i = glob_NelderMeadInd(0); return convToPy(getNelderMeadrefconst(i).varname); } \
+                                   py::object modoptget_Bayesian_   ## varname(void)         { dostartup(); int i = glob_BayesianInd  (0); return convToPy(getBayesianrefconst  (i).varname); } \
+                                   void       modoptset_grid_       ## varname(py::object p) { dostartup(); int i = glob_gridInd      (0); T altp; convFromPy(altp,p); getgridref      (i).varname = altp; } \
+                                   void       modoptset_DIRect_     ## varname(py::object p) { dostartup(); int i = glob_DIRectInd    (0); T altp; convFromPy(altp,p); getDIRectref    (i).varname = altp; } \
+                                   void       modoptset_NelderMead_ ## varname(py::object p) { dostartup(); int i = glob_NelderMeadInd(0); T altp; convFromPy(altp,p); getNelderMeadref(i).varname = altp; } \
+                                   void       modoptset_Bayesian_   ## varname(py::object p) { dostartup(); int i = glob_BayesianInd  (0); T altp; convFromPy(altp,p); getBayesianref  (i).varname = altp; }
 
-#define GETSETKERAPQDEF(getfn,setfn,T) py::object mod_k ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getKernel(). getfn (q));  } \
-                                       void       mod_k ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getKernel_unsafe(). setfn (altp,q); getMLref(i).resetKernel(0,-1,0); } \
-                                       py::object mod_e ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn (q));  } \
-                                       void       mod_e ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp,q); getMLref(i).resetUUOutputKernel(0); } \
-                                       py::object mod_r ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getRFFKernel(). getfn (q));  } \
-                                       void       mod_r ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getRFFKernel_unsafe(). setfn (altp,q); getMLref(i).resetRFFKernel(0); }
-#define GETSETKERBPQDEF(getfn,setfn,T) py::object mod_k ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getKernel(). getfn (q));  } \
-                                       void       mod_k ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getKernel_unsafe(). setfn (altp,q); getMLref(i).resetKernel(0); } \
-                                       py::object mod_e ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn (q));  } \
-                                       void       mod_e ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp,q); getMLref(i).resetUUOutputKernel(0); } \
-                                       py::object mod_r ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getRFFKernel(). getfn (q));  } \
-                                       void       mod_r ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getRFFKernel_unsafe(). setfn (altp,q); getMLref(i).resetRFFKernel(0); }
-#define GETSETKERANQDEF(getfn,setfn,T) py::object mod_k ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getKernel(). getfn (q));  } \
-                                       void       mod_k ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getKernel_unsafe(). setfn (altp,q); getMLref(i).resetKernel(0,-1,0); } \
-                                       py::object mod_e ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn (q));  } \
-                                       void       mod_e ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp,q); getMLref(i).resetUUOutputKernel(0); } \
-                                       py::object mod_r ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getRFFKernel(). getfn (q));  } \
-                                       void       mod_r ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp,q); getMLref(i).resetRFFKernel(0); }
-#define GETSETKERBNQDEF(getfn,setfn,T) py::object mod_k ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getKernel(). getfn (q));  } \
-                                       void       mod_k ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getKernel_unsafe(). setfn (altp,q); getMLref(i).resetKernel(0); } \
-                                       py::object mod_e ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn (q));  } \
-                                       void       mod_e ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp,q); getMLref(i).resetUUOutputKernel(0); } \
-                                       py::object mod_r ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getRFFKernel(). getfn (q));  } \
-                                       void       mod_r ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp,q); getMLref(i).resetRFFKernel(0); }
-#define GETSETKERCNQDEF(getfn,setfn,T) py::object mod_k ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getKernel(). getfn (q));  } \
-                                       void       mod_k ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getKernel_unsafe(). setfn (altp,q); } \
-                                       py::object mod_e ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn (q));  } \
-                                       void       mod_e ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp,q); } \
-                                       py::object mod_r ## getfn(int i, int q)               { dostartup(); i = glob_MLInd(i); return convToPy(getMLrefconst(i).getRFFKernel(). getfn (q));  } \
-                                       void       mod_r ## setfn(int i, int q, py::object p) { dostartup(); i = glob_MLInd(i); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp,q); }
+#define GETSETKERAPDEF(getfn,setfn,T) py::object mod_k ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getKernel(). getfn ());  } \
+                                      void       mod_k ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getKernel_unsafe(). setfn (altp); getMLref(i).resetKernel(0,-1,0); } \
+                                      py::object mod_e ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn ());  } \
+                                      void       mod_e ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp); getMLref(i).resetUUOutputKernel(0); } \
+                                      py::object mod_r ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getRFFKernel(). getfn ());  } \
+                                      void       mod_r ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getRFFKernel_unsafe(). setfn (altp); getMLref(i).resetRFFKernel(0); }
+#define GETSETKERBPDEF(getfn,setfn,T) py::object mod_k ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getKernel(). getfn ());  } \
+                                      void       mod_k ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getKernel_unsafe(). setfn (altp); getMLref(i).resetKernel(0); } \
+                                      py::object mod_e ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn ());  } \
+                                      void       mod_e ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp); getMLref(i).resetUUOutputKernel(0); } \
+                                      py::object mod_r ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getRFFKernel(). getfn ());  } \
+                                      void       mod_r ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getRFFKernel_unsafe(). setfn (altp); getMLref(i).resetRFFKernel(0); }
+#define GETSETKERANDEF(getfn,setfn,T) py::object mod_k ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getKernel(). getfn ());  } \
+                                      void       mod_k ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getKernel_unsafe(). setfn (altp); getMLref(i).resetKernel(0,-1,0); } \
+                                      py::object mod_e ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn ());  } \
+                                      void       mod_e ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp); getMLref(i).resetUUOutputKernel(0); } \
+                                      py::object mod_r ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getRFFKernel(). getfn ());  } \
+                                      void       mod_r ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp); getMLref(i).resetRFFKernel(0); }
+#define GETSETKERBNDEF(getfn,setfn,T) py::object mod_k ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getKernel(). getfn ());  } \
+                                      void       mod_k ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getKernel_unsafe(). setfn (altp); getMLref(i).resetKernel(0); } \
+                                      py::object mod_e ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn ());  } \
+                                      void       mod_e ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp); getMLref(i).resetUUOutputKernel(0); } \
+                                      py::object mod_r ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getRFFKernel(). getfn ());  } \
+                                      void       mod_r ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp); getMLref(i).resetRFFKernel(0); }
+#define GETSETKERCNDEF(getfn,setfn,T) py::object mod_k ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getKernel(). getfn ());  } \
+                                      void       mod_k ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getKernel_unsafe(). setfn (altp); } \
+                                      py::object mod_e ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn ());  } \
+                                      void       mod_e ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp); } \
+                                      py::object mod_r ## getfn(void)         { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getRFFKernel(). getfn ());  } \
+                                      void       mod_r ## setfn(py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp); }
 
-#define OPTGETSETDEF(varname,ty,T) py::object modoptget_ ## ty ## _ ## varname(int i)               { dostartup(); i = glob_ ## ty ## Ind(i); return convToPy((T) get ## ty ## refconst(i).varname); } \
-                                   void       modoptset_ ## ty ## _ ## varname(int i, py::object p) { dostartup(); i = glob_ ## ty ## Ind(i); T altp; convFromPy(altp,p); get ## ty ## ref(i).varname = altp; }
-#define OPTGETSETALLDEF(varname,T) py::object modoptget_grid_       ## varname(int i)               { dostartup(); i = glob_gridInd      (i); return convToPy(getgridrefconst      (i).varname); } \
-                                   py::object modoptget_DIRect_     ## varname(int i)               { dostartup(); i = glob_DIRectInd    (i); return convToPy(getDIRectrefconst    (i).varname); } \
-                                   py::object modoptget_NelderMead_ ## varname(int i)               { dostartup(); i = glob_NelderMeadInd(i); return convToPy(getNelderMeadrefconst(i).varname); } \
-                                   py::object modoptget_Bayesian_   ## varname(int i)               { dostartup(); i = glob_BayesianInd  (i); return convToPy(getBayesianrefconst  (i).varname); } \
-                                   void       modoptset_grid_       ## varname(int i, py::object p) { dostartup(); i = glob_gridInd      (i); T altp; convFromPy(altp,p); getgridref      (i).varname = altp; } \
-                                   void       modoptset_DIRect_     ## varname(int i, py::object p) { dostartup(); i = glob_DIRectInd    (i); T altp; convFromPy(altp,p); getDIRectref    (i).varname = altp; } \
-                                   void       modoptset_NelderMead_ ## varname(int i, py::object p) { dostartup(); i = glob_NelderMeadInd(i); T altp; convFromPy(altp,p); getNelderMeadref(i).varname = altp; } \
-                                   void       modoptset_Bayesian_   ## varname(int i, py::object p) { dostartup(); i = glob_BayesianInd  (i); T altp; convFromPy(altp,p); getBayesianref  (i).varname = altp; }
+#define GETSETKERAPQDEF(getfn,setfn,T) py::object mod_k ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getKernel(). getfn (q));  } \
+                                       void       mod_k ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getKernel_unsafe(). setfn (altp,q); getMLref(i).resetKernel(0,-1,0); } \
+                                       py::object mod_e ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn (q));  } \
+                                       void       mod_e ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp,q); getMLref(i).resetUUOutputKernel(0); } \
+                                       py::object mod_r ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getRFFKernel(). getfn (q));  } \
+                                       void       mod_r ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getRFFKernel_unsafe(). setfn (altp,q); getMLref(i).resetRFFKernel(0); }
+#define GETSETKERBPQDEF(getfn,setfn,T) py::object mod_k ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getKernel(). getfn (q));  } \
+                                       void       mod_k ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getKernel_unsafe(). setfn (altp,q); getMLref(i).resetKernel(0); } \
+                                       py::object mod_e ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn (q));  } \
+                                       void       mod_e ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp,q); getMLref(i).resetUUOutputKernel(0); } \
+                                       py::object mod_r ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getRFFKernel(). getfn (q));  } \
+                                       void       mod_r ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).prepareKernel(); getMLref(i).getRFFKernel_unsafe(). setfn (altp,q); getMLref(i).resetRFFKernel(0); }
+#define GETSETKERANQDEF(getfn,setfn,T) py::object mod_k ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getKernel(). getfn (q));  } \
+                                       void       mod_k ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getKernel_unsafe(). setfn (altp,q); getMLref(i).resetKernel(0,-1,0); } \
+                                       py::object mod_e ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn (q));  } \
+                                       void       mod_e ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp,q); getMLref(i).resetUUOutputKernel(0); } \
+                                       py::object mod_r ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getRFFKernel(). getfn (q));  } \
+                                       void       mod_r ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp,q); getMLref(i).resetRFFKernel(0); }
+#define GETSETKERBNQDEF(getfn,setfn,T) py::object mod_k ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getKernel(). getfn (q));  } \
+                                       void       mod_k ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getKernel_unsafe(). setfn (altp,q); getMLref(i).resetKernel(0); } \
+                                       py::object mod_e ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn (q));  } \
+                                       void       mod_e ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp,q); getMLref(i).resetUUOutputKernel(0); } \
+                                       py::object mod_r ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getRFFKernel(). getfn (q));  } \
+                                       void       mod_r ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp,q); getMLref(i).resetRFFKernel(0); }
+#define GETSETKERCNQDEF(getfn,setfn,T) py::object mod_k ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getKernel(). getfn (q));  } \
+                                       void       mod_k ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getKernel_unsafe(). setfn (altp,q); } \
+                                       py::object mod_e ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getUUOutputKernel(). getfn (q));  } \
+                                       void       mod_e ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getUUOutputKernel_unsafe(). setfn (altp,q); } \
+                                       py::object mod_r ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getRFFKernel(). getfn (q));  } \
+                                       void       mod_r ## setfn(int q, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp,q); }
 
 // Actual functions (including auto-generation stubs) used in python module
 
@@ -330,6 +315,11 @@ void logit(const std::string logstr); // print to errstream
 void callintercalc(void);
 void callsnakes   (void);
 
+py::object svmeval(std::string fn, py::object arg);
+
+
+
+
 int selml(int i = 0);
 
 int selmlmuapprox   (int i = 0, int k = 0);
@@ -355,46 +345,50 @@ int selDIRectopt    (int i, int rst);
 int selNelderMeadopt(int i, int rst);
 int selBayesianopt  (int i, int rst);
 
-int setpriml(int i = 0, int j = 0);
 
-py::object svmeval(std::string fn, py::object arg);
 
-int makeMonot(int i, int n, int t, py::object xb, py::object xlb, py::object xub, int d, py::object y);
-
-int addTrainingVectorml (int i, int j, py::object z, py::object x, py::object Cweigh, py::object epsweigh, py::object d);
-int maddTrainingVectorml(int i, int j, py::object z, py::object x, py::object Cweigh, py::object epsweigh);
-int faddTrainingVectorml(int i, int ignoreStart, int imax, int reverse, int j, const std::string &fname);
-
-double mlcalcLOO   (int i);
-double mlcalcRecall(int i);
-double mlcalcCross (int i, int m, int rndit = 0, int numreps = 1);
-
-int removeTrainingVectorml(int i, int j, int num);
-
-py::object muml (int i, py::object x);
-py::object mugml(int i, py::object x, int fmt);
-py::object varml(int i, py::object x);
-py::object covml(int i, py::object x, py::object y);
-
-py::object mlalpha(int i);
-py::object mlbias (int i);
-py::object mlGp   (int i);
-
-int mlsetalpha(int i, py::object src);
-int mlsetbias (int i, py::object src);
 
 py::object svmtest(int i, std::string type);
 
-double mltuneKernel(int i, int method, double xwidth = 1, int tuneK = 1, int tuneP = 0);
 
-py::object mlK1(int i, py::object xa);
-py::object mlK2(int i, py::object xa, py::object xb);
-py::object mlK3(int i, py::object xa, py::object xb, py::object xc);
-py::object mlK4(int i, py::object xa, py::object xb, py::object xc, py::object xd);
 
-void boSetgridsource(int i, int j);
-void boSetkernapproxsource(int i, int j);
-void boSetimpmeas(int i, int j);
+
+int setpriml(int j = 0);
+
+int makeMonot(int n, int t, py::object xb, py::object xlb, py::object xub, int d, py::object y, double Cweight, double epsweight, int j);
+
+int addTrainingVectorml (int j, py::object z, py::object x, py::object Cweigh, py::object epsweigh, py::object d);
+int maddTrainingVectorml(int j, py::object z, py::object x, py::object Cweigh, py::object epsweigh);
+int faddTrainingVectorml(int ignoreStart, int imax, int reverse, int j, const std::string &fname);
+
+int removeTrainingVectorml(int j, int num);
+
+double mlcalcLOO   (void);
+double mlcalcRecall(void);
+double mlcalcCross (int m, int rndit = 0, int numreps = 1);
+
+py::object muml (py::object x);
+py::object mugml(py::object x, int fmt);
+py::object varml(py::object x);
+py::object covml(py::object x, py::object y);
+
+py::object mlalpha(void);
+py::object mlbias (void);
+py::object mlGp   (void);
+
+int mlsetalpha(py::object src);
+int mlsetbias (py::object src);
+
+double mltuneKernel(int method, double xwidth = 1, int tuneK = 1, int tuneP = 0);
+
+py::object mlK1(py::object xa);
+py::object mlK2(py::object xa, py::object xb);
+py::object mlK3(py::object xa, py::object xb, py::object xc);
+py::object mlK4(py::object xa, py::object xb, py::object xc, py::object xd);
+
+void boSetgridsource      (int j);
+void boSetkernapproxsource(int j);
+void boSetimpmeas         (int j);
 
 GETSETDEF(getMLType,ssetMLTypeClean,std::string)
 
@@ -404,6 +398,7 @@ GETSETDEF(getOmethod,setOmethod,std::string)
 GETSETDEF(getAmethod,setAmethod,std::string)
 GETSETDEF(getRmethod,setRmethod,std::string)
 GETSETDEF(getTmethod,setTmethod,std::string)
+GETSETDEF(getEmethod,setEmethod,std::string)
 GETSETDEF(getBmethod,setBmethod,std::string)
 GETSETDEF(getMmethod,setMmethod,std::string)
 
@@ -450,14 +445,6 @@ GETDEF(maxinfogain  )
 GETDEF(RKHSnorm     )
 GETDEF(RKHSabs      )
 
-GETDEF(isNaiveConst  )
-GETDEF(isEPConst     )
-GETDEF(isLaplaceConst)
-
-DODEF(setNaiveConst)
-DODEF(setEPConst   )
-DOARGDEF(setLaplaceConst,int)
-
 GETDEF(N                 )
 GETDEF(type              )
 GETDEF(subtype           )
@@ -485,10 +472,6 @@ GETDEF(NLF)
 GETDEF(NUF)
 GETDEF(NUB)
 
-GETDEF(Gp   )
-GETDEF(gprGp)
-GETDEF(lsvGp)
-
 GETCLADEF(NNC)
 
 GETDEF(x          )
@@ -503,15 +486,6 @@ GETDEF(alphaState )
 GETDEF(xtang      )
 
 GETDEF(kerndiag)
-
-GETSETDEF(alpha,setAlpha,Vector<gentype>)
-GETSETDEF(bias, setBias, gentype        )
-
-GETSETDEF(gamma,setgamma,Vector<gentype>)
-GETSETDEF(delta,setdelta,gentype        )
-
-GETSETDEF(muWeight,setmuWeight,Vector<gentype>)
-GETSETDEF(muBias,  setmuBias,  gentype        )
 
 GETSETKERAPDEF(isSymmSet, setSymmSet, int)
 GETSETKERAPDEF(isFullNorm,setFullNorm,int)
@@ -725,7 +699,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                 " 1: Rastrigin function        (n-dimensional).\n"
                                 " 2: Ackley's function         (n-dimensional).\n"
                                 " 3: Sphere function           (n-dimensional).\n"
-                                " 4: Rosenbrock function       (>1 dimensional).\n"
+                                " 4: Rosenbrock function      (>1 dimensional).\n"
                                 " 5: Beale's function          (2-dimensional).\n"
                                 " 6: Goldstein–Price function  (2-dimensional).\n"
                                 " 7: Booth's function          (2-dimensional).\n"
@@ -789,9 +763,9 @@ PYBIND11_MODULE(pyheavy, m) {
 
     QGETSETD(m_ml,getMLType,ssetMLTypeClean,"type","settype", "ML type. Types are (strings):\n"
                                             "\n"
-                                            "  s - SVM: single class.\n"
+                                            "  s - SVM: single class classifier.\n"
                                             "  c - SVM: binary classification (default).\n"
-                                            "  m - SVM: multiclass classification.\n"
+                                            "  m - SVM: multi-class classification.\n"
                                             "  r - SVM: scalar regression.\n"
                                             "  v - SVM: vector regression.\n"
                                             "  a - SVM: anionic regression.\n"
@@ -885,7 +859,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                                           "1 - primu(x) defined directly.\n"
                                                           "2 - prior is set to posterior mean of ML priML.\n");
     QGETSETD(m_ml,prival,setprival,"primu",  "setprimu",  "explicit prior mean mu (assuming pritype=1)");
-    m_ml.def("setpriML", &setpriml,"set prior mean to posterior mean of ML j (assuming pritype=2).",py::arg("i")=0,py::arg("j")=0);
+    m_ml.def("setpriML", &setpriml,"set prior mean to posterior mean of ML j (assuming pritype=2).",py::arg("j"));
 
     QGETSETD(m_ml,tspaceDim,settspaceDim,"tspaceDim","settspaceDim", "target space dimension");
     QGETSETD(m_ml,order,    setorder,    "order",    "setorder",     "target space order"    );
@@ -921,18 +895,24 @@ PYBIND11_MODULE(pyheavy, m) {
     QGET(m_ml,alphaState, "training alpha states"                    );
     QGET(m_ml,xtang,      "training class/vector/type specifics"     );
 
-    m_ml.def("alpha",&mlalpha,"For ML, get training alpha.",py::arg("i")=0);
-    m_ml.def("bias", &mlbias, "For ML, get training bias.", py::arg("i")=0);
+    m_ml.def("alpha",&mlalpha,"For ML, get training alpha (SVM,LSV,GP).");
+    m_ml.def("bias", &mlbias, "For ML, get training bias (SVM,LSV,GP)." );
 
-    m_ml.def("setalpha",&mlsetalpha,"For ML, set training alpha.",py::arg("i")=0,py::arg("alpha"));
-    m_ml.def("setbias", &mlsetbias, "For ML, set training bias.", py::arg("i")=0,py::arg("bias") );
+    m_ml.def("setalpha",&mlsetalpha,"For ML, set training alpha (SVM,LSV,GP).",py::arg("alpha"));
+    m_ml.def("setbias", &mlsetbias, "For ML, set training bias (SVM,LSV,GP).", py::arg("bias") );
 
-    m_ml.def("Gp",&mlGp,"For ML, get the Gp matrix (if it is defined).", py::arg("i")=0);
+    m_ml.def("Gp",&mlGp,"For ML, get the Gp matrix (SVM,LSV,GP).");
+
+    QGET(m_ml,loglikelihood,"log-likelihood (quasi for SVM,LSV, actual for GP)."      );
+    QGET(m_ml,maxinfogain,  "max-information-gain (quasi for SVM,LSV, actual for GP).");
+    QGET(m_ml,RKHSnorm,     "RKHS norm ||f||_H^2 (SVM,LSV,GP)."                       );
+    QGET(m_ml,RKHSabs,      "RKHS norm ||f||_H (SVM,LSV,GP)."                         );
 
     m_ml.def("constrain",&makeMonot,"For ML, constrain the posterior mean / trained ML using inducing-point method.\n"
-                                    "This adds n training observations (either in a uniform grid if t=0 or a random\n"
-                                    "scatter from a uniform distribution if t=1) of the form g(x+xb)?y, where ? is\n"
-                                    "either = (d=2), >= (d=+1), <= (d=-1) or not enforced (d=0). For example:\n"
+                                    "This adds n training observations (either in a uniform grid if t=0, a random\n"
+                                    "scatter from a uniform distribution if t=1, or random-on-a-grid using data from\n"
+                                    "ML j if t=2) of the form g(x+xb)?y, where ? is either = (d=2), >= (d=+1), <=\n"
+                                    "(d=-1) or not enforced (d=0). For example:\n"
                                     "\n"
                                     "     xb  = ['::',e1,e2]\n"
                                     "     xlb = [0,0]\n"
@@ -948,20 +928,21 @@ PYBIND11_MODULE(pyheavy, m) {
                                     "sufficiently large relative to the lengthscale) this is approximately the same\n"
                                     "as enforcing monotonicity on the posterior mean.\n"
                                     "\n"
-                                    "Default: n=10^d,t=1,d=1\n",py::arg("i")=0,
+                                    "Default: n=10^d,t=1,d=1",
                                     py::arg("n")=-1,py::arg("t")=1,py::arg("xb")=py::none(),py::arg("xlb")=py::none(),
-                                    py::arg("xub")=py::none(),py::arg("d")=1,py::arg("y")=py::none());
+                                    py::arg("xub")=py::none(),py::arg("d")=1,py::arg("y")=py::none(),
+                                    py::arg("Cweight")=1.0,py::arg("epsweight")=1.0,py::arg("j")=0);
 
 
     m_ml.def("add", &addTrainingVectorml, "For ML, add a single training vector pair [z,x,Cweight,epsweight,d] at\n"
                                           "position j (j=-1 (default) to add at end).\n"
-                                          "The arguments Cweight,epsweight,d are optional (None by default).",py::arg("i")=0,
-                                          py::arg("j")=-1,py::arg("z"),py::arg("x"),py::arg("Cweight")=py::none(),
+                                          "The arguments Cweight,epsweight,d are optional (None by default).",
+                                          py::arg("j")=-1,py::arg("z")=py::none(),py::arg("x"),py::arg("Cweight")=py::none(),
                                           py::arg("epsweight")=py::none(),py::arg("d")=py::none());
     m_ml.def("addm",&maddTrainingVectorml,"For ML, add multiple training vector pairs [z,x,Cweight,epsweight,d] at\n"
                                           "position j (j=-1 (default) to add at end).\n"
-                                          "The arguments Cweight,epsweight are optional (None by default).",py::arg("i")=0,
-                                          py::arg("j")=-1,py::arg("z"),py::arg("x"),py::arg("Cweight")=py::none(),
+                                          "The arguments Cweight,epsweight are optional (None by default).",
+                                          py::arg("j")=-1,py::arg("z")=py::none(),py::arg("x"),py::arg("Cweight")=py::none(),
                                           py::arg("epsweight")=py::none());
     m_ml.def("addf",&faddTrainingVectorml,"For ML, add up to imax (let imax=0 (default) for all) training vector pairs\n"
                                           "[z,x,Cweight,epsweight,d] from file fname at position j (j=-1 (default) to add"
@@ -969,25 +950,25 @@ PYBIND11_MODULE(pyheavy, m) {
                                           "\n"
                                           "By default it is assumed that the file is in target-at-start format, but you\n"
                                           "can use target-at-end format by setting reverse=1 (reverse=0 by default). For\n"
-                                          "full details on the file format see the CLI help.",py::arg("i")=0,
+                                          "full details on the file format see the CLI help.",
                                           py::arg("ignoreStart")=0,py::arg("imax")=-1,py::arg("reverse")=0,
                                           py::arg("j")=-1,py::arg("fname"));
 
     m_ml.def("remove",&removeTrainingVectorml,"For ML, remove num training vector pairs at position j (j=-1 (default) to\n"
-                                              "remove from end).",py::arg("i")=0, py::arg("j")=-1,py::arg("num")=1);
+                                              "remove from end).",py::arg("j")=-1,py::arg("num")=1);
 
     m_ml.def("mu", &muml, "For ML, calculate the posterior mean (output) given input x, which is either a\n"
-                          "sparse vector or a training vector number.",py::arg("i")=0,py::arg("x"));
+                          "sparse vector or a training vector number.",py::arg("x"));
     m_ml.def("g",  &mugml,"For ML, calculate the underlying (ie continuous) output given input x, which is\n"
                            "either a sparse vector or a training vector number. Use fmt=1 to return alternative\n"
                            "format (either vector of outputs if the ML is (nominally) a vector type at base, or\n"
-                           "a vector of probabilities for the GP binary classifier).",py::arg("i")=0,py::arg("x")=py::none(),py::arg("fmt")=0);
+                           "a vector of probabilities for the GP binary classifier).",py::arg("x")=py::none(),py::arg("fmt")=0);
     m_ml.def("var",&varml,"For ML, calculate the posterior variance given input x, which is either a\n"
-                          "sparse vector or an integer (training vector number).",py::arg("i")=0,py::arg("x"));
+                          "sparse vector or an integer (training vector number).",py::arg("x"));
     m_ml.def("cov",&covml,"For ML, Calculate the posterior covariance given inputs x,y, which are either\n"
-                          "sparse vectors or integers (training vector numbers).",py::arg("i")=0,py::arg("x"),py::arg("y"));
+                          "sparse vectors or integers (training vector numbers).",py::arg("x"),py::arg("y"));
 
-    m_ml.def("tuneKernel",&mltuneKernel,"For ML, tune the kernel for ML i to minimise some metric, specified by method:\n"
+    m_ml.def("tuneKernel",&mltuneKernel,"For ML, tune the kernel for ML to minimise some metric, specified by method:\n"
                                         "1 - max-likelihood (default)\n"
                                         "2 - leave-one-out error\n"
                                         "3 - recall error\n"
@@ -996,13 +977,19 @@ PYBIND11_MODULE(pyheavy, m) {
                                         "\n"
                                         "xwidth - the maximum kernel lengthscale override (default 1)\n"
                                         "tuneK  - 0 don't tune kernel parameters, 1 tune kernel parameters (default)\n"
-                                        "tuneP  - 0 don't tune C parameter (default), 1 tune C\n",py::arg("i")=0,
+                                        "tuneP  - 0 don't tune C parameter (default), 1 tune C",
                                         py::arg("method")=2,py::arg("xwidth")=1,py::arg("tuneK")=1,py::arg("tuneP")=0);
 
-    m_ml.def("K1",&mlK1,"For ML, calculate K1(xa).",         py::arg("i")=0,py::arg("xa")                                          );
-    m_ml.def("K2",&mlK2,"For ML, calculate K2(xa,xb).",      py::arg("i")=0,py::arg("xa"),py::arg("xb")                            );
-    m_ml.def("K3",&mlK3,"For ML, calculate K3(xa,xb,xc).",   py::arg("i")=0,py::arg("xa"),py::arg("xb"),py::arg("xc")              );
-    m_ml.def("K4",&mlK4,"For ML, calculate K4(xa,xb,xc,xd).",py::arg("i")=0,py::arg("xa"),py::arg("xb"),py::arg("xc"),py::arg("xd"));
+    m_ml.def("K1",&mlK1,"For ML, calculate K1(xa).",         py::arg("xa")                                          );
+    m_ml.def("K2",&mlK2,"For ML, calculate K2(xa,xb).",      py::arg("xa"),py::arg("xb")                            );
+    m_ml.def("K3",&mlK3,"For ML, calculate K3(xa,xb,xc).",   py::arg("xa"),py::arg("xb"),py::arg("xc")              );
+    m_ml.def("K4",&mlK4,"For ML, calculate K4(xa,xb,xc,xd).",py::arg("xa"),py::arg("xb"),py::arg("xc"),py::arg("xd"));
+
+    m_ml.def("calcLOO",   &mlcalcLOO,   "For ML, calculate leave-one-out error.");
+    m_ml.def("calcRecall",&mlcalcRecall,"For ML, calculate recall error."       );
+    m_ml.def("calcCross", &mlcalcCross, "For ML, calculate n-fold validation error. If numreps>1 then does numreps\n"
+                                        "repetitions, randomised in rndit=1.",py::arg("n"),
+                                        py::arg("rndit")=0,py::arg("numreps")=1);
 
     // ---------------------------
 
@@ -1082,7 +1069,6 @@ PYBIND11_MODULE(pyheavy, m) {
     QGET(m_ml_svm,NUF,"number of training vectors with alpha unconstrained between zero and upper bound");
     QGET(m_ml_svm,NUB,"number of training vectors with alpha constrained at upper bound"                );
 
-    QGET(m_ml_svm,Gp,      "kernel matrix"             );
     QGET(m_ml_svm,kerndiag,"diagonals of kernel matrix");
 
     QGETSET(m_ml_svm,C,        setC,        "regularization trade-off (empirical risk weight, C=1/lambda)"        );
@@ -1103,20 +1089,6 @@ PYBIND11_MODULE(pyheavy, m) {
 
     QGETSETCLA(m_ml_svm,LinBiasForceclass, setLinBiasForceclass, "linear bias-forcing LinBiasForce scale for class d"    );
     QGETSETCLA(m_ml_svm,QuadBiasForceclass,setQuadBiasForceclass,"quadratic bias-forcing QuadBiasForce scale for class d");
-
-    QGET(m_ml_svm,loglikelihood,"quasi-log-likelihood"      );
-    QGET(m_ml_svm,maxinfogain,  "quasi-max-information-gain");
-    QGET(m_ml_svm,RKHSnorm,     "RKHS norm ||f||_H^2"       );
-    QGET(m_ml_svm,RKHSabs,      "RKHS norm ||f||_H"         );
-
-    m_ml.def("calcLOO",   &mlcalcLOO,   "For ML, calculate leave-one-out error.",py::arg("i")=0);
-    m_ml.def("calcRecall",&mlcalcRecall,"For ML, calculate recall error.",       py::arg("i")=0);
-    m_ml.def("calcCross", &mlcalcCross, "For ML, calculate n-fold validation error. If numreps>1 then does numreps\n"
-                                        "repetitions, randomised in rndit=1.", py::arg("i")=0,py::arg("n"),
-                                        py::arg("rndit")=0,py::arg("numreps")=1);
-
-    QGETSETD(m_ml_svm,alpha,setAlpha,"alpha","setalpha","alpha");
-    QGETSETD(m_ml_svm,bias, setBias, "bias", "setbias", "bias" );
 
        QDO(m_ml_svm,removeNonSupports,"remove all non-support vectors alpha=0");
     QDOARG(m_ml_svm,trimTrainingSet,  "trim training set to target size N","N");
@@ -1147,18 +1119,8 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSET(m_ml_lsv,sigma_cut,setsigma_cut,"sigma scale for JIT sampling"                                );
     QGETSET(m_ml_lsv,eps,      seteps,      "epsilon-insensitivity width"                                 );
 
-    QGETD(m_ml_lsv,lsvGp,"Gp","kernel matrix");
-
     QGETSETCLA(m_ml_lsv,Cclass,  setCclass,  "regularization trade-off scale (empirical risk weight) C for class d");
     QGETSETCLA(m_ml_lsv,epsclass,setepsclass,"epsilon-insensitivity width eps scale for class d"                   );
-
-    QGET(m_ml_lsv,loglikelihood,"quasi-log-likelihood"      );
-    QGET(m_ml_lsv,maxinfogain,  "quasi-max-information-gain");
-    QGET(m_ml_lsv,RKHSnorm,     "RKHS norm ||f||_H^2"       );
-    QGET(m_ml_lsv,RKHSabs,      "RKHS norm ||f||_H"         );
-
-    QGETSETD(m_ml_lsv,gamma,setgamma,"alpha","setalpha","alpha");
-    QGETSETD(m_ml_lsv,delta,setdelta,"bias", "setbias", "bias" );
 
     // ---------------------------
 
@@ -1173,33 +1135,21 @@ PYBIND11_MODULE(pyheavy, m) {
                                                                 "gpg - GPR: gaussian process gentype regression.\n"
                                                                 "gpC - GPR: gaussian process binary classify RFF (kernels 3,4,13,19).\n"
                                                                 "gpR - GPR: gaussian process scalar regression RFF (kernels 3,4,13,19).\n");
-    QGETSETD(m_ml_gp,getBmethod,setBmethod,"typeBias","settypeBias","set GP i bias method.  Methods are:\n"
+    QGETSETD(m_ml_gp,getBmethod,setBmethod,"typeBias","settypeBias","set GP bias method.  Methods are:\n"
                                                                     "\n"
                                                                     "var - variable bias.\n"
                                                                     "fix - zero bias (default).");
+    QGETSETD(m_ml_gp,getEmethod,setEmethod,"approxType","setapproxType","set GP inequality constraint/classifier approximation method.  Methods are:\n"
+                                                                        "\n"
+                                                                        "Naive   - enforce alpha sign constraint (posterior variance will be wrong).\n"
+                                                                        "EP      - expectation propogation (CURRENTLY NOT WORKING).\n"
+                                                                        "LapNorm - Laplace approximation using normal CDF likelihood (default).\n"
+                                                                        "LapLog  - Laplace approximation using Logit likelihood.");
 
     QGETSET(m_ml_gp,sigma,    setsigma,    "measurement noise variance sigma"                 );
     QGETSET(m_ml_gp,sigma_cut,setsigma_cut,"measurement noise variance scale for JIT sampling");
 
-    QGETD(m_ml_gp,gprGp,"Gp","kernel matrix");
-
 //    QGETSETCLA(m_ml_gp,sigmaclass,setsigmaclass,"measurement noise variance scale factor for class d (sigma -> sigma/Cd)");
-
-    QGET(m_ml_gp,loglikelihood,"log-likelihood"      );
-    QGET(m_ml_gp,maxinfogain,  "max-information-gain");
-    QGET(m_ml_gp,RKHSnorm,     "RKHS norm ||f||_H^2" );
-    QGET(m_ml_gp,RKHSabs,      "RKHS norm ||f||_H"   );
-
-    QGETSETD(m_ml_gp,muWeight,setmuWeight,"alpha","setalpha","alpha");
-    QGETSETD(m_ml_gp,muBias,  setmuBias,  "bias", "setbias", "bias" );
-
-    QGET(m_ml_gp,isNaiveConst,  "nz if naive method (alpha sign restriction) is used for inequalities"                );
-    QGET(m_ml_gp,isEPConst,     "nz if Expectation Propagation is used for inequalities (not working at present)"     );
-    QGET(m_ml_gp,isLaplaceConst,"nz if Laplace approximation is used for inequalities (1 for normal cdf, 2 for logit)");
-
-    QDO(m_ml_gp,setNaiveConst,"set naive method (alpha sign restriction) for inequalities."           );
-    QDO(m_ml_gp,setEPConst,   "set expectation propagation for inequalities (not working at present).");
-    QDOARG(m_ml_gp,setLaplaceConst,"set Laplace approximation for inequalities (type=1 for normal cdf, 2 for logit).","type");
 
     // ---------------------------
 
@@ -1316,7 +1266,7 @@ PYBIND11_MODULE(pyheavy, m) {
     m_opt_grid.def("selgridopt",&selgridopt,"Select grid optimiser i > 0. If i=0 then return current grid optimizer\n"
                                             "(default 1) without modification. You can have arbitrarily many grid\n"
                                             "optimizers at any given time. Note that you can select per-operation,\n"
-                                            "but like selml this is non-persistent. Set rst = 1 to also reset.\n",py::arg("i")=0,py::arg("rst")=0);
+                                            "but like selml this is non-persistent. Set rst = 1 to also reset.",py::arg("i")=0,py::arg("rst")=0);
 
     QGETSETOPTB(m_opt,numZooms,grid,"number of grid-zooms (default 0)"                                              );
     QGETSETOPTB(m_opt,zoomFact,grid,"scaling (zoom) factor for each grid-zoom (default 0.333)"                      );
@@ -1327,7 +1277,7 @@ PYBIND11_MODULE(pyheavy, m) {
     m_opt_DIRect.def("selDIRectopt",&selDIRectopt,"Select DIRect optimiser i > 0. If i=0 then return current DIRect optimizer\n"
                                                   "(default 1) without modification. You can have arbitrarily many DIRect\n"
                                                   "optimizers at any given time. Note that you can select per-operation,\n"
-                                                  "but like selml this is non-persistent. Set rst = 1 to also reset.\n",py::arg("i")=0,py::arg("rst")=0);
+                                                  "but like selml this is non-persistent. Set rst = 1 to also reset.",py::arg("i")=0,py::arg("rst")=0);
 
     QGETSETOPTB(m_opt,maxits,  DIRect,"maximum cube divisions (default 1000)."      );
     QGETSETOPTB(m_opt,maxevals,DIRect,"maximum function evaluations (default 5000).");
@@ -1338,7 +1288,7 @@ PYBIND11_MODULE(pyheavy, m) {
     m_opt_NelderMead.def("selNelderMeadopt",&selNelderMeadopt,"Select NelderMead optimiser i > 0. If i=0 then return current NelderMead optimizer\n"
                                                               "(default 1) without modification. You can have arbitrarily many NelderMead\n"
                                                               "optimizers at any given time. Note that you can select per-operation,\n"
-                                                              "but like selml this is non-persistent. Set rst = 1 to also reset.\n",py::arg("i")=0,py::arg("rst")=0);
+                                                              "but like selml this is non-persistent. Set rst = 1 to also reset.",py::arg("i")=0,py::arg("rst")=0);
 
     QGETSETOPTB(m_opt,minf_max,NelderMead,"maximum f val (default -HUGE_VAL)."                  );
     QGETSETOPTB(m_opt,ftol_rel,NelderMead,"relative tolerance of function value (default 0)."   );
@@ -1356,7 +1306,7 @@ PYBIND11_MODULE(pyheavy, m) {
     m_opt_Bayesian.def("selBOopt",&selBayesianopt,"Select BO optimiser i > 0. If i=0 then return current BO optimizer\n"
                                                   "(default 1) without modification. You can have arbitrarily many BO\n"
                                                   "optimizers at any given time. Note that you can select per-operation,\n"
-                                                  "but like selml this is non-persistent. Set rst = 1 to also reset.\n",py::arg("i")=0,py::arg("rst")=0);
+                                                  "but like selml this is non-persistent. Set rst = 1 to also reset.",py::arg("i")=0,py::arg("rst")=0);
 
     QGETSETOPTB(m_opt,acq,    Bayesian,"Bayesian optimisation acquisition function:\n"
                                        "\n"
@@ -1378,9 +1328,10 @@ PYBIND11_MODULE(pyheavy, m) {
                                        "15 - GP-UCB RKHS as Bogunovic.~\n"
                                        "16 - Thompson sampling (unity scaling on variance).\n"
                                        "17 - GP-UCB as per Kandasamy (multifidelity 2017).\n"
-                                       "18 - Human will be prompted to input x.\n"
+                                       "18 - Human will be prompted to input x (x=NaN).\n"
                                        "19 - HE (human-level exploitation beta = 0.01).\n"
-                                       "20 - GP-UCB as per BO-Muse (single AI).  Typically combined with human prompt\n"
+                                       "20 - GP-UCB as per BO-Muse (single AI).  Typically combined with human prompt.\n"
+                                       "21 - Random experiments (generated as per start-points).\n"
                                        "\n"
                                        "* beta_n = 2.log((n^{2+dim/2}).(pi^2)/(3.delta))\n"
                                        "$ variance of model only.\n"
@@ -1417,9 +1368,9 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPTB(m_opt,minstdev,   Bayesian,"added to the posterior variance in acquisition function (default 0).");
     QGETSETOPTB(m_opt,ztol,       Bayesian,"zero tolerance factor.");
 
-    QGETSETOPTB(m_opt,startseed,Bayesian,"seed for RNG immediately prior to generating random seeds. -1 for no seed,"
+    QGETSETOPTB(m_opt,startseed,Bayesian,"seed for RNG immediately prior to generating random seeds. -1 for no seed,\n"
                                          "-2 to seed with time. If >=0 then this is incremented on each use (default 42).");
-    QGETSETOPTB(m_opt,algseed,  Bayesian,"seed for RNG immediately prior to the main algorithm loop. -1 for no seed,"
+    QGETSETOPTB(m_opt,algseed,  Bayesian,"seed for RNG immediately prior to the main algorithm loop. -1 for no seed,\n"
                                          "-2 to seed with time. If >=0 then this is incremented on each use (default 42)");
 
 
@@ -1487,7 +1438,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                                   "acquisition function defined by -gbH still be applied after this (to do passthrough\n"
                                                   "use acquisition function 0. Some IMPs have a concept of posterior variance, some\n"
                                                   "don't. For EHI use acquisition function 0, for SVM-type mono-surrogate use for\n"
-                                                  "for example acquition function 3.\n");
+                                                  "for example acquition function 3.",py::arg("j"));
 
 
     QGETSETOPT(m_opt,numfids,   Bayesian,fid,"number of fidelity levels per axis (default 0, no fidelity variables).");
@@ -1512,7 +1463,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                                    "5 - use min mean, sqrt(ibs/Tr(inv(covar))).");
 
 
-    m_opt_Bayesian_tl.def("setkxfersrc",&boSetkernapproxsource,"kernel transfer learning source ML.",py::arg("i")=0,py::arg("j")=0);
+    m_opt_Bayesian_tl.def("setkxfersrc",&boSetkernapproxsource,"kernel transfer learning source ML.",py::arg("j"));
 
     QGETSETOPT(m_opt,tranmeth,Bayesian,tl,"Transfer learning data treatment:\n"
                                           "\n"
@@ -1548,7 +1499,7 @@ PYBIND11_MODULE(pyheavy, m) {
 //    QGETSETOPT(m_opt,tuneaugxmod,Bayesian,tune,"Tuning for x augmentation (side-channel) model (0 none, 1 max-log-likelihood (default), 2 LOO, 3 recall.");
 
 
-    m_opt_Bayesian_model.def("setgridsrc",&boSetgridsource,"For BO, set grid source.",py::arg("i")=0,py::arg("j")=0);
+    m_opt_Bayesian_model.def("setgridsrc",&boSetgridsource,"For BO, set grid source.",py::arg("j"));
     m_opt_Bayesian_model.def("selmu",    &selmlmuapprox,    "select objective model for BO i to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
     m_opt_Bayesian_model.def("selcgt",   &selmlcgtapprox,   "select constraint model for BO i to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
 //    m_opt_Bayesian_model.def("selaug",   &selmlaugxapprox,  "select x augmentation (side-channel) model for BO i to use like any ML (see also selml).",py::arg("i")=0,py::arg("k")=0);
@@ -1752,8 +1703,6 @@ void internobjfn(gentype &res, Vector<gentype> &x, void *arg)
 
     xx("&",0)("&",0) = x;
 
-errstream() << "iternobjfn: x = " << x << "\n";
-errstream() << "iternobjfn: xx = " << xx << "\n";
     res = (*((gentype *) arg))(xx);
 
     return;
@@ -1761,7 +1710,6 @@ errstream() << "iternobjfn: xx = " << xx << "\n";
 
 py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, const py::object &objfn)
 {
-errstream() << "optimiser addr: " << &optimiser << "\n";
     dostartup();
 
     // Check arguments make sense
@@ -1889,610 +1837,94 @@ errstream() << "optimiser addr: " << &optimiser << "\n";
     return res;
 }
 
-void boSetgridsource(int i, int j)
+void boSetgridsource      (int j) { dostartup(); int i = glob_BayesianInd(0); j = glob_MLInd(j); getBayesianref(i).gridsource = &getMLref(j);          }
+void boSetkernapproxsource(int j) { dostartup(); int i = glob_BayesianInd(0); j = glob_MLInd(j); getBayesianref(i).kernapprox = &getMLref(j);          }
+void boSetimpmeas         (int j) { dostartup(); int i = glob_BayesianInd(0); j = glob_MLInd(j); getBayesianref(i).impmeasu   = &getMLref(j).getIMP(); }
+
+double mltuneKernel(int method, double xwidth, int tuneK, int tuneP)
 {
     dostartup();
 
-    i = glob_BayesianInd(i);
-    j = glob_MLInd(j);
-
-    getBayesianref(i).gridsource = &getMLref(j);
-}
-
-void boSetkernapproxsource(int i, int j)
-{
-    dostartup();
-
-    i = glob_BayesianInd(i);
-    j = glob_MLInd(j);
-
-    getBayesianref(i).kernapprox = &getMLref(j);
-}
-
-void boSetimpmeas(int i, int j)
-{
-    dostartup();
-
-    i = glob_BayesianInd(i);
-    j = glob_MLInd(j);
-
-    getBayesianref(i).impmeasu = &getMLref(j).getIMP();
-}
-
-double mltuneKernel(int i, int method, double xwidth, int tuneK, int tuneP)
-{
-    dostartup();
-
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
 
     return getMLref(i).tuneKernel(method,xwidth,tuneK,tuneP);
 }
 
 // Non-trivial python module function layer
 
-py::object mlK1(int i, py::object xa)
+const SparseVector<gentype> &getvec(py::object xa, SparseVector<gentype> &xxa);
+const SparseVector<gentype> &getvec(py::object xa, SparseVector<gentype> &xxa)
 {
     dostartup();
 
-    i = glob_MLInd(i);
-
-    gentype res;
+    int i = glob_MLInd(0);
 
     if ( py::isinstance<py::int_>(xa) )
     {
-        int ia = py::cast<py::int_>(xa);
-
-        getMLref(i).K1(res,ia);
+        return getMLrefconst(i).x(py::cast<py::int_>(xa));
     }
 
-    else
+    if ( convFromPy(xxa,xa) )
     {
-        SparseVector<gentype> xxa;
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K1(res,xxa);
+        throw("Can't convert x to sparsevector");
+        //return py::none();
     }
+
+    return xxa;
+}
+
+py::object mlK1(py::object xa)
+{
+    dostartup();
+    int i = glob_MLInd(0);
+
+    gentype res;
+    SparseVector<gentype> xxa;
+
+    if ( py::isinstance<py::int_>(xa) ) { getMLrefconst(i).K1(res,py::cast<py::int_>(xa)); }
+    else                                { getMLrefconst(i).K1(res,getvec(xa,xxa));         }
 
     return convToPy(res);
 }
 
-py::object mlK2(int i, py::object xa, py::object xb)
+py::object mlK2(py::object xa, py::object xb)
 {
     dostartup();
-
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
 
     gentype res;
+    SparseVector<gentype> xxa,xxb;
 
-    if ( py::isinstance<py::int_>(xa) && py::isinstance<py::int_>(xb) )
-    {
-        int ia = py::cast<py::int_>(xa);
-        int ib = py::cast<py::int_>(xb);
-
-        getMLref(i).K2(res,ia,ib);
-    }
-
-    else if ( py::isinstance<py::int_>(xa) )
-    {
-        int ia = py::cast<py::int_>(xa);
-        SparseVector<gentype> xxb;
-
-        if ( convFromPy(xxb,xb) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K2(res,getMLref(i).x(ia),xxb);
-    }
-
-    else if ( py::isinstance<py::int_>(xb) )
-    {
-        SparseVector<gentype> xxa;
-        int ib = py::cast<py::int_>(xb);
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K2(res,xxa,getMLref(i).x(ib));
-    }
-
-    else
-    {
-        SparseVector<gentype> xxa;
-        SparseVector<gentype> xxb;
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxb,xb) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K2(res,xxa,xxb);
-    }
+    if ( py::isinstance<py::int_>(xa) && py::isinstance<py::int_>(xb) ) { getMLref(i).K2(res,py::cast<py::int_>(xa),py::cast<py::int_>(xb)); }
+    else                                                                { getMLref(i).K2(res,getvec(xa,xxa),getvec(xb,xxb));                 }
 
     return convToPy(res);
 }
 
-py::object mlK3(int i, py::object xa, py::object xb, py::object xc)
+py::object mlK3(py::object xa, py::object xb, py::object xc)
 {
     dostartup();
-
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
 
     gentype res;
+    SparseVector<gentype> xxa,xxb,xxc;
 
-    if ( py::isinstance<py::int_>(xa) && py::isinstance<py::int_>(xb) && py::isinstance<py::int_>(xc) )
-    {
-        int ia = py::cast<py::int_>(xa);
-        int ib = py::cast<py::int_>(xb);
-        int ic = py::cast<py::int_>(xc);
-
-        getMLref(i).K3(res,ia,ib,ic);
-    }
-
-    else if ( py::isinstance<py::int_>(xa) && py::isinstance<py::int_>(xb) )
-    {
-        int ia = py::cast<py::int_>(xa);
-        int ib = py::cast<py::int_>(xb);
-        SparseVector<gentype> xxc;
-
-        if ( convFromPy(xxc,xc) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K3(res,getMLref(i).x(ia),getMLref(i).x(ib),xxc);
-    }
-
-    else if ( py::isinstance<py::int_>(xa) && py::isinstance<py::int_>(xc) )
-    {
-        int ia = py::cast<py::int_>(xa);
-        SparseVector<gentype> xxb;
-        int ic = py::cast<py::int_>(xc);
-
-        if ( convFromPy(xxb,xb) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K3(res,getMLref(i).x(ia),xxb,getMLref(i).x(ic));
-    }
-
-    else if ( py::isinstance<py::int_>(xb) && py::isinstance<py::int_>(xc) )
-    {
-        SparseVector<gentype> xxa;
-        int ib = py::cast<py::int_>(xb);
-        int ic = py::cast<py::int_>(xc);
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K3(res,xxa,getMLref(i).x(ib),getMLref(i).x(ic));
-    }
-
-    else if ( py::isinstance<py::int_>(xa) )
-    {
-        int ia = py::cast<py::int_>(xa);
-        SparseVector<gentype> xxb;
-        SparseVector<gentype> xxc;
-
-        if ( convFromPy(xxb,xb) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxc,xc) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K3(res,getMLref(i).x(ia),xxb,xxc);
-    }
-
-    else if ( py::isinstance<py::int_>(xb) )
-    {
-        SparseVector<gentype> xxa;
-        int ib = py::cast<py::int_>(xb);
-        SparseVector<gentype> xxc;
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxc,xc) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K3(res,xxa,getMLref(i).x(ib),xxc);
-    }
-
-    else if ( py::isinstance<py::int_>(xc) )
-    {
-        SparseVector<gentype> xxa;
-        SparseVector<gentype> xxb;
-        int ic = py::cast<py::int_>(xc);
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxb,xb) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K3(res,xxa,xxb,getMLref(i).x(ic));
-    }
-
-    else
-    {
-        SparseVector<gentype> xxa;
-        SparseVector<gentype> xxb;
-        SparseVector<gentype> xxc;
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxb,xb) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxc,xc) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K3(res,xxa,xxb,xxc);
-    }
+    if ( py::isinstance<py::int_>(xa) && py::isinstance<py::int_>(xb) && py::isinstance<py::int_>(xc) ) { getMLref(i).K3(res,py::cast<py::int_>(xa),py::cast<py::int_>(xb),py::cast<py::int_>(xc)); }
+    else                                                                                                { getMLref(i).K3(res,getvec(xa,xxa),getvec(xb,xxb),getvec(xc,xxc));                         }
 
     return convToPy(res);
 }
 
-py::object mlK4(int i, py::object xa, py::object xb, py::object xc, py::object xd)
+py::object mlK4(py::object xa, py::object xb, py::object xc, py::object xd)
 {
     dostartup();
-
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
 
     gentype res;
+    SparseVector<gentype> xxa,xxb,xxc,xxd;
 
-    if ( py::isinstance<py::int_>(xa) && py::isinstance<py::int_>(xb) && py::isinstance<py::int_>(xc) && py::isinstance<py::int_>(xd) )
-    {
-        int ia = py::cast<py::int_>(xa);
-        int ib = py::cast<py::int_>(xb);
-        int ic = py::cast<py::int_>(xc);
-        int id = py::cast<py::int_>(xd);
-
-        getMLref(i).K4(res,ia,ib,ic,id);
-    }
-
-    else if ( py::isinstance<py::int_>(xa) && py::isinstance<py::int_>(xb) && py::isinstance<py::int_>(xc) )
-    {
-        int ia = py::cast<py::int_>(xa);
-        int ib = py::cast<py::int_>(xb);
-        int ic = py::cast<py::int_>(xc);
-        SparseVector<gentype> xxd;
-
-        if ( convFromPy(xxd,xd) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,getMLref(i).x(ia),getMLref(i).x(ib),getMLref(i).x(ic),xxd);
-    }
-
-    else if ( py::isinstance<py::int_>(xa) && py::isinstance<py::int_>(xb) && py::isinstance<py::int_>(xd) )
-    {
-        int ia = py::cast<py::int_>(xa);
-        int ib = py::cast<py::int_>(xb);
-        SparseVector<gentype> xxc;
-        int id = py::cast<py::int_>(xd);
-
-        if ( convFromPy(xxc,xc) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,getMLref(i).x(ia),getMLref(i).x(ib),xxc,getMLref(i).x(id));
-    }
-
-    else if ( py::isinstance<py::int_>(xa) && py::isinstance<py::int_>(xc) && py::isinstance<py::int_>(xd) )
-    {
-        int ia = py::cast<py::int_>(xa);
-        SparseVector<gentype> xxb;
-        int ic = py::cast<py::int_>(xc);
-        int id = py::cast<py::int_>(xd);
-
-        if ( convFromPy(xxb,xb) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,getMLref(i).x(ia),xxb,getMLref(i).x(ic),getMLref(i).x(id));
-    }
-
-    else if ( py::isinstance<py::int_>(xb) && py::isinstance<py::int_>(xc) && py::isinstance<py::int_>(xd) )
-    {
-        SparseVector<gentype> xxa;
-        int ib = py::cast<py::int_>(xb);
-        int ic = py::cast<py::int_>(xc);
-        int id = py::cast<py::int_>(xd);
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,xxa,getMLref(i).x(ib),getMLref(i).x(ic),getMLref(i).x(id));
-    }
-
-    else if ( py::isinstance<py::int_>(xa) && py::isinstance<py::int_>(xb) )
-    {
-        int ia = py::cast<py::int_>(xa);
-        int ib = py::cast<py::int_>(xb);
-        SparseVector<gentype> xxc;
-        SparseVector<gentype> xxd;
-
-        if ( convFromPy(xxc,xc) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxd,xd) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,getMLref(i).x(ia),getMLref(i).x(ib),xxc,xxd);
-    }
-
-    else if ( py::isinstance<py::int_>(xa) && py::isinstance<py::int_>(xc) )
-    {
-        int ia = py::cast<py::int_>(xa);
-        SparseVector<gentype> xxb;
-        int ic = py::cast<py::int_>(xc);
-        SparseVector<gentype> xxd;
-
-        if ( convFromPy(xxb,xb) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxd,xd) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,getMLref(i).x(ia),xxb,getMLref(i).x(ic),xxd);
-    }
-
-    else if ( py::isinstance<py::int_>(xa) && py::isinstance<py::int_>(xd) )
-    {
-        int ia = py::cast<py::int_>(xa);
-        SparseVector<gentype> xxb;
-        SparseVector<gentype> xxc;
-        int id = py::cast<py::int_>(xd);
-
-        if ( convFromPy(xxb,xb) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxc,xc) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,getMLref(i).x(ia),xxb,xxc,getMLref(i).x(id));
-    }
-
-    else if ( py::isinstance<py::int_>(xb) && py::isinstance<py::int_>(xc) )
-    {
-        SparseVector<gentype> xxa;
-        int ib = py::cast<py::int_>(xb);
-        int ic = py::cast<py::int_>(xc);
-        SparseVector<gentype> xxd;
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxd,xd) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,xxa,getMLref(i).x(ib),getMLref(i).x(ic),xxd);
-    }
-
-    else if ( py::isinstance<py::int_>(xb) && py::isinstance<py::int_>(xd) )
-    {
-        SparseVector<gentype> xxa;
-        int ib = py::cast<py::int_>(xb);
-        SparseVector<gentype> xxc;
-        int id = py::cast<py::int_>(xd);
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxc,xc) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,xxa,getMLref(i).x(ib),xxc,getMLref(i).x(id));
-    }
-
-    else if ( py::isinstance<py::int_>(xc) && py::isinstance<py::int_>(xd) )
-    {
-        SparseVector<gentype> xxa;
-        SparseVector<gentype> xxb;
-        int ic = py::cast<py::int_>(xc);
-        int id = py::cast<py::int_>(xd);
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxb,xb) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,xxa,xxb,getMLref(i).x(ic),getMLref(i).x(id));
-    }
-
-    else if ( py::isinstance<py::int_>(xa) )
-    {
-        int ia = py::cast<py::int_>(xa);
-        SparseVector<gentype> xxb;
-        SparseVector<gentype> xxc;
-        SparseVector<gentype> xxd;
-
-        if ( convFromPy(xxb,xb) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxc,xc) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxd,xd) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,getMLref(i).x(ia),xxb,xxc,xxd);
-    }
-
-    else if ( py::isinstance<py::int_>(xb) )
-    {
-        SparseVector<gentype> xxa;
-        int ib = py::cast<py::int_>(xb);
-        SparseVector<gentype> xxc;
-        SparseVector<gentype> xxd;
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxc,xc) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxc,xd) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,xxa,getMLref(i).x(ib),xxc,xxd);
-    }
-
-    else if ( py::isinstance<py::int_>(xc) )
-    {
-        SparseVector<gentype> xxa;
-        SparseVector<gentype> xxb;
-        int ic = py::cast<py::int_>(xc);
-        SparseVector<gentype> xxd;
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxb,xb) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxd,xd) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,xxa,xxb,getMLref(i).x(ic),xxd);
-    }
-
-    else if ( py::isinstance<py::int_>(xd) )
-    {
-        SparseVector<gentype> xxa;
-        SparseVector<gentype> xxb;
-        SparseVector<gentype> xxc;
-        int id = py::cast<py::int_>(xd);
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxb,xb) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxc,xc) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,xxa,xxb,xxc,getMLref(i).x(id));
-    }
-
-    else
-    {
-        SparseVector<gentype> xxa;
-        SparseVector<gentype> xxb;
-        SparseVector<gentype> xxc;
-        SparseVector<gentype> xxd;
-
-        if ( convFromPy(xxa,xa) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxb,xb) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxc,xc) )
-        {
-            return py::none();
-        }
-
-        if ( convFromPy(xxd,xd) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).K4(res,xxa,xxb,xxc,xxd);
-    }
+    if ( py::isinstance<py::int_>(xa) && py::isinstance<py::int_>(xb) && py::isinstance<py::int_>(xc) && py::isinstance<py::int_>(xd) ) { getMLref(i).K4(res,py::cast<py::int_>(xa),py::cast<py::int_>(xb),py::cast<py::int_>(xc),py::cast<py::int_>(xd)); }
+    else                                                                                                                                { getMLref(i).K4(res,getvec(xa,xxa),getvec(xb,xxb),getvec(xc,xxc),getvec(xd,xxd));                                 }
 
     return convToPy(res);
 }
@@ -2560,9 +1992,9 @@ void svmheavya(void)                      { static std::string dummy; svmheavy(1
 void svmheavyb(int permode)               { static std::string dummy; svmheavy(2,permode,dummy,-1); }
 void svmheavyc(const std::string commstr) {                           svmheavy(3,-1,commstr,-1);    }
 
-double mlcalcLOO   (int i)                                { dostartup(); i = glob_MLInd(i); return calcLOO(getMLref(i));                   }
-double mlcalcRecall(int i)                                { dostartup(); i = glob_MLInd(i); return calcRecall(getMLref(i));                }
-double mlcalcCross (int i, int m, int rndit, int numreps) { dostartup(); i = glob_MLInd(i); return calcCross(getMLref(i),m,rndit,numreps); }
+double mlcalcLOO   (void)                          { dostartup(); int i = glob_MLInd(0); return calcLOO(getMLref(i));                   }
+double mlcalcRecall(void)                          { dostartup(); int i = glob_MLInd(0); return calcRecall(getMLref(i));                }
+double mlcalcCross (int m, int rndit, int numreps) { dostartup(); int i = glob_MLInd(0); return calcCross(getMLref(i),m,rndit,numreps); }
 
 int selgridopt      (int i, int rst) { dostartup(); int res = glob_gridInd      (i,1); if ( rst ) { getgridref      (i).reset(); } return res; }
 int selDIRectopt    (int i, int rst) { dostartup(); int res = glob_DIRectInd    (i,1); if ( rst ) { getDIRectref    (i).reset(); } return res; }
@@ -2587,23 +2019,24 @@ void swapml  (int i, int j) { dostartup(); i = glob_MLInd(i); j = glob_MLInd(j);
 void copyml  (int i, int j) { dostartup(); i = glob_MLInd(i); j = glob_MLInd(j); StrucAssert(i != j); getMLref(i) = getMLrefconst(j); }
 void assignml(int i, int j) { dostartup(); i = glob_MLInd(i); j = glob_MLInd(j); StrucAssert(i != j); getMLref(j) = getMLrefconst(i); }
 
-int setpriml(int i, int j)
+int setpriml(int j)
 {
     dostartup();
 
-    i = glob_MLInd(i);
-    j = glob_MLInd(j);
+    int i = glob_MLInd(0);
+        j = glob_MLInd(j);
 
     StrucAssert( i != j );
 
     return getMLref(i).setpriml(&(getMLrefconst(j).getMLconst()));
 }
 
-int makeMonot(int i, int n, int t, py::object xb, py::object xlb, py::object xub, int d, py::object y)
+int makeMonot(int n, int t, py::object xb, py::object xlb, py::object xub, int d, py::object y, double Cweight, double epsweight, int j)
 {
     dostartup();
 
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
+        j = glob_MLInd(j);
 
     SparseVector<gentype> zxb;
     SparseVector<double> zxlb;
@@ -2624,36 +2057,36 @@ int makeMonot(int i, int n, int t, py::object xb, py::object xlb, py::object xub
         return errcode;
     }
 
-    makeMonotone(getMLref(i),n,t,zxb,zxlb,zxub,d,zy);
+    makeMonotone(getMLref(i),n,t,zxb,zxlb,zxub,d,zy,Cweight,epsweight,((t==2)?&getMLref(j):nullptr));
 
     return 0;
 }
 
-int addTrainingVectorml(int i, int j, py::object z, py::object x, py::object Cweigh, py::object epsweigh, py::object d)
+int addTrainingVectorml(int j, py::object z, py::object x, py::object Cweigh, py::object epsweigh, py::object d)
 {
     dostartup();
 
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
+
+    gentype zz(0.0);
+    SparseVector<gentype> xx;
+    double cw = 1.0;
+    double ew = 1.0;
+    int dd = 1.0;
 
     if ( j == -1 )
     {
         j = getMLref(i).N();
     }
 
-    gentype zz;
-    SparseVector<gentype> xx;
-    double cw = 1.0;
-    double ew = 1.0;
-    int dd = 1.0;
-
     int errcode = 0;
 
-    errcode |= convFromPy(zz,z);
     errcode |= convFromPy(xx,x);
 
-    if ( Cweigh.is_none()   || ( errcode |= convFromPy(cw,Cweigh)   ) ) { cw = 1.0; }
-    if ( epsweigh.is_none() || ( errcode |= convFromPy(ew,epsweigh) ) ) { ew = 1.0; }
-    if ( d.is_none()        || ( errcode |= convFromPy(dd,d)        ) ) { dd = 1.0; }
+    if ( z.is_none()        || ( errcode |= convFromPy(zz,z)        ) ) { zz = 0.0_gent; }
+    if ( Cweigh.is_none()   || ( errcode |= convFromPy(cw,Cweigh)   ) ) { cw = 1.0;      }
+    if ( epsweigh.is_none() || ( errcode |= convFromPy(ew,epsweigh) ) ) { ew = 1.0;      }
+    if ( d.is_none()        || ( errcode |= convFromPy(dd,d)        ) ) { dd = 1.0;      }
 
     if ( errcode )
     {
@@ -2663,16 +2096,11 @@ int addTrainingVectorml(int i, int j, py::object z, py::object x, py::object Cwe
     return getMLref(i).addTrainingVector(j,zz,xx,cw,ew,dd);
 }
 
-int maddTrainingVectorml(int i, int j, py::object z, py::object x, py::object Cweigh, py::object epsweigh)
+int maddTrainingVectorml(int j, py::object z, py::object x, py::object Cweigh, py::object epsweigh)
 {
     dostartup();
 
-    i = glob_MLInd(i);
-
-    if ( j == -1 )
-    {
-        j = getMLref(i).N();
-    }
+    int i = glob_MLInd(0);
 
     Vector<gentype> zz;
     Vector<SparseVector<gentype> > xx;
@@ -2681,31 +2109,30 @@ int maddTrainingVectorml(int i, int j, py::object z, py::object x, py::object Cw
 
     int errcode = 0;
 
-    errcode |= convFromPy(zz,z);
+    if ( j == -1 )
+    {
+        j = getMLref(i).N();
+    }
+
     errcode |= convFromPy(xx,x);
 
-    if ( Cweigh.is_none()   || ( errcode |= convFromPy(cw,Cweigh)   ) ) { cw.resize(xx.size()) = 1.0; }
-    if ( epsweigh.is_none() || ( errcode |= convFromPy(ew,epsweigh) ) ) { ew.resize(xx.size()) = 1.0; }
+    if ( z.is_none()        || ( errcode |= convFromPy(zz,z)        ) ) { zz.resize(xx.size()) = 0.0_gent; }
+    if ( Cweigh.is_none()   || ( errcode |= convFromPy(cw,Cweigh)   ) ) { cw.resize(xx.size()) = 1.0;      }
+    if ( epsweigh.is_none() || ( errcode |= convFromPy(ew,epsweigh) ) ) { ew.resize(xx.size()) = 1.0;      }
 
     if ( errcode || ( zz.size() != xx.size() ) || ( zz.size() != cw.size() ) || ( zz.size() != ew.size() ) )
     {
         return 0;
     }
 
-int addtrainingdata(ML_Base &mlbase, const char *trainfile, int reverse = 0, int ignoreStart = 0, int imax = -1, int ibase = -1, const char *savefile = nullptr);
-int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, const std::string &savefile);
-int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, Vector<SparseVector<gentype> > &x, const Vector<gentype> &y,                                     int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget);
-int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, Vector<SparseVector<gentype> > &x, const Vector<gentype> &y, const Vector<gentype> &sigmaweight, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget);
-int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread, const std::string &savefile);
-
     return getMLref(i).addTrainingVector(j,zz,xx,cw,ew);
 }
 
-int faddTrainingVectorml(int i, int ignoreStart, int imax, int reverse, int j, const std::string &fname)
+int faddTrainingVectorml(int ignoreStart, int imax, int reverse, int j, const std::string &fname)
 {
     dostartup();
 
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
 
     if ( j == -1 )
     {
@@ -2715,11 +2142,11 @@ int faddTrainingVectorml(int i, int ignoreStart, int imax, int reverse, int j, c
     return addtrainingdata(getMLref(i),fname.c_str(),reverse,ignoreStart,imax,j);
 }
 
-int removeTrainingVectorml(int i, int j, int num)
+int removeTrainingVectorml(int j, int num)
 {
     dostartup();
 
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
 
     if ( j == -1 )
     {
@@ -2729,163 +2156,66 @@ int removeTrainingVectorml(int i, int j, int num)
     return getMLref(i).removeTrainingVector(j,num);
 }
 
-py::object muml(int i, py::object x)
+py::object muml(py::object x)
 {
     dostartup();
-
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
 
     gentype resh,resg;
+    SparseVector<gentype> xx;
 
-    if ( py::isinstance<py::int_>(x) )
-    {
-        int j = py::cast<py::int_>(x);
-
-        getMLref(i).ghTrainingVector(resh,resg,j);
-    }
-
-    else
-    {
-        SparseVector<gentype> xx;
-
-        if ( convFromPy(xx,x) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).gh(resh,resg,xx);
-    }
+    if ( py::isinstance<py::int_>(x) ) { getMLref(i).ghTrainingVector(resh,resg,py::cast<py::int_>(x)); }
+    else                               { getMLref(i).gh(resh,resg,getvec(x,xx));                        }
 
     return convToPy(resh);
 }
 
-py::object mugml(int i, py::object x, int fmt)
+py::object mugml(py::object x, int fmt)
 {
     dostartup();
-
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
 
     gentype resh,resg;
+    SparseVector<gentype> xx;
 
-    if ( py::isinstance<py::int_>(x) )
-    {
-        int j = py::cast<py::int_>(x);
-
-        getMLref(i).ghTrainingVector(resh,resg,j,fmt);
-    }
-
-    else
-    {
-        SparseVector<gentype> xx;
-
-        if ( convFromPy(xx,x) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).gh(resh,resg,xx,fmt);
-    }
+    if ( py::isinstance<py::int_>(x) ) { getMLref(i).ghTrainingVector(resh,resg,py::cast<py::int_>(x),fmt); }
+    else                               { getMLref(i).gh(resh,resg,getvec(x,xx),fmt);                        }
 
     return convToPy(resg); // this is the difference from muml
 }
 
-py::object varml(int i, py::object x)
+py::object varml(py::object x)
 {
     dostartup();
-
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
 
     gentype resv,resmu;
+    SparseVector<gentype> xx;
 
-    if ( py::isinstance<py::int_>(x) )
-    {
-        int j = py::cast<py::int_>(x);
-
-        getMLref(i).varTrainingVector(resv,resmu,j);
-    }
-
-    else
-    {
-        SparseVector<gentype> xx;
-
-        if ( convFromPy(xx,x) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).var(resv,resmu,xx);
-    }
+    if ( py::isinstance<py::int_>(x) ) { getMLref(i).varTrainingVector(resv,resmu,py::cast<py::int_>(x)); }
+    else                               { getMLref(i).var(resv,resmu,getvec(x,xx));                        }
 
     return convToPy(resv);
 }
 
-py::object covml(int i, py::object x, py::object y)
+py::object covml(py::object x, py::object y)
 {
     dostartup();
-
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
 
     gentype resv,resmu;
+    SparseVector<gentype> xx,yy;
 
-    if ( py::isinstance<py::int_>(x) && py::isinstance<py::int_>(y) )
-    {
-        int j = py::cast<py::int_>(x);
-        int k = py::cast<py::int_>(y);
-
-        getMLref(i).covTrainingVector(resv,resmu,j,k);
-    }
-
-    else if ( py::isinstance<py::int_>(x) )
-    {
-        int j = py::cast<py::int_>(x);
-
-        const SparseVector<gentype> &xx = getMLref(i).x(j);
-        SparseVector<gentype> yy;
-
-        if ( convFromPy(yy,y) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).cov(resv,resmu,xx,yy);
-    }
-
-    else if ( py::isinstance<py::int_>(y) )
-    {
-        int k = py::cast<py::int_>(y);
-
-        SparseVector<gentype> xx;
-        const SparseVector<gentype> &yy = getMLref(i).x(k);
-
-        if ( convFromPy(xx,x) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).cov(resv,resmu,xx,yy);
-    }
-
-    else
-    {
-        SparseVector<gentype> xx;
-        SparseVector<gentype> yy;
-
-        if ( convFromPy(xx,x) || convFromPy(yy,y) )
-        {
-            return py::none();
-        }
-
-        getMLref(i).cov(resv,resmu,xx,yy);
-    }
+    if ( py::isinstance<py::int_>(x) && py::isinstance<py::int_>(y) ) { getMLref(i).covTrainingVector(resv,resmu,py::cast<py::int_>(x),py::cast<py::int_>(y)); }
+    else                                                              { getMLref(i).cov(resv,resmu,getvec(x,xx),getvec(y,yy));                                 }
 
     return convToPy(resv);
 }
 
-py::object mlalpha(int i)
+py::object mlalpha(void)
 {
     dostartup();
-
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
 
     Vector<gentype> res;
 
@@ -2898,11 +2228,11 @@ py::object mlalpha(int i)
     return convToPy(res);
 }
 
-py::object mlbias(int i)
+py::object mlbias(void)
 {
     dostartup();
 
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
 
     gentype res('N');
 
@@ -2915,11 +2245,11 @@ py::object mlbias(int i)
     return convToPy(res);
 }
 
-py::object mlGp(int i)
+py::object mlGp(void)
 {
     dostartup();
 
-    i = glob_MLInd(i);
+    int i = glob_MLInd(0);
 
     gentype res('N');
 
@@ -2932,13 +2262,13 @@ py::object mlGp(int i)
     return convToPy(res);
 }
 
-int mlsetalpha(int i, py::object src)
+int mlsetalpha(py::object src)
 {
     dostartup();
 
-    int errcode = 0;
+    int i = glob_MLInd(0);
 
-    i = glob_MLInd(i);
+    int errcode = 0;
 
     Vector<gentype> altsrc;
 
@@ -2961,13 +2291,13 @@ int mlsetalpha(int i, py::object src)
     return 0;
 }
 
-int mlsetbias(int i, py::object src)
+int mlsetbias(py::object src)
 {
     dostartup();
 
-    int errcode = 0;
+    int i = glob_MLInd(0);
 
-    i = glob_MLInd(i);
+    int errcode = 0;
 
     gentype altsrc('N');
 
@@ -3109,156 +2439,30 @@ void gensrcreset(int k) { setgetsrc<gentype   >(k,2); }
 
 
 
+py::object convToPy(int                src) {                           return py::cast(src);                                                    }
+py::object convToPy(double             src) {                           return py::cast(src);                                                    }
+py::object convToPy(const std::string &src) {                           return py::cast(src.c_str());                                            }
+py::object convToPy(const d_anion     &src) { if ( src.order() <= 1 ) { return py::cast((std::complex<double>) src); } return py::cast(nan("")); }
 
-py::object convToPy(int src)
-{
-    return py::cast(src);
-}
-
-py::object convToPy(double src)
-{
-    return py::cast(src);
-}
-
-py::object convToPy(const d_anion &src)
-{
-    if ( src.order() <= 1 )
-    {
-        return py::cast((std::complex<double>) src);
-    }
-
-    return py::cast(nan(""));
-}
-
-py::object convToPy(const std::string &src)
-{
-    return py::cast(src.c_str());
-}
-
-template <>
-py::object convToPy(const Vector<double> &src)
-{
-    int vsize = src.size();
-
-    py::list vres(vsize);
-
-    for ( int i = 0 ; i < vsize ; ++i )
-    {
-        vres[i] = py::cast(src.v(i));
-    }
-
-    return vres;
-}
-
-py::object convToPy(int vsize, const double *src)
-{
-    py::list vres(vsize);
-
-    for ( int i = 0 ; i < vsize ; ++i )
-    {
-        vres[i] = py::cast(src[i]);
-    }
-
-    return vres;
-}
-
-template <class T>
-py::object convToPy(const Vector<T> &src)
-{
-    int vsize = src.size();
-
-    py::list vres(vsize);
-
-    for ( int i = 0 ; i < vsize ; ++i )
-    {
-        vres[i] = convToPy(src(i));
-    }
-
-    return vres;
-}
-
-template <class T>
-py::object convToPy(const Matrix<T> &src)
-{
-    int vsize = src.size();
-
-    py::list vres(vsize);
-
-    retVector<T> tmpa;
-    retVector<T> tmpb;
-
-    for ( int i = 0 ; i < vsize ; ++i )
-    {
-        vres[i] = convToPy(src(i,tmpa,tmpb));
-    }
-
-    return vres;
-}
-
-template <class T>
-py::object convToPy(const Set<T> &src)
-{
-    int vsize = src.size();
-
-    py::tuple res(vsize);
-
-    for ( int i = 0 ; i < vsize ; ++i )
-    {
-        res[i] = convToPy(src.all()(i));
-    }
-
-    return res;
-}
-
-template <class T>
-py::object convToPy(const Dict<T,dictkey> &src)
-{
-    int vsize = src.size();
-
-    py::dict res;
-
-    for ( int i = 0 ; i < vsize ; ++i )
-    {
-        res[convToPy(src.key(i))] = convToPy(src.val(i));
-    }
-
-    return res;
-}
-
-template <class T>
-py::object convToPy(const SparseVector<T> &src)
-{
-    gentype altsrc(src);
-
-    return convToPy(altsrc);
-}
+template <class T> py::object convToPy(int vsize, const T    *src) { py::list  res(vsize);        for ( int i = 0 ; i < vsize         ; ++i ) { res[i] = convToPy(src[i]);       } return res; }
+template <>        py::object convToPy(const Vector<double>  &src) { py::list  res(src.size());   for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = py::cast(src.v(i));     } return res; }
+template <class T> py::object convToPy(const Vector<T>       &src) { py::list  res(src.size());   for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = convToPy(src(i));       } return res; }
+template <class T> py::object convToPy(const Set<T>          &src) { py::tuple res(src.size());   for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = convToPy(src.all()(i)); } return res; }
+template <class T> py::object convToPy(const Dict<T,dictkey> &src) { py::dict res;                for ( int i = 0 ; i < src.size()    ; ++i ) { res[convToPy(src.key(i))] = convToPy(src.val(i)); } return res; }
+template <class T> py::object convToPy(const Matrix<T>       &src) { py::list res(src.numRows()); for ( int i = 0 ; i < src.numRows() ; ++i ) { retVector<T> tmpa,tmpb; res[i] = convToPy(src(i,tmpa,tmpb)); } return res; }
+template <class T> py::object convToPy(const SparseVector<T> &src) { gentype altsrc(src); return convToPy(altsrc); }
 
 py::object convToPy(const gentype &src)
 {
-    if ( src.isValNull() )
-    {
-        return py::none();
-    }
-
-    else if ( src.isValInteger() )
-    {
-        return convToPy((int) src);
-    }
-
-    else if ( src.isValReal() )
-    {
-        return convToPy((double) src);
-    }
-
-    else if ( src.isValAnion() )
-    {
-        return convToPy((const d_anion &) src);
-    }
-
-    else if ( src.isValString() )
-    {
-        return convToPy((const std::string &) src);
-    }
+    if      ( src.isValNull()    ) { return py::none();                                    }
+    else if ( src.isValInteger() ) { return convToPy((int) src);                           }
+    else if ( src.isValReal()    ) { return convToPy((double) src);                        }
+    else if ( src.isValAnion()   ) { return convToPy((const d_anion &) src);               }
+    else if ( src.isValString()  ) { return convToPy((const std::string &) src);           }
+    else if ( src.isValVector()  ) { return convToPy((const Vector<gentype> &) src);       }
+    else if ( src.isValMatrix()  ) { return convToPy((const Matrix<gentype> &) src);       }
+    else if ( src.isValSet()     ) { return convToPy((const Set<gentype> &) src);          }
+    else if ( src.isValDict()    ) { return convToPy((const Dict<gentype,dictkey> &) src); }
 
     else if ( src.isValEqnDir() )
     {
@@ -3286,26 +2490,6 @@ py::object convToPy(const gentype &src)
 //        return convToPy((const Vector<double> &) src);
 //    }
 
-    else if ( src.isValVector() )
-    {
-        return convToPy((const Vector<gentype> &) src);
-    }
-
-    else if ( src.isValMatrix() )
-    {
-        return convToPy((const Matrix<gentype> &) src);
-    }
-
-    else if ( src.isValSet() )
-    {
-        return convToPy((const Set<gentype> &) src);
-    }
-
-    else if ( src.isValDict() )
-    {
-        return convToPy((const Dict<gentype,dictkey> &) src);
-    }
-
     return py::cast(nan(""));
 }
 
@@ -3323,9 +2507,12 @@ int convFromPy(T &res, const py::handle &src); // needed helper for raw python d
 
 int convFromPy(int &res, const py::object &src)
 {
+    res = 0;
+
     if ( py::isinstance<py::int_>(src) )
     {
         res = py::cast<py::int_>(src);
+
         return 0;
     }
 
@@ -3334,10 +2521,10 @@ int convFromPy(int &res, const py::object &src)
         double tmpres;
         tmpres = py::cast<py::float_>(src);
         res = (int) tmpres;
+
         return 0;
     }
 
-    res = 0;
     return 1;
 }
 
@@ -3348,16 +2535,19 @@ int convFromPy(double &res, const py::object &src)
         int tmpres = 0;
         tmpres = py::cast<py::int_>(src);
         res = tmpres;
+
         return 0;
     }
 
     else if ( py::isinstance<py::float_>(src) )
     {
         res = py::cast<py::float_>(src);
+
         return 0;
     }
 
     res = nan("");
+
     return 2;
 }
 
@@ -3368,6 +2558,7 @@ int convFromPy(d_anion &res, const py::object &src)
         int tmpres = 0;
         tmpres = py::cast<py::int_>(src);
         res = (double) tmpres;
+
         return 0;
     }
 
@@ -3376,16 +2567,19 @@ int convFromPy(d_anion &res, const py::object &src)
         double tmpres;
         tmpres = py::cast<py::float_>(src);
         res = tmpres;
+
         return 0;
     }
 
     else if ( isComplex(src) )
     {
         res = py::cast<std::complex<double> >(src);
+
         return 0;
     }
 
     res = nan("");
+
     return 4;
 }
 
@@ -3394,10 +2588,12 @@ int convFromPy(std::string &res, const py::object &src)
     if ( py::isinstance<py::str>(src) )
     {
         res = py::cast<py::str>(src);
+
         return 0;
     }
 
     res = "";
+
     return 8;
 }
 
@@ -3428,6 +2624,7 @@ int convFromPy(Vector<T> &res, const py::object &src)
     }
 
     res.resize(0);
+
     return 32;
 }
 
@@ -3474,6 +2671,7 @@ int convFromPy(Matrix<T> &res, const py::object &src)
     }
 
     res.resize(0,0);
+
     return 128;
 }
 
@@ -3658,50 +2856,19 @@ int convFromPy(gentype &res, const py::object &src)
 {
     int errcode = 0;
 
-    if ( src.is_none() )
-    {
-        res.force_null();
-    }
-
-    else if ( py::isinstance<py::int_>(src) )
-    {
-        errcode = convFromPy(res.force_int(),src);
-    }
-
-    else if ( py::isinstance<py::float_>(src) )
-    {
-        errcode = convFromPy(res.force_double(),src);
-    }
-
-    else if ( py::isinstance<py::str>(src) )
-    {
-        errcode = convFromPy(res.force_string(),src);
-    }
-
-    else if ( py::isinstance<py::list>(src) )
-    {
-        errcode = convFromPy(res.force_vector(),src);
-    }
+    if      ( src.is_none()                   ) { res.force_null();                             }
+    else if ( py::isinstance<py::int_>(src)   ) { errcode = convFromPy(res.force_int(),src);    }
+    else if ( py::isinstance<py::float_>(src) ) { errcode = convFromPy(res.force_double(),src); }
+    else if ( py::isinstance<py::str>(src)    ) { errcode = convFromPy(res.force_string(),src); }
+    else if ( py::isinstance<py::list>(src)   ) { errcode = convFromPy(res.force_vector(),src); }
+    else if ( py::isinstance<py::dict>(src)   ) { errcode = convFromPy(res.force_dict(),src);   }
+    else if ( py::isinstance<py::tuple>(src)  ) { errcode = convFromPy(res.force_set(),src);    }
+    else if ( isComplex(src)                  ) { errcode = convFromPy(res.force_anion(),src);  }
 
     //else if ( isNumpyMatrix(src) )
     //{
     //    errcode = convFromPy(res.force_matrix(),src);
     //}
-
-    else if ( py::isinstance<py::dict>(src) )
-    {
-        errcode = convFromPy(res.force_dict(),src);
-    }
-
-    else if ( py::isinstance<py::tuple>(src) )
-    {
-        errcode = convFromPy(res.force_set(),src);
-    }
-
-    else if ( isComplex(src) )
-    {
-        errcode = convFromPy(res.force_anion(),src);
-    }
 
     else if ( isCallable(src) )
     {
@@ -3893,6 +3060,7 @@ template <>
 void pycall(const std::string &fn, gentype &res, const SparseVector<gentype> &x)
 {
     dostartup();
+
     py::object xx = convToPy(x);
     pycall_x(fn,res,xx);
 }
@@ -3900,6 +3068,7 @@ void pycall(const std::string &fn, gentype &res, const SparseVector<gentype> &x)
 void pycall(const std::string &fn, gentype &res, int size, const double *x)
 {
     dostartup();
+
     //py::object xx = convToPy(size,x);
 
     py::list xx(size);
@@ -3925,6 +3094,7 @@ template <class T> void pycall(const std::string &fn, gentype &res, const Sparse
 void pycall(const std::string &fn, gentype &res, const gentype &x)
 {
     dostartup();
+
     py::object xx = convToPy(x);
     pycall_x(fn,res,xx);
 }
@@ -3932,6 +3102,7 @@ void pycall(const std::string &fn, gentype &res, const gentype &x)
 //void pycall(const std::string &fn, gentype &res, int size, const double *x)
 //{
 //    dostartup();
+//
 //    py::object xx = convToPy(size,x);
 //    pycall_x(fn,res,xx);
 //}

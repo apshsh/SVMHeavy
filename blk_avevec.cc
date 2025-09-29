@@ -42,7 +42,7 @@ std::istream &BLK_AveVec::inputstream(std::istream &input )
     return input;
 }
 
-BLK_AveVec::BLK_AveVec(int isIndPrune) : BLK_Generic(isIndPrune)
+BLK_AveVec::BLK_AveVec(int xisIndPrune) : BLK_Generic(xisIndPrune)
 {
     setaltx(nullptr);
 

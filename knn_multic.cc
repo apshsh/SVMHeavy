@@ -260,15 +260,15 @@ int KNN_MultiC::sety(const Vector<gentype> &y)
     return 1;
 }
 
-int KNN_MultiC::setd(int i, int dd)
+int KNN_MultiC::setd(int i, int xdd)
 {
-    NiceAssert( ( dd == +1 ) || ( dd == -1 ) || ( dd == 0 ) );
+    NiceAssert( ( xdd == +1 ) || ( xdd == -1 ) || ( xdd == 0 ) );
 
-    KNN_Generic::setd(i,dd);
+    KNN_Generic::setd(i,xdd);
 
-    if ( dd )
+    if ( xdd )
     {
-        gentype yy(dd);
+        gentype yy(xdd);
 
         KNN_Generic::sety(i,yy);
     }

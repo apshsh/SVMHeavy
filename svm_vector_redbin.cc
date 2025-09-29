@@ -360,16 +360,16 @@ int SVM_Vector_redbin<SVM_Scalar>::qaddTrainingVector(int i, const gentype &z,  
 
     if ( zz.size() )
     {
-        int i;
-
-        for ( i = 0 ; i < zz.size() ; ++i )
+        for ( int j = 0 ; j < zz.size() ; ++j )
         {
-            zd("&",i) = (double) zz(i);
+            zd("&",j) = (double) zz(j);
         }
     }
 
     return SVM_Vector_redbin<SVM_Scalar>::qaddTrainingVector(i,zd,x,Cweigh,epsweigh,dval); //2);
 }
+
+
 
 template <>
 int SVM_Vector_redbin<SVM_Scalar>::qaddTrainingVector(int i, const Vector<double> &z, SparseVector<gentype> &x, double Cweigh, double epsweigh, int d)
@@ -652,8 +652,6 @@ int SVM_Vector_redbin<SVM_Scalar>::settspaceDim(int newMinDim)
 
 	if ( N() )
 	{
-            retVector<double> tmpva;
-
 	    for ( i = 0 ; i < N() ; ++i )
 	    {
 		traintarg("&",i).resize(tspacedimnew);

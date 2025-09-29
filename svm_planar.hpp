@@ -169,7 +169,7 @@ protected:
     // Protected function passthrough
 
     int maxFreeAlphaBias(void) { return SVM_Scalar::maxFreeAlphaBias(); }
-    int fact_minverse(Vector<double> &dalpha, Vector<double> &dbeta, const Vector<double> &bAlpha, const Vector<double> &bBeta) { return SVM_Scalar::fact_minverse(dalpha,dbeta,bAlpha,bBeta); }
+    int fact_minverse(Vector<double> &xdalpha, Vector<double> &xdbeta, const Vector<double> &bAlpha, const Vector<double> &bBeta) { return SVM_Scalar::fact_minverse(xdalpha,xdbeta,bAlpha,bBeta); }
 
     void refactorVV(int updateGpn = 1);
     Vector<Vector<double> > &reflocbasis(void) { return locbasis; }

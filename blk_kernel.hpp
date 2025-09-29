@@ -39,9 +39,9 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    BLK_Kernel(int isIndPrune = 0)                                             : BLK_Generic(isIndPrune) { setaltx(nullptr);                 return; }
-    BLK_Kernel(const BLK_Kernel &src, int isIndPrune = 0)                      : BLK_Generic(isIndPrune) { setaltx(nullptr); assign(src,0);  return; }
-    BLK_Kernel(const BLK_Kernel &src, const ML_Base *xsrc, int isIndPrune = 0) : BLK_Generic(isIndPrune) { setaltx(xsrc); assign(src,-1); return; }
+    BLK_Kernel(int xisIndPrune = 0)                                             : BLK_Generic(xisIndPrune) { setaltx(nullptr);                 return; }
+    BLK_Kernel(const BLK_Kernel &src, int xisIndPrune = 0)                      : BLK_Generic(xisIndPrune) { setaltx(nullptr); assign(src,0);  return; }
+    BLK_Kernel(const BLK_Kernel &src, const ML_Base *xsrc, int xisIndPrune = 0) : BLK_Generic(xisIndPrune) { setaltx(xsrc); assign(src,-1); return; }
     BLK_Kernel &operator=(const BLK_Kernel &src) { assign(src); return *this; }
     virtual ~BLK_Kernel() { return; }
 

@@ -366,7 +366,7 @@ double Kcallbackaltdummy(int typeis, double xprod, double diffis, int xdim, int 
 }
 
 
-BLK_Generic::BLK_Generic(int isIndPrune) : ML_Base(isIndPrune)
+BLK_Generic::BLK_Generic(int xisIndPrune) : ML_Base(xisIndPrune)
 {
     setaltx(nullptr);
 
@@ -452,7 +452,7 @@ BLK_Generic::BLK_Generic(int isIndPrune) : ML_Base(isIndPrune)
     return;
 }
 
-BLK_Generic::BLK_Generic(const BLK_Generic &src, int isIndPrune) : ML_Base(isIndPrune)
+BLK_Generic::BLK_Generic(const BLK_Generic &src, int xisIndPrune) : ML_Base(xisIndPrune)
 {
     xmercachesize = -1;
     xmercachenorm = 0;
@@ -466,7 +466,7 @@ BLK_Generic::BLK_Generic(const BLK_Generic &src, int isIndPrune) : ML_Base(isInd
     return;
 }
 
-BLK_Generic::BLK_Generic(const BLK_Generic &src, const ML_Base *xsrc, int isIndPrune) : ML_Base(isIndPrune)
+BLK_Generic::BLK_Generic(const BLK_Generic &src, const ML_Base *xsrc, int xisIndPrune) : ML_Base(xisIndPrune)
 {
     xmercachesize = -1;
     xmercachenorm = 0;

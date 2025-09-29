@@ -39,9 +39,9 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    BLK_Mercer(int isIndPrune = 0)                                             : BLK_Generic(isIndPrune) { setaltx(nullptr);                 return; }
-    BLK_Mercer(const BLK_Mercer &src, int isIndPrune = 0)                      : BLK_Generic(isIndPrune) { setaltx(nullptr); assign(src,0);  return; }
-    BLK_Mercer(const BLK_Mercer &src, const ML_Base *xsrc, int isIndPrune = 0) : BLK_Generic(isIndPrune) { setaltx(xsrc);    assign(src,-1); return; }
+    BLK_Mercer(int xisIndPrune = 0)                                             : BLK_Generic(xisIndPrune) { setaltx(nullptr);                 return; }
+    BLK_Mercer(const BLK_Mercer &src, int xisIndPrune = 0)                      : BLK_Generic(xisIndPrune) { setaltx(nullptr); assign(src,0);  return; }
+    BLK_Mercer(const BLK_Mercer &src, const ML_Base *xsrc, int xisIndPrune = 0) : BLK_Generic(xisIndPrune) { setaltx(xsrc);    assign(src,-1); return; }
     BLK_Mercer &operator=(const BLK_Mercer &src) { assign(src); return *this; }
     virtual ~BLK_Mercer() { return; }
 

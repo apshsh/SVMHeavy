@@ -1203,14 +1203,12 @@ int SVM_Planar::addToBasisVV(int i, const gentype &o)
 
     if ( SVM_Planar::N() )
     {
-        int j;
-
         retVector<double> tmpva;
         retVector<double> tmpvb;
 
-        for ( j = 0 ; j < SVM_Planar::N() ; ++j )
+        for ( int xj = 0 ; xj < SVM_Planar::N() ; ++xj )
         {
-            rankcalcGpn(inGpn("&",j,tmpva,tmpvb),locd(j),x(j),j);
+            rankcalcGpn(inGpn("&",xj,tmpva,tmpvb),locd(xj),x(xj),xj);
         }
     }
 
@@ -1285,14 +1283,12 @@ int SVM_Planar::setBasisVV(int i, const gentype &o, int updateU)
 
     if ( SVM_Planar::N() )
     {
-        int j;
-
         retVector<double> tmpva;
         retVector<double> tmpvb;
 
-        for ( j = 0 ; j < SVM_Planar::N() ; ++j )
+        for ( int xj = 0 ; xj < SVM_Planar::N() ; ++xj )
         {
-            rankcalcGpn(inGpn("&",j,tmpva,tmpvb),locd(j),x(j),j);
+            rankcalcGpn(inGpn("&",xj,tmpva,tmpvb),locd(xj),x(xj),xj);
         }
     }
 

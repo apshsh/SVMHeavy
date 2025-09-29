@@ -45,9 +45,9 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    BLK_Conect(int isIndPrune = 0);
-    BLK_Conect(const BLK_Conect &src, int isIndPrune = 0)                      : BLK_Generic(isIndPrune) { localygood = 0; setaltx(nullptr); assign(src,0);  return; }
-    BLK_Conect(const BLK_Conect &src, const ML_Base *xsrc, int isIndPrune = 0) : BLK_Generic(isIndPrune) { localygood = 0; setaltx(xsrc);    assign(src,-1); return; }
+    BLK_Conect(int xisIndPrune = 0);
+    BLK_Conect(const BLK_Conect &src, int xisIndPrune = 0)                      : BLK_Generic(xisIndPrune) { localygood = 0; setaltx(nullptr); assign(src,0);  return; }
+    BLK_Conect(const BLK_Conect &src, const ML_Base *xsrc, int xisIndPrune = 0) : BLK_Generic(xisIndPrune) { localygood = 0; setaltx(xsrc);    assign(src,-1); return; }
     BLK_Conect &operator=(const BLK_Conect &src) { assign(src); return *this; }
     virtual ~BLK_Conect() { return; }
 

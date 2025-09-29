@@ -667,16 +667,16 @@ public:
 
     // Calculate battery capacity
 
-    double C(double I, double theta)
+    double C(double xI, double xtheta)
     {
 //FIXME: it is entirely unclear what we should do here during a *charge*
 //       cycle, which is required when calculating DOC.  Our work-around
 //       (guess) is to set I = max(0,I) (ie. cut negatives to zero), but
 //       this may be wrong.
 
-        I = ( I <= 0.0 ) ? 0.0 : I;
+        xI = ( xI <= 0.0 ) ? 0.0 : xI;
 
-        return (K_c*C_0star*pow(1-(theta/theta_f),epsilon))/(1+((K_c-1)*pow(I/Istar,delta)));
+        return (K_c*C_0star*pow(1-(xtheta/theta_f),epsilon))/(1+((K_c-1)*pow(xI/Istar,delta)));
     }
 };
 

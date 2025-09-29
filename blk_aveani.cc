@@ -42,7 +42,7 @@ std::istream &BLK_AveAni::inputstream(std::istream &input )
     return input;
 }
 
-BLK_AveAni::BLK_AveAni(int isIndPrune) : BLK_Generic(isIndPrune)
+BLK_AveAni::BLK_AveAni(int xisIndPrune) : BLK_Generic(xisIndPrune)
 {
     setaltx(nullptr);
 

@@ -16,7 +16,7 @@
 #include "blk_consen.hpp"
 
 
-BLK_Consen::BLK_Consen(int isIndPrune) : BLK_Generic(isIndPrune)
+BLK_Consen::BLK_Consen(int xisIndPrune) : BLK_Generic(xisIndPrune)
 {
     Nnc.resize(1);
     Nnc = 0;
@@ -26,7 +26,7 @@ BLK_Consen::BLK_Consen(int isIndPrune) : BLK_Generic(isIndPrune)
     return;
 }
 
-BLK_Consen::BLK_Consen(const BLK_Consen &src, int isIndPrune) : BLK_Generic(isIndPrune)
+BLK_Consen::BLK_Consen(const BLK_Consen &src, int xisIndPrune) : BLK_Generic(xisIndPrune)
 {
     Nnc.resize(1);
     Nnc = 0;
@@ -38,7 +38,7 @@ BLK_Consen::BLK_Consen(const BLK_Consen &src, int isIndPrune) : BLK_Generic(isIn
     return;
 }
 
-BLK_Consen::BLK_Consen(const BLK_Consen &src, const ML_Base *xsrc, int isIndPrune) : BLK_Generic(isIndPrune)
+BLK_Consen::BLK_Consen(const BLK_Consen &src, const ML_Base *xsrc, int xisIndPrune) : BLK_Generic(xisIndPrune)
 {
     Nnc.resize(1);
     Nnc = 0;

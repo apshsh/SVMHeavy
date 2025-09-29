@@ -39,9 +39,9 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    BLK_CalBak(int isIndPrune = 0)                                             : BLK_Generic(isIndPrune) { setaltx(nullptr);                 return; }
-    BLK_CalBak(const BLK_CalBak &src, int isIndPrune = 0)                      : BLK_Generic(isIndPrune) { setaltx(nullptr); assign(src,0);  return; }
-    BLK_CalBak(const BLK_CalBak &src, const ML_Base *xsrc, int isIndPrune = 0) : BLK_Generic(isIndPrune) { setaltx(xsrc); assign(src,-1); return; }
+    BLK_CalBak(int xisIndPrune = 0)                                             : BLK_Generic(xisIndPrune) { setaltx(nullptr);                 return; }
+    BLK_CalBak(const BLK_CalBak &src, int xisIndPrune = 0)                      : BLK_Generic(xisIndPrune) { setaltx(nullptr); assign(src,0);  return; }
+    BLK_CalBak(const BLK_CalBak &src, const ML_Base *xsrc, int xisIndPrune = 0) : BLK_Generic(xisIndPrune) { setaltx(xsrc); assign(src,-1); return; }
     BLK_CalBak &operator=(const BLK_CalBak &src) { assign(src); return *this; }
     virtual ~BLK_CalBak() { return; }
 

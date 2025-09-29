@@ -39,9 +39,9 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    BLK_Bernst(int isIndPrune = 0);
-    BLK_Bernst(const BLK_Bernst &src, int isIndPrune = 0)                      : BLK_Generic(isIndPrune) { localygood = 0; setaltx(nullptr); assign(src,0);  return; }
-    BLK_Bernst(const BLK_Bernst &src, const ML_Base *xsrc, int isIndPrune = 0) : BLK_Generic(isIndPrune) { localygood = 0; setaltx(xsrc); assign(src,-1); return; }
+    BLK_Bernst(int xisIndPrune = 0);
+    BLK_Bernst(const BLK_Bernst &src, int xisIndPrune = 0)                      : BLK_Generic(xisIndPrune) { localygood = 0; setaltx(nullptr); assign(src,0);  return; }
+    BLK_Bernst(const BLK_Bernst &src, const ML_Base *xsrc, int xisIndPrune = 0) : BLK_Generic(xisIndPrune) { localygood = 0; setaltx(xsrc); assign(src,-1); return; }
     BLK_Bernst &operator=(const BLK_Bernst &src) { assign(src); return *this; }
     virtual ~BLK_Bernst() { return; }
 

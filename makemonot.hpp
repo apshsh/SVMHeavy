@@ -20,6 +20,7 @@
 // n:  number of points to add
 // t:  0 grid of points (n rounded up)
 //     1 random points
+//     2 based on grid (see bayesopt)
 // xb: x template for constraint to enforce. For example [ :: e ]
 //     will place constraint on g(x \oplus xb) = e'd/dx g(x)
 // xlb: lower x bound
@@ -50,6 +51,7 @@ ML_Base &makeMonotone(ML_Base &ml,
                       int d,
                       gentype y,
                       double Cweigh = 1,
-                      double epsweigh = 1);
+                      double epsweigh = 1,
+                      const ML_Base *gridsrc = nullptr);
 
 #endif
