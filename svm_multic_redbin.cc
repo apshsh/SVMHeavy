@@ -208,13 +208,13 @@ SVM_MultiC_redbin::~SVM_MultiC_redbin()
     return;
 }
 
-double SVM_MultiC_redbin::calcDist(const gentype &ha, const gentype &hb, int ia, int db) const
+double SVM_MultiC_redbin::calcDist(const gentype &ha, const gentype &hb, int ia, int ddb) const
 {
     (void) ia;
 
     double res = 0;
 
-    if ( db )
+    if ( ddb )
     {
         res = ( ( (int) ha ) != ( (int) hb ) ) ? 1 : 0;
     }
@@ -1191,9 +1191,9 @@ int SVM_MultiC_redbin::setKernel(const MercerKernel &xkernel, int modind, int on
     return res;
 }
 
-void SVM_MultiC_redbin::fillCache(int Ns, int Ne)
+void SVM_MultiC_redbin::fillCache(int xNs, int xNe)
 {
-    QA.fillCache(Ns,Ne);
+    QA.fillCache(xNs,xNe);
 
     if ( Q.size() )
     {
@@ -1201,7 +1201,7 @@ void SVM_MultiC_redbin::fillCache(int Ns, int Ne)
 
         for ( i = 0 ; i < Q.size() ; ++i )
         {
-            Q("&",i).fillCache(Ns,Ne);
+            Q("&",i).fillCache(xNs,xNe);
         }
     }
 
@@ -1232,17 +1232,17 @@ int SVM_MultiC_redbin::setd(int i, int d)
     return res;
 }
 
-int SVM_MultiC_redbin::setCweight(int i, double xCweight)
+int SVM_MultiC_redbin::setCweight(int i, double xxCweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < N() );
-    NiceAssert( xCweight > 0 );
+    NiceAssert( xxCweight > 0 );
 
     int q;
 
     isStateOpt = 0;
 
-    Cweightval("&",i) = xCweight;
+    Cweightval("&",i) = xxCweight;
 
     if ( isQuadraticCost() )
     {
@@ -1264,17 +1264,17 @@ int SVM_MultiC_redbin::setCweight(int i, double xCweight)
     return 1;
 }
 
-int SVM_MultiC_redbin::setCweightfuzz(int i, double xCweight)
+int SVM_MultiC_redbin::setCweightfuzz(int i, double xxCweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < N() );
-    NiceAssert( xCweight > 0 );
+    NiceAssert( xxCweight > 0 );
 
     int q;
 
     isStateOpt = 0;
 
-    Cweightvalfuzz("&",i) = xCweight;
+    Cweightvalfuzz("&",i) = xxCweight;
 
     if ( isQuadraticCost() )
     {
@@ -1296,18 +1296,18 @@ int SVM_MultiC_redbin::setCweightfuzz(int i, double xCweight)
     return 1;
 }
 
-int SVM_MultiC_redbin::setepsweight(int i, double xepsweight)
+int SVM_MultiC_redbin::setepsweight(int i, double xxepsweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < N() );
-    NiceAssert( xepsweight >= 0 );
+    NiceAssert( xxepsweight >= 0 );
 
     isStateOpt = 0;
 
     int q;
     int res = 0;
 
-    epsweightval("&",i) = xepsweight;
+    epsweightval("&",i) = xxepsweight;
 
     if ( tspaceDim() )
     {
@@ -1341,9 +1341,9 @@ int SVM_MultiC_redbin::setd(const Vector<int> &j, const Vector<int> &d)
     return res;
 }
 
-int SVM_MultiC_redbin::setCweight(const Vector<int> &j, const Vector<double> &xCweight)
+int SVM_MultiC_redbin::setCweight(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == j.size() );
+    NiceAssert( xxCweight.size() == j.size() );
 
     int res = 0;
 
@@ -1353,16 +1353,16 @@ int SVM_MultiC_redbin::setCweight(const Vector<int> &j, const Vector<double> &xC
 
         for ( i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setCweight(j(i),xCweight(i));
+            res |= setCweight(j(i),xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int SVM_MultiC_redbin::setCweightfuzz(const Vector<int> &j, const Vector<double> &xCweight)
+int SVM_MultiC_redbin::setCweightfuzz(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == j.size() );
+    NiceAssert( xxCweight.size() == j.size() );
 
     int res = 0;
 
@@ -1372,16 +1372,16 @@ int SVM_MultiC_redbin::setCweightfuzz(const Vector<int> &j, const Vector<double>
 
         for ( i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setCweightfuzz(j(i),xCweight(i));
+            res |= setCweightfuzz(j(i),xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int SVM_MultiC_redbin::setepsweight(const Vector<int> &j, const Vector<double> &xepsweight)
+int SVM_MultiC_redbin::setepsweight(const Vector<int> &j, const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == j.size() );
+    NiceAssert( xxepsweight.size() == j.size() );
 
     int res = 0;
 
@@ -1391,7 +1391,7 @@ int SVM_MultiC_redbin::setepsweight(const Vector<int> &j, const Vector<double> &
 
         for ( i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setepsweight(j(i),xepsweight(i));
+            res |= setepsweight(j(i),xxepsweight(i));
 	}
     }
 
@@ -1418,9 +1418,9 @@ int SVM_MultiC_redbin::setd(const Vector<int> &d)
     return res;
 }
 
-int SVM_MultiC_redbin::setCweight(const Vector<double> &xCweight)
+int SVM_MultiC_redbin::setCweight(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == N() );
+    NiceAssert( xxCweight.size() == N() );
 
     int i;
     int res = 0;
@@ -1429,16 +1429,16 @@ int SVM_MultiC_redbin::setCweight(const Vector<double> &xCweight)
     {
 	for ( i = 0 ; i < N() ; ++i )
 	{
-            res |= setCweight(i,xCweight(i));
+            res |= setCweight(i,xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int SVM_MultiC_redbin::setCweightfuzz(const Vector<double> &xCweight)
+int SVM_MultiC_redbin::setCweightfuzz(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == N() );
+    NiceAssert( xxCweight.size() == N() );
 
     int i;
     int res = 0;
@@ -1447,16 +1447,16 @@ int SVM_MultiC_redbin::setCweightfuzz(const Vector<double> &xCweight)
     {
 	for ( i = 0 ; i < N() ; ++i )
 	{
-            res |= setCweightfuzz(i,xCweight(i));
+            res |= setCweightfuzz(i,xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int SVM_MultiC_redbin::setepsweight(const Vector<double> &xepsweight)
+int SVM_MultiC_redbin::setepsweight(const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == N() );
+    NiceAssert( xxepsweight.size() == N() );
 
     int i;
     int res = 0;
@@ -1465,7 +1465,7 @@ int SVM_MultiC_redbin::setepsweight(const Vector<double> &xepsweight)
     {
 	for ( i = 0 ; i < N() ; ++i )
 	{
-            res |= setepsweight(i,xepsweight(i));
+            res |= setepsweight(i,xxepsweight(i));
 	}
     }
 
@@ -2291,8 +2291,6 @@ int SVM_MultiC_redbin::train(int &res, svmvolatile int &killSwitch)
 
         if ( dobartlett && N() )
         {
-            int i;
-
             SparseVector<gentype> xnew;
 
             for ( i = 0 ; i < realN ; ++i )
@@ -2392,7 +2390,6 @@ int SVM_MultiC_redbin::ghTrainingVector(gentype &resh, gentype &resg, int i, int
 
         if ( numClasses() )
         {
-            int i;
             int firstelm;
 
             for ( locclassrep = 0 ; locclassrep < numClasses() ; ++locclassrep )
@@ -2406,11 +2403,11 @@ int SVM_MultiC_redbin::ghTrainingVector(gentype &resh, gentype &resg, int i, int
                 {
                     firstelm = 1;
 
-                    for ( i = 0 ; i < gproject.size() ; ++i )
+                    for ( int ii = 0 ; ii < gproject.size() ; ++ii )
                     {
-                        if ( classRepval(locclassrep)(i) && ( firstelm || ( classRepval(locclassrep)(i)*gproject(i) < altresg(locclassrep) ) ) )
+                        if ( classRepval(locclassrep)(ii) && ( firstelm || ( classRepval(locclassrep)(ii)*gproject(ii) < altresg(locclassrep) ) ) )
                         {
-                            altresg("&",locclassrep) = classRepval(locclassrep)(i)*gproject(i);
+                            altresg("&",locclassrep) = classRepval(locclassrep)(ii)*gproject(ii);
                             firstelm = 0;
                         }
                     }

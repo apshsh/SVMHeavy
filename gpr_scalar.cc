@@ -167,9 +167,7 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
 //errstream() << "phantomxyz fuck me: " << *this << "\n";
     res = 0;
 
-    NiceAssert( !isSampleMode() );
-
-    if ( isLocked )
+    if ( isSampleMode() || isLocked )
     {
         return 0;
     }

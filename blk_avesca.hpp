@@ -39,9 +39,9 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    BLK_AveSca(int isIndPrune = 0);
-    BLK_AveSca(const BLK_AveSca &src, int isIndPrune = 0)                      : BLK_Generic(isIndPrune) { setaltx(nullptr); assign(src,0);  return; }
-    BLK_AveSca(const BLK_AveSca &src, const ML_Base *xsrc, int isIndPrune = 0) : BLK_Generic(isIndPrune) { setaltx(xsrc); assign(src,-1); return; }
+    BLK_AveSca(int xisIndPrune = 0);
+    BLK_AveSca(const BLK_AveSca &src, int xisIndPrune = 0)                      : BLK_Generic(xisIndPrune) { setaltx(nullptr); assign(src,0);  return; }
+    BLK_AveSca(const BLK_AveSca &src, const ML_Base *xsrc, int xisIndPrune = 0) : BLK_Generic(xisIndPrune) { setaltx(xsrc); assign(src,-1); return; }
     BLK_AveSca &operator=(const BLK_AveSca &src) { assign(src); return *this; }
     virtual ~BLK_AveSca() { return; }
 

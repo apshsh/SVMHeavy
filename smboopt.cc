@@ -48,7 +48,7 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
     modeltype     = 0;
     oracleMode    = 0;
 
-    TSmode      = 3;
+    TSmode      = 1; //3;
     TSNsamp     = 0; //DEFAULT_SAMPLES_SAMPLE;
     TSsampType  = 0;
     TSxsampType = 0;

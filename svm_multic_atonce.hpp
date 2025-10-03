@@ -296,7 +296,7 @@ public:
     virtual int resetKernel(int modind = 1, int onlyChangeRowI = -1, int updateInfo = 1) override;
     virtual int setKernel(const MercerKernel &xkernel, int modind = 1, int onlyChangeRowI = -1) override;
 
-    virtual void fillCache(int Ns = 0, int Ne = -1) override { Q.fillCache(Ns,Ne); QA.fillCache(Ns,Ne); return; }
+    virtual void fillCache(int xNs = 0, int xNe = -1) override { Q.fillCache(xNs,xNe); QA.fillCache(xNs,xNe); return; }
 
     // Training set control
 

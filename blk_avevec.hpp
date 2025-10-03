@@ -39,9 +39,9 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    BLK_AveVec(int isIndPrune = 0);
-    BLK_AveVec(const BLK_AveVec &src, int xisIndPrune = 0)                      : BLK_Generic(xisIndPrune) { setaltx(nullptr); assign(src,0);  return; }
-    BLK_AveVec(const BLK_AveVec &src, const ML_Base *xsrc, int xisIndPrune = 0) : BLK_Generic(xisIndPrune) { setaltx(xsrc); assign(src,-1); return; }
+    BLK_AveVec(int xisIndPrune = 0);
+    BLK_AveVec(const BLK_AveVec &src, int xxisIndPrune = 0)                      : BLK_Generic(xxisIndPrune) { setaltx(nullptr); assign(src,0);  return; }
+    BLK_AveVec(const BLK_AveVec &src, const ML_Base *xsrc, int xxisIndPrune = 0) : BLK_Generic(xxisIndPrune) { setaltx(xsrc); assign(src,-1); return; }
     BLK_AveVec &operator=(const BLK_AveVec &src) { assign(src); return *this; }
     virtual ~BLK_AveVec() { return; }
 

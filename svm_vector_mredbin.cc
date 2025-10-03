@@ -694,7 +694,7 @@ int SVM_Vector_Mredbin::sety(int i, const Vector<double>  &z)
     return res;
 }
 
-int SVM_Vector_Mredbin::setCweight(int i, double xCweight)
+int SVM_Vector_Mredbin::setCweight(int i, double xxCweight)
 {
     int j,k;
     int res = 0;
@@ -703,13 +703,13 @@ int SVM_Vector_Mredbin::setCweight(int i, double xCweight)
     {
         k = (i*tspaceDim())+j;
 
-        res |= Q.setCweight(k,xCweight);
+        res |= Q.setCweight(k,xxCweight);
     }
 
     return res;
 }
 
-int SVM_Vector_Mredbin::setCweightfuzz(int i, double xCweight)
+int SVM_Vector_Mredbin::setCweightfuzz(int i, double xxCweight)
 {
     int j,k;
     int res = 0;
@@ -718,13 +718,13 @@ int SVM_Vector_Mredbin::setCweightfuzz(int i, double xCweight)
     {
         k = (i*tspaceDim())+j;
 
-        res |= Q.setCweightfuzz(k,xCweight);
+        res |= Q.setCweightfuzz(k,xxCweight);
     }
 
     return res;
 }
 
-int SVM_Vector_Mredbin::setepsweight(int i, double xepsweight)
+int SVM_Vector_Mredbin::setepsweight(int i, double xxepsweight)
 {
     int j,k;
     int res = 0;
@@ -733,7 +733,7 @@ int SVM_Vector_Mredbin::setepsweight(int i, double xepsweight)
     {
         k = (i*tspaceDim())+j;
 
-        res |= Q.setepsweight(k,xepsweight);
+        res |= Q.setepsweight(k,xxepsweight);
     }
 
     return res;
@@ -777,9 +777,9 @@ int SVM_Vector_Mredbin::sety(const Vector<int> &j, const Vector<Vector<double> >
     return res;
 }
 
-int SVM_Vector_Mredbin::setCweight(const Vector<int> &j, const Vector<double> &xCweight)
+int SVM_Vector_Mredbin::setCweight(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == j.size() );
+    NiceAssert( xxCweight.size() == j.size() );
 
     int res = 0;
 
@@ -789,16 +789,16 @@ int SVM_Vector_Mredbin::setCweight(const Vector<int> &j, const Vector<double> &x
 
         for ( i = 0 ; i < j.size() ; ++i )
         {
-            res |= setCweight(j(i),xCweight(i));
+            res |= setCweight(j(i),xxCweight(i));
         }
     }
 
     return res;
 }
 
-int SVM_Vector_Mredbin::setCweightfuzz(const Vector<int> &j, const Vector<double> &xCweight)
+int SVM_Vector_Mredbin::setCweightfuzz(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == j.size() );
+    NiceAssert( xxCweight.size() == j.size() );
 
     int res = 0;
 
@@ -808,16 +808,16 @@ int SVM_Vector_Mredbin::setCweightfuzz(const Vector<int> &j, const Vector<double
 
         for ( i = 0 ; i < j.size() ; ++i )
         {
-            res |= setCweightfuzz(j(i),xCweight(i));
+            res |= setCweightfuzz(j(i),xxCweight(i));
         }
     }
 
     return res;
 }
 
-int SVM_Vector_Mredbin::setepsweight(const Vector<int> &j, const Vector<double> &xepsweight)
+int SVM_Vector_Mredbin::setepsweight(const Vector<int> &j, const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == j.size() );
+    NiceAssert( xxepsweight.size() == j.size() );
 
     int res = 0;
 
@@ -827,7 +827,7 @@ int SVM_Vector_Mredbin::setepsweight(const Vector<int> &j, const Vector<double> 
 
         for ( i = 0 ; i < j.size() ; ++i )
         {
-            res |= setepsweight(j(i),xepsweight(i));
+            res |= setepsweight(j(i),xxepsweight(i));
         }
     }
 
@@ -873,9 +873,9 @@ int SVM_Vector_Mredbin::sety(const Vector<Vector<double> > &z)
     return res;
 }
 
-int SVM_Vector_Mredbin::setCweight(const Vector<double> &xCweight)
+int SVM_Vector_Mredbin::setCweight(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == N() );
+    NiceAssert( xxCweight.size() == N() );
 
     int res = 0;
 
@@ -885,16 +885,16 @@ int SVM_Vector_Mredbin::setCweight(const Vector<double> &xCweight)
 
         for ( i = 0 ; i < N() ; ++i )
         {
-            res |= setCweight(i,xCweight(i));
+            res |= setCweight(i,xxCweight(i));
         }
     }
 
     return res;
 }
 
-int SVM_Vector_Mredbin::setCweightfuzz(const Vector<double> &xCweight)
+int SVM_Vector_Mredbin::setCweightfuzz(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == N() );
+    NiceAssert( xxCweight.size() == N() );
 
     int res = 0;
 
@@ -904,16 +904,16 @@ int SVM_Vector_Mredbin::setCweightfuzz(const Vector<double> &xCweight)
 
         for ( i = 0 ; i < N() ; ++i )
         {
-            res |= setCweightfuzz(i,xCweight(i));
+            res |= setCweightfuzz(i,xxCweight(i));
         }
     }
 
     return res;
 }
 
-int SVM_Vector_Mredbin::setepsweight(const Vector<double> &xepsweight)
+int SVM_Vector_Mredbin::setepsweight(const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == N() );
+    NiceAssert( xxepsweight.size() == N() );
 
     int res = 0;
 
@@ -923,7 +923,7 @@ int SVM_Vector_Mredbin::setepsweight(const Vector<double> &xepsweight)
 
         for ( i = 0 ; i < N() ; ++i )
         {
-            res |= setepsweight(i,xepsweight(i));
+            res |= setepsweight(i,xxepsweight(i));
         }
     }
 
@@ -1330,11 +1330,9 @@ int SVM_Vector_Mredbin::addTrainingVector (int i, const gentype &z, const Sparse
 
     if ( zz.size() )
     {
-        int i;
-
-        for ( i = 0 ; i < zz.size() ; ++i )
+        for ( int ii = 0 ; ii < zz.size() ; ++ii )
         {
-            zd("&",i) = (double) zz(i);
+            zd("&",ii) = (double) zz(ii);
         }
     }
 
@@ -1350,11 +1348,9 @@ int SVM_Vector_Mredbin::qaddTrainingVector(int i, const gentype &z,       Sparse
 
     if ( zz.size() )
     {
-        int i;
-
-        for ( i = 0 ; i < zz.size() ; ++i )
+        for ( int ii = 0 ; ii < zz.size() ; ++ii )
         {
-            zd("&",i) = (double) zz(i);
+            zd("&",ii) = (double) zz(ii);
         }
     }
 

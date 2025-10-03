@@ -665,13 +665,13 @@ int SVM_MultiC_atonce::scale(double a)
     return res;
 }
 
-double SVM_MultiC_atonce::calcDist(const gentype &ha, const gentype &hb, int ia, int db) const
+double SVM_MultiC_atonce::calcDist(const gentype &ha, const gentype &hb, int ia, int ddb) const
 {
     (void) ia;
 
     double res = 0;
 
-    if ( db )
+    if ( ddb )
     {
         res = ( ( (int) ha ) != ( (int) hb ) ) ? 1 : 0;
     }
@@ -1522,17 +1522,17 @@ int SVM_MultiC_atonce::setd(int i, int d)
     return res;
 }
 
-int SVM_MultiC_atonce::setCweight(int i, double xCweight)
+int SVM_MultiC_atonce::setCweight(int i, double xxCweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < N() );
-    NiceAssert( xCweight > 0 );
+    NiceAssert( xxCweight > 0 );
 
     int q;
 
     isStateOpt = 0;
 
-    Cweightval("&",i) = xCweight;
+    Cweightval("&",i) = xxCweight;
 
     if ( isQuadraticCost() )
     {
@@ -1562,17 +1562,17 @@ int SVM_MultiC_atonce::setCweight(int i, double xCweight)
     return 1;
 }
 
-int SVM_MultiC_atonce::setCweightfuzz(int i, double xCweight)
+int SVM_MultiC_atonce::setCweightfuzz(int i, double xxCweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < N() );
-    NiceAssert( xCweight > 0 );
+    NiceAssert( xxCweight > 0 );
 
     int q;
 
     isStateOpt = 0;
 
-    Cweightvalfuzz("&",i) = xCweight;
+    Cweightvalfuzz("&",i) = xxCweight;
 
     if ( isQuadraticCost() )
     {
@@ -1602,18 +1602,18 @@ int SVM_MultiC_atonce::setCweightfuzz(int i, double xCweight)
     return 1;
 }
 
-int SVM_MultiC_atonce::setepsweight(int i, double xepsweight)
+int SVM_MultiC_atonce::setepsweight(int i, double xxepsweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < N() );
-    NiceAssert( xepsweight >= 0 );
+    NiceAssert( xxepsweight >= 0 );
 
     isStateOpt = 0;
 
     int q;
     int res = 0;
 
-    epsweightval("&",i) = xepsweight;
+    epsweightval("&",i) = xxepsweight;
 
     if ( numClasses() )
     {
@@ -1665,9 +1665,9 @@ int SVM_MultiC_atonce::setd(const Vector<int> &j, const Vector<int> &d)
     return res;
 }
 
-int SVM_MultiC_atonce::setCweight(const Vector<int> &j, const Vector<double> &xCweight)
+int SVM_MultiC_atonce::setCweight(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == j.size() );
+    NiceAssert( xxCweight.size() == j.size() );
 
     int res = 0;
 
@@ -1677,16 +1677,16 @@ int SVM_MultiC_atonce::setCweight(const Vector<int> &j, const Vector<double> &xC
 
         for ( i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setCweight(j(i),xCweight(i));
+            res |= setCweight(j(i),xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int SVM_MultiC_atonce::setCweightfuzz(const Vector<int> &j, const Vector<double> &xCweight)
+int SVM_MultiC_atonce::setCweightfuzz(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == j.size() );
+    NiceAssert( xxCweight.size() == j.size() );
 
     int res = 0;
 
@@ -1696,16 +1696,16 @@ int SVM_MultiC_atonce::setCweightfuzz(const Vector<int> &j, const Vector<double>
 
         for ( i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setCweightfuzz(j(i),xCweight(i));
+            res |= setCweightfuzz(j(i),xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int SVM_MultiC_atonce::setepsweight(const Vector<int> &j, const Vector<double> &xepsweight)
+int SVM_MultiC_atonce::setepsweight(const Vector<int> &j, const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == j.size() );
+    NiceAssert( xxepsweight.size() == j.size() );
 
     int res = 0;
 
@@ -1715,7 +1715,7 @@ int SVM_MultiC_atonce::setepsweight(const Vector<int> &j, const Vector<double> &
 
         for ( i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setepsweight(j(i),xepsweight(i));
+            res |= setepsweight(j(i),xxepsweight(i));
 	}
     }
 
@@ -1758,9 +1758,9 @@ int SVM_MultiC_atonce::setd(const Vector<int> &d)
     return res;
 }
 
-int SVM_MultiC_atonce::setCweight(const Vector<double> &xCweight)
+int SVM_MultiC_atonce::setCweight(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == N() );
+    NiceAssert( xxCweight.size() == N() );
 
     int i;
     int res = 0;
@@ -1769,16 +1769,16 @@ int SVM_MultiC_atonce::setCweight(const Vector<double> &xCweight)
     {
 	for ( i = 0 ; i < N() ; ++i )
 	{
-            res |= setCweight(i,xCweight(i));
+            res |= setCweight(i,xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int SVM_MultiC_atonce::setCweightfuzz(const Vector<double> &xCweight)
+int SVM_MultiC_atonce::setCweightfuzz(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == N() );
+    NiceAssert( xxCweight.size() == N() );
 
     int i;
     int res = 0;
@@ -1787,16 +1787,16 @@ int SVM_MultiC_atonce::setCweightfuzz(const Vector<double> &xCweight)
     {
 	for ( i = 0 ; i < N() ; ++i )
 	{
-            res |= setCweightfuzz(i,xCweight(i));
+            res |= setCweightfuzz(i,xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int SVM_MultiC_atonce::setepsweight(const Vector<double> &xepsweight)
+int SVM_MultiC_atonce::setepsweight(const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == N() );
+    NiceAssert( xxepsweight.size() == N() );
 
     int i;
     int res = 0;
@@ -1805,7 +1805,7 @@ int SVM_MultiC_atonce::setepsweight(const Vector<double> &xepsweight)
     {
 	for ( i = 0 ; i < N() ; ++i )
 	{
-            res |= setepsweight(i,xepsweight(i));
+            res |= setepsweight(i,xxepsweight(i));
 	}
     }
 
@@ -1969,8 +1969,6 @@ int SVM_MultiC_atonce::setrecdiv(void)
             if ( ( numClasses() > 1 ) && linbiasforceset )
 	    {
                 Vector<double> gn(Q.getgn());
-
-                retVector<double> tmpva;
 
                 gn = linbiasforceval(1,1,linbiasforceval.size()-1,tmpva);
                 gn -= linbiasforceval(0);
@@ -2578,7 +2576,7 @@ int SVM_MultiC_atonce::addclass(int label, int epszero)
 	    {
                 SparseVector<gentype> tempvec;
 
-                retVector<double> tmpva;
+                retVector<double> tmpve;
                 retVector<double> tmpvb;
                 retVector<double> tmpvc;
                 retVector<double> tmpvd;
@@ -2601,11 +2599,11 @@ int SVM_MultiC_atonce::addclass(int label, int epszero)
                         sigmacache.add(IQFIX(trainclass(i),i,nnew-1));
 
                         Gpn.addRow(IQFIX(trainclass(i),i,nnew-1));
-                        Gpn("&",IQFIX(trainclass(i),i,nnew-1),tmpva,tmpvd) = CMcl(label_placeholder.findID(trainclass(i))+1,( isrecdiv() ? 1 : 0 ))(nnew-2,tmpvb,tmpvc);
+                        Gpn("&",IQFIX(trainclass(i),i,nnew-1),tmpve,tmpvd) = CMcl(label_placeholder.findID(trainclass(i))+1,( isrecdiv() ? 1 : 0 ))(nnew-2,tmpvb,tmpvc);
 
                         if ( xisrankorgrad(i) )
                         {
-                            Gpn("&",IQFIX(trainclass(i),i,nnew-1),tmpva,tmpvd) *= 0.0;
+                            Gpn("&",IQFIX(trainclass(i),i,nnew-1),tmpve,tmpvd) *= 0.0;
                         }
 
                         Q.qaddTrainingVector(IQFIX(trainclass(i),i,nnew-1),D_CALC(trainclass(i),nnew-1),tempvec,CWEIGH_CALC(trainclass(i),Cweightval(i),Cweightvalfuzz(i),nnew-1,dthres),-D_CALC(trainclass(i),nnew-1)*((D_CALC(trainclass(i),nnew-1)*EPSWEIGH_CALC(trainclass(i),epsweightval(i),nnew-1))+(D_CALC(trainclass(i),MODPOS(trainclass(i)))*EPSWEIGH_CALC(trainclass(i),epsweightval(i),MODPOS(trainclass(i))))));
@@ -4138,15 +4136,14 @@ int SVM_MultiC_atonce::gTrainingVector(Vector<double> &gprojectExt, int &locclas
 
             if ( N() )
             {
-                int j;
                 double Kij;
 
-                for ( j = 0 ; j < N() ; ++j )
+                for ( int jj = 0 ; jj < N() ; ++jj )
                 {
-                    if ( QA.alphaState()(j) )
+                    if ( QA.alphaState()(jj) )
                     {
-                        Kij = K2(i,j);
-                        temp += (Kij*(QA.alphaR()(j)));
+                        Kij = K2(i,jj);
+                        temp += (Kij*(QA.alphaR()(jj)));
                     }
                 }
             }
@@ -4205,15 +4202,14 @@ int SVM_MultiC_atonce::gTrainingVector(Vector<double> &gprojectExt, int &locclas
 
             if ( N() )
             {
-                int j;
                 double Kij;
 
-                for ( j = 0 ; j < N() ; ++j )
+                for ( int jj = 0 ; jj < N() ; ++jj )
                 {
-                    if ( QA.alphaState()(j) )
+                    if ( QA.alphaState()(jj) )
                     {
-                        Kij = K2(i,j);
-                        temp += (Kij*(QA.alphaR()(j)));
+                        Kij = K2(i,jj);
+                        temp += (Kij*(QA.alphaR()(jj)));
                     }
                 }
             }

@@ -40,7 +40,7 @@ std::istream &BLK_AveSca::inputstream(std::istream &input )
     return input;
 }
 
-BLK_AveSca::BLK_AveSca(int isIndPrune) : BLK_Generic(isIndPrune)
+BLK_AveSca::BLK_AveSca(int xisIndPrune) : BLK_Generic(xisIndPrune)
 {
     setaltx(nullptr);
 

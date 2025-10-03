@@ -1508,7 +1508,20 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
         {
             // Auto case, note negated sampSplit bodge
 
-            GPR_Generic::genSampleGrid(xx,xmin,xmax,-(10*(N() ? N() : 1)*(xmin.size())*(xmin.size())),sampSplit,xsampType,sampSlack);
+            // This is a terrible hack
+
+            int effdim = (int) std::sqrt((xmin.size())*(xmin.size()));
+            int basemul = 200;
+
+            if      ( effdim == 1 ) { basemul = 200; }
+            else if ( effdim == 2 ) { basemul = 100; }
+            else if ( effdim == 3 ) { basemul = 50;  }
+            else if ( effdim == 4 ) { basemul = 25;  }
+            else if ( effdim == 5 ) { basemul = 12;  }
+            else                    { basemul = 10;  }
+
+//            GPR_Generic::genSampleGrid(xx,xmin,xmax,-(10*(N() ? N() : 1)*(xmin.size())*(xmin.size())),sampSplit,xsampType,sampSlack);
+            GPR_Generic::genSampleGrid(xx,xmin,xmax,basemul*(xmin.size())*(xmin.size()),sampSplit,xsampType,sampSlack);
         }
 
         Ntotsamp = xx.size();
