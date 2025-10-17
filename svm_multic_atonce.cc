@@ -616,13 +616,9 @@ SVM_MultiC_atonce::~SVM_MultiC_atonce()
 {
     if ( Gpval != nullptr )
     {
-        MEMDEL(xyval);
-        MEMDEL(Gpval);
-        MEMDEL(Gpsigma);
-
-        xyval = nullptr;
-        Gpval = nullptr;
-        Gpsigma = nullptr;
+        MEMDEL(xyval);   xyval = nullptr;
+        MEMDEL(Gpval);   Gpval = nullptr;
+        MEMDEL(Gpsigma); Gpsigma = nullptr;
     }
 
     return;
@@ -4726,13 +4722,9 @@ std::istream &SVM_MultiC_atonce::inputstream(std::istream &input)
 
     if ( Gpval != nullptr )
     {
-        MEMDEL(xyval);
-        MEMDEL(Gpval);
-        MEMDEL(Gpsigma);
-
-        xyval = nullptr;
-        Gpval = nullptr;
-        Gpsigma = nullptr;
+        MEMDEL(xyval);   xyval = nullptr;
+        MEMDEL(Gpval);   Gpval = nullptr;
+        MEMDEL(Gpsigma); Gpsigma = nullptr;
     }
 
     MEMNEW(xyval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &(xycache),   (N())*((numClasses()-1)),(N())*((numClasses()-1))));

@@ -169,8 +169,7 @@ inline void IMP_NLSamp::assign(const ML_Base &bb, int onlySemiCopy)
 
     if ( randscal )
     {
-        MEMDEL(randscal);
-        randscal = nullptr;
+        MEMDEL(randscal); randscal = nullptr;
     }
 
     if ( src.randscal )

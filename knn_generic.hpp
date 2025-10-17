@@ -350,8 +350,7 @@ inline void KNN_Generic::assign(const ML_Base &bb, int onlySemiCopy)
     iiscr    = src.iiscr;
     wkt      = src.wkt;
 
-    MEMDEL(Gpdist);
-    Gpdist = nullptr;
+    MEMDEL(Gpdist); Gpdist = nullptr;
 
     kerncache = src.kerncache;
     kerncache.cheatSetEvalArg((void *) this);

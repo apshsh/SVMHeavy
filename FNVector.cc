@@ -1618,8 +1618,7 @@ FuncVector &FuncVector::assign(const FuncVector &src)
 
         for ( i = 0 ; i < NE() ; ++i )
         {
-            MEMDEL(extrapart("&",i));
-            extrapart("&",i) = nullptr;
+            MEMDEL(extrapart("&",i)); extrapart("&",i) = nullptr;
         }
 
         extrapart.resize(0);
@@ -4064,8 +4063,7 @@ std::istream &FuncVector::instream(std::istream &input)
 
         for ( i = 0 ; i < NE() ; ++i )
         {
-            MEMDEL(extrapart("&",i));
-            extrapart("&",i) = nullptr;
+            MEMDEL(extrapart("&",i)); extrapart("&",i) = nullptr;
         }
 
         extrapart.resize(0);

@@ -875,7 +875,7 @@ Kcache<T>::~Kcache()
         lagger  = pos_ptr;
         pos_ptr = pos_ptr->next;
 
-        MEMDEL(lagger);
+        MEMDEL(lagger); lagger = nullptr;
     }
 }
 
@@ -907,7 +907,7 @@ void Kcache<T>::reset(int xpreallocsize)
         lagger  = pos_ptr;
         pos_ptr = pos_ptr->next;
 
-        MEMDEL(lagger);
+        MEMDEL(lagger); lagger = nullptr;
     }
 
     evalCache = nullptr;
@@ -1159,7 +1159,7 @@ void Kcache<T>::setmemsize(int xmemsize, int xmin_rowdim, int modprealloc)
 		    lookup.sv(temp->row_ident,nullptr);
 		}
 
-                MEMDEL(temp);
+                MEMDEL(temp); temp = nullptr;
             }
         }
 

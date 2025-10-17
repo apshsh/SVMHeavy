@@ -1144,7 +1144,7 @@ errstream() << ".";
 
 getout:
 
-    MEMDELARRAY(onelist);
+    MEMDELARRAY(onelist); onelist = nullptr;
 
     return 0;
 }

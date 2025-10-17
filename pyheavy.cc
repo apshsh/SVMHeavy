@@ -1,3 +1,285 @@
+//FIXME - gdb and catch at gentype initialization stage, follow through and figure out wtf is going wrong
+
+//bomuse: convergence proof
+//bomuse: talk to shannon about state of code?
+//bomuse: slides for wednesday AND FRIDAY
+//bomuse: alternative iteration counts: reversed, based on budget etc etc
+
+
+
+// HOME: bag for 12v supply for good headlight on handlebar
+// HOME: print recipes - reciple tin pea and ham soup, pumpkin soup
+//                       bread recipe on phone
+//                       cut/paste cool dessert recipe from mag
+// TRANSITION LAPEOP
+// TRANSITION GMAIL ACCOUNT TO PHONE?
+
+//Write up Arun sims with hybrid inequalities method (batch2)
+//
+//Paper - start on paper on ratchett tonc
+//Code  - upload tutorial along with Dylan when shannon gets back to me
+//
+//Shannon - would it be feasible to say "pay attention to those in the middle, but only say "bigger than x" for those on the extremes"
+//
+//FIXME: put globalopt virtual class precursor in ML_Base, if not nullptr then use this to tuneKernel
+//FIXME: tuneKernel on xor with gpc returns infinity???
+//FIXME: put fidelity after aug, have function that returns which n it is
+//
+//DO: sort out spreadsheet from Dylan, start using
+//DO: Arun sims, and monotonic comparison - consider full kernel?
+//
+//WRITEUP: the theory behind GP regression with inequalities, logic and the general case
+//SVM_Scalar: we need to set res in inintrain when optimization fails rathre than throwing!
+//
+//TO DO: for calcLOO etc, return a dictionary of the whole mess or results, not just the error
+//TO DO: when assessing error (calcLOO etc), >= 0 should count as +1, <= 0 as -1 (use d when working this out!)
+//?????: in mercer.cc, when diff_norm is called, include vectors. If elements are infinite then revert to direct calculation
+//       with vectors and return result of this.
+//TO DO: Consider return field to change acquisition function and parameters on request? Currently only nu is done
+//TO DO: make sure sety retains isNomConst
+//
+//From 6am meeting on 16.8.25
+//
+//- plate build up add 1 plate every n iterations? How to formalise this? Maybe at Dylan's end?
+//- multi-plate equivalents - check if Dylan has implemented this at his end?
+//
+//NEED TO TEST: logistic CDF
+
+/*
+Set.hpp: have infinite sets - natural, real etc
+x-R = R
+x+R = R
+||R|| = infty
+
+Consider changing ||x-setX|| to max dist, but what is the inner product?
+
+Stable multi-fidelity BO
+*/
+
+
+
+//when training a gp with prior mean, if there are inequalities, does the prior mean propogate
+//down through LSV to SVM to properly correct the targets y during training?
+
+/*
+If design x passes, (c(x) <= 0) then we can immediately expand to bounds on thicker plates,
+additional layers. - monotonicity constraints!
+These could be returned in the side-channel.
+Also in the kernel, should back-translate to the "actual" angle
+
+Paper idea: model constraints: c(x) <= 0 (or whatever) for all x satisfying y. How do you do this?
+Answer: monotonicity constaints for material width variables (and maybe others).
+
+
+REMEMBER: the modified GP-UCB should allows us to do multi-fidelity. That's why you needed it!
+
+
+Do paper stuff - sub-gauss proof for GP-UCB variant for publication
+Option to pull results?
+*/
+
+//FIXME: slides with angle calculations
+//fix the definition of adjusted posterior mean/variance in modified gp-ucb method
+
+/*
+BEFORE enforcing the constraint, you have a posterior distribution of c(x)
+REMEMBER you want to enforce the constraint c(x)>=0 whp >1-e
+MOREOVER you have the variance of c(x), so you actually want mean(c(x))>=m, where m is sufficiently positive to enforce the bound whp >1-e
+LEAVE THE CONSTRAINT on alpha sign. If the sign is positive then you're enforcing the constriant, if sign is negative you don't need it.
+NO! because posterior variance. Or maybe YES? Does is really matter so long as don't include alpha<0 in posterior variance?
+ALT the variance of c(x) gives us a lower bound on both m and the variance of c(x) we actually use? Stretch both if alpha<0 until alpha goes to 0? This is
+much smoother, if that's something we want?
+DETAIL: c(x) >= 0 -> c(x) >= m(sigma), c(x) <= 0 -> c(x) <= -m(sigma)
+*/
+
+/*
+29/9/2025: in bayesopt grid, the fidelity in the grid is now separated by a ~
+
+25/9/2025: added acquisition function that basically generates random training vectors as per start-points
+25/9/2025: makemonot can now do monotonic constraints based on a grid (as per bayesopt)
+
+23/9/2025: can now access setLaplaceConst etc (Laplace approx, EP approx, naive approx) through python interface
+
+23/9/2025: have written tutorial, waiting on Shannon review
+23/9/2025: gpr_binary now returns probability when retaltg = 1
+23/9/2025: added monotonicity constraints to python interface
+
+20/9/2025: updated Dylan optfile to include multifidelity and python only
+20/9/2025: can change beta scale interactively
+
+20/8/2025: fixed kernel tuning for GP with Laplace (wasn't calling outer layer)
+20/8/2025: fixed numerical issues where alpha is "too small"
+20/8/2025: there is an issue where you have *no* valid results. This leads to
+           an extremely flat posterior which can (after 30 or so iterations in the
+           Arun case) lead to the inner loop giving *NO VALID RESULTS TO TEST*...
+           so the optimizer exits with nothing at all.
+           FIX: if ires = -1 on inner loop then revert to pure exploration on cgt!
+           OBSERVE: we can see this happen in the lengthscale! in arun/sim1/run2b/svmheavy.err.log.5
+           the lengthscale is really big and eventually breaks everything, but in
+           arun/sim1/run2b/svmheavy.err.log.6 it starts to grow, then drops off
+           when it finds a feasible example.
+           TAKEAWAY: you need to use PEc until you find a feasible solution, then
+           you can go back to whatever else.
+
+18/8/2025: - added "nuscale" return field that let's you set a scale factor on beta to control exploitation/exploration directly
+           - fixed scaling bug in gpr_scalar to prevent Laplace approximation making W so small that it triggers NaN!
+
+12/8/2025:
+- implemented Laplace approximation for GP with inequalities. Tested and it seems to work
+- added fidcost return option so the user can give an exact budgetary cost with each measurement of y (eg if you get multiple results for the price of one)
+
+7/8/2025:
+- implemented multi-fidelity with constraints. Currently very heuristic but done
+
+5/8/2025:
+- added support for empty and infinite sets. The inner-product between sets is the number
+  of shared elements, so the inner product between a set and an infinite set is just the
+  number of elements in the first set.
+
+25/7/2025:
+- monotonic constraints on g(x) (-pmm). c(x) apparently is already increasing in index 0 so makes no
+  difference here
+- fixed bug with parity symmetry in the kernels (adding origin back to x)
+
+DONE 23/7/2025:
+- return dict added, code made saner
+
+DONE 16/7/2025
+- have a mechanism to return additional xy pairs, but it's not tested yet (addexp)
+- added a "don't count me" flag that increments skipcnt (stopflags & 2), but haven't tested this
+
+TO DO 16/7/2025
+- addexp needs to be carried through to the experiments (currently only gridsource does it). Need to use addDataToModel for all cases where we do that
+
+DONE 15/7/2025
+- fixed problem with cgt alt method (was using sigma^2 rather than sigma when calculating overall variance)
+- added parity symmetry to the kernel, so you can map eg [ -1 -1 ] and [ 1 1 ] to [ 1 1 ] (multiply by sign of first element). This
+  will be helpful in incorporating the physical symmetry of the shield (rotational elements) that have this symmetry (sort of).
+- added margin (cgtmargin) of confindent to cgt methods, where the posterior mean of the cgt is offset by e.g. -0.1 as a margin of safety
+
+DONE 14/7/2025
+- added multiply by PI (on the objective only, not the constraint) to effectively "block" recommendations with worse AD than the best so far
+  (in the case where the objective is trivial, and thus represented by a prior built into a BLK module).
+
+
+
+DONE 3/7/25:
+- wrote a simple function to select the ML (or relevant optimizer) - that is, just set i
+- can now run BO etc straight from python without CLI emulation
+- FROM ARUN: if P(pen) is mostly flat away from observations, then it naturally favours very light designs that just won't work
+  MY IDEA: need to take the variance of the P(pen) into account, so the full acquisition should fix the problem!
+  SIMS: testcon, slides set 9 (9/7/25)
+
+DONE 3/7/25:
+Q: fix logging options in pyheavy.cc (by default std::err should only end up in a file, not on the screen)
+A: done
+Q: is in-grid variant just ignoring the constraint (ie lengthscale too long for model)? Double check that constraints and objective have all the same settings and sanity checks (including tuneKernel) to make sure that they are behaving themselves!
+A: see arun comment above.
+Q: like the ML stack, have a BO stack (and a grid stack, and direct etc). You can then fill in the parameters just like you do with the ML models and call optim when you're ready!
+A: done
+
+
+TO DO: 9/7/2025
+- run modified gp-ucb sims
+d add "if q(x)<0 then acquisition is zero" constraint to acquisition. q(x) is a python call from (call if feasibility check) Dylan that returns min_weight(x)-weight(x).
+  Null (none) by default for no such function.
+d add dynamic minimum on acquisition function to ensure min(a(x))>=0
+
+IDEA 3/7/25: if the highest fidelity is binary, we should treat it differently: like a correction factor for the second-highest fidelity? You could
+treat second-max fidelity is prior and do corrections on this, or if you could get rid of the "pull to zero" issue in the GP model you could just have
+inequalities at max fidelity.
+
+PUBLICATION 3/7/25:
+- above idea
+- also trivial problem, multi-fid constraints
+
+NB 3/7/25: in GP, setsigma (or sigma weight) also sets the inequalty offset (eps) for inequality constraints! So setsigma (and associates) must trigger seteps (and associates)
+
+TO DO: targets for week starting 3/7/2025
+d fix logging options in pyheavy.cc (by default std::err should only end up in a file, not on the screen)
+d is in-grid variant just ignoring the constraint (ie lengthscale too long for model)? Double check that constraints and objective have all the same settings and sanity checks (including tuneKernel) to make sure that they are behaving themselves!
+- you need a multi-fidelity algorithm!
+NEXT: - add extra observation insertion option (make sure this doesn't mess up the iteration counter though: "fake" observation counter that you take off the itcount?)
+NEXT: *to do this you could maybe return a set of sets, where each of the inner sets is an observation?)
+NEXT: *push multiple x onto a stack in the opetor() arount line 5354 of bayesopt.cc, set flag on return that asks to call back to grab multiple results
+d - add symmetry constraint g(x) ~ y, g(Ax) ~ y (or G(x : Ax) = 0, which we could set up as a filter).
+d - add inequality constraint support for GPs (just set sigma so that the 95 percentile touches the posterior mean, or something like that?). Note that the current EP algorithm seems to fail when you have a combination of inequality and equality constraints in the same problem.
+d - add monotonicity constraints on axis (planar for simplicity)
+d like the ML stack, have a BO stack (and a grid stack, and direct etc). You can then fill in the parameters just like you do with the ML models and call optim when you're ready!
+*/
+
+//FIXME: returning matrices from python to gentype doesn't really work as there is no way to distinguish
+//       between a matrix and a list of lists. If you export to numpy instead then this should be fixable,
+//       but I'm not sure how you actually achieve that!
+
+//TO DO: simple call function for BO (not CLI)!
+
+/*
+TO DO: NOP type: kernel should be nominally-constant diagonal kernel by default. Weight is variance you want to add
+TO DO: sane log likelihood, rkhs norm etc for NOP type
+
+TO DO: BO kernel stuff?
+
+PLOT IN PLOTBASE:
+
+import pyheavy,cmath,math,numpy,b,quad3,quad2
+import numpy as np
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+f = pyheavy.maths.test(1)
+x1 = np.arange(0,1,0.001).tolist()
+y = list(map(pyheavy.maths.test(1),x1))
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.plot(x1,y)
+fig.savefig('temp.png')
+*/
+
+/*
+FOR PYHEAVY:
+
+SVM:
+** done?
+. to do as per others (M,E,X)
+
+can be set
+    virtual int isanomalyOn(void)  const { return getSVMconst().isanomalyOn();  }
+    virtual int isanomalyOff(void) const { return getSVMconst().isanomalyOff(); }
+    virtual double anomalyNu(void)    const { return getSVMconst().anomalyNu();    }
+    virtual int    anomalyClass(void) const { return getSVMconst().anomalyClass(); }
+
+                    else if ( currcommand(0) == "-Ac"   ) { getMLref(svmbase,MLInd).addclass(safeatoi(currcommand(1),argvariables));          }
+                    else if ( currcommand(0) == "-Acz"  ) { getMLref(svmbase,MLInd).addclass(safeatoi(currcommand(1),argvariables),1);        }
+                    else if ( currcommand(0) == "-Aca"  ) { getMLref(svmbase,MLInd).anomalyOn(safeatoi(currcommand(1),argvariables),safeatof(currcommand(2),argvariables)); }
+                    else if ( currcommand(0) == "-Acd"  ) { getMLref(svmbase,MLInd).anomalyOff();                                             }
+                    else if ( currcommand(0) == "-As"   ) { getMLref(svmbase,MLInd).setanomalyclass(safeatoi(currcommand(1),argvariables));   }
+
+    output << ( ( basic || advanced ) ? "         -Ac  d          - add class to SVM  (multiclass only)  without adding\n" : "" );
+    output << ( ( basic || advanced ) ? "                           any vectors from that class.                       \n" : "" );
+    output << ( (          advanced ) ? "         -Acz d          - like -Ac d, but sets epsilon = 0 for this component\n" : "" );
+    output << ( (          advanced ) ? "                           if recursive division or max wins multiclass used. \n" : "" );
+    output << ( (          advanced ) ? "         -Aca d nu       - add anomaly detector to multiclass SVM with label d\n" : "" );
+    output << ( (          advanced ) ? "                           and anomaly detection parameter nu.                \n" : "" );
+    output << ( (          advanced ) ? "         -Acd            - remove anomaly detector.                           \n" : "" );
+    output << ( (          advanced ) ? "         -As  n          - set single-class  SVM non-anomaly  label (+1 or -1,\n" : "" );
+    output << ( (          advanced ) ? "                           +1 by defaulg).                                    \n" : "" );
+
+can be set
+    virtual int anomclass(void)          const { return getSVMconst().anomclass();       }
+    virtual int singmethod(void)         const { return getSVMconst().singmethod();      }
+    virtual double rejectThreshold(void) const { return getSVMconst().rejectThreshold(); }
+
+can be set
+    virtual       int      maxiterfuzzt(void) const { return getSVMconst().maxiterfuzzt(); }
+**    virtual       int      usefuzzt(void)     const { return getSVMconst().usefuzzt();     }
+    virtual       double   lrfuzzt(void)      const { return getSVMconst().lrfuzzt();      }
+    virtual       double   ztfuzzt(void)      const { return getSVMconst().ztfuzzt();      }
+    virtual const gentype &costfnfuzzt(void)  const { return getSVMconst().costfnfuzzt();  }
+
+can be set
+    virtual int kconstWeights(void) const { return getSVMconst().kconstWeights(); }
+*/
 
 //
 // SVMHeavyv7 Python CLI-like Interface
@@ -28,8 +310,8 @@ inline void qswap(py::object *&a, py::object *&b)
 }
 
 inline py::object *&setident (py::object *&a) { throw("something"); return a; }
-inline py::object *&setzero  (py::object *&a) { return a = nullptr; }
-inline py::object *&setposate(py::object *&a) { return a; }
+inline py::object *&setzero  (py::object *&a) { a = nullptr;        return a; }
+inline py::object *&setposate(py::object *&a) {                     return a; }
 inline py::object *&setnegate(py::object *&a) { throw("something"); return a; }
 inline py::object *&setconj  (py::object *&a) { throw("something"); return a; }
 inline py::object *&setrand  (py::object *&a) { throw("something"); return a; }
@@ -69,50 +351,22 @@ int glob_BayesianInd  (int i, int seti) { static thread_local int iii = 1; if ( 
 // Do these once only - python functions and such that you need
 // Note we allow exceptions to be thrown if !bool in return
 
-py::object &get_builtins(void)
+bool isCallable(const py::object *src)
 {
-    static py::object builtins = py::module_::import("builtins");
-    return builtins;
+    py::object builtins = py::module_::import("builtins");
+    py::object callable = builtins.attr("callable");
+
+    return py::cast<py::bool_>(callable(*src));
 }
 
-bool isCallable(const py::object &src)
+bool isComplex(const py::object *src)
 {
-    static py::object callable_function = get_builtins().attr("callable");
-    return py::cast<py::bool_>(callable_function(src));
-}
+    py::object builtins     = py::module_::import("builtins");
+    py::object isinstance   = builtins.attr("isinstance");
+    py::object complexclass = builtins.attr("complex");
 
-bool isComplex(const py::object &src)
-{
-    static py::object isinstance_function = get_builtins().attr("isinstance");
-    static py::object complex_class = get_builtins().attr("complex");
-    return py::cast<py::bool_>(isinstance_function(src,complex_class));
+    return py::cast<py::bool_>(isinstance(*src,complexclass));
 }
-
-// FIXME: at some point numpy integration will be needed, particularly for matrices.
-//
-//py::object &get_numpy(void)
-//{
-//    static py::object builtins = py::module_::import("numpy");
-//    return builtins;
-//}
-//
-//bool isNumpyArray(py::object src)
-//{
-//    static py::object isinstance_function = get_builtins().attr("isinstance");
-//    static py::object nparray_class = get_numpy().attr("ndarray");
-//    // if not bool let exception be thrown
-//    return py::cast<py::bool_>(isinstance_function(src,nparray_class));
-//}
-//
-//bool isNumpyVector(py::object src)
-//{
-//    return isNumpyArray(src) && ( py::cast<py::int_>((src.attr("ndim"))()) == 1 );
-//}
-//
-//bool isNumpyMatrix(py::object src)
-//{
-//    return isNumpyArray(src) && ( py::cast<py::int_>((src.attr("ndim"))()) == 2 );
-//}
 
 
 
@@ -126,16 +380,16 @@ bool isComplex(const py::object &src)
 
 // unconvertable objects converted to nan
 
-                   py::object convToPy(                int               src);
-                   py::object convToPy(                double            src);
-                   py::object convToPy(          const d_anion          &src);
-                   py::object convToPy(          const std::string      &src);
-template <class T> py::object convToPy(          const Vector<T>        &src);
-template <class T> py::object convToPy(          const Matrix<T>        &src);
-template <class T> py::object convToPy(          const Set<T>           &src);
-template <class T> py::object convToPy(          const Dict<T,dictkey>  &src);
-template <class T> py::object convToPy(          const SparseVector<T>  &src);
-                   py::object convToPy(          const gentype          &src);
+                   py::object convToPy(      int              src);
+                   py::object convToPy(      double           src);
+                   py::object convToPy(const d_anion         &src);
+                   py::object convToPy(const std::string     &src);
+template <class T> py::object convToPy(const Vector<T>       &src);
+template <class T> py::object convToPy(const Matrix<T>       &src);
+template <class T> py::object convToPy(const Set<T>          &src);
+template <class T> py::object convToPy(const Dict<T,dictkey> &src);
+template <class T> py::object convToPy(const SparseVector<T> &src);
+                   py::object convToPy(const gentype         &src);
 
 template <class T> py::object convToPy(int size, const T *src);
 template <> py::object convToPy(const Vector<double> &src);
@@ -653,6 +907,7 @@ OPTGETSETDEF(modelbaseline,   Bayesian,std::string)
 
 // Python module definition
 
+//PYBIND11_MODULE(_pyheavy, m) {
 PYBIND11_MODULE(pyheavy, m) {
     m.doc() = "SVMHeavy Machine Learning Library.";
 
@@ -1716,15 +1971,19 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, const py::objec
 
     if ( dim <= 0 )
     {
-        static py::object ValueError = py::module_::import("builtins").attr("ValueError");
-        py::object err = ValueError("dim must be a positive integer");
+        py::object builtins   = py::module_::import("builtins");
+        py::object ValueError = builtins.attr("ValueError");
+        py::object err        = ValueError("dim must be a positive integer");
+
         return err;
     }
 
-    if ( !isCallable(objfn) )
+    if ( !isCallable(&objfn) )
     {
-        static py::object ValueError = py::module_::import("builtins").attr("ValueError");
-        py::object err = ValueError("objfn must be a callable");
+        py::object builtins   = py::module_::import("builtins");
+        py::object ValueError = builtins.attr("ValueError");
+        py::object err        = ValueError("objfn must be a callable");
+
         return err;
     }
 
@@ -1750,6 +2009,7 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, const py::objec
 
     // This becomes the callback (effectively a lambda)
 
+//errstream() << "Shannon: optim call to gentype from python " << i << " using " << strfn << "\n";
     gentype fnarg(strfn);
 
     // Return values for callback
@@ -1856,19 +2116,10 @@ const SparseVector<gentype> &getvec(py::object xa, SparseVector<gentype> &xxa);
 const SparseVector<gentype> &getvec(py::object xa, SparseVector<gentype> &xxa)
 {
     dostartup();
-
     int i = glob_MLInd(0);
 
-    if ( py::isinstance<py::int_>(xa) )
-    {
-        return getMLrefconst(i).x(py::cast<py::int_>(xa));
-    }
-
-    if ( convFromPy(xxa,xa) )
-    {
-        throw("Can't convert x to sparsevector");
-        //return py::none();
-    }
+    if      ( py::isinstance<py::int_>(xa) ) { return getMLrefconst(i).x(py::cast<py::int_>(xa)); }
+    else if ( convFromPy(xxa,xa) )           { throw("Can't convert x to sparsevector");          }
 
     return xxa;
 }
@@ -1947,16 +2198,25 @@ py::object svmtest(int i, std::string type)
     {
         for ( int j = 1 ; j <= NUMOPTTESTFNS ; j++ )
         {
-            gentype jj(joffset+j);
-            gentype x("x");
+            {
+                gentype jj(j);
+                gentype x("x");
 
-            gentestfn("&",j) = testfn(jj,x); // this is a function of x
+                gentestfn("&",j) = testfn(jj,x); // this is a function of x
+            }
+
+            {
+                gentype jj(2000+j);
+                gentype x("x");
+
+                gentestfn("&",2000+j) = testfn(jj,x); // this is a function of x
+            }
         }
 
         firstrun = false;
     }
 
-    return convToPy(gentestfn(i));
+    return convToPy(gentestfn(i+joffset));
 }
 
 void callintercalc(void)
@@ -2366,6 +2626,8 @@ const T &setgetsrc(int &i, int doset, T *val = nullptr)
     static thread_local SparseVector<T *> xval;
     static thread_local SparseVector<int> useind;
 
+    static T *dummyres = nullptr; // static py::object can cause issues, apparently?
+
     if ( doset == 2 )
     {
         if ( i == -1 )
@@ -2376,7 +2638,7 @@ const T &setgetsrc(int &i, int doset, T *val = nullptr)
                 setgetsrc(i,doset,val);
             }
 
-            i = 0;
+            i = -1;
         }
 
         else
@@ -2385,6 +2647,8 @@ const T &setgetsrc(int &i, int doset, T *val = nullptr)
             xval("&",i) = nullptr;
             xval.zero(i);
             useind.zero(i);
+
+            i = -1;
         }
     }
 
@@ -2402,6 +2666,17 @@ const T &setgetsrc(int &i, int doset, T *val = nullptr)
         useind("&",i) = 1;
     }
 
+    if ( ( i < 0 ) || !xval(i) )
+    {
+errstream() << "Accidental return of undefined object in setgetsrc\n";
+        if ( !dummyres )
+        {
+            MEMNEW(dummyres,T);
+        }
+
+        return *dummyres;
+    }
+
     return *(xval(i));
 }
 
@@ -2411,8 +2686,8 @@ gentype    gengetsrc(int k) { return setgetsrc<gentype   >(k,0); }
 int pyosetsrc(int k, py::object src) { setgetsrc(k,1,&src); return k; }
 int gensetsrc(int k, gentype    src) { setgetsrc(k,1,&src); return k; }
 
-void pyosrcreset(void) { int i = -1; setgetsrc<py::object>(i,2); }
-void gensrcreset(void) { int i = -1; setgetsrc<gentype   >(i,2); }
+void pyosrcreset(void) { int k = -1; setgetsrc<py::object>(k,2); }
+void gensrcreset(void) { int k = -1; setgetsrc<gentype   >(k,2); }
 
 void pyosrcreset(int k) { setgetsrc<py::object>(k,2); }
 void gensrcreset(int k) { setgetsrc<gentype   >(k,2); }
@@ -2455,17 +2730,32 @@ template <class T> py::object convToPy(const SparseVector<T> &src) { gentype alt
 py::object convToPy(const gentype &src)
 {
     if      ( src.isValNull()    ) { return py::none();                                    }
-    else if ( src.isValInteger() ) { return convToPy((int) src);                           }
-    else if ( src.isValReal()    ) { return convToPy((double) src);                        }
-    else if ( src.isValAnion()   ) { return convToPy((const d_anion &) src);               }
-    else if ( src.isValString()  ) { return convToPy((const std::string &) src);           }
-    else if ( src.isValVector()  ) { return convToPy((const Vector<gentype> &) src);       }
-    else if ( src.isValMatrix()  ) { return convToPy((const Matrix<gentype> &) src);       }
-    else if ( src.isValSet()     ) { return convToPy((const Set<gentype> &) src);          }
+    else if ( src.isValInteger() ) { return convToPy((int)                           src); }
+    else if ( src.isValReal()    ) { return convToPy((double)                        src); }
+    else if ( src.isValAnion()   ) { return convToPy((const d_anion &)               src); }
+    else if ( src.isValString()  ) { return convToPy((const std::string &)           src); }
+    else if ( src.isValVector()  ) { return convToPy((const Vector<gentype> &)       src); }
+    else if ( src.isValMatrix()  ) { return convToPy((const Matrix<gentype> &)       src); }
+    else if ( src.isValSet()     ) { return convToPy((const Set<gentype> &)          src); }
     else if ( src.isValDict()    ) { return convToPy((const Dict<gentype,dictkey> &) src); }
 
     else if ( src.isValEqnDir() )
     {
+/*
+        // Make a stateful lambda that will evaluate src given argument of
+        // type py::object and return a result of type py::object
+
+        auto res = [src](py::object x) -> py::object
+        {
+            return convToPy(src(convFromPy(x)));
+        };
+
+        std::function<py::object(py::object)> altres(res);
+        py::function altaltres = altres;
+
+        return altaltres;
+*/
+
         // Store function
 
         int i = gensetsrc(-1,src);
@@ -2478,11 +2768,14 @@ py::object convToPy(const gentype &src)
         fn += std::to_string(i);
         fn += ",x))";
 
+//errstream() << "Shannon: call to gentype from python " << i << " using " << fn << "\n";
         // Evaluated command to create function pointer
 
-        static py::object eval_function = get_builtins().attr("eval");
+        py::object builtins = py::module_::import("builtins");
+        py::object eval     = builtins.attr("eval");
+        py::object res      = eval(fn);
 
-        return eval_function(fn);
+        return res;
     }
 
 //    else if ( src.isValVectorReal() ) - Nones are real according to gentype, but we want to retain structure in the result, so don't do this version!
@@ -2499,103 +2792,18 @@ py::object convToPy(const gentype &src)
 
 
 
+int    naivePyToInt(const py::object &src) { if ( py::isinstance<py::int_>(src) ) { return (int) py::cast<py::int_>(src);            } return (int) ((double) py::cast<py::float_>(src)); }
+double naivePyToDbl(const py::object &src) { if ( py::isinstance<py::int_>(src) ) { return (double) ((int) py::cast<py::int_>(src)); } return (double) py::cast<py::float_>(src); }
 
 
 
 template <class T>
 int convFromPy(T &res, const py::handle &src); // needed helper for raw python data
 
-int convFromPy(int &res, const py::object &src)
-{
-    res = 0;
-
-    if ( py::isinstance<py::int_>(src) )
-    {
-        res = py::cast<py::int_>(src);
-
-        return 0;
-    }
-
-    else if ( py::isinstance<py::float_>(src) )
-    {
-        double tmpres;
-        tmpres = py::cast<py::float_>(src);
-        res = (int) tmpres;
-
-        return 0;
-    }
-
-    return 1;
-}
-
-int convFromPy(double &res, const py::object &src)
-{
-    if ( py::isinstance<py::int_>(src) )
-    {
-        int tmpres = 0;
-        tmpres = py::cast<py::int_>(src);
-        res = tmpres;
-
-        return 0;
-    }
-
-    else if ( py::isinstance<py::float_>(src) )
-    {
-        res = py::cast<py::float_>(src);
-
-        return 0;
-    }
-
-    res = nan("");
-
-    return 2;
-}
-
-int convFromPy(d_anion &res, const py::object &src)
-{
-    if ( py::isinstance<py::int_>(src) )
-    {
-        int tmpres = 0;
-        tmpres = py::cast<py::int_>(src);
-        res = (double) tmpres;
-
-        return 0;
-    }
-
-    else if ( py::isinstance<py::float_>(src) )
-    {
-        double tmpres;
-        tmpres = py::cast<py::float_>(src);
-        res = tmpres;
-
-        return 0;
-    }
-
-    else if ( isComplex(src) )
-    {
-        res = py::cast<std::complex<double> >(src);
-
-        return 0;
-    }
-
-    res = nan("");
-
-    return 4;
-}
-
-int convFromPy(std::string &res, const py::object &src)
-{
-    if ( py::isinstance<py::str>(src) )
-    {
-        res = py::cast<py::str>(src);
-
-        return 0;
-    }
-
-    res = "";
-
-    return 8;
-}
+int convFromPy(int         &res, const py::object &src) { if ( py::isinstance<py::int_>(src) || py::isinstance<py::float_>(src) ) { res = naivePyToInt(src); return 0; } res = 0;       return 1; }
+int convFromPy(double      &res, const py::object &src) { if ( py::isinstance<py::int_>(src) || py::isinstance<py::float_>(src) ) { res = naivePyToDbl(src); return 0; } res = nan(""); return 2; }
+int convFromPy(d_anion     &res, const py::object &src) { if ( py::isinstance<py::int_>(src) || py::isinstance<py::float_>(src) ) { res = naivePyToDbl(src); return 0; } else if ( isComplex(&src) ) { res = py::cast<std::complex<double> >(src); return 0; } res = nan(""); return 4;   }
+int convFromPy(std::string &res, const py::object &src) { if ( py::isinstance<py::str>(src) ) { res = py::cast<py::str>(src);  return 0; } res = ""; return 8;   }
 
 template <class T>
 int convFromPy(Vector<T> &res, const py::object &src)
@@ -2857,20 +3065,20 @@ int convFromPy(gentype &res, const py::object &src)
     int errcode = 0;
 
     if      ( src.is_none()                   ) { res.force_null();                             }
-    else if ( py::isinstance<py::int_>(src)   ) { errcode = convFromPy(res.force_int(),src);    }
+    else if ( py::isinstance<py::int_>(src)   ) { errcode = convFromPy(res.force_int(),   src); }
     else if ( py::isinstance<py::float_>(src) ) { errcode = convFromPy(res.force_double(),src); }
     else if ( py::isinstance<py::str>(src)    ) { errcode = convFromPy(res.force_string(),src); }
     else if ( py::isinstance<py::list>(src)   ) { errcode = convFromPy(res.force_vector(),src); }
-    else if ( py::isinstance<py::dict>(src)   ) { errcode = convFromPy(res.force_dict(),src);   }
-    else if ( py::isinstance<py::tuple>(src)  ) { errcode = convFromPy(res.force_set(),src);    }
-    else if ( isComplex(src)                  ) { errcode = convFromPy(res.force_anion(),src);  }
+    else if ( py::isinstance<py::dict>(src)   ) { errcode = convFromPy(res.force_dict(),  src); }
+    else if ( py::isinstance<py::tuple>(src)  ) { errcode = convFromPy(res.force_set(),   src); }
+    else if ( isComplex(&src)                 ) { errcode = convFromPy(res.force_anion(), src); }
 
     //else if ( isNumpyMatrix(src) )
     //{
     //    errcode = convFromPy(res.force_matrix(),src);
     //}
 
-    else if ( isCallable(src) )
+    else if ( isCallable(&src) )
     {
         // Store function
 
@@ -2884,6 +3092,7 @@ int convFromPy(gentype &res, const py::object &src)
         fn += std::to_string(i);
         fn += "))\",x)";
 
+//errstream() << "Shannon: call to python from gentype " << i << " using " << fn << "\n";
         gentype altres(fn);
 
         res = altres;
@@ -2976,13 +3185,13 @@ gentype pyoevalsrc(int k, gentype xx)
 
     // Evaluated run command
 
-    static py::object eval_function = get_builtins().attr("eval");
-
-    py::object resultobj = eval_function(evalfn);
+    py::object builtins = py::module_::import("builtins");
+    py::object eval     = builtins.attr("eval");
+    py::object resobj   = eval(evalfn);
 
     // Retrieve results of operation
 
-    if ( convFromPy(res,resultobj) )
+    if ( convFromPy(res,resobj) )
     {
         res.force_double() = nan("");
     }
@@ -3029,11 +3238,11 @@ errstream() << "constructed evalstring " << evalfn << "\n";
 
     // Evaluated run command
 
-    static py::object eval_function = get_builtins().attr("eval");
-
-    py::object resultobj = eval_function(evalfn);
+    py::object builtins = py::module_::import("builtins");
+    py::object eval     = builtins.attr("eval");
+    py::object resobj   = eval(evalfn);
 #ifdef DEBUGPY
-errstream() << "evaluation done, result should be here: " << resultobj << "!\n";
+errstream() << "evaluation done, result should be here: " << resobj << "!\n";
 #endif
 
     // Retrieve results of operation
@@ -3041,7 +3250,7 @@ errstream() << "evaluation done, result should be here: " << resultobj << "!\n";
 #ifdef DEBUGPY
     int errcode =
 #endif
-    convFromPy(res,resultobj);
+    convFromPy(res,resobj);
 #ifdef DEBUGPY
 errstream() << "result converted back " << res << " (errcode = " << errcode << ")\n";
 #endif
@@ -3187,8 +3396,11 @@ void cliPrintToErrLog(char c, int mode = 0);
 
 //SparseVector<ML_Mutable *> &getMLmodels(void);
 
-
-
+int atexitblock(void (*)(void));
+int atexitblock(void (*)(void))
+{
+    return 0;
+}
 
 void dostartup(void)
 {
@@ -3203,6 +3415,18 @@ void dostartup(void)
         void(*xcliCharPrintOut)(char c) = cliCharPrintOut;
         static LoggingOstreamOut clicout(xcliCharPrintOut);
         setoutstream(&clicout);
+
+        // atexit doesn't work like we want, so do this instead
+        auto atexitfn = py::module_::import("atexit");
+        atexitfn.attr("register")(py::cpp_function([]() {
+            // perform cleanup here -- this function is called with the GIL held
+            //exitgentype();
+            pyosrcreset();
+            gensrcreset();
+            svm_atexit(nullptr,nullptr,0); // manual cleanup
+        }));
+        // force prevent double-call
+        //svm_setatexitfn(atexitblock);
 
         firstrun = false;
 
@@ -3388,7 +3612,7 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
 
         errstream() << "}";
 
-        MEMDEL(commstack);
+        MEMDEL(commstack); commstack = nullptr;
 
         // If currently persistent and persistence not requested then turn off
 

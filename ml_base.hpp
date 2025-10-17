@@ -1739,8 +1739,8 @@ public:
 
             // Process indirections
 
-            xuntang      = new SparseVector<gentype>(xib);
-            xzinfountang = new vecInfo;
+            MEMNEW(xuntang,     SparseVector<gentype>(xib));
+            MEMNEW(xzinfountang,vecInfo);
 
                           (*xuntang).zeron();
                           (*xuntang).zerof1();
@@ -1772,8 +1772,8 @@ public:
 
             // Process indirections
 
-            xuntang      = new SparseVector<gentype>(xib);
-            xzinfountang = new vecInfo;
+            MEMNEW(xuntang     ,SparseVector<gentype>(xib));
+            MEMNEW(xzinfountang,vecInfo);
 
                           (*xuntang).zeron();
             if ( ilr  ) { (*xuntang).overwritef1(*xfar);       }
@@ -1798,8 +1798,8 @@ public:
 
             // Process indirections
 
-            xuntang      = new SparseVector<gentype>(xib);
-            xzinfountang = new vecInfo;
+            MEMNEW(xuntang     ,SparseVector<gentype>(xib));
+            MEMNEW(xzinfountang,vecInfo);
 
             if ( ilr  ) { (*xuntang).overwriten(*xnear);       }
                           (*xuntang).zerof1();
@@ -1822,8 +1822,8 @@ public:
         {
             // Process indirections
 
-            xuntang      = new SparseVector<gentype>(xib);
-            xzinfountang = new vecInfo;
+            MEMNEW(xuntang,     SparseVector<gentype>(xib));
+            MEMNEW(xzinfountang,vecInfo);
 
             if ( ilr  ) { (*xuntang).overwriten(*xnear);       }
             if ( irr  ) { (*xuntang).overwritef1(*xfar);       }
@@ -2536,25 +2536,10 @@ private:
         wildxgentd = nullptr;
         wildxxgent = nullptr;
 
-        if ( allocxinfoa && wasnulla )
-        {
-            MEMDEL(allocxinfoa);
-        }
-
-        if ( allocxinfob && wasnullb )
-        {
-            MEMDEL(allocxinfob);
-        }
-
-        if ( allocxinfoc && wasnullc )
-        {
-            MEMDEL(allocxinfoc);
-        }
-
-        if ( allocxinfod && wasnulld )
-        {
-            MEMDEL(allocxinfod);
-        }
+        if ( allocxinfoa && wasnulla ) { MEMDEL(allocxinfoa); allocxinfoa = nullptr; }
+        if ( allocxinfob && wasnullb ) { MEMDEL(allocxinfob); allocxinfob = nullptr; }
+        if ( allocxinfoc && wasnullc ) { MEMDEL(allocxinfoc); allocxinfoc = nullptr; }
+        if ( allocxinfod && wasnulld ) { MEMDEL(allocxinfod); allocxinfod = nullptr; }
 
         wildxinfoa = nullptr;
         wildxinfob = nullptr;

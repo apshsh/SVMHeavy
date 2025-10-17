@@ -270,13 +270,13 @@ public:
     template <class S> void sv     (int i, S x); // NOT FAST. Included for completeness
     template <class S> void svdirec(int i, S x); // FAST: By using this, you can potentially avoid destroying altcontent. Only override is T=gentype, S=double
 
-    T         &direref(int i                                  ) { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( content ); resetvecID(); killnearfar(); killaltcontent(); return (*content)("&",i);     }
-    Vector<T> &direref(const Vector<int> &i, retVector<T> &tmp) { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( content ); resetvecID(); killnearfar(); killaltcontent(); return (*content)("&",i,tmp); }
+    T         &direref(int i                                  ) { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( indices && content ); resetvecID(); killnearfar(); killaltcontent(); return (*content)("&",i);     }
+    Vector<T> &direref(const Vector<int> &i, retVector<T> &tmp) { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( indices && content ); resetvecID(); killnearfar(); killaltcontent(); return (*content)("&",i,tmp); }
 
     const T         &direcref(int i                                  ) const { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( content ); return (*content)(i);     }
     const Vector<T> &direcref(const Vector<int> &i, retVector<T> &tmp) const { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( content ); return (*content)(i,tmp); }
 
-    T direval(int i) const { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( content ); return (*content).v(i); }
+    T direval(int i) const { NiceAssert( ( i >= 0 ) && ( i < indsize() ) ); NiceAssert( indices && content ); return (*content).v(i); }
 
     // Equivalents of () operators but for near, f1, f2, f3 and f4
     // Optional additional argument gives near/far up offset
@@ -522,7 +522,7 @@ public:
     void useSlackAllocation(void);
     void applyOnAll(void (*fn)(T &, int), int argx);
 
-    bool array_norm (void) const { return (*content).array_norm(); }
+    bool array_norm (void) const { return (*content).array_norm();  }
     bool array_tight(void) const { return (*content).array_tight(); }
     bool array_slack(void) const { return (*content).array_slack(); }
 
@@ -583,14 +583,12 @@ public:
     {
         if ( altcontent )
         {
-            MEMDELARRAY(altcontent);
-            altcontent = nullptr;
+            MEMDELARRAY(altcontent); altcontent = nullptr;
         }
 
         if ( altcontentsp )
         {
-            MEMDELARRAY(altcontentsp);
-            altcontentsp = nullptr;
+            MEMDELARRAY(altcontentsp); altcontentsp = nullptr;
         }
     }
 
@@ -607,8 +605,7 @@ public:
     {
         if ( npointer )
         {
-            MEMDELARRAY(npointer);
-            npointer = nullptr;
+            MEMDELARRAY(npointer); npointer = nullptr;
             xnupsize = -1;
         }
     }
@@ -617,8 +614,7 @@ public:
     {
         if ( f1pointer )
         {
-            MEMDELARRAY(f1pointer);
-            f1pointer = nullptr;
+            MEMDELARRAY(f1pointer); f1pointer = nullptr;
             xf1upsize = -1;
         }
     }
@@ -627,8 +623,7 @@ public:
     {
         if ( f2pointer )
         {
-            MEMDELARRAY(f2pointer);
-            f2pointer = nullptr;
+            MEMDELARRAY(f2pointer); f2pointer = nullptr;
             xf2upsize = -1;
         }
     }
@@ -637,8 +632,7 @@ public:
     {
         if ( f3pointer )
         {
-            MEMDELARRAY(f3pointer);
-            f3pointer = nullptr;
+            MEMDELARRAY(f3pointer); f3pointer = nullptr;
             xf3upsize = -1;
         }
     }
@@ -647,8 +641,7 @@ public:
     {
         if ( f4pointer )
         {
-            MEMDELARRAY(f4pointer);
-            f4pointer = nullptr;
+            MEMDELARRAY(f4pointer); f4pointer = nullptr;
             xf4upsize = -1;
         }
     }
@@ -1697,6 +1690,8 @@ const SparseVector<T> &SparseVector<T>::f4up(int u) const
 template <class T>
 const SparseVector<T> &SparseVector<T>::n(void) const
 {
+    NiceAssert( indices && content );
+
     int i,j,s,p,qs,rs;
 
     p  = 0;
@@ -1796,7 +1791,7 @@ const SparseVector<T> &SparseVector<T>::n(void) const
 
         if ( !npointerused || ( npointer != xnpointer ) )
         {
-            MEMDELARRAY(xnpointer);
+            MEMDELARRAY(xnpointer); xnpointer = nullptr;
         }
     }
 
@@ -1806,6 +1801,8 @@ const SparseVector<T> &SparseVector<T>::n(void) const
 template <class T>
 const SparseVector<T> &SparseVector<T>::f1(void) const
 {
+    NiceAssert( indices && content );
+
     int i,j,s,p,qs,rs;
 
     p  = nindsize();
@@ -1892,7 +1889,7 @@ const SparseVector<T> &SparseVector<T>::f1(void) const
 
         if ( !f1pointerused || ( f1pointer != xf1pointer ) )
         {
-            MEMDELARRAY(xf1pointer);
+            MEMDELARRAY(xf1pointer); xf1pointer = nullptr;
         }
     }
 
@@ -1902,6 +1899,8 @@ const SparseVector<T> &SparseVector<T>::f1(void) const
 template <class T>
 const SparseVector<T> &SparseVector<T>::f2(void) const
 {
+    NiceAssert( indices && content );
+
     int i,j,s,p,qs,rs;
 
     p  = ntof1indsize();
@@ -1988,7 +1987,7 @@ const SparseVector<T> &SparseVector<T>::f2(void) const
 
         if ( !f2pointerused || ( f2pointer != xf2pointer ) )
         {
-            MEMDELARRAY(xf2pointer);
+            MEMDELARRAY(xf2pointer); xf2pointer = nullptr;
         }
     }
 
@@ -1998,6 +1997,8 @@ const SparseVector<T> &SparseVector<T>::f2(void) const
 template <class T>
 const SparseVector<T> &SparseVector<T>::f3(void) const
 {
+    NiceAssert( indices && content );
+
     int i,j,s,p,qs,rs;
 
     p  = ntof2indsize();
@@ -2084,7 +2085,7 @@ const SparseVector<T> &SparseVector<T>::f3(void) const
 
         if ( !f3pointerused || ( f3pointer != xf3pointer ) )
         {
-            MEMDELARRAY(xf3pointer);
+            MEMDELARRAY(xf3pointer); xf3pointer = nullptr;
         }
     }
 
@@ -2094,6 +2095,8 @@ const SparseVector<T> &SparseVector<T>::f3(void) const
 template <class T>
 const SparseVector<T> &SparseVector<T>::f4(void) const
 {
+    NiceAssert( indices && content );
+
     int i,j,s,p,qs,rs;
 
     p  = ntof3indsize();
@@ -2180,7 +2183,7 @@ const SparseVector<T> &SparseVector<T>::f4(void) const
 
         if ( !f4pointerused || ( f4pointer != xf4pointer ) )
         {
-            MEMDELARRAY(xf4pointer);
+            MEMDELARRAY(xf4pointer); xf4pointer = nullptr;
         }
     }
 
@@ -2271,9 +2274,9 @@ SparseVector<T>::SparseVector(const T &src) : indices(nullptr), content(nullptr)
     NiceAssert(indices);
     NiceAssert(content);
 
-    setzero((*content)("&",0));
-    (*content)("&",1) = src;
+    setzero((*content)("&",1));
 
+    (*content)("&",0) = src;
     (*indices)("&",0) = 0;
 }
 
@@ -2313,14 +2316,12 @@ SparseVector<T>::~SparseVector()
 
     if ( indices )
     {
-        MEMDEL(indices);
-        //indices = nullptr;
+        MEMDEL(indices); indices = nullptr;
     }
 
     if ( content )
     {
-        MEMDEL(content);
-        //content = nullptr;
+        MEMDEL(content); content = nullptr;
     }
 }
 
@@ -2333,6 +2334,8 @@ template <class T>
 template <class S>
 SparseVector<T> &SparseVector<T>::assign(const SparseVector<S> &src)
 {
+    NiceAssert( indices && content );
+
     // No need to worry about shared base here
 
     killnearfar();
@@ -2374,6 +2377,8 @@ template <class T>
 template <class S>
 SparseVector<T> &SparseVector<T>::nearassign(const SparseVector<S> &src)
 {
+    NiceAssert( indices && content );
+
     // No need to worry about shared base here
 
     resetvecID();
@@ -2403,6 +2408,8 @@ template <class T>
 template <class S>
 SparseVector<T> &SparseVector<T>::castassign(const SparseVector<S> &src)
 {
+    NiceAssert( indices && content );
+
     // No need to worry about shared base here
 
     resetvecID();
@@ -2430,6 +2437,8 @@ SparseVector<T> &SparseVector<T>::castassign(const SparseVector<S> &src)
 template <class T>
 SparseVector<T> &SparseVector<T>::operator=(const Vector<T> &src)
 {
+    NiceAssert( indices && content );
+
     // No need to worry about shared base here
 
     resetvecID();
@@ -2454,6 +2463,8 @@ SparseVector<T> &SparseVector<T>::operator=(const Vector<T> &src)
 template <class T>
 SparseVector<T> &SparseVector<T>::operator=(const T &src)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -2470,6 +2481,8 @@ SparseVector<T> &SparseVector<T>::operator=(const T &src)
 template <class T>
 SparseVector<T> &SparseVector<T>::overwrite(const SparseVector<T> &src)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -2494,6 +2507,8 @@ SparseVector<T> &SparseVector<T>::overwrite(const SparseVector<T> &src)
 template <class T>
 SparseVector<T> &SparseVector<T>::ident(void)
 {
+    NiceAssert( indices && content );
+
     if ( altcontentsp )
     {
         killaltcontent(); // because n()s hvae altcontent also
@@ -2536,6 +2551,8 @@ SparseVector<T> &SparseVector<T>::ident(void)
 template <class T>
 SparseVector<T> &SparseVector<T>::conj(void)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killnearfar();
 
@@ -2549,6 +2566,8 @@ SparseVector<T> &SparseVector<T>::conj(void)
 template <class T>
 SparseVector<T> &SparseVector<T>::rand(void)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -2563,6 +2582,8 @@ SparseVector<T> &SparseVector<T>::rand(void)
 template <class T>
 SparseVector<T> &SparseVector<T>::zero(void)
 {
+    NiceAssert( indices && content );
+
     if ( size() == 0 )
     {
         return *this;
@@ -2584,6 +2605,8 @@ SparseVector<T> &SparseVector<T>::zero(void)
 template <class T>
 SparseVector<T> &SparseVector<T>::zeron(int u)
 {
+    NiceAssert( indices && content );
+
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
 
@@ -2618,6 +2641,8 @@ SparseVector<T> &SparseVector<T>::zeron(int u)
 template <class T>
 SparseVector<T> &SparseVector<T>::zerof1(int u)
 {
+    NiceAssert( indices && content );
+
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
 
@@ -2652,6 +2677,8 @@ SparseVector<T> &SparseVector<T>::zerof1(int u)
 template <class T>
 SparseVector<T> &SparseVector<T>::zerof2(int u)
 {
+    NiceAssert( indices && content );
+
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
 
@@ -2686,6 +2713,8 @@ SparseVector<T> &SparseVector<T>::zerof2(int u)
 template <class T>
 SparseVector<T> &SparseVector<T>::zerof3(int u)
 {
+    NiceAssert( indices && content );
+
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
 
@@ -2720,6 +2749,8 @@ SparseVector<T> &SparseVector<T>::zerof3(int u)
 template <class T>
 SparseVector<T> &SparseVector<T>::zerof4(int u)
 {
+    NiceAssert( indices && content );
+
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
 
@@ -2754,6 +2785,8 @@ SparseVector<T> &SparseVector<T>::zerof4(int u)
 template <class T>
 SparseVector<T> &SparseVector<T>::zeronotnu(int u)
 {
+    NiceAssert( indices && content );
+
     NiceAssert( u >= 0 );
     NiceAssert( u < DEFAULT_NUM_TUPLES );
 
@@ -2889,6 +2922,8 @@ SparseVector<T> &SparseVector<T>::zeronotnu(int u)
 template <class T>
 SparseVector<T> &SparseVector<T>::zeron(void)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -2915,6 +2950,8 @@ SparseVector<T> &SparseVector<T>::zeron(void)
 template <class T>
 SparseVector<T> &SparseVector<T>::zerof1(void)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killf1();
@@ -2941,6 +2978,8 @@ SparseVector<T> &SparseVector<T>::zerof1(void)
 template <class T>
 SparseVector<T> &SparseVector<T>::zerof2(void)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killf2();
@@ -2967,6 +3006,8 @@ SparseVector<T> &SparseVector<T>::zerof2(void)
 template <class T>
 SparseVector<T> &SparseVector<T>::zerof3(void)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killf3();
@@ -2993,6 +3034,8 @@ SparseVector<T> &SparseVector<T>::zerof3(void)
 template <class T>
 SparseVector<T> &SparseVector<T>::zerof4(void)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killf4();
@@ -3019,6 +3062,8 @@ SparseVector<T> &SparseVector<T>::zerof4(void)
 template <class T>
 SparseVector<T> &SparseVector<T>::overwriten(const SparseVector<T> &src, int u)
 {
+    NiceAssert( indices && content );
+
     zeron(u);
 
     int srcsize = src.nindsize();
@@ -3039,6 +3084,8 @@ SparseVector<T> &SparseVector<T>::overwriten(const SparseVector<T> &src, int u)
 template <class T>
 SparseVector<T> &SparseVector<T>::overwritef1(const SparseVector<T> &src, int u)
 {
+    NiceAssert( indices && content );
+
     zerof1(u);
 
     int srcsize = src.nindsize();
@@ -3059,6 +3106,8 @@ SparseVector<T> &SparseVector<T>::overwritef1(const SparseVector<T> &src, int u)
 template <class T>
 SparseVector<T> &SparseVector<T>::overwritef2(const SparseVector<T> &src, int u)
 {
+    NiceAssert( indices && content );
+
     zerof2(u);
 
     int srcsize = src.nindsize();
@@ -3079,6 +3128,8 @@ SparseVector<T> &SparseVector<T>::overwritef2(const SparseVector<T> &src, int u)
 template <class T>
 SparseVector<T> &SparseVector<T>::overwritef3(const SparseVector<T> &src, int u)
 {
+    NiceAssert( indices && content );
+
     zerof3(u);
 
     int srcsize = src.nindsize();
@@ -3099,6 +3150,8 @@ SparseVector<T> &SparseVector<T>::overwritef3(const SparseVector<T> &src, int u)
 template <class T>
 SparseVector<T> &SparseVector<T>::overwritef4(const SparseVector<T> &src, int u)
 {
+    NiceAssert( indices && content );
+
     zerof4(u);
 
     int srcsize = src.nindsize();
@@ -3119,6 +3172,8 @@ SparseVector<T> &SparseVector<T>::overwritef4(const SparseVector<T> &src, int u)
 template <class T>
 SparseVector<T> &SparseVector<T>::overwriten(const SparseVector<T> &src)
 {
+    NiceAssert( indices && content );
+
     zeron();
 
     int srcsize = src.nindsize();
@@ -3139,6 +3194,8 @@ SparseVector<T> &SparseVector<T>::overwriten(const SparseVector<T> &src)
 template <class T>
 SparseVector<T> &SparseVector<T>::overwritef1(const SparseVector<T> &src)
 {
+    NiceAssert( indices && content );
+
     zerof1();
 
     int srcsize = src.f1indsize();
@@ -3159,6 +3216,8 @@ SparseVector<T> &SparseVector<T>::overwritef1(const SparseVector<T> &src)
 template <class T>
 SparseVector<T> &SparseVector<T>::overwritef2(const SparseVector<T> &src)
 {
+    NiceAssert( indices && content );
+
     zerof2();
 
     int srcsize = src.f2indsize();
@@ -3179,6 +3238,8 @@ SparseVector<T> &SparseVector<T>::overwritef2(const SparseVector<T> &src)
 template <class T>
 SparseVector<T> &SparseVector<T>::overwritef3(const SparseVector<T> &src)
 {
+    NiceAssert( indices && content );
+
     zerof3();
 
     int srcsize = src.f3indsize();
@@ -3199,6 +3260,8 @@ SparseVector<T> &SparseVector<T>::overwritef3(const SparseVector<T> &src)
 template <class T>
 SparseVector<T> &SparseVector<T>::overwritef4(const SparseVector<T> &src)
 {
+    NiceAssert( indices && content );
+
     zerof4();
 
     int srcsize = src.f4indsize();
@@ -3219,6 +3282,8 @@ SparseVector<T> &SparseVector<T>::overwritef4(const SparseVector<T> &src)
 template <class T>
 SparseVector<T> &SparseVector<T>::zero(int i)
 {
+    NiceAssert( indices && content );
+
     // FIXME: really should only delete the array containing the relevant element
 
     resetvecID();
@@ -3242,6 +3307,8 @@ SparseVector<T> &SparseVector<T>::zero(int i)
 template <class T>
 SparseVector<T> &SparseVector<T>::zero(const Vector<int> &i)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -3262,6 +3329,8 @@ SparseVector<T> &SparseVector<T>::zero(const Vector<int> &i)
 template <class T>
 SparseVector<T> &SparseVector<T>::softzero(void)
 {
+    NiceAssert( indices && content );
+
     if ( altcontentsp )
     {
         killaltcontent(); // because n()s hvae altcontent also
@@ -3304,6 +3373,8 @@ SparseVector<T> &SparseVector<T>::softzero(void)
 template <class T>
 SparseVector<T> &SparseVector<T>::zeropassive(void)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -3318,6 +3389,8 @@ SparseVector<T> &SparseVector<T>::zeropassive(void)
 template <class T>
 SparseVector<T> &SparseVector<T>::posate(void)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -3332,6 +3405,8 @@ SparseVector<T> &SparseVector<T>::posate(void)
 template <class T>
 SparseVector<T> &SparseVector<T>::negate(void)
 {
+    NiceAssert( indices && content );
+
     if ( altcontentsp )
     {
         killaltcontent(); // because n()s hvae altcontent also
@@ -3372,6 +3447,8 @@ SparseVector<T> &SparseVector<T>::negate(void)
 template <class T>
 Vector<T> &SparseVector<T>::operator()(const char *dummy, retVector<T> &tmp)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -3389,6 +3466,8 @@ Vector<T> &SparseVector<T>::operator()(const char *dummy, retVector<T> &tmp)
 template <class T>
 T &SparseVector<T>::operator()(const char *, int i)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -3423,6 +3502,8 @@ template <class T>
 template <class S>
 void SparseVector<T>::sv(int i, S x)
 {
+    NiceAssert( indices && content );
+
     (*this)("&",i) = x;
 }
 
@@ -3430,12 +3511,16 @@ template <class T>
 template <class S>
 void SparseVector<T>::svdirec(int i, S x)
 {
+    NiceAssert( indices && content );
+
     (*this).direref(i) = x;
 }
 
 template <class T>
 void SparseVector<T>::set(int i, const T &src)
 {
+    NiceAssert( indices && content );
+
     (*this)("&",i) = src;
 }
 
@@ -3445,6 +3530,8 @@ void SparseVector<T>::set(int i, const T &src)
 template <class T>
 T &SparseVector<T>::n(const char *, int i)
 {
+    NiceAssert( indices && content );
+
     i += INDNOFFSTART;
 
     resetvecID();
@@ -3480,6 +3567,8 @@ T &SparseVector<T>::n(const char *, int i)
 template <class T>
 T &SparseVector<T>::f1(const char *, int i)
 {
+    NiceAssert( indices && content );
+
     i += INDF1OFFSTART;
 
     resetvecID();
@@ -3515,6 +3604,8 @@ T &SparseVector<T>::f1(const char *, int i)
 template <class T>
 T &SparseVector<T>::f2(const char *, int i)
 {
+    NiceAssert( indices && content );
+
     i += INDF2OFFSTART;
 
     resetvecID();
@@ -3550,6 +3641,8 @@ T &SparseVector<T>::f2(const char *, int i)
 template <class T>
 T &SparseVector<T>::f3(const char *, int i)
 {
+    NiceAssert( indices && content );
+
     i += INDF3OFFSTART;
 
     resetvecID();
@@ -3585,6 +3678,8 @@ T &SparseVector<T>::f3(const char *, int i)
 template <class T>
 T &SparseVector<T>::f4(const char *, int i)
 {
+    NiceAssert( indices && content );
+
     i += INDF4OFFSTART;
 
     resetvecID();
@@ -3619,6 +3714,8 @@ T &SparseVector<T>::f4(const char *, int i)
 template <class T>
 Vector<T> &SparseVector<T>::operator()(const char *dummy, const Vector<int> &i, retVector<T> &tmp)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -3668,6 +3765,8 @@ Vector<T> &SparseVector<T>::operator()(const char *dummy, const Vector<int> &i, 
 template <class T>
 Vector<T> &SparseVector<T>::operator()(const char *dummy, int ib, int is, int im, retVector<T> &tmp)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -3710,6 +3809,8 @@ Vector<T> &SparseVector<T>::operator()(const char *dummy, int ib, int is, int im
 template <class T>
 const Vector<T> &SparseVector<T>::operator()(retVector<T> &tmp) const
 {
+    NiceAssert( indices && content );
+
     if ( nearnonsparse() )
     {
         return (*content)(0,1,size()-1,tmp);
@@ -3721,6 +3822,8 @@ const Vector<T> &SparseVector<T>::operator()(retVector<T> &tmp) const
 template <class T>
 const T &SparseVector<T>::operator()(int i) const
 {
+    NiceAssert( indices && content );
+
     NiceAssert( i >= 0 );
 
     int pos = findind(i);
@@ -3736,6 +3839,8 @@ const T &SparseVector<T>::operator()(int i) const
 template <class T>
 T SparseVector<T>::v(int i) const
 {
+    NiceAssert( indices && content );
+
     NiceAssert( i >= 0 );
 
     int pos = findind(i);
@@ -3751,6 +3856,8 @@ T SparseVector<T>::v(int i) const
 template <class T>
 const T &SparseVector<T>::n(int i) const
 {
+    NiceAssert( indices && content );
+
     i += INDNOFFSTART;
 
     NiceAssert( i >= INDNOFFSTART );
@@ -3769,6 +3876,8 @@ const T &SparseVector<T>::n(int i) const
 template <class T>
 const T &SparseVector<T>::f1(int i) const
 {
+    NiceAssert( indices && content );
+
     i += INDF1OFFSTART;
 
     NiceAssert( i >= INDF1OFFSTART );
@@ -3787,6 +3896,8 @@ const T &SparseVector<T>::f1(int i) const
 template <class T>
 const T &SparseVector<T>::f2(int i) const
 {
+    NiceAssert( indices && content );
+
     i += INDF2OFFSTART;
 
     NiceAssert( i >= INDF2OFFSTART );
@@ -3805,6 +3916,8 @@ const T &SparseVector<T>::f2(int i) const
 template <class T>
 const T &SparseVector<T>::f3(int i) const
 {
+    NiceAssert( indices && content );
+
     i += INDF3OFFSTART;
 
     NiceAssert( i >= INDF3OFFSTART );
@@ -3823,6 +3936,8 @@ const T &SparseVector<T>::f3(int i) const
 template <class T>
 const T &SparseVector<T>::f4(int i) const
 {
+    NiceAssert( indices && content );
+
     i += INDF4OFFSTART;
 
     NiceAssert( i >= INDF4OFFSTART );
@@ -3840,6 +3955,8 @@ const T &SparseVector<T>::f4(int i) const
 template <class T>
 const Vector<T> &SparseVector<T>::operator()(const Vector<int> &i, retVector<T> &tmp) const
 {
+    NiceAssert( indices && content );
+
     if ( indices == &i )
     {
         return (*content)(0,1,indsize()-1,tmp);
@@ -3880,6 +3997,8 @@ const Vector<T> &SparseVector<T>::operator()(const Vector<int> &i, retVector<T> 
 template <class T>
 const Vector<T> &SparseVector<T>::operator()(int ib, int is, int im, retVector<T> &tmp) const
 {
+    NiceAssert( indices && content );
+
     int j;
     Vector<int> iii;
 
@@ -3922,6 +4041,8 @@ const Vector<T> &SparseVector<T>::operator()(int ib, int is, int im, retVector<T
 template <class T>
 int SparseVector<T>::findind(int i) const
 {
+    NiceAssert( indices && content );
+
     int pos = 0;
 
     if ( indsize() )
@@ -3975,6 +4096,8 @@ int SparseVector<T>::findind(int i) const
 template <class T>
 SparseVector<T> &SparseVector<T>::offset(int amoff)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -3991,6 +4114,8 @@ template <class T>
 template <class S>
 SparseVector<T> &SparseVector<T>::indalign(const SparseVector<S> &src)
 {
+    NiceAssert( indices && content );
+
     NiceAssert( (*content).size() );
 
     resetvecID();
@@ -4015,6 +4140,8 @@ SparseVector<T> &SparseVector<T>::indalign(const SparseVector<S> &src)
 template <class T>
 SparseVector<T> &SparseVector<T>::indalign(const Vector<int> &srcind)
 {
+    NiceAssert( indices && content );
+
     NiceAssert( (*content).size() );
 
     resetvecID();
@@ -4039,6 +4166,8 @@ SparseVector<T> &SparseVector<T>::indalign(const Vector<int> &srcind)
 template <class T>
 SparseVector<T> &SparseVector<T>::iprune(const Vector<int> &refind)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -4084,6 +4213,8 @@ SparseVector<T> &SparseVector<T>::iprune(const Vector<int> &refind)
 template <class T>
 SparseVector<T> &SparseVector<T>::iprune(int refind)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -4129,6 +4260,8 @@ SparseVector<T> &SparseVector<T>::iprune(int refind)
 template <class T>
 void SparseVector<T>::prealloc(int newallocsize)
 {
+    NiceAssert( indices && content );
+
     NiceAssert( ( newallocsize >= 0 ) || ( newallocsize == -1 ) );
 
     (*indices).prealloc(newallocsize);
@@ -4138,6 +4271,8 @@ void SparseVector<T>::prealloc(int newallocsize)
 template <class T>
 void SparseVector<T>::useStandardAllocation(void)
 {
+    NiceAssert( indices && content );
+
     (*indices).useStandardAllocation();
     (*content).useStandardAllocation();
 }
@@ -4145,6 +4280,8 @@ void SparseVector<T>::useStandardAllocation(void)
 template <class T>
 void SparseVector<T>::useTightAllocation(void)
 {
+    NiceAssert( indices && content );
+
     (*indices).useTightAllocation();
     (*content).useTightAllocation();
 }
@@ -4152,6 +4289,8 @@ void SparseVector<T>::useTightAllocation(void)
 template <class T>
 void SparseVector<T>::useSlackAllocation(void)
 {
+    NiceAssert( indices && content );
+
     (*indices).useSlackAllocation();
     (*content).useSlackAllocation();
 }
@@ -4159,6 +4298,8 @@ void SparseVector<T>::useSlackAllocation(void)
 template <class T>
 void SparseVector<T>::applyOnAll(void (*fn)(T &, int), int argx)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -4171,6 +4312,8 @@ void SparseVector<T>::applyOnAll(void (*fn)(T &, int), int argx)
 template <class T>
 SparseVector<T> &SparseVector<T>::blockswap(int i, int j)
 {
+    NiceAssert( indices && content );
+
     NiceAssert( i >= 0 );
     NiceAssert( j >= 0 );
 
@@ -4256,6 +4399,8 @@ SparseVector<T> &SparseVector<T>::blockswap(int i, int j)
 template <class T>
 SparseVector<T> &SparseVector<T>::squareswap(int i, int j)
 {
+    NiceAssert( indices && content );
+
     NiceAssert( i >= 0 );
     NiceAssert( j >= 0 );
 
@@ -4314,6 +4459,8 @@ SparseVector<T> &SparseVector<T>::squareswap(int i, int j)
 template <class T>
 SparseVector<T> &SparseVector<T>::nearadd(const SparseVector<T> &right_op)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killn();
@@ -4380,6 +4527,8 @@ SparseVector<T> &SparseVector<T>::nearadd(const SparseVector<T> &right_op)
 template <class T>
 template <class S> SparseVector<T> &SparseVector<T>::scaleAdd(const S &a, const SparseVector<T> &right_op)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -4447,6 +4596,8 @@ template <class S> SparseVector<T> &SparseVector<T>::scaleAdd(const S &a, const 
 template <class T>
 template <class S> SparseVector<T> &SparseVector<T>::scaleAddR(const SparseVector<T> &right_op, const S &b)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -4511,6 +4662,8 @@ template <class S> SparseVector<T> &SparseVector<T>::scaleAddR(const SparseVecto
 template <class T>
 template <class S> SparseVector<T> &SparseVector<T>::scaleAddB(const T &a, const SparseVector<S> &right_op)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -4575,6 +4728,8 @@ template <class S> SparseVector<T> &SparseVector<T>::scaleAddB(const T &a, const
 template <class T>
 template <class S> SparseVector<T> &SparseVector<T>::scaleAddBR(const SparseVector<S> &right_op, const T &b)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -4640,6 +4795,8 @@ template <class S> SparseVector<T> &SparseVector<T>::scaleAddBR(const SparseVect
 template <class T>
 template <class S> SparseVector<T> &SparseVector<T>::scale(const S &a)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -4662,6 +4819,8 @@ template <class S> SparseVector<T> &SparseVector<T>::scale(const S &a)
 template <class T>
 template <class S> SparseVector<T> &SparseVector<T>::scale(const SparseVector<S> &a)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -4741,6 +4900,8 @@ SparseVector<T> &SparseVector<T>::lscale(const T &a)
 template <class T>
 SparseVector<T> &SparseVector<T>::lscale(const SparseVector<T> &a)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -4803,6 +4964,8 @@ SparseVector<T> &SparseVector<T>::lscale(const SparseVector<T> &a)
 template <class T>
 SparseVector<T> &SparseVector<T>::resize(int i)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -4825,6 +4988,8 @@ SparseVector<T> &SparseVector<T>::resize(int i)
 template <class T>
 SparseVector<T> &SparseVector<T>::resize(const Vector<int> &itu)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -4884,6 +5049,8 @@ SparseVector<T> &SparseVector<T>::setorder(int i)
 template <class T>
 SparseVector<T> &SparseVector<T>::append(int i, const T &a)
 {
+    NiceAssert( indices && content );
+
     i = ( i >= 0 ) ? i : size();
 
     NiceAssert( i >= size() );
@@ -4905,6 +5072,8 @@ SparseVector<T> &SparseVector<T>::append(int i, const T &a)
 template <class T>
 SparseVector<T> &SparseVector<T>::append(int i, const SparseVector<T> &a)
 {
+    NiceAssert( indices && content );
+
     i = ( i >= 0 ) ? i : size();
 
     resetvecID();
@@ -4929,6 +5098,8 @@ SparseVector<T> &SparseVector<T>::append(int i, const SparseVector<T> &a)
 template <class T>
 SparseVector<T> &SparseVector<T>::add(int i, int ipos)
 {
+    NiceAssert( indices && content );
+
     NiceAssert( ipos <= indsize() );
     NiceAssert( ipos >= 0 );
     NiceAssert( ( ipos == indsize() ) || ( i < ind(ipos) ) );
@@ -4950,6 +5121,8 @@ SparseVector<T> &SparseVector<T>::add(int i, int ipos)
 template <class T>
 SparseVector<T> &SparseVector<T>::applyon(T (*fn)(T))
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -4970,6 +5143,8 @@ SparseVector<T> &SparseVector<T>::applyon(T (*fn)(T))
 template <class T>
 SparseVector<T> &SparseVector<T>::applyon(T &(*fn)(T &))
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -4990,6 +5165,8 @@ SparseVector<T> &SparseVector<T>::applyon(T &(*fn)(T &))
 template <class T>
 SparseVector<T> &SparseVector<T>::applyon(T &(*fn)(T &, const void *), const void *a)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -5010,6 +5187,8 @@ SparseVector<T> &SparseVector<T>::applyon(T &(*fn)(T &, const void *), const voi
 template <class T>
 SparseVector<T> &SparseVector<T>::applyon(T (*fn)(const T &))
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -5030,6 +5209,8 @@ SparseVector<T> &SparseVector<T>::applyon(T (*fn)(const T &))
 template <class T>
 SparseVector<T> &SparseVector<T>::applyon(T (*fn)(T, const void *), const void *a)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();
@@ -5051,6 +5232,8 @@ SparseVector<T> &SparseVector<T>::applyon(T (*fn)(T, const void *), const void *
 template <class T>
 SparseVector<T> &SparseVector<T>::applyon(T (*fn)(const T &, const void *), const void *a)
 {
+    NiceAssert( indices && content );
+
     resetvecID();
     killaltcontent();
     killnearfar();

@@ -1321,7 +1321,7 @@ retVector<T> &retVector<T>::reset(void)
 {
     if ( !(Vector<T>::pbase) && Vector<T>::pivot )
     {
-        MEMDEL(Vector<T>::pivot);
+        MEMDEL(Vector<T>::pivot); Vector<T>::pivot = nullptr;
     }
 
     Vector<T>::pbase = true;
@@ -1329,8 +1329,16 @@ retVector<T> &retVector<T>::reset(void)
 
     if ( !(Vector<T>::nbase) && Vector<T>::content )
     {
-        MEMDEL(Vector<T>::content);
+        MEMDEL(Vector<T>::content); Vector<T>::content = nullptr;
     }
+
+    Vector<T>::bkref             = nullptr;
+    Vector<T>::nbase             = false;
+    Vector<T>::content           = nullptr;
+    Vector<T>::ccontent          = nullptr;
+    //Vector<T>::newln             = cover.newln;
+    Vector<T>::imoverhere        = nullptr;
+    Vector<T>::defaulttightalloc = 0;
 
     return *this;
 }
@@ -1340,7 +1348,7 @@ retVector<T> &retVector<T>::reset(Vector<T> &cover)
 {
     if ( !(Vector<T>::pbase) && Vector<T>::pivot )
     {
-        MEMDEL(Vector<T>::pivot);
+        MEMDEL(Vector<T>::pivot); Vector<T>::pivot = nullptr;
     }
 
     Vector<T>::pbase = true;
@@ -1348,7 +1356,7 @@ retVector<T> &retVector<T>::reset(Vector<T> &cover)
 
     if ( !(Vector<T>::nbase) && Vector<T>::content )
     {
-        MEMDEL(Vector<T>::content);
+        MEMDEL(Vector<T>::content); Vector<T>::content = nullptr;
     }
 
     Vector<T>::bkref             = cover.bkref;
@@ -1387,7 +1395,7 @@ DynArray<int> *retVector<T>::reset_p(Vector<T> &cover, int pivotsize)
 
     if ( !(Vector<T>::nbase) && Vector<T>::content )
     {
-        MEMDEL(Vector<T>::content);
+        MEMDEL(Vector<T>::content); Vector<T>::content = nullptr;
     }
 
     Vector<T>::bkref             = cover.bkref;
@@ -1407,7 +1415,7 @@ retVector<T> &retVector<T>::creset(const Vector<T> &cover)
 {
     if ( !(Vector<T>::pbase) && Vector<T>::pivot )
     {
-        MEMDEL(Vector<T>::pivot);
+        MEMDEL(Vector<T>::pivot); Vector<T>::pivot = nullptr;
     }
 
     Vector<T>::pbase = true;
@@ -1415,7 +1423,7 @@ retVector<T> &retVector<T>::creset(const Vector<T> &cover)
 
     if ( !(Vector<T>::nbase) && Vector<T>::content )
     {
-        MEMDEL(Vector<T>::content);
+        MEMDEL(Vector<T>::content); Vector<T>::content = nullptr;
     }
 
     Vector<T>::bkref             = cover.bkref;
@@ -1454,7 +1462,7 @@ DynArray<int> *retVector<T>::creset_p(const Vector<T> &cover, int pivotsize)
 
     if ( !(Vector<T>::nbase) && Vector<T>::content )
     {
-        MEMDEL(Vector<T>::content);
+        MEMDEL(Vector<T>::content); Vector<T>::content = nullptr;
     }
 
     Vector<T>::bkref             = cover.bkref;
@@ -1640,17 +1648,17 @@ Vector<T>::~Vector()
 {
     if ( imoverhere )
     {
-        MEMDEL(imoverhere);
+        MEMDEL(imoverhere); imoverhere = nullptr;
     }
 
     if ( !nbase && content )
     {
-        MEMDEL(content);
+        MEMDEL(content); content = nullptr; ccontent = nullptr;
     }
 
     if ( !pbase && pivot )
     {
-        MEMDEL(pivot);
+        MEMDEL(pivot); pivot = nullptr;
     }
 }
 
@@ -1675,8 +1683,7 @@ template <> inline Vector<double> &Vector<double>::assign(const Vector<double> &
 
         else
         {
-            MEMDEL(imoverhere);
-            imoverhere = srcover.makeDup();
+            MEMDEL(imoverhere); imoverhere = srcover.makeDup();
         }
     }
 
@@ -1691,8 +1698,7 @@ template <> inline Vector<double> &Vector<double>::assign(const Vector<double> &
 
         else
         {
-            MEMDEL(imoverhere);
-            imoverhere = src.makeDup();
+            MEMDEL(imoverhere); imoverhere = src.makeDup();
         }
     }
 
@@ -1729,8 +1735,7 @@ template <> inline Vector<double> &Vector<double>::assign(const Vector<double> &
     {
         if ( imoverhere )
         {
-            MEMDEL(imoverhere);
-            imoverhere = nullptr;
+            MEMDEL(imoverhere); imoverhere = nullptr;
         }
 
         int srcsize = src.size();
@@ -1779,8 +1784,7 @@ template <> inline Vector<int> &Vector<int>::assign(const Vector<int> &src)
 
         else
         {
-            MEMDEL(imoverhere);
-            imoverhere = srcover.makeDup();
+            MEMDEL(imoverhere); imoverhere = srcover.makeDup();
         }
     }
 
@@ -1795,8 +1799,7 @@ template <> inline Vector<int> &Vector<int>::assign(const Vector<int> &src)
 
         else
         {
-            MEMDEL(imoverhere);
-            imoverhere = src.makeDup();
+            MEMDEL(imoverhere); imoverhere = src.makeDup();
         }
     }
 
@@ -1833,8 +1836,7 @@ template <> inline Vector<int> &Vector<int>::assign(const Vector<int> &src)
     {
         if ( imoverhere )
         {
-            MEMDEL(imoverhere);
-            imoverhere = nullptr;
+            MEMDEL(imoverhere); imoverhere = nullptr;
         }
 
         int srcsize = src.size();
@@ -1883,8 +1885,7 @@ Vector<T> &Vector<T>::assign(const Vector<T> &src)
 
         else
         {
-            MEMDEL(imoverhere);
-            imoverhere = srcover.makeDup();
+            MEMDEL(imoverhere); imoverhere = srcover.makeDup();
         }
     }
 
@@ -1899,8 +1900,7 @@ Vector<T> &Vector<T>::assign(const Vector<T> &src)
 
         else
         {
-            MEMDEL(imoverhere);
-            imoverhere = src.makeDup();
+            MEMDEL(imoverhere); imoverhere = src.makeDup();
         }
     }
 
@@ -1937,8 +1937,7 @@ Vector<T> &Vector<T>::assign(const Vector<T> &src)
     {
         if ( imoverhere )
         {
-            MEMDEL(imoverhere);
-            imoverhere = nullptr;
+            MEMDEL(imoverhere); imoverhere = nullptr;
         }
 
         int srcsize = src.size();
@@ -10773,7 +10772,7 @@ std::istream &operator>>(std::istream &input, Vector<T> &dest)
 
             else
             {
-                MEMDEL(dest.imoverhere);
+                MEMDEL(dest.imoverhere); dest.imoverhere = nullptr;
                 makeFuncVector(typestring,dest.imoverhere,input);
             }
         }
@@ -10800,8 +10799,7 @@ std::istream &operator>>(std::istream &input, Vector<T> &dest)
     {
         if ( dest.imoverhere )
         {
-            MEMDEL(dest.imoverhere);
-            dest.imoverhere = nullptr;
+            MEMDEL(dest.imoverhere); dest.imoverhere = nullptr;
         }
 
         int xsize = 0;
@@ -10892,7 +10890,7 @@ std::istream &streamItIn(std::istream &input, Vector<T> &dest, int processxyzvw)
 
             else
             {
-                MEMDEL(dest.imoverhere);
+                MEMDEL(dest.imoverhere); dest.imoverhere = nullptr;
                 makeFuncVector(typestring,dest.imoverhere,input,processxyzvw);
             }
         }
@@ -10919,8 +10917,7 @@ std::istream &streamItIn(std::istream &input, Vector<T> &dest, int processxyzvw)
     {
         if ( dest.imoverhere )
         {
-            MEMDEL(dest.imoverhere);
-            dest.imoverhere = nullptr;
+            MEMDEL(dest.imoverhere); dest.imoverhere = nullptr;
         }
 
         int xsize = 0;

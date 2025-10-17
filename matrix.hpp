@@ -1271,7 +1271,7 @@ void retMatrix<T>::reset(Matrix<T> &cover)
 {
     if ( !Matrix<T>::pbaseRow && Matrix<T>::pivotRow )
     {
-        MEMDEL(Matrix<T>::pivotRow);
+        MEMDEL(Matrix<T>::pivotRow); Matrix<T>::pivotRow = nullptr;
     }
 
     Matrix<T>::pbaseRow = true;
@@ -1279,7 +1279,7 @@ void retMatrix<T>::reset(Matrix<T> &cover)
 
     if ( !Matrix<T>::pbaseCol && Matrix<T>::pivotCol )
     {
-        MEMDEL(Matrix<T>::pivotCol);
+        MEMDEL(Matrix<T>::pivotCol); Matrix<T>::pivotCol = nullptr;
     }
 
     Matrix<T>::pbaseCol   = true;
@@ -1327,7 +1327,7 @@ DynArray<int> *retMatrix<T>::reset_r(Matrix<T> &cover, int rowpivotsize)
 
     if ( !Matrix<T>::pbaseCol && Matrix<T>::pivotCol )
     {
-        MEMDEL(Matrix<T>::pivotCol);
+        MEMDEL(Matrix<T>::pivotCol); Matrix<T>::pivotCol = nullptr;
     }
 
     Matrix<T>::pbaseCol   = true;
@@ -1357,7 +1357,7 @@ DynArray<int> *retMatrix<T>::reset_c(Matrix<T> &cover, int colpivotsize)
 {
     if ( !Matrix<T>::pbaseRow && Matrix<T>::pivotRow )
     {
-        MEMDEL(Matrix<T>::pivotRow);
+        MEMDEL(Matrix<T>::pivotRow); Matrix<T>::pivotRow = nullptr;
     }
 
     Matrix<T>::pbaseRow = true;
@@ -1464,7 +1464,7 @@ void retMatrix<T>::creset(const Matrix<T> &cover)
 {
     if ( !Matrix<T>::pbaseRow && Matrix<T>::pivotRow )
     {
-        MEMDEL(Matrix<T>::pivotRow);
+        MEMDEL(Matrix<T>::pivotRow); Matrix<T>::pivotRow = nullptr;
     }
 
     Matrix<T>::pbaseRow = true;
@@ -1472,7 +1472,7 @@ void retMatrix<T>::creset(const Matrix<T> &cover)
 
     if ( !Matrix<T>::pbaseCol && Matrix<T>::pivotCol )
     {
-        MEMDEL(Matrix<T>::pivotCol);
+        MEMDEL(Matrix<T>::pivotCol); Matrix<T>::pivotCol = nullptr;
     }
 
     Matrix<T>::pbaseCol = true;
@@ -1521,7 +1521,7 @@ DynArray<int> *retMatrix<T>::creset_r(const Matrix<T> &cover, int rowpivotsize)
 
     if ( !Matrix<T>::pbaseCol && Matrix<T>::pivotCol )
     {
-        MEMDEL(Matrix<T>::pivotCol);
+        MEMDEL(Matrix<T>::pivotCol); Matrix<T>::pivotCol = nullptr;
     }
 
     Matrix<T>::pbaseCol   = true;
@@ -1551,7 +1551,7 @@ DynArray<int> *retMatrix<T>::creset_c(const Matrix<T> &cover, int colpivotsize)
 {
     if ( !Matrix<T>::pbaseRow && Matrix<T>::pivotRow )
     {
-        MEMDEL(Matrix<T>::pivotRow);
+        MEMDEL(Matrix<T>::pivotRow); Matrix<T>::pivotRow = nullptr;
     }
 
     Matrix<T>::pbaseRow = true;
@@ -2006,8 +2006,7 @@ Matrix<T>::~Matrix()
 {
     if ( !nbase && !iscover && content )
     {
-	MEMDEL(content);
-        //content = nullptr;
+	MEMDEL(content); content = nullptr;
     }
 
     if ( !nbase && iscover )
@@ -2025,14 +2024,12 @@ Matrix<T>::~Matrix()
 
     if ( !pbaseRow && pivotRow )
     {
-        MEMDEL(pivotRow);
-        //pivotRow = nullptr;
+        MEMDEL(pivotRow); pivotRow = nullptr;
     }
 
     if ( !pbaseCol && pivotCol )
     {
-        MEMDEL(pivotCol);
-        //pivotCol = nullptr;
+        MEMDEL(pivotCol); pivotCol = nullptr;
     }
 }
 

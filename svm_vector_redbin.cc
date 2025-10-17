@@ -299,14 +299,9 @@ std::istream &SVM_Vector_redbin<SVM_Scalar>::inputstream(std::istream &input)
 
     if ( Gplocal )
     {
-        MEMDEL(xyval);
-        xyval = nullptr;
-
-        MEMDEL(Gpval);
-        Gpval = nullptr;
-
-        MEMDEL(Gpsigma);
-        Gpsigma = nullptr;
+        MEMDEL(xyval);   xyval = nullptr;
+        MEMDEL(Gpval);   Gpval = nullptr;
+        MEMDEL(Gpsigma); Gpsigma = nullptr;
     }
 
     Gplocal = 1;

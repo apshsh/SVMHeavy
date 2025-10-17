@@ -229,9 +229,9 @@ int nelderOpt(int dim,
         //errstream() << "Subplex Optimisation Ended.\n";
     }
 
-    MEMDELARRAY(xstep);
-    MEMDELARRAY(xtol_abs);
-    MEMDELARRAY(xx);
+    MEMDELARRAY(xstep);    xstep    = nullptr;
+    MEMDELARRAY(xtol_abs); xtol_abs = nullptr;
+    MEMDELARRAY(xx);       xx       = nullptr;
 
     return intres;
 }

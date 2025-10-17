@@ -1337,14 +1337,9 @@ inline void SVM_Scalar::assign(const ML_Base &bb, int onlySemiCopy)
 
         if ( Gplocal )
         {
-	    MEMDEL(xyval);
-            xyval = nullptr;
-
-            MEMDEL(Gpval);
-            Gpval = nullptr;
-
-            MEMDEL(Gpsigma);
-            Gpsigma = nullptr;
+	    MEMDEL(xyval);   xyval = nullptr;
+            MEMDEL(Gpval);   Gpval = nullptr;
+            MEMDEL(Gpsigma); Gpsigma = nullptr;
         }
 
         Gplocal = 0;
@@ -1368,14 +1363,9 @@ inline void SVM_Scalar::assign(const ML_Base &bb, int onlySemiCopy)
 
         if ( Gplocal )
         {
-	    MEMDEL(xyval);
-            xyval = nullptr;
-
-            MEMDEL(Gpval);
-            Gpval = nullptr;
-
-            MEMDEL(Gpsigma);
-            Gpsigma = nullptr;
+	    MEMDEL(xyval);   xyval = nullptr;
+            MEMDEL(Gpval);   Gpval = nullptr;
+            MEMDEL(Gpsigma); Gpsigma = nullptr;
         }
 
         if ( src.Gplocal )

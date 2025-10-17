@@ -59,8 +59,7 @@ std::istream &KNN_Generic::inputstream(std::istream &input )
 
     ML_Base::inputstream(input);
 
-    MEMDEL(Gpdist);
-    Gpdist = nullptr;
+    MEMDEL(Gpdist); Gpdist = nullptr;
 
     MEMNEW(Gpdist,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache, N(),N()));
 
@@ -119,8 +118,7 @@ KNN_Generic::KNN_Generic(const KNN_Generic &src, const ML_Base *xsrc) : ML_Base(
 
 KNN_Generic::~KNN_Generic()
 {
-    MEMDEL(Gpdist);
-    Gpdist = nullptr;
+    MEMDEL(Gpdist); Gpdist = nullptr;
 
     return;
 }

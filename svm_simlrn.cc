@@ -777,13 +777,13 @@ int SVM_SimLrn::train(int &res, svmvolatile int &killSwitch)
 
 
 
-    MEMDEL(xyOuter);
-    MEMDEL(GpOuter);
-    MEMDEL(GpSigmaOuter);
+    MEMDEL(xyOuter);      xyOuter      = nullptr;
+    MEMDEL(GpOuter);      GpOuter      = nullptr;
+    MEMDEL(GpSigmaOuter); GpSigmaOuter = nullptr;
 
-    MEMDEL(xycachesim);
-    MEMDEL(kerncachesim);
-    MEMDEL(sigmacachesim);
+    MEMDEL(xycachesim);    xycachesim    = nullptr;
+    MEMDEL(kerncachesim);  kerncachesim  = nullptr;
+    MEMDEL(sigmacachesim); sigmacachesim = nullptr;
 
     return intres;
 }

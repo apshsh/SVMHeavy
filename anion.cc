@@ -274,8 +274,8 @@ d_anion &d_anion::operator=(double source)
 {
     if ( is_im )
     {
-        MEMDEL(value_inf);
-        MEMDEL(value_0);
+        MEMDEL(value_inf); value_inf = nullptr;
+        MEMDEL(value_0);   value_0   = nullptr;
     }
 
     is_im = 0;
@@ -325,8 +325,8 @@ d_anion &d_anion::operator=(const d_anion &source)
     {
         if ( is_im )
         {
-            MEMDEL(value_inf);
-            MEMDEL(value_0);
+            MEMDEL(value_inf); value_inf = nullptr;
+            MEMDEL(value_0);   value_0   = nullptr;
 
             is_im = 0;
         }
@@ -463,8 +463,8 @@ d_anion &d_anion::setorder(int n)
 
 	    is_im = 0;
 
-	    MEMDEL(value_inf);
-	    MEMDEL(value_0);
+	    MEMDEL(value_inf); value_inf = nullptr;
+	    MEMDEL(value_0);   value_0   = nullptr;
 	}
     }
 
@@ -3612,7 +3612,7 @@ int atod_anion_safe(d_anion &result, const char *qwerty, int len)
 	    }
 	}
 
-        MEMDELARRAY(tempa);
+        MEMDELARRAY(tempa); tempa = nullptr;
       }
     }
 

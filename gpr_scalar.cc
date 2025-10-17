@@ -75,6 +75,8 @@ int GPR_Scalar::setNaiveConst(void)
 
     if ( !xNaiveConst )
     {
+        GPR_Generic::setNaiveConst();
+
         res = 1;
 
         xNaiveConst  = 1;
@@ -92,6 +94,8 @@ int GPR_Scalar::setEPConst(void)
 
     if ( xNaiveConst || ( xEPorLaplace != 0 ) )
     {
+        GPR_Generic::setEPConst();
+
         res = 1;
 
         xNaiveConst  = 0; // Not naive
@@ -116,6 +120,8 @@ int GPR_Scalar::setLaplaceConst(int type)
 
     if ( xNaiveConst || ( xEPorLaplace != type ) )
     {
+        GPR_Generic::setLaplaceConst();
+
         res = 1;
 
         xNaiveConst  = 0;    // Not naive
@@ -167,7 +173,7 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
 //errstream() << "phantomxyz fuck me: " << *this << "\n";
     res = 0;
 
-    if ( isSampleMode() || isLocked )
+    if ( isTrained() || ( isSampleMode() && ( isSampleMode() < 3 ) ) || isLocked )
     {
         return 0;
     }
@@ -805,6 +811,8 @@ errstream() << laststep << ", ";
             res = -1; // indicates failure to converge
         }
     }
+
+    xisTrained = 1;
 
     return locres;
 }

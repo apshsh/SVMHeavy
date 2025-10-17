@@ -618,11 +618,8 @@ inline void SVM_Vector_atonce_temp<T>::assign(const ML_Base &bb, int onlySemiCop
     kerncache.cheatSetEvalArg((void *) this);
     sigmacache.cheatSetEvalArg((void *) this);
 
-    MEMDEL(GpGrad);
-    GpGrad = nullptr;
-
-    MEMDEL(Gpsigma);
-    Gpsigma = nullptr;
+    MEMDEL(GpGrad);  GpGrad = nullptr;
+    MEMDEL(Gpsigma); Gpsigma = nullptr;
 
     const static T dummy = src.dummyarg;
 
@@ -851,11 +848,8 @@ SVM_Vector_atonce_temp<T>::SVM_Vector_atonce_temp(const SVM_Vector_atonce_temp<T
 template <class T>
 SVM_Vector_atonce_temp<T>::~SVM_Vector_atonce_temp()
 {
-    MEMDEL(GpGrad);
-    GpGrad = nullptr;
-
-    MEMDEL(Gpsigma);
-    Gpsigma = nullptr;
+    MEMDEL(GpGrad);  GpGrad = nullptr;
+    MEMDEL(Gpsigma); Gpsigma = nullptr;
 
     return;
 }
@@ -3010,11 +3004,8 @@ std::istream &SVM_Vector_atonce_temp<T>::inputstream(std::istream &input)
 
     input >> dummy; input >> Q;
 
-    MEMDEL(GpGrad);
-    GpGrad = nullptr;
-
-    MEMDEL(Gpsigma);
-    Gpsigma = nullptr;
+    MEMDEL(GpGrad);  GpGrad = nullptr;
+    MEMDEL(Gpsigma); Gpsigma = nullptr;
 
     const static T dummydupe = dummyarg;
 

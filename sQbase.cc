@@ -175,7 +175,7 @@ doitagain:
 
         res = altxx->solve(killSwitch);
 
-        MEMDEL(altxx);
+        MEMDEL(altxx); altxx = nullptr;
     }
 
     else
@@ -298,7 +298,7 @@ doitagain:
 
                 repover |= altxx->repover;
 
-                MEMDEL(altxx);
+                MEMDEL(altxx); altxx = nullptr;
             }
 
             Nbad = 0;
@@ -348,8 +348,8 @@ doitagain:
             x.fixGradhpzero(Gp,Gn,Gpn,gp,gn);
         }
 
-        MEMDEL(newGp);
-        MEMDEL(newGpsigma);
+        MEMDEL(newGp);      newGp      = nullptr;
+        MEMDEL(newGpsigma); newGpsigma = nullptr;
 
         if ( repover )
         {
@@ -395,7 +395,7 @@ doitagain:
 
         res = altxx->solve(killSwitch);
 
-        MEMDEL(altxx);
+        MEMDEL(altxx); altxx = nullptr;
     }
 
     else
@@ -518,7 +518,7 @@ doitagain:
 
                 repover |= altxx->repover;
 
-                MEMDEL(altxx);
+                MEMDEL(altxx); altxx = nullptr;
             }
 
             Nbad = 0;
@@ -568,8 +568,8 @@ doitagain:
             x.fixGradhpzero(Gp,Gn,Gpn,gp,gn);
         }
 
-        MEMDEL(newGp);
-        MEMDEL(newGpsigma);
+        MEMDEL(newGp);      newGp      = nullptr;
+        MEMDEL(newGpsigma); newGpsigma = nullptr;
 
         if ( repover )
         {
@@ -620,7 +620,7 @@ doitagain:
 
         res = altxx->solve(killSwitch);
 
-        MEMDEL(altxx);
+        MEMDEL(altxx); altxx = nullptr;
     }
 
     else
@@ -798,7 +798,7 @@ doitagain:
 
                 repover |= altxx->repover;
 
-                MEMDEL(altxx);
+                MEMDEL(altxx); altxx = nullptr;
             }
 
             Nbad = 0;
@@ -848,8 +848,8 @@ doitagain:
             x.fixGrad(Gp,Gn,Gpn,gp,gn,hp);
         }
 
-        MEMDEL(newGp);
-        MEMDEL(newGpsigma);
+        MEMDEL(newGp);      newGp      = nullptr;
+        MEMDEL(newGpsigma); newGpsigma = nullptr;
 
         if ( repover )
         {

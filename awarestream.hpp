@@ -63,14 +63,12 @@ public:
     {
         if ( nodeval )
         {
-            MEMDELARRAY(nodeval);
-            nodeval = nullptr;
+            MEMDELARRAY(nodeval); nodeval = nullptr;
         }
 
         if ( next )
         {
-            MEMDEL(next);
-            next = nullptr;
+            MEMDEL(next); next = nullptr;
         }
     }
 
@@ -129,10 +127,8 @@ public:
             // can't change midway through.
             res = (char *) ((void *) nodeval);
 
-            MEMDELARRAY(nodeval);
-            nodeval = nullptr;
-            MEMDEL(next);
-            next = nullptr;
+            MEMDELARRAY(nodeval); nodeval = nullptr;
+            MEMDEL(next);         next = nullptr;
         }
 
         else
@@ -245,8 +241,7 @@ public:
     {
         if ( next )
         {
-            MEMDEL(next);
-            next = nullptr;
+            MEMDEL(next); next = nullptr;
         }
     }
 
@@ -643,12 +638,12 @@ public:
     {
         if ( deletable && ( srcsel == 1 ) )
         {
-            MEMDEL(str);
+            MEMDEL(str); str = nullptr;
         }
 
         if ( odeletable && ( srcsel == 1 ) )
         {
-            MEMDEL(ostr);
+            MEMDEL(ostr); ostr = nullptr;
         }
 
         if ( ( srcsel == 2 ) || ( srcsel == 3 ) )

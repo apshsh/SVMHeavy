@@ -366,7 +366,7 @@ ML_Base::~ML_Base()
 //#endif
     }
 
-    MEMDEL(that);
+    MEMDEL(that); that = nullptr;
 
     return;
 }
@@ -5988,7 +5988,7 @@ void ML_Base::Kmxfer(gentype &res, int &minmaxind, int typeis,
                 }
             }
 
-            if ( !( i >= 0 ) ) { resetInnerWildp(); MEMDEL(xx); }
+            if ( !( i >= 0 ) ) { resetInnerWildp(); MEMDEL(xx); xx = nullptr; }
 
             break;
         }
@@ -7379,7 +7379,7 @@ void ML_Base::Kmxfer(double &res, int &minmaxind, int typeis,
                 }
             }
 
-            if ( !( i >= 0 ) ) { resetInnerWildp(); MEMDEL(xx); }
+            if ( !( i >= 0 ) ) { resetInnerWildp(); MEMDEL(xx); xx = nullptr; }
 
             break;
         }
@@ -9273,8 +9273,8 @@ double ML_Base::K1(int ia,
 
         res += iadiagoffset;
 
-        if ( xauntang ) { delete xauntang; }
-        if ( xainfountang ) { delete xainfountang; }
+        if ( xauntang     ) { MEMDEL(xauntang);     }
+        if ( xainfountang ) { MEMDEL(xainfountang); }
 
         if ( iaokr )
         {
@@ -9416,8 +9416,8 @@ T &ML_Base::K1(T &res,
 
         res += iadiagoffset;
 
-        if ( xauntang ) { delete xauntang; }
-        if ( xainfountang ) { delete xainfountang; }
+        if ( xauntang     ) { MEMDEL(xauntang);     }
+        if ( xainfountang ) { MEMDEL(xainfountang); }
 
         if ( iaokr )
         {
@@ -9825,13 +9825,13 @@ double ML_Base::K2x2(int ia, int ib, int ic,
             res += iadiagoffset;
         }
 
-        if ( xauntang ) { delete xauntang; }
-        if ( xbuntang ) { delete xbuntang; }
-        if ( xcuntang ) { delete xcuntang; }
+        if ( xauntang ) { MEMDEL(xauntang); }
+        if ( xbuntang ) { MEMDEL(xbuntang); }
+        if ( xcuntang ) { MEMDEL(xcuntang); }
 
-        if ( xainfountang ) { delete xainfountang; }
-        if ( xbinfountang ) { delete xbinfountang; }
-        if ( xcinfountang ) { delete xcinfountang; }
+        if ( xainfountang ) { MEMDEL(xainfountang); }
+        if ( xbinfountang ) { MEMDEL(xbinfountang); }
+        if ( xcinfountang ) { MEMDEL(xcinfountang); }
 
         if ( iaokr || ibokr || icokr )
         {
@@ -10237,13 +10237,13 @@ T &ML_Base::K2x2(T &res,
             res += iadiagoffset;
         }
 
-        if ( xauntang ) { delete xauntang; }
-        if ( xbuntang ) { delete xbuntang; }
-        if ( xcuntang ) { delete xcuntang; }
+        if ( xauntang ) { MEMDEL(xauntang); }
+        if ( xbuntang ) { MEMDEL(xbuntang); }
+        if ( xcuntang ) { MEMDEL(xcuntang); }
 
-        if ( xainfountang ) { delete xainfountang; }
-        if ( xbinfountang ) { delete xbinfountang; }
-        if ( xcinfountang ) { delete xcinfountang; }
+        if ( xainfountang ) { MEMDEL(xainfountang); }
+        if ( xbinfountang ) { MEMDEL(xbinfountang); }
+        if ( xcinfountang ) { MEMDEL(xcinfountang); }
 
         if ( iaokr || ibokr || icokr )
         {
@@ -10541,11 +10541,11 @@ errstream() << "K2 evaluated null 3: " << getKernel() << "\n";
             res = 0.0;
         }
 
-        if ( xauntang ) { delete xauntang; }
-        if ( xbuntang ) { delete xbuntang; }
+        if ( xauntang ) { MEMDEL(xauntang); }
+        if ( xbuntang ) { MEMDEL(xbuntang); }
 
-        if ( xainfountang ) { delete xainfountang; }
-        if ( xbinfountang ) { delete xbinfountang; }
+        if ( xainfountang ) { MEMDEL(xainfountang); }
+        if ( xbinfountang ) { MEMDEL(xbinfountang); }
 
         if ( ia == ib )
         {
@@ -10811,11 +10811,11 @@ errstream() << "K2 evaluated null 3: " << getKernel() << "\n";
             res = 0.0;
         }
 
-        if ( xauntang ) { delete xauntang; }
-        if ( xbuntang ) { delete xbuntang; }
+        if ( xauntang ) { MEMDEL(xauntang); }
+        if ( xbuntang ) { MEMDEL(xbuntang); }
 
-        if ( xainfountang ) { delete xainfountang; }
-        if ( xbinfountang ) { delete xbinfountang; }
+        if ( xainfountang ) { MEMDEL(xainfountang); }
+        if ( xbinfountang ) { MEMDEL(xbinfountang); }
 
         if ( ia == ib )
         {
@@ -11173,13 +11173,13 @@ double ML_Base::K3(int ia, int ib, int ic,
             res += iadiagoffset;
         }
 
-        if ( xauntang ) { delete xauntang; }
-        if ( xbuntang ) { delete xbuntang; }
-        if ( xcuntang ) { delete xcuntang; }
+        if ( xauntang ) { MEMDEL(xauntang); }
+        if ( xbuntang ) { MEMDEL(xbuntang); }
+        if ( xcuntang ) { MEMDEL(xcuntang); }
 
-        if ( xainfountang ) { delete xainfountang; }
-        if ( xbinfountang ) { delete xbinfountang; }
-        if ( xcinfountang ) { delete xcinfountang; }
+        if ( xainfountang ) { MEMDEL(xainfountang); }
+        if ( xbinfountang ) { MEMDEL(xbinfountang); }
+        if ( xcinfountang ) { MEMDEL(xcinfountang); }
 
         if ( iaokr || ibokr || icokr )
         {
@@ -11533,13 +11533,13 @@ T &ML_Base::K3(T &res,
             res += iadiagoffset;
         }
 
-        if ( xauntang ) { delete xauntang; }
-        if ( xbuntang ) { delete xbuntang; }
-        if ( xcuntang ) { delete xcuntang; }
+        if ( xauntang ) { MEMDEL(xauntang); }
+        if ( xbuntang ) { MEMDEL(xbuntang); }
+        if ( xcuntang ) { MEMDEL(xcuntang); }
 
-        if ( xainfountang ) { delete xainfountang; }
-        if ( xbinfountang ) { delete xbinfountang; }
-        if ( xcinfountang ) { delete xcinfountang; }
+        if ( xainfountang ) { MEMDEL(xainfountang); }
+        if ( xbinfountang ) { MEMDEL(xbinfountang); }
+        if ( xcinfountang ) { MEMDEL(xcinfountang); }
 
         if ( iaokr || ibokr || icokr )
         {
@@ -12047,15 +12047,15 @@ double ML_Base::K4(int ia, int ib, int ic, int id,
             res += iadiagoffset;
         }
 
-        if ( xauntang ) { delete xauntang; }
-        if ( xbuntang ) { delete xbuntang; }
-        if ( xcuntang ) { delete xcuntang; }
-        if ( xduntang ) { delete xduntang; }
+        if ( xauntang ) { MEMDEL(xauntang); }
+        if ( xbuntang ) { MEMDEL(xbuntang); }
+        if ( xcuntang ) { MEMDEL(xcuntang); }
+        if ( xduntang ) { MEMDEL(xduntang); }
 
-        if ( xainfountang ) { delete xainfountang; }
-        if ( xbinfountang ) { delete xbinfountang; }
-        if ( xcinfountang ) { delete xcinfountang; }
-        if ( xdinfountang ) { delete xdinfountang; }
+        if ( xainfountang ) { MEMDEL(xainfountang); }
+        if ( xbinfountang ) { MEMDEL(xbinfountang); }
+        if ( xcinfountang ) { MEMDEL(xcinfountang); }
+        if ( xdinfountang ) { MEMDEL(xdinfountang); }
 
         if ( iaokr || ibokr || icokr || idokr )
         {
@@ -12571,15 +12571,15 @@ T &ML_Base::K4(T &res,
             res += iadiagoffset;
         }
 
-        if ( xauntang ) { delete xauntang; }
-        if ( xbuntang ) { delete xbuntang; }
-        if ( xcuntang ) { delete xcuntang; }
-        if ( xduntang ) { delete xduntang; }
+        if ( xauntang ) { MEMDEL(xauntang); }
+        if ( xbuntang ) { MEMDEL(xbuntang); }
+        if ( xcuntang ) { MEMDEL(xcuntang); }
+        if ( xduntang ) { MEMDEL(xduntang); }
 
-        if ( xainfountang ) { delete xainfountang; }
-        if ( xbinfountang ) { delete xbinfountang; }
-        if ( xcinfountang ) { delete xcinfountang; }
-        if ( xdinfountang ) { delete xdinfountang; }
+        if ( xainfountang ) { MEMDEL(xainfountang); }
+        if ( xbinfountang ) { MEMDEL(xbinfountang); }
+        if ( xcinfountang ) { MEMDEL(xcinfountang); }
+        if ( xdinfountang ) { MEMDEL(xdinfountang); }
 
         if ( iaokr || ibokr || icokr || idokr )
         {
@@ -12673,8 +12673,8 @@ double ML_Base::Km(int m,
 
         res = Km(m,i,bias,basealtK,pxyprod,xxx,xxxinfo,resmode);
 
-        MEMDEL(xxx);
-        MEMDEL(xxxinfo);
+        MEMDEL(xxx);     xxx     = nullptr;
+        MEMDEL(xxxinfo); xxxinfo = nullptr;
     }
 
     if ( m == 0 )
@@ -12853,8 +12853,8 @@ double ML_Base::Km(int m,
 
             for ( ii = 0 ; ii < m ; ++ii )
             {
-                if ( xxi("&",ii) ) { delete xxi("&",ii); }
-                if ( xxinfoi("&",ii) ) { delete xxinfoi("&",ii); }
+                if ( xxi("&",ii)     ) { MEMDEL(xxi("&",ii));     }
+                if ( xxinfoi("&",ii) ) { MEMDEL(xxinfoi("&",ii)); }
             }
 
             if ( sum(iokr) )
@@ -12937,8 +12937,8 @@ T &ML_Base::Km(int m, T &res,
 
         Km(m,res,i,bias,basealtK,pxyprod,xxx,xxxinfo,resmode);
 
-        MEMDEL(xxx);
-        MEMDEL(xxxinfo);
+        MEMDEL(xxx);     xxx     = nullptr;
+        MEMDEL(xxxinfo); xxxinfo = nullptr;
     }
 
     if ( m == 0 )
@@ -13117,8 +13117,8 @@ T &ML_Base::Km(int m, T &res,
 
             for ( ii = 0 ; ii < m ; ++ii )
             {
-                if ( xxi("&",ii) ) { delete xxi("&",ii); }
-                if ( xxinfoi("&",ii) ) { delete xxinfoi("&",ii); }
+                if ( xxi("&",ii)     ) { MEMDEL(xxi("&",ii));     }
+                if ( xxinfoi("&",ii) ) { MEMDEL(xxinfoi("&",ii)); }
             }
 
             if ( sum(iokr) )
@@ -13584,11 +13584,11 @@ void ML_Base::dK(T &xygrad, T &xnormgrad,
 
         altK.dK(xygrad,xnormgrad,dummyind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),nullptr,nullptr,nullptr,deepDeriv,assumeReal);
 
-        if ( xai     ) { delete xai;     }
-        if ( xainfoi ) { delete xainfoi; }
+        if ( xai     ) { MEMDEL(xai);     }
+        if ( xainfoi ) { MEMDEL(xainfoi); }
 
-        if ( xbi     ) { delete xbi;     }
-        if ( xbinfoi ) { delete xbinfoi; }
+        if ( xbi     ) { MEMDEL(xbi);     }
+        if ( xbinfoi ) { MEMDEL(xbinfoi); }
 
         if ( iaokr || ibokr )
         {
@@ -13759,11 +13759,11 @@ void ML_Base::d2K(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T &xyyno
 
         altK.d2K(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,minmaxind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),nullptr,nullptr,nullptr,0,assumeReal);
 
-        if ( xai     ) { delete xai;     }
-        if ( xainfoi ) { delete xainfoi; }
+        if ( xai     ) { MEMDEL(xai);     }
+        if ( xainfoi ) { MEMDEL(xainfoi); }
 
-        if ( xbi     ) { delete xbi;     }
-        if ( xbinfoi ) { delete xbinfoi; }
+        if ( xbi     ) { MEMDEL(xbi);     }
+        if ( xbinfoi ) { MEMDEL(xbinfoi); }
 
         if ( iaokr || ibokr )
         {
@@ -13940,11 +13940,11 @@ void ML_Base::d2K2delxdelx(T &xxscaleres, T &yyscaleres, T &xyscaleres, T &yxsca
 
         altK.d2K2delxdelx(xxscaleres,yyscaleres,xyscaleres,yxscaleres,constres,minmaxind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),nullptr,nullptr,nullptr,0,assumeReal);
 
-        if ( xai     ) { delete xai;     }
-        if ( xainfoi ) { delete xainfoi; }
+        if ( xai     ) { MEMDEL(xai);     }
+        if ( xainfoi ) { MEMDEL(xainfoi); }
 
-        if ( xbi     ) { delete xbi;     }
-        if ( xbinfoi ) { delete xbinfoi; }
+        if ( xbi     ) { MEMDEL(xbi);     }
+        if ( xbinfoi ) { MEMDEL(xbinfoi); }
 
         if ( iaokr || ibokr )
         {
@@ -14119,11 +14119,11 @@ void ML_Base::d2K2delxdely(T &xxscaleres, T &yyscaleres, T &xyscaleres, T &yxsca
 
         altK.d2K2delxdely(xxscaleres,yyscaleres,xyscaleres,yxscaleres,constres,minmaxind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),nullptr,nullptr,nullptr,0,assumeReal);
 
-        if ( xai     ) { delete xai;     }
-        if ( xainfoi ) { delete xainfoi; }
+        if ( xai     ) { MEMDEL(xai);     }
+        if ( xainfoi ) { MEMDEL(xainfoi); }
 
-        if ( xbi     ) { delete xbi;     }
-        if ( xbinfoi ) { delete xbinfoi; }
+        if ( xbi     ) { MEMDEL(xbi);     }
+        if ( xbinfoi ) { MEMDEL(xbinfoi); }
 
         if ( iaokr || ibokr )
         {
@@ -14298,11 +14298,11 @@ void ML_Base::dnK2del(Vector<T> &sc, Vector<Vector<int> > &n, int &minmaxind,
 
         altK.dnK2del(sc,n,minmaxind,q,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),nullptr,nullptr,nullptr,0,assumeReal);
 
-        if ( xai     ) { delete xai;     }
-        if ( xainfoi ) { delete xainfoi; }
+        if ( xai     ) { MEMDEL(xai);     }
+        if ( xainfoi ) { MEMDEL(xainfoi); }
 
-        if ( xbi     ) { delete xbi;     }
-        if ( xbinfoi ) { delete xbinfoi; }
+        if ( xbi     ) { MEMDEL(xbi);     }
+        if ( xbinfoi ) { MEMDEL(xbinfoi); }
 
         if ( iaokr || ibokr )
         {
@@ -14472,11 +14472,11 @@ void ML_Base::dK2delx(T &xscaleres, T &yscaleres, int &minmaxind,
 
         altK.dK2delx(xscaleres,yscaleres,minmaxind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),nullptr,nullptr,nullptr,assumeReal);
 
-        if ( xai     ) { delete xai;     }
-        if ( xainfoi ) { delete xainfoi; }
+        if ( xai     ) { MEMDEL(xai);     }
+        if ( xainfoi ) { MEMDEL(xainfoi); }
 
-        if ( xbi     ) { delete xbi;     }
-        if ( xbinfoi ) { delete xbinfoi; }
+        if ( xbi     ) { MEMDEL(xbi);     }
+        if ( xbinfoi ) { MEMDEL(xbinfoi); }
 
         if ( iaokr || ibokr )
         {

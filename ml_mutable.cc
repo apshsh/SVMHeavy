@@ -233,7 +233,7 @@ void ML_Mutable::setMLTypeMorph(int newmlType)
 
         xfer(*dest,*src);
 
-        MEMDEL(src);
+        MEMDEL(src); src = nullptr;
     }
 
     return;
@@ -804,7 +804,7 @@ void ML_Mutable::resizetheML(int newsize)
         {
             if ( isdelable )
             {
-                MEMDEL(theML("&",i));
+                MEMDEL(theML("&",i)); theML("&",i) = nullptr;
             }
         }
 
@@ -1290,7 +1290,7 @@ ML_Base &assign(ML_Base **dest, const ML_Base *src, int onlySemiCopy)
 {
     if ( (*dest)->type() != src->type() )
     {
-        MEMDEL(*dest);
+        MEMDEL(*dest); *dest = nullptr;
         *dest = makeNewML(src->type());
     }
 

@@ -444,7 +444,7 @@ class fninnerinnerArg
                 res += temp/((double) (2*(n+unscentK)));
             }
 
-            MEMDELARRAY(xxx);
+            MEMDELARRAY(xxx); xxx = nullptr;
         }
 
         return res;
@@ -523,9 +523,9 @@ class fninnerinnerArg
             case 12:  /* TS-Kand             */ { nu = 1;     eps = 0;                                                                                        break; }
             case 16:  /* TS-Kand             */ { nu = 1;     eps = 0;                                                                                        break; }
             case 19:  /* HE                  */ { nu = 1;     eps = 0.001;                                                                                    break; }
-            case 9:   /* PE                  */ { nu = 1;     eps = valpinf();  epspinf = true;                                                               break; }
-            case 10:  /* PEc                 */ { nu = 1;     eps = valpinf();  epspinf = true;                                                               break; }
-            case 100: /* PEc-b               */ { nu = 1;     eps = valpinf();  epspinf = true;                                                               break; }
+            case 9:   /* PE                  */ { nu = 1;     eps = valpinf();                                                                                break; }
+            case 10:  /* PEc                 */ { nu = 1;     eps = valpinf();                                                                                break; }
+            case 100: /* PEc-b               */ { nu = 1;     eps = valpinf();                                                                                break; }
             case 4:   /* gpUCB finite        */ { nu = defnu; eps = 2*log(modD*pow(altiters,2)*(NUMBASE_PI*NUMBASE_PI/(6*delta)));                            break; }
             case 5:   /* gpUCB infinite      */ { nu = defnu; eps = (2*log(pow(altiters,2)*(2*NUMBASE_PI*NUMBASE_PI/(3*delta)))) + (2*thisbatchsize*dvalreal*log(((thisbatchsize==1)?1.0:2.0)*pow(altiters,2)*dvalreal*b*r*sqrt(log(4*thisbatchsize*dvalreal*a/delta)))); break; }
             case 7:   /* gpUCB p finite      */ { nu = defnu; eps = 2*log(modD*numbase_zeta(p)*pow(altiters,p)/delta);                                        break; }
@@ -541,6 +541,11 @@ class fninnerinnerArg
             case 18:  /* Human               */ { nu = 1;     eps = valvnan();                                                                                break; }
             case 21:  /* Random              */ { nu = 1;     eps = valvnan();                                                                                break; }
             default:  /* fallback trigger    */ { nu = 1;     eps = valvnan();                                                                                break; }
+        }
+
+        if ( testisinf(eps) && !testisvnan(eps) )
+        {
+            epspinf = true;
         }
 
         StrucAssert( justreturnbeta || !testisvnan(eps) ); // Human and fallback will trigger this, but if either reaches here then that's an error
@@ -695,20 +700,23 @@ class fninnerinnerArg
                 OP_sqrt(sigmay); // works elementwise on vectors
             }
 
-            else if ( ( acq == 12 ) || ( acq == 16 ) )
-            {
-                // We don't *use* var, but we do need to call var to ensure that the point is properly sampled!
-
-                bbopts.model_muvar(sigmay,muy,x,*xinf);
-                if ( sigmay.isValVector() ) { sigmay.dir_vector() = 0.0_gent; }
-                else                        { sigmay = 0.0;                   }
-            }
+//            else if ( ( acq == 12 ) || ( acq == 16 ) )
+//            {
+//                // We don't *use* var, but we do need to call var to ensure that the point is properly sampled!
+// actually this will be done automatically when calling if needed
+//
+//                bbopts.model_muvar(sigmay,muy,x,*xinf);
+//                if ( sigmay.isValVector() ) { sigmay.dir_vector() = 0.0_gent; }
+//                else                        { sigmay = 0.0;                   }
+//            }
 
             else
             {
                 // Model does not require sigma, no JIT sampling involved, so don't waste time calculating it.
+                // correction: JIT is automatic on call to g
 
                 bbopts.model_mu(muy,x,*xinf);
+
                 if ( muy.isValVector() ) { sigmay.force_vector(muy.size()) = 0.0_gent; }
                 else                     { sigmay.force_double() = 0.0;                }
             }

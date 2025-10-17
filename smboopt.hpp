@@ -1197,7 +1197,7 @@ int SMBOOptions::model_mu(gentype &resg, const SparseVector<S> &x, const vecInfo
 
                 if ( xspp(i) )
                 {
-                    MEMDELARRAY(xspp("&",i));
+                    MEMDELARRAY(xspp("&",i)); xspp("&",i) = nullptr;
                 }
 
                 xspp.remove(i);
@@ -1343,7 +1343,7 @@ int SMBOOptions::model_mu(Vector<double> &resg, const SparseVector<S> &x, const 
 
                 if ( xspp(i) )
                 {
-                    MEMDELARRAY(xspp("&",i));
+                    MEMDELARRAY(xspp("&",i)); xspp("&",i) = nullptr;
                 }
 
                 xspp.remove(i);
@@ -1499,7 +1499,7 @@ int SMBOOptions::model_muvar(gentype &resv, gentype &resmu, const SparseVector<S
 
                 if ( xspp(i) )
                 {
-                    MEMDELARRAY(xspp("&",i));
+                    MEMDELARRAY(xspp("&",i)); xspp("&",i) = nullptr;
                 }
 
                 xspp.remove(i);
@@ -1857,7 +1857,7 @@ bailout:
 
         if ( pxyprodxx )
         {
-            MEMDELARRAY(pxyprodxx);
+            MEMDELARRAY(pxyprodxx); pxyprodxx = nullptr;
         }
 
         return ires;

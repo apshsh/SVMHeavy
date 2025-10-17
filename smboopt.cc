@@ -116,8 +116,7 @@ void SMBOOptions::delreps(void)
         {
             if ( muapproxRaw(i) )
             {
-                MEMDEL(muapproxRaw("&",i));
-                muapproxRaw("&",i) = nullptr;
+                MEMDEL(muapproxRaw("&",i)); muapproxRaw("&",i) = nullptr;
             }
         }
 
@@ -130,8 +129,7 @@ void SMBOOptions::delreps(void)
         {
             if ( muapprox_sample(i) )
             {
-                MEMDEL(muapprox_sample("&",i));
-                muapprox_sample("&",i) = nullptr;
+                MEMDEL(muapprox_sample("&",i)); muapprox_sample("&",i) = nullptr;
             }
         }
 
@@ -144,8 +142,7 @@ void SMBOOptions::delreps(void)
         {
             if ( cgtapproxRaw(i) )
             {
-                MEMDEL(cgtapproxRaw("&",i));
-                cgtapproxRaw("&",i) = nullptr;
+                MEMDEL(cgtapproxRaw("&",i)); cgtapproxRaw("&",i) = nullptr;
             }
         }
 
@@ -158,8 +155,7 @@ void SMBOOptions::delreps(void)
         {
             if ( augxapproxRaw(i) )
             {
-                MEMDEL(augxapproxRaw("&",i));
-                augxapproxRaw("&",i) = nullptr;
+                MEMDEL(augxapproxRaw("&",i)); augxapproxRaw("&",i) = nullptr;
             }
         }
 
@@ -1445,8 +1441,7 @@ void SMBOOptions::model_unsample(void)
 
         for ( i = 0 ; i < muapprox_sample.size() ; i++ )
         {
-            MEMDEL(muapprox_sample("&",i));
-            muapprox_sample("&",i) = nullptr;
+            MEMDEL(muapprox_sample("&",i)); muapprox_sample("&",i) = nullptr;
         }
     }
 

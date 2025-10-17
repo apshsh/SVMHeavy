@@ -18105,8 +18105,8 @@ int MercerKernel::KKprosingle(T &res, const T &xyprod, const T &diffis, int *i, 
             retval += retvalx;
         }
 
-        MEMDELARRAY(ix);
-        MEMDELARRAY(xxprod);
+        MEMDELARRAY(ix);     ix     = nullptr;
+        MEMDELARRAY(xxprod); xxprod = nullptr;
 
         return retval;
     }
@@ -23831,7 +23831,7 @@ T &MercerKernel::yyyaaKm(int m, T &res,
 
         for ( int j = 0 ; j < x.size() ; ++j )
         {
-            MEMDEL(xq("&",j));
+            MEMDEL(xq("&",j)); xq("&",j) = nullptr;
         }
     }
 
@@ -36841,8 +36841,8 @@ postbias:
         {
             for ( q = 0 ; q < isValEqn.size() ; ++q )
             {
-                MEMDEL(yy("&",isValEqn(q)));
-                MEMDEL(yyinfo("&",isValEqn(q)));
+                MEMDEL(yy("&",isValEqn(q)));     yy("&",isValEqn(q))     = nullptr;
+                MEMDEL(yyinfo("&",isValEqn(q))); yyinfo("&",isValEqn(q)) = nullptr;
             }
 
             goto postx;
@@ -36899,8 +36899,8 @@ postbias:
 
         for ( q = 0 ; q < isValEqn.size() ; ++q )
         {
-            MEMDEL(yy("&",isValEqn(q)));
-            MEMDEL(yyinfo("&",isValEqn(q)));
+            MEMDEL(yy("&",isValEqn(q)));     yy("&",isValEqn(q))     = nullptr;
+            MEMDEL(yyinfo("&",isValEqn(q))); yyinfo("&",isValEqn(q)) = nullptr;
         }
 
         return res;

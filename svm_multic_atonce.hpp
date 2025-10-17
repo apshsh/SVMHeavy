@@ -845,13 +845,9 @@ inline void SVM_MultiC_atonce::assign(const ML_Base &bb, int onlySemiCopy)
 
     if ( Gpval != nullptr )
     {
-        MEMDEL(xyval);
-        MEMDEL(Gpval);
-        MEMDEL(Gpsigma);
-
-        xyval = nullptr;
-        Gpval = nullptr;
-        Gpsigma = nullptr;
+        MEMDEL(xyval);   xyval = nullptr;
+        MEMDEL(Gpval);   Gpval = nullptr;
+        MEMDEL(Gpsigma); Gpsigma = nullptr;
     }
 
     MEMNEW(xyval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &xycache   ,(trainclass.size())*((numClasses()-1)),(trainclass.size())*((numClasses()-1))));

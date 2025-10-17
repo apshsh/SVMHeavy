@@ -4892,7 +4892,7 @@ void SVM_Generic::Kmxfer(gentype &res, int &minmaxind, int typeis,
                 }
             }
 
-            if ( !( i >= 0 ) ) { resetInnerWildp(); MEMDEL(xx); }
+            if ( !( i >= 0 ) ) { resetInnerWildp(); MEMDEL(xx); xx = nullptr; }
 
             break;
         }
@@ -5121,7 +5121,7 @@ void SVM_Generic::Kmxfer(gentype &res, int &minmaxind, int typeis,
                 }
             }
 
-            if ( !( i >= 0 ) ) { resetInnerWildp(); MEMDEL(xx); }
+            if ( !( i >= 0 ) ) { resetInnerWildp(); MEMDEL(xx); xx = nullptr; }
 
             break;
         }
@@ -5313,7 +5313,7 @@ void SVM_Generic::Kmxfer(double &res, int &minmaxind, int typeis,
                 }
             }
 
-            if ( !( i >= 0 ) ) { resetInnerWildp(); MEMDEL(xx); }
+            if ( !( i >= 0 ) ) { resetInnerWildp(); MEMDEL(xx); xx = nullptr; }
 
             break;
         }
@@ -5520,7 +5520,7 @@ void SVM_Generic::Kmxfer(double &res, int &minmaxind, int typeis,
                 }
             }
 
-            if ( !( i >= 0 ) ) { resetInnerWildp(); MEMDEL(xx); }
+            if ( !( i >= 0 ) ) { resetInnerWildp(); MEMDEL(xx); xx = nullptr; }
 
             break;
         }

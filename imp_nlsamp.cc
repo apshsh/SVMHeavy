@@ -60,8 +60,7 @@ IMP_NLSamp::~IMP_NLSamp()
 {
     if ( randscal )
     {
-        MEMDEL(randscal);
-        randscal = nullptr;
+        MEMDEL(randscal); randscal = nullptr;
     }
 
     return;
@@ -98,8 +97,7 @@ std::istream &IMP_NLSamp::inputstream(std::istream &input )
 
     if ( randscal )
     {
-        MEMDEL(randscal);
-        randscal = nullptr;
+        MEMDEL(randscal); randscal = nullptr;
     }
 
     return IMP_Generic::inputstream(input);
@@ -224,8 +222,7 @@ void IMP_NLSamp::untrain(void)
 {
     if ( randscal )
     {
-        MEMDEL(randscal);
-        randscal = nullptr;
+        MEMDEL(randscal); randscal = nullptr;
     }
 
     dbias  = 0;

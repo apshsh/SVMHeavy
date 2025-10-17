@@ -50,14 +50,16 @@ std::istream &LSV_Scalar::inputstream(std::istream &input )
 LSV_Scalar::LSV_Scalar() : LSV_Generic()
 {
     dbias.force_double() = 0.0;
+    dbiasR = 0.0;
 
     return;
 }
 
 LSV_Scalar::LSV_Scalar(const LSV_Scalar &src) : LSV_Generic()
 {
-    assign(src,0);
     dbias.force_double() = 0.0;
+    dbiasR = 0.0;
+    assign(src,0);
 
     return;
 }
@@ -66,8 +68,9 @@ LSV_Scalar::LSV_Scalar(const LSV_Scalar &src, const ML_Base *srcx) : LSV_Generic
 {
     setaltx(srcx);
 
-    assign(src,-1);
     dbias.force_double() = 0.0;
+    dbiasR = 0.0;
+    assign(src,-1);
 
     return;
 }
@@ -1080,6 +1083,9 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
 //FIXME: resmu
     if ( ( dtva & 4 ) || ( dtvb & 4 ) || !isUnderlyingScalar() )
     {
+//        resmu = dbias;
+//        resmu *= 0.0;
+
         if ( NNC(-1) || NNC(+1) || NNC(2) )
         {
             int j;
@@ -1579,6 +1585,11 @@ int LSV_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
         }
     }
 
+//    if ( resmu.isCastableToIntegerWithoutLoss() ) { errstream() << "triger valgrind resmu bad\n"; }
+//    if ( ia ) { errstream() << "triger valgrind ia bad\n"; }
+//    if ( yp(ia).isCastableToIntegerWithoutLoss() ) { errstream() << "triger valgrind yp(ia) bad\n"; }
+//    if ( dbias.isCastableToIntegerWithoutLoss() ) { errstream() << "triger valgrind dbias bad\n"; }
+//    if ( dbiasR < 0 ) { errstream() << "triger valgrind dbiasR bad\n"; }
     resmu += yp(ia);
 
     resmu /= KSCALE1(ia);

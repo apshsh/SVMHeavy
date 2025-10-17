@@ -317,8 +317,11 @@ void BLK_CalBak::Kmxfer(gentype &res, int &minmaxind, int typeis,
     {
         int ii;
 
-        double **xx = new double *[m];
-        int *xxdim = new int[m];
+        double **xx = nullptr;
+        int *xxdim = nullptr;
+
+        MEMNEWARRAY(xx,double *,m);
+        MEMNEWARRAY(xxdim,int,m);
 
         for ( ii = 0 ; ii < m ; ++ii )
         {
@@ -327,8 +330,8 @@ void BLK_CalBak::Kmxfer(gentype &res, int &minmaxind, int typeis,
 
         res.force_double() = (*Kmcallbackalt())(typeis,const_cast<const double **>(xx),xxdim,&(i(0)),xdim,m,densetype,resmode,mlid,Kmcallbackdata());
 
-        delete[] xx;
-        delete[] xxdim;
+        MEMDELARRAY(xx);
+        MEMDELARRAY(xxdim);
     }
 
     else

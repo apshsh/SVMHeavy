@@ -46,6 +46,8 @@ GPR_Generic::GPR_Generic() : ML_Base_Deref()
     Nnc.resize(4);
     Nnc = 0;
 
+    xisTrained = 0;
+
     return;
 }
 
@@ -63,6 +65,8 @@ GPR_Generic::GPR_Generic(const GPR_Generic &src) : ML_Base_Deref()
 
     Nnc.resize(4);
     Nnc = 0;
+
+    xisTrained = 0;
 
     assign(src,0);
 
@@ -83,6 +87,8 @@ GPR_Generic::GPR_Generic(const GPR_Generic &src, const ML_Base *srcx) : ML_Base_
 
     Nnc.resize(4);
     Nnc = 0;
+
+    xisTrained = 0;
 
     assign(src,-1);
 
@@ -146,6 +152,8 @@ std::istream &GPR_Generic::inputstream(std::istream &input )
 
     ML_Base::inputstream(input);
 
+    xisTrained = 0;
+
     return input;
 }
 
@@ -154,6 +162,8 @@ int GPR_Generic::addTrainingVector(int i, const gentype &y, const SparseVector<g
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
     NiceAssert( epsweigh = 1 );
+
+    xisTrained = 0;
 
     dsigmaweight.add(i);  dsigmaweight("&",i) = 1/Cweigh;
     dCweight.add(i);      dCweight("&",i)     = Cweigh;
@@ -173,6 +183,8 @@ int GPR_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentyp
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
     NiceAssert( epsweigh = 1 );
+
+    xisTrained = 0;
 
     dsigmaweight.add(i);  dsigmaweight("&",i) = 1/Cweigh;
     dCweight.add(i);      dCweight("&",i)     = Cweigh;
@@ -195,6 +207,8 @@ int GPR_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector
 
     int res = 0;
 
+    xisTrained = 0;
+
     if ( y.size() )
     {
         int j;
@@ -216,6 +230,8 @@ int GPR_Generic::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<Spar
 
     int res = 0;
 
+    xisTrained = 0;
+
     if ( y.size() )
     {
         int j;
@@ -235,6 +251,8 @@ int GPR_Generic::removeTrainingVector(int i, gentype &y, SparseVector<gentype> &
     NiceAssert( i < N() );
 
     --(Nnc("&",xd(i)+1));
+
+    xisTrained = 0;
 
     y = dy(i);
 
@@ -268,6 +286,8 @@ int GPR_Generic::removeTrainingVector(int i, int num)
 
 int GPR_Generic::sety(int i, const gentype &nv)
 {
+    xisTrained = 0;
+
     dy("&",i) = nv;
 
     dyR("&",i) = (double) nv;
@@ -279,6 +299,8 @@ int GPR_Generic::sety(int i, const gentype &nv)
 
 int GPR_Generic::sety(const Vector<int> &i, const Vector<gentype> &nv)
 {
+    xisTrained = 0;
+
     for ( int ii = 0 ; ii < i.size() ; ++ii )
     {
         dy("&",i(ii)) = nv(ii);
@@ -293,6 +315,8 @@ int GPR_Generic::sety(const Vector<int> &i, const Vector<gentype> &nv)
 
 int GPR_Generic::sety(const Vector<gentype> &nv)
 {
+    xisTrained = 0;
+
     for ( int ii = 0 ; ii < N() ; ++ii )
     {
         dy("&",ii) = nv(ii);
@@ -307,6 +331,8 @@ int GPR_Generic::sety(const Vector<gentype> &nv)
 
 int GPR_Generic::sety(int i, double nv)
 {
+    xisTrained = 0;
+
     dy("&",i) = nv;
 
     dyR("&",i) = nv;
@@ -318,6 +344,8 @@ int GPR_Generic::sety(int i, double nv)
 
 int GPR_Generic::sety(const Vector<int> &i, const Vector<double> &nv)
 {
+    xisTrained = 0;
+
     for ( int ii = 0 ; ii < i.size() ; ++ii )
     {
         dy("&",i(ii)) = nv(ii);
@@ -332,6 +360,8 @@ int GPR_Generic::sety(const Vector<int> &i, const Vector<double> &nv)
 
 int GPR_Generic::sety(const Vector<double> &nv)
 {
+    xisTrained = 0;
+
     for ( int ii = 0 ; ii < N() ; ++ii )
     {
         dy("&",ii) = nv(ii);
@@ -353,6 +383,8 @@ int GPR_Generic::sety(int i, const Vector<double> &nv)
 
 int GPR_Generic::sety(const Vector<int> &i, const Vector<Vector<double> > &nv)
 {
+    xisTrained = 0;
+
     Vector<gentype> n(i.size());
 
     for ( int ii = 0 ; ii < i.size() ; ++ii )
@@ -369,6 +401,8 @@ int GPR_Generic::sety(const Vector<int> &i, const Vector<Vector<double> > &nv)
 
 int GPR_Generic::sety(const Vector<Vector<double> > &nv)
 {
+    xisTrained = 0;
+
     Vector<gentype> n(N());
 
     for ( int ii = 0 ; ii < N() ; ++ii )
@@ -392,6 +426,8 @@ int GPR_Generic::sety(int i, const d_anion &nv)
 
 int GPR_Generic::sety(const Vector<int> &i, const Vector<d_anion> &nv)
 {
+    xisTrained = 0;
+
     Vector<gentype> n(i.size());
 
     for ( int ii = 0 ; ii < i.size() ; ++ii )
@@ -408,6 +444,8 @@ int GPR_Generic::sety(const Vector<int> &i, const Vector<d_anion> &nv)
 
 int GPR_Generic::sety(const Vector<d_anion> &nv)
 {
+    xisTrained = 0;
+
     Vector<gentype> n(N());
 
     for ( int ii = 0 ; ii < N() ; ++ii )
@@ -424,6 +462,8 @@ int GPR_Generic::sety(const Vector<d_anion> &nv)
 
 int GPR_Generic::setsigmaweight(int i, double nv)
 {
+    xisTrained = 0;
+
     dsigmaweight("&",i) = nv;
     dCweight("&",i) = 1/nv;
 
@@ -432,6 +472,8 @@ int GPR_Generic::setsigmaweight(int i, double nv)
 
 int GPR_Generic::setsigmaweight(const Vector<int> &i, const Vector<double> &nv)
 {
+    xisTrained = 0;
+
     NiceAssert( i.size() == nv.size() );
 
     if ( i.size() )
@@ -452,6 +494,8 @@ int GPR_Generic::setsigmaweight(const Vector<int> &i, const Vector<double> &nv)
 
 int GPR_Generic::setsigmaweight(const Vector<double> &nv)
 {
+    xisTrained = 0;
+
     NiceAssert( N() == nv.size() );
 
     if ( nv.size() )
@@ -473,6 +517,8 @@ int GPR_Generic::setsigmaweight(const Vector<double> &nv)
 
 int GPR_Generic::setCweight(int i, double nv)
 {
+    xisTrained = 0;
+
     dCweight("&",i) = nv;
     dsigmaweight("&",i) = 1/nv;
 
@@ -481,6 +527,8 @@ int GPR_Generic::setCweight(int i, double nv)
 
 int GPR_Generic::setCweight(const Vector<int> &i, const Vector<double> &nv)
 {
+    xisTrained = 0;
+
     NiceAssert( i.size() == nv.size() );
 
     if ( i.size() )
@@ -499,6 +547,8 @@ int GPR_Generic::setCweight(const Vector<int> &i, const Vector<double> &nv)
 
 int GPR_Generic::setCweight(const Vector<double> &nv)
 {
+    xisTrained = 0;
+
     NiceAssert( N() == nv.size() );
 
     if ( nv.size() )
@@ -517,6 +567,8 @@ int GPR_Generic::setCweight(const Vector<double> &nv)
 
 int GPR_Generic::scaleCweight(double s)
 {
+    xisTrained = 0;
+
     dsigmaweight *= 1/s;
     dCweight *= s;
 
@@ -525,6 +577,8 @@ int GPR_Generic::scaleCweight(double s)
 
 int GPR_Generic::scalesigmaweight(double s)
 {
+    xisTrained = 0;
+
     dsigmaweight *= s;
     dCweight *= 1/s;
 
@@ -535,6 +589,8 @@ int GPR_Generic::setd(int i, int nd)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < N() );
+
+    xisTrained = 0;
 
     // for anions and vectors setting d == -1,+1 makes no sense
 
@@ -558,6 +614,8 @@ int GPR_Generic::setd(int i, int nd)
 int GPR_Generic::setd(const Vector<int> &i, const Vector<int> &nd)
 {
     NiceAssert( i.size() == nd.size() );
+
+    xisTrained = 0;
 
     int res = 0;
 
@@ -709,6 +767,8 @@ int GPR_Generic::scale(double _sf)
 {
     int res = 0;
     gentype sf(_sf);
+
+    xisTrained = 0;
 
     dy *= sf;
     res |= sety(dy);
@@ -2448,8 +2508,7 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
 
             // Delete prior
 
-            MEMDEL(prior);
-            prior = nullptr;
+            MEMDEL(prior); prior = nullptr;
         }
 
         else
@@ -2675,6 +2734,7 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
         // Lock to prevent re-training (which will either fail and mess up the sample or, in best case, just waste time)
 
         isLocked = 1;
+        xisTrained = 1;
     }
 
     sampleMode  = nv;

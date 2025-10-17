@@ -121,11 +121,11 @@ void fnConstDel(const void *args, void *vargs)
     Vector<double>  *rowshow = (Vector<double> *) tempargs[1];
     double         **dp      = (double **)        tempargs[2];
 
-    MEMDELARRAY(dvals);
-    MEMDEL(rowshow);
-    MEMDEL(dp);
+    MEMDELARRAY(dvals); dvals   = nullptr;
+    MEMDEL(rowshow);    rowshow = nullptr;
+    MEMDEL(dp);         dp      = nullptr;
 
-    MEMDELARRAY(tempargs);
+    MEMDELARRAY(tempargs); tempargs = nullptr;
 
     return;
 }
@@ -256,10 +256,10 @@ void fnValsDel(const void *args, void *vargs)
     double          *dvals   = (double *)         tempargs[0];
     Vector<double>  *rowshow = (Vector<double> *) tempargs[1];
 
-    MEMDELARRAY(dvals);
-    MEMDEL(rowshow);
+    MEMDELARRAY(dvals); dvals   = nullptr;
+    MEMDEL(rowshow);    rowshow = nullptr;
 
-    MEMDELARRAY(tempargs);
+    MEMDELARRAY(tempargs); tempargs = nullptr;
 
     return;
 }
@@ -333,9 +333,9 @@ void fnDiagDel(const void *args, void *vargs)
     Vector<double>  *rowshow = (Vector<double> *) tempargs[1];
     Vector<double>  *rowget  = (Vector<double> *) tempargs[2];
 
-    MEMDELARRAY(dvals);
-    MEMDEL(rowshow);
-    MEMDEL(rowget);
+    MEMDELARRAY(dvals); dvals   = nullptr;
+    MEMDEL(rowshow);    rowshow = nullptr;
+    MEMDEL(rowget);     rowget  = nullptr;
 
     MEMDELARRAY((void **) vargs);
 
@@ -408,8 +408,8 @@ void fnDiagDelP(const void *args, void *vargs)
     double          *dvals   = (double *)         tempargs[0];
     Vector<double>  *rowshow = (Vector<double> *) tempargs[1];
 
-    MEMDELARRAY(dvals);
-    MEMDEL(rowshow);
+    MEMDELARRAY(dvals); dvals   = nullptr;
+    MEMDEL(rowshow);    rowshow = nullptr;
 
     MEMDELARRAY((void **) vargs);
 

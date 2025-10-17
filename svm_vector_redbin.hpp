@@ -658,14 +658,9 @@ inline void SVM_Vector_redbin<BaseRegressorClass>::assign(const ML_Base &bb, int
 
     if ( Gplocal )
     {
-	MEMDEL(xyval);
-	xyval = nullptr;
-
-	MEMDEL(Gpval);
-	Gpval = nullptr;
-
-        MEMDEL(Gpsigma);
-	Gpsigma = nullptr;
+	MEMDEL(xyval);   xyval = nullptr;
+	MEMDEL(Gpval);   Gpval = nullptr;
+        MEMDEL(Gpsigma); Gpsigma = nullptr;
     }
 
     if ( src.Gplocal )
@@ -868,14 +863,9 @@ SVM_Vector_redbin<BaseRegressorClass>::~SVM_Vector_redbin()
 {
     if ( Gplocal )
     {
-	MEMDEL(xyval);
-	xyval = nullptr;
-
-	MEMDEL(Gpval);
-	Gpval = nullptr;
-
-        MEMDEL(Gpsigma);
-	Gpsigma = nullptr;
+	MEMDEL(xyval);   xyval = nullptr;
+	MEMDEL(Gpval);   Gpval = nullptr;
+        MEMDEL(Gpsigma); Gpsigma = nullptr;
     }
 
     return;
@@ -2945,14 +2935,9 @@ void SVM_Vector_redbin<BaseRegressorClass>::setGp(Matrix<double> *extGp, Matrix<
 	{
             NiceAssert( extGpsigma != nullptr );
 
-	    MEMDEL(xyval);
-	    xyval = nullptr;
-
-	    MEMDEL(Gpval);
-	    Gpval = nullptr;
-
-	    MEMDEL(Gpsigma);
-	    Gpsigma = nullptr;
+	    MEMDEL(xyval);   xyval = nullptr;
+	    MEMDEL(Gpval);   Gpval = nullptr;
+	    MEMDEL(Gpsigma); Gpsigma = nullptr;
 
 	    Gplocal = 0;
 

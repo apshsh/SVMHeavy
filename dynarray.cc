@@ -52,7 +52,7 @@ void DynArray<int>::locresize(int size, int suggestedallocsize, const int *fillv
     int stepsizeupclip = ( stepsizeup > MINSIZE ) ? stepsizeup : MINSIZE;
 
     //if ( !allocsize && size ) - actually, you need to test content != nullptr to allow for enZeroExt
-    if ( !content && size )
+    if ( !dyncontent && size )
     {
         // JIT allocation occurs here
         // On first run we just allocate the size requested - no alloc
@@ -64,26 +64,31 @@ void DynArray<int>::locresize(int size, int suggestedallocsize, const int *fillv
 
         NiceAssert( allocsize >= 0 );
 
-        MEMNEWARRAY(content,int,allocsize+1);
+        MEMNEWARRAY(dyncontent,int,allocsize+1);
 
-        NiceAssert(content);
+        setzero(DEREFMEMARRAY(dyncontent,0));
+//        setzero(dyncontent[0]);
+
+        NiceAssert(dyncontent);
         #ifndef IGNOREMEM
         memcount((allocsize*sizeof(int)),+1);
         #endif
 
         if ( fillval )
         {
-            for ( int i = -1 ; i < allocsize ; ++i )
+            for ( int i = 0 ; i < allocsize ; ++i )
             {
-                content[i+1] = *fillval;
+                DEREFMEMARRAY(dyncontent,i+1) = *fillval;
+//                dyncontent[i+1] = *fillval;
             }
         }
 
         else if ( suggestedallocsize == -2 )
         {
-            for ( int i = -1 ; i < allocsize ; ++i )
+            for ( int i = 0 ; i < allocsize ; ++i )
             {
-                content[i+1] = i;
+                DEREFMEMARRAY(dyncontent,i+1) = i;
+//                dyncontent[i+1] = i;
             }
         }
     }
@@ -125,7 +130,7 @@ void DynArray<int>::locresize(int size, int suggestedallocsize, const int *fillv
         int oldallocsize = allocsize;
         #endif
 
-        int *oldcontent = content;
+        int *oldcontent = dyncontent;
 
         int copysize;
         int modallocsize;
@@ -142,6 +147,9 @@ void DynArray<int>::locresize(int size, int suggestedallocsize, const int *fillv
 
         MEMNEWARRAY(newcontent,int,newallocsize+1);
 
+        setzero(DEREFMEMARRAY(newcontent,0));
+//        setzero(newcontent[0]);
+
         NiceAssert(newcontent);
         #ifndef IGNOREMEM
         memcount((newallocsize*sizeof(int)),+1);
@@ -149,27 +157,30 @@ void DynArray<int>::locresize(int size, int suggestedallocsize, const int *fillv
 
         if ( fillval )
         {
-            for ( int i = -1 ; i < newallocsize ; ++i )
+            for ( int i = 0 ; i < newallocsize ; ++i )
             {
-                newcontent[i+1] = *fillval;
+                DEREFMEMARRAY(newcontent,i+1) = *fillval;
+//                newcontent[i+1] = *fillval;
             }
         }
 
         else if ( suggestedallocsize == -2 )
         {
-            for ( int i = -1 ; i < newallocsize ; ++i )
+            for ( int i = 0 ; i < newallocsize ; ++i )
             {
-                newcontent[i+1] = i;
+                DEREFMEMARRAY(newcontent,i+1) = i;
+//                newcontent[i+1] = i;
             }
         }
 
         else if ( copysize+((int) enZeroExt) && oldcontent )
         {
-            for ( int i = -((int) enZeroExt) ; i < copysize ; ++i )
+            for ( int i = 0 ; i < copysize ; ++i )
             {
                 // NB: for simple types like this it is actually faster to copy!
 
-                newcontent[i+1] = oldcontent[i+1];
+                DEREFMEMARRAY(newcontent,i+1) = DEREFMEMARRAY(oldcontent,i+1);
+//                newcontent[i+1] = oldcontent[i+1];
             }
         }
 
@@ -192,15 +203,15 @@ void DynArray<int>::locresize(int size, int suggestedallocsize, const int *fillv
 //        else
 //#endif
         {
-            content   = newcontent;
-            dsize     = newdsize;
-            allocsize = newallocsize;
-            holdalloc = newholdalloc;
+            dyncontent = newcontent;
+            dsize      = newdsize;
+            allocsize  = newallocsize;
+            holdalloc  = newholdalloc;
         }
 
-        if ( !leavemem && oldcontent )
+        if ( !notdelcontent && !leavemem && oldcontent )
         {
-            MEMDELARRAY(oldcontent);
+            MEMDELARRAY(oldcontent); oldcontent = nullptr;
         }
 
         oldcontent = nullptr;

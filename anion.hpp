@@ -121,7 +121,7 @@ class d_anion
 
     explicit d_anion(int order) : is_im(order ? 1 : 0), value_real(0.0), value_inf(nullptr), value_0(nullptr) { if ( order ) { MEMNEW(value_inf,d_anion(order-1)); MEMNEW(value_0  ,d_anion(order-1)); } }
 
-    ~d_anion() { if ( is_im ) { MEMDEL(value_inf); MEMDEL(value_0); } }
+    ~d_anion() { if ( is_im ) { MEMDEL(value_inf); value_inf = nullptr; MEMDEL(value_0); value_0 = nullptr; } }
 
     /*
        Assignment operators

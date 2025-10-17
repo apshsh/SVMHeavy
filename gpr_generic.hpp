@@ -62,8 +62,8 @@ public:
     virtual ~GPR_Generic() { return; }
 
     virtual int  prealloc    (int expectedN)       override;
-    virtual int  preallocsize(void)          const override { return getQconst().preallocsize(); }
-    virtual void setmemsize  (int memsize)         override { return getQ().setmemsize(memsize); }
+    virtual int  preallocsize(void)          const override { return getQQconst().preallocsize(); }
+    virtual void setmemsize  (int memsize)         override { return getQQ().setmemsize(memsize); }
 
     virtual void assign       (const ML_Base &src, int onlySemiCopy = 0) override;
     virtual void semicopy     (const ML_Base &src)                       override;
@@ -84,7 +84,8 @@ public:
     virtual int type(void)    const override { return -1;       }
     virtual int subtype(void) const override { return -1;       }
 
-    virtual int isSolGlob(void) const override { return 1; }
+    virtual int isTrained(void) const override { return xisTrained; }
+    virtual int isSolGlob(void) const override { return 1;          }
 
     virtual double calcDistInt(int    ha, int    hb, int ia = -1, int db = 2) const override { return ML_Base::calcDistInt(ha,hb,ia,db); }
     virtual double calcDistDbl(double ha, double hb, int ia = -1, int db = 2) const override { return ML_Base::calcDistDbl(ha,hb,ia,db); }
@@ -108,15 +109,21 @@ public:
     virtual const Vector<double>          &sigmaweight(void) const override { return dsigmaweight; }
     virtual const Vector<double>          &epsweight  (void) const override { static thread_local Vector<double> xxepsweight; xxepsweight.resize(N()) = 1.0; return xxepsweight;   }
 
-    virtual const gentype        &y (int i) const override { return ( i >= 0 ) ? y ()(i) : getQconst().y (i); }
-    virtual       double          yR(int i) const override { return ( i >= 0 ) ? yR()(i) : getQconst().yR(i); }
-    virtual const d_anion        &yA(int i) const override { return ( i >= 0 ) ? yA()(i) : getQconst().yA(i); }
-    virtual const Vector<double> &yV(int i) const override { return ( i >= 0 ) ? yV()(i) : getQconst().yV(i); }
+    virtual const gentype        &y (int i) const override { return ( i >= 0 ) ? y ()(i) : getQQconst().y (i); }
+    virtual       double          yR(int i) const override { return ( i >= 0 ) ? yR()(i) : getQQconst().yR(i); }
+    virtual const d_anion        &yA(int i) const override { return ( i >= 0 ) ? yA()(i) : getQQconst().yA(i); }
+    virtual const Vector<double> &yV(int i) const override { return ( i >= 0 ) ? yV()(i) : getQQconst().yV(i); }
 
     // Kernel tuning - you need this to jump straight to base because this needs to call GPR training (for inequalities at least), *NOT* LSV training
 
-    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr, paraDef *probbnd = nullptr) override { return ML_Base::tuneKernel(method,xwidth,tuneK,tuneP,tunebounds,probbnd); }
-    virtual double evalkernel(int method, const paraDef &probbnd, const Vector<double> &ffull) override { return ML_Base::evalkernel(method,probbnd,ffull); }
+    virtual double tuneKernel(int method, double xwidth, int tuneK = 1, int tuneP = 0, const tkBounds *tunebounds = nullptr, paraDef *probbnd = nullptr) override { xisTrained = 0; return ML_Base::tuneKernel(method,xwidth,tuneK,tuneP,tunebounds,probbnd); }
+    virtual double evalkernel(int method, const paraDef &probbnd, const Vector<double> &ffull) override { xisTrained = 0; return ML_Base::evalkernel(method,probbnd,ffull); }
+
+    virtual int resetKernel(                             int modind = 1, int onlyChangeRowI = -1, int updateInfo = 1) override { xisTrained = 0; return getQQ().resetKernel(modind,onlyChangeRowI,updateInfo); }
+    virtual int setKernel  (const MercerKernel &xkernel, int modind = 1, int onlyChangeRowI = -1                    ) override { xisTrained = 0; return getQQ().setKernel(xkernel,modind,onlyChangeRowI); }
+
+    virtual int setKreal  (void) { xisTrained = 0; return getQQ().setKreal(); }
+    virtual int setKunreal(void) { xisTrained = 0; return getQQ().setKreal(); }
 
     // Training set modification:
 
@@ -126,7 +133,7 @@ public:
     virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
     virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
-    virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
+    virtual int removeTrainingVector(int i                                      ) override { xisTrained = 0; SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
     virtual int removeTrainingVector(int i, int num                             ) override;
 
@@ -173,15 +180,22 @@ public:
 
     // General modification and autoset functions
 
-    virtual int setC         (double xC)          override {                                                                      return setsigma(1/xC);                  }
-    virtual int setsigma     (double xsigma)      override {                                         dsigma     = xsigma;         return getQ().setC(1/sigma());          }
-    virtual int setsigma_cut (double xsigma_cut)  override {                                         dsigma_cut = xsigma_cut;     return getQ().setsigma_cut(xsigma_cut); }
-    virtual int seteps       (double xeps)        override {           (void) xeps; NiceThrow("eps not included in GP methods");  return 0;                               }
-    virtual int setCclass    (int d, double xC)   override { NiceAssert( ( d >= 0 ) && ( d <= 2 ) ); xsigmaclass("&",d+1) = 1/xC; return getQ().setCclass(d,xC);          }
-    virtual int setsigmaclass(int d, double xsig) override { NiceAssert( ( d >= 0 ) && ( d <= 2 ) ); xsigmaclass("&",d+1) = xsig; return getQ().setCclass(d,1/xsig);      }
-    virtual int setepsclass  (int d, double xeps) override { (void) d; (void) xeps; NiceThrow("eps not included in GP methods");  return 1;                               }
+    virtual int setC         (double xC)          override { xisTrained = 0;                                                                      return setsigma(1/xC);                  }
+    virtual int setsigma     (double xsigma)      override { xisTrained = 0;                                         dsigma     = xsigma;         return getQQ().setC(1/sigma());          }
+    virtual int setsigma_cut (double xsigma_cut)  override { xisTrained = 0;                                         dsigma_cut = xsigma_cut;     return getQQ().setsigma_cut(xsigma_cut); }
+    virtual int seteps       (double xeps)        override { xisTrained = 0;           (void) xeps; NiceThrow("eps not included in GP methods");  return 0;                               }
+    virtual int setCclass    (int d, double xC)   override { xisTrained = 0; NiceAssert( ( d >= 0 ) && ( d <= 2 ) ); xsigmaclass("&",d+1) = 1/xC; return getQQ().setCclass(d,xC);          }
+    virtual int setsigmaclass(int d, double xsig) override { xisTrained = 0; NiceAssert( ( d >= 0 ) && ( d <= 2 ) ); xsigmaclass("&",d+1) = xsig; return getQQ().setCclass(d,1/xsig);      }
+    virtual int setepsclass  (int d, double xeps) override { xisTrained = 0; (void) d; (void) xeps; NiceThrow("eps not included in GP methods");  return 1;                               }
 
-    virtual int scale(double a) override;
+    virtual int setprim  (int nv)            override { xisTrained = 0; return getQQ().setprim(nv);   }
+    virtual int setprival(const gentype &nv) override { xisTrained = 0; return getQQ().setprival(nv); }
+    virtual int setpriml (const ML_Base *nv) override { xisTrained = 0; return getQQ().setpriml(nv);  }
+
+    virtual int scale  (double a) override;
+    virtual int reset  (void)     override { xisTrained = 0; return getQQ().reset();   }
+    virtual int restart(void)     override { xisTrained = 0; return getQQ().restart(); }
+    virtual int home   (void)     override { xisTrained = 0; return getQQ().home();    }
 
     virtual ML_Base &operator*=(double sf) override { scale(sf); return *this; }
 
@@ -194,8 +208,8 @@ public:
 
     // Training functions:
 
-    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch);                       }
-    virtual int train(int &res, svmvolatile int &killSwitch) override {                                 return isLocked ? 0 : getQ().train(res,killSwitch); }
+    virtual int train(int &res)                              override { svmvolatile int killSwitch = 0; return train(res,killSwitch);                        }
+    virtual int train(int &res, svmvolatile int &killSwitch) override { xisTrained = 1;                 return isLocked ? 0 : getQQ().train(res,killSwitch); }
 
     // Likelihood
 
@@ -241,11 +255,11 @@ public:
     //
     // sigma = 1/C
 
-    virtual int setmuWeight(const Vector<gentype> &nv) { return getQQ().setgamma(nv); }
-    virtual int setmuBias  (const gentype         &nv) { return getQQ().setdelta(nv); }
+    virtual int setmuWeight(const Vector<gentype> &nv) { xisTrained = 0; return getQQ().setgamma(nv); }
+    virtual int setmuBias  (const gentype         &nv) { xisTrained = 0; return getQQ().setdelta(nv); }
 
-    virtual int setZeromuBias(void) { return getQQ().setZerodelta(); }
-    virtual int setVarmuBias (void) { return getQQ().setVardelta();  }
+    virtual int setZeromuBias(void) { xisTrained = 0; return getQQ().setZerodelta(); }
+    virtual int setVarmuBias (void) { xisTrained = 0; return getQQ().setVardelta();  }
 
     virtual const Vector<gentype> &muWeight(void) const { return getQQconst().gamma(); }
     virtual const gentype         &muBias  (void) const { return getQQconst().delta(); }
@@ -265,9 +279,9 @@ public:
     virtual int isEPConst     (void) const { return 0; }
     virtual int isLaplaceConst(void) const { return 1; }
 
-    virtual int setNaiveConst  (void        ) {              return 0; }
-    virtual int setEPConst     (void        ) {              return 0; }
-    virtual int setLaplaceConst(int type = 1) { (void) type; return 0; }
+    virtual int setNaiveConst  (void        ) { xisTrained = 0;              return 0; }
+    virtual int setEPConst     (void        ) { xisTrained = 0;              return 0; }
+    virtual int setLaplaceConst(int type = 1) { xisTrained = 0; (void) type; return 0; }
 
     // Base-level stuff
     //
@@ -300,6 +314,10 @@ private:
     Vector<double> dyR;
     Vector<d_anion> dyA;
     Vector<Vector<double> > dyV;
+
+public:
+    int xisTrained;
+private:
 
     // Local copy of d.  "d" as passed into lsv_generic is 0/2, d kept here
     // maintains -1,+1.  These can then be used in EP to enforce inequality
@@ -375,6 +393,7 @@ inline void GPR_Generic::qswapinternal(ML_Base &bb)
     qswap(dCweight    ,b.dCweight    );
     qswap(sampleMode  ,b.sampleMode  );
     qswap(sampleScale ,b.sampleScale );
+    qswap(xisTrained  ,b.xisTrained  );
 
     return;
 }
@@ -402,6 +421,7 @@ inline void GPR_Generic::semicopy(const ML_Base &bb)
     dCweight     = b.dCweight;
     sampleMode   = b.sampleMode;
     sampleScale  = b.sampleScale;
+    xisTrained   = b.xisTrained;
 
     return;
 }
@@ -429,6 +449,7 @@ inline void GPR_Generic::assign(const ML_Base &bb, int onlySemiCopy)
     dCweight     = src.dCweight;
     sampleMode   = src.sampleMode;
     sampleScale  = src.sampleScale;
+    xisTrained   = src.xisTrained;
 
     return;
 }

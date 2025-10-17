@@ -246,40 +246,34 @@ protected:
     {
         if ( fastweights )
         {
-            MEMDELARRAY(fastweights);
-            fastweights = nullptr;
+            MEMDELARRAY(fastweights); fastweights = nullptr;
         }
 
         if ( fastxsums )
         {
             for ( int i = 0 ; i < fastdim ; i++ )
             {
-                MEMDELARRAY(fastxsums[i]);
-                fastxsums[i] = nullptr;
+                MEMDELARRAY(fastxsums[i]); fastxsums[i] = nullptr;
             }
 
-            MEMDELARRAY(fastxsums);
-            fastxsums = nullptr;
+            MEMDELARRAY(fastxsums); fastxsums = nullptr;
         }
 
         fastdim = 0;
 
         if ( fastweights_base )
         {
-            MEMDELARRAY(fastweights_base);
-            fastweights_base = nullptr;
+            MEMDELARRAY(fastweights_base); fastweights_base = nullptr;
         }
 
         if ( fastxsums_base )
         {
             for ( int i = 0 ; i < fastdim_base ; i++ )
             {
-                MEMDELARRAY(fastxsums_base[i]);
-                fastxsums_base[i] = nullptr;
+                MEMDELARRAY(fastxsums_base[i]); fastxsums_base[i] = nullptr;
             }
 
-            MEMDELARRAY(fastxsums_base);
-            fastxsums_base = nullptr;
+            MEMDELARRAY(fastxsums_base); fastxsums_base = nullptr;
         }
 
         fastdim_base = 0;

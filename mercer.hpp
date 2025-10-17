@@ -1331,11 +1331,8 @@ public:
 
         if ( res.isloc )
         {
-            MEMDEL((res.content)("&",0));
-            MEMDEL((res.content)("&",1));
-
-            res.content("&",0) = nullptr;
-            res.content("&",1) = nullptr;
+            MEMDEL((res.content)("&",0)); res.content("&",0) = nullptr;
+            MEMDEL((res.content)("&",1)); res.content("&",1) = nullptr;
 
             (res.isloc) = 0;
         }
@@ -1357,8 +1354,8 @@ public:
 
         if ( isloc && src.isloc )
         {
-            MEMDEL(content("&",0));
-            MEMDEL(content("&",1));
+            MEMDEL(content("&",0)); content("&",0) = nullptr;
+            MEMDEL(content("&",1)); content("&",1) = nullptr;
 
             MEMNEW(content("&",0),SparseVector<vecInfoBase>);
             MEMNEW(content("&",1),SparseVector<vecInfoBase>);
@@ -1378,8 +1375,8 @@ public:
 
         else if ( isloc && !(src.isloc) )
         {
-            MEMDEL(content("&",0));
-            MEMDEL(content("&",1));
+            MEMDEL(content("&",0)); content("&",0) = nullptr;
+            MEMDEL(content("&",1)); content("&",1) = nullptr;
 
             content("&",0) = src.content(0);
             content("&",1) = src.content(1);
@@ -1411,17 +1408,13 @@ public:
     {
         if ( isloc )
         {
-            MEMDEL(content("&",0));
-            MEMDEL(content("&",1));
-
-            content("&",0) = nullptr;
-            content("&",1) = nullptr;
+            MEMDEL(content("&",0)); content("&",0) = nullptr;
+            MEMDEL(content("&",1)); content("&",1) = nullptr;
         }
 
         if ( scratch )
         {
-            MEMDEL(scratch);
-            scratch = nullptr;
+            MEMDEL(scratch); scratch = nullptr;
         }
     }
 
@@ -1602,8 +1595,7 @@ public:
 
         if ( !themllist.indsize() )
         {
-            MEMDEL(fullmllist);
-            fullmllist = nullptr;
+            MEMDEL(fullmllist); fullmllist = nullptr;
         }
 
 //#ifdef ENABLE_THREADS

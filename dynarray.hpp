@@ -61,12 +61,14 @@ struct DynArray
 
     ~DynArray()
     {
-        if ( !notdelcontent && content )
+        if ( !notdelcontent && dyncontent )
         {
-            MEMDELARRAY(content);
+            MEMDELARRAY(dyncontent); dyncontent = nullptr;
         }
 
-        //content = nullptr;
+        dyncontent = nullptr;
+
+        //dyncontent = nullptr;
 
         #ifndef IGNOREMEM
         memcount((allocsize*sizeof(T)),-1);
@@ -83,56 +85,66 @@ struct DynArray
 
     T &operator()(const char *, int i)
     {
-        NiceAssert( content );
+        NiceAssert( !notdelcontent );
+        NiceAssert( dyncontent );
         NiceAssert( i >= -((int) enZeroExt) );
         NiceAssert( i <  dsize      );
 
-        return content[i+1];
+        return DEREFMEMARRAY(dyncontent,i+1);
+        //return dyncontent[i+1];
     }
 
     const T &operator()(int i) const
     {
-        NiceAssert( content );
+        NiceAssert( dyncontent );
         NiceAssert( i >= -((int) enZeroExt) );
         NiceAssert( i <  dsize      );
 
-        return content[i+1];
+        return DEREFMEMARRAY(dyncontent,i+1);
+//        return dyncontent[i+1];
     }
 
     void set(int i, const T &src)
     {
-        NiceAssert( content );
+        NiceAssert( !notdelcontent );
+        NiceAssert( dyncontent );
         NiceAssert( i >= -((int) enZeroExt) );
         NiceAssert( i <  dsize      );
 
-        content[i+1] = src;
+        DEREFMEMARRAY(dyncontent,i+1) = src;
+//        dyncontent[i+1] = src;
     }
 
     T v(int i) const
     {
-        NiceAssert( content );
+        NiceAssert( dyncontent );
         NiceAssert( i >= -((int) enZeroExt) );
         NiceAssert( i <  dsize      );
 
-        return content[i+1];
+        return DEREFMEMARRAY(dyncontent,i+1);
+//        return dyncontent[i+1];
     }
 
     void sv(int i, T x) const
     {
-        NiceAssert( content );
+        NiceAssert( !notdelcontent );
+        NiceAssert( dyncontent );
         NiceAssert( i >= -((int) enZeroExt) );
         NiceAssert( i <  dsize      );
 
-        content[i+1] = x;
+        DEREFMEMARRAY(dyncontent,i+1) = x;
+//        dyncontent[i+1] = x;
     }
 
     T &aref(int i)
     {
-        NiceAssert( content );
+        NiceAssert( !notdelcontent );
+        NiceAssert( dyncontent );
         NiceAssert( i >= -((int) enZeroExt) );
         NiceAssert( i <  allocsize  );
 
-        return content[i+1];
+        return DEREFMEMARRAY(dyncontent,i+1);
+//        return dyncontent[i+1];
     }
 
     // Information
@@ -170,7 +182,7 @@ struct DynArray
 
     DynArray<T> &resize(int size, int suggestedallocsize = -1, const T *fillval = nullptr, bool leavemem = false)
     {
-        NiceAssert( !notdelcontent );
+        //NiceAssert( !notdelcontent );
 
         locresize(size,suggestedallocsize,fillval,leavemem);
 
@@ -202,12 +214,12 @@ struct DynArray
                 // allocated, so revert to unallocated state.  Reallocation
                 // will occur JIT.
 
-                if ( content )
+                if ( !notdelcontent && dyncontent )
                 {
-                    MEMDELARRAY(content);
+                    MEMDELARRAY(dyncontent); dyncontent = nullptr;
                 }
 
-                content = nullptr;
+                dyncontent = nullptr;
 
                 dsize     = 0;
                 allocsize = 0;
@@ -244,13 +256,16 @@ struct DynArray
 
     void applyOnAll(void (*fn)(T &, int), int argx)
     {
+        NiceAssert( !notdelcontent );
+
         if ( allocsize+((int) enZeroExt) )
         {
-            NiceAssert( content );
+            NiceAssert( dyncontent );
 
-            for ( int i = -((int) enZeroExt) ; i < allocsize ; ++i )
+            for ( int i = 0 ; i < allocsize ; ++i )
             {
-                fn(content[i+1],argx);
+                fn(DEREFMEMARRAY(dyncontent,i+1),argx);
+//                fn(dyncontent[i+1],argx);
             }
         }
     }
@@ -282,13 +297,14 @@ struct DynArray
 
         enZeroExt = true;
 
-        if ( !content )
+        if ( !dyncontent )
         {
-            MEMNEWARRAY(content,T,allocsize+1);
-            NiceAssert(content);
+            MEMNEWARRAY(dyncontent,T,allocsize+1);
+            NiceAssert(dyncontent);
         }
 
-        setzero(content[0]);
+        setzero(DEREFMEMARRAY(dyncontent,0));
+//        setzero(dyncontent[0]);
     }
 
     void noZeroExtend(void)
@@ -349,7 +365,7 @@ struct DynArray
         int stepsizeupclip = ( stepsizeup > MINSIZE ) ? stepsizeup : MINSIZE;
 
         //if ( !allocsize && size ) - actually, you need to test content != nullptr to allow for enZeroExt
-        if ( !content && size )
+        if ( !dyncontent && size )
         {
             // JIT allocation occurs here
             // On first run we just allocate the size requested - no alloc
@@ -361,18 +377,22 @@ struct DynArray
 
             NiceAssert( allocsize >= 0 );
 
-            MEMNEWARRAY(content,T,allocsize+1);
+            MEMNEWARRAY(dyncontent,T,allocsize+1);
 
-            NiceAssert(content);
+            setzero(DEREFMEMARRAY(dyncontent,0));
+            //setzero(dyncontent[0]);
+
+            NiceAssert(dyncontent);
             #ifndef IGNOREMEM
             memcount((allocsize*sizeof(T)),+1);
             #endif
 
             if ( fillval )
             {
-                for ( int i = -1 ; i < allocsize ; ++i )
+                for ( int i = 0 ; i < allocsize ; ++i )
                 {
-                    content[i+1] = *fillval;
+                    DEREFMEMARRAY(dyncontent,i+1) = *fillval;
+//                    dyncontent[i+1] = *fillval;
                 }
             }
         }
@@ -408,7 +428,7 @@ struct DynArray
             int oldallocsize = allocsize;
             #endif
 
-            T *oldcontent = content;
+            T *oldcontent = dyncontent;
 
             int copysize;
             int modallocsize;
@@ -432,9 +452,13 @@ struct DynArray
 
             if ( fillval )
             {
-                for ( int i = -1 ; i < newallocsize ; ++i )
+                setzero(DEREFMEMARRAY(newcontent,0));
+//                setzero(newcontent[0]);
+
+                for ( int i = 0 ; i < newallocsize ; ++i )
                 {
-                    newcontent[i+1] = *fillval;
+                    DEREFMEMARRAY(newcontent,i+1) = *fillval;
+//                    newcontent[i+1] = *fillval;
                 }
             }
 
@@ -447,20 +471,21 @@ struct DynArray
                     // copy here would result in a serious performance hit.
 
                     //newcontent[i+1] = oldcontent[i+1];
-                    qswap(newcontent[i+1],oldcontent[i+1]);
+                    qswap(DEREFMEMARRAY(newcontent,i+1),DEREFMEMARRAY(oldcontent,i+1));
+//                    qswap(newcontent[i+1],oldcontent[i+1]);
                 }
             }
 
-            content = newcontent;
+            dyncontent = newcontent;
 
             dsize     = newdsize;
             allocsize = newallocsize;
 
             holdalloc  = newholdalloc;
 
-            if ( !leavemem && oldcontent )
+            if ( !notdelcontent && !leavemem && oldcontent )
             {
-                MEMDELARRAY(oldcontent);
+                MEMDELARRAY(oldcontent); oldcontent = nullptr;
             }
 
             oldcontent = nullptr;
@@ -476,7 +501,7 @@ struct DynArray
         }
     }
 
-    // content: contents of array
+    // dyncontent: contents of array
     //
     // dsize:      size of array
     // allocsize:  elements allocated to array
@@ -485,7 +510,7 @@ struct DynArray
     // holdalloc:  set if pre-allocation has occured (allocation size known)
     // enZeroExt:  set if we allow an additional "zero" vector at index -1
 
-    T *content; // default initialisation to 0 == NULL... = nullptr;
+    T *dyncontent; // default initialisation to 0 == NULL... = nullptr;
 
     int dsize;      // default initialised to 0... = 0;
     int allocsize;  // default initialised to 0... = 0;
@@ -494,7 +519,7 @@ struct DynArray
     bool holdalloc;  // default initialised to 0... = false;
     bool enZeroExt;  // default initialised to 0... = false;
 
-    // Only delete content if set - *only* set false for zerointarray etc.
+    // Only delete dyncontent if set - *only* set false for zerointarray etc.
 
     bool notdelcontent; // default initialised to 0... = false;
 };
@@ -506,48 +531,48 @@ template <> void DynArray<int>::locresize(   int size, int suggestedallocsize, c
 
 inline const DynArray<int> *zerointarray(void)
 {
-    static thread_local int content[2] = { 0, 0 };
-    static thread_local DynArray<int> zeroarray = { content,1,1,1,true,true,true }; // final notdelcontent
+    static thread_local int dyncontent[2] = { 0, 0 };
+    static thread_local DynArray<int> zeroarray = { dyncontent,1,1,1,true,true,true }; // final notdelcontent
 
     return &zeroarray;
 }
 
 inline const DynArray<int> *oneintarray(void)
 {
-    static thread_local int content[2] = { 0, 1 };
-    static thread_local DynArray<int> onearray = { content,1,1,1,true,true,true }; // final notdelcontent
+    static thread_local int dyncontent[2] = { 0, 1 };
+    static thread_local DynArray<int> onearray = { dyncontent,1,1,1,true,true,true }; // final notdelcontent
 
     return &onearray;
 }
 
 inline const DynArray<double> *zerodoublearray(void)
 {
-    static thread_local double content[2] = { 0, 0 };
-    static thread_local DynArray<double> zeroarray = { content,1,1,1,true,true,true }; // final notdelcontent
+    static thread_local double dyncontent[2] = { 0, 0 };
+    static thread_local DynArray<double> zeroarray = { dyncontent,1,1,1,true,true,true }; // final notdelcontent
 
     return &zeroarray;
 }
 
 inline const DynArray<double> *onedoublearray(void)
 {
-    static thread_local double content[2] = { 0, 1 };
-    static thread_local DynArray<double> onearray = { content,1,1,1,true,true,true }; // final notdelcontent
+    static thread_local double dyncontent[2] = { 0, 1 };
+    static thread_local DynArray<double> onearray = { dyncontent,1,1,1,true,true,true }; // final notdelcontent
 
     return &onearray;
 }
 
 inline const DynArray<double> *ninfdoublearray(void)
 {
-    static thread_local double content[2] = { 0, -INFINITY };
-    static thread_local DynArray<double> ninfarray = { content,1,1,1,true,true,true }; // final notdelcontent
+    static thread_local double dyncontent[2] = { 0, -INFINITY };
+    static thread_local DynArray<double> ninfarray = { dyncontent,1,1,1,true,true,true }; // final notdelcontent
 
     return &ninfarray;
 }
 
 inline const DynArray<double> *pinfdoublearray(void)
 {
-    static thread_local double content[2] = { 0, INFINITY };
-    static thread_local DynArray<double> pinfarray = { content,1,1,1,true,true,true }; // final notdelcontent
+    static thread_local double dyncontent[2] = { 0, INFINITY };
+    static thread_local DynArray<double> pinfarray = { dyncontent,1,1,1,true,true,true }; // final notdelcontent
 
     return &pinfarray;
 }
@@ -557,7 +582,8 @@ inline const DynArray<double> *pinfdoublearray(void)
 inline const DynArray<int> *cntintarray(int size)
 {
     static thread_local int maxsize = 0;
-    static thread_local std::unique_ptr<DynArray<int> > vogonpoetry(new DynArray<int>({nullptr,0,0,0,false,false,false})); // deletion is automatic thanks to unique_ptr ownership
+    static thread_local std::unique_ptr<DynArray<int> > vogonpoetry(new DynArray<int>({nullptr,0,0,0,false,false,true})); // deletion is automatic thanks to unique_ptr ownership
+//    static thread_local std::unique_ptr<DynArray<int> > vogonpoetry(new DynArray<int>({nullptr,0,0,0,false,false,false})); // deletion is automatic thanks to unique_ptr ownership
     static thread_local DynArray<int> *cntarray = vogonpoetry.get();
 
     NiceAssert( size >= 0 );

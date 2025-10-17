@@ -1,3 +1,97 @@
+/*
+From an old idea email:
+
+Don't calculate variance: rather than calculating variance, use a surrogate of distance from evaluated points.  That way you can have really big datasets without worrying about scaling of the GP (remember that calculating posterior variance is where most of the cost comes from - for posterior mean you really only need to hvae the pre-calculated alpha).  What surrogate?  Pick the nearest n points (n is a small number, maybe even 1) and calculate variance from that set.
+
+Just add noise: very simple BO where you induce exploration by adding noise (correlated to, but not the same as, variance - variance is expensive you use an imperfect surrogate and add noise to make up the difference).
+
+What you can measure: assume you want to model f but also have g,h,... drawn from the same gp.  Can you use observations of other variables to inform optimisation of f?  Can you inform the prior of f from the posterior variance of g,h.  What if you measure the prior kernel K as a draw from a hyper-GP, so f,g,h,... become (noisy) observations of the hyper-GP?  Perhaps this is easier if you view f,g,h as elements of an RKHS sharing the same kernel?
+
+Network pre-smoothing and direct regularisation: at initialization the network can be very rough as the targets are offset by the initial bias function, which is rough, so the (effective) objective function is rough (high rademacher complexity).  Using the real feature map (RKHS model), pre-smooth the model by regularizing the actual weight vector (ie the overall model) to smooth it without zeroing the weights.  Should improve uniform convergence rate.  Also try regularizing through this model.
+
+Sensor-in-network.  Actual sensors provide the bias to random nodes in the network.  Have inverse model of physical system.  Train network to make output of physical system match input under variety of perturbations, so sensors provide necessary feedback in network.
+
+federated gp, share inducing points, get posterior variance by???  Need distance of inducing points from real data somehow, then get approximation from this.
+
+On Tue, 10 Sept 2024 at 22:28, Alistair Shilton <alshilton@gmail.com> wrote:
+Don't calculate variance: rather than calculating variance, use a surrogate of distance from evaluated points.  That way you can have really big datasets without worrying about scaling of the GP (remember that calculating posterior variance is where most of the cost comes from - for posterior mean you really only need to hvae the pre-calculated alpha).  What surrogate?  Pick the nearest n points (n is a small number, maybe even 1) and calculate variance from that set.
+
+Just add noise: very simple BO where you induce exploration by adding noise (correlated to, but not the same as, variance - variance is expensive you use an imperfect surrogate and add noise to make up the difference).
+
+What you can measure: assume you want to model f but also have g,h,... drawn from the same gp.  Can you use observations of other variables to inform optimisation of f?  Can you inform the prior of f from the posterior variance of g,h.  What if you measure the prior kernel K as a draw from a hyper-GP, so f,g,h,... become (noisy) observations of the hyper-GP?  Perhaps this is easier if you view f,g,h as elements of an RKHS sharing the same kernel? 
+
+Network pre-smoothing and direct regularisation: at initialization the network can be very rough as the targets are offset by the initial bias function, which is rough, so the (effective) objective function is rough (high rademacher complexity).  Using the real feature map (RKHS model), pre-smooth the model by regularizing the actual weight vector (ie the overall model) to smooth it without zeroing the weights.  Should improve uniform convergence rate.  Also try regularizing through this model.
+
+Sensor-in-network.  Actual sensors provide the bias to random nodes in the network.  Have inverse model of physical system.  Train network to make output of physical system match input under variety of perturbations, so sensors provide necessary feedback in network.
+
+On Mon, 9 Sept 2024 at 13:04, Alistair Shilton <alshilton@gmail.com> wrote:
+Don't calculate variance: rather than calculating variance, use a surrogate of distance from evaluated points.  That way you can have really big datasets without worrying about scaling of the GP (remember that calculating posterior variance is where most of the cost comes from - for posterior mean you really only need to hvae the pre-calculated alpha).
+
+Just add noise: very simple BO where you induce exploration by adding noise (correlated to, but not the same as, variance - variance is expensive you use an imperfect surrogate and add noise to make up the difference).
+
+What you can measure: assume you want to model f but also have g,h,... drawn from the same gp.  Can you use observations of other variables to inform optimisation of f?  Can you inform the prior of f from the posterior variance of g,h.  What if you measure the prior kernel K as a draw from a hyper-GP, so f,g,h,... become (noisy) observations of the hyper-GP?  Perhaps this is easier if you view f,g,h as elements of an RKHS sharing the same kernel? 
+
+On Wed, 7 Aug 2024 at 22:40, Alistair Shilton <alshilton@gmail.com> wrote:
+Just add noise: very simple BO where you induce exploration by adding noise (correlated to, but not the same as, variance - variance is expensive you use an imperfect surrogate and add noise to make up the difference).
+
+What you can measure: assume you want to model f but also have g,h,... drawn from the same gp.  Can you use observations of other variables to inform optimisation of f?  Can you inform the prior of f from the posterior variance of g,h.  What if you measure the prior kernel K as a draw from a hyper-GP, so f,g,h,... become (noisy) observations of the hyper-GP?  Perhaps this is easier if you view f,g,h as elements of an RKHS sharing the same kernel?
+
+*/
+
+
+//FIXME: document the fullgrid stuff! In particular, the gridsource file format and the various special cases
+//FIXME: deal with case where some isfullgrid have nulls and others dont
+//FIXME: isfullgrid override: suppose the model is linear and the data is not: you might want to enforce linearity (approx), so you need the model.
+//FIXME: make fidelity part of the testlog plot
+//FIXME: if lower fidelity falls outside of range then never do higher fidelity (assumed surrogate accuracty bounds)
+
+/*
+TO DO:
+- have -mu 3 mode where training data is added to prior ML and training goes to prior ML (like the BLK, but done right)
+- extend prior to non-scalar types
+
+FIXME: TEST NEW FIDELITY CODE WITH FIDELITY FEEDBACK!
+FIXME: IS FIDELITY FEEDBACK BEING CORRECTLY ACCOUNTED FOR?
+FIXME: IS FIDELITY COST BEING CORECTLY CALCULATED AND USED FOR TERMINATION?
+*/
+
+//in sparsevector.hpp:
+//sv/set should work in the sparse case as well (altcontentsp)
+
+//For some reason, when plotml evaluates [0] for blk_usrfnb with 4*(x_0-0.5)^2 it gives 10??
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//fpareto, fgrid etc need to be negated for analysis with multi-objective!
+//the optimisation code seems to be working fine, but the *recording* code is negative to what it should be.
+
+
+
+/*
+ADD ALONG WITH -SA, -SAi, -SAA
+
+    virtual int setaltMLidsKB(const Vector<int>    &nv) { KBaltMLids = nv; return 1; }
+    virtual int setMLweightKB(const Vector<double> &nv) { KBMLweight = nv; return 1; }
+
+Optimisation options:
+    virtual int setminstepKB(double nv) { KBminstep = nv; return 1; }
+    virtual int setmaxiterKB(int    nv) { KBmaxiter = nv; return 1; }
+    virtual int setlrKB     (double nv) { KBlr = nv;      return 1; }
+
+Consider integrating into xferml.h
+*/
+
 
 //
 // SVMHeavyv7 abstracted interface
@@ -818,7 +912,7 @@ void killallthreads(SVMThreadContext *svmContext)
 
     if ( svmContext )
     {
-        MEMDEL(svmContext);
+        MEMDEL(svmContext); svmContext = nullptr;
     }
 
     return;
@@ -856,11 +950,11 @@ SparseVector<DIRectOptions *> &getDIRectOptim    (void) { static SparseVector<DI
 SparseVector<NelderOptions *> &getNelderMeadOptim(void) { static SparseVector<NelderOptions *> NelderMeadbase; return NelderMeadbase; }
 SparseVector<BayesOptions  *> &getBayesianOptim  (void) { static SparseVector<BayesOptions  *> Bayesianbase;   return Bayesianbase;   }
 
-void deleteMLs        (void) { SparseVector<ML_Mutable    *> &mlbase         = getMLmodels();        for ( int i = mlbase.        indsize()-1 ; i >= 0 ; --i ) { MEMDEL(mlbase.        direref(i)); mlbase.        zero(mlbase.        ind(i)); } return; }
-void deletegrids      (void) { SparseVector<GridOptions   *> &gridbase       = getgridOptim();       for ( int i = gridbase.      indsize()-1 ; i >= 0 ; --i ) { MEMDEL(gridbase.      direref(i)); gridbase.      zero(gridbase.      ind(i)); } return; }
-void deleteDIRects    (void) { SparseVector<DIRectOptions *> &DIRectbase     = getDIRectOptim();     for ( int i = DIRectbase.    indsize()-1 ; i >= 0 ; --i ) { MEMDEL(DIRectbase.    direref(i)); DIRectbase.    zero(DIRectbase.    ind(i)); } return; }
-void deleteNelderMeads(void) { SparseVector<NelderOptions *> &NelderMeadbase = getNelderMeadOptim(); for ( int i = NelderMeadbase.indsize()-1 ; i >= 0 ; --i ) { MEMDEL(NelderMeadbase.direref(i)); NelderMeadbase.zero(NelderMeadbase.ind(i)); } return; }
-void deleteBayess     (void) { SparseVector<BayesOptions  *> &Bayesianbase   = getBayesianOptim();   for ( int i = Bayesianbase.  indsize()-1 ; i >= 0 ; --i ) { MEMDEL(Bayesianbase.  direref(i)); Bayesianbase.  zero(Bayesianbase.  ind(i)); } return; }
+void deleteMLs        (void) { SparseVector<ML_Mutable    *> &mlbase         = getMLmodels();        for ( int i = mlbase.        indsize()-1 ; i >= 0 ; --i ) { MEMDEL(mlbase.        direref(i)); mlbase.        direref(i) = nullptr; mlbase.        zero(mlbase.        ind(i)); } return; }
+void deletegrids      (void) { SparseVector<GridOptions   *> &gridbase       = getgridOptim();       for ( int i = gridbase.      indsize()-1 ; i >= 0 ; --i ) { MEMDEL(gridbase.      direref(i)); gridbase.      direref(i) = nullptr; gridbase.      zero(gridbase.      ind(i)); } return; }
+void deleteDIRects    (void) { SparseVector<DIRectOptions *> &DIRectbase     = getDIRectOptim();     for ( int i = DIRectbase.    indsize()-1 ; i >= 0 ; --i ) { MEMDEL(DIRectbase.    direref(i)); DIRectbase.    direref(i) = nullptr; DIRectbase.    zero(DIRectbase.    ind(i)); } return; }
+void deleteNelderMeads(void) { SparseVector<NelderOptions *> &NelderMeadbase = getNelderMeadOptim(); for ( int i = NelderMeadbase.indsize()-1 ; i >= 0 ; --i ) { MEMDEL(NelderMeadbase.direref(i)); NelderMeadbase.direref(i) = nullptr; NelderMeadbase.zero(NelderMeadbase.ind(i)); } return; }
+void deleteBayess     (void) { SparseVector<BayesOptions  *> &Bayesianbase   = getBayesianOptim();   for ( int i = Bayesianbase.  indsize()-1 ; i >= 0 ; --i ) { MEMDEL(Bayesianbase.  direref(i)); Bayesianbase.  direref(i) = nullptr; Bayesianbase.  zero(Bayesianbase.  ind(i)); } return; }
 
 void grabML        (SparseVector<ML_Mutable    *> &MLbase,         int MLInd        ) { NiceAssert( MLInd         > 0 ); if ( MLbase        (MLInd)         == nullptr ) { MEMNEW(MLbase        ("&",MLInd        ),ML_Mutable   ); } return; }
 void grabgrid      (SparseVector<GridOptions   *> &gridbase,       int gridInd      ) { NiceAssert( gridInd       > 0 ); if ( gridbase      (gridInd)       == nullptr ) { MEMNEW(gridbase      ("&",gridInd      ),GridOptions  ); } return; }
@@ -3885,7 +3979,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         // ...delete it...
 
-                        MEMDEL(getMLmodels()("&",nInd));
+                        MEMDEL(getMLmodels()("&",nInd)); getMLmodels()("&",nInd) = nullptr;
 
                         // ...and remove all traces
 
@@ -5939,7 +6033,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gbRR"  ) { getBayesianref(BayesianInd).R                   = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbBB"  ) { getBayesianref(BayesianInd).B                   = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbu"   ) { getBayesianref(BayesianInd).p                   = safeatof(currcommand(1),argvariables); }
-                    else if ( currcommand(0) == "-gbv"   ) { getBayesianref(BayesianInd).betafn              = currcommand(1); }
+                    else if ( currcommand(0) == "-gbv"   ) { getBayesianref(BayesianInd).betafn              = currcommand(1);                        }
                     else if ( currcommand(0) == "-gbim"  ) { getBayesianref(BayesianInd).itcntmethod         = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbpd"  ) { getBayesianref(BayesianInd).direcdim            = safeatoi(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbq"   ) { getBayesianref(BayesianInd).impmeasu            = &(getMLref(safeatoi(currcommand(1),argvariables)).getIMP()); }
@@ -6493,7 +6587,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                                         callsvm(svmContext,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,dummyres,loclogfile);
 
-                                        MEMDEL(gridcommstack);
+                                        MEMDEL(gridcommstack); gridcommstack = nullptr;
                                     }
 
 //phantomxyzxyzxyzxyz
@@ -8969,7 +9063,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
         callsvm(svmContext,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
         errstream() << "res = " << res << " ... ";
 
-        MEMDEL(gridcommstack);
+        MEMDEL(gridcommstack); gridcommstack = nullptr;
     }
 
     else if ( ( itnum == 0 ) && interstring.length() )
@@ -8994,7 +9088,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
 
         callsvm(svmContext,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
 
-        MEMDEL(gridcommstack);
+        MEMDEL(gridcommstack); gridcommstack = nullptr;
     }
 
     else if ( ( itnum < 0 ) && ( itnumid == 1 ) && prestring.length() )
@@ -9019,7 +9113,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
 
         callsvm(svmContext,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
 
-        MEMDEL(gridcommstack);
+        MEMDEL(gridcommstack); gridcommstack = nullptr;
     }
 
     else if ( ( itnum < 0 ) && ( itnumid == 2 ) && midstring.length() )
@@ -9044,7 +9138,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
 
         callsvm(svmContext,gridcommstack,globargvariables,getsetExtVar,gridargvars,locverblevel,res,loclogfile);
 
-        MEMDEL(gridcommstack);
+        MEMDEL(gridcommstack); gridcommstack = nullptr;
     }
 
     // Update x if relevant

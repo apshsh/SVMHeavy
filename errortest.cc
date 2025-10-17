@@ -783,12 +783,12 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
                 {
                     if ( i )
                     {
-                        MEMDEL(vprepthread("&",i));
-                        MEMDEL(vfoldthread("&",i));
-                        MEMDEL(vlocML("&",i));
+                        MEMDEL(vprepthread("&",i)); vprepthread("&",i) = nullptr;
+                        MEMDEL(vfoldthread("&",i)); vfoldthread("&",i) = nullptr;
+                        MEMDEL(vlocML("&",i));      vlocML("&",i)      = nullptr;
                     }
 
-                    MEMDEL(vxargs("&",i));
+                    MEMDEL(vxargs("&",i)); vxargs("&",i) = nullptr;
                 }
             }
 
@@ -823,7 +823,7 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
 
                 for ( i = 0 ; ( i < m ) && ( !i || !oneoff ) ; ++i )
                 {
-                    MEMDEL(vxargs("&",i));
+                    MEMDEL(vxargs("&",i)); vxargs("&",i) = nullptr;
                 }
             }
 
@@ -860,7 +860,7 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
 
         { ML_Base *temp = srcML; srcML = locML; locML = temp; }
 
-        MEMDEL(locML);
+        MEMDEL(locML); locML = nullptr;
     }
 
 //    if ( baseML.isRegression() )
@@ -1180,7 +1180,7 @@ nullPrint(errstream(),i,-5);
         {
             { ML_Base *temp = srcML; srcML = locML; locML = temp; }
 
-            MEMDEL(locML);
+            MEMDEL(locML); locML = nullptr;
         }
     }
 
@@ -1480,7 +1480,7 @@ nullPrint(errstream(),k,-5);
 	cfm *= 1/((double) numreps);
         res *= 1/((double) numreps);
 
-        MEMDEL(locML);
+        MEMDEL(locML); locML = nullptr;
     }
 
 //    if ( baseML.isRegression() )

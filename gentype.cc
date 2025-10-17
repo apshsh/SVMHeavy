@@ -2362,13 +2362,13 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
         fnnameind  = srcfnnameind;
         thisfninfo = srcthisfninfo;
 
-        if ( wasValAnion  ) { *this = *anistore;     MEMDEL(anistore); }
-        if ( wasValVector ) { *this = *vecstore;     MEMDEL(vecstore); }
-        if ( wasValMatrix ) { *this = *matstore;     MEMDEL(matstore); }
-        if ( wasValSet    ) { *this = *setstore;     MEMDEL(setstore); }
-        if ( wasValDict   ) { *this = *dctstore;     MEMDEL(dctstore); }
-        if ( wasValDgraph ) { *this = *dgrstore;     MEMDEL(dgrstore); }
-        if ( wasValStrErr ) { makeString(*strstore); MEMDEL(strstore); }
+        if ( wasValAnion  ) { *this = *anistore;     MEMDEL(anistore); anistore = nullptr; }
+        if ( wasValVector ) { *this = *vecstore;     MEMDEL(vecstore); vecstore = nullptr; }
+        if ( wasValMatrix ) { *this = *matstore;     MEMDEL(matstore); matstore = nullptr; }
+        if ( wasValSet    ) { *this = *setstore;     MEMDEL(setstore); setstore = nullptr; }
+        if ( wasValDict   ) { *this = *dctstore;     MEMDEL(dctstore); dctstore = nullptr; }
+        if ( wasValDgraph ) { *this = *dgrstore;     MEMDEL(dgrstore); dgrstore = nullptr; }
+        if ( wasValStrErr ) { makeString(*strstore); MEMDEL(strstore); strstore = nullptr; }
 
         if ( wasValError )
         {
@@ -2380,7 +2380,7 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
             MEMNEW(eqnargs,Vector<gentype>);
             NiceAssert( eqnstore );
             *eqnargs = *eqnstore;
-            MEMDEL(eqnstore);
+            MEMDEL(eqnstore); eqnstore = nullptr;
         }
     }
 
@@ -9553,6 +9553,8 @@ const fninfoblock *getfninfo(int ires)
 void exitgentype(void);
 void exitgentype(void)
 {
+// Python gil blah just leak the damn memory
+//#ifndef PYLOCAL
     int i;
 
     static thread_local gentype blind(0); // never modified, so no need for this to be volatile
@@ -9561,8 +9563,7 @@ void exitgentype(void)
     {
         if ( getfninfo()[i].realderiv )
         {
-            MEMDEL(getfninfo()[i].realderiv);
-            getfninfo()[i].realderiv = &blind; // Not null or it just gets created again!
+            MEMDEL(getfninfo()[i].realderiv); getfninfo()[i].realderiv = &blind; // Not null or it just gets created again!
         }
     }
 
@@ -9572,6 +9573,7 @@ void exitgentype(void)
     }
 
     return;
+//#endif
 }
 
 
@@ -9617,7 +9619,10 @@ void initgentype(void)
             getfninfo(i);
         }
 
+// Python gil blah just leak the damn memory
+//#ifndef PYLOCAL
         static deltrigger dummy; // when destructed after code has run, this will trigger a call to exitgentype
+//#endif
     }
 }
 /*
@@ -24591,8 +24596,7 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<double> &src)
 
     if ( imoverhere )
     {
-        MEMDEL(imoverhere);
-        imoverhere = nullptr;
+        MEMDEL(imoverhere); imoverhere = nullptr;
     }
 
     if ( src.imoverhere )
@@ -24650,8 +24654,7 @@ Vector<double> &Vector<double>::castassign(const Vector<gentype> &src)
 
     if ( imoverhere )
     {
-        MEMDEL(imoverhere);
-        imoverhere = nullptr;
+        MEMDEL(imoverhere); imoverhere = nullptr;
     }
 
     if ( src.imoverhere )
@@ -24709,8 +24712,7 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<int> &src)
 
     if ( imoverhere )
     {
-        MEMDEL(imoverhere);
-        imoverhere = nullptr;
+        MEMDEL(imoverhere); imoverhere = nullptr;
     }
 
     if ( src.imoverhere )
@@ -24767,8 +24769,7 @@ Vector<double> &Vector<double>::castassign(const Vector<int> &src)
 
     if ( imoverhere )
     {
-        MEMDEL(imoverhere);
-        imoverhere = nullptr;
+        MEMDEL(imoverhere); imoverhere = nullptr;
     }
 
     if ( src.imoverhere )
@@ -24834,8 +24835,7 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<int> > &src)
 
     if ( imoverhere )
     {
-        MEMDEL(imoverhere);
-        imoverhere = nullptr;
+        MEMDEL(imoverhere); imoverhere = nullptr;
     }
 
     if ( src.imoverhere )
@@ -24892,8 +24892,7 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<SparseVector<gentype> 
 
     if ( imoverhere )
     {
-        MEMDEL(imoverhere);
-        imoverhere = nullptr;
+        MEMDEL(imoverhere); imoverhere = nullptr;
     }
 
     if ( src.imoverhere )
@@ -24953,8 +24952,7 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<gentype> > &src
 
     if ( imoverhere )
     {
-        MEMDEL(imoverhere);
-        imoverhere = nullptr;
+        MEMDEL(imoverhere); imoverhere = nullptr;
     }
 
     if ( src.imoverhere )

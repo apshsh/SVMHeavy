@@ -200,9 +200,9 @@ int directOpt(int dim,
         x[i] = (x[i]*(xmax(i)-xmin(i)))+xmin(i);
     }
 
-    MEMDELARRAY(l);
-    MEMDELARRAY(u);
-    MEMDELARRAY(xx);
+    MEMDELARRAY(l);  l  = nullptr;
+    MEMDELARRAY(u);  u  = nullptr;
+    MEMDELARRAY(xx); xx = nullptr;
 
     //errstream() << "DIRect Optimisation Ended\n";
 

@@ -196,13 +196,9 @@ SVM_MultiC_redbin::~SVM_MultiC_redbin()
 {
     if ( Gpval != nullptr )
     {
-	MEMDEL(xyval);
-	MEMDEL(Gpval);
-	MEMDEL(Gpsigma);
-
-	xyval   = nullptr;
-	Gpval   = nullptr;
-        Gpsigma = nullptr;
+	MEMDEL(xyval);   xyval   = nullptr;
+	MEMDEL(Gpval);   Gpval   = nullptr;
+	MEMDEL(Gpsigma); Gpsigma = nullptr;
     }
 
     return;
@@ -3334,13 +3330,9 @@ std::istream &SVM_MultiC_redbin::inputstream(std::istream &input)
 
     if ( Gpval != nullptr )
     {
-        MEMDEL(xyval);
-        MEMDEL(Gpval);
-        MEMDEL(Gpsigma);
-
-        xyval   = nullptr;
-        Gpval   = nullptr;
-        Gpsigma = nullptr;
+        MEMDEL(xyval);   xyval   = nullptr;
+        MEMDEL(Gpval);   Gpval   = nullptr;
+        MEMDEL(Gpsigma); Gpsigma = nullptr;
     }
 
 

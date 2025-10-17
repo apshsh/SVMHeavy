@@ -105,7 +105,7 @@ const Vector<int> &KNN_Densit::ClassLabels(void) const
     {
         if ( firstrun )
         {
-            pres = new Vector<int>(3);
+            MEMNEW(pres,Vector<int>(3));
 
             NiceAssert( pres );
 

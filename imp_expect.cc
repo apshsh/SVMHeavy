@@ -215,11 +215,10 @@ void IMP_Expect::untrain(void)
 
         for ( j = 0 ; j < N() ; ++j )
         {
-            MEMDELARRAY(X[j]);
+            MEMDELARRAY(X[j]); X[j] = nullptr;
         }
 
-        MEMDELARRAY(X);
-        X = nullptr;
+        MEMDELARRAY(X); X = nullptr;
     }
 
     IMP_Generic::untrain();
@@ -354,8 +353,8 @@ int IMP_Expect::imp(gentype &resi, gentype &resv, const SparseVector<gentype> &x
             }
         }
 
-        MEMDELARRAY(mu);
-        MEMDELARRAY(s);
+        MEMDELARRAY(mu); mu = nullptr;
+        MEMDELARRAY(s);  s  = nullptr;
     }
 
 //errstream() << "phantomxyz res = " << res << "\n";

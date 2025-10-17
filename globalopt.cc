@@ -71,8 +71,7 @@ void GlobalOptions::delstuff(void)
 {
     if ( randDirtemplate )
     {
-        MEMDEL(randDirtemplate);
-        randDirtemplate = nullptr;
+        MEMDEL(randDirtemplate); randDirtemplate = nullptr;
     }
 
     if ( subDef.size() )
@@ -81,8 +80,7 @@ void GlobalOptions::delstuff(void)
         {
             if ( subDef(i) )
             {
-                MEMDEL(subDef("&",i));
-                subDef("&",i) = nullptr;
+                MEMDEL(subDef("&",i)); subDef("&",i) = nullptr;
             }
         }
 
@@ -91,8 +89,7 @@ void GlobalOptions::delstuff(void)
 
     if ( projOpRaw )
     {
-        MEMDEL(projOpRaw);
-        projOpRaw = nullptr;
+        MEMDEL(projOpRaw); projOpRaw = nullptr;
     }
 
     projOp = nullptr;
@@ -996,7 +993,7 @@ int GlobalOptions::makeSubspace(int dim, void *fnarg, int substatus, const Spars
 
             else if ( projOpRaw )
             {
-                MEMDEL(projOpRaw);
+                MEMDEL(projOpRaw); projOpRaw = nullptr;
             }
 
             // Make projOp a projection onto this subspace
@@ -1646,10 +1643,10 @@ int GlobalOptions::analyse(const Vector<Vector<gentype> > &allxres,
 
                 for ( i = 0 ; i < N ; ++i )
                 {
-                    MEMDELARRAY(X[i]);
+                    MEMDELARRAY(X[i]); X[i] = nullptr;
                 }
 
-                MEMDELARRAY(X);
+                MEMDELARRAY(X); X = nullptr;
             }
         }
 

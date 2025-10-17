@@ -288,13 +288,13 @@ double IMP_Generic::hypervol(void) const
             {
                 if ( isenabled(i) )
                 {
-                    MEMDELARRAY(X[j]);
+                    MEMDELARRAY(X[j]); X[j] = nullptr;
 
                     ++j;
                 }
             }
 
-            MEMDELARRAY(X);
+            MEMDELARRAY(X); X = nullptr;
         }
     }
 

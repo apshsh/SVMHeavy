@@ -1005,6 +1005,38 @@ int addremoveptr(void *addr, int newdel, int type, int size, const char *desc)
         return 0;
     }
 
+    if ( newdel == -3 )
+    {
+        for ( int i = 0 ; i < listsize ; ++i )
+        {
+            if ( addrlist[i] == addr )
+            {
+                if ( size < 0 )
+                {
+                    std::cerr << "Negative index " << i << " on pointer " << desclist[i] << " (desc = " << desc << ")\n";
+
+                    return 6;
+                }
+
+                else if ( size >= sizelist[i] )
+                {
+                    std::cerr << "Oversize index " << i << " (max " << sizelist[i] << ", type " << typelist[i] << ") on pointer " << desclist[i] << " (desc = " << desc << ")\n";
+
+                    return 5;
+                }
+
+                else
+                {
+                    return 0;
+                }
+            }
+        }
+
+        std::cerr << "Unable to find addr " << addr << ", index " << size << " (desc " << desc << ")\n";
+
+        return 4;
+    }
+
     if ( !allocsize )
     {
 #ifndef USE_MEX
@@ -1149,7 +1181,7 @@ int svm_atexit(void (*func)(void), const char *desc, int ring)
     if ( !allocsize )
     {
         //atexit(svm_exitfn);
-//std::cerr << "Set at-exit function\n";
+std::cerr << "Set at-exit function\n";
         svm_setatexitfn()(svm_exitfn);
 
         allocsize = 100;
@@ -1161,7 +1193,7 @@ int svm_atexit(void (*func)(void), const char *desc, int ring)
 
     if ( func == nullptr )
     {
-//std::cerr << "Report on exit " << desclist << " (" << listsize << ")\n";
+std::cerr << "Report on exit " << desclist << " (" << listsize << ")\n";
         if ( desclist )
         {
             for ( i = 0 ; i < listsize ; ++i )

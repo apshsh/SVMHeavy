@@ -444,6 +444,8 @@ void evalSigmaSVM_Scalar(double &res, int i, int j, const gentype **pxyprod, con
 
 SVM_Scalar::SVM_Scalar() : SVM_Generic()
 {
+    useLweight = false;
+
     diagkernvalcheat = nullptr;
     delaydownsize = 0;
 
@@ -566,6 +568,8 @@ SVM_Scalar::SVM_Scalar() : SVM_Generic()
 
 SVM_Scalar::SVM_Scalar(const SVM_Scalar &src) : SVM_Generic()
 {
+    useLweight = false;
+
     diagkernvalcheat = nullptr;
     delaydownsize = 0;
 
@@ -594,6 +598,8 @@ SVM_Scalar::SVM_Scalar(const SVM_Scalar &src) : SVM_Generic()
 
 SVM_Scalar::SVM_Scalar(const SVM_Scalar &src, const ML_Base *xsrc) : SVM_Generic()
 {
+    useLweight = false;
+
     diagkernvalcheat = nullptr;
     delaydownsize = 0;
 
@@ -624,14 +630,9 @@ SVM_Scalar::~SVM_Scalar()
 {
     if ( Gplocal )
     {
-	MEMDEL(xyval);
-	xyval = nullptr;
-
-	MEMDEL(Gpval);
-	Gpval = nullptr;
-
-        MEMDEL(Gpsigma);
-	Gpsigma = nullptr;
+	MEMDEL(xyval);   xyval   = nullptr;
+	MEMDEL(Gpval);   Gpval   = nullptr;
+        MEMDEL(Gpsigma); Gpsigma = nullptr;
     }
 
     return;
@@ -862,14 +863,9 @@ void SVM_Scalar::setGp(Matrix<double> *extGp, Matrix<double> *extGpsigma, Matrix
 	{
             NiceAssert( extGpsigma != nullptr );
 
-	    MEMDEL(xyval);
-	    xyval = nullptr;
-
-	    MEMDEL(Gpval);
-	    Gpval = nullptr;
-
-	    MEMDEL(Gpsigma);
-	    Gpsigma = nullptr;
+	    MEMDEL(xyval);   xyval   = nullptr;
+	    MEMDEL(Gpval);   Gpval   = nullptr;
+	    MEMDEL(Gpsigma); Gpsigma = nullptr;
 
 	    Gplocal = 0;
 
@@ -6725,24 +6721,16 @@ int SVM_Scalar::intrain(int &res, svmvolatile int &killSwitch)
                 {
                     for ( k = 0 ; k <= j ; ++k )
                     {
-                        MEMDELARRAY(emm4K4cache[i][j][k]);
-
-                        emm4K4cache[i][j][k] = nullptr;
+                        MEMDELARRAY(emm4K4cache[i][j][k]); emm4K4cache[i][j][k] = nullptr;
                     }
 
-                    MEMDELARRAY(emm4K4cache[i][j]);
-
-                    emm4K4cache[i][j] = nullptr;
+                    MEMDELARRAY(emm4K4cache[i][j]); emm4K4cache[i][j] = nullptr;
                 }
 
-                MEMDELARRAY(emm4K4cache[i]);
-
-                emm4K4cache[i] = nullptr;
+                MEMDELARRAY(emm4K4cache[i]); emm4K4cache[i] = nullptr;
             }
 
-            MEMDELARRAY(emm4K4cache);
-
-            emm4K4cache = nullptr;
+            MEMDELARRAY(emm4K4cache); emm4K4cache = nullptr;
         }
     }
 
@@ -8435,14 +8423,9 @@ std::istream &SVM_Scalar::inputstream(std::istream &input)
 
     if ( Gplocal )
     {
-        MEMDEL(xyval);
-        xyval = nullptr;
-
-        MEMDEL(Gpval);
-        Gpval = nullptr;
-
-        MEMDEL(Gpsigma);
-        Gpsigma = nullptr;
+        MEMDEL(xyval);   xyval   = nullptr;
+        MEMDEL(Gpval);   Gpval   = nullptr;
+        MEMDEL(Gpsigma); Gpsigma = nullptr;
     }
 
     Gplocal = 1;
@@ -8704,11 +8687,8 @@ int SVM_Scalar::setuseLweight(void)
 
         if ( Gplocal )
         {
-            MEMDEL(Gpval);
-            Gpval = nullptr;
-
-            MEMDEL(Gpsigma);
-            Gpsigma = nullptr;
+            MEMDEL(Gpval);   Gpval   = nullptr;
+            MEMDEL(Gpsigma); Gpsigma = nullptr;
 
             MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,trainclass.size(),trainclass.size(),nullptr,nullptr,&Lweightval,useLweight));
 //phantomxyzxyz            MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,trainclass.size(),trainclass.size()));
@@ -8741,11 +8721,8 @@ int SVM_Scalar::setnoLweight(void)
 
         if ( Gplocal )
         {
-            MEMDEL(Gpval);
-            Gpval = nullptr;
-
-            MEMDEL(Gpsigma);
-            Gpsigma = nullptr;
+            MEMDEL(Gpval);   Gpval   = nullptr;
+            MEMDEL(Gpsigma); Gpsigma = nullptr;
 
             MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,trainclass.size(),trainclass.size(),nullptr,nullptr,&Lweightval,useLweight));
 //phantomxyzxyz            MEMNEW(Gpval  ,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &kerncache ,trainclass.size(),trainclass.size()));

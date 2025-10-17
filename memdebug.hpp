@@ -36,6 +36,9 @@
 #ifndef DEBUG_MEM
 #ifndef DEBUG_MEM_CHEAP
 
+#define DEREFMEM(_p_)          *(_p_)
+#define DEREFMEMARRAY(_p_,_i_)  (_p_)[_i_]
+
 #define MEMNEW(_a_,_b_)          _a_ = new _b_
 #define MEMNEWARRAY(_a_,_b_,_c_) _a_ = new _b_[_c_]
 
@@ -65,6 +68,9 @@ extern size_t _global_alloccnt;
 extern size_t _global_maxalloccnt;
 
 #define MEMCUTPNT 16384
+
+#define DEREFMEM(_p_)          *(_p_)
+#define DEREFMEMARRAY(_p_,_i_)  (_p_)[_i_]
 
 #define MEMNEW(_a_,_b_) \
 { \
@@ -185,7 +191,11 @@ extern size_t _global_maxalloccnt;
 // Function that keeps track of pointers:
 //
 // addr is pointer in question
-// newdel: 1 if new, 0 of delete, -1 to dump report and cleanup, -2 to dump report without cleanup
+// newdel: 1 if new
+//         0 of delete
+//         -1 to dump report and cleanup
+//         -2 to dump report without cleanup
+//         -3 test if base pointer is valid and index size is good
 // type: 0 is pointer, 1 is array
 // size: size of array
 //
@@ -193,11 +203,17 @@ extern size_t _global_maxalloccnt;
 //         1 = attempt to delete an unallocated error code
 //         2 = attempt to delete array with non-array delete
 //         3 = attempt to delete non-array with array delete
+//         4 = unable to find base pointer
+//         5 = found base pointer but size out of range (too large)
+//         6 = found base pointer but size out of range (negative)
 
 //int addremoveptr(void *addr, int newdel, int type, int size, const char *desc);
 
 // use addendum = nullptr to remove most recent addition
 const char *updatedesc(const char *addendum, size_t &oldallocdesclen);
+
+#define DEREFMEM(_p_)          *( addremoveptr((void *) (_p_),-3,0,0,"blah")     ? ((_p_)) : ((_p_)) )
+#define DEREFMEMARRAY(_p_,_i_)  ( addremoveptr((void *) (_p_),-3,0,(_i_),"blah") ? ((_p_)) : ((_p_)) )[_i_]
 
 #define MEMNEW(_a_,_b_) \
 { \

@@ -1320,13 +1320,13 @@ int xferMLtrain12(svmvolatile int &killSwitch,
 //kbquitdet("phantomxyz 1",uservars,varnames,vardescr,1);
 //}
 
-    MEMDELARRAY(xtol_abs);
+    MEMDELARRAY(xtol_abs); xtol_abs = nullptr;
 
-    MEMDELARRAY(lb);
-    MEMDELARRAY(ub);
+    MEMDELARRAY(lb); lb = nullptr;
+    MEMDELARRAY(ub); ub = nullptr;
 
-    MEMDELARRAY(alphaval);
-    MEMDELARRAY(alphastp);
+    MEMDELARRAY(alphaval); alphaval = nullptr;
+    MEMDELARRAY(alphastp); alphastp = nullptr;
 
     return res;
 }

@@ -673,7 +673,7 @@ int genericMLDataLoad(int binaryRelabel,
 
     if ( destfile )
     {
-        MEMDEL(destfile);
+        MEMDEL(destfile); destfile = nullptr;
     }
 
     return pointsadded;
