@@ -597,7 +597,7 @@ double KNN_Generic::calcweightgrad(double dist) const
     return res;
 }
 
-int KNN_Generic::ghTrainingVector(gentype &resh, gentype &resg, int j, int retaltg, gentype ***pxyprodi) const
+int KNN_Generic::gh(gentype &resh, gentype &resg, int j, int retaltg, gentype ***pxyprodi) const
 {
     NiceAssert( !retaltg );
 

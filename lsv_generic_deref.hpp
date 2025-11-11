@@ -83,7 +83,7 @@ public:
     virtual char targType(void)  const override { return getQconst().targType(); }
 
     virtual int tspaceDim   (void)       const override { return getQconst().tspaceDim();    }
-    virtual int xspaceDim   (int u = -1) const override { return getQconst().xspaceDim(u);   }
+    virtual int xspaceDim   (int k = -1) const override { return getQconst().xspaceDim(k);   }
     virtual int fspaceDim   (void)       const override { return getQconst().fspaceDim();    }
     virtual int tspaceSparse(void)       const override { return getQconst().tspaceSparse(); }
     virtual int xspaceSparse(void)       const override { return getQconst().xspaceSparse(); }
@@ -568,13 +568,11 @@ public:
 
     // Evaluation Functions:
 
-    virtual int ggTrainingVector(               gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return getQconst().ggTrainingVector(     resg,i,retaltg,pxyprodi); }
-    virtual int hhTrainingVector(gentype &resh,                int i,                  gentype ***pxyprodi = nullptr) const override { return getQconst().hhTrainingVector(resh,     i,        pxyprodi); }
-    virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return getQconst().ghTrainingVector(resh,resg,i,retaltg,pxyprodi); }
+    virtual int gg(               gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return getQconst().gg(     resg,i,retaltg,pxyprodi); }
+    virtual int hh(gentype &resh,                int i,                  gentype ***pxyprodi = nullptr) const override { return getQconst().hh(resh,     i,        pxyprodi); }
+    virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return getQconst().gh(resh,resg,i,retaltg,pxyprodi); }
 
     virtual double eTrainingVector(int i) const override { return getQconst().eTrainingVector(i); }
-
-    virtual int covTrainingVector(gentype &resv, gentype &resmu, int i, int j, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override { return getQconst().covTrainingVector(resv,resmu,i,j,pxyprodi,pxyprodj,pxyprodij); }
 
     virtual double         &dedgTrainingVector(double         &res, int i) const override { return getQconst().dedgTrainingVector(res,i); }
     virtual Vector<double> &dedgTrainingVector(Vector<double> &res, int i) const override { return getQconst().dedgTrainingVector(res,i); }
@@ -596,10 +594,6 @@ public:
     virtual void dgTrainingVectorX(Vector<double>  &resx, const Vector<int> &i) const override { getQconst().dgTrainingVectorX(resx,i); return; }
 
     virtual void deTrainingVectorX(Vector<gentype> &resx, const Vector<int> &i) const override { getQconst().deTrainingVectorX(resx,i); return; }
-
-    virtual int ggTrainingVector(double         &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return getQconst().ggTrainingVector(resg,i,retaltg,pxyprodi); }
-    virtual int ggTrainingVector(Vector<double> &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return getQconst().ggTrainingVector(resg,i,retaltg,pxyprodi); }
-    virtual int ggTrainingVector(d_anion        &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return getQconst().ggTrainingVector(resg,i,retaltg,pxyprodi); }
 
     virtual void dgTrainingVector(Vector<gentype>         &res, gentype        &resn, int i) const override { getQconst().dgTrainingVector(res,resn,i); return; }
     virtual void dgTrainingVector(Vector<double>          &res, double         &resn, int i) const override { getQconst().dgTrainingVector(res,resn,i); return; }
@@ -623,8 +617,6 @@ public:
 
     virtual double e(const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { return getQconst().e(y,x,xinf); }
 
-    virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override { return getQconst().cov(resv,resmu,xa,xb,xainf,xbinf,pxyprodx,pxyprody,pxyprodij); }
-
     virtual void dedg(double         &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { getQconst().dedg(res,y,x,xinf); return; }
     virtual void dedg(Vector<double> &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { getQconst().dedg(res,y,x,xinf); return; }
     virtual void dedg(d_anion        &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { getQconst().dedg(res,y,x,xinf); return; }
@@ -637,10 +629,6 @@ public:
 
     virtual void deX(Vector<gentype> &resx, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { getQconst().deX(resx,y,x,xinf); return; }
 
-    virtual int gg(double         &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return getQconst().gg(resg,x,retaltg,xinf,pxyprodx); }
-    virtual int gg(Vector<double> &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return getQconst().gg(resg,x,retaltg,xinf,pxyprodx); }
-    virtual int gg(d_anion        &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return getQconst().gg(resg,x,retaltg,xinf,pxyprodx); }
-
     virtual void dg(Vector<gentype>         &res, gentype        &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { getQconst().dg(res,resn,x,xinf); return; }
     virtual void dg(Vector<double>          &res, double         &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { getQconst().dg(res,resn,x,xinf); return; }
     virtual void dg(Vector<Vector<double> > &res, Vector<double> &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { getQconst().dg(res,resn,x,xinf); return; }
@@ -652,7 +640,16 @@ public:
 
     // var and covar functions
 
-    virtual int varTrainingVector(gentype &resv, gentype &resmu, int i, gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return getQconst().varTrainingVector(resv,resmu,i,pxyprodi,pxyprodii); }
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const { return getQconst().predcov(resv_pred,resv,resmu,ia,ib,ii,sigmaweighti); }
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const { return getQconst().predcov(resv_pred,resv,resmu,xa,xb,xx,sigmaweighti,xainf,xbinf,xxinf); }
+
+    virtual int cov(gentype &resv, gentype &resmu, int i, int j,                                                                                                                     gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override { return getQconst().cov(resv,resmu,i,j,pxyprodi,pxyprodj,pxyprodij); }
+    virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override { return getQconst().cov(resv,resmu,xa,xb,xainf,xbinf,pxyprodx,pxyprody,pxyprodij); }
+
+    virtual int predvar(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ii, double sigmaweighti = 1.0                                                                                                                  ) const override { return getQconst().predvar(resv_pred,resv,resmu,ia,ii,sigmaweighti); }
+    virtual int predvar(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xxinf = nullptr) const override { return getQconst().predvar(resv_pred,resv,resmu,xa,xx,sigmaweighti,xainf,xxinf); }
+
+    virtual int var(gentype &resv, gentype &resmu, int i,                                                           gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return getQconst().var(resv,resmu,i,pxyprodi,pxyprodii); }
     virtual int var(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override { return getQconst().var(resv,resmu,xa,xainf,pxyprodx,pxyprodxx); }
 
     virtual int covarTrainingVector(Matrix<gentype> &resv, const Vector<int> &i) const override { return getQconst().covarTrainingVector(resv,i); }
@@ -660,18 +657,18 @@ public:
 
     // Input-Output noise calculation
 
-    virtual int noisevarTrainingVector(gentype &resv, gentype &resmu, int i, const SparseVector<gentype> &xvar, int u = -1, gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return getQconst().noisevarTrainingVector(resv,resmu,i,xvar,u,pxyprodi,pxyprodii); }
-    virtual int noisevar(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override { return getQconst().noisevar(resv,resmu,xa,xvar,u,xainf,pxyprodx,pxyprodxx); }
+    virtual int noisevarTrainingVector(gentype &resv, gentype &resmu, int i, const SparseVector<gentype> &xvar, int uu = -1, gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return getQconst().noisevarTrainingVector(resv,resmu,i,xvar,uu,pxyprodi,pxyprodii); }
+    virtual int noisevar(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int uu = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override { return getQconst().noisevar(resv,resmu,xa,xvar,uu,xainf,pxyprodx,pxyprodxx); }
 
-    virtual int noisecovTrainingVector(gentype &resv, gentype &resmu, int i, int j, const SparseVector<gentype> &xvar, int u = -1, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override { return getQconst().noisecovTrainingVector(resv,resmu,i,j,xvar,u,pxyprodi,pxyprodj,pxyprodij); }
-    virtual int noisecov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodxy = nullptr) const override { return getQconst().noisecov(resv,resmu,xa,xb,xvar,u,xainf,xbinf,pxyprodx,pxyprody,pxyprodxy); }
+    virtual int noisecovTrainingVector(gentype &resv, gentype &resmu, int i, int j, const SparseVector<gentype> &xvar, int uu = -1, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override { return getQconst().noisecovTrainingVector(resv,resmu,i,j,xvar,uu,pxyprodi,pxyprodj,pxyprodij); }
+    virtual int noisecov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xvar, int uu = -1, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodxy = nullptr) const override { return getQconst().noisecov(resv,resmu,xa,xb,xvar,uu,xainf,xbinf,pxyprodx,pxyprody,pxyprodxy); }
 
     // Training data tracking functions:
 
-    virtual const Vector<int>          &indKey         (int u = -1) const override { return getQconst().indKey(u);          }
-    virtual const Vector<int>          &indKeyCount    (int u = -1) const override { return getQconst().indKeyCount(u);     }
-    virtual const Vector<int>          &dattypeKey     (int u = -1) const override { return getQconst().dattypeKey(u);      }
-    virtual const Vector<Vector<int> > &dattypeKeyBreak(int u = -1) const override { return getQconst().dattypeKeyBreak(u); }
+    virtual const Vector<int>          &indKey         (int uu = -1) const override { return getQconst().indKey(uu);          }
+    virtual const Vector<int>          &indKeyCount    (int uu = -1) const override { return getQconst().indKeyCount(uu);     }
+    virtual const Vector<int>          &dattypeKey     (int uu = -1) const override { return getQconst().dattypeKey(uu);      }
+    virtual const Vector<Vector<int> > &dattypeKeyBreak(int uu = -1) const override { return getQconst().dattypeKeyBreak(uu); }
 
     // Other functions
 

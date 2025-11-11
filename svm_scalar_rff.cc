@@ -487,7 +487,7 @@ return ( unusedvar = ( res > 0 ) ? +1 : -1 );
 
 
 
-int SVM_Scalar_rff::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib, gentype ***pxyprodi, gentype ***pxyprodj, gentype **pxyprodij) const
+int SVM_Scalar_rff::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***pxyprodi, gentype ***pxyprodj, gentype **pxyprodij) const
 {
     // FOR DETAILS: see section 3.2 of Daskalakis et al, "How Good are Low-Rank Approximations in Gaussian Process Regression?"
 
@@ -663,7 +663,7 @@ int SVM_Scalar_rff::covTrainingVector(gentype &resv, gentype &resmu, int ia, int
 
     int j;
 
-    //SVM_Scalar::covTrainingVector(resv,resmu,ia,ib,pxyprodi,pxyprodj,pxyprodij);
+    //SVM_Scalar::cov(resv,resmu,ia,ib,pxyprodi,pxyprodj,pxyprodij);
 
     if ( !( xtang(ia) & 7 ) )
     {

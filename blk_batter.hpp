@@ -98,8 +98,10 @@ public:
     //
     // return integer: 0 if all good, 1 if result is infinite, -1 if result is NaN
 
-    virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+    virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+    virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return BLK_Generic::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
 };
+
 
 inline double norm2(const BLK_Batter &a);
 inline double abs2 (const BLK_Batter &a);

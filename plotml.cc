@@ -19,9 +19,9 @@
 #include <fstream>
 
 
-#ifdef NDEBUG
+//#ifdef NDEBUG
 #define DO_CLEANUP
-#endif
+//#endif
 //#define DO_CLEANUP
 
 

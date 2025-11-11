@@ -306,7 +306,7 @@ int GPR_Scalar_rff::train(int &res, svmvolatile int &killSwitch)
 
                 gentype gvari,gmeani;
 
-                getQconst().varTrainingVector(gvari,gmeani,i);
+                getQconst().var(gvari,gmeani,i);
 //errstream() << "phantomxyz var,mean " << i << " = " << gvari << ", " << gmeani << "\n";
 
                 double munegi  = (double) gmeani;
@@ -616,9 +616,12 @@ errstream() << "Laplace approx training (Gaussian CDF, " << sigma() << ")... ";
 
             else
             {
+                gentype fnextelm;
+
                 for ( j = 0 ; j < Nineq ; ++j )
                 {
-                    getQ().ggTrainingVector(fnext("&",j),indin.v(j));
+                    getQ().gg(fnextelm,indin.v(j));
+                    fnext("&",j) = (double) fnextelm;
                 }
 
                 f -= fnext;
@@ -752,9 +755,12 @@ errstream() << "Laplace approx training (Logistic)... ";
 
             else
             {
+                gentype fnextelm;
+
                 for ( j = 0 ; j < Nineq ; ++j )
                 {
-                    getQ().ggTrainingVector(fnext("&",j),indin.v(j));
+                    getQ().gg(fnextelm,indin.v(j));
+                    fnext("&",j) = (double) fnextelm;
                 }
 
                 f -= fnext;

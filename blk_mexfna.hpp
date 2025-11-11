@@ -60,7 +60,8 @@ public:
     // Output g(x) is the input, each element a processed form of the input.
     // Output h(x) is the input, each element a processed form of the input.
 
-    virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+    virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+    virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return BLK_Generic::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
 };
 
 inline double norm2(const BLK_MexFnA &a);

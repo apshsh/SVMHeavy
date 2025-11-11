@@ -19,7 +19,7 @@
 #include "randfun.hpp"
 
 
-IMP_RLSamp::IMP_RLSamp(int isIndPrune) : IMP_Generic(isIndPrune)
+IMP_RLSamp::IMP_RLSamp(int _isIndPrune) : IMP_Generic(_isIndPrune)
 {
     setaltx(nullptr);
 
@@ -30,7 +30,7 @@ IMP_RLSamp::IMP_RLSamp(int isIndPrune) : IMP_Generic(isIndPrune)
     return;
 }
 
-IMP_RLSamp::IMP_RLSamp(const IMP_RLSamp &src, int isIndPrune) : IMP_Generic(isIndPrune)
+IMP_RLSamp::IMP_RLSamp(const IMP_RLSamp &src, int _isIndPrune) : IMP_Generic(_isIndPrune)
 {
     setaltx(nullptr);
 
@@ -42,7 +42,7 @@ IMP_RLSamp::IMP_RLSamp(const IMP_RLSamp &src, int isIndPrune) : IMP_Generic(isIn
     return;
 }
 
-IMP_RLSamp::IMP_RLSamp(const IMP_RLSamp &src, const ML_Base *xsrc, int isIndPrune) : IMP_Generic(isIndPrune)
+IMP_RLSamp::IMP_RLSamp(const IMP_RLSamp &src, const ML_Base *xsrc, int _isIndPrune) : IMP_Generic(_isIndPrune)
 {
     setaltx(xsrc);
 
@@ -83,7 +83,7 @@ std::istream &IMP_RLSamp::inputstream(std::istream &input )
     return IMP_Generic::inputstream(input);
 }
 
-int IMP_RLSamp::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int IMP_RLSamp::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     (void) retaltg;
     (void) pxyprodi;

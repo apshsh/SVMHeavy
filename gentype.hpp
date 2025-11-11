@@ -53,18 +53,29 @@ class gentype;
 // temporary file, but in the python-local version you can
 // override this and do something more sensible.
 
-                   void pycall(const std::string &fn, gentype &res,       int              x);
-                   void pycall(const std::string &fn, gentype &res,       double           x);
-                   void pycall(const std::string &fn, gentype &res, const d_anion         &x);
-                   void pycall(const std::string &fn, gentype &res, const std::string     &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>       &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const Matrix<T>       &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>          &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const Dict<T,dictkey> &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T> &x);
+                   void pycall(const std::string &fn, gentype &res,       int               x);
+                   void pycall(const std::string &fn, gentype &res,       double            x);
+                   void pycall(const std::string &fn, gentype &res, const d_anion          &x);
+                   void pycall(const std::string &fn, gentype &res, const std::string      &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>        &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const Matrix<T>        &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>           &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const Dict<T,dictkey>  &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T>  &x);
+                   void pycall(const std::string &fn, gentype &res, const gentype          &x);
+                   void pycall(const std::string &fn, gentype &res, int size, const double *x);
 
-void pycall(const std::string &fn, gentype &res, const gentype          &x);
-void pycall(const std::string &fn, gentype &res, int size, const double *x);
+                   void pycall(int fni, gentype &res,       int               x);
+                   void pycall(int fni, gentype &res,       double            x);
+                   void pycall(int fni, gentype &res, const d_anion          &x);
+                   void pycall(int fni, gentype &res, const std::string      &x);
+template <class T> void pycall(int fni, gentype &res, const Vector<T>        &x);
+template <class T> void pycall(int fni, gentype &res, const Matrix<T>        &x);
+template <class T> void pycall(int fni, gentype &res, const Set<T>           &x);
+template <class T> void pycall(int fni, gentype &res, const Dict<T,dictkey>  &x);
+template <class T> void pycall(int fni, gentype &res, const SparseVector<T>  &x);
+                   void pycall(int fni, gentype &res, const gentype          &x);
+                   void pycall(int fni, gentype &res, int size, const double *x);
 
 #ifndef PYLOCAL
 template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>       &x) { gentype xx(x); pycall(fn,res,xx); }
@@ -72,6 +83,12 @@ template <class T> void pycall(const std::string &fn, gentype &res, const Matrix
 template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>          &x) { gentype xx(x); pycall(fn,res,xx); }
 template <class T> void pycall(const std::string &fn, gentype &res, const Dict<T,dictkey> &x) { gentype xx(x); pycall(fn,res,xx); }
 template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T> &x) { gentype xx(x); pycall(fn,res,xx); }
+
+template <class T> void pycall(int fni, gentype &res, const Vector<T>       &x) { gentype xx(x); pycall(fni,res,xx); }
+template <class T> void pycall(int fni, gentype &res, const Matrix<T>       &x) { gentype xx(x); pycall(fni,res,xx); }
+template <class T> void pycall(int fni, gentype &res, const Set<T>          &x) { gentype xx(x); pycall(fni,res,xx); }
+template <class T> void pycall(int fni, gentype &res, const Dict<T,dictkey> &x) { gentype xx(x); pycall(fni,res,xx); }
+template <class T> void pycall(int fni, gentype &res, const SparseVector<T> &x) { gentype xx(x); pycall(fni,res,xx); }
 #endif
 
 // Optimisation is as follows: scaladd assumes that all values
@@ -739,8 +756,6 @@ public:
     //          that this (base) node in the structure does.
     // isfasttype: returns true for integers, reals and anions.
     //
-    // ispycallpure: pycall("string",x), where string is just a string, and x is just var(0,0)
-    //
     // Notes: - isValEqnDir return true if this is an equation but not if
     //          this is for example a vector, matrix or set whose components
     //          include equations.
@@ -805,36 +820,6 @@ public:
     bool isAssociative      (void) const { return isNotImaginary() || ( isValAnion() && ( (*anionval).order() <= 2 ) ); }
 
     bool iseq(const gentype &b) const;
-
-    bool ispycallpure(const std::string *&callstr) const
-    {
-        // eg pycall("some string",x), but not some more complicated variant (eg sin(x) rather than x as the second argument)
-
-        const static int pycallInd = getfnind("pycall");
-        const static int varInd    = getfnind("var");
-
-        bool res = ( typeis == 'F' ) &&
-                   ( fnnameind == pycallInd ) &&
-                   ( ((*eqnargs)(0)).isValString() ) &&
-                   ( ((*eqnargs)(1)).typeis == 'F' ) &&
-                   ( ((*eqnargs)(1)).fnnameind == varInd ) &&
-                   ( ((*(((*eqnargs)(1)).eqnargs))(0)).isValInteger() ) &&
-                   ( ((*(((*eqnargs)(1)).eqnargs))(0)).intval == 0 ) &&
-                   ( ((*(((*eqnargs)(1)).eqnargs))(1)).isValInteger() ) &&
-                   ( ((*(((*eqnargs)(1)).eqnargs))(1)).intval == 0 );
-
-        if ( res )
-        {
-            callstr = &((const std::string &) ((*eqnargs)(0)));
-        }
-
-        else
-        {
-            callstr = nullptr;
-        }
-
-        return res;
-    }
 
     // Size information:
     //

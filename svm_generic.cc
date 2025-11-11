@@ -241,184 +241,59 @@ int SVM_Generic::isKVarianceNZ(void) const
 
 void SVM_Generic::fastg(double &res) const
 {
-    SparseVector<gentype> x;
-
-    gg(res,x);
-
-    return;
+    gentype gres;
+    fastg(gres);
+    res = (double) gres;
 }
 
-void SVM_Generic::fastg(double &res, 
-                        int ia, 
-                        const SparseVector<gentype> &xa, 
+void SVM_Generic::fastg(double &res,
+                        int ia,
+                        const SparseVector<gentype> &xa,
                         const vecInfo &xainfo) const
 {
-    (void) ia;
-    (void) xainfo;
-
-    gg(res,xa);
-
-    return;
+    gentype gres;
+    fastg(gres,ia,xa,xainfo);
+    res = (double) gres;
 }
 
-void SVM_Generic::fastg(double &res, 
-                        int ia, int ib, 
-                        const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, 
+void SVM_Generic::fastg(double &res,
+                        int ia, int ib,
+                        const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
                         const vecInfo &xainfo, const vecInfo &xbinfo) const
 {
-    (void) xainfo;
-    (void) xbinfo;
-
-    (void) ia;
-    (void) ib;
-
-    SparseVector<gentype> x(xa);
-
-    if ( xb.indsize() )
-    {
-        int i;
-
-        for ( i = 0 ; i < xb.indsize() ; ++i )
-        {
-            //x("&",xb.ind(i)+DEFAULT_TUPLE_INDEX_STEP) = xb.direcref(i);
-            x("&",xb.ind(i),1) = xb.direcref(i);
-        }
-    }
-
-    gg(res,x);
-
-    return;
+    gentype gres;
+    fastg(gres,ia,ib,xa,xb,xainfo,xbinfo);
+    res = (double) gres;
 }
 
-void SVM_Generic::fastg(double &res, 
-                        int ia, int ib, int ic, 
-                        const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, 
+void SVM_Generic::fastg(double &res,
+                        int ia, int ib, int ic,
+                        const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc,
                         const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo) const
 {
-    (void) xainfo;
-    (void) xbinfo;
-    (void) xcinfo;
-
-    (void) ia;
-    (void) ib;
-    (void) ic;
-
-    SparseVector<gentype> x(xa);
-
-    if ( xb.indsize() )
-    {
-        int i;
-
-        for ( i = 0 ; i < xb.indsize() ; ++i )
-        {
-            //x("&",xb.ind(i)+DEFAULT_TUPLE_INDEX_STEP) = xb.direcref(i);
-            x("&",xb.ind(i),1) = xb.direcref(i);
-        }
-    }
-
-    if ( xc.indsize() )
-    {
-        int i;
-
-        for ( i = 0 ; i < xc.indsize() ; ++i )
-        {
-            //x("&",xc.ind(i)+(2*DEFAULT_TUPLE_INDEX_STEP)) = xc.direcref(i);
-            x("&",xc.ind(i),2) = xc.direcref(i);
-        }
-    }
-
-    gg(res,x);
-
-    return;
+    gentype gres;
+    fastg(gres,ia,ib,ic,xa,xb,xc,xainfo,xbinfo,xcinfo);
+    res = (double) gres;
 }
 
-void SVM_Generic::fastg(double &res, 
+void SVM_Generic::fastg(double &res,
                         int ia, int ib, int ic, int id,
                         const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd,
                         const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo) const
 {
-    (void) xainfo;
-    (void) xbinfo;
-    (void) xcinfo;
-    (void) xdinfo;
-
-    (void) ia;
-    (void) ib;
-    (void) ic;
-    (void) id;
-
-    SparseVector<gentype> x(xa);
-
-    if ( xb.indsize() )
-    {
-        int i;
-
-        for ( i = 0 ; i < xb.indsize() ; ++i )
-        {
-            //x("&",xb.ind(i)+DEFAULT_TUPLE_INDEX_STEP) = xb.direcref(i);
-            x("&",xb.ind(i),1) = xb.direcref(i);
-        }
-    }
-
-    if ( xc.indsize() )
-    {
-        int i;
-
-        for ( i = 0 ; i < xc.indsize() ; ++i )
-        {
-            //x("&",xc.ind(i)+(2*DEFAULT_TUPLE_INDEX_STEP)) = xc.direcref(i);
-            x("&",xc.ind(i),2) = xc.direcref(i);
-        }
-    }
-
-    if ( xd.indsize() )
-    {
-        int i;
-
-        for ( i = 0 ; i < xd.indsize() ; ++i )
-        {
-            //x("&",xd.ind(i)+(3*DEFAULT_TUPLE_INDEX_STEP)) = xd.direcref(i);
-            x("&",xd.ind(i),3) = xd.direcref(i);
-        }
-    }
-
-    gg(res,x);
-
-    return;
+    gentype gres;
+    fastg(gres,ia,ib,ic,id,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo);
+    res = (double) gres;
 }
 
 void SVM_Generic::fastg(double &res,
-                        Vector<int> &ia,
-                        Vector<const SparseVector<gentype> *> &xa,
-                        Vector<const vecInfo *> &xainfo) const
+                        Vector<int> &ii,
+                        Vector<const SparseVector<gentype> *> &xx,
+                        Vector<const vecInfo *> &xxinfo) const
 {
-    (void) xainfo;
-    (void) ia;
-
-    SparseVector<gentype> x;
-
-    if ( xa.size() )
-    {
-        int i,j;
-
-        for ( j = 0 ; j < xa.size() ; ++j )
-        {
-            const SparseVector<gentype> &xb = (*(xa(j)));
-
-            if ( xb.indsize() )
-            {
-                for ( i = 0 ; i < xb.indsize() ; ++i )
-                {
-                    //x("&",xb.ind(i)+(j*DEFAULT_TUPLE_INDEX_STEP)) = xb.direcref(i);
-                    x("&",xb.ind(i),j) = xb.direcref(i);
-                }
-            }
-        }
-    }
-
-    gg(res,x);
-
-    return;
+    gentype gres;
+    fastg(gres,ii,xx,xxinfo);
+    res = (double) gres;
 }
 
 
@@ -431,9 +306,9 @@ void SVM_Generic::fastg(gentype &res) const
     return;
 }
 
-void SVM_Generic::fastg(gentype &res, 
-                        int ia, 
-                        const SparseVector<gentype> &xa, 
+void SVM_Generic::fastg(gentype &res,
+                        int ia,
+                        const SparseVector<gentype> &xa,
                         const vecInfo &xainfo) const
 {
     (void) ia;
@@ -457,20 +332,12 @@ void SVM_Generic::fastg(gentype &res,
 
     SparseVector<gentype> x(xa);
 
-    if ( xb.indsize() )
+    for ( int i = 0 ; i < xb.indsize() ; ++i )
     {
-        int i;
-
-        for ( i = 0 ; i < xb.indsize() ; ++i )
-        {
-            //x("&",xb.ind(i)+DEFAULT_TUPLE_INDEX_STEP) = xb.direcref(i);
-            x("&",xb.ind(i),1) = xb.direcref(i);
-        }
+        x("&",xb.ind(i),1) = xb.direcref(i);
     }
 
     gg(res,x);
-
-    return;
 }
 
 void SVM_Generic::fastg(gentype &res,
@@ -488,31 +355,17 @@ void SVM_Generic::fastg(gentype &res,
 
     SparseVector<gentype> x(xa);
 
-    if ( xb.indsize() )
+    for ( int i = 0 ; i < xb.indsize() ; ++i )
     {
-        int i;
-
-        for ( i = 0 ; i < xb.indsize() ; ++i )
-        {
-            //x("&",xb.ind(i)+DEFAULT_TUPLE_INDEX_STEP) = xb.direcref(i);
-            x("&",xb.ind(i),1) = xb.direcref(i);
-        }
+        x("&",xb.ind(i),1) = xb.direcref(i);
     }
 
-    if ( xc.indsize() )
+    for ( int i = 0 ; i < xc.indsize() ; ++i )
     {
-        int i;
-
-        for ( i = 0 ; i < xc.indsize() ; ++i )
-        {
-            //x("&",xc.ind(i)+(2*DEFAULT_TUPLE_INDEX_STEP)) = xc.direcref(i);
-            x("&",xc.ind(i),2) = xc.direcref(i);
-        }
+        x("&",xc.ind(i),2) = xc.direcref(i);
     }
 
     gg(res,x);
-
-    return;
 }
 
 void SVM_Generic::fastg(gentype &res,
@@ -532,42 +385,22 @@ void SVM_Generic::fastg(gentype &res,
 
     SparseVector<gentype> x(xa);
 
-    if ( xb.indsize() )
+    for ( int i = 0 ; i < xb.indsize() ; ++i )
     {
-        int i;
-
-        for ( i = 0 ; i < xb.indsize() ; ++i )
-        {
-            //x("&",xb.ind(i)+DEFAULT_TUPLE_INDEX_STEP) = xb.direcref(i);
-            x("&",xb.ind(i),1) = xb.direcref(i);
-        }
+        x("&",xb.ind(i),1) = xb.direcref(i);
     }
 
-    if ( xc.indsize() )
+    for ( int i = 0 ; i < xc.indsize() ; ++i )
     {
-        int i;
-
-        for ( i = 0 ; i < xc.indsize() ; ++i )
-        {
-            //x("&",xc.ind(i)+(2*DEFAULT_TUPLE_INDEX_STEP)) = xc.direcref(i);
-            x("&",xc.ind(i),2) = xc.direcref(i);
-        }
+        x("&",xc.ind(i),2) = xc.direcref(i);
     }
 
-    if ( xd.indsize() )
+    for ( int i = 0 ; i < xd.indsize() ; ++i )
     {
-        int i;
-
-        for ( i = 0 ; i < xd.indsize() ; ++i )
-        {
-            //x("&",xd.ind(i)+(3*DEFAULT_TUPLE_INDEX_STEP)) = xd.direcref(i);
-            x("&",xd.ind(i),3) = xd.direcref(i);
-        }
+        x("&",xd.ind(i),3) = xd.direcref(i);
     }
 
     gg(res,x);
-
-    return;
 }
 
 void SVM_Generic::fastg(gentype &res,
@@ -580,28 +413,15 @@ void SVM_Generic::fastg(gentype &res,
 
     SparseVector<gentype> x;
 
-    if ( xa.size() )
+    for ( int j = 0 ; j < xa.size() ; ++j )
     {
-        int i,j;
-
-        for ( j = 0 ; j < xa.size() ; ++j )
+        for ( int i = 0 ; i < (*(xa(j))).indsize() ; ++i )
         {
-            const SparseVector<gentype> &xb = (*(xa(j)));
-
-            if ( xb.indsize() )
-            {
-                for ( i = 0 ; i < xb.indsize() ; ++i )
-                {
-                    //x("&",xb.ind(i)+(j*DEFAULT_TUPLE_INDEX_STEP)) = xb.direcref(i);
-                    x("&",xb.ind(i),j) = xb.direcref(i);
-                }
-            }
+            x("&",(*(xa(j))).ind(i),j) = (*(xa(j))).direcref(i);
         }
     }
 
     gg(res,x);
-
-    return;
 }
 
 

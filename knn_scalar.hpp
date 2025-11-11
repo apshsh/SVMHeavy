@@ -88,7 +88,9 @@ public:
 
     // Fast version of g(x)
 
-    virtual int ggTrainingVector(double &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return ggTrainingVectorInt(resg,i,retaltg,pxyprodi); }
+    virtual int gg(gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return ggTrainingVectorInt(resg.force_double(),i,retaltg,pxyprodi); }
+
+    virtual int gg(gentype &resg, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return KNN_Generic::gg(resg,x,xinf,pxyprodx); }
 
     // Randomisation: for KNN type, randomisation occurs in the target, as
     // this is the only variable available

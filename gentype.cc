@@ -18401,32 +18401,19 @@ gentype pycall(const gentype &c, const gentype &x)
         return resx(c,x);
     }
 
-    if ( !(c.isValString()) )
+    if ( c.isValString() )
     {
-        constructError(c,x,res,"Command must evaluate to string in pycall.");
+        pycall((const std::string &) c,res,x);
+    }
+
+    else if ( c.isCastableToIntegerWithoutLoss() )
+    {
+        pycall((int) c,res,x);
     }
 
     else
     {
-        pycall((const std::string &) c,res,x);
-/*
-        std::string resstr;
-        std::string callstr((const std::string &) c);
-
-        callstr += " ";
-        callstr += (const std::string &) x;
-        svm_pycall(resstr,callstr);
-
-        // At this point I would like to just write "res = resstr", but
-        // python messes things up with unix-y newlines that seem to
-        // break stuff, and C++ seems to actively impede me stripping
-        // said characters from the string. Quick workaround below...
-        //
-        // Why the actual fuck is this sort of crap still a thing?
-
-        std::stringstream pleasework(resstr);
-        pleasework >> res;
-*/
+        constructError(c,x,res,"Command must evaluate to string in pycall.");
     }
 
 //outstream() << "gentype pycall result " << res << "\n";
@@ -18434,16 +18421,23 @@ gentype pycall(const gentype &c, const gentype &x)
 }
 
 #ifndef PYLOCAL
-void pycall(const std::string &fn, gentype &res,       int          x) { gentype xx(x); pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res,       double       x) { gentype xx(x); pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res, const d_anion     &x) { gentype xx(x); pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res, const std::string &x) { gentype xx(x); pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res,       int               x) { gentype xx(x);      pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res,       double            x) { gentype xx(x);      pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res, const d_anion          &x) { gentype xx(x);      pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res, const std::string      &x) { gentype xx(x);      pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res, int size, const double *x) { gentype xx(size,x); pycall(fn,res,xx); }
+
+void pycall(int fni, gentype &res,       int               x) { gentype xx(x);      pycall(fni,res,xx); }
+void pycall(int fni, gentype &res,       double            x) { gentype xx(x);      pycall(fni,res,xx); }
+void pycall(int fni, gentype &res, const d_anion          &x) { gentype xx(x);      pycall(fni,res,xx); }
+void pycall(int fni, gentype &res, const std::string      &x) { gentype xx(x);      pycall(fni,res,xx); }
+void pycall(int fni, gentype &res, int size, const double *x) { gentype xx(size,x); pycall(fni,res,xx); }
 
 // If not local python then we use a system call
-void pycall(const std::string &fn, gentype &res, int size, const double *x)
+
+void pycall(int, gentype &, const gentype &)
 {
-    gentype xx(size,x);
-    pycall(fn,res,xx);
+    NiceThrow("Can't call pycall via system with integer fni");
 }
 
 void pycall(const std::string &evalstr, gentype &res, const gentype &x)

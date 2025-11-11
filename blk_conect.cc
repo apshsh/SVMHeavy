@@ -248,7 +248,7 @@ int BLK_Conect::addTrainingVector(int i, const gentype &y, const SparseVector<ge
 
         if ( getmlqmode() )
         {
-            getRepConst(ii).ggTrainingVector(ytmp,i);
+            getRepConst(ii).gg(ytmp,i);
 
             if ( getRepConst(ii).d()(i) == 2 )
             {
@@ -302,7 +302,7 @@ int BLK_Conect::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype
 
         if ( getmlqmode() )
         {
-            getRepConst(ii).ggTrainingVector(ytmp,i);
+            getRepConst(ii).gg(ytmp,i);
 
             if ( getRepConst(ii).d()(i) == 2 )
             {
@@ -358,7 +358,7 @@ int BLK_Conect::addTrainingVector(int i, const Vector<gentype> &y, const Vector<
         {
             for ( int j = 0 ; j < y.size() ; j++ )
             {
-                getRepConst(ii).ggTrainingVector(ytmp("&",j),i+j);
+                getRepConst(ii).gg(ytmp("&",j),i+j);
 
                 if ( getRepConst(ii).d()(i+j) == 2 )
                 {
@@ -415,7 +415,7 @@ int BLK_Conect::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<Spars
         {
             for ( int j = 0 ; j < y.size() ; j++ )
             {
-                getRepConst(ii).ggTrainingVector(ytmp("&",j),i+j);
+                getRepConst(ii).gg(ytmp("&",j),i+j);
 
                 if ( getRepConst(ii).d()(i+j) == 2 )
                 {
@@ -1659,7 +1659,7 @@ int BLK_Conect::train(int &res, svmvolatile int &killSwitch)
         {
             for ( int j = 0 ; j < yrem.size() ; j++ )
             {
-                getRepConst(ii).ggTrainingVector(ytmp("&",j),j);
+                getRepConst(ii).gg(ytmp("&",j),j);
 
                 if ( getRepConst(ii).d()(j) == 2 )
                 {
@@ -1937,7 +1937,7 @@ int BLK_Conect::isVarDefined(void) const
     return res;
 }
 
-int BLK_Conect::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int BLK_Conect::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     NiceAssert( !retaltg );
 
@@ -1949,7 +1949,7 @@ int BLK_Conect::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
 
     for ( ii = 0 ; ii < numReps() ; ++ii )
     {
-        res |= getRepConst(ii).ghTrainingVector(vech("&",ii),vecg("&",ii),i,retaltg,pxyprodi);
+        res |= getRepConst(ii).gh(vech("&",ii),vecg("&",ii),i,retaltg,pxyprodi);
     }
 
     for ( ii = 0 ; ii < numReps() ; ++ii )
@@ -2495,7 +2495,11 @@ void BLK_Conect::dg(Vector<d_anion> &res, d_anion &resn, const SparseVector<gent
     return;
 }
 
-int BLK_Conect::covTrainingVector(gentype &resv, gentype &resmu,int i, int j, gentype ***pxyprodi, gentype ***pxyprodj, gentype **pxyprodij) const
+
+
+
+
+int BLK_Conect::cov(gentype &resv, gentype &resmu,int i, int j, gentype ***pxyprodi, gentype ***pxyprodj, gentype **pxyprodij) const
 {
     Vector<gentype> vecv(numReps());
     Vector<gentype> vecg(numReps());
@@ -2513,8 +2517,8 @@ int BLK_Conect::covTrainingVector(gentype &resv, gentype &resmu,int i, int j, ge
     {
         if ( !getmlqmode() || ( ii == numReps()-1 ) )
         {
-            //res |= getRepConst(ii).ghTrainingVector(dummy,vecg("&",ii),i,0,pxyprodi);
-            res |= getRepConst(ii).covTrainingVector(vecv("&",ii),vecg("&",ii),i,i,pxyprodi,pxyprodj,pxyprodij);
+            //res |= getRepConst(ii).gh(dummy,vecg("&",ii),i,0,pxyprodi);
+            res |= getRepConst(ii).cov(vecv("&",ii),vecg("&",ii),i,i,pxyprodi,pxyprodj,pxyprodij);
 
             vecg("&",ii) *= getRepWeight(ii);
             vecv("&",ii) *= getRepWeight(ii,1)*getRepWeight(ii,1);
@@ -2522,7 +2526,7 @@ int BLK_Conect::covTrainingVector(gentype &resv, gentype &resmu,int i, int j, ge
 
         else
         {
-            res |= getRepConst(ii).ghTrainingVector(dummyh,vecg("&",ii),i,0,pxyprodi);
+            res |= getRepConst(ii).gh(dummyh,vecg("&",ii),i,0,pxyprodi);
 
             vecg("&",ii) *= getRepWeight(ii);
             vecv("&",ii)  = 0.0;

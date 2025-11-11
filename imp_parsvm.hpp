@@ -42,9 +42,9 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    IMP_ParSVM(int isIndPrune = 0);
-    IMP_ParSVM(const IMP_ParSVM &src, int isIndPrune = 0);
-    IMP_ParSVM(const IMP_ParSVM &src, const ML_Base *xsrc, int isIndPrune = 0);
+    IMP_ParSVM(int _isIndPrune = 0);
+    IMP_ParSVM(const IMP_ParSVM &src, int _isIndPrune = 0);
+    IMP_ParSVM(const IMP_ParSVM &src, const ML_Base *xsrc, int _isIndPrune = 0);
     IMP_ParSVM &operator=(const IMP_ParSVM &src) { assign(src); return *this; }
     virtual ~IMP_ParSVM();
 

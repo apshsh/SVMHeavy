@@ -209,14 +209,9 @@ int GPR_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector
 
     xisTrained = 0;
 
-    if ( y.size() )
+    for ( int j = 0 ; j < y.size() ; ++j )
     {
-        int j;
-
-        for ( j = 0 ; j < y.size() ; ++j )
-        {
-            res |= addTrainingVector(i+j,y(j),x(j),Cweigh(j),epsweigh(j));
-        }
+        res |= addTrainingVector(i+j,y(j),x(j),Cweigh(j),epsweigh(j));
     }
 
     return res;
@@ -232,14 +227,9 @@ int GPR_Generic::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<Spar
 
     xisTrained = 0;
 
-    if ( y.size() )
+    for ( int j = 0 ; j < y.size() ; ++j )
     {
-        int j;
-
-        for ( j = 0 ; j < y.size() ; ++j )
-        {
-            res |= qaddTrainingVector(i+j,y(j),x("&",j),Cweigh(j),epsweigh(j));
-        }
+        res |= qaddTrainingVector(i+j,y(j),x("&",j),Cweigh(j),epsweigh(j));
     }
 
     return res;
@@ -619,14 +609,9 @@ int GPR_Generic::setd(const Vector<int> &i, const Vector<int> &nd)
 
     int res = 0;
 
-    if ( i.size() )
+    for ( int ii = 0 ; ii < i.size() ; ++ii )
     {
-        int ii;
-
-        for ( ii = 0 ; ii < i.size() ; ++ii )
-        {
-            res |= setd(i(ii),nd(ii));
-        }
+        res |= setd(i(ii),nd(ii));
     }
 
     if ( isNaiveConst() )
@@ -643,14 +628,9 @@ int GPR_Generic::setd(const Vector<int> &nd)
 
     int res = 0;
 
-    if ( N() )
+    for ( int i = 0 ; i < N() ; ++i )
     {
-        int i;
-
-        for ( i = 0 ; i < N() ; ++i )
-        {
-            res |= setd(i,nd(i));
-        }
+        res |= setd(i,nd(i));
     }
 
     return res;
@@ -885,6 +865,24 @@ int GPR_Generic::cov(gentype &resv, gentype &resmu, const SparseVector<gentype> 
     return res;
 }
 
+int GPR_Generic::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti, const vecInfo *xainf, const vecInfo *xbinf, const vecInfo *xxinf) const
+{
+    int res = 0;
+
+    if ( isSampleMode() )
+    {
+        res = cov(resv,resmu,xa,xb,xainf,xbinf);
+        resv_pred = resv;
+    }
+
+    else
+    {
+        res = getQconst().predcov(resv_pred,resv,resmu,xa,xb,xx,sigmaweighti,xainf,xbinf,xxinf);
+    }
+
+    return res;
+}
+
 int GPR_Generic::covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &xx) const
 {
     int res = 0;
@@ -892,7 +890,7 @@ int GPR_Generic::covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype>
     if ( ( 3 == isSampleMode() ) || ( 4 == isSampleMode() ) || ( 5 == isSampleMode() ) )
     {
         int m = xx.size();
-        int res = 0;
+
 
         gentype resvv,dummy,dummyb;
 
@@ -966,13 +964,15 @@ int GPR_Generic::var(gentype &resv, gentype &resmu, const SparseVector<gentype> 
 //FIXME: this doesn't work for vectors, anions etc
         if ( ((double) resv) > sigma()*sigma_cut() )
         {
-            GPR_Generic &that = const_cast<GPR_Generic &>(*this);
-            int NN = that.N();
+            GPR_Generic &thut = const_cast<GPR_Generic &>(*this);
+            int NN = thut.N();
 
             // Add to training set
 //FIXME: potential bug here using const_cast, c++ might not "see" the change!
-            that.addTrainingVector(NN,resmu,xa,( ( (sigma()/SIGMA_ADD) > (1.0/sigma_cut()) ) ? (sigma()/SIGMA_ADD) : (1.0/sigma_cut()) ),0);
-            that.train(dummy,killSwitch);
+            thut.isLocked = 0; // turn off lock temporarily to allow for updates
+            thut.addTrainingVector(NN,resmu,xa,( ( (sigma()/SIGMA_ADD) > (1.0/sigma_cut()) ) ? (sigma()/SIGMA_ADD) : (1.0/sigma_cut()) ),0);
+            thut.train(dummy,killSwitch);
+            thut.isLocked = 1;
         }
 
         resv = 0.0;
@@ -987,6 +987,24 @@ int GPR_Generic::var(gentype &resv, gentype &resmu, const SparseVector<gentype> 
     else
     {
         res = getQconst().var(resv,resmu,xa,xainf,pxyprodx,pxyprodxx);
+    }
+
+    return res;
+}
+
+int GPR_Generic::predvar(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xx, double sigmaweighti, const vecInfo *xainf, const vecInfo *xxinf) const
+{
+    int res = 0;
+
+    if ( isSampleMode() )
+    {
+        res = var(resv,resmu,xa,xainf);
+        resv_pred = resv;
+    }
+
+    else
+    {
+        res = getQconst().predvar(resv_pred,resv,resmu,xa,xx,sigmaweighti,xainf,xxinf);
     }
 
     return res;
@@ -1707,7 +1725,7 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
                 {
                     for ( j = 0 ; j <= i ; ++j )
                     {
-                        covTrainingVector(altvs,ms,Npresamp+i,Npresamp+j);
+                        cov(altvs,ms,Npresamp+i,Npresamp+j);
 
                         vv("&",i,j) = ( (double) altvs ) + ( ( i == j ) ? SIGMA_ADD : 0.0 );
 
@@ -1912,7 +1930,7 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
                 {
                     if ( ( intype(i) == -1 ) || ( intype(i) == -2 ) )
                     {
-                        ggTrainingVector(ms,i);
+                        gg(ms,i);
 
                         // -1 is a bound g(x)+h(x) <= y, recast as h(x) <= y-gx
                         // -2 is a bound g(x)+h(x) >= y, recast as h(x) >= y-gx
@@ -1923,7 +1941,7 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
 
                     else if ( intype(i) == 1 )
                     {
-                        ggTrainingVector(ms,i);
+                        gg(ms,i);
 
                         //         1 is a bound (g(x)+h(x))^2 <= y, recast as h(x) <=  sqrt(y)-gx
                         //         1000                                       h(x) >= -sqrt(y)-gx
@@ -1936,7 +1954,7 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
 
                     else if ( ( intype(i) == 2 ) || ( intype(i) == 3 ) )
                     {
-                        ggTrainingVector(ms,i+1);
+                        gg(ms,i+1);
                         gx("&",i) = (double) ms;
 
                         //          2 is a bound (g(x)+h(x))^2 >= y, recast as (2gx+hx).h(x) >= y-gx^2
@@ -1952,9 +1970,9 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
                     else if ( ( intype(i) == 11 ) || ( intype(i) == 12 ) || ( intype(i) == 13 ) )
                     {
 //FIXME
-                        ggTrainingVector(ms,i+1);
+                        gg(ms,i+1);
                         gx("&",i) = (double) ms;
-                        ggTrainingVector(ms,i+2);
+                        gg(ms,i+2);
                         dgx("&",i) = (double) ms;
 
                         //          11 is a bound d(g(x)+h(x))^2 <= y, cast as 2(gx+hx).dh(x) <= y-2(gx+hx)dgx
@@ -1970,9 +1988,9 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
 
                     else if ( ( intype(i) == 21 ) || ( intype(i) == 22 ) || ( intype(i) == 23 ) )
                     {
-                        ggTrainingVector(ms,i+1);
+                        gg(ms,i+1);
                         gx("&",i) = (double) ms;
-                        ggTrainingVector(ms,i+2);
+                        gg(ms,i+2);
                         gz("&",i) = (double) ms;
 
                         //         21 is a bound (g(x)+h(x))^2-(g(z)+h(z))^2 <= y, cast as (2gx+hx).h(x)-(2gz+hz).h(z) <= y-gx^2+gz^2
@@ -2033,19 +2051,19 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
                     {
                         if ( ( intype(i) == 2 ) || ( intype(i) == 3 ) || ( intype(i) == 11 ) || ( intype(i) == 12 ) || ( intype(i) == 13 ) || ( intype(i) == 21 ) || ( intype(i) == 22 ) || ( intype(i) == 23 ) )
                         {
-                            prior->ggTrainingVector(ms,i+1);
+                            prior->gg(ms,i+1);
                             hx("&",i) = (double) ms;
                         }
 
                         if ( ( intype(i) == 11 ) || ( intype(i) == 12 ) || ( intype(i) == 13 ) )
                         {
-                            prior->ggTrainingVector(ms,i+2);
+                            prior->gg(ms,i+2);
                             dhx("&",i) = (double) ms;
                         }
 
                         if ( ( intype(i) == 21 ) || ( intype(i) == 22 ) || ( intype(i) == 23 ) )
                         {
-                            prior->ggTrainingVector(ms,i+2);
+                            prior->gg(ms,i+2);
                             hz("&",i) = (double) ms;
                         }
                     }
@@ -2210,19 +2228,19 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
                         {
                             if ( ( intype(i) == 2 ) || ( intype(i) == 3 ) || ( intype(i) == 11 ) || ( intype(i) == 12 ) || ( intype(i) == 13 ) || ( intype(i) == 21 ) || ( intype(i) == 22 ) || ( intype(i) == 23 ) )
                             {
-                                prior->ggTrainingVector(ms,i+1);
+                                prior->gg(ms,i+1);
                                 hx("&",i) = (double) ms;
                             }
 
                             if ( ( intype(i) == 11 ) || ( intype(i) == 12 ) || ( intype(i) == 13 ) )
                             {
-                                prior->ggTrainingVector(ms,i+2);
+                                prior->gg(ms,i+2);
                                 dhx("&",i) = (double) ms;
                             }
 
                             if ( ( intype(i) == 21 ) || ( intype(i) == 22 ) || ( intype(i) == 23 ) )
                             {
-                                prior->ggTrainingVector(ms,i+2);
+                                prior->gg(ms,i+2);
                                 hz("&",i) = (double) ms;
                             }
                         }
@@ -2490,13 +2508,13 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
                 //
                 //    for ( i = 0 ; i < Npresamp ; i++ )
                 //    {
-                //        ggTrainingVector(mq,i);
+                //        gg(mq,i);
                 //        errstream() << "phantomxyz pre g+h(" << i << ") = " << mq << "\t\t squared = " << (mq*mq) << "\n";
                 //    }
                 //
                 //    for ( i = 0 ; i < Ntotsamp ; i++ )
                 //    {
-                //        ggTrainingVector(mq,i+Npresamp);
+                //        gg(mq,i+Npresamp);
                 //        errstream() << "phantomxyz tot g+h(" << i << ") = " << mq << "\t\t squared = " << (mq*mq) << "\n";
                 //    }
                 //}
@@ -2648,13 +2666,13 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
             //
             //    for ( i = 0 ; i < Npresamp ; i++ )
             //    {
-            //        ggTrainingVector(mq,i);
+            //        gg(mq,i);
             //        errstream() << "phantomxyz pre g+h(" << i << ") = " << mq << "\t\t squared = " << (mq*mq) << "\n";
             //    }
             //
             //    for ( i = 0 ; i < Ntotsamp ; i++ )
             //    {
-            //        ggTrainingVector(mq,i+Npresamp);
+            //        gg(mq,i+Npresamp);
             //        errstream() << "phantomxyz tot g+h(" << i << ") = " << mq << "\t\t squared = " << (mq*mq) << "\n";
             //    }
             //}
@@ -2717,13 +2735,13 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
             //
             //    for ( i = 0 ; i < Npresamp ; i++ )
             //    {
-            //        ggTrainingVector(mq,i);
+            //        gg(mq,i);
             //        errstream() << "phantomxyz pre g+h(" << i << ") = " << mq << "\t\t squared = " << (mq*mq) << "\n";
             //    }
             //
             //    for ( i = 0 ; i < Ntotsamp ; i++ )
             //    {
-            //        ggTrainingVector(mq,i+Npresamp);
+            //        gg(mq,i+Npresamp);
             //        errstream() << "phantomxyz tot g+h(" << i << ") = " << mq << "\t\t squared = " << (mq*mq) << "\n";
             //    }
             //}
@@ -12948,15 +12966,13 @@ int main()
         {
             SparseVector<gentype> &xq = res("&",i);
 
-            int kk;
-
-            for ( kk = 0 ; kk < dim ; ++kk, ++randpos )
+            for ( int kkk = 0 ; kkk < dim ; ++kkk, ++randpos )
             {
-                //randufill(xq("&",kk%sampPerSplit,kk/sampPerSplit),0,1);
+                //randufill(xq("&",kkk%sampPerSplit,kkk/sampPerSplit),0,1);
                 // Generate the SAME sequence normally, generate SEEDED sequence for automatic method
-                xq("&",kk%sampPerSplit,kk/sampPerSplit) = xrandvals[((i*dim)+((isautorand ? randpos : kk))%numrands)];
-                xq("&",kk%sampPerSplit,kk/sampPerSplit) *= (xmax(kk)-xmin(kk));
-                xq("&",kk%sampPerSplit,kk/sampPerSplit) += xmin(kk);
+                xq("&",kkk%sampPerSplit,kkk/sampPerSplit) = xrandvals[((i*dim)+((isautorand ? randpos : kkk))%numrands)];
+                xq("&",kkk%sampPerSplit,kkk/sampPerSplit) *= (xmax(kkk)-xmin(kkk));
+                xq("&",kkk%sampPerSplit,kkk/sampPerSplit) += xmin(kkk);
             }
         }
     }

@@ -350,11 +350,10 @@ public:
 
     // Evaluation:
 
-    virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+    virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+    virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return SVM_Generic::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
 
     virtual double eTrainingVector(int i) const override;
-
-    virtual int covTrainingVector(gentype &resv, gentype &resmu, int i, int j, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override;
 
     virtual double         &dedgTrainingVector(double         &res, int i) const override { return ML_Base::dedgTrainingVector(res,i); }
     virtual Vector<double> &dedgTrainingVector(Vector<double> &res, int i) const override;
@@ -372,6 +371,9 @@ public:
 
     virtual void dgTrainingVectorX(Vector<gentype> &resx, const Vector<int> &i) const override { SVM_Generic::dgTrainingVectorX(resx,i); return; }
     virtual void dgTrainingVectorX(Vector<double>  &resx, const Vector<int> &i) const override { SVM_Generic::dgTrainingVectorX(resx,i); return; }
+
+    virtual int cov(gentype &resv, gentype &resmu, int i, int j, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override;
+    virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override { return SVM_Generic::cov(resv,resmu,xa,xb,xainf,xbinf,pxyprodx,pxyprody,pxyprodij); }
 
     // Other functions
 
@@ -2248,7 +2250,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::train(int &res, svmvolatile int &kill
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int SVM_Vector_redbin<BaseRegressorClass>::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     int unusedvar = 0;
     int tempresh = 0;
@@ -2387,7 +2389,7 @@ Vector<double> &SVM_Vector_redbin<BaseRegressorClass>::dedKTrainingVector(Vector
 
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib, gentype ***pxyprodi, gentype ***pxyprodj, gentype **pxyprodij) const
+int SVM_Vector_redbin<BaseRegressorClass>::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***pxyprodi, gentype ***pxyprodj, gentype **pxyprodij) const
 {
     NiceAssert( !( getKernel().isKVarianceNZ() ) );
 
@@ -2718,7 +2720,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::gTrainingVector(Vector<double> &gproj
                 gentype tempsomeh,tempsomeg;
 
                 //Q(q).gTrainingVector(gproject("&",q),dummy,i,raw);
-                Q(q).ghTrainingVector(tempsomeh,tempsomeg,i,raw,pxyprodi);
+                Q(q).gh(tempsomeh,tempsomeg,i,raw,pxyprodi);
 
                 gproject("&",q) = (double) tempsomeg;
             }

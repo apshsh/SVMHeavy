@@ -152,11 +152,11 @@ int LSV_Generic::sety(const Vector<int> &i, const Vector<gentype> &y)
 
     Vector<gentype> yy(y);
 
-    for ( int i = 0 ; i < yy.size() ; i++ )
+    for ( int ii = 0 ; ii < i.size() ; ii++ )
     {
-        if ( !yy(i).isCastableToRealWithoutLoss() )
+        if ( !yy(i(ii)).isCastableToRealWithoutLoss() )
         {
-            yy("&",i).force_double() = 0.0;
+            yy("&",i(ii)).force_double() = 0.0;
         }
     }
 
@@ -347,18 +347,13 @@ int LSV_Generic::setd(const Vector<int> &i, const Vector<int> &nd)
 
     int res = SVM_Scalar::setd(i,nd);
 
-    if ( i.size() )
+    for ( int j = 0 ; j < i.size() ; ++j )
     {
-        int j;
-
-        for ( j = 0 ; j < i.size() ; ++j )
+        if ( !nd(j) )
         {
-            if ( !nd(j) )
-            {
-                killfasts();
+            killfasts();
 
-                setzeropassive(dalpha("&",i(j)));
-            }
+            setzeropassive(dalpha("&",i(j)));
         }
     }
 
@@ -371,18 +366,13 @@ int LSV_Generic::setd(const Vector<int> &nd)
 
     int res = SVM_Scalar::setd(nd);
 
-    if ( N() )
+    for ( int j = 0 ; j < N() ; ++j )
     {
-        int j;
-
-        for ( j = 0 ; j < N() ; ++j )
+        if ( !nd(j) )
         {
-            if ( !nd(j) )
-            {
-                killfasts();
+            killfasts();
 
-                setzeropassive(dalpha("&",j));
-            }
+            setzeropassive(dalpha("&",j));
         }
     }
 
@@ -474,28 +464,17 @@ void LSV_Generic::dgTrainingVectorX(Vector<double> &resx, int i) const
 
     resx.resize(xspaceDim()) = 0.0;
 
-    int j,k;
-
-    if ( ML_Base::N() )
+    for ( int j = 0 ; j < ML_Base::N() ; ++j )
     {
-        for ( j = 0 ; j < ML_Base::N() ; ++j )
+        for ( int k = 0 ; k < x(j).nindsize() ; ++k )
         {
-            if ( x(j).nindsize() )
-            {
-                for ( k = 0 ; k < x(j).nindsize() ; ++k )
-                {
-                    resx("&",x(j).ind(k)) += (double) ((res(j)*(x(j)).direcref(k)));
-                }
-            }
+            resx("&",x(j).ind(k)) += (double) ((res(j)*(x(j)).direcref(k)));
         }
     }
 
-    if ( x(i).nindsize() )
+    for ( int k = 0 ; k < x(i).nindsize() ; ++k )
     {
-        for ( k = 0 ; k < x(i).nindsize() ; ++k )
-        {
-            resx("&",x(i).ind(k)) += (double) ((resn*(x(i)).direcref(k)));
-        }
+        resx("&",x(i).ind(k)) += (double) ((resn*(x(i)).direcref(k)));
     }
 
     return;
@@ -510,28 +489,17 @@ void LSV_Generic::dgTrainingVectorX(Vector<gentype> &resx, int i) const
 
     resx.resize(xspaceDim()) = 0.0_gent;
 
-    int j,k;
-
-    if ( ML_Base::N() )
+    for ( int j = 0 ; j < ML_Base::N() ; ++j )
     {
-        for ( j = 0 ; j < ML_Base::N() ; ++j )
+        for ( int k = 0 ; k < x(j).nindsize() ; ++k )
         {
-            if ( x(j).nindsize() )
-            {
-                for ( k = 0 ; k < x(j).nindsize() ; ++k )
-                {
-                    resx("&",x(j).ind(k)) += ((res(j)*(x(j)).direcref(k)));
-                }
-            }
+            resx("&",x(j).ind(k)) += ((res(j)*(x(j)).direcref(k)));
         }
     }
 
-    if ( x(i).nindsize() )
+    for ( int k = 0 ; k < x(i).nindsize() ; ++k )
     {
-        for ( k = 0 ; k < x(i).nindsize() ; ++k )
-        {
-            resx("&",x(i).ind(k)) += ((resn*(x(i)).direcref(k)));
-        }
+        resx("&",x(i).ind(k)) += ((resn*(x(i)).direcref(k)));
     }
 
     return;

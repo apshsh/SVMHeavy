@@ -445,6 +445,7 @@ void evalSigmaSVM_Scalar(double &res, int i, int j, const gentype **pxyprod, con
 SVM_Scalar::SVM_Scalar() : SVM_Generic()
 {
     useLweight = false;
+    prevNZ = 0;
 
     diagkernvalcheat = nullptr;
     delaydownsize = 0;
@@ -569,6 +570,7 @@ SVM_Scalar::SVM_Scalar() : SVM_Generic()
 SVM_Scalar::SVM_Scalar(const SVM_Scalar &src) : SVM_Generic()
 {
     useLweight = false;
+    prevNZ = 0;
 
     diagkernvalcheat = nullptr;
     delaydownsize = 0;
@@ -599,6 +601,7 @@ SVM_Scalar::SVM_Scalar(const SVM_Scalar &src) : SVM_Generic()
 SVM_Scalar::SVM_Scalar(const SVM_Scalar &src, const ML_Base *xsrc) : SVM_Generic()
 {
     useLweight = false;
+    prevNZ = 0;
 
     diagkernvalcheat = nullptr;
     delaydownsize = 0;
@@ -3818,7 +3821,7 @@ double SVM_Scalar::RKHSnorm(void) const
 
         // This is important: we need to go through the relevant
         // inheritance chain to get the "correct" alpha
-        ghTrainingVector(resh,resg,j);
+        gh(resh,resg,j);
 
         tmpres = (double) resg;
 
@@ -3836,7 +3839,7 @@ double SVM_Scalar::RKHSnorm(void) const
 
         // This is important: we need to go through the relevant
         // inheritance chain to get the "correct" alpha
-        ghTrainingVector(resh,resg,j);
+        gh(resh,resg,j);
 
         tmpres = (double) resg;
 
@@ -3854,7 +3857,7 @@ double SVM_Scalar::RKHSnorm(void) const
 
         // This is important: we need to go through the relevant
         // inheritance chain to get the "correct" alpha
-        ghTrainingVector(resh,resg,j);
+        gh(resh,resg,j);
 
         tmpres = (double) resg;
 
@@ -3878,7 +3881,7 @@ double SVM_Scalar::RKHSnorm(void) const
 
 
 
-int SVM_Scalar::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int SVM_Scalar::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     int tempresh = 0;
     int unusedvar = 0;
@@ -3932,6 +3935,8 @@ fallback:
 
         else if ( ( i >= 0 ) && !resbad )
         {
+            // resg calculated successfully above
+
             resg += traintarg(i);
             resg -= diagoff(i)*alphaR()(i);
 
@@ -5269,7 +5274,7 @@ void SVM_Scalar::fastg(gentype &res,
     return;
 }
 
-int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib, gentype ***pxyprodi, gentype ***pxyprodj, gentype **pxyprodij) const
+int SVM_Scalar::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***pxyprodi, gentype ***pxyprodj, gentype **pxyprodij) const
 {
     int NN = SVM_Scalar::N();
 
@@ -5315,6 +5320,8 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
     int dtva = xtang(ia) & (7+32+64);
     int dtvb = xtang(ib) & (7+32+64);
 
+    retVector<double> tmpva;
+
     NiceAssert( dtva >= 0 );
     NiceAssert( dtvb >= 0 );
 
@@ -5325,247 +5332,124 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
     {
         if ( NS() )
         {
-            int j;
+            Vector<gentype> Kia(NN,0.0_gent);
+            Vector<gentype> Kib(NN,0.0_gent);
+            Vector<gentype> itsone(1,1.0_gent);
+            gentype Kiaib;
 
-            Vector<gentype> Kia(NN);
-            Vector<gentype> Kib(NN);
-            Vector<gentype> itsone(1);//isVarBias() ? 1 : 0);
-            gentype Kii;
-
-            itsone("&",0) = 1.0;
-
-            if ( ( ia >= 0 ) && ( ib >= 0 ) )
-            {
-                retVector<double> tmpva;
-
-                Kii  = Gp()(ia,ib);
-                Kii -= ( ia == ib ) ? diagoff(tmpva)(ia) : 0.0;
-            }
-
-            else
-            {
-                K2(Kii,ia,ib,(const gentype **) pxyprodij);
-                Kii *= KSCALE2(ia,ib);
-            }
+            if ( ( ia >= 0 ) && ( ib >= 0 ) ) { Kiaib = Gp()(ia,ib); Kiaib -= ( ia == ib ) ? diagoff(tmpva)(ia) : 0.0; }
+            else                              { K2(Kiaib,ia,ib,(const gentype **) pxyprodij); Kiaib *= KSCALE2(ia,ib); }
 
             if ( ia >= 0 )
             {
-                for ( j = 0 ; j < NN ; ++j )
+                for ( int j = 0 ; j < NN ; ++j )
                 {
-                    if ( alphaState()(j) ) //|| ( ia == j ) || ( ib == j ) )
-                    {
-                        Kia("&",j) = Gp()(ia,j);
-                    }
-
-                    else
-                    {
-                        Kia("&",j) = 0.0;
-                    }
+                    if ( alphaState()(j) ) { Kia("&",j) = Gp()(ia,j); }
                 }
 
-                if ( alphaState()(ia) )
-                {
-                    retVector<double> tmpva;
-
-                    Kia("&",ia) -= diagoff(tmpva)(ia);
-                }
+                if ( alphaState()(ia) ) { Kia("&",ia) -= diagoff(tmpva)(ia); }
             }
 
             else
             {
-                for ( j = 0 ; j < NN ; ++j )
+                for ( int j = 0 ; j < NN ; ++j )
                 {
-                    if ( alphaState()(j) ) //|| ( ia == j ) || ( ib == j ) )
-                    {
-                        K2(Kia("&",j),ia,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
-                        Kia("&",ia) *= KSCALE2(ia,j);
-                    }
-
-                    else
-                    {
-                        Kia("&",j) = 0.0;
-                    }
+                    if ( alphaState()(j) ) { K2(Kia("&",j),ia,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr); Kia("&",j) *= KSCALE2(ia,j); }
                 }
             }
 
-            if ( ib == ia )
-            {
-                Kib = Kia;
-            }
+            if ( ib == ia ) { Kib = Kia; }
 
-            else if ( ib >= 0 )
+            if ( ( ib != ia ) && ( ib >= 0 ) )
             {
-                for ( j = 0 ; j < NN ; ++j )
+                for ( int j = 0 ; j < NN ; ++j )
                 {
-                    if ( alphaState()(j) ) //|| ( ia == j ) || ( ib == j ) )
-                    {
-                        Kib("&",j) = Gp()(j,ib);
-                    }
-
-                    else
-                    {
-                        Kib("&",j) = 0.0;
-                    }
+                    if ( alphaState()(j) ) { Kib("&",j) = Gp()(j,ib); }
                 }
 
-                if ( alphaState()(ib) )
-                {
-                    retVector<double> tmpva;
+                if ( alphaState()(ib) ) { Kib("&",ib) -= diagoff(tmpva)(ib); }
+            }
 
-                    Kib("&",ib) -= diagoff(tmpva)(ib);
-                    Kib("&",ib) *= KSCALE2(j,ib);
+            else if ( ib != ia )
+            {
+                for ( int j = 0 ; j < NN ; ++j )
+                {
+                    //K2(Kib("&",j),j,ib,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr); - reversed in line with assumptions in Kxfer (unknown "x" comes first)
+                    if ( alphaState()(j) ) { K2(Kib("&",j),ib,j,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr); setconj(Kib("&",j)); Kib("&",j) *= KSCALE2(ib,j); }
                 }
             }
 
-            else
+            // covariance calculation
+
             {
-                for ( j = 0 ; j < NN ; ++j )
+                resv = Kiaib;
+
+                // Calculate real posterior variance
+
+                Vector<gentype> btemp(1);//isVarBias() ? 1 : 0);
+                Vector<gentype> Kres(NN);
+
+                //NB: this will automatically only do part corresponding to pivAlphaF
+                fact_minverse(Kres,btemp,Kib,itsone);
+
+                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
                 {
-                    if ( alphaState()(j) ) //|| ( ia == j ) || ( ib == j ) )
-                    {
-                        //K2(Kib("&",j),j,ib,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr); - reversed in line with assumptions in Kxfer (unknown "x" comes first)
-                        K2(Kib("&",j),ib,j,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr);
-                        setconj(Kib("&",j));
-                        Kib("&",j) *= KSCALE2(ib,j);
-                    }
 
-                    else
-                    {
-                        Kib("&",j) = 0.0;
-                    }
+                    resv -= outerProd(Kia(pivAlphaF()(jP)),Kres(pivAlphaF()(jP)));
                 }
-            }
 
-            Vector<gentype> btemp(1);//isVarBias() ? 1 : 0);
-            Vector<gentype> Kres(NN);
+                if ( SVM_Scalar::isVarBias() )
+                {
+                    // This is the additional corrective factor
 
-            //NB: this will automatically only do part corresponding to pivAlphaF
-            fact_minverse(Kres,btemp,Kib,itsone);
-
-            resv = Kii;
-
-            for ( j = 0 ; j < pivAlphaF().size() ; ++j )
-            {
-                resv -= outerProd(Kia(pivAlphaF()(j)),Kres(pivAlphaF()(j)));
-            }
-
-            if ( SVM_Scalar::isVarBias() )
-            {
-                // This is the additional corrective factor
-
-                resv -= btemp(0);
+                    resv -= btemp(0);
+                }
             }
 
             // mu calculation
 
             int firstterm = 1;
 
-            for ( j = 0 ; j < pivAlphaF().size() ; ++j )
+            for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
             {
-                if ( firstterm )
-                {
-                    resmu = Kia(pivAlphaF()(j))*alpha()(pivAlphaF()(j));
-
-                    firstterm = 0;
-                }
-
-                else
-                {
-                    resmu += Kia(pivAlphaF()(j))*alpha()(pivAlphaF()(j));
-                }
+                if ( firstterm ) { resmu =  Kia(pivAlphaF()(jP))*alpha()(pivAlphaF()(jP)); firstterm = 0; }
+                else             { resmu += Kia(pivAlphaF()(jP))*alpha()(pivAlphaF()(jP));                }
             }
 
-            for ( j = 0 ; j < pivAlphaLB().size() ; ++j )
+            for ( int jP = 0 ; jP < pivAlphaLB().size() ; ++jP )
             {
-                if ( firstterm )
-                {
-                    resmu = Kia(pivAlphaLB()(j))*alpha()(pivAlphaLB()(j));
-
-                    firstterm = 0;
-                }
-
-                else
-                {
-                    resmu += Kia(pivAlphaLB()(j))*alpha()(pivAlphaLB()(j));
-                }
+                if ( firstterm ) { resmu =  Kia(pivAlphaLB()(jP))*alpha()(pivAlphaLB()(jP)); firstterm = 0; }
+                else             { resmu += Kia(pivAlphaLB()(jP))*alpha()(pivAlphaLB()(jP));                }
             }
 
-            for ( j = 0 ; j < pivAlphaUB().size() ; ++j )
+            for ( int jP = 0 ; jP < pivAlphaUB().size() ; ++jP )
             {
-                if ( firstterm )
-                {
-                    resmu = Kia(pivAlphaUB()(j))*alpha()(pivAlphaUB()(j));
-
-                    firstterm = 0;
-                }
-
-                else
-                {
-                    resmu += Kia(pivAlphaUB()(j))*alpha()(pivAlphaUB()(j));
-                }
+                if ( firstterm ) { resmu =  Kia(pivAlphaUB()(jP))*alpha()(pivAlphaUB()(jP)); firstterm = 0; }
+                else             { resmu += Kia(pivAlphaUB()(jP))*alpha()(pivAlphaUB()(jP));                }
             }
 
             if ( !( dtva & 7 ) )
             {
-                if ( firstterm )
-                {
-                    resmu = bias();
-
-                    firstterm = 0;
-                }
-
-                else
-                {
-                    resmu += bias();
-                }
+                if ( firstterm ) { resmu =  bias(); firstterm = 0; }
+                else             { resmu += bias();                }
             }
 
-            else
+            else if ( firstterm )
             {
-                if ( firstterm )
-                {
-                    resmu =  bias();
-                    resmu *= 0.0;
-
-                    firstterm = 0;
-                }
+                resmu =  bias();
+                resmu *= 0.0;
+                firstterm = 0;
             }
         }
 
         else
         {
-            if ( ( ia >= 0 ) && ( ib >= 0 ) )
-            {
-                retVector<double> tmpva;
+            if ( ( ia >= 0 ) && ( ib >= 0 ) ) { resv = Gp()(ia,ib); resv -= ( ia == ib ) ? diagoff(tmpva)(ia) : 0.0; }
+            else                              { K2(resv,ia,ib,(const gentype **) pxyprodij); resv *= KSCALE2(ia,ib); }
 
-                resv  = Gp()(ia,ib);
-                resv -= ( ia == ib ) ? diagoff(tmpva)(ia) : 0.0;
-            }
-
-            else
-            {
-                K2(resv,ia,ib,(const gentype **) pxyprodij);
-                resv *= KSCALE2(ia,ib);
-            }
-
-            if ( !( dtva & 7 ) )
-            {
-                resmu = bias();
-            }
-
-            else
-            {
-                resmu  = bias();
-                resmu *= 0.0;
-            }
+            if ( !( dtva & 7 ) ) { resmu = bias();               }
+            else                 { resmu = bias(); resmu *= 0.0; }
         }
-
-        // Additional terms: if the kernel itself is a random process then we need to
-        // allow for variance from this.  This extra term is:
-        //
-        // variance_k(g(x))
-        //
-        // which can be calculated using resmode = 0x80
 
         if ( getKernel().isKVarianceNZ() )
         {
@@ -5573,40 +5457,42 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
 
             gentype addres(0.0);
             gentype Kxj;
-            int jP;
 
-            //if ( NLB() )
+            for ( int jP = 0 ; jP < NLB() ; ++jP )
             {
-                for ( jP = 0 ; jP < NLB() ; ++jP )
-                {
-                    int j = Q.pivAlphaLB()(jP);
+                int j = Q.pivAlphaLB()(jP);
 
-                    K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
-                    addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
-                }
+                K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
 
-            //if ( NUB() )
+            for ( int jP = 0 ; jP < NUB() ; ++jP )
             {
-                for ( jP = 0 ; jP < NUB() ; ++jP )
-                {
-                    int j = Q.pivAlphaUB()(jP);
+                int j = Q.pivAlphaUB()(jP);
 
-                    K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
-                    addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
-                }
+                K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
 
-            //if ( NF() )
+            for ( int jP = 0 ; jP < NF() ; ++jP )
             {
-                for ( jP = 0 ; jP < NF() ; ++jP )
-                {
-                    int j = Q.pivAlphaF()(jP);
+                int j = Q.pivAlphaF()(jP);
 
-                    K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
-                    addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
-                }
+                K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
+
+            resv += addres;
+        }
+
+        if ( ( ia == ib ) && ( resv <= 0.0_gent ) ) //zerogentype() ) )
+        {
+            // Sometimes numerical issues can make the variance (ia == ib) 0, so
+            // this is variance) negative.  This causes issues when eg bayesian
+            // optimisation attempts to take the square-root and cast the
+            // result to real.  Hence this "fix-fudge" to make it zero instead.
+
+            resv *= 0.0; //zerogentype();
         }
     }
 
@@ -5615,130 +5501,122 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
         double &resvv = resv.force_double();
         double &resgg = resmu.force_double();
 
-        if ( dtva & 7 )
-        {
-            resgg = 0.0;
-        }
-
-        else
-        {
-            resgg = biasR();
-        }
-
         if ( NS() )
         {
-            int j;
+            Vector<double> Kia(NN,0.0);
+            Vector<double> Kib(NN,0.0);
+            Vector<double> itsone(1,1.0);
+            double Kiaib;
 
-            Vector<double> Kia(NN);
-            Vector<double> Kib(NN);
-            Vector<double> itsone(1);//isVarBias() ? 1 : 0);
-            double Kii;
-
-            itsone("&",0) = 1.0;
-
-            if ( ( ia >= 0 ) && ( ib >= 0 ) )
-            {
-                retVector<double> tmpva;
-
-                Kii  = Gp()(ia,ib);
-                Kii -= ( ia == ib ) ? diagoff(tmpva)(ia) : 0.0;
-            }
-
-            else
-            {
-                Kii = K2(ia,ib,(const gentype **) pxyprodij);
-                Kii *= KSCALE2(ia,ib);
-            }
+            if ( ( ia >= 0 ) && ( ib >= 0 ) ) { Kiaib = Gp()(ia,ib); Kiaib -= ( ia == ib ) ? diagoff(tmpva)(ia) : 0.0; }
+            else                              { Kiaib = K2(ia,ib,(const gentype **) pxyprodij)*KSCALE2(ia,ib);         }
 
             if ( ia >= 0 )
             {
-                for ( j = 0 ; j < NN ; ++j )
+                for ( int j = 0 ; j < NN ; ++j )
                 {
-                    Kia("&",j) = Gp()(ia,j);
+                    if ( alphaState()(j) ) { Kia("&",j) = Gp()(ia,j); }
                 }
 
-                retVector<double> tmpva;
-
-                Kia("&",ia) -= diagoff(tmpva)(ia);
+                if ( alphaState()(ia) ) { Kia("&",ia) -= diagoff(tmpva)(ia); }
             }
 
             else
             {
-                for ( j = 0 ; j < NN ; ++j )
+                for ( int j = 0 ; j < NN ; ++j )
                 {
-                    Kia("&",j) = K2(ia,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr);
-                    Kia("&",j) *= KSCALE2(ia,j);
+                    if ( alphaState()(j) ) { Kia("&",j) = K2(ia,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr)*KSCALE2(ia,j); }
                 }
             }
 
-            if ( ib == ia )
-            {
-                Kib = Kia;
-            }
+            if ( ib == ia ) { Kib = Kia; }
 
-            else if ( ib >= 0 )
+            if ( ( ib != ia ) && ( ib >= 0 ) )
             {
-                for ( j = 0 ; j < NN ; ++j )
+                for ( int j = 0 ; j < NN ; ++j )
                 {
-                    Kib("&",j) = Gp()(j,ib);
+                    if ( alphaState()(j) ) { Kib("&",j) = Gp()(j,ib); }
                 }
 
-                retVector<double> tmpva;
-
-                Kib("&",ib) -= diagoff(tmpva)(ib);
+                if ( alphaState()(ib) ) { Kib("&",ib) -= diagoff(tmpva)(ib); }
             }
 
-            else
+            else if ( ib != ia )
             {
-                for ( j = 0 ; j < NN ; ++j )
+                for ( int j = 0 ; j < NN ; ++j )
                 {
-                    //K2(Kib("&",j),j,ib,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr); - see above
-                    Kib("&",j) = K2(ib,j,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr);
-                    Kib("&",j) *= KSCALE2(ib,j);
+                    if ( alphaState()(j) )
+                    {
+                        //K2(Kib("&",j),j,ib,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr); - see above
+                        Kib("&",j) = K2(ib,j,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr)*KSCALE2(ib,j);
+                    }
                 }
             }
 
-            Vector<double> btemp(1);//isVarBias() ? 1 : 0);
-            Vector<double> Kres(NN);
+            // covariance calculation
 
-            //NB: this will automatically only do part corresponding to pivAlphaF
-            fact_minverse(Kres,btemp,Kib,itsone);
-
-            resvv = Kii;
-
-            for ( j = 0 ; j < pivAlphaF().size() ; ++j )
             {
-                resvv -= Kia(pivAlphaF()(j))*Kres(pivAlphaF()(j));
-            }
+                resvv = Kiaib;
 
-            if ( SVM_Scalar::isVarBias() )
-            {
-                // This is the additional corrective factor
+                Vector<double> btemp(1);//isVarBias() ? 1 : 0);
+                Vector<double> Kres(NN);
 
-                resvv -= btemp(0);
+                //NB: this will automatically only do part corresponding to pivAlphaF
+                fact_minverse(Kres,btemp,Kib,itsone);
+
+                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
+                {
+
+                    resvv -= Kia(pivAlphaF()(jP))*Kres(pivAlphaF()(jP));
+                }
+
+                if ( SVM_Scalar::isVarBias() )
+                {
+                    // This is the additional corrective factor
+
+                    resvv -= btemp(0);
+                }
             }
 
             // mu calculation
 
-            for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
+            if ( ( ia >= 0 ) && ( emm == 2 ) )
             {
-                j = pivAlphaF()(jP);
+                resgg = 0;
 
-                resgg += Kia(j)*alphaR()(j);
+                Q.unAlphaGrad(resgg,ia,*Gpval,GPNorGPNEXT(Gpn,GpnExt),gp,hp);
+
+                resgg += traintarg(ia);
+                resgg -= diagoff(ia)*alphaR()(ia);
+
+                resgg /= KSCALE1(ia);
             }
 
-            for ( int jP = 0 ; jP < pivAlphaLB().size() ; ++jP )
+            else
             {
-                j = pivAlphaLB()(jP);
+                if ( dtva & 7 ) { resgg = 0.0;     }
+                else            { resgg = biasR(); }
 
-                resgg += Kia(j)*alphaR()(j);
-            }
+                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
+                {
+                    int j = pivAlphaF()(jP);
 
-            for ( int jP = 0 ; jP < pivAlphaUB().size() ; ++jP )
-            {
-                j = pivAlphaUB()(jP);
+                    resgg += Kia(j)*alphaR()(j);
+                }
 
-                resgg += Kia(j)*alphaR()(j);
+                for ( int jP = 0 ; jP < pivAlphaLB().size() ; ++jP )
+                {
+                    int j = pivAlphaLB()(jP);
+
+                    resgg += Kia(j)*alphaR()(j);
+                }
+
+                for ( int jP = 0 ; jP < pivAlphaUB().size() ; ++jP )
+                {
+                    int j = pivAlphaUB()(jP);
+
+                    resgg += Kia(j)*alphaR()(j);
+                }
             }
         }
 
@@ -5746,8 +5624,6 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
         {
             if ( ( ia >= 0 ) && ( ib >= 0 ) )
             {
-                retVector<double> tmpva;
-
                 resvv  = Gp()(ia,ib);
                 resvv -= ( ia == ib ) ? diagoff(tmpva)(ia) : 0.0;
             }
@@ -5756,6 +5632,9 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
             {
                 resvv = K2(ia,ib,(const gentype **) pxyprodij)*KSCALE2(ia,ib);
             }
+
+            if ( dtva & 7 ) { resgg = 0.0;     }
+            else            { resgg = biasR(); }
         }
 
         // Additional terms: if the kernel itself is a random process then we need to
@@ -5771,40 +5650,42 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
 
             double addres = 0.0;
             double Kxj;
-            int jP;
 
-            //if ( NLB() )
+            for ( int jP = 0 ; jP < NLB() ; ++jP )
             {
-                for ( jP = 0 ; jP < NLB() ; ++jP )
-                {
-                    int j = Q.pivAlphaLB()(jP);
+                int j = Q.pivAlphaLB()(jP);
 
-                    Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
-                    addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
-                }
+                Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
 
-            //if ( NUB() )
+            for ( int jP = 0 ; jP < NUB() ; ++jP )
             {
-                for ( jP = 0 ; jP < NUB() ; ++jP )
-                {
-                    int j = Q.pivAlphaUB()(jP);
+                int j = Q.pivAlphaUB()(jP);
 
-                    Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
-                    addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
-                }
+                Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
 
-            //if ( NF() )
+            for ( int jP = 0 ; jP < NF() ; ++jP )
             {
-                for ( jP = 0 ; jP < NF() ; ++jP )
-                {
-                    int j = Q.pivAlphaUB()(jP);
+                int j = Q.pivAlphaUB()(jP);
 
-                    Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
-                    addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
-                }
+                Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
+
+            resvv += addres;
+        }
+
+        if ( ( ia == ib ) && ( resvv <= 0.0 ) )
+        {
+            // Sometimes numerical issues can make the variance (ia == ib, so
+            // this is variance) negative.  This causes issues when eg bayesian
+            // optimisation attempts to take the square-root and cast the
+            // result to real.  Hence this "fix-fudge" to make it zero instead.
+
+            resvv = 0.0;
         }
     }
 
@@ -5829,6 +5710,531 @@ int SVM_Scalar::covTrainingVector(gentype &resv, gentype &resmu, int ia, int ib,
 //                resmu += resprior;
 //            }
 //        }
+
+    return 0;
+}
+
+
+
+
+
+
+
+int SVM_Scalar::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti) const
+{
+    int NN = SVM_Scalar::N();
+
+    //NiceAssert( SVM_Scalar::isFixedBias() );
+    NiceAssert( NS() == NF() );
+    NiceAssert( ( NF() == 0 ) || ( NF() == SVM_Scalar::N()-NNC(0) ) );
+    NiceAssert( ( ia >= -3 ) && ( ib != -2 ) );
+    NiceAssert( ia < NN );
+    NiceAssert( ( ib >= -3 ) && ( ib != -2 ) );
+    NiceAssert( ib < NN );
+    NiceAssert( emm == 2 );
+
+    // The calculation is essentially that of cov, but we have an
+    // additional corrective factor that falls out of taking the
+    // inverse of:
+    //
+    // [ K      K(ii)    ]
+    // [ K(ii)' K(ii,ii) ]
+    //
+    // where:
+    //
+    // K(ii) = [ K(ii,:) ]
+    //
+    // are the additionals from the posited observation ii. In the
+    // unbiased case, the corrective term is:
+    //
+    // term = -( K(ia,ii) - K(ia)'.inv(Gp).K(ii) ).( K(ib,ii) - K(ib)'.inv(Gp).K(ii) )/( K(ii,ii) - K(ii)'.inv(Gp).K(ii) )
+    //
+    // where:
+    //
+    // K(ia)  = K(ia,:)
+    // K(ib)  = K(ib,:)
+    //
+    // In the biased case, by the powers of informed guesswork:
+    //
+    // term = -( K(ia,ii) - [ K(ia) ]'.inv([ Gp 1 ]).[ K(ii) ] ).( K(ib,ii) - [ K(ib) ]'.inv([ Gp 1 ]).[ K(ii) ] )/( K(ii,ii) - [ K(ii) ]'.inv([ Gp 1 ]).[ K(ii) ] )
+    //                      [ 1     ]      [ 1  0 ]  [ 1     ]                [ 1     ]      [ 1  0 ]  [ 1     ]                [ 1     ]      [ 1  0 ]  [ 1     ]
+
+    int dtva = xtang(ia) & (7+32+64);
+    int dtvb = xtang(ib) & (7+32+64);
+    int dtvi = xtang(ii) & (7+32+64);
+
+    NiceAssert( dtva >= 0 );
+    NiceAssert( dtvb >= 0 );
+    NiceAssert( dtvi == 0 );
+
+    retVector<double> tmpva;
+
+    if ( ( dtva & 4 ) || ( dtvb & 4 ) || !SVM_Scalar::isUnderlyingScalar() )
+    {
+        if ( NS() )
+        {
+            Vector<gentype> Kia(NN,0.0_gent);
+            Vector<gentype> Kib(NN,0.0_gent);
+            Vector<gentype> Kii(NN,0.0_gent);
+            Vector<gentype> itsone(1,1.0_gent);
+            gentype Kiaib,Kiaii,Kiiib,Kiiii;
+
+            if ( ( ia >= 0 ) && ( ib >= 0 ) ) { Kiaib = Gp()(ia,ib); Kiaib -= ( ia == ib ) ? diagoff(tmpva)(ia) : 0.0; } else { K2(Kiaib,ia,ib); Kiaib *= KSCALE2(ia,ib); }
+            if ( ( ia >= 0 ) && ( ii >= 0 ) ) { Kiaii = Gp()(ia,ii); Kiaii -= ( ia == ii ) ? diagoff(tmpva)(ia) : 0.0; } else { K2(Kiaii,ia,ii); Kiaii *= KSCALE2(ia,ii); }
+            if ( ( ii >= 0 ) && ( ib >= 0 ) ) { Kiiib = Gp()(ii,ib); Kiiib -= ( ii == ib ) ? diagoff(tmpva)(ii) : 0.0; } else { K2(Kiiib,ii,ib); Kiiib *= KSCALE2(ii,ib); }
+            if ( ( ii >= 0 )                ) { Kiiii = Gp()(ii,ii); Kiiii -=                diagoff(tmpva)(ii);       } else { K2(Kiiii,ii,ii); Kiaib *= KSCALE2(ii,ii); }
+
+            if ( ia >= 0 )
+            {
+                for ( int j = 0 ; j < NN ; ++j )
+                {
+                    if ( alphaState()(j) ) { Kia("&",j) = Gp()(ia,j); }
+                }
+
+                if ( alphaState()(ia) ) { Kia("&",ia) -= diagoff(tmpva)(ia); }
+            }
+
+            else
+            {
+                for ( int j = 0 ; j < NN ; ++j )
+                {
+                    if ( alphaState()(j) ) { K2(Kia("&",j),ia,j); Kia("&",ia) *= KSCALE2(ia,j); }
+                }
+            }
+
+            if ( ib == ia ) { Kib = Kia; }
+
+            if ( ( ib != ia ) && ( ib >= 0 ) )
+            {
+                for ( int j = 0 ; j < NN ; ++j )
+                {
+                    if ( alphaState()(j) ) { Kib("&",j) = Gp()(j,ib); }
+                }
+
+                if ( alphaState()(ib) ) { Kib("&",ib) -= diagoff(tmpva)(ib); }
+            }
+
+            else if ( ib != ia )
+            {
+                for ( int j = 0 ; j < NN ; ++j )
+                {
+                    if ( alphaState()(j) ) { K2(Kib("&",j),ib,j); setconj(Kib("&",j)); Kib("&",j) *= KSCALE2(ib,j); }
+                }
+            }
+
+            if ( ii == ia ) { Kii = Kia; }
+            if ( ii == ib ) { Kii = Kib; }
+
+            if ( ( ii != ia ) && ( ii != ib ) && ( ii >= 0 ) )
+            {
+                for ( int j = 0 ; j < NN ; ++j )
+                {
+                    if ( alphaState()(j) ) { Kii("&",j) = Gp()(j,ii); }
+                }
+
+                if ( alphaState()(ii) ) { Kii("&",ii) -= diagoff(tmpva)(ii); }
+            }
+
+            else if ( ( ii != ia ) && ( ii != ib ) )
+            {
+                for ( int j = 0 ; j < NN ; ++j )
+                {
+                    if ( alphaState()(j) ) { K2(Kii("&",j),ii,j); setconj(Kii("&",j)); Kii("&",j) *= KSCALE2(ii,j); }
+                }
+            }
+
+            // Usual covariance term
+            //
+            // resv = K(ia,ib) - K(ia)'.Lib
+            //
+            // Lib = inv(K).Kib
+
+            {
+                resv = Kiaib;
+
+                Vector<gentype> btemp(1);
+                Vector<gentype> Lib(NN);
+
+                fact_minverse(Lib,btemp,Kib,itsone);
+
+                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
+                {
+                    resv -= outerProd(Kia(pivAlphaF()(jP)),Lib(pivAlphaF()(jP)));
+                }
+
+                if ( SVM_Scalar::isVarBias() )
+                {
+                    resv -= btemp(0);
+                }
+            }
+
+            resv_pred = resv;
+
+            // Corrective (prediction) term
+            //
+            // term = -( K(ia,ii) - K(ia)'.inv(Gp).K(ii) ).( K(ib,ii) - K(ib)'.inv(Gp).K(ii) )/( K(ii,ii) - K(ii)'.inv(Gp).K(ii) )
+            //      = -( K(ia,ii) - K(ia)'.Lii ).( K(ib,ii) - K(ib)'.Lii )/( K(ii,ii) - K(ii)'.Lii )
+            //      = -viaii.vibii/viiii
+            //
+            // Lii = inv(K).Kii
+            //
+            // viaii = K(ia,ii) - K(ia)'.Lii
+            // vibii = K(ib,ii) - Lii'.K(ib)
+            // viiii = K(ii,ii) - K(ii)'.Lii
+
+            {
+                Vector<gentype> btemp(1);
+                Vector<gentype> Lii(NN);
+
+                fact_minverse(Lii,btemp,Kii,itsone);
+
+                gentype viaii = Kiaii;
+                gentype viiib = Kiiib;
+                gentype viiii = Kiiii;
+
+                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
+                {
+                    viaii -= outerProd(Kia(pivAlphaF()(jP)),Lii(pivAlphaF()(jP)));
+                    viiib -= outerProd(Lii(pivAlphaF()(jP)),Kib(pivAlphaF()(jP)));
+                    viiii -= outerProd(Lii(pivAlphaF()(jP)),Kii(pivAlphaF()(jP)));
+                }
+
+                if ( SVM_Scalar::isVarBias() )
+                {
+                    //FIXME: check if this is correct (I believe that it is)
+
+                    viaii -= btemp(0);
+                    viiib -= btemp(0);
+                    viiii -= btemp(0);
+                }
+
+                double iiofset = ( ii >= 0 ) ? diagoffset()(ii) : (sigmaweighti*sigma());
+
+                resv_pred -= ((viaii*viiib)/(viiii+iiofset));
+            }
+
+            // mu calculation
+
+            int firstterm = 1;
+
+            for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
+            {
+                if ( firstterm ) { resmu =  Kia(pivAlphaF()(jP))*alpha()(pivAlphaF()(jP)); firstterm = 0; }
+                else             { resmu += Kia(pivAlphaF()(jP))*alpha()(pivAlphaF()(jP));                }
+            }
+
+            for ( int jP = 0 ; jP < pivAlphaLB().size() ; ++jP )
+            {
+                if ( firstterm ) { resmu =  Kia(pivAlphaLB()(jP))*alpha()(pivAlphaLB()(jP)); firstterm = 0; }
+                else             { resmu += Kia(pivAlphaLB()(jP))*alpha()(pivAlphaLB()(jP));                }
+            }
+
+            for ( int jP = 0 ; jP < pivAlphaUB().size() ; ++jP )
+            {
+                if ( firstterm ) { resmu =  Kia(pivAlphaUB()(jP))*alpha()(pivAlphaUB()(jP)); firstterm = 0; }
+                else             { resmu += Kia(pivAlphaUB()(jP))*alpha()(pivAlphaUB()(jP));                }
+            }
+
+            if ( !( dtva & 7 ) )
+            {
+                if ( firstterm ) { resmu =  bias(); firstterm = 0; }
+                else             { resmu += bias();                }
+            }
+
+            else if ( firstterm )
+            {
+                resmu =  bias();
+                resmu *= 0.0;
+                firstterm = 0;
+            }
+        }
+
+        else
+        {
+            if ( ( ia >= 0 ) && ( ib >= 0 ) ) { resv = Gp()(ia,ib); resv -= ( ia == ib ) ? diagoff(tmpva)(ia) : 0.0; }
+            else                              { K2(resv,ia,ib); resv *= KSCALE2(ia,ib);                              }
+
+            if ( !( dtva & 7 ) ) { resmu = bias();               }
+            else                 { resmu = bias(); resmu *= 0.0; }
+
+            resv_pred = 0.0;
+        }
+
+        if ( getKernel().isKVarianceNZ() )
+        {
+            NiceAssert( ia == ib );
+
+            gentype addres(0.0);
+            gentype Kxj;
+
+            for ( int jP = 0 ; jP < NLB() ; ++jP )
+            {
+                int j = Q.pivAlphaLB()(jP);
+
+                K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
+            }
+
+            for ( int jP = 0 ; jP < NUB() ; ++jP )
+            {
+                int j = Q.pivAlphaUB()(jP);
+
+                K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
+            }
+
+            for ( int jP = 0 ; jP < NF() ; ++jP )
+            {
+                int j = Q.pivAlphaF()(jP);
+
+                K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
+            }
+
+            resv      += addres;
+            resv_pred += addres;
+        }
+
+        if ( ( ia == ib ) && ( resv <= 0.0_gent ) )
+        {
+            resv      *= 0.0;
+            resv_pred *= 0.0;
+        }
+    }
+
+    else
+    {
+        double &resvv_pred = resv_pred.force_double();
+        double &resvv = resv.force_double();
+        double &resgg = resmu.force_double();
+
+        if ( NS() )
+        {
+            Vector<double> Kia(NN,0.0);
+            Vector<double> Kib(NN,0.0);
+            Vector<double> Kii(NN,0.0);
+            Vector<double> itsone(1,1.0);
+            double Kiaib,Kiiib,Kiaii,Kiiii;
+
+            if ( ( ia >= 0 ) && ( ib >= 0 ) ) { Kiaib = Gp()(ia,ib);  Kiaib -= ( ia == ib ) ? diagoff(tmpva)(ia) : 0.0; } else { Kiaib = K2(ia,ib)*KSCALE2(ia,ib); }
+            if ( ( ia >= 0 ) && ( ii >= 0 ) ) { Kiaii = Gp()(ia,ii);  Kiaii -= ( ia == ii ) ? diagoff(tmpva)(ia) : 0.0; } else { Kiaii = K2(ia,ii)*KSCALE2(ia,ii); }
+            if ( ( ii >= 0 ) && ( ib >= 0 ) ) { Kiiib = Gp()(ii,ib);  Kiiib -= ( ii == ib ) ? diagoff(tmpva)(ii) : 0.0; } else { Kiiib = K2(ii,ib)*KSCALE2(ii,ib); }
+            if ( ( ii >= 0 )                ) { Kiiii = Gp()(ii,ii);  Kiiii -=                diagoff(tmpva)(ii);       } else { Kiiii = K2(ii,ii)*KSCALE2(ii,ii); }
+
+            if ( ia >= 0 )
+            {
+                for ( int j = 0 ; j < NN ; ++j )
+                {
+                    if ( alphaState()(j) ) { Kia("&",j) = Gp()(ia,j); }
+                }
+
+                if ( alphaState()(ia) ) { Kia("&",ia) -= diagoff(tmpva)(ia); }
+            }
+
+            else
+            {
+                for ( int j = 0 ; j < NN ; ++j )
+                {
+                    if ( alphaState()(j) ) { Kia("&",j) = K2(ia,j)*KSCALE2(ia,j); }
+                }
+            }
+
+            if ( ib == ia ) { Kib = Kia; }
+
+            if ( ( ib != ia ) && ( ib >= 0 ) )
+            {
+                for ( int j = 0 ; j < NN ; ++j )
+                {
+                    if ( alphaState()(j) ) { Kib("&",j) = Gp()(j,ib); }
+                }
+
+                if ( alphaState()(ib) ) { Kib("&",ib) -= diagoff(tmpva)(ib); }
+            }
+
+            else if ( ib != ia )
+            {
+                for ( int j = 0 ; j < NN ; ++j )
+                {
+                    if ( alphaState()(j) ) { Kib("&",j) = K2(ib,j)*KSCALE2(ib,j); }
+                }
+            }
+
+            if ( ii == ia ) { Kii = Kia; }
+            if ( ii == ib ) { Kii = Kib; }
+
+            if ( ( ii != ia ) && ( ii != ib ) && ( ii >= 0 ) )
+            {
+                for ( int j = 0 ; j < NN ; ++j )
+                {
+                    if ( alphaState()(j) ) { Kii("&",j) = Gp()(j,ii); }
+                }
+
+                if ( alphaState()(ii) ) { Kii("&",ii) -= diagoff(tmpva)(ii); }
+            }
+
+            else if ( ( ii != ia ) && ( ii != ib ) )
+            {
+                for ( int j = 0 ; j < NN ; ++j )
+                {
+                    if ( alphaState()(j) ) { Kii("&",j) = K2(ii,j)*KSCALE2(ii,j); }
+                }
+            }
+
+            // Usual covariance term
+
+            {
+                resvv = Kiaib;
+
+                Vector<double> btemp(1);
+                Vector<double> Lib(NN);
+
+                fact_minverse(Lib,btemp,Kib,itsone);
+
+                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
+                {
+                    resvv -= Kia(pivAlphaF()(jP))*Lib(pivAlphaF()(jP));
+                }
+
+                if ( SVM_Scalar::isVarBias() )
+                {
+                    resvv -= btemp(0);
+                }
+            }
+
+            resvv_pred = resvv;
+
+            // Corrective (prediction) term
+
+            {
+                Vector<double> btemp(1);
+                Vector<double> Lii(NN);
+
+                fact_minverse(Lii,btemp,Kii,itsone);
+
+                double viaii = Kiaii;
+                double viiib = Kiiib;
+                double viiii = Kiiii;
+
+                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
+                {
+                    viaii -= Kia(pivAlphaF()(jP))*Lii(pivAlphaF()(jP));
+                    viiib -= Lii(pivAlphaF()(jP))*Kib(pivAlphaF()(jP));
+                    viiii -= Lii(pivAlphaF()(jP))*Kii(pivAlphaF()(jP));
+                }
+
+                if ( SVM_Scalar::isVarBias() )
+                {
+                    //FIXME: check if this is correct (I believe that it is)
+
+                    viaii -= btemp(0);
+                    viiib -= btemp(0);
+                    viiii -= btemp(0);
+                }
+
+                double iiofset = ( ii >= 0 ) ? diagoffset()(ii) : (sigmaweighti*sigma());
+
+                resvv_pred -= ((viaii*viiib)/(viiii+iiofset));
+            }
+
+            // mu calculation
+
+            if ( ( ia >= 0 ) && ( emm == 2 ) )
+            {
+                resgg = 0;
+
+                Q.unAlphaGrad(resgg,ia,*Gpval,GPNorGPNEXT(Gpn,GpnExt),gp,hp);
+
+                resgg += traintarg(ia);
+                resgg -= diagoff(ia)*alphaR()(ia);
+
+                resgg /= KSCALE1(ia);
+            }
+
+            else
+            {
+                if ( dtva & 7 ) { resgg = 0.0;     }
+                else            { resgg = biasR(); }
+
+                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
+                {
+                    int j = pivAlphaF()(jP);
+
+                    resgg += Kia(j)*alphaR()(j);
+                }
+
+                for ( int jP = 0 ; jP < pivAlphaLB().size() ; ++jP )
+                {
+                    int j = pivAlphaLB()(jP);
+
+                    resgg += Kia(j)*alphaR()(j);
+                }
+
+                for ( int jP = 0 ; jP < pivAlphaUB().size() ; ++jP )
+                {
+                    int j = pivAlphaUB()(jP);
+
+                    resgg += Kia(j)*alphaR()(j);
+                }
+            }
+        }
+
+        else
+        {
+            if ( ( ia >= 0 ) && ( ib >= 0 ) ) { resvv = Gp()(ia,ib); resvv -= ( ia == ib ) ? diagoff(tmpva)(ia) : 0.0; }
+            else                              { resvv = K2(ia,ib)*KSCALE2(ia,ib);                                      }
+
+            resvv_pred = 0.0;
+
+            if ( dtva & 7 ) { resgg = 0.0;     }
+            else            { resgg = biasR(); }
+        }
+
+        if ( getKernel().isKVarianceNZ() )
+        {
+            NiceAssert( ia == ib );
+
+            double addres = 0.0;
+            double Kxj;
+
+            for ( int jP = 0 ; jP < NLB() ; ++jP )
+            {
+                int j = Q.pivAlphaLB()(jP);
+
+                Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
+            }
+
+            for ( int jP = 0 ; jP < NUB() ; ++jP )
+            {
+                int j = Q.pivAlphaUB()(jP);
+
+                Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
+            }
+
+            for ( int jP = 0 ; jP < NF() ; ++jP )
+            {
+                int j = Q.pivAlphaUB()(jP);
+
+                Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
+                addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
+            }
+
+            resvv      += addres;
+            resvv_pred += addres;
+        }
+
+        if ( ( ia == ib ) && ( resvv <= 0.0 ) )
+        {
+            resvv      = 0.0;
+            resvv_pred = 0.0;
+        }
+    }
+
+    resmu += yp(ia);
+
+    resmu /= KSCALE1(ia);
+    resv  /= KSCALE2(ia,ib);
 
     return 0;
 }

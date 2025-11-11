@@ -18,7 +18,7 @@
 
 
 
-IMP_ParSVM::IMP_ParSVM(int isIndPrune) : IMP_Generic(isIndPrune)
+IMP_ParSVM::IMP_ParSVM(int _isIndPrune) : IMP_Generic(_isIndPrune)
 {
     setaltx(nullptr);
 
@@ -29,7 +29,7 @@ IMP_ParSVM::IMP_ParSVM(int isIndPrune) : IMP_Generic(isIndPrune)
     return;
 }
 
-IMP_ParSVM::IMP_ParSVM(const IMP_ParSVM &src, int isIndPrune) : IMP_Generic(isIndPrune)
+IMP_ParSVM::IMP_ParSVM(const IMP_ParSVM &src, int _isIndPrune) : IMP_Generic(_isIndPrune)
 {
     setaltx(nullptr);
 
@@ -41,7 +41,7 @@ IMP_ParSVM::IMP_ParSVM(const IMP_ParSVM &src, int isIndPrune) : IMP_Generic(isIn
     return;
 }
 
-IMP_ParSVM::IMP_ParSVM(const IMP_ParSVM &src, const ML_Base *xsrc, int isIndPrune) : IMP_Generic(isIndPrune)
+IMP_ParSVM::IMP_ParSVM(const IMP_ParSVM &src, const ML_Base *xsrc, int _isIndPrune) : IMP_Generic(_isIndPrune)
 {
     setaltx(xsrc);
 

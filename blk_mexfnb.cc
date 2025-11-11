@@ -64,7 +64,7 @@ std::istream &BLK_MexFnB::inputstream(std::istream &input )
 
 
 
-int BLK_MexFnB::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int BLK_MexFnB::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     NiceAssert( !retaltg );
 

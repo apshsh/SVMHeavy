@@ -66,9 +66,9 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    IMP_Generic(int isIndPrune = 0);
-    IMP_Generic(const IMP_Generic &src, int isIndPrune = 0);
-    IMP_Generic(const IMP_Generic &src, const ML_Base *xsrc, int isIndPrune = 0);
+    IMP_Generic(int _isIndPrune = 0);
+    IMP_Generic(const IMP_Generic &src, int _isIndPrune = 0);
+    IMP_Generic(const IMP_Generic &src, const ML_Base *xsrc, int _isIndPrune = 0);
     IMP_Generic &operator=(const IMP_Generic &src) { assign(src); return *this; }
     virtual ~IMP_Generic();
 

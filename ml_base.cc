@@ -6,7 +6,7 @@ Wmethodkey 4: set if gradorder > 0.  For everything but K2 assert that if 4 set 
 FIXME: when igradorder > 0 but no farfar then need to return a vector or matrix of appropriate size.  Basic method is to use
 a helper to try to (a) turn T into vector/matrix (throw if not gentype) and (b) access element i (or i,j) of T (throw if not gentype).
 Then jam the vectorised result (or de-vectorised if it's a full covariance) into this.  This result then naturally filters through
-ghTrainingVector(-1) of various models (though need to make sure ghTrainginVector doesn't *assume* K double for -1 as per
+gh(-1) of various models (though need to make sure gh doesn't *assume* K double for -1 as per
 svm_scalar) and the result naturally comes out at the end.  Also note in instructions that setting a_6 without gradient will
 give a vector or matrix, which could potentially be used as a matrix-valued kernel.
 */
@@ -3840,7 +3840,7 @@ int ML_Base::renormalise(void)
 
         for ( i = 0 ; i < ML_Base::N() ; ++i )
         {
-            ggTrainingVector(gres,i);
+            gg(gres,i);
 
             if ( gres.isValNull() )
             {
@@ -3894,7 +3894,7 @@ int ML_Base::realign(void)
 
         for ( i = 0 ; i < ML_Base::N() ; ++i )
         {
-            hhTrainingVector(hres,i);
+            hh(hres,i);
             locy("&",i) = hres;
         }
 
@@ -3978,7 +3978,7 @@ int ML_Base::autoen(void)
                 }
             }
 
-            hhTrainingVector(hres,i);
+            hh(hres,i);
             locy("&",i) = hres;
         }
 
@@ -4134,86 +4134,39 @@ int ML_Base::isKVarianceNZ(void) const
 
 void ML_Base::fastg(double &res) const
 {
-    SparseVector<gentype> x;
-
-    gg(res,x);
-
-    return;
+    gentype gres;
+    fastg(gres);
+    res = (double) gres;
 }
 
-void ML_Base::fastg(double &res, 
-                        int ia, 
-                        const SparseVector<gentype> &xa, 
+void ML_Base::fastg(double &res,
+                        int ia,
+                        const SparseVector<gentype> &xa,
                         const vecInfo &xainfo) const
 {
-    (void) ia;
-    (void) xainfo;
-
-    gg(res,xa);
-
-    return;
+    gentype gres;
+    fastg(gres,ia,xa,xainfo);
+    res = (double) gres;
 }
 
-void ML_Base::fastg(double &res, 
-                        int ia, int ib, 
-                        const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, 
+void ML_Base::fastg(double &res,
+                        int ia, int ib,
+                        const SparseVector<gentype> &xa, const SparseVector<gentype> &xb,
                         const vecInfo &xainfo, const vecInfo &xbinfo) const
 {
-    (void) xainfo;
-    (void) xbinfo;
-
-    (void) ia;
-    (void) ib;
-
-    SparseVector<gentype> x(xa);
-
-    //if ( xb.indsize() )
-    {
-        for ( int i = 0 ; i < xb.indsize() ; ++i )
-        {
-            x("&",xb.ind(i),1) = xb.direcref(i);
-        }
-    }
-
-    gg(res,x);
-
-    return;
+    gentype gres;
+    fastg(gres,ia,ib,xa,xb,xainfo,xbinfo);
+    res = (double) gres;
 }
 
-void ML_Base::fastg(double &res, 
-                        int ia, int ib, int ic, 
-                        const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, 
+void ML_Base::fastg(double &res,
+                        int ia, int ib, int ic,
+                        const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc,
                         const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo) const
 {
-    (void) xainfo;
-    (void) xbinfo;
-    (void) xcinfo;
-
-    (void) ia;
-    (void) ib;
-    (void) ic;
-
-    SparseVector<gentype> x(xa);
-
-    //if ( xb.indsize() )
-    {
-        for ( int i = 0 ; i < xb.indsize() ; ++i )
-        {
-            x("&",xb.ind(i),1) = xb.direcref(i);
-        }
-    }
-
-    //if ( xc.indsize() )
-    {
-        for ( int i = 0 ; i < xc.indsize() ; ++i )
-        {
-            x("&",xc.ind(i),2) = xc.direcref(i);
-        }
-    }
-
-    gg(res,x);
-
-    return;
+    gentype gres;
+    fastg(gres,ia,ib,ic,xa,xb,xc,xainfo,xbinfo,xcinfo);
+    res = (double) gres;
 }
 
 void ML_Base::fastg(double &res,
@@ -4221,79 +4174,21 @@ void ML_Base::fastg(double &res,
                         const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd,
                         const vecInfo &xainfo, const vecInfo &xbinfo, const vecInfo &xcinfo, const vecInfo &xdinfo) const
 {
-    (void) xainfo;
-    (void) xbinfo;
-    (void) xcinfo;
-    (void) xdinfo;
-
-    (void) ia;
-    (void) ib;
-    (void) ic;
-    (void) id;
-
-    SparseVector<gentype> x(xa);
-
-    //if ( xb.indsize() )
-    {
-        for ( int i = 0 ; i < xb.indsize() ; ++i )
-        {
-            x("&",xb.ind(i),1) = xb.direcref(i);
-        }
-    }
-
-    //if ( xc.indsize() )
-    {
-        for ( int i = 0 ; i < xc.indsize() ; ++i )
-        {
-            x("&",xc.ind(i),2) = xc.direcref(i);
-        }
-    }
-
-    //if ( xd.indsize() )
-    {
-        for ( int i = 0 ; i < xd.indsize() ; ++i )
-        {
-            x("&",xd.ind(i),3) = xd.direcref(i);
-        }
-    }
-
-    gg(res,x);
-
-    return;
+    gentype gres;
+    fastg(gres,ia,ib,ic,id,xa,xb,xc,xd,xainfo,xbinfo,xcinfo,xdinfo);
+    res = (double) gres;
 }
 
-void ML_Base::fastg(double &res, 
-                        Vector<int> &ia, 
-                        Vector<const SparseVector<gentype> *> &xa,
-                        Vector<const vecInfo *> &xainfo) const
+void ML_Base::fastg(double &res,
+                        Vector<int> &ii,
+                        Vector<const SparseVector<gentype> *> &xx,
+                        Vector<const vecInfo *> &xxinfo) const
 {
-    (void) xainfo;
-    (void) ia;
-
-    SparseVector<gentype> x;
-
-    //if ( xa.size() )
-    {
-        int i,j;
-
-        for ( j = 0 ; j < xa.size() ; ++j )
-        {
-            const SparseVector<gentype> &xb = (*(xa(j)));
-
-            if ( xb.indsize() )
-            {
-                for ( i = 0 ; i < xb.indsize() ; ++i )
-                {
-                    x("&",xb.ind(i),j) = xb.direcref(i);
-                }
-            }
-        }
-    }
-
-    gg(res,x);
-
-    return;
+    gentype gres;
+    fastg(gres,ii,xx,xxinfo);
+    res = (double) gres;
 }
+
 
 
 void ML_Base::fastg(gentype &res) const
@@ -4885,7 +4780,7 @@ void ML_Base::K1xfer(gentype &res, int &minmaxind, int typeis,
         {
             gentype ra;
 
-            ggTrainingVector(ra,ia);
+            gg(ra,ia);
 
             switch ( resmode )
             {
@@ -5194,8 +5089,8 @@ void ML_Base::K2xfer(gentype &dxyprod, gentype &ddiffis, gentype &res, int &minm
             gentype ra;
             gentype rb;
 
-            ggTrainingVector(ra,ia);
-            ggTrainingVector(rb,ib);
+            gg(ra,ia);
+            gg(rb,ib);
 
             switch ( resmode )
             {
@@ -5252,7 +5147,7 @@ void ML_Base::K2xfer(gentype &dxyprod, gentype &ddiffis, gentype &res, int &minm
                 {
                     gentype dummy;
 
-                    covTrainingVector(res,dummy,ia,ib);
+                    cov(res,dummy,ia,ib);
 
                     break;
                 }
@@ -5525,9 +5420,9 @@ void ML_Base::K3xfer(gentype &res, int &minmaxind, int typeis,
             gentype rb;
             gentype rc;
 
-            ggTrainingVector(ra,ia);
-            ggTrainingVector(rb,ib);
-            ggTrainingVector(rc,ic);
+            gg(ra,ia);
+            gg(rb,ib);
+            gg(rc,ic);
 
             switch ( resmode )
             {
@@ -5831,10 +5726,10 @@ void ML_Base::K4xfer(gentype &res, int &minmaxind, int typeis,
             gentype rc;
             gentype rd;
 
-            ggTrainingVector(ra,ia);
-            ggTrainingVector(rb,ib);
-            ggTrainingVector(rc,ic);
-            ggTrainingVector(rd,id);
+            gg(ra,ia);
+            gg(rb,ib);
+            gg(rc,ic);
+            gg(rd,id);
 
             switch ( resmode )
             {
@@ -6162,7 +6057,7 @@ void ML_Base::Kmxfer(gentype &res, int &minmaxind, int typeis,
 
             for ( iq = 0 ; iq < m ; ++iq )
             {
-                ggTrainingVector(r("&",iq),i(iq));
+                gg(r("&",iq),i(iq));
                 rr("&",iq) = &(r(iq).cast_vector());
             }
 
@@ -6841,7 +6736,7 @@ void ML_Base::K2xfer(double &dxyprod, double &ddiffis, double &res, int &minmaxi
                     gentype dummy;
                     gentype tempres;
 
-                    covTrainingVector(tempres,dummy,ia,ib);
+                    cov(tempres,dummy,ia,ib);
 
                     res = (double) tempres;
 
@@ -15119,7 +15014,7 @@ int ML_Base::covarTrainingVector(Matrix<gentype> &resv, const Vector<int> &i) co
         {
             for ( jj = 0 ; jj < m ; ++jj )
             {
-                res |= covTrainingVector(resv("&",ii,jj),dummy,i(ii),i(jj));
+                res |= cov(resv("&",ii,jj),dummy,i(ii),i(jj));
             }
         }
     }
@@ -15156,7 +15051,7 @@ int ML_Base::noisevarTrainingVector(gentype &resv, gentype &resmu, int i, const 
 {
 // NB: code is repeated in GPR_Generic
 
-    int res = varTrainingVector(resv,resmu,i,pxyprodi,pxyprodii);
+    int res = var(resv,resmu,i,pxyprodi,pxyprodii);
 
     SparseVector<gentype> ximod(x(i));
 
@@ -15246,7 +15141,7 @@ int ML_Base::noisecovTrainingVector(gentype &resv, gentype &resmu, int i, int j,
 {
 // NB: code is repeated in GPR_Generic
 
-    int res = covTrainingVector(resv,resmu,i,j,pxyprodi,pxyprodj,pxyprodij);
+    int res = cov(resv,resmu,i,j,pxyprodi,pxyprodj,pxyprodij);
 
     SparseVector<gentype> ximod(x(i));
     SparseVector<gentype> xjmod(x(j));
@@ -16030,15 +15925,15 @@ int ML_Base::getparam(int ind, gentype &val, const gentype &xa, int ia, const ge
 
             case 200: { val = calcDist(xa,xb);  desc = "ML_Base::calcDist"; break; }
 
-            case 300: { ggTrainingVector(val,(int) xa); desc = "ML_Base::ggTrainingVector";                                                     break; }
-            case 301: { hhTrainingVector(val,(int) xa); desc = "ML_Base::hhTrainingVector";                                                     break; }
-            case 302: { varTrainingVector(val,dummy,(int) xa); desc = "ML_Base::varTrainingVector";                                             break; }
+            case 300: { gg(val,(int) xa); desc = "ML_Base::gg";                                                        break; }
+            case 301: { hh(val,(int) xa); desc = "ML_Base::hh";                                                                                    break; }
+            case 302: { var(val,dummy,(int) xa); desc = "ML_Base::var";                                                                            break; }
             case 303: { Vector<double> vres; dgTrainingVectorX(vres,(int) xa); val = vres;  desc = "ML_Base::dgTrainingVectorX";                   break; }
             case 304: { Vector<gentype> vres; gentype resn; dgTrainingVector(vres,resn,(int) xa); val = vres; desc = "ML_Base::dgTrainingVector";  break; }
-            case 305: { Vector<gentype> vres; gentype resn; dgTrainingVector(vres,resn,(int) xa); val = resn; desc = "ML_Base::dgTrainingVector"; break; }
+            case 305: { Vector<gentype> vres; gentype resn; dgTrainingVector(vres,resn,(int) xa); val = resn; desc = "ML_Base::dgTrainingVector";  break; }
             case 306: { double dres; int z = 0; stabProbTrainingVector(dres, (int) xa, (int) xb(z), (double) xb(1), (int) xb(2), (double) xb(3), (double) xb(4)); val = dres;  desc = "ML_Base::stabProfTrainingVector"; break; }
 
-            case 400: { covTrainingVector(val,dummy,(int) xa, (int) xb); desc = "ML_Base::covTrainingVector"; break; }
+            case 400: { cov(val,dummy,(int) xa, (int) xb);               desc = "ML_Base::cov";               break; }
             case 401: { K2(val,(int) xa, (int) xb);                      desc = "ML_Base::K2";                break; }
             case 402: { val = K2ip((int) xa, (int) xb,0.0);              desc = "ML_Base::K2ip";              break; }
             case 403: { val = distK((int) xa, (int) xb);                 desc = "ML_Base::distK";             break; }

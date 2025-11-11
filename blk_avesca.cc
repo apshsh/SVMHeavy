@@ -288,7 +288,7 @@ int BLK_AveSca::setd(const Vector<int> &d)
 
 
 
-int BLK_AveSca::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***) const
+int BLK_AveSca::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***) const
 {
     NiceAssert( !retaltg );
 

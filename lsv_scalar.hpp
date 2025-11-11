@@ -102,11 +102,10 @@ public:
 
     // Use functions
 
-    virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+    virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+    virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return LSV_Generic::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
 
     virtual double eTrainingVector(int i) const override;
-
-    virtual int covTrainingVector(gentype &resv, gentype &resmu, int i, int j, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override;
 
     virtual double         &dedgTrainingVector(double         &res, int i) const override;
     virtual Vector<double> &dedgTrainingVector(Vector<double> &res, int i) const override { dedgTrainingVector((res.resize(1))("&",0),i);   return res; }
@@ -118,6 +117,12 @@ public:
     virtual double dedKTrainingVector(int i, int j) const override { double tmp; return dedgTrainingVector(tmp,i)*alphaR()(j); }
     virtual Vector<double> &dedKTrainingVector(Vector<double> &res, int i) const override;
     virtual Matrix<double> &dedKTrainingVector(Matrix<double> &res) const override;
+
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const;
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const { return LSV_Generic::predcov(resv_pred,resv,resmu,xa,xb,xx,sigmaweighti,xainf,xbinf,xxinf); }
+
+    virtual int cov(gentype &resv, gentype &resmu, int i, int j,                                                                                                                     gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override;
+    virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override { return LSV_Generic::cov(resv,resmu,xa,xb,xainf,xbinf,pxyprodx,pxyprody,pxyprodij); }
 
     // ================================================================
     //     Common functions for all LS-SVMs
@@ -135,8 +140,8 @@ public:
 
 private:
 
-    double ghTrainingVectorUnbiasedUnsquaredNotundirectedgradIneg(int i, int xtangi, gentype ***pxyprodi) const;
-    double ghTrainingVectorUnbiasedSquaredNotundirectedgradIneg(int i, int xtangi) const;
+    double ghUnbiasedUnsquaredNotundirectedgradIneg(int i, int xtangi, gentype ***pxyprodi) const;
+    double ghUnbiasedSquaredNotundirectedgradIneg(int i, int xtangi) const;
 
     virtual gentype &makezero(gentype &val)
     {

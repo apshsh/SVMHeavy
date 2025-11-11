@@ -355,6 +355,35 @@ void SMBOOptions::reset(void)
 }
 
 
+gentype SMBOOptions::model_sigma(void) const
+{
+    gentype res;
+
+    if ( !muapprox.size() )
+    {
+        res.force_null();
+    }
+
+    else if ( muapprox.size() == 1 )
+    {
+        res.force_double() = getmuapprox(0).sigma();
+    }
+
+    else
+    {
+        Vector<gentype> &resvec = res.force_vector(muapprox.size());
+
+        for ( int i = 0 ; i < muapprox.size() ; ++i )
+        {
+            resvec("&",i).force_double() = getmuapprox(i).sigma();
+        }
+    }
+
+    return res;
+}
+
+
+
 //GlobalOptions *SMBOOptions::makeDup(void) const
 //    {
 //        SMBOOptions *newver;
@@ -1503,7 +1532,7 @@ int SMBOOptions::model_muTrainingVector(gentype &resmu, int imu) const
 
     else if ( muapprox.size() == 1 )
     {
-        res |= getmuapprox(0).ggTrainingVector(resmu,imu);
+        res |= getmuapprox(0).gg(resmu,imu);
     }
 
     else
@@ -1512,7 +1541,7 @@ int SMBOOptions::model_muTrainingVector(gentype &resmu, int imu) const
 
         for ( int i = 0 ; i < muapprox.size() ; ++i )
         {
-            res |= getmuapprox(i).ggTrainingVector(resmuvec("&",i),imu);
+            res |= getmuapprox(i).gg(resmuvec("&",i),imu);
         }
     }
 
@@ -1544,15 +1573,15 @@ int SMBOOptions::model_muvarTrainingVector(gentype &resvar, gentype &resmu, int 
     {
         if ( !sigmuseparate )
         {
-            resi |= getmuapprox_sample(0).varTrainingVector(resvar,resmu,imu);
+            resi |= getmuapprox_sample(0).var(resvar,resmu,imu);
         }
 
         else
         {
             gentype dummy;
 
-            resi |= getmuapprox_sample(0).ggTrainingVector(resmu,imu);
-            resi |= getsigmaapprox(0).varTrainingVector(resvar,dummy,ivar);
+            resi |= getmuapprox_sample(0).gg(resmu,imu);
+            resi |= getsigmaapprox(0).var(resvar,dummy,ivar);
         }
     }
 
@@ -1565,15 +1594,15 @@ int SMBOOptions::model_muvarTrainingVector(gentype &resvar, gentype &resmu, int 
         {
             if ( !sigmuseparate )
             {
-                resi |= getmuapprox_sample(i).varTrainingVector(resvarvec("&",i),resmuvec("&",i),imu);
+                resi |= getmuapprox_sample(i).var(resvarvec("&",i),resmuvec("&",i),imu);
             }
 
             else
             {
                 gentype dummy;
 
-                resi |= getmuapprox_sample(i).ggTrainingVector(resmuvec("&",i),imu);
-                resi |= getsigmaapprox(i).varTrainingVector(resvarvec("&",i),dummy,ivar);
+                resi |= getmuapprox_sample(i).gg(resmuvec("&",i),imu);
+                resi |= getsigmaapprox(i).var(resvarvec("&",i),dummy,ivar);
             }
         }
     }
@@ -1596,14 +1625,14 @@ int SMBOOptions::model_varTrainingVector(gentype &resv, int imu) const
         {
             gentype dummy;
 
-            resi |= getmuapprox_sample(0).varTrainingVector(resv,dummy,imu);
+            resi |= getmuapprox_sample(0).var(resv,dummy,imu);
         }
 
         else
         {
             gentype dummy;
 
-            resi |= getsigmaapprox(0).varTrainingVector(resv,dummy,imu);
+            resi |= getsigmaapprox(0).var(resv,dummy,imu);
         }
     }
 
@@ -1617,14 +1646,14 @@ int SMBOOptions::model_varTrainingVector(gentype &resv, int imu) const
             {
                 gentype dummy;
 
-                resi |= getmuapprox_sample(i).varTrainingVector(resvarvec("&",i),dummy,imu);
+                resi |= getmuapprox_sample(i).var(resvarvec("&",i),dummy,imu);
             }
 
             else
             {
                 gentype dummy;
 
-                resi |= getsigmaapprox(i).varTrainingVector(resvarvec("&",i),dummy,imu);
+                resi |= getsigmaapprox(i).var(resvarvec("&",i),dummy,imu);
             }
         }
     }
@@ -1640,7 +1669,7 @@ int SMBOOptions::model_muTrainingVector_cgt(Vector<gentype> &resmu, int imu) con
 
     for ( int i = 0 ; i < cgtapprox.size() ; ++i )
     {
-        res |= getcgtapprox(i).ggTrainingVector(resmu("&",i),imu);
+        res |= getcgtapprox(i).gg(resmu("&",i),imu);
     }
 
     return res;
@@ -1655,7 +1684,7 @@ int SMBOOptions::model_muvarTrainingVector_cgt(Vector<gentype> &resv, Vector<gen
 
     for ( int i = 0 ; i < cgtapprox.size() ; ++i )
     {
-        resi |= getcgtapprox(i).varTrainingVector(resv("&",i),resmu("&",i),imu);
+        resi |= getcgtapprox(i).var(resv("&",i),resmu("&",i),imu);
     }
 
     return resi;

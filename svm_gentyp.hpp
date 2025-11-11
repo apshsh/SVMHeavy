@@ -104,17 +104,13 @@ public:
 
     virtual int isVarDefined(void) const override { return 0; }
 
-    virtual int ggTrainingVector(               gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { gentype resh; return ghTrainingVector(resh,resg,i,retaltg,pxyprodi); }
-    virtual int hhTrainingVector(gentype &resh,                int i,                  gentype ***pxyprodi = nullptr) const override { gentype resg; return ghTrainingVector(resh,resg,i,0,      pxyprodi); }
-    virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+    virtual int gg(               gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { gentype resh; return gh(resh,resg,i,retaltg,pxyprodi); }
+    virtual int hh(gentype &resh,                int i,                  gentype ***pxyprodi = nullptr) const override { gentype resg; return gh(resh,resg,i,0,      pxyprodi); }
+    virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
 
-    virtual int ggTrainingVector(double &resg,         int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { gentype resgg; int res = ggTrainingVector(resgg,i,retaltg,pxyprodi); resg = (double)                 resgg; return res; }
-    virtual int ggTrainingVector(Vector<double> &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { gentype resgg; int res = ggTrainingVector(resgg,i,retaltg,pxyprodi); resg = (const Vector<double> &) resgg; return res; }
-    virtual int ggTrainingVector(d_anion &resg,        int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { gentype resgg; int res = ggTrainingVector(resgg,i,retaltg,pxyprodi); resg = (const d_anion &)        resgg; return res; }
-
-//    virtual int gg(               gentype &resg, const SparseVector<gentype> &x                 , const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { gentype resh; return gh(resh,resg,x,0,xinf,pxyprodx); }
-//    virtual int hh(gentype &resh,                const SparseVector<gentype> &x                 , const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { gentype resg; return gh(resh,resg,x,0,xinf,pxyprodx); }
-//    virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const;
+    virtual int gg(               gentype &resg, const SparseVector<gentype> &x                 , const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return SVM_Vector::gg(resg,x,xinf,pxyprodx); }
+    virtual int hh(gentype &resh,                const SparseVector<gentype> &x                 , const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return SVM_Vector::hh(resh,x,xinf,pxyprodx); }
+    virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return SVM_Vector::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
 
 
 

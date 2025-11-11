@@ -65,7 +65,7 @@ std::istream &BLK_System::inputstream(std::istream &input )
 
 
 
-int BLK_System::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int BLK_System::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     NiceAssert( !retaltg );
 

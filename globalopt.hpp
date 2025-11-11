@@ -701,11 +701,11 @@ public:
                             //xxmod("&",(res.ind())(0)) = "fnB(var(1,0),500,x)"; // now gg(x) of ML var(1,0) (see instructvar.txt)
                             xxmod("&",(res.ind())(0)) = "fnB(var(1,0),500,var(2,0))"; // now gg([x y z ...]) of ML var(1,0) (see instructvar.txt)
 
-                            retVector<int> tmpva;
+                            retVector<int> tmpvaa;
 
                             xxmod("&",(res.ind())(0)).scalarfn_setisscalarfn(useScalarFn);
-                            xxmod("&",(res.ind())(0)).scalarfn_seti(zerointvec(fnDim,tmpva));
-                            xxmod("&",(res.ind())(0)).scalarfn_setj(cntintvec(fnDim,tmpva));
+                            xxmod("&",(res.ind())(0)).scalarfn_seti(zerointvec(fnDim,tmpvaa));
+                            xxmod("&",(res.ind())(0)).scalarfn_setj(cntintvec(fnDim,tmpvaa));
                             xxmod("&",(res.ind())(0)).scalarfn_setnumpts(xNsamp);
 
                             Vector<gentype> varlist(fnDim);
@@ -760,11 +760,11 @@ public:
                             //xxmod("&",(res.ind())(0)) = "fnB(var(1,0),500,x)"; // now gg(x) of ML var(1,0) (see instructvar.txt)
                             xxmod("&",(res.ind())(0)) = "fnB(var(1,0),500,var(2,0))"; // now gg([x y z ...]) of ML var(1,0) (see instructvar.txt)
 
-                            retVector<int> tmpva;
+                            retVector<int> tmpvaa;
 
                             xxmod("&",(res.ind())(0)).scalarfn_setisscalarfn(useScalarFn);
-                            xxmod("&",(res.ind())(0)).scalarfn_seti(zerointvec(fnDim,tmpva));
-                            xxmod("&",(res.ind())(0)).scalarfn_setj(cntintvec(fnDim,tmpva));
+                            xxmod("&",(res.ind())(0)).scalarfn_seti(zerointvec(fnDim,tmpvaa));
+                            xxmod("&",(res.ind())(0)).scalarfn_setj(cntintvec(fnDim,tmpvaa));
                             xxmod("&",(res.ind())(0)).scalarfn_setnumpts(xNsamp);
 
                             Vector<gentype> varlist(fnDim);
@@ -1001,11 +1001,11 @@ public:
                     //xxmod("&",0) = "fnB(var(1,0),500,x)"; // now gg(x) of ML y (see instructvar.txt)
                     xxmod("&",0) = "fnB(var(1,0),500,var(2,0))"; // now gg([x y z ...]) of ML var(1,0) (see instructvar.txt)
 
-                    retVector<int> tmpva;
+                    retVector<int> tmpvaa;
 
                     xxmod("&",0).scalarfn_setisscalarfn(useScalarFn);
-                    xxmod("&",0).scalarfn_seti(zerointvec(fnDim,tmpva));
-                    xxmod("&",0).scalarfn_setj(cntintvec(fnDim,tmpva));
+                    xxmod("&",0).scalarfn_seti(zerointvec(fnDim,tmpvaa));
+                    xxmod("&",0).scalarfn_setj(cntintvec(fnDim,tmpvaa));
                     xxmod("&",0).scalarfn_setnumpts(xNsamp);
 
                     Vector<gentype> varlist(fnDim);
@@ -1036,11 +1036,11 @@ public:
                     //xxmod("&",0) = "fnB(var(1,0),500,x)"; // now gg(x) of ML y (see instructvar.txt)
                     xxmod("&",0) = "fnB(var(1,0),500,var(2,0))"; // now gg([x y z ...]) of ML var(1,0) (see instructvar.txt)
 
-                    retVector<int> tmpva;
+                    retVector<int> tmpvaa;
 
                     xxmod("&",0).scalarfn_setisscalarfn(useScalarFn);
-                    xxmod("&",0).scalarfn_seti(zerointvec(fnDim,tmpva));
-                    xxmod("&",0).scalarfn_setj(cntintvec(fnDim,tmpva));
+                    xxmod("&",0).scalarfn_seti(zerointvec(fnDim,tmpvaa));
+                    xxmod("&",0).scalarfn_setj(cntintvec(fnDim,tmpvaa));
                     xxmod("&",0).scalarfn_setnumpts(xNsamp);
 
                     Vector<gentype> varlist(fnDim);

@@ -1190,13 +1190,11 @@ public:
     // retaltg: if bit 1 then returns g as a "value-per-class" vector
     //          if bit 2 set then returns g(x)^2 using 4-kernel trick
 
-    virtual int ggTrainingVector(               gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const { gentype resh; return ghTrainingVector(resh,resg,i,retaltg,pxyprodi); }
-    virtual int hhTrainingVector(gentype &resh,                int i,                  gentype ***pxyprodi = nullptr) const { gentype resg; return ghTrainingVector(resh,resg,i,0,      pxyprodi); }
-    virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const { resg = yp(i); resh = resg; (void) retaltg; (void) pxyprodi; return 0; }
+    virtual int gg(               gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const { gentype resh; return gh(resh,resg,i,retaltg,pxyprodi); }
+    virtual int hh(gentype &resh,                int i,                  gentype ***pxyprodi = nullptr) const { gentype resg; return gh(resh,resg,i,0,      pxyprodi); }
+    virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const { resg = yp(i); resh = resg; (void) retaltg; (void) pxyprodi; return 0; }
 
     virtual double eTrainingVector(int i) const { (void) i; NiceThrow("eTrainingVector not implemented for this ML"); return 0.0; }
-
-    virtual int covTrainingVector(gentype &resv, gentype &resmu, int i, int j, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const { K2(resv,i,j); resmu = yp(i); (void) pxyprodi; (void) pxyprodj; (void) pxyprodij; (void) pxyprodij; return 0; }
 
     virtual double         &dedgTrainingVector(double         &res, int i) const { gentype gres; dedgTrainingVector(gres,i); res = (double) gres;                 return res; }
     virtual Vector<double> &dedgTrainingVector(Vector<double> &res, int i) const { gentype gres; dedgTrainingVector(gres,i); res = (const Vector<double> &) gres; return res; }
@@ -1219,10 +1217,6 @@ public:
 
     virtual void deTrainingVectorX(Vector<gentype> &resx, const Vector<int> &i) const;
 
-    virtual int ggTrainingVector(double         &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const { (void) pxyprodi; gentype res; int resi = ggTrainingVector(res,i,retaltg); resg = (double)                 res; return resi; }
-    virtual int ggTrainingVector(Vector<double> &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const { (void) pxyprodi; gentype res; int resi = ggTrainingVector(res,i,retaltg); resg = (const Vector<double> &) res; return resi; }
-    virtual int ggTrainingVector(d_anion        &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const { (void) pxyprodi; gentype res; int resi = ggTrainingVector(res,i,retaltg); resg = (const d_anion &)        res; return resi; }
-
     virtual void dgTrainingVector(Vector<gentype>         &res, gentype        &resn, int i) const { (void) res; (void) resn; (void) i; NiceThrow("Function dgTrainingVector not available for this ML type."); }
     virtual void dgTrainingVector(Vector<double>          &res, double         &resn, int i) const;
     virtual void dgTrainingVector(Vector<Vector<double> > &res, Vector<double> &resn, int i) const;
@@ -1241,11 +1235,9 @@ public:
 
     virtual int gg(               gentype &resg, const SparseVector<gentype> &x,                  const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { gentype resh; return gh(resh,resg,x,0,xinf,pxyprodx); }
     virtual int hh(gentype &resh,                const SparseVector<gentype> &x,                  const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { gentype resg; return gh(resh,resg,x,0,xinf,pxyprodx); }
-    virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { int ia = setInnerWildpa(&x,xinf); int res = ghTrainingVector(resh,resg,ia,retaltg,pxyprodx); resetInnerWildp(xinf == nullptr); return res; }
+    virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { int ia = setInnerWildpa(&x,xinf); int res = gh(resh,resg,ia,retaltg,pxyprodx); resetInnerWildp(xinf == nullptr); return res; }
 
     virtual double e(const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); double res = eTrainingVector(ia); resetInnerWildp(xinf == nullptr); return res; }
-
-    virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodxa = nullptr, gentype ***pxyprodxb = nullptr, gentype **pxyprodij = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int res = covTrainingVector(resv,resmu,ia,ib,pxyprodxa,pxyprodxb,pxyprodij); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
 
     virtual void dedg(double         &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); dedgTrainingVector(res,ia); resetInnerWildp(xinf == nullptr); }
     virtual void dedg(Vector<double> &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); dedgTrainingVector(res,ia); resetInnerWildp(xinf == nullptr); }
@@ -1259,10 +1251,6 @@ public:
 
     virtual void deX(Vector<gentype> &resx, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); deTrainingVectorX(resx,ia); resetInnerWildp(xinf == nullptr); }
 
-    virtual int gg(double         &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { int ia = setInnerWildpa(&x,xinf); int resi = ggTrainingVector(resg,ia,retaltg,pxyprodx); resetInnerWildp(xinf == nullptr); return resi; }
-    virtual int gg(Vector<double> &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { int ia = setInnerWildpa(&x,xinf); int resi = ggTrainingVector(resg,ia,retaltg,pxyprodx); resetInnerWildp(xinf == nullptr); return resi; }
-    virtual int gg(d_anion        &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { int ia = setInnerWildpa(&x,xinf); int resi = ggTrainingVector(resg,ia,retaltg,pxyprodx); resetInnerWildp(xinf == nullptr); return resi; }
-
     virtual void dg(Vector<gentype>         &res, gentype        &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
     virtual void dg(Vector<double>          &res, double         &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
     virtual void dg(Vector<Vector<double> > &res, Vector<double> &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
@@ -1272,10 +1260,19 @@ public:
 
     virtual void stabProb(double  &res, const SparseVector<gentype> &x, int p, double pnrm, int rot, double mu, double B) const { int ia = setInnerWildpa(&x); stabProbTrainingVector(res,ia,p,pnrm,rot,mu,B); resetInnerWildp(); }
 
-    // var and covar functions
+    // var and covar functions (and predictive covariance - ie covariance if we also make an addition observation xx)
 
-    virtual int varTrainingVector(gentype &resv, gentype &resmu, int i,                                                           gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const { return covTrainingVector(resv,resmu,i,i,pxyprodi,pxyprodi,pxyprodii); }
-    virtual int var              (gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int res = covTrainingVector(resv,resmu,ia,ia,pxyprodx,pxyprodx,pxyprodxx); resetInnerWildp(xainf == nullptr); return res; }
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const { (void) resv_pred; (void) resv; (void) resmu; (void) ia; (void) ib; (void) ii; (void) sigmaweighti; NiceThrow("predcov not available for this ML type") return 1; }
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int ii = setInnerWildpc(&xx,xxinf); int res = predcov(resv_pred,resv,resmu,ia,((&xb != &xa) ? ib : ia),((&xx != &xa) ? ( (&xx != &xb) ? ii : ib ) : ia),sigmaweighti); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr ),( xxinf == nullptr )); return res; }
+
+    virtual int cov(gentype &resv, gentype &resmu, int ia, int ib,                                                                                                                   gentype ***pxyprodia = nullptr, gentype ***pxyprodib = nullptr, gentype **pxyprodij = nullptr) const { K2(resv,ia,ib); resmu = yp(ia); (void) pxyprodia; (void) pxyprodib; (void) pxyprodij; return 0; }
+    virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodxa = nullptr, gentype ***pxyprodxb = nullptr, gentype **pxyprodij = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int res = cov(resv,resmu,ia,(&xb != &xa) ? ib : ia,pxyprodxa,pxyprodxb,pxyprodij); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
+
+    virtual int predvar(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ii, double sigmaweighti = 1.0                                                                                                                  ) const { return predcov(resv_pred,resv,resmu,ia,ia,ii,sigmaweighti); }
+    virtual int predvar(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xxinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ii = setInnerWildpb(&xx,xxinf); int res = predcov(resv_pred,resv,resmu,ia,ia,ii,sigmaweighti); resetInnerWildp(xainf == nullptr, xxinf == nullptr); return res; }
+
+    virtual int var(gentype &resv, gentype &resmu, int i,                                                           gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const { return cov(resv,resmu,i,i,pxyprodi,pxyprodi,pxyprodii); }
+    virtual int var(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int res = cov(resv,resmu,ia,ia,pxyprodx,pxyprodx,pxyprodxx); resetInnerWildp(xainf == nullptr); return res; }
 
     virtual int covarTrainingVector(Matrix<gentype> &resv, const Vector<int> &i)                    const;
     virtual int covar              (Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const;

@@ -2370,7 +2370,7 @@ int SVM_MultiC_redbin::train(int &res, svmvolatile int &killSwitch)
     return result;
 }
 
-int SVM_MultiC_redbin::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int SVM_MultiC_redbin::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     Vector<double> gproject;
     int locclassrep = 0;

@@ -70,6 +70,9 @@ SVM_Gentyp::SVM_Gentyp(const SVM_Gentyp &src) : SVM_Vector(static_cast<const SVM
 {
     setaltx(nullptr);
 
+    isBasisUser = 0;
+    defbasis = -1;
+
     assign(src,0);
 
     return;
@@ -78,6 +81,9 @@ SVM_Gentyp::SVM_Gentyp(const SVM_Gentyp &src) : SVM_Vector(static_cast<const SVM
 SVM_Gentyp::SVM_Gentyp(const SVM_Gentyp &src, const ML_Base *xsrc) : SVM_Vector(static_cast<const SVM_Vector &>(src),xsrc)
 {
     setaltx(xsrc);
+
+    isBasisUser = 0;
+    defbasis = -1;
 
     assign(src,-1);
 
@@ -237,12 +243,15 @@ int SVM_Gentyp::sety(const Vector<gentype> &z)
     return SVM_Gentyp::sety(cntintvec(N(),tmpva),z);
 }
 
-int SVM_Gentyp::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int SVM_Gentyp::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
-    Vector<double> resgvec;
+    gentype resgtemp;
     int res = 0;
 
-    res = SVM_Vector::ggTrainingVector(resgvec,i,retaltg,pxyprodi);
+    res = SVM_Vector::gg(resgtemp,i,retaltg,pxyprodi);
+
+    Vector<double> resgvec;
+    resgvec = (const Vector<double> &) resgtemp;
 
     ConvertYtoOut(resgvec,resg);
 

@@ -64,7 +64,7 @@ std::istream &BLK_UserIO::inputstream(std::istream &input )
 
 
 
-int BLK_UserIO::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int BLK_UserIO::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     NiceAssert( !retaltg );
 

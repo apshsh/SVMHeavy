@@ -685,7 +685,7 @@ public:
 
 
 
-int BLK_Batter::ghTrainingVector(gentype &resh, gentype &resg, int ijk, int retaltg, gentype ***pxyprodi) const
+int BLK_Batter::gh(gentype &resh, gentype &resg, int ijk, int retaltg, gentype ***pxyprodi) const
 {
     NiceAssert( !retaltg );
 

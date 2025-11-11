@@ -321,7 +321,7 @@ int BLK_Consen::setd(const Vector<int> &nd)
 
 
 
-int BLK_Consen::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int BLK_Consen::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     NiceAssert( !retaltg );
 

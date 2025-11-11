@@ -62,7 +62,7 @@
 // - need to store y locally
 // - need to ensure default axis is set (except during evaluation).  That way 
 //   Gp(i,j) can evaluate to double everywhere as required.  Note that 
-//   ghTrainingVector(i>=0) will need to be calculated each time as there is
+//   gh(i>=0) will need to be calculated each time as there is
 //   no "pre-calculated" version waiting to be used (see ghEvalFull in svm_planar).
 //
 
@@ -178,7 +178,8 @@ public:
 
     // Evaluation:
 
-    virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi = nullptr) const override;
+    virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+    virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return SVM_Planar::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
 
     // Other functions
 

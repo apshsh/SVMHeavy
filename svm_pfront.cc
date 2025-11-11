@@ -130,7 +130,7 @@ double SVM_PFront::calcDist(const gentype &ha, const gentype &hb, int ia, int db
     return db ? ( ( ( (int) ha ) != ( (int) hb ) ) ? 1 : 0 ) : 0;
 }
 
-int SVM_PFront::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int SVM_PFront::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     //int unusedvar = 0;
     double tempresg = 0;
@@ -138,7 +138,7 @@ int SVM_PFront::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
     gentype tempsomeh,tempsomeg;
 
     //gTrainingVector(tempresg,unusedvar,i,retaltg,pxyprodi);
-    SVM_Binary::ghTrainingVector(tempsomeh,tempsomeg,i,retaltg,pxyprodi);
+    SVM_Binary::gh(tempsomeh,tempsomeg,i,retaltg,pxyprodi);
 
     tempresg = (double) tempsomeg;
 

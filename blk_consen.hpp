@@ -103,7 +103,8 @@ public:
     // Output h(x) is the concensus result
     // Output raw is the concensus result
 
-    virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+    virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+    virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return BLK_Generic::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
 
     // Private
 

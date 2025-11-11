@@ -75,7 +75,7 @@ const Vector<gentype> &BLK_Bernst::y(void) const
     return res;
 }
 
-int BLK_Bernst::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int BLK_Bernst::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     NiceAssert( !retaltg );
 

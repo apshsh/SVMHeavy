@@ -881,7 +881,7 @@ void SVM_Planar::refactorVV(int updateGpn)
 
 // Evaluation:
 
-int SVM_Planar::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int SVM_Planar::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
 //    ghEvalFull = 0; - not actually needed here, but might be in future.  Meant to force
 // full evaluation of g(x_i) even if i >= 0 (ie don't just use error), but that appears

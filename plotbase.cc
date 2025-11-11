@@ -15,9 +15,11 @@
 #include <sstream>
 #include <fstream>
 
-#ifdef NDEBUG
+//#ifdef NDEBUG
 #define DO_CLEANUP
-#endif
+//#endif
+
+//#define DOCROP
 
 //#ifdef ENABLE_THREADS
 //#define PARSYSCALL false
@@ -343,9 +345,11 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
             dnameshfile << "#!/usr/bin\n";
             dnameshfile << "gnuplot " << dnameplot << " >/dev/null 2>/dev/null\n";
 
+#ifdef DOCROP
             //dnameshfile << "epstopdf " << fname << ".ps  >/dev/null 2>/dev/null\n";
             dnameshfile << "pdfcrop  " << fname << ".pdf >/dev/null 2>/dev/null\n";
             dnameshfile << "mv " << fname << "-crop.pdf " << fname << ".pdf\n";
+#endif
         }
 
         dnameshfile.close();
@@ -686,9 +690,11 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
             dnameshfile << "#!/usr/bin\n";
             dnameshfile << "gnuplot " << dnameplot << " >/dev/null 2>/dev/null\n";
 
+#ifdef DOCROP
             //dnameshfile << "epstopdf " << fname << ".ps  >/dev/null 2>/dev/null\n";
             dnameshfile << "pdfcrop  " << fname << ".pdf >/dev/null 2>/dev/null\n";
             dnameshfile << "mv " << fname << "-crop.pdf " << fname << ".pdf\n";
+#endif
         }
 
         dnameshfile.close();
@@ -929,9 +935,11 @@ int dosurf(double xmin, double xmax, double ymin, double ymax, double omin, doub
             dnameshfile << "#!/usr/bin\n";
             dnameshfile << "gnuplot " << dnameplot << " >/dev/null 2>/dev/null\n";
 
+#ifdef DOCROP
             //dnameshfile << "epstopdf " << fname << ".ps  >/dev/null 2>/dev/null\n";
             dnameshfile << "pdfcrop  " << fname << ".pdf >/dev/null 2>/dev/null\n";
             dnameshfile << "mv " << fname << "-crop.pdf " << fname << ".pdf\n";
+#endif
         }
 
         dnameshfile.close();
@@ -1117,9 +1125,12 @@ int dosurfvar(double xmin, double xmax, double ymin, double ymax, double omin, d
 
     if ( outformat == 2 )
     {
+        ;
+#ifdef DOCROP
         //dnameshfile << "epstopdf " << fname << ".ps  >/dev/null 2>/dev/null\n";
         dnameshfile << "pdfcrop  " << fname << ".pdf >/dev/null 2>/dev/null\n";
         dnameshfile << "mv " << fname << "-crop.pdf " << fname << ".pdf\n";
+#endif
     }
 
     dnameshfile.close();
@@ -1253,9 +1264,12 @@ int doscatterplot2d(double xmin, double xmax, double ymin, double ymax,
 
     if ( outformat == 2 )
     {
+        ;
+#ifdef DOCROP
         //dnameshfile << "epstopdf " << fname << ".ps  >/dev/null 2>/dev/null\n";
         dnameshfile << "pdfcrop  " << fname << ".pdf >/dev/null 2>/dev/null\n";
         dnameshfile << "mv " << fname << "-crop.pdf " << fname << ".pdf\n";
+#endif
     }
 
     dnameshfile.close();

@@ -311,7 +311,7 @@ int LSV_Anions::train(int &res, svmvolatile int &killSwitch)
         int i,j;
 
         Vector<double> dalphaR(N());
-        Vector<double> alltraintargR(N());
+        Vector<double> alltraintargRR(N());
 
         Vector<double> dbetaR(1);
         Vector<double> dybeta(1);
@@ -334,14 +334,14 @@ int LSV_Anions::train(int &res, svmvolatile int &killSwitch)
             {
                 for ( i = 0 ; i < N() ; ++i )
                 {
-                    alltraintargR("&",i) = alltraintargA(i)(j);
+                    alltraintargRR("&",i) = alltraintargA(i)(j);
                 }
             }
 
             dybeta = 0.0;
             dbetaR = 0.0;
 
-            if ( ( res = fact_minverse(dalphaR,dbetaR,alltraintargR,dybeta) ) >= 0 )
+            if ( ( res = fact_minverse(dalphaR,dbetaR,alltraintargRR,dybeta) ) >= 0 )
             {
                 return 1;
             }
@@ -373,7 +373,7 @@ int LSV_Anions::train(int &res, svmvolatile int &killSwitch)
     return 0;
 }
 
-int LSV_Anions::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int LSV_Anions::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     NiceAssert( !retaltg );
 
@@ -492,7 +492,7 @@ double LSV_Anions::eTrainingVector(int i) const
     {
         gentype yval;
 
-        ggTrainingVector(yval,i);
+        gg(yval,i);
         yval -= y(i);
 
         res = norm2(yval)/2.0;
@@ -507,7 +507,7 @@ gentype &LSV_Anions::dedgTrainingVector(gentype &res, int i) const
 
     if ( ( i < 0 ) || isenabled(i) )
     {
-        ggTrainingVector(res,i);
+        gg(res,i);
         res -= y(i);
     }
 

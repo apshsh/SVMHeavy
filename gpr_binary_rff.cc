@@ -167,19 +167,19 @@ int GPR_Binary_rff::setd(const Vector<int> &yn)
     return res;
 }
 
-int GPR_Binary_rff::setd(int i, int xd)
+int GPR_Binary_rff::setd(int i, int xxd)
 {
-    NiceAssert( ( xd == -1 ) || ( xd == 0 ) || ( xd == +1 ) );
+    NiceAssert( ( xxd == -1 ) || ( xxd == 0 ) || ( xxd == +1 ) );
 
     int res = 0;
 
-    if ( xd != d()(i) )
+    if ( xxd != d()(i) )
     {
         res = 1;
 
-        bintraintarg("&",i) = xd;
+        bintraintarg("&",i) = xxd;
 
-        GPR_Scalar_rff::setd(i,xd);
+        GPR_Scalar_rff::setd(i,xxd);
     }
 
     return res;
@@ -235,9 +235,9 @@ int GPR_Binary_rff::removeTrainingVector(int i, gentype &y, SparseVector<gentype
     return GPR_Scalar_rff::removeTrainingVector(i,dummy,x);
 }
 
-int GPR_Binary_rff::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int GPR_Binary_rff::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
-    int tempresh = GPR_Scalar_rff::ghTrainingVector(resh,resg,i,retaltg,pxyprodi);
+    int tempresh = GPR_Scalar_rff::gh(resh,resg,i,retaltg,pxyprodi);
     double resgd = (double) resg;
 
     resh = 0;

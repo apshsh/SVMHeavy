@@ -37,9 +37,9 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    IMP_Expect(int isIndPrune = 0);
-    IMP_Expect(const IMP_Expect &src, int isIndPrune = 0);
-    IMP_Expect(const IMP_Expect &src, const ML_Base *xsrc, int isIndPrune = 0);
+    IMP_Expect(int _isIndPrune = 0);
+    IMP_Expect(const IMP_Expect &src, int _isIndPrune = 0);
+    IMP_Expect(const IMP_Expect &src, const ML_Base *xsrc, int _isIndPrune = 0);
     IMP_Expect &operator=(const IMP_Expect &src) { assign(src); return *this; }
     virtual ~IMP_Expect();
 
@@ -78,7 +78,9 @@ public:
     //
     //
 
-    virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+    virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
+    virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return IMP_Generic::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
+
     virtual int imp(gentype &resi, gentype &resv, const SparseVector<gentype> &xxmean, const gentype &xxvar) const override;
 
 private:

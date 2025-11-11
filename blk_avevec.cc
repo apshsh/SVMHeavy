@@ -283,7 +283,7 @@ int BLK_AveVec::setd(const Vector<int> &d)
 
 
 
-int BLK_AveVec::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***) const
+int BLK_AveVec::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***) const
 {
     NiceAssert( !retaltg );
 

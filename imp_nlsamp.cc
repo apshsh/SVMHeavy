@@ -18,7 +18,7 @@
 #include "hyper_base.hpp"
 
 
-IMP_NLSamp::IMP_NLSamp(int isIndPrune) : IMP_Generic(isIndPrune)
+IMP_NLSamp::IMP_NLSamp(int _isIndPrune) : IMP_Generic(_isIndPrune)
 {
     setaltx(nullptr);
 
@@ -30,7 +30,7 @@ IMP_NLSamp::IMP_NLSamp(int isIndPrune) : IMP_Generic(isIndPrune)
     return;
 }
 
-IMP_NLSamp::IMP_NLSamp(const IMP_NLSamp &src, int isIndPrune) : IMP_Generic(isIndPrune)
+IMP_NLSamp::IMP_NLSamp(const IMP_NLSamp &src, int _isIndPrune) : IMP_Generic(_isIndPrune)
 {
     setaltx(nullptr);
 
@@ -43,7 +43,7 @@ IMP_NLSamp::IMP_NLSamp(const IMP_NLSamp &src, int isIndPrune) : IMP_Generic(isIn
     return;
 }
 
-IMP_NLSamp::IMP_NLSamp(const IMP_NLSamp &src, const ML_Base *xsrc, int isIndPrune) : IMP_Generic(isIndPrune)
+IMP_NLSamp::IMP_NLSamp(const IMP_NLSamp &src, const ML_Base *xsrc, int _isIndPrune) : IMP_Generic(_isIndPrune)
 {
     setaltx(xsrc);
 
@@ -104,7 +104,7 @@ std::istream &IMP_NLSamp::inputstream(std::istream &input )
 }
 
 /*
-int IMP_NLSamp::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int IMP_NLSamp::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     (void) retaltg;
     (void) pxyprodi;

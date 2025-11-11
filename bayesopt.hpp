@@ -191,6 +191,8 @@ public:
     // fidover:     0: nothing
     //              REMOVED, HUMAN CAN DO THIS WHENEVER THEY WANT! - 1: human can override fidelity
     //              2: randomly choose fidelity less than recommended
+    // fidBOCA:     true: BOCA
+    //              false: not BOCA
     // FIXME: add fidvar to mlinter and test it
     //
     // Usage eg from Kandasamy with budget 100: ./svmheavyv7.exe -L res100
@@ -348,6 +350,7 @@ public:
     gentype fidpenalty;
     gentype fidvar;
     int fidover;
+    bool fidBOCA;
 
     // Stable optimisation
 
@@ -424,6 +427,7 @@ public:
         fidpenalty = 1;
         fidvar     = 0;
         fidover    = 0;
+        fidBOCA    = true;
 
         impmeasu       = impmeasux;
         direcpre       = xdirecpre;
@@ -483,6 +487,7 @@ public:
         fidpenalty        = src.fidpenalty;
         fidvar            = src.fidvar;
         fidover           = src.fidover;
+        fidBOCA           = src.fidBOCA;
         humanfreq         = src.humanfreq;
         cgtmethod         = src.cgtmethod;
         cgtmargin         = src.cgtmargin;
@@ -564,10 +569,10 @@ public:
                     int xindex = 0;
                     int yindex = 1;
 
-                    double xmin = 0; //FIXME: is this correct?
-                    double xmax = 1; //FIXME: is this correct?
-                    double ymin = 0; //FIXME: is this correct?
-                    double ymax = 1; //FIXME: is this correct?
+                    //double xmin = 0; //FIXME: is this correct?
+                    //double xmax = 1; //FIXME: is this correct?
+                    //double ymin = 0; //FIXME: is this correct?
+                    //double ymax = 1; //FIXME: is this correct?
                     double omin = 1; //FIXME: is this correct?
                     double omax = 0; //FIXME: is this correct?
 
@@ -683,11 +688,11 @@ public:
 
     int isimphere(void) const { return impmeasu ? 1 : 0; }
 
-    int modelimp_imp(gentype &resi, gentype &resv, const SparseVector<gentype> &xxmean, const gentype &xxvar) const
+    int modelimp_imp(gentype &resi, gentype &resv, const SparseVector<gentype> &xxmean, const gentype &xqxvar) const
     {
         NiceAssert( impmeasu );
 
-        return (*impmeasu).imp(resi,resv,xxmean,xxvar);
+        return (*impmeasu).imp(resi,resv,xxmean,xqxvar);
     }
 
     int modelimp_N(void) const
@@ -721,25 +726,11 @@ public:
     }
 
 
-    virtual int optdefed(void)
-    {
-        return 3;
-    }
+    virtual int optdefed(void) { return 3; }
 
-    int impmeasuNonLocal(void) const
-    {
-        return impmeasu != nullptr;
-    }
-
-    int direcpreDef(void) const
-    {
-        return direcpre != nullptr;
-    }
-
-    int direcsubseqpreDef(void) const
-    {
-        return direcsubseqpre != nullptr;
-    }
+    int impmeasuNonLocal (void) const { return impmeasu       != nullptr; }
+    int direcpreDef      (void) const { return direcpre       != nullptr; }
+    int direcsubseqpreDef(void) const { return direcsubseqpre != nullptr; }
 
     virtual int getdimfid(void) const override { return numfids ? dimfid : 0;  }
 };

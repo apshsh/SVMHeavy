@@ -40,9 +40,9 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    IMP_NLSamp(int isIndPrune = 0);
-    IMP_NLSamp(const IMP_NLSamp &src, int isIndPrune = 0);
-    IMP_NLSamp(const IMP_NLSamp &src, const ML_Base *xsrc, int isIndPrune = 0);
+    IMP_NLSamp(int _isIndPrune = 0);
+    IMP_NLSamp(const IMP_NLSamp &src, int _isIndPrune = 0);
+    IMP_NLSamp(const IMP_NLSamp &src, const ML_Base *xsrc, int _isIndPrune = 0);
     IMP_NLSamp &operator=(const IMP_NLSamp &src) { assign(src); return *this; }
     virtual ~IMP_NLSamp();
 

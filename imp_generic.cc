@@ -52,7 +52,7 @@ std::istream &IMP_Generic::inputstream(std::istream &input )
 }
 
 
-IMP_Generic::IMP_Generic(int isIndPrune) : ML_Base_Deref(isIndPrune)
+IMP_Generic::IMP_Generic(int _isIndPrune) : ML_Base_Deref(_isIndPrune)
 {
     //setaltx(nullptr);
 
@@ -68,7 +68,7 @@ IMP_Generic::IMP_Generic(int isIndPrune) : ML_Base_Deref(isIndPrune)
     return;
 }
 
-IMP_Generic::IMP_Generic(const IMP_Generic &src, int isIndPrune) : ML_Base_Deref(isIndPrune)
+IMP_Generic::IMP_Generic(const IMP_Generic &src, int _isIndPrune) : ML_Base_Deref(_isIndPrune)
 {
     //setaltx(nullptr);
 
@@ -77,7 +77,7 @@ IMP_Generic::IMP_Generic(const IMP_Generic &src, int isIndPrune) : ML_Base_Deref
     return;
 }
 
-IMP_Generic::IMP_Generic(const IMP_Generic &src, const ML_Base *, int isIndPrune) : ML_Base_Deref(isIndPrune)
+IMP_Generic::IMP_Generic(const IMP_Generic &src, const ML_Base *, int _isIndPrune) : ML_Base_Deref(_isIndPrune)
 {
     //setaltx(xsrc);
 

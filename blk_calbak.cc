@@ -82,7 +82,7 @@ const double *getdbl(const SparseVector<gentype> &x, int &resdim)
 
 
 
-int BLK_CalBak::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int BLK_CalBak::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     NiceAssert( !retaltg );
 

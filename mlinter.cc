@@ -1,97 +1,3 @@
-/*
-From an old idea email:
-
-Don't calculate variance: rather than calculating variance, use a surrogate of distance from evaluated points.  That way you can have really big datasets without worrying about scaling of the GP (remember that calculating posterior variance is where most of the cost comes from - for posterior mean you really only need to hvae the pre-calculated alpha).  What surrogate?  Pick the nearest n points (n is a small number, maybe even 1) and calculate variance from that set.
-
-Just add noise: very simple BO where you induce exploration by adding noise (correlated to, but not the same as, variance - variance is expensive you use an imperfect surrogate and add noise to make up the difference).
-
-What you can measure: assume you want to model f but also have g,h,... drawn from the same gp.  Can you use observations of other variables to inform optimisation of f?  Can you inform the prior of f from the posterior variance of g,h.  What if you measure the prior kernel K as a draw from a hyper-GP, so f,g,h,... become (noisy) observations of the hyper-GP?  Perhaps this is easier if you view f,g,h as elements of an RKHS sharing the same kernel?
-
-Network pre-smoothing and direct regularisation: at initialization the network can be very rough as the targets are offset by the initial bias function, which is rough, so the (effective) objective function is rough (high rademacher complexity).  Using the real feature map (RKHS model), pre-smooth the model by regularizing the actual weight vector (ie the overall model) to smooth it without zeroing the weights.  Should improve uniform convergence rate.  Also try regularizing through this model.
-
-Sensor-in-network.  Actual sensors provide the bias to random nodes in the network.  Have inverse model of physical system.  Train network to make output of physical system match input under variety of perturbations, so sensors provide necessary feedback in network.
-
-federated gp, share inducing points, get posterior variance by???  Need distance of inducing points from real data somehow, then get approximation from this.
-
-On Tue, 10 Sept 2024 at 22:28, Alistair Shilton <alshilton@gmail.com> wrote:
-Don't calculate variance: rather than calculating variance, use a surrogate of distance from evaluated points.  That way you can have really big datasets without worrying about scaling of the GP (remember that calculating posterior variance is where most of the cost comes from - for posterior mean you really only need to hvae the pre-calculated alpha).  What surrogate?  Pick the nearest n points (n is a small number, maybe even 1) and calculate variance from that set.
-
-Just add noise: very simple BO where you induce exploration by adding noise (correlated to, but not the same as, variance - variance is expensive you use an imperfect surrogate and add noise to make up the difference).
-
-What you can measure: assume you want to model f but also have g,h,... drawn from the same gp.  Can you use observations of other variables to inform optimisation of f?  Can you inform the prior of f from the posterior variance of g,h.  What if you measure the prior kernel K as a draw from a hyper-GP, so f,g,h,... become (noisy) observations of the hyper-GP?  Perhaps this is easier if you view f,g,h as elements of an RKHS sharing the same kernel? 
-
-Network pre-smoothing and direct regularisation: at initialization the network can be very rough as the targets are offset by the initial bias function, which is rough, so the (effective) objective function is rough (high rademacher complexity).  Using the real feature map (RKHS model), pre-smooth the model by regularizing the actual weight vector (ie the overall model) to smooth it without zeroing the weights.  Should improve uniform convergence rate.  Also try regularizing through this model.
-
-Sensor-in-network.  Actual sensors provide the bias to random nodes in the network.  Have inverse model of physical system.  Train network to make output of physical system match input under variety of perturbations, so sensors provide necessary feedback in network.
-
-On Mon, 9 Sept 2024 at 13:04, Alistair Shilton <alshilton@gmail.com> wrote:
-Don't calculate variance: rather than calculating variance, use a surrogate of distance from evaluated points.  That way you can have really big datasets without worrying about scaling of the GP (remember that calculating posterior variance is where most of the cost comes from - for posterior mean you really only need to hvae the pre-calculated alpha).
-
-Just add noise: very simple BO where you induce exploration by adding noise (correlated to, but not the same as, variance - variance is expensive you use an imperfect surrogate and add noise to make up the difference).
-
-What you can measure: assume you want to model f but also have g,h,... drawn from the same gp.  Can you use observations of other variables to inform optimisation of f?  Can you inform the prior of f from the posterior variance of g,h.  What if you measure the prior kernel K as a draw from a hyper-GP, so f,g,h,... become (noisy) observations of the hyper-GP?  Perhaps this is easier if you view f,g,h as elements of an RKHS sharing the same kernel? 
-
-On Wed, 7 Aug 2024 at 22:40, Alistair Shilton <alshilton@gmail.com> wrote:
-Just add noise: very simple BO where you induce exploration by adding noise (correlated to, but not the same as, variance - variance is expensive you use an imperfect surrogate and add noise to make up the difference).
-
-What you can measure: assume you want to model f but also have g,h,... drawn from the same gp.  Can you use observations of other variables to inform optimisation of f?  Can you inform the prior of f from the posterior variance of g,h.  What if you measure the prior kernel K as a draw from a hyper-GP, so f,g,h,... become (noisy) observations of the hyper-GP?  Perhaps this is easier if you view f,g,h as elements of an RKHS sharing the same kernel?
-
-*/
-
-
-//FIXME: document the fullgrid stuff! In particular, the gridsource file format and the various special cases
-//FIXME: deal with case where some isfullgrid have nulls and others dont
-//FIXME: isfullgrid override: suppose the model is linear and the data is not: you might want to enforce linearity (approx), so you need the model.
-//FIXME: make fidelity part of the testlog plot
-//FIXME: if lower fidelity falls outside of range then never do higher fidelity (assumed surrogate accuracty bounds)
-
-/*
-TO DO:
-- have -mu 3 mode where training data is added to prior ML and training goes to prior ML (like the BLK, but done right)
-- extend prior to non-scalar types
-
-FIXME: TEST NEW FIDELITY CODE WITH FIDELITY FEEDBACK!
-FIXME: IS FIDELITY FEEDBACK BEING CORRECTLY ACCOUNTED FOR?
-FIXME: IS FIDELITY COST BEING CORECTLY CALCULATED AND USED FOR TERMINATION?
-*/
-
-//in sparsevector.hpp:
-//sv/set should work in the sparse case as well (altcontentsp)
-
-//For some reason, when plotml evaluates [0] for blk_usrfnb with 4*(x_0-0.5)^2 it gives 10??
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//fpareto, fgrid etc need to be negated for analysis with multi-objective!
-//the optimisation code seems to be working fine, but the *recording* code is negative to what it should be.
-
-
-
-/*
-ADD ALONG WITH -SA, -SAi, -SAA
-
-    virtual int setaltMLidsKB(const Vector<int>    &nv) { KBaltMLids = nv; return 1; }
-    virtual int setMLweightKB(const Vector<double> &nv) { KBMLweight = nv; return 1; }
-
-Optimisation options:
-    virtual int setminstepKB(double nv) { KBminstep = nv; return 1; }
-    virtual int setmaxiterKB(int    nv) { KBmaxiter = nv; return 1; }
-    virtual int setlrKB     (double nv) { KBlr = nv;      return 1; }
-
-Consider integrating into xferml.h
-*/
-
 
 //
 // SVMHeavyv7 abstracted interface
@@ -1424,9 +1330,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         stopnow = 1;
                     }
 
-                    int iii;
-
-                    for ( iii = 0 ; iii < numreps ; ++iii )
+                    for ( int iii = 0 ; iii < numreps ; ++iii )
                     {
                         // Setup environment and run command
 
@@ -4928,10 +4832,10 @@ int runsvmint(SVMThreadContext *svmContext,
                     {
                         Vector<gentype> dz(1);
                         Vector<SparseVector<gentype> > x(1);
-                        gentype temp,tmpg;
+                        gentype temp,ttmpg;
 
                         safeatowhatever(dz("&",0),currcommand(1),argvariables);
-                        x("&",0) = safeatowhatever(tmpg,currcommand(2),argvariables).cast_vector(1);
+                        x("&",0) = safeatowhatever(ttmpg,currcommand(2),argvariables).cast_vector(1);
 
                         addtrainingdata(getMLref(MLInd),xtemplate,x,dz,-1,0,0,temp);
                     }
@@ -4940,7 +4844,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     {
                         Vector<gentype> dz(1);
                         Vector<SparseVector<gentype> > x(1);
-                        gentype temp,tmpg;
+                        gentype temp,ttmpg;
                         int nInd = safeatoi(currcommand(3),argvariables);
 
                         if ( nInd < 0 )
@@ -4949,7 +4853,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         }
 
                         safeatowhatever(dz("&",0),currcommand(1),argvariables);
-                        x("&",0) = safeatowhatever(tmpg,currcommand(2),argvariables).cast_vector(1);
+                        x("&",0) = safeatowhatever(ttmpg,currcommand(2),argvariables).cast_vector(1);
 
                         addtrainingdata(getMLref(nInd),xtemplate,x,dz,-1,0,0,temp);
                     }
@@ -5236,11 +5140,9 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         Vector<gentype> y(model.y());
 
-                        int i;
-
-                        for ( i = 0 ; i < y.size() ; ++i )
+                        for ( int ii = 0 ; ii < y.size() ; ++ii )
                         {
-                            y("&",i) = f.evalyonly(model.y()(i));
+                            y("&",ii) = f.evalyonly(model.y()(ii));
                         }
 
                         model.sety(y);
@@ -6497,26 +6399,24 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                                         // Not necessarily true NiceAssert( xres.size() == argnums.size() );
 
-                                        int i;
-
                                         if ( xres.size() )
                                         {
-                                            for ( i = 0 ; i < xres.size() ; ++i )
+                                            for ( int ii = 0 ; ii < xres.size() ; ++ii )
                                             {
-                                                if ( i < argnums.size() )
+                                                if ( ii < argnums.size() )
                                                 {
-                                                    gridargvars("&",0)("&",argnums(i)) = xres(i);
+                                                    gridargvars("&",0)("&",argnums(ii)) = xres(ii);
                                                 }
 
-                                                gridargvars("&",50)("&",i) = xres(i);
+                                                gridargvars("&",50)("&",ii) = xres(ii);
                                             }
                                         }
 
                                         if ( sres.size() )
                                         {
-                                            for ( i = 0 ; i < sres.size() ; ++i )
+                                            for ( int ii = 0 ; ii < sres.size() ; ++ii )
                                             {
-                                                gridargvars("&",53)("&",i) = sres(i);
+                                                gridargvars("&",53)("&",ii) = sres(ii);
                                             }
                                         }
 
@@ -6529,30 +6429,30 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                         gridargvars("&",58)("&",0) = meantres; gridargvars("&",58)("&",65536) = vartres;
                                         gridargvars("&",59)("&",0) = meanTres; gridargvars("&",59)("&",65536) = varTres;
 
-                                        for ( i = 0 ; i < optvarind.size() ; ++i )
+                                        for ( int ii = 0 ; ii < optvarind.size() ; ++ii )
                                         {
-                                            gridargvars("&",60)("&",i) = allrawxres(optvarind(i));
-                                            gridargvars("&",61)("&",i) = allfres(optvarind(i));
-                                            //FIXME gridargvars("&",61)("&",i) = allcres(optvarind(i));
-                                            gridargvars("&",62)("&",i) = allires(optvarind(i));
-                                            gridargvars("&",63)("&",i) = allsres(optvarind(i));
-                                            gridargvars("&",64)("&",i) = allhres(optvarind(i));
+                                            gridargvars("&",60)("&",ii) = allrawxres(optvarind(ii));
+                                            gridargvars("&",61)("&",ii) = allfres(optvarind(ii));
+                                            //FIXME gridargvars("&",61)("&",ii) = allcres(optvarind(ii));
+                                            gridargvars("&",62)("&",ii) = allires(optvarind(ii));
+                                            gridargvars("&",63)("&",ii) = allsres(optvarind(ii));
+                                            gridargvars("&",64)("&",ii) = allhres(optvarind(ii));
 
-                                            gridargvars("&",65)("&",i) = meanallfres(optvarind(i)); gridargvars("&",65)("&",65536+i) = varallfres(optvarind(i));
-                                            gridargvars("&",66)("&",i) = meanallmres(optvarind(i)); gridargvars("&",66)("&",65536+i) = varallmres(optvarind(i));
+                                            gridargvars("&",65)("&",ii) = meanallfres(optvarind(ii)); gridargvars("&",65)("&",65536+ii) = varallfres(optvarind(ii));
+                                            gridargvars("&",66)("&",ii) = meanallmres(optvarind(ii)); gridargvars("&",66)("&",65536+ii) = varallmres(optvarind(ii));
                                         }
 
-                                        for ( i = 0 ; i < allrawxres.size() ; ++i )
+                                        for ( int ii = 0 ; ii < allrawxres.size() ; ++ii )
                                         {
-                                            gridargvars("&",70)("&",i) = allrawxres(i);
-                                            gridargvars("&",71)("&",i) = allfres(i);
-                                            //FIXME gridargvars("&",71)("&",i) = allcres(i);
-                                            gridargvars("&",72)("&",i) = allires(i);
-                                            gridargvars("&",73)("&",i) = allsres(i);
-                                            gridargvars("&",74)("&",i) = allhres(i);
+                                            gridargvars("&",70)("&",ii) = allrawxres(ii);
+                                            gridargvars("&",71)("&",ii) = allfres(ii);
+                                            //FIXME gridargvars("&",71)("&",ii) = allcres(ii);
+                                            gridargvars("&",72)("&",ii) = allires(ii);
+                                            gridargvars("&",73)("&",ii) = allsres(ii);
+                                            gridargvars("&",74)("&",ii) = allhres(ii);
 
-                                            gridargvars("&",75)("&",i) = meanallfres(i); gridargvars("&",75)("&",65536+i) = varallfres(i);
-                                            gridargvars("&",76)("&",i) = meanallmres(i); gridargvars("&",76)("&",65536+i) = varallmres(i);
+                                            gridargvars("&",75)("&",ii) = meanallfres(ii); gridargvars("&",75)("&",65536+ii) = varallfres(ii);
+                                            gridargvars("&",76)("&",ii) = meanallmres(ii); gridargvars("&",76)("&",65536+ii) = varallmres(ii);
                                         }
 
                                         gridargvars("&",80)("&",0) = allrawxres;
@@ -6597,8 +6497,8 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                                     if ( verblevel && ( logfile.length() > 0 ) )
                                     {
-                                        retVector<Vector<gentype> > tmpva;
-                                        retVector<gentype>          tmpvb;
+                                        retVector<Vector<gentype> > tmpvaa;
+                                        retVector<gentype>          tmpvbb;
                                         retVector<gentype>          tmpvc;
                                         retVector<Vector<gentype> > tmpvq;
                                         retVector<double>           tmpvd;
@@ -6662,7 +6562,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                         std::string xyparetofilenamefull  = logfile+"_xypareto";
                                         std::string xytparetofilenamefull = logfile+"_xytpareto";
 
-                                        writeLog(allrawxres(optvarind,tmpva),xparetofilenamefull,getsetExtVar);
+                                        writeLog(allrawxres(optvarind,tmpvaa),xparetofilenamefull,getsetExtVar);
                                         writeLog(allfres(optvarind,tmpvc),fparetofilenamefull,getsetExtVar);
                                         writeLog(allcres(optvarind,tmpvq),cparetofilenamefull,getsetExtVar);
                                         writeLog(allmres(optvarind,tmpvc),mparetofilenamefull,getsetExtVar);
@@ -6677,8 +6577,8 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                         writeLog(varallfres(optvarind,tmpvc),varfparetofilenamefull,getsetExtVar);
                                         writeLog(varallmres(optvarind,tmpvc),varmparetofilenamefull,getsetExtVar);
 
-                                        writeLog(allfres(optvarind,tmpvc),allrawxres(optvarind,tmpva),xyparetofilenamefull);
-                                        writeLog(allfres(optvarind,tmpvc),allsres(optvarind,tmpvb),allrawxres(optvarind,tmpva),xytparetofilenamefull);
+                                        writeLog(allfres(optvarind,tmpvc),allrawxres(optvarind,tmpvaa),xyparetofilenamefull);
+                                        writeLog(allfres(optvarind,tmpvc),allsres(optvarind,tmpvbb),allrawxres(optvarind,tmpvaa),xytparetofilenamefull);
 
                                         retVector<gentype> tmpvcc;
                                         const Vector<gentype> &paretofres = allfres(optvarind,tmpvcc);
@@ -6690,14 +6590,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                             Vector<double> fxval(paretofres.size());
                                             Vector<double> fyval(paretofres.size());
 
-                                            int iij;
-
                                             double xmin = -1;
                                             double xmax = 0;
                                             double ymin = -1;
                                             double ymax = 0;
 
-                                            for ( iij = 0 ; iij < paretofres.size() ; iij++ )
+                                            for ( int iij = 0 ; iij < paretofres.size() ; iij++ )
                                             {
                                                 fxval("&",iij) = ((const Vector<double> &) paretofres(iij))(0);
                                                 fyval("&",iij) = ((const Vector<double> &) paretofres(iij))(1);
@@ -6716,14 +6614,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                             Vector<double> fxval(allfres.size());
                                             Vector<double> fyval(allfres.size());
 
-                                            int iij;
-
                                             double xmin = -1;
                                             double xmax = 0;
                                             double ymin = -1;
                                             double ymax = 0;
 
-                                            for ( iij = 0 ; iij < allfres.size() ; iij++ )
+                                            for ( int iij = 0 ; iij < allfres.size() ; iij++ )
                                             {
                                                 fxval("&",iij) = ((const Vector<double> &) allfres(iij))(0);
                                                 fyval("&",iij) = ((const Vector<double> &) allfres(iij))(1);
@@ -7648,11 +7544,9 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         streamItIn(xastr,xa,0);
                         addtemptox(xa,xtemplate);
 
-                        int ii;
-
                         gentype sumtot(0.0);
 
-                        for ( ii = 0 ; ii < getMLrefconst(MLInd).N() ; ii++ )
+                        for ( int ii = 0 ; ii < getMLrefconst(MLInd).N() ; ii++ )
                         {
                             gentype Kxx,Kii,Kxi;
 
@@ -7792,14 +7686,14 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     {
                         double res;
 
-                        int i = safeatoi(currcommand(1),argvariables);
+                        int ii = safeatoi(currcommand(1),argvariables);
                         int p = safeatoi(currcommand(2),argvariables);
                         double mu = safeatof(currcommand(3),argvariables);
                         double B = safeatof(currcommand(4),argvariables);
                         double pnrm = safeatof(currcommand(5),argvariables);
                         int rot = 0;
 
-                        getMLrefconst(MLInd).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B);
+                        getMLrefconst(MLInd).stabProbTrainingVector(res,ii,p,pnrm,rot,mu,B);
 
                         errstream() << "Pr(x) = " << res << "\n";
                     }
@@ -7808,14 +7702,14 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     {
                         double res;
 
-                        int i = safeatoi(currcommand(1),argvariables);
+                        int ii = safeatoi(currcommand(1),argvariables);
                         int p = safeatoi(currcommand(2),argvariables);
                         double mu = safeatof(currcommand(3),argvariables);
                         double B = safeatof(currcommand(4),argvariables);
                         double pnrm = 1;
                         int rot = 1;
 
-                        getMLrefconst(MLInd).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B);
+                        getMLrefconst(MLInd).stabProbTrainingVector(res,ii,p,pnrm,rot,mu,B);
 
                         errstream() << "Pr(x) = " << res << "\n";
                     }
@@ -7973,11 +7867,11 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                     else if ( currcommand(0) == "-Km" )
                     { 
-                        int ii,m = safeatoi(currcommand(1),argvariables);
+                        int m = safeatoi(currcommand(1),argvariables);
 
                         Vector<SparseVector<gentype> > xx(m);
 
-                        for ( ii = 0 ; ii < m ; ++ii )
+                        for ( int ii = 0 ; ii < m ; ++ii )
                         {
                             std::stringstream xstr(currcommand(ii+2));
                             streamItIn(xstr,xx("&",ii),0);
@@ -8140,7 +8034,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         Vector<SparseVector<gentype> > x;
                         Vector<gentype> resh;
                         Vector<gentype> resg;
-                        int i;
+
 
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
@@ -8151,9 +8045,9 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         if ( x.size() )
                         {
-                            for ( i = 0 ; i < x.size() ; ++i )
+                            for ( int ii = 0 ; ii < x.size() ; ++ii )
                             {
-                                getMLrefconst(MLInd).gh(resh("&",i),resg("&",i),x("&",i));
+                                getMLrefconst(MLInd).gh(resh("&",ii),resg("&",ii),x("&",ii));
                             }
 
                             argvariables("&",1)("&",8) = resh;
@@ -8170,7 +8064,6 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         Vector<SparseVector<gentype> > x;
                         Vector<gentype> resh;
                         Vector<gentype> resg;
-                        int i;
 
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
@@ -8181,9 +8074,9 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         if ( x.size() )
                         {
-                            for ( i = 0 ; i < x.size() ; ++i )
+                            for ( int ii = 0 ; ii < x.size() ; ++ii )
                             {
-                                getMLrefconst(MLInd).gh(resh("&",i),resg("&",i),x("&",i),2);
+                                getMLrefconst(MLInd).gh(resh("&",ii),resg("&",ii),x("&",ii),2);
                             }
 
                             argvariables("&",1)("&",8) = resh;
@@ -8196,14 +8089,14 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                     else if ( currcommand(0) == "-hW" )
                     {
-                        int i = safeatoi(currcommand(1),argvariables);
+                        int ii = safeatoi(currcommand(1),argvariables);
                         gentype resh;
                         gentype resg;
 
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
 
-                        getMLrefconst(MLInd).ghTrainingVector(resh,resg,i);
+                        getMLrefconst(MLInd).gh(resh,resg,ii);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -8214,14 +8107,14 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                     else if ( currcommand(0) == "-hhW" )
                     {
-                        int i = safeatoi(currcommand(1),argvariables);
+                        int ii = safeatoi(currcommand(1),argvariables);
                         gentype resh;
                         gentype resg;
 
                         argvariables("&",1)("&",8).makeNull();
                         argvariables("&",1)("&",9).makeNull();
 
-                        getMLrefconst(MLInd).ghTrainingVector(resh,resg,i,2);
+                        getMLrefconst(MLInd).gh(resh,resg,ii,2);
 
                         argvariables("&",1)("&",8) = resh;
                         argvariables("&",1)("&",9) = resg;
@@ -8232,27 +8125,26 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                     else if ( currcommand(0) == "-hWe" )
                     {
-                        int i = safeatoi(currcommand(1),argvariables);
+                        int ii = safeatoi(currcommand(1),argvariables);
 
-                        double res = getMLrefconst(MLInd).eTrainingVector(i);
+                        double res = getMLrefconst(MLInd).eTrainingVector(ii);
 
                         errstream() << "error(x) = " << res << "\n";
                     }
 
                     else if ( currcommand(0) == "-hWE" )
                     {
-                        int i = safeatoi(currcommand(1),argvariables);
+                        int ii = safeatoi(currcommand(1),argvariables);
 
                         gentype res;
 
-                        getMLrefconst(MLInd).dedgTrainingVector(res,i);
+                        getMLrefconst(MLInd).dedgTrainingVector(res,ii);
 
                         errstream() << "error gradient(x) = " << res << "\n";
                     }
 
                     else if ( currcommand(0) == "-hX" )
                     {
-                        int i;
                         Vector<gentype> resh(getMLrefconst(MLInd).N());
                         Vector<gentype> resg(getMLrefconst(MLInd).N());
 
@@ -8261,9 +8153,9 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         if ( getMLrefconst(MLInd).N() )
                         {
-                            for ( i = 0 ; i < getMLrefconst(MLInd).N() ; ++i )
+                            for ( int ii = 0 ; ii < getMLrefconst(MLInd).N() ; ++ii )
                             {
-                                getMLrefconst(MLInd).ghTrainingVector(resh("&",i),resg("&",i),i);
+                                getMLrefconst(MLInd).gh(resh("&",ii),resg("&",ii),ii);
                             }
                         }
 
@@ -8276,7 +8168,6 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                     else if ( currcommand(0) == "-hhX" )
                     {
-                        int i;
                         Vector<gentype> resh(getMLrefconst(MLInd).N());
                         Vector<gentype> resg(getMLrefconst(MLInd).N());
 
@@ -8285,9 +8176,9 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         if ( getMLrefconst(MLInd).N() )
                         {
-                            for ( i = 0 ; i < getMLrefconst(MLInd).N() ; ++i )
+                            for ( int ii = 0 ; ii < getMLrefconst(MLInd).N() ; ++ii )
                             {
-                                getMLrefconst(MLInd).ghTrainingVector(resh("&",i),resg("&",i),i,2);
+                                getMLrefconst(MLInd).gh(resh("&",ii),resg("&",ii),ii,2);
                             }
                         }
 
@@ -8367,7 +8258,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         int ib = safeatoi(currcommand(2),argvariables);
                         gentype resh,dummy;
 
-                        getMLrefconst(MLInd).covTrainingVector(resh,dummy,ia,ib);
+                        getMLrefconst(MLInd).cov(resh,dummy,ia,ib);
 
                         errstream() << "cov(x,y) = " << resh << "\n";
                     }
@@ -8445,10 +8336,10 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                     else if ( currcommand(0) == "-hWv" )
                     {
-                        int i = safeatoi(currcommand(1),argvariables);
+                        int ii = safeatoi(currcommand(1),argvariables);
                         gentype resh,dummy;
 
-                        getMLrefconst(MLInd).varTrainingVector(resh,dummy,i);
+                        getMLrefconst(MLInd).var(resh,dummy,ii);
 
                         errstream() << "var(x) = " << resh << "\n";
                     }
@@ -8458,7 +8349,6 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         std::stringstream xstr(currcommand(1));
                         Vector<SparseVector<gentype> > x;
                         Vector<gentype> resh;
-                        int i;
                         gentype dummy;
 
                         streamItIn(xstr,x,0);
@@ -8467,12 +8357,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         if ( x.size() )
                         {
-                            for ( i = 0 ; i < x.size() ; ++i )
+                            for ( int ii = 0 ; ii < x.size() ; ++ii )
                             {
-                                getMLrefconst(MLInd).var(resh("&",i),dummy,x("&",i));
+                                getMLrefconst(MLInd).var(resh("&",ii),dummy,x("&",ii));
                             }
 
-                            errstream() << "var(x) = " << resh(i) << "\n";
+                            errstream() << "var(x) = " << resh << "\n";
                         }
                     }
 
@@ -8493,15 +8383,14 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                     else if ( currcommand(0) == "-hXv" )
                     {
-                        int i;
                         gentype dummy;
                         Vector<gentype> resh(getMLrefconst(MLInd).N());
 
                         if ( getMLrefconst(MLInd).N() )
                         {
-                            for ( i = 0 ; i < getMLrefconst(MLInd).N() ; ++i )
+                            for ( int ii = 0 ; ii < getMLrefconst(MLInd).N() ; ++ii )
                             {
-                                getMLrefconst(MLInd).varTrainingVector(resh("&",i),dummy,i);
+                                getMLrefconst(MLInd).var(resh("&",ii),dummy,ii);
                             }
                         }
 
@@ -9244,13 +9133,11 @@ int grabnextarg(Stack<awarestream *> &commstack, std::string &currentarg)
             else if ( currentarg.length() )
             {
 #ifdef MANGLE_UNDERSCORES
-                int i;
-
-                for ( i = 0 ; i < (int) currentarg.length() ; ++i )
+                for ( ii = 0 ; ii < (int) currentarg.length() ; ++ii )
                 {
-                    if ( currentarg[i] == '_' )
+                    if ( currentarg[ii] == '_' )
                     {
-                        currentarg[i] = ' ';
+                        currentarg[ii] = ' ';
                     }
                 }
 #endif
@@ -9577,11 +9464,9 @@ template <class T> Vector<T> &safeatowhatever(Vector<T> &res, const std::string 
 
     if ( res_size )
     {
-        int i;
-
         const Vector<gentype> &ghgh = (const Vector<gentype> &) temp;
 
-        for ( i = 0 ; i < res_size ; ++i )
+        for ( int i = 0 ; i < res_size ; ++i )
         {
             res("&",i) = (T) ghgh(i);
         }
@@ -9605,9 +9490,7 @@ template <class T> SparseVector<T> &safeatowhatever(SparseVector<T> &res, const 
 
     // Substitute and cast to target
 
-    int i;
-
-    for ( i = 0 ; i < tempval.indsize() ; ++i )
+    for ( int i = 0 ; i < tempval.indsize() ; ++i )
     {
         ((tempval.direref(i)).substitute(argvariables));
         res("&",tempval.ind(i)) = (T) tempval.direcref(i);
@@ -10032,11 +9915,11 @@ void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &cu
                                 STRTHROW("Error: source index must be >= 0 in -ko");
                             }
 
-                            SparseVector<int> newrealover(theKern.cRealOverwrite());
+                            SparseVector<int> nnewrealover(theKern.cRealOverwrite());
 
-                            newrealover("&",destind) = srcind;
+                            nnewrealover("&",destind) = srcind;
 
-                            theKern.setRealOverwrite(newrealover,kernnum);
+                            theKern.setRealOverwrite(nnewrealover,kernnum);
                         }
 
                         else if ( currcommandis == "-kO" )
@@ -10054,11 +9937,11 @@ void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &cu
                                 STRTHROW("Error: source index must be >= 0 in -kO");
                             }
 
-                            SparseVector<int> newintover(theKern.cIntOverwrite());
+                            SparseVector<int> nnewintover(theKern.cIntOverwrite());
 
-                            newintover("&",destind) = srcind;
+                            nnewintover("&",destind) = srcind;
 
-                            theKern.setIntOverwrite(newintover,kernnum);
+                            theKern.setIntOverwrite(nnewintover,kernnum);
                         }
 
                         else if ( currcommandis == "-kgg" )

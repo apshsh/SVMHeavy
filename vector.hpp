@@ -615,7 +615,7 @@ public:
 
     virtual double abs1(void)     const { return norm1(); }
     virtual double abs2(void)     const { return sqrt(norm2()); }
-    virtual double absp(double p) const { return pow(normp(p),1/p); }
+    virtual double absp(double p) const { return std::pow(normp(p),1/p); }
 
     virtual double absinf(void) const { double res = 0.0; if ( imoverhere ) { res = overhere().absinf(); } else { NiceThrow("Not an FuncVector 14a"); } return res; }
     virtual double abs0  (void) const { double res = 0.0; if ( imoverhere ) { res = overhere().abs0();   } else { NiceThrow("Not an FuncVector 14b"); } return res; }
@@ -882,43 +882,58 @@ template <class T> void qswap(Vector<T> *&a, Vector<T> *&b)
 //
 // sum and mean can be weighted using second argument
 
-template <class T> const T &sum (T &res, const Vector<T> &a, const Vector<double> &weights);
-template <class T> const T &mean(T &res, const Vector<T> &a, const Vector<double> &weights);
+template <class T>       T  max     (const Vector<T> &a, const Vector<T> &b, int &i);
+template <class T>       T  min     (const Vector<T> &a, const Vector<T> &b, int &i);
+template <class T> const T &max     (const Vector<T> &a,                     int &i);
+template <class T> const T &min     (const Vector<T> &a,                     int &i);
+template <class T> const T &median  (const Vector<T> &a,                     int &i);
+template <class T>       T  maxabs  (const Vector<T> &a,                     int &i);
+template <class T>       T  minabs  (const Vector<T> &a,                     int &i);
+template <class T>       T  sqabsmax(const Vector<T> &a,                     int &i);
+template <class T>       T  sqabsmin(const Vector<T> &a,                     int &i);
 
-template <class S, class T> const T &sumb(T &result, const Vector<S> &left_op, const Vector<T> &right_op);
-
-template <class T> T max     (const Vector<T> &a, const Vector<T> &b, int &i);
-template <class T> T min     (const Vector<T> &a, const Vector<T> &b, int &i);
-template <class T> T maxabs  (const Vector<T> &a, const Vector<T> &b, int &i);
-template <class T> T maxabs  (const Vector<T> &a,                     int &i);
-template <class T> T minabs  (const Vector<T> &a,                     int &i);
-template <class T> T sqabsmax(const Vector<T> &a);
-template <class T> T sqabsmin(const Vector<T> &a);
-template <class T> T sum     (const Vector<T> &a);
-template <class T> T sqsum   (const Vector<T> &a);
-template <class T> T orall   (const Vector<T> &a);
-template <class T> T andall  (const Vector<T> &a);
-template <class T> T logsum  (const Vector<T> &a); // sum of the logs of the vector
-template <class T> T prod    (const Vector<T> &a);
-template <class T> T Prod    (const Vector<T> &a);
-template <class T> T mean    (const Vector<T> &a);
-template <class T> T sqmean  (const Vector<T> &a);
-template <class T> T vari    (const Vector<T> &a);
-template <class T> T stdev   (const Vector<T> &a);
-
-template <class T> T logsum  (const Vector<T> &a, int maxsize); // sum of the logs of the vector up to no more than length maxsize
-template <class T> T prod    (const Vector<T> &a, int maxsize); // only do product to max of vector size and maxsize
-
-template <class T> const T &max   (const Vector<T> &a, int &i);
-template <class T> const T &min   (const Vector<T> &a, int &i);
-template <class T> const T &median(const Vector<T> &a, int &i);
+template <class T>       T  max     (const Vector<T> &a, const Vector<T> &b);
+template <class T>       T  min     (const Vector<T> &a, const Vector<T> &b);
+template <class T> const T &max     (const Vector<T> &a                    );
+template <class T> const T &min     (const Vector<T> &a                    );
+template <class T> const T &median  (const Vector<T> &a                    );
+template <class T>       T  maxabs  (const Vector<T> &a                    );
+template <class T>       T  minabs  (const Vector<T> &a                    );
+template <class T>       T  sqabsmax(const Vector<T> &a                    );
+template <class T>       T  sqabsmin(const Vector<T> &a                    );
 
 template <class T> const T &max     (T &res, const Vector<T> &a, const Vector<T> &b, int &i);
 template <class T> const T &min     (T &res, const Vector<T> &a, const Vector<T> &b, int &i);
+template <class T> const T &max     (T &res, const Vector<T> &a,                     int &i);
+template <class T> const T &min     (T &res, const Vector<T> &a,                     int &i);
+template <class T> const T &median  (T &res, const Vector<T> &a,                     int &i);
 template <class T> const T &maxabs  (T &res, const Vector<T> &a,                     int &i);
 template <class T> const T &minabs  (T &res, const Vector<T> &a,                     int &i);
-template <class T> const T &sqabsmax(T &res, const Vector<T> &a);
-template <class T> const T &sqabsmin(T &res, const Vector<T> &a);
+template <class T> const T &sqabsmax(T &res, const Vector<T> &a,                     int &i);
+template <class T> const T &sqabsmin(T &res, const Vector<T> &a,                     int &i);
+
+template <class T> const T &max     (T &res, const Vector<T> &a, const Vector<T> &b);
+template <class T> const T &min     (T &res, const Vector<T> &a, const Vector<T> &b);
+template <class T> const T &max     (T &res, const Vector<T> &a                    );
+template <class T> const T &min     (T &res, const Vector<T> &a                    );
+template <class T> const T &median  (T &res, const Vector<T> &a                    );
+template <class T> const T &maxabs  (T &res, const Vector<T> &a                    );
+template <class T> const T &minabs  (T &res, const Vector<T> &a                    );
+template <class T> const T &sqabsmax(T &res, const Vector<T> &a                    );
+template <class T> const T &sqabsmin(T &res, const Vector<T> &a                    );
+
+template <class T>       T  sum     (const Vector<T> &a);
+template <class T>       T  sqsum   (const Vector<T> &a);
+template <class T>       T  orall   (const Vector<T> &a);
+template <class T>       T  andall  (const Vector<T> &a);
+template <class T>       T  logsum  (const Vector<T> &a); // sum of the logs of the vector
+template <class T>       T  prod    (const Vector<T> &a);
+template <class T>       T  Prod    (const Vector<T> &a);
+template <class T>       T  mean    (const Vector<T> &a);
+template <class T>       T  sqmean  (const Vector<T> &a);
+template <class T>       T  vari    (const Vector<T> &a);
+template <class T>       T  stdev   (const Vector<T> &a);
+
 template <class T> const T &sum     (T &res, const Vector<T> &a);
 template <class T> const T &sqsum   (T &res, const Vector<T> &a);
 template <class T> const T &orall   (T &res, const Vector<T> &a);
@@ -930,6 +945,14 @@ template <class T> const T &sqmean  (T &res, const Vector<T> &a);
 template <class T> const T &vari    (T &res, const Vector<T> &a);
 template <class T> const T &stdev   (T &res, const Vector<T> &a);
 
+template <class T> const T &sum (T &res, const Vector<T> &a, const Vector<double> &weights);
+template <class T> const T &mean(T &res, const Vector<T> &a, const Vector<double> &weights);
+
+template <class S, class T> const T &sumb(T &result, const Vector<S> &left_op, const Vector<T> &right_op);
+
+template <class T> T logsum  (const Vector<T> &a, int maxsize); // sum of the logs of the vector up to no more than length maxsize
+template <class T> T prod    (const Vector<T> &a, int maxsize); // only do product to max of vector size and maxsize
+
 template <> inline const double &sum  (double &result, const Vector<double> &left_op);
 template <> inline const double &sum  (double &result, const Vector<double> &left_op, const Vector<double> &right_op);
 template <> inline const double &sqsum(double &result, const Vector<double> &left_op);
@@ -938,6 +961,8 @@ template <> inline const double &sumb (double &result, const Vector<double> &lef
 template <class T>       T       abssum(             const Vector<T>      &a);
 template <class T> const T      &abssum(T      &res, const Vector<T>      &a);
 template <> inline const double &abssum(double &res, const Vector<double> &a);
+
+//template <class T> T maxabs  (const Vector<T> &a, const Vector<T> &b, int &i);
 
 template <class T> T &innerProduct                         (T &res,                       const Vector<T> &a, const Vector<T> &b                        );
 template <class T> T &innerProductRevConj                  (T &res,                       const Vector<T> &a, const Vector<T> &b                        );
@@ -4847,8 +4872,23 @@ T max(const Vector<T> &a, const Vector<T> &b, int &ii)
     return max(res,a,b,ii);
 }
 
+template <class T>
+const T &max(T &res, const Vector<T> &a, int &i)
+{
+    return res = max(a,i);
+}
 
+template <class T>
+const T &min(T &res, const Vector<T> &a, int &i)
+{
+    return res = min(a,i);
+}
 
+template <class T>
+const T &median(T &res, const Vector<T> &a, int &i)
+{
+    return res = median(a,i);
+}
 
 
 
@@ -4952,6 +4992,23 @@ T min(const Vector<T> &a, const Vector<T> &b, int &ii)
 
 
 
+template <class T>       T  max     (const Vector<T> &a, const Vector<T> &b) { int i; return max   (a,b,i); }
+template <class T>       T  min     (const Vector<T> &a, const Vector<T> &b) { int i; return min   (a,b,i); }
+template <class T> const T &max     (const Vector<T> &a                    ) { int i; return max   (a,  i); }
+template <class T> const T &min     (const Vector<T> &a                    ) { int i; return min   (a,  i); }
+template <class T> const T &median  (const Vector<T> &a                    ) { int i; return median(a,  i); }
+template <class T>       T  maxabs  (const Vector<T> &a                    ) { int i; return maxabs(a,  i); }
+template <class T>       T  minabs  (const Vector<T> &a                    ) { int i; return minabs(a,  i); }
+
+template <class T> const T &max     (T &res, const Vector<T> &a, const Vector<T> &b) { int i; return max   (res,a,b,i); }
+template <class T> const T &min     (T &res, const Vector<T> &a, const Vector<T> &b) { int i; return min   (res,a,b,i); }
+template <class T> const T &max     (T &res, const Vector<T> &a                    ) { int i; return max   (res,a,  i); }
+template <class T> const T &min     (T &res, const Vector<T> &a                    ) { int i; return min   (res,a,  i); }
+template <class T> const T &median  (T &res, const Vector<T> &a                    ) { int i; return median(res,a,  i); }
+template <class T> const T &maxabs  (T &res, const Vector<T> &a                    ) { int i; return maxabs(res,a,  i); }
+template <class T> const T &minabs  (T &res, const Vector<T> &a                    ) { int i; return minabs(res,a,  i); }
+
+
 template <class T>
 const T &maxabs(T &res, const Vector<T> &a, int &ii)
 {
@@ -5009,6 +5066,24 @@ T minabs(const Vector<T> &a, int &ii)
 }
 
 template <class T>
+const T &sqabsmax(T &res, const Vector<T> &a, int &ii)
+{
+    NiceAssert( a.size() );
+
+    for ( int i = 1 ; i < a.size() ; ++i )
+    {
+        if ( norm2(a(i)) > norm2(a(ii)) )
+        {
+            ii = i;
+        }
+    }
+
+    res = norm2(a(ii));
+
+    return res;
+}
+
+template <class T>
 const T &sqabsmax(T &res, const Vector<T> &a)
 {
     NiceAssert( a.size() );
@@ -5029,11 +5104,37 @@ const T &sqabsmax(T &res, const Vector<T> &a)
 }
 
 template <class T>
+T sqabsmax(const Vector<T> &a, int &ii)
+{
+    T res;
+
+    return sqabsmax(res,a,ii);
+}
+
+template <class T>
 T sqabsmax(const Vector<T> &a)
 {
     T res;
 
     return sqabsmax(res,a);
+}
+
+template <class T>
+const T &sqabsmin(T &res, const Vector<T> &a, int &ii)
+{
+    NiceAssert( a.size() );
+
+    for ( int i = 1 ; i < a.size() ; ++i )
+    {
+        if ( norm2(a(i)) < norm2(a(ii)) )
+        {
+            ii = i;
+        }
+    }
+
+    res = norm2(a(ii));
+
+    return res;
 }
 
 template <class T>
@@ -5054,6 +5155,14 @@ const T &sqabsmin(T &res, const Vector<T> &a)
     res = norm2(a(ii));
 
     return res;
+}
+
+template <class T>
+T sqabsmin(const Vector<T> &a, int &ii)
+{
+    T res;
+
+    return sqabsmin(res,a,ii);
 }
 
 template <class T>
@@ -5791,7 +5900,7 @@ template <class S> double abs2(const Vector<S> &a)
 
 template <class S> double absp(const Vector<S> &a, double p)
 {
-    return pow(normp(a,p),1/p);
+    return std::pow(normp(a,p),1/p);
 }
 
 template <class S> double norm1(const Vector<S> &a)

@@ -469,12 +469,17 @@ private:
     // Bias related stuff
 
     // eTrainingVector works through gTrainingVector
-    // ghTrainingVector either works through gTrainingVector or doesn't actually need the bias
+    // gh either works through gTrainingVector or doesn't actually need the bias
     // gTrainingVector mostly works through biasR(), unless i >= 0 for non-gradient evaluation, in which case we need to correct the result
-    // covTrainingVector doesn't go through gTrainingVector, so we need to do the bias adjust on this too.
+    // cov doesn't go through gTrainingVector, so we need to do the bias adjust on this too.
 
     virtual int gTrainingVector(double &res, int &unusedvar, int i, int raw = 0, gentype ***pxyprodi = nullptr) const override;
-    virtual int covTrainingVector(gentype &resv, gentype &resmu, int i, int j, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override;
+
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const { (void) resv_pred; (void) resv; (void) resmu; (void) ia; (void) ib; (void) ii; (void) sigmaweighti; NiceThrow("predcov not defined for SVM_Scalar_rff"); return 0; }
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const { return SVM_Scalar::predcov(resv_pred,resv,resmu,xa,xb,xx,sigmaweighti,xainf,xbinf,xxinf); }
+
+    virtual int cov(gentype &resv, gentype &resmu, int i, int j, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override;
+    virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override { return SVM_Scalar::cov(resv,resmu,xa,xb,xainf,xbinf,pxyprodx,pxyprody,pxyprodij); }
 
     int biastype;
     Vector<double> locbias;

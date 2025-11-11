@@ -141,9 +141,8 @@ public:
 
     // Evaluation Functions:
 
-    virtual int ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return ML_Base::ghTrainingVector(resh,resg,i,retaltg,pxyprodi); }
-
-    virtual int covTrainingVector(gentype &resv, gentype &resmu, int i, int j, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override { return ML_Base::covTrainingVector(resv,resmu,i,j,pxyprodi,pxyprodj,pxyprodij); }
+    virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return ML_Base::gh(resh,resg,i,retaltg,pxyprodi); }
+    virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return SVM_Scalar::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
 
     virtual double eTrainingVector(int i) const override { return ML_Base::eTrainingVector(i); }
 

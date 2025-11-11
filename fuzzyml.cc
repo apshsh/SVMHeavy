@@ -210,7 +210,7 @@ int calcFuzzML(ML_Base &ml, const gentype &fuzzfn, const SparseVector<SparseVect
                 gentype tempg_x,tempresh;
 
                 //clustersvm.gTrainingVector(g_x("&",(indvec(i))(j)),dummya,j,dummyb);
-                clustersvm.ghTrainingVector(tempresh,tempg_x,j);
+                clustersvm.gh(tempresh,tempg_x,j);
 
                 g_x("&",(indvec(i))(j)) = (double) tempg_x;
             }

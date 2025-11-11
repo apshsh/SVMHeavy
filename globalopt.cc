@@ -1079,10 +1079,10 @@ int GlobalOptions::makeSubspace(int dim, void *fnarg, int substatus, const Spars
             int i,j,k;
             int axisdim = (int) pow((double) dim+1,1/((double) fnDim))-1; // floor
 
-            Vector<double> berndim(fnDim);
+            Vector<double> bberndim(fnDim);
             Vector<double> bernind(fnDim);
 
-            berndim = (double) axisdim;
+            bberndim = (double) axisdim;
             bernind = 0.0;
 
             ML_Mutable *randDir;
@@ -1103,11 +1103,11 @@ int GlobalOptions::makeSubspace(int dim, void *fnarg, int substatus, const Spars
 
                 for ( j = 0 ; j < fnDim ; ++j )
                 {
-                    bernind("&",j) = k%(((int) berndim(j))+1);
-                    k /= ((int) berndim(j))+1;
+                    bernind("&",j) = k%(((int) bberndim(j))+1);
+                    k /= ((int) bberndim(j))+1;
                 }
 
-                gentype gberndim(berndim);
+                gentype gberndim(bberndim);
                 gentype gbernind(bernind);
 
 //FIXMEFIXME fnDim

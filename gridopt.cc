@@ -30,18 +30,18 @@ int GridOptions::optim(int dim,
                        void *fnarg,
                        svmvolatile int &killSwitch)
 {
-    Vector<int> locdistMode(getlocdistMode());
-    Vector<int> locvarsType(getlocvarsType());
+    Vector<int> llocdistMode(getlocdistMode());
+    Vector<int> llocvarsType(getlocvarsType());
 
     Vector<int> altnumPts(numPts);
 
-    if ( locdistMode.size() == 0 )
+    if ( llocdistMode.size() == 0 )
     {
-        locdistMode.resize(dim);
-        locvarsType.resize(dim);
+        llocdistMode.resize(dim);
+        llocvarsType.resize(dim);
 
-        locdistMode = 0;
-        locvarsType = 1;
+        llocdistMode = 0;
+        llocvarsType = 1;
     }
 
     if ( altnumPts.size() == 0 )
@@ -55,13 +55,13 @@ int GridOptions::optim(int dim,
     NiceAssert( xmin.size() == dim );
     NiceAssert( xmax.size() == dim );
     NiceAssert( altnumPts.size() == dim );
-    NiceAssert( locdistMode.size() == dim );
-    NiceAssert( locvarsType.size() == dim );
+    NiceAssert( llocdistMode.size() == dim );
+    NiceAssert( llocvarsType.size() == dim );
     NiceAssert( altnumPts >= 0 );
-    NiceAssert( locdistMode >= 0 );
-    NiceAssert( locdistMode <= 4 );
-    NiceAssert( locvarsType >= 0 );
-    NiceAssert( locvarsType <= 1 );
+    NiceAssert( llocdistMode >= 0 );
+    NiceAssert( llocdistMode <= 4 );
+    NiceAssert( llocvarsType >= 0 );
+    NiceAssert( llocvarsType <= 1 );
 
     int res = 0;
     int i,j,k;
@@ -82,7 +82,7 @@ int GridOptions::optim(int dim,
     // Enumerate testpoints on all axis
 
     Vector<Vector<gentype> > gridmarks(dim);
-    Vector<int> isAxisRandom(locvarsType); // This will be zero for all exis except the random ones
+    Vector<int> isAxisRandom(llocvarsType); // This will be zero for all exis except the random ones
 
     isAxisRandom = 0;
 
@@ -90,7 +90,7 @@ int GridOptions::optim(int dim,
     {
         gridmarks("&",i).resize(altnumPts(i));
 
-        isAxisRandom("&",i) = locvarsType(i) ? ( ( locdistMode(i) == 4 ) ? 1 : 2 ) : 0;
+        isAxisRandom("&",i) = llocvarsType(i) ? ( ( llocdistMode(i) == 4 ) ? 1 : 2 ) : 0;
 
         t = ( altnumPts(i) == 1 ) ? 0.5 : 0;
 
@@ -98,13 +98,13 @@ int GridOptions::optim(int dim,
         {
             randufill(s);
 
-            gridmarks("&",i)("&",j) = ( locdistMode(i) == 3 ) ? s : t;
+            gridmarks("&",i)("&",j) = ( llocdistMode(i) == 3 ) ? s : t;
         }
 
         // For randomised we sort ascending to make inter-grid jumps
         // as small as possible
 
-        if ( locdistMode(i) == 3 )
+        if ( llocdistMode(i) == 3 )
         {
             int kmin = 0;
 
@@ -342,8 +342,8 @@ int GridOptions::optim(int dim,
         GridOptions locgopts = *this;
         --(locgopts.numZooms);
 
-        Vector<int> &subdistMode(locdistMode);
-        Vector<int> &subvarsType(locvarsType);
+        Vector<int> &subdistMode(llocdistMode);
+        Vector<int> &subvarsType(llocvarsType);
 
         subdistMode = 0; // So we don't get twice-applied whatever scales.
         subvarsType = 1; // So we only round to integer once.

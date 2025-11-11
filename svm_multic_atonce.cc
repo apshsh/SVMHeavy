@@ -3859,7 +3859,7 @@ int SVM_MultiC_atonce::loctrain(int &res, svmvolatile int &killSwitch, int realN
 //OLD -     return result;
 //OLD - }
 
-int SVM_MultiC_atonce::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int SVM_MultiC_atonce::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     Vector<double> gproject;
     int locclassrep = 0;

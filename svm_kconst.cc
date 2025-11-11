@@ -49,7 +49,7 @@ int SVM_KConst::setBiasR(double newBias)
     return 1;
 }
 
-int SVM_KConst::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int SVM_KConst::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     int unusedvar = 0;
     int tempresh = 0;

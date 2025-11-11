@@ -155,9 +155,9 @@ int LSV_Binary::setepsclass(int d, double xeps)
     return res;
 }
 
-void LSV_Binary::setalleps(double xeps, const Vector<double> &xepsclass)
+void LSV_Binary::setalleps(double xeps, const Vector<double> &xxepsclass)
 {
-    NiceAssert( xepsclass.size() == 3 );
+    NiceAssert( xxepsclass.size() == 3 );
 
     int i;
 
@@ -165,7 +165,7 @@ void LSV_Binary::setalleps(double xeps, const Vector<double> &xepsclass)
 
     for ( i = 0 ; i < 3 ; ++i )
     {
-        setepsclass(i,xepsclass(i));
+        setepsclass(i,xxepsclass(i));
     }
 
     return;
@@ -347,34 +347,34 @@ int LSV_Binary::sety(int i, double xz)
     return res;
 }
 
-int LSV_Binary::setCweight(int i, double xCweight)
+int LSV_Binary::setCweight(int i, double xxCweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < LSV_Binary::N() );
 
-    binCweight("&",i) = xCweight;
+    binCweight("&",i) = xxCweight;
 
     return LSV_Scalar::setCweight(i,CWCALC(bintrainclass(i),binCweight(i),binCweightfuzz(i)));
 }
 
-int LSV_Binary::setCweightfuzz(int i, double xCweight)
+int LSV_Binary::setCweightfuzz(int i, double xxCweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < LSV_Binary::N() );
 
-    binCweightfuzz("&",i) = xCweight;
+    binCweightfuzz("&",i) = xxCweight;
 
     return LSV_Scalar::setCweight(i,CWCALC(bintrainclass(i),binCweight(i),binCweightfuzz(i)));
 }
 
-int LSV_Binary::setepsweight(int i, double xepsweight)
+int LSV_Binary::setepsweight(int i, double xxepsweight)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < LSV_Binary::N() );
 
-    binepsweight("&",i) = xepsweight;
+    binepsweight("&",i) = xxepsweight;
 
-    int res = LSV_Scalar::setepsweight(i,xepsweight);
+    int res = LSV_Scalar::setepsweight(i,xxepsweight);
 
     {
         res |= LSV_Scalar::sety(i,gentype(ZCALC(bintraintarg(i),bintrainclass(i),bineps,binepsclass,bintrainclass(i),binepsweight(i))));
@@ -431,9 +431,9 @@ int LSV_Binary::sety(const Vector<int> &j, const Vector<double> &xz)
     return res;
 }
 
-int LSV_Binary::setCweight(const Vector<int> &j, const Vector<double> &xCweight)
+int LSV_Binary::setCweight(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == j.size() );
+    NiceAssert( xxCweight.size() == j.size() );
 
     int res = 0;
 
@@ -443,16 +443,16 @@ int LSV_Binary::setCweight(const Vector<int> &j, const Vector<double> &xCweight)
 
         for ( i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setCweight(j(i),xCweight(i));
+            res |= setCweight(j(i),xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int LSV_Binary::setCweightfuzz(const Vector<int> &j, const Vector<double> &xCweight)
+int LSV_Binary::setCweightfuzz(const Vector<int> &j, const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == j.size() );
+    NiceAssert( xxCweight.size() == j.size() );
 
     int res = 0;
 
@@ -462,16 +462,16 @@ int LSV_Binary::setCweightfuzz(const Vector<int> &j, const Vector<double> &xCwei
 
         for ( i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setCweightfuzz(j(i),xCweight(i));
+            res |= setCweightfuzz(j(i),xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int LSV_Binary::setepsweight(const Vector<int> &j, const Vector<double> &xepsweight)
+int LSV_Binary::setepsweight(const Vector<int> &j, const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == j.size() );
+    NiceAssert( xxepsweight.size() == j.size() );
 
     int res = 0;
 
@@ -481,7 +481,7 @@ int LSV_Binary::setepsweight(const Vector<int> &j, const Vector<double> &xepswei
 
         for ( i = 0 ; i < j.size() ; ++i )
 	{
-            res |= setepsweight(j(i),xepsweight(i));
+            res |= setepsweight(j(i),xxepsweight(i));
 	}
     }
 
@@ -529,9 +529,9 @@ int LSV_Binary::sety(const Vector<double> &xz)
     return res;
 }
 
-int LSV_Binary::setCweight(const Vector<double> &xCweight)
+int LSV_Binary::setCweight(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == LSV_Binary::N() );
+    NiceAssert( xxCweight.size() == LSV_Binary::N() );
 
     int res = 0;
 
@@ -541,16 +541,16 @@ int LSV_Binary::setCweight(const Vector<double> &xCweight)
     {
         for ( i = 0 ; i < LSV_Binary::N() ; ++i )
 	{
-            res |= setCweight(i,xCweight(i));
+            res |= setCweight(i,xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int LSV_Binary::setCweightfuzz(const Vector<double> &xCweight)
+int LSV_Binary::setCweightfuzz(const Vector<double> &xxCweight)
 {
-    NiceAssert( xCweight.size() == LSV_Binary::N() );
+    NiceAssert( xxCweight.size() == LSV_Binary::N() );
 
     int res = 0;
 
@@ -560,16 +560,16 @@ int LSV_Binary::setCweightfuzz(const Vector<double> &xCweight)
     {
         for ( i = 0 ; i < LSV_Binary::N() ; ++i )
 	{
-            res |= setCweightfuzz(i,xCweight(i));
+            res |= setCweightfuzz(i,xxCweight(i));
 	}
     }
 
     return res;
 }
 
-int LSV_Binary::setepsweight(const Vector<double> &xepsweight)
+int LSV_Binary::setepsweight(const Vector<double> &xxepsweight)
 {
-    NiceAssert( xepsweight.size() == LSV_Binary::N() );
+    NiceAssert( xxepsweight.size() == LSV_Binary::N() );
 
     int i;
     int res = 0;
@@ -578,7 +578,7 @@ int LSV_Binary::setepsweight(const Vector<double> &xepsweight)
     {
         for ( i = 0 ; i < LSV_Binary::N() ; ++i )
 	{
-            res |= setepsweight(i,xepsweight(i));
+            res |= setepsweight(i,xxepsweight(i));
 	}
     }
 
@@ -827,11 +827,11 @@ int LSV_Binary::train(int &res, svmvolatile int &killSwitch)
     return LSV_Scalar::train(res,killSwitch);
 }
 
-int LSV_Binary::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int LSV_Binary::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     NiceAssert( !( retaltg & 2 ) );
 
-    int tempresh = LSV_Scalar::ghTrainingVector(resh,resg,i,retaltg,pxyprodi);
+    int tempresh = LSV_Scalar::gh(resh,resg,i,retaltg,pxyprodi);
 
     resh.force_int() = tempresh;
 
@@ -860,7 +860,7 @@ double LSV_Binary::eTrainingVector(int i) const
         gentype yyval;
         gentype unusedvar;
 
-        LSV_Scalar::ghTrainingVector(yyval,unusedvar,i);
+        LSV_Scalar::gh(yyval,unusedvar,i);
 
         double yval = (double) yyval;
 
@@ -906,7 +906,7 @@ double &LSV_Binary::dedgTrainingVector(double &res, int i) const
         gentype yyval;
         gentype unusedvar;
 
-        LSV_Scalar::ghTrainingVector(yyval,unusedvar,i);
+        LSV_Scalar::gh(yyval,unusedvar,i);
         //Assume no arbitrary biasing
 
         double yval = (double) yyval;
@@ -950,7 +950,7 @@ double &LSV_Binary::d2edg2TrainingVector(double &res, int i) const
         gentype yyval;
         gentype unusedvar;
 
-        LSV_Scalar::ghTrainingVector(yyval,unusedvar,i);
+        LSV_Scalar::gh(yyval,unusedvar,i);
 
         double yval = (double) yyval;
 
@@ -991,7 +991,7 @@ double &LSV_Binary::d2edg2TrainingVector(double &res, int i) const
         gentype yyval;
         gentype unusedvar = 0;
 
-        LSV_Scalar::ghTrainingVector(yval,unusedvar,i);
+        LSV_Scalar::gh(yval,unusedvar,i);
 
         res = (double) yyval;
 
@@ -1019,7 +1019,7 @@ double &LSV_Binary::d2edg2TrainingVector(double &res, int i) const
         gentype yyval;
         gentype unusedvar = 0;
 
-        LSV_Scalar::ghTrainingVector(yval,unusedvar,i);
+        LSV_Scalar::gh(yval,unusedvar,i);
 
         res = (double) yyval;
 

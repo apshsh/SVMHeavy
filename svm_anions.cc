@@ -420,14 +420,14 @@ int SVM_Anions::train(int &res, svmvolatile int &killSwitch)
     return modmod;
 }
 
-int SVM_Anions::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int SVM_Anions::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     int res;
 
     gentype tempresh;
     gentype tempresg;
 
-    res = SVM_Vector::ghTrainingVector(tempresh,tempresg,i,retaltg,pxyprodi);
+    res = SVM_Vector::gh(tempresh,tempresg,i,retaltg,pxyprodi);
 
     VtoA(tempresh.dir_vector(),resh.force_anion());
     VtoA(tempresg.dir_vector(),resg.force_anion());

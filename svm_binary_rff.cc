@@ -1211,7 +1211,7 @@ int SVM_Binary_rff::loctrain(int &res, svmvolatile int &killSwitch, int realN, i
     return modmod;
 }
 
-int SVM_Binary_rff::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int SVM_Binary_rff::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     NiceAssert( !( retaltg & 2 ) );
 

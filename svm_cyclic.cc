@@ -26,6 +26,7 @@
 SVM_Cyclic::SVM_Cyclic() : SVM_Planar()
 {
     cyceps = DEFAULTCYCEPS;
+    qval = 0;
 
     setaltx(nullptr);
 
@@ -38,6 +39,7 @@ SVM_Cyclic::SVM_Cyclic() : SVM_Planar()
 SVM_Cyclic::SVM_Cyclic(const SVM_Cyclic &src) : SVM_Planar()
 {
     cyceps = DEFAULTCYCEPS;
+    qval = 0;
 
     setaltx(nullptr);
 
@@ -52,6 +54,7 @@ SVM_Cyclic::SVM_Cyclic(const SVM_Cyclic &src) : SVM_Planar()
 SVM_Cyclic::SVM_Cyclic(const SVM_Cyclic &src, const ML_Base *xsrc) : SVM_Planar()
 {
     cyceps = DEFAULTCYCEPS;
+    qval = 0;
 
     setaltx(xsrc);
 
@@ -252,14 +255,14 @@ int SVM_Cyclic::setd(int i, int d)
     return res;
 }
 
-int SVM_Cyclic::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int SVM_Cyclic::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     if ( SVM_Cyclic::N() )
     {
         SVM_Planar::unsafesetDefaultProjectionVV(-1);
     }
 
-    int res = SVM_Planar::ghTrainingVector(resh,resg,i,retaltg,pxyprodi);
+    int res = SVM_Planar::gh(resh,resg,i,retaltg,pxyprodi);
 
     double absresg = (double) abs2(resg);
 

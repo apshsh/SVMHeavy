@@ -75,6 +75,12 @@ int GPR_Scalar::setNaiveConst(void)
 
     if ( !xNaiveConst )
     {
+        if ( QQ.isuseLweight() )
+        {
+            QQ.setnoLweight();
+            QQ.sety(yR());
+        }
+
         GPR_Generic::setNaiveConst();
 
         res = 1;
@@ -94,6 +100,12 @@ int GPR_Scalar::setEPConst(void)
 
     if ( xNaiveConst || ( xEPorLaplace != 0 ) )
     {
+        if ( QQ.isuseLweight() )
+        {
+            QQ.setnoLweight();
+            QQ.sety(yR());
+        }
+
         GPR_Generic::setEPConst();
 
         res = 1;
@@ -120,6 +132,12 @@ int GPR_Scalar::setLaplaceConst(int type)
 
     if ( xNaiveConst || ( xEPorLaplace != type ) )
     {
+        if ( QQ.isuseLweight() )
+        {
+            QQ.setnoLweight();
+            QQ.sety(yR());
+        }
+
         GPR_Generic::setLaplaceConst();
 
         res = 1;
@@ -187,6 +205,12 @@ int GPR_Scalar::train(int &res, svmvolatile int &killSwitch)
 
     if ( !Nineq || isNaiveConst() )
     {
+        if ( QQ.isuseLweight() )
+        {
+            QQ.setnoLweight();
+            QQ.sety(yR());
+        }
+
         locres = getQ().train(res,killSwitch);
     }
 
@@ -278,7 +302,7 @@ getQ().reset();
 
                 gentype gvari,gmeani;
 
-                getQconst().varTrainingVector(gvari,gmeani,i);
+                getQconst().var(gvari,gmeani,i);
 //errstream() << "phantomxyz var,mean " << i << " = " << gvari << ", " << gmeani << "\n";
 
                 double munegi  = (double) gmeani;
@@ -614,7 +638,7 @@ NB: as noted in Rassmussen, the gradient of the log-likelihood is always
                 //f -= fnext;
                 //laststep = abs2(f);
 
-                double laststep = 0;
+                laststep = 0;
 
                 for ( j = 0 ; j < Nineq ; j++ )
                 {
@@ -622,7 +646,7 @@ NB: as noted in Rassmussen, the gradient of the log-likelihood is always
                 }
 
 errstream() << laststep << ", ";
-                if ( !firstit && laststep <= LAPSTEPSTOP )
+                if ( !firstit && ( laststep <= LAPSTEPSTOP ) )
                 {
                     isdone = true;
                 }
@@ -778,7 +802,7 @@ errstream() << laststep << ", ";
                     fnext.sv(j,t.v(j)-((QQ.diagoffset()(j))*(localpha.v(j))));
                 }
 
-                double laststep = 0;
+                laststep = 0;
 
                 for ( j = 0 ; j < Nineq ; j++ )
                 {
@@ -786,7 +810,7 @@ errstream() << laststep << ", ";
                 }
 
 errstream() << laststep << ", ";
-                if ( !firstit && laststep <= LAPSTEPSTOP )
+                if ( !firstit && ( laststep <= LAPSTEPSTOP ) )
                 {
                     isdone = true;
                 }

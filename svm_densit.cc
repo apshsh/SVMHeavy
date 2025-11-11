@@ -226,7 +226,7 @@ int SVM_Densit::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector
 
 // Evaluation:
 
-int SVM_Densit::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int SVM_Densit::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     int unusedvar = 0;
     int res = gTrainingVector(resg.force_double(),unusedvar,i,retaltg,pxyprodi);

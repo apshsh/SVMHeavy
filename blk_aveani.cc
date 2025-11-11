@@ -272,7 +272,7 @@ int BLK_AveAni::setd(const Vector<int> &d)
 
 
 
-int BLK_AveAni::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***) const
+int BLK_AveAni::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***) const
 {
     NiceAssert( !retaltg );
 

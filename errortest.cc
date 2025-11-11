@@ -720,13 +720,13 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
 
                 if ( extraFast )
                 {
-                    int xvloctype = (*locML).type();
+                    int xxvloctype = (*locML).type();
 
-                    if ( ( xvloctype == 0 ) || ( xvloctype == 1 ) || ( xvloctype == 2 ) || ( xvloctype == 7 ) || ( xvloctype == 22 ) || ( xvloctype == 23 ) )
+                    if ( ( xxvloctype == 0 ) || ( xxvloctype == 1 ) || ( xxvloctype == 2 ) || ( xxvloctype == 7 ) || ( xxvloctype == 22 ) || ( xxvloctype == 23 ) )
                     {
                         SVM_Scalar &noreallythisone = dynamic_cast<SVM_Scalar &>((*locML).getML());
 
-                        if ( ( xvloctype == 0 ) || ( xvloctype == 1 ) || ( xvloctype == 2 ) || ( xvloctype == 7 ) )
+                        if ( ( xxvloctype == 0 ) || ( xxvloctype == 1 ) || ( xxvloctype == 2 ) || ( xxvloctype == 7 ) )
                         {
                             noreallythisone.downsizenow();
                         }
@@ -858,7 +858,7 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
             res *= 1/((double) numreps);
         }
 
-        { ML_Base *temp = srcML; srcML = locML; locML = temp; }
+        { ML_Base *ttemp = srcML; srcML = locML; locML = ttemp; }
 
         MEMDEL(locML); locML = nullptr;
     }
@@ -972,13 +972,13 @@ void *doatest(void *args_ptr)
     {
         l = locblockidvect(j);
 
-        locML->ghTrainingVector(kresh("&",l),kresg("&",l),l);
+        locML->gh(kresh("&",l),kresg("&",l),l);
 
         if ( calcgvarres )
         {
             gentype dummy;
 
-            locML->varTrainingVector(kgvarres("&",l),dummy,l);
+            locML->var(kgvarres("&",l),dummy,l);
         }
 
         // NB: isenabled actually returns d for MLs.  For ML_Scalar,
@@ -1134,14 +1134,14 @@ nullPrint(errstream(),i,-5);
 //nullPrint(errstream(),".");
 //}
 
-            (*locML).ghTrainingVector(resh("&",i),resg("&",i),i);
+            (*locML).gh(resh("&",i),resg("&",i),i);
 //errstream() << "phantomx: resh,resg = " << resh(i) << "," << resg(i) << "\n";
 
             if ( calcgvarres )
             {
                 gentype dummy;
 
-                (*locML).varTrainingVector(gvarres("&",i),dummy,i);
+                (*locML).var(gvarres("&",i),dummy,i);
             }
 
 //errstream() << "phantomx1: locisenable = " << locisenable << "\n";
@@ -1178,7 +1178,7 @@ nullPrint(errstream(),i,-5);
 
         if ( isLOO )
         {
-            { ML_Base *temp = srcML; srcML = locML; locML = temp; }
+            { ML_Base *ttemp = srcML; srcML = locML; locML = ttemp; }
 
             MEMDEL(locML); locML = nullptr;
         }
@@ -1406,13 +1406,13 @@ nullPrint(errstream(),k,-5);
 
                 if ( locisenabled )
                 {
-                    locML->ghTrainingVector(resh("&",k)("&",j),resg("&",k)("&",j),j);
+                    locML->gh(resh("&",k)("&",j),resg("&",k)("&",j),j);
 
                     if ( calcgvarres )
                     {
                         gentype dummy;
 
-                        locML->varTrainingVector(gvarres("&",k)("&",j),dummy,j);
+                        locML->var(gvarres("&",k)("&",j),dummy,j);
                     }
 
                     // NB: isenabled actually returns d for MLs.  For ML_Scalar,
@@ -1905,9 +1905,9 @@ void bootstrapML(ML_Base &ml)
         {
             // Construct tally vector
 
-            retVector<int> tmpva;
+            retVector<int> ttmpva;
 
-            Vector<int> dnztally(zerointvec(dnzind.size(),tmpva));
+            Vector<int> dnztally(zerointvec(dnzind.size(),ttmpva));
 
             // Randomly "select" elements from dnzind by incrementing the relevant element in tally
 

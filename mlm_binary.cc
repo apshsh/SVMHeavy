@@ -84,7 +84,7 @@ int MLM_Binary::train(int &res, svmvolatile int &killSwitch)
         Vector<double> g;
 
         int isopt = 0;
-        int locres = 0;
+        //int locres = 0;
         int q,i,j,k,m,n,p; //,dummy;
         int Q = tsize();
         double lgst,Etot,Etotprev,gi,yi;
@@ -164,7 +164,7 @@ errstream() << "Turn-around II";
                 gentype tempresh,tempresg;
 
                 //getQconst().gTrainingVector(gi,dummy,i);
-                getQQconst().ghTrainingVector(tempresh,tempresg,i);
+                getQQconst().gh(tempresh,tempresg,i);
 
                 gi = (double) tempresg;
 

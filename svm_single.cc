@@ -243,7 +243,7 @@ void SVM_Single::setanomalyclass(int n)
     return;
 }
 
-int SVM_Single::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int SVM_Single::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     NiceAssert( !( retaltg & 2 ) );
 
@@ -257,7 +257,7 @@ int SVM_Single::ghTrainingVector(gentype &resh, gentype &resg, int i, int retalt
     gentype tempsomeh;
 
     //gTrainingVector(tempresg,unusedvar,i,retaltg);
-    int temptemph = SVM_Scalar::ghTrainingVector(tempsomeh,tempsomeg,i,retaltg,pxyprodi);
+    int temptemph = SVM_Scalar::gh(tempsomeh,tempsomeg,i,retaltg,pxyprodi);
 
     tempresg = (double) tempsomeg;
 

@@ -18,7 +18,7 @@
 #include "hyper_base.hpp"
 
 
-IMP_Expect::IMP_Expect(int isIndPrune) : IMP_Generic(isIndPrune)
+IMP_Expect::IMP_Expect(int _isIndPrune) : IMP_Generic(_isIndPrune)
 {
     setaltx(nullptr);
 
@@ -29,7 +29,7 @@ IMP_Expect::IMP_Expect(int isIndPrune) : IMP_Generic(isIndPrune)
     return;
 }
 
-IMP_Expect::IMP_Expect(const IMP_Expect &src, int isIndPrune) : IMP_Generic(isIndPrune)
+IMP_Expect::IMP_Expect(const IMP_Expect &src, int _isIndPrune) : IMP_Generic(_isIndPrune)
 {
     setaltx(nullptr);
 
@@ -41,7 +41,7 @@ IMP_Expect::IMP_Expect(const IMP_Expect &src, int isIndPrune) : IMP_Generic(isIn
     return;
 }
 
-IMP_Expect::IMP_Expect(const IMP_Expect &src, const ML_Base *xsrc, int isIndPrune) : IMP_Generic(isIndPrune)
+IMP_Expect::IMP_Expect(const IMP_Expect &src, const ML_Base *xsrc, int _isIndPrune) : IMP_Generic(_isIndPrune)
 {
     setaltx(xsrc);
 
@@ -87,7 +87,7 @@ std::istream &IMP_Expect::inputstream(std::istream &input )
     return IMP_Generic::inputstream(input);
 }
 
-int IMP_Expect::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int IMP_Expect::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     NiceAssert( !retaltg );
 

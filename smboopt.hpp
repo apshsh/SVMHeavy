@@ -365,11 +365,15 @@ public:
     template <class S> int model_mu   (                 gentype &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr               ) const;
     template <class S> int model_muvar(gentype &resvar, gentype &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr, int debug = 0) const;
 
+    template <class S> int model_predmuvar(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<S> &x, const SparseVector<S> &xadd) const;
+
     int model_muTrainingVector   (                 gentype &resmu,           int i) const;
     int model_muvarTrainingVector(gentype &resvar, gentype &resmu, int ivar, int i) const;
 
     template <class S> int model_mu_cgt   (                         Vector<gentype> &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr               ) const;
     template <class S> int model_muvar_cgt(Vector<gentype> &resvar, Vector<gentype> &resmu, const SparseVector<S> &x, const vecInfo *xing = nullptr, int debug = 0) const;
+
+    template <class S> int model_predmuvar_cgt(Vector<gentype> &resv_pred, Vector<gentype> &resv, Vector<gentype> &resmu, const SparseVector<S> &x, const SparseVector<S> &xadd) const;
 
     int model_muTrainingVector_cgt   (                         Vector<gentype> &resmu, int i) const;
     int model_muvarTrainingVector_cgt(Vector<gentype> &resvar, Vector<gentype> &resmu, int i) const;
@@ -406,7 +410,8 @@ public:
     template <class S> double inf_dist(               const SparseVector<S> &xz) const;
     template <class S> int    inf_var (gentype &resv, const SparseVector<S> &xz) const;
 
-    double model_sigma(int q) const { return getmuapprox(q).sigma(); }
+    double  model_sigma(int q) const { return getmuapprox(q).sigma(); }
+    gentype model_sigma(void)  const; // full vector for all models
 
     const MercerKernel &model_getKernel(int q) const { return getmuapprox(q).getKernel(); }
 
@@ -569,7 +574,9 @@ public:
     mutable SparseVector<gentype> xxz;   // just use a global here rather than constant calls to constructors and destructors
     mutable SparseVector<gentype> xx1;   // just use a global here rather than constant calls to constructors and destructors
     mutable SparseVector<gentype> xx;    // just use a global here rather than constant calls to constructors and destructors
+    mutable SparseVector<gentype> xxadd; // just use a global here rather than constant calls to constructors and destructors
     mutable SparseVector<gentype> xxvar; // just use a global here rather than constant calls to constructors and destructors
+    mutable SparseVector<gentype> xxaddvar; // just use a global here rather than constant calls to constructors and destructors
 
     // Logging subsiduary (pdf production)
 
@@ -1403,13 +1410,20 @@ bailout:
                 if ( ennornaive )
                 {
                     SparseVector<gentype> tempx;
+                    gentype resggent;
 
-                    ires += getmuapprox_sample(0).gg(resg("&",0),convnearuptonaive(tempx,*xxx));
+                    ires += getmuapprox_sample(0).gg(resggent,convnearuptonaive(tempx,*xxx));
+
+                    resg("&",0) = (double) resggent;
                 }
 
                 else
                 {
-                    ires += getmuapprox_sample(0).gg(resg("&",0),*xxx,0,xinf,pxyprodx);
+                    gentype resggent;
+
+                    ires += getmuapprox_sample(0).gg(resggent,*xxx,xinf,pxyprodx);
+
+                    resg("&",0) = (double) resggent;
                 }
             }
 
@@ -1423,19 +1437,27 @@ bailout:
                     {
                         SparseVector<gentype> tempx;
 
-                        ires += getmuapprox_sample(i).gg(resg,convnearuptonaive(tempx,*xxx));
+                        gentype resggent;
+
+                        ires += getmuapprox_sample(i).gg(resggent,convnearuptonaive(tempx,*xxx));
+
+                        resg = (const Vector<double> &) resggent;
                     }
 
                     else
                     {
-                        ires += getmuapprox_sample(i).gg(resg,*xxx,0,xinf,pxyprodx);
+                        gentype resggent;
+
+                        ires += getmuapprox_sample(i).gg(resggent,*xxx,xinf,pxyprodx);
+
+                        resg = (const Vector<double> &) resggent;
                     }
                 }
             }
         }
 
         return ires;
-    }
+}
 
 template <class S>
 int SMBOOptions::model_muvar(gentype &resv, gentype &resmu, const SparseVector<S> &x, const vecInfo *xing, int debugit) const
@@ -1861,7 +1883,60 @@ bailout:
         }
 
         return ires;
+}
+
+
+template <class S>
+int SMBOOptions::model_predmuvar(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<S> &x, const SparseVector<S> &xadd) const
+{
+    int ires = 0;
+
+    StrucAssert( !ismodelaug() );
+    StrucAssert( !sigmuseparate );
+
+    const SparseVector<gentype> *xxx    = &xx;
+    const SparseVector<gentype> *xxxadd = &xxadd;
+
+    xx.zeronotnu(0);
+    xxadd.zeronotnu(0);
+
+    xxx    = &model_convertx(xx,x);
+    xxxadd = &model_convertx(xxadd,xadd);
+
+    (*xxx).makealtcontent();
+    (*xxxadd).makealtcontent();
+
+    if ( !muapprox.size() )
+    {
+        resv_pred.force_null();
+        resv.force_null();
+        resmu.force_null();
     }
+
+    else if ( muapprox.size() == 1 )
+    {
+        ires += getmuapprox_sample(0).predvar(resv_pred,resv,resmu,*xxx,*xxxadd);
+    }
+
+    else
+    {
+        Vector<gentype> &resv_predvec = resv_pred.force_vector(muapprox.size());
+        Vector<gentype> &resvvec      = resv.force_vector(muapprox.size());
+        Vector<gentype> &resmuvec     = resmu.force_vector(muapprox.size());
+
+        for ( int i = 0 ; i < muapprox.size() ; ++i )
+        {
+            ires += getmuapprox_sample(i).predvar(resv_predvec("&",i),resvvec("&",i),resmuvec("&",i),*xxx,*xxxadd);
+        }
+    }
+
+    return ires;
+}
+
+
+
+
+
 
 template <class S>
 int SMBOOptions::model_covar(Matrix<gentype> &resv, const Vector<SparseVector<S> > &x) const
@@ -1998,6 +2073,39 @@ int SMBOOptions::model_muvar_cgt(Vector<gentype> &resv, Vector<gentype> &resmu, 
 
     return ires;
 }
+
+template <class S>
+int SMBOOptions::model_predmuvar_cgt(Vector<gentype> &resv_pred, Vector<gentype> &resv, Vector<gentype> &resmu, const SparseVector<S> &x, const SparseVector<S> &xadd) const
+{
+    int ires = 0;
+
+    StrucAssert( !ismodelaug() );
+    StrucAssert( !sigmuseparate );
+
+    const SparseVector<gentype> *xxx = &xx;
+    const SparseVector<gentype> *xxxadd = &xxadd;
+
+    xx.zeronotnu(0);
+    xxadd.zeronotnu(0);
+
+    xxx = &model_convertx(xx,x);
+    xxxadd = &model_convertx(xxadd,xadd);
+
+    (*xxx).makealtcontent();
+    (*xxxadd).makealtcontent();
+
+    resv_pred.resize(cgtapprox.size());
+    resv.resize(cgtapprox.size());
+    resmu.resize(cgtapprox.size());
+
+    for ( int i = 0 ; i < cgtapprox.size() ; ++i )
+    {
+        ires += getcgtapprox(i).predvar(resv_pred("&",i),resv("&",i),resmu("&",i),*xxx,*xxxadd);
+    }
+
+    return ires;
+}
+
 
 
 

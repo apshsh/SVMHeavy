@@ -1125,7 +1125,7 @@ int SVM_Vector_Mredbin::train(int &res,svmvolatile int &killSwitch)
     return result;
 }
 
-int SVM_Vector_Mredbin::ghTrainingVector(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
+int SVM_Vector_Mredbin::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***pxyprodi) const
 {
     int unusedvar = 0;
     int tempresh = 0;
@@ -1270,7 +1270,7 @@ int SVM_Vector_Mredbin::gTrainingVector(Vector<double>  &res, int &dummy, int i,
             gentype tempsomeh,tempsomeg;
 
             //Q.gTrainingVector(res("&",j),dummy,k,raw);
-            Q.ghTrainingVector(tempsomeh,tempsomeg,k,raw);
+            Q.gh(tempsomeh,tempsomeg,k,raw);
 
             res("&",j) = (double) tempsomeg;
         }
