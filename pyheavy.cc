@@ -7,27 +7,6 @@
 // Copyright: all rights reserved
 //
 
-//    int callcnt = 0;
-//    auto doit = [callcnt](int j) { static int i = callcnt; i += j; std::cout << i << "\n"; };
-//    static std::function<void(int)> doneit = doit;
-//    static std::function<void(int)> *dodoit = new std::function<void(int)>([callcnt](int j) { static int i = callcnt; i += j; std::cout << i << "\n"; });
-//    static std::function<void(int)> *dodoneit = new std::function<void(int)>(doneit);
-//
-//    doit(2);
-//    doneit(3);
-//    (*dodoit)(4);
-//    (*dodoneit)(5);
-//
-//NB: doit,doneit,dodoneit all share the same static,
-//    dodoit is distinct so probably best option
-//    dodoit style passing py::object pointer set to live forever to std::function held in gentype
-//
-//In int naivePyToEqn(gentype &res, const py::object &src), set index = -1
-//In gentype, if index == -1 then call std::function<gentype(gentype)> pointer for evaluation
-//This can hold the py::object copied as-per dodoit, and include all relevant code to do the call
-//Then there is no need for eval!
-
-
 //#ifndef DNDEBUG
 //#define DEBUGPY
 //#endif
@@ -90,19 +69,25 @@ py::object &pyisinstance(void) { static py::object isinstance = pygetbuiltin().a
 py::object &pycallable  (void) { static py::object callable   = pygetbuiltin().attr("callable");   return callable;   }
 py::object &pyeval      (void) { static py::object eval       = pygetbuiltin().attr("eval");       return eval;       }
 py::object &pyvalueerror(void) { static py::object ValueError = pygetbuiltin().attr("ValueError"); return ValueError; }
+py::object &pycomplex   (void) { static py::object complex    = pygetbuiltin().attr("complex");    return complex;    }
 
-bool isValNone    (const py::object &src) { return src.is_none();                                                                               }
-bool isValInteger (const py::object &src) { return !isValNone(src) && py::isinstance<py::int_>(src);                                            }
-bool isValReal    (const py::object &src) { return !isValNone(src) && py::isinstance<py::float_>(src);                                          }
-bool isValComplex (const py::object &src) { return !isValNone(src) && py::cast<py::bool_>(pyisinstance()(&src,pygetbuiltin().attr("complex"))); }
-bool isValList    (const py::object &src) { return !isValNone(src) && py::isinstance<py::list>(src);                                            }
-bool isValTuple   (const py::object &src) { return !isValNone(src) && py::isinstance<py::tuple>(src);                                           }
-bool isValDict    (const py::object &src) { return !isValNone(src) && py::isinstance<py::dict>(src);                                            }
-bool isValString  (const py::object &src) { return !isValNone(src) && py::isinstance<py::str>(src);                                             }
-bool isValCallable(const py::object &src) { return !isValNone(src) && py::cast<py::bool_>(pycallable()(src));                                   }
+bool isValNone    (const py::object &src) { return src.is_none();                                                            }
+bool isValInteger (const py::object &src) { return !isValNone(src) && py::isinstance<py::int_>(src);                         }
+bool isValReal    (const py::object &src) { return !isValNone(src) && py::isinstance<py::float_>(src);                       }
+bool isValComplex (const py::object &src) { return !isValNone(src) && py::cast<py::bool_>(pyisinstance()(&src,pycomplex())); }
+bool isValList    (const py::object &src) { return !isValNone(src) && py::isinstance<py::list>(src);                         }
+bool isValTuple   (const py::object &src) { return !isValNone(src) && py::isinstance<py::tuple>(src);                        }
+bool isValDict    (const py::object &src) { return !isValNone(src) && py::isinstance<py::dict>(src);                         }
+bool isValString  (const py::object &src) { return !isValNone(src) && py::isinstance<py::str>(src);                          }
+bool isValCallable(const py::object &src) { return !isValNone(src) && py::cast<py::bool_>(pycallable()(src));                }
 
-int    toInt(const py::object &src) { return (int)    py::cast<py::int_>  (src); }
-double toDbl(const py::object &src) { return (double) py::cast<py::float_>(src); }
+bool isValCastableToInteger(const py::object &src) { return isValInteger(src) || isValReal(src);                      }
+bool isValCastableToReal   (const py::object &src) { return isValInteger(src) || isValReal(src);                      }
+bool isValCastableToComplex(const py::object &src) { return isValInteger(src) || isValReal(src) || isValComplex(src); }
+
+int                  toInt(const py::object &src) { return (int)      py::cast<py::int_>  (src); }
+double               toDbl(const py::object &src) { return (double)   py::cast<py::float_>(src); }
+std::complex<double> toCpl(const py::object &src) { return py::cast<std::complex<double> >(src); }
 
                    py::object convToPy(      int              src);
                    py::object convToPy(      double           src);
@@ -133,6 +118,8 @@ template <class T> int convFromPy(Dict<T,dictkey>       &res, const py::object &
 template <class T> int convFromPy(SparseVector<T>       &res, const py::object &src);
 template <>        int convFromPy(SparseVector<gentype> &res, const py::object &src);
                    int convFromPy(gentype               &res, const py::object &src);
+
+gentype convFromPy(const py::object &src);
 
 // Helper macros for python module constructions
 
@@ -313,12 +300,15 @@ void svmheavya(void);                      // just get help screen
 void svmheavyb(int permode);               // set persistence mode
 void svmheavyc(const std::string commstr); // execute with string
 
-void logit(const std::string logstr); // print to errstream
+void logit(py::object logstr); // print to errstream
+
+#define snakehigh 24
+#define snakewide 80
 
 void callintercalc(void);
-void callsnakes   (void);
+void callsnakes   (int wide, int high);
 
-py::object svmeval(std::string fn, py::object arg);
+py::object svmeval(py::object fn, py::object arg);
 
 int selml(int i = 0);
 
@@ -643,121 +633,121 @@ OPTGETSETDEF(modelbaseline,   Bayesian,std::string)
 
 // Functions we might as well import from gentype
 
-MAKEVISA(sqrt)
-MAKEVISA(Sqrt)
-MAKEVISA(cbrt)
-MAKEVISA(Cbrt)
-MAKEVISB(nthrt)
-MAKEVISB(Nthrt)
-MAKEVISA(exp)
-MAKEVISA(tenup)
-MAKEVISA(log)
-MAKEVISA(Log)
-MAKEVISA(log10)
-MAKEVISA(Log10)
-MAKEVISB(logb)
-MAKEVISB(Logb)
-MAKEVISB(logbl)
-MAKEVISB(Logbl)
-MAKEVISB(logbr)
-MAKEVISB(Logbr)
-MAKEVISA(sin)
-MAKEVISA(cos)
-MAKEVISA(tan)
-MAKEVISA(cosec)
-MAKEVISA(sec)
-MAKEVISA(cot)
-MAKEVISA(asin)
-MAKEVISA(Asin)
-MAKEVISA(acos)
-MAKEVISA(Acos)
-MAKEVISA(atan)
-MAKEVISA(acosec)
-MAKEVISA(Acosec)
-MAKEVISA(asec)
-MAKEVISA(Asec)
-MAKEVISA(acot)
-MAKEVISA(sinc)
-MAKEVISA(cosc)
-MAKEVISA(tanc)
-MAKEVISA(vers)
-MAKEVISA(covers)
-MAKEVISA(hav)
-MAKEVISA(excosec)
-MAKEVISA(exsec)
-MAKEVISA(avers)
-MAKEVISA(Avers)
-MAKEVISA(acovers)
-MAKEVISA(Acovers)
-MAKEVISA(ahav)
-MAKEVISA(Ahav)
-MAKEVISA(aexcosec)
-MAKEVISA(Aexcosec)
-MAKEVISA(aexsec)
-MAKEVISA(Aexsec)
-MAKEVISA(castrg)
-MAKEVISA(casctrg)
-MAKEVISA(acastrg)
-MAKEVISA(acasctrg)
-MAKEVISA(Acastrg)
-MAKEVISA(Acasctrg)
-MAKEVISA(sinh)
-MAKEVISA(cosh)
-MAKEVISA(tanh)
-MAKEVISA(cosech)
-MAKEVISA(sech)
-MAKEVISA(coth)
-MAKEVISA(asinh)
-MAKEVISA(acosh)
-MAKEVISA(Acosh)
-MAKEVISA(atanh)
-MAKEVISA(Atanh)
-MAKEVISA(acosech)
-MAKEVISA(asech)
-MAKEVISA(Asech)
-MAKEVISA(acoth)
-MAKEVISA(Acoth)
-MAKEVISA(sinhc)
-MAKEVISA(coshc)
-MAKEVISA(tanhc)
-MAKEVISA(versh)
-MAKEVISA(coversh)
-MAKEVISA(havh)
-MAKEVISA(excosech)
-MAKEVISA(exsech)
-MAKEVISA(aversh)
-MAKEVISA(Aversh)
-MAKEVISA(acovrsh)
-MAKEVISA(ahavh)
-MAKEVISA(Ahavh)
+MAKEVISA(sqrt     )
+MAKEVISA(Sqrt     )
+MAKEVISA(cbrt     )
+MAKEVISA(Cbrt     )
+MAKEVISB(nthrt    )
+MAKEVISB(Nthrt    )
+MAKEVISA(exp      )
+MAKEVISA(tenup    )
+MAKEVISA(log      )
+MAKEVISA(Log      )
+MAKEVISA(log10    )
+MAKEVISA(Log10    )
+MAKEVISB(logb     )
+MAKEVISB(Logb     )
+MAKEVISB(logbl    )
+MAKEVISB(Logbl    )
+MAKEVISB(logbr    )
+MAKEVISB(Logbr    )
+MAKEVISA(sin      )
+MAKEVISA(cos      )
+MAKEVISA(tan      )
+MAKEVISA(cosec    )
+MAKEVISA(sec      )
+MAKEVISA(cot      )
+MAKEVISA(asin     )
+MAKEVISA(Asin     )
+MAKEVISA(acos     )
+MAKEVISA(Acos     )
+MAKEVISA(atan     )
+MAKEVISA(acosec   )
+MAKEVISA(Acosec   )
+MAKEVISA(asec     )
+MAKEVISA(Asec     )
+MAKEVISA(acot     )
+MAKEVISA(sinc     )
+MAKEVISA(cosc     )
+MAKEVISA(tanc     )
+MAKEVISA(vers     )
+MAKEVISA(covers   )
+MAKEVISA(hav      )
+MAKEVISA(excosec  )
+MAKEVISA(exsec    )
+MAKEVISA(avers    )
+MAKEVISA(Avers    )
+MAKEVISA(acovers  )
+MAKEVISA(Acovers  )
+MAKEVISA(ahav     )
+MAKEVISA(Ahav     )
+MAKEVISA(aexcosec )
+MAKEVISA(Aexcosec )
+MAKEVISA(aexsec   )
+MAKEVISA(Aexsec   )
+MAKEVISA(castrg   )
+MAKEVISA(casctrg  )
+MAKEVISA(acastrg  )
+MAKEVISA(acasctrg )
+MAKEVISA(Acastrg  )
+MAKEVISA(Acasctrg )
+MAKEVISA(sinh     )
+MAKEVISA(cosh     )
+MAKEVISA(tanh     )
+MAKEVISA(cosech   )
+MAKEVISA(sech     )
+MAKEVISA(coth     )
+MAKEVISA(asinh    )
+MAKEVISA(acosh    )
+MAKEVISA(Acosh    )
+MAKEVISA(atanh    )
+MAKEVISA(Atanh    )
+MAKEVISA(acosech  )
+MAKEVISA(asech    )
+MAKEVISA(Asech    )
+MAKEVISA(acoth    )
+MAKEVISA(Acoth    )
+MAKEVISA(sinhc    )
+MAKEVISA(coshc    )
+MAKEVISA(tanhc    )
+MAKEVISA(versh    )
+MAKEVISA(coversh  )
+MAKEVISA(havh     )
+MAKEVISA(excosech )
+MAKEVISA(exsech   )
+MAKEVISA(aversh   )
+MAKEVISA(Aversh   )
+MAKEVISA(acovrsh  )
+MAKEVISA(ahavh    )
+MAKEVISA(Ahavh    )
 MAKEVISA(aexcosech)
-MAKEVISA(aexsech)
-MAKEVISA(Aexsech)
-MAKEVISA(cashyp)
-MAKEVISA(caschyp)
-MAKEVISA(acashyp)
-MAKEVISA(acaschyp)
-MAKEVISA(Acashyp)
-MAKEVISA(Acaschyp)
-MAKEVISA(sigm)
-MAKEVISA(gd)
-MAKEVISA(asigm)
-MAKEVISA(Asigm)
-MAKEVISA(agd)
-MAKEVISA(Agd)
-MAKEVISB(bern)
+MAKEVISA(aexsech  )
+MAKEVISA(Aexsech  )
+MAKEVISA(cashyp   )
+MAKEVISA(caschyp  )
+MAKEVISA(acashyp  )
+MAKEVISA(acaschyp )
+MAKEVISA(Acashyp  )
+MAKEVISA(Acaschyp )
+MAKEVISA(sigm     )
+MAKEVISA(gd       )
+MAKEVISA(asigm    )
+MAKEVISA(Asigm    )
+MAKEVISA(agd      )
+MAKEVISA(Agd      )
+MAKEVISB(bern     )
 MAKEVISA(normDistr)
 MAKEVISB(polyDistr)
 MAKEVISB(PolyDistr)
-MAKEVISA(gamma)
-MAKEVISA(lngamma)
-MAKEVISA(psi)
-MAKEVISA(zeta)
-MAKEVISA(lambertW)
+MAKEVISA(gamma    )
+MAKEVISA(lngamma  )
+MAKEVISA(psi      )
+MAKEVISA(zeta     )
+MAKEVISA(lambertW )
 MAKEVISA(lambertWx)
-MAKEVISA(erf)
-MAKEVISA(erfc)
-MAKEVISA(dawson)
+MAKEVISA(erf      )
+MAKEVISA(erfc     )
+MAKEVISA(dawson   )
 
 
 
@@ -786,10 +776,9 @@ PYBIND11_MODULE(pyheavy, m) {
 
     auto m_cli = m.def_submodule("cli","Commandline Emulation.");
 
-    m_cli.def("help",&svmheavya,"Display basic help-screen for CLI emulation.");
+    m_cli.def("help",&svmheavya,"Display basic help-screen for CLI emulation."                 );
     m_cli.def("mode",&svmheavyb,"Set persistence mode (default 1, persistent).",py::arg("mode"));
-    m_cli.def("exec",&svmheavyc,"Run with string given (mimic CLI).",py::arg("str"));
-    m_cli.def("log", &logit,    "Print to log.",py::arg("str") );
+    m_cli.def("exec",&svmheavyc,"Run with string given (mimic CLI).",           py::arg("str") );
 
     // ---------------------------
     // ---------------------------
@@ -798,14 +787,17 @@ PYBIND11_MODULE(pyheavy, m) {
 
     auto m_int = m.def_submodule("internal","Internal use.");
 
-    m_int.def("pyogetsrc",&pyogetsrc,    "Get python object y_k from heap.",py::arg("k")              );
-    m_int.def("eval",     &svmeval,      "Evaluate gentype function fn provided as a string (eg sin(x)) with argument x. \n"
-                                         "x can be: None (mapped to null), int, float, complex, list (mapped to vector), \n"
-                                         "tuple (mapped to set) or dictionary. To explore available functions you can use\n"
-                                         "the inbuilt calculator (see calc function). See also pyheavy.maths.fn...       ",
-                                         py::arg("fn"),py::arg("x"));
-    m_int.def("snakes",   &callsnakes,   "Snakes (test io, streams).");
+    m_int.def("pyogetsrc",&pyogetsrc,    "Get python object k from heap.",py::arg("k"));
+    m_int.def("pyosetsrc",&pyosetsrc,    "Set python object k = val on heap. If val is a callable then this can be used  \n"
+                                         "used in a gentype expression via pycall(k,x).",py::arg("k"),py::arg("val"));
+    m_int.def("eval",     &svmeval,      "Evaluate function fn (gentype as string, or python function) provided (eg      \n"
+                                         "\"sin(x)\" for the gentype sin function) with argument x. x can be: None (mapped \n"
+                                         "to null), int, float, complex, list (mapped to vector), tuple (mapped to set)  \n"
+                                         "or dictionary. To explore available functions you use the inbuilt calculator   \n"
+                                         "(see calc function). See also pyheavy.maths.fn...",py::arg("fn"),py::arg("x"));
+    m_int.def("snakes",   &callsnakes,   "Snakes (test io, streams).",py::arg("w")=snakewide,py::arg("h")=snakehigh);
     m_int.def("calc",     &callintercalc,"Calculator (explore functions available in gentype expressions).");
+    m_int.def("log",      &logit,        "Print to log.",py::arg("str"));
 
     // ---------------------------
     // ---------------------------
@@ -860,122 +852,122 @@ PYBIND11_MODULE(pyheavy, m) {
                                 py::arg("i"),py::arg("type")="norm");
     m_maths.def("calc",&callintercalc,"Calculator (explore functions available in gentype expressions).");
 
-    QIMPA(m_maths_fn,sqrt,     "square root")
-    QIMPA(m_maths_fn,cbrt,     "cube root")
-    QIMPB(m_maths_fn,nthrt,    "nth root")
-    QIMPA(m_maths_fn,exp,      "exponential")
-    QIMPA(m_maths_fn,tenup,    "ten to the power")
-    QIMPA(m_maths_fn,log,      "natural log")
-    QIMPA(m_maths_fn,log10,    "log base 10")
-    QIMPB(m_maths_fn,logb,     "log base b")
-    QIMPB(m_maths_fn,logbl,    "log base b (left-handed)")
-    QIMPB(m_maths_fn,logbr,    "log base b (right-handed)")
-    QIMPA(m_maths_fn,sin,      "sine")
-    QIMPA(m_maths_fn,cos,      "cosine")
-    QIMPA(m_maths_fn,tan,      "tangent")
-    QIMPA(m_maths_fn,cosec,    "cosecant")
-    QIMPA(m_maths_fn,sec,      "secant")
-    QIMPA(m_maths_fn,cot,      "cotangent")
-    QIMPA(m_maths_fn,asin,     "inverse sine")
-    QIMPA(m_maths_fn,acos,     "inverse cosine")
-    QIMPA(m_maths_fn,atan,     "inverse tangent")
-    QIMPA(m_maths_fn,acosec,   "inverse cosecant")
-    QIMPA(m_maths_fn,asec,     "inverse secant")
-    QIMPA(m_maths_fn,acot,     "inverse cotangent")
-    QIMPA(m_maths_fn,sinc,     "sinc")
-    QIMPA(m_maths_fn,cosc,     "cosinc")
-    QIMPA(m_maths_fn,tanc,     "cotanc")
-    QIMPA(m_maths_fn,vers,     "versed sine")
-    QIMPA(m_maths_fn,covers,   "coversed sine")
-    QIMPA(m_maths_fn,hav,      "half versed sine")
-    QIMPA(m_maths_fn,excosec,  "external cosecant")
-    QIMPA(m_maths_fn,exsec,    "external secant")
-    QIMPA(m_maths_fn,avers,    "inverse versed sine")
-    QIMPA(m_maths_fn,acovers,  "inverse coversed sine")
-    QIMPA(m_maths_fn,ahav,     "inverse half versed sine")
-    QIMPA(m_maths_fn,aexcosec, "inverse external cosecant")
-    QIMPA(m_maths_fn,aexsec,   "inverse external secant")
-    QIMPA(m_maths_fn,castrg,   "cas")
-    QIMPA(m_maths_fn,casctrg,  "complementary cas")
-    QIMPA(m_maths_fn,acastrg,  "inverse cas")
-    QIMPA(m_maths_fn,acasctrg, "inverse complementary cas")
-    QIMPA(m_maths_fn,sinh,     "hyperbolic sin");
-    QIMPA(m_maths_fn,cosh,     "hyperbolic cosine")
-    QIMPA(m_maths_fn,tanh,     "hyperbolic tangent")
-    QIMPA(m_maths_fn,cosech,   "hyperbolic cosecant")
-    QIMPA(m_maths_fn,sech,     "hyperbolic secant")
-    QIMPA(m_maths_fn,coth,     "hyperbolic cotangent")
-    QIMPA(m_maths_fn,asinh,    "inverse hyperbolic sine")
-    QIMPA(m_maths_fn,acosh,    "inverse hyperbolic cosine")
-    QIMPA(m_maths_fn,atanh,    "inverse hyperbolic tangent")
-    QIMPA(m_maths_fn,acosech,  "inverse hyperbolic cosecant")
-    QIMPA(m_maths_fn,asech,    "inverse hyperbolic secant")
-    QIMPA(m_maths_fn,acoth,    "inverse hyperbolic cotangent")
-    QIMPA(m_maths_fn,sinhc,    "hyperbolic sinc")
-    QIMPA(m_maths_fn,coshc,    "hyperbolic cosc")
-    QIMPA(m_maths_fn,tanhc,    "hyperbolic tanc")
-    QIMPA(m_maths_fn,versh,    "hyperbolic versed sine")
-    QIMPA(m_maths_fn,coversh,  "hyperbolic coversed sine")
-    QIMPA(m_maths_fn,havh,     "hyperbolic half-versed sine")
-    QIMPA(m_maths_fn,excosech, "hyperbolic external cosecant")
-    QIMPA(m_maths_fn,exsech,   "hyperbolic external secant")
-    QIMPA(m_maths_fn,aversh,   "hyperbolic half-versed secand")
-    QIMPA(m_maths_fn,Aversh,   "inverse hyperbolic versed sine")
-    QIMPA(m_maths_fn,acovrsh,  "inverse hyperbolic coversed sine")
-    QIMPA(m_maths_fn,ahavh,    "inverse hyperbolic half-versed sine")
+    QIMPA(m_maths_fn,sqrt,     "square root"                         )
+    QIMPA(m_maths_fn,cbrt,     "cube root"                           )
+    QIMPB(m_maths_fn,nthrt,    "nth root"                            )
+    QIMPA(m_maths_fn,exp,      "exponential"                         )
+    QIMPA(m_maths_fn,tenup,    "ten to the power"                    )
+    QIMPA(m_maths_fn,log,      "natural log"                         )
+    QIMPA(m_maths_fn,log10,    "log base 10"                         )
+    QIMPB(m_maths_fn,logb,     "log base b"                          )
+    QIMPB(m_maths_fn,logbl,    "log base b (left-handed)"            )
+    QIMPB(m_maths_fn,logbr,    "log base b (right-handed)"           )
+    QIMPA(m_maths_fn,sin,      "sine"                                )
+    QIMPA(m_maths_fn,cos,      "cosine"                              )
+    QIMPA(m_maths_fn,tan,      "tangent"                             )
+    QIMPA(m_maths_fn,cosec,    "cosecant"                            )
+    QIMPA(m_maths_fn,sec,      "secant"                              )
+    QIMPA(m_maths_fn,cot,      "cotangent"                           )
+    QIMPA(m_maths_fn,asin,     "inverse sine"                        )
+    QIMPA(m_maths_fn,acos,     "inverse cosine"                      )
+    QIMPA(m_maths_fn,atan,     "inverse tangent"                     )
+    QIMPA(m_maths_fn,acosec,   "inverse cosecant"                    )
+    QIMPA(m_maths_fn,asec,     "inverse secant"                      )
+    QIMPA(m_maths_fn,acot,     "inverse cotangent"                   )
+    QIMPA(m_maths_fn,sinc,     "sinc"                                )
+    QIMPA(m_maths_fn,cosc,     "cosinc"                              )
+    QIMPA(m_maths_fn,tanc,     "cotanc"                              )
+    QIMPA(m_maths_fn,vers,     "versed sine"                         )
+    QIMPA(m_maths_fn,covers,   "coversed sine"                       )
+    QIMPA(m_maths_fn,hav,      "half versed sine"                    )
+    QIMPA(m_maths_fn,excosec,  "external cosecant"                   )
+    QIMPA(m_maths_fn,exsec,    "external secant"                     )
+    QIMPA(m_maths_fn,avers,    "inverse versed sine"                 )
+    QIMPA(m_maths_fn,acovers,  "inverse coversed sine"               )
+    QIMPA(m_maths_fn,ahav,     "inverse half versed sine"            )
+    QIMPA(m_maths_fn,aexcosec, "inverse external cosecant"           )
+    QIMPA(m_maths_fn,aexsec,   "inverse external secant"             )
+    QIMPA(m_maths_fn,castrg,   "cas"                                 )
+    QIMPA(m_maths_fn,casctrg,  "complementary cas"                   )
+    QIMPA(m_maths_fn,acastrg,  "inverse cas"                         )
+    QIMPA(m_maths_fn,acasctrg, "inverse complementary cas"           )
+    QIMPA(m_maths_fn,sinh,     "hyperbolic sin"                      )
+    QIMPA(m_maths_fn,cosh,     "hyperbolic cosine"                   )
+    QIMPA(m_maths_fn,tanh,     "hyperbolic tangent"                  )
+    QIMPA(m_maths_fn,cosech,   "hyperbolic cosecant"                 )
+    QIMPA(m_maths_fn,sech,     "hyperbolic secant"                   )
+    QIMPA(m_maths_fn,coth,     "hyperbolic cotangent"                )
+    QIMPA(m_maths_fn,asinh,    "inverse hyperbolic sine"             )
+    QIMPA(m_maths_fn,acosh,    "inverse hyperbolic cosine"           )
+    QIMPA(m_maths_fn,atanh,    "inverse hyperbolic tangent"          )
+    QIMPA(m_maths_fn,acosech,  "inverse hyperbolic cosecant"         )
+    QIMPA(m_maths_fn,asech,    "inverse hyperbolic secant"           )
+    QIMPA(m_maths_fn,acoth,    "inverse hyperbolic cotangent"        )
+    QIMPA(m_maths_fn,sinhc,    "hyperbolic sinc"                     )
+    QIMPA(m_maths_fn,coshc,    "hyperbolic cosc"                     )
+    QIMPA(m_maths_fn,tanhc,    "hyperbolic tanc"                     )
+    QIMPA(m_maths_fn,versh,    "hyperbolic versed sine"              )
+    QIMPA(m_maths_fn,coversh,  "hyperbolic coversed sine"            )
+    QIMPA(m_maths_fn,havh,     "hyperbolic half-versed sine"         )
+    QIMPA(m_maths_fn,excosech, "hyperbolic external cosecant"        )
+    QIMPA(m_maths_fn,exsech,   "hyperbolic external secant"          )
+    QIMPA(m_maths_fn,aversh,   "hyperbolic half-versed secand"       )
+    QIMPA(m_maths_fn,Aversh,   "inverse hyperbolic versed sine"      )
+    QIMPA(m_maths_fn,acovrsh,  "inverse hyperbolic coversed sine"    )
+    QIMPA(m_maths_fn,ahavh,    "inverse hyperbolic half-versed sine" )
     QIMPA(m_maths_fn,aexcosech,"inverse hyperbolic external cosecant")
-    QIMPA(m_maths_fn,aexsech,  "inverse hyperbolic external secant")
-    QIMPA(m_maths_fn,cashyp,   "hyperbolic cas")
-    QIMPA(m_maths_fn,caschyp,  "hyperbolic complementary cas")
-    QIMPA(m_maths_fn,acashyp,  "inverse hyperbolic cas")
+    QIMPA(m_maths_fn,aexsech,  "inverse hyperbolic external secant"  )
+    QIMPA(m_maths_fn,cashyp,   "hyperbolic cas"                      )
+    QIMPA(m_maths_fn,caschyp,  "hyperbolic complementary cas"        )
+    QIMPA(m_maths_fn,acashyp,  "inverse hyperbolic cas"              )
     QIMPA(m_maths_fn,acaschyp, "inverse hyperbolic complementary cas")
-    QIMPA(m_maths_fn,sigm,     "sigmoid")
-    QIMPA(m_maths_fn,gd,       "Gudermanian")
-    QIMPA(m_maths_fn,asigm,    "inverse sigmoid")
-    QIMPA(m_maths_fn,agd,      "inverse Gudermanian")
-    QIMPB(m_maths_fn,bern,     "Bernstein polynomial of order x")
-    QIMPA(m_maths_fn,normDistr,"normal distribution")
-    QIMPB(m_maths_fn,polyDistr,"polynomial distribution of order y")
-    QIMPA(m_maths_fn,gamma,    "gamma")
-    QIMPA(m_maths_fn,lngamma,  "log gamma")
-    QIMPA(m_maths_fn,psi,      "digamma")
-    QIMPA(m_maths_fn,zeta,     "polygamma function of index x")
-    QIMPA(m_maths_fn,lambertW, "Lambert W (main branch W0, W>-1)")
-    QIMPA(m_maths_fn,lambertWx,"Lambert W (lower branch W1, W<-1)")
-    QIMPA(m_maths_fn,erf,      "error")
-    QIMPA(m_maths_fn,erfc,     "complementary error")
-    QIMPA(m_maths_fn,dawson,   "Dawson")
+    QIMPA(m_maths_fn,sigm,     "sigmoid"                             )
+    QIMPA(m_maths_fn,gd,       "Gudermanian"                         )
+    QIMPA(m_maths_fn,asigm,    "inverse sigmoid"                     )
+    QIMPA(m_maths_fn,agd,      "inverse Gudermanian"                 )
+    QIMPB(m_maths_fn,bern,     "Bernstein polynomial of order x"     )
+    QIMPA(m_maths_fn,normDistr,"normal distribution"                 )
+    QIMPB(m_maths_fn,polyDistr,"polynomial distribution of order y"  )
+    QIMPA(m_maths_fn,gamma,    "gamma"                               )
+    QIMPA(m_maths_fn,lngamma,  "log gamma"                           )
+    QIMPA(m_maths_fn,psi,      "digamma"                             )
+    QIMPA(m_maths_fn,zeta,     "polygamma function of index x"       )
+    QIMPA(m_maths_fn,lambertW, "Lambert W (main branch W0, W>-1)"    )
+    QIMPA(m_maths_fn,lambertWx,"Lambert W (lower branch W1, W<-1)"   )
+    QIMPA(m_maths_fn,erf,      "error"                               )
+    QIMPA(m_maths_fn,erfc,     "complementary error"                 )
+    QIMPA(m_maths_fn,dawson,   "Dawson"                              )
 
-    QIMPA(m_maths_fn,Sqrt,     "square root (alternate cut)")
-    QIMPA(m_maths_fn,Cbrt,     "cube root (alternate cut)")
-    QIMPB(m_maths_fn,Nthrt,    "nth root (alternate cut)")
-    QIMPA(m_maths_fn,Log,      "natural log (alternate cut)")
-    QIMPA(m_maths_fn,Log10,    "log base 10 (alternate cut)")
-    QIMPB(m_maths_fn,Logb,     "log base b (alternate cut)")
-    QIMPB(m_maths_fn,Logbl,    "log base b (left-handed, alternate cut)")
-    QIMPB(m_maths_fn,Logbr,    "log base b (right-handed, alternate cut)")
-    QIMPA(m_maths_fn,Asin,     "inverse sine (alternate cut)")
-    QIMPA(m_maths_fn,Acos,     "inverse cosine (alternate cut)")
-    QIMPA(m_maths_fn,Acosec,   "inverse cosecant (alternate cut)")
-    QIMPA(m_maths_fn,Asec,     "inverse secant (alternate cut)")
-    QIMPA(m_maths_fn,Avers,    "inverse versed sine (alternate cut)")
-    QIMPA(m_maths_fn,Acovers,  "inverse coversed sine (alterate cut)")
-    QIMPA(m_maths_fn,Ahav,     "inverse half versed sine (alternate cut)")
-    QIMPA(m_maths_fn,Aexcosec, "inverse external cosecant (alternate cut)")
-    QIMPA(m_maths_fn,Aexsec,   "inverse external secant (alternate cut)")
-    QIMPA(m_maths_fn,Acasctrg, "inverse complementary cas (alternate cut)")
-    QIMPA(m_maths_fn,Acosh,    "inverse hyperbolic cosine (alternate cut)")
-    QIMPA(m_maths_fn,Atanh,    "inverse hyperbolic tangent (alternate cut)")
-    QIMPA(m_maths_fn,Asech,    "inverse hyperbolic secant (alternate cut)")
-    QIMPA(m_maths_fn,Acoth,    "inverse hyperbolic cotangent (alternate cut)")
-    QIMPA(m_maths_fn,Ahavh,    "inverse hyperbolic half-versed sine (alternate cut)")
-    QIMPA(m_maths_fn,Aexsech,  "inverse hyperbolic external secant (alternate cut)")
+    QIMPA(m_maths_fn,Sqrt,     "square root (alternate cut)"                         )
+    QIMPA(m_maths_fn,Cbrt,     "cube root (alternate cut)"                           )
+    QIMPB(m_maths_fn,Nthrt,    "nth root (alternate cut)"                            )
+    QIMPA(m_maths_fn,Log,      "natural log (alternate cut)"                         )
+    QIMPA(m_maths_fn,Log10,    "log base 10 (alternate cut)"                         )
+    QIMPB(m_maths_fn,Logb,     "log base b (alternate cut)"                          )
+    QIMPB(m_maths_fn,Logbl,    "log base b (left-handed, alternate cut)"             )
+    QIMPB(m_maths_fn,Logbr,    "log base b (right-handed, alternate cut)"            )
+    QIMPA(m_maths_fn,Asin,     "inverse sine (alternate cut)"                        )
+    QIMPA(m_maths_fn,Acos,     "inverse cosine (alternate cut)"                      )
+    QIMPA(m_maths_fn,Acosec,   "inverse cosecant (alternate cut)"                    )
+    QIMPA(m_maths_fn,Asec,     "inverse secant (alternate cut)"                      )
+    QIMPA(m_maths_fn,Avers,    "inverse versed sine (alternate cut)"                 )
+    QIMPA(m_maths_fn,Acovers,  "inverse coversed sine (alterate cut)"                )
+    QIMPA(m_maths_fn,Ahav,     "inverse half versed sine (alternate cut)"            )
+    QIMPA(m_maths_fn,Aexcosec, "inverse external cosecant (alternate cut)"           )
+    QIMPA(m_maths_fn,Aexsec,   "inverse external secant (alternate cut)"             )
+    QIMPA(m_maths_fn,Acasctrg, "inverse complementary cas (alternate cut)"           )
+    QIMPA(m_maths_fn,Acosh,    "inverse hyperbolic cosine (alternate cut)"           )
+    QIMPA(m_maths_fn,Atanh,    "inverse hyperbolic tangent (alternate cut)"          )
+    QIMPA(m_maths_fn,Asech,    "inverse hyperbolic secant (alternate cut)"           )
+    QIMPA(m_maths_fn,Acoth,    "inverse hyperbolic cotangent (alternate cut)"        )
+    QIMPA(m_maths_fn,Ahavh,    "inverse hyperbolic half-versed sine (alternate cut)" )
+    QIMPA(m_maths_fn,Aexsech,  "inverse hyperbolic external secant (alternate cut)"  )
     QIMPA(m_maths_fn,Acaschyp, "inverse hyperbolic complementary cas (alternate cut)")
-    QIMPA(m_maths_fn,Acastrg,  "inverse cas (alternate cut)")
-    QIMPA(m_maths_fn,Acashyp,  "inverse hyperbolic cas (alternate cut)")
-    QIMPA(m_maths_fn,Asigm,    "inverse sigmoid (alternate cut)")
-    QIMPA(m_maths_fn,Agd,      "inverse Gudermanian (alternate cut)")
-    QIMPB(m_maths_fn,PolyDistr,"polynomial distribution of order y (alternate cut)")
+    QIMPA(m_maths_fn,Acastrg,  "inverse cas (alternate cut)"                         )
+    QIMPA(m_maths_fn,Acashyp,  "inverse hyperbolic cas (alternate cut)"              )
+    QIMPA(m_maths_fn,Asigm,    "inverse sigmoid (alternate cut)"                     )
+    QIMPA(m_maths_fn,Agd,      "inverse Gudermanian (alternate cut)"                 )
+    QIMPB(m_maths_fn,PolyDistr,"polynomial distribution of order y (alternate cut)"  )
 
 
 
@@ -1985,7 +1977,8 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETKERQD(m_ml_kern,getIntConstZeroUB, setIntConstZeroUB, "dUB","setdUB","nominal upper bounds for order"     );
 }
 
-void logit(const std::string logstr) { errstream() << "python: " << logstr << "\n"; }
+//void logit(const std::string logstr) { errstream() << "python: " << logstr << "\n"; }
+void logit(py::object logstr) { errstream() << "python: " << convFromPy(logstr) << "\n"; }
 
 py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, const py::object &objfn);
 
@@ -2088,6 +2081,22 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, const py::objec
     return res;
 }
 
+#define COMMA ,
+#define RECURSE_ARG(Q_x,Q_fn,Q_prefn,Q_postfn)            \
+if ( isValTuple(Q_x) )                                    \
+{                                                         \
+    py::tuple Q_xx = py::cast<py::tuple>(Q_x);            \
+    int Q_size = (int) Q_xx.size();                       \
+    py::list Q_res(Q_size);                               \
+                                                          \
+    for ( int Q_i = 0 ; Q_i < Q_size ; ++Q_i )            \
+    {                                                     \
+        Q_res[Q_i] = Q_fn ( Q_prefn Q_xx[Q_i] Q_postfn ); \
+    }                                                     \
+                                                          \
+    return Q_res;                                         \
+}
+
 void boSetgridsource      (int j) { dostartup(); int i = glob_BayesianInd(0); j = glob_MLInd(j); getBayesianref(i).gridsource = &getMLref(j);          }
 void boSetkernapproxsource(int j) { dostartup(); int i = glob_BayesianInd(0); j = glob_MLInd(j); getBayesianref(i).kernapprox = &getMLref(j);          }
 void boSetimpmeas         (int j) { dostartup(); int i = glob_BayesianInd(0); j = glob_MLInd(j); getBayesianref(i).impmeasu   = &getMLref(j).getIMP(); }
@@ -2114,22 +2123,9 @@ const SparseVector<gentype> &getvec(py::object xa, SparseVector<gentype> &xxa)
     return xxa;
 }
 
-
 py::object mlK1(py::object xa)
 {
-    if ( isValTuple(xa) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xa);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = mlK1(xx[i]);
-        }
-
-        return res;
-    }
+    RECURSE_ARG(xa,mlK1,,);
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2145,33 +2141,8 @@ py::object mlK1(py::object xa)
 
 py::object mlK2(py::object xa, py::object xb)
 {
-    if ( isValTuple(xa) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xa);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = mlK2(xx[i],xb);
-        }
-
-        return res;
-    }
-
-    if ( isValTuple(xb) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xb);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = mlK2(xa,xx[i]);
-        }
-
-        return res;
-    }
+    RECURSE_ARG(xa,mlK2,,COMMA xb);
+    RECURSE_ARG(xb,mlK2,xa COMMA,);
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2187,47 +2158,9 @@ py::object mlK2(py::object xa, py::object xb)
 
 py::object mlK3(py::object xa, py::object xb, py::object xc)
 {
-    if ( isValTuple(xa) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xa);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = mlK3(xx[i],xb,xc);
-        }
-
-        return res;
-    }
-
-    if ( isValTuple(xb) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xb);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = mlK3(xa,xx[i],xc);
-        }
-
-        return res;
-    }
-
-    if ( isValTuple(xc) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xc);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = mlK3(xa,xb,xx[i]);
-        }
-
-        return res;
-    }
+    RECURSE_ARG(xa,mlK3,,COMMA xb COMMA xc);
+    RECURSE_ARG(xb,mlK3,xa COMMA, COMMA xc);
+    RECURSE_ARG(xc,mlK3,xa COMMA xb COMMA,);
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2243,61 +2176,10 @@ py::object mlK3(py::object xa, py::object xb, py::object xc)
 
 py::object mlK4(py::object xa, py::object xb, py::object xc, py::object xd)
 {
-    if ( isValTuple(xa) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xa);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = mlK4(xx[i],xb,xc,xd);
-        }
-
-        return res;
-    }
-
-    if ( isValTuple(xb) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xb);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = mlK4(xa,xx[i],xc,xd);
-        }
-
-        return res;
-    }
-
-    if ( isValTuple(xc) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xc);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = mlK4(xa,xb,xx[i],xd);
-        }
-
-        return res;
-    }
-
-    if ( isValTuple(xd) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xd);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = mlK4(xa,xb,xc,xx[i]);
-        }
-
-        return res;
-    }
+    RECURSE_ARG(xa,mlK4,,COMMA xb COMMA xc COMMA xd);
+    RECURSE_ARG(xb,mlK4,xa COMMA, COMMA xc COMMA xd);
+    RECURSE_ARG(xc,mlK4,xa COMMA xb COMMA, COMMA xd);
+    RECURSE_ARG(xd,mlK4,xa COMMA xb COMMA xc COMMA,);
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2322,19 +2204,8 @@ py::object svmtest(int i, std::string type)
     {
         for ( int j = 1 ; j <= NUMOPTTESTFNS ; j++ )
         {
-            {
-                gentype jj(j);
-                gentype x("x");
-
-                gentestfn("&",j) = testfn(jj,x); // this is a function of x
-            }
-
-            {
-                gentype jj(2000+j);
-                gentype x("x");
-
-                gentestfn("&",2000+j) = testfn(jj,x); // this is a function of x
-            }
+            { gentype jj(j);      gentype x("x"); gentestfn("&",j)      = testfn(jj,x); } // this is a function of x
+            { gentype jj(2000+j); gentype x("x"); gentestfn("&",2000+j) = testfn(jj,x); } // this is a function of x
         }
 
         firstrun = false;
@@ -2350,25 +2221,21 @@ void callintercalc(void)
     intercalc(outstream(),std::cin);
 }
 
-py::object svmeval(std::string f, py::object x)
+py::object svmeval(py::object f, py::object x)
 {
     dostartup();
 
-    gentype ff(f); // convert string to equation
-    gentype xx; // this will hold x
+    gentype ff,xx;
 
-    if ( convFromPy(xx,x) )
-    {
-        return convToPy(nan(""));
-    }
+    if      ( isValString(f)   ) { std::string xf; convFromPy(xf,f); ff = xf; } // convert string to equation
+    else if ( convFromPy(ff,f) ) { throw("Error: can't convert f to gentype function stub in svmeval."); }
+
+    if ( convFromPy(xx,x) ) { return convToPy(nan("")); }
 
     return convToPy(ff(xx)); // evaluate f(x) and convert back to python friendly form
 }
 
-#define snakehigh 24
-#define snakewide 80
-
-void callsnakes(void) { dostartup(); snakes(snakewide,snakehigh,(20*snakehigh)/23,5,20,100000); }
+void callsnakes(int wide, int high) { dostartup(); snakes(wide,high,(20*high)/23,5,20,100000); }
 
 void svmheavy(int method, int permode, const std::string commstr, int wml);
 
@@ -2431,17 +2298,14 @@ int makeMonot(int n, int t, py::object xb, py::object xlb, py::object xub, int d
     errcode |= convFromPy(zxb,xb);
     errcode |= convFromPy(zxlb,xlb);
     errcode |= convFromPy(zxub,xub);
-
     errcode |= convFromPy(zy,y);
 
-    if ( errcode )
+    if ( !errcode )
     {
-        return errcode;
+        makeMonotone(getMLref(i),n,t,zxb,zxlb,zxub,d,zy,Cweight,epsweight,((t==2)?&getMLref(j):nullptr));
     }
 
-    makeMonotone(getMLref(i),n,t,zxb,zxlb,zxub,d,zy,Cweight,epsweight,((t==2)?&getMLref(j):nullptr));
-
-    return 0;
+    return errcode;
 }
 
 int addTrainingVectorml(int j, py::object z, py::object x)
@@ -2453,7 +2317,6 @@ int addTrainingVectorml(int j, py::object z, py::object x)
     if ( ( isValTuple(x) && !isValTuple(z) ) )
     {
         throw("Error: number of vectors being added inconsistent between x and z (z not a tuple).");
-
         return 0;
     }
 
@@ -2507,7 +2370,8 @@ int addTrainingVectorml(int j, py::object z, py::object x)
 
     if ( isValNone(z) )
     {
-        zz = zdefault;
+//        zz = zdefault;
+        zz.makeNull();
         cw = 1.0;
         ew = 1.0;
         dd = ddefault;
@@ -2537,7 +2401,7 @@ int addTrainingVectorml(int j, py::object z, py::object x)
 
             errcode |= convFromPy(keyz,elm.first);
 
-            if ( ( keyz == "y"  ) && ( errcode |= convFromPy(zz,elm.second) ) ) { zz = zdefault; }
+            if ( ( keyz == "y"  ) && ( errcode |= convFromPy(zz,elm.second) ) ) { zz.makeNull(); } // = zdefault; }
             if ( ( keyz == "cw" ) && ( errcode |= convFromPy(cw,elm.second) ) ) { cw = 1.0;      }
             if ( ( keyz == "ew" ) && ( errcode |= convFromPy(ew,elm.second) ) ) { ew = 1.0;      }
             if ( ( keyz == "d"  ) && ( errcode |= convFromPy(dd,elm.second) ) ) { dd = ddefault; }
@@ -2560,10 +2424,7 @@ int faddTrainingVectorml(int ignoreStart, int imax, int reverse, int j, const st
     dostartup();
     int i = glob_MLInd(0);
 
-    if ( j == -1 )
-    {
-        j = getMLref(i).N();
-    }
+    if ( j == -1 ) { j = getMLref(i).N(); }
 
     return addtrainingdata(getMLref(i),fname.c_str(),reverse,ignoreStart,imax,j);
 }
@@ -2573,29 +2434,14 @@ int removeTrainingVectorml(int j, int num)
     dostartup();
     int i = glob_MLInd(0);
 
-    if ( j == -1 )
-    {
-        j = getMLref(i).N()-1;
-    }
+    if ( j == -1 ) { j = getMLref(i).N()-1; }
 
     return getMLref(i).removeTrainingVector(j,num);
 }
 
 py::object muml(py::object xa)
 {
-    if ( isValTuple(xa) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xa);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = muml(xx[i]);
-        }
-
-        return res;
-    }
+    RECURSE_ARG(xa,muml,,);
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2611,19 +2457,7 @@ py::object muml(py::object xa)
 
 py::object mugml(py::object xa, int fmt)
 {
-    if ( isValTuple(xa) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xa);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = mugml(xx[i],fmt);
-        }
-
-        return res;
-    }
+    RECURSE_ARG(xa,mugml,, COMMA fmt);
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2639,19 +2473,7 @@ py::object mugml(py::object xa, int fmt)
 
 py::object varml(py::object xa)
 {
-    if ( isValTuple(xa) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xa);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = varml(xx[i]);
-        }
-
-        return res;
-    }
+    RECURSE_ARG(xa,varml,,);
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2667,33 +2489,8 @@ py::object varml(py::object xa)
 
 py::object covml(py::object xa, py::object xb)
 {
-    if ( isValTuple(xa) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xa);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = covml(xx[i],xb);
-        }
-
-        return res;
-    }
-
-    if ( isValTuple(xb) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xb);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = covml(xa,xx[i]);
-        }
-
-        return res;
-    }
+    RECURSE_ARG(xa,covml,, COMMA xb);
+    RECURSE_ARG(xb,covml,xa COMMA ,);
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2709,19 +2506,7 @@ py::object covml(py::object xa, py::object xb)
 
 py::object predvarml(py::object xa, py::object pp, py::object sigw)
 {
-    if ( isValTuple(xa) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xa);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = predvarml(xx[i],pp,sigw);
-        }
-
-        return res;
-    }
+    RECURSE_ARG(xa,predvarml,, COMMA pp COMMA sigw);
 
     if ( isValTuple(pp) && !isValTuple(sigw) )
     {
@@ -2775,19 +2560,7 @@ py::object predvarml(py::object xa, py::object pp, py::object sigw)
 
 py::object predcovml(py::object xa, py::object xb, py::object pp, py::object sigw)
 {
-    if ( isValTuple(xa) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xa);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = predcovml(xx[i],xb,pp,sigw);
-        }
-
-        return res;
-    }
+    RECURSE_ARG(xa,predcovml,, COMMA xb COMMA pp COMMA sigw);
 
     if ( isValTuple(xb) )
     {
@@ -2909,21 +2682,14 @@ int mlsetalpha(py::object src)
 
     Vector<gentype> altsrc;
 
-    if ( ( errcode = convFromPy(altsrc,src) ) )
-    {
-        return errcode;
-    }
+    if ( ( errcode = convFromPy(altsrc,src) ) ) { return errcode; }
 
     int type = getMLref(i).type();
 
          if ( ( type >= 0   ) && ( type <= 99  ) ) { getMLref(i).setAlpha   (altsrc); }
     else if ( ( type >= 400 ) && ( type <= 499 ) ) { getMLref(i).setmuWeight(altsrc); }
     else if ( ( type >= 500 ) && ( type <= 599 ) ) { getMLref(i).setgamma   (altsrc); }
-
-    else
-    {
-        return 1;
-    }
+    else                                           { return 1;                        }
 
     return 0;
 }
@@ -2937,21 +2703,14 @@ int mlsetbias(py::object src)
 
     gentype altsrc('N');
 
-    if ( ( errcode = convFromPy(altsrc,src) ) )
-    {
-        return errcode;
-    }
+    if ( ( errcode = convFromPy(altsrc,src) ) ) { return errcode; }
 
     int type = getMLref(i).type();
 
          if ( ( type >= 0   ) && ( type <= 99  ) ) { getMLref(i).setBias  (altsrc); }
     else if ( ( type >= 400 ) && ( type <= 499 ) ) { getMLref(i).setmuBias(altsrc); }
     else if ( ( type >= 500 ) && ( type <= 599 ) ) { getMLref(i).setdelta (altsrc); }
-
-    else
-    {
-        return 1;
-    }
+    else                                           { return 1;                      }
 
     return 0;
 }
@@ -2994,50 +2753,7 @@ int mlsetbias(py::object src)
 
 
 
-// Data translation, heap store
-
-py::object &setgetsrc(int &i, int doset, py::object *val = nullptr);
-py::object &setgetsrc(int &i, int doset, py::object *val)
-{
-    static thread_local SparseVector<py::object *> xval;
-    static thread_local SparseVector<int> useind;
-
-    if ( doset )
-    {
-        if ( i == -1 )
-        {
-            i = 0;
-
-            while ( useind.isindpresent(i) ) { ++i; } // This is shared between all stores, so indices are unique.
-        }
-
-        xval("&",i) = val;
-        useind("&",i) = 1;
-    }
-
-    StrucAssert( i >= 0 );
-    StrucAssert( useind.isindpresent(i) );
-
-    return *(xval(i));
-}
-
-py::object &pyogetsrc(int k) { return setgetsrc(k,0); }
-int pyosetsrc(int k, py::object *src) { setgetsrc(k,1,src); return k; }
-
 // Convert C++ types to python
-
-py::object convToPy(int                src) {                           return py::cast(src);                                                    }
-py::object convToPy(double             src) {                           return py::cast(src);                                                    }
-py::object convToPy(const std::string &src) {                           return py::cast(src.c_str());                                            }
-py::object convToPy(const d_anion     &src) { if ( src.order() <= 1 ) { return py::cast((std::complex<double>) src); } return py::cast(nan("")); }
-
-template <class T> py::object convToPy(int vsize, const T    *src) { py::list  res(vsize);         for ( int i = 0 ; i < vsize         ; ++i ) { res[i] = convToPy(src[i]);       } return res; }
-template <>        py::object convToPy(const Vector<double>  &src) { py::list  res(src.size());    for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = py::cast(src.v(i));     } return res; }
-template <class T> py::object convToPy(const Vector<T>       &src) { py::list  res(src.size());    for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = convToPy(src(i));       } return res; }
-template <class T> py::object convToPy(const Set<T>          &src) { py::tuple res(src.size());    for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = convToPy(src.all()(i)); } return res; }
-template <class T> py::object convToPy(const Dict<T,dictkey> &src) { py::dict  res;                for ( int i = 0 ; i < src.size()    ; ++i ) { res[convToPy(src.key(i))] = convToPy(src.val(i)); } return res; }
-template <class T> py::object convToPy(const Matrix<T>       &src) { py::list  res(src.numRows()); for ( int i = 0 ; i < src.numRows() ; ++i ) { retVector<T> tmpa,tmpb; res[i] = convToPy(src(i,tmpa,tmpb)); } return res; }
-template <class T> py::object convToPy(const SparseVector<T> &src) { gentype altsrc(src); return convToPy(altsrc); }
 
 py::object convToPy(const gentype &src)
 {
@@ -3050,10 +2766,61 @@ py::object convToPy(const gentype &src)
     else if ( src.isValMatrix()  ) { return convToPy((const Matrix<gentype> &)       src); }
     else if ( src.isValSet()     ) { return convToPy((const Set<gentype> &)          src); }
     else if ( src.isValDict()    ) { return convToPy((const Dict<gentype,dictkey> &) src); }
-    else if ( src.isValEqnDir()  ) { return py::cpp_function([src](const py::object &x) { gentype xx; convFromPy(xx,x); return convToPy(src(xx)); },py::arg("x")); }
+    else if ( src.isValEqnDir()  ) { return py::cpp_function([src](const py::object &x) { return convToPy(src(convFromPy(x))); },py::arg("x")); }
 
     return py::cast(nan(""));
 }
+
+// Convert python to C++ types
+
+int convFromPy(gentype &res, const py::object &src)
+{
+    int errcode = 4096;
+
+    if      ( isValNone(src)     ) { errcode = 0; res.force_null();                }
+    else if ( isValInteger(src)  ) { errcode = convFromPy(res.force_int(),   src); }
+    else if ( isValReal(src)     ) { errcode = convFromPy(res.force_double(),src); }
+    else if ( isValString(src)   ) { errcode = convFromPy(res.force_string(),src); }
+    else if ( isValList(src)     ) { errcode = convFromPy(res.force_vector(),src); }
+    else if ( isValDict(src)     ) { errcode = convFromPy(res.force_dict(),  src); }
+    else if ( isValTuple(src)    ) { errcode = convFromPy(res.force_set(),   src); }
+    else if ( isValComplex(src)  ) { errcode = convFromPy(res.force_anion(), src); }
+    //else if ( isValMatrix(src)   ) { errcode = convFromPy(res.force_matrix(),src); } - can't disambiguate between array of vectors and matrices at present
+    else if ( isValCallable(src) ) { errcode = gentype_function(gentype(const gentype &),res,[src](const gentype &x) { return convFromPy(src(convToPy(x))); }); }
+    else                           { errcode = 2048; }
+
+    if ( errcode )
+    {
+        std::string errstr;
+        errstr  = "Couldn't convert object from python (error code ";
+        errstr += std::to_string(errcode);
+        errstr += ")";
+        res.makeError(errstr);
+    }
+
+    return errcode ? (errcode+4096) : 0;
+}
+
+gentype convFromPy(const py::object &src)
+{
+    gentype res;
+    convFromPy(res,src);
+    return res;
+}
+
+// Convert C++ types to python
+
+                   py::object convToPy(int                    src) {                           return py::cast(src);                                                    }
+                   py::object convToPy(double                 src) {                           return py::cast(src);                                                    }
+                   py::object convToPy(const std::string     &src) {                           return py::cast(src.c_str());                                            }
+                   py::object convToPy(const d_anion         &src) { if ( src.order() <= 1 ) { return py::cast((std::complex<double>) src); } return py::cast(nan("")); }
+template <class T> py::object convToPy(int vsize, const T    *src) { py::list  res(vsize);         for ( int i = 0 ; i < vsize         ; ++i ) { res[i] = convToPy(src[i]);       } return res; }
+template <>        py::object convToPy(const Vector<double>  &src) { py::list  res(src.size());    for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = py::cast(src.v(i));     } return res; }
+template <class T> py::object convToPy(const Vector<T>       &src) { py::list  res(src.size());    for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = convToPy(src(i));       } return res; }
+template <class T> py::object convToPy(const Set<T>          &src) { py::tuple res(src.size());    for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = convToPy(src.all()(i)); } return res; }
+template <class T> py::object convToPy(const Dict<T,dictkey> &src) { py::dict  res;                for ( int i = 0 ; i < src.size()    ; ++i ) { res[convToPy(src.key(i))] = convToPy(src.val(i)); } return res; }
+template <class T> py::object convToPy(const Matrix<T>       &src) { py::list  res(src.numRows()); for ( int i = 0 ; i < src.numRows() ; ++i ) { retVector<T> tmpa,tmpb; res[i] = convToPy(src(i,tmpa,tmpb)); } return res; }
+template <class T> py::object convToPy(const SparseVector<T> &src) { gentype altsrc(src); return convToPy(altsrc); }
 
 // Convert python to C++ types
 //
@@ -3071,62 +2838,39 @@ template <class T> int naivePyToSpv(SparseVector<T>       &res, const py::object
 template <>        int naivePyToSpv(SparseVector<gentype> &res, const py::object &src);
                    int naivePyToEqn(gentype               &res, const py::object &src);
 
-
 template <class T> int convFromPy(T                     &res, const py::handle &src) { return convFromPy(res,py::reinterpret_borrow<py::object>(src)); }
-                   int convFromPy(int                   &res, const py::object &src) { if ( isValInteger(src) || isValReal(src)                      ) { return naivePyToInt(res,src); } res = 0;                                return 1;   }
-                   int convFromPy(double                &res, const py::object &src) { if ( isValInteger(src) || isValReal(src)                      ) { return naivePyToDbl(res,src); } res = nan("");                          return 2;   }
-                   int convFromPy(d_anion               &res, const py::object &src) { if ( isValInteger(src) || isValReal(src) || isValComplex(src) ) { return naivePyToCpl(res,src); } res = nan("");                          return 4;   }
-                   int convFromPy(std::string           &res, const py::object &src) { if ( isValString (src)                                        ) { return naivePyToStr(res,src); } res = "";                               return 8;   }
-template <class T> int convFromPy(Vector<T>             &res, const py::object &src) { if ( isValList   (src)                                        ) { return naivePyToVec(res,src); } res.resize(0);                          return 16;  }
-template <class T> int convFromPy(Matrix<T>             &res, const py::object &src) { if ( isValList   (src)                                        ) { return naivePyToMat(res,src); } res.resize(0,0);                        return 32;  }
-template <class T> int convFromPy(Set<T>                &res, const py::object &src) { if ( isValTuple  (src)                                        ) { return naivePyToSet(res,src); } Set<T> temp; res = temp;                return 64;  }
-template <class T> int convFromPy(Dict<T,dictkey>       &res, const py::object &src) { if ( isValDict   (src)                                        ) { return naivePyToDct(res,src); } Dict<gentype,dictkey> temp; res = temp; return 128; }
-template <>        int convFromPy(SparseVector<gentype> &res, const py::object &src) { if ( isValList   (src)                                        ) { return naivePyToSpv(res,src); } res.zero();                             return 256; }
-template <class T> int convFromPy(SparseVector<T>       &res, const py::object &src) { if ( isValList   (src)                                        ) { return naivePyToSpv(res,src); } res.zero();                             return 512; }
-
-int convFromPy(gentype &res, const py::object &src)
-{
-    int errcode = 0;
-
-    if      ( isValNone(src)     ) { res.force_null();                             }
-    else if ( isValInteger(src)  ) { errcode = convFromPy(res.force_int(),   src); }
-    else if ( isValReal(src)     ) { errcode = convFromPy(res.force_double(),src); }
-    else if ( isValString(src)   ) { errcode = convFromPy(res.force_string(),src); }
-    else if ( isValList(src)     ) { errcode = convFromPy(res.force_vector(),src); }
-    else if ( isValDict(src)     ) { errcode = convFromPy(res.force_dict(),  src); }
-    else if ( isValTuple(src)    ) { errcode = convFromPy(res.force_set(),   src); }
-    else if ( isValComplex(src)  ) { errcode = convFromPy(res.force_anion(), src); }
-    //else if ( isNumpyMatrix(src) ) { errcode = convFromPy(res.force_matrix(),src); }
-    else if ( isValCallable(src) ) { errcode = naivePyToEqn(res,src);              }
-    else                           { res.makeError("Couldn't convert object from python, type has no gentype equivalent."); errcode = 4096; }
-
-    return errcode ? (errcode+1024) : 0;
-}
-
-
-
+                   int convFromPy(int                   &res, const py::object &src) { if ( isValCastableToInteger(src) ) { return naivePyToInt(res,src); } res = 0;                                return 1;   }
+                   int convFromPy(double                &res, const py::object &src) { if ( isValCastableToReal   (src) ) { return naivePyToDbl(res,src); } res = nan("");                          return 2;   }
+                   int convFromPy(d_anion               &res, const py::object &src) { if ( isValCastableToComplex(src) ) { return naivePyToCpl(res,src); } res = nan("");                          return 4;   }
+                   int convFromPy(std::string           &res, const py::object &src) { if ( isValString           (src) ) { return naivePyToStr(res,src); } res = "";                               return 8;   }
+template <class T> int convFromPy(Vector<T>             &res, const py::object &src) { if ( isValList             (src) ) { return naivePyToVec(res,src); } res.resize(0);                          return 16;  }
+template <class T> int convFromPy(Matrix<T>             &res, const py::object &src) { if ( isValList             (src) ) { return naivePyToMat(res,src); } res.resize(0,0);                        return 32;  }
+template <class T> int convFromPy(Set<T>                &res, const py::object &src) { if ( isValTuple            (src) ) { return naivePyToSet(res,src); } Set<T> temp; res = temp;                return 64;  }
+template <class T> int convFromPy(Dict<T,dictkey>       &res, const py::object &src) { if ( isValDict             (src) ) { return naivePyToDct(res,src); } Dict<gentype,dictkey> temp; res = temp; return 128; }
+template <>        int convFromPy(SparseVector<gentype> &res, const py::object &src) { if ( isValList             (src) ) { return naivePyToSpv(res,src); } res.zero();                             return 256; }
+template <class T> int convFromPy(SparseVector<T>       &res, const py::object &src) { if ( isValList             (src) ) { return naivePyToSpv(res,src); } res.zero();                             return 512; }
 
 int naivePyToInt(int &res, const py::object &src)
 {
-    if ( isValInteger(src) ) { res = (int)           py::cast<py::int_>  (src);  }
-    else                     { res = (int) ((double) py::cast<py::float_>(src)); }
+    if ( isValInteger(src) ) { res =       toInt(src); }
+    else                     { res = (int) toDbl(src); }
 
     return 0;
 }
 
 int naivePyToDbl(double &res, const py::object &src)
 {
-    if ( isValInteger(src) ) { res = (double) ((int) py::cast<py::int_>  (src)); }
-    else                     { res = (double)        py::cast<py::float_>(src);  }
+    if ( isValInteger(src) ) { res = (double) toInt(src); }
+    else                     { res =          toDbl(src); }
 
     return 0;
 }
 
 int naivePyToCpl(d_anion &res, const py::object &src)
 {
-    if      ( isValComplex(src) ) { res =                 py::cast<std::complex<double> >(src);  }
-    else if ( isValInteger(src) ) { res = (double) ((int) py::cast<py::int_>             (src)); }
-    else                          { res = (double)        py::cast<py::float_>           (src);  }
+    if      ( isValComplex(src) ) { res =          toCpl(src); }
+    else if ( isValInteger(src) ) { res = (double) toInt(src); }
+    else                          { res =          toDbl(src); }
 
     return 0;
 }
@@ -3142,11 +2886,10 @@ template <class T>
 int naivePyToVec(Vector<T> &res, const py::object &src)
 {
     py::list altsrc = py::cast<py::list>(src);
-
-    res.resize((int) altsrc.size());
-
     int errcode = 0;
     int i = 0;
+
+    res.resize((int) altsrc.size());
 
     for ( auto elm : altsrc )
     {
@@ -3161,31 +2904,21 @@ template <class T>
 int naivePyToMat(Matrix<T> &res, const py::object &src)
 {
     py::list altsrc = py::cast<py::list>(src);
-
     int errcode = 0;
     int i = 0;
 
     retVector<T> tmpa;
     retVector<T> tmpb;
+    Vector<T> altres;
 
     for ( auto elm : altsrc )
     {
-        if ( !i )
-        {
-            Vector<T> altres;
+        errcode |= convFromPy(altres,elm);
 
-            errcode |= convFromPy(altres,elm);
+        if ( !i ) { res.resize(1,(int) altres.size()); }
+        else      { res.addRow(i);                     }
 
-            res.resize((int) altsrc.size(),(int) altres.size());
-
-            res("&",i,tmpa,tmpb) = altres;
-        }
-
-        else
-        {
-            errcode |= convFromPy(res("&",i,tmpa,tmpb),elm);
-        }
-
+        res("&",i,tmpa,tmpb) = altres;
         ++i;
     }
 
@@ -3196,11 +2929,11 @@ template <class T>
 int naivePyToSet(Set<T> &res, const py::object &src)
 {
     Set<T> temp;
+    int errcode = 0;
+
     res = temp;
 
     py::tuple altsrc = py::cast<py::tuple>(src);
-
-    int errcode = 0;
 
     for ( auto elm : altsrc )
     {
@@ -3217,11 +2950,11 @@ template <class T>
 int naivePyToDct(Dict<T,dictkey> &res, const py::object &src)
 {
     Dict<gentype,dictkey> temp;
+    int errcode = 0;
+
     res = temp;
 
     py::dict altsrc = py::cast<py::dict>(src);
-
-    int errcode = 0;
 
     for ( auto elm : altsrc )
     {
@@ -3281,12 +3014,10 @@ errstream() << "phantomxyz presparse res: " << res << "\n";
     return 0;
 */
 
-    py::list altsrc = py::cast<py::list>(src);
-
-    int errcode = 0;
-
     res.zero();
 
+    py::list altsrc = py::cast<py::list>(src);
+    int errcode = 0;
     int fnum = 0;
     int unum = 0;
     int iv = 0;
@@ -3326,7 +3057,6 @@ template <class T>
 int naivePyToSpv(SparseVector<T> &res, const py::object &src)
 {
     SparseVector<gentype> altres;
-
     int errcode = convFromPy(altres,src);
 
     res.zero();
@@ -3339,22 +3069,93 @@ int naivePyToSpv(SparseVector<T> &res, const py::object &src)
     return errcode ? (errcode+32796) : 0;
 }
 
-int naivePyToEqn(gentype &res, const py::object &src)
+//int naivePyToEqn(gentype &res, const py::object &src)
+//{
+//    // Method: make res a call to pycall, and then set altpycall (which
+//    // will override the usual functionality of pycall) to a
+//    // std::function wrapper around a lambda that captures src
+//
+//    res = "pycall(0,x)";
+//    res.altpycall = new std::function<gentype(const gentype &)>([src](const gentype &x) { gentype altres; convFromPy(altres,src(convToPy(x))); return altres; });
+//
+////Old version: store a copy, make pycall caller to retrieve it and evaluate through eval functionality
+////             (not a good ideal to rely on eval!)
+////    py::object *altsrc = new py::object(src);
+////    (*altsrc).inc_ref(); // want the copy to hang around forever!
+////
+////    int i = pyosetsrc(-1,altsrc);
+////
+////    res = "pycall(y,x)";
+////    SparseVector<SparseVector<gentype>> ii;
+////    ii("&",0)("&",1) = i; // this is y
+////    res.substitute(ii);
+//
+//    return 0;
+//}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// pycall support - allow gentype to directly call python functions (named or
+// stored on heap via pyosetsrc) via eval
+//
+// Data translation, heap store
+
+py::object &setgetsrc(int &i, int doset, py::object *val = nullptr);
+py::object &setgetsrc(int &i, int doset, py::object *val)
 {
-    py::object *altsrc = new py::object(src);
-    (*altsrc).inc_ref(); // want the copy to hang around forever!
+    static thread_local SparseVector<py::object *> xval;
+    static thread_local SparseVector<int> useind;
 
-    int i = pyosetsrc(-1,altsrc);
+    if ( doset )
+    {
+        if ( i == -1 )
+        {
+            i = 0;
 
-    res = "pycall(y,x)";
-    SparseVector<SparseVector<gentype>> ii;
-    ii("&",0)("&",1) = i; // this is y
-    res.substitute(ii);
+            while ( useind.isindpresent(i) ) { ++i; } // This is shared between all stores, so indices are unique.
+        }
 
-    return 0;
+        xval("&",i) = val;
+        useind("&",i) = 1;
+    }
+
+    StrucAssert( i >= 0 );
+    StrucAssert( useind.isindpresent(i) );
+
+    return *(xval(i));
 }
 
-
+py::object &pyogetsrc(int k) { return setgetsrc(k,0); }
+int pyosetsrc(int k, py::object *src) { setgetsrc(k,1,src); return k; }
 
 // drop-in replacement for pycall function in gentype.cc
 // (the gentype version, which uses a system call, is disabled by the macro PYLOCAL)
@@ -3383,13 +3184,7 @@ void pycall_x(const std::string &fn, gentype &res, py::object &xx)
 
     // Retrieve results of operation
 
-#ifdef DEBUGPY
-    int errcode =
-#endif
     convFromPy(res,resobj);
-#ifdef DEBUGPY
-errstream() << "result converted back " << res << " (errcode = " << errcode << ")\n";
-#endif
 
     return;
 }
@@ -3399,13 +3194,7 @@ void pycall_x(int fni, gentype &res, py::object &xx)
 {
     dostartup();
 
-#ifdef DEBUGPY
-    int errcode =
-#endif
     convFromPy(res,pyogetsrc(fni)(xx));
-#ifdef DEBUGPY
-errstream() << "result converted back (int type) " << res << " (errcode = " << errcode << ")\n";
-#endif
 
     return;
 }

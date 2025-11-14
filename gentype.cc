@@ -30,6 +30,7 @@
 #include "randfun.hpp"
 
 
+
 //static int xxxincalc = 0;
 
 #define NUMSAMP 1000
@@ -2245,6 +2246,11 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
             {
                 (*eqnargs)("&",i).fastcopy((*(src.eqnargs))(i),areDistinct);
             }
+
+            if ( src.altpycall )
+            {
+                MEMNEW(altpycall,std::function<gentype(const gentype &)>(*(src.altpycall)));
+            }
         }
 
         else if ( src.isValMatrix() )
@@ -2312,14 +2318,15 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
 
     else
     {
-        d_anion                   *anistore = nullptr;
-        Vector<gentype>           *vecstore = nullptr;
-        Matrix<gentype>           *matstore = nullptr;
-        Set<gentype>              *setstore = nullptr;
-        Dict<gentype,dictkey>     *dctstore = nullptr;
-        Dgraph<gentype,double>    *dgrstore = nullptr;
-        Vector<gentype>           *eqnstore = nullptr;
-        std::string               *strstore = nullptr;
+        d_anion                                 *anistore = nullptr;
+        Vector<gentype>                         *vecstore = nullptr;
+        Matrix<gentype>                         *matstore = nullptr;
+        Set<gentype>                            *setstore = nullptr;
+        Dict<gentype,dictkey>                   *dctstore = nullptr;
+        Dgraph<gentype,double>                  *dgrstore = nullptr;
+        Vector<gentype>                         *eqnstore = nullptr;
+        std::function<gentype(const gentype &)> *pycstore = nullptr;
+        std::string                             *strstore = nullptr;
 
         int wasValAnion  = src.isValAnion();
         int wasValVector = src.isValVector();
@@ -2337,8 +2344,8 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
         if ( wasValSet    ) { MEMNEW(setstore,Set<   gentype       >(*(src.setval)));    }
         if ( wasValDict   ) { MEMNEW(dctstore,xDict                 (*(src.dictval)));   }
         if ( wasValDgraph ) { MEMNEW(dgrstore,xDgraph               (*(src.dgraphval))); }
-        if ( wasValEqn    ) { MEMNEW(eqnstore,Vector<gentype       >(*(src.eqnargs)));   }
-        if ( wasValStrErr ) { MEMNEW(strstore,std::string(*(src.stringval)));            }
+        if ( wasValEqn    ) { MEMNEW(eqnstore,Vector<gentype       >(*(src.eqnargs)));    if ( src.altpycall ) { MEMNEW(pycstore,std::function<gentype(const gentype &)>(*altpycall)); } }
+        if ( wasValStrErr ) { MEMNEW(strstore,std::string           (*(src.stringval))); }
 
         char              srctypeis      = src.typeis;
         int               srcintval      = src.intval;
@@ -2381,6 +2388,13 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
             NiceAssert( eqnstore );
             *eqnargs = *eqnstore;
             MEMDEL(eqnstore); eqnstore = nullptr;
+
+            if ( pycstore )
+            {
+                MEMNEW(altpycall,std::function<gentype(const gentype &)>);
+                *altpycall = *pycstore;
+                MEMDEL(pycstore); pycstore = nullptr;
+            }
         }
     }
 
@@ -2481,7 +2495,7 @@ int gentype::makeEqn(const std::string &src, int processxyzvw)
 
     else if ( src.length() == 1 )
     {
-        if ( ( src[0] == ':' ) || ( src[0] == '~' ) )
+        if ( ( src[0] == ':' ) || ( src[0] == '~' ) ) // not reachable??? Still, above case does this anyhow, so no loss I guess
         {
             makeString(src);
 
@@ -2591,37 +2605,20 @@ int gentype::makeEqn(const char *src, int processxyzvw)
 
 gentype &gentype::toNull(gentype &res) const
 {
-    if ( !(res.isValNull()) )
-    {
-        res.deleteVectMatMem('N');
-        res.typeis = 'N';
-    }
-
     std::string errstr;
 
-    if ( loctoNull(errstr) )
-    {
-        res.makeError(errstr);
-    }
+    if ( !(res.isValNull()) ) { res.deleteVectMatMem('N'); res.typeis = 'N'; }
+    if ( loctoNull(errstr)  ) { res.makeError(errstr);                       }
 
     return res;
 }
 
 gentype &gentype::toInteger(gentype &res) const
 {
-    if ( !(res.isValInteger()) )
-    {
-        res.deleteVectMatMem('Z');
-        res.typeis = 'Z';
-        res.intval = 0;
-    }
-
     std::string errstr;
 
-    if ( loctoInteger(res.intval,errstr) )
-    {
-        res.makeError(errstr);
-    }
+    if ( !(res.isValInteger())           ) { res.deleteVectMatMem('Z'); res.typeis = 'Z'; res.intval = 0; }
+    if ( loctoInteger(res.intval,errstr) ) { res.makeError(errstr);                                       }
 
     res.doubleval  = res.intval;
     res.isNomConst = isNomConst;
@@ -2631,19 +2628,10 @@ gentype &gentype::toInteger(gentype &res) const
 
 gentype &gentype::toReal(gentype &res)    const
 {
-    if ( !(res.isValReal()) )
-    {
-        res.deleteVectMatMem('R');
-        res.typeis = 'R';
-        res.intval = 0;
-    }
-
     std::string errstr;
 
-    if ( loctoReal(res.doubleval,errstr) )
-    {
-        res.makeError(errstr);
-    }
+    if ( !(res.isValReal())              ) { res.deleteVectMatMem('R'); res.typeis = 'R'; res.intval = 0; }
+    if ( loctoReal(res.doubleval,errstr) ) { res.makeError(errstr);                                       }
 
     res.intval     = (int) res.doubleval;
     res.isNomConst = isNomConst;
@@ -2653,124 +2641,70 @@ gentype &gentype::toReal(gentype &res)    const
 
 gentype &gentype::toAnion(gentype &res)   const
 {
-    if ( !(res.isValAnion()) )
-    {
-        res.deleteVectMatMem('A');
-        *(res.anionval) = 0.0;
-    }
-
     std::string errstr;
 
-    if ( loctoAnion(*(res.anionval),errstr) )
-    {
-        res.makeError(errstr);
-    }
+    if ( !(res.isValAnion())                ) { res.deleteVectMatMem('A'); *(res.anionval) = 0.0; }
+    if ( loctoAnion(*(res.anionval),errstr) ) { res.makeError(errstr);                            }
 
     return res;
 }
 
 gentype &gentype::toVector(gentype &res)  const
 {
-    if ( !(res.isValVector()) )
-    {
-        res.deleteVectMatMem('V');
-    }
-
     std::string errstr;
 
-    if ( loctoVector(*(res.vectorval),errstr) )
-    {
-        res.makeError(errstr);
-    }
+    if ( !(res.isValVector())                 ) { res.deleteVectMatMem('V'); }
+    if ( loctoVector(*(res.vectorval),errstr) ) { res.makeError(errstr);     }
 
     return res;
 }
 
 gentype &gentype::toMatrix(gentype &res)  const
 {
-    if ( !(res.isValMatrix()) )
-    {
-        res.deleteVectMatMem('M');
-    }
-
     std::string errstr;
 
-    if ( loctoMatrix(*(res.matrixval),errstr) )
-    {
-        res.makeError(errstr);
-    }
+    if ( !(res.isValMatrix())                 ) { res.deleteVectMatMem('M'); }
+    if ( loctoMatrix(*(res.matrixval),errstr) ) { res.makeError(errstr); }
 
     return res;
 }
 
 gentype &gentype::toSet(gentype &res)  const
 {
-    if ( !(res.isValSet()) )
-    {
-        res.deleteVectMatMem('X');
-        (*(res.setval)).zero();
-    }
-
     std::string errstr;
 
-    if ( loctoSet(*(res.setval),errstr) )
-    {
-        res.makeError(errstr);
-    }
+    if ( !(res.isValSet())              ) { res.deleteVectMatMem('X'); (*(res.setval)).zero(); }
+    if ( loctoSet(*(res.setval),errstr) ) { res.makeError(errstr);                             }
 
     return res;
 }
 
 gentype &gentype::toDict(gentype &res)  const
 {
-    if ( !(res.isValDict()) )
-    {
-        res.deleteVectMatMem('D');
-        (*(res.dictval)).zero();
-    }
-
     std::string errstr;
 
-    if ( loctoDict(*(res.dictval),errstr) )
-    {
-        res.makeError(errstr);
-    }
+    if ( !(res.isValDict())               ) { res.deleteVectMatMem('D'); (*(res.dictval)).zero(); }
+    if ( loctoDict(*(res.dictval),errstr) ) { res.makeError(errstr);                              }
 
     return res;
 }
 
 gentype &gentype::toDgraph(gentype &res)  const
 {
-    if ( !(res.isValDgraph()) )
-    {
-        res.deleteVectMatMem('G');
-        (*(res.dgraphval)).zero();
-    }
-
     std::string errstr;
 
-    if ( loctoDgraph(*(res.dgraphval),errstr) )
-    {
-        res.makeError(errstr);
-    }
+    if ( !(res.isValDgraph())                 ) { res.deleteVectMatMem('G'); (*(res.dgraphval)).zero(); }
+    if ( loctoDgraph(*(res.dgraphval),errstr) ) { res.makeError(errstr);                                }
 
     return res;
 }
 
 gentype &gentype::toString(gentype &res)  const
 {
-    if ( !(res.isValString()) )
-    {
-        res.deleteVectMatMem('S');
-        *(res.stringval) = "";
-    }
-
     std::string errstr;
 
-    if ( loctoString(*(res.stringval),errstr) )
-    {
-        res.makeError(errstr);
-    }
+    if ( !(res.isValString())                 ) { res.deleteVectMatMem('S'); *(res.stringval) = ""; }
+    if ( loctoString(*(res.stringval),errstr) ) { res.makeError(errstr);                            }
 
     return res;
 }
@@ -3070,7 +3004,7 @@ const SparseVector<double> &gentype::cast_sparsevector_real(int finalise) const
 
             if ( vg(i).isValString() )
             {
-                     if ( ((const std::string &) vg(i)) == "~"    ) { unum++;             iv = 0; issep = true; }
+                if      ( ((const std::string &) vg(i)) == "~"    ) { unum++;             iv = 0; issep = true; }
                 else if ( ((const std::string &) vg(i)) == "::::" ) { unum = 0; fnum = 4; iv = 0; issep = true; }
                 else if ( ((const std::string &) vg(i)) == ":::"  ) { unum = 0; fnum = 3; iv = 0; issep = true; }
                 else if ( ((const std::string &) vg(i)) == "::"   ) { unum = 0; fnum = 2; iv = 0; issep = true; }
@@ -3079,7 +3013,7 @@ const SparseVector<double> &gentype::cast_sparsevector_real(int finalise) const
 
             if ( !issep )
             {
-                if ( vg(i).isValNull() && !vg(i).isNomConst ) { ; } // null means "there is no element here", !isNomConst means "wasn't a placeholder in the source"
+                if      ( vg(i).isValNull() && !vg(i).isNomConst ) { ; } // null means "there is no element here", !isNomConst means "wasn't a placeholder in the source"
                 else if ( fnum == 0 ) { vr.n ("&",iv,unum) = (double) vg(i); }
                 else if ( fnum == 1 ) { vr.f1("&",iv,unum) = (double) vg(i); }
                 else if ( fnum == 2 ) { vr.f2("&",iv,unum) = (double) vg(i); }
@@ -3559,70 +3493,17 @@ int gentype::loctoNull(std::string &errstr) const
 
     if ( !isValError() )
     {
-        if ( isValNull() )
-        {
-            ;
-        }
-
-        else if ( isValInteger() )
-	{
-            errstr = "Can't cast integer to null.";
-	    lociserr = 1;
-	}
-
-	else if ( isValReal() )
-	{
-            errstr = "Can't cast real to null.";
-	    lociserr = 1;
-	}
-
-	else if ( isValAnion() )
-	{
-            errstr = "Can't cast anion to null.";
-	    lociserr = 1;
-	}
-
-	else if ( isValVector() )
-	{
-            errstr = "Can't cast vector to null.";
-	    lociserr = 1;
-	}
-
-	else if ( isValMatrix() )
-	{
-            errstr = "Can't cast matrix to null.";
-	    lociserr = 1;
-	}
-
-        else if ( isValSet() )
-	{
-            errstr = "Can't cast set to null.";
-	    lociserr = 1;
-	}
-
-        else if ( isValDict() )
-	{
-            errstr = "Can't cast dictionary to null.";
-	    lociserr = 1;
-	}
-
-        else if ( isValDgraph() )
-	{
-            errstr = "Can't cast dgraph to null.";
-	    lociserr = 1;
-	}
-
-	else if ( isValString() )
-	{
-            errstr = "Can't cast string to null.";
-	    lociserr = 1;
-	}
-
-	else if ( isValEqn() )
-	{
-            errstr = "Can't cast equation to null.";
-	    lociserr = 1;
-	}
+        if      ( isValNull()    ) { ; }
+        else if ( isValInteger() ) { errstr = "Can't cast integer to null.";    lociserr = 1; }
+	else if ( isValReal()    ) { errstr = "Can't cast real to null.";       lociserr = 1; }
+	else if ( isValAnion()   ) { errstr = "Can't cast anion to null.";      lociserr = 1; }
+	else if ( isValVector()  ) { errstr = "Can't cast vector to null.";     lociserr = 1; }
+	else if ( isValMatrix()  ) { errstr = "Can't cast matrix to null.";     lociserr = 1; }
+        else if ( isValSet()     ) { errstr = "Can't cast set to null.";        lociserr = 1; }
+        else if ( isValDict()    ) { errstr = "Can't cast dictionary to null."; lociserr = 1; }
+        else if ( isValDgraph()  ) { errstr = "Can't cast dgraph to null.";     lociserr = 1; }
+	else if ( isValString()  ) { errstr = "Can't cast string to null.";     lociserr = 1; }
+	else if ( isValEqn()     ) { errstr = "Can't cast equation to null.";   lociserr = 1; }
     }
 
     else
@@ -3650,15 +3531,8 @@ int gentype::loctoInteger(int &res, std::string &errstr) const
 
     if ( !isValError() )
     {
-        if ( isValNull() )
-	{
-            res = 0;
-	}
-
-        else if ( isValInteger() )
-	{
-            res = intval;
-	}
+        if      ( isValNull()    ) { res = 0;      }
+        else if ( isValInteger() ) { res = intval; }
 
 	else if ( isValReal() )
 	{
@@ -3724,35 +3598,11 @@ int gentype::loctoInteger(int &res, std::string &errstr) const
             }
 	}
 
-        else if ( isValSet() )
-	{
-            errstr = "Can't cast set to integer.";
-	    lociserr = 1;
-	}
-
-        else if ( isValDict() )
-	{
-            errstr = "Can't cast dictionary to integer.";
-	    lociserr = 1;
-	}
-
-        else if ( isValDgraph() )
-	{
-            errstr = "Can't cast dgraph to integer.";
-	    lociserr = 1;
-	}
-
-	else if ( isValString() )
-	{
-	    errstr = "Can't cast string to integer.";
-	    lociserr = 1;
-	}
-
-	else if ( isValEqn() )
-	{
-	    errstr = "Can't cast equation to integer.";
-	    lociserr = 1;
-	}
+        else if ( isValSet()    ) { errstr = "Can't cast set to integer.";        lociserr = 1; }
+        else if ( isValDict()   ) { errstr = "Can't cast dictionary to integer."; lociserr = 1; }
+        else if ( isValDgraph() ) { errstr = "Can't cast dgraph to integer.";     lociserr = 1; }
+	else if ( isValString() ) { errstr = "Can't cast string to integer.";     lociserr = 1; }
+	else if ( isValEqn()    ) { errstr = "Can't cast equation to integer.";   lociserr = 1; }
     }
 
     else
@@ -3784,20 +3634,9 @@ int gentype::loctoReal(double &res, std::string &errstr) const
 
     if ( !isValError() )
     {
-        if ( isValNull() )
-	{
-            res = 0.0;
-	}
-
-        else if ( isValInteger() )
-	{
-	    res = (double) intval;
-	}
-
-	else if ( isValReal() )
-	{
-            res = doubleval;
-	}
+        if      ( isValNull()    ) { res = 0.0;             }
+        else if ( isValInteger() ) { res = (double) intval; }
+	else if ( isValReal()    ) { res = doubleval;       }
 
 	else if ( isValAnion() )
 	{
@@ -3841,35 +3680,11 @@ int gentype::loctoReal(double &res, std::string &errstr) const
             }
 	}
 
-        else if ( isValSet() )
-	{
-            errstr = "Can't cast set to real.";
-	    lociserr = 1;
-	}
-
-        else if ( isValDict() )
-	{
-            errstr = "Can't cast dictionary to real.";
-	    lociserr = 1;
-	}
-
-        else if ( isValDgraph() )
-	{
-            errstr = "Can't cast dgraph to real.";
-	    lociserr = 1;
-	}
-
-	else if ( isValString() )
-	{
-	    errstr = "Can't cast string to real.";
-	    lociserr = 1;
-	}
-
-	else if ( isValEqn() )
-	{
-	    errstr = "Can't cast equation to real.";
-	    lociserr = 1;
-	}
+        else if ( isValSet()    ) { errstr = "Can't cast set to real.";        lociserr = 1; }
+        else if ( isValDict()   ) { errstr = "Can't cast dictionary to real."; lociserr = 1; }
+        else if ( isValDgraph() ) { errstr = "Can't cast dgraph to real.";     lociserr = 1; }
+	else if ( isValString() ) { errstr = "Can't cast string to real.";     lociserr = 1; }
+	else if ( isValEqn()    ) { errstr = "Can't cast equation to real.";   lociserr = 1; }
     }
 
     else
@@ -3903,20 +3718,9 @@ int gentype::loctoAnion(d_anion &res, std::string &errstr) const
 
     if ( !isValError() )
     {
-        if ( isValNull() )
-	{
-            res = 0.0;
-	}
-
-        else if ( isValInteger() )
-	{
-            res = (double) intval;
-	}
-
-	else if ( isValReal() )
-	{
-            res = doubleval;
-	}
+        if      ( isValNull()    ) { res = 0.0;             }
+        else if ( isValInteger() ) { res = (double) intval; }
+	else if ( isValReal()    ) { res = doubleval;       }
 
 	else if ( isValAnion() )
 	{
@@ -3956,35 +3760,11 @@ int gentype::loctoAnion(d_anion &res, std::string &errstr) const
             }
 	}
 
-        else if ( isValSet() )
-	{
-            errstr = "Can't cast set to anion.";
-	    lociserr = 1;
-	}
-
-        else if ( isValDict() )
-	{
-            errstr = "Can't cast dictionary to anion.";
-	    lociserr = 1;
-	}
-
-        else if ( isValDgraph() )
-	{
-            errstr = "Can't cast dgraph to anion.";
-	    lociserr = 1;
-	}
-
-	else if ( isValString() )
-	{
-	    errstr = "Can't cast string to anion.";
-	    lociserr = 1;
-	}
-
-	else if ( isValEqn() )
-	{
-	    errstr = "Can't cast equation to anion.";
-	    lociserr = 1;
-	}
+        else if ( isValSet()    ) { errstr = "Can't cast set to anion.";        lociserr = 1; }
+        else if ( isValDict()   ) { errstr = "Can't cast dictionary to anion."; lociserr = 1; }
+        else if ( isValDgraph() ) { errstr = "Can't cast dgraph to anion.";     lociserr = 1; }
+	else if ( isValString() ) { errstr = "Can't cast string to anion.";     lociserr = 1; }
+	else if ( isValEqn()    ) { errstr = "Can't cast equation to anion.";   lociserr = 1; }
     }
 
     else
@@ -4078,35 +3858,11 @@ int gentype::loctoVector(Vector<gentype> &res, std::string &errstr) const
 	    }
 	}
 
-        else if ( isValSet() )
-	{
-            errstr = "Can't cast set to vector.";
-	    lociserr = 1;
-	}
-
-        else if ( isValDict() )
-	{
-            errstr = "Can't cast dictionary to vector.";
-	    lociserr = 1;
-	}
-
-        else if ( isValDgraph() )
-	{
-            errstr = "Can't cast dgraph to vector.";
-	    lociserr = 1;
-	}
-
-	else if ( isValString() )
-	{
-	    errstr = "Can't cast string to vector.";
-	    lociserr = 1;
-	}
-
-	else if ( isValEqn() )
-	{
-	    errstr = "Can't cast equation to vector.";
-	    lociserr = 1;
-	}
+        else if ( isValSet()    ) { errstr = "Can't cast set to vector.";        lociserr = 1; }
+        else if ( isValDict()   ) { errstr = "Can't cast dictionary to vector."; lociserr = 1; }
+        else if ( isValDgraph() ) { errstr = "Can't cast dgraph to vector.";     lociserr = 1; }
+	else if ( isValString() ) { errstr = "Can't cast string to vector.";     lociserr = 1; }
+	else if ( isValEqn()    ) { errstr = "Can't cast equation to vector.";   lociserr = 1; }
     }
 
     else
@@ -4177,35 +3933,11 @@ int gentype::loctoMatrix(Matrix<gentype> &res, std::string &errstr) const
             }
 	}
 
-        else if ( isValSet() )
-	{
-            errstr = "Can't cast set to matrix.";
-	    lociserr = 1;
-	}
-
-        else if ( isValDict() )
-	{
-            errstr = "Can't cast dictionary to matrix.";
-	    lociserr = 1;
-	}
-
-        else if ( isValDgraph() )
-	{
-            errstr = "Can't cast dgraph to matrix.";
-	    lociserr = 1;
-	}
-
-	else if ( isValString() )
-	{
-	    errstr = "Can't cast string to matrix.";
-	    lociserr = 1;
-	}
-
-	else if ( isValEqn() )
-	{
-	    errstr = "Can't cast equation to matrix.";
-	    lociserr = 1;
-	}
+        else if ( isValSet()    ) { errstr = "Can't cast set to matrix.";        lociserr = 1; }
+        else if ( isValDict()   ) { errstr = "Can't cast dictionary to matrix."; lociserr = 1; }
+        else if ( isValDgraph() ) { errstr = "Can't cast dgraph to matrix.";     lociserr = 1; }
+	else if ( isValString() ) { errstr = "Can't cast string to matrix.";     lociserr = 1; }
+	else if ( isValEqn()    ) { errstr = "Can't cast equation to matrix.";   lociserr = 1; }
     }
 
     else
@@ -4350,47 +4082,13 @@ int gentype::loctoDgraph(Dgraph<gentype,double> &res, std::string &errstr) const
             res.zero();
 	}
 
-        else if ( isValInteger() )
-	{
-            errstr = "Can't cast integer to dgraph.";
-	    lociserr = 1;
-	}
-
-        else if ( isValReal() )
-	{
-            errstr = "Can't cast real to dgraph.";
-	    lociserr = 1;
-	}
-
-        else if ( isValAnion() )
-	{
-            errstr = "Can't cast anion to dgraph.";
-	    lociserr = 1;
-	}
-
-	else if ( isValVector() )
-	{
-            errstr = "Can't cast vector to dgraph.";
-	    lociserr = 1;
-	}
-
-	else if ( isValMatrix() )
-	{
-            errstr = "Can't cast matrix to dgraph.";
-	    lociserr = 1;
-	}
-
-        else if ( isValSet() )
-	{
-            errstr = "Can't cast set to dgraph.";
-	    lociserr = 1;
-	}
-
-        else if ( isValDict() )
-	{
-            errstr = "Can't cast set to dictionary.";
-	    lociserr = 1;
-	}
+        else if ( isValInteger() ) { errstr = "Can't cast integer to dgraph.";  lociserr = 1; }
+        else if ( isValReal()    ) { errstr = "Can't cast real to dgraph.";     lociserr = 1; }
+        else if ( isValAnion()   ) { errstr = "Can't cast anion to dgraph.";    lociserr = 1; }
+	else if ( isValVector()  ) { errstr = "Can't cast vector to dgraph.";   lociserr = 1; }
+	else if ( isValMatrix()  ) { errstr = "Can't cast matrix to dgraph.";   lociserr = 1; }
+        else if ( isValSet()     ) { errstr = "Can't cast set to dgraph.";      lociserr = 1; }
+        else if ( isValDict()    ) { errstr = "Can't cast set to dictionary.";  lociserr = 1; }
 
         else if ( isValDgraph() )
 	{
@@ -4402,17 +4100,8 @@ int gentype::loctoDgraph(Dgraph<gentype,double> &res, std::string &errstr) const
             }
 	}
 
-	else if ( isValString() )
-	{
-            errstr = "Can't cast string to dgraph.";
-	    lociserr = 1;
-	}
-
-	else if ( isValEqn() )
-	{
-            errstr = "Can't cast equation to dgraph.";
-	    lociserr = 1;
-	}
+	else if ( isValString()  ) { errstr = "Can't cast string to dgraph.";   lociserr = 1; }
+	else if ( isValEqn()     ) { errstr = "Can't cast equation to dgraph."; lociserr = 1; }
     }
 
     else
@@ -4981,76 +4670,23 @@ SparseVector<int> &gentype::rowsUsed(SparseVector<int> &res) const
     else if ( isValAnion()   ) { ; }
     else if ( isValString()  ) { ; }
     else if ( isValError()   ) { ; }
-
-    else if ( isValVector()  )
-    {
-        int i;
-        int xsize = size();
-
-        if ( xsize )
-        {
-            for ( i = 0 ; i < xsize ; ++i )
-            {
-                ((*vectorval)(i)).rowsUsed(res);
-            }
-        }
-    }
-
-    else if ( isValSet()  )
-    {
-        int i;
-        int xsize = size();
-
-        if ( xsize > 0 )
-        {
-            for ( i = 0 ; i < xsize ; ++i )
-            {
-                (((*setval).all())(i)).rowsUsed(res);
-            }
-        }
-    }
-
-    else if ( isValDict()  )
-    {
-        int i;
-        int xsize = size();
-
-        if ( xsize )
-        {
-            for ( i = 0 ; i < xsize ; ++i )
-            {
-                ((*dictval).val(i)).rowsUsed(res);
-            }
-        }
-    }
-
-    else if ( isValDgraph()  )
-    {
-        int i;
-        int xsize = size();
-
-        if ( xsize )
-        {
-            for ( i = 0 ; i < xsize ; ++i )
-            {
-                (((*dgraphval).all())(i)).rowsUsed(res);
-            }
-        }
-    }
+    else if ( isValVector()  ) { int xsize = size(); for ( int i = 0 ; i < xsize ; ++i ) { ((*vectorval)(i)).rowsUsed(res);         } }
+    else if ( isValSet()     ) { int xsize = size(); for ( int i = 0 ; i < xsize ; ++i ) { (((*setval).all())(i)).rowsUsed(res);    } }
+    else if ( isValDict()    ) { int xsize = size(); for ( int i = 0 ; i < xsize ; ++i ) { ((*dictval).val(i)).rowsUsed(res);       } }
+    else if ( isValDgraph()  ) { int xsize = size(); for ( int i = 0 ; i < xsize ; ++i ) { (((*dgraphval).all())(i)).rowsUsed(res); } }
 
     else if ( isValMatrix()  )
     {
-        int i,j;
         int xrows = numRows();
         int xcols = numCols();
 
         NiceAssert( matrixval );
 
-        if ( xrows && xcols )
+        if ( xcols )
         {
-            for ( i = 0 ; i < xrows ; ++i )
+            for ( int i = 0 ; i < xrows ; ++i )
             {
-                for ( j = 0 ; j < xcols ; ++j )
+                for ( int j = 0 ; j < xcols ; ++j )
                 {
                     ((*matrixval)(i,j)).rowsUsed(res);
                 }
@@ -5219,7 +4855,8 @@ int gentype::realDeriv(const gentype &ix, const gentype &jx)
 
 	else if ( isValEqnDir()  )
 	{
-            NiceAssert( eqnargs );
+            NiceAssert( eqnargs    );
+            NiceAssert( !altpycall );
 
             if ( ( fnnameind == varInd ) || ( fnnameind == VarInd ) )
 	    {
@@ -5408,6 +5045,7 @@ int gentype::fastevaluate(const SparseVector<SparseVector<gentype> > &evalargs, 
     const static int norm1Ind     = getfnind("norm1");
     const static int norm2Ind     = getfnind("norm2");
     const static int normpInd     = getfnind("normp");
+    const static int pycallInd    = getfnind("pycall");
 
     int oldfnnameind = fnnameind;
 
@@ -5416,27 +5054,15 @@ int gentype::fastevaluate(const SparseVector<SparseVector<gentype> > &evalargs, 
     int doagain = 0; // set 1 if global function has been evaluated, so repeat required (as global function might itself return a function)
     //const fninfoblock *locthisfninfo = thisfninfo;
 
-    if ( !isValEqn() )
-    {
-        // Not an equation, so no need to evaluate
-
-        ;
-    }
-
-    else if ( isValVector() )
-    {
-	if ( size() )
-	{
-	    for ( i = 0 ; i < size() ; ++i )
-	    {
-                ccnt += ((*vectorval)("&",i)).fastevaluate(evalargs,finalise);
-	    }
-	}
-    }
+    if      ( !isValEqn()   ) { ; }
+    else if ( isValVector() ) { for ( i = 0 ; i < size() ; ++i ) { ccnt += ((*vectorval)("&",i)).fastevaluate(evalargs,finalise);           } }
+    else if ( isValSet()    ) { for ( i = 0 ; i < size() ; ++i ) { ccnt += (((*setval).ncall())("&",i)).fastevaluate(evalargs,finalise);    } }
+    else if ( isValDict()   ) { for ( i = 0 ; i < size() ; ++i ) { ccnt += ((*dictval).val("&",i)).fastevaluate(evalargs,finalise);         } }
+    else if ( isValDgraph() ) { for ( i = 0 ; i < size() ; ++i ) { ccnt += (((*dgraphval).ncall())("&",i)).fastevaluate(evalargs,finalise); } }
 
     else if ( isValMatrix() )
     {
-	if ( numRows() && numCols() )
+	if ( numCols() )
 	{
 	    for ( i = 0 ; i < numRows() ; ++i )
 	    {
@@ -5444,39 +5070,6 @@ int gentype::fastevaluate(const SparseVector<SparseVector<gentype> > &evalargs, 
 		{
                     ccnt += ((*matrixval)("&",i,j)).fastevaluate(evalargs,finalise);
 		}
-	    }
-	}
-    }
-
-    else if ( isValSet() )
-    {
-	if ( size() > 0 )
-	{
-	    for ( i = 0 ; i < size() ; ++i )
-	    {
-                ccnt += (((*setval).ncall())("&",i)).fastevaluate(evalargs,finalise);
-	    }
-	}
-    }
-
-    else if ( isValDict() )
-    {
-	//if ( size() )
-	{
-	    for ( i = 0 ; i < size() ; ++i )
-	    {
-                ccnt += ((*dictval).val("&",i)).fastevaluate(evalargs,finalise);
-	    }
-	}
-    }
-
-    else if ( isValDgraph() )
-    {
-	if ( size() )
-	{
-	    for ( i = 0 ; i < size() ; ++i )
-	    {
-                ccnt += (((*dgraphval).ncall())("&",i)).fastevaluate(evalargs,finalise);
 	    }
 	}
     }
@@ -5970,6 +5563,28 @@ int gentype::fastevaluate(const SparseVector<SparseVector<gentype> > &evalargs, 
 //FIXME: need fast copy below
         }
 
+        else if ( ( fnnameind == pycallInd ) && altpycall && ( argsize == 2 ) && !(*eqnargs)(0).isValEqn() && !(*eqnargs)(1).isValEqnDir() )
+        {
+            NiceAssert( eqnargs );
+
+            // As per argsize == 2 below
+
+            ++ccnt;
+            doagain = (*thisfninfo).isInDetermin & 1;
+            oldfnnameind = fnnameind;
+
+            // We put altpycall into the first argument (replacement), call, then null it. Note that we avoid copying
+
+            gentype altfirstarg;
+            altfirstarg.altpycall = altpycall;
+            gentype temp = ((*thisfninfo).fn2arg)(altfirstarg,(*eqnargs)(1));
+            altfirstarg.altpycall = nullptr;
+
+            // Only overwrite now.
+
+            *this = temp;
+        }
+
         else if ( argsize == 0 ) { ++ccnt; doagain = (*thisfninfo).isInDetermin & 1; oldfnnameind = fnnameind;                        *this = ((*thisfninfo).fn0arg)();                                                                                            }
         else if ( argsize == 1 ) { ++ccnt; doagain = (*thisfninfo).isInDetermin & 1; oldfnnameind = fnnameind; NiceAssert( eqnargs ); *this = ((*thisfninfo).fn1arg)((*eqnargs)(0));                                                                       }
         else if ( argsize == 2 ) { ++ccnt; doagain = (*thisfninfo).isInDetermin & 1; oldfnnameind = fnnameind; NiceAssert( eqnargs ); *this = ((*thisfninfo).fn2arg)((*eqnargs)(0),(*eqnargs)(1));                                                         }
@@ -6078,8 +5693,6 @@ gentype &gentype::zero(void)
 
 void gentype::reversestring(void)
 {
-    int i;
-
     NiceAssert( stringval );
 
     if ( (*stringval).length() )
@@ -6087,7 +5700,7 @@ void gentype::reversestring(void)
         std::string temp = *stringval;
         *stringval = "";
 
-	for ( i = (int) temp.length()-1 ; i >= 0 ; --i )
+	for ( int i = (int) temp.length()-1 ; i >= 0 ; --i )
 	{
             *stringval += temp[i];
 	}
@@ -6098,16 +5711,12 @@ void gentype::reversestring(void)
 
 void gentype::invertstringcase(void)
 {
-    int i;
-
     NiceAssert( stringval );
 
-    if ( (*stringval).length() )
+    for ( int i = 0 ; i < (int) (*stringval).length() ; ++i )
     {
-        for ( i = 0 ; i < (int) (*stringval).length() ; ++i )
+        switch ( (*stringval)[i] )
         {
-            switch ( (*stringval)[i] )
-	    {
             case 'a': { (*stringval)[i] = 'A'; break; }
             case 'b': { (*stringval)[i] = 'B'; break; }
             case 'c': { (*stringval)[i] = 'C'; break; }
@@ -6161,7 +5770,6 @@ void gentype::invertstringcase(void)
             case 'Y': { (*stringval)[i] = 'y'; break; }
             case 'Z': { (*stringval)[i] = 'z'; break; }
 	    default: { break; }
-	    }
 	}
     }
 
@@ -10308,6 +9916,23 @@ void constructError(const gentype &a, const gentype &b, const gentype &c, const 
 // =========================================================================================================================================================================
 
 
+// Macro to call initgentype on first encounter. This is necessary before
+// self-referencing calls like in OP_log, which contains gentype blah("log(x)"),
+// which will hang if encountered before initgentype is called. By using the
+// macro first you avoid this
+
+/*
+#define INITGENBLOCK                                                                           \
+{                                                                                              \
+    bool loc_doit = false;                                                                     \
+    static bool loc_once [[maybe_unused]] = [&loc_doit](){ loc_doit = true; return true; } (); \
+    if ( loc_doit ) { initgentype(); }                                                         \
+}
+*/
+
+#define INITGENBLOCK initgentype();
+
+
 // Logical operators
 
 bool gentype::iseq(const gentype &b) const
@@ -10395,12 +10020,12 @@ int operator<(const gentype &a, const gentype &b)
 
     if ( ( res = checkAddCompat(a,b,acast,bcast,1) ) )
     {
-             if ( ( acast == 1  ) && ( bcast == 1  ) ) { res = (  a.cast_int(0)       <  b.cast_int(0)       ); }
-        else if ( ( acast == 2  ) && ( bcast == 2  ) ) { res = (  a.cast_double(0)    <  b.cast_double(0)    ); }
+             if ( ( acast == 1  ) && ( bcast == 1  ) ) { res = (  a.cast_int(0)       <  b.cast_int(0)     ); }
+        else if ( ( acast == 2  ) && ( bcast == 2  ) ) { res = (  a.cast_double(0)    <  b.cast_double(0)  ); }
         else if ( ( acast == 3  ) && ( bcast == 3  ) ) { res = 0;                                             }
-        else if ( ( acast == 4  ) && ( bcast == 4  ) ) { res = (  a.cast_vector(0)    <  b.cast_vector(0)    ); }
-        else if ( ( acast == 5  ) && ( bcast == 5  ) ) { res = (  a.cast_matrix(0)    <  b.cast_matrix(0)    ); }
-        else if ( ( acast == 8  ) && ( bcast == 8  ) ) { res = (  a.cast_set(0)       <  b.cast_set(0)       ); }
+        else if ( ( acast == 4  ) && ( bcast == 4  ) ) { res = (  a.cast_vector(0)    <  b.cast_vector(0)  ); }
+        else if ( ( acast == 5  ) && ( bcast == 5  ) ) { res = (  a.cast_matrix(0)    <  b.cast_matrix(0)  ); }
+        else if ( ( acast == 8  ) && ( bcast == 8  ) ) { res = (  a.cast_set(0)       <  b.cast_set(0)     ); }
         else if ( ( acast == 9  ) && ( bcast == 9  ) ) { res = 0;                                             }
         else if ( ( acast == 10 ) && ( bcast == 10 ) ) { res = 0;                                             }
         else                                           { res = 0;                                             }
@@ -10422,12 +10047,12 @@ int operator>(const gentype &a, const gentype &b)
 
     if ( ( res = checkAddCompat(a,b,acast,bcast,1) ) )
     {
-             if ( ( acast == 1  ) && ( bcast == 1  ) ) { res = (  a.cast_int(0)       >  b.cast_int(0)       ); }
-        else if ( ( acast == 2  ) && ( bcast == 2  ) ) { res = (  a.cast_double(0)    >  b.cast_double(0)    ); }
+             if ( ( acast == 1  ) && ( bcast == 1  ) ) { res = (  a.cast_int(0)       >  b.cast_int(0)     ); }
+        else if ( ( acast == 2  ) && ( bcast == 2  ) ) { res = (  a.cast_double(0)    >  b.cast_double(0)  ); }
         else if ( ( acast == 3  ) && ( bcast == 3  ) ) { res = 0;                                             }
-        else if ( ( acast == 4  ) && ( bcast == 4  ) ) { res = (  a.cast_vector(0)    >  b.cast_vector(0)    ); }
-        else if ( ( acast == 5  ) && ( bcast == 5  ) ) { res = (  a.cast_matrix(0)    >  b.cast_matrix(0)    ); }
-        else if ( ( acast == 8  ) && ( bcast == 8  ) ) { res = (  a.cast_set(0)       >  b.cast_set(0)       ); }
+        else if ( ( acast == 4  ) && ( bcast == 4  ) ) { res = (  a.cast_vector(0)    >  b.cast_vector(0)  ); }
+        else if ( ( acast == 5  ) && ( bcast == 5  ) ) { res = (  a.cast_matrix(0)    >  b.cast_matrix(0)  ); }
+        else if ( ( acast == 8  ) && ( bcast == 8  ) ) { res = (  a.cast_set(0)       >  b.cast_set(0)     ); }
         else if ( ( acast == 9  ) && ( bcast == 9  ) ) { res = 0;                                             }
         else if ( ( acast == 10 ) && ( bcast == 10 ) ) { res = 0;                                             }
         else                                           { res = 0;                                             }
@@ -10449,12 +10074,12 @@ int operator<=(const gentype &a, const gentype &b)
 
     if ( ( res = checkAddCompat(a,b,acast,bcast,1) ) )
     {
-             if ( ( acast == 1  ) && ( bcast == 1  ) ) { res = (  a.cast_int(0)       <= b.cast_int(0)       ); }
-        else if ( ( acast == 2  ) && ( bcast == 2  ) ) { res = (  a.cast_double(0)    <= b.cast_double(0)    ); }
+             if ( ( acast == 1  ) && ( bcast == 1  ) ) { res = (  a.cast_int(0)       <= b.cast_int(0)     ); }
+        else if ( ( acast == 2  ) && ( bcast == 2  ) ) { res = (  a.cast_double(0)    <= b.cast_double(0)  ); }
         else if ( ( acast == 3  ) && ( bcast == 3  ) ) { res = 1;                                             }
-        else if ( ( acast == 4  ) && ( bcast == 4  ) ) { res = (  a.cast_vector(0)    <= b.cast_vector(0)    ); }
-        else if ( ( acast == 5  ) && ( bcast == 5  ) ) { res = (  a.cast_matrix(0)    <= b.cast_matrix(0)    ); }
-        else if ( ( acast == 8  ) && ( bcast == 8  ) ) { res = (  a.cast_set(0)       <= b.cast_set(0)       ); }
+        else if ( ( acast == 4  ) && ( bcast == 4  ) ) { res = (  a.cast_vector(0)    <= b.cast_vector(0)  ); }
+        else if ( ( acast == 5  ) && ( bcast == 5  ) ) { res = (  a.cast_matrix(0)    <= b.cast_matrix(0)  ); }
+        else if ( ( acast == 8  ) && ( bcast == 8  ) ) { res = (  a.cast_set(0)       <= b.cast_set(0)     ); }
         else if ( ( acast == 9  ) && ( bcast == 9  ) ) { res = 1;                                             }
         else if ( ( acast == 10 ) && ( bcast == 10 ) ) { res = 1;                                             }
         else                                           { res = 1;                                             }
@@ -10476,12 +10101,12 @@ int operator>=(const gentype &a, const gentype &b)
 
     if ( ( res = checkAddCompat(a,b,acast,bcast,1) ) )
     {
-             if ( ( acast == 1  ) && ( bcast == 1  ) ) { res = (  a.cast_int(0)       >= b.cast_int(0)       ); }
-        else if ( ( acast == 2  ) && ( bcast == 2  ) ) { res = (  a.cast_double(0)    >= b.cast_double(0)    ); }
+             if ( ( acast == 1  ) && ( bcast == 1  ) ) { res = (  a.cast_int(0)       >= b.cast_int(0)     ); }
+        else if ( ( acast == 2  ) && ( bcast == 2  ) ) { res = (  a.cast_double(0)    >= b.cast_double(0)  ); }
         else if ( ( acast == 3  ) && ( bcast == 3  ) ) { res = 1;                                             }
-        else if ( ( acast == 4  ) && ( bcast == 4  ) ) { res = (  a.cast_vector(0)    >= b.cast_vector(0)    ); }
-        else if ( ( acast == 5  ) && ( bcast == 5  ) ) { res = (  a.cast_matrix(0)    >= b.cast_matrix(0)    ); }
-        else if ( ( acast == 8  ) && ( bcast == 8  ) ) { res = (  a.cast_set(0)       >= b.cast_set(0)       ); }
+        else if ( ( acast == 4  ) && ( bcast == 4  ) ) { res = (  a.cast_vector(0)    >= b.cast_vector(0)  ); }
+        else if ( ( acast == 5  ) && ( bcast == 5  ) ) { res = (  a.cast_matrix(0)    >= b.cast_matrix(0)  ); }
+        else if ( ( acast == 8  ) && ( bcast == 8  ) ) { res = (  a.cast_set(0)       >= b.cast_set(0)     ); }
         else if ( ( acast == 9  ) && ( bcast == 9  ) ) { res = 1;                                             }
         else if ( ( acast == 10 ) && ( bcast == 10 ) ) { res = 1;                                             }
         else                                           { res = 1;                                             }
@@ -10497,8 +10122,8 @@ gentype  operator+(const gentype &a)
 {
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype res("+x");
-
         return res(a);
     }
 
@@ -10511,8 +10136,8 @@ gentype  operator-(const gentype &a)
 {
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype res("-x");
-
         return res(a);
     }
 
@@ -10566,8 +10191,8 @@ gentype  operator%(const gentype &a, const gentype &b)
 {
     if ( a.isValEqnDir() || b.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype res("x%y");
-
         return res(a,b);
     }
 
@@ -12574,6 +12199,7 @@ int xorOR (int a, int b) { return ( a && !b ) || ( !a && b ); }
 int xandOR(int a, int b) { return ( !a && !b ) || ( a && b ); }
 
 
+
 gentype &OP_elementwiseDefaultCallA(gentype &a, const gentype &fnbare, const char *fname, gentype &(*op_elmfn)(gentype &), d_anion (*anionfn)(const d_anion &), double (*restanionfn)(const d_anion &), double (*doublefn)(double), int (*intfn)(int), int (*outRangeTest)(double));
 gentype &elementwiseDefaultCallB(gentype &res, const gentype &a, const gentype &b, const char *fname, gentype (*elmfn)(const gentype &, const void *), gentype (*specfn)(const gentype &, const gentype &));
 gentype &elementwiseDefaultCallC(gentype &res, const gentype &a, const gentype &b, const char *fname, gentype (*elmfn)(const gentype &, const gentype &), gentype (*fn)(const gentype &, const gentype &), int (*intfn)(int,int));
@@ -13362,6 +12988,7 @@ gentype &binLogicForm(gentype &res, const gentype &a, const gentype &b, const ch
 // =========================================================================================================================================================================
 // =========================================================================================================================================================================
 
+
 gentype realDeriv(const gentype &i, const gentype &j, const gentype &a)
 {
     const static int varInd = getfnind("var");
@@ -13374,8 +13001,8 @@ gentype realDeriv(const gentype &i, const gentype &j, const gentype &a)
 
     if ( a.isValEqnDir() && !(a.realDerivDefinedDir()) && ( ( realDerivInd == fnnameind ) || ( fnnameind == gvarInd ) || ( fnnameind == gVarInd ) || ( fnnameind == varInd ) || ( VarInd == fnnameind ) ) )
     {
+        INITGENBLOCK
         const static gentype res("realDeriv(x,y,z)");
-
         return res(i,j,a);
     }
 
@@ -13398,8 +13025,8 @@ gentype idiv(const gentype &a, const gentype &b)
 {
     if ( a.isValEqnDir() || b.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype res("idiv(x,y)");
-
         return res(a,b);
     }
 
@@ -13433,8 +13060,8 @@ gentype &OP_idiv(gentype &a, const gentype &b)
 {
     if ( a.isValEqnDir() || b.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype res("idiv(x,y)");
-
         return a = res(a,b);
     }
 
@@ -13795,12 +13422,12 @@ gentype Powlintern(const gentype &a, const gentype &b);
 gentype powrintern(const gentype &a, const gentype &b);
 gentype Powrintern(const gentype &a, const gentype &b);
 
-gentype powintern (const gentype &a, const gentype &b) { return genpowintern(a,b,"pow", pow);  }
-gentype Powintern (const gentype &a, const gentype &b) { return genpowintern(a,b,"Pow", Pow);  }
-gentype powlintern(const gentype &a, const gentype &b) { return genpowintern(a,b,"powl",powl); }
-gentype Powlintern(const gentype &a, const gentype &b) { return genpowintern(a,b,"Powl",Powl); }
-gentype powrintern(const gentype &a, const gentype &b) { return genpowintern(a,b,"powr",powr); }
-gentype Powrintern(const gentype &a, const gentype &b) { return genpowintern(a,b,"Powr",Powr); }
+gentype powintern (const gentype &a, const gentype &b) { INITGENBLOCK return genpowintern(a,b,"pow", pow);  }
+gentype Powintern (const gentype &a, const gentype &b) { INITGENBLOCK return genpowintern(a,b,"Pow", Pow);  }
+gentype powlintern(const gentype &a, const gentype &b) { INITGENBLOCK return genpowintern(a,b,"powl",powl); }
+gentype Powlintern(const gentype &a, const gentype &b) { INITGENBLOCK return genpowintern(a,b,"Powl",Powl); }
+gentype powrintern(const gentype &a, const gentype &b) { INITGENBLOCK return genpowintern(a,b,"powr",powr); }
+gentype Powrintern(const gentype &a, const gentype &b) { INITGENBLOCK return genpowintern(a,b,"Powr",Powr); }
 
 gentype ifthenelse(const gentype &a, const gentype &b, const gentype &c)
 {
@@ -13815,8 +13442,8 @@ gentype ifthenelse(const gentype &a, const gentype &b, const gentype &c)
 
 	else
 	{
+            INITGENBLOCK
             const static gentype resx("ifthenelse(x,y,z)");
-
             return resx(a,b,c);
 	}
 
@@ -13973,293 +13600,24 @@ gentype ifthenelse(const gentype &a, const gentype &b, const gentype &c)
 // Reals are also anions (and may be ints)
 // Anions may be ints and/or reals
 
-gentype &OP_isnull(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("isnull(x)");
-        x = res(x);
-    }
-
-    else
-    {
-        x = x.isCastableToNullWithoutLoss();
-    }
-
-    return x;
-}
-
-gentype &OP_isint(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("isint(x)");
-        x = res(x);
-    }
-
-    else
-    {
-        x = x.isCastableToIntegerWithoutLoss();
-    }
-
-    return x;
-}
-
-gentype &OP_isreal(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("isreal(x)");
-        x   = res(x);
-    }
-
-    else
-    {
-        x = x.isCastableToRealWithoutLoss();
-    }
-
-    return x;
-}
-
-gentype &OP_isanion(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("isanion(x)");
-        x   = res(x);
-    }
-
-    else
-    {
-        x = x.isCastableToAnionWithoutLoss();
-    }
-
-    return x;
-}
-
-gentype &OP_isvector(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("isvector(x)");
-        x   = res(x);
-    }
-
-    else
-    {
-        x = x.isValVector();
-    }
-
-    return x;
-}
-
-gentype &OP_ismatrix(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("ismatrix(x)");
-        x   = res(x);
-    }
-
-    else
-    {
-        x = x.isValMatrix();
-    }
-
-    return x;
-}
-
-gentype &OP_isset(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("isset(x)");
-        x   = res(x);
-    }
-
-    else
-    {
-        x = x.isValSet();
-    }
-
-    return x;
-}
-
-gentype &OP_isdict(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("isdict(x)");
-        x   = res(x);
-    }
-
-    else
-    {
-        x = x.isValDict();
-    }
-
-    return x;
-}
-
-gentype &OP_isdgraph(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("isdgraph(x)");
-        x   = res(x);
-    }
-
-    else
-    {
-        x = x.isValDgraph();
-    }
-
-    return x;
-}
-
-gentype &OP_isstring(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("isstring(x)");
-        x   = res(x);
-    }
-
-    else
-    {
-        x = x.isValStrErr();
-    }
-
-    return x;
-}
-
-gentype &OP_iserror(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("iserror(x)");
-        x   = res(x);
-    }
-
-    else
-    {
-        x = x.isValError();
-    }
-
-    return x;
-}
-
-gentype &OP_isvnan(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("isvnan(x)");
-        x = res(x);
-    }
-
-    else
-    {
-        x = testisvnan(x);
-    }
-
-    return x;
-}
-
-gentype &OP_isinf(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("isinf(x)");
-        x = res(x);
-    }
-
-    else
-    {
-        x = testisinf(x);
-    }
-
-    return x;
-}
-
-gentype &OP_ispinf(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("ispinf(x)");
-        x = res(x);
-    }
-
-    else
-    {
-        x = testispinf(x);
-    }
-
-    return x;
-}
-
-gentype &OP_isninf(gentype &x)
-{
-    if ( x.isValEqnDir() )
-    {
-        const static gentype res("isninf(x)");
-        x = res(x);
-    }
-
-    else
-    {
-        x = testisninf(x);
-    }
-
-    return x;
-}
-
-gentype &OP_size(gentype &a)
-{
-    if ( a.isValEqnDir() )
-    {
-        const static gentype res("size(x)");
-        a   = res(a);
-    }
-
-    else
-    {
-        a = a.size();
-    }
-
-    return a;
-}
-
-gentype &OP_numRows(gentype &a)
-{
-    if ( a.isValEqnDir() )
-    {
-        const static gentype res("numRows(x)");
-        a   = res(a);
-    }
-
-    else
-    {
-        a = a.numRows();
-    }
-
-    return a;
-}
-
-gentype &OP_numCols(gentype &a)
-{
-    if ( a.isValEqnDir() )
-    {
-        const static gentype res("numCols(x)");
-        a   = res(a);
-    }
-
-    else
-    {
-        a = a.numCols();
-    }
-
-    return a;
-}
+gentype &OP_isnull  (gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("isnull(x)");   x = res(x); } else { x = x.isCastableToNullWithoutLoss();    } return x; }
+gentype &OP_isint   (gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("isint(x)");    x = res(x); } else { x = x.isCastableToIntegerWithoutLoss(); } return x; }
+gentype &OP_isreal  (gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("isreal(x)");   x = res(x); } else { x = x.isCastableToRealWithoutLoss();    } return x; }
+gentype &OP_isanion (gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("isanion(x)");  x = res(x); } else { x = x.isCastableToAnionWithoutLoss();   } return x; }
+gentype &OP_isvector(gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("isvector(x)"); x = res(x); } else { x = x.isValVector();                    } return x; }
+gentype &OP_ismatrix(gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("ismatrix(x)"); x = res(x); } else { x = x.isValMatrix();                    } return x; }
+gentype &OP_isset   (gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("isset(x)");    x = res(x); } else { x = x.isValSet();                       } return x; }
+gentype &OP_isdict  (gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("isdict(x)");   x = res(x); } else { x = x.isValDict();                      } return x; }
+gentype &OP_isdgraph(gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("isdgraph(x)"); x = res(x); } else { x = x.isValDgraph();                    } return x; }
+gentype &OP_isstring(gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("isstring(x)"); x = res(x); } else { x = x.isValStrErr();                    } return x; }
+gentype &OP_iserror (gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("iserror(x)");  x = res(x); } else { x = x.isValError();                     } return x; }
+gentype &OP_isvnan  (gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("isvnan(x)");   x = res(x); } else { x = testisvnan(x);                      } return x; }
+gentype &OP_isinf   (gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("isinf(x)");    x = res(x); } else { x = testisinf(x);                       } return x; }
+gentype &OP_ispinf  (gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("ispinf(x)");   x = res(x); } else { x = testispinf(x);                      } return x; }
+gentype &OP_isninf  (gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("isninf(x)");   x = res(x); } else { x = testisninf(x);                      } return x; }
+gentype &OP_size    (gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("size(x)");     x = res(x); } else { x = x.size();                           } return x; }
+gentype &OP_numRows (gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("numRows(x)");  x = res(x); } else { x = x.numRows();                        } return x; }
+gentype &OP_numCols (gentype &x) { if ( x.isValEqnDir() ) { INITGENBLOCK const static gentype res("numCols(x)");  x = res(x); } else { x = x.numCols();                        } return x; }
 
 
 
@@ -14276,6 +13634,7 @@ gentype eps_comm(const gentype &n, const gentype &q, const gentype &r, const gen
 
     if ( n.isValEqnDir() || q.isValEqnDir() || r.isValEqnDir() || s.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("eps_comm(x,y,z,v)");
         return resx(n,q,r,s);
     }
@@ -14319,6 +13678,7 @@ gentype eps_assoc(const gentype &n, const gentype &q, const gentype &r, const ge
 
     if ( n.isValEqnDir() || q.isValEqnDir() || r.isValEqnDir() || s.isValEqnDir() || t.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("eps_assoc(x,y,z,v,w)");
         return resx(n,q,r,s,t);
     }
@@ -14366,6 +13726,7 @@ gentype im_complex(const gentype &x)
 
     if ( x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("im_quat(x)");
         return resx(x);
     }
@@ -14389,6 +13750,7 @@ gentype im_quat(const gentype &x)
 
     if ( x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("im_quat(x)");
         return resx(x);
     }
@@ -14412,6 +13774,7 @@ gentype im_octo(const gentype &x)
 
     if ( x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("im_octo(x)");
         return resx(x);
     }
@@ -14435,6 +13798,7 @@ gentype im_anion(const gentype &x, const gentype &y)
 
     if ( x.isValEqnDir() || y.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("im_anion(x,y)");
         return resx(x,y);
     }
@@ -14459,6 +13823,7 @@ gentype Im_complex(const gentype &x)
 
     if ( x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("im_quat(x)");
         return resx(x);
     }
@@ -14482,6 +13847,7 @@ gentype Im_quat(const gentype &x)
 
     if ( x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("im_quat(x)");
         return resx(x);
     }
@@ -14505,6 +13871,7 @@ gentype Im_octo(const gentype &x)
 
     if ( x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("im_octo(x)");
         return resx(x);
     }
@@ -14528,6 +13895,7 @@ gentype Im_anion(const gentype &x, const gentype &y)
 
     if ( x.isValEqnDir() || y.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("im_anion(x,y)");
         return resx(x,y);
     }
@@ -14553,6 +13921,7 @@ gentype vect_const(const gentype &x, const gentype &y)
 
     if ( x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("vect_const(x,y)");
         return resx(x,y);
     }
@@ -14575,6 +13944,7 @@ gentype vect_unit(const gentype &x, const gentype &y)
 
     if ( x.isValEqnDir() || y.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("vect_unit(x,y)");
         return resx(x,y);
     }
@@ -14602,6 +13972,7 @@ gentype ivect(const gentype &x, const gentype &y, const gentype &z)
 
     if ( x.isValEqnDir() || y.isValEqnDir() || z.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("ivect(x,y,z)");
         return resx(x,y,z);
     }
@@ -14662,6 +14033,7 @@ gentype cayleyDickson(const gentype &x, const gentype &y)
 
     if ( x.isValEqnDir() || y.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("cayleyDickson(x,y)");
         return resx(x,y);
     }
@@ -14681,6 +14053,7 @@ gentype rmul(const gentype &x, const gentype &y)
 {
     if ( x.isValEqnDir() || y.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("rmul(x,y)");
         return resx(x,y);
     }
@@ -14696,6 +14069,7 @@ gentype CayleyDickson(const gentype &x, const gentype &y)
 
     if ( x.isValEqnDir() || y.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("CayleyDickson(x,y)");
         return resx(x,y);
     }
@@ -14721,6 +14095,7 @@ gentype eye(const gentype &i, const gentype &j)
 
     if ( i.isValEqn() || j.isValEqn() )
     {
+        INITGENBLOCK
         const static gentype resx("eye(x,y)");
         return resx(i,j);
     }
@@ -14765,6 +14140,7 @@ gentype kronDelta(const gentype &i, const gentype &j)
 
     if ( i.isValEqn() || j.isValEqn() )
     {
+        INITGENBLOCK
         const static gentype resx("kronDelta(x,y)");
         return resx(i,j);
     }
@@ -14778,6 +14154,7 @@ gentype diracDelta(const gentype &x)
 
     if ( x.isValEqn() )
     {
+        INITGENBLOCK
         const static gentype resx("diracDelta(x)");
         return resx(x);
     }
@@ -14792,6 +14169,7 @@ gentype ekronDelta(const gentype &i, const gentype &j)
 
     if ( i.isValEqnDir() || j.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("ekronDelta(x,y)");
         return resx(i,j);
     }
@@ -14805,6 +14183,7 @@ gentype ediracDelta(const gentype &x)
 
     if ( x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("ediracDelta(x)");
         return resx(x);
     }
@@ -14819,6 +14198,7 @@ gentype perm(const gentype &i, const gentype &j)
 
     if ( i.isValEqnDir() || j.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("perm(x,y)");
         return resx(i,j);
     }
@@ -15012,6 +14392,7 @@ gentype comb(const gentype &i, const gentype &j)
 
     if ( i.isValEqnDir() || j.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("comb(x,y)");
         return resx(i,j);
     }
@@ -15216,6 +14597,7 @@ gentype fact(const gentype &i)
 
     if ( i.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("fact(x)");
         return resx(i);
     }
@@ -15266,6 +14648,7 @@ gentype dfact(const gentype &i)
 
     if ( i.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("dfact(x)");
         return resx(i);
     }
@@ -15307,6 +14690,7 @@ gentype tfact(const gentype &i)
 
     if ( i.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("tfact(x)");
         return resx(i);
     }
@@ -15344,6 +14728,7 @@ gentype sf(const gentype &i)
 
     if ( i.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("sf(x)");
         return resx(i);
     }
@@ -15396,6 +14781,7 @@ gentype psf(const gentype &i)
 
     if ( i.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("psf(x)");
         return resx(i);
     }
@@ -15451,6 +14837,7 @@ gentype multifact(const gentype &i, const gentype &m)
 
     if ( i.isValEqnDir() || m.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("multifact(x,y)");
         return resx(i,m);
     }
@@ -15485,6 +14872,7 @@ gentype subfact(const gentype &i)
 
     if ( i.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("subfact(x)");
         return resx(i);
     }
@@ -16018,6 +15406,7 @@ gentype abs1(const gentype &a)
 
     else if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("abs1(x)");
         return resx(a);
     }
@@ -16047,6 +15436,7 @@ gentype abs2(const gentype &a)
 
     else if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("abs2(x)");
         return resx(a);
     }
@@ -16076,6 +15466,7 @@ gentype absp(const gentype &a, const gentype &q)
 
     else if ( a.isValEqnDir() || q.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("absp(x,y)");
         return resx(a,q);
     }
@@ -16200,6 +15591,7 @@ gentype absinf(const gentype &a)
 
     else if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("absinf(x)");
         return resx(a);
     }
@@ -16319,6 +15711,7 @@ gentype abs0(const gentype &a)
 
     else if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("abs0(x)");
         return resx(a);
     }
@@ -16374,6 +15767,7 @@ gentype norm1(const gentype &a)
 
             if ( aa.isValEqnDir() )
             {
+                INITGENBLOCK
                 const static gentype resx("norm1(x)");
                 bb = resx(aa);
             }
@@ -16430,6 +15824,7 @@ gentype norm1(const gentype &a)
 
             if ( aa.isValEqnDir() )
             {
+                INITGENBLOCK
                 const static gentype resx("norm1(x)");
                 bb = resx(aa);
             }
@@ -16472,6 +15867,7 @@ gentype norm1(const gentype &a)
 
     else if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("norm1(x)");
         return resx(a);
     }
@@ -16534,6 +15930,7 @@ gentype norm2(const gentype &a)
 
             if ( aa.isValEqnDir() )
             {
+                INITGENBLOCK
                 const static gentype resx("norm2(x)");
                 bb = resx(aa);
             }
@@ -16593,6 +15990,7 @@ gentype norm2(const gentype &a)
 
             if ( aa.isValEqnDir() )
             {
+                INITGENBLOCK
                 const static gentype resx("norm2(x)");
                 bb = resx(aa);
             }
@@ -16635,6 +16033,7 @@ gentype norm2(const gentype &a)
 
     else if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("norm2(x)");
         return resx(a);
     }
@@ -16694,6 +16093,7 @@ gentype normp(const gentype &a, const gentype &q)
 
             if ( aa.isValEqnDir() )
             {
+                INITGENBLOCK
                 const static gentype resx("normp(x,q)");
                 bb = resx(aa,q);
             }
@@ -16752,6 +16152,7 @@ gentype normp(const gentype &a, const gentype &q)
 
             if ( aa.isValEqnDir() )
             {
+                INITGENBLOCK
                 const static gentype resx("normp(x,y)");
                 bb = resx(aa,q);
             }
@@ -16794,6 +16195,7 @@ gentype normp(const gentype &a, const gentype &q)
 
     else if ( a.isValEqnDir() || q.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("normp(x,y)");
         return resx(a,q);
     }
@@ -16823,6 +16225,7 @@ gentype angle(const gentype &a)
 
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("angle(x)");
         return resx(a);
     }
@@ -16847,6 +16250,7 @@ gentype inv(const gentype &a)
 
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("inv(x)");
         return resx(a);
     }
@@ -16977,6 +16381,7 @@ gentype gamma(const gentype &a)
 
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("gamma(x)");
         return resx(a);
     }
@@ -17019,6 +16424,7 @@ gentype lngamma(const gentype &a)
 
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("lngamma(x)");
         return resx(a);
     }
@@ -17054,6 +16460,7 @@ gentype psi(const gentype &x)
 
     if ( x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("psi(x)");
         return resx(x);
     }
@@ -17091,6 +16498,7 @@ gentype psi_n(const gentype &i, const gentype &x)
 
     if ( i.isValEqnDir() || x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("psi_n(x,y)");
         return resx(i,x);
     }
@@ -17135,6 +16543,7 @@ gentype gamic(const gentype &a, const gentype &x)
 
     if ( a.isValEqnDir() || x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("gamic(x,y)");
         return resx(a,x);
     }
@@ -17172,6 +16581,7 @@ gentype zeta(const gentype &a)
 
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("zeta(x)");
         return resx(a);
     }
@@ -17201,6 +16611,7 @@ gentype lambertW(const gentype &a)
 
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("lambertW(x)");
         return resx(a);
     }
@@ -17235,6 +16646,7 @@ gentype lambertWx(const gentype &a)
 
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("lambertWx(x)");
         return resx(a);
     }
@@ -17270,6 +16682,7 @@ gentype erf(const gentype &x)
 
     if ( x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("erf(x)");
         return resx(x);
     }
@@ -17302,6 +16715,7 @@ gentype erfc(const gentype &x)
 
     if ( x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("erfc(x)");
         return resx(x);
     }
@@ -17335,6 +16749,7 @@ gentype dawson(const gentype &x)
 
     if ( x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("dawson(x)");
         return resx(x);
     }
@@ -17370,6 +16785,7 @@ gentype emaxv(const gentype &a, const gentype &b)
 
     if ( a.isValEqnDir() || b.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("emaxv(a,b)");
         return resx(a,b);
     }
@@ -17462,6 +16878,7 @@ gentype eminv(const gentype &a, const gentype &b)
 
     if ( a.isValEqnDir() || b.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("eminv(a,b)");
         return resx(a,b);
     }
@@ -17563,6 +16980,7 @@ inline gentype fnA(const gentype &i, const gentype &j)
 
     if ( i.isValEqnDir() || j.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("fnA(x,y)");
         return resx(i,j);
     }
@@ -17592,6 +17010,7 @@ inline gentype fnB(const gentype &i, const gentype &j, const gentype &xa)
 
     if ( i.isValEqnDir() || j.isValEqnDir() || xa.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("fnB(x,y,z)");
         return resx(i,j,xa);
     }
@@ -17620,6 +17039,7 @@ inline gentype fnC(const gentype &i, const gentype &j, const gentype &xa, const 
 
     if ( i.isValEqnDir() || j.isValEqnDir() || xa.isValEqnDir() || xb.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("fnC(x,y,z,var(0,3))");
         return resx(i,j,xa,xb);
     }
@@ -17646,6 +17066,7 @@ inline gentype dfnB(const gentype &i, const gentype &j, const gentype &xa, const
 
     if ( i.isValEqnDir() || j.isValEqnDir() || xa.isValEqnDir() || ia.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("dfnB(x,y,z,var(0,3))");
         return resx(i,j,xa,ia);
     }
@@ -17673,6 +17094,7 @@ inline gentype dfnC(const gentype &i, const gentype &j, const gentype &xa, const
 
     if ( i.isValEqnDir() || j.isValEqnDir() || xa.isValEqnDir() || ia.isValEqnDir() || xb.isValEqnDir() || ib.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("dfnC(x,y,z,var(0,3),var(0,4),var(0,5))");
         return resx(i,j,xa,ia,xb,ib);
     }
@@ -17696,6 +17118,7 @@ inline gentype efnB(const gentype &i, const gentype &j, const gentype &xa)
 
     if ( i.isValEqnDir() || j.isValEqnDir() || xa.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("efnB(x,y,z)");
         return resx(i,j,xa);
     }
@@ -17729,6 +17152,7 @@ inline gentype efnC(const gentype &i, const gentype &j, const gentype &xa, const
 
     if ( i.isValEqnDir() || j.isValEqnDir() || xa.isValEqnDir() || xb.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("efnC(x,y,z,var(0,3))");
         return resx(i,j,xa,xb);
     }
@@ -17760,6 +17184,7 @@ inline gentype edfnB(const gentype &i, const gentype &j, const gentype &xa, cons
 
     if ( i.isValEqnDir() || j.isValEqnDir() || xa.isValEqnDir() || ia.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("edfnB(x,y,z,var(0,3))");
         return resx(i,j,xa,ia);
     }
@@ -17787,6 +17212,7 @@ inline gentype edfnC(const gentype &i, const gentype &j, const gentype &xa, cons
 
     if ( i.isValEqnDir() || j.isValEqnDir() || xa.isValEqnDir() || ia.isValEqnDir() || xb.isValEqnDir() || ib.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("edfnC(x,y,z,var(0,3),var(0,4),var(0,5))");
         return resx(i,j,xa,ia,xb,ib);
     }
@@ -17810,6 +17236,7 @@ gentype irand(const gentype &i)
 
     if ( i.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("irand(x)");
         return resx(i);
     }
@@ -17861,6 +17288,7 @@ gentype urand(const gentype &l, const gentype &u)
 
     if ( l.isValEqnDir() || u.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("urand(x,y)");
         return resx(l,u);
     }
@@ -17918,6 +17346,7 @@ gentype grand(const gentype &m, const gentype &v)
 
     if ( m.isValEqnDir() || v.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("grand(x,y)");
         return resx(m,v);
     }
@@ -18102,6 +17531,7 @@ gentype testfn(const gentype &i, const gentype &x)
     if ( i.isValEqnDir() || x.isValEqnDir() )
     {
         eqnfallback:
+        INITGENBLOCK
         const static gentype resx("testfn(x,y)");
         return resx(i,x);
     }
@@ -18155,6 +17585,7 @@ gentype testfnA(const gentype &i, const gentype &x, const gentype &A)
     if ( i.isValEqnDir() || x.isValEqnDir() || A.isValEqnDir() )
     {
         eqnfallback:
+        INITGENBLOCK
         const static gentype resx("testfnA(x,y,z)");
         return resx(i,x,A);
     }
@@ -18226,6 +17657,7 @@ gentype partestfn(const gentype &i, const gentype &M, const gentype &x)
 
     if ( i.isValEqnDir() || M.isValEqnDir() || x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("partestfn(x,y,z)");
         return resx(i,M,x);
     }
@@ -18286,6 +17718,7 @@ gentype partestfnA(const gentype &i, const gentype &M, const gentype &x, const g
 
     if ( i.isValEqnDir() || M.isValEqnDir() || x.isValEqnDir() || alpha.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("partestfnA(x,y,z,v)");
         return resx(i,M,x,alpha);
     }
@@ -18364,6 +17797,7 @@ gentype syscall(const gentype &c, const gentype &x)
 
     if ( c.isValEqnDir() || x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("syscall(x,y)");
         return resx(c,x);
     }
@@ -18397,11 +17831,17 @@ gentype pycall(const gentype &c, const gentype &x)
 
     if ( c.isValEqnDir() || x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("pycall(x,y)");
         return resx(c,x);
     }
 
-    if ( c.isValString() )
+    if ( c.altpycall )
+    {
+        res = (*(c.altpycall))(x);
+    }
+
+    else if ( c.isValString() )
     {
         pycall((const std::string &) c,res,x);
     }
@@ -18486,6 +17926,7 @@ gentype ceil(const gentype &a)
 
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("ceil(x)");
         return resx(a);
     }
@@ -18528,6 +17969,7 @@ gentype floor(const gentype &a)
 
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("floor(x)");
         return resx(a);
     }
@@ -18570,6 +18012,7 @@ gentype rint(const gentype &a)
 
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("rint(x)");
         return resx(a);
     }
@@ -18616,6 +18059,7 @@ gentype deref(const gentype &a, const gentype &i)
 
     if ( a.isValEqnDir() || i.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("deref(x,y)");
         return resx(a,i);
     }
@@ -18722,6 +18166,7 @@ gentype derefv(const gentype &a, const gentype &i)
 
     else if ( a.isValEqnDir() || i.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("derefv(x,y)");
         return resx(a,i);
     }
@@ -18783,6 +18228,7 @@ gentype derefm(const gentype &a, const gentype &i, const gentype &j)
 
     if ( a.isValEqnDir() || i.isValEqnDir() || j.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("derefm(x,y,z)");
         return resx(a,i,j);
     }
@@ -18897,6 +18343,7 @@ gentype derefa(const gentype &a, const gentype &i)
 
     if ( a.isValEqnDir() || i.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("derefv(x,y)");
         return resx(a,i);
     }
@@ -18973,6 +18420,8 @@ gentype derefa(const gentype &a, const gentype &i)
 
 gentype collapse(const gentype &a)
 {
+    INITGENBLOCK
+
     int i,j,k,l;
     gentype res;
 
@@ -19207,6 +18656,7 @@ gentype fourProd(const gentype &a, const gentype &b, const gentype &c, const gen
 
     if ( a.isValEqnDir() || b.isValEqnDir() || c.isValEqnDir() || d.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("fourProd(x,y,z,v)");
         return resx(a,b,c,d);
     }
@@ -19231,6 +18681,7 @@ gentype outerProd(const gentype &a, const gentype &b)
 
     if ( a.isValEqnDir() || b.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("outerProd(x,y)");
         return resx(a,b);
     }
@@ -19255,6 +18706,7 @@ gentype trans(const gentype &a)
 
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("trans(x)");
         return resx(a);
     }
@@ -19274,6 +18726,7 @@ gentype det(const gentype &a)
 
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("det(x)");
         return resx(a);
     }
@@ -19295,6 +18748,7 @@ gentype trace(const gentype &a)
 
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("trace(x)");
         return resx(a);
     }
@@ -19316,6 +18770,7 @@ gentype miner(const gentype &a, const gentype &i, const gentype &j)
 
     if ( a.isValEqnDir() || i.isValEqnDir() || j.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("miner(x,y,z)");
         return resx(a,i,j);
     }
@@ -19325,30 +18780,11 @@ gentype miner(const gentype &a, const gentype &i, const gentype &j)
     else if ( !a.isValMatrix()                    ) { constructError(a,i,j,res,"Matrix minor only defined for matrices");     }
     else
     {
-	if ( a.numRows() != a.numCols() )
-	{
-	    constructError(a,i,j,res,"miner only defined for square matrices.");
-	}
-
-	else if ( !a.numRows() )
-	{
-	    constructError(a,i,j,res,"miner only defined for non-empty matrices.");
-	}
-
-	else if ( ( i.cast_int(0) < 0 ) || ( i.cast_int(0) >= a.numRows() ) )
-	{
-	    constructError(a,i,j,res,"index out of range for miner.");
-	}
-
-	else if ( ( j.cast_int(0) < 0 ) || ( j.cast_int(0) >= a.numRows() ) )
-	{
-	    constructError(a,i,j,res,"index out of range for miner.");
-	}
-
-	else
-	{
-	    res = (a.cast_matrix(0)).miner(i.cast_int(0),j.cast_int(0));
-	}
+	if      ( a.numRows() != a.numCols()                                ) { constructError(a,i,j,res,"miner only defined for square matrices.");    }
+	else if ( !a.numRows()                                              ) { constructError(a,i,j,res,"miner only defined for non-empty matrices."); }
+	else if ( ( i.cast_int(0) < 0 ) || ( i.cast_int(0) >= a.numRows() ) ) { constructError(a,i,j,res,"index out of range for miner.");              }
+	else if ( ( j.cast_int(0) < 0 ) || ( j.cast_int(0) >= a.numRows() ) ) { constructError(a,i,j,res,"index out of range for miner.");              }
+	else                                                                  { res = (a.cast_matrix(0)).miner(i.cast_int(0),j.cast_int(0));            }
     }
 
     return res;
@@ -19360,6 +18796,7 @@ gentype cofactor(const gentype &a, const gentype &i, const gentype &j)
 
     if ( a.isValEqnDir() || i.isValEqnDir() || j.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("cofactor(x,y,z)");
         return resx(a,i,j);
     }
@@ -19369,30 +18806,11 @@ gentype cofactor(const gentype &a, const gentype &i, const gentype &j)
     else if ( !a.isValMatrix()                    ) { constructError(a,i,j,res,"Matrix cofactor only defined for matrices");     }
     else
     {
-	if ( a.numRows() != a.numCols() )
-	{
-	    constructError(a,i,j,res,"cofactor only defined for square matrices.");
-	}
-
-	else if ( !a.numRows() )
-	{
-	    constructError(a,i,j,res,"cofactor only defined for non-empty matrices.");
-	}
-
-	else if ( ( i.cast_int(0) < 0 ) || ( i.cast_int(0) >= a.numRows() ) )
-	{
-	    constructError(a,i,j,res,"index out of range for cofactor.");
-	}
-
-	else if ( ( j.cast_int(0) < 0 ) || ( j.cast_int(0) >= a.numRows() ) )
-	{
-	    constructError(a,i,j,res,"index out of range for cofactor.");
-	}
-
-	else
-	{
-	    res = (a.cast_matrix(0)).cofactor(i.cast_int(0),j.cast_int(0));
-	}
+	if ( a.numRows() != a.numCols()                                     ) { constructError(a,i,j,res,"cofactor only defined for square matrices.");    }
+	else if ( !a.numRows()                                              ) { constructError(a,i,j,res,"cofactor only defined for non-empty matrices."); }
+	else if ( ( i.cast_int(0) < 0 ) || ( i.cast_int(0) >= a.numRows() ) ) { constructError(a,i,j,res,"index out of range for cofactor.");              }
+	else if ( ( j.cast_int(0) < 0 ) || ( j.cast_int(0) >= a.numRows() ) ) { constructError(a,i,j,res,"index out of range for cofactor.");              }
+	else                                                                  { res = (a.cast_matrix(0)).cofactor(i.cast_int(0),j.cast_int(0));            }
     }
 
     return res;
@@ -19404,6 +18822,7 @@ gentype adj(const gentype &a)
 
     if ( a.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("adj(x)");
         return resx(a);
     }
@@ -19412,24 +18831,14 @@ gentype adj(const gentype &a)
 
     else
     {
-	if ( a.numRows() != a.numCols() )
-	{
-	    constructError(a,res,"adj only defined for square matrices.");
-	}
-
-	else if ( !a.numRows() )
-	{
-	    constructError(a,res,"adj only defined for non-empty matrices.");
-	}
-
-	else
-	{
-	    res = (a.cast_matrix(0)).adj();
-	}
+	if      ( a.numRows() != a.numCols() ) { constructError(a,res,"adj only defined for square matrices.");    }
+	else if ( !a.numRows()               ) { constructError(a,res,"adj only defined for non-empty matrices."); }
+	else                                   { res = (a.cast_matrix(0)).adj();                                   }
     }
 
     return res;
 }
+
 
 
 
@@ -19490,15 +18899,8 @@ gentype bern(const gentype &w, const gentype &x)
 
             tmp = ww(j)*pow(x,jj)*pow(ov-x,nn-jj)*((double) xnCr(n,j));
 
-            if ( !j )
-            {
-                res = tmp;
-            }
-
-            else
-            {
-                res += tmp;
-            }
+            if ( !j ) { res  = tmp; }
+            else      { res += tmp; }
         }
     }
 
@@ -19579,6 +18981,7 @@ gentype normDistr(const gentype &x)
 
     if ( x.isValEqnDir() )
     {
+        INITGENBLOCK
         const static gentype resx("normDistr(x)");
         return resx(x);
     }
@@ -19749,12 +19152,14 @@ gentype operator"" _rgent(unsigned long long int valr) { return gentype(d_anion(
 
 
 
-gentype eq(const gentype &a, const gentype &b) { gentype res; return binLogicForm(res,a,b,"eq",operator==,1); }
-gentype ne(const gentype &a, const gentype &b) { gentype res; return binLogicForm(res,a,b,"ne",operator!=,0); }
-gentype gt(const gentype &a, const gentype &b) { gentype res; return binLogicForm(res,a,b,"gt",operator> ,1); }
-gentype ge(const gentype &a, const gentype &b) { gentype res; return binLogicForm(res,a,b,"ge",operator>=,1); }
-gentype le(const gentype &a, const gentype &b) { gentype res; return binLogicForm(res,a,b,"le",operator<=,1); }
-gentype lt(const gentype &a, const gentype &b) { gentype res; return binLogicForm(res,a,b,"lt",operator< ,1); }
+
+
+gentype eq(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return binLogicForm(res,a,b,"eq",operator==,1); }
+gentype ne(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return binLogicForm(res,a,b,"ne",operator!=,0); }
+gentype gt(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return binLogicForm(res,a,b,"gt",operator> ,1); }
+gentype ge(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return binLogicForm(res,a,b,"ge",operator>=,1); }
+gentype le(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return binLogicForm(res,a,b,"le",operator<=,1); }
+gentype lt(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return binLogicForm(res,a,b,"lt",operator< ,1); }
 
 gentype isnull  (const gentype &a) { gentype res = a; return OP_isnull  (res); }
 gentype isint   (const gentype &a) { gentype res = a; return OP_isint   (res); }
@@ -19895,78 +19300,78 @@ gentype erf      (const gentype &a) { gentype res = a; return OP_erf      (res);
 gentype erfc     (const gentype &a) { gentype res = a; return OP_erfc     (res); }
 
 
-gentype eabsp    (const gentype &a, const gentype &q) { gentype res; return elementwiseDefaultCallB(res,a,q,"eabsp"    ,&dubeabsp    ,&absp           ); }
-gentype enormp   (const gentype &a, const gentype &q) { gentype res; return elementwiseDefaultCallB(res,a,q,"enormp"   ,&dubenormp   ,&normp          ); }
-gentype polyDistr(const gentype &a, const gentype &q) { gentype res; return elementwiseDefaultCallB(res,a,q,"polyDistr",&dubpolyDistr,&polyDistrintern); }
-gentype PolyDistr(const gentype &a, const gentype &q) { gentype res; return elementwiseDefaultCallB(res,a,q,"PolyDistr",&dubPolyDistr,&PolyDistrintern); }
+gentype eabsp    (const gentype &a, const gentype &q) { INITGENBLOCK gentype res; return elementwiseDefaultCallB(res,a,q,"eabsp"    ,&dubeabsp    ,&absp           ); }
+gentype enormp   (const gentype &a, const gentype &q) { INITGENBLOCK gentype res; return elementwiseDefaultCallB(res,a,q,"enormp"   ,&dubenormp   ,&normp          ); }
+gentype polyDistr(const gentype &a, const gentype &q) { INITGENBLOCK gentype res; return elementwiseDefaultCallB(res,a,q,"polyDistr",&dubpolyDistr,&polyDistrintern); }
+gentype PolyDistr(const gentype &a, const gentype &q) { INITGENBLOCK gentype res; return elementwiseDefaultCallB(res,a,q,"PolyDistr",&dubPolyDistr,&PolyDistrintern); }
 
-gentype emul (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"emul" ,emul       ,mul        ,nullptr); }
-gentype ermul(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ermul",ermul      ,rmul       ,nullptr); }
-gentype ediv (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ediv" ,ediv       ,div        ,nullptr); }
-gentype eidiv(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"eidiv",eidiv      ,idiv       ,nullptr); }
-gentype erdiv(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"erdiv",erdiv      ,rdiv       ,nullptr); }
-gentype emod (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"emod" ,emod       ,mod        ,nullptr); }
-gentype epow (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"epow" ,epow       ,pow        ,nullptr); }
-gentype Epow (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"Epow" ,Epow       ,Pow        ,nullptr); }
-gentype epowl(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"epowl",epowl      ,powl       ,nullptr); }
-gentype Epowl(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"Epowl",Epowl      ,Powl       ,nullptr); }
-gentype epowr(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"epowr",epowr      ,powr       ,nullptr); }
-gentype Epowr(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"Epowr",Epowr      ,Powr       ,nullptr); }
-gentype nthrt(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"nthrt",nthrtintern,nthrtintern,nullptr); }
-gentype Nthrt(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"Nthrt",Nthrtintern,Nthrtintern,nullptr); }
-gentype eeq  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"eeq"  ,eeq        ,eq         ,nullptr); }
-gentype ene  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ene"  ,ene        ,ne         ,nullptr); }
-gentype egt  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"egt"  ,egt        ,gt         ,nullptr); }
-gentype ege  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ege"  ,ege        ,ge         ,nullptr); }
-gentype ele  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"ele"  ,ele        ,le         ,nullptr); }
-gentype elt  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"elt"  ,elt        ,lt         ,nullptr); }
-gentype lor  (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lor"  ,lor        ,nullptr    ,orOR   ); }
-gentype lnor (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lnor" ,lnor       ,nullptr    ,norOR  ); }
-gentype land (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"land" ,land       ,nullptr    ,andOR  ); }
-gentype lnand(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lnand",lnand      ,nullptr    ,nandOR ); }
-gentype lxor (const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lxor" ,lxor       ,nullptr    ,xorOR  ); }
-gentype lxand(const gentype &a, const gentype &b) { gentype res; return elementwiseDefaultCallC(res,a,b,"lxand",lxand      ,nullptr    ,xandOR ); }
+gentype emul (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"emul" ,emul       ,mul        ,nullptr); }
+gentype ermul(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"ermul",ermul      ,rmul       ,nullptr); }
+gentype ediv (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"ediv" ,ediv       ,div        ,nullptr); }
+gentype eidiv(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"eidiv",eidiv      ,idiv       ,nullptr); }
+gentype erdiv(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"erdiv",erdiv      ,rdiv       ,nullptr); }
+gentype emod (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"emod" ,emod       ,mod        ,nullptr); }
+gentype epow (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"epow" ,epow       ,pow        ,nullptr); }
+gentype Epow (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"Epow" ,Epow       ,Pow        ,nullptr); }
+gentype epowl(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"epowl",epowl      ,powl       ,nullptr); }
+gentype Epowl(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"Epowl",Epowl      ,Powl       ,nullptr); }
+gentype epowr(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"epowr",epowr      ,powr       ,nullptr); }
+gentype Epowr(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"Epowr",Epowr      ,Powr       ,nullptr); }
+gentype nthrt(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"nthrt",nthrtintern,nthrtintern,nullptr); }
+gentype Nthrt(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"Nthrt",Nthrtintern,Nthrtintern,nullptr); }
+gentype eeq  (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"eeq"  ,eeq        ,eq         ,nullptr); }
+gentype ene  (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"ene"  ,ene        ,ne         ,nullptr); }
+gentype egt  (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"egt"  ,egt        ,gt         ,nullptr); }
+gentype ege  (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"ege"  ,ege        ,ge         ,nullptr); }
+gentype ele  (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"ele"  ,ele        ,le         ,nullptr); }
+gentype elt  (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"elt"  ,elt        ,lt         ,nullptr); }
+gentype lor  (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"lor"  ,lor        ,nullptr    ,orOR   ); }
+gentype lnor (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"lnor" ,lnor       ,nullptr    ,norOR  ); }
+gentype land (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"land" ,land       ,nullptr    ,andOR  ); }
+gentype lnand(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"lnand",lnand      ,nullptr    ,nandOR ); }
+gentype lxor (const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"lxor" ,lxor       ,nullptr    ,xorOR  ); }
+gentype lxand(const gentype &a, const gentype &b) { INITGENBLOCK gentype res; return elementwiseDefaultCallC(res,a,b,"lxand",lxand      ,nullptr    ,xandOR ); }
 
-gentype max       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"max"       ,max       ,max    ,nullptr,max    ,i,j,0,0,0); }
-gentype min       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"min"       ,min       ,min    ,nullptr,min    ,i,j,0,0,0); }
-gentype maxabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"maxabs"    ,maxabs    ,maxabs ,nullptr,maxabs ,i,j,0,1,0); }
-gentype minabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"minabs"    ,minabs    ,minabs ,nullptr,minabs ,i,j,0,1,0); }
-gentype maxdiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"maxdiag"   ,maxdiag   ,nullptr,nullptr,nullptr,i,j,0,0,0); }
-gentype mindiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"mindiag"   ,mindiag   ,nullptr,nullptr,nullptr,i,j,0,0,0); }
-gentype maxabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"maxabsdiag",maxabsdiag,nullptr,nullptr,nullptr,i,j,0,1,0); }
-gentype minabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"minabsdiag",minabsdiag,nullptr,nullptr,nullptr,i,j,0,1,0); }
+gentype max       (const gentype &a) { INITGENBLOCK gentype res; int i,j; return zaxmincommonform(res,a,"max"       ,max       ,max    ,nullptr,max    ,i,j,0,0,0); }
+gentype min       (const gentype &a) { INITGENBLOCK gentype res; int i,j; return zaxmincommonform(res,a,"min"       ,min       ,min    ,nullptr,min    ,i,j,0,0,0); }
+gentype maxabs    (const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"maxabs"    ,maxabs    ,maxabs ,nullptr,maxabs ,i,j,0,1,0); }
+gentype minabs    (const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"minabs"    ,minabs    ,minabs ,nullptr,minabs ,i,j,0,1,0); }
+gentype maxdiag   (const gentype &a) { INITGENBLOCK gentype res; int i,j; return zaxmincommonform(res,a,"maxdiag"   ,maxdiag   ,nullptr,nullptr,nullptr,i,j,0,0,0); }
+gentype mindiag   (const gentype &a) { INITGENBLOCK gentype res; int i,j; return zaxmincommonform(res,a,"mindiag"   ,mindiag   ,nullptr,nullptr,nullptr,i,j,0,0,0); }
+gentype maxabsdiag(const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"maxabsdiag",maxabsdiag,nullptr,nullptr,nullptr,i,j,0,1,0); }
+gentype minabsdiag(const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"minabsdiag",minabsdiag,nullptr,nullptr,nullptr,i,j,0,1,0); }
 
-gentype argmax       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmax"       ,max       ,max    ,nullptr,nullptr,i,j,1,0,0); }
-gentype argmin       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmin"       ,min       ,min    ,nullptr,nullptr,i,j,1,0,0); }
-gentype argmaxabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argmaxabs"    ,maxabs    ,maxabs ,nullptr,nullptr,i,j,1,1,0); }
-gentype argminabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argminabs"    ,minabs    ,minabs ,nullptr,nullptr,i,j,1,1,0); }
-gentype argmaxdiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmaxdiag"   ,maxdiag   ,nullptr,nullptr,nullptr,i,j,1,0,0); }
-gentype argmindiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmindiag"   ,mindiag   ,nullptr,nullptr,nullptr,i,j,1,0,0); }
-gentype argmaxabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argmaxabsdiag",maxabsdiag,nullptr,nullptr,nullptr,i,j,1,1,0); }
-gentype argminabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argminabsdiag",minabsdiag,nullptr,nullptr,nullptr,i,j,1,1,0); }
+gentype argmax       (const gentype &a) { INITGENBLOCK gentype res; int i,j; return zaxmincommonform(res,a,"argmax"       ,max       ,max    ,nullptr,nullptr,i,j,1,0,0); }
+gentype argmin       (const gentype &a) { INITGENBLOCK gentype res; int i,j; return zaxmincommonform(res,a,"argmin"       ,min       ,min    ,nullptr,nullptr,i,j,1,0,0); }
+gentype argmaxabs    (const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"argmaxabs"    ,maxabs    ,maxabs ,nullptr,nullptr,i,j,1,1,0); }
+gentype argminabs    (const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"argminabs"    ,minabs    ,minabs ,nullptr,nullptr,i,j,1,1,0); }
+gentype argmaxdiag   (const gentype &a) { INITGENBLOCK gentype res; int i,j; return zaxmincommonform(res,a,"argmaxdiag"   ,maxdiag   ,nullptr,nullptr,nullptr,i,j,1,0,0); }
+gentype argmindiag   (const gentype &a) { INITGENBLOCK gentype res; int i,j; return zaxmincommonform(res,a,"argmindiag"   ,mindiag   ,nullptr,nullptr,nullptr,i,j,1,0,0); }
+gentype argmaxabsdiag(const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"argmaxabsdiag",maxabsdiag,nullptr,nullptr,nullptr,i,j,1,1,0); }
+gentype argminabsdiag(const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"argminabsdiag",minabsdiag,nullptr,nullptr,nullptr,i,j,1,1,0); }
 
-gentype allargmax       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmax"       ,max       ,max    ,nullptr,nullptr,i,j,1,0,1); }
-gentype allargmin       (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmin"       ,min       ,min    ,nullptr,nullptr,i,j,1,0,1); }
-gentype allargmaxabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argmaxabs"    ,maxabs    ,maxabs ,nullptr,nullptr,i,j,1,1,1); }
-gentype allargminabs    (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argminabs"    ,minabs    ,minabs ,nullptr,nullptr,i,j,1,1,1); }
-gentype allargmaxdiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmaxdiag"   ,maxdiag   ,nullptr,nullptr,nullptr,i,j,1,0,1); }
-gentype allargmindiag   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmindiag"   ,mindiag   ,nullptr,nullptr,nullptr,i,j,1,0,1); }
-gentype allargmaxabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argmaxabsdiag",maxabsdiag,nullptr,nullptr,nullptr,i,j,1,1,1); }
-gentype allargminabsdiag(const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"argminabsdiag",minabsdiag,nullptr,nullptr,nullptr,i,j,1,1,1); }
+gentype allargmax       (const gentype &a) { INITGENBLOCK gentype res; int i,j; return zaxmincommonform(res,a,"argmax"       ,max       ,max    ,nullptr,nullptr,i,j,1,0,1); }
+gentype allargmin       (const gentype &a) { INITGENBLOCK gentype res; int i,j; return zaxmincommonform(res,a,"argmin"       ,min       ,min    ,nullptr,nullptr,i,j,1,0,1); }
+gentype allargmaxabs    (const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"argmaxabs"    ,maxabs    ,maxabs ,nullptr,nullptr,i,j,1,1,1); }
+gentype allargminabs    (const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"argminabs"    ,minabs    ,minabs ,nullptr,nullptr,i,j,1,1,1); }
+gentype allargmaxdiag   (const gentype &a) { INITGENBLOCK gentype res; int i,j; return zaxmincommonform(res,a,"argmaxdiag"   ,maxdiag   ,nullptr,nullptr,nullptr,i,j,1,0,1); }
+gentype allargmindiag   (const gentype &a) { INITGENBLOCK gentype res; int i,j; return zaxmincommonform(res,a,"argmindiag"   ,mindiag   ,nullptr,nullptr,nullptr,i,j,1,0,1); }
+gentype allargmaxabsdiag(const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"argmaxabsdiag",maxabsdiag,nullptr,nullptr,nullptr,i,j,1,1,1); }
+gentype allargminabsdiag(const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"argminabsdiag",minabsdiag,nullptr,nullptr,nullptr,i,j,1,1,1); }
 
-gentype sum      (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"sum"      ,nullptr,nullptr,sum    ,sum    ,i,j,0,0,0); }
-gentype prod     (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"prod"     ,nullptr,nullptr,prod   ,prod   ,i,j,0,0,0); }
-gentype Prod     (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"Prod"     ,nullptr,nullptr,Prod   ,Prod   ,i,j,0,0,0); }
-gentype mean     (const gentype &a) { gentype res; int i,j; return maxmincommonform(res,a,"mean"     ,nullptr,nullptr,mean   ,mean   ,i,j,0,0,0); }
-gentype median   (const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"median"   ,nullptr,median ,nullptr,median ,i,j,0,0,0); }
-gentype argmedian(const gentype &a) { gentype res; int i,j; return zaxmincommonform(res,a,"argmedian",nullptr,median ,nullptr,nullptr,i,j,1,0,0); }
+gentype sum      (const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"sum"      ,nullptr,nullptr,sum    ,sum    ,i,j,0,0,0); }
+gentype prod     (const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"prod"     ,nullptr,nullptr,prod   ,prod   ,i,j,0,0,0); }
+gentype Prod     (const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"Prod"     ,nullptr,nullptr,Prod   ,Prod   ,i,j,0,0,0); }
+gentype mean     (const gentype &a) { INITGENBLOCK gentype res; int i,j; return maxmincommonform(res,a,"mean"     ,nullptr,nullptr,mean   ,mean   ,i,j,0,0,0); }
+gentype median   (const gentype &a) { INITGENBLOCK gentype res; int i,j; return zaxmincommonform(res,a,"median"   ,nullptr,median ,nullptr,median ,i,j,0,0,0); }
+gentype argmedian(const gentype &a) { INITGENBLOCK gentype res; int i,j; return zaxmincommonform(res,a,"argmedian",nullptr,median ,nullptr,nullptr,i,j,1,0,0); }
 
-gentype pow  (const gentype &a, const gentype &b) { return powintern (a,b); }
-gentype powl (const gentype &a, const gentype &b) { return powlintern(a,b); }
-gentype powr (const gentype &a, const gentype &b) { return powrintern(a,b); }
-gentype Pow  (const gentype &a, const gentype &b) { return Powintern (a,b); }
-gentype Powl (const gentype &a, const gentype &b) { return Powlintern(a,b); }
-gentype Powr (const gentype &a, const gentype &b) { return Powrintern(a,b); }
+gentype pow  (const gentype &a, const gentype &b) { INITGENBLOCK return powintern (a,b); }
+gentype powl (const gentype &a, const gentype &b) { INITGENBLOCK return powlintern(a,b); }
+gentype powr (const gentype &a, const gentype &b) { INITGENBLOCK return powrintern(a,b); }
+gentype Pow  (const gentype &a, const gentype &b) { INITGENBLOCK return Powintern (a,b); }
+gentype Powl (const gentype &a, const gentype &b) { INITGENBLOCK return Powlintern(a,b); }
+gentype Powr (const gentype &a, const gentype &b) { INITGENBLOCK return Powrintern(a,b); }
 
 
 
@@ -20030,123 +19435,123 @@ gentype Powr (const gentype &a, const gentype &b) { return Powrintern(a,b); }
 
 
 
-gentype &OP_lnot     (gentype &a) { const static gentype fnbare("lnot(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"lnot"     ,&OP_lnot     ,nullptr   ,nullptr   ,nullptr      ,&invertOR,&falseOR   ); }
-gentype &OP_lis      (gentype &a) { const static gentype fnbare("lis(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"lis"      ,&OP_lis      ,nullptr   ,nullptr   ,nullptr      ,&bufferOR,&falseOR   ); }
-gentype &OP_eabs2    (gentype &a) { const static gentype fnbare("eabs2(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"eabs2"    ,&OP_eabs2    ,nullptr   ,&abs2     ,&abs2     ,&abs2    ,&falseOR   ); }
-gentype &OP_eabs1    (gentype &a) { const static gentype fnbare("eabs1(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"eabs1"    ,&OP_eabs1    ,nullptr   ,&abs1     ,&abs1     ,&abs1    ,&falseOR   ); }
-gentype &OP_eabsinf  (gentype &a) { const static gentype fnbare("eabsinf(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"eabsinf"  ,&OP_eabsinf  ,nullptr   ,&absinf   ,&absinf   ,&absinf  ,&falseOR   ); }
-gentype &OP_eabs0    (gentype &a) { const static gentype fnbare("eabs0(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"eabs0"    ,&OP_eabs0    ,nullptr   ,&abs0     ,&abs0     ,&abs0    ,&falseOR   ); }
-gentype &OP_enorm2   (gentype &a) { const static gentype fnbare("enorm2(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"enorm2"   ,&OP_enorm2   ,nullptr   ,&norm2    ,&norm2    ,&norm2   ,&falseOR   ); }
-gentype &OP_enorm1   (gentype &a) { const static gentype fnbare("enorm1(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"enorm1"   ,&OP_enorm1   ,nullptr   ,&norm1    ,&norm1    ,&norm1   ,&falseOR   ); }
-gentype &OP_real     (gentype &a) { const static gentype fnbare("real(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"real"     ,&OP_real     ,nullptr   ,&real     ,&real     ,&real    ,&falseOR   ); }
-gentype &OP_imag     (gentype &a) { const static gentype fnbare("imag(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"imag"     ,&OP_imag     ,nullptr   ,&imag     ,&imag     ,&imag    ,&falseOR   ); }
-gentype &OP_arg      (gentype &a) { const static gentype fnbare("arg(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"arg"      ,&OP_arg      ,nullptr   ,&arg      ,&arg      ,nullptr     ,&falseOR   ); }
-gentype &OP_eangle   (gentype &a) { const static gentype fnbare("eangle(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"eangle"   ,&OP_eangle   ,&angle    ,nullptr   ,&angle    ,nullptr     ,&falseOR   ); }
-gentype &OP_einv     (gentype &a) { const static gentype fnbare("einv(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"einv"     ,&OP_einv     ,&inv      ,nullptr   ,&inv      ,nullptr     ,&falseOR   ); }
-gentype &OP_imagd    (gentype &a) { const static gentype fnbare("imagd(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"imagd"    ,&OP_imagd    ,&imagd    ,nullptr   ,nullptr      ,nullptr     ,&trueOR    ); }
-gentype &OP_imagx    (gentype &a) { const static gentype fnbare("imagx(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"imagx"    ,&OP_imagx    ,&imagx    ,nullptr   ,&imagx    ,&imagx   ,&falseOR   ); }
-gentype &OP_argd     (gentype &a) { const static gentype fnbare("argd(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"argd"     ,&OP_argd     ,&argd     ,nullptr   ,nullptr      ,nullptr     ,&trueOR    ); }
-gentype &OP_argx     (gentype &a) { const static gentype fnbare("argx(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"argx"     ,&OP_argx     ,&argx     ,nullptr   ,nullptr      ,nullptr     ,&trueOR    ); }
-gentype &OP_Imagd    (gentype &a) { const static gentype fnbare("Imagd(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Imagd"    ,&OP_Imagd    ,&Imagd    ,nullptr   ,nullptr      ,nullptr     ,&trueOR    ); }
-gentype &OP_Argd     (gentype &a) { const static gentype fnbare("Argd(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Argd"     ,&OP_Argd     ,&Argd     ,nullptr   ,nullptr      ,nullptr     ,&trueOR    ); }
-gentype &OP_Argx     (gentype &a) { const static gentype fnbare("Argx(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Argx"     ,&OP_Argx     ,&Argx     ,nullptr   ,nullptr      ,nullptr     ,&trueOR    ); }
-gentype &OP_sgn      (gentype &a) { const static gentype fnbare("sgn(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"sgn"      ,&OP_sgn      ,&sgn      ,nullptr   ,&sgn      ,&sgn     ,&falseOR   ); }
-gentype &OP_sqrt     (gentype &a) { const static gentype fnbare("sqrt(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"sqrt"     ,&OP_sqrt     ,&sqrt     ,nullptr   ,&sqrt     ,nullptr     ,&sqrtOR    ); }
-gentype &OP_Sqrt     (gentype &a) { const static gentype fnbare("Sqrt(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Sqrt"     ,&OP_Sqrt     ,&Sqrt     ,nullptr   ,&sqrt     ,nullptr     ,&sqrtOR    ); }
-gentype &OP_cbrt     (gentype &a) { const static gentype fnbare("cbrt(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"cbrt"     ,&OP_cbrt     ,&cbrt     ,nullptr   ,&cbrt     ,nullptr     ,&falseOR   ); }
-gentype &OP_Cbrt     (gentype &a) { const static gentype fnbare("Cbrt(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Cbrt"     ,&OP_Cbrt     ,&Cbrt     ,nullptr   ,&cbrt     ,nullptr     ,&falseOR   ); }
-gentype &OP_exp      (gentype &a) { const static gentype fnbare("exp(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"exp"      ,&OP_exp      ,&exp      ,nullptr   ,&exp      ,nullptr     ,&falseOR   ); }
-gentype &OP_tenup    (gentype &a) { const static gentype fnbare("tenup(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"tenup"    ,&OP_tenup    ,&tenup    ,nullptr   ,&tenup    ,nullptr     ,&falseOR   ); }
-gentype &OP_log      (gentype &a) { const static gentype fnbare("log(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"log"      ,&OP_log      ,&log      ,nullptr   ,&log      ,nullptr     ,&logOR     ); }
-gentype &OP_log10    (gentype &a) { const static gentype fnbare("log10(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"log10"    ,&OP_log10    ,&log10    ,nullptr   ,&log10    ,nullptr     ,&log10OR   ); }
-gentype &OP_Log      (gentype &a) { const static gentype fnbare("Log(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"Log"      ,&OP_Log      ,&Log      ,nullptr   ,&log      ,nullptr     ,&logOR     ); }
-gentype &OP_Log10    (gentype &a) { const static gentype fnbare("Log10(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Log10"    ,&OP_Log10    ,&Log10    ,nullptr   ,&log10    ,nullptr     ,&log10OR   ); }
-gentype &OP_sin      (gentype &a) { const static gentype fnbare("sin(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"sin"      ,&OP_sin      ,&sin      ,nullptr   ,&sin      ,nullptr     ,&falseOR   ); }
-gentype &OP_cos      (gentype &a) { const static gentype fnbare("cos(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"cos"      ,&OP_cos      ,&cos      ,nullptr   ,&cos      ,nullptr     ,&falseOR   ); }
-gentype &OP_tan      (gentype &a) { const static gentype fnbare("tan(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"tan"      ,&OP_tan      ,&tan      ,nullptr   ,&tan      ,nullptr     ,&falseOR   ); }
-gentype &OP_cosec    (gentype &a) { const static gentype fnbare("cosec(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"cosec"    ,&OP_cosec    ,&cosec    ,nullptr   ,&cosec    ,nullptr     ,&falseOR   ); }
-gentype &OP_sec      (gentype &a) { const static gentype fnbare("sec(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"sec"      ,&OP_sec      ,&sec      ,nullptr   ,&sec      ,nullptr     ,&falseOR   ); }
-gentype &OP_cot      (gentype &a) { const static gentype fnbare("cot(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"cot"      ,&OP_cot      ,&cot      ,nullptr   ,&cot      ,nullptr     ,&falseOR   ); }
-gentype &OP_vers     (gentype &a) { const static gentype fnbare("vers(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"vers"     ,&OP_vers     ,&vers     ,nullptr   ,&vers     ,nullptr     ,&falseOR   ); }
-gentype &OP_covers   (gentype &a) { const static gentype fnbare("covers(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"covers"   ,&OP_covers   ,&covers   ,nullptr   ,&covers   ,nullptr     ,&falseOR   ); }
-gentype &OP_hav      (gentype &a) { const static gentype fnbare("hav(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"hav"      ,&OP_hav      ,&hav      ,nullptr   ,&hav      ,nullptr     ,&falseOR   ); }
-gentype &OP_excosec  (gentype &a) { const static gentype fnbare("excosec(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"excosec"  ,&OP_excosec  ,&excosec  ,nullptr   ,&excosec  ,nullptr     ,&falseOR   ); }
-gentype &OP_exsec    (gentype &a) { const static gentype fnbare("exsec(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"exsec"    ,&OP_exsec    ,&exsec    ,nullptr   ,&exsec    ,nullptr     ,&falseOR   ); }
-gentype &OP_castrg   (gentype &a) { const static gentype fnbare("castrg(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"castrg"   ,&OP_castrg   ,&castrg   ,nullptr   ,&castrg   ,nullptr     ,&falseOR   ); }
-gentype &OP_casctrg  (gentype &a) { const static gentype fnbare("casctrg(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"casctrg"  ,&OP_casctrg  ,&casctrg  ,nullptr   ,&casctrg  ,nullptr     ,&falseOR   ); }
-gentype &OP_asin     (gentype &a) { const static gentype fnbare("asin(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"asin"     ,&OP_asin     ,&asin     ,nullptr   ,&asin     ,nullptr     ,&asinOR    ); }
-gentype &OP_acos     (gentype &a) { const static gentype fnbare("acos(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"acos"     ,&OP_acos     ,&acos     ,nullptr   ,&acos     ,nullptr     ,&acosOR    ); }
-gentype &OP_Asin     (gentype &a) { const static gentype fnbare("Asin(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Asin"     ,&OP_Asin     ,&Asin     ,nullptr   ,&asin     ,nullptr     ,&asinOR    ); }
-gentype &OP_Acos     (gentype &a) { const static gentype fnbare("Acos(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Acos"     ,&OP_Acos     ,&Acos     ,nullptr   ,&acos     ,nullptr     ,&acosOR    ); }
-gentype &OP_atan     (gentype &a) { const static gentype fnbare("atan(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"atan"     ,&OP_atan     ,&atan     ,nullptr   ,&atan     ,nullptr     ,&falseOR   ); }
-gentype &OP_acosec   (gentype &a) { const static gentype fnbare("acosec(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"acosec"   ,&OP_acosec   ,&acosec   ,nullptr   ,&acosec   ,nullptr     ,&acosecOR  ); }
-gentype &OP_asec     (gentype &a) { const static gentype fnbare("asec(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"asec"     ,&OP_asec     ,&asec     ,nullptr   ,&asec     ,nullptr     ,&asecOR    ); }
-gentype &OP_Acosec   (gentype &a) { const static gentype fnbare("Acosec(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"Acosec"   ,&OP_Acosec   ,&Acosec   ,nullptr   ,&acosec   ,nullptr     ,&acosecOR  ); }
-gentype &OP_Asec     (gentype &a) { const static gentype fnbare("Asec(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Asec"     ,&OP_Asec     ,&Asec     ,nullptr   ,&asec     ,nullptr     ,&asecOR    ); }
-gentype &OP_acot     (gentype &a) { const static gentype fnbare("acot(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"acot"     ,&OP_acot     ,&acot     ,nullptr   ,&acot     ,nullptr     ,&falseOR   ); }
-gentype &OP_avers    (gentype &a) { const static gentype fnbare("avers(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"avers"    ,&OP_avers    ,&avers    ,nullptr   ,&avers    ,nullptr     ,&aversOR   ); }
-gentype &OP_acovers  (gentype &a) { const static gentype fnbare("acovers(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"acovers"  ,&OP_acovers  ,&acovers  ,nullptr   ,&acovers  ,nullptr     ,&acoversOR ); }
-gentype &OP_ahav     (gentype &a) { const static gentype fnbare("ahav(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"ahav"     ,&OP_ahav     ,&ahav     ,nullptr   ,&ahav     ,nullptr     ,&ahavOR    ); }
-gentype &OP_aexcosec (gentype &a) { const static gentype fnbare("aexcosec(x)");  return OP_elementwiseDefaultCallA(a,fnbare,"aexcosec" ,&OP_aexcosec ,&aexcosec ,nullptr   ,&aexcosec ,nullptr     ,&aexcosecOR); }
-gentype &OP_aexsec   (gentype &a) { const static gentype fnbare("aexsec(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"aexsec"   ,&OP_aexsec   ,&aexsec   ,nullptr   ,&aexsec   ,nullptr     ,&aexsecOR  ); }
-gentype &OP_acastrg  (gentype &a) { const static gentype fnbare("acastrg(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"acastrg"  ,&OP_acastrg  ,&acastrg  ,nullptr   ,&acastrg  ,nullptr     ,&acastrgOR); }
-gentype &OP_acasctrg (gentype &a) { const static gentype fnbare("acasctrg(x)");  return OP_elementwiseDefaultCallA(a,fnbare,"acasctrg" ,&OP_acasctrg ,&acasctrg ,nullptr   ,&acasctrg ,nullptr     ,&acasctrgOR); }
-gentype &OP_Avers    (gentype &a) { const static gentype fnbare("Avers(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Avers"    ,&OP_Avers    ,&Avers    ,nullptr   ,&avers    ,nullptr     ,&aversOR   ); }
-gentype &OP_Acovers  (gentype &a) { const static gentype fnbare("Acovers(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"Acovers"  ,&OP_Acovers  ,&Acovers  ,nullptr   ,&acovers  ,nullptr     ,&acoversOR ); }
-gentype &OP_Ahav     (gentype &a) { const static gentype fnbare("Ahav(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Ahav"     ,&OP_Ahav     ,&Ahav     ,nullptr   ,&ahav     ,nullptr     ,&ahavOR    ); }
-gentype &OP_Aexcosec (gentype &a) { const static gentype fnbare("Aexcosec(x)");  return OP_elementwiseDefaultCallA(a,fnbare,"Aexcosec" ,&OP_Aexcosec ,&Aexcosec ,nullptr   ,&aexcosec ,nullptr     ,&aexcosecOR); }
-gentype &OP_Aexsec   (gentype &a) { const static gentype fnbare("Aexsec(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"Aexsec"   ,&OP_Aexsec   ,&Aexsec   ,nullptr   ,&aexsec   ,nullptr     ,&aexsecOR  ); }
-gentype &OP_Acastrg  (gentype &a) { const static gentype fnbare("Acastrg(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"Acastrg"  ,&OP_Acastrg  ,&Acastrg  ,nullptr   ,&acastrg  ,nullptr     ,&acastrgOR);  }
-gentype &OP_Acasctrg (gentype &a) { const static gentype fnbare("Acasctrg(x)");  return OP_elementwiseDefaultCallA(a,fnbare,"Acasctrg" ,&OP_Acasctrg ,&Acasctrg ,nullptr   ,&acasctrg ,nullptr     ,&acasctrgOR); }
-gentype &OP_sinc     (gentype &a) { const static gentype fnbare("sinc(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"sinc"     ,&OP_sinc     ,&sinc     ,nullptr   ,&sinc     ,nullptr     ,&falseOR   ); }
-gentype &OP_cosc     (gentype &a) { const static gentype fnbare("cosc(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"cosc"     ,&OP_cosc     ,&cosc     ,nullptr   ,&cosc     ,nullptr     ,&falseOR   ); }
-gentype &OP_tanc     (gentype &a) { const static gentype fnbare("tanc(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"tanc"     ,&OP_tanc     ,&tanh     ,nullptr   ,&tanc     ,nullptr     ,&falseOR   ); }
-gentype &OP_sinh     (gentype &a) { const static gentype fnbare("sinh(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"sinh"     ,&OP_sinh     ,&sinh     ,nullptr   ,&sinh     ,nullptr     ,&falseOR   ); }
-gentype &OP_cosh     (gentype &a) { const static gentype fnbare("cosh(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"cosh"     ,&OP_cosh     ,&cosh     ,nullptr   ,&cosh     ,nullptr     ,&falseOR   ); }
-gentype &OP_tanh     (gentype &a) { const static gentype fnbare("tanh(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"tanh"     ,&OP_tanh     ,&tanh     ,nullptr   ,&tanh     ,nullptr     ,&falseOR   ); }
-gentype &OP_cosech   (gentype &a) { const static gentype fnbare("cosech(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"cosech"   ,&OP_cosech   ,&cosech   ,nullptr   ,&cosech   ,nullptr     ,&falseOR   ); }
-gentype &OP_sech     (gentype &a) { const static gentype fnbare("sech(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"sech"     ,&OP_sech     ,&sech     ,nullptr   ,&sech     ,nullptr     ,&falseOR   ); }
-gentype &OP_coth     (gentype &a) { const static gentype fnbare("coth(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"coth"     ,&OP_coth     ,&coth     ,nullptr   ,&coth     ,nullptr     ,&falseOR   ); }
-gentype &OP_versh    (gentype &a) { const static gentype fnbare("versh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"versh"    ,&OP_versh    ,&versh    ,nullptr   ,&versh    ,nullptr     ,&falseOR   ); }
-gentype &OP_coversh  (gentype &a) { const static gentype fnbare("coversh(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"coversh"  ,&OP_coversh  ,&coversh  ,nullptr   ,&coversh  ,nullptr     ,&falseOR   ); }
-gentype &OP_havh     (gentype &a) { const static gentype fnbare("havh(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"havh"     ,&OP_havh     ,&havh     ,nullptr   ,&havh     ,nullptr     ,&falseOR   ); }
-gentype &OP_excosech (gentype &a) { const static gentype fnbare("excosech(x)");  return OP_elementwiseDefaultCallA(a,fnbare,"excosech" ,&OP_excosech ,&excosech ,nullptr   ,&excosech ,nullptr     ,&falseOR   ); }
-gentype &OP_exsech   (gentype &a) { const static gentype fnbare("exsech(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"exsech"   ,&OP_exsech   ,&exsech   ,nullptr   ,&exsech   ,nullptr     ,&falseOR   ); }
-gentype &OP_cashyp   (gentype &a) { const static gentype fnbare("cashyp(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"cashyp"   ,&OP_cashyp   ,&cashyp   ,nullptr   ,&cashyp   ,nullptr     ,&falseOR   ); }
-gentype &OP_caschyp  (gentype &a) { const static gentype fnbare("caschyp(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"caschyp"  ,&OP_caschyp  ,&caschyp  ,nullptr   ,&caschyp  ,nullptr     ,&falseOR   ); }
-gentype &OP_asinh    (gentype &a) { const static gentype fnbare("asinh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"asinh"    ,&OP_asinh    ,&asinh    ,nullptr   ,&asinh    ,nullptr     ,&falseOR   ); }
-gentype &OP_acosh    (gentype &a) { const static gentype fnbare("acosh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"acosh"    ,&OP_acosh    ,&acosh    ,nullptr   ,&acosh    ,nullptr     ,&acoshOR   ); }
-gentype &OP_atanh    (gentype &a) { const static gentype fnbare("atanh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"atanh"    ,&OP_atanh    ,&atanh    ,nullptr   ,&atanh    ,nullptr     ,&atanhOR   ); }
-gentype &OP_Acosh    (gentype &a) { const static gentype fnbare("Acosh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Acosh"    ,&OP_Acosh    ,&Acosh    ,nullptr   ,&acosh    ,nullptr     ,&acoshOR   ); }
-gentype &OP_Atanh    (gentype &a) { const static gentype fnbare("Atanh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Atanh"    ,&OP_Atanh    ,&Atanh    ,nullptr   ,&atanh    ,nullptr     ,&atanhOR   ); }
-gentype &OP_acosech  (gentype &a) { const static gentype fnbare("acosech(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"acosech"  ,&OP_acosech  ,&acosech  ,nullptr   ,&acosech  ,nullptr     ,&falseOR   ); }
-gentype &OP_asech    (gentype &a) { const static gentype fnbare("asech(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"asech"    ,&OP_asech    ,&asech    ,nullptr   ,&asech    ,nullptr     ,&asechOR   ); }
-gentype &OP_acoth    (gentype &a) { const static gentype fnbare("acoth(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"acoth"    ,&OP_acoth    ,&acoth    ,nullptr   ,&acoth    ,nullptr     ,&acothOR   ); }
-gentype &OP_aversh   (gentype &a) { const static gentype fnbare("aversh(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"aversh"   ,&OP_aversh   ,&aversh   ,nullptr   ,&aversh   ,nullptr     ,&avershOR  ); }
-gentype &OP_acovrsh  (gentype &a) { const static gentype fnbare("acovrsh(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"acovrsh"  ,&OP_acovrsh  ,&acovrsh  ,nullptr   ,&acovrsh  ,nullptr     ,&falseOR   ); }
-gentype &OP_ahavh    (gentype &a) { const static gentype fnbare("ahavh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"ahavh"    ,&OP_ahavh    ,&ahavh    ,nullptr   ,&ahavh    ,nullptr     ,&ahavhOR   ); }
-gentype &OP_aexcosech(gentype &a) { const static gentype fnbare("aexcosech(x)"); return OP_elementwiseDefaultCallA(a,fnbare,"aexcosech",&OP_aexcosech,&aexcosech,nullptr   ,&aexcosech,nullptr     ,&falseOR   ); }
-gentype &OP_aexsech  (gentype &a) { const static gentype fnbare("aexsech(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"aexsech"  ,&OP_aexsech  ,&aexsech  ,nullptr   ,&aexsech  ,nullptr     ,&aexsechOR ); }
-gentype &OP_acashyp  (gentype &a) { const static gentype fnbare("acashyp(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"acashyp"  ,&OP_acashyp  ,&acashyp  ,nullptr   ,&acashyp  ,nullptr     ,&acashypOR ); }
-gentype &OP_acaschyp (gentype &a) { const static gentype fnbare("acaschyp(x)");  return OP_elementwiseDefaultCallA(a,fnbare,"acaschyp" ,&OP_acaschyp ,&acaschyp ,nullptr   ,&acaschyp ,nullptr     ,&acaschypOR); }
-gentype &OP_Asech    (gentype &a) { const static gentype fnbare("Asech(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Asech"    ,&OP_Asech    ,&Asech    ,nullptr   ,&asech    ,nullptr     ,&asechOR   ); }
-gentype &OP_Acoth    (gentype &a) { const static gentype fnbare("Acoth(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Acoth"    ,&OP_Acoth    ,&Acoth    ,nullptr   ,&acoth    ,nullptr     ,&acothOR   ); }
-gentype &OP_Aversh   (gentype &a) { const static gentype fnbare("Aversh(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"Aversh"   ,&OP_Aversh   ,&Aversh   ,nullptr   ,&aversh   ,nullptr     ,&avershOR  ); }
-gentype &OP_Ahavh    (gentype &a) { const static gentype fnbare("Ahavh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Ahavh"    ,&OP_Ahavh    ,&Ahavh    ,nullptr   ,&ahavh    ,nullptr     ,&ahavhOR   ); }
-gentype &OP_Aexsech  (gentype &a) { const static gentype fnbare("Aexsech(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"Aexsech"  ,&OP_Aexsech  ,&Aexsech  ,nullptr   ,&aexsech  ,nullptr     ,&aexsechOR ); }
-gentype &OP_Acashyp  (gentype &a) { const static gentype fnbare("Acashyp(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"Acashyp"  ,&OP_Acashyp  ,&Acashyp  ,nullptr   ,&acashyp  ,nullptr     ,&acashypOR ); }
-gentype &OP_Acaschyp (gentype &a) { const static gentype fnbare("Acaschyp(x)");  return OP_elementwiseDefaultCallA(a,fnbare,"Acaschyp" ,&OP_Acaschyp ,&Acaschyp ,nullptr   ,&acaschyp ,nullptr     ,&acaschypOR); }
-gentype &OP_sinhc    (gentype &a) { const static gentype fnbare("sinhc(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"sinhc"    ,&OP_sinhc    ,&sinhc    ,nullptr   ,&sinhc    ,nullptr     ,&falseOR   ); }
-gentype &OP_coshc    (gentype &a) { const static gentype fnbare("coshc(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"coshc"    ,&OP_coshc    ,&coshc    ,nullptr   ,&coshc    ,nullptr     ,&falseOR   ); }
-gentype &OP_tanhc    (gentype &a) { const static gentype fnbare("tanhc(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"tanhc"    ,&OP_tanhc    ,&tanhc    ,nullptr   ,&tanhc    ,nullptr     ,&falseOR   ); }
-gentype &OP_sigm     (gentype &a) { const static gentype fnbare("sigm(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"sigm"     ,&OP_sigm     ,&sigm     ,nullptr   ,&sigm     ,nullptr     ,&falseOR   ); }
-gentype &OP_gd       (gentype &a) { const static gentype fnbare("gd(x)");        return OP_elementwiseDefaultCallA(a,fnbare,"gd"       ,&OP_gd       ,&gd       ,nullptr   ,&gd       ,nullptr     ,&falseOR   ); }
-gentype &OP_asigm    (gentype &a) { const static gentype fnbare("asigm(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"asigm"    ,&OP_asigm    ,&asigm    ,nullptr   ,&asigm    ,nullptr     ,&asigmOR   ); }
-gentype &OP_agd      (gentype &a) { const static gentype fnbare("agd(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"agd"      ,&OP_agd      ,&agd      ,nullptr   ,&agd      ,nullptr     ,&agdOR     ); }
-gentype &OP_Asigm    (gentype &a) { const static gentype fnbare("Asigm(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Asigm"    ,&OP_Asigm    ,&Asigm    ,nullptr   ,&asigm    ,nullptr     ,&asigmOR   ); }
-gentype &OP_Agd      (gentype &a) { const static gentype fnbare("Agd(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"Agd"      ,&OP_Agd      ,&Agd      ,nullptr   ,&agd      ,nullptr     ,&agdOR     ); }
-gentype &OP_erf      (gentype &a) { const static gentype fnbare("erf(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"erf"      ,&OP_erf      ,nullptr   ,nullptr   ,&erf      ,nullptr     ,&falseOR   ); }
-gentype &OP_erfc     (gentype &a) { const static gentype fnbare("erfc(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"erfc"     ,&OP_erfc     ,nullptr   ,nullptr   ,&erfc     ,nullptr     ,&falseOR   ); }
+gentype &OP_lnot     (gentype &a) { INITGENBLOCK const static gentype fnbare("lnot(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"lnot"     ,&OP_lnot     ,nullptr   ,nullptr   ,nullptr      ,&invertOR,&falseOR   ); }
+gentype &OP_lis      (gentype &a) { INITGENBLOCK const static gentype fnbare("lis(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"lis"      ,&OP_lis      ,nullptr   ,nullptr   ,nullptr      ,&bufferOR,&falseOR   ); }
+gentype &OP_eabs2    (gentype &a) { INITGENBLOCK const static gentype fnbare("eabs2(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"eabs2"    ,&OP_eabs2    ,nullptr   ,&abs2     ,&abs2     ,&abs2    ,&falseOR   ); }
+gentype &OP_eabs1    (gentype &a) { INITGENBLOCK const static gentype fnbare("eabs1(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"eabs1"    ,&OP_eabs1    ,nullptr   ,&abs1     ,&abs1     ,&abs1    ,&falseOR   ); }
+gentype &OP_eabsinf  (gentype &a) { INITGENBLOCK const static gentype fnbare("eabsinf(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"eabsinf"  ,&OP_eabsinf  ,nullptr   ,&absinf   ,&absinf   ,&absinf  ,&falseOR   ); }
+gentype &OP_eabs0    (gentype &a) { INITGENBLOCK const static gentype fnbare("eabs0(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"eabs0"    ,&OP_eabs0    ,nullptr   ,&abs0     ,&abs0     ,&abs0    ,&falseOR   ); }
+gentype &OP_enorm2   (gentype &a) { INITGENBLOCK const static gentype fnbare("enorm2(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"enorm2"   ,&OP_enorm2   ,nullptr   ,&norm2    ,&norm2    ,&norm2   ,&falseOR   ); }
+gentype &OP_enorm1   (gentype &a) { INITGENBLOCK const static gentype fnbare("enorm1(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"enorm1"   ,&OP_enorm1   ,nullptr   ,&norm1    ,&norm1    ,&norm1   ,&falseOR   ); }
+gentype &OP_real     (gentype &a) { INITGENBLOCK const static gentype fnbare("real(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"real"     ,&OP_real     ,nullptr   ,&real     ,&real     ,&real    ,&falseOR   ); }
+gentype &OP_imag     (gentype &a) { INITGENBLOCK const static gentype fnbare("imag(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"imag"     ,&OP_imag     ,nullptr   ,&imag     ,&imag     ,&imag    ,&falseOR   ); }
+gentype &OP_arg      (gentype &a) { INITGENBLOCK const static gentype fnbare("arg(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"arg"      ,&OP_arg      ,nullptr   ,&arg      ,&arg      ,nullptr     ,&falseOR   ); }
+gentype &OP_eangle   (gentype &a) { INITGENBLOCK const static gentype fnbare("eangle(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"eangle"   ,&OP_eangle   ,&angle    ,nullptr   ,&angle    ,nullptr     ,&falseOR   ); }
+gentype &OP_einv     (gentype &a) { INITGENBLOCK const static gentype fnbare("einv(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"einv"     ,&OP_einv     ,&inv      ,nullptr   ,&inv      ,nullptr     ,&falseOR   ); }
+gentype &OP_imagd    (gentype &a) { INITGENBLOCK const static gentype fnbare("imagd(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"imagd"    ,&OP_imagd    ,&imagd    ,nullptr   ,nullptr      ,nullptr     ,&trueOR    ); }
+gentype &OP_imagx    (gentype &a) { INITGENBLOCK const static gentype fnbare("imagx(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"imagx"    ,&OP_imagx    ,&imagx    ,nullptr   ,&imagx    ,&imagx   ,&falseOR   ); }
+gentype &OP_argd     (gentype &a) { INITGENBLOCK const static gentype fnbare("argd(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"argd"     ,&OP_argd     ,&argd     ,nullptr   ,nullptr      ,nullptr     ,&trueOR    ); }
+gentype &OP_argx     (gentype &a) { INITGENBLOCK const static gentype fnbare("argx(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"argx"     ,&OP_argx     ,&argx     ,nullptr   ,nullptr      ,nullptr     ,&trueOR    ); }
+gentype &OP_Imagd    (gentype &a) { INITGENBLOCK const static gentype fnbare("Imagd(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Imagd"    ,&OP_Imagd    ,&Imagd    ,nullptr   ,nullptr      ,nullptr     ,&trueOR    ); }
+gentype &OP_Argd     (gentype &a) { INITGENBLOCK const static gentype fnbare("Argd(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Argd"     ,&OP_Argd     ,&Argd     ,nullptr   ,nullptr      ,nullptr     ,&trueOR    ); }
+gentype &OP_Argx     (gentype &a) { INITGENBLOCK const static gentype fnbare("Argx(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Argx"     ,&OP_Argx     ,&Argx     ,nullptr   ,nullptr      ,nullptr     ,&trueOR    ); }
+gentype &OP_sgn      (gentype &a) { INITGENBLOCK const static gentype fnbare("sgn(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"sgn"      ,&OP_sgn      ,&sgn      ,nullptr   ,&sgn      ,&sgn     ,&falseOR   ); }
+gentype &OP_sqrt     (gentype &a) { INITGENBLOCK const static gentype fnbare("sqrt(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"sqrt"     ,&OP_sqrt     ,&sqrt     ,nullptr   ,&sqrt     ,nullptr     ,&sqrtOR    ); }
+gentype &OP_Sqrt     (gentype &a) { INITGENBLOCK const static gentype fnbare("Sqrt(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Sqrt"     ,&OP_Sqrt     ,&Sqrt     ,nullptr   ,&sqrt     ,nullptr     ,&sqrtOR    ); }
+gentype &OP_cbrt     (gentype &a) { INITGENBLOCK const static gentype fnbare("cbrt(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"cbrt"     ,&OP_cbrt     ,&cbrt     ,nullptr   ,&cbrt     ,nullptr     ,&falseOR   ); }
+gentype &OP_Cbrt     (gentype &a) { INITGENBLOCK const static gentype fnbare("Cbrt(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Cbrt"     ,&OP_Cbrt     ,&Cbrt     ,nullptr   ,&cbrt     ,nullptr     ,&falseOR   ); }
+gentype &OP_exp      (gentype &a) { INITGENBLOCK const static gentype fnbare("exp(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"exp"      ,&OP_exp      ,&exp      ,nullptr   ,&exp      ,nullptr     ,&falseOR   ); }
+gentype &OP_tenup    (gentype &a) { INITGENBLOCK const static gentype fnbare("tenup(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"tenup"    ,&OP_tenup    ,&tenup    ,nullptr   ,&tenup    ,nullptr     ,&falseOR   ); }
+gentype &OP_log      (gentype &a) { INITGENBLOCK const static gentype fnbare("log(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"log"      ,&OP_log      ,&log      ,nullptr   ,&log      ,nullptr     ,&logOR     ); }
+gentype &OP_log10    (gentype &a) { INITGENBLOCK const static gentype fnbare("log10(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"log10"    ,&OP_log10    ,&log10    ,nullptr   ,&log10    ,nullptr     ,&log10OR   ); }
+gentype &OP_Log      (gentype &a) { INITGENBLOCK const static gentype fnbare("Log(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"Log"      ,&OP_Log      ,&Log      ,nullptr   ,&log      ,nullptr     ,&logOR     ); }
+gentype &OP_Log10    (gentype &a) { INITGENBLOCK const static gentype fnbare("Log10(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Log10"    ,&OP_Log10    ,&Log10    ,nullptr   ,&log10    ,nullptr     ,&log10OR   ); }
+gentype &OP_sin      (gentype &a) { INITGENBLOCK const static gentype fnbare("sin(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"sin"      ,&OP_sin      ,&sin      ,nullptr   ,&sin      ,nullptr     ,&falseOR   ); }
+gentype &OP_cos      (gentype &a) { INITGENBLOCK const static gentype fnbare("cos(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"cos"      ,&OP_cos      ,&cos      ,nullptr   ,&cos      ,nullptr     ,&falseOR   ); }
+gentype &OP_tan      (gentype &a) { INITGENBLOCK const static gentype fnbare("tan(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"tan"      ,&OP_tan      ,&tan      ,nullptr   ,&tan      ,nullptr     ,&falseOR   ); }
+gentype &OP_cosec    (gentype &a) { INITGENBLOCK const static gentype fnbare("cosec(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"cosec"    ,&OP_cosec    ,&cosec    ,nullptr   ,&cosec    ,nullptr     ,&falseOR   ); }
+gentype &OP_sec      (gentype &a) { INITGENBLOCK const static gentype fnbare("sec(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"sec"      ,&OP_sec      ,&sec      ,nullptr   ,&sec      ,nullptr     ,&falseOR   ); }
+gentype &OP_cot      (gentype &a) { INITGENBLOCK const static gentype fnbare("cot(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"cot"      ,&OP_cot      ,&cot      ,nullptr   ,&cot      ,nullptr     ,&falseOR   ); }
+gentype &OP_vers     (gentype &a) { INITGENBLOCK const static gentype fnbare("vers(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"vers"     ,&OP_vers     ,&vers     ,nullptr   ,&vers     ,nullptr     ,&falseOR   ); }
+gentype &OP_covers   (gentype &a) { INITGENBLOCK const static gentype fnbare("covers(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"covers"   ,&OP_covers   ,&covers   ,nullptr   ,&covers   ,nullptr     ,&falseOR   ); }
+gentype &OP_hav      (gentype &a) { INITGENBLOCK const static gentype fnbare("hav(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"hav"      ,&OP_hav      ,&hav      ,nullptr   ,&hav      ,nullptr     ,&falseOR   ); }
+gentype &OP_excosec  (gentype &a) { INITGENBLOCK const static gentype fnbare("excosec(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"excosec"  ,&OP_excosec  ,&excosec  ,nullptr   ,&excosec  ,nullptr     ,&falseOR   ); }
+gentype &OP_exsec    (gentype &a) { INITGENBLOCK const static gentype fnbare("exsec(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"exsec"    ,&OP_exsec    ,&exsec    ,nullptr   ,&exsec    ,nullptr     ,&falseOR   ); }
+gentype &OP_castrg   (gentype &a) { INITGENBLOCK const static gentype fnbare("castrg(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"castrg"   ,&OP_castrg   ,&castrg   ,nullptr   ,&castrg   ,nullptr     ,&falseOR   ); }
+gentype &OP_casctrg  (gentype &a) { INITGENBLOCK const static gentype fnbare("casctrg(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"casctrg"  ,&OP_casctrg  ,&casctrg  ,nullptr   ,&casctrg  ,nullptr     ,&falseOR   ); }
+gentype &OP_asin     (gentype &a) { INITGENBLOCK const static gentype fnbare("asin(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"asin"     ,&OP_asin     ,&asin     ,nullptr   ,&asin     ,nullptr     ,&asinOR    ); }
+gentype &OP_acos     (gentype &a) { INITGENBLOCK const static gentype fnbare("acos(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"acos"     ,&OP_acos     ,&acos     ,nullptr   ,&acos     ,nullptr     ,&acosOR    ); }
+gentype &OP_Asin     (gentype &a) { INITGENBLOCK const static gentype fnbare("Asin(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Asin"     ,&OP_Asin     ,&Asin     ,nullptr   ,&asin     ,nullptr     ,&asinOR    ); }
+gentype &OP_Acos     (gentype &a) { INITGENBLOCK const static gentype fnbare("Acos(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Acos"     ,&OP_Acos     ,&Acos     ,nullptr   ,&acos     ,nullptr     ,&acosOR    ); }
+gentype &OP_atan     (gentype &a) { INITGENBLOCK const static gentype fnbare("atan(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"atan"     ,&OP_atan     ,&atan     ,nullptr   ,&atan     ,nullptr     ,&falseOR   ); }
+gentype &OP_acosec   (gentype &a) { INITGENBLOCK const static gentype fnbare("acosec(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"acosec"   ,&OP_acosec   ,&acosec   ,nullptr   ,&acosec   ,nullptr     ,&acosecOR  ); }
+gentype &OP_asec     (gentype &a) { INITGENBLOCK const static gentype fnbare("asec(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"asec"     ,&OP_asec     ,&asec     ,nullptr   ,&asec     ,nullptr     ,&asecOR    ); }
+gentype &OP_Acosec   (gentype &a) { INITGENBLOCK const static gentype fnbare("Acosec(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"Acosec"   ,&OP_Acosec   ,&Acosec   ,nullptr   ,&acosec   ,nullptr     ,&acosecOR  ); }
+gentype &OP_Asec     (gentype &a) { INITGENBLOCK const static gentype fnbare("Asec(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Asec"     ,&OP_Asec     ,&Asec     ,nullptr   ,&asec     ,nullptr     ,&asecOR    ); }
+gentype &OP_acot     (gentype &a) { INITGENBLOCK const static gentype fnbare("acot(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"acot"     ,&OP_acot     ,&acot     ,nullptr   ,&acot     ,nullptr     ,&falseOR   ); }
+gentype &OP_avers    (gentype &a) { INITGENBLOCK const static gentype fnbare("avers(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"avers"    ,&OP_avers    ,&avers    ,nullptr   ,&avers    ,nullptr     ,&aversOR   ); }
+gentype &OP_acovers  (gentype &a) { INITGENBLOCK const static gentype fnbare("acovers(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"acovers"  ,&OP_acovers  ,&acovers  ,nullptr   ,&acovers  ,nullptr     ,&acoversOR ); }
+gentype &OP_ahav     (gentype &a) { INITGENBLOCK const static gentype fnbare("ahav(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"ahav"     ,&OP_ahav     ,&ahav     ,nullptr   ,&ahav     ,nullptr     ,&ahavOR    ); }
+gentype &OP_aexcosec (gentype &a) { INITGENBLOCK const static gentype fnbare("aexcosec(x)");  return OP_elementwiseDefaultCallA(a,fnbare,"aexcosec" ,&OP_aexcosec ,&aexcosec ,nullptr   ,&aexcosec ,nullptr     ,&aexcosecOR); }
+gentype &OP_aexsec   (gentype &a) { INITGENBLOCK const static gentype fnbare("aexsec(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"aexsec"   ,&OP_aexsec   ,&aexsec   ,nullptr   ,&aexsec   ,nullptr     ,&aexsecOR  ); }
+gentype &OP_acastrg  (gentype &a) { INITGENBLOCK const static gentype fnbare("acastrg(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"acastrg"  ,&OP_acastrg  ,&acastrg  ,nullptr   ,&acastrg  ,nullptr     ,&acastrgOR); }
+gentype &OP_acasctrg (gentype &a) { INITGENBLOCK const static gentype fnbare("acasctrg(x)");  return OP_elementwiseDefaultCallA(a,fnbare,"acasctrg" ,&OP_acasctrg ,&acasctrg ,nullptr   ,&acasctrg ,nullptr     ,&acasctrgOR); }
+gentype &OP_Avers    (gentype &a) { INITGENBLOCK const static gentype fnbare("Avers(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Avers"    ,&OP_Avers    ,&Avers    ,nullptr   ,&avers    ,nullptr     ,&aversOR   ); }
+gentype &OP_Acovers  (gentype &a) { INITGENBLOCK const static gentype fnbare("Acovers(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"Acovers"  ,&OP_Acovers  ,&Acovers  ,nullptr   ,&acovers  ,nullptr     ,&acoversOR ); }
+gentype &OP_Ahav     (gentype &a) { INITGENBLOCK const static gentype fnbare("Ahav(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"Ahav"     ,&OP_Ahav     ,&Ahav     ,nullptr   ,&ahav     ,nullptr     ,&ahavOR    ); }
+gentype &OP_Aexcosec (gentype &a) { INITGENBLOCK const static gentype fnbare("Aexcosec(x)");  return OP_elementwiseDefaultCallA(a,fnbare,"Aexcosec" ,&OP_Aexcosec ,&Aexcosec ,nullptr   ,&aexcosec ,nullptr     ,&aexcosecOR); }
+gentype &OP_Aexsec   (gentype &a) { INITGENBLOCK const static gentype fnbare("Aexsec(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"Aexsec"   ,&OP_Aexsec   ,&Aexsec   ,nullptr   ,&aexsec   ,nullptr     ,&aexsecOR  ); }
+gentype &OP_Acastrg  (gentype &a) { INITGENBLOCK const static gentype fnbare("Acastrg(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"Acastrg"  ,&OP_Acastrg  ,&Acastrg  ,nullptr   ,&acastrg  ,nullptr     ,&acastrgOR);  }
+gentype &OP_Acasctrg (gentype &a) { INITGENBLOCK const static gentype fnbare("Acasctrg(x)");  return OP_elementwiseDefaultCallA(a,fnbare,"Acasctrg" ,&OP_Acasctrg ,&Acasctrg ,nullptr   ,&acasctrg ,nullptr     ,&acasctrgOR); }
+gentype &OP_sinc     (gentype &a) { INITGENBLOCK const static gentype fnbare("sinc(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"sinc"     ,&OP_sinc     ,&sinc     ,nullptr   ,&sinc     ,nullptr     ,&falseOR   ); }
+gentype &OP_cosc     (gentype &a) { INITGENBLOCK const static gentype fnbare("cosc(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"cosc"     ,&OP_cosc     ,&cosc     ,nullptr   ,&cosc     ,nullptr     ,&falseOR   ); }
+gentype &OP_tanc     (gentype &a) { INITGENBLOCK const static gentype fnbare("tanc(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"tanc"     ,&OP_tanc     ,&tanh     ,nullptr   ,&tanc     ,nullptr     ,&falseOR   ); }
+gentype &OP_sinh     (gentype &a) { INITGENBLOCK const static gentype fnbare("sinh(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"sinh"     ,&OP_sinh     ,&sinh     ,nullptr   ,&sinh     ,nullptr     ,&falseOR   ); }
+gentype &OP_cosh     (gentype &a) { INITGENBLOCK const static gentype fnbare("cosh(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"cosh"     ,&OP_cosh     ,&cosh     ,nullptr   ,&cosh     ,nullptr     ,&falseOR   ); }
+gentype &OP_tanh     (gentype &a) { INITGENBLOCK const static gentype fnbare("tanh(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"tanh"     ,&OP_tanh     ,&tanh     ,nullptr   ,&tanh     ,nullptr     ,&falseOR   ); }
+gentype &OP_cosech   (gentype &a) { INITGENBLOCK const static gentype fnbare("cosech(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"cosech"   ,&OP_cosech   ,&cosech   ,nullptr   ,&cosech   ,nullptr     ,&falseOR   ); }
+gentype &OP_sech     (gentype &a) { INITGENBLOCK const static gentype fnbare("sech(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"sech"     ,&OP_sech     ,&sech     ,nullptr   ,&sech     ,nullptr     ,&falseOR   ); }
+gentype &OP_coth     (gentype &a) { INITGENBLOCK const static gentype fnbare("coth(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"coth"     ,&OP_coth     ,&coth     ,nullptr   ,&coth     ,nullptr     ,&falseOR   ); }
+gentype &OP_versh    (gentype &a) { INITGENBLOCK const static gentype fnbare("versh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"versh"    ,&OP_versh    ,&versh    ,nullptr   ,&versh    ,nullptr     ,&falseOR   ); }
+gentype &OP_coversh  (gentype &a) { INITGENBLOCK const static gentype fnbare("coversh(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"coversh"  ,&OP_coversh  ,&coversh  ,nullptr   ,&coversh  ,nullptr     ,&falseOR   ); }
+gentype &OP_havh     (gentype &a) { INITGENBLOCK const static gentype fnbare("havh(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"havh"     ,&OP_havh     ,&havh     ,nullptr   ,&havh     ,nullptr     ,&falseOR   ); }
+gentype &OP_excosech (gentype &a) { INITGENBLOCK const static gentype fnbare("excosech(x)");  return OP_elementwiseDefaultCallA(a,fnbare,"excosech" ,&OP_excosech ,&excosech ,nullptr   ,&excosech ,nullptr     ,&falseOR   ); }
+gentype &OP_exsech   (gentype &a) { INITGENBLOCK const static gentype fnbare("exsech(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"exsech"   ,&OP_exsech   ,&exsech   ,nullptr   ,&exsech   ,nullptr     ,&falseOR   ); }
+gentype &OP_cashyp   (gentype &a) { INITGENBLOCK const static gentype fnbare("cashyp(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"cashyp"   ,&OP_cashyp   ,&cashyp   ,nullptr   ,&cashyp   ,nullptr     ,&falseOR   ); }
+gentype &OP_caschyp  (gentype &a) { INITGENBLOCK const static gentype fnbare("caschyp(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"caschyp"  ,&OP_caschyp  ,&caschyp  ,nullptr   ,&caschyp  ,nullptr     ,&falseOR   ); }
+gentype &OP_asinh    (gentype &a) { INITGENBLOCK const static gentype fnbare("asinh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"asinh"    ,&OP_asinh    ,&asinh    ,nullptr   ,&asinh    ,nullptr     ,&falseOR   ); }
+gentype &OP_acosh    (gentype &a) { INITGENBLOCK const static gentype fnbare("acosh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"acosh"    ,&OP_acosh    ,&acosh    ,nullptr   ,&acosh    ,nullptr     ,&acoshOR   ); }
+gentype &OP_atanh    (gentype &a) { INITGENBLOCK const static gentype fnbare("atanh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"atanh"    ,&OP_atanh    ,&atanh    ,nullptr   ,&atanh    ,nullptr     ,&atanhOR   ); }
+gentype &OP_Acosh    (gentype &a) { INITGENBLOCK const static gentype fnbare("Acosh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Acosh"    ,&OP_Acosh    ,&Acosh    ,nullptr   ,&acosh    ,nullptr     ,&acoshOR   ); }
+gentype &OP_Atanh    (gentype &a) { INITGENBLOCK const static gentype fnbare("Atanh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Atanh"    ,&OP_Atanh    ,&Atanh    ,nullptr   ,&atanh    ,nullptr     ,&atanhOR   ); }
+gentype &OP_acosech  (gentype &a) { INITGENBLOCK const static gentype fnbare("acosech(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"acosech"  ,&OP_acosech  ,&acosech  ,nullptr   ,&acosech  ,nullptr     ,&falseOR   ); }
+gentype &OP_asech    (gentype &a) { INITGENBLOCK const static gentype fnbare("asech(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"asech"    ,&OP_asech    ,&asech    ,nullptr   ,&asech    ,nullptr     ,&asechOR   ); }
+gentype &OP_acoth    (gentype &a) { INITGENBLOCK const static gentype fnbare("acoth(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"acoth"    ,&OP_acoth    ,&acoth    ,nullptr   ,&acoth    ,nullptr     ,&acothOR   ); }
+gentype &OP_aversh   (gentype &a) { INITGENBLOCK const static gentype fnbare("aversh(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"aversh"   ,&OP_aversh   ,&aversh   ,nullptr   ,&aversh   ,nullptr     ,&avershOR  ); }
+gentype &OP_acovrsh  (gentype &a) { INITGENBLOCK const static gentype fnbare("acovrsh(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"acovrsh"  ,&OP_acovrsh  ,&acovrsh  ,nullptr   ,&acovrsh  ,nullptr     ,&falseOR   ); }
+gentype &OP_ahavh    (gentype &a) { INITGENBLOCK const static gentype fnbare("ahavh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"ahavh"    ,&OP_ahavh    ,&ahavh    ,nullptr   ,&ahavh    ,nullptr     ,&ahavhOR   ); }
+gentype &OP_aexcosech(gentype &a) { INITGENBLOCK const static gentype fnbare("aexcosech(x)"); return OP_elementwiseDefaultCallA(a,fnbare,"aexcosech",&OP_aexcosech,&aexcosech,nullptr   ,&aexcosech,nullptr     ,&falseOR   ); }
+gentype &OP_aexsech  (gentype &a) { INITGENBLOCK const static gentype fnbare("aexsech(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"aexsech"  ,&OP_aexsech  ,&aexsech  ,nullptr   ,&aexsech  ,nullptr     ,&aexsechOR ); }
+gentype &OP_acashyp  (gentype &a) { INITGENBLOCK const static gentype fnbare("acashyp(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"acashyp"  ,&OP_acashyp  ,&acashyp  ,nullptr   ,&acashyp  ,nullptr     ,&acashypOR ); }
+gentype &OP_acaschyp (gentype &a) { INITGENBLOCK const static gentype fnbare("acaschyp(x)");  return OP_elementwiseDefaultCallA(a,fnbare,"acaschyp" ,&OP_acaschyp ,&acaschyp ,nullptr   ,&acaschyp ,nullptr     ,&acaschypOR); }
+gentype &OP_Asech    (gentype &a) { INITGENBLOCK const static gentype fnbare("Asech(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Asech"    ,&OP_Asech    ,&Asech    ,nullptr   ,&asech    ,nullptr     ,&asechOR   ); }
+gentype &OP_Acoth    (gentype &a) { INITGENBLOCK const static gentype fnbare("Acoth(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Acoth"    ,&OP_Acoth    ,&Acoth    ,nullptr   ,&acoth    ,nullptr     ,&acothOR   ); }
+gentype &OP_Aversh   (gentype &a) { INITGENBLOCK const static gentype fnbare("Aversh(x)");    return OP_elementwiseDefaultCallA(a,fnbare,"Aversh"   ,&OP_Aversh   ,&Aversh   ,nullptr   ,&aversh   ,nullptr     ,&avershOR  ); }
+gentype &OP_Ahavh    (gentype &a) { INITGENBLOCK const static gentype fnbare("Ahavh(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Ahavh"    ,&OP_Ahavh    ,&Ahavh    ,nullptr   ,&ahavh    ,nullptr     ,&ahavhOR   ); }
+gentype &OP_Aexsech  (gentype &a) { INITGENBLOCK const static gentype fnbare("Aexsech(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"Aexsech"  ,&OP_Aexsech  ,&Aexsech  ,nullptr   ,&aexsech  ,nullptr     ,&aexsechOR ); }
+gentype &OP_Acashyp  (gentype &a) { INITGENBLOCK const static gentype fnbare("Acashyp(x)");   return OP_elementwiseDefaultCallA(a,fnbare,"Acashyp"  ,&OP_Acashyp  ,&Acashyp  ,nullptr   ,&acashyp  ,nullptr     ,&acashypOR ); }
+gentype &OP_Acaschyp (gentype &a) { INITGENBLOCK const static gentype fnbare("Acaschyp(x)");  return OP_elementwiseDefaultCallA(a,fnbare,"Acaschyp" ,&OP_Acaschyp ,&Acaschyp ,nullptr   ,&acaschyp ,nullptr     ,&acaschypOR); }
+gentype &OP_sinhc    (gentype &a) { INITGENBLOCK const static gentype fnbare("sinhc(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"sinhc"    ,&OP_sinhc    ,&sinhc    ,nullptr   ,&sinhc    ,nullptr     ,&falseOR   ); }
+gentype &OP_coshc    (gentype &a) { INITGENBLOCK const static gentype fnbare("coshc(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"coshc"    ,&OP_coshc    ,&coshc    ,nullptr   ,&coshc    ,nullptr     ,&falseOR   ); }
+gentype &OP_tanhc    (gentype &a) { INITGENBLOCK const static gentype fnbare("tanhc(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"tanhc"    ,&OP_tanhc    ,&tanhc    ,nullptr   ,&tanhc    ,nullptr     ,&falseOR   ); }
+gentype &OP_sigm     (gentype &a) { INITGENBLOCK const static gentype fnbare("sigm(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"sigm"     ,&OP_sigm     ,&sigm     ,nullptr   ,&sigm     ,nullptr     ,&falseOR   ); }
+gentype &OP_gd       (gentype &a) { INITGENBLOCK const static gentype fnbare("gd(x)");        return OP_elementwiseDefaultCallA(a,fnbare,"gd"       ,&OP_gd       ,&gd       ,nullptr   ,&gd       ,nullptr     ,&falseOR   ); }
+gentype &OP_asigm    (gentype &a) { INITGENBLOCK const static gentype fnbare("asigm(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"asigm"    ,&OP_asigm    ,&asigm    ,nullptr   ,&asigm    ,nullptr     ,&asigmOR   ); }
+gentype &OP_agd      (gentype &a) { INITGENBLOCK const static gentype fnbare("agd(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"agd"      ,&OP_agd      ,&agd      ,nullptr   ,&agd      ,nullptr     ,&agdOR     ); }
+gentype &OP_Asigm    (gentype &a) { INITGENBLOCK const static gentype fnbare("Asigm(x)");     return OP_elementwiseDefaultCallA(a,fnbare,"Asigm"    ,&OP_Asigm    ,&Asigm    ,nullptr   ,&asigm    ,nullptr     ,&asigmOR   ); }
+gentype &OP_Agd      (gentype &a) { INITGENBLOCK const static gentype fnbare("Agd(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"Agd"      ,&OP_Agd      ,&Agd      ,nullptr   ,&agd      ,nullptr     ,&agdOR     ); }
+gentype &OP_erf      (gentype &a) { INITGENBLOCK const static gentype fnbare("erf(x)");       return OP_elementwiseDefaultCallA(a,fnbare,"erf"      ,&OP_erf      ,nullptr   ,nullptr   ,&erf      ,nullptr     ,&falseOR   ); }
+gentype &OP_erfc     (gentype &a) { INITGENBLOCK const static gentype fnbare("erfc(x)");      return OP_elementwiseDefaultCallA(a,fnbare,"erfc"     ,&OP_erfc     ,nullptr   ,nullptr   ,&erfc     ,nullptr     ,&falseOR   ); }
 
 
 
@@ -21176,6 +20581,8 @@ bool isopstartkey(int x)
 //void intercalc(std::ostream &output, std::istream &input)
 void intercalc(std::ostream &, std::istream &)
 {
+    INITGENBLOCK
+
     size_t datawidth  = 67; // width of calculator screen
 
     size_t calcwidth  = 77; // width of calculator
