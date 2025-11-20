@@ -2852,9 +2852,35 @@ int bayesOpt(int dim,
     // hyperparameters. Find the min-distance on the grid and set this as a lower bound
     // on the lengthscale (simplistic case).
 
-    if ( isgridopt && !iscontopt )
+    if ( isgridopt && !iscontopt && bopts.model_lenscaleLB(0).isValNone() )
     {
-;//gridsource
+        double mindist = 0;
+        bool firstdist = true;
+
+        for ( int jj = 0 ; jj < gridind.size()-1 ; ++jj )
+        {
+            for ( int kk = jj+1 ; kk < gridind.size() ; ++kk )
+            {
+                const SparseVector<gentype> &xjj = bopts.model_x(Nbasemu+gridind(jj));
+                const SparseVector<gentype> &xkk = bopts.model_x(Nbasemu+gridind(kk));
+
+                double ttmmpp = 0;
+                double jjkkdist = sqrt(norm2(xjj)+norm2(xkk)-2*innerProductAssumeReal(ttmmpp,xjj,xkk));
+
+                if ( ( ( jjkkdist > 0 ) && firstdist ) || ( ( jjkkdist > 0 ) && ( jjkkdist < mindist ) ) )
+                {
+                    mindist = jjkkdist;
+                    firstdist = false;
+                }
+            }
+        }
+
+        if ( !firstdist )
+        {
+errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
+            bopts.model_getKernel_unsafe(0).setRealConstZeroLB(1.5*mindist);
+            bopts.model_resetKernel(0);
+        }
     }
 
 

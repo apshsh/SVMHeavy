@@ -413,7 +413,9 @@ public:
     double  model_sigma(int q) const { return getmuapprox(q).sigma(); }
     gentype model_sigma(void)  const; // full vector for all models
 
-    const MercerKernel &model_getKernel(int q) const { return getmuapprox(q).getKernel(); }
+    const MercerKernel &model_getKernel(int q)        const { return getmuapprox(q).getKernel();        }
+          MercerKernel &model_getKernel_unsafe(int q)       { return getmuapprox("&",q).getKernel_unsafe(); }
+          int           model_resetKernel(int q)            { return getmuapprox("&",q).resetKernel();      }
 
     const SparseVector<gentype> &model_x(int i, int q = 0) const { return getmuapprox(q).x(i); }
     const Vector<gentype>       &model_y(int q = -1)       const { return ( q == -1 ) ? ( ismoo() ? locyres : getmuapprox(0).y() ) : getmuapprox(q).y();  }
@@ -440,11 +442,12 @@ public:
 
     const Vector<double> &model_xcopy(Vector<double> &resx, int i) const;
 
-    double model_negloglikelihood(int q)            const { return calcnegloglikelihood(getmuapprox(q)); }
-    double model_maxinfogain     (int q)            const { return calcmaxinfogain     (getmuapprox(q)); }
-    double model_RKHSnorm        (int q)            const { return calcRKHSnorm        (getmuapprox(q)); }
-    double model_lenscale        (int q, int i = 0) const { return (double) getmuapprox_sample(q).getKernel().cRealConstants(i%(getmuapprox(q).getKernel().size()))(0); }
-    double model_kappa0          (int q)            const { return (double) getmuapprox_sample(q).getKernel().effweight(q); }
+    double  model_negloglikelihood(int q)            const { return calcnegloglikelihood(getmuapprox(q)); }
+    double  model_maxinfogain     (int q)            const { return calcmaxinfogain     (getmuapprox(q)); }
+    double  model_RKHSnorm        (int q)            const { return calcRKHSnorm        (getmuapprox(q)); }
+    double  model_lenscale        (int q, int i = 0) const { return (double) getmuapprox_sample(q).getKernel().cRealConstants(i%(getmuapprox(q).getKernel().size()))(0); }
+    gentype model_lenscaleLB      (int q, int i = 0) const { return          getmuapprox_sample(q).getKernel().cRealConstantsLB(i%(getmuapprox(q).getKernel().size()))(0); }
+    double  model_kappa0          (int q)            const { return (double) getmuapprox_sample(q).getKernel().effweight(q); }
 
     // Work out frequentist certainty - see "Adaptive and Safe Bayesian Optimization in High Dimensions via One-Dimentional Subspaces"
 
