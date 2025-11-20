@@ -1056,6 +1056,42 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
             break;
         }
 
+        case 2035:
+        {
+            retVector<double> tmpva;
+
+            x("&",0,1,1,tmpva) -= 0.5;
+            x("&",0,1,1,tmpva) *= 2.0;
+        }
+        // fall through
+        case 1035:
+        {
+            resscale = 1.0/10.8;
+            resshift = 0.0;
+        }
+        // fall through
+        case 35:
+        {
+            retVector<double> tmpva;
+
+            x("&",0,1,1,tmpva) /= 2.0;
+            x("&",0,1,1,tmpva) += 0.5;
+
+            // Currin muti-fidelity function
+
+            NiceAssert( n == 3 );
+
+            double xx = x(0);
+            double yy = x(1);
+            double zz = x(2);
+
+            yy = ( ( yy > -1e-12 ) && ( yy < 1e-12 ) ) ? 1e-12 : yy;
+
+            res = 13.8-((1-(0.1*(1-zz)*exp(-1/(2*yy))))*(((2300*xx*xx*xx)+(1900*xx*xx)+(2092*xx)+60)/((100*xx*xx*xx)+(500*xx*xx)+(4*xx)+20)));
+
+            break;
+        }
+
         default:
         {
             res = 0;

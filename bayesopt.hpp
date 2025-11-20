@@ -191,8 +191,8 @@ public:
     // fidover:     0: nothing
     //              REMOVED, HUMAN CAN DO THIS WHENEVER THEY WANT! - 1: human can override fidelity
     //              2: randomly choose fidelity less than recommended
-    // fidBOCA:     true: BOCA
-    //              false: not BOCA
+    // fidmode:     1: BOCA
+    //              0: not BOCA
     // FIXME: add fidvar to mlinter and test it
     //
     // Usage eg from Kandasamy with budget 100: ./svmheavyv7.exe -L res100
@@ -350,7 +350,7 @@ public:
     gentype fidpenalty;
     gentype fidvar;
     int fidover;
-    bool fidBOCA;
+    int fidmode;
 
     // Stable optimisation
 
@@ -427,7 +427,7 @@ public:
         fidpenalty = 1;
         fidvar     = 0;
         fidover    = 0;
-        fidBOCA    = true;
+        fidmode    = 1;
 
         impmeasu       = impmeasux;
         direcpre       = xdirecpre;
@@ -487,7 +487,7 @@ public:
         fidpenalty        = src.fidpenalty;
         fidvar            = src.fidvar;
         fidover           = src.fidover;
-        fidBOCA           = src.fidBOCA;
+        fidmode           = src.fidmode;
         humanfreq         = src.humanfreq;
         cgtmethod         = src.cgtmethod;
         cgtmargin         = src.cgtmargin;

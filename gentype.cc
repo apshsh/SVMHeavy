@@ -413,9 +413,7 @@ Matrix<double> &gentypeToMatrixRep(Matrix<double> &res, const gentype &src, int 
     {
         double tempres = src.cast_double(0);
 
-        int i;
-
-        for ( i = 0 ; i < spaceDim ; ++i )
+        for ( int i = 0 ; i < spaceDim ; ++i )
         {
             res("&",i,i) = tempres;
         }
@@ -429,9 +427,7 @@ Matrix<double> &gentypeToMatrixRep(Matrix<double> &res, const gentype &src, int 
 
         d_anion tempres = src.cast_anion(0);
 
-        int i;
-
-        for ( i = 0 ; i < spaceDim ; ++i )
+        for ( int i = 0 ; i < spaceDim ; ++i )
         {
             res("&",i,i) = tempres(0);
         }
@@ -542,7 +538,6 @@ Matrix<double> &gentypeToMatrixRep(Matrix<double> &res, const gentype &src, int 
         res = src.cast_matrix_real(0);
 
 /*
-        int i,j;
         Matrix<gentype> tempres;
 
         tempres = src.cast_matrix(0);
@@ -552,9 +547,9 @@ Matrix<double> &gentypeToMatrixRep(Matrix<double> &res, const gentype &src, int 
 
         if ( tempres.numRows() && tempres.numCols() )
         {
-            for ( i = 0 ; i < tempres.numRows() ; ++i )
+            for ( int i = 0 ; i < tempres.numRows() ; ++i )
             {
-                for ( j = 0 ; j < tempres.numCols() ; ++j )
+                for ( int j = 0 ; j < tempres.numCols() ; ++j )
                 {
                     res("&",i,j) = tempres(i,j).cast_double(0);
                 }
@@ -2250,6 +2245,7 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
             if ( src.altpycall )
             {
                 MEMNEW(altpycall,std::function<gentype(const gentype &)>(*(src.altpycall)));
+                storealtpycall(&altpycall);
             }
         }
 
@@ -2344,7 +2340,7 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
         if ( wasValSet    ) { MEMNEW(setstore,Set<   gentype       >(*(src.setval)));    }
         if ( wasValDict   ) { MEMNEW(dctstore,xDict                 (*(src.dictval)));   }
         if ( wasValDgraph ) { MEMNEW(dgrstore,xDgraph               (*(src.dgraphval))); }
-        if ( wasValEqn    ) { MEMNEW(eqnstore,Vector<gentype       >(*(src.eqnargs)));    if ( src.altpycall ) { MEMNEW(pycstore,std::function<gentype(const gentype &)>(*altpycall)); } }
+        if ( wasValEqn    ) { MEMNEW(eqnstore,Vector<gentype       >(*(src.eqnargs)));    if ( src.altpycall ) { MEMNEW(pycstore,std::function<gentype(const gentype &)>(*(src.altpycall))); } }
         if ( wasValStrErr ) { MEMNEW(strstore,std::string           (*(src.stringval))); }
 
         char              srctypeis      = src.typeis;
@@ -2389,12 +2385,14 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
             *eqnargs = *eqnstore;
             MEMDEL(eqnstore); eqnstore = nullptr;
 
-            if ( pycstore )
-            {
-                MEMNEW(altpycall,std::function<gentype(const gentype &)>);
-                *altpycall = *pycstore;
-                MEMDEL(pycstore); pycstore = nullptr;
-            }
+            altpycall = pycstore ? pycstore : nullptr;
+            if ( altpycall ) { storealtpycall(&altpycall); }
+//            if ( pycstore )
+//            {
+//                MEMNEW(altpycall,std::function<gentype(const gentype &)>);
+//                *altpycall = *pycstore;
+//                MEMDEL(pycstore); pycstore = nullptr;
+//            }
         }
     }
 
@@ -2881,9 +2879,7 @@ const Vector<double> &gentype::cast_vector_real(int finalise) const
         Vector<gentype> &vg = *vectorval;
         Vector<double>  &vr = *vectorvalreal;
 
-        int i;
-
-        for ( i = 0 ; i < vsize ; ++i )
+        for ( int i = 0 ; i < vsize ; ++i )
         {
             vr("&",i) = (double) vg(i);
         }
@@ -2913,9 +2909,7 @@ const Vector<int> &gentype::cast_vector_int(int finalise) const
         Vector<gentype> &vg = *vectorval;
         Vector<int>     &vi = *vectorvalint;
 
-        int i;
-
-        for ( i = 0 ; i < vsize ; ++i )
+        for ( int i = 0 ; i < vsize ; ++i )
         {
             vi("&",i) = (int) ((double) vg(i)); // *first* cast to double to avoid throw, *then* cast to int
         }
@@ -3083,11 +3077,9 @@ const Matrix<double> &gentype::cast_matrix_real(int finalise) const
         Matrix<gentype> &vg = *matrixval;
         Matrix<double>  &vr = *matrixvalreal;
 
-        int i,j;
-
-        for ( i = 0 ; i < vrows ; ++i )
+        for ( int i = 0 ; i < vrows ; ++i )
         {
-            for ( j = 0 ; j < vcols ; ++j )
+            for ( int j = 0 ; j < vcols ; ++j )
             {
                 vr("&",i,j) = (double) vg(i,j);
             }
@@ -4550,21 +4542,16 @@ SparseVector<SparseVector<int> > &gentype::varsUsed(SparseVector<SparseVector<in
 
     else if ( isValVector()  )
     {
-        int i;
         int xsize = size();
 
-        if ( xsize )
+        for ( int i = 0 ; i < xsize ; ++i )
         {
-            for ( i = 0 ; i < xsize ; ++i )
-            {
-                ((*vectorval)(i)).varsUsed(res);
-            }
+            ((*vectorval)(i)).varsUsed(res);
         }
     }
 
     else if ( isValMatrix()  )
     {
-        int i,j;
         int xrows = numRows();
         int xcols = numCols();
 
@@ -4572,9 +4559,9 @@ SparseVector<SparseVector<int> > &gentype::varsUsed(SparseVector<SparseVector<in
 
         if ( xrows && xcols )
         {
-            for ( i = 0 ; i < xrows ; ++i )
+            for ( int i = 0 ; i < xrows ; ++i )
             {
-                for ( j = 0 ; j < xcols ; ++j )
+                for ( int j = 0 ; j < xcols ; ++j )
                 {
                     ((*matrixval)(i,j)).varsUsed(res);
                 }
@@ -4584,43 +4571,31 @@ SparseVector<SparseVector<int> > &gentype::varsUsed(SparseVector<SparseVector<in
 
     else if ( isValSet()  )
     {
-        int i;
         int xsize = size();
 
-        if ( xsize > 0 )
+        for ( int i = 0 ; i < xsize ; ++i )
         {
-            for ( i = 0 ; i < xsize ; ++i )
-            {
-                (((*setval).all())(i)).varsUsed(res);
-            }
+            (((*setval).all())(i)).varsUsed(res);
         }
     }
 
     else if ( isValDict()  )
     {
-        int i;
         int xsize = size();
 
-        if ( xsize )
+        for ( int i = 0 ; i < xsize ; ++i )
         {
-            for ( i = 0 ; i < xsize ; ++i )
-            {
-                ((*dictval).val("&",i)).varsUsed(res);
-            }
+            ((*dictval).val("&",i)).varsUsed(res);
         }
     }
 
     else if ( isValDgraph()  )
     {
-        int i;
         int xsize = size();
 
-        if ( xsize )
+        for ( int i = 0 ; i < xsize ; ++i )
         {
-            for ( i = 0 ; i < xsize ; ++i )
-            {
-                (((*dgraphval).all())(i)).varsUsed(res);
-            }
+            (((*dgraphval).all())(i)).varsUsed(res);
         }
     }
 
@@ -4646,11 +4621,9 @@ SparseVector<SparseVector<int> > &gentype::varsUsed(SparseVector<SparseVector<in
 
     else
     {
-        int i;
-
         NiceAssert( eqnargs );
 
-        for ( i = 0 ; i < (*eqnargs).size() ; ++i )
+        for ( int i = 0 ; i < (*eqnargs).size() ; ++i )
         {
             (*eqnargs)(i).varsUsed(res);
         }
@@ -7063,9 +7036,7 @@ void getsetunsetegenFunc(int i, int j, int mode, const eGenFunc fnaddr, const Ve
 
     eres.resize(exa.size());
 
-    int k;
-
-    for ( k = 0 ; k < exa.size() ; ++k )
+    for ( int k = 0 ; k < exa.size() ; ++k )
     {
         eres("&",k).force_null();
     }
@@ -7107,7 +7078,6 @@ void getsetunsetegenFunc(int i, int j, int mode, const eGenFunc fnaddr, const Ve
 
 gentype gentype::var(const SparseVector<SparseVector<gentype> > &evalargs, const Vector<gentype> &argres) const
 {
-    int i,j;
     gentype res;
 
     if ( argres(0).isValVector() && argres(1).isValVector() )
@@ -7117,9 +7087,9 @@ gentype gentype::var(const SparseVector<SparseVector<gentype> > &evalargs, const
 	Vector<gentype> jj(argres(1).cast_vector(0));
         Matrix<gentype> tempres(argres(0).size(),argres(1).size());
 
-        for ( i = 0 ; i < argres(0).size() ; ++i )
+        for ( int i = 0 ; i < argres(0).size() ; ++i )
 	{
-	    for ( j = 0 ; j < argres(1).size() ; ++j )
+	    for ( int j = 0 ; j < argres(1).size() ; ++j )
 	    {
 		locargres("&",0) = ii(i);
 		locargres("&",1) = jj(j);
@@ -7138,7 +7108,7 @@ gentype gentype::var(const SparseVector<SparseVector<gentype> > &evalargs, const
 
         locargres("&",1) = argres(1);
 
-        for ( i = 0 ; i < argres(0).size() ; ++i )
+        for ( int i = 0 ; i < argres(0).size() ; ++i )
 	{
 	    locargres("&",0) = ii(i);
 	    tempres("&",i) = var(evalargs,locargres);
@@ -7155,7 +7125,7 @@ gentype gentype::var(const SparseVector<SparseVector<gentype> > &evalargs, const
 
         locargres("&",0) = argres(0);
 
-	for ( j = 0 ; j < argres(1).size() ; ++j )
+	for ( int j = 0 ; j < argres(1).size() ; ++j )
 	{
 	    locargres("&",1) = jj(j);
             tempres("&",j) = var(evalargs,locargres);
@@ -7166,8 +7136,8 @@ gentype gentype::var(const SparseVector<SparseVector<gentype> > &evalargs, const
 
     else if ( argres(0).isCastableToIntegerWithoutLoss() && argres(1).isCastableToIntegerWithoutLoss() )
     {
-	i = argres(0).cast_int(0);
-	j = argres(1).cast_int(0);
+	int i = argres(0).cast_int(0);
+	int j = argres(1).cast_int(0);
 
 	if ( (evalargs.isindpresent(i)) )
 	{
@@ -7211,7 +7181,6 @@ gentype gentype::var(const SparseVector<SparseVector<gentype> > &evalargs, const
 int gentype::OP_var(const SparseVector<SparseVector<gentype> > &evalargs)
 {
     int res = 0;
-    int i,j;
 
     // Assumption here: this function == var
 
@@ -7224,9 +7193,9 @@ int gentype::OP_var(const SparseVector<SparseVector<gentype> > &evalargs)
         Vector<gentype> jj((*eqnargs)(1).cast_vector(0));
         Matrix<gentype> tempres((*eqnargs)(0).size(),(*eqnargs)(1).size());
 
-        for ( i = 0 ; i < (*eqnargs)(0).size() ; ++i )
+        for ( int i = 0 ; i < (*eqnargs)(0).size() ; ++i )
 	{
-            for ( j = 0 ; j < (*eqnargs)(1).size() ; ++j )
+            for ( int j = 0 ; j < (*eqnargs)(1).size() ; ++j )
 	    {
 		locargres("&",0) = ii(i);
 		locargres("&",1) = jj(j);
@@ -7246,7 +7215,7 @@ int gentype::OP_var(const SparseVector<SparseVector<gentype> > &evalargs)
 
         locargres("&",1) = (*eqnargs)(1);
 
-        for ( i = 0 ; i < (*eqnargs)(0).size() ; ++i )
+        for ( int i = 0 ; i < (*eqnargs)(0).size() ; ++i )
 	{
 	    locargres("&",0) = ii(i);
 	    tempres("&",i) = var(evalargs,locargres);
@@ -7264,7 +7233,7 @@ int gentype::OP_var(const SparseVector<SparseVector<gentype> > &evalargs)
 
         locargres("&",0) = (*eqnargs)(0);
 
-        for ( j = 0 ; j < (*eqnargs)(1).size() ; ++j )
+        for ( int j = 0 ; j < (*eqnargs)(1).size() ; ++j )
 	{
 	    locargres("&",1) = jj(j);
             tempres("&",j) = var(evalargs,locargres);
@@ -7276,8 +7245,8 @@ int gentype::OP_var(const SparseVector<SparseVector<gentype> > &evalargs)
 
     else if ( (*eqnargs)(0).isCastableToIntegerWithoutLoss() && (*eqnargs)(1).isCastableToIntegerWithoutLoss() )
     {
-        i = (*eqnargs)(0).cast_int(0);
-        j = (*eqnargs)(1).cast_int(0);
+        int i = (*eqnargs)(0).cast_int(0);
+        int j = (*eqnargs)(1).cast_int(0);
 
 	if ( (evalargs.isindpresent(i)) )
 	{
@@ -8082,14 +8051,13 @@ static int processExprLtoR(int start, int &end, int &isitastring, const std::str
 
 	    res = 2;
 
-            int i;
 	    int curvecount = 0;
 	    int squarecount = 0;
 	    int curlycount = 0;
 	    int quotecount = 0;
 	    char charlast = ' ';
 
-	    for ( i = tempend+1 ; i <= end-1 ; ++i )
+	    for ( int i = tempend+1 ; i <= end-1 ; ++i )
 	    {
 		if ( src[i] == '(' ) { ++curvecount; }
 		if ( src[i] == ')' ) { --curvecount; }
@@ -9074,9 +9042,9 @@ const char *getfnname(int fnnameind)
 
 int getfnind(const std::string &fnname)
 {
-    int i,ires = -1;
+    int ires = -1;
 
-    for ( i = 0 ; i < NUMFNDEF ; ++i )
+    for ( int i = 0 ; i < NUMFNDEF ; ++i )
     {
         if ( fnname == getfnname(i) )
         {
@@ -9091,10 +9059,9 @@ int getfnind(const std::string &fnname)
 const char *getfndescrip(const std::string &fnname)
 {
     const static char unknownfn[] = "Function not found";
-    int i;
     const char *res = unknownfn;
 
-    for ( i = 0 ; i < NUMFNDEF ; ++i )
+    for ( int i = 0 ; i < NUMFNDEF ; ++i )
     {
         if ( fnname == getfnname(i) )
         {
@@ -9163,11 +9130,9 @@ void exitgentype(void)
 {
 // Python gil blah just leak the damn memory
 //#ifndef PYLOCAL
-    int i;
-
     static thread_local gentype blind(0); // never modified, so no need for this to be volatile
 
-    for ( i = 0 ; i < NUMFNDEF ; ++i )
+    for ( int i = 0 ; i < NUMFNDEF ; ++i )
     {
         if ( getfninfo()[i].realderiv )
         {
@@ -9175,7 +9140,7 @@ void exitgentype(void)
         }
     }
 
-    for ( i = 0 ; i < NUMFNDEF ; ++i )
+    for ( int i = 0 ; i < NUMFNDEF ; ++i )
     {
         getfninfo()[i].realderiv = nullptr; // nullptr is safe here.
     }
@@ -9220,9 +9185,7 @@ void initgentype(void)
 
 //        svm_atexit(exitgentype,"gentype",2); - old version using atexit call.  No longer used
 
-        int i;
-
-        for ( i = 0 ; i < NUMFNDEF ; ++i )
+        for ( int i = 0 ; i < NUMFNDEF ; ++i )
         {
             getfninfo(i);
         }
@@ -9260,14 +9223,12 @@ void initgentype(void)
 
 //        errstream() << "Constructing gentype derivatives\n";
 
-        int i;
-
-        for ( i = 0 ; i < NUMFNDEF ; ++i )
+        for ( int i = 0 ; i < NUMFNDEF ; ++i )
         {
             getfninfo(i);
         }
 
-//        for ( i = 0 ; i < NUMFNDEF ; ++i )
+//        for ( int i = 0 ; i < NUMFNDEF ; ++i )
 //        {
 //            errstream() << i << " (" << getfninfo()[i].fnname << "): " << *(getfninfo()[i].realderiv) << " done.\n";
 //        }
@@ -12346,17 +12307,15 @@ gentype &elementwiseDefaultCallC(gentype &res, const gentype &a, const gentype &
 
 	else if ( ( a.numRows() == b.numRows() ) && ( a.numCols() == b.numCols() ) )
 	{
-	    int i,j;
-
             Matrix<gentype> mres(a.cast_matrix(0));
 	    Matrix<gentype> aa(a.cast_matrix(0));
 	    Matrix<gentype> bb(b.cast_matrix(0));
 
-            if ( a.numRows() && a.numCols() )
+            if ( a.numCols() )
             {
-                for ( i = 0 ; i < a.numRows() ; ++i )
+                for ( int i = 0 ; i < a.numRows() ; ++i )
 	        {
-	            for ( j = 0 ; j < a.numCols() ; ++j )
+	            for ( int j = 0 ; j < a.numCols() ; ++j )
 	            {
                         mres("&",i,j) = elmfn(aa(i,j),bb(i,j));
 	            }
@@ -12398,19 +12357,14 @@ gentype &elementwiseDefaultCallC(gentype &res, const gentype &a, const gentype &
 
 	else if ( a.size() == b.size() )
 	{
-	    int i;
-
             Vector<gentype> vres(a.cast_vector(0));
 	    Vector<gentype> aa(a.cast_vector(0));
 	    Vector<gentype> bb(b.cast_vector(0));
 
-            //if ( a.size() )
+            for ( int i = 0 ; i < a.size() ; ++i )
             {
-	        for ( i = 0 ; i < a.size() ; ++i )
-	        {
-		    vres("&",i) = elmfn(aa(i),bb(i));
-		}
-	    }
+                vres("&",i) = elmfn(aa(i),bb(i));
+            }
 
             res = vres;
 	}
@@ -12523,10 +12477,9 @@ gentype &maxmincommonform(gentype &res, const gentype &a, const char *fname, gen
 
             if ( a.size() )
             {
-                int k;
                 gentype kk;
 
-                for ( k = 0 ; k < a.size() ; ++k )
+                for ( int k = 0 ; k < a.size() ; ++k )
                 {
                     kk = k;
 
@@ -12656,10 +12609,9 @@ gentype &zaxmincommonform(gentype &res, const gentype &a, const char *fname, con
 
             if ( a.size() )
             {
-                int k;
                 gentype kk;
 
-                for ( k = 0 ; k < a.size() ; ++k )
+                for ( int k = 0 ; k < a.size() ; ++k )
                 {
                     kk = k;
 
@@ -12754,16 +12706,15 @@ gentype &binLogicForm(gentype &res, const gentype &a, const gentype &b, const ch
     {
         if ( a.numRows() && a.numCols() )
         {
-            int i,j;
             Matrix<gentype> am(a.cast_matrix(0));
             Matrix<gentype> bm(b.cast_matrix(0));
             gentype temp;
 
             res = andor;
 
-            for ( i = 0 ; i < a.numRows() ; ++i )
+            for ( int i = 0 ; i < a.numRows() ; ++i )
             {
-                for ( j = 0 ; j < a.numCols() ; ++j )
+                for ( int j = 0 ; j < a.numCols() ; ++j )
                 {
                     if ( andor )
                     {
@@ -12788,14 +12739,13 @@ gentype &binLogicForm(gentype &res, const gentype &a, const gentype &b, const ch
     {
         if ( a.size() )
         {
-            int i;
             Vector<gentype> av(a.cast_vector(0));
             Vector<gentype> bv(b.cast_vector(0));
             gentype temp;
 
             res = andor;
 
-            for ( i = 0 ; i < a.size() ; ++i )
+            for ( int i = 0 ; i < a.size() ; ++i )
             {
                 if ( andor )
                 {
@@ -12819,14 +12769,13 @@ gentype &binLogicForm(gentype &res, const gentype &a, const gentype &b, const ch
     {
         if ( a.size() )
         {
-            int i;
             Vector<gentype> av((a.cast_set(0)).all());
             Vector<gentype> bv((b.cast_set(0)).all());
             gentype temp;
 
             res = andor;
 
-            for ( i = 0 ; i < a.size() ; ++i )
+            for ( int i = 0 ; i < a.size() ; ++i )
             {
                 if ( andor )
                 {
@@ -13153,7 +13102,6 @@ gentype genpowintern(const gentype &a, const gentype &b, const char *powname, d_
 	{
 	    int bint = b.cast_int(0);
 	    int absbint = ( bint < 0 ) ? -bint : bint;
-	    int i;
 
 	    if ( !bint )
 	    {
@@ -13164,7 +13112,7 @@ gentype genpowintern(const gentype &a, const gentype &b, const char *powname, d_
 
 	    else
 	    {
-		for ( i = 0 ; i < absbint ; ++i )
+		for ( int i = 0 ; i < absbint ; ++i )
 		{
 		    if ( !i )
 		    {
@@ -13209,10 +13157,9 @@ gentype genpowintern(const gentype &a, const gentype &b, const char *powname, d_
             {
                 bool intgood = true;
 
-                int i;
                 int ires = 1;
 
-                for ( i = 0 ; i < bbmag ; ++i )
+                for ( int i = 0 ; i < bbmag ; ++i )
                 {
                     int vala = ires;
 
@@ -13234,7 +13181,7 @@ gentype genpowintern(const gentype &a, const gentype &b, const char *powname, d_
                 {
                     double dres = 1;
 
-                    for ( i = 0 ; i < bbmag ; ++i )
+                    for ( int i = 0 ; i < bbmag ; ++i )
                     {
                         dres *= aa;
                     }
@@ -13250,11 +13197,10 @@ gentype genpowintern(const gentype &a, const gentype &b, const char *powname, d_
 
 	    //int bint = b.cast_int(0);
 	    //int absbint = ( bint < 0 ) ? -bint : bint;
-	    //int i;
             //
 	    //res = 1;
             //
-	    //for ( i = 0 ; i < absbint ; ++i )
+	    //for ( int i = 0 ; i < absbint ; ++i )
 	    //{
 	    //    res *= a;
 	    //}
@@ -13285,10 +13231,9 @@ gentype genpowintern(const gentype &a, const gentype &b, const char *powname, d_
 
             else
             {
-                int i;
                 double dres = 1;
 
-                for ( i = 0 ; i < bbmag ; ++i )
+                for ( int i = 0 ; i < bbmag ; ++i )
                 {
                     dres *= aa;
                 }
@@ -13303,11 +13248,10 @@ gentype genpowintern(const gentype &a, const gentype &b, const char *powname, d_
 
 	    //int bint = b.cast_int(0);
 	    //int absbint = ( bint < 0 ) ? -bint : bint;
-	    //int i;
             //
 	    //res = 1;
             //
-	    //for ( i = 0 ; i < absbint ; ++i )
+	    //for ( int i = 0 ; i < absbint ; ++i )
 	    //{
 	    //    res *= a;
 	    //}
@@ -13461,16 +13405,14 @@ gentype ifthenelse(const gentype &a, const gentype &b, const gentype &c)
 
 	    else if ( a.numRows() && a.numCols() )
 	    {
-		int i,j;
-
 		Matrix<gentype> tempres(a.numRows(),a.numCols());
 		Matrix<gentype> tempa(a.cast_matrix(0));
                 Matrix<gentype> tempb(b.cast_matrix(0));
                 Matrix<gentype> tempc(c.cast_matrix(0));
 
-		for ( i = 0 ; i < a.numRows() ; ++i )
+		for ( int i = 0 ; i < a.numRows() ; ++i )
 		{
-		    for ( j = 0 ; j < a.numCols() ; ++j )
+		    for ( int j = 0 ; j < a.numCols() ; ++j )
 		    {
 			tempres("&",i,j) = ifthenelse(tempa(i,j),tempb(i,j),tempc(i,j));
 		    }
@@ -13489,14 +13431,12 @@ gentype ifthenelse(const gentype &a, const gentype &b, const gentype &c)
 	{
 	    if ( a.numRows() && a.numCols() )
 	    {
-		int i,j;
-
                 Matrix<gentype> tempres(a.numRows(),a.numCols());
 		Matrix<gentype> tempa(a.cast_matrix(0));
 
-		for ( i = 0 ; i < a.numRows() ; ++i )
+		for ( int i = 0 ; i < a.numRows() ; ++i )
 		{
-		    for ( j = 0 ; j < a.numCols() ; ++j )
+		    for ( int j = 0 ; j < a.numCols() ; ++j )
 		    {
 			tempres("&",i,j) = ifthenelse(tempa(i,j),b,c);
 		    }
@@ -13523,14 +13463,12 @@ gentype ifthenelse(const gentype &a, const gentype &b, const gentype &c)
 
 	    else if ( a.size() )
 	    {
-		int i;
-
 		Vector<gentype> tempres(a.size());
                 Vector<gentype> tempa(a.cast_vector(0));
                 Vector<gentype> tempb(b.cast_vector(0));
                 Vector<gentype> tempc(c.cast_vector(0));
 
-		for ( i = 0 ; i < a.size() ; ++i )
+		for ( int i = 0 ; i < a.size() ; ++i )
 		{
 		    tempres("&",i) = ifthenelse(tempa(i),tempb(i),tempc(i));
 		}
@@ -13548,12 +13486,10 @@ gentype ifthenelse(const gentype &a, const gentype &b, const gentype &c)
 	{
 	    if ( a.size() )
 	    {
-		int i;
-
                 Vector<gentype> tempres(a.size());
                 Vector<gentype> tempa(a.cast_vector(0));
 
-		for ( i = 0 ; i < a.size() ; ++i )
+		for ( int i = 0 ; i < a.size() ; ++i )
 		{
 		    tempres("&",i) = ifthenelse(tempa(i),b,c);
 		}
@@ -14761,10 +14697,9 @@ gentype sf(const gentype &i)
     {
         res.dir_int() = 1;
 
-        int k;
         int ii = i.cast_int(0);
 
-        for ( k = 0 ; k <= ii ; ++k )
+        for ( int k = 0 ; k <= ii ; ++k )
         {
             gentype kk(k);
 
@@ -14807,14 +14742,13 @@ gentype psf(const gentype &i)
 
     else
     {
-        int k;
         gentype ibang((double) fact(i));
         gentype tmpg;
         int ii = i.cast_int(0);
 
         res = ibang;
 
-        for ( k = 1 ; k < ii ; ++k )
+        for ( int k = 1 ; k < ii ; ++k )
         {
             res = pow(ibang,res);
         }
@@ -14968,7 +14902,6 @@ gentype normpmat(const Vector<gentype> &a, double p);
 
 gentype abs1vec(const Vector<gentype> &a)
 {
-    int i;
     gentype result;
 
     if ( a.infsize() )
@@ -14980,12 +14913,9 @@ gentype abs1vec(const Vector<gentype> &a)
     {
 	result = norm1(a(0));
 
-	//if ( a.size() > 1 )
-	{
-	    for ( i = 1 ; i < a.size() ; ++i )
-	    {
-		result += norm1(a(i));
-	    }
+        for ( int i = 1 ; i < a.size() ; ++i )
+        {
+            result += norm1(a(i));
 	}
     }
 
@@ -14994,7 +14924,6 @@ gentype abs1vec(const Vector<gentype> &a)
 
 gentype abs2vec(const Vector<gentype> &a)
 {
-    int i;
     gentype result;
 
     if ( a.infsize() )
@@ -15006,12 +14935,9 @@ gentype abs2vec(const Vector<gentype> &a)
     {
 	result = norm2(a(0));
 
-	//if ( a.size() > 1 )
-	{
-	    for ( i = 1 ; i < a.size() ; ++i )
-	    {
-		result += norm2(a(i));
-	    }
+        for ( int i = 1 ; i < a.size() ; ++i )
+        {
+            result += norm2(a(i));
 	}
     }
 
@@ -15020,7 +14946,6 @@ gentype abs2vec(const Vector<gentype> &a)
 
 gentype abspvec(const Vector<gentype> &a, double p)
 {
-    int i;
     gentype result;
 
     if ( a.infsize() )
@@ -15032,12 +14957,9 @@ gentype abspvec(const Vector<gentype> &a, double p)
     {
 	result = normp(a(0),p);
 
-	//if ( a.size() > 1 )
-	{
-	    for ( i = 1 ; i < a.size() ; ++i )
-	    {
-		result += normp(a(i),p);
-	    }
+        for ( int i = 1 ; i < a.size() ; ++i )
+        {
+            result += normp(a(i),p);
 	}
     }
 
@@ -15048,7 +14970,6 @@ gentype abspvec(const Vector<gentype> &a, double p)
 
 gentype absinfvec(const Vector<gentype> &a)
 {
-    int i;
     gentype result(a);
     gentype temp;
     double dres = 0.0;
@@ -15061,7 +14982,7 @@ gentype absinfvec(const Vector<gentype> &a)
 
     else if ( a.size() )
     {
-        for ( i = 0 ; i < a.size() ; ++i )
+        for ( int i = 0 ; i < a.size() ; ++i )
         {
             temp = absinf(a(i));
 
@@ -15088,7 +15009,6 @@ gentype absinfvec(const Vector<gentype> &a)
 
 gentype abs0vec(const Vector<gentype> &a)
 {
-    int i;
     gentype result(a);
     gentype temp;
     double dres = 0.0;
@@ -15101,7 +15021,7 @@ gentype abs0vec(const Vector<gentype> &a)
 
     else if ( a.size() )
     {
-        for ( i = 0 ; i < a.size() ; ++i )
+        for ( int i = 0 ; i < a.size() ; ++i )
         {
             temp = abs0(a(i));
 
@@ -15128,7 +15048,6 @@ gentype abs0vec(const Vector<gentype> &a)
 
 gentype norm1vec(const Vector<gentype> &a)
 {
-    int i;
     gentype result;
 
     if ( a.infsize() )
@@ -15140,12 +15059,9 @@ gentype norm1vec(const Vector<gentype> &a)
     {
 	result = norm1(a(0));
 
-	//if ( a.size() > 1 )
-	{
-	    for ( i = 1 ; i < a.size() ; ++i )
-	    {
-		result += norm1(a(i));
-	    }
+        for ( int i = 1 ; i < a.size() ; ++i )
+        {
+            result += norm1(a(i));
 	}
     }
 
@@ -15154,7 +15070,6 @@ gentype norm1vec(const Vector<gentype> &a)
 
 gentype norm2vec(const Vector<gentype> &a)
 {
-    int i;
     gentype result;
 
     if ( a.infsize() )
@@ -15166,12 +15081,9 @@ gentype norm2vec(const Vector<gentype> &a)
     {
 	result = norm2(a(0));
 
-	//if ( a.size() > 1 )
-	{
-	    for ( i = 1 ; i < a.size() ; ++i )
-	    {
-		result += norm2(a(i));
-	    }
+        for ( int i = 1 ; i < a.size() ; ++i )
+        {
+            result += norm2(a(i));
 	}
     }
 
@@ -15180,7 +15092,6 @@ gentype norm2vec(const Vector<gentype> &a)
 
 gentype normpvec(const Vector<gentype> &a, double p)
 {
-    int i;
     gentype result;
 
     if ( a.infsize() )
@@ -15192,12 +15103,9 @@ gentype normpvec(const Vector<gentype> &a, double p)
     {
 	result = normp(a(0),p);
 
-	//if ( a.size() > 1 )
-	{
-	    for ( i = 1 ; i < a.size() ; ++i )
-	    {
-		result += normp(a(i),p);
-	    }
+        for ( int i = 1 ; i < a.size() ; ++i )
+        {
+            result += normp(a(i),p);
 	}
     }
 
@@ -15211,14 +15119,13 @@ gentype normpvec(const Vector<gentype> &a, double p)
 
 gentype abs1mat(const Matrix<gentype> &a)
 {
-    int i,j;
     gentype result;
 
-    if ( a.numRows() && a.numCols() )
+    if ( a.numCols() )
     {
-	for ( i = 0 ; i < a.numRows() ; ++i )
+	for ( int i = 0 ; i < a.numRows() ; ++i )
 	{
-	    for ( j = 0 ; j < a.numCols() ; ++j )
+	    for ( int j = 0 ; j < a.numCols() ; ++j )
 	    {
 		result += norm1(a(i,j));
 	    }
@@ -15230,14 +15137,13 @@ gentype abs1mat(const Matrix<gentype> &a)
 
 gentype abs2mat(const Matrix<gentype> &a)
 {
-    int i,j;
     gentype result;
 
-    if ( a.numRows() && a.numCols() )
+    if ( a.numCols() )
     {
-	for ( i = 0 ; i < a.numRows() ; ++i )
+	for ( int i = 0 ; i < a.numRows() ; ++i )
 	{
-	    for ( j = 0 ; j < a.numCols() ; ++j )
+	    for ( int j = 0 ; j < a.numCols() ; ++j )
 	    {
 		result += norm2(a(i,j));
 	    }
@@ -15249,14 +15155,13 @@ gentype abs2mat(const Matrix<gentype> &a)
 
 gentype abspmat(const Matrix<gentype> &a, double p)
 {
-    int i,j;
     gentype result;
 
-    if ( a.numRows() && a.numCols() )
+    if ( a.numCols() )
     {
-	for ( i = 0 ; i < a.numRows() ; ++i )
+	for ( int i = 0 ; i < a.numRows() ; ++i )
 	{
-	    for ( j = 0 ; j < a.numCols() ; ++j )
+	    for ( int j = 0 ; j < a.numCols() ; ++j )
 	    {
 		result += normp(a(i,j),p);
 	    }
@@ -15270,17 +15175,16 @@ gentype abspmat(const Matrix<gentype> &a, double p)
 
 gentype absinfmat(const Matrix<gentype> &a)
 {
-    int i,j;
     gentype result(a);
     gentype temp;
     double dres = 0.0;
     double dtemp = 0.0;
 
-    if ( a.numRows() && a.numCols() )
+    if ( a.numCols() )
     {
-	for ( i = 0 ; i < a.numRows() ; ++i )
+	for ( int i = 0 ; i < a.numRows() ; ++i )
 	{
-	    for ( j = 0 ; j < a.numCols() ; ++j )
+	    for ( int j = 0 ; j < a.numCols() ; ++j )
 	    {
 		temp = absinf(a(i,j));
 
@@ -15303,17 +15207,16 @@ gentype absinfmat(const Matrix<gentype> &a)
 
 gentype abs0mat(const Matrix<gentype> &a)
 {
-    int i,j;
     gentype result(a);
     gentype temp;
     double dres = 0.0;
     double dtemp = 0.0;
 
-    if ( a.numRows() && a.numCols() )
+    if ( a.numCols() )
     {
-	for ( i = 0 ; i < a.numRows() ; ++i )
+	for ( int i = 0 ; i < a.numRows() ; ++i )
 	{
-	    for ( j = 0 ; j < a.numCols() ; ++j )
+	    for ( int j = 0 ; j < a.numCols() ; ++j )
 	    {
 		temp = abs0(a(i,j));
 
@@ -15336,14 +15239,13 @@ gentype abs0mat(const Matrix<gentype> &a)
 
 gentype norm1mat(const Matrix<gentype> &a)
 {
-    int i,j;
     gentype result;
 
-    if ( a.numRows() && a.numCols() )
+    if ( a.numCols() )
     {
-	for ( i = 0 ; i < a.numRows() ; ++i )
+	for ( int i = 0 ; i < a.numRows() ; ++i )
 	{
-	    for ( j = 0 ; j < a.numCols() ; ++j )
+	    for ( int j = 0 ; j < a.numCols() ; ++j )
 	    {
 		result += norm1(a(i,j));
 	    }
@@ -15355,14 +15257,13 @@ gentype norm1mat(const Matrix<gentype> &a)
 
 gentype norm2mat(const Matrix<gentype> &a)
 {
-    int i,j;
     gentype result;
 
-    if ( a.numRows() && a.numCols() )
+    if ( a.numCols() )
     {
-	for ( i = 0 ; i < a.numRows() ; ++i )
+	for ( int i = 0 ; i < a.numRows() ; ++i )
 	{
-	    for ( j = 0 ; j < a.numCols() ; ++j )
+	    for ( int j = 0 ; j < a.numCols() ; ++j )
 	    {
 		result += norm2(a(i,j));
 	    }
@@ -15374,14 +15275,13 @@ gentype norm2mat(const Matrix<gentype> &a)
 
 gentype normpmat(const Matrix<gentype> &a, double p)
 {
-    int i,j;
     gentype result;
 
-    if ( a.numRows() && a.numCols() )
+    if ( a.numCols() )
     {
-	for ( i = 0 ; i < a.numRows() ; ++i )
+	for ( int i = 0 ; i < a.numRows() ; ++i )
 	{
-	    for ( j = 0 ; j < a.numCols() ; ++j )
+	    for ( int j = 0 ; j < a.numCols() ; ++j )
 	    {
 		result += normp(a(i,j),p);
 	    }
@@ -15510,8 +15410,6 @@ gentype absinf(const gentype &a)
 
         int numpts = a.scalarfn_numpts();
 
-        int i;
-
         res.zero();
 
         SparseVector<SparseVector<gentype> > xa;
@@ -15519,7 +15417,7 @@ gentype absinf(const gentype &a)
         double temp = 0;
         double restemp = 0;
 
-        for ( i = 0 ; i < numpts ; ++i )
+        for ( int i = 0 ; i < numpts ; ++i )
         {
             xa("&",a.scalarfn_i()(0))("&",a.scalarfn_j()(0)) = (((double) i)+0.5)/((double) numpts);
 
@@ -15543,7 +15441,6 @@ gentype absinf(const gentype &a)
         int numpts = a.scalarfn_numpts();
         int numtot = (int) pow(numpts,numvar);
 
-        int i,j;
         Vector<int> k(numvar);
 
         k = 0;
@@ -15555,9 +15452,9 @@ gentype absinf(const gentype &a)
         double temp = 0;
         double restemp = 0;
 
-        for ( i = 0 ; i < numtot ; ++i )
+        for ( int i = 0 ; i < numtot ; ++i )
         {
-            for ( j = 0 ; j < numvar ; ++j )
+            for ( int j = 0 ; j < numvar ; ++j )
             {
                 xa("&",a.scalarfn_i()(j))("&",a.scalarfn_j()(j)) = (((double) k(j))+0.5)/((double) numpts);
             }
@@ -15567,7 +15464,7 @@ gentype absinf(const gentype &a)
                 restemp = temp;
             }
 
-            for ( j = 0 ; j < numvar ; ++j )
+            for ( int j = 0 ; j < numvar ; ++j )
             {
                 ++(k("&",j));
 
@@ -15630,8 +15527,6 @@ gentype abs0(const gentype &a)
 
         int numpts = a.scalarfn_numpts();
 
-        int i;
-
         res.zero();
 
         SparseVector<SparseVector<gentype> > xa;
@@ -15639,7 +15534,7 @@ gentype abs0(const gentype &a)
         double temp = 0;
         double restemp = 0;
 
-        for ( i = 0 ; i < numpts ; ++i )
+        for ( int i = 0 ; i < numpts ; ++i )
         {
             xa("&",a.scalarfn_i()(0))("&",a.scalarfn_j()(0)) = (((double) i)+0.5)/((double) numpts);
 
@@ -15663,7 +15558,6 @@ gentype abs0(const gentype &a)
         int numpts = a.scalarfn_numpts();
         int numtot = (int) pow(numpts,numvar);
 
-        int i,j;
         Vector<int> k(numvar);
 
         k = 0;
@@ -15675,9 +15569,9 @@ gentype abs0(const gentype &a)
         double temp = 0;
         double restemp = 0;
 
-        for ( i = 0 ; i < numtot ; ++i )
+        for ( int i = 0 ; i < numtot ; ++i )
         {
-            for ( j = 0 ; j < numvar ; ++j )
+            for ( int j = 0 ; j < numvar ; ++j )
             {
                 xa("&",a.scalarfn_i()(j))("&",a.scalarfn_j()(j)) = (((double) k(j))+0.5)/((double) numpts);
             }
@@ -15687,7 +15581,7 @@ gentype abs0(const gentype &a)
                 restemp = temp;
             }
 
-            for ( j = 0 ; j < numvar ; ++j )
+            for ( int j = 0 ; j < numvar ; ++j )
             {
                 ++(k("&",j));
 
@@ -15750,15 +15644,13 @@ gentype norm1(const gentype &a)
 
         int numpts = a.scalarfn_numpts();
 
-        int i;
-
         res.zero();
 
         SparseVector<SparseVector<gentype> > xa;
 
         gentype aa,bb;
 
-        for ( i = 0 ; i < numpts ; ++i )
+        for ( int i = 0 ; i < numpts ; ++i )
         {
             xa("&",a.scalarfn_i()(0))("&",a.scalarfn_j()(0)) = (((double) i)+0.5)/((double) numpts);
 
@@ -15801,7 +15693,6 @@ gentype norm1(const gentype &a)
         int numpts = a.scalarfn_numpts();
         int numtot = (int) pow(numpts,numvar);
 
-        int i,j;
         Vector<int> k(numvar);
 
         k = 0;
@@ -15812,9 +15703,9 @@ gentype norm1(const gentype &a)
 
         gentype aa,bb;
 
-        for ( i = 0 ; i < numtot ; ++i )
+        for ( int i = 0 ; i < numtot ; ++i )
         {
-            for ( j = 0 ; j < numvar ; ++j )
+            for ( int j = 0 ; j < numvar ; ++j )
             {
                 xa("&",a.scalarfn_i()(j))("&",a.scalarfn_j()(j)) = (((double) k(j))+0.5)/((double) numpts);
             }
@@ -15844,7 +15735,7 @@ gentype norm1(const gentype &a)
 
             res += bb;
 
-            for ( j = 0 ; j < numvar ; ++j )
+            for ( int j = 0 ; j < numvar ; ++j )
             {
                 ++(k("&",j));
 
@@ -15910,15 +15801,13 @@ gentype norm2(const gentype &a)
         int numpts = a.scalarfn_numpts();
 
 //errstream() << "phantomxg 1: " << numpts << "\n";
-        int i;
-
         res.zero();
 
         SparseVector<SparseVector<gentype> > xa;
 
         gentype aa,bb;
 
-        for ( i = 0 ; i < numpts ; ++i )
+        for ( int i = 0 ; i < numpts ; ++i )
         {
             xa("&",a.scalarfn_i()(0))("&",a.scalarfn_j()(0)) = (((double) i)+0.5)/((double) numpts);
 //errstream() << "phantomxg 2(" << i << "): " << xa << "\n";
@@ -15967,7 +15856,6 @@ gentype norm2(const gentype &a)
         int numpts = a.scalarfn_numpts();
         int numtot = (int) pow(numpts,numvar);
 
-        int i,j;
         Vector<int> k(numvar);
 
         k = 0;
@@ -15978,9 +15866,9 @@ gentype norm2(const gentype &a)
 
         gentype aa,bb;
 
-        for ( i = 0 ; i < numtot ; ++i )
+        for ( int i = 0 ; i < numtot ; ++i )
         {
-            for ( j = 0 ; j < numvar ; ++j )
+            for ( int j = 0 ; j < numvar ; ++j )
             {
                 xa("&",a.scalarfn_i()(j))("&",a.scalarfn_j()(j)) = (((double) k(j))+0.5)/((double) numpts);
             }
@@ -16010,7 +15898,7 @@ gentype norm2(const gentype &a)
 
             res += bb;
 
-            for ( j = 0 ; j < numvar ; ++j )
+            for ( int j = 0 ; j < numvar ; ++j )
             {
                 ++(k("&",j));
 
@@ -16074,8 +15962,6 @@ gentype normp(const gentype &a, const gentype &q)
 
         int numpts = a.scalarfn_numpts();
 
-        int i;
-
         res.zero();
 
         SparseVector<SparseVector<gentype> > xa;
@@ -16084,7 +15970,7 @@ gentype normp(const gentype &a, const gentype &q)
 
         double p = q.cast_double(0);
 
-        for ( i = 0 ; i < numpts ; ++i )
+        for ( int i = 0 ; i < numpts ; ++i )
         {
             xa("&",a.scalarfn_i()(0))("&",a.scalarfn_j()(0)) = (((double) i)+0.5)/((double) numpts);
 
@@ -16127,7 +16013,6 @@ gentype normp(const gentype &a, const gentype &q)
         int numpts = a.scalarfn_numpts();
         int numtot = (int) pow(numpts,numvar);
 
-        int i,j;
         Vector<int> k(numvar);
 
         k = 0;
@@ -16140,9 +16025,9 @@ gentype normp(const gentype &a, const gentype &q)
 
         double p = q.cast_double(0);
 
-        for ( i = 0 ; i < numtot ; ++i )
+        for ( int i = 0 ; i < numtot ; ++i )
         {
-            for ( j = 0 ; j < numvar ; ++j )
+            for ( int j = 0 ; j < numvar ; ++j )
             {
                 xa("&",a.scalarfn_i()(j))("&",a.scalarfn_j()(j)) = (((double) k(j))+0.5)/((double) numpts);
             }
@@ -16172,7 +16057,7 @@ gentype normp(const gentype &a, const gentype &q)
 
             res += bb;
 
-            for ( j = 0 ; j < numvar ; ++j )
+            for ( int j = 0 ; j < numvar ; ++j )
             {
                 ++(k("&",j));
 
@@ -16813,13 +16698,11 @@ gentype emaxv(const gentype &a, const gentype &b)
             return res;
         }
 
-        int i,j;
-
         Matrix<gentype> &tres = res.force_matrix().resize(aa.numRows(),aa.numCols());
 
-        for ( i = 0 ; i < aa.numRows() ; ++i )
+        for ( int i = 0 ; i < aa.numRows() ; ++i )
         {
-            for ( j = 0 ; j < aa.numCols() ; ++j )
+            for ( int j = 0 ; j < aa.numCols() ; ++j )
             {
                 tres("&",i,j) = emaxv(aa(i,j),bb(i,j));
             }
@@ -16843,11 +16726,9 @@ gentype emaxv(const gentype &a, const gentype &b)
             return res;
         }
 
-        int i;
-
         Vector<gentype> &tres = res.force_vector().resize(aa.numRows(),aa.numCols());
 
-        for ( i = 0 ; i < aa.size() ; ++i )
+        for ( int i = 0 ; i < aa.size() ; ++i )
         {
             tres("&",i,j) = emaxv(aa(i),bb(i));
         }
@@ -16906,13 +16787,11 @@ gentype eminv(const gentype &a, const gentype &b)
             return res;
         }
 
-        int i,j;
-
         Matrix<gentype> &tres = res.force_matrix().resize(aa.numRows(),aa.numCols());
 
-        for ( i = 0 ; i < aa.numRows() ; ++i )
+        for ( int i = 0 ; i < aa.numRows() ; ++i )
         {
-            for ( j = 0 ; j < aa.numCols() ; ++j )
+            for ( int j = 0 ; j < aa.numCols() ; ++j )
             {
                 tres("&",i,j) = eminv(aa(i,j),bb(i,j));
             }
@@ -16936,11 +16815,9 @@ gentype eminv(const gentype &a, const gentype &b)
             return res;
         }
 
-        int i;
-
         Vector<gentype> &tres = res.force_vector().resize(aa.numRows(),aa.numCols());
 
-        for ( i = 0 ; i < aa.size() )
+        for ( int i = 0 ; i < aa.size() )
         {
             tres("&",i,j) = eminv(aa(i),bb(i));
         }
@@ -17552,9 +17429,7 @@ gentype testfn(const gentype &i, const gentype &x)
         int ii = (int) i;
         const Vector<gentype> &xx = (const Vector<gentype> &) x;
 
-        int j;
-
-        for ( j = 0 ; j < xx.size() ; ++j )
+        for ( int j = 0 ; j < xx.size() ; ++j )
         {
             if ( xx(j).isValEqnDir() )
             {
@@ -17613,9 +17488,7 @@ gentype testfnA(const gentype &i, const gentype &x, const gentype &A)
         const Vector<gentype> &xx = (const Vector<gentype> &) x;
         const Matrix<gentype> &AA = (const Matrix<gentype> &) A;
 
-        int j,k;
-
-        for ( j = 0 ; j < xx.size() ; ++j )
+        for ( int j = 0 ; j < xx.size() ; ++j )
         {
             if ( xx(j).isValEqnDir() )
             {
@@ -17628,9 +17501,9 @@ gentype testfnA(const gentype &i, const gentype &x, const gentype &A)
             }
         }
 
-        for ( j = 0 ; j < AA.numRows() ; ++j )
+        for ( int j = 0 ; j < AA.numRows() ; ++j )
         {
-            for ( k = 0 ; k < AA.numCols() ; ++k )
+            for ( int k = 0 ; k < AA.numCols() ; ++k )
             {
                 if ( !(AA(j,k).isCastableToRealWithoutLoss()) )
                 {
@@ -17684,9 +17557,7 @@ gentype partestfn(const gentype &i, const gentype &M, const gentype &x)
         int MM = (int) M;
         const Vector<gentype> &xx = (const Vector<gentype> &) x;
 
-        int j;
-
-        for ( j = 0 ; j < xx.size() ; ++j )
+        for ( int j = 0 ; j < xx.size() ; ++j )
         {
             if ( !(xx(j).isCastableToRealWithoutLoss()) )
             {
@@ -17751,9 +17622,7 @@ gentype partestfnA(const gentype &i, const gentype &M, const gentype &x, const g
         const Vector<gentype> &xx = (const Vector<gentype> &) x;
         double Alpha = (double) alpha;
 
-        int j;
-
-        for ( j = 0 ; j < xx.size() ; ++j )
+        for ( int j = 0 ; j < xx.size() ; ++j )
         {
             if ( !(xx(j).isCastableToRealWithoutLoss()) )
             {
@@ -18196,17 +18065,13 @@ gentype derefv(const gentype &a, const gentype &i)
 
     else if ( i.isValVector() )
     {
-        int k;
         gentype kk;
         Vector<gentype> resv(i.size());
 
-        //if ( i.size() )
+        for ( int k = 0 ; k < i.size() ; ++k )
         {
-            for ( k = 0 ; k < i.size() ; ++k )
-            {
-                kk = k;
-                resv("&",k) = derefv(a,derefv(i,kk));
-            }
+            kk = k;
+            resv("&",k) = derefv(a,derefv(i,kk));
         }
 
         res = resv;
@@ -18261,17 +18126,13 @@ gentype derefm(const gentype &a, const gentype &i, const gentype &j)
 
         else
         {
-            int k;
             gentype kk;
             Vector<gentype> resv(i.size());
 
-            //if ( i.size() )
+            for ( int k = 0 ; k < i.size() ; ++k )
             {
-                for ( k = 0 ; k < i.size() ; ++k )
-                {
-                    kk = k;
-                    resv("&",k) = derefm(a,derefv(i,kk),j);
-                }
+                kk = k;
+                resv("&",k) = derefm(a,derefv(i,kk),j);
             }
 
             res = resv;
@@ -18287,17 +18148,13 @@ gentype derefm(const gentype &a, const gentype &i, const gentype &j)
 
         else
         {
-            int l;
             gentype ll;
             Vector<gentype> resv(j.size());
 
-            //if ( i.size() )
+            for ( int l = 0 ; l < j.size() ; ++l )
             {
-                for ( l = 0 ; l < j.size() ; ++l )
-                {
-                    ll = l;
-                    resv("&",l) = derefm(a,i,derefv(j,ll));
-                }
+                ll = l;
+                resv("&",l) = derefm(a,i,derefv(j,ll));
             }
 
             res = resv;
@@ -18306,15 +18163,14 @@ gentype derefm(const gentype &a, const gentype &i, const gentype &j)
 
     else if ( i.isValVector() && j.isValVector() )
     {
-        int k,l;
         gentype kk,ll;
         Matrix<gentype> resm(i.size(),j.size());
 
-        if ( i.size() && j.size() )
+        if ( j.size() )
         {
-            for ( k = 0 ; k < i.size() ; ++k )
+            for ( int k = 0 ; k < i.size() ; ++k )
             {
-                for ( l = 0 ; l < j.size() ; ++l )
+                for ( int l = 0 ; l < j.size() ; ++l )
                 {
                     kk = k;
                     ll = l;
@@ -18355,17 +18211,13 @@ gentype derefa(const gentype &a, const gentype &i)
 
     else if ( a.isValVector() )
     {
-        int k;
         gentype kk;
         Vector<gentype> resv(a.size());
 
-        //if ( a.size() )
+        for ( int k = 0 ; k < a.size() ; ++k )
         {
-            for ( k = 0 ; k < a.size() ; ++k )
-            {
-                kk = k;
-                resv("&",k) = derefa(derefv(a,kk),i);
-            }
+            kk = k;
+            resv("&",k) = derefa(derefv(a,kk),i);
         }
 
         res = resv;
@@ -18391,17 +18243,13 @@ gentype derefa(const gentype &a, const gentype &i)
 
     else if ( i.isValVector() )
     {
-        int k;
         gentype kk;
         Vector<gentype> resv(i.size());
 
-        //if ( i.size() )
+        for ( int k = 0 ; k < i.size() ; ++k )
         {
-            for ( k = 0 ; k < i.size() ; ++k )
-            {
-                kk = k;
-                resv("&",k) = derefa(a,derefv(i,kk));
-            }
+            kk = k;
+            resv("&",k) = derefa(a,derefv(i,kk));
         }
 
         res = resv;
@@ -18422,7 +18270,7 @@ gentype collapse(const gentype &a)
 {
     INITGENBLOCK
 
-    int i,j,k,l;
+    int k,l;
     gentype res;
 
     if ( a.isValMatrix() )
@@ -18434,11 +18282,11 @@ gentype collapse(const gentype &a)
 
 	if ( aa.numRows() && aa.numCols() )
 	{
-	    for ( i = 0 ; ( i < aa.numRows() ) && !badres ; ++i )
+	    for ( int i = 0 ; ( i < aa.numRows() ) && !badres ; ++i )
 	    {
 		rowdim("&",i) = aa(i,0).numRows();
 
-		for ( j = 0 ; j < aa.numCols() ; ++j )
+		for ( int j = 0 ; j < aa.numCols() ; ++j )
 		{
 		    coldim("&",j) = aa(0,j).numCols();
 
@@ -18459,11 +18307,11 @@ gentype collapse(const gentype &a)
 
                 retMatrix<gentype> tmpma;
 
-		for ( i = 0 ; i < aa.numRows() ; ++i )
+		for ( int i = 0 ; i < aa.numRows() ; ++i )
 		{
 		    l = 0;
 
-		    for ( j = 0 ; j < aa.numCols() ; ++j )
+		    for ( int j = 0 ; j < aa.numCols() ; ++j )
 		    {
 			if ( aa(i,j).isValMatrix() || aa(i,j).isValVector() )
 			{
@@ -18506,7 +18354,7 @@ gentype collapse(const gentype &a)
 
 	else if ( aa.size() )
 	{
-	    for ( i = 0 ; i < aa.size() ; ++i )
+	    for ( int i = 0 ; i < aa.size() ; ++i )
 	    {
 		rowdim("&",i) = aa(i).numRows();
                 coldim         = aa(0).numCols();
@@ -18529,7 +18377,7 @@ gentype collapse(const gentype &a)
 
                     retVector<gentype> tmpva;
 
-		    for ( i = 0 ; i < aa.size() ; ++i )
+		    for ( int i = 0 ; i < aa.size() ; ++i )
 		    {
 			if ( aa(i).isValMatrix() || aa(i).isValVector() )
 			{
@@ -18555,7 +18403,7 @@ gentype collapse(const gentype &a)
 
                     retMatrix<gentype> tmpma;
 
-		    for ( i = 0 ; i < aa.size() ; ++i )
+		    for ( int i = 0 ; i < aa.size() ; ++i )
 		    {
 			if ( aa(i).isValMatrix() || aa(i).isValVector() )
 			{
@@ -19576,11 +19424,10 @@ gentype &raiseto(gentype &a, int b)
 
             bool intgood = true;
 
-            int i;
             int res = 1;
             int aa = a.cast_int(0);
 
-            for ( i = 0 ; i < b ; ++i )
+            for ( int i = 0 ; i < b ; ++i )
             {
                 int vala = res;
 
@@ -19602,7 +19449,7 @@ gentype &raiseto(gentype &a, int b)
             {
                 double dres = 1;
 
-                for ( i = 0 ; i < b ; ++i )
+                for ( int i = 0 ; i < b ; ++i )
                 {
                     dres *= aa;
                 }
@@ -19613,11 +19460,10 @@ gentype &raiseto(gentype &a, int b)
 
         else if ( b < 0 )
         {
-            int i;
             double res = 1;
             int aa = a.cast_int(0);
 
-            for ( i = 0 ; i < -b ; ++i )
+            for ( int i = 0 ; i < -b ; ++i )
             {
                 res /= aa;
             }
@@ -19635,11 +19481,10 @@ gentype &raiseto(gentype &a, int b)
     {
         if ( b > 0 )
         {
-            int i;
             double res = 1;
             double aa = a.cast_double(0);
 
-            for ( i = 0 ; i < b ; ++i )
+            for ( int i = 0 ; i < b ; ++i )
             {
                 res *= aa;
             }
@@ -19649,11 +19494,10 @@ gentype &raiseto(gentype &a, int b)
 
         else if ( b < 0 )
         {
-            int i;
             double res = 1;
             double aa = a.cast_double(0);
 
-            for ( i = 0 ; i < -b ; ++i )
+            for ( int i = 0 ; i < -b ; ++i )
             {
                 res /= aa;
             }
@@ -19737,15 +19581,13 @@ gentype &postProInnerProd(gentype &a)
 
         int numpts = a.scalarfn_numpts();
 
-        int i;
-
         res.zero();
 
         SparseVector<SparseVector<gentype> > xa;
 
         gentype aa;
 
-        for ( i = 0 ; i < numpts ; ++i )
+        for ( int i = 0 ; i < numpts ; ++i )
         {
             xa("&",a.scalarfn_i()(0))("&",a.scalarfn_j()(0)) = (((double) i)+0.5)/((double) numpts);
 
@@ -19771,7 +19613,6 @@ gentype &postProInnerProd(gentype &a)
         int numpts = a.scalarfn_numpts();
         int numtot = (int) pow(numpts,numvar);
 
-        int i,j;
         Vector<int> k(numvar);
 
         k = 0;
@@ -19782,9 +19623,9 @@ gentype &postProInnerProd(gentype &a)
 
         gentype aa;
 
-        for ( i = 0 ; i < numtot ; ++i )
+        for ( int i = 0 ; i < numtot ; ++i )
         {
-            for ( j = 0 ; j < numvar ; ++j )
+            for ( int j = 0 ; j < numvar ; ++j )
             {
                 xa("&",a.scalarfn_i()(j))("&",a.scalarfn_j()(j)) = (((double) k(j))+0.5)/((double) numpts);
             }
@@ -19795,7 +19636,7 @@ gentype &postProInnerProd(gentype &a)
 
             res += aa;
 
-            for ( j = 0 ; j < numvar ; ++j )
+            for ( int j = 0 ; j < numvar ; ++j )
             {
                 ++(k("&",j));
 
@@ -19827,15 +19668,99 @@ void gentype::scalarfn_setisscalarfn(int nv)
     //NB use of short-circuit: if !eqnargs the *eqnargs never evaluated
     if ( !nv && eqnargs && (*eqnargs).size() )
     {
-	int i;
-
-        for ( i = 0 ; i < (*eqnargs).size() ; ++i )
+        for ( int i = 0 ; i < (*eqnargs).size() ; ++i )
         {
             ((*eqnargs)("&",i)).scalarfn_setisscalarfn(nv);
 	}
     }
 
     return;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+inline void qswap(std::function<gentype(const gentype &)> **&a, std::function<gentype(const gentype &)> **&b)
+{
+    std::function<gentype(const gentype &)> **x = a; a = b; b = x;
+}
+
+inline std::function<gentype(const gentype &)> **&setident (std::function<gentype(const gentype &)> **&a) { throw("something"); return a; }
+inline std::function<gentype(const gentype &)> **&setzero  (std::function<gentype(const gentype &)> **&a) { a = nullptr;        return a; }
+inline std::function<gentype(const gentype &)> **&setposate(std::function<gentype(const gentype &)> **&a) {                     return a; }
+inline std::function<gentype(const gentype &)> **&setnegate(std::function<gentype(const gentype &)> **&a) { throw("something"); return a; }
+inline std::function<gentype(const gentype &)> **&setconj  (std::function<gentype(const gentype &)> **&a) { throw("something"); return a; }
+inline std::function<gentype(const gentype &)> **&setrand  (std::function<gentype(const gentype &)> **&a) { throw("something"); return a; }
+inline std::function<gentype(const gentype &)> **&postProInnerProd(std::function<gentype(const gentype &)> **&a) { return a; }
+
+void controlaltpycalls(int mode, std::function<gentype(const gentype &)> **a, std::function<gentype(const gentype &)> **b)
+{
+    static Vector<std::function<gentype(const gentype &)> **> lambdastore;
+
+    if ( mode == 1 )
+    {
+        lambdastore.append(lambdastore.size(),a);
+    }
+
+    else if ( mode == 2 )
+    {
+        int modcnt = 0;
+
+        for ( int i = lambdastore.size()-1 ; ( i >= 0 ) && ( modcnt < 2 ) ; --i )
+        {
+            if      ( lambdastore(i) == a ) { lambdastore("&",i) = b; ++modcnt; }
+            else if ( lambdastore(i) == b ) { lambdastore("&",i) = a; ++modcnt; }
+        }
+    }
+
+    else if ( mode == 3 )
+    {
+        for ( int i = lambdastore.size()-1 ; i >= 0 ; --i )
+        {
+            if ( lambdastore(i) == a ) { lambdastore.remove(i); return; }
+        }
+    }
+
+    else if ( mode == 4 )
+    {
+        for ( int i = lambdastore.size()-1 ; i >= 0 ; --i )
+        {
+            if ( *lambdastore("&",i) ) { MEMDEL(*lambdastore("&",i)); *lambdastore("&",i) = nullptr; }
+        }
+
+        lambdastore.resize(0);
+    }
+}
+
+void storealtpycall(std::function<gentype(const gentype &)> **newaltpycall)
+{
+    controlaltpycalls(1,newaltpycall,nullptr);
+}
+
+void swapaltpycall(std::function<gentype(const gentype &)> **leftaltpycall, std::function<gentype(const gentype &)> **rightaltpycall)
+{
+    controlaltpycalls(2,leftaltpycall,rightaltpycall);
+}
+
+void removealtpycall(std::function<gentype(const gentype &)> **oldaltpycall)
+{
+    controlaltpycalls(3,oldaltpycall,nullptr);
+}
+
+void removeallaltpycall(void)
+{
+    controlaltpycalls(4,nullptr,nullptr);
 }
 
 
@@ -24014,7 +23939,6 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<double> &src)
     {
         {
 	    int srcsize = src.size();
-	    int i;
 
             if ( !nbase )
 	    {
@@ -24033,12 +23957,9 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<double> &src)
 
             NiceAssert( dsize == srcsize );
 
-    	    //if ( dsize )
-	    {
-	        for ( i = 0 ; i < dsize ; ++i )
-	        {
-                    (*this)("&",i) = src.v(i);
-                }
+            for ( int i = 0 ; i < dsize ; ++i )
+            {
+                (*this)("&",i) = src.v(i);
 	    }
 	}
     }
@@ -24072,7 +23993,6 @@ Vector<double> &Vector<double>::castassign(const Vector<gentype> &src)
     {
         {
 	    int srcsize = src.size();
-	    int i;
 
             if ( !nbase )
 	    {
@@ -24091,12 +24011,9 @@ Vector<double> &Vector<double>::castassign(const Vector<gentype> &src)
 
             NiceAssert( dsize == srcsize );
 
-    	    //if ( dsize )
-	    {
-	        for ( i = 0 ; i < dsize ; ++i )
-	        {
-                    (*this).sv(i,(double) src(i));
-                }
+            for ( int i = 0 ; i < dsize ; ++i )
+            {
+                (*this).sv(i,(double) src(i));
 	    }
 	}
     }
@@ -24130,7 +24047,6 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<int> &src)
     {
         {
 	    int srcsize = src.size();
-	    int i;
 
             if ( !nbase )
 	    {
@@ -24149,12 +24065,9 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<int> &src)
 
             NiceAssert( dsize == srcsize );
 
-    	    //if ( dsize )
-	    {
-	        for ( i = 0 ; i < dsize ; ++i )
-	        {
-                    (*this)("&",i) = src.v(i);
-                }
+            for ( int i = 0 ; i < dsize ; ++i )
+            {
+                (*this)("&",i) = src.v(i);
 	    }
 	}
     }
@@ -24187,7 +24100,6 @@ Vector<double> &Vector<double>::castassign(const Vector<int> &src)
     {
         {
 	    int srcsize = src.size();
-	    int i;
 
             if ( !nbase )
 	    {
@@ -24206,12 +24118,9 @@ Vector<double> &Vector<double>::castassign(const Vector<int> &src)
 
             NiceAssert( dsize == srcsize );
 
-    	    //if ( dsize )
-	    {
-	        for ( i = 0 ; i < dsize ; ++i )
-	        {
-                    (*this).sv(i,(double) src.v(i));
-                }
+            for ( int i = 0 ; i < dsize ; ++i )
+            {
+                (*this).sv(i,(double) src.v(i));
 	    }
 	}
     }
@@ -24253,7 +24162,6 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<int> > &src)
     {
         {
 	    int srcsize = src.size();
-	    int i;
 
             if ( !nbase )
 	    {
@@ -24272,12 +24180,9 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<int> > &src)
 
             NiceAssert( dsize == srcsize );
 
-    	    //if ( dsize )
-	    {
-	        for ( i = 0 ; i < dsize ; ++i )
-	        {
-                    (*this)("&",i) = src(i);
-                }
+            for ( int i = 0 ; i < dsize ; ++i )
+            {
+                (*this)("&",i) = src(i);
 	    }
 	}
     }
@@ -24310,7 +24215,6 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<SparseVector<gentype> 
     {
         {
 	    int srcsize = src.size();
-	    int i;
 
             if ( !nbase )
 	    {
@@ -24329,15 +24233,11 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<SparseVector<gentype> 
 
             NiceAssert( dsize == srcsize );
 
-    	    if ( dsize )
-	    {
+            retVector<gentype> tmpa;
 
-                retVector<gentype> tmpa;
-
-	        for ( i = 0 ; i < dsize ; ++i )
-	        {
-                    (*this)("&",i) = src(i)(tmpa);
-                }
+            for ( int i = 0 ; i < dsize ; ++i )
+            {
+                (*this)("&",i) = src(i)(tmpa);
 	    }
 	}
     }
@@ -24370,7 +24270,6 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<gentype> > &src
     {
         {
 	    int srcsize = src.size();
-	    int i;
 
             if ( !nbase )
 	    {
@@ -24389,12 +24288,9 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<gentype> > &src
 
             NiceAssert( dsize == srcsize );
 
-    	    //if ( dsize )
-	    {
-	        for ( i = 0 ; i < dsize ; ++i )
-	        {
-                    (*this)("&",i) = src(i);
-                }
+            for ( int i = 0 ; i < dsize ; ++i )
+            {
+                (*this)("&",i) = src(i);
 	    }
 	}
     }
@@ -24458,9 +24354,7 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
 
     else if ( size )
     {
-	int i;
-
-	for ( i = 0 ; i < size ; ++i )
+	for ( int i = 0 ; i < size ; ++i )
 	{
             if ( src.ind(i) == prevind+1 )
             {
@@ -24678,9 +24572,7 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<doub
 
     else if ( size )
     {
-	int i;
-
-	for ( i = 0 ; i < size ; ++i )
+	for ( int i = 0 ; i < size ; ++i )
 	{
             if ( src.ind(i) == prevind+1 )
             {

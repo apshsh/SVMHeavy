@@ -140,6 +140,16 @@ template <> template <> Vector<gentype> &Vector<gentype>::castassign(const Vecto
 template <> template <> Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<gentype> >       &src);
 template <> template <> Vector<SparseVector<gentype> >& Vector<SparseVector<gentype> >::castassign(const Vector<SparseVector<gentype> > &src);
 
+// Store of lambdas - this keeps all the "out of program" (typically in python)
+// lambdas in one spot, so you can call removeallaltpycall to delete the lot
+// and null out all the references in one place
+
+void storealtpycall(std::function<gentype(const gentype &)> **newaltpycall);  // store altpycall in static memory
+void swapaltpycall(std::function<gentype(const gentype &)> **leftaltpycall, std::function<gentype(const gentype &)> **rightaltpycall);  // swap altpycalls in static memory
+void removealtpycall(std::function<gentype(const gentype &)> **oldaltpycall); // remove altpycall from static memory store
+void removeallaltpycall(void); // delete all altbycalls in static memory store
+
+
 // Multithreaded initialisation function:
 //
 // Initialises all derivatives in one block.  This is not required for single
@@ -714,6 +724,7 @@ public:
     // Make gentype a null
 
     gentype &makeNull(void) { deleteVectMatMem(); typeis = 'N'; return *this; }
+    gentype &makeNone(void) { deleteVectMatMem(); typeis = 'N'; return *this; }
 
     // Write equation string (note that the term *this = (*this)()
     // automatically simplifies the equation)
@@ -771,6 +782,7 @@ public:
     //          casting.
 
     bool isValNull      (void) const { return typeis == 'N'; }
+    bool isValNone      (void) const { return typeis == 'N'; }
     bool isValInteger   (void) const { return typeis == 'Z'; }
     bool isValReal      (void) const { return typeis == 'R'; }
     bool isValAnion     (void) const { return typeis == 'A'; }
@@ -1033,6 +1045,7 @@ public:
     std::string            &dir_string(void) { if ( !isValString()  ) { morph_string(); } NiceAssert( isValString() );                   return *stringval; }
 
     void                    force_null  (void)                 { makeNull(); }
+    void                    force_none  (void)                 { makeNull(); }
     int                    &force_int   (void)                 {                                                    if ( !isValInteger() ) { *this = 0;          }                                                return  intval;    }
     double                 &force_double(void)                 {                                                    if ( !isValReal()    ) { *this = 0.0;        }                                                return  doubleval; }
     d_anion                &force_anion (int i = -1)           {                                                    if ( !isValAnion()   ) { *this = 0_anion;    } if ( i   >= 0 ) { (*anionval).setorder(i);  }  return *anionval;  }
@@ -1728,7 +1741,7 @@ private:
         if ( dictval   != nullptr ) { MEMNEW(res.dictval  ,xDict                                  (*dictval)  ); }
         if ( dgraphval != nullptr ) { MEMNEW(res.dgraphval,xDgraph                                (*dgraphval)); }
         if ( stringval != nullptr ) { MEMNEW(res.stringval,std::string                            (*stringval)); }
-        if ( altpycall != nullptr ) { MEMNEW(res.altpycall,std::function<gentype(const gentype &)>(*altpycall)); }
+        if ( altpycall != nullptr ) { MEMNEW(res.altpycall,std::function<gentype(const gentype &)>(*altpycall)); storealtpycall(&(res.altpycall)); }
 
         MEMNEW(res.eqnargs,Vector<gentype>(locargres));
     }
@@ -1752,7 +1765,8 @@ private:
         if ( ( dgraphval           != nullptr ) && ( ( targtype != 'G' ) )                               ) { MEMDEL(dgraphval);           dgraphval           = nullptr; }
         if ( ( stringval           != nullptr ) && ( ( targtype != 'S' ) && ( targtype != 'E' ) )        ) { MEMDEL(stringval);           stringval           = nullptr; }
         if ( ( eqnargs             != nullptr )                                                          ) { MEMDEL(eqnargs);             eqnargs             = nullptr; }
-        if ( ( altpycall           != nullptr )                                                          ) { MEMDEL(altpycall);           altpycall           = nullptr; }
+        if ( ( altpycall           != nullptr )                                                          ) { removealtpycall(&altpycall);
+                                                                                                             MEMDEL(altpycall);           altpycall           = nullptr; }
 
         typeis     = targtype;
         intval     = 0;
@@ -1918,9 +1932,11 @@ public:
 
 #define gentype_function(F,res,f) 0; \
 { \
-    res = "pycall(0,x)"; \
+    res = "pycall(-1,x)"; \
     res.altpycall = new std::function<F>(f); \
+    storealtpycall(&(res.altpycall)); \
 }
+
 
 
 inline void qswap(gentype &a, gentype &b)
@@ -1952,6 +1968,7 @@ inline void qswap(gentype &a, gentype &b)
     std::string                             *stringval;           stringval           = a.stringval;           a.stringval           = b.stringval;           b.stringval           = stringval;
     Vector<gentype>                         *eqnargs;             eqnargs             = a.eqnargs;             a.eqnargs             = b.eqnargs;             b.eqnargs             = eqnargs;
     std::function<gentype(const gentype &)> *altpycall;           altpycall           = a.altpycall;           a.altpycall           = b.altpycall;           b.altpycall           = altpycall;
+    swapaltpycall(&(a.altpycall),&(b.altpycall));
 
     const fninfoblock *thisfninfo; thisfninfo = a.thisfninfo; a.thisfninfo = b.thisfninfo; b.thisfninfo = thisfninfo;
 }

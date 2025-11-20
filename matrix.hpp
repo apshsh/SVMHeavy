@@ -286,7 +286,15 @@ public:
     const Matrix<T> &operator()(const Vector<int> &i,   int jb, int js, int jm, retMatrix<T> &res,                                         int ib, int is, int im                        ) const;
 
     T     v(int i, int j     ) const;
-    void sv(int i, int j, T x) const;
+    void sv(int i, int j, T x);
+
+    // row-concantenated linear access
+
+          T &r(const char *dummy, int i)       { return (*this)(dummy,i/dnumCols,i%dnumCols); }
+    const T &r(                   int i) const { return (*this)(i/dnumCols,i%dnumCols);       }
+
+    T     v(int i     ) const { return v (i/dnumCols,i%dnumCols  ); }
+    void sv(int i, T x)       {        sv(i/dnumCols,i%dnumCols,x); }
 
     // Row and column norms
 
@@ -2337,7 +2345,7 @@ T Matrix<T>::v(int i, int j) const
 }
 
 template <class T>
-void Matrix<T>::sv(int i, int j, T x) const
+void Matrix<T>::sv(int i, int j, T x)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i < dnumRows );

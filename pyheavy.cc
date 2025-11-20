@@ -1,3 +1,5 @@
+//FIX HYPERPARAMETER TUNING ON GRID - SEE SHANNON DISCUSSION, SEEMS TO OVERFIT ON UNIFORMLY SPACED GRID - MAYBE DETECT AND SET LOWER BOUND IN CODE VIA MERCER?
+//MAKE SURE ML_BASE RESPECTS BOUNDS IN MERCER, AND THAT THEY COPY CORRECTLY IN DUPLICATION OF PRIOR.
 
 //
 // SVMHeavyv7 Python CLI-like Interface
@@ -81,9 +83,9 @@ bool isValDict    (const py::object &src) { return !isValNone(src) && py::isinst
 bool isValString  (const py::object &src) { return !isValNone(src) && py::isinstance<py::str>(src);                          }
 bool isValCallable(const py::object &src) { return !isValNone(src) && py::cast<py::bool_>(pycallable()(src));                }
 
-bool isValCastableToInteger(const py::object &src) { return isValInteger(src) || isValReal(src);                      }
-bool isValCastableToReal   (const py::object &src) { return isValInteger(src) || isValReal(src);                      }
-bool isValCastableToComplex(const py::object &src) { return isValInteger(src) || isValReal(src) || isValComplex(src); }
+bool isValCastableToInteger(const py::object &src) { return isValNone(src) || isValInteger(src) || isValReal(src);                      }
+bool isValCastableToReal   (const py::object &src) { return isValNone(src) || isValInteger(src) || isValReal(src);                      }
+bool isValCastableToComplex(const py::object &src) { return isValNone(src) || isValInteger(src) || isValReal(src) || isValComplex(src); }
 
 int                  toInt(const py::object &src) { return (int)      py::cast<py::int_>  (src); }
 double               toDbl(const py::object &src) { return (double)   py::cast<py::float_>(src); }
@@ -288,27 +290,10 @@ py::object gencalc_ ## func (py::object x, py::object y, py::object z)          
 
 // Actual functions (including auto-generation stubs) used in python module
 
-py::object mloptgrid(      int i, int dim, int numreps, py::object objfn);
-py::object mloptDIRect(    int i, int dim, int numreps, py::object objfn);
-py::object mloptNelderMead(int i, int dim, int numreps, py::object objfn);
-py::object mloptBayesian(  int i, int dim, int numreps, py::object objfn);
-
-py::object &pyogetsrc(int k);
-int pyosetsrc(int k, py::object *src);
-
-void svmheavya(void);                      // just get help screen
-void svmheavyb(int permode);               // set persistence mode
-void svmheavyc(const std::string commstr); // execute with string
-
-void logit(py::object logstr); // print to errstream
-
-#define snakehigh 24
-#define snakewide 80
-
-void callintercalc(void);
-void callsnakes   (int wide, int high);
-
-py::object svmeval(py::object fn, py::object arg);
+py::object mloptgrid(      int i, int dim, int numreps, py::object objfn, py::object callback);
+py::object mloptDIRect(    int i, int dim, int numreps, py::object objfn, py::object callback);
+py::object mloptNelderMead(int i, int dim, int numreps, py::object objfn, py::object callback);
+py::object mloptBayesian(  int i, int dim, int numreps, py::object objfn, py::object callback);
 
 int selml(int i = 0);
 
@@ -335,14 +320,33 @@ int selDIRectopt    (int i, int rst);
 int selNelderMeadopt(int i, int rst);
 int selBayesianopt  (int i, int rst);
 
+void svmheavya(void);                      // just get help screen
+void svmheavyb(int permode);               // set persistence mode
+void svmheavyc(const std::string commstr); // execute with string
+
+#define snakehigh 24
+#define snakewide 80
+
+// Set, get and clear storage
+
+py::object &pyogetsrc(int k);
+int         pyosetsrc(int k, const py::object &src);
+void        pyoclrsrc(void);
+
+void logit        (py::object logstr); // print to errstream
+void callintercalc(void);
+void callsnakes   (int wide, int high);
+
+py::object svmeval(py::object fn, py::object arg);
+
 py::object svmtest(int i, std::string type);
 
 int setpriml(int j = 0);
 
 int makeMonot(int n, int t, py::object xb, py::object xlb, py::object xub, int d, py::object y, double Cweight, double epsweight, int j);
 
-int  addTrainingVectorml(int j, py::object z, py::object x);
-int faddTrainingVectorml(int ignoreStart, int imax, int reverse, int j, const std::string &fname);
+int  addTrainingVectorml(py::object x, py::object z, int j);
+int faddTrainingVectorml(const std::string &fname, int ignoreStart, int imax, int reverse, int j);
 
 int removeTrainingVectorml(int j, int num);
 
@@ -598,6 +602,7 @@ OPTGETSETDEF(B,          Bayesian,double )
 OPTGETSETDEF(betafn,     Bayesian,gentype)
 OPTGETSETDEF(numfids,    Bayesian,int    )
 OPTGETSETDEF(fidover,    Bayesian,int    )
+OPTGETSETDEF(fidmode,    Bayesian,int    )
 OPTGETSETDEF(dimfid,     Bayesian,int    )
 OPTGETSETDEF(fidbudget,  Bayesian,double )
 OPTGETSETDEF(fidpenalty, Bayesian,gentype)
@@ -614,11 +619,11 @@ OPTGETSETDEF(beta0,      Bayesian,double )
 OPTGETSETDEF(kxfnum,     Bayesian,int    )
 OPTGETSETDEF(kxfnorm,    Bayesian,int    )
 
-OPTGETSETDEF(intrinbatch,        Bayesian,int    )
-OPTGETSETDEF(intrinbatchmethod,  Bayesian,int    )
-OPTGETSETDEF(startpointsmultiobj,Bayesian,int    )
-OPTGETSETDEF(totitersmultiobj,   Bayesian,int    )
-OPTGETSETDEF(ehimethodmultiobj,  Bayesian,int    )
+OPTGETSETDEF(intrinbatch,        Bayesian,int)
+OPTGETSETDEF(intrinbatchmethod,  Bayesian,int)
+OPTGETSETDEF(startpointsmultiobj,Bayesian,int)
+OPTGETSETDEF(totitersmultiobj,   Bayesian,int)
+OPTGETSETDEF(ehimethodmultiobj,  Bayesian,int)
 
 OPTGETSETDEF(tunemu,          Bayesian,int        )
 OPTGETSETDEF(tunecgt,         Bayesian,int        )
@@ -755,7 +760,8 @@ MAKEVISA(dawson   )
 // (I don't fully understand what this does, but it seems to work)
 
 void shutdown_module() {
-    // Acquire the GIL to make sure pybind11 destructors run safely
+    removeallaltpycall(); // remove any remaining std::function references back to python in gentype objects
+    pyoclrsrc(); // clear local store
     py::gil_scoped_acquire gil;
 }
 
@@ -791,10 +797,10 @@ PYBIND11_MODULE(pyheavy, m) {
     m_int.def("pyosetsrc",&pyosetsrc,    "Set python object k = val on heap. If val is a callable then this can be used  \n"
                                          "used in a gentype expression via pycall(k,x).",py::arg("k"),py::arg("val"));
     m_int.def("eval",     &svmeval,      "Evaluate function fn (gentype as string, or python function) provided (eg      \n"
-                                         "\"sin(x)\" for the gentype sin function) with argument x. x can be: None (mapped \n"
-                                         "to null), int, float, complex, list (mapped to vector), tuple (mapped to set)  \n"
-                                         "or dictionary. To explore available functions you use the inbuilt calculator   \n"
-                                         "(see calc function). See also pyheavy.maths.fn...",py::arg("fn"),py::arg("x"));
+                                         "\"sin(x)\" for the gentype sin function) with argument x. x can be: None, int, \n"
+                                         "float, complex, list (mapped to vector), tuple (mapped to set) or dictionary.  \n"
+                                         "To explore available functions you use the inbuilt calculator (calc function). \n"
+                                         "See also pyheavy.maths.fn...",py::arg("fn"),py::arg("x"));
     m_int.def("snakes",   &callsnakes,   "Snakes (test io, streams).",py::arg("w")=snakewide,py::arg("h")=snakehigh);
     m_int.def("calc",     &callintercalc,"Calculator (explore functions available in gentype expressions).");
     m_int.def("log",      &logit,        "Print to log.",py::arg("str"));
@@ -844,6 +850,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                 "32: Bohachevsky Function 2    (2-dimensional).                                 \n"
                                 "33: Bohachevsky Function 3    (2-dimensional).                                 \n"
                                 "34: Perm function 0,D,1       (-dimensional).                                  \n"
+                                "35: Currin test function      (2-dimensional + 1-fidelity).                    \n"
                                 "                                                                               \n"
                                 "The x argument later provided must have dimension stated. The optional second  \n"
                                 "argument type can take two values: \"norm\" (default), which returns a function\n"
@@ -1077,10 +1084,10 @@ PYBIND11_MODULE(pyheavy, m) {
     QDOARG(m_ml,randomise,"randomise (alpha,bias) with sparsity 0<=s<=1","s" );
 
     QGETSETD(m_ml,prim,  setprim,  "pritype","setpritype","set prior mean type:\n"
-                                                          "\n"
-                                                          "0 - no (0) prior mean (default).\n"
-                                                          "1 - primu(x) defined directly.\n"
-                                                          "2 - prior is set to posterior mean of ML priML.\n");
+                                                          "                                                                               \n"
+                                                          "0 - no (0) prior mean (default).                                               \n"
+                                                          "1 - primu(x) defined directly.                                                 \n"
+                                                          "2 - prior is set to posterior mean of ML priML.                                ");
     QGETSETD(m_ml,prival,setprival,"primu",  "setprimu",  "explicit prior mean mu (assuming pritype=1)");
     m_ml.def("setpriML", &setpriml,"Set prior mean to posterior mean of ML j (assuming pritype=2).",py::arg("j"));
 
@@ -1175,7 +1182,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                           "where x is a list (vector). To add multiple training pairs use z = (z1,z2,...),\n"
                                           "x=(x1,x2,...). To set d, Cweight etc use z = {\"y\":y, \"d\":d, \"cw\":cw,     \n"
                                           "\"ew\":ew} (all keys are optional).                                            ",
-                                          py::arg("j")=-1,py::arg("z")=py::none(),py::arg("x"));
+                                          py::arg("x"),py::arg("z")=py::none(),py::arg("j")=-1);
     m_ml.def("addf",&faddTrainingVectorml,"Add up to imax (let imax=0 (default) for all) training vector pairs [z,x] from \n"
                                           "file fname at position j in the ML (j=-1 (default) to add, skipping ignoreStart\n"
                                           "(default 0) training pairs at start of file.                                   \n"
@@ -1183,8 +1190,8 @@ PYBIND11_MODULE(pyheavy, m) {
                                           "By default it is assumed that the file is in target-at-start format, but you   \n"
                                           "can use target-at-end format by setting reverse=1 (reverse=0 by default). You  \n"
                                           "can include Cweight, epsweight and d as described in the CLI documentation.    ",
-                                          py::arg("ignoreStart")=0,py::arg("imax")=-1,py::arg("reverse")=0,
-                                          py::arg("j")=-1,py::arg("fname"));
+                                          py::arg("fname"),py::arg("ignoreStart")=0,py::arg("imax")=-1,py::arg("reverse")=0,
+                                          py::arg("j")=-1);
 
     m_ml.def("remove",&removeTrainingVectorml,"Remove num training vectors at position j (j=-1 (default) to remove from end)",
                                               py::arg("j")=-1,py::arg("num")=1);
@@ -1501,10 +1508,10 @@ PYBIND11_MODULE(pyheavy, m) {
     auto m_opt_NelderMead = m_opt.def_submodule("NelderMead","Nelder-Mead Optimisation");
     auto m_opt_Bayesian   = m_opt.def_submodule("BO",        "Bayesian Optimisation"   );
 
-    m_opt_grid.def(      "opt", &mloptgrid,       "Optimise (minimise) fn : [0,1]^dim to [0,1] using grid optimiser i.",       py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
-    m_opt_DIRect.def(    "opt", &mloptDIRect,     "Optimise (minimise) fn : [0,1]^dim to [0,1] using DIRect optimiser i.",     py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
-    m_opt_NelderMead.def("opt", &mloptNelderMead, "Optimise (minimise) fn : [0,1]^dim to [0,1] using Nelder-Mead optimiser i.",py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
-    m_opt_Bayesian.def(  "opt", &mloptBayesian,   "Optimise (minimise) fn : [0,1]^dim to [0,1] using Bayesian optimiser i.",   py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"));
+    m_opt_grid.def(      "opt", &mloptgrid,       "Optimise (minimise) fn : [0,1]^dim to [0,1] using grid optimiser i.",       py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
+    m_opt_DIRect.def(    "opt", &mloptDIRect,     "Optimise (minimise) fn : [0,1]^dim to [0,1] using DIRect optimiser i.",     py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
+    m_opt_NelderMead.def("opt", &mloptNelderMead, "Optimise (minimise) fn : [0,1]^dim to [0,1] using Nelder-Mead optimiser i.",py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
+    m_opt_Bayesian.def(  "opt", &mloptBayesian,   "Optimise (minimise) fn : [0,1]^dim to [0,1] using Bayesian optimiser i.",   py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
 
     auto m_opt_Bayesian_model = m_opt_Bayesian.def_submodule("models","Model Options"               );
     auto m_opt_Bayesian_tune  = m_opt_Bayesian.def_submodule("models","Model Tuning"                );
@@ -1607,11 +1614,24 @@ PYBIND11_MODULE(pyheavy, m) {
                                        "^ Intendid to be combined with human prompt.                                   ");
     QGETSETOPTB(m_opt,betafn, Bayesian,"user-defined beta for acq 11. You can make this a function with the vars:\n"
                                        "                                                                               \n"
-                                       "- var(0,1) (y) = iteration number.                                             \n"
-                                       "- var(0,2) (z) = x dimension.                                                  \n"
-                                       "- var(0,3) (v) = delta.                                                        \n"
-                                       "- var(0,4) (w) = |D| specified by -gbx.                                        \n"
-                                       "- var(0,5) (g) = a as specified by -gbo.                                       \n"
+                                       "- x_0  = iteration number.                                                     \n"
+                                       "- x_1  = x dimension.                                                          \n"
+                                       "- x_2  = delta.                                                                \n"
+                                       "- x_3  = |D|.                                                                  \n"
+                                       "- x_4  = a.                                                                    \n"
+                                       "- x_5  = b.                                                                    \n"
+                                       "- x_6  = r.                                                                    \n"
+                                       "- x_7  = p.                                                                    \n"
+                                       "- x_8  = batch size (inner).                                                   \n"
+                                       "- x_9  = R.                                                                    \n"
+                                       "- x_10 = B.                                                                    \n"
+                                       "- x_11 = mig.                                                                  \n"
+                                       "- x_12 = RKHS norm.                                                            \n"
+                                       "- x_13 = kappa0.                                                               \n"
+                                       "- x_14 = lengthscale.                                                          \n"
+                                       "- x_15 = sigma.                                                                \n"
+                                       "- x_16 = ell1.                                                                 \n"
+                                       "- x_17 = pi.                                                                   \n"
                                        "                                                                               \n"
                                        "You can also use [ [ f1 ] [ f2 ] ... ], where f1,f2,... define acquisition     \n"
                                        "function (see acq variable). This will generate multiple recommendations in a  \n"
@@ -1625,7 +1645,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                              "1 - use separate models. This is required e.g. for hallucinated samples in.    \n"
                                              "    some multi-recommendation methods, where the variance updates after each   \n"
                                              "    individual recommendation but the posterior mean updates only after the    \n"
-                                             "    whole batch.");
+                                             "    whole batch.                                                               ");
 
     QGETSETOPTB(m_opt,startpoints,Bayesian,"number of initial (random, uniform) seeds points. Use -1 (default) for d+1.");
     QGETSETOPTB(m_opt,totiters,   Bayesian,"number of iterations. Use 0 for unlimited, -1 (default) for 15d, -2 for\n"
@@ -1711,6 +1731,7 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPT(m_opt,fidbudget, Bayesian,fid,"fidelity budget (default -1, unlimited)."                                     );
     QGETSETOPT(m_opt,fidpenalty,Bayesian,fid,"fidelity penalty function f(z), where z is the fidelity vector."              );
     QGETSETOPT(m_opt,fidvar,    Bayesian,fid,"fidelity additive variance function n(z), added to measurement vari (dflt 0).");
+    QGETSETOPT(m_opt,fidmode,   Bayesian,fid,"");
     QGETSETOPT(m_opt,fidover,   Bayesian,fid,"optional fidelity overwrite:\n"
                                             "                                                                               \n"
                                              "0 - use fidelity generated by algorithm.                                      \n"
@@ -1980,16 +2001,27 @@ PYBIND11_MODULE(pyheavy, m) {
 //void logit(const std::string logstr) { errstream() << "python: " << logstr << "\n"; }
 void logit(py::object logstr) { errstream() << "python: " << convFromPy(logstr) << "\n"; }
 
-py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, const py::object &objfn);
+py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object &objfn, py::object &callback);
 
-py::object mloptgrid(      int i, int dim, int numreps, py::object objfn) { i = glob_gridInd      (i); return mlopt(getgridref      (i),dim,numreps,objfn); }
-py::object mloptDIRect(    int i, int dim, int numreps, py::object objfn) { i = glob_DIRectInd    (i); return mlopt(getDIRectref    (i),dim,numreps,objfn); }
-py::object mloptNelderMead(int i, int dim, int numreps, py::object objfn) { i = glob_NelderMeadInd(i); return mlopt(getNelderMeadref(i),dim,numreps,objfn); }
-py::object mloptBayesian(  int i, int dim, int numreps, py::object objfn) { i = glob_BayesianInd  (i); return mlopt(getBayesianref  (i),dim,numreps,objfn); }
+py::object mloptgrid(      int i, int dim, int numreps, py::object objfn, py::object callback) { i = glob_gridInd      (i); return mlopt(getgridref      (i),dim,numreps,objfn,callback); }
+py::object mloptDIRect(    int i, int dim, int numreps, py::object objfn, py::object callback) { i = glob_DIRectInd    (i); return mlopt(getDIRectref    (i),dim,numreps,objfn,callback); }
+py::object mloptNelderMead(int i, int dim, int numreps, py::object objfn, py::object callback) { i = glob_NelderMeadInd(i); return mlopt(getNelderMeadref(i),dim,numreps,objfn,callback); }
+py::object mloptBayesian(  int i, int dim, int numreps, py::object objfn, py::object callback) { i = glob_BayesianInd  (i); return mlopt(getBayesianref  (i),dim,numreps,objfn,callback); }
 
-void internobjfn(gentype &res, Vector<gentype> &x, void *arg) { convFromPy(res, (*((py::object *) arg))(convToPy(x)) ); }
+void internobjfn(gentype &res, Vector<gentype> &x, void *arg)
+{
+    if ( x.size() )
+    {
+        convFromPy(res,(*(((py::object **) arg)[0]))(convToPy(x)));
+    }
 
-py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, const py::object &objfn)
+    else if ( !isValNone(*(((py::object **) arg)[1])) && isValCallable(*(((py::object **) arg)[1])) )
+    {
+        (*(((py::object **) arg)[1]))(convToPy(res));
+    }
+}
+
+py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object &objfn, py::object &callback)
 {
     dostartup();
 
@@ -2041,15 +2073,17 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, const py::objec
 
     svmvolatile int dummy = 0;
 
-    optimiser.ispydirect = true;
+    py::object *optargs[2] = { &objfn, &callback };
+
+    //optimiser.ispydirect = true;
     int retcode = optimiser.optim(dim,
                                   xres,rawxres,fres,ires,
                                   mInd,
                                   allxres,allrawxres,allfres,allcres,allmres,allsres,s_score,
                                   xmin,xmax,distMode,varsType,
-                                  &internobjfn,(void *) &objfn,dummy,numreps,
+                                  &internobjfn,optargs,dummy,numreps,
                                   meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
-    optimiser.ispydirect = false;
+    //optimiser.ispydirect = false;
 
     // Setup return dictionary
 
@@ -2083,7 +2117,6 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, const py::objec
 
 #define COMMA ,
 #define RECURSE_ARG(Q_x,Q_fn,Q_prefn,Q_postfn)            \
-if ( isValTuple(Q_x) )                                    \
 {                                                         \
     py::tuple Q_xx = py::cast<py::tuple>(Q_x);            \
     int Q_size = (int) Q_xx.size();                       \
@@ -2092,6 +2125,78 @@ if ( isValTuple(Q_x) )                                    \
     for ( int Q_i = 0 ; Q_i < Q_size ; ++Q_i )            \
     {                                                     \
         Q_res[Q_i] = Q_fn ( Q_prefn Q_xx[Q_i] Q_postfn ); \
+    }                                                     \
+                                                          \
+    return Q_res;                                         \
+}
+#define RECURSE_ARG_B(Q_x,Q_fn,Q_prefn,Q_postfn)          \
+{                                                         \
+    py::tuple Q_xx = py::cast<py::tuple>(Q_x);            \
+    int Q_size = (int) Q_xx.size();                       \
+    int Q_res = 0;                                        \
+                                                          \
+    for ( int Q_i = 0 ; Q_i < Q_size ; ++Q_i )            \
+    {                                                     \
+        Q_res += Q_fn ( Q_prefn Q_xx[Q_i] Q_postfn );     \
+    }                                                     \
+                                                          \
+    return Q_res;                                         \
+}
+#define RECURSE_ARG_C(Q_x,Q_fn,Q_prefn,Q_postfn)          \
+{                                                         \
+    py::tuple Q_xx = py::cast<py::tuple>(Q_x);            \
+    int Q_size = (int) Q_xx.size();                       \
+    int Q_res = 0;                                        \
+                                                          \
+    for ( int Q_i = 0 ; Q_i < Q_size ; ++Q_i )            \
+    {                                                     \
+        Q_res += Q_fn ( Q_prefn Q_xx[Q_size-(Q_i+1)] Q_postfn ); \
+    }                                                     \
+                                                          \
+    return Q_res;                                         \
+}
+
+#define DRECURSE_ARG(Q_z,Q_x,Q_fn,Q_prefn,Q_postfn)       \
+{                                                         \
+    py::tuple Q_zz = py::cast<py::tuple>(Q_z);            \
+    py::tuple Q_xx = py::cast<py::tuple>(Q_x);            \
+    int Q_size = (int) Q_xx.size();                       \
+    StrucAssert( (int) Q_zz.size() == Q_size );           \
+    py::list Q_res(Q_size);                               \
+                                                          \
+    for ( int Q_i = 0 ; Q_i < Q_size ; ++Q_i )            \
+    {                                                     \
+        Q_res[Q_i] = Q_fn ( Q_prefn Q_zz[Q_i],Q_xx[Q_i] Q_postfn ); \
+    }                                                     \
+                                                          \
+    return Q_res;                                         \
+}
+#define DRECURSE_ARG_B(Q_z,Q_x,Q_fn,Q_prefn,Q_postfn)     \
+{                                                         \
+    py::tuple Q_zz = py::cast<py::tuple>(Q_z);            \
+    py::tuple Q_xx = py::cast<py::tuple>(Q_x);            \
+    int Q_size = (int) Q_xx.size();                       \
+    StrucAssert( (int) Q_zz.size() == Q_size );           \
+    int Q_res = 0;                                        \
+                                                          \
+    for ( int Q_i = 0 ; Q_i < Q_size ; ++Q_i )            \
+    {                                                     \
+        Q_res += Q_fn ( Q_prefn Q_zz[Q_i],Q_xx[Q_i] Q_postfn ); \
+    }                                                     \
+                                                          \
+    return Q_res;                                         \
+}
+#define DRECURSE_ARG_C(Q_z,Q_x,Q_fn,Q_prefn,Q_postfn)     \
+{                                                         \
+    py::tuple Q_zz = py::cast<py::tuple>(Q_z);            \
+    py::tuple Q_xx = py::cast<py::tuple>(Q_x);            \
+    int Q_size = (int) Q_xx.size();                       \
+    StrucAssert( (int) Q_zz.size() == Q_size );           \
+    int Q_res = 0;                                        \
+                                                          \
+    for ( int Q_i = 0 ; Q_i < Q_size ; ++Q_i )            \
+    {                                                     \
+        Q_res += Q_fn ( Q_prefn Q_zz[Q_size-(Q_i+1)],Q_xx[Q_size-(Q_i+1)] Q_postfn ); \
     }                                                     \
                                                           \
     return Q_res;                                         \
@@ -2125,7 +2230,7 @@ const SparseVector<gentype> &getvec(py::object xa, SparseVector<gentype> &xxa)
 
 py::object mlK1(py::object xa)
 {
-    RECURSE_ARG(xa,mlK1,,);
+    if ( isValTuple(xa) ) { RECURSE_ARG(xa,mlK1,,); }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2141,8 +2246,8 @@ py::object mlK1(py::object xa)
 
 py::object mlK2(py::object xa, py::object xb)
 {
-    RECURSE_ARG(xa,mlK2,,COMMA xb);
-    RECURSE_ARG(xb,mlK2,xa COMMA,);
+    if      ( isValTuple(xa) ) { RECURSE_ARG(xa,mlK2,,COMMA xb); }
+    else if ( isValTuple(xb) ) { RECURSE_ARG(xb,mlK2,xa COMMA,); }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2158,9 +2263,9 @@ py::object mlK2(py::object xa, py::object xb)
 
 py::object mlK3(py::object xa, py::object xb, py::object xc)
 {
-    RECURSE_ARG(xa,mlK3,,COMMA xb COMMA xc);
-    RECURSE_ARG(xb,mlK3,xa COMMA, COMMA xc);
-    RECURSE_ARG(xc,mlK3,xa COMMA xb COMMA,);
+    if      ( isValTuple(xa) ) { RECURSE_ARG(xa,mlK3,,COMMA xb COMMA xc); }
+    else if ( isValTuple(xb) ) { RECURSE_ARG(xb,mlK3,xa COMMA, COMMA xc); }
+    else if ( isValTuple(xc) ) { RECURSE_ARG(xc,mlK3,xa COMMA xb COMMA,); }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2176,10 +2281,10 @@ py::object mlK3(py::object xa, py::object xb, py::object xc)
 
 py::object mlK4(py::object xa, py::object xb, py::object xc, py::object xd)
 {
-    RECURSE_ARG(xa,mlK4,,COMMA xb COMMA xc COMMA xd);
-    RECURSE_ARG(xb,mlK4,xa COMMA, COMMA xc COMMA xd);
-    RECURSE_ARG(xc,mlK4,xa COMMA xb COMMA, COMMA xd);
-    RECURSE_ARG(xd,mlK4,xa COMMA xb COMMA xc COMMA,);
+    if      ( isValTuple(xa) ) { RECURSE_ARG(xa,mlK4,,COMMA xb COMMA xc COMMA xd); }
+    else if ( isValTuple(xb) ) { RECURSE_ARG(xb,mlK4,xa COMMA, COMMA xc COMMA xd); }
+    else if ( isValTuple(xc) ) { RECURSE_ARG(xc,mlK4,xa COMMA xb COMMA, COMMA xd); }
+    else if ( isValTuple(xd) ) { RECURSE_ARG(xd,mlK4,xa COMMA xb COMMA xc COMMA,); }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2308,88 +2413,32 @@ int makeMonot(int n, int t, py::object xb, py::object xlb, py::object xub, int d
     return errcode;
 }
 
-int addTrainingVectorml(int j, py::object z, py::object x)
+int addTrainingVectorml(py::object x, py::object z, int j)
 {
-    dostartup();
-
     // Can have z a tuple and x not a tuple if target is tuple.
 
-    if ( ( isValTuple(x) && !isValTuple(z) ) )
-    {
-        throw("Error: number of vectors being added inconsistent between x and z (z not a tuple).");
-        return 0;
-    }
+    if      ( isValTuple(x) && isValTuple(z) && ( py::cast<py::tuple>(z).size() == py::cast<py::tuple>(x).size() ) && ( j == -1 ) ) { DRECURSE_ARG_B(x,z,addTrainingVectorml,,COMMA j); }
+    else if ( isValTuple(x) && isValTuple(z) && ( py::cast<py::tuple>(z).size() == py::cast<py::tuple>(x).size() )                ) { DRECURSE_ARG_C(x,z,addTrainingVectorml,,COMMA j); }
+    else if ( isValTuple(x)                                                                                        && ( j == -1 ) ) { RECURSE_ARG_B(x,addTrainingVectorml,,COMMA z COMMA j); }
+    else if ( isValTuple(x)                                                                                                       ) { RECURSE_ARG_C(x,addTrainingVectorml,,COMMA z COMMA j); }
 
-    if ( isValTuple(x) && ( py::cast<py::tuple>(z).size() == py::cast<py::tuple>(x).size() ) )
-    {
-        py::tuple xx = py::cast<py::tuple>(x);
-        py::tuple zz = py::cast<py::tuple>(z);
-
-        int size = (int) xx.size();
-        int res = 0;
-
-        for ( int ii = 0 ; ii < size ; ++ii )
-        {
-            if ( j == -1 )
-            {
-                // This will add at end, so add them in order
-
-                res += addTrainingVectorml(j,zz[ii],xx[ii]);
-            }
-
-            else
-            {
-                // This will add at point j, so add in reverse order
-
-                res += addTrainingVectorml(j,zz[size-(ii+1)],xx[size-(ii+1)]);
-            }
-        }
-
-        return res;
-    }
-
+    dostartup();
     int i = glob_MLInd(0);
 
-    if ( j == -1 )
-    {
-        j = getMLref(i).N();
-    }
-
-    gentype zdefault = 0.0_gent;
-    int ddefault = 2;
+    if ( j == -1 ) { j = getMLref(i).N(); }
 
     SparseVector<gentype> xx;
-    gentype zz(zdefault);
+    gentype zz;
     double cw = 1.0;
     double ew = 1.0;
-    int dd = ddefault;
+    int dd = 2;
 
     int errcode = 0;
 
     errcode |= convFromPy(xx,x);
+    errcode |= convFromPy(zz,z);
 
-    if ( isValNone(z) )
-    {
-//        zz = zdefault;
-        zz.makeNull();
-        cw = 1.0;
-        ew = 1.0;
-        dd = ddefault;
-    }
-
-    else if ( !isValDict(z) )
-    {
-        if ( errcode |= convFromPy(zz,z) )
-        {
-            zz = zdefault;
-        }
-
-        cw = 1.0;
-        ew = 1.0;
-        dd = ddefault;
-    }
-
-    else
+    if ( isValDict(z) )
     {
         SparseVector<gentype> xdefault(xx);
 
@@ -2401,10 +2450,10 @@ int addTrainingVectorml(int j, py::object z, py::object x)
 
             errcode |= convFromPy(keyz,elm.first);
 
-            if ( ( keyz == "y"  ) && ( errcode |= convFromPy(zz,elm.second) ) ) { zz.makeNull(); } // = zdefault; }
+            if ( ( keyz == "y"  ) && ( errcode |= convFromPy(zz,elm.second) ) ) { zz.makeNone(); }
             if ( ( keyz == "cw" ) && ( errcode |= convFromPy(cw,elm.second) ) ) { cw = 1.0;      }
             if ( ( keyz == "ew" ) && ( errcode |= convFromPy(ew,elm.second) ) ) { ew = 1.0;      }
-            if ( ( keyz == "d"  ) && ( errcode |= convFromPy(dd,elm.second) ) ) { dd = ddefault; }
+            if ( ( keyz == "d"  ) && ( errcode |= convFromPy(dd,elm.second) ) ) { dd = 2;        }
             if ( ( keyz == "x"  ) && ( errcode |= convFromPy(xx,elm.second) ) ) { xx = xdefault; }
 
             xdefault = xx;
@@ -2419,7 +2468,7 @@ int addTrainingVectorml(int j, py::object z, py::object x)
     return getMLref(i).addTrainingVector(j,zz,xx,cw,ew,dd);
 }
 
-int faddTrainingVectorml(int ignoreStart, int imax, int reverse, int j, const std::string &fname)
+int faddTrainingVectorml(const std::string &fname, int ignoreStart, int imax, int reverse, int j)
 {
     dostartup();
     int i = glob_MLInd(0);
@@ -2441,7 +2490,7 @@ int removeTrainingVectorml(int j, int num)
 
 py::object muml(py::object xa)
 {
-    RECURSE_ARG(xa,muml,,);
+    if ( isValTuple(xa) ) { RECURSE_ARG(xa,muml,,); }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2457,7 +2506,7 @@ py::object muml(py::object xa)
 
 py::object mugml(py::object xa, int fmt)
 {
-    RECURSE_ARG(xa,mugml,, COMMA fmt);
+    if ( isValTuple(xa) ) { RECURSE_ARG(xa,mugml,, COMMA fmt); }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2473,7 +2522,7 @@ py::object mugml(py::object xa, int fmt)
 
 py::object varml(py::object xa)
 {
-    RECURSE_ARG(xa,varml,,);
+    if ( isValTuple(xa) ) { RECURSE_ARG(xa,varml,,); }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2489,8 +2538,8 @@ py::object varml(py::object xa)
 
 py::object covml(py::object xa, py::object xb)
 {
-    RECURSE_ARG(xa,covml,, COMMA xb);
-    RECURSE_ARG(xb,covml,xa COMMA ,);
+    if      ( isValTuple(xa) ) { RECURSE_ARG(xa,covml,, COMMA xb); }
+    else if ( isValTuple(xb) ) { RECURSE_ARG(xb,covml,xa COMMA ,); }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2506,51 +2555,19 @@ py::object covml(py::object xa, py::object xb)
 
 py::object predvarml(py::object xa, py::object pp, py::object sigw)
 {
-    RECURSE_ARG(xa,predvarml,, COMMA pp COMMA sigw);
-
-    if ( isValTuple(pp) && !isValTuple(sigw) )
-    {
-        py::tuple xx = py::cast<py::tuple>(pp);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = predvarml(xa,xx[i],sigw);
-        }
-
-        return res;
-    }
-
-    if ( isValTuple(pp) && isValTuple(sigw) )
-    {
-        py::tuple xx = py::cast<py::tuple>(pp);
-        py::tuple s  = py::cast<py::tuple>(sigw);
-        StrucAssert( s.size() == xx.size() );
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = predvarml(xa,xx[i],s[i]);
-        }
-
-        return res;
-    }
-
-    double s = 1.0;
-
-    if ( !isValNone(sigw) && convFromPy(s,sigw) )
-    {
-        NiceThrow("Couldn't convert sigw to real weight");
-    }
+    if      ( isValTuple(xa)                      ) { RECURSE_ARG(xa,predvarml,, COMMA pp COMMA sigw); }
+    else if ( isValTuple(pp) && !isValTuple(sigw) ) { RECURSE_ARG(pp,predvarml, xa COMMA, COMMA sigw); }
+    else if ( isValTuple(pp) &&  isValTuple(sigw) ) { DRECURSE_ARG(pp,sigw,predvarml,xa COMMA,);       }
 
     dostartup();
     int i = glob_MLInd(0);
 
+    StrucAssert( isValCastableToReal(sigw) );
+
     gentype resv_pred,resv,resmu;
     SparseVector<gentype> xx;
     SparseVector<gentype> yy;
+    double s = 1.0; convFromPy(s,sigw);
 
     if ( isValInteger(xa) && isValInteger(xa) ) { getMLref(i).predvar(resv_pred,resv,resmu,toInt(xa)    ,toInt(pp)    ,s); }
     else                                        { getMLref(i).predvar(resv_pred,resv,resmu,getvec(xa,xx),getvec(pp,yy),s); }
@@ -2560,64 +2577,19 @@ py::object predvarml(py::object xa, py::object pp, py::object sigw)
 
 py::object predcovml(py::object xa, py::object xb, py::object pp, py::object sigw)
 {
-    RECURSE_ARG(xa,predcovml,, COMMA xb COMMA pp COMMA sigw);
-
-    if ( isValTuple(xb) )
-    {
-        py::tuple xx = py::cast<py::tuple>(xb);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = predcovml(xa,xx[i],pp,sigw);
-        }
-
-        return res;
-    }
-
-    if ( isValTuple(pp) && !isValTuple(sigw) )
-    {
-        py::tuple xx = py::cast<py::tuple>(pp);
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = predcovml(xa,xb,xx[i],sigw);
-        }
-
-        return res;
-    }
-
-    if ( isValTuple(pp) && isValTuple(sigw) )
-    {
-        py::tuple xx = py::cast<py::tuple>(pp);
-        py::tuple s  = py::cast<py::tuple>(sigw);
-        StrucAssert( s.size() == xx.size() );
-        int size = (int) xx.size();
-        py::list res(size);
-
-        for ( int i = 0 ; i < size ; ++i )
-        {
-            res[i] = predcovml(xa,xb,xx[i],s[i]);
-        }
-
-        return res;
-    }
-
-    double s = 1.0;
-
-    if ( !isValNone(sigw) && convFromPy(s,sigw) )
-    {
-        NiceThrow("Couldn't convert sigw to real weight");
-    }
+    if      ( isValTuple(xa)                      ) { RECURSE_ARG( xa,predcovml,, COMMA xb COMMA pp COMMA sigw);    }
+    else if (                      isValTuple(xb) ) { RECURSE_ARG( xb,predcovml, xa COMMA, COMMA pp COMMA sigw);    }
+    else if ( isValTuple(pp) && !isValTuple(sigw) ) { RECURSE_ARG( pp,predcovml,     xa COMMA xb COMMA,COMMA sigw); }
+    else if ( isValTuple(pp) &&  isValTuple(sigw) ) { DRECURSE_ARG(pp,sigw,predcovml,xa COMMA xb COMMA,);           }
 
     dostartup();
     int i = glob_MLInd(0);
 
+    StrucAssert( isValCastableToReal(sigw) );
+
     gentype resv_pred,resv,resmu;
     SparseVector<gentype> xx,yy,zz;
+    double s = 1.0; convFromPy(s,sigw);
 
     if ( isValInteger(xa) && isValInteger(xb) && isValInteger(pp) ) { getMLref(i).predcov(resv_pred,resv,resmu,toInt(xa),    toInt(xb),    toInt(pp)    ,s); }
     else                                                            { getMLref(i).predcov(resv_pred,resv,resmu,getvec(xa,xx),getvec(xb,yy),getvec(pp,zz),s); }
@@ -2631,7 +2603,6 @@ py::object mlalpha(void)
     int i = glob_MLInd(0);
 
     Vector<gentype> res;
-
     int type = getMLref(i).type();
 
          if ( ( type >= 0   ) && ( type <= 99  ) ) { res = getMLref(i).alpha();    }
@@ -2647,7 +2618,6 @@ py::object mlbias(void)
     int i = glob_MLInd(0);
 
     gentype res('N');
-
     int type = getMLref(i).type();
 
          if ( ( type >= 0   ) && ( type <= 99  ) ) { res = getMLref(i).bias  (); }
@@ -2663,7 +2633,6 @@ py::object mlGp(void)
     int i = glob_MLInd(0);
 
     gentype res('N');
-
     int type = getMLref(i).type();
 
          if ( ( type >= 0   ) && ( type <= 99  ) ) { res = getMLref(i).Gp   (); }
@@ -2757,18 +2726,23 @@ int mlsetbias(py::object src)
 
 py::object convToPy(const gentype &src)
 {
-    if      ( src.isValNull()    ) { return py::none();                                    }
-    else if ( src.isValInteger() ) { return convToPy((int)                           src); }
-    else if ( src.isValReal()    ) { return convToPy((double)                        src); }
-    else if ( src.isValAnion()   ) { return convToPy((const d_anion &)               src); }
-    else if ( src.isValString()  ) { return convToPy((const std::string &)           src); }
-    else if ( src.isValVector()  ) { return convToPy((const Vector<gentype> &)       src); }
-    else if ( src.isValMatrix()  ) { return convToPy((const Matrix<gentype> &)       src); }
-    else if ( src.isValSet()     ) { return convToPy((const Set<gentype> &)          src); }
-    else if ( src.isValDict()    ) { return convToPy((const Dict<gentype,dictkey> &) src); }
-    else if ( src.isValEqnDir()  ) { return py::cpp_function([src](const py::object &x) { return convToPy(src(convFromPy(x))); },py::arg("x")); }
+    // Order is important - keep objects as close to source type as possible (especially none)
 
-    return py::cast(nan(""));
+    if      ( src.isValNone()                          ) { return py::none();                                    }
+    else if ( src.isValInteger()                       ) { return convToPy((int)                           src); }
+    else if ( src.isValReal()                          ) { return convToPy((double)                        src); }
+    else if ( src.isValAnion() && ( src.order() <= 1 ) ) { return convToPy((const d_anion &)               src); }
+    else if ( src.isValString()                        ) { return convToPy((const std::string &)           src); }
+    else if ( src.isValVector()                        ) { return convToPy((const Vector<gentype> &)       src); }
+    else if ( src.isValMatrix()                        ) { return convToPy((const Matrix<gentype> &)       src); }
+    else if ( src.isValSet()                           ) { return convToPy((const Set<gentype> &)          src); }
+    else if ( src.isValDict()                          ) { return convToPy((const Dict<gentype,dictkey> &) src); }
+    else if ( src.isValEqnDir()                        ) { return py::cpp_function([src](const py::object &x) { return convToPy(src(convFromPy(x))); },py::arg("x")); }
+    else if ( src.isValError()                         ) { return py::cast(nan(((const std::string &) src).c_str())); }
+    else if ( src.isValAnion()                         ) { return py::cast(nan("Gentype type anion has no python equivalent for order >1.")); }
+    else if ( src.isValDgraph()                        ) { return py::cast(nan("Gentype type directed graph has no python equivalent."));     }
+
+    return py::cast(nan("Type error in gentype->python conversion."));
 }
 
 // Convert python to C++ types
@@ -2777,7 +2751,9 @@ int convFromPy(gentype &res, const py::object &src)
 {
     int errcode = 4096;
 
-    if      ( isValNone(src)     ) { errcode = 0; res.force_null();                }
+    // Order is important - keep objects as close to source type as possible (especially none/null)
+
+    if      ( isValNone(src)     ) { errcode = 0; res.force_none();                }
     else if ( isValInteger(src)  ) { errcode = convFromPy(res.force_int(),   src); }
     else if ( isValReal(src)     ) { errcode = convFromPy(res.force_double(),src); }
     else if ( isValString(src)   ) { errcode = convFromPy(res.force_string(),src); }
@@ -2792,7 +2768,7 @@ int convFromPy(gentype &res, const py::object &src)
     if ( errcode )
     {
         std::string errstr;
-        errstr  = "Couldn't convert object from python (error code ";
+        errstr  = "Couldn't convert python object to gentype (error code ";
         errstr += std::to_string(errcode);
         errstr += ")";
         res.makeError(errstr);
@@ -2852,23 +2828,26 @@ template <class T> int convFromPy(SparseVector<T>       &res, const py::object &
 
 int naivePyToInt(int &res, const py::object &src)
 {
-    if ( isValInteger(src) ) { res =       toInt(src); }
-    else                     { res = (int) toDbl(src); }
+    if      ( isValNone(src)    ) { res =       0;          }
+    else if ( isValInteger(src) ) { res =       toInt(src); }
+    else                          { res = (int) toDbl(src); }
 
     return 0;
 }
 
 int naivePyToDbl(double &res, const py::object &src)
 {
-    if ( isValInteger(src) ) { res = (double) toInt(src); }
-    else                     { res =          toDbl(src); }
+    if      ( isValNone(src)    ) { res =          0.0;        }
+    else if ( isValInteger(src) ) { res = (double) toInt(src); }
+    else                          { res =          toDbl(src); }
 
     return 0;
 }
 
 int naivePyToCpl(d_anion &res, const py::object &src)
 {
-    if      ( isValComplex(src) ) { res =          toCpl(src); }
+    if      ( isValNone(src)    ) { res =          0.0;        }
+    else if ( isValComplex(src) ) { res =          toCpl(src); }
     else if ( isValInteger(src) ) { res = (double) toInt(src); }
     else                          { res =          toDbl(src); }
 
@@ -2975,7 +2954,7 @@ int naivePyToSpv(SparseVector<gentype> &res, const py::object &src)
 {
 /* old version that relies on conversion from gentype.cc
    this doesn't work right for eg [ 1.2 3.4 None ]. The final None is
-   converted to null, which is removed by gentype to leave [ 1.2 3.4 ],
+   converted to none, which is removed by gentype to leave [ 1.2 3.4 ],
    which is not what we want when None could be a placedholder
 
     gentype altsrc;
@@ -3135,8 +3114,12 @@ py::object &setgetsrc(int &i, int doset, py::object *val)
     static thread_local SparseVector<py::object *> xval;
     static thread_local SparseVector<int> useind;
 
-    if ( doset )
+    if ( doset == 1 )
     {
+        // Adding element to store
+
+        StrucAssert(val);
+
         if ( i == -1 )
         {
             i = 0;
@@ -3148,14 +3131,36 @@ py::object &setgetsrc(int &i, int doset, py::object *val)
         useind("&",i) = 1;
     }
 
+    if ( doset == -1 )
+    {
+        // Clear and delete stored objects
+
+        StrucAssert(val);
+
+        useind.zero();
+
+        for ( int j = 0 ; j < xval.indsize() ; ++j )
+        {
+            if ( xval.direref(j) )
+            {
+                MEMDEL(xval.direref(j));
+            }
+        }
+
+        return *val;
+    }
+
+    // return object reference
+
     StrucAssert( i >= 0 );
     StrucAssert( useind.isindpresent(i) );
 
     return *(xval(i));
 }
 
-py::object &pyogetsrc(int k) { return setgetsrc(k,0); }
-int pyosetsrc(int k, py::object *src) { setgetsrc(k,1,src); return k; }
+int         pyosetsrc(int k, const py::object &src) { py::object *newsrc; MEMNEW(newsrc,py::object(src)); setgetsrc(k,1,newsrc); return k; }
+py::object &pyogetsrc(int k)                        { return setgetsrc(k,0);                                                               }
+void        pyoclrsrc(void)                         { int k = 0; py::object dummy = py::cast(1); setgetsrc(k,-1,&dummy);                   }
 
 // drop-in replacement for pycall function in gentype.cc
 // (the gentype version, which uses a system call, is disabled by the macro PYLOCAL)
@@ -3167,7 +3172,7 @@ void pycall_x(const std::string &fn, gentype &res, py::object &xx)
 
     // Store in transfer indices (will never be deleted)
 
-    int i = pyosetsrc(-1,&xx);
+    int i = pyosetsrc(-1,xx);
 
     // Construct run command
 
@@ -3192,9 +3197,17 @@ void pycall_x(const std::string &fn, gentype &res, py::object &xx)
 void pycall_x(int fni, gentype &res, py::object &xx);
 void pycall_x(int fni, gentype &res, py::object &xx)
 {
-    dostartup();
+    if ( fni >= 0 )
+    {
+        dostartup();
 
-    convFromPy(res,pyogetsrc(fni)(xx));
+        convFromPy(res,pyogetsrc(fni)(xx));
+    }
+
+    else
+    {
+        res.force_null();
+    }
 
     return;
 }
