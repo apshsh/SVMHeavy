@@ -895,22 +895,22 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 
             for ( i = 0 ; i < model_N_mu(j) ; ++i )
             {
-                if ( (model_d(j))(i) == +1 )
+                if ( model_d(i,j) == +1 )
                 {
                     xpos("&",j).add(xpos(j).size()); xpos("&",j)("&",xpos(j).size()-1) = (double) locxresunconv(i)(xind); //(model_x(i))(xind);
-                    ypos("&",j).add(ypos(j).size()); ypos("&",j)("&",ypos(j).size()-1) = -((double) (model_y(j))(i));
+                    ypos("&",j).add(ypos(j).size()); ypos("&",j)("&",ypos(j).size()-1) = -((double) (model_y(i,j)));
                 }
 
-                if ( (model_d(j))(i) == -1 )
+                if ( model_d(i,j) == -1 )
                 {
                     xneg("&",j).add(xneg(j).size()); xneg("&",j)("&",xneg(j).size()-1) = (double) locxresunconv(i)(xind); //(model_x(i))(xind);
-                    yneg("&",j).add(yneg(j).size()); yneg("&",j)("&",yneg(j).size()-1) = -((double) (model_y(j))(i));
+                    yneg("&",j).add(yneg(j).size()); yneg("&",j)("&",yneg(j).size()-1) = -((double) (model_y(i,j)));
                 }
 
-                if ( (model_d())(i) == 2 )
+                if ( model_d(i) == 2 )
                 {
                     xequ("&",j).add(xequ(j).size()); xequ("&",j)("&",xequ(j).size()-1) = (double) locxresunconv(i)(xind); //(model_x(i))(xind);
-                    yequ("&",j).add(yequ(j).size()); yequ("&",j)("&",yequ(j).size()-1) = -((double) (model_y(j))(i));
+                    yequ("&",j).add(yequ(j).size()); yequ("&",j)("&",yequ(j).size()-1) = -((double) (model_y(i,j)));
                 }
             }
 
@@ -1278,6 +1278,10 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 
 void SMBOOptions::model_sublog(const ML_Base &plotmodel, gentype &baselinefn, int incbaselinefn, double xmin, double xmax, double ymin, double ymax, int j, const std::string &nameof, int xind, int yind, const std::string &stagestr, double sf)
 {
+    static int lognum = 0;
+
+    ++lognum;
+
     double omin = 1;
     double omax = 0;
 
@@ -1325,6 +1329,16 @@ void SMBOOptions::model_sublog(const ML_Base &plotmodel, gentype &baselinefn, in
     //ffname += std::to_string(plotmodel.N());
     dname  += std::to_string(plotmodel.N());
     mlname += std::to_string(plotmodel.N());
+
+    fname  += "_";
+    //ffname += "_";
+    dname  += "_";
+    mlname += "_";
+
+    fname  += std::to_string(lognum);
+    //ffname += std::to_string(lognum);
+    dname  += std::to_string(lognum);
+    mlname += std::to_string(lognum);
 
     std::ofstream mlnamefile(mlname);
     mlnamefile << plotmodel << "\n";
