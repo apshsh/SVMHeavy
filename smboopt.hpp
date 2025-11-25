@@ -144,7 +144,7 @@ public:
     std::string modelname;
     int modeloutformat;
     int plotfreq;
-    std::string modelbaseline;
+    gentype modelbaseline;
 
     int sigmuseparate;
     int moodim;

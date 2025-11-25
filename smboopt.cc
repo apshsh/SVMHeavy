@@ -32,14 +32,14 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
     modelname      = "smbomodel";
     modeloutformat = 2; // pdf by default
     plotfreq       = 0; // don't plot by default
-    modelbaseline  = "null";
+    modelbaseline  = nullgentype();
 #endif
 
 #ifdef USE_MEX
     modelname      = "smbomodel";
     modeloutformat = 3; // matlab plot if system is matlab
     plotfreq       = 0; // don't plot by default
-    modelbaseline  = "null";
+    modelbaseline  = nullgentype();
 #endif
 
     sigmuseparate = 0;
@@ -842,7 +842,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
         for ( j = 0 ; j < ydim ; j++ )
         {
             gentype baseline(modelbaseline);
-            int incbaseline = ( ( modelbaseline == "null" ) ? 0 : 1 );
+            int incbaseline = ( ( baseline.isValNull() ) ? 0 : 1 );
 
             model_sublog(getmuapprox(j),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"model",xind,yind,stagestr,-1);
         }

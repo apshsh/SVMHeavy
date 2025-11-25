@@ -635,7 +635,7 @@ OPTGETSETDEF(tunediffmod,     Bayesian,int        )
 OPTGETSETDEF(modelname,       Bayesian,std::string)
 OPTGETSETDEF(modeloutformat,  Bayesian,int        )
 OPTGETSETDEF(plotfreq,        Bayesian,int        )
-OPTGETSETDEF(modelbaseline,   Bayesian,std::string)
+OPTGETSETDEF(modelbaseline,   Bayesian,gentype    )
 
 // Functions we might as well import from gentype
 
