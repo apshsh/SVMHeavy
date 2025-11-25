@@ -1,5 +1,3 @@
-//FIX HYPERPARAMETER TUNING ON GRID - SEE SHANNON DISCUSSION, SEEMS TO OVERFIT ON UNIFORMLY SPACED GRID - MAYBE DETECT AND SET LOWER BOUND IN CODE VIA MERCER?
-//MAKE SURE ML_BASE RESPECTS BOUNDS IN MERCER, AND THAT THEY COPY CORRECTLY IN DUPLICATION OF PRIOR.
 
 //
 // SVMHeavyv7 Python CLI-like Interface
@@ -91,18 +89,19 @@ int                  toInt(const py::object &src) { return (int)      py::cast<p
 double               toDbl(const py::object &src) { return (double)   py::cast<py::float_>(src); }
 std::complex<double> toCpl(const py::object &src) { return py::cast<std::complex<double> >(src); }
 
-                   py::object convToPy(      int              src);
-                   py::object convToPy(      double           src);
-                   py::object convToPy(const d_anion         &src);
-                   py::object convToPy(const std::string     &src);
-template <class T> py::object convToPy(const Vector<T>       &src);
-template <>        py::object convToPy(const Vector<double>  &src);
-template <class T> py::object convToPy(const Matrix<T>       &src);
-template <class T> py::object convToPy(const Set<T>          &src);
-template <class T> py::object convToPy(const Dict<T,dictkey> &src);
-template <class T> py::object convToPy(const SparseVector<T> &src);
-                   py::object convToPy(const gentype         &src);
-template <class T> py::object convToPy(int size, const T     *src);
+                   py::object convToPy(      int                   src);
+                   py::object convToPy(      double                src);
+                   py::object convToPy(      std::complex<double>  src);
+                   py::object convToPy(const d_anion              &src);
+                   py::object convToPy(const std::string          &src);
+template <class T> py::object convToPy(const Vector<T>            &src);
+template <>        py::object convToPy(const Vector<double>       &src);
+template <class T> py::object convToPy(const Matrix<T>            &src);
+template <class T> py::object convToPy(const Set<T>               &src);
+template <class T> py::object convToPy(const Dict<T,dictkey>      &src);
+template <class T> py::object convToPy(const SparseVector<T>      &src);
+                   py::object convToPy(const gentype              &src);
+template <class T> py::object convToPy(int size, const T          *src);
 
 py::object makeError(const char *src) { return pyvalueerror()(src); }
 
@@ -111,6 +110,7 @@ py::object makeError(const char *src) { return pyvalueerror()(src); }
 template <class T> int convFromPy(T                     &res, const py::handle &src);
                    int convFromPy(int                   &res, const py::object &src);
                    int convFromPy(double                &res, const py::object &src);
+                   int convFromPy(std::complex<double>  &res, const py::object &src);
                    int convFromPy(d_anion               &res, const py::object &src);
                    int convFromPy(std::string           &res, const py::object &src);
 template <class T> int convFromPy(Vector<T>             &res, const py::object &src);
@@ -370,6 +370,7 @@ int mlsetbias (py::object src);
 
 double mltuneKernel(int method, double xwidth = 1, int tuneK = 1, int tuneP = 0);
 
+py::object mlK0(void);
 py::object mlK1(py::object xa);
 py::object mlK2(py::object xa, py::object xb);
 py::object mlK3(py::object xa, py::object xb, py::object xc);
@@ -1248,6 +1249,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                         "tuneP  - 0 don't tune C (1/sigma) parameter (default), 1 tune C                ",
                                         py::arg("method")=2,py::arg("xwidth")=1,py::arg("tuneK")=1,py::arg("tuneP")=0);
 
+    m_ml.def("K0",&mlK0,"Calculate K0()."                                                                   );
     m_ml.def("K1",&mlK1,"Calculate K1(xa).",         py::arg("xa")                                          );
     m_ml.def("K2",&mlK2,"Calculate K2(xa,xb).",      py::arg("xa"),py::arg("xb")                            );
     m_ml.def("K3",&mlK3,"Calculate K3(xa,xb,xc).",   py::arg("xa"),py::arg("xb"),py::arg("xc")              );
@@ -1829,7 +1831,7 @@ PYBIND11_MODULE(pyheavy, m) {
     auto m_ml_kern_UU  = m_ml_kern.def_submodule("UU", "Output kernel Options for Model."        );
     auto m_ml_kern_RFF = m_ml_kern.def_submodule("RFF","RFF similarity kernel Options for Model.");
 
-    QGETSETKERQD(m_ml_kern,cType,   setType, "type", "settype", "kernel type, for example (here z = <x,x'>, d=||x-x'||_2):\n"
+    QGETSETKERQD(m_ml_kern,cType,   setType, "type", "settype", "kernel type, for example (z = <x,x'>, d=||x-x'||_2):\n"
                                                                 "                                                                               \n"
                                                                 "   0: Constant:                 Kq(x,x') = rq_1                                \n"
                                                                 "   1: Linear:                   Kq(x,x') = z/(rq_0.rq_0)                       \n"
@@ -1866,7 +1868,15 @@ PYBIND11_MODULE(pyheavy, m) {
                                                                 "  25: Weak fourier:             Kq(x,x') = pi.cosh(pi-(sqrt(d)/rq_0))          \n"
                                                                 "  26: Thin spline 1:            Kq(x,x') = ((d/rq_0)^(rq_1+0.5))               \n"
                                                                 "  27: Thin spline 2:            Kq(x,x') = ((d/rq_0)^rq_1).ln(sqrt(d/rq_0))    \n"
-                                                                "  28: Generic:                  Kq(x,x') = (user defined)                      \n"
+                                                                "  28: Generic:                  Kq(x,x') = (user defined by hyperparam rq_10)  \n"
+                                                                "                          args: a_0: m                                         \n"
+                                                                "                                a_1: <x,x'>/(rq_0.rq_0)                        \n"
+                                                                "                                a_2: <x',x>/(rq_0.rq_0)                        \n"
+                                                                "                                a_3: ||x-x'||^2/(rq_0.rq_0)                    \n"
+                                                                "                                a_4: [ rq_0 rq_1 ... rq_8 ]                    \n"
+                                                                "                                a_5: [ ||x||^2/(rq_0.rq_0) ||x'||^2/... ... ]  \n"
+                                                                "                                a_6: [ x/rq_0 x'/rq_0 ... ]                    \n"
+                                                                "                                a_7: [ Ki0 Ki1 ... : rq_9 = [ i0 i1 ... ] ]    \n"
                                                                 "  29: Arc-cosine:               Kq(x,x') = (1/pi) (rq_0.sqrt(a))^iq_0 ...      \n"
                                                                 "                            (rq_0.sqrt(b))^iq_0 Jn(arccos(z/(sqrt(a).sqrt(b))))\n"
                                                                 "  30: Chaotic logistic:         Kq(x,x') = Kn(x,x') = <phi_{sigma,n}(x/rq_0),..\n"
@@ -2010,15 +2020,13 @@ py::object mloptBayesian(  int i, int dim, int numreps, py::object objfn, py::ob
 
 void internobjfn(gentype &res, Vector<gentype> &x, void *arg)
 {
-    if ( x.size() )
-    {
-        convFromPy(res,(*(((py::object **) arg)[0]))(convToPy(x)));
-    }
+    py::object **argp = (py::object **) arg;
 
-    else if ( !isValNone(*(((py::object **) arg)[1])) && isValCallable(*(((py::object **) arg)[1])) )
-    {
-        (*(((py::object **) arg)[1]))(convToPy(res));
-    }
+    // In the evaluate case x is a non-zero sized vector, and res is the result of evaluating argp[0] on x
+    // In the callback case x is empty, argp[1] is callable and res is an integer (callback type); and we evaluate argp[1] on res
+
+    if      ( x.size() )                                            { convFromPy(res,(*(argp[0]))(convToPy(x  ))); }
+    else if ( !isValNone(*(argp[1])) && isValCallable(*(argp[1])) ) {                (*(argp[1]))(convToPy(res));  }
 }
 
 py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object &objfn, py::object &callback)
@@ -2228,9 +2236,24 @@ const SparseVector<gentype> &getvec(py::object xa, SparseVector<gentype> &xxa)
     return xxa;
 }
 
+py::object mlK0(void)
+{
+    dostartup();
+    int i = glob_MLInd(0);
+
+    gentype res;
+    SparseVector<gentype> xxa;
+
+    getMLrefconst(i).K0(res);
+
+    return convToPy(res);
+}
+
 py::object mlK1(py::object xa)
 {
     if ( isValTuple(xa) ) { RECURSE_ARG(xa,mlK1,,); }
+
+    if ( isValNone(xa) ) { return mlK0(); }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2248,6 +2271,9 @@ py::object mlK2(py::object xa, py::object xb)
 {
     if      ( isValTuple(xa) ) { RECURSE_ARG(xa,mlK2,,COMMA xb); }
     else if ( isValTuple(xb) ) { RECURSE_ARG(xb,mlK2,xa COMMA,); }
+
+    if ( isValNone(xa) ) { return mlK1(xb); }
+    if ( isValNone(xb) ) { return mlK1(xa); }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2267,6 +2293,10 @@ py::object mlK3(py::object xa, py::object xb, py::object xc)
     else if ( isValTuple(xb) ) { RECURSE_ARG(xb,mlK3,xa COMMA, COMMA xc); }
     else if ( isValTuple(xc) ) { RECURSE_ARG(xc,mlK3,xa COMMA xb COMMA,); }
 
+    if ( isValNone(xa) ) { return mlK2(xb,xc); }
+    if ( isValNone(xb) ) { return mlK2(xa,xc); }
+    if ( isValNone(xc) ) { return mlK2(xa,xb); }
+
     dostartup();
     int i = glob_MLInd(0);
 
@@ -2285,6 +2315,11 @@ py::object mlK4(py::object xa, py::object xb, py::object xc, py::object xd)
     else if ( isValTuple(xb) ) { RECURSE_ARG(xb,mlK4,xa COMMA, COMMA xc COMMA xd); }
     else if ( isValTuple(xc) ) { RECURSE_ARG(xc,mlK4,xa COMMA xb COMMA, COMMA xd); }
     else if ( isValTuple(xd) ) { RECURSE_ARG(xd,mlK4,xa COMMA xb COMMA xc COMMA,); }
+
+    if ( isValNone(xa) ) { return mlK3(xb,xc,xd); }
+    if ( isValNone(xb) ) { return mlK3(xa,xc,xd); }
+    if ( isValNone(xc) ) { return mlK3(xa,xb,xd); }
+    if ( isValNone(xd) ) { return mlK3(xa,xb,xc); }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2728,19 +2763,19 @@ py::object convToPy(const gentype &src)
 {
     // Order is important - keep objects as close to source type as possible (especially none)
 
-    if      ( src.isValNone()                          ) { return py::none();                                    }
-    else if ( src.isValInteger()                       ) { return convToPy((int)                           src); }
-    else if ( src.isValReal()                          ) { return convToPy((double)                        src); }
-    else if ( src.isValAnion() && ( src.order() <= 1 ) ) { return convToPy((const d_anion &)               src); }
-    else if ( src.isValString()                        ) { return convToPy((const std::string &)           src); }
-    else if ( src.isValVector()                        ) { return convToPy((const Vector<gentype> &)       src); }
-    else if ( src.isValMatrix()                        ) { return convToPy((const Matrix<gentype> &)       src); }
-    else if ( src.isValSet()                           ) { return convToPy((const Set<gentype> &)          src); }
-    else if ( src.isValDict()                          ) { return convToPy((const Dict<gentype,dictkey> &) src); }
-    else if ( src.isValEqnDir()                        ) { return py::cpp_function([src](const py::object &x) { return convToPy(src(convFromPy(x))); },py::arg("x")); }
-    else if ( src.isValError()                         ) { return py::cast(nan(((const std::string &) src).c_str())); }
-    else if ( src.isValAnion()                         ) { return py::cast(nan("Gentype type anion has no python equivalent for order >1.")); }
-    else if ( src.isValDgraph()                        ) { return py::cast(nan("Gentype type directed graph has no python equivalent."));     }
+    if      ( src.isValNone()    ) { return py::none();                                    }
+    else if ( src.isValInteger() ) { return convToPy((int)                           src); }
+    else if ( src.isValReal()    ) { return convToPy((double)                        src); }
+    else if ( src.isValComplex() ) { return convToPy((std::complex<double>)          src); }
+    else if ( src.isValString()  ) { return convToPy((const std::string &)           src); }
+    else if ( src.isValVector()  ) { return convToPy((const Vector<gentype> &)       src); }
+    else if ( src.isValMatrix()  ) { return convToPy((const Matrix<gentype> &)       src); }
+    else if ( src.isValSet()     ) { return convToPy((const Set<gentype> &)          src); }
+    else if ( src.isValDict()    ) { return convToPy((const Dict<gentype,dictkey> &) src); }
+    else if ( src.isValEqnDir()  ) { return py::cpp_function([src](const py::object &x) { return convToPy(src(convFromPy(x))); },py::arg("x")); }
+    else if ( src.isValError()   ) { return py::cast(nan(((const std::string &) src).c_str())); }
+    else if ( src.isValAnion()   ) { return py::cast(nan("Gentype type anion (hypercomplex) has no python equivalent.")); }
+    else if ( src.isValDgraph()  ) { return py::cast(nan("Gentype type directed graph has no python equivalent."));       }
 
     return py::cast(nan("Type error in gentype->python conversion."));
 }
@@ -2750,17 +2785,18 @@ py::object convToPy(const gentype &src)
 int convFromPy(gentype &res, const py::object &src)
 {
     int errcode = 4096;
+    std::complex<double> tmpres;
 
     // Order is important - keep objects as close to source type as possible (especially none/null)
 
-    if      ( isValNone(src)     ) { errcode = 0; res.force_none();                }
-    else if ( isValInteger(src)  ) { errcode = convFromPy(res.force_int(),   src); }
-    else if ( isValReal(src)     ) { errcode = convFromPy(res.force_double(),src); }
-    else if ( isValString(src)   ) { errcode = convFromPy(res.force_string(),src); }
-    else if ( isValList(src)     ) { errcode = convFromPy(res.force_vector(),src); }
-    else if ( isValDict(src)     ) { errcode = convFromPy(res.force_dict(),  src); }
-    else if ( isValTuple(src)    ) { errcode = convFromPy(res.force_set(),   src); }
-    else if ( isValComplex(src)  ) { errcode = convFromPy(res.force_anion(), src); }
+    if      ( isValNone(src)     ) { errcode = 0; res.force_none();                              }
+    else if ( isValInteger(src)  ) { errcode = convFromPy(res.force_int(),   src);               }
+    else if ( isValReal(src)     ) { errcode = convFromPy(res.force_double(),src);               }
+    else if ( isValComplex(src)  ) { errcode = convFromPy(tmpres,            src); res = tmpres; }
+    else if ( isValString(src)   ) { errcode = convFromPy(res.force_string(),src);               }
+    else if ( isValList(src)     ) { errcode = convFromPy(res.force_vector(),src);               }
+    else if ( isValDict(src)     ) { errcode = convFromPy(res.force_dict(),  src);               }
+    else if ( isValTuple(src)    ) { errcode = convFromPy(res.force_set(),   src);               }
     //else if ( isValMatrix(src)   ) { errcode = convFromPy(res.force_matrix(),src); } - can't disambiguate between array of vectors and matrices at present
     else if ( isValCallable(src) ) { errcode = gentype_function(gentype(const gentype &),res,[src](const gentype &x) { return convFromPy(src(convToPy(x))); }); }
     else                           { errcode = 2048; }
@@ -2786,17 +2822,18 @@ gentype convFromPy(const py::object &src)
 
 // Convert C++ types to python
 
-                   py::object convToPy(int                    src) {                           return py::cast(src);                                                    }
-                   py::object convToPy(double                 src) {                           return py::cast(src);                                                    }
-                   py::object convToPy(const std::string     &src) {                           return py::cast(src.c_str());                                            }
-                   py::object convToPy(const d_anion         &src) { if ( src.order() <= 1 ) { return py::cast((std::complex<double>) src); } return py::cast(nan("")); }
-template <class T> py::object convToPy(int vsize, const T    *src) { py::list  res(vsize);         for ( int i = 0 ; i < vsize         ; ++i ) { res[i] = convToPy(src[i]);       } return res; }
-template <>        py::object convToPy(const Vector<double>  &src) { py::list  res(src.size());    for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = py::cast(src.v(i));     } return res; }
-template <class T> py::object convToPy(const Vector<T>       &src) { py::list  res(src.size());    for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = convToPy(src(i));       } return res; }
-template <class T> py::object convToPy(const Set<T>          &src) { py::tuple res(src.size());    for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = convToPy(src.all()(i)); } return res; }
-template <class T> py::object convToPy(const Dict<T,dictkey> &src) { py::dict  res;                for ( int i = 0 ; i < src.size()    ; ++i ) { res[convToPy(src.key(i))] = convToPy(src.val(i)); } return res; }
-template <class T> py::object convToPy(const Matrix<T>       &src) { py::list  res(src.numRows()); for ( int i = 0 ; i < src.numRows() ; ++i ) { retVector<T> tmpa,tmpb; res[i] = convToPy(src(i,tmpa,tmpb)); } return res; }
-template <class T> py::object convToPy(const SparseVector<T> &src) { gentype altsrc(src); return convToPy(altsrc); }
+                   py::object convToPy(int                         src) { return py::cast(src);         }
+                   py::object convToPy(double                      src) { return py::cast(src);         }
+                   py::object convToPy(std::complex<double>        src) { return py::cast(src);         }
+                   py::object convToPy(const d_anion              &src) { if ( src.order() <= 1 ) { return py::cast((std::complex<double>) src); } return py::cast(nan("Cant cast hypercomplex anion to python object")); }
+                   py::object convToPy(const std::string          &src) { return py::cast(src.c_str()); }
+template <class T> py::object convToPy(int vsize, const T         *src) { py::list  res(vsize);         for ( int i = 0 ; i < vsize         ; ++i ) { res[i] = convToPy(src[i]);       } return res; }
+template <>        py::object convToPy(const Vector<double>       &src) { py::list  res(src.size());    for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = py::cast(src.v(i));     } return res; }
+template <class T> py::object convToPy(const Vector<T>            &src) { py::list  res(src.size());    for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = convToPy(src(i));       } return res; }
+template <class T> py::object convToPy(const Set<T>               &src) { py::tuple res(src.size());    for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = convToPy(src.all()(i)); } return res; }
+template <class T> py::object convToPy(const Dict<T,dictkey>      &src) { py::dict  res;                for ( int i = 0 ; i < src.size()    ; ++i ) { res[convToPy(src.key(i))] = convToPy(src.val(i)); } return res; }
+template <class T> py::object convToPy(const Matrix<T>            &src) { py::list  res(src.numRows()); for ( int i = 0 ; i < src.numRows() ; ++i ) { retVector<T> tmpa,tmpb; res[i] = convToPy(src(i,tmpa,tmpb)); } return res; }
+template <class T> py::object convToPy(const SparseVector<T>      &src) { gentype altsrc(src); return convToPy(altsrc); }
 
 // Convert python to C++ types
 //
@@ -2804,6 +2841,7 @@ template <class T> py::object convToPy(const SparseVector<T> &src) { gentype alt
 
                    int naivePyToInt(int                   &res, const py::object &src);
                    int naivePyToDbl(double                &res, const py::object &src);
+                   int naivePyToCpl(std::complex<double>  &res, const py::object &src);
                    int naivePyToCpl(d_anion               &res, const py::object &src);
                    int naivePyToStr(std::string           &res, const py::object &src);
 template <class T> int naivePyToVec(Vector<T>             &res, const py::object &src);
@@ -2816,8 +2854,9 @@ template <>        int naivePyToSpv(SparseVector<gentype> &res, const py::object
 
 template <class T> int convFromPy(T                     &res, const py::handle &src) { return convFromPy(res,py::reinterpret_borrow<py::object>(src)); }
                    int convFromPy(int                   &res, const py::object &src) { if ( isValCastableToInteger(src) ) { return naivePyToInt(res,src); } res = 0;                                return 1;   }
-                   int convFromPy(double                &res, const py::object &src) { if ( isValCastableToReal   (src) ) { return naivePyToDbl(res,src); } res = nan("");                          return 2;   }
-                   int convFromPy(d_anion               &res, const py::object &src) { if ( isValCastableToComplex(src) ) { return naivePyToCpl(res,src); } res = nan("");                          return 4;   }
+                   int convFromPy(double                &res, const py::object &src) { if ( isValCastableToReal   (src) ) { return naivePyToDbl(res,src); } res = nan("Not castable to double");    return 2;   }
+                   int convFromPy(std::complex<double>  &res, const py::object &src) { if ( isValCastableToComplex(src) ) { return naivePyToCpl(res,src); } res = nan("Not castable to complex");   return 4;   }
+                   int convFromPy(d_anion               &res, const py::object &src) { if ( isValCastableToComplex(src) ) { return naivePyToCpl(res,src); } res = nan("Not castable to anion");     return 4;   }
                    int convFromPy(std::string           &res, const py::object &src) { if ( isValString           (src) ) { return naivePyToStr(res,src); } res = "";                               return 8;   }
 template <class T> int convFromPy(Vector<T>             &res, const py::object &src) { if ( isValList             (src) ) { return naivePyToVec(res,src); } res.resize(0);                          return 16;  }
 template <class T> int convFromPy(Matrix<T>             &res, const py::object &src) { if ( isValList             (src) ) { return naivePyToMat(res,src); } res.resize(0,0);                        return 32;  }
@@ -2838,6 +2877,16 @@ int naivePyToInt(int &res, const py::object &src)
 int naivePyToDbl(double &res, const py::object &src)
 {
     if      ( isValNone(src)    ) { res =          0.0;        }
+    else if ( isValInteger(src) ) { res = (double) toInt(src); }
+    else                          { res =          toDbl(src); }
+
+    return 0;
+}
+
+int naivePyToCpl(std::complex<double> &res, const py::object &src)
+{
+    if      ( isValNone(src)    ) { res =          0.0;        }
+    else if ( isValComplex(src) ) { res =          toCpl(src); }
     else if ( isValInteger(src) ) { res = (double) toInt(src); }
     else                          { res =          toDbl(src); }
 
@@ -3164,6 +3213,8 @@ void        pyoclrsrc(void)                         { int k = 0; py::object dumm
 
 // drop-in replacement for pycall function in gentype.cc
 // (the gentype version, which uses a system call, is disabled by the macro PYLOCAL)
+//
+// NB these aren't really necessary now that gentype conversion uses lambdas, but could be handy for other purposes
 
 void pycall_x(const std::string &fn, gentype &res, py::object &xx);
 void pycall_x(const std::string &fn, gentype &res, py::object &xx)
@@ -3243,27 +3294,29 @@ void pycall(int fni, gentype &res, int size, const double *x)
     pycall_x(fni,res,xx);
 }
 
-                   void pycall(const std::string &fn, gentype &res,       int               x) { dostartup(); py::object xx = py::cast(x);         pycall_x(fn,res,xx); }
-                   void pycall(const std::string &fn, gentype &res,       double            x) { dostartup(); py::object xx = py::cast(x);         pycall_x(fn,res,xx); }
-                   void pycall(const std::string &fn, gentype &res, const d_anion          &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-                   void pycall(const std::string &fn, gentype &res, const std::string      &x) { dostartup(); py::object xx = py::cast(x.c_str()); pycall_x(fn,res,xx); }
-template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>        &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-template <class T> void pycall(const std::string &fn, gentype &res, const Matrix<T>        &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>           &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-template <class T> void pycall(const std::string &fn, gentype &res, const Dict<T,dictkey>  &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T>  &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
-                   void pycall(const std::string &fn, gentype &res, const gentype          &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
+                   void pycall(const std::string &fn, gentype &res,       int                   x) { dostartup(); py::object xx = py::cast(x);         pycall_x(fn,res,xx); }
+                   void pycall(const std::string &fn, gentype &res,       double                x) { dostartup(); py::object xx = py::cast(x);         pycall_x(fn,res,xx); }
+                   void pycall(const std::string &fn, gentype &res,       std::complex<double>  x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
+                   void pycall(const std::string &fn, gentype &res, const d_anion              &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
+                   void pycall(const std::string &fn, gentype &res, const std::string          &x) { dostartup(); py::object xx = py::cast(x.c_str()); pycall_x(fn,res,xx); }
+template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>            &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
+template <class T> void pycall(const std::string &fn, gentype &res, const Matrix<T>            &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
+template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>               &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
+template <class T> void pycall(const std::string &fn, gentype &res, const Dict<T,dictkey>      &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
+template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T>      &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
+                   void pycall(const std::string &fn, gentype &res, const gentype              &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fn,res,xx); }
 
-                   void pycall(int fni, gentype &res,       int               x) { dostartup(); py::object xx = py::cast(x);         pycall_x(fni,res,xx); }
-                   void pycall(int fni, gentype &res,       double            x) { dostartup(); py::object xx = py::cast(x);         pycall_x(fni,res,xx); }
-                   void pycall(int fni, gentype &res, const d_anion          &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
-                   void pycall(int fni, gentype &res, const std::string      &x) { dostartup(); py::object xx = py::cast(x.c_str()); pycall_x(fni,res,xx); }
-template <class T> void pycall(int fni, gentype &res, const Vector<T>        &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
-template <class T> void pycall(int fni, gentype &res, const Matrix<T>        &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
-template <class T> void pycall(int fni, gentype &res, const Set<T>           &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
-template <class T> void pycall(int fni, gentype &res, const Dict<T,dictkey>  &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
-template <class T> void pycall(int fni, gentype &res, const SparseVector<T>  &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
-                   void pycall(int fni, gentype &res, const gentype          &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
+                   void pycall(int fni, gentype &res,       int                   x) { dostartup(); py::object xx = py::cast(x);         pycall_x(fni,res,xx); }
+                   void pycall(int fni, gentype &res,       double                x) { dostartup(); py::object xx = py::cast(x);         pycall_x(fni,res,xx); }
+                   void pycall(int fni, gentype &res,       std::complex<double>  x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
+                   void pycall(int fni, gentype &res, const d_anion              &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
+                   void pycall(int fni, gentype &res, const std::string          &x) { dostartup(); py::object xx = py::cast(x.c_str()); pycall_x(fni,res,xx); }
+template <class T> void pycall(int fni, gentype &res, const Vector<T>            &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
+template <class T> void pycall(int fni, gentype &res, const Matrix<T>            &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
+template <class T> void pycall(int fni, gentype &res, const Set<T>               &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
+template <class T> void pycall(int fni, gentype &res, const Dict<T,dictkey>      &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
+template <class T> void pycall(int fni, gentype &res, const SparseVector<T>      &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
+                   void pycall(int fni, gentype &res, const gentype              &x) { dostartup(); py::object xx = convToPy(x);         pycall_x(fni,res,xx); }
 
 //void pycall(const std::string &fn, gentype &res, int size, const double *x)
 //{

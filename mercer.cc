@@ -11343,7 +11343,7 @@ void MercerKernel::Kbase(gentype &res, int q, int typeis,
 
     int i,j;
 
-    if ( KusesVector || KusesMinDiff || KusesMaxDiff )
+    if ( ( KusesVector && ( typeis != 28 ) ) || KusesMinDiff || KusesMaxDiff )
     {
         if ( m != 2 )
         {
@@ -11939,41 +11939,26 @@ void MercerKernel::Kbase(gentype &res, int q, int typeis,
 
         case 28:
         {
-            SparseVector<SparseVector<gentype> > t;
+            gentype t;
+            retVector<gentype> tmpvr;
+            double r0 = (double) r(0);
 
-            t("&",0)("&",0)  = m;
-            t("&",0)("&",1)  = txyprod;
-            t("&",0)("&",2)  = tyxprod;
-            t("&",0)("&",3)  = diffis;
-            t("&",0)("&",4)  = *(xnorm(0));
-            t("&",0)("&",5)  = *(xnorm(1));
-            t("&",1)("&",0)  = r(0);
-            t("&",1)("&",1)  = r(1);
-            t("&",1)("&",2)  = r(2);
-            t("&",1)("&",3)  = r(3);
-            t("&",1)("&",4)  = r(4);
-            t("&",1)("&",5)  = r(5);
-            t("&",1)("&",6)  = r(6);
-            t("&",1)("&",7)  = r(7);
-            t("&",1)("&",8)  = r(8);
-            t("&",1)("&",9)  = r(9);
-            t("&",1)("&",10) = r(10);
-            t("&",3) = xx;
-            t("&",4) = yy;
+            Vector<gentype> &tt  = t.force_vector(8);
+            Vector<gentype> &ttn = tt("&",5).force_vector(m);
+            Vector<gentype> &ttx = tt("&",6).force_vector(m);
+            Vector<gentype> &ttk = tt("&",7).force_vector(r(9).size());
 
-            SparseVector<SparseVector<int> > vused(r(10).varsUsed());
+            tt("&",0) = m;
+            tt("&",1) = txyprod;        tt("&",1) /= (r0*r0);
+            tt("&",2) = tyxprod;        tt("&",2) /= (r0*r0);
+            tt("&",3) = diffis;         tt("&",3) /= (r0*r0);
+            tt("&",4) = r(0,1,8,tmpvr);
 
-            if ( vused(2).nindsize() )
-            {
-                for ( i = 0 ; i < vused(2).nindsize() ; ++i )
-                {
-                    j = vused(2).ind(i);
-
-                    Kbase(t("&",2)("&",j),q,j,txyprod,tyxprod,diffis,x,xinfo,xnorm,iiii,xdim,m,0,0,0,mlid);
-                }
-            }
+            for ( i = 0 ; i < m           ; ++i ) { ttn("&",i) = *(xnorm(i)); ttx("&",i) = *(x(i)); ttn("&",i) /= (r0*r0); ttx("&",i) /= r0;       }
+            for ( i = 0 ; i < r(9).size() ; ++i ) { Kbase(ttk("&",i),q,(int) r(9)(i),txyprod,tyxprod,diffis,x,xinfo,xnorm,iiii,xdim,m,0,0,0,mlid); }
 
             res = r(10)(t);
+errstream() << "phantomxyzabc: res = " << res << "\n";
 
             break;
         }
@@ -12129,7 +12114,7 @@ void MercerKernel::Kbase(gentype &res, int q, int typeis,
         case 32:
         {
 //            res = ( ( iiii(0) == iiii(1) ) && ( iiii(0) >= 0 ) ) ? r(1) : 0.0_gent; //zerogentype();
-            res = ( iiii(0) == iiii(1) ) ? r(1) : 0.0_gent; //zerogentype();
+            res = ( iiii(0) == iiii(1) ) ? r(1)/r(0) : 0.0_gent; //zerogentype();
             break;
         }
 
@@ -13469,7 +13454,7 @@ void MercerKernel::Kbase(gentype &res, int q, int typeis,
 
         case 32:
 	{
-            vres("&",0) = 0.0;
+            vres("&",0) = ( iiii(0) == iiii(1) ) ? (-r(1)/(r(0)*r(0))) : 0.0;
 //            vres("&",1) = ( ( iiii(0) == iiii(1) ) && ( iiii(0) >= 0 ) ) ? 1.0 : 0.0;
             vres("&",1) = ( iiii(0) == iiii(1) ) ? 1.0 : 0.0;
 
@@ -14205,7 +14190,7 @@ kernInfo &fillOutInfo(kernInfo &ki, Vector<gentype> &r, Vector<int> &ic, int kty
         case  25: { ki.usesDiff = 1; ki.usesInner = 0; ki.usesNorm = 0; ki.usesVector = 0; ki.usesMinDiff = 0; ki.usesMaxDiff = 0; ic.resize(0); r.resize(1+1);                 r("&",1+0) = 1.0;                                                           break; }
         case  26: { ki.usesDiff = 1; ki.usesInner = 0; ki.usesNorm = 0; ki.usesVector = 0; ki.usesMinDiff = 0; ki.usesMaxDiff = 0; ic.resize(0); r.resize(1+2);                 r("&",1+0) = 1.0; r("&",1+1) = 1;                                          break; }
         case  27: { ki.usesDiff = 1; ki.usesInner = 0; ki.usesNorm = 0; ki.usesVector = 0; ki.usesMinDiff = 0; ki.usesMaxDiff = 0; ic.resize(0); r.resize(1+2);                 r("&",1+0) = 1.0; r("&",1+1) = 1;                                          break; }
-        case  28: { ki.usesDiff = 1; ki.usesInner = 1; ki.usesNorm = 1; ki.usesVector = 1; ki.usesMinDiff = 1; ki.usesMaxDiff = 1; ic.resize(0); r.resize(1+11);                r("&",1+0) = 1.0; r("&",1+1) = 1.0; r("&",1+2) = 1.0;  r("&",1+3) = 1.0; r("&",1+4) = 1.0; r("&",1+5) = 1.0; r("&",1+6) = 1.0; r("&",1+7) = 1.0; r("&",1+8) = 1.0; r("&",1+9) = 1.0; r("&",1+10) = "(var(0,1)+var(0,2))/2"; break; }
+        case  28: { ki.usesDiff = 1; ki.usesInner = 1; ki.usesNorm = 1; ki.usesVector = 1; ki.usesMinDiff = 1; ki.usesMaxDiff = 1; ic.resize(0); r.resize(1+11);                r("&",1+0) = 1.0; r("&",1+1) = 1.0; r("&",1+2) = 1.0;  r("&",1+3) = 1.0; r("&",1+4) = 1.0; r("&",1+5) = 1.0; r("&",1+6) = 1.0; r("&",1+7) = 1.0; r("&",1+8) = 1.0; r("&",1+9).force_null(); r("&",1+10) = "(x_1+x_2)/2"; break; }
         case  29: { ki.usesDiff = 0; ki.usesInner = 1; ki.usesNorm = 1; ki.usesVector = 0; ki.usesMinDiff = 0; ki.usesMaxDiff = 0; ic.resize(1); r.resize(1+1);  ic("&",0) = 0; r("&",1+0) = 1.0;                                                            break; }
         case  30: { ki.usesDiff = 0; ki.usesInner = 0; ki.usesNorm = 0; ki.usesVector = 1; ki.usesMinDiff = 0; ki.usesMaxDiff = 0; ic.resize(1); r.resize(1+3);  ic("&",0) = 0; r("&",1+0) = 1.0; r("&",1+1) = 1.8; r("&",1+2) = 1e-5;                      break; }
         case  31: { ki.usesDiff = 0; ki.usesInner = 0; ki.usesNorm = 0; ki.usesVector = 1; ki.usesMinDiff = 0; ki.usesMaxDiff = 0; ic.resize(1); r.resize(1+2);  ic("&",0) = 0; r("&",1+2) = 1.0; r("&",1+1) = 1.8; r("&",1+2) = 1e-5;                      break; }
@@ -18534,7 +18519,7 @@ int MercerKernel::KKprosingle(T &res, const T &xyprod, const T &diffis, int *i, 
 
                     if ( j == m )
                     {
-                        res = r(1);
+                        res = r(1)/r(0);
                     }
                 }
             }
@@ -19180,7 +19165,7 @@ int MercerKernel::KKprosinglediffiszero(T &res, const T &xyprod, int ia, int ib,
 
             if ( ( ia == ib ) && ( ia >= 0 ) )
             {
-                res = r(1);
+                res = r(1)/r(0);
             }
 
             break;
@@ -20479,7 +20464,7 @@ void MercerKernel::dKKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad, T &res
 
             if ( ( i == j ) && ( i >= 0 ) )
             {
-                res = r(1);
+                res = r(1)/r(0);
             }
 
             break;
@@ -22309,7 +22294,7 @@ void MercerKernel::d2KKprosingle(T &xygrad, T &diffgrad, T &xnormonlygrad,
 
             if ( ( i == j ) && ( i >= 0 ) )
             {
-                res = r(1);
+                res = r(1)/r(0);
             }
 
             break;
@@ -22992,7 +22977,7 @@ void MercerKernel::dnKKpro(T &res, const Vector<int> &gd, const T &xyprod, const
 
             if ( ( gd(z) == z ) && ( gd(1) == z ) && ( gd(2) == z ) && ( i == j ) && ( i >= 0 ) )
             {
-                res = r(1);
+                res = r(1)/r(0);
             }
         }
 

@@ -7659,7 +7659,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
                         ;
                     }
 
-                    else if ( ( j == 0 ) && ( lockernel.cType(i) < 800 ) && ( lockernel.cType(i) != 0 ) && ( lockernel.cType(i) != 32 ) && ( lockernel.cType(i) != 48 ) && ( lockernel.cType(i) != 200 ) && !(lockernel.cRealConstants(i)(j).isNomConst) ) //&& lockernel.isAdjRealConstants(j,i) )
+                    else if ( ( j == 0 ) && ( lockernel.cType(i) < 800 ) && ( lockernel.cType(i) != 0 ) && ( lockernel.cType(i) != 48 ) && ( lockernel.cType(i) != 200 ) && !(lockernel.cRealConstants(i)(j).isNomConst) ) //&& lockernel.isAdjRealConstants(j,i) )
                     {
                         // This is length-scale, always, with the single exception of lockernels 0 and 48 where lengthscale is meaningless (log)
 
@@ -14995,7 +14995,7 @@ void ML_Base::dgTrainingVector(Vector<d_anion> &res, const Vector<int> &i) const
     return;
 }
 
-int ML_Base::covarTrainingVector(Matrix<gentype> &resv, const Vector<int> &i) const
+int ML_Base::covar(Matrix<gentype> &resv, const Vector<int> &i) const
 {
     NiceAssert( ( i.size() == 0 ) || ( i >= 0 ) );
 
@@ -15047,7 +15047,7 @@ int ML_Base::covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &
     return 0;
 }
 
-int ML_Base::noisevarTrainingVector(gentype &resv, gentype &resmu, int i, const SparseVector<gentype> &xvar, int u, gentype ***pxyprodi, gentype **pxyprodii) const
+int ML_Base::noisevar(gentype &resv, gentype &resmu, int i, const SparseVector<gentype> &xvar, int u, gentype ***pxyprodi, gentype **pxyprodii) const
 {
 // NB: code is repeated in GPR_Generic
 
@@ -15137,7 +15137,7 @@ int ML_Base::noisevar(gentype &resv, gentype &resmu, const SparseVector<gentype>
 }
 */
 
-int ML_Base::noisecovTrainingVector(gentype &resv, gentype &resmu, int i, int j, const SparseVector<gentype> &xvar, int u, gentype ***pxyprodi, gentype ***pxyprodj, gentype **pxyprodij) const
+int ML_Base::noisecov(gentype &resv, gentype &resmu, int i, int j, const SparseVector<gentype> &xvar, int u, gentype ***pxyprodi, gentype ***pxyprodj, gentype **pxyprodij) const
 {
 // NB: code is repeated in GPR_Generic
 

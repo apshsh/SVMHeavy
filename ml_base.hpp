@@ -1262,7 +1262,7 @@ public:
 
     // var and covar functions (and predictive covariance - ie covariance if we also make an addition observation xx)
 
-    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const { (void) resv_pred; (void) resv; (void) resmu; (void) ia; (void) ib; (void) ii; (void) sigmaweighti; NiceThrow("predcov not available for this ML type"); return 1; }
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const { K2(resv,ia,ib); resv_pred = resv; resmu = yp(ia); (void) ii; (void) sigmaweighti; return 1; }
     virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int ii = setInnerWildpc(&xx,xxinf); int res = predcov(resv_pred,resv,resmu,ia,((&xb != &xa) ? ib : ia),((&xx != &xa) ? ( (&xx != &xb) ? ii : ib ) : ia),sigmaweighti); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr ),( xxinf == nullptr )); return res; }
 
     virtual int cov(gentype &resv, gentype &resmu, int ia, int ib,                                                                                                                   gentype ***pxyprodia = nullptr, gentype ***pxyprodib = nullptr, gentype **pxyprodij = nullptr) const { K2(resv,ia,ib); resmu = yp(ia); (void) pxyprodia; (void) pxyprodib; (void) pxyprodij; return 0; }
@@ -1274,8 +1274,8 @@ public:
     virtual int var(gentype &resv, gentype &resmu, int i,                                                           gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const { return cov(resv,resmu,i,i,pxyprodi,pxyprodi,pxyprodii); }
     virtual int var(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int res = cov(resv,resmu,ia,ia,pxyprodx,pxyprodx,pxyprodxx); resetInnerWildp(xainf == nullptr); return res; }
 
-    virtual int covarTrainingVector(Matrix<gentype> &resv, const Vector<int> &i)                    const;
-    virtual int covar              (Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const;
+    virtual int covar(Matrix<gentype> &resv, const Vector<int>                    &i) const;
+    virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const;
 
     // Input-Output noise calculation
     //
@@ -1290,11 +1290,11 @@ public:
     // (basically we model output noise as input noise times gradient,
     // assuming input noise is "small" relative to gradient variation).
 
-    virtual int noisevarTrainingVector(gentype &resv, gentype &resmu, int i,                           const SparseVector<gentype> &xvar, int u = -1,                                 gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const;
-    virtual int noisevar              (gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int res = noisevarTrainingVector(resv,resmu,ia,xvar,u,pxyprodx,pxyprodxx); resetInnerWildp(xainf == nullptr); return res; }
+    virtual int noisevar(gentype &resv, gentype &resmu, int i,                           const SparseVector<gentype> &xvar, int u = -1,                                 gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const;
+    virtual int noisevar(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int res = noisevar(resv,resmu,ia,xvar,u,pxyprodx,pxyprodxx); resetInnerWildp(xainf == nullptr); return res; }
 
-    virtual int noisecovTrainingVector(gentype &resv, gentype &resmu, int i,                           int j,                           const SparseVector<gentype> &xvar, int u = -1,                                                                 gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const;
-    virtual int noisecov              (gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodxy = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int res = noisecovTrainingVector(resv,resmu,ia,ib,xvar,u,pxyprodx,pxyprody,pxyprodxy); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
+    virtual int noisecov(gentype &resv, gentype &resmu, int i,                           int j,                           const SparseVector<gentype> &xvar, int u = -1,                                                                 gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const;
+    virtual int noisecov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodxy = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int res = noisecov(resv,resmu,ia,ib,xvar,u,pxyprodx,pxyprody,pxyprodxy); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
 
     // Training data tracking functions:
     //
