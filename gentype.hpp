@@ -54,29 +54,31 @@ class gentype;
 // temporary file, but in the python-local version you can
 // override this and do something more sensible.
 
-                   void pycall(const std::string &fn, gentype &res,       int               x);
-                   void pycall(const std::string &fn, gentype &res,       double            x);
-                   void pycall(const std::string &fn, gentype &res, const d_anion          &x);
-                   void pycall(const std::string &fn, gentype &res, const std::string      &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>        &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const Matrix<T>        &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>           &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const Dict<T,dictkey>  &x);
-template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T>  &x);
-                   void pycall(const std::string &fn, gentype &res, const gentype          &x);
-                   void pycall(const std::string &fn, gentype &res, int size, const double *x);
+                   void pycall(const std::string &fn, gentype &res,       int                   x);
+                   void pycall(const std::string &fn, gentype &res,       double                x);
+                   void pycall(const std::string &fn, gentype &res,       std::complex<double>  x);
+                   void pycall(const std::string &fn, gentype &res, const d_anion              &x);
+                   void pycall(const std::string &fn, gentype &res, const std::string          &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>            &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const Matrix<T>            &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const Set<T>               &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const Dict<T,dictkey>      &x);
+template <class T> void pycall(const std::string &fn, gentype &res, const SparseVector<T>      &x);
+                   void pycall(const std::string &fn, gentype &res, const gentype              &x);
+                   void pycall(const std::string &fn, gentype &res, int size, const double     *x);
 
-                   void pycall(int fni, gentype &res,       int               x);
-                   void pycall(int fni, gentype &res,       double            x);
-                   void pycall(int fni, gentype &res, const d_anion          &x);
-                   void pycall(int fni, gentype &res, const std::string      &x);
-template <class T> void pycall(int fni, gentype &res, const Vector<T>        &x);
-template <class T> void pycall(int fni, gentype &res, const Matrix<T>        &x);
-template <class T> void pycall(int fni, gentype &res, const Set<T>           &x);
-template <class T> void pycall(int fni, gentype &res, const Dict<T,dictkey>  &x);
-template <class T> void pycall(int fni, gentype &res, const SparseVector<T>  &x);
-                   void pycall(int fni, gentype &res, const gentype          &x);
-                   void pycall(int fni, gentype &res, int size, const double *x);
+                   void pycall(int fni, gentype &res,       int                   x);
+                   void pycall(int fni, gentype &res,       double                x);
+                   void pycall(int fni, gentype &res,       std::complex<double>  x);
+                   void pycall(int fni, gentype &res, const d_anion              &x);
+                   void pycall(int fni, gentype &res, const std::string          &x);
+template <class T> void pycall(int fni, gentype &res, const Vector<T>            &x);
+template <class T> void pycall(int fni, gentype &res, const Matrix<T>            &x);
+template <class T> void pycall(int fni, gentype &res, const Set<T>               &x);
+template <class T> void pycall(int fni, gentype &res, const Dict<T,dictkey>      &x);
+template <class T> void pycall(int fni, gentype &res, const SparseVector<T>      &x);
+                   void pycall(int fni, gentype &res, const gentype              &x);
+                   void pycall(int fni, gentype &res, int size, const double     *x);
 
 #ifndef PYLOCAL
 template <class T> void pycall(const std::string &fn, gentype &res, const Vector<T>       &x) { gentype xx(x); pycall(fn,res,xx); }
@@ -355,7 +357,7 @@ public:
     //          not a string (use makeString if you want a string).
     //        - likewise, assignment from std::String or char * makes equation
 
-    explicit gentype(char typechar) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
+    explicit gentype(char typechar) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
     {
         switch ( typechar )
         {
@@ -375,24 +377,25 @@ public:
         }
     }
 
-    gentype(const gentype &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
+    gentype(const gentype &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
     {
         fastcopy(src,1);
     }
 
-    explicit gentype(                                    ) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { ;                }
-    explicit gentype(      int                        src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'Z'; intval = src;       doubleval = src;                                  }
-    explicit gentype(      double                     src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'R'; intval = (int) src; doubleval = src;                                  }
-    explicit gentype(const d_anion                   &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'A'; MEMNEW(anionval,d_anion(src));                                        }
-    explicit gentype(const Vector<gentype>           &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>(src));                               }
-    explicit gentype(const Matrix<gentype>           &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'M'; MEMNEW(matrixval,Matrix<gentype>(src));                               }
-    explicit gentype(const Set<gentype>              &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'X'; MEMNEW(setval,Set<gentype>(src));                                     }
-    explicit gentype(const Dict<gentype,dictkey>     &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'D'; MEMNEW(dictval,Dict<gentype COMMA dictkey>(src));                     }
-    explicit gentype(const Dgraph<gentype,double>    &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'G'; MEMNEW(dgraphval,Dgraph<gentype COMMA double>(src));                  }
-    explicit gentype(const std::string               &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { makeEqn(src);                                                                       }
-    explicit gentype(const char                      *src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { makeEqn(src);                                                                       }
+    explicit gentype(                                    ) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { ;                }
+    explicit gentype(      int                        src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'Z'; intval = src;       doubleval = src;                                  }
+    explicit gentype(      double                     src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'R'; intval = (int) src; doubleval = src;                                  }
+    explicit gentype(      std::complex<double>       src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'A'; MEMNEW(anionval,d_anion(src));                                        }
+    explicit gentype(const d_anion                   &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'A'; MEMNEW(anionval,d_anion(src));                                        }
+    explicit gentype(const Vector<gentype>           &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'V'; MEMNEW(vectorval,Vector<gentype>(src));                               }
+    explicit gentype(const Matrix<gentype>           &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'M'; MEMNEW(matrixval,Matrix<gentype>(src));                               }
+    explicit gentype(const Set<gentype>              &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'X'; MEMNEW(setval,Set<gentype>(src));                                     }
+    explicit gentype(const Dict<gentype,dictkey>     &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'D'; MEMNEW(dictval,Dict<gentype COMMA dictkey>(src));                     }
+    explicit gentype(const Dgraph<gentype,double>    &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { typeis = 'G'; MEMNEW(dgraphval,Dgraph<gentype COMMA double>(src));                  }
+    explicit gentype(const std::string               &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { makeEqn(src);                                                                       }
+    explicit gentype(const char                      *src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { makeEqn(src);                                                                       }
 
-    explicit gentype(const SparseVector<std::string> &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
+    explicit gentype(const SparseVector<std::string> &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
     {
         typeis = 'V';
 
@@ -400,7 +403,7 @@ public:
         SparseToNonSparse(*vectorval,src);
     }
 
-    explicit gentype(const SparseVector<int> &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
+    explicit gentype(const SparseVector<int> &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
     {
         typeis = 'V';
 
@@ -424,7 +427,7 @@ public:
         }
     }
 
-    explicit gentype(const SparseVector<double> &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
+    explicit gentype(const SparseVector<double> &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
     {
         typeis = 'V';
 
@@ -447,7 +450,7 @@ public:
         }
     }
 
-    explicit gentype(const SparseVector<gentype> &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
+    explicit gentype(const SparseVector<gentype> &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
     {
         typeis = 'V';
 
@@ -482,7 +485,7 @@ public:
         }
     }
 
-    explicit gentype(int srcsize, const double *src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
+    explicit gentype(int srcsize, const double *src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
     {
         if ( ( ( srcsize > 0 ) && src ) || ( srcsize == 0 ) )
         {
@@ -504,17 +507,18 @@ public:
         }
     }
 
-    template <class T> explicit gentype(const Vector<T>           &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { *this = src; }
-    template <class T> explicit gentype(const SparseVector<T>     &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { *this = src; }
-    template <class T> explicit gentype(const Matrix<T>           &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { *this = src; }
-    template <class T> explicit gentype(const Set<T>              &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { *this = src; }
-    template <class T> explicit gentype(const Dict<T,dictkey>     &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { *this = src; }
-    template <class T> explicit gentype(const Dgraph<T,double>    &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { *this = src; }
+    template <class T> explicit gentype(const Vector<T>           &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { *this = src; }
+    template <class T> explicit gentype(const SparseVector<T>     &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { *this = src; }
+    template <class T> explicit gentype(const Matrix<T>           &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { *this = src; }
+    template <class T> explicit gentype(const Set<T>              &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { *this = src; }
+    template <class T> explicit gentype(const Dict<T,dictkey>     &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { *this = src; }
+    template <class T> explicit gentype(const Dgraph<T,double>    &src) : typeis('Z'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr) { *this = src; }
 
     ~gentype() { deleteVectMatMem(); if ( varid_xi ) { MEMDEL(varid_xi); varid_xi = nullptr; } if ( varid_xj ) { MEMDEL(varid_xj); varid_xj = nullptr; } }
 
     gentype &operator=(      int                        src) { deleteVectMatMem('Z'                            ); typeis = 'Z'; intval     = src; doubleval = src;    return *this; }
     gentype &operator=(      double                     src) { deleteVectMatMem('R'                            ); typeis = 'R'; doubleval  = src; intval = (int) src; return *this; }
+    gentype &operator=(      std::complex<double>       src) { deleteVectMatMem('A'                            ); typeis = 'A'; *anionval  = src;                     return *this; }
     gentype &operator=(const d_anion                   &src) { deleteVectMatMem('A'                            ); typeis = 'A'; *anionval  = src;                     return *this; }
     gentype &operator=(const Vector<gentype>           &src) { deleteVectMatMem('V',src.size()                 ); typeis = 'V'; *vectorval = src;                     return *this; }
     gentype &operator=(const Matrix<gentype>           &src) { deleteVectMatMem('M',src.numRows(),src.numCols()); typeis = 'M'; *matrixval = src;                     return *this; }
@@ -605,23 +609,8 @@ public:
         return *this;
     }
 
-    template <class T> gentype &operator=(const SparseVector<T> &src)
-    {
-        deleteVectMatMem('V',0);
-        SparseToNonSparse(*vectorval,src);
-        typeis = 'V';
-
-        return *this;
-    }
-
-    template <class T> gentype &operator=(const Vector<T> &src)
-    {
-        deleteVectMatMem('V',src.size());
-        (*vectorval).castassign(src);
-        typeis = 'V';
-
-        return *this;
-    }
+    template <class T> gentype &operator=(const SparseVector<T> &src) { deleteVectMatMem('V',0);          SparseToNonSparse(*vectorval,src); typeis = 'V'; return *this; }
+    template <class T> gentype &operator=(const Vector<T>       &src) { deleteVectMatMem('V',src.size()); (*vectorval).castassign(src);      typeis = 'V'; return *this; }
 
     template <class T> gentype &operator=(const Matrix<T> &src)
     {
@@ -785,6 +774,7 @@ public:
     bool isValNone      (void) const { return typeis == 'N'; }
     bool isValInteger   (void) const { return typeis == 'Z'; }
     bool isValReal      (void) const { return typeis == 'R'; }
+    bool isValComplex   (void) const { return isValAnion() && ( order() <= 1 ); }
     bool isValAnion     (void) const { return typeis == 'A'; }
     bool isValVector    (void) const { return typeis == 'V'; }
     bool isValMatrix    (void) const { return typeis == 'M'; }
@@ -802,9 +792,10 @@ public:
     bool isCastableToNullWithoutLoss   (void) const { return isValNull(); }
     bool isCastableToIntegerWithoutLoss(void) const { return ( isValNull() || isValInteger() || ( isCastableToRealWithoutLoss() && ( cast_double(0) == ((int) cast_double(0)) ) ) ); }
     bool isCastableToRealWithoutLoss   (void) const { return ( isValNull() || isValInteger() || isValReal() || ( isValAnion() && ( size() == 1 ) ) || ( isValVector() && ( size() == 1 ) && (*vectorval)(0).isCastableToRealWithoutLoss() ) || ( isValMatrix() && ( numRows() == 1 ) && ( numCols() == 1 ) && (*matrixval)(0,0).isCastableToRealWithoutLoss() ) ); }
-    bool isCastableToAnionWithoutLoss  (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion() || ( isValVector() && ( size() == 1 ) && (*vectorval)(0).isCastableToAnionWithoutLoss() ) || ( isValMatrix() && ( numRows() == 1 ) && ( numCols() == 1 ) && (*matrixval)(0,0).isCastableToAnionWithoutLoss() ) ); }
-    bool isCastableToVectorWithoutLoss (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion() || isValVector() || ( isValMatrix() && ( ( (*matrixval).numRows() == 1 ) || ( (*matrixval).numCols() == 1 ) || (*matrixval).isEmpty() ) ) ); }
-    bool isCastableToMatrixWithoutLoss (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion() || ( isValVector() && !infsize() ) || isValMatrix() ); }
+    bool isCastableToComplexWithoutLoss(void) const { return ( isValNull() || isValInteger() || isValReal() || isValComplex() || ( isValVector() && ( size() == 1 ) && (*vectorval)(0).isCastableToComplexWithoutLoss() ) || ( isValMatrix() && ( numRows() == 1 ) && ( numCols() == 1 ) && (*matrixval)(0,0).isCastableToComplexWithoutLoss() ) ); }
+    bool isCastableToAnionWithoutLoss  (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion()   || ( isValVector() && ( size() == 1 ) && (*vectorval)(0).isCastableToAnionWithoutLoss() ) || ( isValMatrix() && ( numRows() == 1 ) && ( numCols() == 1 ) && (*matrixval)(0,0).isCastableToAnionWithoutLoss() ) ); }
+    bool isCastableToVectorWithoutLoss (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion()   || isValVector() || ( isValMatrix() && ( ( (*matrixval).numRows() == 1 ) || ( (*matrixval).numCols() == 1 ) || (*matrixval).isEmpty() ) ) ); }
+    bool isCastableToMatrixWithoutLoss (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion()   || ( isValVector() && !infsize() ) || isValMatrix() ); }
     bool isCastableToSetWithoutLoss    (void) const { return ( isValNull() || isValSet()    ); }
     bool isCastableToDictWithoutLoss   (void) const { return ( isValNull() || isValDict()   ); }
     bool isCastableToDgraphWithoutLoss (void) const { return ( isValNull() || isValDgraph() ); }
@@ -813,9 +804,10 @@ public:
     bool isCastableToNull   (void) const { return isValNull(); }
     bool isCastableToInteger(void) const { return isCastableToReal(); }
     bool isCastableToReal   (void) const { return ( isValNull() || isValInteger() || isValReal() || ( isValAnion() && ( size() == 1 ) ) || ( isValVector() && ( size() == 1 ) && (*vectorval)(0).isCastableToReal() ) || ( isValMatrix() && ( numRows() == 1 ) && ( numCols() == 1 ) && (*matrixval)(0,0).isCastableToReal() ) ); }
-    bool isCastableToAnion  (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion() || ( isValVector() && ( size() == 1 ) && (*vectorval)(0).isCastableToAnion() ) || ( isValMatrix() && ( numRows() == 1 ) && ( numCols() == 1 ) && (*matrixval)(0,0).isCastableToAnion() ) ); }
-    bool isCastableToVector (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion() || isValVector() || ( isValMatrix() && ( ( (*matrixval).numRows() == 1 ) || ( (*matrixval).numCols() == 1 ) || (*matrixval).isEmpty() ) ) ); }
-    bool isCastableToMatrix (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion() || isValVector() || isValMatrix() ); }
+    bool isCastableToComplex(void) const { return ( isValNull() || isValInteger() || isValReal() || isValComplex() || ( isValVector() && ( size() == 1 ) && (*vectorval)(0).isCastableToComplex() ) || ( isValMatrix() && ( numRows() == 1 ) && ( numCols() == 1 ) && (*matrixval)(0,0).isCastableToComplex() ) ); }
+    bool isCastableToAnion  (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion()   || ( isValVector() && ( size() == 1 ) && (*vectorval)(0).isCastableToAnion() ) || ( isValMatrix() && ( numRows() == 1 ) && ( numCols() == 1 ) && (*matrixval)(0,0).isCastableToAnion() ) ); }
+    bool isCastableToVector (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion()   || isValVector() || ( isValMatrix() && ( ( (*matrixval).numRows() == 1 ) || ( (*matrixval).numCols() == 1 ) || (*matrixval).isEmpty() ) ) ); }
+    bool isCastableToMatrix (void) const { return ( isValNull() || isValInteger() || isValReal() || isValAnion()   || isValVector() || isValMatrix() ); }
     bool isCastableToSet    (void) const { return ( isValNull() || isValSet()    ); }
     bool isCastableToDict   (void) const { return ( isValNull() || isValDict()   ); }
     bool isCastableToDgraph (void) const { return ( isValNull() || isValDgraph() ); }
@@ -982,6 +974,7 @@ public:
 
     operator       int()                      const { if ( isValInteger()    ) { return intval;         } else if ( isValReal()    ) { return (int) doubleval; } else if ( isValNull() ) { return 0; } return cast_int(3);    }
     operator       double()                   const { if ( isValReal()       ) { return doubleval;      } else if ( isValInteger() ) { return intval;          } else if ( isValNull() ) { return 0; } return cast_double(3); }
+    operator       std::complex<double>()     const {                                                     return cast_complex(3);           }
     operator const d_anion &()                const { if ( isValAnion()      ) { return *anionval;      } return cast_anion(3);             }
     operator const Vector<gentype> &()        const { if ( isValVector()     ) { return *vectorval;     } return cast_vector(3);            }
     operator const Vector<double> &()         const { if ( isValVectorReal() ) { return *vectorvalreal; } return cast_vector_real(3);       }
@@ -998,6 +991,7 @@ public:
           void                       cast_null             (int finalise = 0) const;
           int                        cast_int              (int finalise = 0) const;
           double                     cast_double           (int finalise = 0) const;
+          std::complex<double>       cast_complex          (int finalise = 0) const;
     const d_anion                   &cast_anion            (int finalise = 0) const;
     const Vector<gentype>           &cast_vector           (int finalise = 0) const;
     const Vector<double>            &cast_vector_real      (int finalise = 0) const;
@@ -1014,6 +1008,7 @@ public:
     gentype &toNull   (gentype &res) const;
     gentype &toInteger(gentype &res) const;
     gentype &toReal   (gentype &res) const;
+    gentype &toComplex(gentype &res) const;
     gentype &toAnion  (gentype &res) const;
     gentype &toVector (gentype &res) const;
     gentype &toMatrix (gentype &res) const;
@@ -1022,16 +1017,17 @@ public:
     gentype &toDgraph (gentype &res) const;
     gentype &toString (gentype &res) const;
 
-    gentype &morph_null  (void);
-    gentype &morph_int   (void);
-    gentype &morph_double(void);
-    gentype &morph_anion (void);
-    gentype &morph_vector(void);
-    gentype &morph_matrix(void);
-    gentype &morph_set   (void);
-    gentype &morph_dict  (void);
-    gentype &morph_dgraph(void);
-    gentype &morph_string(void);
+    gentype &morph_null   (void);
+    gentype &morph_int    (void);
+    gentype &morph_double (void);
+    gentype &morph_complex(void);
+    gentype &morph_anion  (void);
+    gentype &morph_vector (void);
+    gentype &morph_matrix (void);
+    gentype &morph_set    (void);
+    gentype &morph_dict   (void);
+    gentype &morph_dgraph (void);
+    gentype &morph_string (void);
 
     void                    dir_null  (void) { if ( !isValNull()    ) { morph_null();   } NiceAssert( isValNull()   );                                      }
     int                    &dir_int   (void) { if ( !isValInteger() ) { morph_int();    } NiceAssert( isValInteger());                   return  intval;    }
@@ -1044,17 +1040,18 @@ public:
     Dgraph<gentype,double> &dir_dgraph(void) { if ( !isValDgraph()  ) { morph_dgraph(); } NiceAssert( isValDgraph() );                   return *dgraphval; }
     std::string            &dir_string(void) { if ( !isValString()  ) { morph_string(); } NiceAssert( isValString() );                   return *stringval; }
 
-    void                    force_null  (void)                 { makeNull(); }
-    void                    force_none  (void)                 { makeNull(); }
-    int                    &force_int   (void)                 {                                                    if ( !isValInteger() ) { *this = 0;          }                                                return  intval;    }
-    double                 &force_double(void)                 {                                                    if ( !isValReal()    ) { *this = 0.0;        }                                                return  doubleval; }
-    d_anion                &force_anion (int i = -1)           {                                                    if ( !isValAnion()   ) { *this = 0_anion;    } if ( i   >= 0 ) { (*anionval).setorder(i);  }  return *anionval;  }
-    Vector<gentype>        &force_vector(int i = 0)            { const static Vector<gentype>           defaultval; if ( !isValVector()  ) { *this = defaultval; } if ( i   >= 0 ) { (*vectorval).resize(i);   }  clearindirects(); return *vectorval; }
-    Matrix<gentype>        &force_matrix(int i = 0, int j = 0) { const static Matrix<gentype>           defaultval; if ( !isValMatrix()  ) { *this = defaultval; } if ( i+j >= 0 ) { (*matrixval).resize(i,j); }  clearindirects(); return *matrixval; }
-    Set<gentype>           &force_set   (void)                 { const static Set<gentype>              defaultval; if ( !isValSet()     ) { *this = defaultval; }                                                return *setval;    }
-    Dict<gentype,dictkey>  &force_dict  (void)                 { const static Dict<gentype,dictkey>     defaultval; if ( !isValDict()    ) { *this = defaultval; }                                                return *dictval;   }
-    Dgraph<gentype,double> &force_dgraph(void)                 { const static Dgraph<gentype,double>    defaultval; if ( !isValDgraph()  ) { *this = defaultval; }                                                return *dgraphval; }
-    std::string            &force_string(void)                 { makeString(""); return *stringval; }
+    void                    force_null   (void)                 { makeNull(); }
+    void                    force_none   (void)                 { makeNull(); }
+    int                    &force_int    (void)                 {                                                    if ( !isValInteger() ) { *this = 0;          }                                                return  intval;    }
+    double                 &force_double (void)                 {                                                    if ( !isValReal()    ) { *this = 0.0;        }                                                return  doubleval; }
+    d_anion                &force_complex(void)                 {                                                    if ( !isValComplex() ) { morph_anion();      }                   (*anionval).setorder(1);     return *anionval;  }
+    d_anion                &force_anion  (int i = -1)           {                                                    if ( !isValAnion()   ) { *this = 0_anion;    } if ( i   >= 0 ) { (*anionval).setorder(i);  }  return *anionval;  }
+    Vector<gentype>        &force_vector (int i = 0)            { const static Vector<gentype>           defaultval; if ( !isValVector()  ) { *this = defaultval; } if ( i   >= 0 ) { (*vectorval).resize(i);   }  clearindirects(); return *vectorval; }
+    Matrix<gentype>        &force_matrix (int i = 0, int j = 0) { const static Matrix<gentype>           defaultval; if ( !isValMatrix()  ) { *this = defaultval; } if ( i+j >= 0 ) { (*matrixval).resize(i,j); }  clearindirects(); return *matrixval; }
+    Set<gentype>           &force_set    (void)                 { const static Set<gentype>              defaultval; if ( !isValSet()     ) { *this = defaultval; }                                                return *setval;    }
+    Dict<gentype,dictkey>  &force_dict   (void)                 { const static Dict<gentype,dictkey>     defaultval; if ( !isValDict()    ) { *this = defaultval; }                                                return *dictval;   }
+    Dgraph<gentype,double> &force_dgraph (void)                 { const static Dgraph<gentype,double>    defaultval; if ( !isValDgraph()  ) { *this = defaultval; }                                                return *dgraphval; }
+    std::string            &force_string (void)                 { makeString(""); return *stringval; }
 
     // Variables usage information:
     //
@@ -1186,18 +1183,21 @@ public:
 
     gentype &zeropassive(void)
     {
-             if ( isValNull()    ) { intval = 0; doubleval = 0;                      }
-        else if ( isValInteger() ) { intval = 0; doubleval = 0;                      }
-        else if ( isValReal()    ) { intval = 0; doubleval = 0;                      }
-        else if ( isValAnion()   ) { intval = 0; doubleval = 0; (*anionval) = 0.0;   }
-        else if ( isValVector()  ) { intval = 0; doubleval = 0; (*vectorval).zero(); }
-        else if ( isValMatrix()  ) { intval = 0; doubleval = 0; (*matrixval).zero(); }
-        else if ( isValSet()     ) { intval = 0; doubleval = 0; (*setval).zero();    }
-        else if ( isValDict()    ) { intval = 0; doubleval = 0; (*dictval).zero();   }
-        else if ( isValDgraph()  ) { intval = 0; doubleval = 0; (*dgraphval).zero(); }
-        else if ( isValString()  ) { intval = 0; doubleval = 0; (*stringval) = "";   }
-        else if ( isValError()   ) { intval = 0; doubleval = 0; ;                    }
-        else                       { intval = 0; doubleval = 0; *this = 0;           }
+        intval    = 0;
+        doubleval = 0;
+
+             if ( isValNull()    ) { ;                    }
+        else if ( isValInteger() ) { ;                    }
+        else if ( isValReal()    ) { ;                    }
+        else if ( isValAnion()   ) { (*anionval) = 0.0;   }
+        else if ( isValVector()  ) { (*vectorval).zero(); }
+        else if ( isValMatrix()  ) { (*matrixval).zero(); }
+        else if ( isValSet()     ) { (*setval).zero();    }
+        else if ( isValDict()    ) { (*dictval).zero();   }
+        else if ( isValDgraph()  ) { (*dgraphval).zero(); }
+        else if ( isValString()  ) { (*stringval) = "";   }
+        else if ( isValError()   ) { ;                    }
+        else                       { *this = 0;           }
 
         return *this;
     }
@@ -1244,22 +1244,22 @@ public:
     {
         const static int negInd = getfnind("neg");
 
-             if ( isValNull()    ) { intval *= -1; doubleval *= -1;                        }
-        else if ( isValInteger() ) { intval *= -1; doubleval *= -1;                        }
-        else if ( isValReal()    ) { intval *= -1; doubleval *= -1;                        }
-        else if ( isValAnion()   ) { intval *= -1; doubleval *= -1; (*anionval) *= -1.0;   }
-        else if ( isValVector()  ) { intval *= -1; doubleval *= -1; (*vectorval).negate(); }
-        else if ( isValMatrix()  ) { intval *= -1; doubleval *= -1; (*matrixval).negate(); }
-        else if ( isValSet()     ) { intval *= -1; doubleval *= -1; (*setval).negate();    }
-        else if ( isValDict()    ) { intval *= -1; doubleval *= -1; (*dictval).negate();   }
-        else if ( isValDgraph()  ) { intval *= -1; doubleval *= -1; (*dgraphval).negate(); }
-        else if ( isValString()  ) { intval *= -1; doubleval *= -1; reversestring();       }
-        else if ( isValError()   ) { intval *= -1; doubleval *= -1; ;                      }
+        intval    *= -1;
+        doubleval *= -1;
+
+             if ( isValNull()    ) { ;                      }
+        else if ( isValInteger() ) { ;                      }
+        else if ( isValReal()    ) { ;                      }
+        else if ( isValAnion()   ) { (*anionval) *= -1.0;   }
+        else if ( isValVector()  ) { (*vectorval).negate(); }
+        else if ( isValMatrix()  ) { (*matrixval).negate(); }
+        else if ( isValSet()     ) { (*setval).negate();    }
+        else if ( isValDict()    ) { (*dictval).negate();   }
+        else if ( isValDgraph()  ) { (*dgraphval).negate(); }
+        else if ( isValString()  ) { reversestring();       }
+        else if ( isValError()   ) { ;                      }
         else
         {
-            intval    *= -1;
-            doubleval *= -1;
-
             // Method: construct a new gentype, qswap (fast) this
             // new gentype with the present equation, then set
             // the present equation as neg with the argument
@@ -1596,8 +1596,9 @@ private:
     int fnnameind    = 0;
     int varid_numpts = DEFAULT_INTEGRAL_SLICES;
 
-    mutable int    intval    = 0;
-    mutable double doubleval = 0.0;
+    mutable int                  intval     = 0;
+    mutable double               doubleval  = 0.0;
+    mutable std::complex<double> complexval = 0.0;
 
     Vector<int> *varid_xi = nullptr;
     Vector<int> *varid_xj = nullptr;
@@ -1699,6 +1700,7 @@ private:
     int loctoNull   (                             std::string &errstr) const;
     int loctoInteger(int                    &res, std::string &errstr) const;
     int loctoReal   (double                 &res, std::string &errstr) const;
+    int loctoComplex(std::complex<double>   &res, std::string &errstr) const;
     int loctoAnion  (d_anion                &res, std::string &errstr) const;
     int loctoVector (Vector<gentype>        &res, std::string &errstr) const;
     int loctoMatrix (Matrix<gentype>        &res, std::string &errstr) const;
@@ -1731,6 +1733,7 @@ private:
         res.isNomConst = isNomConst;
         res.intval     = intval;
         res.doubleval  = doubleval;
+        res.complexval = complexval;
         res.fnnameind  = fnnameind;
         res.thisfninfo = thisfninfo;
 
@@ -1945,6 +1948,7 @@ inline void qswap(gentype &a, gentype &b)
     qswap(a.isNomConst,b.isNomConst);
     qswap(a.intval    ,b.intval    );
     qswap(a.doubleval ,b.doubleval );
+    qswap(a.complexval,b.complexval);
 
     qswap(a.varid_isscalar,b.varid_isscalar);
     qswap(a.varid_numpts  ,b.varid_numpts  );

@@ -191,8 +191,8 @@ public:
     // fidover:     0: nothing
     //              REMOVED, HUMAN CAN DO THIS WHENEVER THEY WANT! - 1: human can override fidelity
     //              2: randomly choose fidelity less than recommended
-    // fidmode:     1: BOCA
-    //              0: not BOCA
+    // fidmode:     21: BOCA
+    //              0:  not BOCA
     // FIXME: add fidvar to mlinter and test it
     //
     // Usage eg from Kandasamy with budget 100: ./svmheavyv7.exe -L res100
@@ -427,7 +427,7 @@ public:
         fidpenalty = 1;
         fidvar     = 0;
         fidover    = 0;
-        fidmode    = 1;
+        fidmode    = 21;
 
         impmeasu       = impmeasux;
         direcpre       = xdirecpre;

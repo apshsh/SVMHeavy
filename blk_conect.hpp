@@ -356,13 +356,13 @@ public:
     virtual int var(gentype &resv, gentype &resmu, int i,                                                           gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return cov(resv,resmu,i,i,pxyprodi,pxyprodi,pxyprodii); }
     virtual int var(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override { return cov(resv,resmu,xa,xa,xainf,xainf,pxyprodx,pxyprodx,pxyprodxx); }
 
-    virtual int covarTrainingVector(Matrix<gentype> &resv, const Vector<int> &i) const override { return ML_Base::covarTrainingVector(resv,i); }
+    virtual int covar(Matrix<gentype> &resv, const Vector<int>                    &i) const override { return ML_Base::covar(resv,i); }
     virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const override { return ML_Base::covar(resv,x); }
 
-    virtual int noisevarTrainingVector(gentype &resv, gentype &resmu, int i, const SparseVector<gentype> &xvar, int u = -1, gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return ML_Base::noisevarTrainingVector(resv,resmu,i,xvar,u,pxyprodi,pxyprodii); }
+    virtual int noisevar(gentype &resv, gentype &resmu, int i,                           const SparseVector<gentype> &xvar, int u = -1,                                 gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return ML_Base::noisevar(resv,resmu,i,xvar,u,pxyprodi,pxyprodii); }
     virtual int noisevar(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override { return ML_Base::noisevar(resv,resmu,xa,xvar,u,xainf,pxyprodx,pxyprodxx); }
 
-    virtual int noisecovTrainingVector(gentype &resv, gentype &resmu, int i, int j, const SparseVector<gentype> &xvar, int u = -1, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override { return ML_Base::noisecovTrainingVector(resv,resmu,i,j,xvar,u,pxyprodi,pxyprodj,pxyprodij); }
+    virtual int noisecov(gentype &resv, gentype &resmu, int i,                           int j,                           const SparseVector<gentype> &xvar, int u = -1,                                                                 gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override { return ML_Base::noisecov(resv,resmu,i,j,xvar,u,pxyprodi,pxyprodj,pxyprodij); }
     virtual int noisecov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodxy = nullptr) const override { return ML_Base::noisecov(resv,resmu,xa,xb,xvar,u,xainf,xbinf,pxyprodx,pxyprody,pxyprodxy); }
 
     // Training data tracking functions:

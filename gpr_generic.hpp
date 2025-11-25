@@ -242,10 +242,13 @@ public:
     virtual int var(gentype &resv, gentype &resmu, int i,                                                           gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return ML_Base::var(resv,resmu,i,pxyprodi,pxyprodii); }
     virtual int var(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override;
 
-    virtual int covarTrainingVector(Matrix<gentype> &resv, const Vector<int> &i)                    const override { return ML_Base::covarTrainingVector(resv,i); }
-    virtual int covar              (Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const override;
+    virtual int covar(Matrix<gentype> &resv, const Vector<int>                    &i) const override { return ML_Base::covar(resv,i); }
+    virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const override;
 
+    virtual int noisevar(gentype &resv, gentype &resmu, int i,                           const SparseVector<gentype> &xvar, int u = -1,                                 gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return ML_Base::noisevar(resv,resmu,i,xvar,u,pxyprodi,pxyprodii); }
     virtual int noisevar(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override;
+
+    virtual int noisecov(gentype &resv, gentype &resmu, int i,                           int j,                           const SparseVector<gentype> &xvar, int u = -1,                                                                 gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override { return ML_Base::noisecov(resv,resmu,i,j,xvar,u,pxyprodi,pxyprodj,pxyprodij); }
     virtual int noisecov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodxy = nullptr) const override;
 
 

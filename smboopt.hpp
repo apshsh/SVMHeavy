@@ -393,7 +393,7 @@ public:
     template <class S> int  model_covar(Matrix<gentype> &rescov, const Vector<SparseVector<S> > &x) const;
     template <class S> void model_stabProb(double &res, const SparseVector<S> &x, int p, double pnrm, int rot, double mu, double B) const;
 
-    int  model_covarTrainingVector(Matrix<gentype> &rescov, const Vector<int> &i, int q = 0) const { return getsigmaapprox(q).covarTrainingVector(rescov,i); }
+    int  model_covar(Matrix<gentype> &rescov, const Vector<int> &i, int q = 0) const { return getsigmaapprox(q).covar(rescov,i); }
     void model_stabProbTrainingVector(double &res, int i, int p, double pnrm, int rot, double mu, double B, int q = 0) const { (getmuapprox(q)).stabProbTrainingVector(res,i,p,pnrm,rot,mu,B); }
 
     int model_addTrainingVector_sigmaifsep    (const gentype &y,                       const SparseVector<gentype> &x,                                                     double varadd = 0);
@@ -412,18 +412,19 @@ public:
 
     double  model_sigma(int q) const { return getmuapprox(q).sigma(); }
     gentype model_sigma(void)  const; // full vector for all models
+    double  model_sigma_cgt(int q) const { return getcgtapprox(q).sigma(); }
 
     const MercerKernel &model_getKernel(int q)        const { return getmuapprox(q).getKernel();        }
           MercerKernel &model_getKernel_unsafe(int q)       { return getmuapprox("&",q).getKernel_unsafe(); }
           int           model_resetKernel(int q)            { return getmuapprox("&",q).resetKernel();      }
 
-    const SparseVector<gentype> &model_x(int i, int q = 0) const { return getmuapprox(q).x(i); }
-    const Vector<gentype>       &model_y(int q = -1)       const { return ( q == -1 ) ? ( ismoo() ? locyres : getmuapprox(0).y() ) : getmuapprox(q).y();  }
-    const Vector<int>           &model_d(int q = 0)        const { return getmuapprox(q).d();  }
+    const SparseVector<gentype> &model_x(int i, int q = 0)  const { return getmuapprox(q).x(i); }
+    const gentype               &model_y(int i, int q = -1) const { return ( q == -1 ) ? ( ismoo() ? locyres(i) : getmuapprox(0).y(i) ) : getmuapprox(q).y(i);  }
+          int                    model_d(int i, int q = 0)  const { return (getmuapprox(q).d())(i);  }
 
     const SparseVector<gentype> &model_x_cgt(int i, int q = 0) const { return getcgtapprox(q).x(i); }
-    const Vector<gentype>       &model_y_cgt(int q = 0)        const { return getcgtapprox(q).y();  }
-    const Vector<int>           &model_d_cgt(int q = 0)        const { return getcgtapprox(q).d();  }
+    const gentype               &model_y_cgt(int i, int q = 0) const { return getcgtapprox(q).y(i); }
+          int                    model_d_cgt(int i, int q = 0) const { return (getcgtapprox(q).d())(i); }
 
     int model_train      (int &res, svmvolatile int &killSwitch);
     int model_train_sigma(int &res, svmvolatile int &killSwitch);

@@ -1,5 +1,10 @@
 //when model_convertx is called, only go through near part. far part should mimic near part (it's the other side of a rank constraint)
 
+//FIXME: if you hvae y specified in a gridfile, but x has nulls, you should do
+//       a random spread of points for the nulls to induce equality for all x
+// crazy idea: if true for 2 x values then you get a sum alpha1 x1 + alpha2 x2
+// so a continuum should give a weighted integral.
+
 //FIXME: can we plot slides on request
 // FIXME: have option for human feedback that does disable(-i-1) to disable
 //        in the GP layer of blk_conect but not the prior model(s)
@@ -735,7 +740,7 @@ class fninnerinnerArg
         // don't calculate sigmay unless we need to
 
         bool needvar = ( ( ( acq != 0 ) && ( acq != 12 ) && ( acq != 16 ) ) || bbopts.isimphere() || PIscale ); // need the variance for calculating acquisition fn
-        bool answisy = ( ( gridi >= 0 ) && ( isfullgrid || ( bbopts.model_d()(Nbasemu+gridi) == 2 ) ) );        // the point x,y is in the training set
+        bool answisy = ( ( gridi >= 0 ) && ( isfullgrid || ( bbopts.model_d(Nbasemu+gridi) == 2 ) ) );        // the point x,y is in the training set
 
 //errstream() << "phantomxyz testpoint 4 needvar = " << needvar << "\n";
 //errstream() << "phantomxyz testpoint 4 answisy = " << answisy << "\n";
@@ -780,7 +785,7 @@ predictive noise is predsigmay, not sigma()
 
         else
         {
-            if      ( isgridopt &&               ( gridi >= 0 ) && answisy ) { muy = bbopts.model_y()(Nbasemu+gridi);                                       }
+            if      ( isgridopt &&               ( gridi >= 0 ) && answisy ) { muy = bbopts.model_y(Nbasemu+gridi);                                         }
             else if ( isgridopt && !iscontopt && ( gridi >= 0 ) && needvar ) { bbopts.model_muvarTrainingVector(sigmay,muy,Nbasesigma+gridi,Nbasemu+gridi); }
             else if ( isgridopt && !iscontopt && ( gridi >= 0 )            ) { bbopts.model_muTrainingVector(muy,Nbasemu+gridi);                            }
             else if (                                              needvar ) { bbopts.model_muvar(sigmay,muy,x);                                            }
@@ -1147,8 +1152,8 @@ predictive noise is predsigmay, not sigma()
                         double dmuy  = (double) muy;
                         double dsigy = (double) sigmay;
 
-                        double ykdec = ( k == 0 ) ? stabZeroPt : ((double) (bbopts.model_y())(ysort(k-1)));
-                        double yk    = ( k == ysort.size() ) ? 1e12 : ((double) (bbopts.model_y())(ysort(k))); // 1e12 is a placeholder for bugnum. Never actually used.
+                        double ykdec = ( k == 0 ) ? stabZeroPt : ((double) (bbopts.model_y(ysort(k-1))));
+                        double yk    = ( k == ysort.size() ) ? 1e12 : ((double) (bbopts.model_y(ysort(k)))); // 1e12 is a placeholder for bugnum. Never actually used.
 
                         //parta = phifn((dmuy-ykdec)/dsigy) - ( ( k == ysort.size() ) ? 0.0 : phifn((dmuy-yk)/dsigy) );
                         //partb = Phifn((dmuy-ykdec)/dsigy) - ( ( k == ysort.size() ) ? 0.0 : Phifn((dmuy-yk)/dsigy) );
@@ -1173,8 +1178,8 @@ predictive noise is predsigmay, not sigma()
 
                         for ( int i = 0 ; i < k-1 ; ++i )
                         {
-                            double yidec = ( i == 0 ) ? stabZeroPt : ((double) (bbopts.model_y())(ysort(i-1)));
-                            double yi    = ( i == ysort.size() ) ? 1e12 : ((double) (bbopts.model_y())(ysort(i))); // i == ysort.size() never attained.
+                            double yidec = ( i == 0 ) ? stabZeroPt : ((double) (bbopts.model_y(ysort(i-1))));
+                            double yi    = ( i == ysort.size() ) ? 1e12 : ((double) (bbopts.model_y(ysort(i)))); // i == ysort.size() never attained.
 
                             scaleb += sscore(i)*(yi-yidec)/dsigy;
                         }
@@ -2669,6 +2674,7 @@ int bayesOpt(int dim,
                     bool fullobs = process_obs(yyval,xycgt,xxobstype,xxobstype_cgt,bopts.numcgt);
                     const SparseVector<gentype> &xtoadd = xxreplacexx ? xxxreplace : (*gridsource).x(i);
 
+//FIXME if d=2 and y!=none, and numcgt=0 or dcgt=2 and y!=none THEN fill in nulls with scatter of random points and train on that (this is a full observation)
                     if ( !xxobstype ) { isfullgrid = false; }
                     if ( !fullobs   ) { allfullobs = 0;     }
 
@@ -2718,6 +2724,8 @@ int bayesOpt(int dim,
 
                 if ( !skipthis )
                 {
+//FIXME if d=2 and y!=none, and numcgt=0 or dcgt=2 and y!=none THEN fill in nulls with scatter of random points and train on that (this is a full observation)
+//FIXME also do for d=+-1, but these don't count as a full observation
                     double nuscaledummy = 1;
 
                     readres(yyval,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost,nuscaledummy);
@@ -2840,6 +2848,12 @@ int bayesOpt(int dim,
     int ismultfid = dimfid ? 1 : 0;                     // is multi-fidelity optimization
 
     NiceAssert( !isgridopt || !(bopts.isXconvertNonTrivial()) );
+
+
+
+
+
+
 
 
 
@@ -3058,7 +3072,7 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
                 {
                     gridref    = rand()%(gridind.size()); // stored for later when we *may* (or may not) remove from grid if the observation is "full"
                     gridi      = gridind(gridref);
-                    gridy      = (double) bopts.model_y()(Nbasemu+gridi);
+                    gridy      = (double) bopts.model_y(Nbasemu+gridi);
                     //xinf    = &(((*gridsource).xinfo(gridi)));
                 }
 
@@ -3134,9 +3148,9 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                 // ===========================================================
                 // ===========================================================
 
-                if ( isgridopt && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
+                if ( isgridopt && ( isfullgrid || ( bopts.model_d(Nbasemu+gridi) == 2 ) ) )
                 {
-                    mupred("&",k) = bopts.model_y()(Nbasemu+gridi);
+                    mupred("&",k) = bopts.model_y(Nbasemu+gridi);
                     sigmapred("&",k) = bopts.model_sigma(0);
                 }
 
@@ -3180,19 +3194,19 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                 gentype gridresis = nullgentype();
                 Vector<gentype> ycgtis(bopts.numcgt,nullgentype());
 
-                if ( isgridopt && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
+                if ( isgridopt && ( isfullgrid || ( bopts.model_d(Nbasemu+gridi) == 2 ) ) )
                 {
                     // Grid may have defined solutions already loaded.
 
-                    gridresis = bopts.model_y()(Nbasemu+gridi);
+                    gridresis = bopts.model_y(Nbasemu+gridi);
                     gridresis.negate();
                 }
 
                 for ( int iy = 0 ; iy < bopts.numcgt ; ++iy )
                 {
-                    if ( isgridopt && ( bopts.model_d_cgt(iy)(Nbasemu+gridi) == 2 ) )
+                    if ( isgridopt && ( bopts.model_d_cgt(Nbasemu+gridi,iy) == 2 ) )
                     {
-                        ycgtis("&",iy) = bopts.model_y_cgt(iy)(Nbasemu+gridi);
+                        ycgtis("&",iy) = bopts.model_y_cgt(Nbasemu+gridi,iy);
                     }
                 }
 
@@ -3285,7 +3299,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                         {
                             if ( xobstype && ( addvar != 0 ) ) { bopts.model_setsigmaweight_addvar(Nbasemu+gridi,Nsigma,addvar); }
                             if ( xobstype ) { bopts.model_setyd(Nbasemu+gridi,Nbasesigma+gridi,xobstype,fnapproxout,varscale); }
-                            if ( !xobstype && !bopts.model_d()(Nbasemu+gridi) ) { fullobs = false; }
+                            if ( !xobstype && !bopts.model_d(Nbasemu+gridi) ) { fullobs = false; }
                         }
 
                         else
@@ -3297,13 +3311,13 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                         {
                             for ( int iy = 0 ; iy < ycgt.size() ; ++iy )
                             {
-                                if ( !xobstype_cgt(iy) && ( bopts.model_d_cgt(iy)(Nbasecgt+gridi) ) )
+                                if ( !xobstype_cgt(iy) && ( bopts.model_d_cgt(Nbasecgt+gridi,iy) ) )
                                 {
-                                    ycgt("&",iy) = bopts.model_y_cgt(iy)(Nbasecgt+gridi);
-                                    xobstype_cgt("&",iy) = bopts.model_d_cgt(iy)(Nbasecgt+gridi);
+                                    ycgt("&",iy) = bopts.model_y_cgt(Nbasecgt+gridi,iy);
+                                    xobstype_cgt("&",iy) = bopts.model_d_cgt(Nbasecgt+gridi,iy);
                                 }
 
-                                if ( !xobstype_cgt(iy) && !bopts.model_d_cgt(iy)(Nbasecgt+gridi) ) { fullobs = false; }
+                                if ( !xobstype_cgt(iy) && !bopts.model_d_cgt(Nbasecgt+gridi,iy) ) { fullobs = false; }
                             }
 
                             bopts.model_setyd_cgt(Nbasecgt+gridi,xobstype_cgt,ycgt,varscale);
@@ -3596,7 +3610,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
 
             for ( j = 0 ; j < rort.size() ; ++j )
             {
-                if ( (bopts.model_d())(j) && ( firstone || ( (bopts.model_y())(rort(j)) < (bopts.model_y())(rort(jj)) ) ) )
+                if ( bopts.model_d(j) && ( firstone || ( (bopts.model_y(rort(j))) < (bopts.model_y(rort(jj))) ) ) )
                 {
                     jj = j;
                     firstone = 0;
@@ -4255,7 +4269,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                     gridi = gridires;
                     //gridind.remove(itorem); - do this later if we get a full observation!
                     gridref = itorem;
-                    gridy = (double) bopts.model_y()(Nbasemu+gridi); //((*gridsource).y())(gridi);
+                    gridy = (double) bopts.model_y(Nbasemu+gridi); //((*gridsource).y())(gridi);
 
                     if ( !iscontopt )
                     {
@@ -4295,7 +4309,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
 
                 if ( ( dimfid && ( fidmode != 0 ) ) && ( locacq != 18 ) )
                 {
-                    if ( fidmode == 1 )
+                    if ( fidmode == 21 )
                     {
                         int numfids = bopts.numfids;
 
@@ -4458,7 +4472,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                         }
                     }
 
-                    else if ( ( fidmode >= 2 ) && ( fidmode <= 19 ) )
+                    else if ( ( fidmode >= 1 ) && ( fidmode <= 19 ) )
                     {
                         // Loop through all fidelities, work out which one gives the best information gain per unit budget
 
@@ -4477,6 +4491,10 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                         double target_max = 0;
                         gentype predsigmay,sigmay,muy;
 
+                        Vector<gentype> predsigmay_cgt(bopts.numcgt);
+                        Vector<gentype> sigmay_cgt(bopts.numcgt);
+                        Vector<gentype> muy_cgt(bopts.numcgt);
+
                         for ( int kk = 0 ; kk < fidpencostsize ; kk++ )
                         {
                             for ( int jij = 0 ; jij < dimfid ; jij++ )
@@ -4487,64 +4505,60 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                             SparseVector<gentype> tmpxalowfid;
                             NonsparseToSparsenear(tmpxalowfid,xalowfid,dim,dimfid);
 
-                            // sigmay = prior variance at xautopia
-                            // predsigmay = posterior variance at xautopia if we make a measurement at xalowfid
-
-                            bopts.model_predmuvar(predsigmay,sigmay,muy,tmpxautopia,tmpxalowfid);
-
 //errstream() << "fidelity " << kk << ": sigmay = " << sigmay << "\n";
 //errstream() << "fidelity " << kk << ": predsigmay = " << predsigmay << "\n";
 //errstream() << "fidelity " << kk << ": sigma = " << bopts.model_sigma() << "\n";
                             double fidcst = fidpencost(kk);
 
-                            double sigma_rat = ((double) sigmay)/((double) predsigmay);
                             double cost_rat  = fidcst_max/fidcst;
+                            double cost_diff = fidcst_max-fidcst;
 
-                            double sigma_diff = ((double) sigmay)-((double) predsigmay);
-                            double cost_diff  = fidcst_max-fidcst;
-
-                            double fidmig = std::log2(1+((((double) sigmay)+bopts.model_sigma(0))/(((double) predsigmay)+bopts.model_sigma(0))));
                             double fidtrm = std::log2(1+(fidcst_max/fidcst));
 
-                            double target_v11a = cost_rat  * sigma_rat;
-                            double target_v21a = cost_diff * sigma_rat;
-                            double target_v31a = fidtrm    * sigma_rat;
-                            double target_v12a = cost_rat  * sigma_diff; // ***
-                            double target_v22a = cost_diff * sigma_diff;
-                            double target_v32a = fidtrm    * sigma_diff;
-                            double target_v13a = cost_rat  * fidmig;
-                            double target_v23a = cost_diff * fidmig; // ***
-                            double target_v33a = fidtrm    * fidmig; // ***
-                            double target_v11b = cost_rat  + sigma_rat;
-                            double target_v21b = cost_diff + sigma_rat;
-                            double target_v31b = fidtrm    + sigma_rat;
-                            double target_v12b = cost_rat  + sigma_diff;
-                            double target_v22b = cost_diff + sigma_diff;
-                            double target_v32b = fidtrm    + sigma_diff;
-                            double target_v13b = cost_rat  + fidmig;
-                            double target_v23b = cost_diff + fidmig;
-                            double target_v33b = fidtrm    + fidmig;
+                            // sigmay = prior variance at xautopia
+                            // predsigmay = posterior variance at xautopia if we make a measurement at xalowfid
+
+                            bopts.model_predmuvar(predsigmay,sigmay,muy,tmpxautopia,tmpxalowfid);
+
+                            double sigma_rat  = ((double) sigmay)/((double) predsigmay);
+                            double sigma_diff = ((double) sigmay)-((double) predsigmay);
+
+                            double fidmig = std::log2(1+((((double) sigmay)+bopts.model_sigma(0))/(((double) predsigmay)+bopts.model_sigma(0))));
+
+                            if ( bopts.numcgt )
+                            {
+                                bopts.model_predmuvar_cgt(predsigmay_cgt,sigmay_cgt,muy_cgt,tmpxautopia,tmpxalowfid);
+
+                                for ( int icgt = 0 ; icgt < bopts.numcgt ; ++icgt )
+                                {
+                                    sigma_diff += ((double) sigmay_cgt(icgt))-((double) predsigmay_cgt(icgt));
+
+                                    fidmig += std::log2(1+((((double) sigmay_cgt(icgt))+bopts.model_sigma_cgt(icgt))/(((double) predsigmay_cgt(icgt))+bopts.model_sigma_cgt(icgt))));
+                                }
+
+                                sigma_rat = std::pow(2.0,fidmig)-1; // working back from the definitions
+                            }
 
                             double target = 0;
 
-                            if      ( fidmode == 2  ) { target = target_v11a; }
-                            else if ( fidmode == 3  ) { target = target_v21a; }
-                            else if ( fidmode == 4  ) { target = target_v31a; }
-                            else if ( fidmode == 5  ) { target = target_v12a; } // ***
-                            else if ( fidmode == 6  ) { target = target_v22a; }
-                            else if ( fidmode == 7  ) { target = target_v32a; }
-                            else if ( fidmode == 8  ) { target = target_v13a; }
-                            else if ( fidmode == 9  ) { target = target_v23a; } // ***
-                            else if ( fidmode == 10 ) { target = target_v33a; } // ***
-                            else if ( fidmode == 11 ) { target = target_v11b; }
-                            else if ( fidmode == 12 ) { target = target_v21b; }
-                            else if ( fidmode == 13 ) { target = target_v31b; }
-                            else if ( fidmode == 14 ) { target = target_v12b; }
-                            else if ( fidmode == 15 ) { target = target_v22b; }
-                            else if ( fidmode == 16 ) { target = target_v32b; }
-                            else if ( fidmode == 17 ) { target = target_v13b; }
-                            else if ( fidmode == 18 ) { target = target_v23b; }
-                            else if ( fidmode == 19 ) { target = target_v33b; }
+                            if      ( fidmode == 1  ) { target = cost_rat  * sigma_rat;  }
+                            else if ( fidmode == 2  ) { target = cost_diff * sigma_rat;  }
+                            else if ( fidmode == 3  ) { target = fidtrm    * sigma_rat;  }
+                            else if ( fidmode == 4  ) { target = cost_rat  * sigma_diff; } // ***
+                            else if ( fidmode == 5  ) { target = cost_diff * sigma_diff; }
+                            else if ( fidmode == 6  ) { target = fidtrm    * sigma_diff; }
+                            else if ( fidmode == 7  ) { target = cost_rat  * fidmig;     }
+                            else if ( fidmode == 8  ) { target = cost_diff * fidmig;     } // ***
+                            else if ( fidmode == 9  ) { target = fidtrm    * fidmig;     } // ***
+                            else if ( fidmode == 11 ) { target = cost_rat  + sigma_rat;  }
+                            else if ( fidmode == 12 ) { target = cost_diff + sigma_rat;  }
+                            else if ( fidmode == 13 ) { target = fidtrm    + sigma_rat;  }
+                            else if ( fidmode == 14 ) { target = cost_rat  + sigma_diff; }
+                            else if ( fidmode == 15 ) { target = cost_diff + sigma_diff; }
+                            else if ( fidmode == 16 ) { target = fidtrm    + sigma_diff; }
+                            else if ( fidmode == 17 ) { target = cost_rat  + fidmig;     }
+                            else if ( fidmode == 18 ) { target = cost_diff + fidmig;     }
+                            else if ( fidmode == 19 ) { target = fidtrm    + fidmig;     }
 
 errstream() << "migpercost " << kk << ": target = (" << fidcst_max << "," << fidcst << " : " << sigmay << "," << predsigmay << ")";
 
@@ -4851,7 +4865,7 @@ errstream() << "\n";
 
                 if ( bopts.sigmuseparate )
                 {
-                    if ( isgridopt && isfullfid && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
+                    if ( isgridopt && isfullfid && ( isfullgrid || ( bopts.model_d(Nbasemu+gridi) == 2 ) ) )
                     {
                         ;
                     }
@@ -4875,9 +4889,9 @@ errstream() << "\n";
                 // ===========================================================
                 // ===========================================================
 
-                if ( isgridopt && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
+                if ( isgridopt && ( isfullgrid || ( bopts.model_d(Nbasemu+gridi) == 2 ) ) )
                 {
-                    mupred("&",numRecs)    = bopts.model_y()(Nbasemu+gridi);
+                    mupred("&",numRecs)    = bopts.model_y(Nbasemu+gridi);
                     sigmapred("&",numRecs) = bopts.model_sigma(0);
                 }
 
@@ -4983,19 +4997,19 @@ errstream() << "\n";
                 gentype gridresis = nullgentype();
                 Vector<gentype> ycgtis(bopts.numcgt,nullgentype());
 
-                if ( isgridopt && ( isfullgrid || ( bopts.model_d()(Nbasemu+gridi) == 2 ) ) )
+                if ( isgridopt && ( isfullgrid || ( bopts.model_d(Nbasemu+gridi) == 2 ) ) )
                 {
                     // Grid may have defined solutions already loaded.
 
-                    gridresis = bopts.model_y()(Nbasemu+gridi);
+                    gridresis = bopts.model_y(Nbasemu+gridi);
                     gridresis.negate();
                 }
 
                 for ( int iy = 0 ; iy < bopts.numcgt ; ++iy )
                 {
-                    if ( isgridopt && !iscontopt && ( bopts.model_d_cgt(iy)(Nbasemu+gridi) == 2 ) )
+                    if ( isgridopt && !iscontopt && ( bopts.model_d_cgt(Nbasemu+gridi,iy) == 2 ) )
                     {
-                        ycgtis("&",iy) = bopts.model_y_cgt(iy)(Nbasemu+gridi);
+                        ycgtis("&",iy) = bopts.model_y_cgt(Nbasemu+gridi,iy);
                     }
                 }
 
@@ -5104,7 +5118,7 @@ errstream() << "\n";
                             zindex("&",jij) = (int) std::round(((double) (xxb(k).n(jij,1)))*numfids);
                         }
 
-                        if ( fidmode == 1 )
+                        if ( fidmode == 21 )
                         {
                             // Heuristic from Kandasamy supplementary C.1
 
@@ -5196,7 +5210,7 @@ errstream() << "\n";
                             }
                         }
 
-                        else if ( !bopts.model_d()(Nbasemu+gridi) )
+                        else if ( !bopts.model_d(Nbasemu+gridi) )
                         {
                             fullobs = false;
                         }
@@ -5213,10 +5227,10 @@ errstream() << "\n";
                         {
                             if ( !xobstype_cgt(iy) ) //ycgt(iy).isValNull() )
                             {
-                                if ( bopts.model_d_cgt(iy)(Nbasecgt+gridi) )
+                                if ( bopts.model_d_cgt(Nbasecgt+gridi,iy) )
                                 {
-                                    ycgt("&",iy) = bopts.model_y_cgt(iy)(Nbasecgt+gridi);
-                                    xobstype_cgt("&",iy) = bopts.model_d_cgt(iy)(Nbasecgt+gridi);
+                                    ycgt("&",iy) = bopts.model_y_cgt(Nbasecgt+gridi,iy);
+                                    xobstype_cgt("&",iy) = bopts.model_d_cgt(Nbasecgt+gridi,iy);
                                 }
 
                                 else
@@ -5344,7 +5358,7 @@ errstream() << "\n";
                     for ( jj = 0 ; jj < ysort.size() ; ++jj )
                     {
 //FIXME TS-MOO
-                        if ( (bopts.model_y())(addpointpos) < (bopts.model_y())(ysort(jj)) )
+                        if ( (bopts.model_y(addpointpos)) < (bopts.model_y(ysort(jj))) )
                         {
                             break;
                         }

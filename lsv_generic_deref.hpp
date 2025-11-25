@@ -652,15 +652,15 @@ public:
     virtual int var(gentype &resv, gentype &resmu, int i,                                                           gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return getQconst().var(resv,resmu,i,pxyprodi,pxyprodii); }
     virtual int var(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override { return getQconst().var(resv,resmu,xa,xainf,pxyprodx,pxyprodxx); }
 
-    virtual int covarTrainingVector(Matrix<gentype> &resv, const Vector<int> &i) const override { return getQconst().covarTrainingVector(resv,i); }
+    virtual int covar(Matrix<gentype> &resv, const Vector<int>                    &i) const override { return getQconst().covar(resv,i); }
     virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const override { return getQconst().covar(resv,x); }
 
     // Input-Output noise calculation
 
-    virtual int noisevarTrainingVector(gentype &resv, gentype &resmu, int i, const SparseVector<gentype> &xvar, int uu = -1, gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return getQconst().noisevarTrainingVector(resv,resmu,i,xvar,uu,pxyprodi,pxyprodii); }
+    virtual int noisevar(gentype &resv, gentype &resmu, int i,                           const SparseVector<gentype> &xvar, int uu = -1,                                 gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return getQconst().noisevar(resv,resmu,i,xvar,uu,pxyprodi,pxyprodii); }
     virtual int noisevar(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int uu = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override { return getQconst().noisevar(resv,resmu,xa,xvar,uu,xainf,pxyprodx,pxyprodxx); }
 
-    virtual int noisecovTrainingVector(gentype &resv, gentype &resmu, int i, int j, const SparseVector<gentype> &xvar, int uu = -1, gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override { return getQconst().noisecovTrainingVector(resv,resmu,i,j,xvar,uu,pxyprodi,pxyprodj,pxyprodij); }
+    virtual int noisecov(gentype &resv, gentype &resmu, int i,                           int j,                           const SparseVector<gentype> &xvar, int uu = -1,                                                                 gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override { return getQconst().noisecov(resv,resmu,i,j,xvar,uu,pxyprodi,pxyprodj,pxyprodij); }
     virtual int noisecov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xvar, int uu = -1, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodxy = nullptr) const override { return getQconst().noisecov(resv,resmu,xa,xb,xvar,uu,xainf,xbinf,pxyprodx,pxyprody,pxyprodxy); }
 
     // Training data tracking functions:

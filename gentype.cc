@@ -2196,6 +2196,7 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
         isNomConst = src.isNomConst;
         intval     = src.intval;
         doubleval  = src.doubleval;
+        complexval = src.complexval;
     }
 
     else if ( areDistinct )
@@ -2308,6 +2309,7 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
         intval     = src.intval;
         isNomConst = src.isNomConst;
         doubleval  = src.doubleval;
+        complexval = src.complexval;
         fnnameind  = src.fnnameind;
         thisfninfo = src.thisfninfo;
     }
@@ -2343,12 +2345,13 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
         if ( wasValEqn    ) { MEMNEW(eqnstore,Vector<gentype       >(*(src.eqnargs)));    if ( src.altpycall ) { MEMNEW(pycstore,std::function<gentype(const gentype &)>(*(src.altpycall))); } }
         if ( wasValStrErr ) { MEMNEW(strstore,std::string           (*(src.stringval))); }
 
-        char              srctypeis      = src.typeis;
-        int               srcintval      = src.intval;
-        double            srcdoubleval   = src.doubleval;
-        bool              srcisNomConst  = src.isNomConst;
-        int               srcfnnameind   = src.fnnameind;
-        const fninfoblock *srcthisfninfo = src.thisfninfo;
+        char                 srctypeis      = src.typeis;
+        int                  srcintval      = src.intval;
+        double               srcdoubleval   = src.doubleval;
+        std::complex<double> srccomplexval  = src.complexval;
+        bool                 srcisNomConst  = src.isNomConst;
+        int                  srcfnnameind   = src.fnnameind;
+        const fninfoblock   *srcthisfninfo  = src.thisfninfo;
 
         // Only now can we safely delete the contents of *this
 
@@ -2361,6 +2364,7 @@ gentype &gentype::fastcopy(const gentype &src, int areDistinct)
         isNomConst = src.isNomConst;
         intval     = srcintval;
         doubleval  = srcdoubleval;
+        complexval = srccomplexval;
         isNomConst = srcisNomConst;
         fnnameind  = srcfnnameind;
         thisfninfo = srcthisfninfo;
@@ -2637,6 +2641,19 @@ gentype &gentype::toReal(gentype &res)    const
     return res;
 }
 
+gentype &gentype::toComplex(gentype &res)   const
+{
+    std::string errstr;
+
+    if ( !(res.isValComplex())               ) { res.deleteVectMatMem('A'); res.complexval = 0.0; (*(res.anionval)).setorder(1); }
+    if ( loctoComplex(res.complexval,errstr) ) { res.makeError(errstr);                                                          }
+
+    *(res.anionval) = res.complexval;
+    res.isNomConst  = isNomConst;
+
+    return res;
+}
+
 gentype &gentype::toAnion(gentype &res)   const
 {
     std::string errstr;
@@ -2790,6 +2807,41 @@ double gentype::cast_double(int finalise) const
     }
 
     return doubleval;
+}
+
+std::complex<double> gentype::cast_complex(int finalise) const
+{
+    if ( !isValComplex() )
+    {
+        bool locisNomConst = isNomConst;
+
+        std::string errstr;
+
+        if ( finalise && isValEqn() )
+        {
+            gentype temp(*this);
+            SparseVector<SparseVector<gentype> > tempargs;
+
+            temp.fastevaluate(tempargs,finalise);
+            complexval = temp.cast_complex(0);
+        }
+
+        else if ( loctoComplex(complexval,errstr) )
+        {
+            // If this is set then doubleval is a also set nan, so we'll go with that
+            //NiceThrow(errstr);
+            ;
+        }
+
+        isNomConst = locisNomConst;
+    }
+
+    else
+    {
+        complexval = (std::complex<double>) *anionval;
+    }
+
+    return complexval;
 }
 
 const d_anion &gentype::cast_anion(int finalise) const
@@ -3319,6 +3371,36 @@ gentype &gentype::morph_anion(void)
     return *this;
 }
 
+gentype &gentype::morph_complex(void)
+{
+    if ( !isValComplex() )
+    {
+        isNomConst = false;
+
+        if ( anionval == nullptr )
+        {
+            MEMNEW(anionval,d_anion);
+        }
+
+        (*anionval).setorder(1);
+
+        std::string errstr;
+
+        if ( loctoComplex(complexval,errstr) )
+        {
+            makeError(errstr);
+
+            return *this;
+        }
+
+        *anionval = complexval;
+    }
+
+    typeis = 'A';
+
+    return *this;
+}
+
 gentype &gentype::morph_vector(void)
 {
     if ( !isValVector() )
@@ -3526,10 +3608,9 @@ int gentype::loctoInteger(int &res, std::string &errstr) const
         if      ( isValNull()    ) { res = 0;      }
         else if ( isValInteger() ) { res = intval; }
 
-	else if ( isValReal() )
+	else if ( isValReal()    )
 	{
             rpart = doubleval;
-
 	    res = (int) rpart;
 
             if ( ( (((double) res)-rpart) > 2 ) || ( (((double) res)-rpart) < -2 ) )
@@ -3539,13 +3620,12 @@ int gentype::loctoInteger(int &res, std::string &errstr) const
             }
 	}
 
-	else if ( isValAnion() )
+	else if ( isValAnion()   )
 	{
             if ( (*anionval).isreal() )
 	    {
                 //res = (int) (*anionval).realpart();
                 rpart = (*anionval).realpart();
-
                 res = (int) rpart;
 
                 if ( ( (((double) res)-rpart) > 2 ) || ( (((double) res)-rpart) < -2 ) )
@@ -3562,39 +3642,15 @@ int gentype::loctoInteger(int &res, std::string &errstr) const
 	    }
 	}
 
-	else if ( isValVector() )
-	{
-            if ( (*vectorval).size() == 1 )
-	    {
-                res = (*vectorval)(0).cast_int(0);
-	    }
-
-	    else
-	    {
-                errstr = "Can't cast vector to int.";
-                lociserr = 1;
-	    }
-	}
-
-	else if ( isValMatrix() )
-	{
-            if ( ( (*matrixval).numRows() == 1 ) && ( (*matrixval).numCols() == 1 ) )
-	    {
-                res = (*matrixval)(0,0).cast_int(0);
-	    }
-
-	    else
-	    {
-                errstr = "Can't cast matrix to int.";
-                lociserr = 1;
-            }
-	}
-
-        else if ( isValSet()    ) { errstr = "Can't cast set to integer.";        lociserr = 1; }
-        else if ( isValDict()   ) { errstr = "Can't cast dictionary to integer."; lociserr = 1; }
-        else if ( isValDgraph() ) { errstr = "Can't cast dgraph to integer.";     lociserr = 1; }
-	else if ( isValString() ) { errstr = "Can't cast string to integer.";     lociserr = 1; }
-	else if ( isValEqn()    ) { errstr = "Can't cast equation to integer.";   lociserr = 1; }
+	else if ( isValVector()  ) { if   ( (*vectorval).size() == 1 ) { res = (*vectorval)(0).cast_int(0);                  }
+                                     else                              { errstr = "Can't cast vector to int."; lociserr = 1; } }
+	else if ( isValMatrix()  ) { if   ( ( (*matrixval).numRows() == 1 ) && ( (*matrixval).numCols() == 1 ) ) { res = (*matrixval)(0,0).cast_int(0);                }
+                                     else                                                                        { errstr = "Can't cast matrix to int."; lociserr = 1; } }
+        else if ( isValSet()     ) { errstr = "Can't cast set to integer.";        lociserr = 1; }
+        else if ( isValDict()    ) { errstr = "Can't cast dictionary to integer."; lociserr = 1; }
+        else if ( isValDgraph()  ) { errstr = "Can't cast dgraph to integer.";     lociserr = 1; }
+	else if ( isValString()  ) { errstr = "Can't cast string to integer.";     lociserr = 1; }
+	else if ( isValEqn()     ) { errstr = "Can't cast equation to integer.";   lociserr = 1; }
     }
 
     else
@@ -3608,10 +3664,7 @@ int gentype::loctoInteger(int &res, std::string &errstr) const
         lociserr = 1;
     }
 
-    if ( lociserr )
-    {
-        res = 0;
-    }
+    if ( lociserr ) { res = 0; }
 
     return lociserr;
 }
@@ -3629,54 +3682,17 @@ int gentype::loctoReal(double &res, std::string &errstr) const
         if      ( isValNull()    ) { res = 0.0;             }
         else if ( isValInteger() ) { res = (double) intval; }
 	else if ( isValReal()    ) { res = doubleval;       }
-
-	else if ( isValAnion() )
-	{
-            if ( (*anionval).isreal() )
-	    {
-                res = (*anionval).realpart();
-	    }
-
-	    else
-	    {
-		errstr = "Can't cast imaginary number to real.";
-                lociserr = 1;
-	    }
-	}
-
-	else if ( isValVector() )
-	{
-            if ( (*vectorval).size() == 1 )
-	    {
-                res = (*vectorval)(0).cast_double(0);
-	    }
-
-	    else
-	    {
-                errstr = "Can't cast vector to real.";
-                lociserr = 1;
-	    }
-	}
-
-	else if ( isValMatrix() )
-	{
-            if ( ( (*matrixval).numRows() == 1 ) && ( (*matrixval).numCols() == 1 ) )
-	    {
-                res = (*matrixval)(0,0).cast_double(0);
-	    }
-
-	    else
-	    {
-                errstr = "Can't cast matrix to real.";
-                lociserr = 1;
-            }
-	}
-
-        else if ( isValSet()    ) { errstr = "Can't cast set to real.";        lociserr = 1; }
-        else if ( isValDict()   ) { errstr = "Can't cast dictionary to real."; lociserr = 1; }
-        else if ( isValDgraph() ) { errstr = "Can't cast dgraph to real.";     lociserr = 1; }
-	else if ( isValString() ) { errstr = "Can't cast string to real.";     lociserr = 1; }
-	else if ( isValEqn()    ) { errstr = "Can't cast equation to real.";   lociserr = 1; }
+	else if ( isValAnion()   ) { if   ( (*anionval).isreal() ) { res = (*anionval).realpart();                                  }
+                                     else                          { errstr = "Can't cast imaginary number to real."; lociserr = 1; } }
+	else if ( isValVector()  ) { if   ( (*vectorval).size() == 1 ) { res = (*vectorval)(0).cast_double(0);                }
+                                     else                              { errstr = "Can't cast vector to real."; lociserr = 1; } }
+	else if ( isValMatrix()  ) { if   ( ( (*matrixval).numRows() == 1 ) && ( (*matrixval).numCols() == 1 ) ) { res = (*matrixval)(0,0).cast_double(0);              }
+                                     else                                                                        { errstr = "Can't cast matrix to real."; lociserr = 1; } }
+        else if ( isValSet()     ) { errstr = "Can't cast set to real.";        lociserr = 1; }
+        else if ( isValDict()    ) { errstr = "Can't cast dictionary to real."; lociserr = 1; }
+        else if ( isValDgraph()  ) { errstr = "Can't cast dgraph to real.";     lociserr = 1; }
+	else if ( isValString()  ) { errstr = "Can't cast string to real.";     lociserr = 1; }
+	else if ( isValEqn()     ) { errstr = "Can't cast equation to real.";   lociserr = 1; }
     }
 
     else
@@ -3690,12 +3706,49 @@ int gentype::loctoReal(double &res, std::string &errstr) const
         lociserr = 1;
     }
 
-    if ( lociserr )
-    {
-        //res = 0.0;
+    if ( lociserr ) { res = valvnan(errstr.c_str()); }
 
-        res = valvnan(errstr.c_str());
+    return lociserr;
+}
+
+int gentype::loctoComplex(std::complex<double> &res, std::string &errstr) const
+{
+    // Very important: don't overwrite res straight away, as it may actually
+    // be a reference to ...val.
+
+    int lociserr = 0;
+    errstr = "";
+
+    if ( !isValError() )
+    {
+        if      ( isValNull()    ) { res = 0.0;             }
+        else if ( isValInteger() ) { res = (double) intval; }
+	else if ( isValReal()    ) { res = doubleval;       }
+	else if ( isValComplex() ) { res = (std::complex<double>) *anionval; }
+	else if ( isValVector()  ) { if   ( (*vectorval).size() == 1 ) { res = (*vectorval)(0).cast_complex(0);                  }
+                                     else                              { errstr = "Can't cast vector to complex."; lociserr = 1; } }
+	else if ( isValMatrix()  ) { if   ( ( (*matrixval).numRows() == 1 ) && ( (*matrixval).numCols() == 1 ) ) { res = (*matrixval)(0,0).cast_complex(0);                }
+                                     else                                                                        { errstr = "Can't cast matrix to complex."; lociserr = 1; } }
+        else if ( isValAnion()   ) { errstr = "Can't cast hypercomplex to complex."; lociserr = 1; }
+        else if ( isValSet()     ) { errstr = "Can't cast set to complex.";          lociserr = 1; }
+        else if ( isValDict()    ) { errstr = "Can't cast dictionary to complex.";   lociserr = 1; }
+        else if ( isValDgraph()  ) { errstr = "Can't cast dgraph to complex.";       lociserr = 1; }
+	else if ( isValString()  ) { errstr = "Can't cast string to complex.";       lociserr = 1; }
+	else if ( isValEqn()     ) { errstr = "Can't cast equation to complex.";     lociserr = 1; }
     }
+
+    else
+    {
+        NiceAssert( stringval );
+
+        errstr = *stringval;
+	errstr += "\n";
+        errstr += "Can't cast error to integer.";
+
+        lociserr = 1;
+    }
+
+    if ( lociserr ) { res = valvnan(errstr.c_str()); }
 
     return lociserr;
 }
@@ -3713,50 +3766,16 @@ int gentype::loctoAnion(d_anion &res, std::string &errstr) const
         if      ( isValNull()    ) { res = 0.0;             }
         else if ( isValInteger() ) { res = (double) intval; }
 	else if ( isValReal()    ) { res = doubleval;       }
-
-	else if ( isValAnion() )
-	{
-            // Overwriting a with a would not be sensible
-
-            if ( &res != anionval )
-            {
-                res = *anionval;
-            }
-	}
-
-	else if ( isValVector() )
-	{
-            if ( (*vectorval).size() == 1 )
-	    {
-                res = (*vectorval)(0).cast_anion(0);
-	    }
-
-	    else
-	    {
-                errstr = "Can't cast vector to anion.";
-                lociserr = 1;
-	    }
-	}
-
-	else if ( isValMatrix() )
-	{
-            if ( ( (*matrixval).numRows() == 1 ) && ( (*matrixval).numCols() == 1 ) )
-	    {
-                res = (*matrixval)(0,0).cast_anion(0);
-	    }
-
-	    else
-	    {
-                errstr = "Can't cast matrix to anion.";
-                lociserr = 1;
-            }
-	}
-
-        else if ( isValSet()    ) { errstr = "Can't cast set to anion.";        lociserr = 1; }
-        else if ( isValDict()   ) { errstr = "Can't cast dictionary to anion."; lociserr = 1; }
-        else if ( isValDgraph() ) { errstr = "Can't cast dgraph to anion.";     lociserr = 1; }
-	else if ( isValString() ) { errstr = "Can't cast string to anion.";     lociserr = 1; }
-	else if ( isValEqn()    ) { errstr = "Can't cast equation to anion.";   lociserr = 1; }
+	else if ( isValAnion()   ) { if ( &res != anionval ) { res = *anionval; } }
+	else if ( isValVector()  ) { if   ( (*vectorval).size() == 1 ) { res = (*vectorval)(0).cast_anion(0);                  }
+                                     else                              { errstr = "Can't cast vector to anion."; lociserr = 1; } }
+	else if ( isValMatrix()  ) { if   ( ( (*matrixval).numRows() == 1 ) && ( (*matrixval).numCols() == 1 ) ) { res = (*matrixval)(0,0).cast_anion(0);                }
+                                     else                                                                        { errstr = "Can't cast matrix to anion."; lociserr = 1; } }
+        else if ( isValSet()     ) { errstr = "Can't cast set to anion.";        lociserr = 1; }
+        else if ( isValDict()    ) { errstr = "Can't cast dictionary to anion."; lociserr = 1; }
+        else if ( isValDgraph()  ) { errstr = "Can't cast dgraph to anion.";     lociserr = 1; }
+	else if ( isValString()  ) { errstr = "Can't cast string to anion.";     lociserr = 1; }
+	else if ( isValEqn()     ) { errstr = "Can't cast equation to anion.";   lociserr = 1; }
     }
 
     else
@@ -3770,12 +3789,7 @@ int gentype::loctoAnion(d_anion &res, std::string &errstr) const
         lociserr = 1;
     }
 
-    if ( lociserr )
-    {
-//        res = 0.0;
-
-        res = valvnan(errstr.c_str());
-    }
+    if ( lociserr ) { res = valvnan(errstr.c_str()); }
 
     return lociserr;
 }
@@ -3790,42 +3804,19 @@ int gentype::loctoVector(Vector<gentype> &res, std::string &errstr) const
 
     if ( !isValError() )
     {
-        if ( isValNull() )
-	{
-            res.resize(0);
-	}
+        if      ( isValNull()    ) { res.resize(0);                                   }
+        else if ( isValInteger() ) { res.resize(1); res("&",0) = *this;               }
+        else if ( isValReal()    ) { res.resize(1); res("&",0) = *this;               }
+        else if ( isValAnion()   ) { res.resize(1); res("&",0) = *this;               }
+	else if ( isValVector()  ) { if ( &res != vectorval ) { res = (*vectorval); } }
 
-        else if ( isValInteger() || isValReal() || isValAnion() )
-	{
-	    res.resize(1);
-
-	    res("&",0) = *this;
-	}
-
-	else if ( isValVector() )
-	{
-            // Overwriting a with a would not be sensible
-
-            if ( &res != vectorval )
-            {
-                res = (*vectorval);
-            }
-	}
-
-	else if ( isValMatrix() )
+	else if ( isValMatrix()  )
 	{
             retVector<gentype> tmpva;
             retVector<gentype> tmpvb;
 
-	    if ( !(*matrixval).numRows() || !(*matrixval).numCols() )
-            {
-                res.resize(0);
-            }
-
-	    else if ( (*matrixval).numRows() == 1 )
-	    {
-		res = (*matrixval)(0,tmpva,tmpvb);
-	    }
+	    if      ( !(*matrixval).numRows() || !(*matrixval).numCols() ) { res.resize(0);                     }
+	    else if ( (*matrixval).numRows() == 1                        ) { res = (*matrixval)(0,tmpva,tmpvb); }
 
 	    else if ( (*matrixval).numCols() == 1 )
 	    {
@@ -3868,13 +3859,7 @@ int gentype::loctoVector(Vector<gentype> &res, std::string &errstr) const
         lociserr = 1;
     }
 
-    if ( lociserr )
-    {
-        //res.resize(0);
-
-        res.resize(1);
-        res("&",0) = *this;
-    }
+    if ( lociserr ) { res.resize(1); res("&",0) = *this; }
 
     return lociserr;
 }
@@ -3891,45 +3876,17 @@ int gentype::loctoMatrix(Matrix<gentype> &res, std::string &errstr) const
 
     if ( !isValError() )
     {
-        if ( isValNull() )
-        {
-            res.resize(0,0);
-        }
-
-        else if ( isValInteger() || isValReal() || isValAnion() )
-	{
-	    res.resize(1,1);
-
-	    res("&",0,0) = *this;
-	}
-
-	else if ( isValVector() )
-	{
-	    res.resize((*vectorval).size(),1);
-
-	    int dessize = (*vectorval).size();
-
-	    for ( int i = 0 ; i < dessize ; ++i )
-	    {
-                res("&",i,0) = (*vectorval)(i);
-	    }
-	}
-
-	else if ( isValMatrix() )
-	{
-            // Overwriting a with a would not be sensible
-
-            if ( &res != matrixval )
-            {
-                res = (*matrixval);
-            }
-	}
-
-        else if ( isValSet()    ) { errstr = "Can't cast set to matrix.";        lociserr = 1; }
-        else if ( isValDict()   ) { errstr = "Can't cast dictionary to matrix."; lociserr = 1; }
-        else if ( isValDgraph() ) { errstr = "Can't cast dgraph to matrix.";     lociserr = 1; }
-	else if ( isValString() ) { errstr = "Can't cast string to matrix.";     lociserr = 1; }
-	else if ( isValEqn()    ) { errstr = "Can't cast equation to matrix.";   lociserr = 1; }
+        if      ( isValNull()    ) { res.resize(0,0);                       }
+        else if ( isValInteger() ) { res.resize(1,1); res("&",0,0) = *this; }
+        else if ( isValReal()    ) { res.resize(1,1); res("&",0,0) = *this; }
+        else if ( isValAnion()   ) { res.resize(1,1); res("&",0,0) = *this; }
+	else if ( isValVector()  ) { res.resize((*vectorval).size(),1); for ( int i = 0 ; i < (*vectorval).size() ; ++i ) { res("&",i,0) = (*vectorval)(i); } }
+	else if ( isValMatrix()  ) { if ( &res != matrixval ) { res = (*matrixval); } }
+        else if ( isValSet()     ) { errstr = "Can't cast set to matrix.";        lociserr = 1; }
+        else if ( isValDict()    ) { errstr = "Can't cast dictionary to matrix."; lociserr = 1; }
+        else if ( isValDgraph()  ) { errstr = "Can't cast dgraph to matrix.";     lociserr = 1; }
+	else if ( isValString()  ) { errstr = "Can't cast string to matrix.";     lociserr = 1; }
+	else if ( isValEqn()     ) { errstr = "Can't cast equation to matrix.";   lociserr = 1; }
     }
 
     else
@@ -3943,13 +3900,7 @@ int gentype::loctoMatrix(Matrix<gentype> &res, std::string &errstr) const
         lociserr = 1;
     }
 
-    if ( lociserr )
-    {
-//        res.resize(0,0);
-
-        res.resize(1,1);
-        res("&",0,0) = *this;
-    }
+    if ( lociserr ) { res.resize(1,1); res("&",0,0) = *this; }
 
     return lociserr;
 }
@@ -3964,26 +3915,9 @@ int gentype::loctoSet(Set<gentype> &res, std::string &errstr) const
 
     if ( !isValError() )
     {
-        if ( isValNull() )
-	{
-            res.zero();
-	}
-
-        else if ( isValSet() )
-	{
-            // Overwriting a with a would not be sensible
-
-            if ( &res != setval )
-            {
-                res = *setval;
-            }
-	}
-
-        else
-        {
-            res.zero();
-            res.add(*this);
-	}
+        if      ( isValNull() ) { res.zero();                              }
+        else if ( isValSet()  ) { if ( &res != setval ) { res = *setval; } }
+        else                    { res.zero(); res.add(*this);              }
     }
 
     else
@@ -3997,13 +3931,7 @@ int gentype::loctoSet(Set<gentype> &res, std::string &errstr) const
         lociserr = 1;
     }
 
-    if ( lociserr )
-    {
-//        res.zero();
-
-        res.zero();
-        res.add(*this);
-    }
+    if ( lociserr ) { res.zero(); res.add(*this); }
 
     return lociserr;
 }
@@ -4018,26 +3946,9 @@ int gentype::loctoDict(Dict<gentype,dictkey> &res, std::string &errstr) const
 
     if ( !isValError() )
     {
-        if ( isValNull() )
-	{
-            res.zero();
-	}
-
-        else if ( isValDict() )
-	{
-            // Overwriting a with a would not be sensible
-
-            if ( &res != dictval )
-            {
-                res = *dictval;
-            }
-	}
-
-        else
-        {
-            res.zero();
-            res("&","res") = *this;
-	}
+        if      ( isValNull() ) { res.zero();                                }
+        else if ( isValDict() ) { if ( &res != dictval ) { res = *dictval; } }
+        else                    { res.zero(); res("&","res") = *this;        }
     }
 
     else
@@ -4051,13 +3962,7 @@ int gentype::loctoDict(Dict<gentype,dictkey> &res, std::string &errstr) const
         lociserr = 1;
     }
 
-    if ( lociserr )
-    {
-//        res.zero();
-
-        res.zero();
-        res("&","err") = *this;
-    }
+    if ( lociserr ) { res.zero(); res("&","err") = *this; }
 
     return lociserr;
 }
@@ -4069,11 +3974,7 @@ int gentype::loctoDgraph(Dgraph<gentype,double> &res, std::string &errstr) const
 
     if ( !isValError() )
     {
-        if ( isValNull() )
-	{
-            res.zero();
-	}
-
+        if      ( isValNull()    ) { res.zero(); }
         else if ( isValInteger() ) { errstr = "Can't cast integer to dgraph.";  lociserr = 1; }
         else if ( isValReal()    ) { errstr = "Can't cast real to dgraph.";     lociserr = 1; }
         else if ( isValAnion()   ) { errstr = "Can't cast anion to dgraph.";    lociserr = 1; }
@@ -4081,17 +3982,7 @@ int gentype::loctoDgraph(Dgraph<gentype,double> &res, std::string &errstr) const
 	else if ( isValMatrix()  ) { errstr = "Can't cast matrix to dgraph.";   lociserr = 1; }
         else if ( isValSet()     ) { errstr = "Can't cast set to dgraph.";      lociserr = 1; }
         else if ( isValDict()    ) { errstr = "Can't cast set to dictionary.";  lociserr = 1; }
-
-        else if ( isValDgraph() )
-	{
-            // Overwriting a with a would not be sensible
-
-            if ( &res != dgraphval )
-            {
-                res = *dgraphval;
-            }
-	}
-
+        else if ( isValDgraph()  ) { if ( &res != dgraphval ) { res = *dgraphval; } }
 	else if ( isValString()  ) { errstr = "Can't cast string to dgraph.";   lociserr = 1; }
 	else if ( isValEqn()     ) { errstr = "Can't cast equation to dgraph."; lociserr = 1; }
     }
@@ -4107,10 +3998,7 @@ int gentype::loctoDgraph(Dgraph<gentype,double> &res, std::string &errstr) const
         lociserr = 1;
     }
 
-    if ( lociserr )
-    {
-        res.zero();
-    }
+    if ( lociserr ) { res.zero(); }
 
     return lociserr;
 }
@@ -17696,8 +17584,6 @@ gentype syscall(const gentype &c, const gentype &x)
 
 gentype pycall(const gentype &c, const gentype &x)
 {
-    gentype res;
-
     if ( c.isValEqnDir() || x.isValEqnDir() )
     {
         INITGENBLOCK
@@ -17705,42 +17591,31 @@ gentype pycall(const gentype &c, const gentype &x)
         return resx(c,x);
     }
 
-    if ( c.altpycall )
-    {
-        res = (*(c.altpycall))(x);
-    }
+    gentype res;
 
-    else if ( c.isValString() )
-    {
-        pycall((const std::string &) c,res,x);
-    }
-
-    else if ( c.isCastableToIntegerWithoutLoss() )
-    {
-        pycall((int) c,res,x);
-    }
-
-    else
-    {
-        constructError(c,x,res,"Command must evaluate to string in pycall.");
-    }
+    if      ( c.altpycall                        ) { res = (*(c.altpycall))(x);                                            }
+    else if ( c.isValString()                    ) { pycall((const std::string &) c,res,x);                                }
+    else if ( c.isCastableToIntegerWithoutLoss() ) { pycall((int) c,res,x);                                                }
+    else                                           { constructError(c,x,res,"Command must evaluate to string in pycall."); }
 
 //outstream() << "gentype pycall result " << res << "\n";
     return res;
 }
 
 #ifndef PYLOCAL
-void pycall(const std::string &fn, gentype &res,       int               x) { gentype xx(x);      pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res,       double            x) { gentype xx(x);      pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res, const d_anion          &x) { gentype xx(x);      pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res, const std::string      &x) { gentype xx(x);      pycall(fn,res,xx); }
-void pycall(const std::string &fn, gentype &res, int size, const double *x) { gentype xx(size,x); pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res,       int                   x) { gentype xx(x);      pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res,       double                x) { gentype xx(x);      pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res,       std::complex<double>  x) { gentype xx(x);      pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res, const d_anion              &x) { gentype xx(x);      pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res, const std::string          &x) { gentype xx(x);      pycall(fn,res,xx); }
+void pycall(const std::string &fn, gentype &res, int size, const double     *x) { gentype xx(size,x); pycall(fn,res,xx); }
 
-void pycall(int fni, gentype &res,       int               x) { gentype xx(x);      pycall(fni,res,xx); }
-void pycall(int fni, gentype &res,       double            x) { gentype xx(x);      pycall(fni,res,xx); }
-void pycall(int fni, gentype &res, const d_anion          &x) { gentype xx(x);      pycall(fni,res,xx); }
-void pycall(int fni, gentype &res, const std::string      &x) { gentype xx(x);      pycall(fni,res,xx); }
-void pycall(int fni, gentype &res, int size, const double *x) { gentype xx(size,x); pycall(fni,res,xx); }
+void pycall(int fni, gentype &res,       int                   x) { gentype xx(x);      pycall(fni,res,xx); }
+void pycall(int fni, gentype &res,       double                x) { gentype xx(x);      pycall(fni,res,xx); }
+void pycall(int fni, gentype &res,       std::complex<double>  x) { gentype xx(x);      pycall(fni,res,xx); }
+void pycall(int fni, gentype &res, const d_anion              &x) { gentype xx(x);      pycall(fni,res,xx); }
+void pycall(int fni, gentype &res, const std::string          &x) { gentype xx(x);      pycall(fni,res,xx); }
+void pycall(int fni, gentype &res, int size, const double     *x) { gentype xx(size,x); pycall(fni,res,xx); }
 
 // If not local python then we use a system call
 
