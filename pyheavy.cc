@@ -84,20 +84,6 @@ py::object *pyevalptr      (bool delit = false) { BUILTINDEF(pygetbuiltin().attr
 py::object *pyvalueerrorptr(bool delit = false) { BUILTINDEF(pygetbuiltin().attr("ValueError")); }
 py::object *pycomplexptr   (bool delit = false) { BUILTINDEF(pygetbuiltin().attr("complex"));    }
 
-//#define BUILTINDEF                                                       \
-//    static py::object *statobj = nullptr;                                \
-//    if ( !delit && !statobj ) { MEMNEW(statobj,py::object); *statobj =
-//#define BUILTINDEFEND                                                  } \
-//    if (  delit &&  statobj ) { MEMDEL(statobj); statobj = nullptr;    } \
-//    return statobj;
-//
-//py::object *pygetbuiltinptr(bool delit = false) { BUILTINDEF py::module_::import("builtins");   BUILTINDEFEND }
-//py::object *pyisinstanceptr(bool delit = false) { BUILTINDEF pygetbuiltin().attr("isinstance"); BUILTINDEFEND }
-//py::object *pycallableptr  (bool delit = false) { BUILTINDEF pygetbuiltin().attr("callable");   BUILTINDEFEND }
-//py::object *pyevalptr      (bool delit = false) { BUILTINDEF pygetbuiltin().attr("eval");       BUILTINDEFEND }
-//py::object *pyvalueerrorptr(bool delit = false) { BUILTINDEF pygetbuiltin().attr("ValueError"); BUILTINDEFEND }
-//py::object *pycomplexptr   (bool delit = false) { BUILTINDEF pygetbuiltin().attr("complex");    BUILTINDEFEND }
-
 py::object &pygetbuiltin(void) { return *pygetbuiltinptr(); }
 py::object &pyisinstance(void) { return *pyisinstanceptr(); }
 py::object &pycallable  (void) { return *pycallableptr  (); }
@@ -105,6 +91,8 @@ py::object &pyeval      (void) { return *pyevalptr      (); }
 py::object &pyvalueerror(void) { return *pyvalueerrorptr(); }
 py::object &pycomplex   (void) { return *pycomplexptr   (); }
 
+// Old static version: this will crash with GIL error on exit
+//
 //py::object &pygetbuiltin(void) { static py::object builtins   = py::module_::import("builtins");   return builtins;   }
 //py::object &pyisinstance(void) { static py::object isinstance = pygetbuiltin().attr("isinstance"); return isinstance; }
 //py::object &pycallable  (void) { static py::object callable   = pygetbuiltin().attr("callable");   return callable;   }

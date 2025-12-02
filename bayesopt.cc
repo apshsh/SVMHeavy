@@ -1,3 +1,5 @@
+//FIXME callback
+
 //when model_convertx is called, only go through near part. far part should mimic near part (it's the other side of a rank constraint)
 
 //FIXME: if you hvae y specified in a gridfile, but x has nulls, you should do
@@ -5679,7 +5681,24 @@ class fninnerArg
         {
             // This is just to trigger the intermediate command
 
+//FIXME callback
+#ifdef PYLOCAL
+            gentype dummyyres;
+            Dict<gentype,dictkey> & dummyaltres = dummyyres.force_dict();
+            dummyaltres.zero();
+            dummyaltres("[]","x")     = xres;
+            dummyaltres("[]","y")     = fres;
+            dummyaltres("[]","i")     = ires;
+            dummyaltres("[]","allx")  = allxres;
+            dummyaltres("[]","ally")  = allfres;
+            dummyaltres("[]","allgt") = allcres;
+            dummyaltres("[]","allhv") = allmres;
+
+            (*fn)(dummyyres,dummyxarg,arginner);
+#endif
+#ifndef PYLOCAL
             (*fn)(res,dummyxarg,arginner);
+#endif
 
             return;
         }

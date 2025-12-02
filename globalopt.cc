@@ -1247,7 +1247,7 @@ void overfn(gentype &res, Vector<gentype> &x, void *arg)
     ////resbuffer << "))) = " << res;
     ////errstream() << gopts.optname << ": global optimiser: f(g(.))" << xmod << ") = " << res << "\n";
 
-    if ( !(penterm.isCastableToRealWithoutLoss()) || ( ( (double) penterm ) != 0.0 ) )
+    if ( actualtest && ( !(penterm.isCastableToRealWithoutLoss()) || ( ( (double) penterm ) != 0.0 ) ) )
     {
         gentype xmodvecform(xmod);
 
@@ -1259,7 +1259,7 @@ void overfn(gentype &res, Vector<gentype> &x, void *arg)
 
     // Clip result at softmin/max
 
-    if ( ( res.isValInteger() || res.isValReal() ) && ( (double) res > gopts.softmax ) )
+    if ( actualtest && ( ( res.isValInteger() || res.isValReal() ) && ( (double) res > gopts.softmax ) ) )
     {
         errstream() << gopts.optname << ": result clipped at softmax: " << res << " -> " << gopts.softmax << "\n";
 
@@ -1268,7 +1268,7 @@ void overfn(gentype &res, Vector<gentype> &x, void *arg)
         resbuffer << " (clip)";
     }
 
-    if ( ( res.isValInteger() || res.isValReal() ) && ( (double) res < gopts.softmin ) )
+    if ( actualtest && ( ( res.isValInteger() || res.isValReal() ) && ( (double) res < gopts.softmin ) ) )
     {
         errstream() << gopts.optname << ": result clipped at softmin: " << res << " -> " << gopts.softmin << "\n";
 
