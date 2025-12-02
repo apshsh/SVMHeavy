@@ -740,7 +740,7 @@ class fninnerinnerArg
         // don't calculate sigmay unless we need to
 
         bool needvar = ( ( ( acq != 0 ) && ( acq != 12 ) && ( acq != 16 ) ) || bbopts.isimphere() || PIscale ); // need the variance for calculating acquisition fn
-        bool answisy = ( ( gridi >= 0 ) && ( isfullgrid || ( bbopts.model_d(Nbasemu+gridi) == 2 ) ) );        // the point x,y is in the training set
+        bool answisy = ( ( gridi >= 0 ) && ( isfullgrid || ( bbopts.model_d(Nbasemu+gridi) == 2 ) ) );          // the point x,y is in the training set
 
 //errstream() << "phantomxyz testpoint 4 needvar = " << needvar << "\n";
 //errstream() << "phantomxyz testpoint 4 answisy = " << answisy << "\n";
@@ -1221,9 +1221,9 @@ predictive noise is predsigmay, not sigma()
 
                 NiceAssert( !isstable );
 
-                if      ( (double) sigmay > ztol      ) { res = normPhi(( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )); }
-                else if ( (double) muy > yymaxcorrect ) { res = 1;                                                                  }
-                else                                    { res = 0;                                                                  }
+                if      ( (double) sigmay > ztol      ) { res = normPhi((((double) muy)-yymaxcorrect)/((double) sigmay)); }
+                else if ( (double) muy > yymaxcorrect ) { res = 1;                                                        }
+                else                                    { res = 0;                                                        }
 
                 break;
             }
@@ -1411,7 +1411,8 @@ int dogridOpt(int dim,
               Vector<int> &gridind,
               svmvolatile int &killSwitch,
               const DIRectOptions &dopts,
-              double xmtrtime);
+              double xmtrtime,
+              bool isfullgrid);
 
 
 int dogridOpt(int dim,
@@ -1427,7 +1428,8 @@ int dogridOpt(int dim,
               Vector<int> &gridind,
               svmvolatile int &killSwitch,
               const DIRectOptions &dopts,
-              double xmtrtime)
+              double xmtrtime,
+              bool isfullgrid)
 {
     NiceAssert( dim > 0 );
     NiceAssert( gridind.size() > 0 );
@@ -1488,7 +1490,7 @@ int dogridOpt(int dim,
             if ( !bopts.model_x(Nbasemu+gridi).direcref(j).isValNull() )
             {
                 // element is pre-defined by the grid
-                xxres("&",j) = (double) bopts.model_x(Nbasemu+gridi).direcref(j);
+                xxres("&",j)   = (double) bopts.model_x(Nbasemu+gridi).direcref(j);
                 locxmin("&",j) = xx[j];
                 locxmax("&",j) = xx[j];
             }
@@ -1496,7 +1498,7 @@ int dogridOpt(int dim,
             else if ( xmin(j) == xmax(j) )
             {
                 // element not pre-defined, but no range, so this is the only possible value
-                xxres("&",j) = xmin(j);
+                xxres("&",j)   = xmin(j);
                 locxmin("&",j) = xmin(j);
                 locxmax("&",j) = xmax(j);
             }
@@ -1512,6 +1514,9 @@ int dogridOpt(int dim,
             }
         }
 
+        // if we have the complete solution (even if there are nulls) then this will be true
+        bool havesoln = ( ( (bopts.cgtapprox).size() == 0 ) && ( ( gridi >= 0 ) && ( isfullgrid || ( bopts.model_d(Nbasemu+gridi) == 2 ) ) ) );
+
         if ( fidpencost.size() )
         {
             maxfidpenalty = fidpencost(fidpencost.size()-1); // propogate through
@@ -1523,15 +1528,8 @@ int dogridOpt(int dim,
 
                 for ( int j = dim-dimfid ; ( j < dim ) && isusable ; ++j )
                 {
-                    if ( ( fidpenvecs(k)(j-(dim-dimfid)) != xxres(j) ) && ( locxmin(j) == locxmax(j) ) )
-                    {
-                        isusable = false;
-                    }
-
-                    else if ( ( xxres(j) < locxmin(j) ) || ( xxres(j) > locxmax(j) ) )
-                    {
-                        isusable = false;
-                    }
+                    if      ( ( fidpenvecs(k)(j-(dim-dimfid)) != xxres(j) ) && ( locxmin(j) == locxmax(j) ) ) { isusable = false; }
+                    else if ( ( xxres(j) < locxmin(j) ) || ( xxres(j) > locxmax(j) ) )                        { isusable = false; }
                 }
 
                 if ( isusable )
@@ -1544,10 +1542,19 @@ errstream() << "phantomxabc: locxmin " << locxmin << "\n";
 errstream() << "phantomxabc: locxmax " << locxmax << "\n";
 errstream() << "phantomxabc: numnulls " << numnulls << "\n";
 
-                    if ( !numnulls )
+                    if ( !numnulls || ( havesoln && !numnullfids ) )
                     {
                         // x is fully defined by the grid, so we need only evaluate the acquisition function
                         tempfres = (*fn)(dim,xx,fnarg);
+
+                        if ( numnulls )
+                        {
+                            // Random null fill
+                            for ( int j = 0 ; j < dim ; ++j )
+                            {
+                                if ( bopts.model_x(Nbasemu+gridi).direcref(j).isValNull() && ( xmin(j) != xmax(j) ) ) { randufill(xxres("&",j),xmin(j),xmax(j)); }
+                            }
+                        }
                     }
 
                     else
@@ -1587,10 +1594,19 @@ errstream() << "phantomxabc: locxmin " << locxmin << "\n";
 errstream() << "phantomxabc: locxmax " << locxmax << "\n";
 errstream() << "phantomxabc: numnulls " << numnulls << "\n";
 
-            if ( !numnulls )
+            if ( !numnulls || ( havesoln && !numnullfids ) )
             {
                 // x is fully defined by the grid, so we need only evaluate the acquisition function
                 tempfres = (*fn)(dim,xx,fnarg);
+
+                if ( numnulls )
+                {
+                    // Random null fill
+                    for ( int j = 0 ; j < dim ; ++j )
+                    {
+                        if ( bopts.model_x(Nbasemu+gridi).direcref(j).isValNull() && ( xmin(j) != xmax(j) ) ) { randufill(xxres("&",j),xmin(j),xmax(j)); }
+                    }
+                }
             }
 
             else
@@ -2686,10 +2702,7 @@ int bayesOpt(int dim,
                 }
             }
 
-            if ( allfullobs )
-            {
-                isfullgrid = false;
-            }
+            if ( allfullobs ) { isfullgrid = false; }
         }
 
         // Pre-add vectors to mu and sigma approximators, then set d = 0 (so pre-add but not yet included in calculations)
@@ -3083,52 +3096,26 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
 //errstream() << "phantomxyzxyz model_x = " << bopts.model_x(Nbasemu+gridi) << "\n";
                 for ( j = 0 ; j < dim ; ++j )
                 {
+                    int qqq = 0;
+
                     if ( j < dim-dimfid )
                     {
-                        // Regular variables
+                        bool randfillit = ( !isgridopt || bopts.model_x(Nbasemu+gridi)(j).isValNull() );
 
-                        //if ( nullxlist(j) )
-                        if ( !isgridopt || bopts.model_x(Nbasemu+gridi)(j).isValNull() ) // short-circuit means model_x only used for isgridopt case
-                        {
-                            // Continuous random: values chosen randomly from uniform distribution
-
-                            randufill(xxb("&",k)("&",j),xmin(j),xmax(j));
-                        }
-
-                        else
-                        {
-                            // Discrete defined: defined by grid element.
-
-                            xxb("&",k)("&",j) = bopts.model_x(Nbasemu+gridi)(j);
-                        }
+                        if ( randfillit ) { randufill(xxb("&",k)("&",j),xmin(j),xmax(j));        }
+                        else              { xxb("&",k)("&",j) = bopts.model_x(Nbasemu+gridi)(j); }
                     }
 
                     else
                     {
-                        int qqq = 0;
+                        bool randfillit = ( !isgridopt || bopts.model_x(Nbasemu+gridi).n(j-(dim-dimfid),1).isValNull() );
 
-                        // Fidelity variables
+                        if ( randfillit ) { qqq = 1+(rand()%(bopts.numfids));
+                                            xxb("&",k).n("&",j-(dim-dimfid),1).dir_double() = ((double) qqq)/((double) bopts.numfids); }
+                        else              { xxb("&",k).n("&",j-(dim-dimfid),1) = bopts.model_x(Nbasemu+gridi).n(j-(dim-dimfid),1);
+                                            qqq = (int) std::round(((double) (xxb(k).n(j-(dim-dimfid),1)))*(bopts.numfids)); }
 
-                        if ( !isgridopt || bopts.model_x(Nbasemu+gridi).n(j-(dim-dimfid),1).isValNull() ) // short-circuit means model_x only used for isgridopt case
-                        {
-                            // Discrete random: finite fidelities
-
-                            qqq = 1+(rand()%(bopts.numfids));
-                            xxb("&",k).n("&",j-(dim-dimfid),1).dir_double() = ((double) qqq)/((double) bopts.numfids);
-                        }
-
-                        else
-                        {
-                            // Discrete defined: defined by grid element.
-
-                            xxb("&",k).n("&",j-(dim-dimfid),1) = bopts.model_x(Nbasemu+gridi).n(j-(dim-dimfid),1);
-                            qqq = (int) std::round(((double) (xxb(k).n(j-(dim-dimfid),1)))*(bopts.numfids));
-                        }
-
-                        if ( qqq != bopts.numfids )
-                        {
-                            isfullfid = false;
-                        }
+                        if ( qqq != bopts.numfids ) { isfullfid = false; }
                     }
                 }
 
@@ -3197,17 +3184,13 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                 if ( isgridopt && ( isfullgrid || ( bopts.model_d(Nbasemu+gridi) == 2 ) ) )
                 {
                     // Grid may have defined solutions already loaded.
-
                     gridresis = bopts.model_y(Nbasemu+gridi);
                     gridresis.negate();
                 }
 
                 for ( int iy = 0 ; iy < bopts.numcgt ; ++iy )
                 {
-                    if ( isgridopt && ( bopts.model_d_cgt(Nbasemu+gridi,iy) == 2 ) )
-                    {
-                        ycgtis("&",iy) = bopts.model_y_cgt(Nbasemu+gridi,iy);
-                    }
+                    if ( isgridopt && ( bopts.model_d_cgt(Nbasemu+gridi,iy) == 2 ) ) { ycgtis("&",iy) = bopts.model_y_cgt(Nbasemu+gridi,iy); }
                 }
 
                 double nuscaledummy;
@@ -3241,10 +3224,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
 
                         for ( int jij = dimfid-1 ; isfullfid && ( jij >= 0 ) ; jij-- )
                         {
-                            if ( (int) std::round(((double) (xxb(k).n(jij,1)))*(bopts.numfids)) != bopts.numfids )
-                            {
-                                isfullfid = false;
-                            }
+                            if ( (int) std::round(((double) (xxb(k).n(jij,1)))*(bopts.numfids)) != bopts.numfids ) { isfullfid = false; }
                         }
                     }
 
@@ -3273,7 +3253,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                         }
 
                         fidtotcost += ( ( fidcost >= 0 ) ? fidcost : locfidpenalty );
-                        varscale    = ( ( fidcost >= 0 ) ? 1.0 : locvarscale );
+                        varscale    = ( ( fidcost >= 0 ) ? 1.0     : locvarscale   );
                         firstinset = false;
 //errstream() << "fidpenalty: " << bopts.fidpenalty << "\n";
 //errstream() << "locfidpenalty: " << locfidpenalty << "\n";
@@ -4262,7 +4242,8 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                                          gridindtmp,
                                          killSwitch,
                                          bopts.goptssingleobj,
-                                         xmtrtime);
+                                         xmtrtime,
+                                         isfullgrid);
                         fnarginner.mode = 0; // turn off single beta, stale x calculation fast mode
                     }
 
@@ -4608,42 +4589,23 @@ errstream() << "\n";
                 if ( anyindirect )
                 {
                     // Direct result needs to be processed to get recommendation batch
-
                     SparseVector<gentype> tempx;
 
-                    for ( i = 0 ; i < n ; ++i )
-                    {
-                        tempx("&",i) = xa(i); // gentype sparsevector
-                    }
-
-                    if ( xappend.size() && k )
-                    {
-                        for ( i = n ; i < n+xappend.size() ; ++i )
-                        {
-                            tempx("&",i) = xappend(i-n);
-                        }
-                    }
+                                                 for ( i = 0 ; i < n ; ++i                ) { tempx("&",i) = xa(i);        } // gentype sparsevector
+                    if ( xappend.size() && k ) { for ( i = n ; i < n+xappend.size() ; ++i ) { tempx("&",i) = xappend(i-n); } }
 
                     (*direcpre).gg(xytemp,tempx);
-
                     const Vector<gentype> &ghgh = (const Vector<gentype> &) xytemp;
 
-                    for ( i = 0 ; i < dim*currintrinbatchsize ; ++i )
-                    {
-                        xa("&",i) = (double) ghgh(i);
-                    }
+                    for ( i = 0 ; i < dim*currintrinbatchsize ; ++i ) { xa("&",i) = (double) ghgh(i); }
                 }
 
                 if ( partindirect && !k )
                 {
                     NiceAssert( !anyindirect );
-
                     // update xappend here
 
-                    for ( i = 0 ; i < n ; ++i )
-                    {
-                        xappend("&",i) = xa(i);
-                    }
+                    for ( i = 0 ; i < n ; ++i ) { xappend("&",i) = xa(i); }
                 }
 
                 //errstream() << dres << "...";

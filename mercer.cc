@@ -23812,7 +23812,7 @@ T &MercerKernel::yyyaaKm(int m, T &res,
             }
         }
 
-        return yyyaaKm(m,res,x,xinfo,xignorefarfar,xignorefarfarfar,xgradordadd,xgradordaddR,bias,i,nullptr,xdim,xconsist,resmode,mlid,nullptr,assumreal,justcalcip);
+        return yyyaKm(m,res,x,xinfo,xignorefarfar,xignorefarfarfar,xgradordadd,xgradordaddR,bias,i,nullptr,xdim,xconsist,resmode,mlid,nullptr,assumreal,justcalcip);
 
         for ( int j = 0 ; j < x.size() ; ++j )
         {
@@ -23820,7 +23820,7 @@ T &MercerKernel::yyyaaKm(int m, T &res,
         }
     }
 
-    return yyyaaKm(m,res,x,xinfo,xignorefarfar,xignorefarfarfar,xgradordadd,xgradordaddR,bias,i,pxyprod,xdim,xconsist,resmode,mlid,xy,assumreal,justcalcip);
+    return yyyaKm(m,res,x,xinfo,xignorefarfar,xignorefarfarfar,xgradordadd,xgradordaddR,bias,i,pxyprod,xdim,xconsist,resmode,mlid,xy,assumreal,justcalcip);
 }
 
 template <class T>
@@ -23853,10 +23853,10 @@ int MercerKernel::yyyaaphim(int m, Vector<T>  &res, const SparseVector<gentype> 
             }
         }
 
-        return yyyaaphim(m,res,xxa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,ia,allowfinite,xdim,xconsist,assumreal);
+        return yyyaphim(m,res,xxa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,ia,allowfinite,xdim,xconsist,assumreal);
     }
 
-    return yyyaaphim(m,res,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,ia,allowfinite,xdim,xconsist,assumreal);
+    return yyyaphim(m,res,xa,xainfo,xaignorefarfar,xaignorefarfarfar,xagradordadd,xagradordaddR,ia,allowfinite,xdim,xconsist,assumreal);
 }
 
 

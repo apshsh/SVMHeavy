@@ -32,14 +32,20 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
     modelname      = "smbomodel";
     modeloutformat = 2; // pdf by default
     plotfreq       = 0; // don't plot by default
-    modelbaseline  = nullgentype();
+    modelsave      = 0; // don't save models by default
+    modelbaseline.force_null();
+    cgtsave        = 0; // don't save models by default
+    cgtbaseline.force_null();
 #endif
 
 #ifdef USE_MEX
     modelname      = "smbomodel";
     modeloutformat = 3; // matlab plot if system is matlab
     plotfreq       = 0; // don't plot by default
-    modelbaseline  = nullgentype();
+    modelsave      = 0; // don't save models by default
+    modelbaseline.force_null();
+    cgtsave        = 0; // don't save models by default
+    cgtbaseline.force_null();
 #endif
 
     sigmuseparate = 0;
@@ -238,7 +244,10 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
     modelname      = src.modelname;
     modeloutformat = src.modeloutformat;
     plotfreq       = src.plotfreq;
+    modelsave      = src.modelsave;
     modelbaseline  = src.modelbaseline;
+    cgtsave        = src.cgtsave;
+    cgtbaseline    = src.cgtbaseline;
 
     sigmuseparate = src.sigmuseparate;
     moodim        = src.moodim;
@@ -831,7 +840,6 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 
         int xind = 0;
         int yind = getdimfid() ? (DEFAULT_TUPLE_INDEX_STEP) : 1; // this is very naive, but as we are only doing 2-dimensions it makes sense
-        int j;
 
 //errstream() << "phantomxyz yind = " << yind << "\n";
         //int i;
@@ -839,35 +847,29 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 
         int ydim = moodim; //ismoo() ? moodim : 1;
 
-        for ( j = 0 ; j < ydim ; j++ )
+        for ( int j = 0 ; j < ydim ; j++ )
         {
             gentype baseline(modelbaseline);
             int incbaseline = ( ( baseline.isValNull() ) ? 0 : 1 );
 
-            model_sublog(getmuapprox(j),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"model",xind,yind,stagestr,-1);
+            model_sublog(getmuapprox(j),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"model",xind,yind,stagestr,-1,+1);
         }
 
-        if ( usemodelaugx )
+        for ( int j = 0 ; usemodelaugx && ( j < augxapprox.size() ) ; ++j )
         {
-            for ( j = 0 ; j < augxapprox.size() ; ++j )
-            {
-                gentype baseline = nullgentype();
-                int incbaseline = 0;
+            gentype baseline = nullgentype();
+            int incbaseline = ( ( baseline.isValNull() ) ? 0 : 1 );
 
-                model_sublog(getaugxapprox(j),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"aug",xind,yind,stagestr,+1);
-            }
+            model_sublog(getaugxapprox(j),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"aug",xind,yind,stagestr,+1,+1);
         }
 
 
-        if ( cgtapprox.size() )
+        for ( int j = 0 ; j < cgtapprox.size() ; ++j )
         {
-            for ( j = 0 ; j < cgtapprox.size() ; ++j )
-            {
-                gentype baseline = nullgentype();
-                int incbaseline = 0;
+            gentype baseline = cgtbaseline; // for some reason if cgtbaseline is a python lambda returning a vector and we wrap this in derefv it fails
+            int incbaseline = ( ( baseline.isValNull() ) ? 0 : 1 );
 
-                model_sublog(getcgtapprox(j),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"cgt",xind,yind,stagestr,+1);
-            }
+            model_sublog(getcgtapprox(j),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"cgt",xind,yind,stagestr,+1,-1);
         }
     }
 
@@ -1276,7 +1278,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 }
 
 
-void SMBOOptions::model_sublog(const ML_Base &plotmodel, gentype &baselinefn, int incbaselinefn, double xmin, double xmax, double ymin, double ymax, int j, const std::string &nameof, int xind, int yind, const std::string &stagestr, double sf)
+void SMBOOptions::model_sublog(const ML_Base &plotmodel, gentype &baselinefn, int incbaselinefn, double xmin, double xmax, double ymin, double ymax, int j, const std::string &nameof, int xind, int yind, const std::string &stagestr, double sf, double dsf)
 {
     static int lognum = 0;
 
@@ -1340,9 +1342,12 @@ void SMBOOptions::model_sublog(const ML_Base &plotmodel, gentype &baselinefn, in
     dname  += std::to_string(lognum);
     mlname += std::to_string(lognum);
 
-    std::ofstream mlnamefile(mlname);
-    mlnamefile << plotmodel << "\n";
-    mlnamefile.close();
+    if ( modelsave )
+    {
+        std::ofstream mlnamefile(mlname);
+        mlnamefile << plotmodel << "\n";
+        mlnamefile.close();
+    }
 
 //errstream() << "phantomxyz tspaceDim = " << plotmodel.tspaceDim() << "\n";
 //errstream() << "phantomxyz xspaceDim = " << plotmodel.xspaceDim() << "\n";
@@ -1355,8 +1360,8 @@ void SMBOOptions::model_sublog(const ML_Base &plotmodel, gentype &baselinefn, in
 
         SparseVector<gentype> xtemplate;
 
-        plotml(plotmodel,xind,xmin,xmax,omin,omax,fname, dname,modeloutformat,incdata,baselinefn,incvar,xusevar,xtemplate,0,0,sf);
-        plotml(plotmodel,xind,xmin,xmax,omin,omax,ffname,dname,modeloutformat,incdata,baselinefn,incvar,xusevar,xtemplate,0,0,sf);
+        plotml(plotmodel,xind,xmin,xmax,omin,omax,fname, dname,modeloutformat,incdata,baselinefn,incvar,xusevar,xtemplate,0,0,sf,dsf);
+        plotml(plotmodel,xind,xmin,xmax,omin,omax,ffname,dname,modeloutformat,incdata,baselinefn,incvar,xusevar,xtemplate,0,0,sf,dsf);
     }
 
     else if ( ( plotmodel.tspaceDim() == 1 ) && plotmodel.N() && ( plotmodel.x()(0).indsize() == 2 ) ) //( plotmodel.xspaceDim() == 2 ) )
@@ -1369,8 +1374,8 @@ void SMBOOptions::model_sublog(const ML_Base &plotmodel, gentype &baselinefn, in
 
         SparseVector<gentype> xtemplate;
 
-        plotml(plotmodel,xind,yind,xmin,xmax,ymin,ymax,omin,omax,fname, dname,modeloutformat,incdata,baselinefn,incvar,xusevar,yusevar,xtemplate,0,0,sf);
-        plotml(plotmodel,xind,yind,xmin,xmax,ymin,ymax,omin,omax,ffname,dname,modeloutformat,incdata,baselinefn,incvar,xusevar,yusevar,xtemplate,0,0,sf);
+        plotml(plotmodel,xind,yind,xmin,xmax,ymin,ymax,omin,omax,fname, dname,modeloutformat,incdata,baselinefn,incvar,xusevar,yusevar,xtemplate,0,0,sf,dsf);
+        plotml(plotmodel,xind,yind,xmin,xmax,ymin,ymax,omin,omax,ffname,dname,modeloutformat,incdata,baselinefn,incvar,xusevar,yusevar,xtemplate,0,0,sf,dsf);
     }
 
     return;

@@ -64,17 +64,59 @@ int glob_DIRectInd    (int i, int seti) { static thread_local int iii = 1; if ( 
 int glob_NelderMeadInd(int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
 int glob_BayesianInd  (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
 
-py::object &pygetbuiltin(void) { static py::object builtins   = py::module_::import("builtins");   return builtins;   }
-py::object &pyisinstance(void) { static py::object isinstance = pygetbuiltin().attr("isinstance"); return isinstance; }
-py::object &pycallable  (void) { static py::object callable   = pygetbuiltin().attr("callable");   return callable;   }
-py::object &pyeval      (void) { static py::object eval       = pygetbuiltin().attr("eval");       return eval;       }
-py::object &pyvalueerror(void) { static py::object ValueError = pygetbuiltin().attr("ValueError"); return ValueError; }
-py::object &pycomplex   (void) { static py::object complex    = pygetbuiltin().attr("complex");    return complex;    }
+py::object &pygetbuiltin(void);
+py::object &pyisinstance(void);
+py::object &pycallable  (void);
+py::object &pyeval      (void);
+py::object &pyvalueerror(void);
+py::object &pycomplex   (void);
+
+#define BUILTINDEF(defstr)                                                       \
+    static py::object *statobj = nullptr;                                        \
+    if ( !delit && !statobj ) { MEMNEW(statobj,py::object); *statobj = defstr; } \
+    if (  delit &&  statobj ) { MEMDEL(statobj); statobj = nullptr;            } \
+    return statobj;
+
+py::object *pygetbuiltinptr(bool delit = false) { BUILTINDEF(py::module_::import("builtins"));   }
+py::object *pyisinstanceptr(bool delit = false) { BUILTINDEF(pygetbuiltin().attr("isinstance")); }
+py::object *pycallableptr  (bool delit = false) { BUILTINDEF(pygetbuiltin().attr("callable"));   }
+py::object *pyevalptr      (bool delit = false) { BUILTINDEF(pygetbuiltin().attr("eval"));       }
+py::object *pyvalueerrorptr(bool delit = false) { BUILTINDEF(pygetbuiltin().attr("ValueError")); }
+py::object *pycomplexptr   (bool delit = false) { BUILTINDEF(pygetbuiltin().attr("complex"));    }
+
+//#define BUILTINDEF                                                       \
+//    static py::object *statobj = nullptr;                                \
+//    if ( !delit && !statobj ) { MEMNEW(statobj,py::object); *statobj =
+//#define BUILTINDEFEND                                                  } \
+//    if (  delit &&  statobj ) { MEMDEL(statobj); statobj = nullptr;    } \
+//    return statobj;
+//
+//py::object *pygetbuiltinptr(bool delit = false) { BUILTINDEF py::module_::import("builtins");   BUILTINDEFEND }
+//py::object *pyisinstanceptr(bool delit = false) { BUILTINDEF pygetbuiltin().attr("isinstance"); BUILTINDEFEND }
+//py::object *pycallableptr  (bool delit = false) { BUILTINDEF pygetbuiltin().attr("callable");   BUILTINDEFEND }
+//py::object *pyevalptr      (bool delit = false) { BUILTINDEF pygetbuiltin().attr("eval");       BUILTINDEFEND }
+//py::object *pyvalueerrorptr(bool delit = false) { BUILTINDEF pygetbuiltin().attr("ValueError"); BUILTINDEFEND }
+//py::object *pycomplexptr   (bool delit = false) { BUILTINDEF pygetbuiltin().attr("complex");    BUILTINDEFEND }
+
+py::object &pygetbuiltin(void) { return *pygetbuiltinptr(); }
+py::object &pyisinstance(void) { return *pyisinstanceptr(); }
+py::object &pycallable  (void) { return *pycallableptr  (); }
+py::object &pyeval      (void) { return *pyevalptr      (); }
+py::object &pyvalueerror(void) { return *pyvalueerrorptr(); }
+py::object &pycomplex   (void) { return *pycomplexptr   (); }
+
+//py::object &pygetbuiltin(void) { static py::object builtins   = py::module_::import("builtins");   return builtins;   }
+//py::object &pyisinstance(void) { static py::object isinstance = pygetbuiltin().attr("isinstance"); return isinstance; }
+//py::object &pycallable  (void) { static py::object callable   = pygetbuiltin().attr("callable");   return callable;   }
+//py::object &pyeval      (void) { static py::object eval       = pygetbuiltin().attr("eval");       return eval;       }
+//py::object &pyvalueerror(void) { static py::object ValueError = pygetbuiltin().attr("ValueError"); return ValueError; }
+//py::object &pycomplex   (void) { static py::object complex    = pygetbuiltin().attr("complex");    return complex;    }
 
 bool isValNone    (const py::object &src) { return src.is_none();                                                            }
 bool isValInteger (const py::object &src) { return !isValNone(src) && py::isinstance<py::int_>(src);                         }
 bool isValReal    (const py::object &src) { return !isValNone(src) && py::isinstance<py::float_>(src);                       }
-bool isValComplex (const py::object &src) { return !isValNone(src) && py::cast<py::bool_>(pyisinstance()(&src,pycomplex())); }
+bool isValComplex (const py::object &src) { return !isValNone(src) && py::isinstance<py::bool_>(pyisinstance()(&src,pycomplex())) &&
+                                                                      py::cast<py::bool_>(pyisinstance()(&src,pycomplex())); }
 bool isValList    (const py::object &src) { return !isValNone(src) && py::isinstance<py::list>(src);                         }
 bool isValTuple   (const py::object &src) { return !isValNone(src) && py::isinstance<py::tuple>(src);                        }
 bool isValDict    (const py::object &src) { return !isValNone(src) && py::isinstance<py::dict>(src);                         }
@@ -174,22 +216,22 @@ gentype convFromPy(const py::object &src);
 
 // Corresponding helper macros to auto-generate function definitions to be used by python module
 
-#define        DODEF(dofn)          py::object mod_ ##  dofn(void)                { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLref(i). dofn ());        }
+#define        DODEF(dofn)          py::object mod_ ##  dofn(void)                       { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLref(i). dofn ());        }
 #define     DOARGDEF(dofn,T)        int        mod_ ##  dofn(       py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); return getMLref(i). dofn (altp);              }
-#define       GETDEF(getfn)         py::object mod_ ## getfn(void)                { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn ());  }
-#define    GETCLADEF(getfn)         py::object mod_ ## getfn(int d)               { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn (d)); }
+#define       GETDEF(getfn)         py::object mod_ ## getfn(void)                       { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn ());  }
+#define    GETCLADEF(getfn)         py::object mod_ ## getfn(int d)                      { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn (d)); }
 #define    SETCLADEF(setfn,T)       int        mod_ ## setfn(int d, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); return getMLref(i). setfn (d,altp);           }
-#define    GETSETDEF(getfn,setfn,T) py::object mod_ ## getfn(void)                { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn ());  } \
+#define    GETSETDEF(getfn,setfn,T) py::object mod_ ## getfn(void)                       { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn ());  } \
                                     int        mod_ ## setfn(       py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); return getMLref(i). setfn (altp);             }
-#define GETSETCLADEF(getfn,setfn,T) py::object mod_ ## getfn(int d)               { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn (d)); } \
+#define GETSETCLADEF(getfn,setfn,T) py::object mod_ ## getfn(int d)                      { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn (d)); } \
                                     int        mod_ ## setfn(int d, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); return getMLref(i). setfn (d,altp);           }
 
-#define OPTGETSETDEF(varname,ty,T) py::object modoptget_ ## ty ## _ ## varname(void)         { dostartup(); int i = glob_ ## ty ## Ind(0); return convToPy((T) get ## ty ## refconst(i).varname); } \
+#define OPTGETSETDEF(varname,ty,T) py::object modoptget_ ## ty ## _ ## varname(void)                { dostartup(); int i = glob_ ## ty ## Ind(0); return convToPy((T) get ## ty ## refconst(i).varname); } \
                                    void       modoptset_ ## ty ## _ ## varname(py::object p) { dostartup(); int i = glob_ ## ty ## Ind(0); T altp; convFromPy(altp,p); get ## ty ## ref(i).varname = altp; }
-#define OPTGETSETALLDEF(varname,T) py::object modoptget_grid_       ## varname(void)         { dostartup(); int i = glob_gridInd      (0); return convToPy(getgridrefconst      (i).varname); } \
-                                   py::object modoptget_DIRect_     ## varname(void)         { dostartup(); int i = glob_DIRectInd    (0); return convToPy(getDIRectrefconst    (i).varname); } \
-                                   py::object modoptget_NelderMead_ ## varname(void)         { dostartup(); int i = glob_NelderMeadInd(0); return convToPy(getNelderMeadrefconst(i).varname); } \
-                                   py::object modoptget_Bayesian_   ## varname(void)         { dostartup(); int i = glob_BayesianInd  (0); return convToPy(getBayesianrefconst  (i).varname); } \
+#define OPTGETSETALLDEF(varname,T) py::object modoptget_grid_       ## varname(void)                { dostartup(); int i = glob_gridInd      (0); return convToPy(getgridrefconst      (i).varname); } \
+                                   py::object modoptget_DIRect_     ## varname(void)                { dostartup(); int i = glob_DIRectInd    (0); return convToPy(getDIRectrefconst    (i).varname); } \
+                                   py::object modoptget_NelderMead_ ## varname(void)                { dostartup(); int i = glob_NelderMeadInd(0); return convToPy(getNelderMeadrefconst(i).varname); } \
+                                   py::object modoptget_Bayesian_   ## varname(void)                { dostartup(); int i = glob_BayesianInd  (0); return convToPy(getBayesianrefconst  (i).varname); } \
                                    void       modoptset_grid_       ## varname(py::object p) { dostartup(); int i = glob_gridInd      (0); T altp; convFromPy(altp,p); getgridref      (i).varname = altp; } \
                                    void       modoptset_DIRect_     ## varname(py::object p) { dostartup(); int i = glob_DIRectInd    (0); T altp; convFromPy(altp,p); getDIRectref    (i).varname = altp; } \
                                    void       modoptset_NelderMead_ ## varname(py::object p) { dostartup(); int i = glob_NelderMeadInd(0); T altp; convFromPy(altp,p); getNelderMeadref(i).varname = altp; } \
@@ -329,17 +371,18 @@ void svmheavyc(const std::string commstr); // execute with string
 
 // Set, get and clear storage
 
-py::object &pyogetsrc(int k);
-int         pyosetsrc(int k, const py::object &src);
-void        pyoclrsrc(void);
+py::object pyogetsrc(int k);
+int        pyosetsrc(int k, py::object src);
+void       pyoclrsrc(void);
 
 void logit        (py::object logstr); // print to errstream
 void callintercalc(void);
 void callsnakes   (int wide, int high);
 
-py::object svmeval(py::object fn, py::object arg);
+py::object svmeval (py::object fn, py::object arg);
+py::object svmevalr(py::object fn, py::object arg);
 
-py::object svmtest(int i, std::string type);
+py::object svmtest(int i, const std::string &type);
 
 int setpriml(int j = 0);
 
@@ -635,7 +678,10 @@ OPTGETSETDEF(tunediffmod,     Bayesian,int        )
 OPTGETSETDEF(modelname,       Bayesian,std::string)
 OPTGETSETDEF(modeloutformat,  Bayesian,int        )
 OPTGETSETDEF(plotfreq,        Bayesian,int        )
+OPTGETSETDEF(modelsave,       Bayesian,int        )
 OPTGETSETDEF(modelbaseline,   Bayesian,gentype    )
+OPTGETSETDEF(cgtsave,         Bayesian,int        )
+OPTGETSETDEF(cgtbaseline,     Bayesian,gentype    )
 
 // Functions we might as well import from gentype
 
@@ -761,8 +807,14 @@ MAKEVISA(dawson   )
 // (I don't fully understand what this does, but it seems to work)
 
 void shutdown_module() {
-    removeallaltpycall(); // remove any remaining std::function references back to python in gentype objects
-    pyoclrsrc(); // clear local store
+    removeallaltpycall(); // remove any remaining std::function references back to python in gentype objects (separating code)
+    pyoclrsrc(); // clear local stor
+    pygetbuiltinptr(true);
+    pyisinstanceptr(true);
+    pycallableptr(true);
+    pyevalptr(true);
+    pyvalueerrorptr(true);
+    pycomplexptr(true);
     py::gil_scoped_acquire gil;
 }
 
@@ -772,6 +824,7 @@ void shutdown_module() {
 
 //PYBIND11_MODULE(_pyheavy, m) {
 PYBIND11_MODULE(pyheavy, m) {
+
     m.doc() = "SVMHeavy Machine Learning Library.";
 
     m.def("shutdown",&shutdown_module,"Safely shutdown the pyheavy module");
@@ -802,6 +855,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                          "float, complex, list (mapped to vector), tuple (mapped to set) or dictionary.  \n"
                                          "To explore available functions you use the inbuilt calculator (calc function). \n"
                                          "See also pyheavy.maths.fn...",py::arg("fn"),py::arg("x"));
+    m_int.def("evalr",    &svmevalr,     "Like eval, but does computation on py::object not gentype.",py::arg("fn"),py::arg("x"));
     m_int.def("snakes",   &callsnakes,   "Snakes (test io, streams).",py::arg("w")=snakewide,py::arg("h")=snakehigh);
     m_int.def("calc",     &callintercalc,"Calculator (explore functions available in gentype expressions).");
     m_int.def("log",      &logit,        "Print to log.",py::arg("str"));
@@ -1777,7 +1831,10 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPT(m_opt,modelname,     Bayesian,vis,"model basename when plotting/logging (default smbomodel)"            );
     QGETSETOPT(m_opt,modeloutformat,Bayesian,vis,"format for plotting posterior (0 terminal, 1 ps, 2 pdf (default))"   );
     QGETSETOPT(m_opt,plotfreq,      Bayesian,vis,"plotting frequency for posterior (0 none (default), -1 only on exit)");
-    QGETSETOPT(m_opt,modelbaseline, Bayesian,vis,"baseline function f(x) for posterior plots (empty for none)"         );
+    QGETSETOPT(m_opt,modelsave,     Bayesian,vis,"save model when plotting (0 don't save (default), 1 save)"           );
+    QGETSETOPT(m_opt,modelbaseline, Bayesian,vis,"baseline function for posterior plots (or none)"                     );
+    QGETSETOPT(m_opt,cgtsave,       Bayesian,vis,"save constraint model when plotting (0 don't save (default), 1 save)");
+    QGETSETOPT(m_opt,cgtbaseline,   Bayesian,vis,"baseline constraint function for posterior plots (or none)"          );
 
     QGETSETOPT(m_opt,tunemu,     Bayesian,tune,"Tuning for objective model (0 none, 1 max-log-like (default), 2 LOO, 3 recall." );
     QGETSETOPT(m_opt,tunecgt,    Bayesian,tune,"Tuning for constraint model (0 none, 1 max-log-like (default), 2 LOO, 3 recall.");
@@ -2011,7 +2068,7 @@ PYBIND11_MODULE(pyheavy, m) {
 //void logit(const std::string logstr) { errstream() << "python: " << logstr << "\n"; }
 void logit(py::object logstr) { errstream() << "python: " << convFromPy(logstr) << "\n"; }
 
-py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object &objfn, py::object &callback);
+py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objfn, py::object callback);
 
 py::object mloptgrid(      int i, int dim, int numreps, py::object objfn, py::object callback) { i = glob_gridInd      (i); return mlopt(getgridref      (i),dim,numreps,objfn,callback); }
 py::object mloptDIRect(    int i, int dim, int numreps, py::object objfn, py::object callback) { i = glob_DIRectInd    (i); return mlopt(getDIRectref    (i),dim,numreps,objfn,callback); }
@@ -2020,7 +2077,7 @@ py::object mloptBayesian(  int i, int dim, int numreps, py::object objfn, py::ob
 
 void internobjfn(gentype &res, Vector<gentype> &x, void *arg)
 {
-    py::object **argp = (py::object **) arg;
+    const py::object **argp = (const py::object **) arg;
 
     // In the evaluate case x is a non-zero sized vector, and res is the result of evaluating argp[0] on x
     // In the callback case x is empty, argp[1] is callable and res is an integer (callback type); and we evaluate argp[1] on res
@@ -2029,7 +2086,7 @@ void internobjfn(gentype &res, Vector<gentype> &x, void *arg)
     else if ( !isValNone(*(argp[1])) && isValCallable(*(argp[1])) ) {                (*(argp[1]))(convToPy(res));  }
 }
 
-py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object &objfn, py::object &callback)
+py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objfn, py::object callback)
 {
     dostartup();
 
@@ -2081,7 +2138,7 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object &obj
 
     svmvolatile int dummy = 0;
 
-    py::object *optargs[2] = { &objfn, &callback };
+    const py::object *optargs[2] = { &objfn, &callback };
 
     //optimiser.ispydirect = true;
     int retcode = optimiser.optim(dim,
@@ -2089,7 +2146,7 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object &obj
                                   mInd,
                                   allxres,allrawxres,allfres,allcres,allmres,allsres,s_score,
                                   xmin,xmax,distMode,varsType,
-                                  &internobjfn,optargs,dummy,numreps,
+                                  &internobjfn,(void *) optargs,dummy,numreps,
                                   meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
     //optimiser.ispydirect = false;
 
@@ -2333,7 +2390,7 @@ py::object mlK4(py::object xa, py::object xb, py::object xc, py::object xd)
     return convToPy(res);
 }
 
-py::object svmtest(int i, std::string type)
+py::object svmtest(int i, const std::string &type)
 {
     dostartup();
 
@@ -2373,6 +2430,19 @@ py::object svmeval(py::object f, py::object x)
     if ( convFromPy(xx,x) ) { return convToPy(nan("")); }
 
     return convToPy(ff(xx)); // evaluate f(x) and convert back to python friendly form
+}
+
+py::object svmevalr(py::object f, py::object x)
+{
+    dostartup();
+
+    gentype xx;
+
+    if ( convFromPy(xx,x) ) { return convToPy(nan("")); }
+
+    gentype res;
+    convFromPy(res,f(convToPy(xx)));
+    return convToPy(res);
 }
 
 void callsnakes(int wide, int high) { dostartup(); snakes(wide,high,(20*high)/23,5,20,100000); }
@@ -2772,7 +2842,7 @@ py::object convToPy(const gentype &src)
     else if ( src.isValMatrix()  ) { return convToPy((const Matrix<gentype> &)       src); }
     else if ( src.isValSet()     ) { return convToPy((const Set<gentype> &)          src); }
     else if ( src.isValDict()    ) { return convToPy((const Dict<gentype,dictkey> &) src); }
-    else if ( src.isValEqnDir()  ) { return py::cpp_function([src](const py::object &x) { return convToPy(src(convFromPy(x))); },py::arg("x")); }
+    else if ( src.isValEqnDir()  ) { return py::cpp_function([src](py::object x) { return convToPy(src(convFromPy(x))); },py::arg("x")); }
     else if ( src.isValError()   ) { return py::cast(nan(((const std::string &) src).c_str())); }
     else if ( src.isValAnion()   ) { return py::cast(nan("Gentype type anion (hypercomplex) has no python equivalent.")); }
     else if ( src.isValDgraph()  ) { return py::cast(nan("Gentype type directed graph has no python equivalent."));       }
@@ -2792,12 +2862,12 @@ int convFromPy(gentype &res, const py::object &src)
     if      ( isValNone(src)     ) { errcode = 0; res.force_none();                              }
     else if ( isValInteger(src)  ) { errcode = convFromPy(res.force_int(),   src);               }
     else if ( isValReal(src)     ) { errcode = convFromPy(res.force_double(),src);               }
-    else if ( isValComplex(src)  ) { errcode = convFromPy(tmpres,            src); res = tmpres; }
     else if ( isValString(src)   ) { errcode = convFromPy(res.force_string(),src);               }
     else if ( isValList(src)     ) { errcode = convFromPy(res.force_vector(),src);               }
     else if ( isValDict(src)     ) { errcode = convFromPy(res.force_dict(),  src);               }
     else if ( isValTuple(src)    ) { errcode = convFromPy(res.force_set(),   src);               }
-    //else if ( isValMatrix(src)   ) { errcode = convFromPy(res.force_matrix(),src); } - can't disambiguate between array of vectors and matrices at present
+    //else if ( isValMatrix(src)   ) { errcode = convFromPy(res.force_matrix(),src);              } - can't disambiguate between array of vectors and matrices at present
+    else if ( isValComplex(src)  ) { errcode = convFromPy(tmpres,            src); res = tmpres; }
     else if ( isValCallable(src) ) { errcode = gentype_function(gentype(const gentype &),res,[src](const gentype &x) { return convFromPy(src(convToPy(x))); }); }
     else                           { errcode = 2048; }
 
@@ -2852,7 +2922,7 @@ template <class T> int naivePyToSpv(SparseVector<T>       &res, const py::object
 template <>        int naivePyToSpv(SparseVector<gentype> &res, const py::object &src);
                    int naivePyToEqn(gentype               &res, const py::object &src);
 
-template <class T> int convFromPy(T                     &res, const py::handle &src) { return convFromPy(res,py::reinterpret_borrow<py::object>(src)); }
+template <class T> int convFromPy(T                     &res, const py::handle &src) { py::handle altsrc = src; return convFromPy(res,py::reinterpret_borrow<py::object>(altsrc)); }
                    int convFromPy(int                   &res, const py::object &src) { if ( isValCastableToInteger(src) ) { return naivePyToInt(res,src); } res = 0;                                return 1;   }
                    int convFromPy(double                &res, const py::object &src) { if ( isValCastableToReal   (src) ) { return naivePyToDbl(res,src); } res = nan("Not castable to double");    return 2;   }
                    int convFromPy(std::complex<double>  &res, const py::object &src) { if ( isValCastableToComplex(src) ) { return naivePyToCpl(res,src); } res = nan("Not castable to complex");   return 4;   }
@@ -2886,9 +2956,9 @@ int naivePyToDbl(double &res, const py::object &src)
 int naivePyToCpl(std::complex<double> &res, const py::object &src)
 {
     if      ( isValNone(src)    ) { res =          0.0;        }
-    else if ( isValComplex(src) ) { res =          toCpl(src); }
     else if ( isValInteger(src) ) { res = (double) toInt(src); }
-    else                          { res =          toDbl(src); }
+    else if ( isValReal(src)    ) { res =          toDbl(src); }
+    else                          { res =          toCpl(src); }
 
     return 0;
 }
@@ -2896,9 +2966,9 @@ int naivePyToCpl(std::complex<double> &res, const py::object &src)
 int naivePyToCpl(d_anion &res, const py::object &src)
 {
     if      ( isValNone(src)    ) { res =          0.0;        }
-    else if ( isValComplex(src) ) { res =          toCpl(src); }
     else if ( isValInteger(src) ) { res = (double) toInt(src); }
-    else                          { res =          toDbl(src); }
+    else if ( isValReal(src)    ) { res =          toDbl(src); }
+    else                          { res =          toCpl(src); }
 
     return 0;
 }
@@ -3097,7 +3167,7 @@ int naivePyToSpv(SparseVector<T> &res, const py::object &src)
     return errcode ? (errcode+32796) : 0;
 }
 
-//int naivePyToEqn(gentype &res, const py::object &src)
+//int naivePyToEqn(gentype &res, const py::object src)
 //{
 //    // Method: make res a call to pycall, and then set altpycall (which
 //    // will override the usual functionality of pycall) to a
@@ -3196,6 +3266,8 @@ py::object &setgetsrc(int &i, int doset, py::object *val)
             }
         }
 
+        xval.zero();
+
         return *val;
     }
 
@@ -3207,9 +3279,9 @@ py::object &setgetsrc(int &i, int doset, py::object *val)
     return *(xval(i));
 }
 
-int         pyosetsrc(int k, const py::object &src) { py::object *newsrc; MEMNEW(newsrc,py::object(src)); setgetsrc(k,1,newsrc); return k; }
-py::object &pyogetsrc(int k)                        { return setgetsrc(k,0);                                                               }
-void        pyoclrsrc(void)                         { int k = 0; py::object dummy = py::cast(1); setgetsrc(k,-1,&dummy);                   }
+int        pyosetsrc(int k, py::object src) { py::object *newsrc; MEMNEW(newsrc,py::object(src)); setgetsrc(k,1,newsrc); return k; }
+py::object pyogetsrc(int k)                 { return setgetsrc(k,0);                                                               }
+void       pyoclrsrc(void)                  { int k = 0; py::object dummy = py::cast(1); setgetsrc(k,-1,&dummy);                   }
 
 // drop-in replacement for pycall function in gentype.cc
 // (the gentype version, which uses a system call, is disabled by the macro PYLOCAL)

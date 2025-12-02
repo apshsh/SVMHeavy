@@ -80,7 +80,7 @@ int surffn(double xmin, double xmax, double ymin, double ymax, double omin, doub
 int plotml(const ML_Base &ml, int xindex,
            double xmin, double xmax, double omin, double omax,
            const std::string &fname, const std::string &dname, int outformat, int incdata, const gentype &baseline, int incvar, int xusevar,
-           const SparseVector<gentype> &xtemplate, int plotsq = 0, int plotimp = 0, double scale = 1);
+           const SparseVector<gentype> &xtemplate, int plotsq = 0, int plotimp = 0, double scale = 1, double dscale = 1);
 
 
 // Do a surface plot visualisation of ml
@@ -88,7 +88,7 @@ int plotml(const ML_Base &ml, int xindex,
 int plotml(const ML_Base &ml, int xindoes, int yindex,
            double xmin, double xmax, double ymin, double ymax, double omin, double omax,
            const std::string &fname, const std::string &dname, int outformat, int incdata, const gentype &baseline, int incvar, int xusevar, int yusevar,
-           const SparseVector<gentype> &xtemplate, int plotsq = 0, int plotimp = 0, double scale = 1);
+           const SparseVector<gentype> &xtemplate, int plotsq = 0, int plotimp = 0, double scale = 1, double dscale = 1);
 
 
 

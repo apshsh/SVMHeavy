@@ -137,14 +137,22 @@ public:
     // plotfreq: visualise model (1-d only) every this many iterations if nz, plus
     //           on exit.
     //           -1 means log only on exit
+    // modelsave: 0 = don't save model files
+    //            1 = save model files
     // modelbaseline: baseline (function) to plot, null() if not used
+    // cgtsave: 0 = don't save constraint files
+    //          1 = save constraint files
+    // cgtbaseline: constraint baseline (function) to plot, null() if not used
     //
     // PIscale: if 0 then nothing, if 1 then scale acquisition function by PI
 
     std::string modelname;
     int modeloutformat;
     int plotfreq;
+    int modelsave;
     gentype modelbaseline;
+    int cgtsave;
+    gentype cgtbaseline;
 
     int sigmuseparate;
     int moodim;
@@ -584,7 +592,7 @@ public:
 
     // Logging subsiduary (pdf production)
 
-    void model_sublog(const ML_Base &plotmodel, gentype &baselinefn, int incbaselinefn, double xmin, double xmax, double ymin, double ymax, int j, const std::string &nameof, int xind, int yind, const std::string &stagestr, double sf);
+    void model_sublog(const ML_Base &plotmodel, gentype &baselinefn, int incbaselinefn, double xmin, double xmax, double ymin, double ymax, int j, const std::string &nameof, int xind, int yind, const std::string &stagestr, double sf, double dsf);
 };
 
 

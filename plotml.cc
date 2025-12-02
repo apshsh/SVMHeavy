@@ -132,7 +132,7 @@ int surffn(double xmin, double xmax, double ymin, double ymax, double omin, doub
 int plotml(const ML_Base &ml, int xindex,
            double xmin, double xmax, double omin, double omax,
            const std::string &fname, const std::string &dname, int outformat, int incdata, const gentype &baseline, int incvar, int xusevar,
-           const SparseVector<gentype> &xtemplate, int plotsq, int plotimp, double scale)
+           const SparseVector<gentype> &xtemplate, int plotsq, int plotimp, double scale, double dscale)
 {
     NiceAssert( xmin < xmax );
 
@@ -229,17 +229,17 @@ int plotml(const ML_Base &ml, int xindex,
             if ( (ml.d())(i) == +1 )
             {
                 //dnameposfile << (ml.y())(i) << "\t" << (ml.x(i))(xindex) << "\n";
-                dnameposfile << (ml.x(i))(xindex) << "\t" << (-(ml.y())(i)) << "\n";
+                dnameposfile << (ml.x(i))(xindex) << "\t" << (-dscale*(ml.y())(i)) << "\n";
             }
 
             if ( (ml.d())(i) == -1 )
             {
-                dnamenegfile << (ml.x(i))(xindex) << "\t" << (-(ml.y())(i)) << "\n";
+                dnamenegfile << (ml.x(i))(xindex) << "\t" << (-dscale*(ml.y())(i)) << "\n";
             }
 
             if ( (ml.d())(i) == 2 )
             {
-                dnameequfile << (ml.x(i))(xindex) << "\t" << (-(ml.y())(i)) << "\n";
+                dnameequfile << (ml.x(i))(xindex) << "\t" << (-dscale*(ml.y())(i)) << "\n";
             }
         }
 
@@ -265,7 +265,7 @@ int plotml(const ML_Base &ml, int xindex,
             std::string fname_sub = fname+"_subplot_"+std::to_string(ii);
             std::string dname_sub = dname+"_subplot_"+std::to_string(ii);
 
-            ires |= plotml(ml_sub,xindex,xmin,xmax,omin,omax,fname_sub,dname_sub,outformat,incdata_sub,baseline,incvar_sub,xusevar,xtemplate,plotsq,plotimp,scale);
+            ires |= plotml(ml_sub,xindex,xmin,xmax,omin,omax,fname_sub,dname_sub,outformat,incdata_sub,baseline,incvar_sub,xusevar,xtemplate,plotsq,plotimp,scale,dscale);
         }
     }
 
@@ -294,7 +294,7 @@ int plotml(const ML_Base &ml, int xindex,
 int plotml(const ML_Base &ml, int xindex, int yindex,
            double xmin, double xmax, double ymin, double ymax, double omin, double omax,
            const std::string &fname, const std::string &dname, int outformat, int incdata, const gentype &baseline, int incvar, int xusevar, int yusevar,
-           const SparseVector<gentype> &xtemplate, int plotsq, int plotimp, double scale)
+           const SparseVector<gentype> &xtemplate, int plotsq, int plotimp, double scale, double dscale)
 {
     NiceAssert( xmin < xmax );
     NiceAssert( ymin < ymax );
@@ -439,17 +439,17 @@ int plotml(const ML_Base &ml, int xindex, int yindex,
             if ( (ml.d())(i) == +1 )
             {
                 //dnameposfile << (ml.y())(i) << "\t" << (ml.x(i))(xindex) << "\n";
-                dnameposfile << (ml.x(i))(xindex) << "\t" << (ml.x(i))(yindex) << "\t" << (-(ml.y())(i)) << "\n";
+                dnameposfile << (ml.x(i))(xindex) << "\t" << (ml.x(i))(yindex) << "\t" << (-dscale*(ml.y())(i)) << "\n";
             }
 
             if ( (ml.d())(i) == -1 )
             {
-                dnamenegfile << (ml.x(i))(xindex) << "\t" << (ml.x(i))(yindex) << "\t" << (-(ml.y())(i)) << "\n";
+                dnamenegfile << (ml.x(i))(xindex) << "\t" << (ml.x(i))(yindex) << "\t" << (-dscale*(ml.y())(i)) << "\n";
             }
 
             if ( (ml.d())(i) == 2 )
             {
-                dnameequfile << (ml.x(i))(xindex) << "\t" << (ml.x(i))(yindex) << "\t" << (-(ml.y())(i)) << "\n";
+                dnameequfile << (ml.x(i))(xindex) << "\t" << (ml.x(i))(yindex) << "\t" << (-dscale*(ml.y())(i)) << "\n";
             }
         }
 

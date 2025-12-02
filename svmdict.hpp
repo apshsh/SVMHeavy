@@ -183,9 +183,9 @@ template <class K, class T> int operator==(const Dict<K,T> &left_op, const Dict<
 template <class K, class T> int operator==(const Dict<K,T> &left_op, const T         &right_op) { return left_op() == right_op;   }
 template <class K, class T> int operator==(const T         &left_op, const Dict<K,T> &right_op) { return left_op   == right_op(); }
 
-template <class K, class T> int operator!=(const Dict<K,T> &left_op, const Dict<K,T> &right_op) { return left_op   != right_op;   }
-template <class K, class T> int operator!=(const Dict<K,T> &left_op, const T         &right_op) { return left_op() != right_op;   }
-template <class K, class T> int operator!=(const T         &left_op, const Dict<K,T> &right_op) { return left_op   != right_op(); }
+template <class K, class T> int operator!=(const Dict<K,T> &left_op, const Dict<K,T> &right_op) { return !(left_op   == right_op);  }
+template <class K, class T> int operator!=(const Dict<K,T> &left_op, const T         &right_op) { return   left_op() != right_op;   }
+template <class K, class T> int operator!=(const T         &left_op, const Dict<K,T> &right_op) { return   left_op   != right_op(); }
 
 
 
