@@ -4292,7 +4292,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
 
                 if ( ( dimfid && ( fidmode != 0 ) ) && ( locacq != 18 ) )
                 {
-                    if ( fidmode == 21 )
+                    if ( fidmode != 0 )
                     {
                         int numfids = bopts.numfids;
 
@@ -4452,113 +4452,6 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                         for ( int jij = 0 ; jij < dimfid ; jij++ )
                         {
                             xa("&",n-dimfid+jij) = ( zindex(jij) == -1 ) ? valvnan() : (((double) zindex(jij))/((double) numfids));
-                        }
-                    }
-
-                    else if ( ( fidmode >= 1 ) && ( fidmode <= 19 ) )
-                    {
-                        // Loop through all fidelities, work out which one gives the best information gain per unit budget
-
-                        Vector<double> xalowfid(xa);
-                        Vector<double> xautopia(xa);
-
-                        for ( int jij = 0 ; jij < dimfid ; jij++ )
-                        {
-                            xautopia("&",n-dimfid+jij) = 1;
-                        }
-
-                        SparseVector<gentype> tmpxautopia;
-                        NonsparseToSparsenear(tmpxautopia,xautopia,dim,dimfid);
-
-                        double fidcst_max = fidpencost(fidpencostsize-1);
-                        double target_max = 0;
-                        gentype predsigmay,sigmay,muy;
-
-                        Vector<gentype> predsigmay_cgt(bopts.numcgt);
-                        Vector<gentype> sigmay_cgt(bopts.numcgt);
-                        Vector<gentype> muy_cgt(bopts.numcgt);
-
-                        for ( int kk = 0 ; kk < fidpencostsize ; kk++ )
-                        {
-                            for ( int jij = 0 ; jij < dimfid ; jij++ )
-                            {
-                                xalowfid("&",n-dimfid+jij) = fidpenvecs(kk)(jij);
-                            }
-
-                            SparseVector<gentype> tmpxalowfid;
-                            NonsparseToSparsenear(tmpxalowfid,xalowfid,dim,dimfid);
-
-//errstream() << "fidelity " << kk << ": sigmay = " << sigmay << "\n";
-//errstream() << "fidelity " << kk << ": predsigmay = " << predsigmay << "\n";
-//errstream() << "fidelity " << kk << ": sigma = " << bopts.model_sigma() << "\n";
-                            double fidcst = fidpencost(kk);
-
-                            double cost_rat  = fidcst_max/fidcst;
-                            double cost_diff = fidcst_max-fidcst;
-
-                            double fidtrm = std::log2(1+(fidcst_max/fidcst));
-
-                            // sigmay = prior variance at xautopia
-                            // predsigmay = posterior variance at xautopia if we make a measurement at xalowfid
-
-                            bopts.model_predmuvar(predsigmay,sigmay,muy,tmpxautopia,tmpxalowfid);
-
-                            double sigma_rat  = ((double) sigmay)/((double) predsigmay);
-                            double sigma_diff = ((double) sigmay)-((double) predsigmay);
-
-                            double fidmig = std::log2(1+((((double) sigmay)+bopts.model_sigma(0))/(((double) predsigmay)+bopts.model_sigma(0))));
-
-                            if ( bopts.numcgt )
-                            {
-                                bopts.model_predmuvar_cgt(predsigmay_cgt,sigmay_cgt,muy_cgt,tmpxautopia,tmpxalowfid);
-
-                                for ( int icgt = 0 ; icgt < bopts.numcgt ; ++icgt )
-                                {
-                                    sigma_diff += ((double) sigmay_cgt(icgt))-((double) predsigmay_cgt(icgt));
-
-                                    fidmig += std::log2(1+((((double) sigmay_cgt(icgt))+bopts.model_sigma_cgt(icgt))/(((double) predsigmay_cgt(icgt))+bopts.model_sigma_cgt(icgt))));
-                                }
-
-                                sigma_rat = std::pow(2.0,fidmig)-1; // working back from the definitions
-                            }
-
-                            double target = 0;
-
-                            if      ( fidmode == 1  ) { target = cost_rat  * sigma_rat;  }
-                            else if ( fidmode == 2  ) { target = cost_diff * sigma_rat;  }
-                            else if ( fidmode == 3  ) { target = fidtrm    * sigma_rat;  }
-                            else if ( fidmode == 4  ) { target = cost_rat  * sigma_diff; } // ***
-                            else if ( fidmode == 5  ) { target = cost_diff * sigma_diff; }
-                            else if ( fidmode == 6  ) { target = fidtrm    * sigma_diff; }
-                            else if ( fidmode == 7  ) { target = cost_rat  * fidmig;     }
-                            else if ( fidmode == 8  ) { target = cost_diff * fidmig;     } // ***
-                            else if ( fidmode == 9  ) { target = fidtrm    * fidmig;     } // ***
-                            else if ( fidmode == 11 ) { target = cost_rat  + sigma_rat;  }
-                            else if ( fidmode == 12 ) { target = cost_diff + sigma_rat;  }
-                            else if ( fidmode == 13 ) { target = fidtrm    + sigma_rat;  }
-                            else if ( fidmode == 14 ) { target = cost_rat  + sigma_diff; }
-                            else if ( fidmode == 15 ) { target = cost_diff + sigma_diff; }
-                            else if ( fidmode == 16 ) { target = fidtrm    + sigma_diff; }
-                            else if ( fidmode == 17 ) { target = cost_rat  + fidmig;     }
-                            else if ( fidmode == 18 ) { target = cost_diff + fidmig;     }
-                            else if ( fidmode == 19 ) { target = fidtrm    + fidmig;     }
-
-errstream() << "migpercost " << kk << ": target = (" << fidcst_max << "," << fidcst << " : " << sigmay << "," << predsigmay << ")";
-
-                            // - fidmig will be >= 1 as measurements will never increase the variance, so sigmay >= predsigmay
-                            // - fidmig will be 1 if the lower-fidelity measurement doesn't change the variance of the utopia point.
-                            // - fidmig will be maximised as predsigmay -> 0 (that is, the posterior predicted variance at the utopia point goes to zero)
-                            // - fidmig is relative to the current variance, which may be a problem
-                            // - the term fidcst_max/fidcst = 1 if this is the max cost (utopia) measure, >1 otherwise
-                            // - it measures the savings for using the lower-fidelity surrogate
-
-                            if ( !kk || ( target > target_max ) )
-                            {
-                                target_max = target;
-                                xa = xalowfid;
-errstream() << "**";
-                            }
-errstream() << "\n";
                         }
                     }
 
@@ -5082,7 +4975,7 @@ errstream() << "\n";
                             zindex("&",jij) = (int) std::round(((double) (xxb(k).n(jij,1)))*numfids);
                         }
 
-                        if ( fidmode == 21 )
+                        if ( fidmode != 0 )
                         {
                             // Heuristic from Kandasamy supplementary C.1
 
