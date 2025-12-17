@@ -77,37 +77,50 @@ public:
 //        return newver;
 //    }
 
-    // supres: none
+    // allsres: none
 
     virtual int optim(int dim,
-                      Vector<gentype> &xres,
-                      gentype &fres,
-                      int &ires,
+                      Vector<gentype> &Xres,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
                       Vector<Vector<gentype> > &allxres,
-                      Vector<gentype> &allfres,
+                      Vector<gentype>          &allfres,
                       Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &supres,
-                      Vector<double> &sscore,
+                      Vector<gentype>          &allFres,
+                      Vector<gentype>          &allmres,
+                      Vector<gentype>          &allsres,
+                      Vector<double>           &s_score,
+                      Vector<int>              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
                       void *fnarg,
-                      svmvolatile int &killSwitch);
+                      svmvolatile int &killSwitch) override;
 
     virtual int optim(int dim,
                       Vector<gentype> &xres,
                       Vector<gentype> &Xres,
-                      gentype &fres,
-                      int &ires,
-                      int &mInd,
-                      Vector<Vector<gentype> > &allxres,
-                      Vector<Vector<gentype> > &allXres,
-                      Vector<gentype> &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &allsres,
-                      Vector<double>  &s_score,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
+                      Vector<Vector<Vector<gentype> > > &allxres,
+                      Vector<Vector<Vector<gentype> > > &allXres,
+                      Vector<Vector<gentype> >          &allfres,
+                      Vector<Vector<Vector<gentype> > > &allcres,
+                      Vector<Vector<gentype> >          &allFres,
+                      Vector<Vector<gentype> >          &allmres,
+                      Vector<Vector<gentype> >          &allsres,
+                      Vector<Vector<double> >           &s_score,
+                      Vector<Vector<int> >              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -117,16 +130,18 @@ public:
                       svmvolatile int &killSwitch,
                       size_t numReps,
                       gentype &meanfres, gentype &varfres,
+                      gentype &meanFres, gentype &varFres,
                       gentype &meanires, gentype &varires,
                       gentype &meantres, gentype &vartres,
                       gentype &meanTres, gentype &varTres,
                       Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
-                      Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
+                      Vector<gentype> &meanallFres, Vector<gentype> &varallFres,
+                      Vector<gentype> &meanallmres, Vector<gentype> &varallmres) override
     {
-        return GlobalOptions::optim(dim,xres,Xres,fres,ires,mInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
+        return GlobalOptions::optim(dim,xres,Xres,fres,cres,Fres,mres,sres,ires,mInd,allxres,allXres,allfres,allcres,allFres,allmres,allsres,s_score,is_feas,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanFres,varFres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallFres,varallFres,meanallmres,varallmres);
     }
 
-    virtual int optdefed(void)
+    virtual int optdefed(void) override
     {
         return 1;
     }

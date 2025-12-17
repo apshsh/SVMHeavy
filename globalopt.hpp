@@ -38,7 +38,8 @@
 #define _globalopt_h
 
 
-
+bool isisValNone(const gentype &val);
+bool isisValNone(const double  &val);
 
 
 #define DEFAULT_NUMOPTS 10
@@ -85,6 +86,23 @@ public:
     // Optname used for logging only
 
     std::string optname;
+
+    // simname: simulation base-name.  If you plot regret this is used
+    // simoutformat: model output format (0 terminal, 1 ps, 2 pdf)
+    // simfreq: 0 don't plot regret
+    //          1 plot regret
+    // simFmin: on regret plot, start of x (iteration/budget) range (default 1, simFmin > simFmax means auto)
+    // simFmax: on regret plot, end of x (iteration/budget) range (default 0)
+    // simRmin: on regret plot, start of y (regret) range (default 1, simRmin > simRmax means auto)
+    // simRmax: on regret plot, end of y (regret) range (default 0)
+
+    std::string simname;      // "regret"
+    int         simoutformat; // 2
+    int         simfreq;      // 1
+    double      simFmin;      // 1
+    double      simFmax;      // 0
+    double      simRmin;      // 1
+    double      simRmax;      // 0
 
     // recursive allxres
 
@@ -146,17 +164,17 @@ public:
     // bernstart     - for scheduled Bernstein projection (isProjection == 4), this is the
     //                 initial polynomial order.  The maximum is min(dim,bernStart+randReproject)
 
-    int isProjection;  // default 0
-    int includeConst;  // default 0
-    double whatConst;  // default 2.0
-    int randReproject; // default 0
-    int useScalarFn;   // default 1
-    int xxSampType;    // default 3
-    int xNsamp;        // default DEFAULT_SAMPLES_SAMPLE
-    int xSampSplit;    // default 1
-    int xSampType;     // default 0
-    int fnDim;         // default 1
-    int bernstart;     // default 1
+    int    isProjection;  // default 0
+    int    includeConst;  // default 0
+    double whatConst;     // default 2.0
+    int    randReproject; // default 0
+    int    useScalarFn;   // default 1
+    int    xxSampType;    // default 3
+    int    xNsamp;        // default DEFAULT_SAMPLES_SAMPLE
+    int    xSampSplit;    // default 1
+    int    xSampType;     // default 0
+    int    fnDim;         // default 1
+    int    bernstart;     // default 1
 
     BLK_UsrFnB priorrandDirtemplateVec;
     ML_Mutable priorrandDirtemplateFnGP;   // GPR_Scalar
@@ -203,6 +221,7 @@ public:
     // fres: f(x) result.
     // cres: c(x) result
     // ires: index of result.
+    // Fres; budget point of result.
     // mInd: for functional optimisation, this returns the (registered) index of the ML model found
     // allxres: all x results.
     // allfres: all f(x) results.
@@ -242,14 +261,21 @@ public:
 //FIXME: add tres vector that is calculated based on either iteration (default) or budget (if used)
     virtual int optim(int dim,
                       Vector<gentype> &Xres,
-                      gentype &fres,
-                      int &ires,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
                       Vector<Vector<gentype> > &allXres,
-                      Vector<gentype> &allfres,
+                      Vector<gentype>          &allfres,
                       Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &allsres,
-                      Vector<double>  &s_score,
+                      Vector<gentype>          &allFres,
+                      Vector<gentype>          &allmres,
+                      Vector<gentype>          &allsres,
+                      Vector<double>           &s_score,
+                      Vector<int>              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -259,13 +285,20 @@ public:
         (void) dim;
         (void) Xres;
         (void) fres;
+        (void) cres;
+        (void) Fres;
+        (void) mres;
+        (void) sres;
         (void) ires;
+        (void) mInd;
         (void) allXres;
         (void) allfres;
         (void) allcres;
+        (void) allFres;
         (void) allmres;
         (void) allsres;
         (void) s_score;
+        (void) is_feas;
         (void) xmin;
         (void) xmax;
         (void) fn;
@@ -285,7 +318,7 @@ public:
 
         for ( k = 0 ; k < src.size() ; ++k )
         {
-            if ( src(k).isCastableToRealWithoutLoss() && ( (double) src(k) <= target ) )
+            if ( !src(k).isValNone() && src(k).isCastableToRealWithoutLoss() && ( (double) src(k) <= target ) )
             {
                 res = k+1;
                 nores = 0;
@@ -306,53 +339,93 @@ public:
         return res;
     }
 
-    void calcmeanvar(gentype &meanres, gentype &varires, const Vector<gentype> &src)
+    template <class T>
+    void calcmeanvar(T &meanres, T &varires, const Vector<T> &src)
     {
-        mean(meanres,src);
-        vari(varires,src);
-
-        // Actually we want the variance of the sample mean here, so...
-
-        varires *= 1/((double) src.size());
-    }
-
-    void calcmeanvar(Vector<gentype> &meanres, Vector<gentype> &varires, const Vector<Vector<gentype> > &src)
-    {
-        Vector<gentype> srcsum;
-        Vector<gentype> srcsqsum;
+        T srcsum;
+        T srcsqsum;
 
         sum(  srcsum,  src);
         sqsum(srcsqsum,src);
 
-        int numReps = src.size();
+        int totReps = src.size();
+        int numReps = 0;
 
-        meanres = srcsum;
-        meanres.scale(1/((double) numReps));
+        for ( int j = 0 ; j < totReps ; ++j )
+        {
+            if ( !isisValNone(src(j)) )
+            {
+                numReps++;
+            }
+        }
 
-        varires =  srcsum;
-        varires *= srcsum;
-        varires.scale(1/((double) numReps));
-        varires -= srcsqsum;
-        varires.scale(-1/((double) numReps));
+        if ( numReps > 1 )
+        {
+            meanres = srcsum;
+            meanres /= ((double) numReps);
 
-        // Actually we want the variance of the sample mean here, so...
+            varires =  srcsum;
+            varires *= srcsum;
+            varires /= ((double) numReps);
+            varires -= srcsqsum;
+            varires /= -((double) numReps);
 
-        varires.scale(1/((double) numReps));
+            // Actually we want the variance of the sample mean here, so...
+            varires /= ((double) numReps);
+//            varires *= (((double) totReps)/((double) numReps));
+        }
+
+        else if ( numReps == 1 )
+        {
+            meanres = srcsum;
+            varires = nullgentype();
+        }
+
+        else
+        {
+            meanres = nullgentype();
+            varires = nullgentype();
+        }
+    }
+
+    template <class T>
+    void calcmeanvar(Vector<T> &meanres, Vector<T> &varires, const Vector<Vector<T> > &src)
+    {
+        meanres.resize(src(0).size());
+        varires.resize(src(0).size());
+
+        Vector<T> altsrc(src.size());
+
+        for ( int i = 0 ; i < meanres.size() ; ++i )
+        {
+            for ( int j = 0 ; j < src.size() ; ++j )
+            {
+                altsrc("&",j) = src(j)(i);
+            }
+
+            calcmeanvar(meanres("&",i),varires("&",i),altsrc);
+        }
     }
 
     virtual int optim(int dim,
                       Vector<gentype> &xres,
                       Vector<gentype> &Xres,
-                      gentype &fres,
-                      int &ires,
-                      int &mInd,
-                      Vector<Vector<gentype> > &allxres,
-                      Vector<Vector<gentype> > &allXres,
-                      Vector<gentype> &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &allsres,
-                      Vector<double>  &s_score,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
+                      Vector<Vector<Vector<gentype> > > &allxres,
+                      Vector<Vector<Vector<gentype> > > &allXres,
+                      Vector<Vector<gentype> >          &allfres,
+                      Vector<Vector<Vector<gentype> > > &allcres,
+                      Vector<Vector<gentype> >          &allFres,
+                      Vector<Vector<gentype> >          &allmres,
+                      Vector<Vector<gentype> >          &allsres,
+                      Vector<Vector<double> >           &s_score,
+                      Vector<Vector<int> >              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -360,27 +433,101 @@ public:
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
                       void *fnarg,
                       svmvolatile int &killSwitch,
-                      size_t numReps, 
+                      size_t numReps,
                       gentype &meanfres, gentype &varfres,
+                      gentype &meanFres, gentype &varFres,
                       gentype &meanires, gentype &varires,
                       gentype &meantres, gentype &vartres,
                       gentype &meanTres, gentype &varTres,
                       Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
+                      Vector<gentype> &meanallFres, Vector<gentype> &varallFres,
                       Vector<gentype> &meanallmres, Vector<gentype> &varallmres);
+
+    virtual int optim(int dim,
+                      Vector<gentype> &xres,
+                      Vector<gentype> &Xres,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
+                      Vector<Vector<gentype> > &allxres,
+                      Vector<Vector<gentype> > &allXres,
+                      Vector<gentype>          &allfres,
+                      Vector<Vector<gentype> > &allcres,
+                      Vector<gentype>          &allFres,
+                      Vector<gentype>          &allmres,
+                      Vector<gentype>          &allsres,
+                      Vector<double>           &s_score,
+                      Vector<int>              &is_feas,
+                      const Vector<gentype> &xmin,
+                      const Vector<gentype> &xmax,
+                      const Vector<int> &distMode,
+                      const Vector<int> &varsType,
+                      void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
+                      void *fnarg,
+                      svmvolatile int &killSwitch,
+                      size_t numReps,
+                      gentype &meanfres, gentype &varfres,
+                      gentype &meanFres, gentype &varFres,
+                      gentype &meanires, gentype &varires,
+                      gentype &meantres, gentype &vartres,
+                      gentype &meanTres, gentype &varTres,
+                      Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
+                      Vector<gentype> &meanallFres, Vector<gentype> &varallFres,
+                      Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
+    {
+        Vector<Vector<Vector<gentype> > > vecallxres;
+        Vector<Vector<Vector<gentype> > > vecallXres;
+        Vector<Vector<gentype> >          vecallfres;
+        Vector<Vector<Vector<gentype> > > vecallcres;
+        Vector<Vector<gentype> >          vecallFres;
+        Vector<Vector<gentype> >          vecallmres;
+        Vector<Vector<gentype> >          vecallsres;
+        Vector<Vector<double> >           vecs_score;
+        Vector<Vector<int> >              vecis_feas;
+
+        int retcode = optim(dim,
+                      xres,Xres,fres,cres,Fres,mres,sres,ires,mInd,
+                      vecallxres,vecallXres,vecallfres,vecallcres,vecallFres,vecallmres,vecallsres,vecs_score,vecis_feas,
+                      xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,
+                      meanfres,varfres,meanFres,varFres,meanires,varires,meantres,vartres,meanTres,varTres,
+                      meanallfres,varallfres,meanallFres,varallFres,meanallmres,varallmres);
+
+        allxres = vecallxres(0);
+        allXres = vecallXres(0);
+        allfres = vecallfres(0);
+        allcres = vecallcres(0);
+        allFres = vecallFres(0);
+        allmres = vecallmres(0);
+        allsres = vecallsres(0);
+        s_score = vecs_score(0);
+        is_feas = vecis_feas(0);
+
+        return retcode;
+    }
 
     virtual int realOptim(int dim,
                       Vector<gentype> &xres,
                       Vector<gentype> &Xres,
-                      gentype &fres,
-                      int &ires,
-                      int &mInd,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
-                      Vector<gentype> &allfres,
+                      Vector<gentype>          &allfres,
                       Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &allsres,
-                      Vector<double>  &s_score,
+                      Vector<gentype>          &allFres,
+                      Vector<gentype>          &allmres,
+                      Vector<gentype>          &allsres,
+                      Vector<double>           &s_score,
+                      Vector<int>              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -410,14 +557,11 @@ public:
     //           dominated in the negative quadrant otherwise.
     // fdecreasing: min f up to iteration.
 
-    int analyse(const Vector<Vector<gentype> > &allxres,
-                const Vector<gentype> &allmres,
-                const Vector<Vector<gentype> > &allcres,
+    int analyse(const Vector<gentype> &allmres,
+                const Vector<int> &is_feas,
                 Vector<double> &hypervol,
                 Vector<int> &parind,
                 int calchypervol) const; // = 1) const;
-
-    int isFeasible(const Vector<gentype> &cres, const Vector<gentype> &Xres) const;
 
     // Internal function to differentiate between the base class and the
     // actual optimisation problem classes.  Will return zero for base
@@ -663,7 +807,7 @@ public:
                     if ( isProjection == 1 )
                     {
                         SparseVector<gentype> xxmod;
-                        const static SparseVector<gentype> xdummy;
+                        SparseVector<gentype> xdummy;
 
                         (*projOp).gg(xxmod("&",(res.ind())(0)),xdummy);
 
@@ -986,7 +1130,7 @@ public:
                 if ( isProjection == 1 )
                 {
                     Vector<gentype> xxmod(res);
-                    const static SparseVector<gentype> xdummy;
+                    SparseVector<gentype> xdummy;
 
                     (*projOp).gg(xxmod("&",0),xdummy);
 
@@ -1173,10 +1317,10 @@ private:
     // spOverride: set for all but the first run to make sure startpoints are only added for the first for scheduled Bernstein
     // bestyet:    best result yet
 
-    int stopearly;
-    int firsttest;
-    int spOverride;
-    int berndim;
+    int     stopearly;
+    int     firsttest;
+    int     spOverride;
+    int     berndim;
     gentype bestyet;
 
     // ML registration stuff (for functional optimisation)
@@ -1247,6 +1391,8 @@ private:
     int addSubDim; // additional (fixed) dimensions on subspace
 
     void *locfnarg;
+
+    bool needsReset; // set after optimization run to indicate that reset() needs to be called next time around
 
 public:
     int overfnitcnt;

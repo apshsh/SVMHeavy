@@ -506,9 +506,9 @@ int plotml(const ML_Base &ml, int xindex, int yindex,
 // Do a simple line-plot with optional variance, baseline and datapoints
 
 int plot2d(const Vector<double> &x, const Vector<double> &y, const Vector<double> &yvar, const Vector<double> &ybaseline,
-           const Vector<double> &xpos, const Vector<double> &ypos,
-           const Vector<double> &xneg, const Vector<double> &yneg,
-           const Vector<double> &xequ, const Vector<double> &yequ,
+           const Vector<Vector<double> > &xpos, const Vector<Vector<double> > &ypos,
+           const Vector<Vector<double> > &xneg, const Vector<Vector<double> > &yneg,
+           const Vector<Vector<double> > &xequ, const Vector<Vector<double> > &yequ,
            double xmin, double xmax, double omin, double omax,
            const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar)
 {
@@ -563,19 +563,53 @@ int plot2d(const Vector<double> &x, const Vector<double> &y, const Vector<double
         std::ofstream dnamenegfile(dnameneg);
         std::ofstream dnameequfile(dnameequ);
 
-        for ( i = 0 ; i < xpos.size() ; ++i )
+        if ( xpos.size() > 1 )
         {
-            dnameposfile << xpos(i) << "\t" << ypos(i) << "\n";
+            for ( int q = 0 ; q < xpos.size() ; ++q )
+            {
+                NiceAssert( xpos(q).size() == ypos(q).size() );
+                NiceAssert( xneg(q).size() == yneg(q).size() );
+                NiceAssert( xequ(q).size() == yequ(q).size() );
+
+                for ( i = 0 ; i < xpos(q).size() ; ++i )
+                {
+                    dnameposfile << xpos(q)(i) << "\t" << ypos(q)(i) << "\t" << (q+1) << "\n";
+                }
+
+                for ( i = 0 ; i < xneg(q).size() ; ++i )
+                {
+                    dnamenegfile << xneg(q)(i) << "\t" << yneg(q)(i) << "\t" << (q+1) << "\n";
+                }
+
+                for ( i = 0 ; i < xequ(q).size() ; ++i )
+                {
+                    dnameequfile << xequ(q)(i) << "\t" << yequ(q)(i) << "\t" << (q+1) << "\n";
+                }
+            }
         }
 
-        for ( i = 0 ; i < xneg.size() ; ++i )
+        else if ( xpos.size() == 1 )
         {
-            dnamenegfile << xneg(i) << "\t" << yneg(i) << "\n";
-        }
+            int q = 0;
 
-        for ( i = 0 ; i < xequ.size() ; ++i )
-        {
-            dnameequfile << xequ(i) << "\t" << yequ(i) << "\n";
+            NiceAssert( xpos(q).size() == ypos(q).size() );
+            NiceAssert( xneg(q).size() == yneg(q).size() );
+            NiceAssert( xequ(q).size() == yequ(q).size() );
+
+            for ( i = 0 ; i < xpos(q).size() ; ++i )
+            {
+                dnameposfile << xpos(q)(i) << "\t" << ypos(q)(i) << "\n";
+            }
+
+            for ( i = 0 ; i < xneg(q).size() ; ++i )
+            {
+                dnamenegfile << xneg(q)(i) << "\t" << yneg(q)(i) << "\n";
+            }
+
+            for ( i = 0 ; i < xequ(q).size() ; ++i )
+            {
+                dnameequfile << xequ(q)(i) << "\t" << yequ(q)(i) << "\n";
+            }
         }
 
         dnameposfile.close();
@@ -583,7 +617,10 @@ int plot2d(const Vector<double> &x, const Vector<double> &y, const Vector<double
         dnameequfile.close();
     }
 
-    return doplot(xmin,xmax,omin,omax,fname,dname,outformat,incdata,incvar);
+    int doline = 2;
+    int numdat = ( xpos.size() > 1 ) ? xpos.size() : 0;
+
+    return doplot(xmin,xmax,omin,omax,fname,dname,outformat,incdata,incvar,doline,numdat);
 }
 
 // Plot multiple graphs (specified by y) on a single 2-d axis

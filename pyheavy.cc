@@ -1,3 +1,5 @@
+//ml_base tuneKernelk to min ||alpha|| with method 4
+
 
 //
 // SVMHeavyv7 Python CLI-like Interface
@@ -71,6 +73,14 @@ py::object &pyeval      (void);
 py::object &pyvalueerror(void);
 py::object &pycomplex   (void);
 
+// We want to keep these functions cached for speed. However the obvious
+// solution (making them static) causes issues with the GIL as they get
+// deleted after/during python shutdown (they need to be deleted before
+// shutdown). To get around this we use static pointers - these are allocated
+// on first use (as static objects would be) and deleted on request (in the
+// shutdown_module function, which is called using pythons atexit hook before
+// python itself self-destructs).
+
 #define BUILTINDEF(defstr)                                                       \
     static py::object *statobj = nullptr;                                        \
     if ( !delit && !statobj ) { MEMNEW(statobj,py::object); *statobj = defstr; } \
@@ -111,6 +121,16 @@ bool isValDict    (const py::object &src) { return !isValNone(src) && py::isinst
 bool isValString  (const py::object &src) { return !isValNone(src) && py::isinstance<py::str>(src);                          }
 bool isValCallable(const py::object &src) { return !isValNone(src) && py::cast<py::bool_>(pycallable()(src));                }
 
+bool isValNone    (const py::handle &src) { py::handle altsrc = src; return isValNone    (py::reinterpret_borrow<py::object>(altsrc)); }
+bool isValInteger (const py::handle &src) { py::handle altsrc = src; return isValInteger (py::reinterpret_borrow<py::object>(altsrc)); }
+bool isValReal    (const py::handle &src) { py::handle altsrc = src; return isValReal    (py::reinterpret_borrow<py::object>(altsrc)); }
+bool isValComplex (const py::handle &src) { py::handle altsrc = src; return isValComplex (py::reinterpret_borrow<py::object>(altsrc)); }
+bool isValList    (const py::handle &src) { py::handle altsrc = src; return isValList    (py::reinterpret_borrow<py::object>(altsrc)); }
+bool isValTuple   (const py::handle &src) { py::handle altsrc = src; return isValTuple   (py::reinterpret_borrow<py::object>(altsrc)); }
+bool isValDict    (const py::handle &src) { py::handle altsrc = src; return isValDict    (py::reinterpret_borrow<py::object>(altsrc)); }
+bool isValString  (const py::handle &src) { py::handle altsrc = src; return isValString  (py::reinterpret_borrow<py::object>(altsrc)); }
+bool isValCallable(const py::handle &src) { py::handle altsrc = src; return isValCallable(py::reinterpret_borrow<py::object>(altsrc)); }
+
 bool isValCastableToInteger(const py::object &src) { return isValNone(src) || isValInteger(src) || isValReal(src);                      }
 bool isValCastableToReal   (const py::object &src) { return isValNone(src) || isValInteger(src) || isValReal(src);                      }
 bool isValCastableToComplex(const py::object &src) { return isValNone(src) || isValInteger(src) || isValReal(src) || isValComplex(src); }
@@ -118,6 +138,8 @@ bool isValCastableToComplex(const py::object &src) { return isValNone(src) || is
 int                  toInt(const py::object &src) { return (int)      py::cast<py::int_>  (src); }
 double               toDbl(const py::object &src) { return (double)   py::cast<py::float_>(src); }
 std::complex<double> toCpl(const py::object &src) { return py::cast<std::complex<double> >(src); }
+
+// Conversion operators from c++ types (or gentype) to py::object
 
                    py::object convToPy(      int                   src);
                    py::object convToPy(      double                src);
@@ -133,9 +155,16 @@ template <class T> py::object convToPy(const SparseVector<T>      &src);
                    py::object convToPy(const gentype              &src);
 template <class T> py::object convToPy(int size, const T          *src);
 
-py::object makeError(const char *src) { return pyvalueerror()(src); }
+// python "error" type
 
-// These return 1 if conversion fails
+py::object makeError(const char        *src)              {                                                           return pyvalueerror()(src);       }
+py::object makeError(const std::string &src)              {                                                           return makeError(src.c_str());    }
+py::object makeError(const std::string &src, int errcode) { std::string errstr = src+" "+std::to_string(errcode)+"."; return makeError(errstr.c_str()); }
+py::object makeError(const char        *src, int errcode) { std::string altsrc(src);                                  return makeError(altsrc,errcode); }
+
+// Converseion operators from py::object to c++ types (or gentype)
+//
+// These return nz code if conversion fails
 
 template <class T> int convFromPy(T                     &res, const py::handle &src);
                    int convFromPy(int                   &res, const py::object &src);
@@ -150,6 +179,8 @@ template <class T> int convFromPy(Dict<T,dictkey>       &res, const py::object &
 template <class T> int convFromPy(SparseVector<T>       &res, const py::object &src);
 template <>        int convFromPy(SparseVector<gentype> &res, const py::object &src);
                    int convFromPy(gentype               &res, const py::object &src);
+
+// Shortcut conversion
 
 gentype convFromPy(const py::object &src);
 
@@ -200,26 +231,24 @@ gentype convFromPy(const py::object &src);
 #define QIMPB(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), "Evaluate " desc " in gentype", py::arg("x"),py::arg("y"));
 #define QIMPC(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), "Evaluate " desc " in gentype", py::arg("x"),py::arg("y"),py::arg("z"));
 
-
-
 // Corresponding helper macros to auto-generate function definitions to be used by python module
 
-#define        DODEF(dofn)          py::object mod_ ##  dofn(void)                       { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLref(i). dofn ());        }
+#define        DODEF(dofn)          py::object mod_ ##  dofn(void)                { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLref(i). dofn ());        }
 #define     DOARGDEF(dofn,T)        int        mod_ ##  dofn(       py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); return getMLref(i). dofn (altp);              }
-#define       GETDEF(getfn)         py::object mod_ ## getfn(void)                       { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn ());  }
-#define    GETCLADEF(getfn)         py::object mod_ ## getfn(int d)                      { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn (d)); }
+#define       GETDEF(getfn)         py::object mod_ ## getfn(void)                { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn ());  }
+#define    GETCLADEF(getfn)         py::object mod_ ## getfn(int d)               { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn (d)); }
 #define    SETCLADEF(setfn,T)       int        mod_ ## setfn(int d, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); return getMLref(i). setfn (d,altp);           }
-#define    GETSETDEF(getfn,setfn,T) py::object mod_ ## getfn(void)                       { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn ());  } \
+#define    GETSETDEF(getfn,setfn,T) py::object mod_ ## getfn(void)                { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn ());  } \
                                     int        mod_ ## setfn(       py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); return getMLref(i). setfn (altp);             }
-#define GETSETCLADEF(getfn,setfn,T) py::object mod_ ## getfn(int d)                      { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn (d)); } \
+#define GETSETCLADEF(getfn,setfn,T) py::object mod_ ## getfn(int d)               { dostartup(); int i = glob_MLInd(0);                             return convToPy(getMLrefconst(i). getfn (d)); } \
                                     int        mod_ ## setfn(int d, py::object p) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); return getMLref(i). setfn (d,altp);           }
 
-#define OPTGETSETDEF(varname,ty,T) py::object modoptget_ ## ty ## _ ## varname(void)                { dostartup(); int i = glob_ ## ty ## Ind(0); return convToPy((T) get ## ty ## refconst(i).varname); } \
+#define OPTGETSETDEF(varname,ty,T) py::object modoptget_ ## ty ## _ ## varname(void)         { dostartup(); int i = glob_ ## ty ## Ind(0); return convToPy((T) get ## ty ## refconst(i).varname); } \
                                    void       modoptset_ ## ty ## _ ## varname(py::object p) { dostartup(); int i = glob_ ## ty ## Ind(0); T altp; convFromPy(altp,p); get ## ty ## ref(i).varname = altp; }
-#define OPTGETSETALLDEF(varname,T) py::object modoptget_grid_       ## varname(void)                { dostartup(); int i = glob_gridInd      (0); return convToPy(getgridrefconst      (i).varname); } \
-                                   py::object modoptget_DIRect_     ## varname(void)                { dostartup(); int i = glob_DIRectInd    (0); return convToPy(getDIRectrefconst    (i).varname); } \
-                                   py::object modoptget_NelderMead_ ## varname(void)                { dostartup(); int i = glob_NelderMeadInd(0); return convToPy(getNelderMeadrefconst(i).varname); } \
-                                   py::object modoptget_Bayesian_   ## varname(void)                { dostartup(); int i = glob_BayesianInd  (0); return convToPy(getBayesianrefconst  (i).varname); } \
+#define OPTGETSETALLDEF(varname,T) py::object modoptget_grid_       ## varname(void)         { dostartup(); int i = glob_gridInd      (0); return convToPy(getgridrefconst      (i).varname); } \
+                                   py::object modoptget_DIRect_     ## varname(void)         { dostartup(); int i = glob_DIRectInd    (0); return convToPy(getDIRectrefconst    (i).varname); } \
+                                   py::object modoptget_NelderMead_ ## varname(void)         { dostartup(); int i = glob_NelderMeadInd(0); return convToPy(getNelderMeadrefconst(i).varname); } \
+                                   py::object modoptget_Bayesian_   ## varname(void)         { dostartup(); int i = glob_BayesianInd  (0); return convToPy(getBayesianrefconst  (i).varname); } \
                                    void       modoptset_grid_       ## varname(py::object p) { dostartup(); int i = glob_gridInd      (0); T altp; convFromPy(altp,p); getgridref      (i).varname = altp; } \
                                    void       modoptset_DIRect_     ## varname(py::object p) { dostartup(); int i = glob_DIRectInd    (0); T altp; convFromPy(altp,p); getDIRectref    (i).varname = altp; } \
                                    void       modoptset_NelderMead_ ## varname(py::object p) { dostartup(); int i = glob_NelderMeadInd(0); T altp; convFromPy(altp,p); getNelderMeadref(i).varname = altp; } \
@@ -290,33 +319,20 @@ gentype convFromPy(const py::object &src);
 #define MAKEVISA(func)                                                                      \
 py::object gencalc_ ## func (py::object x)                                                  \
 {                                                                                           \
-    gentype xx;                                                                             \
-    if ( convFromPy(xx,x) ) { return makeError("Couldn't convert argument 1 for " #func); } \
-    return convToPy( func (xx));                                                            \
+    return convToPy( func (convFromPy(x)));                                                 \
 }
 
 #define MAKEVISB(func)                                                                      \
 py::object gencalc_ ## func (py::object x, py::object y)                                    \
 {                                                                                           \
-    gentype xx,yy;                                                                          \
-    if ( convFromPy(xx,x) ) { return makeError("Couldn't convert argument 1 for " #func); } \
-    if ( convFromPy(yy,y) ) { return makeError("Couldn't convert argument 2 for " #func); } \
-    return convToPy( func (xx,yy));                                                         \
+    return convToPy( func (convFromPy(x),convFromPy(y)));                                   \
 }
 
 #define MAKEVISC(func)                                                                      \
 py::object gencalc_ ## func (py::object x, py::object y, py::object z)                      \
 {                                                                                           \
-    gentype xx,yy,zz;                                                                       \
-    if ( convFromPy(xx,x) ) { return makeError("Couldn't convert argument 1 for " #func); } \
-    if ( convFromPy(yy,y) ) { return makeError("Couldn't convert argument 2 for " #func); } \
-    if ( convFromPy(zz,z) ) { return makeError("Couldn't convert argument 3 for " #func); } \
-    return convToPy( func (xx,yy,zz));                                                      \
+    return convToPy( func (convFromPy(x),convFromPy(y),convFromPy(z)));                     \
 }
-
-
-
-
 
 // Actual functions (including auto-generation stubs) used in python module
 
@@ -357,14 +373,12 @@ void svmheavyc(const std::string commstr); // execute with string
 #define snakehigh 24
 #define snakewide 80
 
-// Set, get and clear storage
+py::object pyogetsrc(int k);                 // get object from heap store
+int        pyosetsrc(int k, py::object src); // put object into heap store
+void       pyoclrsrc(void);                  // empty heap store
 
-py::object pyogetsrc(int k);
-int        pyosetsrc(int k, py::object src);
-void       pyoclrsrc(void);
-
-void logit        (py::object logstr); // print to errstream
-void callintercalc(void);
+void logit        (py::object logstr);  // print to errstream
+void callintercalc(void);               // inbuilt interactive calculator
 void callsnakes   (int wide, int high);
 
 py::object svmeval (py::object fn, py::object arg);
@@ -372,12 +386,12 @@ py::object svmevalr(py::object fn, py::object arg);
 
 py::object svmtest(int i, const std::string &type);
 
-int setpriml(int j = 0);
+py::object setpriml(int j = 0);
 
 int makeMonot(int n, int t, py::object xb, py::object xlb, py::object xub, int d, py::object y, double Cweight, double epsweight, int j);
 
-int  addTrainingVectorml(py::object x, py::object z, int j);
-int faddTrainingVectorml(const std::string &fname, int ignoreStart, int imax, int reverse, int j);
+py::object  addTrainingVectorml(py::object x, py::object z, int j);
+int        faddTrainingVectorml(const std::string &fname, int ignoreStart, int imax, int reverse, int j);
 
 int removeTrainingVectorml(int j, int num);
 
@@ -406,6 +420,7 @@ py::object mlK1(py::object xa);
 py::object mlK2(py::object xa, py::object xb);
 py::object mlK3(py::object xa, py::object xb, py::object xc);
 py::object mlK4(py::object xa, py::object xb, py::object xc, py::object xd);
+py::object mlKm(py::object xa);
 
 void boSetgridsource      (int j);
 void boSetkernapproxsource(int j);
@@ -589,6 +604,14 @@ OPTGETSETALLDEF(softmin,double)
 OPTGETSETALLDEF(softmax,double)
 OPTGETSETALLDEF(hardmin,double)
 OPTGETSETALLDEF(hardmax,double)
+
+OPTGETSETALLDEF(simname,     std::string)
+OPTGETSETALLDEF(simoutformat,int        )
+OPTGETSETALLDEF(simfreq,     int        )
+OPTGETSETALLDEF(simFmin,     double     )
+OPTGETSETALLDEF(simFmax,     double     )
+OPTGETSETALLDEF(simRmin,     double     )
+OPTGETSETALLDEF(simRmax,     double     )
 
 OPTGETSETDEF(numZooms,grid,int   )
 OPTGETSETDEF(zoomFact,grid,double)
@@ -791,19 +814,23 @@ MAKEVISA(dawson   )
 
 
 
-// We need this because there are static py::objects, and things get messy at shutdown
-// (I don't fully understand what this does, but it seems to work)
+// Cleanup on exit function
 
-void shutdown_module() {
+void shutdown_module(void)
+{
     removeallaltpycall(); // remove any remaining std::function references back to python in gentype objects (separating code)
-    pyoclrsrc(); // clear local stor
+    pyoclrsrc();          // clear local store
+
+    // Clear local cache of python function pointers
+
     pygetbuiltinptr(true);
     pyisinstanceptr(true);
-    pycallableptr(true);
-    pyevalptr(true);
+    pycallableptr  (true);
+    pyevalptr      (true);
     pyvalueerrorptr(true);
-    pycomplexptr(true);
-    py::gil_scoped_acquire gil;
+    pycomplexptr   (true);
+
+    //py::gil_scoped_acquire gil; - previously this was needed on exit, but no longer relevant
 }
 
 
@@ -815,7 +842,7 @@ PYBIND11_MODULE(pyheavy, m) {
 
     m.doc() = "SVMHeavy Machine Learning Library.";
 
-    m.def("shutdown",&shutdown_module,"Safely shutdown the pyheavy module");
+    //m.def("shutdown", &shutdown_module, "Safely shutdown the pyheavy module (shouldn't be needed).");
 
     // ---------------------------
     // ---------------------------
@@ -894,6 +921,8 @@ PYBIND11_MODULE(pyheavy, m) {
                                 "33: Bohachevsky Function 3    (2-dimensional).                                 \n"
                                 "34: Perm function 0,D,1       (-dimensional).                                  \n"
                                 "35: Currin test function      (2-dimensional + 1-fidelity).                    \n"
+                                "36: Park test function        (2-dimensional + 1-fidelity).                    \n"
+                                "37: Brannin test function     (2-dimensional + 1-fidelity).                    \n"
                                 "                                                                               \n"
                                 "The x argument later provided must have dimension stated. The optional second  \n"
                                 "argument type can take two values: \"norm\" (default), which returns a function\n"
@@ -1168,6 +1197,11 @@ PYBIND11_MODULE(pyheavy, m) {
     QGET(m_ml,alphaState, "training alpha states"                    );
     QGET(m_ml,xtang,      "training class/vector/type specifics"     );
 
+    QGETSET(m_ml,C,        setC,        "regularization trade-off (empirical risk weight, C=1/lambda)"        );
+    QGETSET(m_ml,sigma,    setsigma,    "regularization trade-off (regularization weight, lambda=1/C)"        );
+    QGETSET(m_ml,sigma_cut,setsigma_cut,"sigma scale for JIT sampling"                                        );
+    QGETSET(m_ml,eps,      seteps,      "epsilon-insensitivity width"                                         );
+
     m_ml.def("alpha",&mlalpha,"Get training alpha (SVM,LSV,GP).");
     m_ml.def("bias", &mlbias, "Get training bias (SVM,LSV,GP)." );
 
@@ -1296,6 +1330,7 @@ PYBIND11_MODULE(pyheavy, m) {
     m_ml.def("K2",&mlK2,"Calculate K2(xa,xb).",      py::arg("xa"),py::arg("xb")                            );
     m_ml.def("K3",&mlK3,"Calculate K3(xa,xb,xc).",   py::arg("xa"),py::arg("xb"),py::arg("xc")              );
     m_ml.def("K4",&mlK4,"Calculate K4(xa,xb,xc,xd).",py::arg("xa"),py::arg("xb"),py::arg("xc"),py::arg("xd"));
+    m_ml.def("Km",&mlKm,"Calculate Km(xa) (list xa)",py::arg("xa")                                          );
 
     m_ml.def("calcLOO",   &mlcalcLOO,   "Calculate leave-one-out error.");
     m_ml.def("calcRecall",&mlcalcRecall,"Calculate recall error."       );
@@ -1578,6 +1613,14 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPTALL(m_opt,hardmin,     "hard minimum (stop if found) on objective (default -inf)");
     QGETSETOPTALL(m_opt,hardmax,     "hard maximum (stop if found) on objective (default +inf)");
 
+    QGETSETOPTALL(m_opt,simname,     "base-name for regret plot (if simfreq = 1)");
+    QGETSETOPTALL(m_opt,simoutformat,"output format for regret plot (0 txt, 1 ps, 2 pdf, if simfreq = 1)");
+    QGETSETOPTALL(m_opt,simfreq,     "regret plot: 0 none, 1 plot regret at end");
+    QGETSETOPTALL(m_opt,simFmin,     "regret plot: x (iteration/budget) axis min (default 1, auto if Fmin>Fmax)");
+    QGETSETOPTALL(m_opt,simFmax,     "regret plot: x (iteration/budget) axis max (default 0, auto if Fmin>Fmax)");
+    QGETSETOPTALL(m_opt,simRmin,     "regret plot: y (regert) axis min (default 1, auto if Rmin>Rmax)");
+    QGETSETOPTALL(m_opt,simRmax,     "regret plot: y (regret) axis max (default 0, auto if Rmin>Rmax)");
+
     // Grid options
 
     m_opt_grid.def("selgridopt",&selgridopt,"Select grid optimiser i > 0. If i=0 then return current grid optimizer (default\n"
@@ -1777,9 +1820,9 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPT(m_opt,fidvar,    Bayesian,fid,"fidelity additive variance function n(z), added to measurement vari (dflt 0).");
     QGETSETOPT(m_opt,fidmode,   Bayesian,fid,"");
     QGETSETOPT(m_opt,fidover,   Bayesian,fid,"optional fidelity overwrite:\n"
-                                            "                                                                               \n"
-                                             "0 - use fidelity generated by algorithm.                                      \n"
-                                             "1 - randomly select fidelity <= recommended fidelity.                         ");
+                                             "                                                                              \n"
+                                             "0  - use fidelity generated by algorithm.                                     \n"
+                                             "21 - randomly select fidelity <= recommended fidelity.                        ");
 
 
     QGETSETOPT(m_opt,intrinbatch,      Bayesian,mr,"intrinsic batch size (default 1)."                                             );
@@ -2093,31 +2136,33 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objf
     Vector<gentype> xres;
     Vector<gentype> rawxres;
     gentype         fres;
+    Vector<gentype> cres;
+    gentype         Fres;
+    gentype         mres;
+    gentype         sres;
     int             ires = 0;
 
     int mInd = 0;       // ignore
 
-    Vector<Vector<gentype> > allxres;
-    Vector<Vector<gentype> > allrawxres;
-    Vector<gentype>          allfres;
-    Vector<Vector<gentype> > allcres;
-    Vector<gentype>          allmres;
-    Vector<gentype>          allsres;
-    Vector<double>           s_score;
+    Vector<Vector<Vector<gentype>>> allxres;
+    Vector<Vector<Vector<gentype>>> allrawxres;
+    Vector<Vector<gentype>>         allfres;
+    Vector<Vector<Vector<gentype>>> allcres;
+    Vector<Vector<gentype>>         allFres;
+    Vector<Vector<gentype>>         allmres;
+    Vector<Vector<gentype>>         allsres;
+    Vector<Vector<double>>          s_score;
+    Vector<Vector<int>>             is_feas;
 
-    gentype meanfres;
-    gentype varfres;
-    gentype meanires;
-    gentype varires;
-    gentype meantres;
-    gentype vartres;
-    gentype meanTres;
-    gentype varTres;
+    gentype meanfres; gentype varfres;
+    gentype meanFres; gentype varFres;
+    gentype meanires; gentype varires;
+    gentype meantres; gentype vartres;
+    gentype meanTres; gentype varTres;
 
-    Vector<gentype> meanallfres;
-    Vector<gentype> varallfres;
-    Vector<gentype> meanallmres;
-    Vector<gentype> varallmres;
+    Vector<gentype> meanallfres; Vector<gentype> varallfres;
+    Vector<gentype> meanallFres; Vector<gentype> varallFres;
+    Vector<gentype> meanallmres; Vector<gentype> varallmres;
 
     Vector<int> distMode(dim,0); // linear range
     Vector<int> varsType(dim,1); // double
@@ -2130,38 +2175,55 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objf
 
     //optimiser.ispydirect = true;
     int retcode = optimiser.optim(dim,
-                                  xres,rawxres,fres,ires,
+                                  xres,rawxres,fres,cres,Fres,mres,sres,ires,
                                   mInd,
-                                  allxres,allrawxres,allfres,allcres,allmres,allsres,s_score,
+                                  allxres,allrawxres,allfres,allcres,allFres,allmres,allsres,s_score,is_feas,
                                   xmin,xmax,distMode,varsType,
                                   &internobjfn,(void *) optargs,dummy,numreps,
-                                  meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
+                                  meanfres,varfres,meanFres,varFres,meanires,varires,meantres,vartres,meanTres,varTres,
+                                  meanallfres,varallfres,meanallFres,varallFres,meanallmres,varallmres);
     //optimiser.ispydirect = false;
 
     // Setup return dictionary
 
-    py::dict res(py::arg("x")         = convToPy(xres),
-                 py::arg("y")         = convToPy(fres),
-                 py::arg("i")         = convToPy(ires),
-                 py::arg("allx")      = convToPy(allxres),
-                 py::arg("ally")      = convToPy(allfres),
-                 py::arg("allgt")     = convToPy(allcres),
-                 py::arg("allhv")     = convToPy(allmres),
-                 py::arg("alls")      = convToPy(allsres),
-                 py::arg("allsscore") = convToPy(allsres),
-                 py::arg("retcode")   = convToPy(retcode),
-                 py::arg("meanf")     = convToPy(meanfres),
-                 py::arg("varf")      = convToPy(varfres),
-                 py::arg("meani")     = convToPy(meanires),
-                 py::arg("vari")      = convToPy(varires),
-                 py::arg("meant")     = convToPy(meantres),
-                 py::arg("vart")      = convToPy(vartres),
-                 py::arg("meanT")     = convToPy(meanTres),
-                 py::arg("varT")      = convToPy(varTres),
-                 py::arg("meanallf")  = convToPy(meanallfres),
-                 py::arg("varallf")   = convToPy(varallfres),
-                 py::arg("meanallm")  = convToPy(meanallmres),
-                 py::arg("varallm")   = convToPy(varallmres));
+    py::dict res(py::arg("x")           = convToPy(xres),         // x*
+                 py::arg("f")           = convToPy(-fres),        // f(x*)
+                 py::arg("y")           = convToPy(fres),         // -f(x*)
+                 py::arg("c")           = convToPy(cres),         // c(x*)
+                 py::arg("cost")        = convToPy(Fres),         // cost of evaluating f(x)
+                 py::arg("m")           = convToPy(-mres),        // hypervolume
+                 py::arg("s")           = convToPy(sres),         // stability score
+                 py::arg("i")           = convToPy(ires),         // iteration
+                 py::arg("allx")        = convToPy(allxres),      // all x
+                 py::arg("allf")        = convToPy(-allfres),     // all -f(x)
+                 py::arg("ally")        = convToPy(allfres),      // all f(x)
+                 py::arg("allc")        = convToPy(allcres),      // all c(x)
+                 py::arg("allcost")     = convToPy(allFres),      // all costs of evaluating f(x)
+                 py::arg("allm")        = convToPy(-allmres),     // all hypervolume
+                 py::arg("allsup")      = convToPy(allsres),      // all supplementary
+                 py::arg("allsscore")   = convToPy(s_score),      // all stability scores
+                 py::arg("allfeas")     = convToPy(is_feas),      // all feasibility (0 not, 1 yes)
+                 py::arg("retcode")     = convToPy(retcode),      // return code
+                 py::arg("meanf")       = convToPy(-meanfres),    // mean f(x*)
+                 py::arg("varf")        = convToPy(varfres),      // var f(x*)
+                 py::arg("meany")       = convToPy(meanfres),     // mean -f(x*)
+                 py::arg("vary")        = convToPy(varfres),      // var -f(x*)
+                 py::arg("meancost")    = convToPy(meanFres),     // mean cost of evaluating f(x*)
+                 py::arg("varcost")     = convToPy(varFres),      // var cost of evaluating f(x*)
+                 py::arg("meani")       = convToPy(meanires),     // mean iteration
+                 py::arg("vari")        = convToPy(varires),      // var iteration
+                 py::arg("meant")       = convToPy(meantres),     // mean time to reach soft min
+                 py::arg("vart")        = convToPy(vartres),      // var time to reach soft min
+                 py::arg("meanT")       = convToPy(meanTres),     // mean time to reach hard min
+                 py::arg("varT")        = convToPy(varTres),      // var time to reach hard min
+                 py::arg("meanallf")    = convToPy(-meanallfres), // mean f(x) for all iterations
+                 py::arg("varallf")     = convToPy(varallfres),   // var f(x) for all iterations
+                 py::arg("meanally")    = convToPy(meanallfres),  // mean -f(x) for all iterations
+                 py::arg("varally")     = convToPy(varallfres),   // var -f(x) for all iterations
+                 py::arg("meanallcost") = convToPy(meanallFres),  // mean cost of evaluating f(x) for all iterations
+                 py::arg("varallcost")  = convToPy(varallFres),   // var cost of evaluating f(x) for all iterations
+                 py::arg("meanallm")    = convToPy(-meanallmres), // mean hypervolume for all iterations
+                 py::arg("varallm")     = convToPy(varallmres));  // var hypervolume for all iterations
 
     // ...and we're done
 
@@ -2182,6 +2244,7 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objf
                                                           \
     return Q_res;                                         \
 }
+
 #define RECURSE_ARG_B(Q_x,Q_fn,Q_prefn,Q_postfn)          \
 {                                                         \
     py::tuple Q_xx = py::cast<py::tuple>(Q_x);            \
@@ -2190,11 +2253,14 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objf
                                                           \
     for ( int Q_i = 0 ; Q_i < Q_size ; ++Q_i )            \
     {                                                     \
-        Q_res += Q_fn ( Q_prefn Q_xx[Q_i] Q_postfn );     \
+        py::object Q_tmpres = Q_fn ( Q_prefn Q_xx[Q_i] Q_postfn ); \
+        if ( !isValInteger(Q_tmpres) ) { return Q_tmpres; } \
+        Q_res += toInt(Q_tmpres);                         \
     }                                                     \
                                                           \
-    return Q_res;                                         \
+    return convToPy(Q_res);                               \
 }
+
 #define RECURSE_ARG_C(Q_x,Q_fn,Q_prefn,Q_postfn)          \
 {                                                         \
     py::tuple Q_xx = py::cast<py::tuple>(Q_x);            \
@@ -2203,10 +2269,12 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objf
                                                           \
     for ( int Q_i = 0 ; Q_i < Q_size ; ++Q_i )            \
     {                                                     \
-        Q_res += Q_fn ( Q_prefn Q_xx[Q_size-(Q_i+1)] Q_postfn ); \
+        py::object Q_tmpres = Q_fn ( Q_prefn Q_xx[Q_size-(Q_i+1)] Q_postfn ); \
+        if ( !isValInteger(Q_tmpres) ) { return Q_tmpres; } \
+        Q_res += toInt(Q_tmpres);                         \
     }                                                     \
                                                           \
-    return Q_res;                                         \
+    return convToPy(Q_res);                               \
 }
 
 #define DRECURSE_ARG(Q_z,Q_x,Q_fn,Q_prefn,Q_postfn)       \
@@ -2214,7 +2282,12 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objf
     py::tuple Q_zz = py::cast<py::tuple>(Q_z);            \
     py::tuple Q_xx = py::cast<py::tuple>(Q_x);            \
     int Q_size = (int) Q_xx.size();                       \
-    StrucAssert( (int) Q_zz.size() == Q_size );           \
+                                                          \
+    if ( (int) Q_zz.size() != Q_size )                    \
+    {                                                     \
+        return makeError("Size mismatch in tuple process 1"); \
+    }                                                     \
+                                                          \
     py::list Q_res(Q_size);                               \
                                                           \
     for ( int Q_i = 0 ; Q_i < Q_size ; ++Q_i )            \
@@ -2224,35 +2297,51 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objf
                                                           \
     return Q_res;                                         \
 }
+
 #define DRECURSE_ARG_B(Q_z,Q_x,Q_fn,Q_prefn,Q_postfn)     \
 {                                                         \
     py::tuple Q_zz = py::cast<py::tuple>(Q_z);            \
     py::tuple Q_xx = py::cast<py::tuple>(Q_x);            \
     int Q_size = (int) Q_xx.size();                       \
-    StrucAssert( (int) Q_zz.size() == Q_size );           \
+                                                          \
+    if ( (int) Q_zz.size() != Q_size )                    \
+    {                                                     \
+        return makeError("Size mismatch in tuple process 2"); \
+    }                                                     \
+                                                          \
     int Q_res = 0;                                        \
                                                           \
     for ( int Q_i = 0 ; Q_i < Q_size ; ++Q_i )            \
     {                                                     \
-        Q_res += Q_fn ( Q_prefn Q_zz[Q_i],Q_xx[Q_i] Q_postfn ); \
+        py::object Q_tmpres = Q_fn ( Q_prefn Q_zz[Q_i],Q_xx[Q_i] Q_postfn ); \
+        if ( !isValInteger(Q_tmpres) ) { return Q_tmpres; } \
+        Q_res += toInt(Q_tmpres);                          \
     }                                                     \
                                                           \
-    return Q_res;                                         \
+    return convToPy(Q_res);                               \
 }
+
 #define DRECURSE_ARG_C(Q_z,Q_x,Q_fn,Q_prefn,Q_postfn)     \
 {                                                         \
     py::tuple Q_zz = py::cast<py::tuple>(Q_z);            \
     py::tuple Q_xx = py::cast<py::tuple>(Q_x);            \
     int Q_size = (int) Q_xx.size();                       \
-    StrucAssert( (int) Q_zz.size() == Q_size );           \
+                                                          \
+    if ( (int) Q_zz.size() != Q_size )                    \
+    {                                                     \
+        return makeError("Size mismatch in tuple process 3"); \
+    }                                                     \
+                                                          \
     int Q_res = 0;                                        \
                                                           \
     for ( int Q_i = 0 ; Q_i < Q_size ; ++Q_i )            \
     {                                                     \
-        Q_res += Q_fn ( Q_prefn Q_zz[Q_size-(Q_i+1)],Q_xx[Q_size-(Q_i+1)] Q_postfn ); \
+        py::object Q_tmpres = Q_fn ( Q_prefn Q_zz[Q_size-(Q_i+1)],Q_xx[Q_size-(Q_i+1)] Q_postfn ); \
+        if ( !isValInteger(Q_tmpres) ) { return Q_tmpres; } \
+        Q_res += toInt(Q_tmpres);                         \
     }                                                     \
                                                           \
-    return Q_res;                                         \
+    return convToPy(Q_res);                               \
 }
 
 void boSetgridsource      (int j) { dostartup(); int i = glob_BayesianInd(0); j = glob_MLInd(j); getBayesianref(i).gridsource = &getMLref(j);          }
@@ -2279,6 +2368,14 @@ const SparseVector<gentype> &getvec(py::object xa, SparseVector<gentype> &xxa)
     else if ( convFromPy(xxa,xa) ) { throw("Can't convert x to sparsevector"); }
 
     return xxa;
+}
+
+const SparseVector<gentype> &getvec(py::handle xa, SparseVector<gentype> &xxa);
+const SparseVector<gentype> &getvec(py::handle xa, SparseVector<gentype> &xxa)
+{
+    py::handle altsrc = xa;
+
+    return getvec(py::reinterpret_borrow<py::object>(altsrc),xxa);
 }
 
 py::object mlK0(void)
@@ -2378,6 +2475,63 @@ py::object mlK4(py::object xa, py::object xb, py::object xc, py::object xd)
     return convToPy(res);
 }
 
+py::object mlKm(py::object xa)
+{
+    if      ( isValTuple(xa) ) { RECURSE_ARG(xa,mlKm,,);                               }
+    else if ( isValNone(xa)  ) { return mlK0();                                        }
+    else if ( !isValList(xa) ) { return makeError("Km requires list, tuple or None."); }
+
+    dostartup();
+    int i = glob_MLInd(0);
+
+    py::list altxa = py::cast<py::list>(xa);
+
+    int tuplepos = 0;
+    py::tuple tupleelm;
+
+    for ( auto elm : altxa )
+    {
+        if ( isValTuple(elm) )
+        {
+            tupleelm = py::cast<py::tuple>(elm);
+            py::list res(tupleelm.size());
+            int ii = 0;
+
+            for ( auto elm : tupleelm )
+            {
+                py::list altxxa(altxa);
+                altxxa[tuplepos] = elm;
+                res[ii] = mlKm(altxxa);
+                ++ii;
+            }
+
+            return res;
+        }
+
+        else
+        {
+            ++tuplepos;
+        }
+    }
+
+    Vector<SparseVector<gentype> > xxa((int) altxa.size());
+
+    int ii = 0;
+
+    for ( auto elm : altxa )
+    {
+        if ( isValNone(elm) ) { xxa.remove(ii); --ii;    }
+        else                  { getvec(elm,xxa("&",ii)); }
+
+        ++ii;
+    }
+
+    gentype res;
+    getMLref(i).Km(res,xxa);
+
+    return convToPy(res);
+}
+
 py::object svmtest(int i, const std::string &type)
 {
     dostartup();
@@ -2410,27 +2564,24 @@ py::object svmeval(py::object f, py::object x)
 {
     dostartup();
 
-    gentype ff,xx;
+    gentype ff;
+
+    // In this version we do the evaluation inside c++ gentype.
+    // f can be a string or a callable (or just something gentype can encompass)
 
     if      ( isValString(f)   ) { std::string xf; convFromPy(xf,f); ff = xf; } // convert string to equation
-    else if ( convFromPy(ff,f) ) { throw("Error: can't convert f to gentype function stub in svmeval."); }
+    else if ( convFromPy(ff,f) ) { return makeError("Error: can't convert f to gentype function stub in svmeval."); }
 
-    if ( convFromPy(xx,x) ) { return convToPy(nan("")); }
-
-    return convToPy(ff(xx)); // evaluate f(x) and convert back to python friendly form
+    return convToPy(ff(convFromPy(x))); // evaluate f(x) and convert back to python friendly form
 }
 
 py::object svmevalr(py::object f, py::object x)
 {
     dostartup();
 
-    gentype xx;
+    // In this version we do the evaluation inside python - basically this exists to test the translation layers
 
-    if ( convFromPy(xx,x) ) { return convToPy(nan("")); }
-
-    gentype res;
-    convFromPy(res,f(convToPy(xx)));
-    return convToPy(res);
+    return convToPy(convFromPy(f(convToPy(convFromPy(x)))));
 }
 
 void callsnakes(int wide, int high) { dostartup(); snakes(wide,high,(20*high)/23,5,20,100000); }
@@ -2464,19 +2615,19 @@ int selmlsigmaapprox_prior(int i)        { dostartup(); i = glob_BayesianInd(i);
 int selmldiffmodel_prior  (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(MLIndForBayesian_diffmodel_prior  (i  ),1); }
 int selmlsrcmodel_prior   (int i)        { dostartup(); i = glob_BayesianInd(i); return glob_MLInd(MLIndForBayesian_srcmodel_prior   (i  ),1); }
 
-void swapml  (int i, int j) { dostartup(); i = glob_MLInd(i); j = glob_MLInd(j); StrucAssert(i != j); qswap(getMLref(i),getMLref(j)); }
-void copyml  (int i, int j) { dostartup(); i = glob_MLInd(i); j = glob_MLInd(j); StrucAssert(i != j); getMLref(i) = getMLrefconst(j); }
-void assignml(int i, int j) { dostartup(); i = glob_MLInd(i); j = glob_MLInd(j); StrucAssert(i != j); getMLref(j) = getMLrefconst(i); }
+void swapml  (int i, int j) { dostartup(); i = glob_MLInd(i); j = glob_MLInd(j); if ( i != j ) { qswap(getMLref(i),getMLref(j)); } }
+void copyml  (int i, int j) { dostartup(); i = glob_MLInd(i); j = glob_MLInd(j); if ( i != j ) { getMLref(i) = getMLrefconst(j); } }
+void assignml(int i, int j) { dostartup(); i = glob_MLInd(i); j = glob_MLInd(j); if ( i != j ) { getMLref(j) = getMLrefconst(i); } }
 
-int setpriml(int j)
+py::object setpriml(int j)
 {
     dostartup();
     int i = glob_MLInd(0);
         j = glob_MLInd(j);
 
-    StrucAssert( i != j );
+    if ( i == j ) { return makeError("Attempt to define infinitely recursive prior in setpriml (i==j)."); }
 
-    return getMLref(i).setpriml(&(getMLrefconst(j).getMLconst()));
+    return convToPy(getMLref(i).setpriml(&(getMLrefconst(j).getMLconst())));
 }
 
 int makeMonot(int n, int t, py::object xb, py::object xlb, py::object xub, int d, py::object y, double Cweight, double epsweight, int j)
@@ -2498,15 +2649,12 @@ int makeMonot(int n, int t, py::object xb, py::object xlb, py::object xub, int d
     errcode |= convFromPy(zxub,xub);
     errcode |= convFromPy(zy,y);
 
-    if ( !errcode )
-    {
-        makeMonotone(getMLref(i),n,t,zxb,zxlb,zxub,d,zy,Cweight,epsweight,((t==2)?&getMLref(j):nullptr));
-    }
+    if ( !errcode ) { makeMonotone(getMLref(i),n,t,zxb,zxlb,zxub,d,zy,Cweight,epsweight,((t==2)?&getMLref(j):nullptr)); }
 
     return errcode;
 }
 
-int addTrainingVectorml(py::object x, py::object z, int j)
+py::object addTrainingVectorml(py::object x, py::object z, int j)
 {
     // Can have z a tuple and x not a tuple if target is tuple.
 
@@ -2525,7 +2673,6 @@ int addTrainingVectorml(py::object x, py::object z, int j)
     double cw = 1.0;
     double ew = 1.0;
     int dd = 2;
-
     int errcode = 0;
 
     errcode |= convFromPy(xx,x);
@@ -2555,10 +2702,10 @@ int addTrainingVectorml(py::object x, py::object z, int j)
 
     if ( errcode )
     {
-        return 0;
+        return convToPy(0);
     }
 
-    return getMLref(i).addTrainingVector(j,zz,xx,cw,ew,dd);
+    return convToPy(getMLref(i).addTrainingVector(j,zz,xx,cw,ew,dd));
 }
 
 int faddTrainingVectorml(const std::string &fname, int ignoreStart, int imax, int reverse, int j)
@@ -2655,7 +2802,7 @@ py::object predvarml(py::object xa, py::object pp, py::object sigw)
     dostartup();
     int i = glob_MLInd(0);
 
-    StrucAssert( isValCastableToReal(sigw) );
+    if ( !isValCastableToReal(sigw) ) { return makeError("sigw must be (casable to) real in predvarml"); }
 
     gentype resv_pred,resv,resmu;
     SparseVector<gentype> xx;
@@ -2678,7 +2825,7 @@ py::object predcovml(py::object xa, py::object xb, py::object pp, py::object sig
     dostartup();
     int i = glob_MLInd(0);
 
-    StrucAssert( isValCastableToReal(sigw) );
+    if ( !isValCastableToReal(sigw) ) { return makeError("sigw must be (casable to) real in predcovml"); }
 
     gentype resv_pred,resv,resmu;
     SparseVector<gentype> xx,yy,zz;
@@ -2831,11 +2978,11 @@ py::object convToPy(const gentype &src)
     else if ( src.isValSet()     ) { return convToPy((const Set<gentype> &)          src); }
     else if ( src.isValDict()    ) { return convToPy((const Dict<gentype,dictkey> &) src); }
     else if ( src.isValEqnDir()  ) { return py::cpp_function([src](py::object x) { return convToPy(src(convFromPy(x))); },py::arg("x")); }
-    else if ( src.isValError()   ) { return py::cast(nan(((const std::string &) src).c_str())); }
-    else if ( src.isValAnion()   ) { return py::cast(nan("Gentype type anion (hypercomplex) has no python equivalent.")); }
-    else if ( src.isValDgraph()  ) { return py::cast(nan("Gentype type directed graph has no python equivalent."));       }
+    else if ( src.isValError()   ) { return makeError((const std::string &) src);                                               }
+    else if ( src.isValAnion()   ) { return makeError("Gentype type anion has no python equivalent beyond complex (order 1)."); }
+    else if ( src.isValDgraph()  ) { return makeError("Gentype directed graph has no python equivalent.");                      }
 
-    return py::cast(nan("Type error in gentype->python conversion."));
+    return makeError("Type error in gentype->python conversion.");
 }
 
 // Convert python to C++ types
@@ -2883,7 +3030,7 @@ gentype convFromPy(const py::object &src)
                    py::object convToPy(int                         src) { return py::cast(src);         }
                    py::object convToPy(double                      src) { return py::cast(src);         }
                    py::object convToPy(std::complex<double>        src) { return py::cast(src);         }
-                   py::object convToPy(const d_anion              &src) { if ( src.order() <= 1 ) { return py::cast((std::complex<double>) src); } return py::cast(nan("Cant cast hypercomplex anion to python object")); }
+                   py::object convToPy(const d_anion              &src) { if ( src.order() <= 1 ) { return py::cast((std::complex<double>) src); } return makeError("Gentype type anion has no python equivalent beyond complex (order 1)."); }
                    py::object convToPy(const std::string          &src) { return py::cast(src.c_str()); }
 template <class T> py::object convToPy(int vsize, const T         *src) { py::list  res(vsize);         for ( int i = 0 ; i < vsize         ; ++i ) { res[i] = convToPy(src[i]);       } return res; }
 template <>        py::object convToPy(const Vector<double>       &src) { py::list  res(src.size());    for ( int i = 0 ; i < src.size()    ; ++i ) { res[i] = py::cast(src.v(i));     } return res; }
@@ -2912,9 +3059,9 @@ template <>        int naivePyToSpv(SparseVector<gentype> &res, const py::object
 
 template <class T> int convFromPy(T                     &res, const py::handle &src) { py::handle altsrc = src; return convFromPy(res,py::reinterpret_borrow<py::object>(altsrc)); }
                    int convFromPy(int                   &res, const py::object &src) { if ( isValCastableToInteger(src) ) { return naivePyToInt(res,src); } res = 0;                                return 1;   }
-                   int convFromPy(double                &res, const py::object &src) { if ( isValCastableToReal   (src) ) { return naivePyToDbl(res,src); } res = nan("Not castable to double");    return 2;   }
-                   int convFromPy(std::complex<double>  &res, const py::object &src) { if ( isValCastableToComplex(src) ) { return naivePyToCpl(res,src); } res = nan("Not castable to complex");   return 4;   }
-                   int convFromPy(d_anion               &res, const py::object &src) { if ( isValCastableToComplex(src) ) { return naivePyToCpl(res,src); } res = nan("Not castable to anion");     return 4;   }
+                   int convFromPy(double                &res, const py::object &src) { if ( isValCastableToReal   (src) ) { return naivePyToDbl(res,src); } res = nan("py::object not castable to double");    return 2;   }
+                   int convFromPy(std::complex<double>  &res, const py::object &src) { if ( isValCastableToComplex(src) ) { return naivePyToCpl(res,src); } res = nan("py::object not castable to complex");   return 4;   }
+                   int convFromPy(d_anion               &res, const py::object &src) { if ( isValCastableToComplex(src) ) { return naivePyToCpl(res,src); } res = nan("py::object not castable to anion");     return 4;   }
                    int convFromPy(std::string           &res, const py::object &src) { if ( isValString           (src) ) { return naivePyToStr(res,src); } res = "";                               return 8;   }
 template <class T> int convFromPy(Vector<T>             &res, const py::object &src) { if ( isValList             (src) ) { return naivePyToVec(res,src); } res.resize(0);                          return 16;  }
 template <class T> int convFromPy(Matrix<T>             &res, const py::object &src) { if ( isValList             (src) ) { return naivePyToMat(res,src); } res.resize(0,0);                        return 32;  }
@@ -3454,12 +3601,6 @@ void cliPrintToErrLog(char c, int mode = 0);
 
 //SparseVector<ML_Mutable *> &getMLmodels(void);
 
-int atexitblock(void (*)(void));
-int atexitblock(void (*)(void))
-{
-    return 0;
-}
-
 void dostartup(void)
 {
     static bool firstrun = true;
@@ -3474,16 +3615,10 @@ void dostartup(void)
         static LoggingOstreamOut clicout(xcliCharPrintOut);
         setoutstream(&clicout);
 
-        // atexit doesn't work like we want, so do this instead
-        // auto atexitfn = py::module_::import("atexit");
-        // atexitfn.attr("register")(py::cpp_function([]() {
-        //     // perform cleanup here -- this function is called with the GIL held
-        //     //exitgentype();
-        //     pyosrcreset();
-        //     svm_atexit(nullptr,nullptr,0); // manual cleanup
-        // }));
-        // force prevent double-call
-        //svm_setatexitfn(atexitblock);
+        // register cleanup of python objects at python exit
+
+        auto atexitfn = py::module_::import("atexit");
+        atexitfn.attr("register")(py::cpp_function([]() { shutdown_module(); }));
 
         firstrun = false;
 

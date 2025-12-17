@@ -14,7 +14,7 @@
 #include "vector.hpp"
 #include "matrix.hpp"
 
-#define NUMOPTTESTFNS 35
+#define NUMOPTTESTFNS 37
 
 
 // fnnum values (acronyms as per DTLZ)
@@ -56,7 +56,10 @@
 // #32: Bohachevsky Function 2    - range -100    <= x,y <= 100  - opt f(0,0) = 0
 // #33: Bohachevsky Function 3    - range -100    <= x,y <= 100  - opt f(0,0) = 0
 // #34: Perm function 0,D,1       - range -2      <= x,y <= 2    - opt f(1,1/2,...,1/n) = 0
-//  35: Currin (Kan4)             - range 0       <= x,y,z <= 1  - opt f(0.217,0,-) = -13.8
+//  35: Currin (Kan4) multifid    - range 0       <= x,y,z <= 1  - opt f(0.217,0,-) = -13.8
+//  35: Park multifid             - range 0       <= x,y,z <= 1  - opt f(0,0,1) = 0.25
+//  37: Brannin multifid          - range 0       <= x,y,z <= 1  - opt ???
+//
 //
 // *Many local minima
 // #Bowl shape

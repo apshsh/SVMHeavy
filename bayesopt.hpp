@@ -31,7 +31,7 @@ int bayesOpt(int dim,
              void *fnarg,
              BayesOptions &bopts,
              svmvolatile int &killSwitch,
-             Vector<double> &sscore);
+             Vector<double> &s_score);
 
 class BayesOptions : public SMBOOptions
 {
@@ -44,7 +44,7 @@ class BayesOptions : public SMBOOptions
              void *fnarg,
              BayesOptions &bopts,
              svmvolatile int &killSwitch,
-             Vector<double> &sscore);
+             Vector<double> &s_score);
 
 public:
 
@@ -191,8 +191,8 @@ public:
     // fidover:     0: nothing
     //              REMOVED, HUMAN CAN DO THIS WHENEVER THEY WANT! - 1: human can override fidelity
     //              2: randomly choose fidelity less than recommended
-    // fidmode:     1: BOCA
-    //              0: not BOCA
+    // fidmode:     21: BOCA
+    //              0:  not BOCA
     // FIXME: add fidvar to mlinter and test it
     //
     // Usage eg from Kandasamy with budget 100: ./svmheavyv7.exe -L res100
@@ -306,21 +306,21 @@ public:
     // For multi-objective based multi-recommendation use betafn = null
     // (or [ null null ... ] for multiple rounds of multi-objective multi-rec)
 
-    int acq;
-    int intrinbatch;
-    int intrinbatchmethod;
-    //int evaluse;
-    //int sigmuseparate;
-    int startpoints;
-    int startpointsalt;
-    int startseed;         // this changes during optimisation setup to ensure no repeats unless specified
-    int algseed;           // ...as does this
-    int totiters;
-    int itcntmethod;
+    int    acq;
+    int    intrinbatch;
+    int    intrinbatchmethod;
+    //int    evaluse;
+    //int    sigmuseparate;
+    int    startpoints;
+    int    startpointsalt;
+    int    startseed;         // this changes during optimisation setup to ensure no repeats unless specified
+    int    algseed;           // ...as does this. DO NOT RESET!
+    int    totiters;
+    int    itcntmethod;
     double err;
     double minstdev;
-    int humanfreq;
-    int cgtmethod;
+    int    humanfreq;
+    int    cgtmethod;
     double cgtmargin;
 
     double ztol;
@@ -336,27 +336,27 @@ public:
     double B;
     gentype betafn;
 
-    IMP_Generic *impmeasu;
-    ML_Base *direcpre;
-    ML_Base *direcsubseqpre;
-    int direcdim;
-    Vector<double> direcmin;
-    Vector<double> direcmax;
-    ML_Base *gridsource;
+    IMP_Generic    *impmeasu;
+    ML_Base        *direcpre;
+    ML_Base        *direcsubseqpre;
+    int             direcdim;
+    Vector<double>  direcmin;
+    Vector<double>  direcmax;
+    ML_Base        *gridsource;
 
-    int numfids;
-    int dimfid;
-    double fidbudget;
+    int     numfids;
+    int      dimfid;
+    double  fidbudget;
     gentype fidpenalty;
     gentype fidvar;
-    int fidover;
-    int fidmode;
+    int     fidover;
+    int     fidmode;
 
     // Stable optimisation
 
-    int stabpmax;
-    int stabpmin;
-    int stabUseSig;
+    int    stabpmax;
+    int    stabpmin;
+    int    stabUseSig;
     double stabA;
     double stabB;
     double stabF;
@@ -368,8 +368,8 @@ public:
 
     // Unscented optimisation
 
-    int unscentUse;
-    int unscentK;
+    int            unscentUse;
+    int            unscentK;
     Matrix<double> unscentSqrtSigma;
 
     // DIRect options (note that global options in this are over-ridden by *this, so only DIRect parts matter)
@@ -379,10 +379,10 @@ public:
     // Multi-objective, multi-recommendation part
 
     DIRectOptions goptsmultiobj; // this overwrites goptssingleobj when constructing the local optimizer
-    int startpointsmultiobj;
-    int startpointsaltmultiobj;
-    int totitersmultiobj;
-    int ehimethodmultiobj;
+    int           startpointsmultiobj;
+    int           startpointsaltmultiobj;
+    int           totitersmultiobj;
+    int           ehimethodmultiobj;
 
     BayesOptions(IMP_Generic *impmeasux = nullptr, ML_Base *xdirecpre = nullptr, int xdirecdim = 0, ML_Base *xdirecsubseqpre = nullptr, ML_Base *xgridsource = nullptr) : SMBOOptions()
     {
@@ -427,7 +427,7 @@ public:
         fidpenalty = 1;
         fidvar     = 0;
         fidover    = 0;
-        fidmode    = 1;
+        fidmode    = 21;
 
         impmeasu       = impmeasux;
         direcpre       = xdirecpre;
@@ -544,9 +544,12 @@ public:
 
     virtual void reset(void) override
     {
-        SMBOOptions::reset();
+        if ( impmeasu )
+        {
+            (*impmeasu).reset();
+        }
 
-        return;
+        SMBOOptions::reset();
     }
 
     // Logging (plot IMP)
@@ -561,8 +564,8 @@ public:
             {
                 {
                     int plotoutformat = modeloutformat;
-                    int plotsquare = 1;
-                    int plotimp = 1;
+                    int plotsquare    = 1;
+                    int plotimp       = 1;
 
                     SparseVector<gentype> plotxtemplate;
 
@@ -580,24 +583,24 @@ public:
                     std::string dname(modelname);
                     std::string mlname(modelname);
 
-                    fname += "_imp_plot";
-                    dname += "_imp_data";
+                    fname  += "_imp_plot";
+                    dname  += "_imp_data";
                     mlname += "_imp_gpr";
 
                     std::stringstream ssi;
 
                     ssi << model_N_mu(); // /plotfreq;
 
-                    fname += stagestr;
-                    dname += stagestr;
+                    fname  += stagestr;
+                    dname  += stagestr;
                     mlname += stagestr;
 
-                    fname += "_";
-                    dname += "_";
+                    fname  += "_";
+                    dname  += "_";
                     mlname += "_";
 
-                    fname += ssi.str();
-                    dname += ssi.str();
+                    fname  += ssi.str();
+                    dname  += ssi.str();
                     mlname += ssi.str();
 
                     int incdata = 0;
@@ -631,39 +634,52 @@ public:
 //        return newver;
 //    }
 
-    // supres: [ see .cc file ] for each evaluation of (*fn),
+    // allsres: [ see .cc file ] for each evaluation of (*fn),
     //         where beta is the value used to find the point being
     //         evaluated (zero for initial startpoint block)
 
     virtual int optim(int dim,
-                      Vector<gentype> &xres,
-                      gentype &fres,
-                      int &ires,
+                      Vector<gentype> &Xres,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
                       Vector<Vector<gentype> > &allxres,
-                      Vector<gentype> &allfres,
+                      Vector<gentype>          &allfres,
                       Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &supres,
-                      Vector<double> &sscore,
+                      Vector<gentype>          &allFres,
+                      Vector<gentype>          &allmres,
+                      Vector<gentype>          &allsres,
+                      Vector<double>           &s_score,
+                      Vector<int>              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
                       void *fnarg,
-                      svmvolatile int &killSwitch);
+                      svmvolatile int &killSwitch) override;
 
     virtual int optim(int dim,
                       Vector<gentype> &xres,
                       Vector<gentype> &Xres,
-                      gentype &fres,
-                      int &ires,
-                      int &mInd,
-                      Vector<Vector<gentype> > &allxres,
-                      Vector<Vector<gentype> > &allXres,
-                      Vector<gentype> &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &allsres,
-                      Vector<double>  &s_score,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
+                      Vector<Vector<Vector<gentype> > > &allxres,
+                      Vector<Vector<Vector<gentype> > > &allXres,
+                      Vector<Vector<gentype> >          &allfres,
+                      Vector<Vector<Vector<gentype> > > &allcres,
+                      Vector<Vector<gentype> >          &allFres,
+                      Vector<Vector<gentype> >          &allmres,
+                      Vector<Vector<gentype> >          &allsres,
+                      Vector<Vector<double> >           &s_score,
+                      Vector<Vector<int> >              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -673,13 +689,15 @@ public:
                       svmvolatile int &killSwitch,
                       size_t numReps,
                       gentype &meanfres, gentype &varfres,
+                      gentype &meanFres, gentype &varFres,
                       gentype &meanires, gentype &varires,
                       gentype &meantres, gentype &vartres,
                       gentype &meanTres, gentype &varTres,
                       Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
-                      Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
+                      Vector<gentype> &meanallFres, Vector<gentype> &varallFres,
+                      Vector<gentype> &meanallmres, Vector<gentype> &varallmres) override
     {
-        int res = SMBOOptions::optim(dim,xres,Xres,fres,ires,mInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
+        int res = SMBOOptions::optim(dim,xres,Xres,fres,cres,Fres,mres,sres,ires,mInd,allxres,allXres,allfres,allcres,allFres,allmres,allsres,s_score,is_feas,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanFres,varFres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallFres,varallFres,meanallmres,varallmres);
 
         return res;
     }
@@ -726,7 +744,7 @@ public:
     }
 
 
-    virtual int optdefed(void) { return 3; }
+    virtual int optdefed(void) override { return 3; }
 
     int impmeasuNonLocal (void) const { return impmeasu       != nullptr; }
     int direcpreDef      (void) const { return direcpre       != nullptr; }

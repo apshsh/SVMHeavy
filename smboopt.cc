@@ -97,6 +97,8 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
     locxres.useTightAllocation();
     locxresunconv.useTightAllocation();
     locyres.useTightAllocation();
+
+    lognum = 0;
 }
 
 SMBOOptions::SMBOOptions(const SMBOOptions &src) : GlobalOptions(src)
@@ -129,19 +131,6 @@ void SMBOOptions::delreps(void)
         muapproxRaw.resize(0);
     }
 
-    if ( muapprox_sample.size() )
-    {
-        for ( int i = 0 ; i < muapprox_sample.size() ; ++i )
-        {
-            if ( muapprox_sample(i) )
-            {
-                MEMDEL(muapprox_sample("&",i)); muapprox_sample("&",i) = nullptr;
-            }
-        }
-
-        muapprox_sample.resize(0);
-    }
-
     if ( cgtapproxRaw.size() )
     {
         for ( int i = 0 ; i < cgtapproxRaw.size() ; ++i )
@@ -167,6 +156,27 @@ void SMBOOptions::delreps(void)
 
         augxapproxRaw.resize(0);
     }
+
+    if ( muapprox_sample.size() )
+    {
+        for ( int i = 0 ; i < muapprox_sample.size() ; ++i )
+        {
+            if ( muapprox_sample(i) )
+            {
+                MEMDEL(muapprox_sample("&",i)); muapprox_sample("&",i) = nullptr;
+            }
+        }
+
+        muapprox_sample.resize(0);
+    }
+
+    muapprox   = nullptr; muapprox.resize(0);
+    augxapprox = nullptr; augxapprox.resize(0);
+    cgtapprox  = nullptr; cgtapprox.resize(0);
+
+    sigmaapprox.reset();
+    srcmodel.reset();
+    diffmodel.reset();
 }
 
 SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
@@ -285,6 +295,8 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
 
     PIscale = src.PIscale;
 
+    lognum = src.lognum;
+
     // ======================================
 
     indpremu         = src.indpremu;
@@ -322,8 +334,7 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
 
 void SMBOOptions::reset(void)
 {
-    GlobalOptions::reset();
-
+    model_unsample();
     delreps();
 
     indpremu.resize(0);
@@ -341,14 +352,10 @@ void SMBOOptions::reset(void)
 
     firsttrain = 1;
 
-    //
-
     xmodprod.resize(0,0);
     xshortcutenabled = 0;
     xsp.resize(0);
     xspp.resize(0);
-
-    model_unsample();
 
     locires.resize(0);
     locxres.resize(0);
@@ -360,7 +367,9 @@ void SMBOOptions::reset(void)
     xx.zero();
     xxvar.zero();
 
-    return;
+    lognum = 0;
+
+    GlobalOptions::reset();
 }
 
 
@@ -501,17 +510,23 @@ void SMBOOptions::consultTheOracle(ML_Mutable &randDir, int dim, const SparseVec
 
 int SMBOOptions::realOptim(int dim,
                       Vector<gentype> &xres,
-                      Vector<gentype> &rawxres,
-                      gentype &fres,
-                      int &ires,
-                      int &mres,
+                      Vector<gentype> &Xres,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
                       Vector<Vector<gentype> > &allxres,
-                      Vector<Vector<gentype> > &allrawxres,
-                      Vector<gentype> &allfres,
+                      Vector<Vector<gentype> > &allXres,
+                      Vector<gentype>          &allfres,
                       Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &supres,
-                      Vector<double> &sscore,
+                      Vector<gentype>          &allFres,
+                      Vector<gentype>          &allmres,
+                      Vector<gentype>          &allsres,
+                      Vector<double>           &s_score,
+                      Vector<int>              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -653,7 +668,7 @@ int SMBOOptions::realOptim(int dim,
 
         // Optimise
 
-        int res = GlobalOptions::realOptim(dim,xres,rawxres,fres,ires,mres,allxres,allrawxres,allfres,allcres,allmres,supres,sscore,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+        int res = GlobalOptions::realOptim(dim,xres,Xres,fres,cres,Fres,mres,sres,ires,mInd,allxres,allXres,allfres,allcres,allFres,allmres,allsres,s_score,is_feas,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
 
         return res;
     }
@@ -1280,7 +1295,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 
 void SMBOOptions::model_sublog(const ML_Base &plotmodel, gentype &baselinefn, int incbaselinefn, double xmin, double xmax, double ymin, double ymax, int j, const std::string &nameof, int xind, int yind, const std::string &stagestr, double sf, double dsf)
 {
-    static int lognum = 0;
+//    static int lognum = 0;
 
     ++lognum;
 
@@ -2552,15 +2567,15 @@ int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const 
         {
             gentype yval = y(i).isValNull() ? 0.0_gent : y(i);
 
+            int dval = xobstype.size() ? xobstype(i) : 2;
+
             {
-                ires |= getcgtapprox("&",i).addTrainingVector(getcgtapprox(i).N(),yval,convnearuptonaive(tempx,xxx));
+                ires |= getcgtapprox("&",i).addTrainingVector(getcgtapprox(i).N(),yval,convnearuptonaive(tempx,xxx),1.0,1.0,dval);
 
                 if ( varadd )
                 {
                     ires |= getcgtapprox("&",i).setsigmaweight(getcgtapprox(i).N()-1,1+(varadd/(getcgtapprox(i).sigma())));
                 }
-
-                int dval = xobstype.size() ? xobstype(i) : 2;
 
                 if ( dval != 2 )
                 {
@@ -2582,16 +2597,16 @@ int SMBOOptions::modelcgt_int_addTrainingVector(const Vector<gentype> &y, const 
         {
             gentype yval = y(i).isValNull() ? 0.0_gent : y(i);
 
+            int dval = xobstype.size() ? xobstype(i) : 2;
+
             //if ( !y(i).isValNull() )
             {
-                ires |= getcgtapprox("&",i).addTrainingVector(getcgtapprox(i).N(),yval,xxx);
+                ires |= getcgtapprox("&",i).addTrainingVector(getcgtapprox(i).N(),yval,xxx,1.0,1.0,dval);
 
                 if ( varadd )
                 {
                     ires |= getcgtapprox("&",i).setsigmaweight(getcgtapprox(i).N()-1,1+(varadd/(getcgtapprox(i).sigma())));
                 }
-
-                int dval = xobstype.size() ? xobstype(i) : 2;
 
                 if ( dval != 2 )
                 {
@@ -3122,15 +3137,22 @@ double SMBOOptions::model_err(int dim, const Vector<double> &xmin, const Vector<
     gentype minUCB(0.0); // min_x mu(x) + sigma(x)
 
     Vector<gentype> xdummy;
+    Vector<gentype> cdummy;
+    gentype Fdummy;
+    gentype mdummy;
+    gentype sdummy;
     int idummy;
+    int midummy;
     Vector<Vector<gentype> > allxdummy;
     Vector<gentype> allfdummy;
     Vector<Vector<gentype> > allcdummy;
+    Vector<gentype> allFdummy;
     Vector<gentype> allmdummy;
     Vector<gentype> allsupdummy;
     Vector<double> allsdummy;
     Vector<gentype> altxmin;
     Vector<gentype> altxmax;
+    Vector<int> feasdummy;
 
     altxmin.castassign(xmin);
     altxmax.castassign(xmax);
@@ -3138,8 +3160,8 @@ double SMBOOptions::model_err(int dim, const Vector<double> &xmin, const Vector<
     DIRectOptions dopts;
     static_cast<GlobalOptions &>(dopts) = static_cast<const GlobalOptions &>(*this);
 
-    int dresa = dopts.optim(dim,xdummy,minLCB,idummy,allxdummy,allfdummy,allcdummy,allmdummy,allsupdummy,allsdummy,altxmin,altxmax,altcalcLCB,modelarg,killSwitch);
-    int dresb = dopts.optim(dim,xdummy,minUCB,idummy,allxdummy,allfdummy,allcdummy,allmdummy,allsupdummy,allsdummy,altxmin,altxmax,altcalcUCB,modelarg,killSwitch);
+    int dresa = dopts.optim(dim,xdummy,minLCB,cdummy,Fdummy,mdummy,sdummy,idummy,midummy,allxdummy,allfdummy,allcdummy,allFdummy,allmdummy,allsupdummy,allsdummy,feasdummy,altxmin,altxmax,altcalcLCB,modelarg,killSwitch);
+    int dresb = dopts.optim(dim,xdummy,minUCB,cdummy,Fdummy,mdummy,sdummy,idummy,midummy,allxdummy,allfdummy,allcdummy,allFdummy,allmdummy,allsupdummy,allsdummy,feasdummy,altxmin,altxmax,altcalcUCB,modelarg,killSwitch);
 
     std::stringstream resbuffer;
     resbuffer << "Model error codes = " << dresa << "," << dresb << "  ";

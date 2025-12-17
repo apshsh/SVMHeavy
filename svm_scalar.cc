@@ -2832,7 +2832,7 @@ void SVM_Scalar::prepareKernel(void)
 
 int SVM_Scalar::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 {
-    NiceAssert( onlyChangeRowI >= -1 );
+    NiceAssert( onlyChangeRowI >= -2 );
     NiceAssert( onlyChangeRowI < SVM_Scalar::N() );
 
     int res = 0;
@@ -2841,6 +2841,62 @@ int SVM_Scalar::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
     if ( !SVM_Scalar::N() )
     {
         res = SVM_Generic::resetKernel(modind,onlyChangeRowI,updateInfo);
+    }
+
+    else if ( SVM_Scalar::N() && ( onlyChangeRowI == -2 ) )
+    {
+        res = SVM_Generic::resetKernel(modind,onlyChangeRowI,updateInfo);
+
+        if ( fixxycache )
+        {
+            xycache.setSymmetry(1);
+        }
+
+        kerncache.setSymmetry(getKernel().getSymmetry());
+        sigmacache.setSymmetry(1);
+
+        res |= 1;
+
+        int i;
+
+	isStateOpt = 0;
+
+        isQuasiLogLikeCalced = 0;
+        isMaxInfGainCalced   = 0;
+
+        for ( i = 0 ; i < SVM_Scalar::N() ; ++i )
+	{
+            if ( SVM_Scalar::d()(i) )
+            {
+                kerndiagval("&",i) = K2(i,i);
+  	    }
+	}
+
+//errstream() << "phantomxyz 0 K2 = " << kerndiagval << "\n";
+        if ( fixxycache )
+        {
+            xycache.clear();
+        }
+
+        for ( i = 0 ; i < SVM_Scalar::N() ; ++i )
+        {
+            if ( SVM_Scalar::d()(i) )
+            {
+                kerncache.recalc(i);
+                sigmacache.recalc(i);
+  	    }
+        }
+
+        if ( prim() )
+        {
+            gp = bfixval;
+            gp -= traintarg;
+            gp += ypR();
+        }
+
+        Q.refact(*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
+
+        res |= SVM_Scalar::fixautosettings(1,0);
     }
 
     else if ( SVM_Scalar::N() && ( onlyChangeRowI == -1 ) )

@@ -2525,14 +2525,29 @@ int ML_Base::removeTrainingVector(int i, int num)
 
 int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 {
-    NiceAssert( onlyChangeRowI >= -1 );
+    NiceAssert( onlyChangeRowI >= -2 );
     NiceAssert( onlyChangeRowI < ML_Base::N() );
 
     calcSetAssumeReal();
 
     int res = 1;
 
-    if ( ML_Base::N() && ( onlyChangeRowI == -1 ) && updateInfo )
+    if ( ML_Base::N() && ( onlyChangeRowI == -2 ) && updateInfo )
+    {
+        res = 1;
+
+        for ( int i = 0 ; i < ML_Base::N() ; ++i )
+	{
+            if ( modind && d()(i) )
+	    {
+                // If x() is not accurate don't worry as it will be done via callback
+                getKernel().getvecInfo(traininfo("&",i),x(i),nullptr,isXConsistent(),assumeReal); //()(i));
+                traintang("&",i) = detangle_x(i);
+	    }
+	}
+    }
+
+    else if ( ML_Base::N() && ( onlyChangeRowI == -1 ) && updateInfo )
     {
         res = 1;
 
@@ -2571,7 +2586,7 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
         alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
     }
 
-    else
+    else if ( onlyChangeRowI == -1 )
     {
         const static Vector<double> empvec;
 
@@ -2584,6 +2599,22 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
         }
     }
 
+    else
+    {
+        const static Vector<double> empvec;
+
+        for ( int i = 0 ; i < ML_Base::N() ; i++ )
+        {
+            if ( d()(i) )
+            {
+                calcprior(alltraintargp("&",i),allxdatagent(i));
+                alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
+                alltraintargpA("&",i) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+                alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
+            }
+        }
+    }
+
     return res;
 }
 
@@ -2591,14 +2622,29 @@ int ML_Base::setKernel(const MercerKernel &xkernel, int modind, int onlyChangeRo
 {
     kernel = xkernel;
 
-    NiceAssert( onlyChangeRowI >= -1 );
+    NiceAssert( onlyChangeRowI >= -2 );
     NiceAssert( onlyChangeRowI < ML_Base::N() );
 
     calcSetAssumeReal();
 
     int res = 1;
 
-    if ( ML_Base::N() && ( onlyChangeRowI == -1 ) )
+    if ( ML_Base::N() && ( onlyChangeRowI == -2 ) )
+    {
+        res = 1;
+
+        for ( int i = 0 ; i < ML_Base::N() ; ++i )
+	{
+            if ( modind && d()(i) )
+	    {
+                // If x() is not accurate don't worry as it will be done via callback
+                getKernel().getvecInfo(traininfo("&",i),x(i),nullptr,isXConsistent(),assumeReal); //()(i));
+                traintang("&",i) = detangle_x(i);
+	    }
+	}
+    }
+
+    else if ( ML_Base::N() && ( onlyChangeRowI == -1 ) )
     {
         res = 1;
 
@@ -7998,7 +8044,7 @@ errstream() << "\n";
                         lockernel.setWeight(wv,j);
                     }
 
-                    model.resetKernel();
+                    model.resetKernel(1,-2);
                 }
 
                 if ( tuneP & 1 ) { setC(Cval);     }
@@ -8078,7 +8124,7 @@ double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<doub
                                 lockernel.setWeight(wv,j);
                             }
 
-                            model.resetKernel();
+                            model.resetKernel(1,-2);
                         }
 
                         if ( loctuneP & 1 ) { setC(locCval);     }
@@ -8101,14 +8147,15 @@ double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<doub
                         if      ( method == 1 ) { evalval = calcnegloglikelihood(model,1); }
                         else if ( method == 2 ) { evalval = calcLOO(model,0,1);            }
                         else if ( method == 3 ) { evalval = calcRecall(model,0,1);         }
+                        else if ( method == 4 ) { evalval = norm2(alphaVal());             }
 
                         if ( testisvnan(evalval) || testisinf(evalval) )
                         {
                             reset();
 
-                            if ( loctuneK )     { lockernel = backkernel; resetKernel(); }
-                            if ( loctuneP & 1 ) { setC(backC);                           }
-                            if ( loctuneP & 2 ) { seteps(backeps);                       }
+                            if ( loctuneK )     { lockernel = backkernel; resetKernel(1,-2); }
+                            if ( loctuneP & 1 ) { setC(backC);                               }
+                            if ( loctuneP & 2 ) { seteps(backeps);                           }
 
                             reset();
                         }
@@ -12572,7 +12619,18 @@ double ML_Base::Km(int m,
         MEMDEL(xxxinfo); xxxinfo = nullptr;
     }
 
-    if ( m == 0 )
+    else if ( !xxxinfo )
+    {
+        MEMNEW(xxxinfo,Vector<const vecInfo *>(m));
+
+        *xxxinfo = (const vecInfo *) nullptr;
+
+        res = Km(m,i,bias,basealtK,pxyprod,xxx,xxxinfo,resmode);
+
+        MEMDEL(xxxinfo); xxxinfo = nullptr;
+    }
+
+    else if ( m == 0 )
     {
         res = K0(bias,basealtK,pxyprod,resmode);
     }
@@ -12836,14 +12894,30 @@ T &ML_Base::Km(int m, T &res,
         MEMDEL(xxxinfo); xxxinfo = nullptr;
     }
 
-    if ( m == 0 )
+    else if ( !xxxinfo )
+    {
+        MEMNEW(xxxinfo,Vector<const vecInfo *>(m));
+
+        *xxxinfo = (const vecInfo *) nullptr;
+
+        Km(m,res,i,bias,basealtK,pxyprod,xxx,xxxinfo,resmode);
+
+        MEMDEL(xxxinfo); xxxinfo = nullptr;
+    }
+
+    else if ( m == 0 )
     {
         K0(res,bias,basealtK,pxyprod,resmode);
     }
 
     else if ( m == 1 )
     {
-        K1(res,i(z),bias,basealtK,pxyprod,(*xxx)(z),(*xxxinfo)(z),resmode);
+        K1(res,
+i(z),
+bias,basealtK,pxyprod,
+(*xxx)(z),
+(*xxxinfo)(z),
+resmode);
     }
 
     else if ( m == 2 )

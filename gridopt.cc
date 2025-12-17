@@ -15,21 +15,30 @@
 #define LOGZTOL 1e-8
 
 int GridOptions::optim(int dim,
-                       Vector<gentype> &xres,
-                       gentype &fres,
-                       int &ires,
+                       Vector<gentype> &Xres,
+                       gentype         &fres,
+                       Vector<gentype> &cres,
+                       gentype         &Fres,
+                       gentype         &mres,
+                       gentype         &sres,
+                       int             &ires,
+                       int             &mInd,
                        Vector<Vector<gentype> > &allxres,
-                       Vector<gentype> &allfres,
+                       Vector<gentype>          &allfres,
                        Vector<Vector<gentype> > &allcres,
-                       Vector<gentype> &allmres,
-                       Vector<gentype> &allsupres,
-                       Vector<double> &sscore,
+                       Vector<gentype>          &allFres,
+                       Vector<gentype>          &allmres,
+                       Vector<gentype>          &allsres,
+                       Vector<double>           &s_score,
+                       Vector<int>              &is_feas,
                        const Vector<gentype> &xmin,
                        const Vector<gentype> &xmax,
                        void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
                        void *fnarg,
                        svmvolatile int &killSwitch)
 {
+   (void) mInd;
+
     Vector<int> llocdistMode(getlocdistMode());
     Vector<int> llocvarsType(getlocvarsType());
 
@@ -69,7 +78,7 @@ int GridOptions::optim(int dim,
     double dres = 0;
     double s,t;
 
-    xres.resize(dim);
+    Xres.resize(dim);
     fres = 0.0;
     ires = 0;
 
@@ -77,7 +86,7 @@ int GridOptions::optim(int dim,
     allfres.resize(0);
     allcres.resize(0);
     allmres.resize(0);
-    allsupres.resize(0);
+    allsres.resize(0);
 
     // Enumerate testpoints on all axis
 
@@ -143,7 +152,7 @@ int GridOptions::optim(int dim,
 
     Vector<gentype> locxres(dim);
     gentype locfres;
-    gentype locsupres;
+    gentype locsres;
     double locdres;
 
     // Initialise loop counters.  Direction is kept to minimise jump between
@@ -190,8 +199,8 @@ int GridOptions::optim(int dim,
         (*fn)(locfres,locxres,fnarg);
         errstream() << "\n";
 
-        locsupres.force_vector().resize(2);
-        locsupres("&",0) = nullgentype();
+        locsres.force_vector().resize(2);
+        locsres("&",0) = nullgentype();
 
         if ( locfres.isValSet() )
         {
@@ -201,7 +210,7 @@ int GridOptions::optim(int dim,
             gentype varres((locfres.all())(1));
 
             locfres = mures;
-            locsupres("&",0) = varres;
+            locsres("&",0) = varres;
         }
 
         // Find distance to centre
@@ -210,7 +219,7 @@ int GridOptions::optim(int dim,
         locdres = norm2(locxres);
         locxres += xcentre;
 
-        locsupres("&",1) = locdres;
+        locsres("&",1) = locdres;
 
         // Record if required
 
@@ -222,8 +231,8 @@ int GridOptions::optim(int dim,
             allfres.append(allfres.size(),locfres);
             allcres.append(allcres.size(),loccres);
             allmres.append(allmres.size(),locfres);
-            allsupres.append(allsupres.size(),locsupres);
-            sscore.append(sscore.size(),1.0);
+            allsres.append(allsres.size(),locsres);
+            s_score.append(s_score.size(),1.0);
         }
 
         // Test optimality
@@ -232,7 +241,7 @@ int GridOptions::optim(int dim,
         {
             isfirst = 0;
 
-            xres = locxres;
+            Xres = locxres;
             fres = locfres;
             dres = locdres;
             ires = j;
@@ -304,14 +313,20 @@ int GridOptions::optim(int dim,
     {
         Vector<gentype> subxres;
         gentype subfres(0);
+        Vector<gentype> subcres;
+        gentype subFres;
+        gentype submres;
+        gentype subsres;
         int subires = 0;
-        int submres = 0;
-        Vector<Vector<gentype> > suballxres;
-        Vector<gentype> suballfres;
-        Vector<Vector<gentype> > suballcres;
-        Vector<gentype> suballmres;
-        Vector<gentype> suballsupres;
-        Vector<double> subsscore;
+        int submInd = 0;
+        Vector<Vector<Vector<gentype> > > suballxres;
+        Vector<Vector<gentype> >          suballfres;
+        Vector<Vector<Vector<gentype> > > suballcres;
+        Vector<Vector<gentype> >          suballmres;
+        Vector<Vector<gentype> >          suballFres;
+        Vector<Vector<gentype> >          suballsres;
+        Vector<Vector<double> >           subs_score;
+        Vector<Vector<int> >              subis_feas;
         Vector<gentype> subxmin(xmin);
         Vector<gentype> subxmax(xmax);
 
@@ -325,7 +340,7 @@ int GridOptions::optim(int dim,
             // real zoom always
 
             width  = ( (double) xmax(i) ) - ( (double) xmin(i) );
-            centre = (double) xres(i);
+            centre = (double) Xres(i);
             width *= loczoomFact;
 
             subxmin("&",i) = centre - width/2;
@@ -348,41 +363,64 @@ int GridOptions::optim(int dim,
         subdistMode = 0; // So we don't get twice-applied whatever scales.
         subvarsType = 1; // So we only round to integer once.
 
-        Vector<gentype> subxignore;             // We only really care about "raw" here
-        Vector<Vector<gentype> > suballxignore; // We only really care about "raw" here
+        Vector<gentype> subxignore;                      // We only really care about "raw" here
+        Vector<Vector<Vector<gentype> > > suballxignore; // We only really care about "raw" here
 
         gentype dummymeanfres, dummyvarfres;
+        gentype dummymeanFres, dummyvarFres;
         gentype dummymeanires, dummyvarires;
         gentype dummymeantres, dummyvartres;
         gentype dummymeanTres, dummyvarTres;
 
         Vector<gentype> dummymeanallfres, dummyvarallfres;
+        Vector<gentype> dummymeanallFres, dummyvarallFres;
         Vector<gentype> dummymeanallmres, dummyvarallmres;
 
-        res |= locgopts.optim(dim,subxignore,subxres,subfres,subires,submres,suballxignore,suballxres,suballfres,suballcres,suballmres,suballsupres,subsscore,
+        res |= locgopts.optim(dim,subxignore,subxres,subfres,subcres,subFres,submres,subsres,subires,submInd,
+                              suballxignore,suballxres,suballfres,suballcres,suballFres,suballmres,suballsres,subs_score,subis_feas,
                               subxmin,subxmax,subdistMode,subvarsType,fn,fnarg,killSwitch,1,
-                              dummymeanfres,dummyvarfres,dummymeanires,dummyvarires,dummymeantres,dummyvartres,dummymeanTres,dummyvarTres,dummymeanallfres,dummyvarallfres,dummymeanallmres,dummyvarallmres);
+                              dummymeanfres,dummyvarfres,dummymeanFres,dummyvarFres,dummymeanires,dummyvarires,dummymeantres,dummyvartres,dummymeanTres,dummyvarTres,dummymeanallfres,dummyvarallfres,dummymeanallFres,dummyvarallFres,dummymeanallmres,dummyvarallmres);
 
         // Incorporate results
 
         if ( subfres < fres )
         {
-            xres   = subxres;
+            Xres   = subxres;
             fres   = subfres;
+            cres   = subcres;
+            Fres   = subFres;
+            mres   = submres;
+            sres   = subsres;
             ires   = subires+allfres.size();
-//            mres   = submres;
+//            mInd   = submInd;
         }
 
         if ( 1 )
         {
-            allxres.append(allxres.size(),suballxres);
-            allfres.append(allfres.size(),suballfres);
-            allcres.append(allcres.size(),suballcres);
-            allmres.append(allmres.size(),suballmres);
-            allsupres.append(allsupres.size(),suballsupres);
-            sscore.append(sscore.size(),subsscore);
+            allxres.append(allxres.size(),suballxres(0));
+            allfres.append(allfres.size(),suballfres(0));
+            allcres.append(allcres.size(),suballcres(0));
+            allFres.append(allFres.size(),suballFres(0));
+            allmres.append(allmres.size(),suballmres(0));
+            allsres.append(allsres.size(),suballsres(0));
+            s_score.append(s_score.size(),subs_score(0));
+            is_feas.append(is_feas.size(),subis_feas(0));
         }
     }
+
+    mres = fres;
+    cres.resize(0);
+    Fres = ires;
+
+    allFres.resize(allfres.size());
+
+    for ( int i = 0 ; i < allFres.size() ; ++i )
+    {
+        allFres("&",i) = i;
+    }
+
+    is_feas.resize(allfres.size());
+    is_feas = 1;
 
     return res;
 }

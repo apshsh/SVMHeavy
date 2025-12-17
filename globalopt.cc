@@ -10,13 +10,26 @@
 #include "globalopt.hpp"
 #include "hyper_base.hpp"
 #include "randfun.hpp"
+#include "plotml.hpp"
 
+bool isisValNone(const gentype &val) { return val.isValNone(); }
+bool isisValNone(const double &)     { return false;           }
+
+#define NOMINAL_MAX 1
 
 GlobalOptions::GlobalOptions()
 {
         ispydirect = false;
 
         optname = "Global Optimisation";
+
+        simname = "regret";
+        simoutformat = 2;
+        simfreq = 1;
+        simFmin = 1;
+        simFmax = 0;
+        simRmin = 1;
+        simRmax = 0;
 
         altallxres = nullptr;
 
@@ -60,6 +73,8 @@ GlobalOptions::GlobalOptions()
         overfnitcnt = 0;
 
         ismodel_convertx_simple = false;
+
+        needsReset = false;
 }
 
 GlobalOptions::~GlobalOptions()
@@ -107,6 +122,14 @@ GlobalOptions &GlobalOptions::operator=(const GlobalOptions &src)
     ispydirect = src.ispydirect;
 
     optname = src.optname;
+
+        simname = src.simname;
+        simoutformat = src.simoutformat;
+        simfreq = src.simfreq;
+        simFmin = src.simFmin;
+        simFmax = src.simFmax;
+        simRmin = src.simRmin;
+        simRmax = src.simRmax;
 
     altallxres = src.altallxres;
 
@@ -181,6 +204,8 @@ GlobalOptions &GlobalOptions::operator=(const GlobalOptions &src)
 
     overfnitcnt = src.overfnitcnt;
 
+    needsReset = src.needsReset;
+
     return *this;
 }
 
@@ -226,6 +251,8 @@ void GlobalOptions::reset(void)
     projOpRaw          = nullptr;
     projOpInd          = -1;
 
+    ismodel_convertx_simple = false;
+
     subDef = nullptr;
     subDef.resize(0);
     subDefInd.resize(0);
@@ -241,28 +268,25 @@ void GlobalOptions::reset(void)
 
 
 
-//FIXME: polymorph in bayesopt for fidelity
-
-int GlobalOptions::isFeasible(const Vector<gentype> &cres, const Vector<gentype> &Xres) const
-{
-    (void) Xres;
-
-    return ( cres >= 0.0_gent );
-}
-
 int GlobalOptions::optim(int dim,
                       Vector<gentype> &xres,
                       Vector<gentype> &Xres,
-                      gentype &fres,
-                      int &ires,
-                      int &mInd,
-                      Vector<Vector<gentype> > &allxres,
-                      Vector<Vector<gentype> > &allXres,
-                      Vector<gentype> &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &allsres,
-                      Vector<double>  &s_score,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
+                      Vector<Vector<Vector<gentype> > > &allxres,
+                      Vector<Vector<Vector<gentype> > > &allXres,
+                      Vector<Vector<gentype> >          &allfres,
+                      Vector<Vector<Vector<gentype> > > &allcres,
+                      Vector<Vector<gentype> >          &allFres,
+                      Vector<Vector<gentype> >          &allmres,
+                      Vector<Vector<gentype> >          &allsres,
+                      Vector<Vector<double> >           &s_score,
+                      Vector<Vector<int> >              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -272,190 +296,222 @@ int GlobalOptions::optim(int dim,
                       svmvolatile int &killSwitch,
                       size_t numReps,
                       gentype &meanfres, gentype &varfres,
+                      gentype &meanFres, gentype &varFres,
                       gentype &meanires, gentype &varires,
                       gentype &meantres, gentype &vartres,
                       gentype &meanTres, gentype &varTres,
                       Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
+                      Vector<gentype> &meanallFres, Vector<gentype> &varallFres,
                       Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
     {
-        // numReps:  1 = normal behaviour
-        //          >1 = do multiple runs.  Everything returned is for the final run, except
-        //               allfres and allmres are now vectors, where the first element is
-        //               an average and the second element is a variance.
+        if ( needsReset ) { reset(); }
 
         int res = 0;
+        int nr = static_cast<int>(numReps);
 
-        if ( numReps == 1 )
         {
-            int k;
+            allxres.resize(nr);
+            allXres.resize(nr);
+            allfres.resize(nr);
+            allcres.resize(nr);
+            allFres.resize(nr);
+            allmres.resize(nr);
+            allsres.resize(nr);
+            s_score.resize(nr);
+            is_feas.resize(nr);
 
-            gentype nullval('N');
-
-            res = realOptim(dim,xres,Xres,fres,ires,mInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
-
-            // Sort allmres to be strictly decreasing!
-
-            int startyet = 0;
-
-            for ( k = 0 ; k < allmres.size() ; ++k )
-            {
-                if ( !startyet )
-                {
-                    if ( isFeasible(allcres(k),allXres(k)) && allmres(k).isCastableToRealWithoutLoss() )
-                    {
-                        for ( int kk = k-1 ; kk >= 0 ; --kk )
-                        {
-                            allmres("&",kk) = allmres(k);
-                        }
-
-                        startyet = 1;
-                    }
-
-                    else
-                    {
-                        allmres("&",k) = nullgentype();
-                    }
-                }
-
-                else
-                {
-                    if ( isFeasible(allcres(k),allXres(k)) && allmres(k).isCastableToRealWithoutLoss() )
-                    {
-                        allmres("&",k) = ( allmres(k) < allmres(k-1) ) ? allmres(k) : allmres(k-1);
-                    }
-
-                    else
-                    {
-                        allmres("&",k) = allmres(k-1);
-                    }
-                }
-            }
-
-            meanfres = fres; varfres = nullval;
-            meanires = ires; varires = nullval;
-
-            meanallfres = allfres; varallfres.resize(allfres.size()) = nullval;
-            meanallmres = allmres; varallmres.resize(allmres.size()) = nullval;
-
-            findfirstLT(meantres,allmres,softmin); vartres = nullval;
-            findfirstLT(meanTres,allmres,hardmin); vartres = nullval;
-        }
-
-        else if ( numReps > 1 )
-        {
-            size_t j;
-            int k;
-
-            Vector<gentype> vecfres(static_cast<int>(numReps));
-            Vector<gentype> vecires(static_cast<int>(numReps));
-
-            Vector<Vector<gentype> > vecallfres(static_cast<int>(numReps));
-            Vector<Vector<Vector<gentype> > > vecallcres(static_cast<int>(numReps));
-            Vector<Vector<Vector<gentype> > > vecallXres(static_cast<int>(numReps));
-            Vector<Vector<gentype> > vecallmres(static_cast<int>(numReps));
-
-            Vector<gentype> vectres(static_cast<int>(numReps));
-            Vector<gentype> vecTres(static_cast<int>(numReps));
+            Vector<gentype> vecfres(nr);
+            Vector<gentype> vecFres(nr);
+            Vector<gentype> vecires(nr);
+            Vector<gentype> vectres(nr);
+            Vector<gentype> vecTres(nr);
 
             int maxxlen = 0;
 
-            for ( j = 0 ; j < numReps ; ++j )
+            for ( size_t j = 0 ; j < numReps ; ++j )
             {
+                int jj = static_cast<int>(j);
+
                 //GlobalOptions *locopt = makeDup();
 
-                allXres.resize(0);
-                allsres.resize(0);
-                s_score.resize(0);
+                res += realOptim(dim,
+                                 xres,Xres,fres,cres,Fres,mres,sres,ires,mInd,
+                                 allxres("&",jj),allXres("&",jj),allfres("&",jj),allcres("&",jj),allFres("&",jj),allmres("&",jj),allsres("&",jj),s_score("&",jj),is_feas("&",jj),
+                                 xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
 
-                //res += (*locopt).realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,allxres,allXres,vecallfres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
-                res += realOptim(dim,xres,Xres,vecfres("&",static_cast<int>(j)),vecires("&",static_cast<int>(j)).force_int(),mInd,vecallXres("&",static_cast<int>(j)),allXres,vecallfres("&",static_cast<int>(j)),vecallcres("&",static_cast<int>(j)),vecallmres("&",static_cast<int>(j)),allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch);
+                vecfres("&",jj) = fres;
+                vecFres("&",jj) = Fres;
+                vecires("&",jj) = ires;
 
-                // Sort vecallmres(j) to be strictly decreasing!
+                // Sort allmres(j) to be strictly decreasing!
 
                 int startyet = 0;
 
-                for ( k = 0 ; k < vecallfres(static_cast<int>(j)).size() ; ++k )
+                for ( int kk = 0 ; kk < allfres(jj).size() ; ++kk )
                 {
                     if ( !startyet )
                     {
-                        //if ( isFeasible(vecallcres(static_cast<int>(j))(k),vecallXres(static_cast<int>(j))(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
-                        if ( isFeasible(vecallcres(static_cast<int>(j))(k),allXres(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
-                        {
-                            for ( int kk = k-1 ; kk >= 0 ; --kk )
-                            {
-                                vecallmres("&",static_cast<int>(j))("&",kk) = vecallmres(static_cast<int>(j))(k);
-                            }
-
-                            startyet = 1;
-                        }
-
-                        else
-                        {
-                            vecallmres("&",static_cast<int>(j))("&",k) = nullgentype();
-                        }
+                        if ( is_feas(jj)(kk) && allmres(jj)(kk).isCastableToRealWithoutLoss() ) { startyet = 1;                            }
+                        else                                                                    { allmres("&",jj)("&",kk) = nullgentype(); }
                     }
 
                     else
                     {
-                        //if ( isFeasible(vecallcres(static_cast<int>(j))(k),vecallXres(static_cast<int>(j))(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
-                        if ( isFeasible(vecallcres(static_cast<int>(j))(k),allXres(k)) && vecallmres(static_cast<int>(j))(k).isCastableToRealWithoutLoss() )
-                        {
-                            vecallmres("&",static_cast<int>(j))("&",k) = ( vecallmres(static_cast<int>(j))(k) < vecallmres(static_cast<int>(j))(k-1) ) ? vecallmres(static_cast<int>(j))(k) : vecallmres(static_cast<int>(j))(k-1);
-                        }
-
-                        else
-                        {
-                            vecallmres("&",static_cast<int>(j))("&",k) = vecallmres(static_cast<int>(j))(k-1);
-                        }
+                        if ( is_feas(jj)(kk) && allmres(jj)(kk).isCastableToRealWithoutLoss() ) { allmres("&",jj)("&",kk) = ( allmres(jj)(kk) > allmres(jj)(kk-1) ) ? allmres(jj)(kk) : allmres(jj)(kk-1); }
+                        else                                                                    { allmres("&",jj)("&",kk) = allmres(jj)(kk-1);                                                             }
                     }
                 }
 
-                if ( j == numReps-1 )
-                {
-                    fres = vecfres(static_cast<int>(j));
-                    ires = (int) vecires(static_cast<int>(j));
+                maxxlen = ( allmres(jj).size() > maxxlen ) ? allmres(jj).size() : maxxlen;
 
-                    allfres = vecallfres(static_cast<int>(j));
-                    allcres = vecallcres(static_cast<int>(j));
-                    allXres = vecallXres(static_cast<int>(j));
-                    allmres = vecallmres(static_cast<int>(j));
-                }
+                findfirstLT(vectres("&",jj),allmres(jj),softmin);
+                findfirstLT(vecTres("&",jj),allmres(jj),hardmin);
 
-                maxxlen = ( vecallmres(static_cast<int>(j)).size() > maxxlen ) ? vecallmres(static_cast<int>(j)).size() : maxxlen;
-
-                findfirstLT(vectres("&",static_cast<int>(j)),vecallmres(static_cast<int>(j)),softmin);
-                findfirstLT(vecTres("&",static_cast<int>(j)),vecallmres(static_cast<int>(j)),hardmin);
-
-                //MEMDEL(locopt);
-
-                if ( j != numReps-1 )
-                {
-                    reset();
-                }
-            }
-
-            retVector<gentype> tmpva;
-            retVector<Vector<gentype> > tmpvu;
-
-            for ( j = 0 ; j < numReps ; ++j )
-            {
-                if ( ( k = vecallmres(static_cast<int>(j)).size() ) < maxxlen )
-                {
-                    (vecallfres("&",static_cast<int>(j)).resize(maxxlen))("&",k,1,maxxlen-1,tmpva) = vecallfres(static_cast<int>(j))(k-1);
-                    (vecallcres("&",static_cast<int>(j)).resize(maxxlen))("&",k,1,maxxlen-1,tmpvu) = vecallcres(static_cast<int>(j))(k-1);
-                    (vecallXres("&",static_cast<int>(j)).resize(maxxlen))("&",k,1,maxxlen-1,tmpvu) = vecallXres(static_cast<int>(j))(k-1);
-                    (vecallmres("&",static_cast<int>(j)).resize(maxxlen))("&",k,1,maxxlen-1,tmpva) = vecallmres(static_cast<int>(j))(k-1);
-                }
+                if ( j != numReps-1 ) { reset(); }
             }
 
             calcmeanvar(meanfres,varfres,vecfres);
+            calcmeanvar(meanFres,varFres,vecFres);
             calcmeanvar(meanires,varires,vecires);
             calcmeanvar(meantres,vartres,vectres);
             calcmeanvar(meanTres,varTres,vecTres);
 
+            Vector<int> ii(nr);
+            bool isdone = false;
+
+            Vector<Vector<gentype> > vecallfres(allfres);
+            Vector<Vector<gentype> > vecallFres(allFres);
+            Vector<Vector<gentype> > vecallmres(allmres);
+
+            for ( size_t j = 0 ; j < numReps ; ++j )
+            {
+                int jj = static_cast<int>(j);
+
+                for ( int kk = 0 ; kk < allmres(jj).size() ; ++kk )
+                {
+                    if ( vecallmres(jj)(kk).isValNone() )
+                    {
+                        vecallmres("&",jj)("&",kk) = -NOMINAL_MAX;
+                    }
+                }
+            }
+
+            for ( ii = 0 ; !isdone ; )
+            {
+                isdone = true;
+
+                for ( size_t j = 0 ; j < numReps ; ++j )
+                {
+                    int jj = static_cast<int>(j);
+
+                    if ( ii(jj) < vecallmres(jj).size() )
+                    {
+                        isdone = false;
+                        break;
+                    }
+                }
+
+                if ( !isdone )
+                {
+                    double Fmin = 0;
+                    int jjmin = -1;
+
+                    for ( size_t j = 0 ; j < numReps ; ++j )
+                    {
+                        int jj = static_cast<int>(j);
+
+                        if ( ( ii(jj) < vecallmres(jj).size() ) && ( ( jjmin == -1 ) || ( ((double) vecallFres(jj)(ii(jj))) < Fmin ) ) )
+                        {
+                            Fmin = vecallFres(jj)(ii(jj));
+                            jjmin = jj;
+                        }
+                    }
+
+                    StrucAssert( jjmin != -1 );
+
+                    for ( size_t j = 0 ; j < numReps ; ++j )
+                    {
+                        int jj = static_cast<int>(j);
+
+                        if ( ( ii(jj) >= vecallFres(jj).size() ) || ( ((double) vecallFres(jj)(ii(jj))) != Fmin ) )
+                        {
+                            vecallfres("&",jj).add(ii(jj)); vecallfres("&",jj)("&",ii(jj)) = nullgentype();
+                            vecallFres("&",jj).add(ii(jj)); vecallFres("&",jj)("&",ii(jj)) = Fmin;
+                            vecallmres("&",jj).add(ii(jj)); vecallmres("&",jj)("&",ii(jj)) = ( simRmin < simRmax ) ? simRmax : -NOMINAL_MAX; //nullgentype();
+
+                            if ( ii(jj) ) { vecallmres("&",jj)("&",ii(jj)) = vecallmres(jj)(ii(jj)-1); }
+                        }
+                    }
+                }
+
+                ii += 1;
+            }
+
             calcmeanvar(meanallfres,varallfres,vecallfres);
+            calcmeanvar(meanallFres,varallFres,vecallFres);
             calcmeanvar(meanallmres,varallmres,vecallmres);
         }
+
+        {
+            // Plot comparison of different grids if selected
+
+            if ( simfreq )
+            {
+                // Find unused filename to prevent sequential overwrite
+
+                std::string plotnamepdf = simname+"_0.pdf";
+
+                int fcnt = 0;
+
+                while ( fileExists(plotnamepdf) )
+                {
+                    ++fcnt;
+                    plotnamepdf = simname+"_"+(std::to_string(fcnt))+".pdf";
+                }
+
+                std::string plotname = simname+"_"+(std::to_string(fcnt));
+
+                // Translate data
+
+                Vector<double> xdata(meanallFres.size());
+                Vector<double> ydata(meanallmres.size());
+                Vector<double> yvar(varallmres.size());
+                Vector<double> ybaseline(meanallmres.size(),0.0); // unused but must be present
+                Vector<Vector<double> > xpos(0); //allFres.size());
+                Vector<Vector<double> > ypos(0); //allFres.size());
+                Vector<Vector<double> > xneg(0); //allFres.size());
+                Vector<Vector<double> > yneg(0); //allFres.size());
+                Vector<Vector<double> > xequ(0); //allFres.size());
+                Vector<Vector<double> > yequ(0); //allmres.size());
+
+                for ( int i = meanallFres.size()-1 ; i >= 0 ; --i )
+                {
+                    if ( meanallmres(i).isValNone() ) { xdata.remove(i); ydata.remove(i); yvar.remove(i); ybaseline.remove(i);                      }
+                    else                              { xdata("&",i) = meanallFres(i); ydata("&",i) = -meanallmres(i); yvar("&",i) = varallmres(i); }
+                }
+
+                //for ( int j = 0 ; j < allFres.size() ; ++j )
+                //{
+                //    xequ("&",j).resize(allFres(j).size());
+                //    yequ("&",j).resize(allmres(j).size());
+                //
+                //    for ( int i = allFres(j).size()-1 ; i >= 0 ; --i )
+                //    {
+                //        if ( allmres(j)(i).isValNone() ) { xequ("&",j).remove(i); yequ("&",j).remove(i);                            }
+                //        else                             { xequ("^",j)("&",i) = allFres(j)(i); yequ("&",j)("&",i) = -allmres(j)(i); }
+                //    }
+                //}
+
+                // Plot
+
+                int incvar = 1;
+                int incdata = ( xequ.size() > 1 ) ? 1 : 0;
+
+                plot2d(xdata,ydata,yvar,ybaseline,xpos,ypos,xneg,yneg,xequ,yequ,simFmin,simFmax,simRmin,simRmax,plotname,plotname+"_dat",simoutformat,incdata,incvar);
+            }
+        }
+
+        needsReset = true;
 
         return res;
     }
@@ -463,16 +519,22 @@ int GlobalOptions::optim(int dim,
 int GlobalOptions::realOptim(int dim,
                       Vector<gentype> &xres,
                       Vector<gentype> &Xres,
-                      gentype &fres,
-                      int &ires,
-                      int &mInd,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
                       Vector<Vector<gentype> > &allxres,
                       Vector<Vector<gentype> > &allXres,
-                      Vector<gentype> &allfres,
+                      Vector<gentype>          &allfres,
                       Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &allsres,
-                      Vector<double>  &s_score,
+                      Vector<gentype>          &allFres,
+                      Vector<gentype>          &allmres,
+                      Vector<gentype>          &allsres,
+                      Vector<double>           &s_score,
+                      Vector<int>              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -699,18 +761,26 @@ int GlobalOptions::realOptim(int dim,
 
             Vector<gentype> locxres;
             Vector<gentype> locXres;
+            gentype         locfres;
+            Vector<gentype> loccres;
+            gentype         locFres;
+            gentype         locmres;
+            gentype         locsres;
+            int             locires;
+            int             locmInd;
+
             SparseVector<gentype> altlocxres;
             SparseVector<gentype> altlocXres;
-            gentype locfres;
-            int locires;
 
             Vector<Vector<gentype> > locallxres;
             Vector<Vector<gentype> > locallXres;
-            Vector<gentype> locallfres;
+            Vector<gentype>          locallfres;
             Vector<Vector<gentype> > locallcres;
-            Vector<gentype> locallmres;
-            Vector<gentype> locallsres;
-            Vector<double>  locs_score;
+            Vector<gentype>          locallFres;
+            Vector<gentype>          locallmres;
+            Vector<gentype>          locallsres;
+            Vector<double>           locs_score;
+            Vector<int>              locis_feas;
 
             stopearly = 0;
 
@@ -763,8 +833,9 @@ int GlobalOptions::realOptim(int dim,
 
             model_log(0,locxmin,locxmax,locymin,locymax); // model_log records these min/max for later use!
 
-            res = optim(dim,locXres,locfres,locires,locallXres,locallfres,locallcres,locallmres,locallsres,locs_score,
-                        fakexmin,fakexmax,overfn,overfnargs,killSwitch);
+            res = optim(dim,locXres,locfres,loccres,locFres,locmres,locsres,locires,locmInd,
+                          locallXres,locallfres,locallcres,locallFres,locallmres,locallsres,locs_score,locis_feas,
+                          fakexmin,fakexmax,overfn,overfnargs,killSwitch);
 
             model_log(2);
 
@@ -782,16 +853,22 @@ int GlobalOptions::realOptim(int dim,
                 xres = locxres;
                 Xres = locXres;
                 fres = locfres;
+                cres = loccres;
+                Fres = locFres;
+                mres = locmres;
+                sres = locsres;
                 ires = locires+(allfres.size());
-                mInd = projOpInd;
+                mInd = projOpInd; // locmInd
 
                 allxres.append(allxres.size(),locallxres);
                 allXres.append(allXres.size(),locallXres);
                 allfres.append(allfres.size(),locallfres);
                 allcres.append(allcres.size(),locallcres);
+                allFres.append(allFres.size(),locallFres);
                 allmres.append(allmres.size(),locallmres);
                 allsres.append(allsres.size(),locallsres);
                 s_score.append(s_score.size(),locs_score);
+                is_feas.append(is_feas.size(),locis_feas);
 
                 substatus = 2;
             }
@@ -808,16 +885,22 @@ int GlobalOptions::realOptim(int dim,
                 xres = locxres;
                 Xres = locXres;
                 fres = locfres;
+                cres = loccres;
+                Fres = locFres;
+                mres = locmres;
+                sres = locsres;
                 ires = locires+(allfres.size());
-                mInd = projOpInd;
+                mInd = projOpInd; // locMind
 
                 allxres.append(allxres.size(),locallxres);
                 allXres.append(allXres.size(),locallXres);
                 allfres.append(allfres.size(),locallfres);
                 allcres.append(allcres.size(),locallcres);
+                allFres.append(allFres.size(),locallFres);
                 allmres.append(allmres.size(),locallmres);
                 allsres.append(allsres.size(),locallsres);
                 s_score.append(s_score.size(),locs_score);
+                is_feas.append(is_feas.size(),locis_feas);
 
                 substatus = 2;
             }
@@ -845,9 +928,11 @@ int GlobalOptions::realOptim(int dim,
                 allXres.append(allXres.size(),locallXres);
                 allfres.append(allfres.size(),locallfres);
                 allcres.append(allcres.size(),locallcres);
+                allFres.append(allFres.size(),locallFres);
                 allmres.append(allmres.size(),locallmres);
                 allsres.append(allsres.size(),locallsres);
                 s_score.append(s_score.size(),locs_score);
+                is_feas.append(is_feas.size(),locis_feas);
 
                 substatus = 1;
             }
@@ -1575,17 +1660,14 @@ double calcabc(int dim,
 
 
 
-int GlobalOptions::analyse(const Vector<Vector<gentype> > &allxres,
-                           const Vector<gentype> &allmres,
-                           const Vector<Vector<gentype> > &allcres,
+int GlobalOptions::analyse(const Vector<gentype> &allmres,
+                           const Vector<int> &is_feas,
                            Vector<double> &hypervol,
                            Vector<int> &parind,
                            int calchypervol) const
 {
-    NiceAssert( allxres.size() == allmres.size() );
-
 //errstream() << "DEBUG: allmres = " << allmres << "\n";
-    int N = allxres.size();
+    int N = allmres.size();
 
     parind.resize(N);
     hypervol.resize(N);
@@ -1598,53 +1680,34 @@ int GlobalOptions::analyse(const Vector<Vector<gentype> > &allxres,
 
         if ( calchypervol )
         {
-            if ( allmres(0).isValReal() )
+            if ( allmres(0).isValReal() || allmres(0).isValNone() )
             {
-                int i;
-
-                for ( i = 0 ; i < N ; ++i )
+                for ( int i = 0 ; i < N ; ++i )
                 {
-                    if ( !i || ( (double) allmres(i) < -(hypervol(i-1)) ) )
-                    {
-                        hypervol("&",i) = -((double) allmres(i));
-                    }
-
-                    else
-                    {
-                        hypervol("&",i) = hypervol(i-1);
-                    }
+                    if ( !i || ( (double) allmres(i) < -(hypervol(i-1)) ) ) { hypervol("&",i) = -((double) allmres(i)); }
+                    else                                                    { hypervol("&",i) = hypervol(i-1);          }
                 }
             }
 
             else
             {
-                int i,j;
-
                 int M = (allmres(0)).size();
                 double **X;
 
                 MEMNEWARRAY(X,double *,N);
-
                 NiceAssert(X);
 
-                for ( i = 0 ; i < N ; ++i )
+                for ( int i = 0 ; i < N ; ++i )
                 {
                     MEMNEWARRAY(X[i],double,M);
-
                     NiceAssert( X[i] );
 
-                    for ( j = 0 ; j < M ; ++j )
-                    {
-                        X[i][j] = -((double) ((allmres(i))(j)));
-                    }
+                    for ( int j = 0 ; j < M ; ++j ) { X[i][j] = -((double) ((allmres(i))(j))); }
 
                     hypervol("&",i) = h(X,i+1,M);
                 }
 
-                for ( i = 0 ; i < N ; ++i )
-                {
-                    MEMDELARRAY(X[i]); X[i] = nullptr;
-                }
+                for ( int i = 0 ; i < N ; ++i ) { MEMDELARRAY(X[i]); X[i] = nullptr; }
 
                 MEMDELARRAY(X); X = nullptr;
             }
@@ -1662,55 +1725,35 @@ int GlobalOptions::analyse(const Vector<Vector<gentype> > &allxres,
 
         for ( int pos = parind.size()-1 ; pos >= 0 ; --pos )
         {
-            if ( !isFeasible(allcres(pos),allxres(pos)) )
-            {
-                parind.remove(pos);
-            }
+            if ( !is_feas(pos) ) { parind.remove(pos); }
         }
 
-        int pos,i,j,isdom;
-
-        for ( pos = parind.size()-1 ; pos >= 0 ; --pos )
+        for ( int pos = parind.size()-1 ; pos >= 0 ; --pos )
         {
             NiceAssert( allmres(pos).size() == m );
 
             // Test if allfres(parind(pos)) is dominated by any points
             // in parind != pos.  If it is then remove it from parind.
 
-            isdom = 0;
+            int isdom = 0;
 
-            for ( i = 0 ; i < parind.size() ; ++i )
+            for ( int i = 0 ; !isdom && ( i < parind.size() ) ; ++i )
             {
                 if ( parind(i) != parind(pos) )
                 {
-                    // Test if allfres(i) dominates allfres(pos) - that is,
+                    // Test if allmres(i) dominates allmres(pos) - that is,
                     // if allfres(pos)(j) >= allfres(i)(j) for all j
 
                     isdom = 1;
 
-                    for ( j = 0 ; j < m ; ++j )
+                    for ( int j = 0 ; isdom && ( j < m ) ; ++j )
                     {
-                        if ( allmres(parind(pos))(j) < allmres(parind(i))(j) )
-                        {
-                            isdom = 0;
-                            break;
-                        }
-                    }
-
-                    if ( isdom )
-                    {
-                        break;
+                        if ( allmres(parind(pos))(j) < allmres(parind(i))(j) ) { isdom = 0; }
                     }
                 }
             }
 
-            if ( isdom )
-            {
-//errstream() << "DEBUG: " << allmres(parind(i)) << " dominates " << allmres(parind(pos)) << "\n";
-//errstream() << "DEBUG: index " << parind(i) << " dominates index " << parind(pos) << "\n";
-//errstream() << "DEBUG: subindex " << i << " dominates subindex " << pos << "\n";
-                parind.remove(pos);
-            }
+            if ( isdom ) { parind.remove(pos); }
         }
     }
 

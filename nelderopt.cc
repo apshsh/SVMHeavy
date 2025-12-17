@@ -16,13 +16,19 @@
 
 
 int nelderOpt(int dim,
-              Vector<gentype> &xres,
-              gentype &fres,
-              int &ires,
+              Vector<gentype> &Xres,
+              gentype         &fres,
+              Vector<gentype> &cres,
+              gentype         &Fres,
+              gentype         &mres,
+              gentype         &sres,
+              int             &ires,
+              int             &mInd,
               Vector<Vector<gentype> > &allxres,
-              Vector<gentype> &allfres,
+              Vector<gentype>          &allfres,
               Vector<Vector<gentype> > &allcres,
-              Vector<gentype> &supres,
+              Vector<gentype>          &allFres,
+              Vector<gentype>          &allsres,
               const Vector<gentype> &xmin,
               const Vector<gentype> &xmax,
               void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -87,8 +93,8 @@ double tst_obj(unsigned int n, const double *x, double *undefined_flag, void *fn
 
 
 int nelderOpt(int dim,
-              Vector<double> &xres,
-              gentype &fres,
+              Vector<double> &Xres,
+              gentype        &fres,
               const Vector<double> &xmin,
               const Vector<double> &xmax,
               double (*fn)(int n, const double *x, void *arg),
@@ -101,9 +107,9 @@ int nelderOpt(int dim,
     NiceAssert( xmax.size() == dim );
     NiceAssert( xmax >= xmin );
 
-    xres.resize(dim);
+    Xres.resize(dim);
 
-    double *x = &xres("&",0);
+    double *x = &Xres("&",0);
     const double *l = &xmin(0);
     const double *u = &xmax(0);
 
@@ -286,12 +292,18 @@ errstream() << "\n";
 
 int nelderOpt(int dim,
               Vector<gentype> &xres,
-              gentype &fres,
-              int &ires,
+              gentype         &fres,
+              Vector<gentype> &cres,
+              gentype         &Fres,
+              gentype         &mres,
+              gentype         &sres,
+              int             &ires,
+              int             &mInd,
               Vector<Vector<gentype> > &allxres,
-              Vector<gentype> &allfres,
+              Vector<gentype>          &allfres,
               Vector<Vector<gentype> > &allcres,
-              Vector<gentype> &supres,
+              Vector<gentype>          &allFres,
+              Vector<gentype>          &allsres,
               const Vector<gentype> &xmin,
               const Vector<gentype> &xmax,
               void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -299,6 +311,9 @@ int nelderOpt(int dim,
               const NelderOptions &dopts,
               svmvolatile int &killSwitch)
 {
+    (void) sres;
+    (void) mInd;
+
     NiceAssert( dim > 0 );
     NiceAssert( xmin.size() == dim );
     NiceAssert( xmax.size() == dim );
@@ -306,7 +321,7 @@ int nelderOpt(int dim,
     allxres.resize(0);
     allfres.resize(0);
     allcres.resize(0);
-    supres.resize(0);
+    allsres.resize(0);
 
     Vector<double> locxres;
 
@@ -347,14 +362,25 @@ int nelderOpt(int dim,
 
     int res = nelderOpt(dim,locxres,locfres,locxmin,locxmax,fninnerdd,(void *) fnarginner,dopts,killSwitch);
 
-    supres.resize(allxres.size());
+    allsres.resize(allxres.size());
     gentype dummynull;
     dummynull.force_null();
-    supres = dummynull;
+    allsres = dummynull;
 
     for ( i = 0 ; i < dim ; ++i )
     {
         xres("&",i) = locxres(i);
+    }
+
+    mres = fres;
+    cres.resize(0);
+    Fres = ires;
+
+    allFres.resize(allfres.size());
+
+    for ( int i = 0 ; i < allFres.size() ; ++i )
+    {
+        allFres("&",i) = i;
     }
 
     return res;
@@ -364,28 +390,40 @@ int nelderOpt(int dim,
 
 
 int NelderOptions::optim(int dim,
-                      Vector<gentype> &xres,
-                      gentype &fres,
-                      int &ires,
+                      Vector<gentype> &Xres,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
                       Vector<Vector<gentype> > &allxres,
-                      Vector<gentype> &allfres,
+                      Vector<gentype>          &allfres,
                       Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &supres,
-                      Vector<double> &sscore,
+                      Vector<gentype>          &allFres,
+                      Vector<gentype>          &allmres,
+                      Vector<gentype>          &allsres,
+                      Vector<double>           &s_score,
+                      Vector<int>              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
                       void *fnarg,
                       svmvolatile int &killSwitch)
 {
-    int res = nelderOpt(dim,xres,fres,ires,allxres,allfres,allcres,supres,
+    int res = nelderOpt(dim,Xres,fres,cres,Fres,mres,sres,ires,mInd,allxres,allfres,allcres,allFres,allsres,
                          xmin,xmax,fn,fnarg,*this,killSwitch);
 
     allmres = allfres;
 
-    sscore.resize(allfres.size());
-    sscore = 1.0;
+    s_score.resize(allfres.size());
+    s_score = 1.0;
+
+    is_feas.resize(allfres.size());
+    is_feas = 1;
 
     return res;
 }
+
+

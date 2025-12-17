@@ -129,6 +129,8 @@ public:
     //                  when in models, where n = ennornaive
     //             NB: MUST BE ZERO IF USING MULTI-FIDELITY STUFF!
     //
+    // PIscale: if 0 then nothing, if 1 then scale acquisition function by PI
+    //
     // Generated noise: makenoise = 0: no noise
     //                              1: add noise to samples
     //
@@ -143,16 +145,14 @@ public:
     // cgtsave: 0 = don't save constraint files
     //          1 = save constraint files
     // cgtbaseline: constraint baseline (function) to plot, null() if not used
-    //
-    // PIscale: if 0 then nothing, if 1 then scale acquisition function by PI
 
     std::string modelname;
-    int modeloutformat;
-    int plotfreq;
-    int modelsave;
-    gentype modelbaseline;
-    int cgtsave;
-    gentype cgtbaseline;
+    int         modeloutformat;
+    int         plotfreq;
+    int         modelsave;
+    gentype     modelbaseline;
+    int         cgtsave;
+    gentype     cgtbaseline;
 
     int sigmuseparate;
     int moodim;
@@ -160,19 +160,19 @@ public:
     int modeltype;
     int oracleMode;
 
-    int TSmode;
-    int TSNsamp;
-    int TSsampType;
-    int TSxsampType;
+    int    TSmode;
+    int    TSNsamp;
+    int    TSsampType;
+    int    TSxsampType;
     double sigma_cut;
 
-    int tranmeth;
+    int    tranmeth;
     double alpha0;
     double beta0;
 
     ML_Base *kernapprox;
-    int kxfnum;
-    int kxfnorm;
+    int      kxfnum;
+    int      kxfnorm;
 
     int tunemu;
     int tunesigma;
@@ -213,42 +213,55 @@ public:
 
     // Oracles
 
-    virtual void consultTheOracle(ML_Mutable &randDir, int dim, const SparseVector<gentype> &locxres, int isFirstAxis);
+    virtual void consultTheOracle(ML_Mutable &randDir, int dim, const SparseVector<gentype> &locxres, int isFirstAxis) override;
 
     // Optimisation functions etc fall back to GlobalOptions
 
     virtual int optim(int dim,
-                      Vector<gentype> &rawxres,
-                      gentype &fres,
-                      int &ires,
-                      Vector<Vector<gentype> > &allrawxres,
-                      Vector<gentype> &allfres,
+                      Vector<gentype> &Xres,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
+                      Vector<Vector<gentype> > &allXres,
+                      Vector<gentype>          &allfres,
                       Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &supres,
-                      Vector<double> &sscore,
+                      Vector<gentype>          &allFres,
+                      Vector<gentype>          &allmres,
+                      Vector<gentype>          &allsres,
+                      Vector<double>           &s_score,
+                      Vector<int>              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
                       void *fnarg,
-                      svmvolatile int &killSwitch)
+                      svmvolatile int &killSwitch) override
     {
-        return GlobalOptions::optim(dim,rawxres,fres,ires,allrawxres,allfres,allcres,allmres,supres,sscore,xmin,xmax,fn,fnarg,killSwitch);
+        return GlobalOptions::optim(dim,Xres,fres,cres,Fres,mres,sres,ires,mInd,allXres,allfres,allcres,allFres,allmres,allsres,s_score,is_feas,xmin,xmax,fn,fnarg,killSwitch);
     }
 
     virtual int optim(int dim,
                       Vector<gentype> &xres,
                       Vector<gentype> &Xres,
-                      gentype &fres,
-                      int &ires,
-                      int &mInd,
-                      Vector<Vector<gentype> > &allxres,
-                      Vector<Vector<gentype> > &allXres,
-                      Vector<gentype> &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &allsres,
-                      Vector<double>  &s_score,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
+                      Vector<Vector<Vector<gentype> > > &allxres,
+                      Vector<Vector<Vector<gentype> > > &allXres,
+                      Vector<Vector<gentype> >          &allfres,
+                      Vector<Vector<Vector<gentype> > > &allcres,
+                      Vector<Vector<gentype> >          &allFres,
+                      Vector<Vector<gentype> >          &allmres,
+                      Vector<Vector<gentype> >          &allsres,
+                      Vector<Vector<double> >           &s_score,
+                      Vector<Vector<int> >              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -258,37 +271,45 @@ public:
                       svmvolatile int &killSwitch,
                       size_t numReps,
                       gentype &meanfres, gentype &varfres,
+                      gentype &meanFres, gentype &varFres,
                       gentype &meanires, gentype &varires,
                       gentype &meantres, gentype &vartres,
                       gentype &meanTres, gentype &varTres,
                       Vector<gentype> &meanallfres, Vector<gentype> &varallfres,
-                      Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
+                      Vector<gentype> &meanallFres, Vector<gentype> &varallFres,
+                      Vector<gentype> &meanallmres, Vector<gentype> &varallmres) override
     {
-        int res = GlobalOptions::optim(dim,xres,Xres,fres,ires,mInd,allxres,allXres,allfres,allcres,allmres,allsres,s_score,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallmres,varallmres);
+        int res = GlobalOptions::optim(dim,xres,Xres,fres,cres,Fres,mres,sres,ires,mInd,allxres,allXres,allfres,allcres,allFres,allmres,allsres,s_score,is_feas,xmin,xmax,distMode,varsType,fn,fnarg,killSwitch,numReps,meanfres,varfres,meanFres,varFres,meanires,varires,meantres,vartres,meanTres,varTres,meanallfres,varallfres,meanallFres,varallFres,meanallmres,varallmres);
 
         return res;
     }
 
     virtual int realOptim(int dim,
                       Vector<gentype> &xres,
-                      Vector<gentype> &rawxres,
-                      gentype &fres,
-                      int &ires,
-                      int &mres,
+                      Vector<gentype> &Xres,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
                       Vector<Vector<gentype> > &allxres,
-                      Vector<Vector<gentype> > &allrawxres,
-                      Vector<gentype> &allfres,
+                      Vector<Vector<gentype> > &allXres,
+                      Vector<gentype>          &allfres,
                       Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &supres,
-                      Vector<double> &sscore,
+                      Vector<gentype>          &allFres,
+                      Vector<gentype>          &allmres,
+                      Vector<gentype>          &allsres,
+                      Vector<double>           &s_score,
+                      Vector<int>              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
                       const Vector<int> &varsType,
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
                       void *fnarg,
-                      svmvolatile int &killSwitch);
+                      svmvolatile int &killSwitch) override;
 
     // Local or global models?
     //
@@ -337,9 +358,7 @@ public:
     {
         res.resize(augxapprox.size());
 
-        int i;
-
-        for ( i = 0 ; i < augxapprox.size() ; ++i )
+        for ( int i = 0 ; i < augxapprox.size() ; ++i )
         {
             res("&",i) = makenoise ? getaugxapprox(i).sigma() : 0.0;
         }
@@ -528,10 +547,10 @@ public:
     //
     // firsttrain: set 1 by optim, then 0 again by train
 
-    Vector<int> indpremu;
+    Vector<int>    indpremu;
     Vector<double> presigweightmu;
 
-    int Nbasemu;
+    int     Nbasemu;
     gentype resdiff;
 
     double alpha;
@@ -583,15 +602,16 @@ public:
 
     int locdim;
 
-    mutable SparseVector<gentype> xxz;   // just use a global here rather than constant calls to constructors and destructors
-    mutable SparseVector<gentype> xx1;   // just use a global here rather than constant calls to constructors and destructors
-    mutable SparseVector<gentype> xx;    // just use a global here rather than constant calls to constructors and destructors
-    mutable SparseVector<gentype> xxadd; // just use a global here rather than constant calls to constructors and destructors
-    mutable SparseVector<gentype> xxvar; // just use a global here rather than constant calls to constructors and destructors
+    mutable SparseVector<gentype> xxz;      // just use a global here rather than constant calls to constructors and destructors
+    mutable SparseVector<gentype> xx1;      // just use a global here rather than constant calls to constructors and destructors
+    mutable SparseVector<gentype> xx;       // just use a global here rather than constant calls to constructors and destructors
+    mutable SparseVector<gentype> xxadd;    // just use a global here rather than constant calls to constructors and destructors
+    mutable SparseVector<gentype> xxvar;    // just use a global here rather than constant calls to constructors and destructors
     mutable SparseVector<gentype> xxaddvar; // just use a global here rather than constant calls to constructors and destructors
 
     // Logging subsiduary (pdf production)
 
+    int lognum;
     void model_sublog(const ML_Base &plotmodel, gentype &baselinefn, int incbaselinefn, double xmin, double xmax, double ymin, double ymax, int j, const std::string &nameof, int xind, int yind, const std::string &stagestr, double sf, double dsf);
 };
 

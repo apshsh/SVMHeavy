@@ -5467,24 +5467,30 @@ int runsvmint(SVMThreadContext *svmContext,
                 Vector<Vector<Vector<gentype> > > vecallrawxres;
                 Vector<Vector<gentype> >          vecallfres;
                 Vector<Vector<Vector<gentype> > > vecallcres;
+                Vector<Vector<gentype> >          vecallFres;
                 Vector<Vector<gentype> >          vecallmres;
                 Vector<Vector<int> >              vecallires;
                 Vector<Vector<gentype> >          vecallsres;
                 Vector<Vector<double> >           vecallhres;
                 Vector<Vector<double> >           vecsscore;
+                Vector<Vector<int> >              vecis_feas;
 
                 Vector<gentype>          vecmeanfres;
+                Vector<gentype>          vecmeanFres;
                 Vector<gentype>          vecmeanires;
                 Vector<gentype>          vecmeantres;
                 Vector<gentype>          vecmeanTres;
                 Vector<Vector<gentype> > vecmeanallfres;
+                Vector<Vector<gentype> > vecmeanallFres;
                 Vector<Vector<gentype> > vecmeanallmres;
 
                 Vector<gentype>          vecvarfres;
+                Vector<gentype>          vecvarFres;
                 Vector<gentype>          vecvarires;
                 Vector<gentype>          vecvartres;
                 Vector<gentype>          vecvarTres;
                 Vector<Vector<gentype> > vecvarallfres;
+                Vector<Vector<gentype> > vecvarallFres;
                 Vector<Vector<gentype> > vecvarallmres;
 
                 Vector<std::string> vecnames;
@@ -6147,11 +6153,13 @@ int runsvmint(SVMThreadContext *svmContext,
 
                                 Vector<gentype> xres(defxres);
                                 Vector<gentype> rawxres(defxres);
-                                gentype fres;
+                                gentype         fres;
                                 Vector<gentype> cres;
-                                int ires = 0;
-                                int mInd = 0;
-                                gentype sres;
+                                gentype         Fres;
+                                gentype         mres;
+                                gentype         sres;
+                                int             ires = 0;
+                                int             mInd = 0;
                                 double hres = 0.0;
                                 int rawitcnt = 0;
                                 double optstarttime = TIMEABSSEC(TIMECALL);
@@ -6164,24 +6172,30 @@ int runsvmint(SVMThreadContext *svmContext,
                                 vecallrawxres.add(numtests);
                                 vecallfres.add(numtests);
                                 vecallcres.add(numtests);
+                                vecallFres.add(numtests);
                                 vecallmres.add(numtests);
                                 vecallires.add(numtests);
                                 vecallsres.add(numtests);
                                 vecallhres.add(numtests);
                                 vecsscore.add(numtests);
+                                vecis_feas.add(numtests);
 
                                 vecmeanfres.add(numtests);
+                                vecmeanFres.add(numtests);
                                 vecmeanires.add(numtests);
                                 vecmeantres.add(numtests);
                                 vecmeanTres.add(numtests);
                                 vecmeanallfres.add(numtests);
+                                vecmeanallFres.add(numtests);
                                 vecmeanallmres.add(numtests);
 
                                 vecvarfres.add(numtests);
+                                vecvarFres.add(numtests);
                                 vecvarires.add(numtests);
                                 vecvartres.add(numtests);
                                 vecvarTres.add(numtests);
                                 vecvarallfres.add(numtests);
+                                vecvarallFres.add(numtests);
                                 vecvarallmres.add(numtests);
 
                                 vecnames.add(numtests);
@@ -6190,24 +6204,30 @@ int runsvmint(SVMThreadContext *svmContext,
                                 Vector<Vector<gentype> > &allrawxres = vecallrawxres("&",numtests);
                                 Vector<gentype>          &allfres    = vecallfres("&",numtests);
                                 Vector<Vector<gentype> > &allcres    = vecallcres("&",numtests);
+                                Vector<gentype>          &allFres    = vecallFres("&",numtests);
                                 Vector<gentype>          &allmres    = vecallmres("&",numtests);
                                 Vector<int>              &allires    = vecallires("&",numtests);
                                 Vector<gentype>          &allsres    = vecallsres("&",numtests);
                                 Vector<double>           &allhres    = vecallhres("&",numtests);
                                 Vector<double>           &sscore     = vecsscore("&",numtests);
+                                Vector<int>              &is_feas    = vecis_feas("&",numtests);
 
                                 gentype         &meanfres    = vecmeanfres("&",numtests);
+                                gentype         &meanFres    = vecmeanFres("&",numtests);
                                 gentype         &meanires    = vecmeanires("&",numtests);
                                 gentype         &meantres    = vecmeantres("&",numtests);
                                 gentype         &meanTres    = vecmeanTres("&",numtests);
                                 Vector<gentype> &meanallfres = vecmeanallfres("&",numtests);
+                                Vector<gentype> &meanallFres = vecmeanallFres("&",numtests);
                                 Vector<gentype> &meanallmres = vecmeanallmres("&",numtests);
 
                                 gentype         &varfres    = vecvarfres("&",numtests);
+                                gentype         &varFres    = vecvarFres("&",numtests);
                                 gentype         &varires    = vecvarires("&",numtests);
                                 gentype         &vartres    = vecvartres("&",numtests);
                                 gentype         &varTres    = vecvarTres("&",numtests);
                                 Vector<gentype> &varallfres = vecvarallfres("&",numtests);
+                                Vector<gentype> &varallFres = vecvarallFres("&",numtests);
                                 Vector<gentype> &varallmres = vecvarallmres("&",numtests);
 
                                 vecnames("&",numtests) = optname;
@@ -6251,15 +6271,21 @@ int runsvmint(SVMThreadContext *svmContext,
                                                           xres,
                                                           rawxres,
                                                           fres,
+                                                          cres,
+                                                          Fres,
+                                                          mres,
+                                                          sres,
                                                           ires,
                                                           mInd,
                                                           allxres,
                                                           allrawxres,
                                                           allfres,
                                                           allcres,
+                                                          allFres,
                                                           allmres,
                                                           allsres,
                                                           sscore,
+                                                          is_feas,
                                                           startval,
                                                           endval,
                                                           argtype,
@@ -6269,10 +6295,12 @@ int runsvmint(SVMThreadContext *svmContext,
                                                           dummy,
                                                           numOptReps,
                                                           meanfres,varfres,
+                                                          meanFres,varFres,
                                                           meanires,varires,
                                                           meantres,vartres,
                                                           meanTres,varTres,
                                                           meanallfres,varallfres,
+                                                          meanallFres,varallFres,
                                                           meanallmres,varallmres);
 
 
@@ -6344,7 +6372,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                                 Vector<int> optvarind(allrawxres.size() ? 1 : 0);
 
-                                xopts.analyse(allrawxres,allmres,allcres,allhres,optvarind,1);
+                                xopts.analyse(allmres,is_feas,allhres,optvarind,1);
 
                                 if ( allfres.size() && ( allfres(0).size() > 1 ) )
                                 {
@@ -6361,8 +6389,10 @@ int runsvmint(SVMThreadContext *svmContext,
                                     xres = allrawxres(optvarind(0));
                                     fres = allfres(optvarind(0));
                                     cres = allcres(optvarind(0));
-                                    ires = allires(optvarind(0));
+                                    Fres = allFres(optvarind(0));
+                                    mres = allmres(optvarind(0));
                                     sres = allsres(optvarind(0));
+                                    ires = allires(optvarind(0));
                                     hres = allhres(optvarind(0));
                                 }
 
@@ -6376,8 +6406,10 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                     xres = allrawxres(optvarind(0)); // Important to do this: xres is non-converted, allxres is
                                     // fres = allfres(optvarind(0));
                                     // cres = allcres(optvarind(0));
+                                    // Fres = allFres(optvarind(0));
+                                    // mres = allmres(optvarind(0));
+                                    // sres = allsres(optvarind(0));
                                     // ires = allires(optvarind(0));
-                                    sres = allsres(optvarind(0));
                                     hres = allhres(optvarind(0));
                                 }
 
@@ -6540,7 +6572,6 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                         writeLog(varallmres,varmgridfilenamefull,getsetExtVar);
 
                                         writeLog(allfres,allrawxres,xygridfilenamefull);
-                                        writeLog(allfres,allsres,allrawxres,xytgridfilenamefull);
 
                                         errstream() << "Writing paretofile... " << optvarind;
 

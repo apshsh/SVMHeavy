@@ -370,9 +370,9 @@ TARGSRC = svmheavyv7.cc
 #PYTHONI = -I/usr/include/python3.8/ -I/usr/local/lib/python3.8/dist-packages/numpy/core/include/
 #PYTHONL = -Xlinker -export-dynamic
 PYFLAGS = -shared -fPIC
-PYTHONI = -I/usr/include/python3.8 -I/home/ashilton/.local/lib/python3.8/site-packages/pybind11/include
+PYTHONI = -I/usr/include/python3.10 -I./pybind11/include
 #PYTHONI = $(python3 -m pybind11 --includes)
-PYTARGNAME = pyheavy.cpython-38-x86_64-linux-gnu.so
+PYTARGNAME = pyheavy.cpython-310-x86_64-linux-gnu.so
 #PYTARGNAME = pyheavy$(python3-config --extension-suffix)
 PYTARGSRC = pyheavy.cc
 PYTHONL =
@@ -1119,7 +1119,7 @@ balc.o           : balc.cc balc.hpp $(BALCDEP)
 hillclimb.o      : hillclimb.cc hillclimb.hpp $(HILLCLIMBDEP) errortest.hpp $(ERRORTESTDEP)
 	$(CC) $< -o $@ -c $(CFLAGS)
 
-globalopt.o : globalopt.cc globalopt.hpp $(GLOBALOPTDEP) hyper_base.hpp
+globalopt.o : globalopt.cc globalopt.hpp $(GLOBALOPTDEP) hyper_base.hpp plotml.hpp
 	$(CC) $< -o $@ -c $(CFLAGS)
 gridopt.o   : gridopt.cc gridopt.hpp $(GRIDOPTDEP)
 	$(CC) $< -o $@ -c $(CFLAGS)

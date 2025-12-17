@@ -411,12 +411,12 @@ errstream() << "phantomx 8\n";
 
 
 
-int doplot(double xmin, double xmax, double omin, double omax, const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar, int doline)
+int doplot(double xmin, double xmax, double omin, double omax, const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar, int doline, int numdat)
 {
     std::string dnamepos = dname+"_pos";
     std::string dnameneg = dname+"_neg";
     std::string dnameequ = dname+"_equ";
-    std::string linetype = ( doline ? "smooth cspline" : "" );
+    std::string linetype = ( doline == 1 ) ? "smooth cspline" : ( ( doline == 2 ) ? "with lines" : "" );
 
     // Construct the gnuplot script to do the actual plotting
 
@@ -500,11 +500,17 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
 
     if ( outformat <= 2 )
     {
+        if ( numdat )
+        {
+            dnameplotfile << "set encoding utf8\n";
+            dnameplotfile << "symbol(z) = \"•✷+△♠□♣♥♦\"[int(z):int(z)]\n";
+        }
+
         dnameplotfile << "plot \\\n";
 
         if ( incvar )
         {
-            dnameplotfile << "'" << dname << "' using 1:($2-$3):($2+$3) with filledcurve lt 2 t \"\", '' using 1:2 " << linetype << " lt -1 " << lwcomm << " t \"\"";
+            dnameplotfile << "'" << dname << "' using 1:($2-$3):($2+$3) with filledcurve lt 2 t \"\", \\\n'" << dname << "' using 1:2 " << linetype << " lt -1 " << lwcomm << " t \"\"";
         }
 
         else
@@ -516,14 +522,21 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
 
         if ( ( 2 & incdata ) )
         {
-            dnameplotfile << ", '' using 1:4 " << linetype << " lt -1 dt \".\" " << lwcomm << " t \"\"";
+            dnameplotfile << ", \\\n'' using 1:4 " << linetype << " lt -1 dt \".\" " << lwcomm << " t \"\"";
         }
 
-        if ( ( 1 & incdata ) )
+        if ( ( 1 & incdata ) && !numdat )
         {
-            dnameplotfile << ", '" << dnamepos << "' w points lt -1 lw 1 pt 1 ps 0.5 t\"\"";
-            dnameplotfile << ", '" << dnameneg << "' w points lt -1 lw 1 pt 4 ps 0.5 t\"\"";
-            dnameplotfile << ", '" << dnameequ << "' w points lt -1 lw 1 pt 2 ps 0.5 t\"\"";
+            dnameplotfile << ", \\\n'" << dnamepos << "' w points lt -1 lw 1 pt 1 ps 0.5 t\"\"";
+            dnameplotfile << ", \\\n'" << dnameneg << "' w points lt -1 lw 1 pt 4 ps 0.5 t\"\"";
+            dnameplotfile << ", \\\n'" << dnameequ << "' w points lt -1 lw 1 pt 2 ps 0.5 t\"\"";
+        }
+
+        else if ( ( 1 & incdata ) && numdat )
+        {
+            dnameplotfile << ", \\\n'" << dnamepos << "' using 1:2:(symbol($3)) lt -1 lw 1 ps 0.5 t\"\"";
+            dnameplotfile << ", \\\n'" << dnameneg << "' using 1:2:(symbol($3)) lt -1 lw 1 ps 0.5 t\"\"";
+            dnameplotfile << ", \\\n'" << dnameequ << "' using 1:2:(symbol($3)) lt -1 lw 1 ps 0.5 t\"\"";
         }
 
         dnameplotfile << "\n";

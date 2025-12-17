@@ -95,9 +95,9 @@ int plotml(const ML_Base &ml, int xindoes, int yindex,
 // Do a simple line-plot with optional variance, baseline and datapoints
 
 int plot2d(const Vector<double> &x, const Vector<double> &y, const Vector<double> &yvar, const Vector<double> &ybaseline,
-           const Vector<double> &xpos, const Vector<double> &ypos,
-           const Vector<double> &xneg, const Vector<double> &yneg,
-           const Vector<double> &xequ, const Vector<double> &yequ,
+           const Vector<Vector<double> > &xpos, const Vector<Vector<double> > &ypos,
+           const Vector<Vector<double> > &xneg, const Vector<Vector<double> > &yneg,
+           const Vector<Vector<double> > &xequ, const Vector<Vector<double> > &yequ,
            double xmin, double xmax, double omin, double omax,
            const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar);
 

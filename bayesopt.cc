@@ -42,14 +42,21 @@
 
 int bayesOpt(int dim,
              Vector<gentype> &xres,
-             gentype &fres,
-             int &ires,
+             gentype         &fres,
+             Vector<gentype> &cres,
+             gentype         &Fres,
+             gentype         &mres,
+             gentype         &sres,
+             int             &ires,
+             int             &mInd,
              Vector<Vector<gentype> > &allxres,
-             Vector<gentype> &allfres,
+             Vector<gentype>          &allfres,
              Vector<Vector<gentype> > &allcres,
-             Vector<gentype> &allmres,
-             Vector<gentype> &supres,
-             Vector<double> &sscore,
+             Vector<gentype>          &allFres,
+             Vector<gentype>          &allmres,
+             Vector<gentype>          &allsres,
+             Vector<double>           &s_score,
+             Vector<int>              &is_feas,
              const Vector<gentype> &xmin,
              const Vector<gentype> &xmax,
              void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -66,7 +73,7 @@ int bayesOpt(int dim,
 //     I decided to change this to min.
 //   o Rather than re-write various negations have been introduced.
 // - Returning beta:
-//   o We need to return beta in supres.
+//   o We need to return beta in allsres.
 //   o To do this we need (a) a variant of the direct call (a function
 //     passed to the direct optimiser for evaluation) that just returns beta,
 //     and (b) a means of passing this up to the next level.
@@ -83,22 +90,29 @@ int bayesOpt(int dim,
 
 
 int BayesOptions::optim(int dim,
-                      Vector<gentype> &xres,
-                      gentype &fres,
-                      int &ires,
+                      Vector<gentype> &Xres,
+                      gentype         &fres,
+                      Vector<gentype> &cres,
+                      gentype         &Fres,
+                      gentype         &mres,
+                      gentype         &sres,
+                      int             &ires,
+                      int             &mInd,
                       Vector<Vector<gentype> > &allxres,
-                      Vector<gentype> &allfres,
+                      Vector<gentype>          &allfres,
                       Vector<Vector<gentype> > &allcres,
-                      Vector<gentype> &allmres,
-                      Vector<gentype> &supres,
-                      Vector<double> &sscore,
+                      Vector<gentype>          &allFres,
+                      Vector<gentype>          &allmres,
+                      Vector<gentype>          &allsres,
+                      Vector<double>           &s_score,
+                      Vector<int>              &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
                       void *fnarg,
                       svmvolatile int &killSwitch)
 {
-    return bayesOpt(dim,xres,fres,ires,allxres,allfres,allcres,allmres,supres,sscore,
+    return bayesOpt(dim,Xres,fres,cres,Fres,mres,sres,ires,mInd,allxres,allfres,allcres,allFres,allmres,allsres,s_score,is_feas,
                         xmin,xmax,fn,fnarg,*this,killSwitch);
 }
 
@@ -110,16 +124,16 @@ int BayesOptions::optim(int dim,
 
 
 
-static void calcsscore(Vector<double> &sscore, const BayesOptions &bopts, const Vector<int> &xdatind, int stabp, double stabpnrm, int stabrot, double stabmu, double stabB);
-static void calcsscore(Vector<double> &sscore, const BayesOptions &bopts, const Vector<int> &xdatind, int stabp, double stabpnrm, int stabrot, double stabmu, double stabB)
+void calcsscore(Vector<double> &s_score, const BayesOptions &bopts, const Vector<int> &xdatind, int stabp, double stabpnrm, int stabrot, double stabmu, double stabB);
+void calcsscore(Vector<double> &s_score, const BayesOptions &bopts, const Vector<int> &xdatind, int stabp, double stabpnrm, int stabrot, double stabmu, double stabB)
 {
-    NiceAssert( sscore.size() == xdatind.size() );
+    NiceAssert( s_score.size() == xdatind.size() );
 
     int j;
 
-    for ( j = 0 ; j < sscore.size() ; ++j )
+    for ( j = 0 ; j < s_score.size() ; ++j )
     {
-        bopts.model_stabProbTrainingVector(sscore("&",j),xdatind(j),stabp,stabpnrm,stabrot,stabmu,stabB);
+        bopts.model_stabProbTrainingVector(s_score("&",j),xdatind(j),stabp,stabpnrm,stabrot,stabmu,stabB);
     }
 
     return;
@@ -194,7 +208,7 @@ class fninnerinnerArg
                     const int &_stabrot,
                     const double &_stabmu,
                     const double &_stabB,
-                    Vector<double> &_sscore,
+                    Vector<double> &_s_score,
                     int &_firstevalinseq,
                     const double &_stabZeroPt,
                     const int &_unscentUse,
@@ -263,7 +277,7 @@ class fninnerinnerArg
                                                 stabrot(_stabrot),
                                                 stabmu(_stabmu),
                                                 stabB(_stabB),
-                                                sscore(_sscore),
+                                                s_score(_s_score),
                                                 firstevalinseq(_firstevalinseq),
                                                 stabZeroPt(_stabZeroPt),
                                                 unscentUse(_unscentUse),
@@ -341,7 +355,7 @@ class fninnerinnerArg
                                                   stabrot(src.stabrot),
                                                   stabmu(src.stabmu),
                                                   stabB(src.stabB),
-                                                  sscore(src.sscore),
+                                                  s_score(src.s_score),
                                                   firstevalinseq(src.firstevalinseq),
                                                   stabZeroPt(src.stabZeroPt),
                                                   unscentUse(src.unscentUse),
@@ -425,7 +439,7 @@ class fninnerinnerArg
     const int &stabrot;
     const double &stabmu;
     const double &stabB;
-    Vector<double> &sscore;
+    Vector<double> &s_score;
     int &firstevalinseq;
     const double &stabZeroPt;
     const int &unscentUse;
@@ -736,13 +750,14 @@ class fninnerinnerArg
     sigmay     = predsigmay;           // assume the current measurement is appropriately noisy by default. See FIXME caveat above
 
     double overscale = 1;
+    bool answisy = false;
 
     if ( thisbatchsize == 1 )
     {
         // don't calculate sigmay unless we need to
 
         bool needvar = ( ( ( acq != 0 ) && ( acq != 12 ) && ( acq != 16 ) ) || bbopts.isimphere() || PIscale ); // need the variance for calculating acquisition fn
-        bool answisy = ( ( gridi >= 0 ) && ( isfullgrid || ( bbopts.model_d(Nbasemu+gridi) == 2 ) ) );          // the point x,y is in the training set
+             answisy = ( ( gridi >= 0 ) && ( isfullgrid || ( bbopts.model_d(Nbasemu+gridi) == 2 ) ) );          // the point x,y is in the training set
 
 //errstream() << "phantomxyz testpoint 4 needvar = " << needvar << "\n";
 //errstream() << "phantomxyz testpoint 4 answisy = " << answisy << "\n";
@@ -918,9 +933,9 @@ predictive noise is predsigmay, not sigma()
 //double tempvalue = ( ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )*NUMBASE_SQRT1ON2);
 //errstream() << "tempvalue = " << tempvalue << "\n";
 //errstream() << "normPhi(tempvalue) = " << normPhi(tempvalue) << "\n";
-        if      ( (double) sigmay > ztol      ) { double tempvalue = ( ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )*NUMBASE_SQRT1ON2); resscale = normPhi(tempvalue); }
-        else if ( (double) muy < yymaxcorrect ) { resscale = 0; }
-        else                                    { resscale = 1; }
+        if      ( !answisy && ( (double) sigmay > ztol ) ) { double tempvalue = ( ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )*NUMBASE_SQRT1ON2); resscale = normPhi(tempvalue); }
+        else if ( (double) muy < yymaxcorrect            ) { resscale = 0; }
+        else                                               { resscale = 1; }
 //errstream() << "(" << resscale << ")\n";
     }
 
@@ -1060,26 +1075,26 @@ predictive noise is predsigmay, not sigma()
 
             // ...then the stability score on x(j)...
 
-            sscore.resize(ysort.size()+1); // This will eventually become the products
-            sscore("&",ysort.size()) = 0.0;
+            s_score.resize(ysort.size()+1); // This will eventually become the products
+            s_score("&",ysort.size()) = 0.0;
 
             retVector<double> tmpva;
-            calcsscore(sscore("&",0,1,ysort.size()-1,tmpva),bbopts,ysort,stabp,stabpnrm,stabrot,stabmu,stabB);
+            calcsscore(s_score("&",0,1,ysort.size()-1,tmpva),bbopts,ysort,stabp,stabpnrm,stabrot,stabmu,stabB);
 
             // ...and finally convert stability scores to combined stability scores.
 
-            sscore *= -1.0;
-            sscore += 1.0;
+            s_score *= -1.0;
+            s_score += 1.0;
 
-            for ( int j = sscore.size()-1 ; j >= 1 ; --j ) { sscore("&",0,1,j-1,tmpva) *= sscore(j); }
+            for ( int j = s_score.size()-1 ; j >= 1 ; --j ) { s_score("&",0,1,j-1,tmpva) *= s_score(j); }
 
             if ( stabUseSig )
             {
-                for ( int j = 0 ; j < sscore.size() ; ++j )
+                for ( int j = 0 ; j < s_score.size() ; ++j )
                 {
-                    //sscore("&",j) = ( sscore(j) >= stabThresh ) ? 1.0 : DISCOUNTRATE;
-                    sscore("&",j) = 1/(1+exp(-1000*(sscore(j)-stabThresh)));
-                    //sscore("&",j) = 1/(1+exp(-(sscore(j)-stabThresh)/(sscore(j)*(1-sscore(j)))));
+                    //s_score("&",j) = ( s_score(j) >= stabThresh ) ? 1.0 : DISCOUNTRATE;
+                    s_score("&",j) = 1/(1+exp(-1000*(s_score(j)-stabThresh)));
+                    //s_score("&",j) = 1/(1+exp(-(s_score(j)-stabThresh)/(s_score(j)*(1-s_score(j)))));
                 }
             }
         }
@@ -1175,15 +1190,15 @@ predictive noise is predsigmay, not sigma()
                         parta = partadec - ( ( k == ysort.size() ) ? 0.0 : parta );
                         partb = partbdec - ( ( k == ysort.size() ) ? 0.0 : partb );
 
-                        scalea = sscore(k);
-                        scaleb = sscore(k)*(dmuy-ykdec)/dsigy;
+                        scalea = s_score(k);
+                        scaleb = s_score(k)*(dmuy-ykdec)/dsigy;
 
                         for ( int i = 0 ; i < k-1 ; ++i )
                         {
                             double yidec = ( i == 0 ) ? stabZeroPt : ((double) (bbopts.model_y(ysort(i-1))));
                             double yi    = ( i == ysort.size() ) ? 1e12 : ((double) (bbopts.model_y(ysort(i)))); // i == ysort.size() never attained.
 
-                            scaleb += sscore(i)*(yi-yidec)/dsigy;
+                            scaleb += s_score(i)*(yi-yidec)/dsigy;
                         }
 
                         res += (parta*scalea)+(partb*scaleb);
@@ -1194,7 +1209,7 @@ predictive noise is predsigmay, not sigma()
 
                 else
                 {
-                    if ( (double) sigmay > ztol )
+                    if ( !answisy && ( (double) sigmay > ztol ) )
                     {
                         double z = ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay );
 
@@ -1223,9 +1238,9 @@ predictive noise is predsigmay, not sigma()
 
                 NiceAssert( !isstable );
 
-                if      ( (double) sigmay > ztol      ) { res = normPhi((((double) muy)-yymaxcorrect)/((double) sigmay)); }
-                else if ( (double) muy > yymaxcorrect ) { res = 1;                                                        }
-                else                                    { res = 0;                                                        }
+                if      ( !answisy && ( (double) sigmay > ztol ) ) { res = normPhi((((double) muy)-yymaxcorrect)/((double) sigmay)); }
+                else if ( (double) muy > yymaxcorrect            ) { res = 1;                                                        }
+                else                                               { res = 0;                                                        }
 
                 break;
             }
@@ -1689,8 +1704,8 @@ errstream() << "phantomxabc: tempfres " << tempfres << "\n";
 // quadrant, so we need to negative sigma.
 // ===========================================================================
 
-static void multiObjectiveCombine(gentype &res, Vector<gentype> &x, void *arg);
-static void multiObjectiveCombine(gentype &res, Vector<gentype> &x, void *arg)
+void multiObjectiveCombine(gentype &res, Vector<gentype> &x, void *arg);
+void multiObjectiveCombine(gentype &res, Vector<gentype> &x, void *arg)
 {
     BayesOptions &bopts = *((BayesOptions *) ((void **) arg)[0]);
 
@@ -1711,8 +1726,8 @@ static void multiObjectiveCombine(gentype &res, Vector<gentype> &x, void *arg)
 
 
 
-static gentype &negateoutery(gentype &res);
-static gentype &negateoutery(gentype &res)
+gentype &negateoutery(gentype &res);
+gentype &negateoutery(gentype &res)
 {
     // Defaults
 
@@ -1745,7 +1760,7 @@ static gentype &negateoutery(gentype &res)
 // use of NULL: if a variable is NULL or absent then the corresponding vector is not set
 // replacexx: this is set if xxreplace is set
 
-static void readres(gentype &res,
+void readres(gentype &res,
                     double &addvar,
                     Vector<gentype> &ycgt,
                     SparseVector<gentype> &xxreplace,
@@ -1759,7 +1774,7 @@ static void readres(gentype &res,
                     double &nuscale);
 
 
-static void readres(gentype &res,
+void readres(gentype &res,
                     double &addvar,
                     Vector<gentype> &ycgt,
                     SparseVector<gentype> &xxreplace,
@@ -2380,19 +2395,26 @@ void NonsparseToSparsenonnear(SparseVector<double> &dest, const Vector<double> &
 // ===========================================================================
 // ===========================================================================
 
-#define CONT_TEST ( !stopnow && !stopearly && !killSwitch && !isopt && ( ( itcnt-skipcnt < maxitcnt ) || !maxitcnt ) && !timeout && ( !isgridopt || ( gridind.size() > recBatchSize ) ) && ( !usefidbudget || maxitcnt || ( fidtotcost < bopts.fidbudget ) ) )
+#define CONT_TEST ( !stopnow    && \
+                    !stopearly  && \
+                    !killSwitch && \
+                    !isopt      && \
+                    !timeout    && \
+                    ( !maxitcnt               || ( itcnt-skipcnt  < maxitcnt         ) ) && \
+                    ( !isgridopt || iscontopt || ( gridind.size() > recBatchSize     ) ) && \
+                    ( !usefidbudget           || ( fidtotcost     < bopts.fidbudget  ) )    )
 
 
 int bayesOpt(int dim,
              Vector<double> &xres,
-             gentype &fres,
+             gentype        &fres,
              const Vector<double> &qmin,
              const Vector<double> &qmax,
-             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd, double fidcost, double &nuscale),
+             void (*fn)(int n, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd, double fidcost, double &nuscale, double fidtotcost),
              void *fnarg,
              BayesOptions &bopts,
              svmvolatile int &killSwitch,
-             Vector<double> &sscore)
+             Vector<double> &s_score)
 {
 //    BayesOptions bopts(bbopts);
 
@@ -3200,7 +3222,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                 fidcost = -1;
                 xobstype = 2;
                 fnapproxout.force_int() = -1;
-                (*fn)(dim,fnapproxout,&xb(k)(0),fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridresis,muapproxsize,ycgtis,false,fidcost,nuscaledummy);
+                (*fn)(dim,fnapproxout,&xb(k)(0),fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridresis,muapproxsize,ycgtis,false,fidcost,nuscaledummy,fidtotcost);
                 negateoutery(fnapproxout);
 
                 bool fullobs    = false;
@@ -3582,9 +3604,9 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
         int NC = bopts.model_N_mu()-bopts.model_NNCz_mu(0);
 
         //ysort.prealloc( NC+(( bopts.totiters == -1 ) ? 10*dim*( bopts.ismoo() ? bopts.moodim : 1 ) : bopts.totiters)+10);
-        //sscore.prealloc(NC+(( bopts.totiters == -1 ) ? 10*dim*( bopts.ismoo() ? bopts.moodim : 1 ) : bopts.totiters)+10);
+        //s_score.prealloc(NC+(( bopts.totiters == -1 ) ? 10*dim*( bopts.ismoo() ? bopts.moodim : 1 ) : bopts.totiters)+10);
         ysort.prealloc( NC+(( bopts.totiters == -1 ) ? DEFITERS(dim) : bopts.totiters)+10);
-        sscore.prealloc(NC+(( bopts.totiters == -1 ) ? DEFITERS(dim) : bopts.totiters)+10);
+        s_score.prealloc(NC+(( bopts.totiters == -1 ) ? DEFITERS(dim) : bopts.totiters)+10);
 
         while ( NC )
         {
@@ -3780,7 +3802,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                                stabrot,
                                stabmu,
                                stabB,
-                               sscore,
+                               s_score,
                                firstevalinseq,
                                stabZeroPt,
                                (bopts.unscentUse),
@@ -3806,8 +3828,9 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
     int timeout     = 0;
     int isopt       = 0;
     double xmtrtime = bopts.maxtraintime;
-    //double maxitcnt = ( bopts.totiters == -2 ) ? 0 : ( ( bopts.totiters == -1 ) ? 10*effdim*( bopts.ismoo() ? bopts.moodim : 1 ) : bopts.totiters ); // note use of effdim, not dim ( bopts.totiters == -2 ) ? 0 : ( ( bopts.totiters == -1 ) ? 10*dim : bopts.totiters );
-    double maxitcnt = ( ( bopts.totiters == -2 ) ||  usefidbudget ) ? 0 : ( ( bopts.totiters == -1 ) ? DEFITERS(effdim) : bopts.totiters ); // note use of effdim, not dim ( bopts.totiters == -2 ) ? 0 : ( ( bopts.totiters == -1 ) ? 10*dim : bopts.totiters );
+    ////double maxitcnt = ( bopts.totiters == -2 ) ? 0 : ( ( bopts.totiters == -1 ) ? 10*effdim*( bopts.ismoo() ? bopts.moodim : 1 ) : bopts.totiters ); // note use of effdim, not dim ( bopts.totiters == -2 ) ? 0 : ( ( bopts.totiters == -1 ) ? 10*dim : bopts.totiters );
+    //double maxitcnt = ( ( bopts.totiters == -2 ) ||  usefidbudget ) ? 0 : ( ( bopts.totiters == -1 ) ? DEFITERS(effdim) : bopts.totiters ); // note use of effdim, not dim ( bopts.totiters == -2 ) ? 0 : ( ( bopts.totiters == -1 ) ? 10*dim : bopts.totiters );
+    double maxitcnt = ( ( bopts.totiters == -2 ) ||  usefidbudget ) ? ( ( bopts.totiters > 0 ) ? bopts.totiters : 0 ) : ( ( bopts.totiters == -1 ) ? DEFITERS(effdim) : bopts.totiters ); // note use of effdim, not dim ( bopts.totiters == -2 ) ? 0 : ( ( bopts.totiters == -1 ) ? 10*dim : bopts.totiters );
     int dofreqstop  = ( ( bopts.totiters == -2 ) && !usefidbudget ) ? 1 : 0;
 
     double *uservars[]     = { &maxitcnt, &xmtrtime, &ztol, &delta, &zeta, &nu, nullptr };
@@ -3902,7 +3925,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
         fidcost = -1;
         xobstype = 2;
         dummyyres.force_int() = 0;
-        (*fn)(-1,dummyyres,nullptr,fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,nullgentype(),muapproxsize,dummyyres_cgt,false,fidcost,nuscale);
+        (*fn)(-1,dummyyres,nullptr,fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,nullgentype(),muapproxsize,dummyyres_cgt,false,fidcost,nuscale,fidtotcost);
 
         // ===================================================================
         // ===================================================================
@@ -4292,7 +4315,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
 
                 if ( ( dimfid && ( fidmode != 0 ) ) && ( locacq != 18 ) )
                 {
-                    if ( fidmode != 0 )
+                    if ( fidmode == 21 )
                     {
                         int numfids = bopts.numfids;
 
@@ -4455,6 +4478,113 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                         }
                     }
 
+                    else if ( ( fidmode >= 1 ) && ( fidmode <= 19 ) )
+                    {
+                        // Loop through all fidelities, work out which one gives the best information gain per unit budget
+
+                        Vector<double> xalowfid(xa);
+                        Vector<double> xautopia(xa);
+
+                        for ( int jij = 0 ; jij < dimfid ; jij++ )
+                        {
+                            xautopia("&",n-dimfid+jij) = 1;
+                        }
+
+                        SparseVector<gentype> tmpxautopia;
+                        NonsparseToSparsenear(tmpxautopia,xautopia,dim,dimfid);
+
+                        double fidcst_max = fidpencost(fidpencostsize-1);
+                        double target_max = 0;
+                        gentype predsigmay,sigmay,muy;
+
+                        Vector<gentype> predsigmay_cgt(bopts.numcgt);
+                        Vector<gentype> sigmay_cgt(bopts.numcgt);
+                        Vector<gentype> muy_cgt(bopts.numcgt);
+
+                        for ( int kk = 0 ; kk < fidpencostsize ; kk++ )
+                        {
+                            for ( int jij = 0 ; jij < dimfid ; jij++ )
+                            {
+                                xalowfid("&",n-dimfid+jij) = fidpenvecs(kk)(jij);
+                            }
+
+                            SparseVector<gentype> tmpxalowfid;
+                            NonsparseToSparsenear(tmpxalowfid,xalowfid,dim,dimfid);
+
+//errstream() << "fidelity " << kk << ": sigmay = " << sigmay << "\n";
+//errstream() << "fidelity " << kk << ": predsigmay = " << predsigmay << "\n";
+//errstream() << "fidelity " << kk << ": sigma = " << bopts.model_sigma() << "\n";
+                            double fidcst = fidpencost(kk);
+
+                            double cost_rat  = fidcst_max/fidcst;
+                            double cost_diff = fidcst_max-fidcst;
+
+                            double fidtrm = std::log2(1+(fidcst_max/fidcst));
+
+                            // sigmay = prior variance at xautopia
+                            // predsigmay = posterior variance at xautopia if we make a measurement at xalowfid
+
+                            bopts.model_predmuvar(predsigmay,sigmay,muy,tmpxautopia,tmpxalowfid);
+
+                            double sigma_rat  = ((double) sigmay)/((double) predsigmay);
+                            double sigma_diff = ((double) sigmay)-((double) predsigmay);
+
+                            double fidmig = std::log2(1+((((double) sigmay)+bopts.model_sigma(0))/(((double) predsigmay)+bopts.model_sigma(0))));
+
+                            if ( bopts.numcgt )
+                            {
+                                bopts.model_predmuvar_cgt(predsigmay_cgt,sigmay_cgt,muy_cgt,tmpxautopia,tmpxalowfid);
+
+                                for ( int icgt = 0 ; icgt < bopts.numcgt ; ++icgt )
+                                {
+                                    sigma_diff += ((double) sigmay_cgt(icgt))-((double) predsigmay_cgt(icgt));
+
+                                    fidmig += std::log2(1+((((double) sigmay_cgt(icgt))+bopts.model_sigma_cgt(icgt))/(((double) predsigmay_cgt(icgt))+bopts.model_sigma_cgt(icgt))));
+                                }
+
+                                sigma_rat = std::pow(2.0,fidmig)-1; // working back from the definitions
+                            }
+
+                            double target = 0;
+
+                            if      ( fidmode == 1  ) { target = cost_rat  * sigma_rat;  }
+                            else if ( fidmode == 2  ) { target = cost_diff * sigma_rat;  }
+                            else if ( fidmode == 3  ) { target = fidtrm    * sigma_rat;  }
+                            else if ( fidmode == 4  ) { target = cost_rat  * sigma_diff; } // ***
+                            else if ( fidmode == 5  ) { target = cost_diff * sigma_diff; }
+                            else if ( fidmode == 6  ) { target = fidtrm    * sigma_diff; }
+                            else if ( fidmode == 7  ) { target = cost_rat  * fidmig;     }
+                            else if ( fidmode == 8  ) { target = cost_diff * fidmig;     } // ***
+                            else if ( fidmode == 9  ) { target = fidtrm    * fidmig;     } // ***
+                            else if ( fidmode == 11 ) { target = cost_rat  + sigma_rat;  }
+                            else if ( fidmode == 12 ) { target = cost_diff + sigma_rat;  }
+                            else if ( fidmode == 13 ) { target = fidtrm    + sigma_rat;  }
+                            else if ( fidmode == 14 ) { target = cost_rat  + sigma_diff; }
+                            else if ( fidmode == 15 ) { target = cost_diff + sigma_diff; }
+                            else if ( fidmode == 16 ) { target = fidtrm    + sigma_diff; }
+                            else if ( fidmode == 17 ) { target = cost_rat  + fidmig;     }
+                            else if ( fidmode == 18 ) { target = cost_diff + fidmig;     }
+                            else if ( fidmode == 19 ) { target = fidtrm    + fidmig;     }
+
+errstream() << "migpercost " << kk << ": target = (" << fidcst_max << "," << fidcst << " : " << sigmay << "," << predsigmay << ")";
+
+                            // - fidmig will be >= 1 as measurements will never increase the variance, so sigmay >= predsigmay
+                            // - fidmig will be 1 if the lower-fidelity measurement doesn't change the variance of the utopia point.
+                            // - fidmig will be maximised as predsigmay -> 0 (that is, the posterior predicted variance at the utopia point goes to zero)
+                            // - fidmig is relative to the current variance, which may be a problem
+                            // - the term fidcst_max/fidcst = 1 if this is the max cost (utopia) measure, >1 otherwise
+                            // - it measures the savings for using the lower-fidelity surrogate
+
+                            if ( !kk || ( target > target_max ) )
+                            {
+                                target_max = target;
+                                xa = xalowfid;
+errstream() << "**";
+                            }
+errstream() << "\n";
+                        }
+                    }
+
                     if ( printrec && ( recBatchSize > 1 ) )
                     {
                         std::stringstream xpromptbuff;
@@ -4564,15 +4694,22 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
 
                 Vector<gentype> dummyxres;
                 gentype dummyfres;
+                Vector<gentype> dummycres;
+                gentype dummyFres;
+                gentype dummymres;
+                gentype dummysres;
                 int dummyires;
+                int dummymInd;
                 Vector<double> dummyhypervol;
 
                 Vector<Vector<gentype> > locallxres;
                 Vector<gentype> locallfres;
                 Vector<Vector<gentype> > locallcres;
+                Vector<gentype> locallFres;
                 Vector<gentype> locallmres;
-                Vector<gentype> locsupres;
-                Vector<double> locsscore;
+                Vector<gentype> locallsres;
+                Vector<double> locs_score;
+                Vector<int> locis_feas;
                 Vector<int> locparind;
 
                 // ===========================================================
@@ -4586,13 +4723,20 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                 bayesOpt(dim,
                          dummyxres,
                          dummyfres,
+                         dummycres,
+                         dummyFres,
+                         dummymres,
+                         dummysres,
                          dummyires,
+                         dummymInd,
                          locallxres,
                          locallfres,
                          locallcres,
+                         locallFres,
                          locallmres,
-                         locsupres,
-                         locsscore,
+                         locallsres,
+                         locs_score,
+                         locis_feas,
                          xminalt,
                          xmaxalt,
                          &multiObjectiveCombine,
@@ -4605,7 +4749,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                 // Pareto set will be indexed by locparind
                 // ===========================================================
 
-                newRecs = bopts.analyse(locallxres,locallmres,locallcres,dummyhypervol,locparind,1);
+                newRecs = bopts.analyse(locallmres,locis_feas,dummyhypervol,locparind,1);
 
                 NiceAssert( newRecs );
 
@@ -4873,7 +5017,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                 fidcost = -1;
                 xobstype = 2;
                 fnapproxout.force_int() = static_cast<int>(itcnt+1);
-                (*fn)(dim,fnapproxout,&(xb(k)(0)),fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridresis,muapproxsize,ycgtis,false,fidcost,nuscale);
+                (*fn)(dim,fnapproxout,&(xb(k)(0)),fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridresis,muapproxsize,ycgtis,false,fidcost,nuscale,fidtotcost);
                 negateoutery(fnapproxout);
             }
 
@@ -4975,7 +5119,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                             zindex("&",jij) = (int) std::round(((double) (xxb(k).n(jij,1)))*numfids);
                         }
 
-                        if ( fidmode != 0 )
+                        if ( fidmode == 21 )
                         {
                             // Heuristic from Kandasamy supplementary C.1
 
@@ -5389,21 +5533,21 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
     // Final calculation of stability scores
     // =======================================================================
 
-    sscore.resize(muapproxsize);
+    s_score.resize(muapproxsize);
 
     if ( isstable )
     {
-        sscore = 0.0;
+        s_score = 0.0;
 
 //NB: we *absolutely do not* want to use ysort ordering here!
         retVector<int> tmpvaaa;
 
-        calcsscore(sscore,bopts,cntintvec(sscore.size(),tmpvaaa),stabp,stabpnrm,stabrot,stabmu,stabB);
+        calcsscore(s_score,bopts,cntintvec(s_score.size(),tmpvaaa),stabp,stabpnrm,stabrot,stabmu,stabB);
     }
 
     else
     {
-        sscore = 1.0;
+        s_score = 1.0;
     }
 
     // =======================================================================
@@ -5466,10 +5610,16 @@ class fninnerArg
                Vector<Vector<gentype> > &_allxres,
                Vector<gentype> &_allfres,
                Vector<Vector<gentype> > &_allcres,
+               Vector<gentype> &_allFres,
                Vector<gentype> &_allmres,
+               Vector<int> &_is_feas,
                gentype &_fres,
+               Vector<gentype> &_cres,
+               gentype &_Fres,
+               gentype &_mres,
+               gentype &_sres,
                Vector<gentype> &_xres,
-               Vector<gentype> &_supres,
+               Vector<gentype> &_allsres,
                volatile int &_killSwitch,
                double &_hardmin,
                double &_hardmax,
@@ -5483,10 +5633,16 @@ class fninnerArg
                                    allxres(_allxres),
                                    allfres(_allfres),
                                    allcres(_allcres),
+                                   allFres(_allFres),
                                    allmres(_allmres),
+                                   is_feas(_is_feas),
                                    fres(_fres),
+                                   cres(_cres),
+                                   Fres(_Fres),
+                                   mres(_mres),
+                                   sres(_sres),
                                    xres(_xres),
-                                   supres(_supres),
+                                   allsres(_allsres),
                                    killSwitch(_killSwitch),
                                    hardmin(_hardmin),
                                    hardmax(_hardmax),
@@ -5500,8 +5656,10 @@ class fninnerArg
         allxres.prealloc(nres);
         allfres.prealloc(nres);
         allcres.prealloc(nres);
+        allFres.prealloc(nres);
         allmres.prealloc(nres);
-        supres.prealloc(nres);
+        is_feas.prealloc(nres);
+        allsres.prealloc(nres);
 
         xa.resize(dim);
 
@@ -5514,10 +5672,16 @@ class fninnerArg
                                    allxres(src.allxres),
                                    allfres(src.allfres),
                                    allcres(src.allcres),
+                                   allFres(src.allFres),
                                    allmres(src.allmres),
+                                   is_feas(src.is_feas),
                                    fres(src.fres),
+                                   cres(src.cres),
+                                   Fres(src.Fres),
+                                   mres(src.mres),
+                                   sres(src.sres),
                                    xres(src.xres),
-                                   supres(src.supres),
+                                   allsres(src.allsres),
                                    killSwitch(src.killSwitch),
                                    hardmin(src.hardmin),
                                    hardmax(src.hardmax),
@@ -5549,10 +5713,16 @@ class fninnerArg
     Vector<Vector<gentype> > &allxres;
     Vector<gentype> &allfres;
     Vector<Vector<gentype> > &allcres;
+    Vector<gentype> &allFres;
     Vector<gentype> &allmres;
+    Vector<int> &is_feas;
     gentype &fres;
+    Vector<gentype> &cres;
+    gentype &Fres;
+    gentype &mres;
+    gentype &sres;
     Vector<gentype> &xres;
-    Vector<gentype> &supres;
+    Vector<gentype> &allsres;
     volatile int &killSwitch;
     double &hardmin;
     double &hardmax;
@@ -5562,7 +5732,7 @@ class fninnerArg
     Vector<double> &scnoise;
     int numcgt;
 
-    void operator()(int dim, gentype &res, const double *x, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_ycgt, bool onlyAdd, double fidcost, double &nuscale)
+    void operator()(int dim, gentype &res, const double *x, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_ycgt, bool onlyAdd, double fidcost, double &nuscale, double fidtotcost)
     {
         // ===========================================================================
         // Inner loop evaluation function.  This is used as a buffer between the
@@ -5579,13 +5749,16 @@ class fninnerArg
             gentype dummyyres;
             Dict<gentype,dictkey> & dummyaltres = dummyyres.force_dict();
             dummyaltres.zero();
-            dummyaltres("[]","x")     = xres;
-            dummyaltres("[]","y")     = fres;
-            dummyaltres("[]","i")     = ires;
-            dummyaltres("[]","allx")  = allxres;
-            dummyaltres("[]","ally")  = allfres;
-            dummyaltres("[]","allgt") = allcres;
-            dummyaltres("[]","allhv") = allmres;
+            dummyaltres("[]","x")       = xres;
+            dummyaltres("[]","f")       = -fres;
+            dummyaltres("[]","y")       = fres;
+            dummyaltres("[]","i")       = ires;
+            dummyaltres("[]","allx")    = allxres;
+            dummyaltres("[]","allf")    = -allfres;
+            dummyaltres("[]","ally")    = allfres;
+            dummyaltres("[]","allgt")   = allcres;
+            dummyaltres("[]","allcost") = allFres;
+            dummyaltres("[]","allfeas") = is_feas;
 
             (*fn)(dummyyres,dummyxarg,arginner);
 #endif
@@ -5705,16 +5878,26 @@ class fninnerArg
                     // ===========================================================
                     // ===========================================================
 
+                    int x_is_feas = 0;
+
                     if (    isfullfid
                          && ( altxobstype == 2 )
-                         && ( ( ires == -1 ) || ( altres > fres ) )
                          && ( xobstype_cgt >= 1 )
                          && ( altycgt >= 0.0_gent )
                          && ( xxb.indsize() == xxb.nindsize() ) )
                     {
-                        ires = allfres.size();
-                        fres = altres;
-                        xres = xa;
+                        x_is_feas = 1;
+
+                        if ( ( ires == -1 ) || ( altres > fres ) )
+                        {
+                            ires = allfres.size();
+                            fres = altres;
+                            cres = altycgt;
+                            Fres = fidtotcost;
+                            mres = altres;
+                            //sres = ;
+                            xres = xa;
+                        }
                     }
 
                     if ( (double) altres <= hardmin )
@@ -5734,11 +5917,15 @@ class fninnerArg
                     {
                         muapproxsize++;
 
+                        gentype fidtotcostg(fidtotcost);
+
                         allxres.append(allxres.size(),xa);
                         allfres.append(allfres.size(),altres);
                         allcres.append(allcres.size(),altycgt);
+                        allFres.append(allFres.size(),fidtotcostg);
                         allmres.append(allmres.size(),altres);
-                        supres.add(supres.size());
+                        is_feas.append(is_feas.size(),x_is_feas);
+                        allsres.append(allsres.size());
 
                         double dstandev = x[dim+6];
                         double softmax  = x[dim+7];
@@ -5746,28 +5933,28 @@ class fninnerArg
                         double ucbdist = softmax - ( altres.isCastableToReal() ? ( (double) altres ) : 0.0 );
                         double sigbnd  = ( ucbdist < dstandev ) ? ucbdist : dstandev;
 
-                        supres("&",supres.size()-1).force_vector().resize(20);
+                        allsres("&",allsres.size()-1).force_vector().resize(20);
 
-                        supres("&",supres.size()-1)("&",0)  = TIMEABSSEC(starttime);
-                        supres("&",supres.size()-1)("&",1)  = TIMEABSSEC(endtime);
-                        supres("&",supres.size()-1)("&",2)  = x[dim];    // numRecs
-                        supres("&",supres.size()-1)("&",3)  = x[dim+1];  // beta
-                        supres("&",supres.size()-1)("&",4)  = x[dim+2];  // mu
-                        supres("&",supres.size()-1)("&",5)  = x[dim+3];  // sigma
-                        supres("&",supres.size()-1)("&",6)  = x[dim+4];  // UCB
-                        supres("&",supres.size()-1)("&",7)  = x[dim+5];  // LCB
-                        supres("&",supres.size()-1)("&",8)  = dstandev;  // DVAR
-                        supres("&",supres.size()-1)("&",9)  = ucbdist;   // UCBDIST
-                        supres("&",supres.size()-1)("&",10) = sigbnd;    // SIGBND
-                        supres("&",supres.size()-1)("&",11) = x[dim+9];  // DIRect runtime
-                        supres("&",supres.size()-1)("&",12) = x[dim+10]; // mu model training time
-                        supres("&",supres.size()-1)("&",13) = x[dim+11]; // sigma model training time
-                        supres("&",supres.size()-1)("&",14) = TIMEDIFFSEC(endtime,starttime);
-                        supres("&",supres.size()-1)("&",15) = x[dim+12]; // grid index (-1 if none)
-                        supres("&",supres.size()-1)("&",16) = x[dim+13]; // known grid evaluation (0.0 if none)
-                        supres("&",supres.size()-1)("&",17) = x[dim+14]; // B
-                        supres("&",supres.size()-1)("&",18) = x[dim+15]; // max info gain
-                        supres("&",supres.size()-1)("&",19) = x[dim+16]; // fidelity cost
+                        allsres("&",allsres.size()-1)("&",0)  = TIMEABSSEC(starttime);
+                        allsres("&",allsres.size()-1)("&",1)  = TIMEABSSEC(endtime);
+                        allsres("&",allsres.size()-1)("&",2)  = x[dim];    // numRecs
+                        allsres("&",allsres.size()-1)("&",3)  = x[dim+1];  // beta
+                        allsres("&",allsres.size()-1)("&",4)  = x[dim+2];  // mu
+                        allsres("&",allsres.size()-1)("&",5)  = x[dim+3];  // sigma
+                        allsres("&",allsres.size()-1)("&",6)  = x[dim+4];  // UCB
+                        allsres("&",allsres.size()-1)("&",7)  = x[dim+5];  // LCB
+                        allsres("&",allsres.size()-1)("&",8)  = dstandev;  // DVAR
+                        allsres("&",allsres.size()-1)("&",9)  = ucbdist;   // UCBDIST
+                        allsres("&",allsres.size()-1)("&",10) = sigbnd;    // SIGBND
+                        allsres("&",allsres.size()-1)("&",11) = x[dim+9];  // DIRect runtime
+                        allsres("&",allsres.size()-1)("&",12) = x[dim+10]; // mu model training time
+                        allsres("&",allsres.size()-1)("&",13) = x[dim+11]; // sigma model training time
+                        allsres("&",allsres.size()-1)("&",14) = TIMEDIFFSEC(endtime,starttime);
+                        allsres("&",allsres.size()-1)("&",15) = x[dim+12]; // grid index (-1 if none)
+                        allsres("&",allsres.size()-1)("&",16) = x[dim+13]; // known grid evaluation (0.0 if none)
+                        allsres("&",allsres.size()-1)("&",17) = x[dim+14]; // B
+                        allsres("&",allsres.size()-1)("&",18) = x[dim+15]; // max info gain
+                        allsres("&",allsres.size()-1)("&",19) = x[dim+16]; // fidelity cost
                     }
 
                     addobs = ( altaddexp.isValNull() ? false : true );
@@ -5899,10 +6086,10 @@ class fninnerArg
 // and saves things like timing, beta etc.
 // ===========================================================================
 
-static void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd, double fidcost, double &nuscale);
-static void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd, double fidcost, double &nuscale)
+void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd, double fidcost, double &nuscale, double fidtotcost);
+void fninner(int dim, gentype &res, const double *x, void *arg, double &addvar, Vector<gentype> &xsidechan, int &xobstype, Vector<int> &xobstype_cgt, Vector<gentype> &ycgt, SparseVector<gentype> &xxreplace, int &replacexx, gentype &addexp, int &stopflags, const gentype &gridres, int &muapproxsize, const Vector<gentype> &gridres_cgt, bool onlyAdd, double fidcost, double &nuscale, double fidtotcost)
 {
-    (*((fninnerArg *) arg))(dim,res,x,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridres,muapproxsize,gridres_cgt,onlyAdd,fidcost,nuscale);
+    (*((fninnerArg *) arg))(dim,res,x,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,gridres,muapproxsize,gridres_cgt,onlyAdd,fidcost,nuscale,fidtotcost);
     return;
 }
 
@@ -5919,14 +6106,21 @@ static void fninner(int dim, gentype &res, const double *x, void *arg, double &a
 
 int bayesOpt(int dim,
               Vector<gentype> &xres,
-              gentype &fres,
-              int &ires,
+              gentype         &fres,
+              Vector<gentype> &cres,
+              gentype         &Fres,
+              gentype         &mres,
+              gentype         &sres,
+              int             &ires,
+              int             &mInd,
               Vector<Vector<gentype> > &allxres,
-              Vector<gentype> &allfres,
+              Vector<gentype>          &allfres,
               Vector<Vector<gentype> > &allcres,
-              Vector<gentype> &allmres,
-              Vector<gentype> &supres,
-              Vector<double> &sscore,
+              Vector<gentype>          &allFres,
+              Vector<gentype>          &allmres,
+              Vector<gentype>          &allsres,
+              Vector<double>           &s_score,
+              Vector<int>              &is_feas,
               const Vector<gentype> &xmin,
               const Vector<gentype> &xmax,
               void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -5938,15 +6132,19 @@ int bayesOpt(int dim,
     NiceAssert( xmin.size() == dim );
     NiceAssert( xmax.size() == dim );
 
+    (void) mInd;
+
     double hardmin = bopts.hardmin;
     double hardmax = bopts.hardmax;
 
     allxres.resize(0);
     allfres.resize(0);
     allcres.resize(0);
+    allFres.resize(0);
     allmres.resize(0);
-    supres.resize(0);
-    sscore.resize(0);
+    allsres.resize(0);
+    s_score.resize(0);
+    is_feas.resize(0);
 
     Vector<double> locxres;
 
@@ -5988,10 +6186,16 @@ int bayesOpt(int dim,
                        allxres,
                        allfres,
                        allcres,
+                       allFres,
                        allmres,
+                       is_feas,
                        fres,
+                       cres,
+                       Fres,
+                       mres,
+                       sres,
                        xres,
-                       supres,
+                       allsres,
                        killSwitch,
                        hardmin,
                        hardmax,
@@ -6001,7 +6205,7 @@ int bayesOpt(int dim,
                        scnoise,
                        bopts.numcgt);
 
-    int res = bayesOpt(dim,locxres,locfres,locxmin,locxmax,fninner,(void *) &optargs,bopts,killSwitch,sscore);
+    int res = bayesOpt(dim,locxres,locfres,locxmin,locxmax,fninner,(void *) &optargs,bopts,killSwitch,s_score);
     int isstable = bopts.stabpmax;
 
 //errstream() << "allxres = " << allxres << "\n";
@@ -6011,7 +6215,7 @@ int bayesOpt(int dim,
 //errstream() << "ires = " << ires << "\n";
 //errstream() << "fres = " << fres << "\n";
 //errstream() << "xres = " << xres << "\n";
-//errstream() << "supres = " << supres << "\n";
+//errstream() << "allsres = " << allsres << "\n";
 
     killSwitch = 0; // Need to reset this trigger so that subsequent runs don't get hit (it is tripped by hardmin/hardmax)
 
@@ -6095,7 +6299,7 @@ int bayesOpt(int dim,
 
     if ( isstable )
     {
-//FIXME: at this point need to modify allmres to include sscore
+//FIXME: at this point need to modify allmres to include s_score
         // Need to re-analyse results to find optimal result *that satisfies gradient constraints*
 
         int N = allfres.size();
@@ -6109,14 +6313,14 @@ int bayesOpt(int dim,
             {
                 if ( bopts.stabUseSig )
                 {
-//allmres("&",k) *= ( ( sscore(k) > bopts.stabThresh ) ? 1.0 : DISCOUNTRATE );
-allmres("&",k) *= 1/(1+exp(-1000*(sscore(k)-bopts.stabThresh)));
-//                    allmres("&",k) *= 1/(1+exp(-(sscore(k)-bopts.stabThresh)/(sscore(k)*(1-sscore(k)))));
+//allmres("&",k) *= ( ( s_score(k) > bopts.stabThresh ) ? 1.0 : DISCOUNTRATE );
+allmres("&",k) *= 1/(1+exp(-1000*(s_score(k)-bopts.stabThresh)));
+//                    allmres("&",k) *= 1/(1+exp(-(s_score(k)-bopts.stabThresh)/(s_score(k)*(1-s_score(k)))));
                 }
 
                 else
                 {
-                    allmres("&",k) *= sscore(k); // Allows us to do unscented and stable together
+                    allmres("&",k) *= s_score(k); // Allows us to do unscented and stable together
                 }
 
                 bool ismaxfid = true;

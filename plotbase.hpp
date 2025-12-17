@@ -41,12 +41,18 @@
 //          3 = include both baseline and samples
 // incvar:  0 = just the mean
 //          1 = mean and variance
+// doline:  0 = no line
+//          1 = with line
+// numdat:  0 = all data in dname is from a common source
+//          n = there are n data sources in dname, with an
+//              extra column indicating which is which to be
+//              use to separate dot-type
 
 int doplot(double xmin, double xmax,
            double omin, double omax,
            const std::string &fname,
            const std::string &dname,
-           int outformat, int incdata, int incvar, int doline = 1);
+           int outformat, int incdata, int incvar, int doline = 1, int numdat = 0);
 
 // Surface plot
 //
