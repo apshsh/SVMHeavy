@@ -3396,6 +3396,35 @@ const Vector<double> &ML_Base::sigmaweight(void) const
 
 
 
+int ML_Base::setlevel(gentype &resv, gentype &resmu, int ia, double beta, double h) const
+{
+    var(resv,resmu,ia);
+
+    double dresv  = (double) resv;
+    double dresmu = (double) resmu;
+
+    double dresstdev = sqrt(std::max(0.0,dresv));
+
+         if ( dresmu > (h+(beta*dresstdev)) ) { return 1;  }
+    else if ( dresmu < (h-(beta*dresstdev)) ) { return -1; }
+
+    return 0;
+}
+
+int ML_Base::setlevel(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, double beta, double h) const
+{
+    var(resv,resmu,xa);
+
+    double dresv  = (double) resv;
+    double dresmu = (double) resmu;
+
+    double dresstdev = sqrt(std::max(0.0,dresv));
+
+         if ( dresmu > (h+(beta*dresstdev)) ) { return 1;  }
+    else if ( dresmu < (h-(beta*dresstdev)) ) { return -1; }
+
+    return 0;
+}
 
 void ML_Base::stabProbTrainingVector(double &res, int i, int p, double pnrm, int rot, double mu, double B) const
 {

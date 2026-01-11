@@ -48,7 +48,7 @@ public:
 
     // Not-kosher Gp return - all matrices globbed together
 
-    virtual const Matrix<double> &Gp(void) const { return getGpGradTemp(); }
+    virtual const Matrix<double> &Gp(void) const override { return getGpGradTemp(); }
 
     // Other functions
 

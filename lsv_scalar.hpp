@@ -105,7 +105,8 @@ public:
     virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
     virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return LSV_Generic::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
 
-    virtual double eTrainingVector(int i) const override;
+    virtual double e(int i)                                                                           const override;
+    virtual double e(const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { return LSV_Generic::e(y,x,xinf); }
 
     virtual double         &dedgTrainingVector(double         &res, int i) const override;
     virtual Vector<double> &dedgTrainingVector(Vector<double> &res, int i) const override { dedgTrainingVector((res.resize(1))("&",0),i);   return res; }
@@ -118,8 +119,8 @@ public:
     virtual Vector<double> &dedKTrainingVector(Vector<double> &res, int i) const override;
     virtual Matrix<double> &dedKTrainingVector(Matrix<double> &res) const override;
 
-    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const;
-    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const { return LSV_Generic::predcov(resv_pred,resv,resmu,xa,xb,xx,sigmaweighti,xainf,xbinf,xxinf); }
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const override;
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const override { return LSV_Generic::predcov(resv_pred,resv,resmu,xa,xb,xx,sigmaweighti,xainf,xbinf,xxinf); }
 
     virtual int cov(gentype &resv, gentype &resmu, int i, int j,                                                                                                                     gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override;
     virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override { return LSV_Generic::cov(resv,resmu,xa,xb,xainf,xbinf,pxyprodx,pxyprody,pxyprodij); }

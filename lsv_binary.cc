@@ -851,7 +851,7 @@ int LSV_Binary::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***
     return tempresh;
 }
 
-double LSV_Binary::eTrainingVector(int i) const
+double LSV_Binary::e(int i) const
 {
     double res = 0;
 

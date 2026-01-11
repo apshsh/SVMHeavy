@@ -353,7 +353,8 @@ public:
     virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
     virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return SVM_Generic::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
 
-    virtual double eTrainingVector(int i) const override;
+    virtual double e(int i)                                                                           const override;
+    virtual double e(const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { return SVM_Generic::e(y,x,xinf); }
 
     virtual double         &dedgTrainingVector(double         &res, int i) const override { return ML_Base::dedgTrainingVector(res,i); }
     virtual Vector<double> &dedgTrainingVector(Vector<double> &res, int i) const override;

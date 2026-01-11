@@ -155,8 +155,9 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
             {
                 int lt = ( q+1 < 6 ) ? q+1 : q+2; // skip the blue/purple duplicate because I'm blue/purple colour blind
 
-                //dnameplotfile << "'" << dnamelist(q) << "' using 1:($2-$3):($2+$3) with filledcurve fc " << lt << " fs transparent solid 0.30 t \"" << "\", \\\n";
+//                //dnameplotfile << "'" << dnamelist(q) << "' using 1:($2-$3):($2+$3) with filledcurve fc " << lt << " fs transparent solid 0.30 t \"" << "\", \\\n";
                 dnameplotfile << "'" << dnamelist(q) << "' using 1:($2-$3):($2+$3) with filledcurve lc " << lt << " fs transparent solid 0.30 t \"" << "\", \\\n";
+//                dnameplotfile << "'" << dnamelist(q) << "' using 1:($2-$3):($2+$3) with filledcurve lt " << lt << " fs transparent solid 0.30 t \"" << "\", \\\n";
             }
         }
 

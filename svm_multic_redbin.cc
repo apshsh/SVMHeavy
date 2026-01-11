@@ -2417,7 +2417,7 @@ int SVM_MultiC_redbin::gh(gentype &resh, gentype &resg, int i, int retaltg, gent
     return tempresh;
 }
 
-double SVM_MultiC_redbin::eTrainingVector(int i) const
+double SVM_MultiC_redbin::e(int i) const
 {
     double res = 0;
 

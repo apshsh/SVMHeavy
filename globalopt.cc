@@ -21,9 +21,9 @@ GlobalOptions::GlobalOptions()
 {
         ispydirect = false;
 
-        optname = "Global Optimisation";
+        optname = "opt";
 
-        simname = "regret";
+        simname = "";
         simoutformat = 2;
         simfreq = 1;
         simFmin = 1;
@@ -452,69 +452,140 @@ int GlobalOptions::optim(int dim,
             calcmeanvar(meanallmres,varallmres,vecallmres);
         }
 
+        std::string locsimname = getsimname();
+
+        Vector<Vector<gentype> > resmeanallFres(1,meanallFres);
+        Vector<Vector<gentype> > resmeanallmres(1,meanallmres);
+        Vector<Vector<gentype> > resvarallmres(1,varallmres);
+
+        Vector<std::string> resname(1,"regret");
+
+        // Plot comparison of different grids if selected
+
+        if ( simfreq )
         {
-            // Plot comparison of different grids if selected
-
-            if ( simfreq )
-            {
-                // Find unused filename to prevent sequential overwrite
-
-                std::string plotnamepdf = simname+"_0.pdf";
-
-                int fcnt = 0;
-
-                while ( fileExists(plotnamepdf) )
-                {
-                    ++fcnt;
-                    plotnamepdf = simname+"_"+(std::to_string(fcnt))+".pdf";
-                }
-
-                std::string plotname = simname+"_"+(std::to_string(fcnt));
-
-                // Translate data
-
-                Vector<double> xdata(meanallFres.size());
-                Vector<double> ydata(meanallmres.size());
-                Vector<double> yvar(varallmres.size());
-                Vector<double> ybaseline(meanallmres.size(),0.0); // unused but must be present
-                Vector<Vector<double> > xpos(0); //allFres.size());
-                Vector<Vector<double> > ypos(0); //allFres.size());
-                Vector<Vector<double> > xneg(0); //allFres.size());
-                Vector<Vector<double> > yneg(0); //allFres.size());
-                Vector<Vector<double> > xequ(0); //allFres.size());
-                Vector<Vector<double> > yequ(0); //allmres.size());
-
-                for ( int i = meanallFres.size()-1 ; i >= 0 ; --i )
-                {
-                    if ( meanallmres(i).isValNone() ) { xdata.remove(i); ydata.remove(i); yvar.remove(i); ybaseline.remove(i);                      }
-                    else                              { xdata("&",i) = meanallFres(i); ydata("&",i) = -meanallmres(i); yvar("&",i) = varallmres(i); }
-                }
-
-                //for ( int j = 0 ; j < allFres.size() ; ++j )
-                //{
-                //    xequ("&",j).resize(allFres(j).size());
-                //    yequ("&",j).resize(allmres(j).size());
-                //
-                //    for ( int i = allFres(j).size()-1 ; i >= 0 ; --i )
-                //    {
-                //        if ( allmres(j)(i).isValNone() ) { xequ("&",j).remove(i); yequ("&",j).remove(i);                            }
-                //        else                             { xequ("^",j)("&",i) = allFres(j)(i); yequ("&",j)("&",i) = -allmres(j)(i); }
-                //    }
-                //}
-
-                // Plot
-
-                int incvar = 1;
-                int incdata = ( xequ.size() > 1 ) ? 1 : 0;
-
-                plot2d(xdata,ydata,yvar,ybaseline,xpos,ypos,xneg,yneg,xequ,yequ,simFmin,simFmax,simRmin,simRmax,plotname,plotname+"_dat",simoutformat,incdata,incvar);
-            }
+            plotregret(locsimname,resmeanallFres,resmeanallmres,resvarallmres,resname);
         }
 
         needsReset = true;
 
         return res;
     }
+
+void GlobalOptions::plotregret(const std::string &locsimname,
+                               const Vector<Vector<gentype> > &resmeanallFres,
+                               const Vector<Vector<gentype> > &resmeanallmres,
+                               const Vector<Vector<gentype> > &resvarallmres,
+                               const Vector<std::string> &resname)
+{
+    int numcurves = resmeanallFres.size();
+
+    StrucAssert( resmeanallFres.size() == numcurves );
+    StrucAssert( resmeanallmres.size() == numcurves );
+    StrucAssert( resvarallmres.size()  == numcurves );
+    StrucAssert( resname.size()        == numcurves );
+
+    // Find unused filename to prevent sequential overwrite
+
+    std::string plotnamepdf = locsimname+"_0.pdf";
+
+    int fcnt = 0;
+
+    while ( fileExists(plotnamepdf) )
+    {
+        ++fcnt;
+        plotnamepdf = locsimname+"_"+(std::to_string(fcnt))+".pdf";
+    }
+
+    std::string plotname = locsimname+"_"+(std::to_string(fcnt));
+
+    // Translate data
+
+    int incvar  = 1;
+    int incdata = 1;
+
+    Vector<Vector<double> > resxdata    (numcurves);
+    Vector<Vector<double> > resydata    (numcurves);
+    Vector<Vector<double> > resyvar     (numcurves);
+    Vector<Vector<double> > resybaseline(numcurves);
+
+    Vector<Vector<Vector<double> > > resxpos(numcurves);
+    Vector<Vector<Vector<double> > > resypos(numcurves);
+    Vector<Vector<Vector<double> > > resxneg(numcurves);
+    Vector<Vector<Vector<double> > > resyneg(numcurves);
+    Vector<Vector<Vector<double> > > resxequ(numcurves);
+    Vector<Vector<Vector<double> > > resyequ(numcurves);
+
+    for ( int ii = 0 ; ii < numcurves ; ++ii )
+    {
+        const Vector<gentype> &meanallFres = resmeanallFres(ii);
+        const Vector<gentype> &meanallmres = resmeanallmres(ii);
+        const Vector<gentype> &varallmres  = resvarallmres (ii);
+
+        Vector<double> &xdata     = resxdata    ("&",ii);
+        Vector<double> &ydata     = resydata    ("&",ii);
+        Vector<double> &yvar      = resyvar     ("&",ii);
+        Vector<double> &ybaseline = resybaseline("&",ii);
+
+        Vector<Vector<double> > &xpos = resxpos("&",ii);
+        Vector<Vector<double> > &ypos = resypos("&",ii);
+        Vector<Vector<double> > &xneg = resxneg("&",ii);
+        Vector<Vector<double> > &yneg = resyneg("&",ii);
+        Vector<Vector<double> > &xequ = resxequ("&",ii);
+        Vector<Vector<double> > &yequ = resyequ("&",ii);
+
+        xdata    .resize(meanallFres.size());
+        ydata    .resize(meanallmres.size());
+        yvar     .resize(varallmres .size());
+        ybaseline.resize(meanallmres.size());
+
+        xpos.resize(0); //allFres.size());
+        ypos.resize(0); //allFres.size());
+        xneg.resize(0); //allFres.size());
+        yneg.resize(0); //allFres.size());
+        xequ.resize(0); //allFres.size());
+        yequ.resize(0); //allmres.size());
+
+        ybaseline = 0.0;
+
+        for ( int i = meanallFres.size()-1 ; i >= 0 ; --i )
+        {
+            if ( meanallmres(i).isValNone() ) { xdata.remove(i); ydata.remove(i); yvar.remove(i); ybaseline.remove(i);                      }
+            else                              { xdata("&",i) = meanallFres(i); ydata("&",i) = -meanallmres(i); yvar("&",i) = varallmres(i); }
+        }
+
+        //for ( int j = 0 ; j < allFres.size() ; ++j )
+        //{
+        //    xequ("&",j).resize(allFres(j).size());
+        //    yequ("&",j).resize(allmres(j).size());
+        //
+        //    for ( int i = allFres(j).size()-1 ; i >= 0 ; --i )
+        //    {
+        //        if ( allmres(j)(i).isValNone() ) { xequ("&",j).remove(i); yequ("&",j).remove(i);                            }
+        //        else                             { xequ("^",j)("&",i) = allFres(j)(i); yequ("&",j)("&",i) = -allmres(j)(i); }
+        //    }
+        //}
+
+        if ( xequ.size() <= 1 ) { incdata = 0; }
+
+        // Plot
+
+        if ( numcurves == 1 )
+        {
+            plot2d(xdata,ydata,yvar,ybaseline,xpos,ypos,xneg,yneg,xequ,yequ,simFmin,simFmax,simRmin,simRmax,plotname,plotname+"_dat",simoutformat,incdata,incvar);
+        }
+    }
+
+    if ( numcurves > 1 )
+    {
+        std::string title("Regret convergence");
+
+        multiplot2d(resxdata,resydata,resyvar,resname,simFmin,simFmax,simRmin,simRmax,plotname,plotname+"_dat",simoutformat,title,incvar);
+    }
+
+    return;
+}
+
 
 int GlobalOptions::realOptim(int dim,
                       Vector<gentype> &xres,
@@ -1758,4 +1829,109 @@ int GlobalOptions::analyse(const Vector<gentype> &allmres,
     }
 
     return parind.size();
+}
+
+
+
+
+int readres(gentype &res,
+                    double &addvar,
+                    Vector<gentype> &ycgt,
+                    SparseVector<gentype> &xxreplace,
+                    int &replacexx,
+                    gentype &addexp,
+                    int &stopflags,
+                    Vector<gentype> &xsidechan,
+                    int &xobstype,
+                    Vector<int> &xobstype_cgt,
+                    double &fidcost,
+                    double &nuscale)
+{
+    int ires = 0;
+
+    // Defaults
+
+    //xobstype = 2;           // constraint type. this may be preset in gridsource
+    //xobstype_cgt.resize(0); // constraint observation types. this is always preset outside, but we leave as an option to pass in
+    xsidechan.resize(0);    // side-channel observation
+    addexp.force_null();    // additional observations
+    stopflags = 0;          // return flags
+    xxreplace.resize(0);    // x replacement
+    replacexx = 0;          // x replacement flag
+    ycgt.resize(0);         // y observation type
+    addvar = 0;             // additional variance
+    fidcost = -1;           // use internally calculate fidelity cost
+
+    // Overrides
+
+    if ( res.isValSet() )
+    {
+        bool resSet = false;
+        // Keep set return for backwards compatability
+        const Set<gentype> &z = (const Set<gentype> &) res;
+
+        if ( ( z.size() >= 3  ) && !z.all()(2) .isValNull() ) { ycgt = z.all()(2).cast_vector();      }
+        if ( ycgt.size() && !xobstype_cgt.size()            ) { xobstype_cgt.resize(ycgt.size()) = 2; }
+
+        if ( ( z.size() >= 1  ) && !z.all()(0) .isValNull() ) { resSet = true; res          =          z.all()(0);                                                          }
+        if ( ( z.size() >= 2  ) && !z.all()(1) .isValNull() ) {                addvar       = (double) z.all()(1);                   if ( addvar            ) { ires = 2; } }
+        if ( ( z.size() >= 4  ) && !z.all()(3) .isValNull() ) { replacexx = 1; xxreplace    =          z.all()(3).cast_sparsevector();                          ires = 2;   }
+        if ( ( z.size() >= 5  ) && !z.all()(4) .isValNull() ) {                addexp       =          z.all()(4);                                              ires = 2;   }
+        if ( ( z.size() >= 6  ) && !z.all()(5) .isValNull() ) {                stopflags    = (int)    z.all()(5);                                                          }
+        if ( ( z.size() >= 7  ) && !z.all()(6) .isValNull() ) {                xsidechan    =          z.all()(6).cast_vector();                                ires = 2;   }
+        if ( ( z.size() >= 8  ) && !z.all()(7) .isValNull() ) {                xobstype     = (int)    z.all()(7);                   if ( xobstype     != 2 ) { ires = 2; } }
+        if ( ( z.size() >= 9  ) && !z.all()(8) .isValNull() ) {                xobstype_cgt =          z.all()(8).cast_vector_int(); if ( xobstype_cgt != 2 ) { ires = 2; } }
+        if ( ( z.size() >= 10 ) && !z.all()(9) .isValNull() ) {                fidcost      = (double) z.all()(9);                                                          }
+        if ( ( z.size() >= 11 ) && !z.all()(10).isValNull() ) {                nuscale      = (double) z.all()(10);                                                         }
+
+        if ( !resSet ) { res.force_null(); ires = 2; }
+    }
+
+    else if ( res.isValDict() )
+    {
+        bool resSet = false;
+        // Proper way to do it
+        const Dict<gentype,dictkey> &z = (const Dict<gentype,dictkey> &) res;
+
+        if ( z.iskeypresent("c")      && !z("c").isValNull() ) { ycgt = z("c").cast_vector();          }
+        if ( ycgt.size() && !xobstype_cgt.size()             ) { xobstype_cgt.resize(ycgt.size()) = 2; }
+
+        if ( z.iskeypresent("y")       && !z("y").isValNull()       ) { resSet = true; res          =          z("y");                                                           }
+        if ( z.iskeypresent("addvar")  && !z("addvar").isValNull()  ) {                addvar       = (double) z("addvar");               if ( addvar            ) { ires = 2; } }
+        if ( z.iskeypresent("x")       && !z("x").isValNull()       ) { replacexx = 1; xxreplace    =          z("x").cast_sparsevector();                           ires = 2;   }
+        if ( z.iskeypresent("and")     && !z("and").isValNull()     ) {                addexp       =          z("and");                                             ires = 2;   }
+        if ( z.iskeypresent("sf")      && !z("sf").isValNull()      ) {                stopflags    = (int)    z("sf");                                                          }
+        if ( z.iskeypresent("xsc")     && !z("xsc").isValNull()     ) {                xsidechan    =          z("xsc").cast_vector();                               ires = 2;   }
+        if ( z.iskeypresent("d")       && !z("d").isValNull()       ) {                xobstype     = (int)    z("d");                    if ( xobstype     != 2 ) { ires = 2; } }
+        if ( z.iskeypresent("dc")      && !z("dc").isValNull()      ) {                xobstype_cgt =          z("dc").cast_vector_int(); if ( xobstype_cgt != 2 ) { ires = 2; } }
+        if ( z.iskeypresent("fidcost") && !z("fidcost").isValNull() ) {                fidcost      = (double) z("fidcost");                                                     }
+        if ( z.iskeypresent("nuscale") && !z("nuscale").isValNull() ) {                nuscale      = (double) z("nuscale");                                                     }
+
+        if ( !resSet ) { res.force_null(); ires = 2; }
+    }
+
+    // Check feasibility if relevant
+
+    if ( !ires && ycgt.size() && !( ycgt >= 0.0_gent ) ) { ires = 1; }
+    if ( res.isValNull()                               ) { ires = 1; }
+
+    return ires;
+}
+
+int readres(gentype &res, int &stopflags)
+{
+    double addvar = 0;
+    Vector<gentype> ycgt;
+    SparseVector<gentype> xxreplace;
+    int replacexx;
+    gentype addexp;
+    Vector<gentype> xsidechan;
+    int xobstype = 2;
+    Vector<int> xobstype_cgt;
+    double fidcost = 0;
+    double nuscale = 1;
+
+    int ires = readres(res,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost,nuscale);
+
+    return ires;
 }

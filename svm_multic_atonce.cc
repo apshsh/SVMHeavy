@@ -3872,7 +3872,7 @@ int SVM_MultiC_atonce::gh(gentype &resh, gentype &resg, int i, int retaltg, gent
     return tempresh;
 }
 
-double SVM_MultiC_atonce::eTrainingVector(int i) const
+double SVM_MultiC_atonce::e(int i) const
 {
     double res = 0;
 

@@ -14,8 +14,6 @@
 
 SMBOOptions::SMBOOptions() : GlobalOptions()
 {
-    optname = "SMBO Optimisation"; // in GlobalOptions
-
     priormuapprox.ssetMLTypeClean("gpr");
     priorcgtapprox.ssetMLTypeClean("gpr");
     prioraugxapprox.ssetMLTypeClean("gpr");
@@ -29,7 +27,7 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
     sigmaapprox.ssetMLTypeClean("gpr");
 
 #ifndef USE_MEX
-    modelname      = "smbomodel";
+    modelname      = ""; //"smbomodel";
     modeloutformat = 2; // pdf by default
     plotfreq       = 0; // don't plot by default
     modelsave      = 0; // don't save models by default
@@ -39,7 +37,7 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
 #endif
 
 #ifdef USE_MEX
-    modelname      = "smbomodel";
+    modelname      = ""; //"smbomodel";
     modeloutformat = 3; // matlab plot if system is matlab
     plotfreq       = 0; // don't plot by default
     modelsave      = 0; // don't save models by default
@@ -168,6 +166,19 @@ void SMBOOptions::delreps(void)
         }
 
         muapprox_sample.resize(0);
+    }
+
+    if ( cgtapprox_sample.size() )
+    {
+        for ( int i = 0 ; i < cgtapprox_sample.size() ; ++i )
+        {
+            if ( cgtapprox_sample(i) )
+            {
+                MEMDEL(cgtapprox_sample("&",i)); cgtapprox_sample("&",i) = nullptr;
+            }
+        }
+
+        cgtapprox_sample.resize(0);
     }
 
     muapprox   = nullptr; muapprox.resize(0);
@@ -335,6 +346,7 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
 void SMBOOptions::reset(void)
 {
     model_unsample();
+    modelcgt_unsample();
     delreps();
 
     indpremu.resize(0);
@@ -1302,10 +1314,10 @@ void SMBOOptions::model_sublog(const ML_Base &plotmodel, gentype &baselinefn, in
     double omin = 1;
     double omax = 0;
 
-    std::string fname(modelname);
+    std::string fname(getmodelname());
     std::string ffname = "mu";
-    std::string dname(modelname);
-    std::string mlname(modelname);
+    std::string dname(getmodelname());
+    std::string mlname(getmodelname());
 
     fname  += "_";
     ffname += "_";
@@ -1317,10 +1329,10 @@ void SMBOOptions::model_sublog(const ML_Base &plotmodel, gentype &baselinefn, in
     dname  += std::to_string(j);
     mlname += std::to_string(j);
 
-    fname  += "_smbo_";
-    ffname += "_smbo_";
-    dname  += "_smbo_";
-    mlname += "_smbo_";
+    fname  += "_";
+    ffname += "_";
+    dname  += "_";
+    mlname += "_";
 
     fname  += nameof;
     ffname += nameof;
@@ -1519,6 +1531,84 @@ int SMBOOptions::model_issample(void) const
 }
 
 
+
+
+
+void SMBOOptions::modelcgt_sample(const Vector<double> &qmin, const Vector<double> &qmax, double sampScale)
+{
+    if ( !modelcgt_issample() )
+    {
+        SparseVector<double> qqmin(qmin);
+        SparseVector<double> qqmax(qmax);
+
+        SparseVector<gentype> xmin; xmin.castassign(qqmin);
+        SparseVector<gentype> xmax; xmax.castassign(qqmax);
+
+        cgtapprox_sample.resize(cgtapprox.size());
+        cgtapprox_sample = nullptr;
+
+        int i;
+
+errstream() << "Sample objective model\n";
+        for ( i = 0 ; i < cgtapprox_sample.size() ; i++ )
+        {
+            cgtapprox_sample("&",i) = makeDupML(getcgtapprox(i));
+        }
+
+        SparseVector<gentype> xxmin;
+        SparseVector<gentype> xxmax;
+
+        xxmax = model_convertx(xxmax,xmax);
+        xxmin = model_convertx(xxmin,xmin);
+
+        xxmax.makealtcontent();
+        xxmin.makealtcontent();
+
+        for ( i = 0 ; i < cgtapprox_sample.size() ; i++ )
+        {
+            retVector<gentype> xminrettmp;
+            retVector<gentype> xmaxrettmp;
+
+            int sampSplit = 0; // We want true random samples here!
+
+            getcgtapprox_sample("&",i).setsigma(SIGMA_ADD); // effectively noiseless samples for practical purposes
+            getcgtapprox_sample("&",i).setsigma_cut(sigma_cut); // scale factor may be set
+            getcgtapprox_sample("&",i).setSampleMode(TSmode,xxmin(xminrettmp),xxmax(xmaxrettmp),TSNsamp,sampSplit,TSsampType,TSxsampType,sampScale);
+        }
+    }
+
+errstream() << "Sampling complete\n";
+    return;
+}
+
+void SMBOOptions::modelcgt_unsample(void)
+{
+    if ( modelcgt_issample() )
+    {
+        int i;
+
+        for ( i = 0 ; i < cgtapprox_sample.size() ; i++ )
+        {
+            MEMDEL(cgtapprox_sample("&",i)); cgtapprox_sample("&",i) = nullptr;
+        }
+    }
+
+    cgtapprox_sample.resize(0);
+
+    return;
+}
+
+int SMBOOptions::modelcgt_issample(void) const
+{
+    return ( cgtapprox_sample.size() && cgtapprox_sample(0) ) ? 1 : 0;
+}
+
+
+
+
+
+
+
 int SMBOOptions::initModelDistr(const Vector<int> &sampleInd, const Vector<gentype> &sampleDist)
 {
     if ( muapprox.size() )
@@ -1566,7 +1656,7 @@ int SMBOOptions::model_muTrainingVector(gentype &resmu, int imu) const
 
     else if ( muapprox.size() == 1 )
     {
-        res |= getmuapprox(0).gg(resmu,imu);
+        res |= getmuapprox_sample(0).gg(resmu,imu);
     }
 
     else
@@ -1575,7 +1665,7 @@ int SMBOOptions::model_muTrainingVector(gentype &resmu, int imu) const
 
         for ( int i = 0 ; i < muapprox.size() ; ++i )
         {
-            res |= getmuapprox(i).gg(resmuvec("&",i),imu);
+            res |= getmuapprox_sample(i).gg(resmuvec("&",i),imu);
         }
     }
 
@@ -1703,7 +1793,7 @@ int SMBOOptions::model_muTrainingVector_cgt(Vector<gentype> &resmu, int imu) con
 
     for ( int i = 0 ; i < cgtapprox.size() ; ++i )
     {
-        res |= getcgtapprox(i).gg(resmu("&",i),imu);
+        res |= getcgtapprox_sample(i).gg(resmu("&",i),imu);
     }
 
     return res;
@@ -1718,7 +1808,7 @@ int SMBOOptions::model_muvarTrainingVector_cgt(Vector<gentype> &resv, Vector<gen
 
     for ( int i = 0 ; i < cgtapprox.size() ; ++i )
     {
-        resi |= getcgtapprox(i).var(resv("&",i),resmu("&",i),imu);
+        resi |= getcgtapprox_sample(i).var(resv("&",i),resmu("&",i),imu);
     }
 
     return resi;

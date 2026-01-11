@@ -72,6 +72,8 @@ public:
     //         19 - HE (human-level exploitation beta = 0.01).
     //         20 - GP-UCB as per BO-Muse (single AI).  Typically
     //              combined with human prompt
+    //         20 - Random experiment
+    //         20 - Zero
     //          * beta_n = 2.log((n^{2+dim/2}).(pi^2)/(3.delta))
     //          # Chowdhury, On Kernelised Multi-Arm Bandits, Alg 2
     //          ~ Bogunovic, Misspecified GP Bandit Optim., Lemma 1
@@ -115,9 +117,17 @@ public:
     // minstdev: if >0 then we add a penalty to the inner loop if the posterior
     //         variance is below minstdev
     //
+    // h: h in level-set optimization
+    //
     // cgtmethod: 0 - calculate probability of c(x)>=0, scale acquisition function by this (default)
     //            1 - build c(x) into mean/variance calculation before calculating acquisition function
+    //            2 - as per 1, but also add beta.var_c(x)
+    //            3 - as per 1, but also add sgn(beta).var_c(x)
+    //            4 - Thompson sample c(x) at each iteration
+    //            5 - Thompson sample c(x) at each iteration, scaling variance
+    //            6 - like 0, but rather than P(c(x)>=0) use level set of c(x) - set scq 0 unless in level set c(x)>=0 with confidence cgtcertain
     // cgtmargin: margin for cgt pass used in acquisiton function
+    // cgtcertain: beta confidence factor for cgtmethod == 6
     //
     // ztol:   zero tolerance (used when assessing sigma > 0, sigma = 0)
     // delta:  used by GP-UCB algorithm (0.1 by default)
@@ -194,6 +204,10 @@ public:
     // fidmode:     21: BOCA
     //              0:  not BOCA
     // FIXME: add fidvar to mlinter and test it
+    //
+    // cgtVarScale: scale the posterior constraint variance by this. For example setting
+    //              this less than 1 will make the algorithm explore closer to the
+    //              constraint boundary if using probability of feasibility.
     //
     // Usage eg from Kandasamy with budget 100: ./svmheavyv7.exe -L res100
     // sigma value:            -gmd 0.5/14
@@ -307,6 +321,7 @@ public:
     // (or [ null null ... ] for multiple rounds of multi-objective multi-rec)
 
     int    acq;
+    int    acqcgt;
     int    intrinbatch;
     int    intrinbatchmethod;
     //int    evaluse;
@@ -322,6 +337,10 @@ public:
     int    humanfreq;
     int    cgtmethod;
     double cgtmargin;
+    double cgtcertain;
+    double h;
+    double hcgt;
+    double lseeps;
 
     double ztol;
     double delta;
@@ -335,6 +354,7 @@ public:
     double R;
     double B;
     gentype betafn;
+    gentype betafncgt;
 
     IMP_Generic    *impmeasu;
     ML_Base        *direcpre;
@@ -344,13 +364,19 @@ public:
     Vector<double>  direcmax;
     ML_Base        *gridsource;
 
+    // Multi-Fidelity details
+
     int     numfids;
-    int      dimfid;
+    int     dimfid;
     double  fidbudget;
     gentype fidpenalty;
     gentype fidvar;
     int     fidover;
     int     fidmode;
+
+    // Constraint enforcement scaling
+
+    double cgtVarScale;
 
     // Stable optimisation
 
@@ -386,9 +412,10 @@ public:
 
     BayesOptions(IMP_Generic *impmeasux = nullptr, ML_Base *xdirecpre = nullptr, int xdirecdim = 0, ML_Base *xdirecsubseqpre = nullptr, ML_Base *xgridsource = nullptr) : SMBOOptions()
     {
-        optname = "Bayesian Optimisation";
+        optname = "opt_BO";
 
         acq               = 1;
+        acqcgt            = 22;
         intrinbatch       = 1;
         intrinbatchmethod = 0;
         //evaluse           = 0;
@@ -403,7 +430,11 @@ public:
         minstdev          = 0;
         humanfreq         = 0;
         cgtmethod         = 0;
-        cgtmargin         = 0.1; //1;
+        cgtmargin         = 0; //0.1; //1;
+        cgtcertain        = 2;
+        h                 = 0;
+        hcgt              = 0;
+        lseeps            = 0.01;
 
         ztol   = DEFAULT_BAYES_ZTOL;
         delta  = DEFAULT_BAYES_DELTA;
@@ -415,11 +446,12 @@ public:
         r      = DEFAULT_BAYES_R; // This is basically the width of our search region in
                                   // any given dimension.  Usually you would want to
                                   // normalise to 0->1, so 1 is correct.
-        p      = DEFAULT_BAYES_P;
-        betafn = 0;
-        R      = 1;
-        //B      = 1; // small positive value or things get weird.
-        B      = -1; // use actual norm
+        p         = DEFAULT_BAYES_P;
+        betafn    = 0;
+        betafncgt = 0;
+        R         = 1;
+        //B         = 1; // small positive value or things get weird.
+        B         = -1; // use actual norm
 
         numfids    = 0;
         dimfid     = 1;
@@ -428,6 +460,8 @@ public:
         fidvar     = 0;
         fidover    = 0;
         fidmode    = 21;
+
+        cgtVarScale = 1;
 
         impmeasu       = impmeasux;
         direcpre       = xdirecpre;
@@ -469,6 +503,7 @@ public:
         SMBOOptions::operator=(src);
 
         acq               = src.acq;
+        acqcgt            = src.acqcgt;
         intrinbatch       = src.intrinbatch;
         intrinbatchmethod = src.intrinbatchmethod;
         //evaluse           = src.evaluse;
@@ -491,19 +526,25 @@ public:
         humanfreq         = src.humanfreq;
         cgtmethod         = src.cgtmethod;
         cgtmargin         = src.cgtmargin;
+        cgtcertain        = src.cgtcertain;
+        h                 = src.h;
+        hcgt              = src.hcgt;
+        lseeps            = src.lseeps;
+        cgtVarScale       = src.cgtVarScale;
 
-        ztol   = src.ztol;
-        delta  = src.delta;
-        zeta   = src.zeta;
-        nu     = src.nu;
-        modD   = src.modD;
-        a      = src.a;
-        b      = src.b;
-        r      = src.r;
-        p      = src.p;
-        betafn = src.betafn;
-        R      = src.R;
-        B      = src.B;
+        ztol      = src.ztol;
+        delta     = src.delta;
+        zeta      = src.zeta;
+        nu        = src.nu;
+        modD      = src.modD;
+        a         = src.a;
+        b         = src.b;
+        r         = src.r;
+        p         = src.p;
+        betafn    = src.betafn;
+        betafncgt = src.betafncgt;
+        R         = src.R;
+        B         = src.B;
 
         impmeasu       = src.impmeasu;
         direcpre       = src.direcpre;
@@ -579,9 +620,9 @@ public:
                     double omin = 1; //FIXME: is this correct?
                     double omax = 0; //FIXME: is this correct?
 
-                    std::string fname(modelname);
-                    std::string dname(modelname);
-                    std::string mlname(modelname);
+                    std::string fname(getmodelname());
+                    std::string dname(getmodelname());
+                    std::string mlname(getmodelname());
 
                     fname  += "_imp_plot";
                     dname  += "_imp_data";

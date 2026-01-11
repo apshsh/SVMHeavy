@@ -147,7 +147,7 @@ public:
     virtual const Vector<gentype> &alphaVal(void)  const override { return getRepConst().alphaVal();  }
     virtual       double           alphaVal(int i) const override { return getRepConst().alphaVal(i); }
 
-    virtual int RFFordata(int i) const { return getRepConst().RFFordata(i); }
+    virtual int RFFordata(int i) const override { return getRepConst().RFFordata(i); }
 
     virtual int isClassifier(void) const override { return getRepConst().isClassifier(); }
     virtual int isRegression(void) const override { return getRepConst().isRegression(); }
@@ -344,8 +344,8 @@ public:
 
     // var and covar functions
 
-    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const { (void) resv_pred; (void) resv; (void) resmu; (void) ia; (void) ib; (void) ii; (void) sigmaweighti; NiceThrow("predcov not defined for blk_conect"); return 0; }
-    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const { (void) resv_pred; (void) resv; (void) resmu; (void) xa; (void) xb; (void) xx; (void) sigmaweighti; (void) xainf; (void) xbinf; (void) xxinf; NiceThrow("predcov not defined for blk_conect"); return 0; }
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const override { (void) resv_pred; (void) resv; (void) resmu; (void) ia; (void) ib; (void) ii; (void) sigmaweighti; NiceThrow("predcov not defined for blk_conect"); return 0; }
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const override { (void) resv_pred; (void) resv; (void) resmu; (void) xa; (void) xb; (void) xx; (void) sigmaweighti; (void) xainf; (void) xbinf; (void) xxinf; NiceThrow("predcov not defined for blk_conect"); return 0; }
 
     virtual int cov(gentype &resv, gentype &resmu, int ia, int ib,                                                                                                                   gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override;
     virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override;

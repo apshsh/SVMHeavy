@@ -169,9 +169,9 @@ public:
     virtual int setsigmaweight(const Vector<int> &i, const Vector<double> &nv) override;
     virtual int setsigmaweight(                      const Vector<double> &nv) override;
 
-    virtual int setepsweight(int,                 double                ) { NiceThrow("eps not included in GP methods"); return 0; }
-    virtual int setepsweight(const Vector<int> &, const Vector<double> &) { NiceThrow("eps not included in GP methods"); return 0; }
-    virtual int setepsweight(                     const Vector<double> &) { NiceThrow("eps not included in GP methods"); return 0; }
+    virtual int setepsweight(int,                 double                ) override { NiceThrow("eps not included in GP methods"); return 0; }
+    virtual int setepsweight(const Vector<int> &, const Vector<double> &) override { NiceThrow("eps not included in GP methods"); return 0; }
+    virtual int setepsweight(                     const Vector<double> &) override { NiceThrow("eps not included in GP methods"); return 0; }
 
     virtual int scaleCweight    (double s) override;
     virtual int scaleCweightfuzz(double s) override { (void) s; NiceThrow("Weight fuzzing not available for gpr models"); return 1; }
@@ -230,8 +230,8 @@ public:
 
     // var and covar functions
 
-    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const { return ML_Base_Deref::predcov(resv_pred,resv,resmu,ia,ib,ii,sigmaweighti); }
-    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const;
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const override { return ML_Base_Deref::predcov(resv_pred,resv,resmu,ia,ib,ii,sigmaweighti); }
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const override;
 
     virtual int cov(gentype &resv, gentype &resmu, int i, int j,                                                                                                                     gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override { return ML_Base_Deref::cov(resv,resmu,i,j,pxyprodx,pxyprody,pxyprodij); }
     virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override;
@@ -251,6 +251,8 @@ public:
     virtual int noisecov(gentype &resv, gentype &resmu, int i,                           int j,                           const SparseVector<gentype> &xvar, int u = -1,                                                                 gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override { return ML_Base::noisecov(resv,resmu,i,j,xvar,u,pxyprodi,pxyprodj,pxyprodij); }
     virtual int noisecov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodxy = nullptr) const override;
 
+    virtual int setlevel(gentype &resv, gentype &resmu, int ia,                          double beta, double h) const override { return ML_Base::setlevel(resv,resmu,ia,beta,h); }
+    virtual int setlevel(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, double beta, double h) const override { return ML_Base::setlevel(resv,resmu,xa,beta,h); }
 
 
 

@@ -106,7 +106,8 @@ public:
     virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
     virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return LSV_Generic::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
 
-    virtual double eTrainingVector(int i) const override;
+    virtual double e(int i)                                                                           const override;
+    virtual double e(const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { return LSV_Generic::e(y,x,xinf); }
 
     virtual double         &dedgTrainingVector(double         &res, int i) const override { return ML_Base::dedgTrainingVector(res,i); }
     virtual Vector<double> &dedgTrainingVector(Vector<double> &res, int i) const override { return ML_Base::dedgTrainingVector(res,i); }
@@ -115,9 +116,9 @@ public:
 
     virtual double &d2edg2TrainingVector(double &res, int i) const override { return ML_Base::d2edg2TrainingVector(res,i); }
 
-    virtual double dedKTrainingVector(int i, int j) const override { d_anion tmp(order()); d_anion resg(order()); return innerProduct(resg,dedgTrainingVector(tmp,i),alphaA()(j)).realpart(); }
+    virtual double          dedKTrainingVector(int i, int j)               const override { d_anion tmp(order()); d_anion resg(order()); return innerProduct(resg,dedgTrainingVector(tmp,i),alphaA()(j)).realpart(); }
     virtual Vector<double> &dedKTrainingVector(Vector<double> &res, int i) const override;
-    virtual Matrix<double> &dedKTrainingVector(Matrix<double> &res) const override;
+    virtual Matrix<double> &dedKTrainingVector(Matrix<double> &res)        const override;
 
     // ================================================================
     //     Common functions for all LS-SVMs

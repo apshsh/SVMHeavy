@@ -4115,12 +4115,12 @@ fallback:
     return tempresh;
 }
 
-double SVM_Scalar::eTrainingVector(int i) const
+double SVM_Scalar::e(int i) const
 {
     int unusedvar = 0;
     double res = 0;
 
-    gTrainingVector(res,unusedvar,i); // This is important.  SVM_Scalar_rff overloads gTrainingVector, so calls to eTrainingVector *must* go through gTrainingVector!
+    gTrainingVector(res,unusedvar,i); // This is important.  SVM_Scalar_rff overloads gTrainingVector, so calls to e *must* go through gTrainingVector!
 
     if ( ( i < 0 ) || ( Q.alphaRestrict(i) == 0 ) )
     {
@@ -5398,42 +5398,27 @@ int SVM_Scalar::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***px
 
             if ( ia >= 0 )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { Kia("&",j) = Gp()(ia,j); }
-                }
-
-                if ( alphaState()(ia) ) { Kia("&",ia) -= diagoff(tmpva)(ia); }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j)  ) { Kia("&",j)  =  Gp()(ia,j);         } }
+                                                   if ( alphaState()(ia) ) { Kia("&",ia) -= diagoff(tmpva)(ia); }
             }
 
             else
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { K2(Kia("&",j),ia,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr); Kia("&",j) *= KSCALE2(ia,j); }
-                }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j) ) { K2(Kia("&",j),ia,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr); Kia("&",j) *= KSCALE2(ia,j); } }
             }
-
-            if ( ib == ia ) { Kib = Kia; }
 
             if ( ( ib != ia ) && ( ib >= 0 ) )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { Kib("&",j) = Gp()(j,ib); }
-                }
-
-                if ( alphaState()(ib) ) { Kib("&",ib) -= diagoff(tmpva)(ib); }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j)  ) { Kib("&",j)  =  Gp()(j,ib);         } }
+                                                   if ( alphaState()(ib) ) { Kib("&",ib) -= diagoff(tmpva)(ib); }
             }
 
             else if ( ib != ia )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    //K2(Kib("&",j),j,ib,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr); - reversed in line with assumptions in Kxfer (unknown "x" comes first)
-                    if ( alphaState()(j) ) { K2(Kib("&",j),ib,j,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr); setconj(Kib("&",j)); Kib("&",j) *= KSCALE2(ib,j); }
-                }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j) ) { K2(Kib("&",j),ib,j,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr); setconj(Kib("&",j)); Kib("&",j) *= KSCALE2(ib,j); } }
             }
+
+            if ( ib == ia ) { Kib = Kia; }
 
             // covariance calculation
 
@@ -5448,18 +5433,10 @@ int SVM_Scalar::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***px
                 //NB: this will automatically only do part corresponding to pivAlphaF
                 fact_minverse(Kres,btemp,Kib,itsone);
 
-                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
-                {
 
-                    resv -= outerProd(Kia(pivAlphaF()(jP)),Kres(pivAlphaF()(jP)));
-                }
+                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP ) { resv -= outerProd(Kia(pivAlphaF()(jP)),Kres(pivAlphaF()(jP))); }
 
-                if ( SVM_Scalar::isVarBias() )
-                {
-                    // This is the additional corrective factor
-
-                    resv -= btemp(0);
-                }
+                if ( SVM_Scalar::isVarBias() ) { resv -= btemp(0); } // This is the additional corrective factor
             }
 
             // mu calculation
@@ -5517,7 +5494,6 @@ int SVM_Scalar::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***px
             for ( int jP = 0 ; jP < NLB() ; ++jP )
             {
                 int j = Q.pivAlphaLB()(jP);
-
                 K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
                 addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
@@ -5525,7 +5501,6 @@ int SVM_Scalar::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***px
             for ( int jP = 0 ; jP < NUB() ; ++jP )
             {
                 int j = Q.pivAlphaUB()(jP);
-
                 K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
                 addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
@@ -5533,7 +5508,6 @@ int SVM_Scalar::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***px
             for ( int jP = 0 ; jP < NF() ; ++jP )
             {
                 int j = Q.pivAlphaF()(jP);
-
                 K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
                 addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
@@ -5569,45 +5543,27 @@ int SVM_Scalar::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***px
 
             if ( ia >= 0 )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { Kia("&",j) = Gp()(ia,j); }
-                }
-
-                if ( alphaState()(ia) ) { Kia("&",ia) -= diagoff(tmpva)(ia); }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j)  ) { Kia("&",j)  =  Gp()(ia,j);         } }
+                                                   if ( alphaState()(ia) ) { Kia("&",ia) -= diagoff(tmpva)(ia); }
             }
 
             else
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { Kia("&",j) = K2(ia,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr)*KSCALE2(ia,j); }
-                }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j) ) { Kia("&",j) = K2(ia,j,pxyprodi ? (const gentype **) pxyprodi[j] : nullptr)*KSCALE2(ia,j); } }
             }
-
-            if ( ib == ia ) { Kib = Kia; }
 
             if ( ( ib != ia ) && ( ib >= 0 ) )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { Kib("&",j) = Gp()(j,ib); }
-                }
-
-                if ( alphaState()(ib) ) { Kib("&",ib) -= diagoff(tmpva)(ib); }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j)  ) { Kib("&",j)  =  Gp()(j,ib);         } }
+                                                   if ( alphaState()(ib) ) { Kib("&",ib) -= diagoff(tmpva)(ib); }
             }
 
             else if ( ib != ia )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) )
-                    {
-                        //K2(Kib("&",j),j,ib,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr); - see above
-                        Kib("&",j) = K2(ib,j,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr)*KSCALE2(ib,j);
-                    }
-                }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j) ) { Kib("&",j) = K2(ib,j,pxyprodj ? (const gentype **) pxyprodj[j] : nullptr)*KSCALE2(ib,j); } }
             }
+
+            if ( ib == ia ) { Kib = Kia; }
 
             // covariance calculation
 
@@ -5620,18 +5576,10 @@ int SVM_Scalar::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***px
                 //NB: this will automatically only do part corresponding to pivAlphaF
                 fact_minverse(Kres,btemp,Kib,itsone);
 
-                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
-                {
 
-                    resvv -= Kia(pivAlphaF()(jP))*Kres(pivAlphaF()(jP));
-                }
+                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP ) { resvv -= Kia(pivAlphaF()(jP))*Kres(pivAlphaF()(jP)); }
 
-                if ( SVM_Scalar::isVarBias() )
-                {
-                    // This is the additional corrective factor
-
-                    resvv -= btemp(0);
-                }
+                if ( SVM_Scalar::isVarBias() ) { resvv -= btemp(0); } // This is the additional corrective factor
             }
 
             // mu calculation
@@ -5656,21 +5604,18 @@ int SVM_Scalar::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***px
                 for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
                 {
                     int j = pivAlphaF()(jP);
-
                     resgg += Kia(j)*alphaR()(j);
                 }
 
                 for ( int jP = 0 ; jP < pivAlphaLB().size() ; ++jP )
                 {
                     int j = pivAlphaLB()(jP);
-
                     resgg += Kia(j)*alphaR()(j);
                 }
 
                 for ( int jP = 0 ; jP < pivAlphaUB().size() ; ++jP )
                 {
                     int j = pivAlphaUB()(jP);
-
                     resgg += Kia(j)*alphaR()(j);
                 }
             }
@@ -5678,16 +5623,8 @@ int SVM_Scalar::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***px
 
         else
         {
-            if ( ( ia >= 0 ) && ( ib >= 0 ) )
-            {
-                resvv  = Gp()(ia,ib);
-                resvv -= ( ia == ib ) ? diagoff(tmpva)(ia) : 0.0;
-            }
-
-            else
-            {
-                resvv = K2(ia,ib,(const gentype **) pxyprodij)*KSCALE2(ia,ib);
-            }
+            if ( ( ia >= 0 ) && ( ib >= 0 ) ) { resvv  = Gp()(ia,ib); resvv -= ( ia == ib ) ? diagoff(tmpva)(ia) : 0.0; }
+            else                              { resvv = K2(ia,ib,(const gentype **) pxyprodij)*KSCALE2(ia,ib);          }
 
             if ( dtva & 7 ) { resgg = 0.0;     }
             else            { resgg = biasR(); }
@@ -5710,7 +5647,6 @@ int SVM_Scalar::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***px
             for ( int jP = 0 ; jP < NLB() ; ++jP )
             {
                 int j = Q.pivAlphaLB()(jP);
-
                 Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
                 addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
@@ -5718,7 +5654,6 @@ int SVM_Scalar::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***px
             for ( int jP = 0 ; jP < NUB() ; ++jP )
             {
                 int j = Q.pivAlphaUB()(jP);
-
                 Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
                 addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
@@ -5726,7 +5661,6 @@ int SVM_Scalar::cov(gentype &resv, gentype &resmu, int ia, int ib, gentype ***px
             for ( int jP = 0 ; jP < NF() ; ++jP )
             {
                 int j = Q.pivAlphaUB()(jP);
-
                 Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
                 addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
@@ -5842,62 +5776,40 @@ int SVM_Scalar::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int i
 
             if ( ia >= 0 )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { Kia("&",j) = Gp()(ia,j); }
-                }
-
-                if ( alphaState()(ia) ) { Kia("&",ia) -= diagoff(tmpva)(ia); }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j)  ) { Kia("&",j)  =  Gp()(ia,j);         } }
+                                                   if ( alphaState()(ia) ) { Kia("&",ia) -= diagoff(tmpva)(ia); }
             }
 
             else
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { K2(Kia("&",j),ia,j); Kia("&",ia) *= KSCALE2(ia,j); }
-                }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j) ) { K2(Kia("&",j),ia,j); Kia("&",ia) *= KSCALE2(ia,j); } }
             }
-
-            if ( ib == ia ) { Kib = Kia; }
 
             if ( ( ib != ia ) && ( ib >= 0 ) )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { Kib("&",j) = Gp()(j,ib); }
-                }
-
-                if ( alphaState()(ib) ) { Kib("&",ib) -= diagoff(tmpva)(ib); }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j)  ) { Kib("&",j)  =  Gp()(j,ib);         } }
+                                                   if ( alphaState()(ib) ) { Kib("&",ib) -= diagoff(tmpva)(ib); }
             }
 
             else if ( ib != ia )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { K2(Kib("&",j),ib,j); setconj(Kib("&",j)); Kib("&",j) *= KSCALE2(ib,j); }
-                }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j) ) { K2(Kib("&",j),ib,j); setconj(Kib("&",j)); Kib("&",j) *= KSCALE2(ib,j); } }
             }
-
-            if ( ii == ia ) { Kii = Kia; }
-            if ( ii == ib ) { Kii = Kib; }
 
             if ( ( ii != ia ) && ( ii != ib ) && ( ii >= 0 ) )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { Kii("&",j) = Gp()(j,ii); }
-                }
-
-                if ( alphaState()(ii) ) { Kii("&",ii) -= diagoff(tmpva)(ii); }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j)  ) { Kii("&",j)  =  Gp()(j,ii);         } }
+                                                   if ( alphaState()(ii) ) { Kii("&",ii) -= diagoff(tmpva)(ii); }
             }
 
             else if ( ( ii != ia ) && ( ii != ib ) )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { K2(Kii("&",j),ii,j); setconj(Kii("&",j)); Kii("&",j) *= KSCALE2(ii,j); }
-                }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j) ) { K2(Kii("&",j),ii,j); setconj(Kii("&",j)); Kii("&",j) *= KSCALE2(ii,j); } }
             }
+
+            if ( ib == ia ) { Kib = Kia; }
+            if ( ii == ia ) { Kii = Kia; }
+            if ( ii == ib ) { Kii = Kib; }
 
             // Usual covariance term
             //
@@ -5913,15 +5825,9 @@ int SVM_Scalar::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int i
 
                 fact_minverse(Lib,btemp,Kib,itsone);
 
-                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
-                {
-                    resv -= outerProd(Kia(pivAlphaF()(jP)),Lib(pivAlphaF()(jP)));
-                }
+                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP ) { resv -= outerProd(Kia(pivAlphaF()(jP)),Lib(pivAlphaF()(jP))); }
 
-                if ( SVM_Scalar::isVarBias() )
-                {
-                    resv -= btemp(0);
-                }
+                if ( SVM_Scalar::isVarBias() ) { resv -= btemp(0); }
             }
 
             resv_pred = resv;
@@ -6026,7 +5932,6 @@ int SVM_Scalar::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int i
             for ( int jP = 0 ; jP < NLB() ; ++jP )
             {
                 int j = Q.pivAlphaLB()(jP);
-
                 K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
                 addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
@@ -6034,7 +5939,6 @@ int SVM_Scalar::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int i
             for ( int jP = 0 ; jP < NUB() ; ++jP )
             {
                 int j = Q.pivAlphaUB()(jP);
-
                 K2(Kxj,ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
                 addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
@@ -6079,62 +5983,40 @@ int SVM_Scalar::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int i
 
             if ( ia >= 0 )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { Kia("&",j) = Gp()(ia,j); }
-                }
-
-                if ( alphaState()(ia) ) { Kia("&",ia) -= diagoff(tmpva)(ia); }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j)  ) { Kia("&",j)  =  Gp()(ia,j);         } }
+                                                   if ( alphaState()(ia) ) { Kia("&",ia) -= diagoff(tmpva)(ia); }
             }
 
             else
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { Kia("&",j) = K2(ia,j)*KSCALE2(ia,j); }
-                }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j) ) { Kia("&",j) = K2(ia,j)*KSCALE2(ia,j); } }
             }
-
-            if ( ib == ia ) { Kib = Kia; }
 
             if ( ( ib != ia ) && ( ib >= 0 ) )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { Kib("&",j) = Gp()(j,ib); }
-                }
-
-                if ( alphaState()(ib) ) { Kib("&",ib) -= diagoff(tmpva)(ib); }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j)  ) { Kib("&",j)  =  Gp()(j,ib);         } }
+                                                   if ( alphaState()(ib) ) { Kib("&",ib) -= diagoff(tmpva)(ib); }
             }
 
             else if ( ib != ia )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { Kib("&",j) = K2(ib,j)*KSCALE2(ib,j); }
-                }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j) ) { Kib("&",j) = K2(ib,j)*KSCALE2(ib,j); } }
             }
-
-            if ( ii == ia ) { Kii = Kia; }
-            if ( ii == ib ) { Kii = Kib; }
 
             if ( ( ii != ia ) && ( ii != ib ) && ( ii >= 0 ) )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { Kii("&",j) = Gp()(j,ii); }
-                }
-
-                if ( alphaState()(ii) ) { Kii("&",ii) -= diagoff(tmpva)(ii); }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j)  ) { Kii("&",j)  =  Gp()(j,ii);         } }
+                                                   if ( alphaState()(ii) ) { Kii("&",ii) -= diagoff(tmpva)(ii); }
             }
 
             else if ( ( ii != ia ) && ( ii != ib ) )
             {
-                for ( int j = 0 ; j < NN ; ++j )
-                {
-                    if ( alphaState()(j) ) { Kii("&",j) = K2(ii,j)*KSCALE2(ii,j); }
-                }
+                for ( int j = 0 ; j < NN ; ++j ) { if ( alphaState()(j) ) { Kii("&",j) = K2(ii,j)*KSCALE2(ii,j); } }
             }
+
+            if ( ib == ia ) { Kib = Kia; }
+            if ( ii == ia ) { Kii = Kia; }
+            if ( ii == ib ) { Kii = Kib; }
 
             // Usual covariance term
 
@@ -6146,15 +6028,9 @@ int SVM_Scalar::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int i
 
                 fact_minverse(Lib,btemp,Kib,itsone);
 
-                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
-                {
-                    resvv -= Kia(pivAlphaF()(jP))*Lib(pivAlphaF()(jP));
-                }
+                for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP ) { resvv -= Kia(pivAlphaF()(jP))*Lib(pivAlphaF()(jP)); }
 
-                if ( SVM_Scalar::isVarBias() )
-                {
-                    resvv -= btemp(0);
-                }
+                if ( SVM_Scalar::isVarBias() ) { resvv -= btemp(0); }
             }
 
             resvv_pred = resvv;
@@ -6214,21 +6090,18 @@ int SVM_Scalar::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int i
                 for ( int jP = 0 ; jP < pivAlphaF().size() ; ++jP )
                 {
                     int j = pivAlphaF()(jP);
-
                     resgg += Kia(j)*alphaR()(j);
                 }
 
                 for ( int jP = 0 ; jP < pivAlphaLB().size() ; ++jP )
                 {
                     int j = pivAlphaLB()(jP);
-
                     resgg += Kia(j)*alphaR()(j);
                 }
 
                 for ( int jP = 0 ; jP < pivAlphaUB().size() ; ++jP )
                 {
                     int j = pivAlphaUB()(jP);
-
                     resgg += Kia(j)*alphaR()(j);
                 }
             }
@@ -6255,7 +6128,6 @@ int SVM_Scalar::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int i
             for ( int jP = 0 ; jP < NLB() ; ++jP )
             {
                 int j = Q.pivAlphaLB()(jP);
-
                 Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
                 addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
@@ -6263,7 +6135,6 @@ int SVM_Scalar::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int i
             for ( int jP = 0 ; jP < NUB() ; ++jP )
             {
                 int j = Q.pivAlphaUB()(jP);
-
                 Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
                 addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }
@@ -6271,7 +6142,6 @@ int SVM_Scalar::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int i
             for ( int jP = 0 ; jP < NF() ; ++jP )
             {
                 int j = Q.pivAlphaUB()(jP);
-
                 Kxj = K2(ia,j,nullptr,nullptr,nullptr,nullptr,nullptr,0x80);
                 addres += (alphaR()(j))*(alphaR()(j))*Kxj*KSCALE2(ia,j);
             }

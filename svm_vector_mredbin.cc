@@ -1138,7 +1138,7 @@ int SVM_Vector_Mredbin::gh(gentype &resh, gentype &resg, int i, int retaltg, gen
     return tempresh;
 }
 
-double SVM_Vector_Mredbin::eTrainingVector(int i) const
+double SVM_Vector_Mredbin::e(int i) const
 {
     double res = 0;
 

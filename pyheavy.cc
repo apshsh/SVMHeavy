@@ -341,6 +341,8 @@ py::object mloptDIRect(    int i, int dim, int numreps, py::object objfn, py::ob
 py::object mloptNelderMead(int i, int dim, int numreps, py::object objfn, py::object callback);
 py::object mloptBayesian(  int i, int dim, int numreps, py::object objfn, py::object callback);
 
+void plotregret(std::string &simname, py::object resnames, py::object listofres);
+
 int selml(int i = 0);
 
 int selmlmuapprox   (int i = 0, int k = 0);
@@ -399,12 +401,13 @@ double mlcalcLOO   (void);
 double mlcalcRecall(void);
 double mlcalcCross (int m, int rndit = 0, int numreps = 1);
 
-py::object muml     (py::object xa);
-py::object mugml    (py::object xa, int fmt);
-py::object varml    (py::object xa);
-py::object covml    (py::object xa, py::object xb);
-py::object predvarml(py::object xa, py::object pp, py::object sigw);
-py::object predcovml(py::object xa, py::object xb, py::object pp, py::object sigw);
+py::object muml      (py::object xa);
+py::object mugml     (py::object xa, int fmt);
+py::object varml     (py::object xa);
+py::object covml     (py::object xa, py::object xb);
+py::object setlevelml(py::object xa, double beta, double h);
+py::object predvarml (py::object xa, py::object pp, py::object sigw);
+py::object predcovml (py::object xa, py::object xb, py::object pp, py::object sigw);
 
 py::object mlalpha(void);
 py::object mlbias (void);
@@ -631,6 +634,7 @@ OPTGETSETDEF(maxeval, NelderMead,int   )
 OPTGETSETDEF(method,  NelderMead,int   )
 
 OPTGETSETDEF(acq,        Bayesian,int    )
+OPTGETSETDEF(acqcgt,     Bayesian,int    )
 OPTGETSETDEF(startpoints,Bayesian,int    )
 OPTGETSETDEF(totiters,   Bayesian,int    )
 OPTGETSETDEF(startseed,  Bayesian,int    )
@@ -643,6 +647,7 @@ OPTGETSETDEF(sigmuseparate,Bayesian,int    )
 OPTGETSETDEF(numcgt,     Bayesian,int    )
 OPTGETSETDEF(cgtmethod,  Bayesian,int    )
 OPTGETSETDEF(cgtmargin,  Bayesian,double )
+OPTGETSETDEF(cgtcertain, Bayesian,double )
 OPTGETSETDEF(ztol,       Bayesian,double )
 OPTGETSETDEF(delta,      Bayesian,double )
 OPTGETSETDEF(zeta,       Bayesian,double )
@@ -655,6 +660,7 @@ OPTGETSETDEF(p,          Bayesian,double )
 OPTGETSETDEF(R,          Bayesian,double )
 OPTGETSETDEF(B,          Bayesian,double )
 OPTGETSETDEF(betafn,     Bayesian,gentype)
+OPTGETSETDEF(betafncgt,  Bayesian,gentype)
 OPTGETSETDEF(numfids,    Bayesian,int    )
 OPTGETSETDEF(fidover,    Bayesian,int    )
 OPTGETSETDEF(fidmode,    Bayesian,int    )
@@ -662,6 +668,7 @@ OPTGETSETDEF(dimfid,     Bayesian,int    )
 OPTGETSETDEF(fidbudget,  Bayesian,double )
 OPTGETSETDEF(fidpenalty, Bayesian,gentype)
 OPTGETSETDEF(fidvar,     Bayesian,gentype)
+OPTGETSETDEF(cgtVarScale,Bayesian,double )
 OPTGETSETDEF(PIscale,    Bayesian,int    )
 OPTGETSETDEF(TSmode,     Bayesian,int    )
 OPTGETSETDEF(TSNsamp,    Bayesian,int    )
@@ -673,6 +680,8 @@ OPTGETSETDEF(alpha0,     Bayesian,double )
 OPTGETSETDEF(beta0,      Bayesian,double )
 OPTGETSETDEF(kxfnum,     Bayesian,int    )
 OPTGETSETDEF(kxfnorm,    Bayesian,int    )
+OPTGETSETDEF(lseeps,     Bayesian,double )
+OPTGETSETDEF(h,          Bayesian,double )
 
 OPTGETSETDEF(intrinbatch,        Bayesian,int)
 OPTGETSETDEF(intrinbatchmethod,  Bayesian,int)
@@ -1273,44 +1282,46 @@ PYBIND11_MODULE(pyheavy, m) {
     m_ml.def("remove",&removeTrainingVectorml,"Remove num training vectors at position j (j=-1 (default) to remove from end)",
                                               py::arg("j")=-1,py::arg("num")=1);
 
-    m_ml.def("mu", &muml,         "Calculate the posterior mean (output) mu(x), where x is either a vector (list) \n"
-                                  "or an integer indexing a training vector in the ML training set. To evaluate   \n"
-                                  "multiple posterior means, let x be a tuple of vectors (lists).                 ",
-                                  py::arg("x"));
-    m_ml.def("g",  &mugml,        "Calculate the underlying (ie continuous) output g(x), where x is either a      \n"
-                                  "vector (list) or an integer indexing a training vector in the ML training set. \n"
-                                  "Set fmt=1 (fmt=0 by default) for alternate return format (eg a vector if the ML\n"
-                                  "is (nominally) a vector type at base or a vector of probabilities for a GP     \n"
-                                  "binary classifier). To evaluate multiple outpuys, let x be a tuple of vectors  \n"
-                                  "(lists).                                                                       ",
-                                  py::arg("x")=py::none(),py::arg("fmt")=0);
-    m_ml.def("var",&varml,        "Calculate the posterior variance var(x), where x is either a vector (list) or  \n"
-                                  "an integer indexing a training vector in the ML training set. To evaluated     \n"
-                                  "multiple posterior variances, let x be a tuple of vectors (lists).             ",
-                                  py::arg("x"));
-    m_ml.def("cov",&covml,        "Calculate the posterior covariance cov(x,y), where each of x and y can be      \n"
-                                  "either a vector (list) or an integer indexing a training vector in the ML      \n"
-                                  "training set. To evaluated multiple posterior covariances, let x and/or y be a \n"
-                                  "tuple of vectors (lists).                                                      ",
-                                  py::arg("xa"),py::arg("xb"));
-    m_ml.def("predvar",&predvarml,"Calculate the predictive posterior variance var(x) predicated on z being added \n"
-                                  "to the training set (ie. if we observed g(z), what would the posterior variance\n"
-                                  "var(x) be). Each of x and z can be either a vector (list) or an integer        \n"
-                                  "indexing a training vector in the ML trainig set. To evaluates multiple        \n"
-                                  "predictive variances, let x and/or z be a tuple of vectors (lists).            \n"
-                                  "                                                                               \n"
-                                  "Optional argument: sigw (default 1.0) controls the noise of the predicated     \n"
-                                  "(assumed to be taken) observation g(z) ~ N(...,sigw*sigma()).                  ",
-                                  py::arg("x"),py::arg("p"),py::arg("sigw")=1);
-    m_ml.def("predcov",&predcovml,"Calculate the predictive posterior covariance cov(x,y) predicated on z being   \n"
-                                  "added to the training set (ie. if we observed g(z), what would the posterior   \n"
-                                  "covariance cov(x,y) be). Each of x,y and z can be either a vector (list) or an \n"
-                                  "integer indexing a training vector in the ML trainig set. To evaluate multiple \n"
-                                  "predictive covariances, let x,y and/or z be tuples of vectors (lists).         \n"
-                                  "                                                                               \n"
-                                  "Optional argument: sigw (default 1.0) controls the noise of the predicated     \n"
-                                  "(assumed to be taken) observation g(z) ~ N(...,sigw*sigma()).                  ",
-                                  py::arg("xa"),py::arg("xb"),py::arg("p"),py::arg("sigw")=1);
+    m_ml.def("mu", &muml,           "Calculate the posterior mean (output) mu(x), where x is either a vector (list) \n"
+                                    "or an integer indexing a training vector in the ML training set. To evaluate   \n"
+                                    "multiple posterior means, let x be a tuple of vectors (lists).                 ",
+                                    py::arg("x"));
+    m_ml.def("g",  &mugml,          "Calculate the underlying (ie continuous) output g(x), where x is either a      \n"
+                                    "vector (list) or an integer indexing a training vector in the ML training set. \n"
+                                    "Set fmt=1 (fmt=0 by default) for alternate return format (eg a vector if the ML\n"
+                                    "is (nominally) a vector type at base or a vector of probabilities for a GP     \n"
+                                    "binary classifier). To evaluate multiple outpuys, let x be a tuple of vectors  \n"
+                                    "(lists).                                                                       ",
+                                    py::arg("x")=py::none(),py::arg("fmt")=0);
+    m_ml.def("var",&varml,          "Calculate the posterior variance var(x), where x is either a vector (list) or  \n"
+                                    "an integer indexing a training vector in the ML training set. To evaluated     \n"
+                                    "multiple posterior variances, let x be a tuple of vectors (lists).             ",
+                                    py::arg("x"));
+    m_ml.def("cov",&covml,          "Calculate the posterior covariance cov(x,y), where each of x and y can be      \n"
+                                    "either a vector (list) or an integer indexing a training vector in the ML      \n"
+                                    "training set. To evaluated multiple posterior covariances, let x and/or y be a \n"
+                                    "tuple of vectors (lists).                                                      ",
+                                    py::arg("xa"),py::arg("xb"));
+    m_ml.def("setlevel",&setlevelml,"Calculate whether g(x)>h (+1), g(x)<-h (-1), or indet with confidence beta.    ",
+                                    py::arg("x"),py::arg("beta"),py::arg("h"));
+    m_ml.def("predvar",&predvarml,  "Calculate the predictive posterior variance var(x) predicated on z being added \n"
+                                    "to the training set (ie. if we observed g(z), what would the posterior variance\n"
+                                    "var(x) be). Each of x and z can be either a vector (list) or an integer        \n"
+                                    "indexing a training vector in the ML trainig set. To evaluates multiple        \n"
+                                    "predictive variances, let x and/or z be a tuple of vectors (lists).            \n"
+                                    "                                                                               \n"
+                                    "Optional argument: sigw (default 1.0) controls the noise of the predicated     \n"
+                                    "(assumed to be taken) observation g(z) ~ N(...,sigw*sigma()).                  ",
+                                    py::arg("x"),py::arg("p"),py::arg("sigw")=1);
+    m_ml.def("predcov",&predcovml,  "Calculate the predictive posterior covariance cov(x,y) predicated on z being   \n"
+                                    "added to the training set (ie. if we observed g(z), what would the posterior   \n"
+                                    "covariance cov(x,y) be). Each of x,y and z can be either a vector (list) or an \n"
+                                    "integer indexing a training vector in the ML trainig set. To evaluate multiple \n"
+                                    "predictive covariances, let x,y and/or z be tuples of vectors (lists).         \n"
+                                    "                                                                               \n"
+                                    "Optional argument: sigw (default 1.0) controls the noise of the predicated     \n"
+                                    "(assumed to be taken) observation g(z) ~ N(...,sigw*sigma()).                  ",
+                                    py::arg("xa"),py::arg("xb"),py::arg("p"),py::arg("sigw")=1);
 
     m_ml.def("tuneKernel",&mltuneKernel,"Tune the kernel to minimise some metric, specified by method:                  \n"
                                         "                                                                               \n"
@@ -1592,17 +1603,20 @@ PYBIND11_MODULE(pyheavy, m) {
     m_opt_NelderMead.def("opt", &mloptNelderMead, "Optimise (minimise) fn : [0,1]^dim to [0,1] using Nelder-Mead optimiser i.",py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
     m_opt_Bayesian.def(  "opt", &mloptBayesian,   "Optimise (minimise) fn : [0,1]^dim to [0,1] using Bayesian optimiser i.",   py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
 
-    auto m_opt_Bayesian_model = m_opt_Bayesian.def_submodule("models","Model Options"               );
-    auto m_opt_Bayesian_tune  = m_opt_Bayesian.def_submodule("models","Model Tuning"                );
-    auto m_opt_Bayesian_gpucb = m_opt_Bayesian.def_submodule("gpucb", "GP-UCB related constants"    );
-    auto m_opt_Bayesian_ei    = m_opt_Bayesian.def_submodule("ei",    "EI related constants"        );
-    auto m_opt_Bayesian_cgt   = m_opt_Bayesian.def_submodule("cgt",   "Constraints"                 );
-    auto m_opt_Bayesian_fid   = m_opt_Bayesian.def_submodule("fid",   "Multi-fidelity"              );
-    auto m_opt_Bayesian_vis   = m_opt_Bayesian.def_submodule("vis",   "Visualization and Plotting"  );
-    auto m_opt_Bayesian_ts    = m_opt_Bayesian.def_submodule("ts",    "Thompson Sampling"           );
-    auto m_opt_Bayesian_tl    = m_opt_Bayesian.def_submodule("tl",    "Transfer learning"           );
-    auto m_opt_Bayesian_moo   = m_opt_Bayesian.def_submodule("moo",   "Multi-objective learning"    );
-    auto m_opt_Bayesian_mr    = m_opt_Bayesian.def_submodule("mr",    "Multi-recommendation methods");
+    m_opt.def("plotRegret",&plotregret,"Plot regret. simname defines filenames, key is descriptions, res is a list of returns from opt.",py::arg("simname"),py::arg("key"),py::arg("res"));
+
+    auto m_opt_Bayesian_model = m_opt_Bayesian.def_submodule("models","Model Options"                               );
+    auto m_opt_Bayesian_tune  = m_opt_Bayesian.def_submodule("tune",  "Model Tuning"                                );
+    auto m_opt_Bayesian_gpucb = m_opt_Bayesian.def_submodule("gpucb", "GP-UCB related constants"                    );
+    auto m_opt_Bayesian_lse   = m_opt_Bayesian.def_submodule("lse",   "LSE (level-set estimation) related constants");
+    auto m_opt_Bayesian_ei    = m_opt_Bayesian.def_submodule("ei",    "EI related constants"                        );
+    auto m_opt_Bayesian_cgt   = m_opt_Bayesian.def_submodule("cgt",   "Constraints"                                 );
+    auto m_opt_Bayesian_fid   = m_opt_Bayesian.def_submodule("fid",   "Multi-fidelity"                              );
+    auto m_opt_Bayesian_vis   = m_opt_Bayesian.def_submodule("vis",   "Visualization and Plotting"                  );
+    auto m_opt_Bayesian_ts    = m_opt_Bayesian.def_submodule("ts",    "Thompson Sampling"                           );
+    auto m_opt_Bayesian_tl    = m_opt_Bayesian.def_submodule("tl",    "Transfer learning"                           );
+    auto m_opt_Bayesian_moo   = m_opt_Bayesian.def_submodule("moo",   "Multi-objective learning"                    );
+    auto m_opt_Bayesian_mr    = m_opt_Bayesian.def_submodule("mr",    "Multi-recommendation methods"                );
 
     // All optimisers
 
@@ -1692,6 +1706,9 @@ PYBIND11_MODULE(pyheavy, m) {
                                        "19 - HE (human-level exploitation beta = 0.01).                                \n"
                                        "20 - GP-UCB as per BO-Muse (single AI).  Typically combined with human prompt. \n"
                                        "21 - Random experiments (generated as per start-points).                       \n"
+                                       "22 - Zero (minimize 0 placeholder).                                            \n"
+                                       "23 - Level set (LSE) with Straddle Heuristic (Bry1).                           \n"
+                                       "24 - Level set (LSE) with C2LSE (Ngo1).                                        \n"
                                        "                                                                               \n"
                                        "* beta_n = 2.log((n^{2+dim/2}).(pi^2)/(3.delta))                               \n"
                                        "$ variance of model only.                                                      \n"
@@ -1699,6 +1716,14 @@ PYBIND11_MODULE(pyheavy, m) {
                                        "# Chowdhury, On Kernelised Multi-Arm Bandits, Algorithm 2.                     \n"
                                        "~ Bogunovic, Misspecified GP Bandit Optim., Lemma 1.                           \n"
                                        "^ Intendid to be combined with human prompt.                                   ");
+    QGETSETOPTB(m_opt,acqcgt, Bayesian,"Bayesian optimisation acquisition function (constraint part):\n"
+                                       "                                                                               \n"
+                                       " 9 - PE (variance-only maximisation).                                          \n"
+                                       "10 - PEc (variance-only maximisation).                                         \n"
+                                       "11 - Multi-strategy learning or user-defined.                                  \n"
+                                       "22 - Zero (minimize 0 placeholder, default).                                   \n"
+                                       "23 - Level set (LSE) with Straddle Heuristic (Bry1).                           \n"
+                                       "24 - Level set (LSE) with C2LSE (Ngo1).                                        ");
     QGETSETOPTB(m_opt,betafn, Bayesian,"user-defined beta for acq 11. You can make this a function with the vars:\n"
                                        "                                                                               \n"
                                        "- x_0  = iteration number.                                                     \n"
@@ -1723,8 +1748,35 @@ PYBIND11_MODULE(pyheavy, m) {
                                        "You can also use [ [ f1 ] [ f2 ] ... ], where f1,f2,... define acquisition     \n"
                                        "function (see acq variable). This will generate multiple recommendations in a  \n"
                                        "single iteration, one for each of the acq f1,f2,... given.                     ");
+    QGETSETOPTB(m_opt,betafncgt,Bayesian,"user-defined beta for acqcgt 11. You can make this a function with the vars:\n"
+                                       "                                                                               \n"
+                                       "- x_0  = iteration number.                                                     \n"
+                                       "- x_1  = x dimension.                                                          \n"
+                                       "- x_2  = delta.                                                                \n"
+                                       "- x_3  = |D|.                                                                  \n"
+                                       "- x_4  = a.                                                                    \n"
+                                       "- x_5  = b.                                                                    \n"
+                                       "- x_6  = r.                                                                    \n"
+                                       "- x_7  = p.                                                                    \n"
+                                       "- x_8  = batch size (inner).                                                   \n"
+                                       "- x_9  = R.                                                                    \n"
+                                       "- x_10 = B.                                                                    \n"
+                                       "- x_11 = mig.                                                                  \n"
+                                       "- x_12 = RKHS norm.                                                            \n"
+                                       "- x_13 = kappa0.                                                               \n"
+                                       "- x_14 = lengthscale.                                                          \n"
+                                       "- x_15 = sigma.                                                                \n"
+                                       "- x_16 = ell1.                                                                 \n"
+                                       "- x_17 = pi.                                                                   \n"
+                                       "                                                                               \n"
+                                       "You can also use [ [ f1 ] [ f2 ] ... ], where f1,f2,... define acquisition     \n"
+                                       "function (see acqcgt variable). This will generate multiple recommendations in \n"
+                                       "a single iteration, one for each of the acq f1,f2,... given. Note that in this \n"
+                                       "case betafn must be a vector of the same format and size, and that acq and     \n"
+                                       "acqcgt will then be taken in pairs from betafn and betafncgt.                  ");
     QGETSETOPTB(m_opt,PIscale,Bayesian,"PI scaling: set 0 for standard operation, 1 to scale aquisition function by    \n"
-                                       "the PI (probability of improvement) acquisition function.                      ");
+                                       "the PI (probability of improvement) acquisition function. 2 is like 1 but with \n"
+                                       "a ``hard ratchett'' to avoid any experiments for no-progress (a bad idea).     ");
 
     QGETSETOPTB(m_opt,sigmuseparate,Bayesian,"posterior separation:\n"
                                              "                                                                               \n"
@@ -1738,7 +1790,7 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPTB(m_opt,totiters,   Bayesian,"number of iterations. Use 0 for unlimited, -1 (default) for 15d, -2 for\n"
                                            "frequentist mode (stop when min_x err(x) < err).");
     QGETSETOPTB(m_opt,err,        Bayesian,"when totiters=-2, the frequentist stopping condition is min_x err(x) < err.");
-    QGETSETOPTB(m_opt,minstdev,   Bayesian,"added to the posterior variance in acquisition function (default 0).");
+    QGETSETOPTB(m_opt,minstdev,   Bayesian,"if nz and posterior variance less than this, mark infeasible for inner loop (default 0).");
     QGETSETOPTB(m_opt,ztol,       Bayesian,"zero tolerance factor.");
 
     QGETSETOPTB(m_opt,startseed,Bayesian,"seed for RNG immediately prior to generating random seeds. -1 for no seed,\n"
@@ -1747,18 +1799,22 @@ PYBIND11_MODULE(pyheavy, m) {
                                          "-2 to seed with time. If >=0 then this is incremented on each use (default 42)");
 
 
-    QGETSETOPT(m_opt,delta,Bayesian,gpucb,"delta factor used in GP-UCB (default 0.1).");
-    QGETSETOPT(m_opt,nu,   Bayesian,gpucb,"nu factor Srinivas GP-UCB (default 0.2, see Srivinas)");
+    QGETSETOPT(m_opt,delta,Bayesian,gpucb,"delta factor used in GP-UCB (default 0.1).                      ");
+    QGETSETOPT(m_opt,nu,   Bayesian,gpucb,"nu factor Srinivas GP-UCB (default 0.2, see Srivinas)           ");
     QGETSETOPT(m_opt,modD, Bayesian,gpucb,"|D| (grid siez) for GP-UCB finite (deflt -1: size of grid or 10)");
-    QGETSETOPT(m_opt,a,    Bayesian,gpucb,"a constant for Srinivas |D|-infinite gpUCB (default 1)");
-    QGETSETOPT(m_opt,b,    Bayesian,gpucb,"b constant for Srinivas |D|-infinite gpUCB (default 1)");
-    QGETSETOPT(m_opt,r,    Bayesian,gpucb,"r constant for Srinivas |D|-infinite gpUCB (default 1)");
-    QGETSETOPT(m_opt,p,    Bayesian,gpucb,"p value for GP-UCB p variants (default 2)");
-    QGETSETOPT(m_opt,R,    Bayesian,gpucb,"R constant for acquisition functions 12,13,14 (default 1)");
-    QGETSETOPT(m_opt,B,    Bayesian,gpucb,"B constant for acquisition functions 12,13,14 (default 1)");
+    QGETSETOPT(m_opt,a,    Bayesian,gpucb,"a constant for Srinivas |D|-infinite gpUCB (default 1)          ");
+    QGETSETOPT(m_opt,b,    Bayesian,gpucb,"b constant for Srinivas |D|-infinite gpUCB (default 1)          ");
+    QGETSETOPT(m_opt,r,    Bayesian,gpucb,"r constant for Srinivas |D|-infinite gpUCB (default 1)          ");
+    QGETSETOPT(m_opt,p,    Bayesian,gpucb,"p value for GP-UCB p variants (default 2)                       ");
+    QGETSETOPT(m_opt,R,    Bayesian,gpucb,"R constant for acquisition functions 12,13,14 (default 1)       ");
+    QGETSETOPT(m_opt,B,    Bayesian,gpucb,"B constant for acquisition functions 12,13,14 (default 1)       ");
 
 
-    QGETSETOPT(m_opt,zeta, Bayesian,ei,"zeta factor in EI (default 0). 0.01 works ok).");
+    QGETSETOPT(m_opt,lseeps,Bayesian,lse,"epsilon factor in LSE (default 0.01).    ");
+    QGETSETOPT(m_opt,h,     Bayesian,lse,"level-set objective level h (default 0). ");
+
+
+    QGETSETOPT(m_opt,zeta,Bayesian,ei,"zeta factor in EI (default 0). 0.01 works ok).");
 
 
     QGETSETOPT(m_opt,TSmode,     Bayesian,ts,"Thompson sampling mode:\n"
@@ -1792,13 +1848,22 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPT(m_opt,sigma_cut,  Bayesian,ts,"variance scale for JIT TS (default 0.1).");
 
 
-    QGETSETOPT(m_opt,numcgt,   Bayesian,cgt,"number of constraints enforced (default 0).");
-    QGETSETOPT(m_opt,cgtmethod,Bayesian,cgt,"constraint method:\n"
-                                            "                                                                               \n"
-                                            "0 - calculate P(c(x))>=0 and scale acquisition function by this (default).     \n"
-                                            "1 - optimise f(x).ind(c(x)>=0), so that the mean/variance of c are built into  \n"
-                                            "    the posterior mean/variance before calculating acquisition function.       ");
-    QGETSETOPT(m_opt,cgtmargin,Bayesian,cgt,"safety margin for enforcing inequality constraints in the acq fn (default 0.1)");
+    QGETSETOPT(m_opt,numcgt,     Bayesian,cgt,"number of constraints enforced (default 0).");
+    QGETSETOPT(m_opt,cgtmethod,  Bayesian,cgt,"constraint method:\n"
+                                              "                                                                               \n"
+                                              "0 - calculate P(c(x))>=0 and scale acquisition function by this (default).     \n"
+                                              "1 - optimise f(x).ind(c(x)>=0), so that the mean/variance of c are built into  \n"
+                                              "    the posterior mean/variance before calculating acquisition function.       \n"
+                                              "2 - like 1, but add beta.var(c(x)) to acquisition function.                    \n"
+                                              "3 - like 1, but add sgn(beta).var(c(x)) to acquisition function.               \n"
+                                              "4 - Thompson sample c(x) and enforce constraint per iteration.                 \n"
+                                              "5 - Thompson sample c(x) and enforce constraint per iteration (scaled variance)\n"
+                                              "6 - enforce constraint c(x) > 0 with confidence cgtcertain (level set version).");
+    QGETSETOPT(m_opt,cgtmargin,  Bayesian,cgt,"safety margin for enforcing inequality constraints in the acq fn (default 0.1)");
+    QGETSETOPT(m_opt,cgtcertain, Bayesian,cgt,"certainty for cgtmethod 6 (level set enforcement).");
+    QGETSETOPT(m_opt,cgtVarScale,Bayesian,cgt,"posterior constraint model variance scale. For example setting cgtVarScale less\n"
+                                              "than 1 will tend to increase the probability of feasibility, encouraging the BO\n"
+                                              "to explore nearer the margin of the feasible region (assuming PoF scaling).    \n");
 
 
     QGETSETOPT(m_opt,moodim,Bayesian,moo,"number of objectives (default 1, single-objective).");
@@ -2228,6 +2293,44 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objf
     // ...and we're done
 
     return res;
+}
+
+void plotregret(std::string &simname, py::object pyresname, py::object pylistofres)
+{
+    Vector<std::string> resname;
+    Vector<Dict<gentype,dictkey> > listofres;
+
+    convFromPy(resname,pyresname);
+    convFromPy(listofres,pylistofres);
+
+errstream() << "resname = " << resname << "\n";
+errstream() << "listofres = " << listofres << "\n";
+    StrucAssert( resname.size() == listofres.size() );
+
+    GlobalOptions temp;
+
+    Vector<Vector<gentype> > resmeanallFres(resname.size());
+    Vector<Vector<gentype> > resmeanallmres(resname.size());
+    Vector<Vector<gentype> > resvarallmres (resname.size());
+
+    for ( int i = 0 ; i < resname.size() ; ++i )
+    {
+        resmeanallFres("&",i) =  ((const Vector<gentype> &) listofres(i)("meanallcost"));
+        resmeanallmres("&",i) = -((const Vector<gentype> &) listofres(i)("meanallm"));
+        resvarallmres ("&",i) =  ((const Vector<gentype> &) listofres(i)("varallm"));
+errstream() << "listofres(" << i << ") = " << listofres(i) << "\n";
+errstream() << "listofres(" << i << ")(\"meanallcost\") = " << listofres(i)("meanallcost") << "\n";
+errstream() << "listofres(" << i << ")(\"meanallm\") = " << listofres(i)("meanallm") << "\n";
+errstream() << "listofres(" << i << ")(\"varallm\") = " << listofres(i)("varallm") << "\n";
+    }
+
+errstream() << "resmeanallFres = " << resmeanallFres << "\n";
+errstream() << "resmeanallmres = " << resmeanallmres << "\n";
+errstream() << "resvarallmres = " << resvarallmres << "\n";
+
+    temp.plotregret(simname,resmeanallFres,resmeanallmres,resvarallmres,resname);
+
+    return;
 }
 
 #define COMMA ,
@@ -2793,6 +2896,23 @@ py::object covml(py::object xa, py::object xb)
     return convToPy(resv);
 }
 
+py::object setlevelml(py::object xa, double beta, double h)
+{
+    if ( isValTuple(xa) ) { RECURSE_ARG(xa,setlevelml,, COMMA beta COMMA h); }
+
+    dostartup();
+    int i = glob_MLInd(0);
+
+    gentype resv,resmu;
+    SparseVector<gentype> xx;
+    int resi = 0;
+
+    if ( isValInteger(xa) ) { resi = getMLref(i).setlevel(resv,resmu,toInt(xa)    ,beta,h); }
+    else                    { resi = getMLref(i).setlevel(resv,resmu,getvec(xa,xx),beta,h); }
+
+    return convToPy(resi);
+}
+
 py::object predvarml(py::object xa, py::object pp, py::object sigw)
 {
     if      ( isValTuple(xa)                      ) { RECURSE_ARG(xa,predvarml,, COMMA pp COMMA sigw); }
@@ -2809,7 +2929,7 @@ py::object predvarml(py::object xa, py::object pp, py::object sigw)
     SparseVector<gentype> yy;
     double s = 1.0; convFromPy(s,sigw);
 
-    if ( isValInteger(xa) && isValInteger(xa) ) { getMLref(i).predvar(resv_pred,resv,resmu,toInt(xa)    ,toInt(pp)    ,s); }
+    if ( isValInteger(xa) && isValInteger(pp) ) { getMLref(i).predvar(resv_pred,resv,resmu,toInt(xa)    ,toInt(pp)    ,s); }
     else                                        { getMLref(i).predvar(resv_pred,resv,resmu,getvec(xa,xx),getvec(pp,yy),s); }
 
     return convToPy(resv_pred);

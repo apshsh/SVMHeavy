@@ -108,6 +108,16 @@ int multiplot2d(const Vector<Vector<gentype> > &y, const Vector<Vector<gentype> 
            double omin, double omax,
            const std::string &fname, const std::string &dname, int outformat, const std::string &title);
 
+// Plot multiple graphs (specified by x and y) on a single 2-d axis
+
+int multiplot2d(const Vector<Vector<double> > &x,
+                const Vector<Vector<double> > &y,
+                const Vector<Vector<double> > &yvar,
+                const Vector<std::string> &plotlabels,
+                double xmin, double xmax,
+                double omin, double omax,
+                const std::string &fname, const std::string &dname, int outformat, const std::string &title, int incvar);
+
 
 // Simple scatter plot
 

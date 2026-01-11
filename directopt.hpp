@@ -1,4 +1,5 @@
-
+//FIXME - use readres in the optimizer, stop if stopflags, set nan if infeasible
+//FIXME - do the same for grid, maybe other?
 //
 // DIRect global optimiser
 //
@@ -38,7 +39,7 @@
 // -100: out of memory
 // -101: invalid args
 // -102: forced stop
-//
+// -200: no result found
 
 // Required by Bayesopt
 
@@ -52,7 +53,17 @@ int directOpt(int dim,
               double (*fn)(int n, const double *x, void *arg),
               void *fnarg,
               const DIRectOptions &dopts,
-              svmvolatile int &killSwitch);
+              svmvolatile int &killSwitch,
+              bool jitterbound = false);
+
+// jitterbound: I find that if you use this in the inner loop of
+// a BO for a particularly flat objective it tends to be a bit
+// repetitive and subsequently get stuck. Setting jitterbound to
+// true will slightly perturb the bounds (inwards, not outwards)
+// to inject some randomness into the process, hopefully preventing
+// the issue.
+
+#define JITTERVAR 1e-2
 
 
 class DIRectOptions : public GlobalOptions
@@ -75,10 +86,11 @@ public:
     {
         optname = "DIRect Optimisation";
 
-        maxits            = 1000; //200;
-        maxevals          = 5000; //1000;
+        maxits            = 400; //200;
+        maxevals          = 2000; //1000;
         eps               = 1e-4;
-        algorithm         = DIRECT_ORIGINAL; //DIRECT_GABLONSKY;
+        //algorithm         = DIRECT_ORIGINAL;
+        algorithm         = DIRECT_GABLONSKY; // always use this so the "hidden constraint" feature is accessible!
         traintimeoverride = 0;
     }
 

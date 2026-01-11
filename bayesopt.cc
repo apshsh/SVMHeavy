@@ -1,4 +1,10 @@
-//FIXME callback
+
+/*
+PIscale: this is basically just enforcing search in the level-set of results better than what we have so far whp. Consider formalizing this,
+possibly by reversing it to look *outside of* the level set of results worse whp. Of course the danger here is that if the model is ill-conceived
+then we might exclude the optimal solution, so take care! See also LCB and UCB - PIscale should remove those results below the LCB. And of course
+PIscale only really makes sense when you have constraints and are searching in their level-set: otherwise it is enforced automatically.
+*/
 
 //when model_convertx is called, only go through near part. far part should mimic near part (it's the other side of a rank constraint)
 
@@ -7,15 +13,7 @@
 // crazy idea: if true for 2 x values then you get a sum alpha1 x1 + alpha2 x2
 // so a continuum should give a weighted integral.
 
-//FIXME: can we plot slides on request
-// FIXME: have option for human feedback that does disable(-i-1) to disable
-//        in the GP layer of blk_conect but not the prior model(s)
-//        THAT IS: present the experiment.  Human gp say 'go ahead", "give
-//        hard feedback" (ie some sort of observation for all levels of the
-//        model) or "give soft feedback, which uses disable (-i-1) to only
-//        change the prior.  If answer is "give feedback" then you don't do
-//        the experiment, you go back and find another x as the model has
-//        changed!
+#define ADDJITTER false
 
 //
 // Bayesian Optimiser
@@ -177,8 +175,15 @@ class fninnerinnerArg
                     const double &_mig,
                     const double &_rkhsnorm,
                     const double &_kappa0,
+                    const double &_qRcgt,
+                    const double &_qBBcgt,
+                    const double &_migcgt,
+                    const double &_rkhsnormcgt,
+                    const double &_kappa0cgt,
                     gentype &_betafn,
+                    gentype &_betafncgt,
                     const int &_locacq,
+                    const int &_locacqcgt,
                     const int &_justreturnbeta,
                     Matrix<gentype> &_covarmatrix,
                     Vector<gentype> &_meanvector,
@@ -220,7 +225,8 @@ class fninnerinnerArg
                     const Vector<double> &_fidpencost,
                     const Vector<double> &_fidpenvars,
                     const Vector<Vector<double>> &_fidpenvecs,
-                    int _fidmode) : bbopts(_bbopts),
+                    int _fidmode,
+                    double _cgtVarScale) : bbopts(_bbopts),
                                                 _q_x(&_x),
                                                 _q_x_fullfid(&_x_fullfid),
                                                 _q_x_minfid(&_x_minfid),
@@ -246,8 +252,15 @@ class fninnerinnerArg
                                                 _q_mig(_mig),
                                                 _q_rkhsnorm(_rkhsnorm),
                                                 _q_kappa0(_kappa0),
+                                                _q_Rcgt(_qRcgt),
+                                                _q_BBcgt(_qBBcgt),
+                                                _q_migcgt(_migcgt),
+                                                _q_rkhsnormcgt(_rkhsnormcgt),
+                                                _q_kappa0cgt(_kappa0cgt),
                                                 _q_betafn(&_betafn),
+                                                _q_betafncgt(&_betafncgt),
                                                 _q_locacq(_locacq),
+                                                _q_locacqcgt(_locacqcgt),
                                                 justreturnbeta(_justreturnbeta),
                                                 covarmatrix(_covarmatrix),
                                                 meanvector(_meanvector),
@@ -287,13 +300,17 @@ class fninnerinnerArg
                                                 stabThresh(_stabThresh),
                                                 mode(0),
                                                 storeeps(0.0),
-                                                storeepspinf(false),
                                                 storenu(1.0),
+                                                storealpha(1.0),
+                                                storeepscgt(0.0),
+                                                storenucgt(1.0),
+                                                storealphacgt(1.0),
                                                 iires(_iires),
                                                 fidpencost(_fidpencost),
                                                 fidpenvars(_fidpenvars),
                                                 fidpenvecs(_fidpenvecs),
-                                                fidmode(_fidmode)
+                                                fidmode(_fidmode),
+                                                cgtVarScale(_cgtVarScale)
     {
         return;
     }
@@ -324,8 +341,15 @@ class fninnerinnerArg
                                                   _q_mig(src._q_mig),
                                                   _q_rkhsnorm(src._q_rkhsnorm),
                                                   _q_kappa0(src._q_kappa0),
+                                                  _q_Rcgt(src._q_Rcgt),
+                                                  _q_BBcgt(src._q_BBcgt),
+                                                  _q_migcgt(src._q_migcgt),
+                                                  _q_rkhsnormcgt(src._q_rkhsnormcgt),
+                                                  _q_kappa0cgt(src._q_kappa0cgt),
                                                   _q_betafn(src._q_betafn),
+                                                  _q_betafncgt(src._q_betafncgt),
                                                   _q_locacq(src._q_locacq),
+                                                  _q_locacqcgt(src._q_locacqcgt),
                                                   justreturnbeta(src.justreturnbeta),
                                                   covarmatrix(src.covarmatrix),
                                                   meanvector(src.meanvector),
@@ -365,13 +389,17 @@ class fninnerinnerArg
                                                   stabThresh(src.stabThresh),
                                                   mode(0),
                                                   storeeps(0.0),
-                                                  storeepspinf(false),
                                                   storenu(1.0),
+                                                  storealpha(1.0),
+                                                  storeepscgt(0.0),
+                                                  storenucgt(1.0),
+                                                  storealphacgt(1.0),
                                                   iires(src.iires),
                                                   fidpencost(src.fidpencost),
                                                   fidpenvars(src.fidpenvars),
                                                   fidpenvecs(src.fidpenvecs),
-                                                  fidmode(src.fidmode)
+                                                  fidmode(src.fidmode),
+                                                  cgtVarScale(src.cgtVarScale)
     {
         NiceThrow("Can't use copy constructer on fninnerinnerArg");
     }
@@ -408,8 +436,15 @@ class fninnerinnerArg
     double _q_mig;
     double _q_rkhsnorm;
     double _q_kappa0;
+    double _q_Rcgt;
+    double _q_BBcgt;
+    double _q_migcgt;
+    double _q_rkhsnormcgt;
+    double _q_kappa0cgt;
     gentype *_q_betafn;
+    gentype *_q_betafncgt;
     int _q_locacq;
+    int _q_locacqcgt;
     const int &justreturnbeta;
     Matrix<gentype> &covarmatrix;
     Vector<gentype> &meanvector;
@@ -451,8 +486,11 @@ class fninnerinnerArg
 
     int mode; // 0 for normal, set 1 when entering DirECT, which will calc beta and zero x precisely once then set to 2, set 2 for no beta calc/x zero
     double storeeps;
-    bool storeepspinf;
     double storenu;
+    double storealpha;
+    double storeepscgt;
+    double storenucgt;
+    double storealphacgt;
 
     const int &iires; // if -1 then we don't have a solution, so use alternative acquisition function to force exploration!
 
@@ -461,6 +499,8 @@ class fninnerinnerArg
     const Vector<Vector<double>> &fidpenvecs;
 
     int fidmode;
+
+    double cgtVarScale;
 
     double fidpenalty;
     double maxfidpenalty;
@@ -521,7 +561,17 @@ class fninnerinnerArg
     double rkhsnorm = _q_rkhsnorm;
     double kappa0   = _q_kappa0;
 
-    int locacq          = ( (bbopts.cgtapprox).size() && ( iires == -1 ) ) ? 100 : _q_locacq;
+    double Rcgt        = _q_Rcgt;
+    double Bcgt        = _q_BBcgt;
+    double migcgt      = _q_migcgt;
+    double rkhsnormcgt = _q_rkhsnormcgt;
+    double kappa0cgt   = _q_kappa0cgt;
+
+    // Until we find a feasible solution we stick to variance-only maximization
+
+    int locacq    = ( (bbopts.cgtapprox).size() && ( iires == -1 ) ) ? 10 : _q_locacq;
+    int locacqcgt = ( (bbopts.cgtapprox).size() && ( iires == -1 ) ) ? 10 : _q_locacqcgt;
+
     int thisbatchsize   = _q_thisbatchsize;
     int thisbatchmethod = _q_thisbatchmethod;
     int gridi           = _q_gridi;
@@ -533,28 +583,32 @@ class fninnerinnerArg
     SparseVector<gentype> &x_fullfid = (*_q_x_fullfid);
     SparseVector<gentype> &x_minfid  = (*_q_x_minfid);
 
-    gentype &betafn = *_q_betafn;
+    gentype &betafn    = *_q_betafn;
+    gentype &betafncgt = *_q_betafncgt;
 
     // NB: n != dim in general (in fact n = dim*multivecin)
 
-    (void) softmax;
-    (void) unscentUse;
-    (void) unscentK;
-    (void) unscentSqrtSigma;
-
     // =======================================================================
     // =======================================================================
-    // First work out "beta"
+    // First work out alpha (mean) and beta (variance) scale factors
     // =======================================================================
     // =======================================================================
 
-    double beta = 0;
+    double alpha = 1; // scale for mean
+    double beta  = 0; // scale for variance
 
-    bool epspinf = false;
     int betasgn  = ( locacq >= 0 ) ? 1 : -1;
     int acq      = betasgn*locacq;
     double eps   = 0;
     double nu    = 1;
+
+    double alphacgt = 0; // scale for cgt mean
+    double betacgt  = 0; // scale for cgt variance
+
+    int betasgncgt  = ( locacqcgt >= 0 ) ? 1 : -1;
+    int acqcgt      = betasgncgt*locacqcgt;
+    double epscgt   = 0;
+    double nucgt    = 1;
 
     // We start by working out beta. We do this for all cases, even IMP etc.
     //
@@ -565,12 +619,14 @@ class fninnerinnerArg
     if ( ( mode == 0 ) || ( mode == 1 ) )
     {
 //FIXME: FIDELITY STUFF HERE - do we need a budget-based iteration count? equivalent number of iterations at max fidelity or something?
-        double iter  = static_cast<double>(( itcntmethod == 2 ) ? iters-itinbatch : iters); //+1;
-        double d     = (double) (dim-dimfid); // don't include fidelity variables in this scaling: it's not really a "feature" in the usual sense
-        double Bsize = (double) thisbatchsize;
-        double ell1  = d/(bbopts.model_lenscale(0)); // this needs to be generalized. It's in BOCA, but the paper never says what it is, only that this is the SE case
+        double iter    = static_cast<double>(( itcntmethod == 2 ) ? iters-itinbatch : iters); //+1;
+        double d       = (double) (dim-dimfid); // don't include fidelity variables in this scaling: it's not really a "feature" in the usual sense
+        double Bsize   = (double) thisbatchsize;
+        double ell1    = d/(bbopts.model_lenscale(0)); // this needs to be generalized. It's in BOCA, but the paper never says what it is, only that this is the SE case
+        double ell1cgt = d/(bbopts.model_lenscale(0)); // this needs to be generalized. It's in BOCA, but the paper never says what it is, only that this is the SE case
 
         gentype betaargs;
+        gentype betaargscgt;
 
         if ( acq == 11 )
         {
@@ -596,6 +652,30 @@ class fninnerinnerArg
             betaArg("&",17) = NUMBASE_PI;
         }
 
+        if ( acqcgt == 11 )
+        {
+            Vector<gentype> &betaArg = betaargscgt.force_vector(18);
+
+            betaArg("&",0)  = iter;
+            betaArg("&",1)  = d;
+            betaArg("&",2)  = delta;
+            betaArg("&",3)  = modD;
+            betaArg("&",4)  = a;
+            betaArg("&",5)  = b;
+            betaArg("&",6)  = r;
+            betaArg("&",7)  = p;
+            betaArg("&",8)  = Bsize;
+            betaArg("&",9)  = Rcgt;
+            betaArg("&",10) = Bcgt;
+            betaArg("&",11) = migcgt;
+            betaArg("&",12) = rkhsnormcgt;
+            betaArg("&",13) = kappa0cgt;
+            betaArg("&",14) = bbopts.modelcgt_lenscale(0);
+            betaArg("&",15) = bbopts.model_sigma_cgt(0);
+            betaArg("&",16) = ell1cgt;
+            betaArg("&",17) = NUMBASE_PI;
+        }
+
         switch ( acq )
         {
             // TS-Kand: Thompson-sampling (Kandasamy version - actually Chowdhury version, On Kernelised Multiarm Bandits)
@@ -605,39 +685,90 @@ class fninnerinnerArg
 
             //FIXME ell1 should be the L1 diameter of X computed by scaling each dimension by the inverse of the SE bandwitdh
 
-            case 0:   /* Mean only           */ { nu = 1;     eps = 0;                                                                        break; }
-            case 1:   /* EI                  */ { nu = 1;     eps = 0;                                                                        break; }
-            case 2:   /* PI                  */ { nu = 1;     eps = 0;                                                                        break; }
-            case 12:  /* TS-Kand             */ { nu = 1;     eps = 0;                                                                        break; }
-            case 16:  /* TS-Kand             */ { nu = 1;     eps = 0;                                                                        break; }
-            case 19:  /* HE                  */ { nu = 1;     eps = 0.001;                                                                    break; }
-            case 9:   /* PE                  */ { nu = 1;     eps = valpinf();                                                                break; }
-            case 10:  /* PEc                 */ { nu = 1;     eps = valpinf();                                                                break; }
-            case 100: /* PEc-b               */ { nu = 1;     eps = valpinf();                                                                break; }
-            case 4:   /* gpUCB finite        */ { nu = defnu; eps = 2*log(modD*iter*iter*(NUMBASE_PI*NUMBASE_PI/(6*delta)));                  break; }
-            case 7:   /* gpUCB p finite      */ { nu = defnu; eps = 2*log(modD*numbase_zeta(p)*pow(iter,p)/delta);                            break; }
-            case 5:   /* gpUCB infinite      */ { nu = defnu; eps = (2*log(iter*iter*(2*NUMBASE_PI*NUMBASE_PI/(3*delta)))) + (2*Bsize*d*log(((Bsize==1)?1.0:2.0)*iter*iter*d*b*r*sqrt(log(4*Bsize*d*a/delta)))); break; }
-            case 8:   /* gpUCB p infinite    */ { nu = defnu; eps = (2*log(4*numbase_zeta(p)*pow(iter,p)/delta))           + (2*Bsize*d*log(((Bsize==1)?1.0:2.0)*iter*iter*d*b*r*sqrt(log(4*Bsize*d*a/delta)))); break; }
-            case 11:  /* gpUCB user def      */ { nu = defnu; eps = (double) betafn(betaargs);                                                break; }
-            case 13:  /* gpUCB inf RKHS Sri1 */ { nu = defnu; eps = (2*B) + (300*mig*pow(log(iter/delta),3));                                 break; }
-            case 3:   /* gpUCB basic         */ { nu = 1;     eps = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta)));             break; }
-            case 6:   /* gpUCB p basic       */ { nu = 1;     eps = 2*log(2*pow(sqrt(iter),d)*numbase_zeta(p)*pow(iter,p)/delta);             break; }
-            case 17:  /* gpUCB MultiFid      */ { nu = 1;     eps = 0.5*d*log((2*ell1*iter)+1);                                               break; }
-            case 14:  /* gpUCB inf RKHS Cho7 */ { nu = 1;     eps = B + (R*sqrt(2*(mig+(1+log(2/delta)))));                   eps *=   eps;   break; }
-            case 15:  /* gpUCB inf RKHS Bog2 */ { nu = 1;     eps = B + (R*sqrt(2*(mig+(2*log(1/delta)))));                   eps *=   eps;   break; }
-            case 20:  /* gpUCB as in BO-Muse */ { nu = 1;     eps = B + sqrt(bbopts.model_sigma(0)*((2*log(1/delta))+1+mig)); eps *= 7*eps;   break; }
-            case 18:  /* Human               */ { nu = 1;     eps = valvnan();                                                                break; }
-            case 21:  /* Random              */ { nu = 1;     eps = valvnan();                                                                break; }
-            default:  /* fallback trigger    */ { nu = 1;     eps = valvnan();                                                                break; }
+            case 1:   /* EI                  */ { alpha = 0; nu = 1;     eps = 0;         break; }
+            case 2:   /* PI                  */ { alpha = 0; nu = 1;     eps = 0;         break; }
+
+            case 23:  /* LSE Saddle, Bry1    */ { alpha = 0; nu = 1;     eps = 0;         break; }
+            case 24:  /* LSE C2LSE, Ngo1     */ { alpha = 0; nu = 1;     eps = 0;         break; }
+
+            case 22:  /* Zero                */ { alpha = 0; nu = 1;     eps = 0;         break; }
+            case 0:   /* Mean only           */ { alpha = 1; nu = 1;     eps = 0;         break; }
+            case 12:  /* TS-Kand             */ { alpha = 1; nu = 1;     eps = 0;         break; }
+            case 16:  /* TS-Kand             */ { alpha = 1; nu = 1;     eps = 0;         break; }
+            case 19:  /* HE                  */ { alpha = 1; nu = 1;     eps = 0.001;     break; }
+            case 9:   /* PE                  */ { alpha = 0; nu = 1;     eps = 1;         break; }
+            case 10:  /* PEc                 */ { alpha = 0; nu = 1;     eps = 1;         break; }
+            case 4:   /* gpUCB finite        */ { alpha = 1; nu = defnu; eps = 2*log(modD*iter*iter*(NUMBASE_PI*NUMBASE_PI/(6*delta)));              break; }
+            case 7:   /* gpUCB p finite      */ { alpha = 1; nu = defnu; eps = 2*log(modD*numbase_zeta(p)*pow(iter,p)/delta);                        break; }
+            case 5:   /* gpUCB infinite      */ { alpha = 1; nu = defnu; eps = (2*log(iter*iter*(2*NUMBASE_PI*NUMBASE_PI/(3*delta)))) + (2*Bsize*d*log(((Bsize==1)?1.0:2.0)*iter*iter*d*b*r*sqrt(log(4*Bsize*d*a/delta)))); break; }
+            case 8:   /* gpUCB p infinite    */ { alpha = 1; nu = defnu; eps = (2*log(4*numbase_zeta(p)*pow(iter,p)/delta))           + (2*Bsize*d*log(((Bsize==1)?1.0:2.0)*iter*iter*d*b*r*sqrt(log(4*Bsize*d*a/delta)))); break; }
+            case 11:  /* gpUCB user def      */ { alpha = 1; nu = defnu; eps = (double) betafn(betaargs);                                            break; }
+            case 13:  /* gpUCB inf RKHS Sri1 */ { alpha = 1; nu = defnu; eps = (2*B) + (300*mig*pow(log(iter/delta),3));                             break; }
+            case 3:   /* gpUCB basic         */ { alpha = 1; nu = 1;     eps = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta)));         break; }
+            case 6:   /* gpUCB p basic       */ { alpha = 1; nu = 1;     eps = 2*log(2*pow(sqrt(iter),d)*numbase_zeta(p)*pow(iter,p)/delta);         break; }
+            case 17:  /* gpUCB MultiFid      */ { alpha = 1; nu = 1;     eps = 0.5*d*log((2*ell1*iter)+1);                                           break; }
+            case 14:  /* gpUCB inf RKHS Cho7 */ { alpha = 1; nu = 1;     eps = std::pow(B+(R*sqrt(2*(mig+(1+log(2/delta))))),2);                     break; }
+            case 15:  /* gpUCB inf RKHS Bog2 */ { alpha = 1; nu = 1;     eps = std::pow(B+(R*sqrt(2*(mig+(2*log(1/delta))))),2);                     break; }
+            case 20:  /* gpUCB as in BO-Muse */ { alpha = 1; nu = 1;     eps = std::pow(B+sqrt(bbopts.model_sigma(0)*((2*log(1/delta))+1+mig)),2)*7; break; }
+
+            case 18:  /* Human               */ { alpha = 1; nu = 1;     eps = valvnan(); break; }
+            case 21:  /* Random              */ { alpha = 1; nu = 1;     eps = valvnan(); break; }
+            default:  /* fallback trigger    */ { alpha = 1; nu = 1;     eps = valvnan(); break; }
         }
 
-        if ( testisinf(eps) && !testisvnan(eps) ) { epspinf = true; }
+        switch ( acqcgt )
+        {
+            // TS-Kand: Thompson-sampling (Kandasamy version - actually Chowdhury version, On Kernelised Multiarm Bandits)
+            // Human: ask a human (unreachable, kept as placeholder)
+            // HE: human exploration agent, as per BO-Muse paper
+            // gpUCB MultiFid: gpUCB Kandasamy multifidelity 2017
 
-        StrucAssert( justreturnbeta || !testisvnan(eps) ); // Human and fallback will trigger this, but if either reaches here then that's an error
+            //FIXME ell1 should be the L1 diameter of X computed by scaling each dimension by the inverse of the SE bandwitdh
 
-        storeeps     = eps;
-        storeepspinf = epspinf;
-        storenu      = nu;
+            case 1:   /* EI                  */ { alphacgt = 0; nucgt = 1;     epscgt = 0;         break; }
+            case 2:   /* PI                  */ { alphacgt = 0; nucgt = 1;     epscgt = 0;         break; }
+
+            case 23:  /* LSE Saddle, Bry1    */ { alphacgt = 0; nucgt = 1;     epscgt = 0;         break; }
+            case 24:  /* LSE C2LSE, Ngo1     */ { alphacgt = 0; nucgt = 1;     epscgt = 0;         break; }
+
+            case 22:  /* Zero                */ { alphacgt = 0; nucgt = 1;     epscgt = 0;         break; }
+            case 0:   /* Mean only           */ { alphacgt = 1; nucgt = 1;     epscgt = 0;         break; }
+            case 12:  /* TS-Kand             */ { alphacgt = 1; nucgt = 1;     epscgt = 0;         break; }
+            case 16:  /* TS-Kand             */ { alphacgt = 1; nucgt = 1;     epscgt = 0;         break; }
+            case 19:  /* HE                  */ { alphacgt = 1; nucgt = 1;     epscgt = 0.001;     break; }
+            case 9:   /* PE                  */ { alphacgt = 0; nucgt = 1;     epscgt = 1;         break; }
+            case 10:  /* PEc                 */ { alphacgt = 0; nucgt = 1;     epscgt = 1;         break; }
+            case 4:   /* gpUCB finite        */ { alphacgt = 1; nucgt = defnu; epscgt = 2*log(modD*iter*iter*(NUMBASE_PI*NUMBASE_PI/(6*delta)));                    break; }
+            case 7:   /* gpUCB p finite      */ { alphacgt = 1; nucgt = defnu; epscgt = 2*log(modD*numbase_zeta(p)*pow(iter,p)/delta);                              break; }
+            case 5:   /* gpUCB infinite      */ { alphacgt = 1; nucgt = defnu; epscgt = (2*log(iter*iter*(2*NUMBASE_PI*NUMBASE_PI/(3*delta)))) + (2*Bsize*d*log(((Bsize==1)?1.0:2.0)*iter*iter*d*b*r*sqrt(log(4*Bsize*d*a/delta)))); break; }
+            case 8:   /* gpUCB p infinite    */ { alphacgt = 1; nucgt = defnu; epscgt = (2*log(4*numbase_zeta(p)*pow(iter,p)/delta))           + (2*Bsize*d*log(((Bsize==1)?1.0:2.0)*iter*iter*d*b*r*sqrt(log(4*Bsize*d*a/delta)))); break; }
+            case 11:  /* gpUCB user def      */ { alphacgt = 1; nucgt = defnu; epscgt = (double) betafncgt(betaargscgt);                                            break; }
+            case 13:  /* gpUCB inf RKHS Sri1 */ { alphacgt = 1; nucgt = defnu; epscgt = (2*B) + (300*migcgt*pow(log(iter/delta),3));                                break; }
+            case 3:   /* gpUCB basic         */ { alphacgt = 1; nucgt = 1;     epscgt = 2*log(pow(iter,(2+(d/2)))*(NUMBASE_PI*NUMBASE_PI/(3*delta)));               break; }
+            case 6:   /* gpUCB p basic       */ { alphacgt = 1; nucgt = 1;     epscgt = 2*log(2*pow(sqrt(iter),d)*numbase_zeta(p)*pow(iter,p)/delta);               break; }
+            case 17:  /* gpUCB MultiFid      */ { alphacgt = 1; nucgt = 1;     epscgt = 0.5*d*log((2*ell1cgt*iter)+1);                                              break; }
+            case 14:  /* gpUCB inf RKHS Cho7 */ { alphacgt = 1; nucgt = 1;     epscgt = std::pow(Bcgt+(Rcgt*sqrt(2*(migcgt+(1+log(2/delta))))),2);                  break; }
+            case 15:  /* gpUCB inf RKHS Bog2 */ { alphacgt = 1; nucgt = 1;     epscgt = std::pow(Bcgt+(Rcgt*sqrt(2*(migcgt+(2*log(1/delta))))),2);                  break; }
+            case 20:  /* gpUCB as in BO-Muse */ { alphacgt = 1; nucgt = 1;     epscgt = std::pow(Bcgt+sqrt(bbopts.model_sigma(0)*((2*log(1/delta))+1+migcgt)),2)*7; break; }
+
+            case 18:  /* Human               */ { alphacgt = 1; nucgt = 1;     epscgt = valvnan(); break; }
+            case 21:  /* Random              */ { alphacgt = 1; nucgt = 1;     epscgt = valvnan(); break; }
+            default:  /* fallback trigger    */ { alphacgt = 1; nucgt = 1;     epscgt = valvnan(); break; }
+        }
+
+        if ( testisinf(eps)    && !testisvnan(eps)    ) { alpha    = 0; eps    = 1; }
+        if ( testisinf(epscgt) && !testisvnan(epscgt) ) { alphacgt = 0; epscgt = 1; }
+
+        StrucAssert( justreturnbeta || !testisvnan(eps)    ); // Human and fallback will trigger this, but if either reaches here then that's an error
+        StrucAssert( justreturnbeta || !testisvnan(epscgt) ); // Human and fallback will trigger this, but if either reaches here then that's an error
+
+        storeeps   = eps;
+        storenu    = nu;
+        storealpha = alpha;
+
+        storeepscgt   = epscgt;
+        storenucgt    = nucgt;
+        storealphacgt = alphacgt;
 
         x.zero();
         x_fullfid.zero();
@@ -646,14 +777,22 @@ class fninnerinnerArg
 
     else if ( mode == 2 )
     {
-        eps     = storeeps;
-        epspinf = storeepspinf;
-        nu      = storenu;
+        eps   = storeeps;
+        nu    = storenu;
+        alpha = storealpha;
+
+        epscgt   = storeepscgt;
+        nucgt    = storenucgt;
+        alphacgt = storealphacgt;
     }
 
-    beta = nuscale*nu*eps; // remember that nu can change!
+    beta    = nuscale*nu*eps;       // remember that nu can change!
+    betacgt = nuscale*nucgt*epscgt; // remember that nu can change!
 
-    if ( justreturnbeta == 1 ) { return beta; }
+         if ( justreturnbeta == 1 ) { return beta;     }
+    else if ( justreturnbeta == 2 ) { return betacgt;  }
+    else if ( justreturnbeta == 3 ) { return alpha;    }
+    else if ( justreturnbeta == 4 ) { return alphacgt; }
 //errstream() << "phantomxyz testpoint 1 beta = " << beta << "\n";
 
     // =======================================================================
@@ -750,14 +889,15 @@ class fninnerinnerArg
     sigmay     = predsigmay;           // assume the current measurement is appropriately noisy by default. See FIXME caveat above
 
     double overscale = 1;
+    bool needvar = false;
     bool answisy = false;
 
     if ( thisbatchsize == 1 )
     {
         // don't calculate sigmay unless we need to
 
-        bool needvar = ( ( ( acq != 0 ) && ( acq != 12 ) && ( acq != 16 ) ) || bbopts.isimphere() || PIscale ); // need the variance for calculating acquisition fn
-             answisy = ( ( gridi >= 0 ) && ( isfullgrid || ( bbopts.model_d(Nbasemu+gridi) == 2 ) ) );          // the point x,y is in the training set
+        needvar = ( ( ( acq    != 0 ) && ( acq    != 12 ) && ( acq    != 16 ) ) || bbopts.isimphere() || PIscale ); // need the variance for calculating acquisition fn
+        answisy = ( ( gridi >= 0 ) && ( isfullgrid || ( bbopts.model_d(Nbasemu+gridi) == 2 ) ) );                   // the point x,y is in the training set
 
 //errstream() << "phantomxyz testpoint 4 needvar = " << needvar << "\n";
 //errstream() << "phantomxyz testpoint 4 answisy = " << answisy << "\n";
@@ -784,6 +924,8 @@ class fninnerinnerArg
             sigmay += ((bbopts.model_sigma())/((double) predsigmay));
             //overscale = (double) predsigmay;
 
+            sigmay += predsigmay;
+
 //FIXME
 /*
 FIXME: I think the method suggested below will actually tend to choose noisy low-fidelity measurements. We need to cancel that out! We could fix this by scaling beta by
@@ -797,6 +939,13 @@ predvar - sigma
 for all of the acquisition functions: we currently assume an exact measure. We need to assume a noisy measure.
 to do this maybe we can just add the noise in measurement to the current posterior noise? In this case, the
 predictive noise is predsigmay, not sigma()
+
+
+
+I previously  had sigmay += predsigmay for non multi-fid as well, Justification was:
+// transfer noise on measurement to noise on model (recall additivity of Gaussians)
+// NB: most implementations don't do this, but mathematically they should. eg when
+//     calculating EI or PI with a noisy measurement the measurement noise matters!
 */
         }
 
@@ -810,30 +959,17 @@ predictive noise is predsigmay, not sigma()
 //errstream() << "phantomxyz testpoint 5 muy = " << muy << "\n";
 //errstream() << "phantomxyz testpoint 5 sigmay = " << sigmay << "\n";
 
-           sigmay += predsigmay;
+           //sigmay += predsigmay; - why was this here?
         }
 
         // Sanity check here!
 
-        if ( testisvnan(sigmay) )
-        {
-            errstream() << "sigma NaN in Bayesian Optimisation!\n";
-            if ( sigmay.isValVector() ) { sigmay.force_vector(muy.size()) = 0.0_gent; }
-            else                        { sigmay.force_double() = 0.0;                }
-        }
-
-        else if ( testisinf(sigmay) )
-        {
-            errstream() << "sigma inf in Bayesian Optimisation!\n";
-            if ( sigmay.isValVector() ) { sigmay.force_vector(muy.size()) = 0.0_gent; }
-            else                        { sigmay.force_double() = 0.0;                }
-        }
+        if      ( testisvnan(sigmay)      ) { errstream() << "sigma NaN in Bayesian Optimisation!\n"; if ( sigmay.isValVector() ) { sigmay.force_vector(muy.size()) = 0.0_gent; } else { sigmay.force_double() = 0.0; } }
+        else if ( testisinf(sigmay)       ) { errstream() << "sigma inf in Bayesian Optimisation!\n"; if ( sigmay.isValVector() ) { sigmay.force_vector(muy.size()) = 0.0_gent; } else { sigmay.force_double() = 0.0; } }
+        else if ( !( sigmay >= 0.0_gent ) ) { errstream() << "sigma neg in Bayesian Optimisation!\n"; if ( sigmay.isValVector() ) { sigmay.force_vector(muy.size()) = 0.0_gent; } else { sigmay.force_double() = 0.0; } }
 
         // Combine noise contributions
 
-//        sigmay += predsigmay; // transfer noise on measurement to noise on model (recall additivity of Gaussians)
-                              // NB: most implementations don't do this, but mathematically they should. eg when
-                              //     calculating EI or PI with a noisy measurement the measurement noise matters!
         OP_sqrt(sigmay);      // This works elementwise on vectors
 //errstream() << "phantomxyz testpoint 6 muy = " << muy << "\n";
 //errstream() << "phantomxyz testpoint 6 sigmay = " << sigmay << "\n";
@@ -875,37 +1011,93 @@ predictive noise is predsigmay, not sigma()
 
         // Sanity check here!
 
-        if ( testisvnan(sigmay) )
-        {
-            errstream() << "sigma NaN in Bayesian Optimisation!\n";
-            if ( sigmay.isValVector() ) { sigmay.force_vector(muy.size()) = 0.0_gent; }
-            else                        { sigmay.force_double() = 0.0;                }
-        }
-
-        else if ( testisinf(sigmay) )
-        {
-            errstream() << "sigma inf in Bayesian Optimisation!\n";
-            if ( sigmay.isValVector() ) { sigmay.force_vector(muy.size()) = 0.0_gent; }
-            else                        { sigmay.force_double() = 0.0;                }
-        }
+        if      ( testisvnan(sigmay)      ) { errstream() << "sigma NaN in Bayesian Optimisation!\n"; if ( sigmay.isValVector() ) { sigmay.force_vector(muy.size()) = 0.0_gent; } else { sigmay.force_double() = 0.0; } }
+        else if ( testisinf(sigmay)       ) { errstream() << "sigma inf in Bayesian Optimisation!\n"; if ( sigmay.isValVector() ) { sigmay.force_vector(muy.size()) = 0.0_gent; } else { sigmay.force_double() = 0.0; } }
+        else if ( !( sigmay >= 0.0_gent ) ) { errstream() << "sigma neg in Bayesian Optimisation!\n"; if ( sigmay.isValVector() ) { sigmay.force_vector(muy.size()) = 0.0_gent; } else { sigmay.force_double() = 0.0; } }
 
         // Combine noise contributions
 
-        sigmay += predsigmay; // transfer noise on measurement to noise on model (recall additivity of Gaussians)
-                              // NB: most implementations don't do this, but mathematically they should. eg when
-                              //     calculating EI or PI with a noisy measurement the measurement noise matters!
         OP_sqrt(sigmay);      // This works elementwise on vectors
     }
 
-    double yymax = ( ymax.isValVector() ) ? 0.0 : ((double) ymax);
+    double yymax        = ( ymax.isValVector() ) ? 0.0 : ((double) ymax);
     double yymaxcorrect = yymax;
+    double hh           = -bbopts.h;
+    double hhcgt        = bbopts.hcgt;
 
     // Correction factors (min/max and other misc)
 
     if ( !ymax.isValVector() && !muy.isValVector() )
     {
-        muy          += 1.0; // DESIGN DECISION: typically mu in [-1,0] here, but this is bad for the constrained case. We add 1 to "fix" the problem and make mu in [0,1].
-        yymaxcorrect += 1.0; // NEED TO CORRECT THIS AS WELL FOR EI
+//Was += 1, but see ADDITIONAL
+        muy          += 1.5; // DESIGN DECISION: typically mu in [-1,0] here, but this is bad for the constrained case. We add 1 to "fix" the problem and make mu in [0,1].
+                             // ADDITIONAL: we observe that the posterior mean can actually range over something like [-1.5,0.5], so we add 1.5
+        yymaxcorrect += 1.5; // NEED TO CORRECT THIS AS WELL FOR EI
+        hh           += 1.5; // NEED TO CORRECT THIS AS WELL FOR LEVEL-SET
+
+        // We observe that if muy is near zero then in the modified constrained
+        // case this tends to "squash" the fidelity. So we correct for that.
+
+//        if ( (bbopts.cgtapprox).size() && ( bbopts.cgtmethod == 1 ) && ( iires >= 0 ) )
+//        {
+//            muy          *= 0.9; muy          += 0.1;
+//            yymaxcorrect *= 0.9; yymaxcorrect += 0.1;
+//        }
+    }
+
+    int numcgt = bbopts.numcgt;
+    gentype altsig(bbopts.model_sigma(0));
+
+    if ( numcgt )
+    {
+        altsig = bbopts.model_sigma_cgt(0);
+    }
+
+    Vector<gentype> mucgt(numcgt,0.0_gent);
+    Vector<gentype> varcgtsq(numcgt,altsig);
+    Vector<gentype> varcgtsq_pred(numcgt,altsig);
+
+    double totalconstraintvariance = 0;
+
+    double probofvalid = 1;
+    bool   objresfeas  = true;
+
+    if ( numcgt )
+    {
+        bool inlevelset = true;
+
+        NiceAssert( thisbatchsize == 1 );
+
+        if ( dimfid && ( fidmode == 0 ) ) { bbopts.model_predmuvar_cgt(varcgtsq_pred,varcgtsq,mucgt,x_fullfid,x); varcgtsq += varcgtsq_pred; }
+        else                              { bbopts.model_muvar_cgt(varcgtsq,mucgt,x);                                                        }
+
+        varcgtsq.scale(cgtVarScale);
+
+        for ( int i = 0 ; i < numcgt ; ++i )
+        {
+            if      ( testisvnan(varcgtsq(i))      ) { errstream() << "sigma NaN in Bayesian Optimisation!\n"; varcgtsq("&",i).force_double() = 0.0; }
+            else if ( testisinf(varcgtsq(i))       ) { errstream() << "sigma inf in Bayesian Optimisation!\n"; varcgtsq("&",i).force_double() = 0.0; }
+            else if ( !( varcgtsq(i) >= 0.0_gent ) ) { errstream() << "sigma neg in Bayesian Optimisation!\n"; varcgtsq("&",i).force_double() = 0.0; }
+
+            double ecgt   = (double) mucgt(i);
+            double vcgtsq = (double) varcgtsq(i);
+
+            if ( ( bbopts.cgtmethod == 4 ) || ( bbopts.cgtmethod == 5 ) ) { vcgtsq = 0.01; }
+
+            if      ( vcgtsq > ztol*ztol ) { probofvalid *= normPhi(ecgt/sqrt(vcgtsq)); }
+            else if ( ecgt < 0           ) { probofvalid = 0;                           }
+
+            if ( ecgt <= (bbopts.cgtcertain)*sqrt(vcgtsq) ) { inlevelset = false; }
+
+            totalconstraintvariance += sqrt(vcgtsq);
+        }
+
+        // mucgt >= cgtmargin
+        // mucgt-cgtmargin >= 0
+
+        for ( int i = 0 ; i < mucgt.size() ; ++i ) { mucgt("&",i) -= bbopts.cgtmargin; } // ((bbopts.cgtmargin)*2*sqrt(varcgtsq(i)))
+
+        if ( bbopts.cgtmethod == 6 ) { probofvalid = inlevelset ? 1.0 : 0.0; objresfeas = inlevelset; } // alternative "in or out of level set" test
     }
 
     // =======================================================================
@@ -917,26 +1109,15 @@ predictive noise is predsigmay, not sigma()
 //errstream() << "phantomxyz testpoint 7 sigmay = " << sigmay << "\n";
 
     double resscale = 1.0;
+    bool   resfeas  = true;
 
-    if ( (bbopts.cgtapprox).size() && PIscale && ( iires >= 0 ) ) // don't do this if we don't have any solution yet, as that indicates to feasible results and hence completely flat CGT!
+    if ( PIscale && ( iires >= 0 ) ) // don't do this if we don't have any solution yet, as that indicates to feasible results and hence completely flat CGT!
     {
         NiceAssert( !ymax.isValVector() && !muy.isValVector() );
 
-//errstream() << "phantomxyz muy > yymaxoccrect? " << muy << " ?>? " << yymaxcorrect << " (" << sigmay << ")";
-//errstream() << "\n";
-//errstream() << "(double) muy = " << ((double) muy) << "\n";
-//errstream() << "(double) sigmay = " << ((double) sigmay) << "\n";
-//errstream() << "( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay ) = " << ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay ) << "\n";
-//errstream() << "( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )*NUMBASE_SQRT1ON2 = " << ( ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )*NUMBASE_SQRT1ON2) << "\n";
-//errstream() << "erf( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay ) = " << erf(( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )*NUMBASE_SQRT1ON2) << "\n";
-//errstream() << "normPhi( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay ) = " << normPhi( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay ) << "\n";
-//double tempvalue = ( ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )*NUMBASE_SQRT1ON2);
-//errstream() << "tempvalue = " << tempvalue << "\n";
-//errstream() << "normPhi(tempvalue) = " << normPhi(tempvalue) << "\n";
-        if      ( !answisy && ( (double) sigmay > ztol ) ) { double tempvalue = ( ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay )*NUMBASE_SQRT1ON2); resscale = normPhi(tempvalue); }
-        else if ( (double) muy < yymaxcorrect            ) { resscale = 0; }
-        else                                               { resscale = 1; }
-//errstream() << "(" << resscale << ")\n";
+        if      ( !answisy && ( (double) sigmay > ztol ) ) { double tempvalue = (((((double) muy)-yymaxcorrect)/((double) sigmay))*NUMBASE_SQRT1ON2); resscale = normPhi(tempvalue); }
+        else if ( (double) muy <= yymaxcorrect           ) { resscale = 0; objresfeas = false; if ( PIscale == 2 ) { resfeas = false; } }
+        else                                               { resscale = 1;                                                              }
     }
 
     // =======================================================================
@@ -945,35 +1126,12 @@ predictive noise is predsigmay, not sigma()
     // =======================================================================
     // =======================================================================
 
-    if ( (bbopts.cgtapprox).size() && ( bbopts.cgtmethod == 1 ) && ( iires >= 0 ) ) // don't do this if we don't have any solution yet, as that indicates to feasible results and hence completely flat CGT!
+    if ( numcgt && ( bbopts.cgtmethod == 1 ) && ( iires >= 0 ) ) // don't do this if we don't have any solution yet, as that indicates to feasible results and hence completely flat CGT!
     {
-        NiceAssert( thisbatchsize == 1 );
-
-        Vector<gentype> varcgtsq;
-        Vector<gentype> mucgt;
-
-        if ( dimfid && ( fidmode == 0 ) )
-        {
-            Vector<gentype> varcgtsq_pred;
-            bbopts.model_predmuvar_cgt(varcgtsq_pred,varcgtsq,mucgt,x_fullfid,x);
-            varcgtsq += varcgtsq_pred;
-        }
-
-        else
-        {
-            if ( isgridopt && !iscontopt && ( gridi >= 0 ) ) { bbopts.model_muvarTrainingVector_cgt(varcgtsq,mucgt,Nbasecgt+gridi); }
-            else                                             { bbopts.model_muvar_cgt(varcgtsq,mucgt,x);                            }
-        }
-
-        // mucgt >= cgtmargin
-        // mucgt-cgtmargin >= 0
-
-        for ( int i = 0 ; i < mucgt.size() ; ++i ) { mucgt("&",i) -= bbopts.cgtmargin; } // ((bbopts.cgtmargin)*2*sqrt(varcgtsq(i)))
-
         // Work out mean and variance of delta(c_i(x) >= 0) for all constraints c_i
 
         Vector<double> cgtmean((bbopts.cgtapprox).size()+1);
-        Vector<double> cgtvar((bbopts.cgtapprox).size()+1);
+        Vector<double> cgtvar ((bbopts.cgtapprox).size()+1);
 
         for ( int i = 0 ; i < (bbopts.cgtapprox).size() ; i++ )
         {
@@ -982,29 +1140,21 @@ predictive noise is predsigmay, not sigma()
             double ecgt   = (double) mucgt(i);
             double vcgtsq = (double) varcgtsq(i);
 
-            if      ( testisvnan(vcgtsq) ) { errstream() << "varcgt " << vcgtsq << " NaN in Bayesian Optimisation!\n"; vcgtsq = 0.0; }
-            else if ( testisinf(vcgtsq)  ) { errstream() << "varcgt " << vcgtsq << " inf in Bayesian Optimisation!\n"; vcgtsq = 0.0; }
-            else if ( vcgtsq <= 0        ) { errstream() << "varcgt " << vcgtsq << " or " << varcgtsq(i) << " neg in Bayesian Optimisation!\n"; vcgtsq = 0.0; }
-
             // This is basically PI
+            // E[delta(c(x)>=0)]
+            // var[delta(c(x)>=0)]
 
-            if ( vcgtsq > ztol )
-            {
-                double phihere = normPhi(ecgt/sqrt(vcgtsq));
-                cgtmean("&",i) = phihere; // E[delta(c(x)>=0)]
-                cgtvar("&",i)  = sqrt((cgtmean(i)*cgtmean(i)*(1-phihere)) + ((1-cgtmean(i))*(1-cgtmean(i))*phihere));  // var[delta(c(x)>=0)]
-            }
+                //double phihere = normPhi(ecgt/sqrt(vcgtsq));
+                //cgtmean("&",i) = phihere; // E[delta(c(x)>=0)]
+                //cgtvar("&",i)  = sqrt((cgtmean(i)*cgtmean(i)*(1-phihere)) + ((1-cgtmean(i))*(1-cgtmean(i))*phihere));  // var[delta(c(x)>=0)]
 
-            else if ( ecgt <= 0 ) { cgtmean("&",i) = 0; cgtvar("&",i) = 0; }
-            else                  { cgtmean("&",i) = 1; cgtvar("&",i) = 0; }
+            if ( vcgtsq > ztol*ztol ) { cgtmean("&",i) = normPhi(ecgt/sqrt(vcgtsq)); cgtvar("&",i) = sqrt((cgtmean(i)*cgtmean(i)*(1-cgtmean(i))) + ((1-cgtmean(i))*(1-cgtmean(i))*cgtmean(i))); }
+            else if ( ecgt <= 0     ) { cgtmean("&",i) = 0;                          cgtvar("&",i) = 0; }
+            else                      { cgtmean("&",i) = 1;                          cgtvar("&",i) = 0; }
         }
 
         cgtmean("&",(bbopts.cgtapprox).size()) = (double) muy;
         cgtvar("&",(bbopts.cgtapprox).size())  = (double) sigmay;
-//errstream() << "phantomxyz muy: " << muy << "\n";
-//errstream() << "phantomxyz sigmay: " << sigmay << "\n";
-//errstream() << "phantomxyz muy_cgt: " << cgtmean(0) << "\n";
-//errstream() << "phantomxyz sigmay_cgt: " << cgtvar(0) << "\n";
 
         // See Goodman: On the Exact Variance of Products
 
@@ -1025,7 +1175,7 @@ predictive noise is predsigmay, not sigma()
                 // Binary, eg size = 3:
                 // jj = 001b, 010b, 100b
 
-                if ( ( i & jj ) ) { varsub *= cgtvar(k)*cgtvar(k);   } // bit set, posterior variance
+                if ( ( i & jj ) ) { varsub *= cgtvar(k) *cgtvar (k); } // bit set, posterior variance
                 else              { varsub *= cgtmean(k)*cgtmean(k); } // bit not set, posterior mean squared
             }
 
@@ -1034,8 +1184,8 @@ predictive noise is predsigmay, not sigma()
 
         muy    = meantot;      // corrected mean
         sigmay = sqrt(vartot); // corrected variance
-//errstream() << "phantomxyz muy_corrected: " << muy << "\n";
-//errstream() << "phantomxyz sigmay_corrected: " << sigmay << "\n";
+
+        probofvalid = 1;
     }
 
     // =======================================================================
@@ -1120,7 +1270,7 @@ predictive noise is predsigmay, not sigma()
         bbopts.modelimp_imp(ires,altresv,xmean,sigmay); // IMP may or may not update sigmay
         res = ((double) ires);
 
-        muy.force_double() = ((double) res); // This is done so that passthrough will apply to IMP
+        muy.force_double()    = ((double) res); // This is done so that passthrough will apply to IMP
         sigmay.force_double() = sqrt((double) altresv);
 
         if ( ymax.isValVector() && ( ( acq == 1 ) || ( acq == 2 ) ) )
@@ -1141,6 +1291,27 @@ predictive noise is predsigmay, not sigma()
         }
     }
 
+    double exploitFactor = 0;
+    double exploreFactor = 0;
+
+    double exploitFactorcgt = 0;
+    double exploreFactorcgt = 0;
+
+    double minexploitFactor = 0;
+    double minexploreFactor = 0;
+
+    double minexploitFactorcgt = 0;
+    double minexploreFactorcgt = 0;
+
+    double maxexploitFactor = 0;
+    double maxexploreFactor = 0;
+
+    double maxexploitFactorcgt = 0;
+    double maxexploreFactorcgt = 0;
+
+    bool objresfeascgt  = numcgt ? false : true; // start with false so we can set true if any *component* is true
+
+
     // else - Do this part anyhow to allow for standard GP-UCB.  acq 0 does passthrough of IMP, other methods will change things around
     {
 //FIXME - TS-MOO
@@ -1150,14 +1321,17 @@ predictive noise is predsigmay, not sigma()
 //errstream() << "phantomxyz yymaxcorrect = " << yymaxcorrect << "\n";
 //errstream() << "phantomxyz gridi = " << gridi << "\n";
 
-        switch ( acq )
+        if ( isstable && ( ( acq == 1 ) || !( ( acq == 2 ) || ( acq == 23 ) || ( acq == 24 ) ) ) )
         {
-            case 1:  // EI - BIG ASSUMPTION: sigmay > ztol
-            {
-                if ( isstable )
-                {
-                    res = 0.0;
+            double locmuy     = (double) muy;
+            double locsigmay  = (double) sigmay;
 
+            // Stable EI or gpUCB variant
+
+            switch ( acq )
+            {
+                case 1: // EI
+                {
                     double parta = 0;
                     double partb = 0;
                     double partadec = 0;
@@ -1169,20 +1343,11 @@ predictive noise is predsigmay, not sigma()
                         double dmuy  = (double) muy;
                         double dsigy = (double) sigmay;
 
-                        double ykdec = ( k == 0 ) ? stabZeroPt : ((double) (bbopts.model_y(ysort(k-1))));
-                        double yk    = ( k == ysort.size() ) ? 1e12 : ((double) (bbopts.model_y(ysort(k)))); // 1e12 is a placeholder for bugnum. Never actually used.
-
-                        //parta = phifn((dmuy-ykdec)/dsigy) - ( ( k == ysort.size() ) ? 0.0 : phifn((dmuy-yk)/dsigy) );
-                        //partb = Phifn((dmuy-ykdec)/dsigy) - ( ( k == ysort.size() ) ? 0.0 : Phifn((dmuy-yk)/dsigy) );
-
-                        //numbase_phi(parta,(dmuy-yk)/dsigy);
-                        //numbase_Phi(partb,(dmuy-yk)/dsigy);
+                        double ykdec = ( k == 0            ) ? stabZeroPt : ((double) (bbopts.model_y(ysort(k-1))));
+                        double yk    = ( k == ysort.size() ) ? 1e12       : ((double) (bbopts.model_y(ysort(k  )))); // 1e12 is a placeholder for bugnum. Never actually used.
 
                         parta = normphi((dmuy-yk-zeta)/dsigy);
                         partb = normPhi((dmuy-yk-zeta)/dsigy);
-
-                        //numbase_phi(partadec,(dmuy-ykdec)/dsigy);
-                        //numbase_Phi(partbdec,(dmuy-ykdec)/dsigy);
 
                         partadec = normphi((dmuy-ykdec)/dsigy);
                         partbdec = normPhi((dmuy-ykdec)/dsigy);
@@ -1195,161 +1360,331 @@ predictive noise is predsigmay, not sigma()
 
                         for ( int i = 0 ; i < k-1 ; ++i )
                         {
-                            double yidec = ( i == 0 ) ? stabZeroPt : ((double) (bbopts.model_y(ysort(i-1))));
-                            double yi    = ( i == ysort.size() ) ? 1e12 : ((double) (bbopts.model_y(ysort(i)))); // i == ysort.size() never attained.
+                            double yidec = ( i == 0            ) ? stabZeroPt : ((double) (bbopts.model_y(ysort(i-1))));
+                            double yi    = ( i == ysort.size() ) ? 1e12       : ((double) (bbopts.model_y(ysort(i  )))); // i == ysort.size() never attained.
 
                             scaleb += s_score(i)*(yi-yidec)/dsigy;
                         }
 
-                        res += (parta*scalea)+(partb*scaleb);
+                        exploitFactor += (parta*scalea)+(partb*scaleb);
                     }
 
-                    res *= ((double) sigmay)*stabscore;
+                    exploitFactor *= ((double) sigmay)*stabscore;
+
+                    break;
                 }
 
-                else
+                default: // gpUCB variant
                 {
-                    if ( !answisy && ( (double) sigmay > ztol ) )
-                    {
-                        double z = ( ( (double) muy ) - yymaxcorrect ) / ( (double) sigmay );
-
-                        double Phiz = normPhi(z-zeta); //numbase_Phi(Phiz,z); or Phifn(z);
-                        double phiz = normphi(z-zeta); //numbase_phi(phiz,z); or phifn(z);
-
-                        res = ( ( ( (double) muy ) - yymaxcorrect - zeta ) * Phiz ) + ( ( (double) sigmay ) * phiz );
-                    }
-
-                    else
-                    {
-                        // if muy > ymax then z = +infty, so Phiz = +1, phiz = 0
-                        // if muy < ymax then z = -infty, so Phiz = 0,  phiz = infty
-                        // assume lim_{z->-infty} sigmay.phiz = 0
-
-                        res = ( (double) muy > yymaxcorrect-zeta ) ? ( ( (double) muy ) - yymaxcorrect - zeta ) : 0.0;
-                    }
-                }
-
-                break;
-            }
-
-            case 2:
-            {
-                // PI
-
-                NiceAssert( !isstable );
-
-                if      ( !answisy && ( (double) sigmay > ztol ) ) { res = normPhi((((double) muy)-yymaxcorrect)/((double) sigmay)); }
-                else if ( (double) muy > yymaxcorrect            ) { res = 1;                                                        }
-                else                                               { res = 0;                                                        }
-
-                break;
-            }
-
-            case 100:
-            {
-                // PEc-b
-
-                res = 0;
-
-                break;
-            }
-
-            default:
-            {
-                // gpUCB variants, VO and MO, default acq
-
-                double locsigmay = (double) sigmay;
-                double locmuy = (double) muy;
-
-                //FIXME: assuming binomial distribution here, may not be valid
-
-//                if ( isstable && !stabUseSig )
-//                {
-//                    // For independent vars: var(x.y) = var(x).var(y) + var(x).mu(y).mu(y) + var(y).mu(x).mu(x)
+//                    if ( isstable && !stabUseSig )
+//                    {
+//                        // For independent vars: var(x.y) = var(x).var(y) + var(x).mu(y).mu(y) + var(y).mu(x).mu(x)
 //
-////                    double stabvar = stabscore*(1-stabscore);
+////                        double stabvar = stabscore*(1-stabscore);
 ////errstream() << stabvar << "\t" << stabscore << "\t" << locmuy << "\t" << locsigmay << "\t";
 //
 ////THIS REALLY DOESNT WORK AT ALL!  MAKES VARIANCE LARGE EVERYWHERE, WHICH HINDERS EXPLORATION                    locsigmay = (locsigmay*stabvar) + (locsigmay*stabscore*stabscore) + (locmuy*locmuy*stabvar);
-//                    locmuy    = stabscore*locmuy;
+//                        locmuy    = stabscore*locmuy;
 ////phantomx - new variance calc
 //locsigmay = stabscore*stabscore*locsigmay;
 ////errstream() << "(\t" << locmuy << "\t" << locsigmay << "\t)\t";
-//                }
+//                    }
 
-                if ( isstable && !stabUseSig ) { locmuy = stabscore*locmuy; locsigmay = stabscore*stabscore*locsigmay; }
+                    if ( !stabUseSig ) { locmuy *= stabscore; locsigmay *= stabscore*stabscore; }
 
-                if ( epspinf ) { res = betasgn*locsigmay;                                                                                                      }
-                else           { res = locmuy + (betasgn*sqrt(beta)*locsigmay) - ( ( ( bbopts.minstdev > 0 ) && ( locsigmay < bbopts.minstdev ) ) ? 100 : 0 ); } // (1+(2*fabs(locmuy)));
+                    exploitFactor = alpha*locmuy;
+                    exploreFactor = (betasgn*sqrt(beta)*locsigmay);
 
-                if ( isstable && stabUseSig ) { res *= stabscore; }
+                    if ( stabUseSig ) { exploitFactor *= stabscore; exploreFactor *= stabscore; }
 
-                break;
+                    break;
+                }
             }
+
+            if ( ( bbopts.minstdev > 0 ) && ( locsigmay < bbopts.minstdev ) )
+            {
+                probofvalid = 0;
+                objresfeas  = false;
+            }
+
+            exploitFactor *= probofvalid;
+            exploreFactor *= probofvalid;
+
+            StrucAssert( !numcgt );
+
+            maxexploitFactor = 1;
+            maxexploreFactor = 1;
+
+            maxexploitFactorcgt = numcgt;
+            maxexploreFactorcgt = numcgt;
+        }
+
+        else
+        {
+            StrucAssert( !isstable );
+
+            double muR         = (double) muy;
+            double sigmaR      = (double) sigmay;
+            double yymaxR      = hhcgt;
+            double hhR         = hh;
+            double alphaR      = alpha;
+            double betaR       = beta;
+            double betasgnR    = betasgn;
+            double modelsigmaR = bbopts.model_sigma(0);
+            double mumin       = 0; // based on the shifting done previously
+            double mumax       = 2; // based on assumption that the objective lies (more or less) in [0,1], plus error factor, then shifted
+
+            double exploitFactorR = 0;
+            double exploreFactorR = 0;
+
+            double minexploitFactorR = 0;
+            double minexploreFactorR = 0;
+
+            double maxexploitFactorR = 1;
+            double maxexploreFactorR = 1;
+
+            int acqR = acq;
+
+            switch ( acqR )
+            {
+                case 1: // EI
+                {
+                    double Phizm = normPhi(((muR-yymaxR)/sigmaR)-zeta);
+                    double phizm = normphi(((muR-yymaxR)/sigmaR)-zeta);
+
+                    if ( sigmaR > ztol ) { exploitFactorR = ((muR-yymaxR-zeta)*Phizm) + (sigmaR*phizm);      exploreFactorR = 0; }
+                    else                 { exploitFactorR = ( muR > yymaxR+zeta ) ? (muR-yymaxR-zeta) : 0.0; exploreFactorR = 0; }
+
+                    minexploitFactorR = 0;
+                    maxexploitFactorR = (mumax-mumin);
+
+                    minexploreFactorR = 0;
+                    maxexploreFactorR = 0;
+
+                    break;
+                }
+
+                case 2: // PI
+                {
+                    double Phiz = normPhi((muR-yymaxR)/sigmaR);
+
+                    if ( sigmaR > ztol ) { exploitFactorR = Phiz;                     exploreFactorR = 0; }
+                    else                 { exploitFactorR = ( muR > yymaxR ) ? 1 : 0; exploreFactorR = 0; }
+
+                    minexploitFactorR = 0;
+                    maxexploitFactorR = 1;
+
+                    minexploreFactorR = 0;
+                    maxexploreFactorR = 0;
+
+                    break;
+                }
+
+                case 23: // LSE Saddle, Bry1 - note additional factor to ensure positivity
+                {
+                    exploitFactorR = 0;
+                    exploreFactorR = (1.96*sigmaR) - std::abs(muR-hhR) + ((mumax-mumin)+std::abs(hhR));
+
+                    minexploitFactorR = 0;
+                    maxexploitFactorR = 0;
+
+                    minexploreFactorR = 0; //(1.96*modelsigmaR);
+                    maxexploreFactorR = (1.96*(1+modelsigmaR)) + ((mumax-mumin)+std::abs(hhR));
+
+                    break;
+                }
+
+                case 24: // LSE C2LSE, Ngo1 - rescaled and squished, but still has the same minima. Also bounds are a bit arbitrary
+                {
+                    exploitFactorR = 0;
+                    exploreFactorR = log(1+(sigmaR/std::max(bbopts.lseeps,std::abs(muR-hhR))));
+
+                    minexploitFactorR = 0;
+                    maxexploitFactorR = 0;
+
+                    minexploreFactorR = 0; //log(1+modelsigmaR/((mumax-mumin)+std::abs(hhR)));
+                    maxexploreFactorR = minexploreFactorR+1; // This is arbitrary! The real max is very large, and we don't want to "squash" what matters.
+                                                             // "real" max: log(1+((1+modelsigmaR)/lseeps))
+
+                    break;
+                }
+
+                default: // gpUCB variants
+                {
+                    exploitFactorR = alphaR*(muR-mumin);
+                    exploreFactorR = (betasgnR*sqrt(betaR)*sigmaR);
+
+                    minexploitFactorR = 0;
+                    maxexploitFactorR = alphaR*(mumax-mumin);
+
+                    minexploreFactorR = 0; //(betasgnR*sqrt(betaR)*modelsigmaR);
+                    maxexploreFactorR = (betasgnR*sqrt(betaR)*(1+modelsigmaR));
+
+                    break;
+                }
+            }
+
+            if ( ( bbopts.minstdev > 0 ) && ( sigmaR < bbopts.minstdev ) )
+            {
+                probofvalid = 0;
+                objresfeas  = false;
+            }
+
+            exploitFactor += probofvalid*exploitFactorR;
+            exploreFactor += probofvalid*exploreFactorR;
+
+            minexploitFactor += minexploitFactorR;
+            minexploreFactor += minexploreFactorR;
+
+            maxexploitFactor += maxexploitFactorR;
+            maxexploreFactor += maxexploreFactorR;
+        }
+
+        for ( int qq = 0 ; qq < numcgt ; ++qq )
+        {
+            double muR         = (double) mucgt(qq);
+            double sigmaR      = sqrt((double) varcgtsq(qq));
+            double yymaxR      = hhcgt; // 0
+            double hhR         = hhcgt; // 0
+            double alphaR      = alphacgt;
+            double betaR       = betacgt;
+            double betasgnR    = betasgncgt;
+            double modelsigmaR = bbopts.model_sigma_cgt(qq);
+            double mumin       = -15; // see next line
+            double mumax       = 15;  // based on assumption that the objective lies (more or less) in [-10,10]
+
+            double exploitFactorR = 0;
+            double exploreFactorR = 0;
+
+            double minexploitFactorR = 0;
+            double minexploreFactorR = 0;
+
+            double maxexploitFactorR = 0;
+            double maxexploreFactorR = 0;
+
+            int acqR = acqcgt;
+
+            switch ( acqR )
+            {
+                case 1: // EI
+                {
+                    double Phizm = normPhi(((muR-yymaxR)/sigmaR)-zeta);
+                    double phizm = normphi(((muR-yymaxR)/sigmaR)-zeta);
+
+                    if ( sigmaR > ztol ) { exploitFactorR = ((muR-yymaxR-zeta)*Phizm) + (sigmaR*phizm);      exploreFactorR = 0; }
+                    else                 { exploitFactorR = ( muR > yymaxR+zeta ) ? (muR-yymaxR-zeta) : 0.0; exploreFactorR = 0; }
+
+                    minexploitFactorR = 0;
+                    maxexploitFactorR = (mumax-mumin);
+
+                    minexploreFactorR = 0;
+                    maxexploreFactorR = 0;
+
+                    break;
+                }
+
+                case 2: // PI
+                {
+                    double Phiz = normPhi((muR-yymaxR)/sigmaR);
+
+                    if ( sigmaR > ztol ) { exploitFactorR = Phiz;                     exploreFactorR = 0; }
+                    else                 { exploitFactorR = ( muR > yymaxR ) ? 1 : 0; exploreFactorR = 0; }
+
+                    minexploitFactorR = 0;
+                    maxexploitFactorR = 1;
+
+                    minexploreFactorR = 0;
+                    maxexploreFactorR = 0;
+
+                    break;
+                }
+
+                case 23: // LSE Saddle, Bry1 - note additional factor to ensure positivity
+                {
+                    exploitFactorR = 0;
+                    exploreFactorR = (1.96*sigmaR) - std::abs(muR-hhR) + ((mumax-mumin)+std::abs(hhR));
+
+                    minexploitFactorR = 0;
+                    maxexploitFactorR = 0;
+
+                    minexploreFactorR = 0; //(1.96*modelsigmaR);
+                    maxexploreFactorR = (1.96*(1+modelsigmaR)) + ((mumax-mumin)+std::abs(hhR));
+
+                    break;
+                }
+
+                case 24: // LSE C2LSE, Ngo1 - rescaled and squished, but still has the same minima. Also bounds are a bit arbitrary
+                {
+                    exploitFactorR = 0;
+                    exploreFactorR = log(1+(sigmaR/std::max(bbopts.lseeps,std::abs(muR-hhR))));
+
+                    minexploitFactorR = 0;
+                    maxexploitFactorR = 0;
+
+                    minexploreFactorR = 0; //log(1+modelsigmaR/((mumax-mumin)+std::abs(hhR)));
+                    maxexploreFactorR = 1; // This is arbitrary! The real max is very large, and we don't want to "squash" what matters.
+                                           // "real" max: log(1+((1+modelsigmaR)/lseeps))
+
+                    break;
+                }
+
+                default: // gpUCB variants
+                {
+                    exploitFactorR = alphaR*(muR-mumin);
+                    exploreFactorR = (betasgnR*sqrt(betaR)*sigmaR);
+
+                    minexploitFactorR = 0;
+                    maxexploitFactorR = alphaR*(mumax-mumin);
+
+                    minexploreFactorR = 0; //(betasgnR*sqrt(betaR)*modelsigmaR);
+                    maxexploreFactorR = (betasgnR*sqrt(betaR)*(1+modelsigmaR));
+
+                    break;
+                }
+            }
+
+            double probofvalidcgt = 0;
+
+            if ( !( ( bbopts.minstdev > 0 ) && ( sigmaR < bbopts.minstdev ) ) )
+            {
+                probofvalidcgt = 1;
+                objresfeascgt  = true;
+            } // Note the negated logic here!
+
+            exploitFactorcgt += probofvalidcgt*exploitFactorR;
+            exploreFactorcgt += probofvalidcgt*exploreFactorR;
+
+            minexploitFactorcgt += minexploitFactorR;
+            minexploreFactorcgt += minexploreFactorR;
+
+            maxexploitFactorcgt += maxexploitFactorR;
+            maxexploreFactorcgt += maxexploreFactorR;
         }
     }
+
+    if ( PIscale != 2 )
+    {
+        exploitFactor *= resscale;
+        exploreFactor *= resscale;
+    }
+
+    res = (exploitFactor+exploreFactor) + (exploitFactorcgt+exploreFactorcgt);
+
+    double resmin = 0;
+    double resmax = (maxexploitFactor+maxexploreFactor) + (maxexploitFactorcgt+maxexploreFactorcgt);
 //errstream() << "phantomxyz testpoint 8 res = " << res << "\n";
 //errstream() << "phantomxyz testpoint 8 muy = " << muy << "\n";
 //errstream() << "phantomxyz testpoint 8 sigmay = " << sigmay << "\n";
 
     // =======================================================================
     // =======================================================================
-    // Scale by probability that constraints are met if cgtmethod == 0
-    // (or add variances together for PEc (method 10)
+    // Add constraint variance if required.
     // =======================================================================
     // =======================================================================
 
-    if ( (bbopts.cgtapprox).size() && ( ( bbopts.cgtmethod == 0 ) || ( iires == -1 ) ) ) // don't do this if we don't have any solution yet, as that indicates to feasible results and hence completely flat CGT!
-    {
-        NiceAssert( thisbatchsize == 1 );
-
-        Vector<gentype> varcgtsq;
-        Vector<gentype> mucgt;
-
-        if ( dimfid && ( fidmode == 0 ) )
-        {
-            Vector<gentype> varcgtsq_pred;
-            bbopts.model_predmuvar_cgt(varcgtsq_pred,varcgtsq,mucgt,x_fullfid,x);
-            varcgtsq += varcgtsq_pred;
-        }
-
-        else
-        {
-            if ( isgridopt && !iscontopt && ( gridi >= 0 ) ) { bbopts.model_muvarTrainingVector_cgt(varcgtsq,mucgt,Nbasecgt+gridi); }
-            else                                             { bbopts.model_muvar_cgt(varcgtsq,mucgt,x);                            }
-        }
-
-        // mucgt >= cgtmargin
-        // mucgt-cgtmargin >= 0
-
-        for ( int i = 0 ; i < mucgt.size() ; ++i ) { mucgt("&",i) -= bbopts.cgtmargin; } // ((bbopts.cgtmargin)*2*sqrt(varcgtsq(i)))
-
-        double probofvalid             = 1;
-        double totalconstraintvariance = 0;
-
-        for ( int i = 0 ; i < (bbopts.cgtapprox).size() ; i++ )
-        {
-            double ecgt   = (double) mucgt(i);
-            double vcgtsq = (double) varcgtsq(i);
-
-            // Sanity check here!
-
-            if      ( testisvnan(vcgtsq) ) { errstream() << "varcgtsq " << vcgtsq << " NaN in Bayesian Optimisation!\n";                       vcgtsq = 0.0; }
-            else if ( testisinf(vcgtsq)  ) { errstream() << "varcgtsq " << vcgtsq << " inf in Bayesian Optimisation!\n";                       vcgtsq = 0.0; }
-            else if ( vcgtsq <= 0        ) { errstream() << "varcgtsq " << vcgtsq << " or " << varcgtsq << " neg in Bayesian Optimisation!\n"; vcgtsq = 0.0; }
-
-            // This is basically PI
-
-            if      ( vcgtsq > ztol ) { totalconstraintvariance += sqrt(vcgtsq); probofvalid *= normPhi(ecgt/sqrt(vcgtsq)); }
-            else if ( ecgt < 0      ) { probofvalid = 0;                                                                    }
-        }
-
-        // acq 10 aims for exploration in constraints and objective
-
-        if      ( acq == 10  ) { res += betasgn*totalconstraintvariance; }
-        else if ( acq == 100 ) { res  = betasgn*totalconstraintvariance; }
-        else                   { res *= probofvalid;                     }
-    }
+    if      ( acq == 10             ) { res += betasgn*     totalconstraintvariance; objresfeas = true; objresfeascgt = true; resfeas = true; }
+    else if ( bbopts.cgtmethod == 2 ) { res += betasgn*beta*totalconstraintvariance; objresfeas = true; objresfeascgt = true; resfeas = true; }
+    else if ( bbopts.cgtmethod == 3 ) { res += betasgn*     totalconstraintvariance; objresfeas = true; objresfeascgt = true; resfeas = true; }
 
     // =======================================================================
     // =======================================================================
@@ -1357,11 +1692,7 @@ predictive noise is predsigmay, not sigma()
     // =======================================================================
     // =======================================================================
 
-    if ( dimfid && ( fidmode == 0 ) )
-    {
-//        res *= fidpenalty/maxfidpenalty;
-        res *= overscale*maxfidpenalty/fidpenalty;
-    }
+    if ( dimfid && ( fidmode == 0 ) ) { res *= overscale*maxfidpenalty/fidpenalty; }
 
     // =======================================================================
     // =======================================================================
@@ -1370,9 +1701,33 @@ predictive noise is predsigmay, not sigma()
     // =======================================================================
     // =======================================================================
 
-    res = -res; // Set up for minimiser
+//    double baseoff = 1.5+(bbopts.numcgt); // To compensate for the fact that the variance contributions may be negative
+//                                          // Note also that in EI the posterior mean may fall outside of [-1,1], so use 1.5 rather than 1 as a fudge
+//    res = (baseoff-res)/(baseoff+1); // Set up for minimiser
+    res = (resmax-res)/(resmax-resmin);
 
-    return res*resscale;
+    // When only one of the acquisition (obj and cgt) contribute, we can generalise infeasibility
+
+    if ( (           !objresfeas    ) && ( !numcgt || ( acqcgt == 22 ) ) ) { resfeas = false; }
+    if ( ( numcgt && !objresfeascgt ) && (            ( acq    == 22 ) ) ) { resfeas = false; }
+
+    if ( !objresfeas && !objresfeascgt ) { resfeas = false; }
+
+    // Flag infeasibility for DIRect using NaN
+
+    if      ( !resfeas     ) { res  = valvnan("infeasible inner loop result"); }
+    else if ( PIscale == 2 ) { res *= resscale;                                }
+
+//errstream() << "inner loop (" << objresfeas << "," << objresfeascgt << "," << acq << "," << acqcgt << "," << resfeas << "," << PIscale << "): ";
+//printoneline(errstream(),x);
+//errstream() << " -> " << res;
+//errstream() << " =?= ( " << resscale << " * " << probofvalid << " * ( (" << alpha << "*" << muy << ") + " << " ( " << beta << " * " << sigmay << " ) )";
+//errstream() << " = ( " << exploitFactor << " + " << exploreFactor << " ))";
+//errstream() << " + ( " << exploitFactorcgt << " + " << exploreFactorcgt << " ))";
+//errstream() << "\t ( " << minexploreFactorcgt << " to " << maxexploreFactorcgt << " )";
+//errstream() << "\t" << mucgt << "\n";
+
+    return res;
   }
 };
 
@@ -1559,18 +1914,21 @@ errstream() << "phantomxabc: locxmin " << locxmin << "\n";
 errstream() << "phantomxabc: locxmax " << locxmax << "\n";
 errstream() << "phantomxabc: numnulls " << numnulls << "\n";
 
-                    if ( !numnulls || ( havesoln && !numnullfids ) )
+                    if ( !numnulls )
+                    {
+                        // x is fully defined by the grid, so we need only evaluate the acquisition function
+                        tempfres = (*fn)(dim,xx,fnarg);
+                    }
+
+                    else if ( havesoln && !numnullfids )
                     {
                         // x is fully defined by the grid, so we need only evaluate the acquisition function
                         tempfres = (*fn)(dim,xx,fnarg);
 
-                        if ( numnulls )
+                        // Random null fill
+                        for ( int j = 0 ; j < dim ; ++j )
                         {
-                            // Random null fill
-                            for ( int j = 0 ; j < dim ; ++j )
-                            {
-                                if ( bopts.model_x(Nbasemu+gridi).direcref(j).isValNull() && ( xmin(j) != xmax(j) ) ) { randufill(xxres("&",j),xmin(j),xmax(j)); }
-                            }
+                            if ( bopts.model_x(Nbasemu+gridi).direcref(j).isValNull() && ( xmin(j) != xmax(j) ) ) { randufill(xxres("&",j),xmin(j),xmax(j)); }
                         }
                     }
 
@@ -1581,14 +1939,14 @@ errstream() << "phantomxabc: numnulls " << numnulls << "\n";
 
                         gentype dummyres;
 
-                        int directres = directOpt(dim,xxres,dummyres,locxmin,locxmax,fnfnapprox,fnarg,dopts,killSwitch);
+                        int directres = directOpt(dim,xxres,dummyres,locxmin,locxmax,fnfnapprox,fnarg,dopts,killSwitch,ADDJITTER);
                         errstream() << "direct(" << gridi << "," << directres << "):";
 
-                        tempfres = (double) dummyres;
+                        tempfres = !dummyres.isValNull() ? ((double) dummyres) : valvnan("no solution found");
                     }
 errstream() << "phantomxabc: tempfres " << tempfres << "\n";
 
-                    if ( ( locires == -1 ) || ( tempfres < (double) fres ) )
+                    if ( !std::isnan(tempfres) && ( ( locires == -1 ) || ( tempfres < (double) fres ) ) )
                     {
                         for ( int j = 0 ; j < dim ; ++j ) { x[j] = xx[j]; }
 
@@ -1611,18 +1969,21 @@ errstream() << "phantomxabc: locxmin " << locxmin << "\n";
 errstream() << "phantomxabc: locxmax " << locxmax << "\n";
 errstream() << "phantomxabc: numnulls " << numnulls << "\n";
 
-            if ( !numnulls || ( havesoln && !numnullfids ) )
+            if ( !numnulls )
+            {
+                // x is fully defined by the grid, so we need only evaluate the acquisition function
+                tempfres = (*fn)(dim,xx,fnarg);
+            }
+
+            else if ( havesoln && !numnullfids )
             {
                 // x is fully defined by the grid, so we need only evaluate the acquisition function
                 tempfres = (*fn)(dim,xx,fnarg);
 
-                if ( numnulls )
+                // Random null fill
+                for ( int j = 0 ; j < dim ; ++j )
                 {
-                    // Random null fill
-                    for ( int j = 0 ; j < dim ; ++j )
-                    {
-                        if ( bopts.model_x(Nbasemu+gridi).direcref(j).isValNull() && ( xmin(j) != xmax(j) ) ) { randufill(xxres("&",j),xmin(j),xmax(j)); }
-                    }
+                    if ( bopts.model_x(Nbasemu+gridi).direcref(j).isValNull() && ( xmin(j) != xmax(j) ) ) { randufill(xxres("&",j),xmin(j),xmax(j)); }
                 }
             }
 
@@ -1633,14 +1994,14 @@ errstream() << "phantomxabc: numnulls " << numnulls << "\n";
 
                 gentype dummyres;
 
-                int directres = directOpt(dim,xxres,dummyres,locxmin,locxmax,fnfnapprox,fnarg,dopts,killSwitch);
+                int directres = directOpt(dim,xxres,dummyres,locxmin,locxmax,fnfnapprox,fnarg,dopts,killSwitch,ADDJITTER);
                 errstream() << "direct(" << gridi << "," << directres << "):";
 
-                tempfres = (double) dummyres;
+                tempfres = !dummyres.isValNull() ? ((double) dummyres) : valvnan("no solution found");
             }
 errstream() << "phantomxabc: tempfres " << tempfres << "\n";
 
-            if ( ( locires == -1 ) || ( tempfres < (double) fres ) )
+            if ( !std::isnan(tempfres) && ( ( locires == -1 ) || ( tempfres < (double) fres ) ) )
             {
                 for ( int j = 0 ; j < dim ; ++j ) { x[j] = xx[j]; }
 
@@ -1650,7 +2011,7 @@ errstream() << "phantomxabc: tempfres " << tempfres << "\n";
             }
         }
 
-        if ( ( tempfres <= hardmin ) || ( tempfres >= hardmax ) )
+        if ( !std::isnan(tempfres) && ( ( tempfres <= hardmin ) || ( tempfres >= hardmax ) ) )
         {
             break;
         }
@@ -1677,7 +2038,7 @@ errstream() << "phantomxabc: tempfres " << tempfres << "\n";
 
     nullPrint(errstream(),"MLGrid Optimisation Ended");
 
-    return 0;
+    return ( ires >= 0 ) ? 0 : -200;
 }
 
 
@@ -1739,115 +2100,6 @@ gentype &negateoutery(gentype &res)
 }
 
 
-
-// res - either the result, or a set:
-//
-// { res; addvar; ycgt; xxreplace; xsidechan; obstype }
-//
-// res:              restype:         replacement for res (result of f(x))
-// addvar:           NULL or double:  additional variance in f(x)
-// ycgt:             NULL or vector:  constraint vector [c1(x);c2(x);...]
-// xxreplace:        NULL or vector:  replacement for x (the x where the measurement is actually taken)
-// stopflages:       NULL or int:     bitwise flags.
-//                                    1: force early termination
-// xsidechan:        NULL or vector:  side-channel data [ xx1 ... xxn ]
-// obstype:          NULL or int:     observations type: 0 (na), 1 (>=), -1 (<=), 2 (==).
-// obstype_cgt:      NULL or vector:  observations type for ycgt
-// addexp:           NULL or gentype: additional observation of the same form (recursively)
-// fidcost:          NULL or double:  cost of evaluation for multi-fidelity (-1 for calculate in code, default)
-// nuscale:          NULL or double:  scaling factor on beta in acquisition function
-//
-// use of NULL: if a variable is NULL or absent then the corresponding vector is not set
-// replacexx: this is set if xxreplace is set
-
-void readres(gentype &res,
-                    double &addvar,
-                    Vector<gentype> &ycgt,
-                    SparseVector<gentype> &xxreplace,
-                    int &replacexx,
-                    gentype &addexp,
-                    int &stopflags,
-                    Vector<gentype> &xsidechan,
-                    int &xobstype,
-                    Vector<int> &xobstype_cgt,
-                    double &fidcost,
-                    double &nuscale);
-
-
-void readres(gentype &res,
-                    double &addvar,
-                    Vector<gentype> &ycgt,
-                    SparseVector<gentype> &xxreplace,
-                    int &replacexx,
-                    gentype &addexp,
-                    int &stopflags,
-                    Vector<gentype> &xsidechan,
-                    int &xobstype,
-                    Vector<int> &xobstype_cgt,
-                    double &fidcost,
-                    double &nuscale)
-{
-    // Defaults
-
-    //xobstype = 2;           // constraint type. this may be preset in gridsource
-    //xobstype_cgt.resize(0); // constraint observation types. this is always preset outside, but we leave as an option to pass in
-    xsidechan.resize(0);    // side-channel observation
-    addexp.force_null();    // additional observations
-    stopflags = 0;          // return flags
-    xxreplace.resize(0);    // x replacement
-    replacexx = 0;          // x replacement flag
-    ycgt.resize(0);         // y observation type
-    addvar = 0;             // additional variance
-    fidcost = -1;           // use internally calculate fidelity cost
-
-    // Overrides
-
-    if ( res.isValSet() )
-    {
-        bool resSet = false;
-        // Keep set return for backwards compatability
-        const Set<gentype> &z = (const Set<gentype> &) res;
-
-        if ( ( z.size() >= 3  ) && !z.all()(2) .isValNull() ) { ycgt = z.all()(2).cast_vector();      }
-        if ( ycgt.size() && !xobstype_cgt.size()            ) { xobstype_cgt.resize(ycgt.size()) = 2; }
-
-        if ( ( z.size() >= 1  ) && !z.all()(0) .isValNull() ) { resSet = true; res          =          z.all()(0);                     }
-        if ( ( z.size() >= 2  ) && !z.all()(1) .isValNull() ) {                addvar       = (double) z.all()(1);                     }
-        if ( ( z.size() >= 4  ) && !z.all()(3) .isValNull() ) { replacexx = 1; xxreplace    =          z.all()(3).cast_sparsevector(); }
-        if ( ( z.size() >= 5  ) && !z.all()(4) .isValNull() ) {                addexp       =          z.all()(4);                     }
-        if ( ( z.size() >= 6  ) && !z.all()(5) .isValNull() ) {                stopflags    = (int)    z.all()(5);                     }
-        if ( ( z.size() >= 7  ) && !z.all()(6) .isValNull() ) {                xsidechan    =          z.all()(6).cast_vector();       }
-        if ( ( z.size() >= 8  ) && !z.all()(7) .isValNull() ) {                xobstype     = (int)    z.all()(7);                     }
-        if ( ( z.size() >= 9  ) && !z.all()(8) .isValNull() ) {                xobstype_cgt =          z.all()(8).cast_vector_int();   }
-        if ( ( z.size() >= 10 ) && !z.all()(9) .isValNull() ) {                fidcost      = (double) z.all()(9);                     }
-        if ( ( z.size() >= 11 ) && !z.all()(10).isValNull() ) {                nuscale      = (double) z.all()(10);                    }
-
-        if ( !resSet ) { res.force_null(); }
-    }
-
-    else if ( res.isValDict() )
-    {
-        bool resSet = false;
-        // Proper way to do it
-        const Dict<gentype,dictkey> &z = (const Dict<gentype,dictkey> &) res;
-
-        if ( z.iskeypresent("c")      && !z("c").isValNull() ) { ycgt = z("c").cast_vector();          }
-        if ( ycgt.size() && !xobstype_cgt.size()             ) { xobstype_cgt.resize(ycgt.size()) = 2; }
-
-        if ( z.iskeypresent("y")       && !z("y").isValNull()       ) { resSet = true; res          =          z("y");                     }
-        if ( z.iskeypresent("addvar")  && !z("addvar").isValNull()  ) {                addvar       = (double) z("addvar");                }
-        if ( z.iskeypresent("x")       && !z("x").isValNull()       ) { replacexx = 1; xxreplace    =          z("x").cast_sparsevector(); }
-        if ( z.iskeypresent("and")     && !z("and").isValNull()     ) {                addexp       =          z("and");                   }
-        if ( z.iskeypresent("sf")      && !z("sf").isValNull()      ) {                stopflags    = (int)    z("sf");                    }
-        if ( z.iskeypresent("xsc")     && !z("xsc").isValNull()     ) {                xsidechan    =          z("xsc").cast_vector();     }
-        if ( z.iskeypresent("d")       && !z("d").isValNull()       ) {                xobstype     = (int)    z("d");                     }
-        if ( z.iskeypresent("dc")      && !z("dc").isValNull()      ) {                xobstype_cgt =          z("dc").cast_vector_int();  }
-        if ( z.iskeypresent("fidcost") && !z("fidcost").isValNull() ) {                fidcost      = (double) z("fidcost");               }
-        if ( z.iskeypresent("nuscale") && !z("nuscale").isValNull() ) {                nuscale      = (double) z("nuscale");               }
-
-        if ( !resSet ) { res.force_null(); }
-    }
-}
 
 // Given y, ycgt and observation types, translate nulls in y to non-observations
 //
@@ -2507,6 +2759,8 @@ int bayesOpt(int dim,
     int numfids = bopts.numfids;
     int fidmode = bopts.fidmode;
 
+    double cgtVarScale = bopts.cgtVarScale;
+
     effdim -= dimfid; // multi-fidelity terms don't get included in effdim
 
     NiceAssert( effdim > 0 );
@@ -2957,6 +3211,7 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
     Vector<double> xa(dim);
     Vector<SparseVector<double>  > xb (recBatchSize); // Has fidelity variables in nup(0), and augmented data
     Vector<SparseVector<gentype> > xxb(recBatchSize); // Has fidelity variables in nup(1), and no augmented data
+    Vector<int> dresb(recBatchSize);
     gentype fnapproxout;
     gentype nothingmuch('N');
     SparseVector<gentype> xinb;
@@ -3016,6 +3271,10 @@ errstream() << "Setting min lengthscale from grid: " << (1.5*mindist) << "\n";
     double mig        = 1; // set per iteration
     double rkhsnorm   = 1; // set per iteration
     double kappa0     = 1; // set per iteration
+    double Bcgt          = 1; // set per iteration
+    double migcgt        = 1; // set per iteration
+    double rkhsnormcgt   = 1; // set per iteration
+    double kappa0cgt     = 1; // set per iteration
     //double fidc       = 0.5; // see Kandasamy supplementary and the fidelity stuff
     double fidc       = 1; // see Kandasamy supplementary and the fidelity stuff
     int fidmaxcnt     = 0; // number of times that maximum fidelity has been queried
@@ -3771,8 +4030,15 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                                mig,
                                rkhsnorm,
                                kappa0,
+                               (bopts.R),
+                               Bcgt,
+                               migcgt,
+                               rkhsnormcgt,
+                               kappa0cgt,
                                (bopts.betafn),
+                               (bopts.betafncgt),
                                (bopts.acq),
+                               (bopts.acqcgt),
                                justreturnbeta,
                                covarmatrix,
                                meanvector,
@@ -3814,7 +4080,8 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                                fidpencost,
                                fidpenvars,
                                fidpenvecs,
-                               fidmode);
+                               fidmode,
+                               cgtVarScale);
 
     void *fnarginnerdr = (void *) &fnarginner;
 
@@ -3876,8 +4143,8 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
     // =======================================================================
 
     errstream() << "Entering main optimisation loop.\n";
-    if ( bopts.acq != 11 ) { outstream() << "***(acq " << bopts.acq << ")\n"; }
-    else                   { outstream() << "***(acq " << bopts.acq << "," << bopts.betafn << ")\n"; }
+    if ( bopts.acq != 11 ) { outstream() << "***(acq " << bopts.acq << "," << bopts.acqcgt << ")\n"; }
+    else                   { outstream() << "***(acq " << bopts.acq << "," << bopts.betafn << "," << bopts.betafncgt << ")\n"; }
 
     if ( algseed >= 0 )
     {
@@ -3946,6 +4213,8 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
 
         for ( k = 0 ; k < recBatchSize ; ++k )
         {
+            int dres = 0;
+
             anyindirect = isindirect || ( partindirect && k );
 
             // ===============================================================
@@ -3962,12 +4231,18 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
             ismultitargrec      = 0;
             currintrinbatchsize = bopts.intrinbatch;
 
-            int locacq = bopts.acq;
+            int locacq    = bopts.acq;
+            //int locacqcgt = bopts.acqcgt;
 
             if ( ( bopts.acq == 11 ) && (bopts.betafn).isValVector() )
             {
                 if ( ((bopts.betafn)(k)).isValVector() )
                 {
+                    bool cgtisvec = bopts.numcgt && ( ( bopts.acqcgt == 11 ) && (bopts.betafncgt).isValVector() )
+                                                 && ( ((bopts.betafncgt)(k)).isValVector() );
+
+                    StrucAssert( !cgtisvec || ( bopts.betafn.size() == bopts.betafncgt.size() ) );
+
                     // =======================================================
                     // =======================================================
                     // Explicit multi-recommendation via multiple strategies
@@ -3977,36 +4252,45 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                     NiceAssert( ((bopts.betafn)(k)).size() >= 1  );
                     NiceAssert( ((bopts.betafn)(k)).size() <= 12 );
 
-                    gentype locbetafn;
+                    NiceAssert( ((bopts.betafncgt)(k)).size() >= 1  );
+                    NiceAssert( ((bopts.betafncgt)(k)).size() <= 12 );
 
-                    if ( ((bopts.betafn)(k)).size() >= 3 )
-                    {
-                        gentype tmpbetafn((bopts.betafn)(k)(2));
-                        locbetafn = tmpbetafn;
-                    }
+                    gentype locbetafn;
+                    gentype locbetafncgt;
+
+                    if (             ((bopts.betafn   )(k)).size() >= 3 ) { gentype tmpbetafn   ((bopts.betafn   )(k)(2)); locbetafn    = tmpbetafn;    }
+                    if ( cgtisvec && ((bopts.betafncgt)(k)).size() >= 3 ) { gentype tmpbetafncgt((bopts.betafncgt)(k)(2)); locbetafncgt = tmpbetafncgt; }
 
                     // Note use of cast_ here (without finalisation) just in case any of these are functions.
 
-                    fnarginner._q_locacq          = ((bopts.betafn)(k)(0)).cast_int(0);
-                    fnarginner._q_p               = ( ( ((bopts.betafn)(k)).size() >= 2 ) && !(((bopts.betafn)(k)(1 )).isValVector()) ) ?  (((bopts.betafn)(k)(1 )).cast_double(0)) :  (bopts.p);
-                    fnarginner._q_betafn          = ( ( ((bopts.betafn)(k)).size() >= 3 ) && !(((bopts.betafn)(k)(2 )).isValVector()) ) ? &locbetafn                                : &(bopts.betafn);
-                    fnarginner._q_modD            = ( ( ((bopts.betafn)(k)).size() >= 4 ) && !(((bopts.betafn)(k)(3 )).isValVector()) ) ?  (((bopts.betafn)(k)(3 )).cast_double(0)) :  bopts.modD;
-                    fnarginner._q_delta           = ( ( ((bopts.betafn)(k)).size() >= 5 ) && !(((bopts.betafn)(k)(4 )).isValVector()) ) ?  (((bopts.betafn)(k)(4 )).cast_double(0)) :  delta;
-                    fnarginner._q_zeta            = 0.01; //( ( ((bopts.betafn)(k)).size() >= 5 ) && !(((bopts.betafn)(k)(4 )).isValVector()) ) ?  (((bopts.betafn)(k)(4 )).cast_double(0)) :  delta;
-                    fnarginner._q_defnu           = ( ( ((bopts.betafn)(k)).size() >= 6 ) && !(((bopts.betafn)(k)(5 )).isValVector()) ) ?  (((bopts.betafn)(k)(5 )).cast_double(0)) :  nu;
-                    fnarginner._q_a               = ( ( ((bopts.betafn)(k)).size() >= 7 ) && !(((bopts.betafn)(k)(6 )).isValVector()) ) ?  (((bopts.betafn)(k)(6 )).cast_double(0)) :  (bopts.a);
-                    fnarginner._q_b               = ( ( ((bopts.betafn)(k)).size() >= 8 ) && !(((bopts.betafn)(k)(7 )).isValVector()) ) ?  (((bopts.betafn)(k)(7 )).cast_double(0)) :  (bopts.b);
-                    fnarginner._q_r               = ( ( ((bopts.betafn)(k)).size() >= 9 ) && !(((bopts.betafn)(k)(8 )).isValVector()) ) ?  (((bopts.betafn)(k)(8 )).cast_double(0)) :  (bopts.r);
-                    fnarginner._q_thisbatchsize   = ( ( ((bopts.betafn)(k)).size() >= 10) && !(((bopts.betafn)(k)(9 )).isValVector()) ) ?  (((bopts.betafn)(k)(9 )).cast_int   (0)) :  (bopts.intrinbatch);
-                    fnarginner._q_thisbatchmethod = ( ( ((bopts.betafn)(k)).size() >= 11) && !(((bopts.betafn)(k)(10)).isValVector()) ) ?  (((bopts.betafn)(k)(10)).cast_int   (0)) :  (bopts.intrinbatchmethod);
-                    fnarginner._q_R               = ( ( ((bopts.betafn)(k)).size() >= 12) && !(((bopts.betafn)(k)(11)).isValVector()) ) ?  (((bopts.betafn)(k)(11)).cast_double(0)) :  (bopts.R);
+                    int locacqk    = bopts.acq;
+                    int locacqkcgt = bopts.acqcgt;
 
-                    if ( ( (bopts.betafn(k)).size() >= 10 ) && !(((bopts.betafn)(k)(9)).isValVector()) )
-                    {
-                        currintrinbatchsize = (int) ((bopts.betafn)(k)(9));
-                    }
+                                      locacqk    = ((bopts.betafn   )(k)(0)).cast_int(0);
+                    if ( cgtisvec ) { locacqkcgt = ((bopts.betafncgt)(k)(0)).cast_int(0); }
 
-                    locacq = fnarginner._q_locacq;
+                    fnarginner._q_locacq    = locacqk;
+                    fnarginner._q_locacqcgt = locacqkcgt;
+
+                    fnarginner._q_p               = ( ( ((bopts.betafn)(k)).size() >= 2  ) && !(((bopts.betafn)(k)(1 )).isValVector()) ) ?  (((bopts.betafn)(k)(1 )).cast_double(0)) :  (bopts.p);
+                    fnarginner._q_betafn          = ( ( ((bopts.betafn)(k)).size() >= 3  ) && !(((bopts.betafn)(k)(2 )).isValVector()) ) ? &locbetafn                                : &(bopts.betafn);
+                    fnarginner._q_modD            = ( ( ((bopts.betafn)(k)).size() >= 4  ) && !(((bopts.betafn)(k)(3 )).isValVector()) ) ?  (((bopts.betafn)(k)(3 )).cast_double(0)) :  bopts.modD;
+                    fnarginner._q_delta           = ( ( ((bopts.betafn)(k)).size() >= 5  ) && !(((bopts.betafn)(k)(4 )).isValVector()) ) ?  (((bopts.betafn)(k)(4 )).cast_double(0)) :  delta;
+                    fnarginner._q_zeta            = 0.01; //( ( ((bopts.betafn)(k)).size() >= 5  ) && !(((bopts.betafn)(k)(4 )).isValVector()) ) ?  (((bopts.betafn)(k)(4 )).cast_double(0)) :  delta;
+                    fnarginner._q_defnu           = ( ( ((bopts.betafn)(k)).size() >= 6  ) && !(((bopts.betafn)(k)(5 )).isValVector()) ) ?  (((bopts.betafn)(k)(5 )).cast_double(0)) :  nu;
+                    fnarginner._q_a               = ( ( ((bopts.betafn)(k)).size() >= 7  ) && !(((bopts.betafn)(k)(6 )).isValVector()) ) ?  (((bopts.betafn)(k)(6 )).cast_double(0)) :  (bopts.a);
+                    fnarginner._q_b               = ( ( ((bopts.betafn)(k)).size() >= 8  ) && !(((bopts.betafn)(k)(7 )).isValVector()) ) ?  (((bopts.betafn)(k)(7 )).cast_double(0)) :  (bopts.b);
+                    fnarginner._q_r               = ( ( ((bopts.betafn)(k)).size() >= 9  ) && !(((bopts.betafn)(k)(8 )).isValVector()) ) ?  (((bopts.betafn)(k)(8 )).cast_double(0)) :  (bopts.r);
+                    fnarginner._q_thisbatchsize   = ( ( ((bopts.betafn)(k)).size() >= 10 ) && !(((bopts.betafn)(k)(9 )).isValVector()) ) ?  (((bopts.betafn)(k)(9 )).cast_int   (0)) :  (bopts.intrinbatch);
+                    fnarginner._q_thisbatchmethod = ( ( ((bopts.betafn)(k)).size() >= 11 ) && !(((bopts.betafn)(k)(10)).isValVector()) ) ?  (((bopts.betafn)(k)(10)).cast_int   (0)) :  (bopts.intrinbatchmethod);
+                    fnarginner._q_R               = ( ( ((bopts.betafn)(k)).size() >= 12 ) && !(((bopts.betafn)(k)(11)).isValVector()) ) ?  (((bopts.betafn)(k)(11)).cast_double(0)) :  (bopts.R);
+
+                    if ( cgtisvec ) { fnarginner._q_betafncgt = ( ( ((bopts.betafncgt)(k)).size() >= 3  ) && !(((bopts.betafncgt)(k)(2 )).isValVector()) ) ? &locbetafncgt                                : &(bopts.betafncgt); }
+
+                    if ( ( (bopts.betafn(k)).size() >= 10 ) && !(((bopts.betafn)(k)(9)).isValVector()) ) { currintrinbatchsize = (int) ((bopts.betafn)(k)(9)); }
+
+                    locacq    = fnarginner._q_locacq;
+                    //locacqcgt = fnarginner._q_locacqcgt;
                 }
 
                 else
@@ -4019,6 +4303,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                     // =======================================================
 
                     fnarginner._q_locacq          = (bopts.acq);
+                    fnarginner._q_locacqcgt       = (bopts.acqcgt);
                     fnarginner._q_p               = (bopts.p);
                     fnarginner._q_betafn          = &(bopts.betafn);
                     fnarginner._q_modD            = bopts.modD;
@@ -4031,6 +4316,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                     fnarginner._q_thisbatchsize   = (bopts.intrinbatch);
                     fnarginner._q_thisbatchmethod = (bopts.intrinbatchmethod);
                     fnarginner._q_R               = (bopts.R);
+                    fnarginner._q_betafncgt       = &(bopts.betafncgt);
 
                     // If this gets set then we are using multi-objective optimisation on (mu,sigma) to construct relevant number of recommendations
                     ismultitargrec = ((bopts.betafn)(k)).isValNull() ? 1 : 0;
@@ -4092,7 +4378,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                 bopts.hardmin = valninf();
                 bopts.hardmax = valpinf();
 
-                int dres = 0;
+                dres = 0;
 
                 firstevalinseq = 1;
 
@@ -4100,6 +4386,14 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                 mig      = bopts.model_maxinfogain(0);
                 rkhsnorm = bopts.model_RKHSnorm(0);
                 kappa0   = bopts.model_kappa0(0);
+
+                if ( bopts.numcgt )
+                {
+                    Bcgt        = ( bopts.B <= 0 ) ? bopts.modelcgt_RKHSnorm(0) : bopts.B;
+                    migcgt      = bopts.modelcgt_maxinfogain(0);
+                    rkhsnormcgt = bopts.modelcgt_RKHSnorm(0);
+                    kappa0cgt   = bopts.modelcgt_kappa0(0);
+                }
 
                 // Adjust bounds for multifidelity (with BOCA, recommendation is always done
                 // for max fidelity, then the real fidelity is chosen afterwards
@@ -4125,6 +4419,15 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                     double sampScale = ( locacq == 12 ) ? ( B + (R*sqrt(2*(mig+1+log(2/ddelta)))) ) : 1.0;
 
                     bopts.model_sample(xmin,xmax,sampScale*sampScale);
+                }
+
+                if ( ( bopts.cgtmethod == 4 ) || ( bopts.cgtmethod == 5 ) )
+                {
+                    double Rcgt         = bopts.R;
+                    double ddeltacgt    = bopts.delta;
+                    double sampScalecgt = ( bopts.cgtmethod == 5 ) ? ( Bcgt + (Rcgt*sqrt(2*(migcgt+1+log(2/ddeltacgt)))) ) : 1.0;
+
+                    bopts.modelcgt_sample(xmin,xmax,sampScalecgt*sampScalecgt);
                 }
 
                 gridi   = -1;
@@ -4186,11 +4489,14 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                                          fnfnapprox,
                                          fnarginnerdr,
                                          bopts.goptssingleobj,
-                                         killSwitch);
+                                         killSwitch,
+                                         ADDJITTER);
                         fnarginner.mode = 0; // turn off single beta, stale x calculation fast mode
+
+                        errstream() << "#((" << dres << "," << dummyres << "))";
                     }
 
-                    errstream() << "Unfiltered result x before fidelity selection: " << xa       << "\n";
+                    errstream() << "Unfiltered result x before fidelity selection: "; printoneline(errstream(),xa); errstream() << "\n";
                     errstream() << "Unfiltered result y before fidelity selection: " << dummyres << "\n";
 
                     printrec = true;
@@ -4296,6 +4602,11 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                     bopts.model_unsample();
                 }
 
+                if ( ( bopts.cgtmethod == 4 ) || ( bopts.cgtmethod == 5 ) )
+                {
+                    bopts.modelcgt_unsample();
+                }
+
                 if ( dimfid && ( fidmode != 0 ) )
                 {
                     for ( int jij = 0 ; jij < dimfid ; jij++ )
@@ -4313,7 +4624,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
 
                 // Put fidelity bounds back how they should be
 
-                if ( ( dimfid && ( fidmode != 0 ) ) && ( locacq != 18 ) )
+                if ( ( dres != -200 ) && ( dimfid && ( fidmode != 0 ) ) && ( locacq != 18 ) )
                 {
                     if ( fidmode == 21 )
                     {
@@ -4641,6 +4952,7 @@ errstream() << "\n";
                 {
                     xb.resize(numRecs+newRecs);
                     xxb.resize(numRecs+newRecs);
+                    dresb.resize(numRecs+newRecs);
                 }
 
                 retVector<double> tmpvaaa;
@@ -4649,6 +4961,13 @@ errstream() << "\n";
                 {
                     xb("&",numRecs+jji).zero();
                     xb("&",numRecs+jji) = xa((jji*dim),1,(jji*dim)+dim-1,tmpvaaa);
+
+                    if ( dres != -200 )
+                    {
+                        altitcnt += itcntmethod ? 1 : 0;
+                    }
+
+                    dresb("&",numRecs+jji) = dres;
                 }
             }
 
@@ -4685,6 +5004,7 @@ errstream() << "\n";
                 locbopts.moodim            = recBatchSize;
                 locbopts.impmeasu          = &(static_cast<IMP_Generic &>(locimpmeasu));
                 locbopts.acq               = 1;
+                locbopts.acqcgt            = 22;
                 locbopts.intrinbatch       = 1;
                 locbopts.intrinbatchmethod = 0;
                 locbopts.startpoints       = bopts.startpointsmultiobj;
@@ -4762,6 +5082,7 @@ errstream() << "\n";
                 {
                     xb.resize(numRecs+newRecs);
                     xxb.resize(numRecs+newRecs);
+                    dresb.resize(numRecs+newRecs);
                 }
 
                 // ===========================================================
@@ -4780,6 +5101,13 @@ errstream() << "\n";
                     {
                         xb("&",numRecs+jji)("&",jki) = (double) locallxres(locparind(jji))(jki);
                     }
+
+                    if ( dres != -200 )
+                    {
+                        altitcnt += itcntmethod ? 1 : 0;
+                    }
+
+                    dresb("&",numRecs+jji) = dres;
                 }
 
                 {
@@ -4816,8 +5144,6 @@ errstream() << "\n";
             justreturnbeta = 0; // This puts things back to standard operation
 
             // If the iteration count is per batch size then do this
-
-            altitcnt += itcntmethod ? 1 : 0;
 
             if ( newRecs )
             {
@@ -4933,12 +5259,14 @@ errstream() << "\n";
             }
         }
 
+outstream() << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
         //int sigmamod = 0;
-
         bool doeval = true;
 
         for ( k = 0 ; k < numRecs ; ++k )
         {
+          if ( dresb(k) != -200 ) // Don't evaluate recommendations that don't actually recommend anything
+          {
             //errstream() << "e";
 
             // ===============================================================
@@ -4947,15 +5275,8 @@ errstream() << "\n";
             // ===============================================================
             // ===============================================================
 
-            if ( isgridopt )
-            {
-                gridi = gridivec(k);
-            }
-
-            else
-            {
-                gridi = -1;
-            }
+            if ( isgridopt ) { gridi = gridivec(k); }
+            else             { gridi = -1;          }
 
             doeval = true;
             int dval = 2;
@@ -5394,6 +5715,10 @@ errstream() << "\n";
                     negateoutery(fnapproxout);
                 }
             }
+
+            altitcnt += itcntmethod ? 0 : 1;
+            ++itcnt;
+          }
         }
 
         // ===================================================================
@@ -5441,7 +5766,7 @@ errstream() << "\n";
         // ===================================================================
         // ===================================================================
 
-++itcnt;
+//++itcnt;
 /*
         if ( !(++itcnt%FEEDBACK_CYCLE) )
         {
@@ -5490,8 +5815,6 @@ errstream() << "\n";
         {
             timeout = kbquitdet("Bayesian optimisation",uservars,varnames,vardescr);
         }
-
-        altitcnt += itcntmethod ? 0 : 1;
 
         xinf = nullptr;
 

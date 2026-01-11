@@ -484,7 +484,7 @@ int LSV_Anions::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***
     return 0;
 }
 
-double LSV_Anions::eTrainingVector(int i) const
+double LSV_Anions::e(int i) const
 {
     double res = 0;
 

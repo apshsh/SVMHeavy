@@ -1221,7 +1221,7 @@ int SVM_Binary::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***
     return tempresh;
 }
 
-double SVM_Binary::eTrainingVector(int i) const
+double SVM_Binary::e(int i) const
 {
     double res = 0;
 

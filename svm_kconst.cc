@@ -60,7 +60,7 @@ int SVM_KConst::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***
     return tempresh;
 }
 
-double SVM_KConst::eTrainingVector(int i) const
+double SVM_KConst::e(int i) const
 {
     int unusedvar = 0;
     double res = 0;

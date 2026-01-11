@@ -740,13 +740,6 @@ public:
     virtual Matrix<double> &K2(int spaceDim, Matrix<double> &res, int ia, int ib                          , const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int resmode = 0) const;
     virtual d_anion        &K2(int order,    d_anion        &res, int ia, int ib                          , const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int resmode = 0) const;
 
-    virtual gentype        &K2x2(              gentype        &res, int i, int ia, int ib                          , const SparseVector<gentype> *x = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xinfo = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int resmode = 0) const;
-    virtual gentype        &K2x2(              gentype        &res, int i, int ia, int ib, const gentype &bias     , const SparseVector<gentype> *x = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xinfo = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int resmode = 0) const;
-    virtual gentype        &K2x2(              gentype        &res, int i, int ia, int ib, const MercerKernel &altK, const SparseVector<gentype> *x = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xinfo = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int resmode = 0) const;
-    virtual double          K2x2(                                   int i, int ia, int ib                          , const SparseVector<gentype> *x = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xinfo = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int resmode = 0) const;
-    virtual Matrix<double> &K2x2(int spaceDim, Matrix<double> &res, int i, int ia, int ib                          , const SparseVector<gentype> *x = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xinfo = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int resmode = 0) const;
-    virtual d_anion        &K2x2(int order,    d_anion        &res, int i, int ia, int ib                          , const SparseVector<gentype> *x = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xinfo = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int resmode = 0) const;
-
     virtual gentype        &K3(              gentype        &res, int ia, int ib, int ic                          , const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr, int resmode = 0) const;
     virtual gentype        &K3(              gentype        &res, int ia, int ib, int ic, const gentype &bias     , const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr, int resmode = 0) const;
     virtual gentype        &K3(              gentype        &res, int ia, int ib, int ic, const MercerKernel &altK, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const SparseVector<gentype> *xc = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, const vecInfo *xcinfo = nullptr, int resmode = 0) const;
@@ -767,6 +760,13 @@ public:
     virtual double          Km(int m              ,                      Vector<int> &i                          , const gentype **pxyprod = nullptr, Vector<const SparseVector<gentype> *> *xx = nullptr, Vector<const vecInfo *> *xzinfo = nullptr, int resmode = 0) const;
     virtual Matrix<double> &Km(int m, int spaceDim, Matrix<double> &res, Vector<int> &i                          , const gentype **pxyprod = nullptr, Vector<const SparseVector<gentype> *> *xx = nullptr, Vector<const vecInfo *> *xzinfo = nullptr, int resmode = 0) const;
     virtual d_anion        &Km(int m, int order   , d_anion        &res, Vector<int> &i                          , const gentype **pxyprod = nullptr, Vector<const SparseVector<gentype> *> *xx = nullptr, Vector<const vecInfo *> *xzinfo = nullptr, int resmode = 0) const;
+
+    virtual gentype        &K2x2(              gentype        &res, int i, int ia, int ib                          , const SparseVector<gentype> *x = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xinfo = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int resmode = 0) const;
+    virtual gentype        &K2x2(              gentype        &res, int i, int ia, int ib, const gentype &bias     , const SparseVector<gentype> *x = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xinfo = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int resmode = 0) const;
+    virtual gentype        &K2x2(              gentype        &res, int i, int ia, int ib, const MercerKernel &altK, const SparseVector<gentype> *x = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xinfo = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int resmode = 0) const;
+    virtual double          K2x2(                                   int i, int ia, int ib                          , const SparseVector<gentype> *x = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xinfo = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int resmode = 0) const;
+    virtual Matrix<double> &K2x2(int spaceDim, Matrix<double> &res, int i, int ia, int ib                          , const SparseVector<gentype> *x = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xinfo = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int resmode = 0) const;
+    virtual d_anion        &K2x2(int order,    d_anion        &res, int i, int ia, int ib                          , const SparseVector<gentype> *x = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xinfo = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int resmode = 0) const;
 
     virtual void dK(gentype &xygrad, gentype &xnormgrad, int ia, int ib, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int deepDeriv = 0) const;
     virtual void dK(double  &xygrad, double  &xnormgrad, int ia, int ib, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xa = nullptr, const SparseVector<gentype> *xb = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *xbinfo = nullptr, int deepDeriv = 0) const;
@@ -1194,7 +1194,7 @@ public:
     virtual int hh(gentype &resh,                int i,                  gentype ***pxyprodi = nullptr) const { gentype resg; return gh(resh,resg,i,0,      pxyprodi); }
     virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const { resg = yp(i); resh = resg; (void) retaltg; (void) pxyprodi; return 0; }
 
-    virtual double eTrainingVector(int i) const { (void) i; NiceThrow("eTrainingVector not implemented for this ML"); return 0.0; }
+    virtual double e(int i) const { (void) i; NiceThrow("e not implemented for this ML"); return 0.0; }
 
     virtual double         &dedgTrainingVector(double         &res, int i) const { gentype gres; dedgTrainingVector(gres,i); res = (double) gres;                 return res; }
     virtual Vector<double> &dedgTrainingVector(Vector<double> &res, int i) const { gentype gres; dedgTrainingVector(gres,i); res = (const Vector<double> &) gres; return res; }
@@ -1237,7 +1237,7 @@ public:
     virtual int hh(gentype &resh,                const SparseVector<gentype> &x,                  const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { gentype resg; return gh(resh,resg,x,0,xinf,pxyprodx); }
     virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const { int ia = setInnerWildpa(&x,xinf); int res = gh(resh,resg,ia,retaltg,pxyprodx); resetInnerWildp(xinf == nullptr); return res; }
 
-    virtual double e(const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); double res = eTrainingVector(ia); resetInnerWildp(xinf == nullptr); return res; }
+    virtual double e(const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); double res = e(ia); resetInnerWildp(xinf == nullptr); return res; }
 
     virtual void dedg(double         &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); dedgTrainingVector(res,ia); resetInnerWildp(xinf == nullptr); }
     virtual void dedg(Vector<double> &res, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); dedgTrainingVector(res,ia); resetInnerWildp(xinf == nullptr); }
@@ -1276,6 +1276,15 @@ public:
 
     virtual int covar(Matrix<gentype> &resv, const Vector<int>                    &i) const;
     virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const;
+
+    // Level-set functions
+    //
+    // return -1: with conficence beta, g(x) < h  (mu(x) > h + beta.sigma(x))
+    //         0: with conficence beta, g(x) = h  (h - beta.sigma(x) <= mu(x) <= h + beta.sigma(x))
+    //        +1: with conficence beta, g(x) > h  (mu(x) < h - beta.sigma(x))
+
+    virtual int setlevel(gentype &resv, gentype &resmu, int ia,                          double beta, double h) const;
+    virtual int setlevel(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, double beta, double h) const;
 
     // Input-Output noise calculation
     //

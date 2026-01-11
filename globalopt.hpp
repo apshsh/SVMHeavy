@@ -96,13 +96,18 @@ public:
     // simRmin: on regret plot, start of y (regret) range (default 1, simRmin > simRmax means auto)
     // simRmax: on regret plot, end of y (regret) range (default 0)
 
-    std::string simname;      // "regret"
+    std::string simname;      // "", which derives to optname+"_regret"
     int         simoutformat; // 2
     int         simfreq;      // 1
     double      simFmin;      // 1
     double      simFmax;      // 0
     double      simRmin;      // 1
     double      simRmax;      // 0
+
+    std::string getsimname(void)
+    {
+        return ( simname != "" ) ? simname : (optname+"_regret");
+    }
 
     // recursive allxres
 
@@ -535,6 +540,14 @@ public:
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
                       void *fnarg,
                       svmvolatile int &killSwitch);
+
+    // Plot regret
+
+    void plotregret(const std::string &locsimname,
+                    const Vector<Vector<gentype> > &resmeanallFres,
+                    const Vector<Vector<gentype> > &resmeanallmres,
+                    const Vector<Vector<gentype> > &resvarallmres,
+                    const Vector<std::string> &resname);
 
     // Overload to set sample distributions in models (if any)
 
@@ -1397,6 +1410,57 @@ private:
 public:
     int overfnitcnt;
 };
+
+
+
+
+
+
+//
+// res - either the result f(x), or a set:
+//
+//   element        return (default)           type             explanation
+//
+// "y"            res (none)                 null or double   evaluation of f(x)
+// "d"            xobstype (unchanged)       null or int      f(x) observation type (-1,0,+1,2)
+//                                                            set 2 if "y" provided
+//                                                            set "d" if "d" provded (overriding 2)
+//                                                            unchanged otherwise
+// "addvar"       addvar (0)                 null or double   additional variance in f(x)
+// "c"            ycgt (empty)               null or vector   constraint vector [c1(x);c2(x);...]
+// "dc"           xobstype_cgt (unchanged)   null or vector   c(x) type vector (-1,0,+1,+2)
+//                                                            set [2;2;...] if "c" provided
+//                                                            set "dc" if "dc" provded (overriding [2;2;...])
+//                                                            unchanged otherwise
+// "addvar"       addvar (0)                 null or double   additional variance in measurement
+// "x"            xxreplace (empty)          null or vector   x replacement
+//                replacexx (0)              null or int      0 by default, 1 if "x" given
+// "sf"           stopflags (0)              null or int      0 by default, 1 to stop optimisation now
+// "fidcost"      fidcost (-1)               null or double   -1 by default, >=0 to override fidelity cost
+// "nuscale"      nuscale (unchanged)        null or double   change the beta scale factor
+// "xsc"          xsidechan (empty)          null or vector   additional side-channel vector [ xx1 ... xxn ]
+// "addexp"       addexp (null)              null or gentype  additional observation
+//
+// Return value: 0 if simple observation of f(x) (and maybe c(x)) that is feasible, stopflag may be set
+//               1 if simple observation of f(x) (and maybe c(x)) that is infeasible, stopflag may be set
+//               2 if non-trivial observation, stopflag may be set
+//
+
+int readres(gentype &res,
+                    double &addvar,
+                    Vector<gentype> &ycgt,
+                    SparseVector<gentype> &xxreplace,
+                    int &replacexx,
+                    gentype &addexp,
+                    int &stopflags,
+                    Vector<gentype> &xsidechan,
+                    int &xobstype,
+                    Vector<int> &xobstype_cgt,
+                    double &fidcost,
+                    double &nuscale);
+
+
+int readres(gentype &res, int &stopflags);
 
 
 

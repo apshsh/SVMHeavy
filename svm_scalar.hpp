@@ -310,9 +310,9 @@ public:
     virtual int setCclass  (int d, double nv) override;
     virtual int setepsclass(int d, double nv) override;
 
-    virtual int setprim  (int nv)            { isStateOpt = 0; return ML_Base::setprim  (nv) | sety(y()); }
-    virtual int setprival(const gentype &nv) { isStateOpt = 0; return ML_Base::setprival(nv) | sety(y()); }
-    virtual int setpriml (const ML_Base *nv) { isStateOpt = 0; return ML_Base::setpriml (nv) | sety(y()); }
+    virtual int setprim  (int nv)            override { isStateOpt = 0; return ML_Base::setprim  (nv) | sety(y()); }
+    virtual int setprival(const gentype &nv) override { isStateOpt = 0; return ML_Base::setprival(nv) | sety(y()); }
+    virtual int setpriml (const ML_Base *nv) override { isStateOpt = 0; return ML_Base::setpriml (nv) | sety(y()); }
 
     virtual int setOptActive(void) override;
     virtual int setOptSMO   (void) override;
@@ -459,7 +459,8 @@ public:
     virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodx = nullptr) const override;
     virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return SVM_Generic::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
 
-    virtual double eTrainingVector(int i) const override;
+    virtual double e(int i)                                                                           const override;
+    virtual double e(const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { return SVM_Generic::e(y,x,xinf); }
 
     virtual double         &dedgTrainingVector(double         &res, int i) const override;
     virtual Vector<double> &dedgTrainingVector(Vector<double> &res, int i) const override { dedgTrainingVector((res.resize(1))("&",0),i);   return res; }
@@ -477,8 +478,8 @@ public:
     virtual double RKHSnorm     (void) const override;
     virtual double RKHSabs      (void) const override { return sqrt(RKHSnorm()); }
 
-    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const;
-    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const { return SVM_Generic::predcov(resv_pred,resv,resmu,xa,xb,xx,sigmaweighti,xainf,xbinf,xxinf); }
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const override;
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const override { return SVM_Generic::predcov(resv_pred,resv,resmu,xa,xb,xx,sigmaweighti,xainf,xbinf,xxinf); }
 
     virtual int cov(gentype &resv, gentype &resmu, int i, int j,                                                                                                                     gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override;
     virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override { return SVM_Generic::cov(resv,resmu,xa,xb,xainf,xbinf,pxyprodx,pxyprody,pxyprodij); }
@@ -615,11 +616,11 @@ public:
     // Only for the GP branch - elementwise kernel scaling
 
     virtual const Vector<double> &Lweight(void) const { return Lweightval; }
-    virtual int setLweight(int i, double xLweight);
-    virtual int setLweight(const Vector<int> &i, const Vector<double> &xLweight);
-    virtual int setLweight(const Vector<double> &xLweight);
-    virtual int setuseLweight(void);
-    virtual int setnoLweight (void);
+    virtual int  setLweight(int i, double xLweight);
+    virtual int  setLweight(const Vector<int> &i, const Vector<double> &xLweight);
+    virtual int  setLweight(const Vector<double> &xLweight);
+    virtual int  setuseLweight(void);
+    virtual int  setnoLweight (void);
     virtual bool isuseLweight(void) { return useLweight; }
 
 

@@ -49,8 +49,8 @@ public:
     virtual void semicopy(const ML_Base &src);
     virtual void qswapinternal(ML_Base &b);
 
-    virtual std::ostream &printstream(std::ostream &output, int dep) const;
-    virtual std::istream &inputstream(std::istream &input );
+    virtual std::ostream &printstream(std::ostream &output, int dep) const override;
+    virtual std::istream &inputstream(std::istream &input ) override;
 
     // Information functions
 

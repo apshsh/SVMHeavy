@@ -1251,7 +1251,7 @@ int SVM_Binary_rff::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype
     return tempresh;
 }
 
-double SVM_Binary_rff::eTrainingVector(int i) const
+double SVM_Binary_rff::e(int i) const
 {
     double res = 0;
 

@@ -188,7 +188,7 @@ public:
     virtual int xisrankorgrad(int i)                               const override { return getQconst().xisrankorgrad(i);           }
     virtual int xisclass     (int i, int defaultclass, int q = -1) const override { return getQconst().xisclass(i,defaultclass,q); }
 
-    virtual int RFFordata(int i) const { return getQconst().RFFordata(i); }
+    virtual int RFFordata(int i) const override { return getQconst().RFFordata(i); }
 
     virtual int isClassifier(void) const override { return getQconst().isClassifier(); }
     virtual int isRegression(void) const override { return getQconst().isRegression(); }
@@ -561,10 +561,10 @@ public:
 
     // Information functions:
 
-    virtual double loglikelihood(void) const { return getQconst().loglikelihood(); }
-    virtual double maxinfogain  (void) const { return getQconst().maxinfogain  (); }
-    virtual double RKHSnorm     (void) const { return getQconst().RKHSnorm     (); }
-    virtual double RKHSabs      (void) const { return getQconst().RKHSabs      (); }
+    virtual double loglikelihood(void) const override { return getQconst().loglikelihood(); }
+    virtual double maxinfogain  (void) const override { return getQconst().maxinfogain  (); }
+    virtual double RKHSnorm     (void) const override { return getQconst().RKHSnorm     (); }
+    virtual double RKHSabs      (void) const override { return getQconst().RKHSabs      (); }
 
     // Evaluation Functions:
 
@@ -572,7 +572,7 @@ public:
     virtual int hh(gentype &resh,                int i,                  gentype ***pxyprodi = nullptr) const override { return getQconst().hh(resh,     i,        pxyprodi); }
     virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return getQconst().gh(resh,resg,i,retaltg,pxyprodi); }
 
-    virtual double eTrainingVector(int i) const override { return getQconst().eTrainingVector(i); }
+    virtual double e(int i) const override { return getQconst().e(i); }
 
     virtual double         &dedgTrainingVector(double         &res, int i) const override { return getQconst().dedgTrainingVector(res,i); }
     virtual Vector<double> &dedgTrainingVector(Vector<double> &res, int i) const override { return getQconst().dedgTrainingVector(res,i); }
@@ -640,8 +640,8 @@ public:
 
     // var and covar functions
 
-    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const { return getQconst().predcov(resv_pred,resv,resmu,ia,ib,ii,sigmaweighti); }
-    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const { return getQconst().predcov(resv_pred,resv,resmu,xa,xb,xx,sigmaweighti,xainf,xbinf,xxinf); }
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const override { return getQconst().predcov(resv_pred,resv,resmu,ia,ib,ii,sigmaweighti); }
+    virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const override { return getQconst().predcov(resv_pred,resv,resmu,xa,xb,xx,sigmaweighti,xainf,xbinf,xxinf); }
 
     virtual int cov(gentype &resv, gentype &resmu, int i, int j,                                                                                                                     gentype ***pxyprodi = nullptr, gentype ***pxyprodj = nullptr, gentype **pxyprodij = nullptr) const override { return getQconst().cov(resv,resmu,i,j,pxyprodi,pxyprodj,pxyprodij); }
     virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override { return getQconst().cov(resv,resmu,xa,xb,xainf,xbinf,pxyprodx,pxyprody,pxyprodij); }
@@ -654,6 +654,11 @@ public:
 
     virtual int covar(Matrix<gentype> &resv, const Vector<int>                    &i) const override { return getQconst().covar(resv,i); }
     virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const override { return getQconst().covar(resv,x); }
+
+    // Level-set functions
+
+    virtual int setlevel(gentype &resv, gentype &resmu, int ia,                          double beta, double h) const override { return getQconst().setlevel(resv,resmu,ia,beta,h); }
+    virtual int setlevel(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, double beta, double h) const override { return getQconst().setlevel(resv,resmu,xa,beta,h); }
 
     // Input-Output noise calculation
 
@@ -765,23 +770,23 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    virtual int setgamma(const Vector<gentype> &newgamma) { return getLSV().setgamma(newgamma); }
-    virtual int setdelta(const gentype         &newdelta) { return getLSV().setdelta(newdelta); }
+    virtual int setgamma(const Vector<gentype> &newgamma) override { return getLSV().setgamma(newgamma); }
+    virtual int setdelta(const gentype         &newdelta) override { return getLSV().setdelta(newdelta); }
 
     // Additional information
 
-    virtual int isVardelta (void) const { return getLSVconst().isVardelta();  }
-    virtual int isZerodelta(void) const { return getLSVconst().isZerodelta(); }
+    virtual int isVardelta (void) const override { return getLSVconst().isVardelta();  }
+    virtual int isZerodelta(void) const override { return getLSVconst().isZerodelta(); }
 
-    virtual const Vector<gentype> &gamma(void) const { return getLSVconst().gamma(); }
-    virtual const gentype         &delta(void) const { return getLSVconst().delta(); }
+    virtual const Vector<gentype> &gamma(void) const override { return getLSVconst().gamma(); }
+    virtual const gentype         &delta(void) const override { return getLSVconst().delta(); }
 
-    virtual const Matrix<double> &lsvGp(void) const { return getLSVconst().lsvGp(); }
+    virtual const Matrix<double> &lsvGp(void) const override { return getLSVconst().lsvGp(); }
 
     // General modification and autoset functions
 
-    virtual int setVardelta (void) { return getLSV().setVardelta();  }
-    virtual int setZerodelta(void) { return getLSV().setZerodelta(); }
+    virtual int setVardelta (void) override { return getLSV().setVardelta();  }
+    virtual int setZerodelta(void) override { return getLSV().setZerodelta(); }
 
 };
 

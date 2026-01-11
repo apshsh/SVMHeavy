@@ -76,35 +76,35 @@ public:
 
     // LSV_Generic
 
-    virtual       LSV_Generic &getLSV     (void)       { return *this; }
-    virtual const LSV_Generic &getLSVconst(void) const { return *this; }
+    virtual       LSV_Generic &getLSV     (void)       override { return *this; }
+    virtual const LSV_Generic &getLSVconst(void) const override { return *this; }
 
     // Constructors, destructors, assignment etc..
 
-    virtual int setgamma(const Vector<gentype> &newgamma) { return getQQQ().setAlpha(newgamma); }
-    virtual int setdelta(const gentype         &newdelta) { return getQQQ().setBias(newdelta);  }
+    virtual int setgamma(const Vector<gentype> &newgamma) override { return getQQQ().setAlpha(newgamma); }
+    virtual int setdelta(const gentype         &newdelta) override { return getQQQ().setBias(newdelta);  }
 
     // Additional information
 
-    virtual int isVardelta (void) const { return getQQQconst().isVarBias();   }
-    virtual int isZerodelta(void) const { return getQQQconst().isFixedBias(); }
+    virtual int isVardelta (void) const override { return getQQQconst().isVarBias();   }
+    virtual int isZerodelta(void) const override { return getQQQconst().isFixedBias(); }
 
-    virtual const Vector<gentype> &gamma(void) const { return getQQQconst().alpha(); }
-    virtual const gentype         &delta(void) const { return getQQQconst().bias();  }
+    virtual const Vector<gentype> &gamma(void) const override { return getQQQconst().alpha(); }
+    virtual const gentype         &delta(void) const override { return getQQQconst().bias();  }
 
-    virtual const Matrix<double> &lsvGp(void) const { return getQQQconst().Gp(); }
+    virtual const Matrix<double> &lsvGp(void) const override { return getQQQconst().Gp(); }
 
     // General modification and autoset functions
 
-    virtual int setVardelta (void) { return getQQQ().setVarBias();      }
-    virtual int setZerodelta(void) { return getQQQ().setFixedBias(0.0); }
+    virtual int setVardelta (void) override { return getQQQ().setVarBias();      }
+    virtual int setZerodelta(void) override { return getQQQ().setFixedBias(0.0); }
 
     // Likelihood
 
-    virtual double loglikelihood(void) const { return getQQQconst().loglikelihood(); }
-    virtual double maxinfogain  (void) const { return getQQQconst().maxinfogain  (); }
-    virtual double RKHSnorm     (void) const { return getQQQconst().RKHSnorm     (); }
-    virtual double RKHSabs      (void) const { return getQQQconst().RKHSabs      (); }
+    virtual double loglikelihood(void) const override { return getQQQconst().loglikelihood(); }
+    virtual double maxinfogain  (void) const override { return getQQQconst().maxinfogain  (); }
+    virtual double RKHSnorm     (void) const override { return getQQQconst().RKHSnorm     (); }
+    virtual double RKHSabs      (void) const override { return getQQQconst().RKHSabs      (); }
 
 
 private:

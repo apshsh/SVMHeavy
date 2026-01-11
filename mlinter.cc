@@ -8158,7 +8158,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     {
                         int ii = safeatoi(currcommand(1),argvariables);
 
-                        double res = getMLrefconst(MLInd).eTrainingVector(ii);
+                        double res = getMLrefconst(MLInd).e(ii);
 
                         errstream() << "error(x) = " << res << "\n";
                     }
@@ -14574,6 +14574,9 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           19 - HE (human-level exploitation beta = 0.01).    \n" : "" );
     output << ( (          advanced ) ? "                           20 - GP-UCB as per BO-Muse (single AI).^           \n" : "" );
     output << ( (          advanced ) ? "                           21 - Random experiments.                           \n" : "" );
+    output << ( (          advanced ) ? "                           22 - Zero.                                         \n" : "" );
+    output << ( (          advanced ) ? "                           23 - Level set (LSE) via straddle heuristic Bry1.  \n" : "" );
+    output << ( (          advanced ) ? "                           24 - Level set (LSE) via C2LSE Ngo1.               \n" : "" );
     output << ( (          advanced ) ? "                           * beta_n = 2.log((n^{2+dim/2}).(pi^2)/(3.delta))   \n" : "" );
     output << ( (          advanced ) ? "                           $ variance of model only.                          \n" : "" );
     output << ( (          advanced ) ? "                           @ total variance of model and contraints.          \n" : "" );

@@ -174,7 +174,7 @@ double evalfandgrad(double C, int &Ntot, Matrix<double> &hess, Vector<double> &g
             if ( calcres )
             {
                 // Primary goal: R = sum_i e(i)
-                Rstep = ((kcase.eTrainingVector(i))*caseweight(k));
+                Rstep = ((kcase.e(i))*caseweight(k));
 
                 R           += Rstep;
                 allR("&",k) += Rstep;

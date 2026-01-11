@@ -35,7 +35,7 @@ public:
 
     GridOptions() : GlobalOptions()
     {
-        optname = "Grid Optimisation";
+        optname = "opt_grid";
 
         numZooms = 0;
         zoomFact = 0.333333333333;

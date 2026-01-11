@@ -53,7 +53,7 @@ public:
 
     NelderOptions() : GlobalOptions()
     {
-        optname = "Nelder-Mead Optimisation";
+        optname = "opt_nelder";
 
         minf_max = -HUGE_VAL;
         ftol_rel = 0;

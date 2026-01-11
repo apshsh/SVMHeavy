@@ -692,7 +692,91 @@ int multiplot2d(const Vector<Vector<gentype> > &y, const Vector<Vector<gentype> 
                 {
                     double varval = yvar(j)(i).isValNull() ? 0.0 : ( yvar(j)(i).isValVector() ? ((double) yvar(j)(i)(k)) : ((double) yvar(j)(i)) );
 
-                    dnameqfile << i << "\t" << y(j)(i)(k) << "\t" << sqrt(sqrt(varval*varval)) << "\n";
+                    dnameqfile << i << "\t" << y(j)(i)(k) << "\t" << (STDDEVSCALE*sqrt(sqrt(varval*varval))) << "\n";
+                }
+
+                dnameqfile.close();
+
+                ++q;
+            }
+        }
+    }
+
+    //int numdatfiles = q; // total number of lines to draw
+
+    int ires = domultiplot2d(xmin,xmax,omin,omax,fname,dname,outformat,title,dnamelist,repind,objind,plotlabels,maxobj,1);
+
+#ifdef DO_CLEANUP
+        if ( dnamelist.size() )
+        {
+            for ( int i = 0 ; i < dnamelist.size() ; i++ )
+            {
+                std::string delstringx = "rm "+dnamelist(i);
+
+                svm_system(delstringx.c_str());
+            }
+        }
+#endif
+
+    return ires;
+}
+
+
+
+int multiplot2d(const Vector<Vector<double> > &x,
+                const Vector<Vector<double> > &y,
+                const Vector<Vector<double> > &yvar,
+                const Vector<std::string> &plotlabels,
+                double xmin, double xmax,
+                double omin, double omax,
+                const std::string &fname, const std::string &dname, int outformat, const std::string &title, int incvar)
+{
+    NiceAssert( y.size() == yvar.size() );
+    NiceAssert( y.size() == plotlabels.size() );
+
+    if ( !y.size() )
+    {
+        return 0;
+    }
+
+    int m = y.size();
+    int i,j,q;
+    int maxobj = 0; // maximum number of objectives for any repitition
+
+    Vector<std::string> dnamelist;
+    Vector<int> repind;
+    Vector<int> objind;
+
+    for ( j = 0, q = 0 ; j < m ; ++j )
+    {
+        if ( y(j).size() )
+        {
+            {
+                dnamelist.add(q);
+                repind.add(q);
+                objind.add(q);
+
+                dnamelist("&",q) = dname+"_"; // Base for datafile name
+                repind("&",q) = j; // Which repitition
+                objind("&",q) = 0; // Which objective
+
+                dnamelist("&",q) += std::to_string(j);
+
+                {
+                    dnamelist("&",q) += "_";
+
+                    dnamelist("&",q) += std::to_string(0);
+                }
+
+                dnamelist("&",q) += "_dat";
+
+                std::ofstream dnameqfile(dnamelist(q));
+
+                for ( i = 0 ; i < y(j).size() ; ++i )
+                {
+                    double varval = incvar ? yvar(j)(i) : 0.0;
+
+                    dnameqfile << x(j)(i) << "\t" << y(j)(i) << "\t" << (STDDEVSCALE*sqrt(std::max(0.0,varval))) << "\n";
                 }
 
                 dnameqfile.close();

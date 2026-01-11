@@ -144,7 +144,8 @@ public:
     virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override { return ML_Base::gh(resh,resg,i,retaltg,pxyprodi); }
     virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return SVM_Scalar::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
 
-    virtual double eTrainingVector(int i) const override { return ML_Base::eTrainingVector(i); }
+    virtual double e(int i)                                                                           const override { return ML_Base::e(i); }
+    virtual double e(const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { return SVM_Scalar::e(y,x,xinf); }
 
     virtual void dgTrainingVectorX(Vector<gentype> &resx, int i) const override;
     virtual void dgTrainingVectorX(Vector<double>  &resx, int i) const override;

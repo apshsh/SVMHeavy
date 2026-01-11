@@ -27,14 +27,6 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
     double resshift = 0;
     double resscale = 1;
 
-    double xx = 0;
-    double yy = 0;
-    double tt = 0;
-
-    if ( n >= 1 ) { xx = x(0); }
-    if ( n >= 2 ) { yy = x(1); }
-    if ( n >= 3 ) { tt = x(2); }
-
     const static double A1 = 10;
 
     const static double A2 = 20;
@@ -116,9 +108,9 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 5:
         {
             NiceAssert( n == 2 );
-            res  = (1.5-xx+(xx*yy))*(1.5-xx+(xx*yy));
-            res += (2.25-xx+(xx*yy*yy))*(2.25-xx+(xx*yy*yy));
-            res += (2.625-xx+(xx*yy*yy*yy))*(2.625-xx+(xx*yy*yy*yy));
+            res  = (1.5-x(0)+(x(0)*x(1)))*(1.5-x(0)+(x(0)*x(1)));
+            res += (2.25-x(0)+(x(0)*x(1)*x(1)))*(2.25-x(0)+(x(0)*x(1)*x(1)));
+            res += (2.625-x(0)+(x(0)*x(1)*x(1)*x(1)))*(2.625-x(0)+(x(0)*x(1)*x(1)*x(1)));
             break;
         }
 
@@ -130,8 +122,8 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 6:
         {
             NiceAssert( n == 2 );
-            res  = (1+((xx+yy+1)*(xx+yy+1)*(19-(14*xx)+(3*xx*xx)-(14*yy)+(6*xx*yy)+(3*yy*yy))));
-            res *= (30+(((2*xx)-(3*yy))*((2*xx)-(3*yy))*(18-(32*xx)+(12*xx*xx)+(48*yy)-(26*xx*yy)+(27*yy*yy))));
+            res  = (1+((x(0)+x(1)+1)*(x(0)+x(1)+1)*(19-(14*x(0))+(3*x(0)*x(0))-(14*x(1))+(6*x(0)*x(1))+(3*x(1)*x(1)))));
+            res *= (30+(((2*x(0))-(3*x(1)))*((2*x(0))-(3*x(1)))*(18-(32*x(0))+(12*x(0)*x(0))+(48*x(1))-(26*x(0)*x(1))+(27*x(1)*x(1)))));
             break;
         }
 
@@ -143,8 +135,8 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 7:
         {
             NiceAssert( n == 2 );
-            res  = ((xx+(2*yy)-7)*(xx+(2*yy)-7));
-            res += (((2*xx)+yy-5)*((2*xx)+yy-5));
+            res  = ((x(0)+(2*x(1))-7)*(x(0)+(2*x(1))-7));
+            res += (((2*x(0))+x(1)-5)*((2*x(0))+x(1)-5));
             break;
         }
 
@@ -156,7 +148,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 8:
         {
             NiceAssert( n == 2 );
-            res = (100*sqrt(abs2(yy-(0.01*xx*xx)))) + (0.01*abs2(xx+10));
+            res = (100*sqrt(abs2(x(1)-(0.01*x(0)*x(0))))) + (0.01*abs2(x(0)+10));
             break;
         }
 
@@ -168,7 +160,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 9:
         {
             NiceAssert( n == 2 );
-            res = (0.26*((xx*xx)+(yy*yy)))-(0.48*xx*yy);
+            res = (0.26*((x(0)*x(0))+(x(1)*x(1))))-(0.48*x(0)*x(1));
             break;
         }
 
@@ -180,9 +172,9 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 10:
         {
             NiceAssert( n == 2 );
-            res  = (sin(3*NUMBASE_PI*xx)*sin(3*NUMBASE_PI*xx));
-            res += (xx-1)*(xx-1)*(1+(sin(3*NUMBASE_PI*yy)*sin(3*NUMBASE_PI*yy)));
-            res += (yy-1)*(yy-1)*(1+(sin(2*NUMBASE_PI*yy)*sin(2*NUMBASE_PI*yy)));
+            res  = (sin(3*NUMBASE_PI*x(0))*sin(3*NUMBASE_PI*x(0)));
+            res += (x(0)-1)*(x(0)-1)*(1+(sin(3*NUMBASE_PI*x(1))*sin(3*NUMBASE_PI*x(1))));
+            res += (x(1)-1)*(x(1)-1)*(1+(sin(2*NUMBASE_PI*x(1))*sin(2*NUMBASE_PI*x(1))));
             break;
         }
 
@@ -194,8 +186,8 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 11:
         {
             NiceAssert( n == 2 );
-            res  = (((xx*xx)+yy-11)*((xx*xx)+yy-11)); // (30-11)*(30-11) = 361
-            res += ((xx+(yy*yy)-7)*(xx+(yy*yy)-7));   // 23*23 = 529
+            res  = (((x(0)*x(0))+x(1)-11)*((x(0)*x(0))+x(1)-11)); // (30-11)*(30-11) = 361
+            res += ((x(0)+(x(1)*x(1))-7)*(x(0)+(x(1)*x(1))-7));   // 23*23 = 529
             break;
         }
 
@@ -207,7 +199,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 12:
         {
             NiceAssert( n == 2 );
-            res = (2*xx*xx)-(1.05*xx*xx*xx*xx)+(xx*xx*xx*xx*xx*xx/6)+(xx*yy)+(yy*yy);
+            res = (2*x(0)*x(0))-(1.05*x(0)*x(0)*x(0)*x(0))+(x(0)*x(0)*x(0)*x(0)*x(0)*x(0)/6)+(x(0)*x(1))+(x(1)*x(1));
             break;
         }
 
@@ -219,7 +211,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 13:
         {
             NiceAssert( n == 2 );
-            res = -cos(xx)*cos(yy)*exp(-((xx-NUMBASE_PI)*(xx-NUMBASE_PI))-((yy-NUMBASE_PI)*(yy-NUMBASE_PI)));
+            res = -cos(x(0))*cos(x(1))*exp(-((x(0)-NUMBASE_PI)*(x(0)-NUMBASE_PI))-((x(1)-NUMBASE_PI)*(x(1)-NUMBASE_PI)));
             break;
         }
 
@@ -231,7 +223,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 14:
         {
             NiceAssert( n == 2 );
-            res = -0.0001*pow(abs2(sin(xx)*sin(yy)*exp(abs2(100-(abs2(x)/NUMBASE_PI))))+1,0.1);
+            res = -0.0001*pow(abs2(sin(x(0))*sin(x(1))*exp(abs2(100-(abs2(x)/NUMBASE_PI))))+1,0.1);
             break;
         }
 
@@ -243,8 +235,8 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 15:
         {
             NiceAssert( n == 2 );
-            res  = -(yy+47)*sin(sqrt(abs2((xx/2)+yy+47)));
-            res -= xx*sin(sqrt(abs2(xx-(yy+47))));
+            res  = -(x(1)+47)*sin(sqrt(abs2((x(0)/2)+x(1)+47)));
+            res -= x(0)*sin(sqrt(abs2(x(0)-(x(1)+47))));
             break;
         }
 
@@ -256,7 +248,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 16:
         {
             NiceAssert( n == 2 );
-            res = -abs2(sin(xx)*cos(yy)*exp(abs2(1-(abs2(x)/NUMBASE_PI))));
+            res = -abs2(sin(x(0))*cos(x(1))*exp(abs2(1-(abs2(x)/NUMBASE_PI))));
             break;
         }
 
@@ -268,7 +260,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 17:
         {
             NiceAssert( n == 2 );
-            res = sin(xx+yy)+((xx-yy)*(xx-yy))-(1.5*xx)+(2.5*yy)+1;
+            res = sin(x(0)+x(1))+((x(0)-x(1))*(x(0)-x(1)))-(1.5*x(0))+(2.5*x(1))+1;
             break;
         }
 
@@ -280,7 +272,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 18:
         {
             NiceAssert( n == 2 );
-            res = 0.5+(((sin((xx*xx)-(yy*yy))*sin((xx*xx)-(yy*yy)))-0.5)/((1+(0.001*((xx*xx)+(yy*yy))))*(1+(0.001*((xx*xx)+(yy*yy))))));
+            res = 0.5+(((sin((x(0)*x(0))-(x(1)*x(1)))*sin((x(0)*x(0))-(x(1)*x(1))))-0.5)/((1+(0.001*((x(0)*x(0))+(x(1)*x(1)))))*(1+(0.001*((x(0)*x(0))+(x(1)*x(1)))))));
             break;
         }
 
@@ -292,7 +284,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 19:
         {
             NiceAssert( n == 2 );
-            res = 0.5+(((cos(sin((xx*xx)-(yy*yy)))*cos(sin((xx*xx)-(yy*yy))))-0.5)/((1+(0.001*((xx*xx)+(yy*yy))))*(1+(0.001*((xx*xx)+(yy*yy))))));
+            res = 0.5+(((cos(sin((x(0)*x(0))-(x(1)*x(1))))*cos(sin((x(0)*x(0))-(x(1)*x(1)))))-0.5)/((1+(0.001*((x(0)*x(0))+(x(1)*x(1)))))*(1+(0.001*((x(0)*x(0))+(x(1)*x(1)))))));
             break;
         }
 
@@ -316,7 +308,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 21:
         {
             NiceAssert( n == 1 );
-            res = exp(-20*(xx-0.2)*(xx-0.2))+exp(-20*sqrt(0.00001+((xx-0.5)*(xx-0.5))))+exp(2*(xx-0.8));
+            res = exp(-20*(x(0)-0.2)*(x(0)-0.2))+exp(-20*sqrt(0.00001+((x(0)-0.5)*(x(0)-0.5))))+exp(2*(x(0)-0.8));
             break;
         }
 
@@ -328,7 +320,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 22:
         {
             NiceAssert( n == 1 );
-            res = (4*exp(-(xx-1)*(xx-1)/(2*gamma22*gamma22))) + exp(-(xx-0.5)*(xx-0.5)/(2*gamma22*gamma22));
+            res = (4*exp(-(x(0)-1)*(x(0)-1)/(2*gamma22*gamma22))) + exp(-(x(0)-0.5)*(x(0)-0.5)/(2*gamma22*gamma22));
             break;
         }
 
@@ -372,7 +364,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 25:
         {
             NiceAssert( n == 1 );
-            res = (sin(10*NUMBASE_PI*xx)/(2*xx))+((xx-1)*(xx-1)*(xx-1)*(xx-1));
+            res = (sin(10*NUMBASE_PI*x(0))/(2*x(0)))+((x(0)-1)*(x(0)-1)*(x(0)-1)*(x(0)-1));
             break;
         }
 
@@ -386,8 +378,8 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
             NiceAssert( n == 2 );
             for ( i = 0 ; i < m26 ; i++ )
             {
-                double s0 = (xx-AA26[i][0])*(xx-AA26[i][0]);
-                double s1 = (yy-AA26[i][1])*(yy-AA26[i][1]);
+                double s0 = (x(0)-AA26[i][0])*(x(0)-AA26[i][0]);
+                double s1 = (x(1)-AA26[i][1])*(x(1)-AA26[i][1]);
                 res += cc26[i]*exp(-(s0+s1)/NUMBASE_PI)*cos((s0+s1)*NUMBASE_PI);
             }
             break;
@@ -444,7 +436,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
             NiceAssert( n == 2 );
             double resa = 0.0;
             double resb = 0.0;
-            for ( i = 1 ; i <= 5 ; i++ ) { resa += i*cos(((i+1)*xx)+i); resb += i*cos(((i+1)*yy)+i); }
+            for ( i = 1 ; i <= 5 ; i++ ) { resa += i*cos(((i+1)*x(0))+i); resb += i*cos(((i+1)*x(1))+i); }
             res = resa*resb;
             break;
         }
@@ -457,7 +449,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 31:
         {
             NiceAssert( n == 2 );
-            res = (xx*xx) + (2*yy*yy) - (0.3*cos(3*NUMBASE_PI*xx)) - (0.4*cos(4*NUMBASE_PI*yy)) + 0.7;
+            res = (x(0)*x(0)) + (2*x(1)*x(1)) - (0.3*cos(3*NUMBASE_PI*x(0))) - (0.4*cos(4*NUMBASE_PI*x(1))) + 0.7;
             break;
         }
 
@@ -481,7 +473,7 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 33:
         {
             NiceAssert( n == 2 );
-            res = (xx*xx) + (2*yy*yy) - (0.3*cos(3*(NUMBASE_PI*xx)+(4*NUMBASE_PI*yy))) + 0.3;
+            res = (x(0)*x(0)) + (2*x(1)*x(1)) - (0.3*cos(3*(NUMBASE_PI*x(0))+(4*NUMBASE_PI*x(1)))) + 0.3;
             break;
         }
 
@@ -509,8 +501,9 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 35:
         {
             NiceAssert( n == 3 );
-            yy = ( ( yy > -1e-12 ) && ( yy < 1e-12 ) ) ? 1e-12 : yy;
-            res = 13.8-( (1-(0.1*(1-tt)*exp(-1/(2*yy)))) * (((2300*xx*xx*xx)+(1900*xx*xx)+(2092*xx)+60)/((100*xx*xx*xx)+(500*xx*xx)+(4*xx)+20)) );
+            double yy = ( ( x(1) > -1e-12 ) && ( x(1) < 1e-12 ) ) ? 1e-12 : x(1);
+            double tt = x(2);
+            res = 13.8-( (1-(0.1*(1-tt)*exp(-1/(2*yy)))) * (((2300*x(0)*x(0)*x(0))+(1900*x(0)*x(0))+(2092*x(0))+60)/((100*x(0)*x(0)*x(0))+(500*x(0)*x(0))+(4*x(0))+20)) );
             break;
         }
 
@@ -522,7 +515,8 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 36:
         {
             NiceAssert( n == 3 );
-            res = (((xx+(tt/2))*(xx+(tt/2)))+((yy+(tt/2))+(yy+(tt/2))))/2;
+            double tt = x(2);
+            res = (((x(0)+(tt/2))*(x(0)+(tt/2)))+((x(1)+(tt/2))+(x(1)+(tt/2))))/2;
             break;
         }
 
@@ -534,9 +528,9 @@ int evalTestFn(int fnnum, double &res, const Vector<double> &xxx, const Matrix<d
         case 37:
         {
             NiceAssert( n == 3 );
-            xx = 1.5*(xx+1)/2;
-            yy = 1.5*(yy+1)/2;
-            tt = (tt+1)/2;
+            double xx = 1.5*(x(0)+1)/2;
+            double yy = 1.5*(x(1)+1)/2;
+            double tt = (x(2)+1)/2;
             res = yy-((b37-(0.1*(1-tt)))*xx*xx)+(c37*xx)-r37;
             res = (res*res)+(10*(1-s37)*cos(xx))+10;
             break;

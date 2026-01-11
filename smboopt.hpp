@@ -129,7 +129,8 @@ public:
     //                  when in models, where n = ennornaive
     //             NB: MUST BE ZERO IF USING MULTI-FIDELITY STUFF!
     //
-    // PIscale: if 0 then nothing, if 1 then scale acquisition function by PI
+    // PIscale: if 0 then nothing, if 1 then scale acquisition function by PI, 2
+    //          is like 1 but with hard ratchetting
     //
     // Generated noise: makenoise = 0: no noise
     //                              1: add noise to samples
@@ -146,13 +147,18 @@ public:
     //          1 = save constraint files
     // cgtbaseline: constraint baseline (function) to plot, null() if not used
 
-    std::string modelname;
+    std::string modelname; // "", which translates to optname+"_smbomodel"
     int         modeloutformat;
     int         plotfreq;
     int         modelsave;
     gentype     modelbaseline;
     int         cgtsave;
     gentype     cgtbaseline;
+
+    std::string getmodelname(void)
+    {
+        return ( modelname != "" ) ? modelname : (optname+"_smbomodel");
+    }
 
     int sigmuseparate;
     int moodim;
@@ -343,6 +349,10 @@ public:
     void model_unsample(void);
     int  model_issample(void) const;
 
+    void modelcgt_sample  (const Vector<double> &xmin, const Vector<double> &xmax, double sampScale);
+    void modelcgt_unsample(void);
+    int  modelcgt_issample(void) const;
+
     // Model control and use functionality
 
     virtual int initModelDistr(const Vector<int> &sampleInd, const Vector<gentype> &sampleDist);
@@ -477,6 +487,13 @@ public:
     gentype model_lenscaleLB      (int q, int i = 0) const { return          getmuapprox_sample(q).getKernel().cRealConstantsLB(i%(getmuapprox(q).getKernel().size()))(0); }
     double  model_kappa0          (int q)            const { return (double) getmuapprox_sample(q).getKernel().effweight(q); }
 
+    double  modelcgt_negloglikelihood(int q)            const { return calcnegloglikelihood(getcgtapprox(q)); }
+    double  modelcgt_maxinfogain     (int q)            const { return calcmaxinfogain     (getcgtapprox(q)); }
+    double  modelcgt_RKHSnorm        (int q)            const { return calcRKHSnorm        (getcgtapprox(q)); }
+    double  modelcgt_lenscale        (int q, int i = 0) const { return (double) getcgtapprox_sample(q).getKernel().cRealConstants(i%(getcgtapprox(q).getKernel().size()))(0); }
+    gentype modelcgt_lenscaleLB      (int q, int i = 0) const { return          getcgtapprox_sample(q).getKernel().cRealConstantsLB(i%(getcgtapprox(q).getKernel().size()))(0); }
+    double  modelcgt_kappa0          (int q)            const { return (double) getcgtapprox_sample(q).getKernel().effweight(q); }
+
     // Work out frequentist certainty - see "Adaptive and Safe Bayesian Optimization in High Dimensions via One-Dimentional Subspaces"
 
     double model_err(int dim, const Vector<double> &xmin, const Vector<double> &xmax, svmvolatile int &killSwitch);
@@ -575,6 +592,10 @@ public:
     Vector<ML_Base *> muapprox_sample;
     Vector<ML_Base *> augxapprox;
     Vector<ML_Base *> cgtapprox;
+    Vector<ML_Base *> cgtapprox_sample;
+
+    const ML_Base &getcgtapprox_sample(                   int q) const { return ( cgtapprox_sample.size() && cgtapprox_sample(q) ) ? *cgtapprox_sample(      q) : getcgtapprox(      q); }
+          ML_Base &getcgtapprox_sample(const char *dummy, int q)       { return ( cgtapprox_sample.size() && cgtapprox_sample(q) ) ? *cgtapprox_sample(dummy,q) : getcgtapprox(dummy,q); }
 
     const ML_Base &getmuapprox_sample(                   int q) const { return ( muapprox_sample.size() && muapprox_sample(q) ) ? *muapprox_sample(      q) : getmuapprox(      q); }
           ML_Base &getmuapprox_sample(const char *dummy, int q)       { return ( muapprox_sample.size() && muapprox_sample(q) ) ? *muapprox_sample(dummy,q) : getmuapprox(dummy,q); }
@@ -1126,7 +1147,7 @@ double SMBOOptions::inf_dist(const SparseVector<S> &xz) const
 
     for ( int q = 0 ; q < numcgt ; ++q )
     {
-        const ML_Base &modeltouse = getcgtapprox(q);
+        const ML_Base &modeltouse = getcgtapprox_sample(q);
 
         if ( isSVM(modeltouse) || isGPR(modeltouse) || isLSV(modeltouse) )
         {
@@ -1168,7 +1189,7 @@ int SMBOOptions::inf_var(gentype &resv, const SparseVector<S> &xz) const
 
     for ( int q = 0 ; q < numcgt ; ++q )
     {
-        const ML_Base &modeltouse = getcgtapprox(q);
+        const ML_Base &modeltouse = getcgtapprox_sample(q);
 
         if ( isSVM(modeltouse) || isGPR(modeltouse) || isLSV(modeltouse) )
         {
@@ -2024,12 +2045,12 @@ int SMBOOptions::model_mu_cgt(Vector<gentype> &resmu, const SparseVector<S> &x, 
         {
             SparseVector<gentype> tempx;
 
-            ires += getcgtapprox(i).gg(resmu("&",i),convnearuptonaive(tempx,*xxx));
+            ires += getcgtapprox_sample(i).gg(resmu("&",i),convnearuptonaive(tempx,*xxx));
         }
 
         else
         {
-            ires += getcgtapprox(i).gg(resmu("&",i),*xxx,nullptr,nullptr);
+            ires += getcgtapprox_sample(i).gg(resmu("&",i),*xxx,nullptr,nullptr);
         }
     }
 
@@ -2075,12 +2096,12 @@ int SMBOOptions::model_muvar_cgt(Vector<gentype> &resv, Vector<gentype> &resmu, 
             {
                 SparseVector<gentype> tempx,tempv;
 
-                ires += getcgtapprox(i).noisevar(resv("&",i),resmu("&",i),convnearuptonaive(tempx,*xxx),convnearuptonaive(xxvar,tempv),-1);
+                ires += getcgtapprox_sample(i).noisevar(resv("&",i),resmu("&",i),convnearuptonaive(tempx,*xxx),convnearuptonaive(xxvar,tempv),-1);
             }
 
             else
             {
-                ires += getcgtapprox(i).noisevar(resv("&",i),resmu("&",i),*xxx,xxvar,02,nullptr,nullptr,nullptr);
+                ires += getcgtapprox_sample(i).noisevar(resv("&",i),resmu("&",i),*xxx,xxvar,02,nullptr,nullptr,nullptr);
             }
         }
     }
@@ -2093,12 +2114,12 @@ int SMBOOptions::model_muvar_cgt(Vector<gentype> &resv, Vector<gentype> &resmu, 
             {
                 SparseVector<gentype> tempx;
 
-                ires += getcgtapprox(i).var(resv("&",i),resmu("&",i),convnearuptonaive(tempx,*xxx));
+                ires += getcgtapprox_sample(i).var(resv("&",i),resmu("&",i),convnearuptonaive(tempx,*xxx));
             }
 
             else
             {
-                ires += getcgtapprox(i).var(resv("&",i),resmu("&",i),*xxx,nullptr,nullptr,nullptr);
+                ires += getcgtapprox_sample(i).var(resv("&",i),resmu("&",i),*xxx,nullptr,nullptr,nullptr);
             }
         }
     }
@@ -2132,7 +2153,7 @@ int SMBOOptions::model_predmuvar_cgt(Vector<gentype> &resv_pred, Vector<gentype>
 
     for ( int i = 0 ; i < cgtapprox.size() ; ++i )
     {
-        ires += getcgtapprox(i).predvar(resv_pred("&",i),resv("&",i),resmu("&",i),*xxx,*xxxadd);
+        ires += getcgtapprox_sample(i).predvar(resv_pred("&",i),resv("&",i),resmu("&",i),*xxx,*xxxadd);
     }
 
     return ires;
