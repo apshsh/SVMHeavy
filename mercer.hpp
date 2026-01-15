@@ -2283,16 +2283,7 @@ public:
     int isFullNorm       (void) const { return isfullnorm;                } // normalise at outermost
     int isProd           (void) const { return isprod;                    } // K(x,y) = prod_i K(x_i,y_i)
     int isIndex          (void) const { return isind;                     } // x'z is indexed (x'z -> sum_{i in S} x_i.y_i)
-    int isShifted        (void) const { return isshift & 1;               } // vectors shifted (x -> (x-sh))
-    int isScaled         (void) const { return isshift & 2;               } // vectors scaled (x -> diag(sc).x)
-    int isShiftedScaled  (void) const { return isshift == 3;              } // vectors shifted and scaled (x -> diag(sc).(x-sh))
-    int isLeftPlain      (void) const { return leftplain;                 } // no normalisation applied to x in K(x,y)
-    int isRightPlain     (void) const { return rightplain;                } // no normalisation applied to y in K(x,y)
-    int isLeftRightPlain (void) const { return leftplain && rightplain;   } // no normalisation applied to x and y in K(x,y)
-    int isLeftNormal     (void) const { return !leftplain;                } // normalisation may be applied to x in K(x,y)
-    int isRightNormal    (void) const { return !rightplain;               } // normalisation may be applied to y in K(x,y)
-    int isLeftRightNormal(void) const { return !leftplain && !rightplain; } // normalisation may be applied to x and y in K(x,y)
-    int isPartNormal     (void) const { return !leftplain || !rightplain; } // normalisation may be applied to x or y in K(x,y)
+    int isScaled         (void) const { return isscale;                   } // vectors scaled (x -> diag(sc).x)
     int isAltDiff        (void) const { return isdiffalt;                 } // see above notes
     int needsmProd       (void) const { return needsInner(-1,4);          } // m-kernel calculation requires <<x,y,...>>_m
     int wantsXYprod      (void) const { return needsMatDiff();            } // providing an xy matrix will result in speedup
@@ -2305,9 +2296,7 @@ public:
     int size       (void) const { return isnorm.size(); } // number of kernel "blocks" in total kernel
     int getSymmetry(void) const;                          // 1 for symmetric, -1 for anti, 0 for none
 
-    const       Vector<int>     &cIndexes(void) const { return dIndexes; } // index vector S if used
-    const SparseVector<gentype> &cShift  (void) const { return dShift;   } // shift used for normalisation
-    const SparseVector<gentype> &cScale  (void) const { return dScale;   } // scale used for normalisation
+    const Vector<int> &cIndexes(void) const { return dIndexes; } // index vector S if used
 
     // Linear constraint information
     //
@@ -2342,12 +2331,12 @@ public:
     // constants from the input vectors x and y.  For example, if
     // cRealOverwrite(q) = ( 0:2 1:10 ) then:
     //
-    // realConstant(0) -> x(2)*y(2)    (x(2) is rightPlain, y(2) if leftPlain)
-    // realConstant(1) -> x(10)*y(10)  (x(2) is rightPlain, y(2) if leftPlain)
+    // realConstant(0) -> x(2)*y(2)
+    // realConstant(1) -> x(10)*y(10)
 
     const gentype &cWeight     (int q = 0) const { return dRealConstants(q)(0); } // weight w_q for K_q
     int            cType       (int q = 0) const { return dtype(q);             } // type of K_q
-    int            isNormalised(int q = 0) const { return isnorm(q);            } // set if K_q is scaled/shifted (x -> diag(sc).(x-sh))
+    int            isNormalised(int q = 0) const { return isnorm(q);            } // set if K_q is scaled (x -> diag(sc).(x))
     int            isMagTerm   (int q = 0) const { return ismagterm(q);         } // K(x,y,...)=K(x,x,...).K(y,y,...)....
 
           int              numSamples        (void) const { return xnumsamples; } // used when interpretting functions as distributions
@@ -2356,10 +2345,11 @@ public:
 
     const kernPrecursor *getAltCall(int q = 0, int currml = -1) const { (void) currml; NiceAssert( currml != altcallback(q) ); kernPrecursor *res = nullptr; int ires = getaltML(res,altcallback(q)); NiceAssert( !ires ); (void) ires; return res; }
 
-    const Vector<gentype>   &cRealConstants(int q = 0) const { return dRealConstants(q)(1,1,dRealConstants(q).size()-1,cRealConstantsTmp); } // real constants for K_q
-    const Vector<int>       &cIntConstants (int q = 0) const { return dIntConstants(q);                                                    } // int constants for K_q
-    const SparseVector<int> &cRealOverwrite(int q = 0) const { return dRealOverwrite(q);                                                   } // real constant overwrites for K_q
-    const SparseVector<int> &cIntOverwrite (int q = 0) const { return dIntOverwrite(q);                                                    } // int constant overwrites for K_q
+    const Vector<gentype>       &cRealConstants(int q = 0) const { return dRealConstants(q)(1,1,dRealConstants(q).size()-1,cRealConstantsTmp); } // real constants for K_q
+    const Vector<int>           &cIntConstants (int q = 0) const { return dIntConstants(q);                                                    } // int constants for K_q
+    const SparseVector<int>     &cRealOverwrite(int q = 0) const { return dRealOverwrite(q);                                                   } // real constant overwrites for K_q
+    const SparseVector<int>     &cIntOverwrite (int q = 0) const { return dIntOverwrite(q);                                                    } // int constant overwrites for K_q
+    const SparseVector<gentype> &cScale        (void)      const { return dScale;                                                              }
 
     const gentype &getRealConstZero(int q = 0) const { return cRealConstants(q)(0); }
           int      getIntConstZero (int q = 0) const { return cIntConstants(q)(0);  }
@@ -2372,16 +2362,18 @@ public:
 
     const gentype &cWeightLB(int q = 0) const { return dRealConstantsLB(q)(0); }
 
-    const Vector<gentype> &cRealConstantsLB(int q = 0) const { return dRealConstantsLB(q)(1,1,dRealConstantsLB(q).size()-1,cRealConstantsTmp); }
-    const Vector<int>     &cIntConstantsLB (int q = 0) const { return dIntConstantsLB(q);                                                      }
+    const Vector<gentype>       &cRealConstantsLB(int q = 0) const { return dRealConstantsLB(q)(1,1,dRealConstantsLB(q).size()-1,cRealConstantsTmp); }
+    const Vector<int>           &cIntConstantsLB (int q = 0) const { return dIntConstantsLB(q);                                                      }
+    const SparseVector<gentype> &cScaleLB        (void)      const { return dScaleLB;                                                                }
 
     const gentype &getRealConstZeroLB(int q = 0) const { return cRealConstantsLB(q)(0); }
           int      getIntConstZeroLB (int q = 0) const { return cIntConstantsLB(q)(0);  }
 
     const gentype &cWeightUB(int q = 0) const { return dRealConstantsUB(q)(0); }
 
-    const Vector<gentype> &cRealConstantsUB(int q = 0) const { return dRealConstantsUB(q)(1,1,dRealConstantsUB(q).size()-1,cRealConstantsTmp); }
-    const Vector<int>     &cIntConstantsUB (int q = 0) const { return dIntConstantsUB(q);                                                      }
+    const Vector<gentype>       &cRealConstantsUB(int q = 0) const { return dRealConstantsUB(q)(1,1,dRealConstantsUB(q).size()-1,cRealConstantsTmp); }
+    const Vector<int>           &cIntConstantsUB (int q = 0) const { return dIntConstantsUB(q);                                                      }
+    const SparseVector<gentype> &cScaleUB        (void)      const { return dScaleUB;                                                                }
 
     const gentype &getRealConstZeroUB(int q = 0) const { return cRealConstantsUB(q)(0); }
           int      getIntConstZeroUB (int q = 0) const { return cIntConstantsUB(q)(0);  }
@@ -2523,20 +2515,12 @@ public:
     MercerKernel &setNoFullNorm     (void) {                                                                                                      isfullnorm = 0;                                  recalcRandFeats(-1); return *this; }
     MercerKernel &setProd           (void) {                    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isprod     = 1;                                  recalcRandFeats(-1); return *this; }
     MercerKernel &setnonProd        (void) {                    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isprod     = 0;                                  recalcRandFeats(-1); return *this; }
-    MercerKernel &setLeftPlain      (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; leftplain  = 1;                  fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setRightPlain     (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; rightplain = 1;                  fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setLeftRightPlain (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; leftplain  = 1;  rightplain = 1; fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setLeftNormal     (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; leftplain  = 0;                  fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setRightNormal    (void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; rightplain = 0;                  fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setLeftRightNormal(void) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; leftplain  = 0;  rightplain = 0; fixShiftProd(); recalcRandFeats(-1); return *this; }
 
     MercerKernel &setdenseZeroPoint(double nv) { xdenseZeroPoint = nv; return *this; }
 
     MercerKernel &setSymmSet        (int nv) {                                                                                                      issymmset       = nv;                 recalcRandFeats(-1); return *this; }
     MercerKernel &setFullNorm       (int nv) {                                                                                                      isfullnorm      = nv;                 recalcRandFeats(-1); return *this; }
     MercerKernel &setProd           (int nv) {                    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isprod          = nv;                 recalcRandFeats(-1); return *this; }
-    MercerKernel &setLeftPlain      (int nv) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; leftplain       = nv; fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setRightPlain     (int nv) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; rightplain      = nv; fixShiftProd(); recalcRandFeats(-1); return *this; }
     MercerKernel &setAltDiff        (int nv) {                    xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isdiffalt       = nv;                 recalcRandFeats(-1); return *this; }
     MercerKernel &setsuggestXYcache (int nv) {                                                                                                      xsuggestXYcache = nv;                 recalcRandFeats(-1); return *this; }
     MercerKernel &setIPdiffered     (int nv) {                                                                                                      xisIPdiffered   = nv;                 recalcRandFeats(-1); return *this; }
@@ -2546,12 +2530,8 @@ public:
     MercerKernel &setSampleDistribution(const Vector<gentype> &nv) { xsampdist   = nv; return *this; }
     MercerKernel &setSampleIndices     (const Vector<int>     &nv) { xindsub     = nv; return *this; }
 
-    MercerKernel &setIndexes(const Vector<int> &ndIndexes) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isind = 1; dIndexes = ndIndexes; fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setUnIndex(void)                         { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isind = 0;                       fixShiftProd(); recalcRandFeats(-1); return *this; }
-
-    MercerKernel &setShift(const SparseVector<gentype> &ndShift) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isshift |= 1; dShift = ndShift; dShift.makealtcontent(); fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setScale(const SparseVector<gentype> &ndScale) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isshift |= 2; dScale = ndScale; dScale.makealtcontent(); fixShiftProd(); recalcRandFeats(-1); return *this; }
-    MercerKernel &setUnShiftedScaled(void)                       { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isshift  = 0;                                            fixShiftProd(); recalcRandFeats(-1); return *this; }
+    MercerKernel &setIndexes(const Vector<int> &ndIndexes) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isind = 1; dIndexes = ndIndexes; recalcRandFeats(-1); return *this; }
+    MercerKernel &setUnIndex(void)                         { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isind = 0;                       recalcRandFeats(-1); return *this; }
 
     MercerKernel &setChained   (int q = 0)         { xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; ischain  ("&",q) = 1;                                     recalcRandFeats(q); return *this; }
     MercerKernel &setNormalised(int q = 0)         { xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isnorm   ("&",q) = 1;                                     recalcRandFeats(q); return *this; }
@@ -2586,6 +2566,8 @@ public:
     MercerKernel &setRealConstZero(double nv, int q = 0) { dRealConstants("&",q)("&",1) = nv; recalcRandFeats(q); return *this; }
     MercerKernel &setIntConstZero (int    nv, int q = 0) { dIntConstants("&",q)("&",0)  = nv; recalcRandFeats(q); return *this; }
 
+    MercerKernel &setScale(const SparseVector<gentype> &nv) { xisIPdiffered = 1; xisfast = -1; xneedsInnerm2 = xneedsInner = -1; xneedsDiff = -1; xneedsNorm = -1; isscale = nv.size() ? 2 : 0; dScale = nv; dScale.makealtcontent(); recalcRandFeats(-1); return *this; }
+
     // Nominal bounds on constants (used in tuneKernel)
 
     MercerKernel &setisNomConst(int nv, int q = 0) { disNomConst("&",q) = nv; return *this; }
@@ -2605,6 +2587,9 @@ public:
 
     MercerKernel &setRealConstZeroUB(double nvUB, int q = 0) { dRealConstantsUB("&",q)("&",1) = nvUB; return *this; }
     MercerKernel &setIntConstZeroUB (int    nvUB, int q = 0) { dIntConstantsUB("&",q)("&",0)  = nvUB; return *this; }
+
+    MercerKernel &setScaleLB(const SparseVector<gentype> &nvLB) { dScaleLB = nvLB; return *this; }
+    MercerKernel &setScaleUB(const SparseVector<gentype> &nvUB) { dScaleUB = nvUB; return *this; }
 
     // setnumRandFeats triggers calculation/drawing of features.
     // setRandFeats and sertRandFeatAngle does this manually.
@@ -2652,10 +2637,12 @@ public:
 
     // Element retrieval
     //
-    // Sets res = x(i).direcref(j) (shifted/scaled if shifting/scaling is turned on)
+    // Sets res = x(i).direcref(j) (scaled if scaling is turned on)
     // and returns reference to this.
+    //
+    // q=-1: no scale
 
-    gentype &xelm(gentype &res, const SparseVector<gentype> &x, int i, int j) const;
+    gentype &xelm(gentype &res, const SparseVector<gentype> &x, int i, int j, int q=-1) const;
     int xindsize(const SparseVector<gentype> &x, int i) const;
     //const SparseVector<gentype> &getx(const SparseVector<gentype> &x, int i) const { (void) i; return x; }
 
@@ -2791,7 +2778,7 @@ public:
     // xy matrix stores either inner products [ <x,x> <x,y> ; <y,x> <y,y> ] or their transferred
     // equivalents [ K2xfer(x,x) K2xfer(x,y) ; K2xfer(y,x) K2xfer(y,y) ].
     //
-    // xconsist:  set if we can assume the indices of x,y, etc and scale/shift are all the same
+    // xconsist:  set if we can assume the indices of x,y, etc and scale are all the same
     // assumreal: set 1 if we assume x is real-valued to speed things up (call before doing kernel eval)
 
     gentype &K0(gentype &res, const gentype &bias, const gentype **pxyprod, int xdim, int xconsist, int resmode, int mlid, int assumreal = 0) const;
@@ -2880,9 +2867,8 @@ public:
     // If minmaxind >= 0 then derivative is only with respect to element minmaxind
     // of vectors x,y (so result is xscaleres.x(minmaxind) + yscaleres.y(minmaxind)).
     //
-    // NB: this is actually the derivative wrt dScale.*(x-dShift) if shifting and/or
-    //     scaling is present, so factor this in when calculating results.  That is
-    //     d/dx_i => dScale_i d/dx_i etc
+    // NB: this is actually the derivative wrt dScale.*x scaling is present, so factor
+    //     this in when calculating results.  That is d/dx_i => dScale_i d/dx_i etc
 
     void dK2delx(gentype &xscaleres, gentype &yscaleres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, const gentype &bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int assumreal = 0) const;
     void dK2delx(double  &xscaleres, double  &yscaleres, int &minmaxind, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo,       double   bias, const gentype **pxyprod = nullptr, int i = DEFAULT_VECT_INDEX, int j = DEFAULT_VECT_INDEX-1, int xdim = 0, int xconsist = 0, int mlid = 0, const double *xy00 = nullptr, const double *xy10 = nullptr, const double *xy11 = nullptr, int assumreal = 0) const;
@@ -3108,8 +3094,8 @@ private:
 
     // Terms used:
     //
-    // - normalised:         Kn(x,y) = K(x,y)/sqrt(|K(x,x)|.|K(y,y)|)
-    // - shifted and scaled: Ks(x,y) = K((x+shift).*scale,(y+shift).*scale)
+    // - normalised: Kn(x,y) = K(x,y)/sqrt(|K(x,x)|.|K(y,y)|)
+    // - scaled:     Ks(x,y) = K((x).*scale,(y).*scale)
     //
     // dtype: kernel type vector.
     // isprod:     0 = normal, 1 = K(x,y) = prod_i K(x_i,y_i)
@@ -3119,11 +3105,9 @@ private:
     // issplit:    0 = normal, 1 = this kernel (for this part of x) stops here, next kernel (for this part of x) starts, 2 means additive split
     // mulsplit:   0 = normal, 1 = this kernel (for all x) stops here, next kernel (for all x) starts, 2 for additive split.
     // ismagtern   0 = normal, 1 = use K(x,x).K(y,y) rather than K(x,y).
-    // isshift:    0 = normal, 1 = use shifting only, 2 = use scaling only, 3 = use shifting and scaling
+    // isscale:    0 = normal, 2 = use scaling
     // isind:      0 = normal, 1 = use indexed products
     // isfullnorm: 0 = normal, 1 = normalise at outermost
-    // leftplain:  0 = normal, 1 = don't shift-scale left-hand argument in K
-    // rightplain: 0 = normal, 1 = don't shift-scale right-hand argument in K
     // weight: weight factor kernel is multiplied by
     //         (now stored as index 0 of real constants)
     // dIntConstants: integer constants in kernel
@@ -3135,16 +3119,11 @@ private:
     // dIntOverwrite: selects which variables will be overwritten by which x(i)*y(i)
     // dRealOverwrite: selects which variables will be overwritten by which x(i)*y(i)
     // dIndexes: indices used in index products
-    // dShift: shift factor
     // dScale: scale factor
-    // dShiftProd: ||dShift.*dScale||_2^2
 
     Vector<int> xdefindKey;
 
     mutable int isind;
-    int isshift;
-    int leftplain;
-    int rightplain;
     int isprod;
     int isdiffalt;
     int xproddepth;
@@ -3164,6 +3143,7 @@ private:
     Vector<int> issplit;
     Vector<int> mulsplit;
     Vector<int> ismagterm;
+    int isscale;
     mutable Vector<int> dIndexes;
     Vector<kernInfo> kernflags;
     mutable Vector<Vector<gentype> > dRealConstants;
@@ -3181,11 +3161,9 @@ private:
     Vector<int> randFeatReOnly; // 0 both real and im, 1 re only, -1 im only
     Vector<int> randFeatNoAngle; // 0 for random angle, 1 for no angle.
 
-    SparseVector<gentype> dShift;
     SparseVector<gentype> dScale;
-    gentype dShiftProd;
-    gentype dShiftProdNoConj;
-    gentype dShiftProdRevConj;
+    SparseVector<gentype> dScaleLB;
+    SparseVector<gentype> dScaleUB;
 
     mutable retVector<gentype> cRealConstantsTmp;
     mutable retVector<int> cRealConstantsTmpb;
@@ -3758,11 +3736,11 @@ private:
 
     // Further in, deeper down
 
-    void getOneProd  (gentype &res, const SparseVector<gentype> &xa, int inding, int scaling, int xconsist, int assumreal) const;
-    void getTwoProd  (gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, int inding, int conj, int scaling, int xconsist, int assumreal) const;
-    void getThreeProd(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, int inding, int scaling, int xconsist, int assumreal) const;
-    void getFourProd (gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, int inding, int scaling, int xconsist, int assumreal) const;
-    void getmProd    (gentype &res, const Vector<const SparseVector<gentype> *> &x, int inding, int scaling, int xconsist, int assumreal) const;
+    gentype &getOneProd  (gentype &res, const SparseVector<gentype> &xa, int inding, int scaling, int xconsist, int assumreal) const;
+    gentype &getTwoProd  (gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, int inding, int conj, int scaling, int xconsist, int assumreal) const;
+    gentype &getThreeProd(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, int inding, int scaling, int xconsist, int assumreal) const;
+    gentype &getFourProd (gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, int inding, int scaling, int xconsist, int assumreal) const;
+    gentype &getmProd    (gentype &res, const Vector<const SparseVector<gentype> *> &x, int inding, int scaling, int xconsist, int assumreal) const;
 
     double getOneProd  (const SparseVector<gentype> &xa, int inding, int scaling, int xconsist, int assumreal) const;
     double getTwoProd  (const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, int inding, int conj, int scaling, int xconsist, int assumreal) const;
@@ -3770,9 +3748,7 @@ private:
     double getFourProd (const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, int inding, int scaling, int xconsist, int assumreal) const;
     double getmProd    (const Vector<const SparseVector<gentype> *> &x, int inding, int scaling, int xconsist, int assumreal) const;
 
-    void fixShiftProd(void);
-
-    SparseVector<gentype> &preShiftScale(SparseVector<gentype> &res, const SparseVector<gentype> &x) const;
+    SparseVector<gentype> &preScale(SparseVector<gentype> &res, const SparseVector<gentype> &x, int q) const;
 
     // Note: diff0norm and diff1norm evaluate to zero in all cases, so we bypass them here
     // Note: because xyprod etc can be infinite for sets, need to take in ia,ib,... and set res = 0 if ia == ib == ic ... for diff kernels to work
@@ -3968,7 +3944,6 @@ private:
     {
 //        return !isProd() &&
 //               !isIndex() &&
-//               !isShifted() &&
 //               !isScaled() &&
 //               ( size() == 1 ) &&
 //               !isNormalised(0) &&
@@ -4458,8 +4433,8 @@ public:
     int isSimpleXferKernel (void) const { return ( isSimpleKernel() && ( ( cType() >= 800 ) && ( cType() <= 829 ) ) ); }
     int isSimpleKernelChain(void) const { return ( ( size() == 2 )  && ( ( cType() >= 800 ) && ( cType() <= 829 ) )
                                           && !isNormalised(0) && !isNormalised(1) && isChained(0) && !isSplit(0) && !isMulSplit(0) && !isMagTerm() ); }
-    int isTrivialKernel    (int allowsymm = 0) const { const static gentype tempsampdist("[ ]"); return ( ( size() == 1 ) && !isFullNorm() && ( allowsymm || !isSymmSet() ) && !isProd() && !isIndex() && !isShifted() && !isScaled() && !isLeftPlain() &&
-                                          !isRightPlain() && ( isAltDiff() == 1 ) && !isNormalised() && !isChained() && !isSplit() && !isMulSplit() && !isMagTerm() &&
+    int isTrivialKernel    (int allowsymm = 0) const { const static gentype tempsampdist("[ ]"); return ( ( size() == 1 ) && !isFullNorm() && ( allowsymm || !isSymmSet() ) && !isProd() && !isIndex() && !isScaled() &&
+                                          ( isAltDiff() == 1 ) && !isNormalised() && !isChained() && !isSplit() && !isMulSplit() && !isMagTerm() &&
                                           ( numSamples() == DEFAULT_NUMKERNSAMP ) && ( sampleDistribution() == tempsampdist ) && ( sampleIndices().size() == 0 ) &&
                                           ( cRealOverwrite().indsize() == 0 ) && ( cIntOverwrite().indsize() == 0 ) ); }
     int isVeryTrivialKernel(int allowsymm = 0) const { return ( ( !xdefindKey.size() || ( xdefindKey(xdefindKey.size()-1) == xdefindKey.size()-1 ) ) && isTrivialKernel(allowsymm) && ( !sizeLinConstr() ) && ( !sizeLinParity() ) ); }
@@ -4494,9 +4469,7 @@ inline void qswap(MercerKernel &a, MercerKernel &b)
     qswap(a.isind               ,b.isind               );
     qswap(a.isfullnorm          ,b.isfullnorm          );
     qswap(a.issymmset           ,b.issymmset           );
-    qswap(a.isshift             ,b.isshift             );
-    qswap(a.leftplain           ,b.leftplain           );
-    qswap(a.rightplain          ,b.rightplain          );
+    qswap(a.isscale             ,b.isscale             );
     qswap(a.isdiffalt           ,b.isdiffalt           );
     qswap(a.xproddepth          ,b.xproddepth          );
     qswap(a.enchurn             ,b.enchurn             );
@@ -4530,11 +4503,9 @@ inline void qswap(MercerKernel &a, MercerKernel &b)
     qswap(a.randFeatReOnly      ,b.randFeatReOnly      );
     qswap(a.randFeatNoAngle     ,b.randFeatNoAngle     );
 
-    qswap(a.dShift              ,b.dShift              );
     qswap(a.dScale              ,b.dScale              );
-    qswap(a.dShiftProd          ,b.dShiftProd          );
-    qswap(a.dShiftProdNoConj    ,b.dShiftProdNoConj    );
-    qswap(a.dShiftProdRevConj   ,b.dShiftProdRevConj   );
+    qswap(a.dScaleLB            ,b.dScaleLB            );
+    qswap(a.dScaleUB            ,b.dScaleUB            );
 
     qswap(a.linGradOrd          ,b.linGradOrd          );
     qswap(a.linGradScal         ,b.linGradScal         );

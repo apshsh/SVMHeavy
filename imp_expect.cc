@@ -96,7 +96,7 @@ int IMP_Expect::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***
 
     gentype dummyresv;
 
-    int res = imp(resg,dummyresv,x(i),nullgentype());
+    int res = imp(resg,dummyresv,x(i),toGentype());
 
     resh = resg;
 

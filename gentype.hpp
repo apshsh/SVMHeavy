@@ -94,11 +94,30 @@ template <class T> void pycall(int fni, gentype &res, const Dict<T,dictkey> &x) 
 template <class T> void pycall(int fni, gentype &res, const SparseVector<T> &x) { gentype xx(x); pycall(fni,res,xx); }
 #endif
 
+// Simple conversion functions. RVO should avoid copy
+
+inline       const gentype &toGentype(void);      // null/none
+inline             gentype  toGentype(char type); // type specified
+inline             gentype  toGentype(                   int                        src);
+inline             gentype  toGentype(                   double                     src);
+inline             gentype  toGentype(                   std::complex<double>       src);
+inline             gentype  toGentype(             const d_anion                   &src);
+template <class T> gentype  toGentype(             const Vector<T>                 &src);
+template <class T> gentype  toGentype(             const SparseVector<T>           &src);
+template <class T> gentype  toGentype(             const Matrix<T>                 &src);
+template <class T> gentype  toGentype(             const Set<T>                    &src);
+template <class T> gentype  toGentype(             const Dict<T,dictkey>           &src);
+template <class T> gentype  toGentype(             const Dgraph<T,double>          &src);
+inline             gentype  toGentype(             const std::string               &src);
+inline             gentype  toGentype(             const char                      *src);
+inline             gentype  toGentype(int srcsize, const double                    *src);
+
 // Optimisation is as follows: scaladd assumes that all values
 // are integer or double and does a += b*c.  scalmul performs a *= b.
 
 inline double &scaladd(double &a, const gentype &b);
 inline double &scaladd(double &a, const gentype &b, const gentype &c);
+inline double &scaladd(double &a, const gentype &b, double c);
 inline double &scaladd(double &a, const gentype &b, const gentype &c, const gentype &d);
 inline double &scaladd(double &a, const gentype &b, const gentype &c, const gentype &d, const gentype &e);
 inline double &scalsub(double &a, const gentype &b);
@@ -109,6 +128,7 @@ inline double &scaldiv(double &a, const gentype &b);
 
 inline gentype &scaladd(gentype &a, const gentype &b);
 inline gentype &scaladd(gentype &a, const gentype &b, const gentype &c);
+inline gentype &scaladd(gentype &a, const gentype &b, double c);
 inline gentype &scaladd(gentype &a, const gentype &b, const gentype &c, const gentype &d);
 inline gentype &scaladd(gentype &a, const gentype &b, const gentype &c, const gentype &d, const gentype &e);
 inline gentype &scalsub(gentype &a, const gentype &b);
@@ -342,6 +362,7 @@ class gentype
 
     friend inline double &scaladd(double &a, const gentype &b);
     friend inline double &scaladd(double &a, const gentype &b, const gentype &c);
+    friend inline double &scaladd(double &a, const gentype &b, double c);
     friend inline double &scaladd(double &a, const gentype &b, const gentype &c, const gentype &d);
     friend inline double &scaladd(double &a, const gentype &b, const gentype &c, const gentype &d, const gentype &e);
     friend inline double &scalsub(double &a, const gentype &b);
@@ -2051,17 +2072,24 @@ gentype operator"" _pgent(unsigned long long int valp);
 gentype operator"" _qgent(unsigned long long int valq);
 gentype operator"" _rgent(unsigned long long int valr);
 
+// simplified constructors
 
+inline       const gentype &toGentype(void) { const static gentype res('N');  return res; }
+inline             gentype  toGentype(char type) { gentype res(type); return res; }
+inline             gentype  toGentype(                   int                        src) { gentype res(        src);  return res; }
+inline             gentype  toGentype(                   double                     src) { gentype res(        src);  return res; }
+inline             gentype  toGentype(                   std::complex<double>       src) { gentype res(        src);  return res; }
+inline             gentype  toGentype(             const d_anion                   &src) { gentype res(        src);  return res; }
+template <class T> gentype  toGentype(             const Vector<T>                 &src) { gentype res(        src);  return res; }
+template <class T> gentype  toGentype(             const SparseVector<T>           &src) { gentype res(        src);  return res; }
+template <class T> gentype  toGentype(             const Matrix<T>                 &src) { gentype res(        src);  return res; }
+template <class T> gentype  toGentype(             const Set<T>                    &src) { gentype res(        src);  return res; }
+template <class T> gentype  toGentype(             const Dict<T,dictkey>           &src) { gentype res(        src);  return res; }
+template <class T> gentype  toGentype(             const Dgraph<T,double>          &src) { gentype res(        src);  return res; }
+inline             gentype  toGentype(             const std::string               &src) { gentype res(        src);  return res; }
+inline             gentype  toGentype(             const char                      *src) { gentype res(        src);  return res; }
+inline             gentype  toGentype(int srcsize, const double                    *src) { gentype res(srcsize,src);  return res; }
 
-// Common values by reference
-
-inline const gentype &nullgentype(void);
-inline const gentype &nullgentype(void)
-{
-    const static gentype nullval('N');
-
-    return nullval;
-}
 
 
 
@@ -2112,9 +2140,7 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
 	{
             if ( src.ind(i) == prevind+1 )
             {
-                gentype tmp(src.direcref(i));
-
-                res.append(-1,tmp);
+                res.append(-1,toGentype(src.direcref(i)));
 
                 if ( res(res.size()-1).isValNull() )
                 {
@@ -2134,15 +2160,11 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
-                    gentype tmp(src.direcref(i));
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype(src.direcref(i)));
 
                     if ( res(res.size()-1).isValNull() )
                     {
@@ -2163,15 +2185,11 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
-                    gentype tmp(src.direcref(i));
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype(src.direcref(i)));
 
                     if ( res(res.size()-1).isValNull() )
                     {
@@ -2192,15 +2210,11 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
-                    gentype tmp(src.direcref(i));
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype(src.direcref(i)));
 
                     if ( res(res.size()-1).isValNull() )
                     {
@@ -2221,15 +2235,11 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
-                    gentype tmp(src.direcref(i));
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype(src.direcref(i)));
 
                     if ( res(res.size()-1).isValNull() )
                     {
@@ -2257,15 +2267,11 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
-                    gentype tmp(src.direcref(i));
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype(src.direcref(i)));
 
                     if ( res(res.size()-1).isValNull() )
                     {
@@ -2278,15 +2284,11 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<T> &
             {
                 for ( int ii = prevind+1 ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
-                    gentype tmp(src.direcref(i));
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype(src.direcref(i)));
 
                     if ( res(res.size()-1).isValNull() )
                     {
@@ -3784,6 +3786,21 @@ inline double &scaladd(double &a, const gentype &b, const gentype &c)
     return a;
 }
 
+inline double &scaladd(double &a, const gentype &b, double c)
+{
+    if ( b.isCastableToRealWithoutLoss() )
+    {
+        a = std::fma(((double) b),c,a);
+    }
+
+    else
+    {
+        a += (double) (b*c);
+    }
+
+    return a;
+}
+
 inline double &scaladd(double &a, const gentype &b, const gentype &c, const gentype &d)
 {
     if ( b.isCastableToRealWithoutLoss() && b.isCastableToRealWithoutLoss() && d.isCastableToRealWithoutLoss() )
@@ -3820,6 +3837,7 @@ inline double &scaldiv(double &a, const gentype &b) { return a /= ((double) b); 
 
 inline gentype &scaladd(gentype &a, const gentype &b)                                                       { return a += b; }
 inline gentype &scaladd(gentype &a, const gentype &b, const gentype &c)                                     { return a += b*c; }
+inline gentype &scaladd(gentype &a, const gentype &b, double c)                                             { return a += b*c; }
 inline gentype &scaladd(gentype &a, const gentype &b, const gentype &c, const gentype &d)                   { return a += b*c*d; }
 inline gentype &scaladd(gentype &a, const gentype &b, const gentype &c, const gentype &d, const gentype &e) { return a += b*c*d*e; }
 

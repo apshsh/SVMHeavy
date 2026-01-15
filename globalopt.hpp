@@ -383,13 +383,13 @@ public:
         else if ( numReps == 1 )
         {
             meanres = srcsum;
-            varires = nullgentype();
+            varires = toGentype();
         }
 
         else
         {
-            meanres = nullgentype();
-            varires = nullgentype();
+            meanres = toGentype();
+            varires = toGentype();
         }
     }
 
@@ -1460,7 +1460,7 @@ int readres(gentype &res,
                     double &nuscale);
 
 
-int readres(gentype &res, int &stopflags);
+int readres(gentype &res, Vector<gentype> &ycgt, int &stopflags);
 
 
 

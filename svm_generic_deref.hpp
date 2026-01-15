@@ -695,13 +695,6 @@ public:
     virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getQconst().xmax(res);    }
     virtual const SparseVector<gentype> &xmin   (SparseVector<gentype> &res) const override { return getQconst().xmin(res);    }
 
-    // Kernel normalisation function
-
-    virtual int normKernelNone                  (void)                              override { return getQ().normKernelNone();                                   }
-    virtual int normKernelZeroMeanUnitVariance  (int flatnorm = 0, int noshift = 0) override { return getQ().normKernelZeroMeanUnitVariance(flatnorm,noshift);   }
-    virtual int normKernelZeroMedianUnitVariance(int flatnorm = 0, int noshift = 0) override { return getQ().normKernelZeroMedianUnitVariance(flatnorm,noshift); }
-    virtual int normKernelUnitRange             (int flatnorm = 0, int noshift = 0) override { return getQ().normKernelUnitRange(flatnorm,noshift);              }
-
     // Helper functions for sparse variables
 
     virtual SparseVector<gentype> &xlateToSparse(SparseVector<gentype> &dest, const Vector<gentype>      &src) const override { return getQconst().xlateToSparse(dest,src); }

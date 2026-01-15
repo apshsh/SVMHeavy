@@ -75,16 +75,18 @@ public:
     // eps: epsilon argument for DIRect.  Suggest 0, 1e-4, 1e-3 etc
     // algorithm: method used (either DIRECT_ORIGINAL or DIRECT_GABLONSKY).
     // traintimeoverride: 0 for standard, >0 to set train time separately for direct optimiser
+    // gridsource: see bayesopt.hpp. This version only supports simple equality observations
 
     long int maxits;
     long int maxevals;
     double eps;
     direct_algorithm algorithm;
     double traintimeoverride;
+    ML_Base *gridsource;
 
     DIRectOptions() : GlobalOptions()
     {
-        optname = "DIRect Optimisation";
+        optname = "opt_DIRect";
 
         maxits            = 400; //200;
         maxevals          = 2000; //1000;
@@ -92,6 +94,7 @@ public:
         //algorithm         = DIRECT_ORIGINAL;
         algorithm         = DIRECT_GABLONSKY; // always use this so the "hidden constraint" feature is accessible!
         traintimeoverride = 0;
+        gridsource        = nullptr;
     }
 
     DIRectOptions(const DIRectOptions &src) : GlobalOptions(src)
@@ -108,6 +111,7 @@ public:
         eps               = src.eps;
         algorithm         = src.algorithm;
         traintimeoverride = src.traintimeoverride;
+        gridsource        = src.gridsource;
 
         return *this;
     }

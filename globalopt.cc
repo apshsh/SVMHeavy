@@ -352,7 +352,7 @@ int GlobalOptions::optim(int dim,
                     if ( !startyet )
                     {
                         if ( is_feas(jj)(kk) && allmres(jj)(kk).isCastableToRealWithoutLoss() ) { startyet = 1;                            }
-                        else                                                                    { allmres("&",jj)("&",kk) = nullgentype(); }
+                        else                                                                    { allmres("&",jj)("&",kk) = toGentype(); }
                     }
 
                     else
@@ -435,9 +435,9 @@ int GlobalOptions::optim(int dim,
 
                         if ( ( ii(jj) >= vecallFres(jj).size() ) || ( ((double) vecallFres(jj)(ii(jj))) != Fmin ) )
                         {
-                            vecallfres("&",jj).add(ii(jj)); vecallfres("&",jj)("&",ii(jj)) = nullgentype();
+                            vecallfres("&",jj).add(ii(jj)); vecallfres("&",jj)("&",ii(jj)) = toGentype();
                             vecallFres("&",jj).add(ii(jj)); vecallFres("&",jj)("&",ii(jj)) = Fmin;
-                            vecallmres("&",jj).add(ii(jj)); vecallmres("&",jj)("&",ii(jj)) = ( simRmin < simRmax ) ? simRmax : -NOMINAL_MAX; //nullgentype();
+                            vecallmres("&",jj).add(ii(jj)); vecallmres("&",jj)("&",ii(jj)) = ( simRmin < simRmax ) ? simRmax : -NOMINAL_MAX; //toGentype();
 
                             if ( ii(jj) ) { vecallmres("&",jj)("&",ii(jj)) = vecallmres(jj)(ii(jj)-1); }
                         }
@@ -1918,10 +1918,9 @@ int readres(gentype &res,
     return ires;
 }
 
-int readres(gentype &res, int &stopflags)
+int readres(gentype &res, Vector<gentype> &ycgt, int &stopflags)
 {
     double addvar = 0;
-    Vector<gentype> ycgt;
     SparseVector<gentype> xxreplace;
     int replacexx;
     gentype addexp;

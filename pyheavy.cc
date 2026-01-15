@@ -214,18 +214,18 @@ gentype convFromPy(const py::object &src);
                                               modis ## _NelderMead        .def(      #varname, &(modoptget_NelderMead_ ## varname), "For " "NelderMead" " optimiser, get " desc); \
                                               modis ## _Bayesian          .def(      #varname, &(modoptget_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, get " desc);
 
-#define QGETSETKERD(modis,getfn,setfn,getname,setname,desc)  modis.def(setname, &(mod_k ## setfn), "Set kernel param "                  desc, py::arg(getname)); \
-                                                             modis.def(getname, &(mod_k ## getfn), "Get kernel param "                  desc);                   \
-                                                   (modis ##  _UU).def(setname, &(mod_e ## setfn), "Set output kernel param "           desc, py::arg(getname)); \
-                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "Get output kernel param "           desc);                   \
-                                                   (modis ## _RFF).def(setname, &(mod_r ## setfn), "Set RFF kernel param "              desc, py::arg(getname)); \
-                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "Get RFF kernel param "              desc);
-#define QGETSETKERQD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_k ## setfn), "Set kernel element q param "        desc, py::arg(getname), py::arg("q") = 0); \
-                                                             modis.def(getname, &(mod_k ## getfn), "Get kernel element q param "        desc,                   py::arg("q") = 0); \
-                                                   (modis ##  _UU).def(setname, &(mod_e ## setfn), "Set output kernel element q param " desc, py::arg(getname), py::arg("q") = 0); \
-                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "Set output kernel element q param " desc,                   py::arg("q") = 0); \
-                                                   (modis ## _RFF).def(setname, &(mod_r ## setfn), "Set RFF kernel element q param "    desc, py::arg(getname), py::arg("q") = 0); \
-                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "Set RFF kernel element q param "    desc,                   py::arg("q") = 0);
+#define QGETSETKERD(modis,getfn,setfn,getname,setname,desc)  modis.def(setname, &(mod_k ## setfn), "\n\nSet kernel param "                  desc, py::arg(getname)); \
+                                                             modis.def(getname, &(mod_k ## getfn), "\n\nGet kernel param "                  desc);                   \
+                                                   (modis ##  _UU).def(setname, &(mod_e ## setfn), "\n\nSet output kernel param "           desc, py::arg(getname)); \
+                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "\n\nGet output kernel param "           desc);                   \
+                                                   (modis ## _RFF).def(setname, &(mod_r ## setfn), "\n\nSet RFF kernel param "              desc, py::arg(getname)); \
+                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "\n\nGet RFF kernel param "              desc);
+#define QGETSETKERQD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_k ## setfn), "\n\nSet kernel element q param "        desc, py::arg(getname), py::arg("q") = 0); \
+                                                             modis.def(getname, &(mod_k ## getfn), "\n\nGet kernel element q param "        desc,                   py::arg("q") = 0); \
+                                                   (modis ##  _UU).def(setname, &(mod_e ## setfn), "\n\nSet output kernel element q param " desc, py::arg(getname), py::arg("q") = 0); \
+                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "\n\nSet output kernel element q param " desc,                   py::arg("q") = 0); \
+                                                   (modis ## _RFF).def(setname, &(mod_r ## setfn), "\n\nSet RFF kernel element q param "    desc, py::arg(getname), py::arg("q") = 0); \
+                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "\n\nSet RFF kernel element q param "    desc,                   py::arg("q") = 0);
 
 #define QIMPA(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), "Evaluate " desc " in gentype", py::arg("x"));
 #define QIMPB(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), "Evaluate " desc " in gentype", py::arg("x"),py::arg("y"));
@@ -425,6 +425,8 @@ py::object mlK3(py::object xa, py::object xb, py::object xc);
 py::object mlK4(py::object xa, py::object xb, py::object xc, py::object xd);
 py::object mlKm(py::object xa);
 
+void DIRectSetgridsource(int j);
+
 void boSetgridsource      (int j);
 void boSetkernapproxsource(int j);
 void boSetimpmeas         (int j);
@@ -552,6 +554,10 @@ GETSETKERBNDEF(getIntOverwrites, setIntOverwrites, Vector<SparseVector<int>>)
 GETSETKERAPDEF(getIsNormalised,  setIsNormalised,  Vector<int>              )
 GETSETKERAPDEF(getIsMagTerm,     setIsMagTerm,     Vector<int>              )
 GETSETKERAPDEF(getIsNomConst,    setIsNomConst,    Vector<int>              )
+
+GETSETKERAPDEF(cScale,  setScale,  SparseVector<gentype>)
+GETSETKERAPDEF(cScaleLB,setScaleLB,SparseVector<gentype>)
+GETSETKERAPDEF(cScaleUB,setScaleUB,SparseVector<gentype>)
 
 GETSETKERAPDEF(getChained, setChained, Vector<int>)
 GETSETKERAPDEF(getSplit,   setSplit,   Vector<int>)
@@ -1657,6 +1663,8 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPTB(m_opt,maxevals,DIRect,"maximum function evaluations (default 5000).");
     QGETSETOPTB(m_opt,eps,     DIRect,"epsilon factor (default 1e-4)."              );
 
+    m_opt_DIRect.def("setgridsrc",&DIRectSetgridsource, "For DIRect, set grid source.",py::arg("j"));
+
     // Nelder-Mead options
 
     m_opt_NelderMead.def("selNelderMeadopt",&selNelderMeadopt,"Select NelderMead optimiser i > 0. If i=0 then return current NelderMead       \n"
@@ -1984,7 +1992,7 @@ PYBIND11_MODULE(pyheavy, m) {
     auto m_ml_kern_UU  = m_ml_kern.def_submodule("UU", "Output kernel Options for Model."        );
     auto m_ml_kern_RFF = m_ml_kern.def_submodule("RFF","RFF similarity kernel Options for Model.");
 
-    QGETSETKERQD(m_ml_kern,cType,   setType, "type", "settype", "kernel type, for example (z = <x,x'>, d=||x-x'||_2):\n"
+    QGETSETKERQD(m_ml_kern,cType,   setType, "type", "settype", "kernel type, eg (z = <x,x'>, d=||x-x'||_2):\n"
                                                                 "                                                                               \n"
                                                                 "   0: Constant:                 Kq(x,x') = rq_1                                \n"
                                                                 "   1: Linear:                   Kq(x,x') = z/(rq_0.rq_0)                       \n"
@@ -2086,8 +2094,11 @@ PYBIND11_MODULE(pyheavy, m) {
                                                                 "       * kernel is only positive definite in R^2                               \n"
                                                                 "       + kernel is only positive definite in R^3                               \n"
                                                                 "       @ kernel is only defined if set to operate product-wise                 ");
-    QGETSETKERD(m_ml_kern, getTypes,setTypes,"types","settypes","Kernel types [ t0, t1, ... ] (by default the overall kernel is the weighted sum\n"
-                                                                "K(x,x') = sum_i wi Ki(x,x') of these, but you can change this (see (mul)split).");
+    QGETSETKERD(m_ml_kern, getTypes,setTypes,"types","settypes","Kernel types [ t0, t1, ... ]\n"
+                                                                "(by default the overall kernel is the  weighted sum K(x,x') = sum_i wi Ki(x,x')\n"
+                                                                "of these, but you can change this (see (mul)split).                            ");
+
+    QGETSETKERD(m_ml_kern,cScale,setScale,"scale","setscale","Kernel ARD-type scale x -> x./s (use empty to remove)");
 
     QGETSETKERQD(m_ml_kern,getRealConstZero,setRealConstZero,"l","setl","lengthscale rq_0=l");
     QGETSETKERQD(m_ml_kern,getIntConstZero, setIntConstZero, "d","setd","order iq_0=d"      );
@@ -2159,6 +2170,9 @@ PYBIND11_MODULE(pyheavy, m) {
 
     QGETSETKERQD(m_ml_kern,getRealConstZeroUB,setRealConstZeroUB,"lUB","setlUB","nominal upper bound for lengthscale");
     QGETSETKERQD(m_ml_kern,getIntConstZeroUB, setIntConstZeroUB, "dUB","setdUB","nominal upper bounds for order"     );
+
+    QGETSETKERD(m_ml_kern,cScaleLB,setScaleLB,"scaleLB","setscaleLB","Kernel ARD-type scale x -> x./s nominal lower bound");
+    QGETSETKERD(m_ml_kern,cScaleUB,setScaleUB,"scaleUB","setscaleUB","Kernel ARD-type scale x -> x./s nominal upper bound");
 }
 
 //void logit(const std::string logstr) { errstream() << "python: " << logstr << "\n"; }
@@ -2447,6 +2461,7 @@ errstream() << "resvarallmres = " << resvarallmres << "\n";
     return convToPy(Q_res);                               \
 }
 
+void DIRectSetgridsource  (int j) { dostartup(); int i = glob_DIRectInd  (0); j = glob_MLInd(j); getDIRectref  (i).gridsource = &getMLref(j);          }
 void boSetgridsource      (int j) { dostartup(); int i = glob_BayesianInd(0); j = glob_MLInd(j); getBayesianref(i).gridsource = &getMLref(j);          }
 void boSetkernapproxsource(int j) { dostartup(); int i = glob_BayesianInd(0); j = glob_MLInd(j); getBayesianref(i).kernapprox = &getMLref(j);          }
 void boSetimpmeas         (int j) { dostartup(); int i = glob_BayesianInd(0); j = glob_MLInd(j); getBayesianref(i).impmeasu   = &getMLref(j).getIMP(); }

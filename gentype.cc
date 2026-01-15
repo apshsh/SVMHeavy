@@ -612,20 +612,9 @@ std::ostream &operator<<(std::ostream &output, const gentype &src )
     {
         double srcdval = src.cast_double(0);
 
-        if ( testisvnan(srcdval) )
-        {
-            output << "vnan()";
-        }
-
-        else if ( testispinf(srcdval) )
-        {
-            output << "pinf()";
-        }
-
-        else if ( testisninf(srcdval) )
-        {
-            output << "ninf()";
-        }
+        if      ( testisvnan(srcdval) ) { output << "vnan()"; }
+        else if ( testispinf(srcdval) ) { output << "pinf()"; }
+        else if ( testisninf(srcdval) ) { output << "ninf()"; }
 
 	else
 	{
@@ -24255,9 +24244,7 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
@@ -24284,9 +24271,7 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
@@ -24313,9 +24298,7 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
@@ -24342,9 +24325,7 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
@@ -24378,9 +24359,7 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
@@ -24399,9 +24378,7 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<gent
             {
                 for ( int ii = prevind+1 ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
@@ -24451,9 +24428,7 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<doub
 	{
             if ( src.ind(i) == prevind+1 )
             {
-                gentype tmp(src.direval(i));
-
-                res.append(-1,tmp);
+                res.append(-1,toGentype(src.direval(i)));
             }
 
             else if ( ( baseind < INDF1OFFSTART ) && ( src.ind(i) >= INDF1OFFSTART ) && ( src.ind(i) <= INDF1OFFEND ) )
@@ -24468,15 +24443,11 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<doub
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
-                    gentype tmp(src.direval(i));
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype(src.direval(i)));
                 }
             }
 
@@ -24492,15 +24463,11 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<doub
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
-                    gentype tmp(src.direval(i));
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype(src.direval(i)));
                 }
             }
 
@@ -24516,15 +24483,11 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<doub
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
-                    gentype tmp(src.direval(i));
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype(src.direval(i)));
                 }
             }
 
@@ -24540,15 +24503,11 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<doub
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
-                    gentype tmp(src.direval(i));
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype(src.direval(i)));
                 }
             }
 
@@ -24571,15 +24530,11 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<doub
 
                 for ( int ii = baseind ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
-                    gentype tmp(src.direval(i));
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype(src.direval(i)));
                 }
             }
 
@@ -24587,15 +24542,11 @@ Vector<gentype> &SparseToNonSparse(Vector<gentype> &res, const SparseVector<doub
             {
                 for ( int ii = prevind+1 ; ii < src.ind(i) ; ++ii )
                 {
-                    const static gentype tmp('N');
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype());
                 }
 
                 {
-                    gentype tmp(src.direval(i));
-
-                    res.append(-1,tmp);
+                    res.append(-1,toGentype(src.direval(i)));
                 }
             }
 

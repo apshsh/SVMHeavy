@@ -48,7 +48,6 @@
 
 
 
-
 #ifndef DEFAULT_SAMPLES_SAMPLE
 #define DEFAULT_SAMPLES_SAMPLE     100
 #endif
@@ -835,6 +834,8 @@ template <class T> void qswap(Vector<T> *&a, Vector<T> *&b)
     b = c;
 }
 
+template <class T> Vector<T> &scaladd(Vector<T> &a, const Vector<T> &b, double s);
+template <class T> Vector<T> &scaladd(Vector<T> &a, const Vector<T> &b, double s) { return a.scaleAdd(s,b); }
 
 
 // Various functions
@@ -852,6 +853,7 @@ template <class T> void qswap(Vector<T> *&a, Vector<T> *&b)
 // Prod: find the product of elements in a vector, bottom to top
 // mean: calculate the mean of.  Ill-defined if vector empty.
 // median: calculate the median.  Put the index into i.
+// MAD: calculate the median absolute deviation
 //
 // innerProduct: calculate the inner product of two vectors conj(a)'.b
 // innerProductRevConj: calculate the inner product of two vectors a'.conj(b)
@@ -944,6 +946,11 @@ template <class T> const T &mean    (T &res, const Vector<T> &a);
 template <class T> const T &sqmean  (T &res, const Vector<T> &a);
 template <class T> const T &vari    (T &res, const Vector<T> &a);
 template <class T> const T &stdev   (T &res, const Vector<T> &a);
+
+template <class T> const T &median(const Vector<T> &a, int &i, const Vector<double> &w);
+template <class T> const Vector<T> &geometricMedian(Vector<T> &res, const Vector<Vector<T> > &a, const Vector<double> &w);
+template <class T> double MAD(double &medianres, const Vector<T> &a);
+template <class T> double geometricMAD(Vector<T> &medianres, const Vector<Vector<T> > &a, const Vector<double> &w);
 
 template <class T> const T &sum (T &res, const Vector<T> &a, const Vector<double> &weights);
 template <class T> const T &mean(T &res, const Vector<T> &a, const Vector<double> &weights);
@@ -5246,8 +5253,9 @@ const T &sum(T &res, const Vector<T> &a, const Vector<double> &weights)
 
     else if ( a.size() )
     {
-        res  = a(0);
-        res *= weights(0);
+        res = a(0); setzero(res); // result might be a vector. first part sets size, second part zeros it out
+
+        scaladd(res,a(0),weights(0));
 
         if ( a.size() > 1 )
         {
@@ -5255,8 +5263,7 @@ const T &sum(T &res, const Vector<T> &a, const Vector<double> &weights)
 
             for ( int i = 1 ; i < a.size() ; ++i )
             {
-                temp  = a(i);
-                temp *= weights(i);
+                scaladd(res,a(i),weights(i));
 
                 res += temp;
             }
@@ -5652,10 +5659,12 @@ const T &mean(T &res, const Vector<T> &a, const Vector<double> &weights)
 {
     NiceAssert( a.size() == weights.size() );
 
+    Vector<double> sw(weights);
+    sw /= sum(weights);
+
     if ( a.size() )
     {
-        sum(res,a,weights);
-        res *= 1/((double) a.size());
+        sum(res,a,sw);
     }
 
     else
@@ -6069,6 +6078,177 @@ template <class T> Vector<T> &setrand(Vector<T> &a)
 }
 
 
+#define GMMAfits 5
+#define ZTOLgm 1e-20
+
+template <class T> const Vector<T> &geometricMedian(Vector<T> &y, const Vector<Vector<T> > &x, const Vector<double> &w)
+{
+    NiceAssert( w.size() == x.size() );
+
+    int n = x.size();
+
+    if ( !n )
+    {
+        y.resize(0);
+    }
+
+    else if ( n == 1 )
+    {
+        y = x(0);
+    }
+
+    else
+    {
+        // See https://pmc.ncbi.nlm.nih.gov/articles/PMC26449/pdf/pq001423.pdf
+        //
+        // Vardi and Zhang, The multivariate L1-Median and Associated Data Depth
+
+        mean(y,x,w); // y_0
+
+        Vector<Vector<T>> xy(n);
+        Vector<double> xydist(n,0.0);
+        Vector<T> Ttilde(y);
+        Vector<T> Rtilde(y);
+        Vector<double> sfactor(n);
+        double Tscale;
+
+        for ( int k = 1 ; k <= GMMAfits ; ++k )
+        {
+            // Work out Euclidean distances
+
+            for ( int i = 0 ; i < n ; ++i )
+            {
+                xy("&",i)  = x(i);
+                xy("&",i) -= y;
+
+                xydist("&",i) = abs2(xy(i));
+            }
+
+            // Work out Ttilde (and Rtilde)
+
+            Tscale = 0.0;
+            Ttilde.zero();
+
+            int zcnt = n;
+            double eta = 0.0;
+
+            for ( int i = 0 ; i < n ; ++i )
+            {
+                if ( xydist(i) >= ZTOLgm )
+                {
+                    sfactor("&",i) = w(i)/xydist(i);
+
+                    Tscale += sfactor(i);
+                    Ttilde.scaleAdd(sfactor(i),x(i));
+
+                    --zcnt;
+                }
+
+                else
+                {
+                    eta += w(i);
+                }
+            }
+
+            Ttilde.scale(1/Tscale);
+
+            // Ttilde is the result of the Weiszfeld algorithm
+            //
+            // This usually suffices, but if we y hits the set x then we need more
+            // (see above)
+
+            // Work out Rtilde and r
+
+            if ( !zcnt || ( eta < ZTOLgm ) )
+            {
+                y = Ttilde;
+            }
+
+            else
+            {
+                Rtilde.zero();
+
+                for ( int i = 0 ; i < n ; ++i )
+                {
+                    if ( xydist(i) >= ZTOLgm )
+                    {
+                        Rtilde.scaleAdd(sfactor(i),xy(i));
+                    }
+                }
+
+                double r = abs2(Rtilde);
+
+                if ( r >= ZTOLgm )
+                {
+                    y.zero();
+
+                    y.scaleAdd(std::max(0.0,eta/r),Ttilde);
+                    y.scaleAdd(std::min(1.0,eta/r),y);
+                }
+
+                else
+                {
+                    // See paper
+
+                    y = Ttilde;
+                }
+            }
+        }
+    }
+
+    return y;
+}
+
+template <class T> double MAD(double &y, const Vector<T> &x)
+{
+    median(y,x);
+
+    int n = x.size();
+    double res = 0;
+
+    if ( n > 1 )
+    {
+        Vector<double> dist(n,0.0);
+
+        for ( int i = 0 ; i < n ; ++n )
+        {
+            dist("&",i) = abs2(x(i)-y);
+        }
+
+        res = median(dist);
+    }
+
+    return res;
+}
+
+template <class T> double geometricMAD(Vector<T> &y, const Vector<Vector<T> > &x, const Vector<double> &w)
+{
+    NiceAssert( x.size() == w.size() );
+
+    geometricMedian(y,x,w);
+
+    int n = x.size();
+    double res = 0;
+
+    if ( n > 1 )
+    {
+        Vector<double> dist(n,0.0);
+        Vector<T> temp(y);
+
+        for ( int i = 0 ; i < n ; ++n )
+        {
+            temp =  x(i);
+            temp -= y;
+
+            dist("&",i) = abs2(temp);
+        }
+
+        int i = 0;
+        res = median(dist,i); //,w);
+    }
+
+    return res;
+}
 
 
 

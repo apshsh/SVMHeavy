@@ -771,7 +771,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 
     //errstream() << "Negative log likelihoods: ";
 //errstream() << "phantomxyzxyzxyz Model " << *(muapprox(0)) << "\n";
-    errstream() << "NLL: ";
+    errstream() << "NLL (kernel tuning): ";
 
     if ( muapprox.size() )
     {
@@ -782,14 +782,13 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
             if ( muapprox(i) )
             {
                 errstream() << ", " << calcnegloglikelihood(getmuapprox(i),1) << " (mu " << i << "): ";
+                printoneline(errstream(),(getmuapprox(i).getKernel()).cScale()) << ", ";
 
                 for ( int iii = 0 ; iii < (getmuapprox(i).getKernel()).size() ; iii++ )
                 {
                     errstream() << (getmuapprox(i).getKernel()).cWeight(iii) << ", ";
-                    errstream() << (getmuapprox(i).getKernel()).cRealConstants(iii) << "\t";
+                    printoneline(errstream(),(getmuapprox(i).getKernel()).cRealConstants(iii)); errstream() << "\t";
                 }
-
-                errstream() << "\n";
             }
         }
     }
@@ -831,17 +830,18 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
             if ( cgtapprox(i) )
             {
                 errstream() << ", " << calcnegloglikelihood(getcgtapprox(i),1) << " (cgt " << i << "): ";
+                printoneline(errstream(),(getcgtapprox(i).getKernel()).cScale()) << ", ";
 
                 for ( int iii = 0 ; iii < (getcgtapprox(i).getKernel()).size() ; iii++ )
                 {
                     errstream() << (getcgtapprox(i).getKernel()).cWeight(iii) << ", ";
-                    errstream() << (getcgtapprox(i).getKernel()).cRealConstants(iii) << "\t";
+                    printoneline(errstream(),(getcgtapprox(i).getKernel()).cRealConstants(iii)); errstream() << "\t";
                 }
-
-                errstream() << "\n";
             }
         }
     }
+
+    errstream() << "\n";
 
     //errstream() << "\t";//\n";
 
@@ -884,7 +884,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 
         for ( int j = 0 ; usemodelaugx && ( j < augxapprox.size() ) ; ++j )
         {
-            gentype baseline = nullgentype();
+            gentype baseline = toGentype();
             int incbaseline = ( ( baseline.isValNull() ) ? 0 : 1 );
 
             model_sublog(getaugxapprox(j),baseline,incbaseline,xmin,xmax,ymin,ymax,j,"aug",xind,yind,stagestr,+1,+1);
@@ -1205,8 +1205,8 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 
                     SparseVector<gentype> xtemplate;
 
-                    plotml((*(augxapprox(j))),xind,xmin,xmax,omin,omax,fname, dname,modeloutformat,incdata,nullgentype(),incvar,xusevar,xtemplate,0,0,-1);
-                    plotml((*(augxapprox(j))),xind,xmin,xmax,omin,omax,ffname,dname,modeloutformat,incdata,nullgentype(),incvar,xusevar,xtemplate,0,0,-1);
+                    plotml((*(augxapprox(j))),xind,xmin,xmax,omin,omax,fname, dname,modeloutformat,incdata,toGentype(),incvar,xusevar,xtemplate,0,0,-1);
+                    plotml((*(augxapprox(j))),xind,xmin,xmax,omin,omax,ffname,dname,modeloutformat,incdata,toGentype(),incvar,xusevar,xtemplate,0,0,-1);
                 }
 
                 else if ( ( (*(augxapprox(j))).tspaceDim() == 1 ) && ( (*(augxapprox(j))).xspaceDim() == 2 ) )
@@ -1270,8 +1270,8 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 
                     SparseVector<gentype> xtemplate;
 
-                    plotml((*(augxapprox(j))),xind,yind,xmin,xmax,ymin,ymax,omin,omax,fname, dname,modeloutformat,incdata,nullgentype(),incvar,xusevar,yusevar,xtemplate,0,0,-1);
-                    plotml((*(augxapprox(j))),xind,yind,xmin,xmax,ymin,ymax,omin,omax,ffname,dname,modeloutformat,incdata,nullgentype(),incvar,xusevar,yusevar,xtemplate,0,0,-1);
+                    plotml((*(augxapprox(j))),xind,yind,xmin,xmax,ymin,ymax,omin,omax,fname, dname,modeloutformat,incdata,toGentype(),incvar,xusevar,yusevar,xtemplate,0,0,-1);
+                    plotml((*(augxapprox(j))),xind,yind,xmin,xmax,ymin,ymax,omin,omax,ffname,dname,modeloutformat,incdata,toGentype(),incvar,xusevar,yusevar,xtemplate,0,0,-1);
                 }
 
                 else

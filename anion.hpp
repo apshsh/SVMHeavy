@@ -262,6 +262,7 @@ void qswap(d_anion &a, d_anion &b)
 
 
 
+
 // Cooked UDL stuff
 //
 // real: 2.3_anion
@@ -416,6 +417,10 @@ inline int operator!=(const std::complex<double> &left_op, const d_anion        
 inline int operator!=(const d_anion              &left_op,       double                right_op);
 inline int operator!=(const d_anion              &left_op, const std::complex<double> &right_op);
 inline int operator!=(const d_anion              &left_op, const d_anion              &right_op);
+
+
+inline d_anion &scaladd(d_anion &a, const d_anion &b, double c);
+inline d_anion &scaladd(d_anion &a, const d_anion &b, double c) { return a += (b*c); }
 
 
 

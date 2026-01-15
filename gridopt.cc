@@ -200,7 +200,7 @@ int GridOptions::optim(int dim,
         errstream() << "\n";
 
         locsres.force_vector().resize(2);
-        locsres("&",0) = nullgentype();
+        locsres("&",0) = toGentype();
 
         if ( locfres.isValSet() )
         {

@@ -3108,11 +3108,11 @@ double SVM_Scalar_rff::K2(int ia, int ib, const gentype **pxyprod, const SparseV
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             gentype UUres;
 
@@ -3130,11 +3130,11 @@ double SVM_Scalar_rff::K2(int ia, int ib, const gentype **pxyprod, const SparseV
 
             iiplanr("&",0) = iaplanr;
             iiplan("&",0)  = iaplan;
-            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &nullgentype();
+            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &toGentype();
 
             iiplanr("&",1) = ibplanr;
             iiplan("&",1)  = ibplan;
-            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &nullgentype();
+            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &toGentype();
 
             gentype VVres;
             gentype kval(res);

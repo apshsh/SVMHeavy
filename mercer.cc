@@ -37,15 +37,12 @@ MercerKernel::MercerKernel()
 {
     isind           = 0;
     backupisind     = 0;
-    isshift         = 0;
+    isscale         = 0;
     isprod          = 0;
     isdiffalt       = 1;
     isfullnorm      = 0;
     issymmset       = 0;
     xdenseZeroPoint = -1;
-
-    leftplain  = 0;
-    rightplain = 0;
 
     xisfast       = -1;
     xneedsInner   = -1;
@@ -90,10 +87,6 @@ MercerKernel::MercerKernel()
     dRealOverwrite.resize(1);
     dIntOverwrite.resize(1);
 
-    dShiftProd        = 0;
-    dShiftProdNoConj  = 0;
-    dShiftProdRevConj = 0;
-
     xproddepth      = 4; // Needs to be 4 for the K4 optimisations to work properly
     enchurn         = 0;
     xsuggestXYcache = 0;
@@ -134,9 +127,7 @@ MercerKernel &MercerKernel::operator=(const MercerKernel &src)
     isind                = src.isind;
     isfullnorm           = src.isfullnorm;
     issymmset            = src.issymmset;
-    isshift              = src.isshift;
-    leftplain            = src.leftplain;
-    rightplain           = src.rightplain;
+    isscale              = src.isscale;
     isdiffalt            = src.isdiffalt;
     xproddepth           = src.xproddepth;
     enchurn              = src.enchurn;
@@ -178,11 +169,9 @@ MercerKernel &MercerKernel::operator=(const MercerKernel &src)
     linParity            = src.linParity;
     linParityOrig        = src.linParityOrig;
 
-    dShift               = src.dShift;
     dScale               = src.dScale;
-    dShiftProd           = src.dShiftProd;
-    dShiftProdNoConj     = src.dShiftProdNoConj;
-    dShiftProdRevConj    = src.dShiftProdRevConj;
+    dScaleLB             = src.dScaleLB;
+    dScaleUB             = src.dScaleUB;
 
     xnumsamples          = src.xnumsamples;
     xindsub              = src.xindsub;
@@ -1034,7 +1023,7 @@ void MercerKernel::recalcRandFeats(int q, int numFeats)
 // Element retrieval
 
 //gentype &MercerKernel::xelm(gentype &res, const SparseVector<gentype> &x, int i, int j) const
-gentype &MercerKernel::xelm(gentype &res, const SparseVector<gentype> &x, int, int j) const
+gentype &MercerKernel::xelm(gentype &res, const SparseVector<gentype> &x, int, int j, int q) const
 {
     //(void) i;
 
@@ -1051,13 +1040,9 @@ gentype &MercerKernel::xelm(gentype &res, const SparseVector<gentype> &x, int, i
         {
             int l;
 
-            for ( l = 0 ; l < dIndexes.size() ; ++l )
+            for ( l = 0 ; ( l < dIndexes.size() ) && !isvalnz ; ++l )
             {
-                if ( dIndexes(l) == xindis )
-                {
-                    isvalnz = 1;
-                    break;
-                }
+                if ( dIndexes(l) == xindis ) { isvalnz = 1; }
             }
         }
     }
@@ -1066,15 +1051,7 @@ gentype &MercerKernel::xelm(gentype &res, const SparseVector<gentype> &x, int, i
     {
         res = x.direcref(j);
 
-        if ( isShifted() || isShiftedScaled() )
-        {
-            res -= dShift(xindis);
-        }
-
-        if ( ( isScaled() || isShiftedScaled() ) && ( dScale.isindpresent(j) ) )
-        {
-            res /= dScale(xindis);
-        }
+        if ( ( q >= 0 ) && isScaled() && ( dScale.isindpresent(j) ) ) { res /= dScale(xindis); }
     }
 
     else
@@ -1257,7 +1234,12 @@ void MercerKernel::ddistKdx(double &xscaleres, double &yscaleres,
 }
 
 //phantomx
-void MercerKernel::densedKdx(double &res, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, double bias, int i, int j, int xdim, int xconsist, int mlid, int assumreal) const
+void MercerKernel::densedKdx(double &res,
+                             const SparseVector<gentype> &x, const SparseVector<gentype> &y,
+                             const vecInfo &xinfo, const vecInfo &yinfo,
+                             double bias,
+                             int i, int j,
+                             int xdim, int xconsist, int mlid, int assumreal) const
 {
     NiceAssert( !isprod );
 
@@ -1285,7 +1267,12 @@ void MercerKernel::densedKdx(double &res, const SparseVector<gentype> &x, const 
 }
 
 //phantomx
-void MercerKernel::denseintK(double &res, const SparseVector<gentype> &x, const SparseVector<gentype> &y, const vecInfo &xinfo, const vecInfo &yinfo, double bias, int i, int j, int xdim, int xconsist, int mlid, int assumreal) const
+void MercerKernel::denseintK(double &res,
+                             const SparseVector<gentype> &x, const SparseVector<gentype> &y,
+                             const vecInfo &xinfo, const vecInfo &yinfo,
+                             double bias,
+                             int i, int j,
+                             int xdim, int xconsist, int mlid, int assumreal) const
 {
     NiceAssert( !isprod );
 
@@ -1682,7 +1669,7 @@ double MercerKernel::LL2fast(const SparseVector<gentype> &xa, const SparseVector
 
     double diffis = 0.0;
 
-    if ( ( ia == ib ) && !isMagTerm(0) )
+    if ( ( ia == ib ) && !isMagTerm(0) && !isScaled() )
     {
         // infer that xa == xb which makes things particularly simple
 
@@ -1726,7 +1713,7 @@ double MercerKernel::LL2fast(const SparseVector<gentype> &xa, const SparseVector
 
     else
     {
-        if ( xy00 && xy11 )
+        if ( xy00 && xy11 && !isScaled() )
         {
             aaprod = (*xy00)+bias;
             bbprod = (*xy11)+bias;
@@ -1734,26 +1721,36 @@ double MercerKernel::LL2fast(const SparseVector<gentype> &xa, const SparseVector
 
         else if ( isNormalised(0) || needsNorm(0) || needsDiff(0) )
         {
-            aaprod = getmnorm(xainfo,xa,2,xconsist,assumreal)+bias;
-            bbprod = getmnorm(xbinfo,xb,2,xconsist,assumreal)+bias;
+            if ( !isScaled() )
+            {
+                aaprod = getmnorm(xainfo,xa,2,xconsist,assumreal)+bias;
+                bbprod = getmnorm(xbinfo,xb,2,xconsist,assumreal)+bias;
+            }
+
+            else
+            {
+                aaprod = getTwoProd(xa,xa,0,0,3,xconsist,assumreal)+bias;
+                bbprod = getTwoProd(xb,xb,0,0,3,xconsist,assumreal)+bias;
+            }
         }
 
-        if ( xy10 )
+        if ( xy10 && !isScaled() )
         {
             xyprod = (*xy10)+bias;
         }
 
-        else if ( pxyprod && pxyprod[0] )
+        else if ( pxyprod && pxyprod[0] && !isScaled() )
         {
             xyprod = (*pxyprod[0]);
         }
 
         else if ( needsInner(0,2) )
         {
-            xyprod = getTwoProd(xa,xb,0,0,0,xconsist,assumreal)+bias;
+            if ( !isScaled() ) { xyprod = getTwoProd(xa,xb,0,0,0,xconsist,assumreal)+bias; }
+            else               { xyprod = getTwoProd(xa,xb,0,0,3,xconsist,assumreal)+bias; }
         }
 
-        if ( pxyprod && pxyprod[1] )
+        if ( pxyprod && pxyprod[1] && !isScaled() )
         {
             diffis = (*pxyprod[1]);
         }
@@ -2053,24 +2050,23 @@ double  MercerKernel::yyyK2(const SparseVector<gentype> &xa, const SparseVector<
 
     if ( !sizeLinConstr() )
     {
-        if ( !resmode &&
-             !isprod &&
-             !justcalcip &&
-             ( size() == 1 ) &&
-             isFastKernelSum() &&
-             !isfullnorm &&
-             !isNormalised(0) &&
-             !numMulSplits() &&
-             !(combinedOverwriteSrc.size()) &&
-             ( ( !isShifted() && !isScaled() ) || isLeftRightPlain() ) &&
-             !isIndex() &&
-             ( xainfo.xusize() == 1 ) &&
-             ( xbinfo.xusize() == 1 ) &&
-             !xainfo.xiseqn() &&
-             !xbinfo.xiseqn() &&
-             xa.isnofaroffindpresent() &&
-             xb.isnofaroffindpresent() &&
-             !sizeLinParity() )
+        if ( !resmode
+          && !isprod
+          && !justcalcip
+          && ( size() == 1 )
+          && isFastKernelSum()
+          && !isfullnorm
+          && !isNormalised(0)
+          && !numMulSplits()
+          && !(combinedOverwriteSrc.size())
+          && !isIndex()
+          && ( xainfo.xusize() == 1 )
+          && ( xbinfo.xusize() == 1 )
+          && !xainfo.xiseqn()
+          && !xbinfo.xiseqn()
+          && xa.isnofaroffindpresent()
+          && xb.isnofaroffindpresent()
+          && !sizeLinParity() )
         {
             res = LL2fast(xa,xb,xainfo,xbinfo,bias,pxyprod,ia,ib,xdim,xconsist,assumreal,xy00,xy10,xy11);
         }
@@ -4177,15 +4173,8 @@ const gentype &MercerKernel::getmnorm(const vecInfo &xinfo, const SparseVector<g
 
     gentype &res = scratch("&",scrind);
 
-    if ( m == 1 )
-    {
-        oneProductDiverted(res,x,xconsist,assumreal);
-    }
-
-    else if ( m == 3 )
-    {
-        threeProductDiverted(res,x,x,x,xconsist,assumreal);
-    }
+    if      ( m == 1 ) { oneProductDiverted(res,x,xconsist,assumreal);       }
+    else if ( m == 3 ) { threeProductDiverted(res,x,x,x,xconsist,assumreal); }
 
     else
     {
@@ -4836,7 +4825,7 @@ void MercerKernel::K0i(gentype &res,
     return;
 }
 
-void MercerKernel::K2i(gentype &res, 
+void MercerKernel::K2i(gentype &res,
                      const gentype &xyprod, const gentype &yxprod,
                      const vecInfo &xinfo, const vecInfo &yinfo,
                      const gentype &xnorm, const gentype &ynorm,
@@ -7627,50 +7616,17 @@ void MercerKernel::dKunnormdz(gentype &res, int &minmaxind, int q,
 //===========================================================================
 
 
-// Function to shift, scale and index vectors prior to calling the callback
+// Function to scale and index vectors prior to calling the callback
 // function
 //
 // Note: this function is not fast.  Better hope the kernel cache is large
 // enough.
 
-SparseVector<gentype> &MercerKernel::preShiftScale(SparseVector<gentype> &res, const SparseVector<gentype> &x) const
+SparseVector<gentype> &MercerKernel::preScale(SparseVector<gentype> &res, const SparseVector<gentype> &x, int) const
 {
     int i,j;
 
-    if ( isShiftedScaled() && isIndex() )
-    {
-        res.zero();
-
-        if ( dIndexes.size() )
-        {
-            for ( i = 0 ; i < dIndexes.size() ; ++i )
-            {
-                j = dIndexes(i);
-
-                res("&",j) = x(j);
-                res("&",j) += dShift(j);
-                res("&",j) /= dScale(j);
-            }
-        }
-    }
-
-    else if ( isShifted() && isIndex() )
-    {
-        res.zero();
-
-        if ( dIndexes.size() )
-        {
-            for ( i = 0 ; i < dIndexes.size() ; ++i )
-            {
-                j = dIndexes(i);
-
-                res("&",j) = x(j);
-                res("&",j) += dShift(j);
-            }
-        }
-    }
-
-    else if ( isScaled() && isIndex() )
+    if ( isScaled() && isIndex() )
     {
         res.zero();
 
@@ -7684,19 +7640,6 @@ SparseVector<gentype> &MercerKernel::preShiftScale(SparseVector<gentype> &res, c
                 res("&",j) /= dScale(j);
             }
         }
-    }
-
-    else if ( isShiftedScaled() )
-    {
-        res  = x;
-        res += dShift;
-        res /= dScale;
-    }
-
-    else if ( isShifted() )
-    {
-        res  = x;
-        res += dShift;
     }
 
     else if ( isScaled() )
@@ -7728,25 +7671,6 @@ SparseVector<gentype> &MercerKernel::preShiftScale(SparseVector<gentype> &res, c
     return res;
 }
 
-
-void MercerKernel::fixShiftProd(void)
-{
-    if ( !isIndex() )
-    {
-        getTwoProd(dShiftProd,dShift,dShift,0,1,3,0,0);
-        getTwoProd(dShiftProdNoConj,dShift,dShift,0,0,3,0,0);
-        getTwoProd(dShiftProdRevConj,dShift,dShift,0,2,3,0,0);
-    }
-
-    else
-    {
-        getTwoProd(dShiftProd,dShift,dShift,1,1,3,0,0);
-        getTwoProd(dShiftProdNoConj,dShift,dShift,1,0,3,0,0);
-        getTwoProd(dShiftProdRevConj,dShift,dShift,1,2,3,0,0);
-    }
-
-    return;
-}
 
 vecInfo &MercerKernel::getvecInfo(vecInfo &res, const SparseVector<gentype> &x, const gentype *xmag, int xconsist, int assumreal) const
 {
@@ -7875,11 +7799,6 @@ vecInfoBase &MercerKernel::getvecInfo(vecInfoBase &res, const SparseVector<genty
 
 void MercerKernel::processOverwrites(int q, const SparseVector<gentype> &x, const SparseVector<gentype> &y) const
 {
-    if ( isLeftRightPlain() )
-    {
-        return;
-    }
-
     int i;
 
     if ( dIntOverwrite(q).nindsize() )
@@ -7892,17 +7811,6 @@ void MercerKernel::processOverwrites(int q, const SparseVector<gentype> &x, cons
 
             setzero(altdest);
 
-            if ( isLeftPlain() )
-            {
-                altdest = y(srcind);
-            }
-
-            else if ( isRightPlain() )
-            {
-                altdest = x(srcind);
-            }
-
-            else
             {
                 altdest  = x(srcind);
                 altdest *= y(srcind);
@@ -7921,18 +7829,6 @@ void MercerKernel::processOverwrites(int q, const SparseVector<gentype> &x, cons
 
             setzero(dest);
 
-            if ( isLeftPlain() )
-            {
-                dest = y(srcind);
-            }
-
-            else if ( isRightPlain() )
-            {
-                dest = x(srcind);
-                setconj(dest);
-            }
-
-            else
             {
                 dest = x(srcind);
                 setconj(dest);
@@ -8921,129 +8817,20 @@ int MercerKernel::innerProductDiverted(gentype &result, const SparseVector<genty
     // = ( x'.y - sum(x).ystep - conj(xstep).sum(y) + conj(xstep).ystep.N )/(xscale*yscale)
     //
     // where xstep, xscale, ystep and yscale are all scalars and already
-    // include correction for shifting/scaling and indexing.
-    //
-    // leftPlain:  = ( x'.y - sum(x).ystep       )/yscale
-    // rightPlain: = ( x'.y - conj(xstep).sum(y) )/xscale
+    // include correction for scaling and indexing.
 
     // Step 1 - common for all cases
 
+    if ( !isScaled() )
     {
-        if ( ( !isShifted() && !isScaled() ) || isLeftRightPlain() )
-        {
-            if ( !isIndex() )
-            {
-                getTwoProd(result,x,y,0,1,0,xconsist,assumreal);
-            }
+        if ( !isIndex() ) { getTwoProd(result,x,y,0,1,0,xconsist,assumreal); }
+        else              { getTwoProd(result,x,y,1,1,0,xconsist,assumreal); }
+    }
 
-            else
-            {
-                getTwoProd(result,x,y,1,1,0,xconsist,assumreal);
-            }
-        }
-
-        else if ( !isShifted() || isLeftRightPlain() )
-        {
-            if ( !isIndex() )
-            {
-                getTwoProd(result,x,y,0,1,3,xconsist,assumreal);
-            }
-
-            else
-            {
-                getTwoProd(result,x,y,1,1,3,xconsist,assumreal);
-            }
-        }
-
-        else
-        {
-            // If isLeftPlain:
-            //
-            // x'(sc.*(y+sh)) = x'.diag(sc).(y+sh)
-            //                = x'.diag(sc).y + x'.diag(sc).sh
-            //                = x'.S.y + x'.S.sh
-            //
-            // If isRightPlain:
-            //
-            // (sc.*(x+sh))'y = (x+sh)'.diag(sc).y
-            //                = x'.diag(sc).y + sh'.diag(sc).y
-            //
-            // else:
-            //
-            // (sc.*(x+sh))'(sc.*(y+sh)) = (x+sh)'.diag(sc.*sc).(y+sh)
-            //                           = x'.diag(sc.*sc).y + x'.diag(sc.*sc).(sh./sc) + (sh./sc)'.diag(sc.*sc).y + sh'.diag(sc.*sc).sh
-            //                           = x'.S.y + x'.S.dShift + dShift'.S.y + dShiftProd
-
-            // NB: sc(i).*sc(i) = outerProd(sc(i),sc(i)) for vector-valued case
-
-            if ( isLeftPlain() )
-            {
-                NiceAssert( isRightNormal() );
-
-                gentype tempb;
-
-                if ( !isIndex() )
-                {
-                    getTwoProd(result,x,y,0,1,2,xconsist,assumreal);
-                    getTwoProd(tempb,dShift,y,0,1,2,xconsist,assumreal);
-                }
-
-                else
-                {
-                    getTwoProd(result,x,y,1,1,2,xconsist,assumreal);
-                    getTwoProd(tempb,dShift,y,1,1,2,xconsist,assumreal);
-                }
-
-                result += tempb;
-            }
-
-            else if ( isRightPlain() )
-            {
-                NiceAssert( isLeftNormal() );
-
-                gentype tempa;
-
-                if ( !isIndex() )
-                {
-                    getTwoProd(result,x,y,0,1,1,xconsist,assumreal);
-                    getTwoProd(tempa,x,dShift,0,1,1,xconsist,assumreal);
-                }
-
-                else
-                {
-                    getTwoProd(result,x,y,1,1,1,xconsist,assumreal);
-                    getTwoProd(tempa,x,dShift,1,1,1,xconsist,assumreal);
-                }
-
-                result += tempa;
-            }
-
-            else
-            {
-                NiceAssert( isLeftRightNormal() );
-
-                gentype tempa;
-                gentype tempb;
-
-                if ( !isIndex() )
-                {
-                    getTwoProd(result,x,y,0,1,3,xconsist,assumreal);
-                    getTwoProd(tempa,x,dShift,0,1,3,xconsist,assumreal);
-                    getTwoProd(tempb,dShift,y,0,1,3,xconsist,assumreal);
-                }
-
-                else
-                {
-                    getTwoProd(result,x,y,1,1,3,xconsist,assumreal);
-                    getTwoProd(tempa,x,dShift,1,1,3,xconsist,assumreal);
-                    getTwoProd(tempb,dShift,y,1,1,3,xconsist,assumreal);
-                }
-
-                result += tempa;
-                result += tempb;
-                result += dShiftProd;
-            }
-        }
+    else
+    {
+        if ( !isIndex() ) { getTwoProd(result,x,y,0,1,3,xconsist,assumreal); }
+        else              { getTwoProd(result,x,y,1,1,3,xconsist,assumreal); }
     }
 
 //errstream() << "phantomxyzmercer 100\n";
@@ -9068,118 +8855,16 @@ int MercerKernel::innerProductDivertedRevConj(gentype &result, const gentype &xy
 
     addinOverwriteInd(x,y);
 
-    if ( ( !isShifted() && !isScaled() ) || isLeftRightPlain() )
+    if ( !isScaled() )
     {
-        if ( !isIndex() )
-	{
-            getTwoProd(result,x,y,0,2,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            getTwoProd(result,x,y,1,2,0,xconsist,assumreal);
-	}
-    }
-
-    else if ( !isShifted() || isLeftRightPlain() )
-    {
-        if ( !isIndex() )
-	{
-            getTwoProd(result,x,y,0,2,3,xconsist,assumreal);
-	}
-
-	else
-	{
-            getTwoProd(result,x,y,1,2,3,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { getTwoProd(result,x,y,0,2,0,xconsist,assumreal); }
+	else              { getTwoProd(result,x,y,1,2,0,xconsist,assumreal); }
     }
 
     else
     {
-        // If isLeftPlain:
-        //
-        // x'(sc.*(y+sh)) = x'.diag(sc).(y+sh)
-        //                = x'.diag(sc).y + x'.diag(sc).sh
-        //                = x'.S.y + x'.S.sh
-        //
-        // If isRightPlain:
-        //
-        // (sc.*(x+sh))'y = (x+sh)'.diag(sc).y
-        //                = x'.diag(sc).y + sh'.diag(sc).y
-        //
-        // else:
-        //
-	// ((x+sh).*sc)'((y+sh).*sc) = (x+sh)'.diag(sc.*sc).(y+sh)
-	//                           = x'.diag(sc.*sc).y + x'.diag(sc.*sc).(sh./sc) + (sh./sc)'.diag(sc.*sc).y + sh'.diag(sc.*sc).sh
-        //                           = x'.S.y + x'.S.dShift + dShift'.S.y + dShiftProd
-
-        if ( isLeftPlain() )
-        {
-            NiceAssert( isRightNormal() );
-
-            gentype tempb;
-
-            if ( !isIndex() )
-            {
-                getTwoProd(result,x,y,0,2,2,xconsist,assumreal);
-                getTwoProd(tempb,dShift,y,0,2,2,xconsist,assumreal);
-            }
-
-            else
-            {
-                getTwoProd(result,x,y,1,2,2,xconsist,assumreal);
-                getTwoProd(tempb,dShift,y,1,2,2,xconsist,assumreal);
-            }
-
-            result += tempb;
-        }
-
-        else if ( isRightPlain() )
-        {
-            NiceAssert( isLeftNormal() );
-
-            gentype tempa;
-
-            if ( !isIndex() )
-            {
-                getTwoProd(result,x,y,0,2,1,xconsist,assumreal);
-                getTwoProd(tempa,x,dShift,0,2,1,xconsist,assumreal);
-            }
-
-            else
-            {
-                getTwoProd(result,x,y,1,2,1,xconsist,assumreal);
-                getTwoProd(tempa,x,dShift,1,2,1,xconsist,assumreal);
-            }
-
-            result += tempa;
-        }
-
-        else
-        {
-            NiceAssert( isLeftRightNormal() );
-
-            gentype tempa;
-            gentype tempb;
-
-            if ( !isIndex() )
-            {
-                getTwoProd(result,x,y,0,2,3,xconsist,assumreal);
-                getTwoProd(tempa,x,dShift,0,2,3,xconsist,assumreal);
-                getTwoProd(tempb,dShift,y,0,2,3,xconsist,assumreal);
-            }
-
-            else
-            {
-                getTwoProd(result,x,y,1,2,3,xconsist,assumreal);
-                getTwoProd(tempa,x,dShift,1,2,3,xconsist,assumreal);
-                getTwoProd(tempb,dShift,y,1,2,3,xconsist,assumreal);
-            }
-
-            result += tempa;
-            result += tempb;
-            result += dShiftProdRevConj;
-        }
+        if ( !isIndex() ) { getTwoProd(result,x,y,0,2,3,xconsist,assumreal); }
+	else              { getTwoProd(result,x,y,1,2,3,xconsist,assumreal); }
     }
 
     removeOverwriteInd();
@@ -9206,50 +8891,16 @@ int MercerKernel::oneProductDiverted(double &result, const SparseVector<gentype>
 
     addinOverwriteInd(v);
 
-    NiceAssert( isLeftRightNormal() );
-
-    if ( !isShifted() && !isScaled() )
+    if ( !isScaled() )
     {
-        if ( !isIndex() )
-	{
-            result = getOneProd(v,0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            result = getOneProd(v,1,0,xconsist,assumreal);
-	}
-    }
-
-    else if ( !isShifted() )
-    {
-        if ( !isIndex() )
-	{
-            result = getOneProd(v,0,3,xconsist,assumreal);
-	}
-
-	else
-	{
-            result = getOneProd(v,1,3,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { result = getOneProd(v,0,0,xconsist,assumreal); }
+	else              { result = getOneProd(v,1,0,xconsist,assumreal); }
     }
 
     else
     {
-        SparseVector<gentype> vv(v);
-
-	vv += dShift;
-        vv /= dScale;
-
-        if ( !isIndex() )
-	{
-            result = getOneProd(vv,0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            result = getOneProd(vv,1,0,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { result = getOneProd(v,0,3,xconsist,assumreal); }
+	else              { result = getOneProd(v,1,3,xconsist,assumreal); }
     }
 
     removeOverwriteInd();
@@ -9264,50 +8915,16 @@ int MercerKernel::oneProductDiverted(gentype &result, const SparseVector<gentype
 
     addinOverwriteInd(v);
 
-    NiceAssert( isLeftRightNormal() );
-
-    if ( !isShifted() && !isScaled() )
+    if ( !isScaled() )
     {
-        if ( !isIndex() )
-	{
-            getOneProd(result,v,0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            getOneProd(result,v,1,0,xconsist,assumreal);
-	}
-    }
-
-    else if ( !isShifted() )
-    {
-        if ( !isIndex() )
-	{
-            getOneProd(result,v,0,3,xconsist,assumreal);
-	}
-
-	else
-	{
-            getOneProd(result,v,1,3,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { getOneProd(result,v,0,0,xconsist,assumreal); }
+	else              { getOneProd(result,v,1,0,xconsist,assumreal); }
     }
 
     else
     {
-        SparseVector<gentype> vv(v);
-
-	vv += dShift;
-        vv /= dScale;
-
-        if ( !isIndex() )
-	{
-            getOneProd(result,vv,0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            getOneProd(result,vv,1,0,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { getOneProd(result,v,0,3,xconsist,assumreal); }
+	else              { getOneProd(result,v,1,3,xconsist,assumreal); }
     }
 
     removeOverwriteInd();
@@ -9333,118 +8950,16 @@ int MercerKernel::twoProductDiverted(double  &res, const SparseVector<gentype> &
 //errstream() << "phantomxyzmerceraa 0\n";
     addinOverwriteInd(a,b);
 
-    if ( ( !isShifted() && !isScaled() ) || isLeftRightPlain() )
+    if ( !isScaled() )
     {
-        if ( !isIndex() )
-	{
-            res = getTwoProd(a,b,0,0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            res = getTwoProd(a,b,1,0,0,xconsist,assumreal);
-	}
-    }
-
-    else if ( !isShifted() || isLeftRightPlain() )
-    {
-        if ( !isIndex() )
-	{
-            res = getTwoProd(a,b,0,0,3,xconsist,assumreal);
-	}
-
-	else
-	{
-            res = getTwoProd(a,b,1,0,3,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { res = getTwoProd(a,b,0,0,0,xconsist,assumreal); }
+	else              { res = getTwoProd(a,b,1,0,0,xconsist,assumreal); }
     }
 
     else
     {
-        // If isLeftPlain:
-        //
-        // x'(sc.*(y+sh)) = x'.diag(sc).(y+sh)
-        //                = x'.diag(sc).y + x'.diag(sc).sh
-        //                = x'.S.y + x'.S.sh
-        //
-        // If isRightPlain:
-        //
-        // (sc.*(x+sh))'y = (x+sh)'.diag(sc).y
-        //                = x'.diag(sc).y + sh'.diag(sc).y
-        //
-        // else:
-        //
-	// ((x+sh).*sc)'((y+sh).*sc) = (x+sh)'.diag(sc.*sc).(y+sh)
-	//                           = x'.diag(sc.*sc).y + x'.diag(sc.*sc).(sh./sc) + (sh./sc)'.diag(sc.*sc).y + sh'.diag(sc.*sc).sh
-        //                           = x'.S.y + x'.S.dShift + dShift'.S.y + dShiftProd
-
-        if ( isLeftPlain() )
-        {
-            NiceAssert( isRightNormal() );
-
-            double tempb;
-
-            if ( !isIndex() )
-            {
-                res   = getTwoProd(a,b,0,0,2,xconsist,assumreal);
-                tempb = getTwoProd(dShift,b,0,0,2,xconsist,assumreal);
-            }
-
-            else
-            {
-                res   = getTwoProd(a,b,1,0,2,xconsist,assumreal);
-                tempb = getTwoProd(dShift,b,1,0,2,xconsist,assumreal);
-            }
-
-            res += tempb;
-        }
-
-        else if ( isRightPlain() )
-        {
-            NiceAssert( isLeftNormal() );
-
-            double tempa;
-
-            if ( !isIndex() )
-            {
-                res   = getTwoProd(a,b,0,0,1,xconsist,assumreal);
-                tempa = getTwoProd(a,dShift,0,0,1,xconsist,assumreal);
-            }
-
-            else
-            {
-                res   = getTwoProd(a,b,1,0,1,xconsist,assumreal);
-                tempa = getTwoProd(a,dShift,1,0,1,xconsist,assumreal);
-            }
-
-            res += tempa;
-        }
-
-        else
-        {
-            NiceAssert( isLeftRightNormal() );
-
-            double tempa;
-            double tempb;
-
-            if ( !isIndex() )
-            {
-                res   = getTwoProd(a,b,0,0,3,xconsist,assumreal);
-                tempa = getTwoProd(a,dShift,0,0,3,xconsist,assumreal);
-                tempb = getTwoProd(dShift,b,0,0,3,xconsist,assumreal);
-            }
-
-            else
-            {
-                res   = getTwoProd(a,b,1,0,3,xconsist,assumreal);
-                tempa = getTwoProd(a,dShift,1,0,3,xconsist,assumreal);
-                tempb = getTwoProd(dShift,b,1,0,3,xconsist,assumreal);
-            }
-
-            res += tempa;
-            res += tempb;
-            res += (double) dShiftProdNoConj;
-        }
+        if ( !isIndex() ) { res = getTwoProd(a,b,0,0,3,xconsist,assumreal); }
+	else              { res = getTwoProd(a,b,1,0,3,xconsist,assumreal); }
     }
 
     removeOverwriteInd();
@@ -9455,126 +8970,22 @@ int MercerKernel::twoProductDiverted(double  &res, const SparseVector<gentype> &
 
 int MercerKernel::twoProductDiverted(gentype &result, const SparseVector<gentype> &x, const SparseVector<gentype> &y, int xconsist, int assumreal) const
 {
-//errstream() << "phantomxyzmerceraa 0\n";
     addinOverwriteInd(x,y);
 
-    if ( ( !isShifted() && !isScaled() ) || isLeftRightPlain() )
+    if ( !isScaled() )
     {
-        if ( !isIndex() )
-	{
-            getTwoProd(result,x,y,0,0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            getTwoProd(result,x,y,1,0,0,xconsist,assumreal);
-	}
-    }
-
-    else if ( !isShifted() || isLeftRightPlain() )
-    {
-        if ( !isIndex() )
-	{
-            getTwoProd(result,x,y,0,0,3,xconsist,assumreal);
-	}
-
-	else
-	{
-            getTwoProd(result,x,y,1,0,3,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { getTwoProd(result,x,y,0,0,0,xconsist,assumreal); }
+	else              { getTwoProd(result,x,y,1,0,0,xconsist,assumreal); }
     }
 
     else
     {
-        // If isLeftPlain:
-        //
-        // x'(sc.*(y+sh)) = x'.diag(sc).(y+sh)
-        //                = x'.diag(sc).y + x'.diag(sc).sh
-        //                = x'.S.y + x'.S.sh
-        //
-        // If isRightPlain:
-        //
-        // (sc.*(x+sh))'y = (x+sh)'.diag(sc).y
-        //                = x'.diag(sc).y + sh'.diag(sc).y
-        //
-        // else:
-        //
-	// ((x+sh).*sc)'((y+sh).*sc) = (x+sh)'.diag(sc.*sc).(y+sh)
-	//                           = x'.diag(sc.*sc).y + x'.diag(sc.*sc).(sh./sc) + (sh./sc)'.diag(sc.*sc).y + sh'.diag(sc.*sc).sh
-        //                           = x'.S.y + x'.S.dShift + dShift'.S.y + dShiftProd
-
-        if ( isLeftPlain() )
-        {
-            NiceAssert( isRightNormal() );
-
-            gentype tempb;
-
-            if ( !isIndex() )
-            {
-                getTwoProd(result,x,y,0,0,2,xconsist,assumreal);
-                getTwoProd(tempb,dShift,y,0,0,2,xconsist,assumreal);
-            }
-
-            else
-            {
-                getTwoProd(result,x,y,1,0,2,xconsist,assumreal);
-                getTwoProd(tempb,dShift,y,1,0,2,xconsist,assumreal);
-            }
-
-            result += tempb;
-        }
-
-        else if ( isRightPlain() )
-        {
-            NiceAssert( isLeftNormal() );
-
-            gentype tempa;
-
-            if ( !isIndex() )
-            {
-                getTwoProd(result,x,y,0,0,1,xconsist,assumreal);
-                getTwoProd(tempa,x,dShift,0,0,1,xconsist,assumreal);
-            }
-
-            else
-            {
-                getTwoProd(result,x,y,1,0,1,xconsist,assumreal);
-                getTwoProd(tempa,x,dShift,1,0,1,xconsist,assumreal);
-            }
-
-            result += tempa;
-        }
-
-        else
-        {
-            NiceAssert( isLeftRightNormal() );
-
-            gentype tempa;
-            gentype tempb;
-
-            if ( !isIndex() )
-            {
-                getTwoProd(result,x,y,0,0,3,xconsist,assumreal);
-                getTwoProd(tempa,x,dShift,0,0,3,xconsist,assumreal);
-                getTwoProd(tempb,dShift,y,0,0,3,xconsist,assumreal);
-            }
-
-            else
-            {
-                getTwoProd(result,x,y,1,0,3,xconsist,assumreal);
-                getTwoProd(tempa,x,dShift,1,0,3,xconsist,assumreal);
-                getTwoProd(tempb,dShift,y,1,0,3,xconsist,assumreal);
-            }
-
-            result += tempa;
-            result += tempb;
-            result += dShiftProdNoConj;
-        }
+        if ( !isIndex() ) { getTwoProd(result,x,y,0,0,3,xconsist,assumreal); }
+	else              { getTwoProd(result,x,y,1,0,3,xconsist,assumreal); }
     }
 
     removeOverwriteInd();
 
-//errstream() << "phantomxyzmerceraa 1\n";
     return result.isValEqn();
 }
 
@@ -9597,58 +9008,16 @@ int MercerKernel::threeProductDiverted(double &result, const SparseVector<gentyp
 
     addinOverwriteInd(v,w,x);
 
-    NiceAssert( isLeftRightNormal() );
-
-    if ( !isShifted() && !isScaled() )
+    if ( !isScaled() )
     {
-        if ( !isIndex() )
-	{
-            result = getThreeProd(v,w,x,0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            result = getThreeProd(v,w,x,1,0,xconsist,assumreal);
-	}
-    }
-
-    else if ( !isShifted() )
-    {
-        if ( !isIndex() )
-	{
-            result = getThreeProd(v,w,x,0,3,xconsist,assumreal);
-	}
-
-	else
-	{
-            result = getThreeProd(v,w,x,1,3,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { result = getThreeProd(v,w,x,0,0,xconsist,assumreal); }
+	else              { result = getThreeProd(v,w,x,1,0,xconsist,assumreal); }
     }
 
     else
     {
-        SparseVector<gentype> vv(v);
-        SparseVector<gentype> ww(w);
-        SparseVector<gentype> xx(x);
-
-	vv += dShift;
-        vv /= dScale;
-
-	ww += dShift;
-        ww /= dScale;
-
-	xx += dShift;
-        xx /= dScale;
-
-        if ( !isIndex() )
-	{
-            result = getThreeProd(vv,ww,xx,0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            result = getThreeProd(vv,ww,xx,1,0,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { result = getThreeProd(v,w,x,0,3,xconsist,assumreal); }
+	else              { result = getThreeProd(v,w,x,1,3,xconsist,assumreal); }
     }
 
     removeOverwriteInd();
@@ -9663,58 +9032,16 @@ int MercerKernel::threeProductDiverted(gentype &result, const SparseVector<genty
 
     addinOverwriteInd(v,w,x);
 
-    NiceAssert( isLeftRightNormal() );
-
-    if ( !isShifted() && !isScaled() )
+    if ( !isScaled() )
     {
-        if ( !isIndex() )
-	{
-            getThreeProd(result,v,w,x,0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            getThreeProd(result,v,w,x,1,0,xconsist,assumreal);
-	}
-    }
-
-    else if ( !isShifted() )
-    {
-        if ( !isIndex() )
-	{
-            getThreeProd(result,v,w,x,0,3,xconsist,assumreal);
-	}
-
-	else
-	{
-            getThreeProd(result,v,w,x,1,3,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { getThreeProd(result,v,w,x,0,0,xconsist,assumreal); }
+	else              { getThreeProd(result,v,w,x,1,0,xconsist,assumreal); }
     }
 
     else
     {
-        SparseVector<gentype> vv(v);
-        SparseVector<gentype> ww(w);
-        SparseVector<gentype> xx(x);
-
-	vv += dShift;
-        vv /= dScale;
-
-	ww += dShift;
-        ww /= dScale;
-
-	xx += dShift;
-        xx /= dScale;
-
-        if ( !isIndex() )
-	{
-            getThreeProd(result,vv,ww,xx,0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            getThreeProd(result,vv,ww,xx,1,0,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { getThreeProd(result,v,w,x,0,3,xconsist,assumreal); }
+	else              { getThreeProd(result,v,w,x,1,3,xconsist,assumreal); }
     }
 
     removeOverwriteInd();
@@ -9739,62 +9066,16 @@ int MercerKernel::fourProductDiverted(double &res, const SparseVector<gentype> &
   {
     addinOverwriteInd(a,b,c,d);
 
-    NiceAssert( isLeftRightNormal() );
-
-    if ( !isShifted() && !isScaled() )
+    if ( !isScaled() )
     {
-        if ( !isIndex() )
-	{
-            res = getFourProd(a,b,c,d,0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            res = getFourProd(a,b,c,d,1,0,xconsist,assumreal);
-	}
-    }
-
-    else if ( !isShifted() )
-    {
-        if ( !isIndex() )
-	{
-            res = getFourProd(a,b,c,d,0,3,xconsist,assumreal);
-	}
-
-	else
-	{
-            res = getFourProd(a,b,c,d,1,3,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { res = getFourProd(a,b,c,d,0,0,xconsist,assumreal); }
+	else              { res = getFourProd(a,b,c,d,1,0,xconsist,assumreal); }
     }
 
     else
     {
-        SparseVector<gentype> vv(a);
-        SparseVector<gentype> ww(b);
-        SparseVector<gentype> xx(c);
-        SparseVector<gentype> yy(d);
-
-	vv += dShift;
-        vv /= dScale;
-
-	ww += dShift;
-        ww /= dScale;
-
-	xx += dShift;
-        xx /= dScale;
-
-	yy += dShift;
-        yy /= dScale;
-
-        if ( !isIndex() )
-	{
-            res = getFourProd(vv,ww,xx,yy,0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            res = getFourProd(vv,ww,xx,yy,1,0,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { res = getFourProd(a,b,c,d,0,3,xconsist,assumreal); }
+	else              { res = getFourProd(a,b,c,d,1,3,xconsist,assumreal); }
     }
 
     removeOverwriteInd();
@@ -9809,62 +9090,16 @@ int MercerKernel::fourProductDiverted(gentype &result, const SparseVector<gentyp
 
     addinOverwriteInd(v,w,x,y);
 
-    NiceAssert( isLeftRightNormal() );
-
-    if ( !isShifted() && !isScaled() )
+    if ( !isScaled() )
     {
-        if ( !isIndex() )
-	{
-            getFourProd(result,v,w,x,y,0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            getFourProd(result,v,w,x,y,1,0,xconsist,assumreal);
-	}
-    }
-
-    else if ( !isShifted() )
-    {
-        if ( !isIndex() )
-	{
-            getFourProd(result,v,w,x,y,0,3,xconsist,assumreal);
-	}
-
-	else
-	{
-            getFourProd(result,v,w,x,y,1,3,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { getFourProd(result,v,w,x,y,0,0,xconsist,assumreal); }
+	else              { getFourProd(result,v,w,x,y,1,0,xconsist,assumreal); }
     }
 
     else
     {
-        SparseVector<gentype> vv(v);
-        SparseVector<gentype> ww(w);
-        SparseVector<gentype> xx(x);
-        SparseVector<gentype> yy(y);
-
-	vv += dShift;
-        vv /= dScale;
-
-	ww += dShift;
-        ww /= dScale;
-
-	xx += dShift;
-        xx /= dScale;
-
-	yy += dShift;
-        yy /= dScale;
-
-        if ( !isIndex() )
-	{
-            getFourProd(result,vv,ww,xx,yy,0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            getFourProd(result,vv,ww,xx,yy,1,0,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { getFourProd(result,v,w,x,y,0,3,xconsist,assumreal); }
+	else              { getFourProd(result,v,w,x,y,1,3,xconsist,assumreal); }
     }
 
     removeOverwriteInd();
@@ -9893,22 +9128,11 @@ int MercerKernel::mProductDiverted(int m, double &result, const Vector<const Spa
 
     // FIXME: modify so that copy constructor not needed
 
-    NiceAssert( isLeftRightNormal() );
-
     {
-        if ( !isIndex() )
-	{
-            retVector<const SparseVector<gentype> *> tmpva;
+        retVector<const SparseVector<gentype> *> tmpva;
 
-            result = getmProd(a(0,1,m-1,tmpva),0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            retVector<const SparseVector<gentype> *> tmpva;
-
-            result = getmProd(a(0,1,m-1,tmpva),1,0,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { result = getmProd(a(0,1,m-1,tmpva),0,0,xconsist,assumreal); }
+	else              { result = getmProd(a(0,1,m-1,tmpva),1,0,xconsist,assumreal); }
     }
 
     removeOverwriteInd();
@@ -9925,22 +9149,11 @@ int MercerKernel::mProductDiverted(int m, gentype &result, const Vector<const Sp
 
     // FIXME: modify so that copy constructor not needed
 
-    NiceAssert( isLeftRightNormal() );
-
     {
-        if ( !isIndex() )
-	{
-            retVector<const SparseVector<gentype> *> tmpva;
+        retVector<const SparseVector<gentype> *> tmpva;
 
-            getmProd(result,a(0,1,m-1,tmpva),0,0,xconsist,assumreal);
-	}
-
-	else
-	{
-            retVector<const SparseVector<gentype> *> tmpva;
-
-            getmProd(result,a(0,1,m-1,tmpva),1,0,xconsist,assumreal);
-	}
+        if ( !isIndex() ) { getmProd(result,a(0,1,m-1,tmpva),0,0,xconsist,assumreal); }
+	else              { getmProd(result,a(0,1,m-1,tmpva),1,0,xconsist,assumreal); }
     }
 
     removeOverwriteInd();
@@ -11353,8 +10566,8 @@ void MercerKernel::Kbase(gentype &res, int q, int typeis,
         xx = *(x(0));
         yy = *(x(1));
 
-        if ( isLeftNormal()  ) { preShiftScale(xx,*(x(0))); }
-        if ( isRightNormal() ) { preShiftScale(yy,*(x(1)));         }
+        preScale(xx,*(x(0)),q);
+        preScale(yy,*(x(1)),q);
 
         xx.conj();
 
@@ -14142,8 +13355,8 @@ MercerKernel &MercerKernel::setType(int ndtype, int q)
     dRealConstantsLB("&",q).resize(dRealConstants(q).size());
     dRealConstantsUB("&",q).resize(dRealConstants(q).size());
 
-    dRealConstantsLB("&",q) = nullgentype();
-    dRealConstantsUB("&",q) = nullgentype();
+    dRealConstantsLB("&",q) = toGentype();
+    dRealConstantsUB("&",q) = toGentype();
 
     dIntConstantsLB("&",q).resize(dIntConstants(q).size());
     dIntConstantsUB("&",q).resize(dIntConstants(q).size());
@@ -14643,8 +13856,8 @@ void MercerKernel::dKdzBase(gentype &res, int &minmaxind, int q,
         xx = *(x(0));
         yy = *(x(1));
 
-        if ( isLeftNormal()  ) { preShiftScale(xx,*(x(0))); }
-        if ( isRightNormal() ) { preShiftScale(yy,*(x(1))); }
+        preScale(xx,*(x(0)),q);
+        preScale(yy,*(x(1)),q);
 
         xx.conj();
 
@@ -16377,12 +15590,9 @@ std::ostream &MercerKernel::printstream(std::ostream &output, int dep) const
         output << "Indexed:               " << src.isind               << "\n";
         output << "Full Norm:             " << src.isfullnorm          << "\n";
         output << "Symmetrised setwise:   " << src.issymmset           << "\n";
-        output << "Left Plain:            " << src.leftplain           << "\n";
-        output << "Right Plain:           " << src.rightplain          << "\n";
         output << "Alternative Diff:      " << src.isdiffalt           << "\n";
-        output << "Shifting/scaling:      " << src.isshift             << "\n";
+        output << "Scaling:               " << src.isscale             << "\n";
         output << "Indexing:              " << src.dIndexes            << "\n";
-        output << "Shift factor:          " << src.dShift              << "\n";
         output << "Scale factor:          " << src.dScale              << "\n";
         output << "Suggest xy cache:      " << src.xsuggestXYcache     << "\n";
         output << "IP differed:           " << src.xisIPdiffered       << "\n";
@@ -16390,6 +15600,9 @@ std::ostream &MercerKernel::printstream(std::ostream &output, int dep) const
         output << "Sample indices:        " << src.xindsub             << "\n";
         output << "Sample distribution:   " << src.xsampdist           << "\n";
         output << "Dense integr z point:  " << src.xdenseZeroPoint     << "\n";
+
+        output << "Scale factor LB:       " << src.dScaleLB            << "\n";
+        output << "Scale factor UB:       " << src.dScaleUB            << "\n";
 
         output << "Kernel type:           " << src.dtype               << "\n";
         output << "Kernel flags:          " << src.kernflags           << "\n";
@@ -16456,16 +15669,16 @@ std::istream &MercerKernel::inputstream(std::istream &input)
         dest.isind               = 0;
         dest.isfullnorm          = 0;
         dest.issymmset           = 0;
-        dest.leftplain           = 0;
-        dest.rightplain          = 0;
         dest.isdiffalt           = 1;
-        dest.isshift             = 0;
+        dest.isscale             = 0;
         dest.dIndexes            = 0;
-        dest.dShift.zero();
         dest.dScale.zero();
         dest.xnumsamples         = DEFAULT_NUMKERNSAMP;
         dest.xsampdist           = tempsampdist;
         dest.xdenseZeroPoint     = -1;
+
+        dest.dScaleLB.zero();
+        dest.dScaleUB.zero();
 
         dest.xindsub.zero();
 
@@ -16639,12 +15852,9 @@ std::istream &MercerKernel::inputstream(std::istream &input)
         input >> dummy; input >> dest.isind;
         input >> dummy; input >> dest.isfullnorm;
         input >> dummy; input >> dest.issymmset;
-        input >> dummy; input >> dest.leftplain;
-        input >> dummy; input >> dest.rightplain;
         input >> dummy; input >> dest.isdiffalt;
-        input >> dummy; input >> dest.isshift;
+        input >> dummy; input >> dest.isscale;
         input >> dummy; input >> dest.dIndexes;
-        input >> dummy; input >> dest.dShift;
         input >> dummy; input >> dest.dScale;
         input >> dummy; input >> dest.xsuggestXYcache;
         input >> dummy; input >> dest.xisIPdiffered;
@@ -16652,6 +15862,9 @@ std::istream &MercerKernel::inputstream(std::istream &input)
         input >> dummy; input >> dest.xindsub;
         input >> dummy; input >> dest.xsampdist;
         input >> dummy; input >> dest.xdenseZeroPoint;
+
+        input >> dummy; input >> dest.dScaleLB;
+        input >> dummy; input >> dest.dScaleUB;
 
         input >> dummy; input >> dest.dtype;
         input >> dummy; input >> dest.kernflags;
@@ -16694,7 +15907,6 @@ std::istream &MercerKernel::inputstream(std::istream &input)
     dest.xnumMulSplits = dest.calcnumMulSplits();
 
     dest.fixcombinedOverwriteSrc();
-    dest.fixShiftProd();
 
     dest.xisfast       = -1;
     dest.xneedsInner   = -1;
@@ -16785,9 +15997,7 @@ int operator==(const MercerKernel &leftop, const MercerKernel &rightop)
 {
     if ( !( leftop.isprod               == rightop.isprod               ) ) { return 0; }
     if ( !( leftop.isind                == rightop.isind                ) ) { return 0; }
-    if ( !( leftop.leftplain            == rightop.leftplain            ) ) { return 0; }
-    if ( !( leftop.rightplain           == rightop.rightplain           ) ) { return 0; }
-    if ( !( leftop.isshift              == rightop.isshift              ) ) { return 0; }
+    if ( !( leftop.isscale              == rightop.isscale              ) ) { return 0; }
     if ( !( leftop.dtype                == rightop.dtype                ) ) { return 0; }
     if ( !( leftop.kernflags            == rightop.kernflags            ) ) { return 0; }
     if ( !( leftop.isnorm               == rightop.isnorm               ) ) { return 0; }
@@ -16796,23 +16006,13 @@ int operator==(const MercerKernel &leftop, const MercerKernel &rightop)
     if ( !( leftop.issplit              == rightop.issplit              ) ) { return 0; }
     if ( !( leftop.mulsplit             == rightop.mulsplit             ) ) { return 0; }
     if ( !( leftop.ismagterm            == rightop.ismagterm            ) ) { return 0; }
-//    if ( !( leftop.disNomConst          == rightop.disNomConst          ) ) { return 0; }
     if ( !( leftop.xranktype            == rightop.xranktype            ) ) { return 0; }
     if ( !( leftop.xnumSplits           == rightop.xnumSplits           ) ) { return 0; }
     if ( !( leftop.xnumMulSplits        == rightop.xnumMulSplits        ) ) { return 0; }
-//    if ( !( leftop.altcallback          == rightop.altcallback          ) ) { return 0; }
     if ( !( leftop.dIndexes             == rightop.dIndexes             ) ) { return 0; }
-    if ( !( leftop.dShift               == rightop.dShift               ) ) { return 0; }
     if ( !( leftop.dScale               == rightop.dScale               ) ) { return 0; }
-    if ( !( leftop.dShiftProd           == rightop.dShiftProd           ) ) { return 0; }
-    if ( !( leftop.dShiftProdNoConj     == rightop.dShiftProdNoConj     ) ) { return 0; }
-    if ( !( leftop.dShiftProdRevConj    == rightop.dShiftProdRevConj    ) ) { return 0; }
     if ( !( leftop.dRealConstants       == rightop.dRealConstants       ) ) { return 0; }
     if ( !( leftop.dIntConstants        == rightop.dIntConstants        ) ) { return 0; }
-//    if ( !( leftop.dRealConstantsLB     == rightop.dRealConstantsLB     ) ) { return 0; }
-//    if ( !( leftop.dIntConstantsLB      == rightop.dIntConstantsLB      ) ) { return 0; }
-//    if ( !( leftop.dRealConstantsUB     == rightop.dRealConstantsUB     ) ) { return 0; }
-//    if ( !( leftop.dIntConstantsUB      == rightop.dIntConstantsUB      ) ) { return 0; }
     if ( !( leftop.dRealOverwrite       == rightop.dRealOverwrite       ) ) { return 0; }
     if ( !( leftop.dIntOverwrite        == rightop.dIntOverwrite        ) ) { return 0; }
     if ( !( leftop.combinedOverwriteSrc == rightop.combinedOverwriteSrc ) ) { return 0; }
@@ -16824,10 +16024,12 @@ int operator==(const MercerKernel &leftop, const MercerKernel &rightop)
     return 1;
 }
 
-void MercerKernel::getOneProd(gentype &res,
-                              const SparseVector<gentype> &x,
-                              int inding, int scaling, int xconsist, int assumreal) const
+gentype &MercerKernel::getOneProd(gentype &res,
+                                  const SparseVector<gentype> &x,
+                                  int inding, int scaling, int xconsist, int assumreal) const
 {
+//    scaling = ( q >= 0 ) ? scaling : 0;
+
     if ( ( x.altcontent || x.altcontentsp ) && xconsist )
     {
         // In this case the xconsist shortcut slows us down, so don't use it!
@@ -16886,17 +16088,19 @@ void MercerKernel::getOneProd(gentype &res,
             else
             {
                NiceThrow("Unknown one product type.");
-            } 
+            }
         }
     }
 
-    return;
+    return res;
 }
 
 double MercerKernel::getOneProd(const SparseVector<gentype> &x,
                                 int inding, int scaling, int xconsist, int assumreal) const
 {
     double res = 0;
+
+//    scaling = ( q >= 0 ) ? scaling : 0;
 
     if ( ( x.altcontent || x.altcontentsp ) && xconsist )
     {
@@ -16922,15 +16126,7 @@ double MercerKernel::getOneProd(const SparseVector<gentype> &x,
         else
         {
             if ( ( inding == 0 ) && ( scaling == 0 ) ) { oneProductAssumeReal(res,x); }
-
-            else
-            {
-                gentype temp(res);
-
-                getOneProd(temp,x,inding,scaling,xconsist,assumreal);
-
-                res = (double) temp;
-            }
+            else                                       { gentype temp(1.0); res = (double) getOneProd(temp,x,inding,scaling,xconsist,assumreal); }
         }
     }
 
@@ -16950,26 +16146,20 @@ double MercerKernel::getOneProd(const SparseVector<gentype> &x,
             retVector<gentype> tmpva;
 
             if ( ( inding == 0 ) && ( scaling == 0 ) ) { oneProductAssumeReal(res,xx); }
-
-            else
-            {
-                gentype temp(res);
-
-                getOneProd(temp,x,inding,scaling,xconsist,assumreal);
-
-                res = (double) temp;
-            }
+            else                                       { gentype temp(1.0); res = (double) getOneProd(temp,x,inding,scaling,xconsist,assumreal); }
         }
     }
 
     return res;
 }
 
-void MercerKernel::getTwoProd(gentype &res,
-                                const SparseVector<gentype> &x,
-                                const SparseVector<gentype> &y,
-                                int inding, int conj, int scaling, int xconsist, int assumreal) const
+gentype &MercerKernel::getTwoProd(gentype &res,
+                                  const SparseVector<gentype> &x,
+                                  const SparseVector<gentype> &y,
+                                  int inding, int conj, int scaling, int xconsist, int assumreal) const
 {
+//    scaling = ( q >= 0 ) ? scaling : 0;
+
 //errstream() << "phantomxyzmerceraabb 0\n";
     if ( ( x.altcontent || x.altcontentsp ) && ( y.altcontent || y.altcontentsp ) && xconsist )
     {
@@ -17002,10 +16192,10 @@ void MercerKernel::getTwoProd(gentype &res,
 
         else
         {
-                 if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 0 ) ) {        twoProduct            (res,         x,y       ); }
-            else if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 1 ) ) {        twoProductLeftScaled  (res,         x,y,dScale); }
-            else if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 2 ) ) {        twoProductRightScaled (res,         x,y,dScale); }
-            else if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 3 ) ) {        twoProductScaled      (res,         x,y,dScale); }
+                 if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 0 ) ) {        twoProduct                    (res,         x,y       ); }
+            else if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 1 ) ) {        twoProductLeftScaled          (res,         x,y,dScale); }
+            else if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 2 ) ) {        twoProductRightScaled         (res,         x,y,dScale); }
+            else if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 3 ) ) {        twoProductScaled              (res,         x,y,dScale); }
             else if ( ( inding == 0 ) && ( conj == 1 ) && ( scaling == 0 ) ) {        innerProduct                  (res,         x,y       ); }
             else if ( ( inding == 0 ) && ( conj == 1 ) && ( scaling == 1 ) ) {        innerProductLeftScaled        (res,         x,y,dScale); }
             else if ( ( inding == 0 ) && ( conj == 1 ) && ( scaling == 2 ) ) {        innerProductRightScaled       (res,         x,y,dScale); }
@@ -17014,10 +16204,10 @@ void MercerKernel::getTwoProd(gentype &res,
             else if ( ( inding == 0 ) && ( conj == 2 ) && ( scaling == 1 ) ) {        innerProductLeftScaledRevConj (res,         x,y,dScale); }
             else if ( ( inding == 0 ) && ( conj == 2 ) && ( scaling == 2 ) ) {        innerProductRightScaledRevConj(res,         x,y,dScale); }
             else if ( ( inding == 0 ) && ( conj == 2 ) && ( scaling == 3 ) ) {        innerProductScaledRevConj     (res,         x,y,dScale); }
-            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 0 ) ) { indexedtwoProduct            (res,dIndexes,x,y       ); }
-            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 1 ) ) { indexedtwoProductLeftScaled  (res,dIndexes,x,y,dScale); }
-            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 2 ) ) { indexedtwoProductRightScaled (res,dIndexes,x,y,dScale); }
-            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 3 ) ) { indexedtwoProductScaled      (res,dIndexes,x,y,dScale); }
+            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 0 ) ) { indexedtwoProduct                    (res,dIndexes,x,y       ); }
+            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 1 ) ) { indexedtwoProductLeftScaled          (res,dIndexes,x,y,dScale); }
+            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 2 ) ) { indexedtwoProductRightScaled         (res,dIndexes,x,y,dScale); }
+            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 3 ) ) { indexedtwoProductScaled              (res,dIndexes,x,y,dScale); }
             else if ( ( inding == 1 ) && ( conj == 1 ) && ( scaling == 0 ) ) { indexedinnerProduct                  (res,dIndexes,x,y       ); }
             else if ( ( inding == 1 ) && ( conj == 1 ) && ( scaling == 1 ) ) { indexedinnerProductLeftScaled        (res,dIndexes,x,y,dScale); }
             else if ( ( inding == 1 ) && ( conj == 1 ) && ( scaling == 2 ) ) { indexedinnerProductRightScaled       (res,dIndexes,x,y,dScale); }
@@ -17053,10 +16243,10 @@ void MercerKernel::getTwoProd(gentype &res,
         {
             retVector<gentype> tmpva;
 
-                 if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 0 ) ) {        twoProduct            (res,         xx,yy                           ); }
-            else if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 1 ) ) {        twoProductLeftScaled  (res,         xx,yy,dScale(dScale.ind(),tmpva)); }
-            else if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 2 ) ) {        twoProductRightScaled (res,         xx,yy,dScale(dScale.ind(),tmpva)); }
-            else if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 3 ) ) {        twoProductScaled      (res,         xx,yy,dScale(dScale.ind(),tmpva)); }
+                 if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 0 ) ) {        twoProduct                    (res,         xx,yy                           ); }
+            else if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 1 ) ) {        twoProductLeftScaled          (res,         xx,yy,dScale(dScale.ind(),tmpva)); }
+            else if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 2 ) ) {        twoProductRightScaled         (res,         xx,yy,dScale(dScale.ind(),tmpva)); }
+            else if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 3 ) ) {        twoProductScaled              (res,         xx,yy,dScale(dScale.ind(),tmpva)); }
             else if ( ( inding == 0 ) && ( conj == 1 ) && ( scaling == 0 ) ) {        innerProduct                  (res,         xx,yy                           ); }
             else if ( ( inding == 0 ) && ( conj == 1 ) && ( scaling == 1 ) ) {        innerProductLeftScaled        (res,         xx,yy,dScale(dScale.ind(),tmpva)); }
             else if ( ( inding == 0 ) && ( conj == 1 ) && ( scaling == 2 ) ) {        innerProductRightScaled       (res,         xx,yy,dScale(dScale.ind(),tmpva)); }
@@ -17065,10 +16255,10 @@ void MercerKernel::getTwoProd(gentype &res,
             else if ( ( inding == 0 ) && ( conj == 2 ) && ( scaling == 1 ) ) {        innerProductLeftScaledRevConj (res,         xx,yy,dScale(dScale.ind(),tmpva)); }
             else if ( ( inding == 0 ) && ( conj == 2 ) && ( scaling == 2 ) ) {        innerProductRightScaledRevConj(res,         xx,yy,dScale(dScale.ind(),tmpva)); }
             else if ( ( inding == 0 ) && ( conj == 2 ) && ( scaling == 3 ) ) {        innerProductScaledRevConj     (res,         xx,yy,dScale(dScale.ind(),tmpva)); }
-            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 0 ) ) { indexedtwoProduct            (res,dIndexes,xx,yy                           ); }
-            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 1 ) ) { indexedtwoProductLeftScaled  (res,dIndexes,xx,yy,dScale(dScale.ind(),tmpva)); }
-            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 2 ) ) { indexedtwoProductRightScaled (res,dIndexes,xx,yy,dScale(dScale.ind(),tmpva)); }
-            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 3 ) ) { indexedtwoProductScaled      (res,dIndexes,xx,yy,dScale(dScale.ind(),tmpva)); }
+            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 0 ) ) { indexedtwoProduct                    (res,dIndexes,xx,yy                           ); }
+            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 1 ) ) { indexedtwoProductLeftScaled          (res,dIndexes,xx,yy,dScale(dScale.ind(),tmpva)); }
+            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 2 ) ) { indexedtwoProductRightScaled         (res,dIndexes,xx,yy,dScale(dScale.ind(),tmpva)); }
+            else if ( ( inding == 1 ) && ( conj == 0 ) && ( scaling == 3 ) ) { indexedtwoProductScaled              (res,dIndexes,xx,yy,dScale(dScale.ind(),tmpva)); }
             else if ( ( inding == 1 ) && ( conj == 1 ) && ( scaling == 0 ) ) { indexedinnerProduct                  (res,dIndexes,xx,yy                           ); }
             else if ( ( inding == 1 ) && ( conj == 1 ) && ( scaling == 1 ) ) { indexedinnerProductLeftScaled        (res,dIndexes,xx,yy,dScale(dScale.ind(),tmpva)); }
             else if ( ( inding == 1 ) && ( conj == 1 ) && ( scaling == 2 ) ) { indexedinnerProductRightScaled       (res,dIndexes,xx,yy,dScale(dScale.ind(),tmpva)); }
@@ -17087,7 +16277,7 @@ void MercerKernel::getTwoProd(gentype &res,
     }
 
 //errstream() << "phantomxyzmerceraabb 6\n";
-    return;
+    return res;
 }
 //            xyprod = getTwoProd(xa,xb,0,0,0,xconsist,assumreal)+bias;
 double MercerKernel::getTwoProd(const SparseVector<gentype> &x,
@@ -17095,6 +16285,8 @@ double MercerKernel::getTwoProd(const SparseVector<gentype> &x,
                                 int inding, int conj, int scaling, int xconsist, int assumreal) const
 {
     double res = 0;
+
+//    scaling = ( q >= 0 ) ? scaling : 0;
 
 //errstream() << "phantomxyzmerceraabb 0\n";
     if ( ( x.altcontent || x.altcontentsp ) && ( y.altcontent || y.altcontentsp ) && xconsist )
@@ -17131,15 +16323,7 @@ double MercerKernel::getTwoProd(const SparseVector<gentype> &x,
                  if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 0 ) ) { innerProductAssumeReal(res,x,y); }
             else if ( ( inding == 0 ) && ( conj == 1 ) && ( scaling == 0 ) ) { innerProductAssumeReal(res,x,y); }
             else if ( ( inding == 0 ) && ( conj == 2 ) && ( scaling == 0 ) ) { innerProductAssumeReal(res,x,y); }
-
-            else
-            {
-                gentype temp(res);
-
-                getTwoProd(temp,x,y,inding,conj,scaling,xconsist,assumreal);
-
-                res = (double) temp;
-            }
+            else                                                             { gentype temp(1.0); res = (double) getTwoProd(temp,x,y,inding,conj,scaling,xconsist,assumreal); }
         }
 //errstream() << "phantomxyzmerceraabb 3\n";
     }
@@ -17165,15 +16349,7 @@ double MercerKernel::getTwoProd(const SparseVector<gentype> &x,
                  if ( ( inding == 0 ) && ( conj == 0 ) && ( scaling == 0 ) ) { innerProductAssumeReal(res,xx,yy); }
             else if ( ( inding == 0 ) && ( conj == 1 ) && ( scaling == 0 ) ) { innerProductAssumeReal(res,xx,yy); }
             else if ( ( inding == 0 ) && ( conj == 2 ) && ( scaling == 0 ) ) { innerProductAssumeReal(res,xx,yy); }
-
-            else
-            {
-                gentype temp(res);
-
-                getTwoProd(temp,x,y,inding,conj,scaling,xconsist,assumreal);
-
-                res = (double) temp;
-            }
+            else                                                             { gentype temp(1.0); res = (double) getTwoProd(temp,x,y,inding,conj,scaling,xconsist,assumreal); }
         }
 //errstream() << "phantomxyzmerceraabb 5\n";
     }
@@ -17182,12 +16358,14 @@ double MercerKernel::getTwoProd(const SparseVector<gentype> &x,
     return res;
 }
 
-void MercerKernel::getThreeProd(gentype &res,
-                                const SparseVector<gentype> &xa,
-                                const SparseVector<gentype> &xb,
-                                const SparseVector<gentype> &xc,
-                                int inding, int scaling, int xconsist, int assumreal) const
+gentype &MercerKernel::getThreeProd(gentype &res,
+                                    const SparseVector<gentype> &xa,
+                                    const SparseVector<gentype> &xb,
+                                    const SparseVector<gentype> &xc,
+                                    int inding, int scaling, int xconsist, int assumreal) const
 {
+//    scaling = ( q >= 0 ) ? scaling : 0;
+
     if ( (xa.altcontent) && (xb.altcontent) && (xc.altcontent) && xconsist )
     {
         // In this case the xconsist shortcut slows us down, so don't use it!
@@ -17254,15 +16432,17 @@ void MercerKernel::getThreeProd(gentype &res,
         }
     }
 
-    return;
+    return res;
 }
 
 double MercerKernel::getThreeProd(const SparseVector<gentype> &xa,
-                                const SparseVector<gentype> &xb,
-                                const SparseVector<gentype> &xc,
-                                int inding, int scaling, int xconsist, int assumreal) const
+                                  const SparseVector<gentype> &xb,
+                                  const SparseVector<gentype> &xc,
+                                  int inding, int scaling, int xconsist, int assumreal) const
 {
     double res = 0;
+
+//    scaling = ( q >= 0 ) ? scaling : 0;
 
     if ( (xa.altcontent) && (xb.altcontent) && (xc.altcontent) && xconsist )
     {
@@ -17288,15 +16468,7 @@ double MercerKernel::getThreeProd(const SparseVector<gentype> &xa,
         else
         {
             if ( ( inding == 0 ) && ( scaling == 0 ) ) { threeProductAssumeReal(res,xa,xb,xc); }
-
-            else
-            {
-                gentype temp(res);
-
-                getThreeProd(temp,xa,xb,xc,inding,scaling,xconsist,assumreal);
-
-                res = (double) temp;
-            }
+            else                                       { gentype temp(1.0); res = (double) getThreeProd(temp,xa,xb,xc,inding,scaling,xconsist,assumreal); }
         }
     }
 
@@ -17320,28 +16492,22 @@ double MercerKernel::getThreeProd(const SparseVector<gentype> &xa,
             retVector<gentype> tmpva;
 
             if ( ( inding == 0 ) && ( scaling == 0 ) ) { threeProductAssumeReal(res,xxa,xxb,xxc); }
-
-            else
-            {
-                gentype temp(res);
-
-                getThreeProd(temp,xa,xb,xc,inding,scaling,xconsist,assumreal);
-
-                res = (double) temp;
-            }
+            else                                       { gentype temp(1.0); res = (double) getThreeProd(temp,xa,xb,xc,inding,scaling,xconsist,assumreal); }
         }
     }
 
     return res;
 }
 
-void MercerKernel::getFourProd(gentype &res,
-                               const SparseVector<gentype> &xa,
-                               const SparseVector<gentype> &xb,
-                               const SparseVector<gentype> &xc,
-                               const SparseVector<gentype> &xd,
-                               int inding, int scaling, int xconsist, int assumreal) const
+gentype &MercerKernel::getFourProd(gentype &res,
+                                   const SparseVector<gentype> &xa,
+                                   const SparseVector<gentype> &xb,
+                                   const SparseVector<gentype> &xc,
+                                   const SparseVector<gentype> &xd,
+                                   int inding, int scaling, int xconsist, int assumreal) const
 {
+//    scaling = ( q >= 0 ) ? scaling : 0;
+
     if ( (xa.altcontent) && (xb.altcontent) && (xc.altcontent) && (xd.altcontent) && xconsist )
     {
         // In this case the xconsist shortcut slows us down, so don't use it!
@@ -17410,16 +16576,18 @@ void MercerKernel::getFourProd(gentype &res,
         }
     }
 
-    return;
+    return res;
 }
 
 double MercerKernel::getFourProd(const SparseVector<gentype> &xa,
-                               const SparseVector<gentype> &xb,
-                               const SparseVector<gentype> &xc,
-                               const SparseVector<gentype> &xd,
-                               int inding, int scaling, int xconsist, int assumreal) const
+                                 const SparseVector<gentype> &xb,
+                                 const SparseVector<gentype> &xc,
+                                 const SparseVector<gentype> &xd,
+                                 int inding, int scaling, int xconsist, int assumreal) const
 {
     double res = 0;
+
+//    scaling = ( q >= 0 ) ? scaling : 0;
 
     if ( (xa.altcontent) && (xb.altcontent) && (xc.altcontent) && (xd.altcontent) && xconsist )
     {
@@ -17445,15 +16613,7 @@ double MercerKernel::getFourProd(const SparseVector<gentype> &xa,
         else
         {
             if ( ( inding == 0 ) && ( scaling == 0 ) ) { fourProductAssumeReal(res,xa,xb,xc,xd); }
-
-            else
-            {
-                gentype temp(res);
-
-                getFourProd(temp,xa,xb,xc,xd,inding,scaling,xconsist,assumreal);
-
-                res = (double) temp;
-            }
+            else                                       { gentype temp(1.0); res = (double) getFourProd(temp,xa,xb,xc,xd,inding,scaling,xconsist,assumreal); }
         }
     }
 
@@ -17479,31 +16639,22 @@ double MercerKernel::getFourProd(const SparseVector<gentype> &xa,
             retVector<gentype> tmpva;
 
             if ( ( inding == 0 ) && ( scaling == 0 ) ) { fourProductAssumeReal(res,xxa,xxb,xxc,xxd); }
-
-            else
-            {
-                gentype temp(res);
-
-                getFourProd(temp,xa,xb,xc,xd,inding,scaling,xconsist,assumreal);
-
-                res = (double) temp;
-            }
+            else                                       { gentype temp(1.0); res = (double) getFourProd(temp,xa,xb,xc,xd,inding,scaling,xconsist,assumreal); }
         }
     }
 
     return res;
 }
 
-//void MercerKernel::getmProd(gentype &res,
-//                            const Vector<const SparseVector<gentype> *> &x,
-//                            int inding, int scaling, int xconsist, int assumreal) const
-void MercerKernel::getmProd(gentype &res,
-                            const Vector<const SparseVector<gentype> *> &x,
-                            int inding, int scaling, int, int assumreal) const
+gentype &MercerKernel::getmProd(gentype &res,
+                                const Vector<const SparseVector<gentype> *> &x,
+                                int inding, int scaling, int, int assumreal) const
 {
     //xconsist = 0; // Otherwise we need to search through all x, which is too time consuming
 
     //(void) xconsist;
+
+//    scaling = ( q >= 0 ) ? scaling : 0;
 
     if ( assumreal && !inding && !scaling )
     {
@@ -17523,13 +16674,15 @@ void MercerKernel::getmProd(gentype &res,
         }
     }
 
-    return;
+    return res;
 }
 
 double MercerKernel::getmProd(const Vector<const SparseVector<gentype> *> &x,
-                            int inding, int scaling, int xconsist, int assumreal) const
+                              int inding, int scaling, int xconsist, int assumreal) const
 {
     double res = 0;
+
+//    scaling = ( q >= 0 ) ? scaling : 0;
 
     xconsist = 0; // Otherwise we need to search through all x, which is too time consuming
 
@@ -17541,15 +16694,7 @@ double MercerKernel::getmProd(const Vector<const SparseVector<gentype> *> &x,
     else
     {
         if ( ( inding == 0 ) && ( scaling == 0 ) ) { mProductAssumeReal(res,x); }
-
-        else
-        {
-            gentype temp(res);
-
-            getmProd(temp,x,inding,scaling,xconsist,assumreal);
-
-            res = (double) temp;
-        }
+        else                                       { gentype temp(1.0); res = (double) getmProd(temp,x,inding,scaling,xconsist,assumreal); }
     }
 
     return res;
@@ -17659,31 +16804,21 @@ int MercerKernel::getparam(int ind, gentype &val, const gentype &xa, int ia, con
 
         switch ( ind )
         {
-            case   0: { val = isFullNorm();           desc = "mercer::isFullNorm"; break; }
-            case   1: { val = isProd();               desc = "mercer::isProd"; break; }
-            case   2: { val = isIndex();              desc = "mercer::isIndex"; break; }
-            case   3: { val = isShiftedScaled();      desc = "mercer::isShiftedScaled"; break; }
-            case   4: { val = isLeftPlain();          desc = "mercer::isLeftPlain"; break; }
-            case   5: { val = isRightPlain();         desc = "mercer::isRightPlain"; break; }
-            case   6: { val = isLeftRightPlain();     desc = "mercer::isLeftRightPlain"; break; }
-            case   7: { val = isLeftNormal();         desc = "mercer::isLeftNormal"; break; }
-            case   8: { val = isRightNormal();        desc = "mercer::ifRightNormal"; break; }
-            case   9: { val = isLeftRightNormal();    desc = "mercer::isLeftRightNormal"; break; }
-            case  10: { val = isPartNormal();         desc = "mercer::isPartNormal"; break; }
-            case  16: { val = isAltDiff();            desc = "mercer::isAltDiff"; break; }
-            case  17: { val = needsmProd();           desc = "mercer::needsmProd"; break; }
-            case  18: { val = wantsXYprod();          desc = "mercer::wantsXYprod"; break; }
-            case  19: { val = suggestXYcache();       desc = "mercer::suggestXYcache"; break; }
-            case  20: { val = isIPdiffered();         desc = "mercer::isIPdiffered"; break; }
-            case  22: { val = size();                 desc = "mercer::size"; break; }
-            case  23: { val = getSymmetry();          desc = "mercer::getSymmetry"; break; }
-            case  24: { val = cIndexes();             desc = "mercer::cIndexes"; break; }
-            case  25: { val = cShift()(tmpva);        desc = "mercer::cShift"; break; }
-            case  26: { val = cScale()(tmpva);        desc = "mercer::cScale"; break; }
-            case  29: { val = churnInner();           desc = "mercer::churnInner"; break; }
-            case  30: { val = isKVarianceNZ();        desc = "mercer::isKVarianceNZ"; break; }
-            case  31: { val = isShifted();            desc = "mercer::isShifted"; break; }
-            case  32: { val = isScaled();             desc = "mercer::isScaled"; break; }
+            case   0: { val = isFullNorm();           desc = "mercer::isFullNorm";      break; }
+            case   1: { val = isProd();               desc = "mercer::isProd";          break; }
+            case   2: { val = isIndex();              desc = "mercer::isIndex";         break; }
+            case   3: { val = isScaled();             desc = "mercer::isScaled";        break; }
+            case  16: { val = isAltDiff();            desc = "mercer::isAltDiff";       break; }
+            case  17: { val = needsmProd();           desc = "mercer::needsmProd";      break; }
+            case  18: { val = wantsXYprod();          desc = "mercer::wantsXYprod";     break; }
+            case  19: { val = suggestXYcache();       desc = "mercer::suggestXYcache";  break; }
+            case  20: { val = isIPdiffered();         desc = "mercer::isIPdiffered";    break; }
+            case  22: { val = size();                 desc = "mercer::size";            break; }
+            case  23: { val = getSymmetry();          desc = "mercer::getSymmetry";     break; }
+            case  24: { val = cIndexes();             desc = "mercer::cIndexes";        break; }
+            case  26: { val = cScale()(tmpva);        desc = "mercer::cScale";          break; }
+            case  29: { val = churnInner();           desc = "mercer::churnInner";      break; }
+            case  30: { val = isKVarianceNZ();        desc = "mercer::isKVarianceNZ";   break; }
 
             default:
             {
@@ -17699,19 +16834,19 @@ int MercerKernel::getparam(int ind, gentype &val, const gentype &xa, int ia, con
 
         switch ( ind )
         {
-            case  50: { val = cWeight((int) xa);               desc = "mercer::cWeight"; break; }
-            case  51: { val = cType((int) xa);                 desc = "mercer::cType"; break; }
-            case  52: { val = isNormalised((int) xa);          desc = "mercer::isNormalised"; break; }
-            case  54: { val = isChained((int) xa);             desc = "mercer::isChained"; break; }
-            case  56: { val = cRealConstants((int) xa);        desc = "mercer::cRealConstants"; break; }
-            case  57: { val = cIntConstants((int) xa);         desc = "mercer::cIntConstants"; break; }
-            case  58: { val = cRealOverwrite((int) xa)(tmpva); desc = "mercer::cRealOverwrite"; break; }
-            case  59: { val = cIntOverwrite((int) xa)(tmpva);  desc = "mercer::cIntOverwrite"; break; }
+            case  50: { val = cWeight((int) xa);               desc = "mercer::cWeight";          break; }
+            case  51: { val = cType((int) xa);                 desc = "mercer::cType";            break; }
+            case  52: { val = isNormalised((int) xa);          desc = "mercer::isNormalised";     break; }
+            case  54: { val = isChained((int) xa);             desc = "mercer::isChained";        break; }
+            case  56: { val = cRealConstants((int) xa);        desc = "mercer::cRealConstants";   break; }
+            case  57: { val = cIntConstants((int) xa);         desc = "mercer::cIntConstants";    break; }
+            case  58: { val = cRealOverwrite((int) xa)(tmpva); desc = "mercer::cRealOverwrite";   break; }
+            case  59: { val = cIntOverwrite((int) xa)(tmpva);  desc = "mercer::cIntOverwrite";    break; }
             case  60: { val = getRealConstZero((int) xa);      desc = "mercer::getRealConstZero"; break; }
-            case  61: { val = getIntConstZero((int) xa);       desc = "mercer::getIntConstZero"; break; }
-            case  62: { val = isSplit((int) xa);               desc = "mercer::isSplit"; break; }
-            case  64: { val = isMagTerm((int) xa);             desc = "mercer::isMagTerm"; break; }
-            case  66: { val = isMulSplit((int) xa);            desc = "mercer::isMulSplit"; break; }
+            case  61: { val = getIntConstZero((int) xa);       desc = "mercer::getIntConstZero";  break; }
+            case  62: { val = isSplit((int) xa);               desc = "mercer::isSplit";          break; }
+            case  64: { val = isMagTerm((int) xa);             desc = "mercer::isMagTerm";        break; }
+            case  66: { val = isMulSplit((int) xa);            desc = "mercer::isMulSplit";       break; }
 
             default:
             {
@@ -37118,11 +36253,11 @@ T &MercerKernel::LL0(T &res, T &logres, int &logresvalid,
 //phantomx
 template <class T>
 T &MercerKernel::LL1(T &res, T &logres, int &logresvalid,
-                     const SparseVector<gentype> &xa, 
-                     const vecInfo &xainfo, 
+                     const SparseVector<gentype> &xa,
+                     const vecInfo &xainfo,
                      const T &bias,
                      const gentype **pxyprod,
-                     int ia,  
+                     int ia,
                      int xdim, int xconsist, int assumreal, int resmode, int mlid, const double *xy, int justcalcip, int indstart, int indend) const
 {
     NiceAssert( ! ( isFastKernelSum() && ( isAltDiff() >= 200 ) && ( isAltDiff() <= 299 ) ) );

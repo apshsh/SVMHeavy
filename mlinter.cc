@@ -2508,11 +2508,7 @@ int runsvmint(SVMThreadContext *svmContext,
                 updateargvars = 1;
             }
 
-            else if ( ( currentarg == "-Snx"  ) || ( currentarg == "-Sna"  ) || ( currentarg == "-Snb"  ) ||
-                      ( currentarg == "-Snc"  ) || ( currentarg == "-SNa"  ) || ( currentarg == "-SNb"  ) ||
-                      ( currentarg == "-SNc"  ) || ( currentarg == "-SnA"  ) || ( currentarg == "-SnB"  ) ||
-                      ( currentarg == "-SnC"  ) || ( currentarg == "-SNA"  ) || ( currentarg == "-SNB"  ) ||
-                      ( currentarg == "-SNC"  ) || ( currentarg == "-St"   ) || ( currentarg == "-Spt"  ) ||
+            else if ( ( currentarg == "-St"   ) || ( currentarg == "-Spt"  ) ||
                       ( currentarg == "-SPt"  ) || ( currentarg == "-Sjt"  ) || ( currentarg == "-Sjt+" ) ||
                       ( currentarg == "-Sjt-" ) || ( currentarg == "-Srt"  ) || ( currentarg == "-Snt"  ) )
             {
@@ -4990,19 +4986,6 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-Stc"  ) { samScale  = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-Stq"  ) { samSlack  = safeatof(currcommand(1),argvariables); }
 
-                    else if ( currcommand(0) == "-Snx"  ) { getMLref(MLInd).normKernelNone();                                                             }
-                    else if ( currcommand(0) == "-Sna"  ) { getMLref(MLInd).normKernelZeroMeanUnitVariance();                                             }
-                    else if ( currcommand(0) == "-Snb"  ) { getMLref(MLInd).normKernelZeroMedianUnitVariance();                                           }
-                    else if ( currcommand(0) == "-Snc"  ) { getMLref(MLInd).normKernelUnitRange();                                                        }
-                    else if ( currcommand(0) == "-SNa"  ) { getMLref(MLInd).normKernelZeroMeanUnitVariance(0,1);                                          }
-                    else if ( currcommand(0) == "-SNb"  ) { getMLref(MLInd).normKernelZeroMedianUnitVariance(0,1);                                        }
-                    else if ( currcommand(0) == "-SNc"  ) { getMLref(MLInd).normKernelUnitRange(0,1);                                                     }
-                    else if ( currcommand(0) == "-SnA"  ) { getMLref(MLInd).normKernelZeroMeanUnitVariance(1,0);                                          }
-                    else if ( currcommand(0) == "-SnB"  ) { getMLref(MLInd).normKernelZeroMedianUnitVariance(1,0);                                        }
-                    else if ( currcommand(0) == "-SnC"  ) { getMLref(MLInd).normKernelUnitRange(1,0);                                                     }
-                    else if ( currcommand(0) == "-SNA"  ) { getMLref(MLInd).normKernelZeroMeanUnitVariance(1,1);                                          }
-                    else if ( currcommand(0) == "-SNB"  ) { getMLref(MLInd).normKernelZeroMedianUnitVariance(1,1);                                        }
-                    else if ( currcommand(0) == "-SNC"  ) { getMLref(MLInd).normKernelUnitRange(1,1);                                                     }
                     else if ( currcommand(0) == "-Sra"  ) { getMLref(MLInd).randomise(safeatof(currcommand(1),argvariables));                             }
                     else if ( currcommand(0) == "-Snt"  ) { getMLref(MLInd).setSampleMode(0,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
                     else if ( currcommand(0) == "-St"   ) { getMLref(MLInd).setSampleMode(1,xmin,xmax,Nsamp,samSplit,samType,xsamType,samScale,samSlack); }
@@ -11924,7 +11907,7 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "                           B - SVM: binary classifier using random FF.#       \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                               *Uses  1-norm cost,  kernel can be  non-Mercer.\n" : "" );
-    output << ( ( basic || advanced ) ? "                                Recommend setting r0 = N, norm with -Sna.     \n" : "" );
+    output << ( ( basic || advanced ) ? "                                Recommend setting r0 = N.                     \n" : "" );
     output << ( ( basic || advanced ) ? "                               #Kernel choice is limited to 3,4,13,19.        \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                               Least-squares SVMs (LSV):                      \n" : "" );
@@ -12808,20 +12791,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                           +1 by defaulg).                                    \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "Post-load options (after adding training vectors) options:                    \n" : "" );
-    output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -Snx            - remove any existing data normalisation.            \n" : "" );
-    output << ( ( basic || advanced ) ? "         -Sna            - normalise data features to zero mean, unit var.    \n" : "" );
-    output << ( ( basic || advanced ) ? "         -Snb            - normalise data features to zero median, unit var.  \n" : "" );
-    output << ( ( basic || advanced ) ? "         -Snc            - normalise data features to range 0,1.              \n" : "" );
-    output << ( ( basic || advanced ) ? "         -SNa            - like -Sna, but no shifting applied.                \n" : "" );
-    output << ( ( basic || advanced ) ? "         -SNb            - like -Snb, but no shifting applied.                \n" : "" );
-    output << ( ( basic || advanced ) ? "         -SNc            - like -Snc, but no shifting applied.                \n" : "" );
-    output << ( ( basic || advanced ) ? "         -SnA            - like -Sna, but applies min scale to all elements.  \n" : "" );
-    output << ( ( basic || advanced ) ? "         -SnB            - like -Snb, but applies min scale to all elements.  \n" : "" );
-    output << ( ( basic || advanced ) ? "         -SnC            - like -Snc, but applies min scale to all elements.  \n" : "" );
-    output << ( ( basic || advanced ) ? "         -SNA            - like -Sna, but no shift and min scale.             \n" : "" );
-    output << ( ( basic || advanced ) ? "         -SNB            - like -Snb, but no shift and min scale.             \n" : "" );
-    output << ( ( basic || advanced ) ? "         -SNC            - like -Snc, but no shift and min scale.             \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "         -Sra f          - random alpha/weight initialisation with sparsity f.\n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );

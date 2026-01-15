@@ -811,6 +811,9 @@ template <class T> void qswap(SparseVector<T> *&a, SparseVector<T> *&b)
 // norm1:  return the 1-norm of the vector ||a||_1
 // normp:  return the p-norm of the vector ||a||_p^p
 
+template <class T> SparseVector<T> &scaladd(SparseVector<T> &a, const SparseVector<T> &b, double s);
+template <class T> SparseVector<T> &scaladd(SparseVector<T> &a, const SparseVector<T> &b, double s) { return a.scaleAdd(s,b); }
+
 template <class T> T max     (const SparseVector<T> &a, const SparseVector<T> &b, int &i);
 template <class T> T min     (const SparseVector<T> &a, const SparseVector<T> &b, int &i);
 template <class T> T maxabs  (const SparseVector<T> &a, int &i);
@@ -826,9 +829,9 @@ template <class T> T sqmean  (const SparseVector<T> &a);
 template <class T> T vari    (const SparseVector<T> &a);
 template <class T> T stdev   (const SparseVector<T> &a);
 
-template <class T> const T &max   (const SparseVector<T> &a, int &i);
-template <class T> const T &min   (const SparseVector<T> &a, int &i);
-template <class T> const T &median(const SparseVector<T> &a, int &i);
+template <class T> const T &max     (const SparseVector<T> &a, int &i);
+template <class T> const T &min     (const SparseVector<T> &a, int &i);
+template <class T> const T &median  (const SparseVector<T> &a, int &i);
 
 template <class T> const T &max     (T &res, const SparseVector<T> &a, const SparseVector<T> &b, int &i);
 template <class T> const T &min     (T &res, const SparseVector<T> &a, const SparseVector<T> &b, int &i);
@@ -855,6 +858,13 @@ template <class T> const T &indexedstdev (T &res, const Vector<int> &n, const Sp
 template <class T> const T &indexedmax   (        const Vector<int> &n, const SparseVector<T> &a, int &i);
 template <class T> const T &indexedmin   (        const Vector<int> &n, const SparseVector<T> &a, int &i);
 template <class T> const T &indexedmaxabs(T &res, const Vector<int> &n, const SparseVector<T> &a, int &i);
+
+
+
+template <class T> const SparseVector<T> &geometricMedian(SparseVector<T> &res, const Vector<SparseVector<T> > &a, const Vector<double> &w);
+template <class T> double geometricMAD(SparseVector<T> &medianres, const Vector<SparseVector<T> > &a, const Vector<double> &w);
+
+
 
 template <class T> T &innerProduct                         (T &res,                       const SparseVector<T> &a, const SparseVector<T> &b);
 template <class T> T &innerProductRevConj                  (T &res,                       const SparseVector<T> &a, const SparseVector<T> &b);
@@ -4536,7 +4546,7 @@ template <class S> SparseVector<T> &SparseVector<T>::scaleAdd(const S &a, const 
     if ( nearnonsparse() && right_op.nearnonsparse() && ( size() == right_op.size() ) )
     {
         retVector<T> tmpva;
-        retVector<S> tmpvb;
+        retVector<T> tmpvb;
 
         ((*this)("&",(*this).ind(),tmpva)).scaleAdd(a,right_op(right_op.ind(),tmpvb));
 
@@ -5942,6 +5952,174 @@ const T &indexedstdev(T &res, const Vector<int> &n, const SparseVector<T> &a)
 
     return res;
 }
+
+
+
+
+
+
+
+
+
+
+
+template <class T> const SparseVector<T> &geometricMedian(SparseVector<T> &y, const Vector<SparseVector<T> > &x, const Vector<double> &w)
+{
+    NiceAssert( w.size() == x.size() );
+
+    int n = x.size();
+
+    if ( !n )
+    {
+        y.zero();
+    }
+
+    else if ( n == 1 )
+    {
+        y = x(0);
+    }
+
+    else
+    {
+        // See https://pmc.ncbi.nlm.nih.gov/articles/PMC26449/pdf/pq001423.pdf
+        //
+        // Vardi and Zhang, The multivariate L1-Median and Associated Data Depth
+
+        mean(y,x,w); // y_0
+
+        Vector<SparseVector<T>> xy(n);
+        Vector<double> xydist(n,0.0);
+        SparseVector<T> Ttilde(y);
+        SparseVector<T> Rtilde(y);
+        Vector<double> sfactor(n);
+        double Tscale;
+
+        for ( int k = 1 ; k <= GMMAfits ; ++k )
+        {
+            // Work out Euclidean distances
+
+            for ( int i = 0 ; i < n ; ++i )
+            {
+                xy("&",i)  = x(i);
+                xy("&",i) -= y;
+
+                xydist("&",i) = abs2(xy(i));
+            }
+
+            // Work out Ttilde (and Rtilde)
+
+            Tscale = 0.0;
+            Ttilde.zero();
+
+            int zcnt = n;
+            double eta = 0.0;
+
+            for ( int i = 0 ; i < n ; ++i )
+            {
+                if ( xydist(i) >= ZTOLgm )
+                {
+                    sfactor("&",i) = w(i)/xydist(i);
+
+                    Tscale += sfactor(i);
+                    Ttilde.scaleAdd(sfactor(i),x(i));
+
+                    --zcnt;
+                }
+
+                else
+                {
+                    eta += w(i);
+                }
+            }
+
+            Ttilde.scale(1/Tscale);
+
+            // Ttilde is the result of the Weiszfeld algorithm
+            //
+            // This usually suffices, but if we y hits the set x then we need more
+            // (see above)
+
+            // Work out Rtilde and r
+
+            if ( !zcnt || ( eta < ZTOLgm ) )
+            {
+                y = Ttilde;
+            }
+
+            else
+            {
+                Rtilde.zero();
+
+                for ( int i = 0 ; i < n ; ++i )
+                {
+                    if ( xydist(i) >= ZTOLgm )
+                    {
+                        Rtilde.scaleAdd(sfactor(i),xy(i));
+                    }
+                }
+
+                double r = abs2(Rtilde);
+
+                if ( r >= ZTOLgm )
+                {
+                    y.zero();
+
+                    y.scaleAdd(std::max(0.0,eta/r),Ttilde);
+                    y.scaleAdd(std::min(1.0,eta/r),y);
+                }
+
+                else
+                {
+                    // See paper
+
+                    y = Ttilde;
+                }
+            }
+        }
+    }
+
+    return y;
+}
+
+template <class T> double geometricMAD(SparseVector<T> &y, const Vector<SparseVector<T> > &x, const Vector<double> &w)
+{
+    NiceAssert( x.size() == w.size() );
+
+    geometricMedian(y,x,w);
+
+    int n = x.size();
+    double res = 0;
+
+    if ( n > 1 )
+    {
+        Vector<double> dist(n,0.0);
+        SparseVector<T> temp(y);
+
+        for ( int i = 0 ; i < n ; ++n )
+        {
+            temp =  x(i);
+            temp -= y;
+
+            dist("&",i) = abs2(temp);
+        }
+
+        int i = 0;
+        res = median(dist,i); //,w);
+    }
+
+    return res;
+}
+
+
+
+
+
+
+
+
+
+
+
 template <class T>
 const T &indexedmax(const Vector<int> &n, const SparseVector<T> &a, int &ii)
 {
@@ -6012,12 +6190,6 @@ const T &indexedmaxabs(T &res, const Vector<int> &n, const SparseVector<T> &a, i
 
     return res;
 }
-
-
-
-
-
-
 
 
 

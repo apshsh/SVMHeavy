@@ -152,7 +152,6 @@ int convertSparseToSet(gentype &rres, const SparseVector<gentype> &src)
         int doit = 0;
 
         Vector<gentype> temp;
-        gentype nulldummy('N');
 
              if ( src.f4indsize() ) { doit = 4; }
         else if ( src.f2indsize() ) { doit = 3; }
@@ -171,7 +170,7 @@ int convertSparseToSet(gentype &rres, const SparseVector<gentype> &src)
 
             else
             {
-                res.add(nulldummy);
+                res.add(toGentype());
             }
         }
 
@@ -187,7 +186,7 @@ int convertSparseToSet(gentype &rres, const SparseVector<gentype> &src)
 
             else
             {
-                res.add(nulldummy);
+                res.add(toGentype());
             }
         }
 
@@ -203,7 +202,7 @@ int convertSparseToSet(gentype &rres, const SparseVector<gentype> &src)
 
             else
             {
-                res.add(nulldummy);
+                res.add(toGentype());
             }
         }
 
@@ -219,7 +218,7 @@ int convertSparseToSet(gentype &rres, const SparseVector<gentype> &src)
 
             else
             {
-                res.add(nulldummy);
+                res.add(toGentype());
             }
         }
     }
@@ -624,53 +623,17 @@ const SparseVector<gentype> &ML_Base::xmeansq(SparseVector<gentype> &res) const
 
 const SparseVector<gentype> &ML_Base::xmedian(SparseVector<gentype> &res) const
 {
-    res.zero();
+    retVector<double> tmpva;
 
-    if ( xspaceDim() && N() )
-    {
-        int i,j,k;
-        int indkeyscale = isXAssumedConsistent() ? N() : 1;
+    return geometricMedian(res,x(),onedoublevec(x().size(),tmpva));
+}
 
-        for ( i = 0 ; i < xspaceDim() ; ++i )
-        {
-            Vector<gentype> featvec(indkeyscale*indKeyCount()(i));
+double ML_Base::xMAD(void) const
+{
+    retVector<double> tmpva;
+    SparseVector<gentype> xmed;
 
-            k = 0;
-
-            for ( j = 0 ; j < N() ; ++j )
-            {
-                const SparseVector<gentype> &xx = x(j);
-
-                if ( xx.isindpresent(indKey()(i)) )
-                {
-                    featvec("&",k) = xx(indKey()(i));
-                    ++k;
-                }
-            }
-
-            gentype featveccomp(featvec);
-
-            res("&",indKey()(i)) = median(featveccomp);
-        }
-    }
-
-    //if ( res.nindsize() )
-    {
-        for ( int i = 0 ; i < res.nindsize() ; ++i )
-        {
-            if ( !( res.direcref(i).isValNull()    ||
-                    res.direcref(i).isValInteger() ||
-                    res.direcref(i).isValReal()    ||
-                    res.direcref(i).isValAnion()   ||
-                    res.direcref(i).isValVector()  ||
-                    res.direcref(i).isValMatrix()     ) )
-            {
-                res.direref(i) = 0;
-            }
-        }
-    }
-
-    return res;
+    return geometricMAD(xmed,x(),onedoublevec(x().size(),tmpva));
 }
 
 const SparseVector<gentype> &ML_Base::xvar(SparseVector<gentype> &res) const
@@ -842,208 +805,6 @@ const SparseVector<gentype> &ML_Base::xmin(SparseVector<gentype> &res) const
                 res.direref(i) = 0;
             }
         }
-    }
-
-    return res;
-}
-
-int ML_Base::normKernelNone(void)
-{
-    int res = 0;
-
-    if ( N() )
-    {
-        res = 1;
-
-        getKernel_unsafe().setUnShiftedScaled();
-        resetKernel(1);
-    }
-
-    return res;
-}
-
-int ML_Base::normKernelZeroMeanUnitVariance(int flatnorm, int noshift)
-{
-    // Normalise to zero mean, unit variance
-
-    int res = 0;
-
-    if ( N() )  
-    {
-        res = 1;
-
-        SparseVector<gentype> xmeanis;
-        SparseVector<gentype> xstddevis;
-
-        // Calculate mean and variance
-
-        xmean(xmeanis);
-        xstddev(xstddevis);
-
-        errstream() << ".";
-
-        // Calculate shift and scale from mean and variance
-        // Also sanitise by removing non-numeric entries
-
-        SparseVector<gentype> xshift;
-        SparseVector<gentype> xscale;
-
-        xshift = xmeanis;
-        xshift.negate();
-        xscale = xstddevis;
-
-        if ( flatnorm )
-        {
-            gentype totalscale;
-            int iii;
-
-            totalscale = min(xscale,iii);
-
-            xscale = totalscale;
-        }
-
-        if ( noshift )
-        {
-            xshift.zero();
-        }
-
-        // Remove errors from shift and scale (probably related to
-        // non-numeric features).
-
-        errstream() << "Shift: " << xshift << "\n";
-        errstream() << "Scale: " << xscale << "\n";
-
-        getKernel_unsafe().setShift(xshift);
-        getKernel_unsafe().setScale(xscale);
-        resetKernel(1);
-    }
-
-    return res;
-}
-
-int ML_Base::normKernelZeroMedianUnitVariance(int flatnorm, int noshift)
-{
-    // Normalise to zero median, unit variance
-
-    int res = 0;
-
-    if ( N() )  
-    {
-        res = 1;
-
-        SparseVector<gentype> xmedianis;
-        SparseVector<gentype> xstddevis;
-
-        // Calculate median and variance
-
-        xmedian(xmedianis);
-        xstddev(xstddevis);
-
-        errstream() << ".";
-
-        // Calculate shift and scale from median and variance
-        // Also sanitise by removing non-numeric entries
-
-        SparseVector<gentype> xshift;
-        SparseVector<gentype> xscale;
-
-        xshift = xmedianis;
-        xshift.negate();
-        xscale = xstddevis;
-
-        if ( flatnorm )
-        {
-            gentype totalscale;
-            int iii;
-
-            totalscale = min(xscale,iii);
-
-            xscale = totalscale;
-        }
-
-        if ( noshift )
-        {
-            xshift.zero();
-        }
-
-        // Remove errors from shift and scale (probably related to
-        // non-numeric features).
-
-        errstream() << "Shift: " << xshift << "\n";
-        errstream() << "Scale: " << xscale << "\n";
-
-        getKernel_unsafe().setShift(xshift);
-        getKernel_unsafe().setScale(xscale);
-        resetKernel(1);
-    }
-
-    return res;
-}
-
-
-int ML_Base::normKernelUnitRange(int flatnorm, int noshift)
-{
-    // Normalise range to 0-1
-
-    int res = 0;
-
-    if ( N() )  
-    {
-        res = 1;
-
-        SparseVector<gentype> xminis;
-        SparseVector<gentype> xmaxis;
-
-        xmin(xminis);
-        xmax(xmaxis);
-
-        // Calculate shift and scale
-
-        SparseVector<gentype> xshift(xminis);
-        SparseVector<gentype> xscale(xmaxis);
-
-        xshift.negate();
-        xscale -= xminis;
-
-        //if ( xscale.nindsize() )
-        {
-            for ( int j = 0 ; j < xscale.nindsize() ; ++j )
-            {
-                if ( abs2((double) xscale.direcref(j)) > 0 )
-                {
-                    ;
-                }
-
-                else
-                {
-                    xscale.direref(j) = 1;
-                }
-            }
-        }
-
-        if ( flatnorm )
-        {
-            gentype totalscale;
-            int iii;
-
-            totalscale = min(xscale,iii);
-
-            xscale = totalscale;
-        }
-
-        if ( noshift )
-        {
-            xshift.zero();
-        }
-
-        // Shift and scale
-
-        errstream() << "Shift: " << xshift << "\n";
-        errstream() << "Scale: " << xscale << "\n";
-
-        getKernel_unsafe().setShift(xshift);
-        getKernel_unsafe().setScale(xscale);
-        resetKernel(1);
     }
 
     return res;
@@ -7614,8 +7375,9 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
     ML_Base &model = *this;
     MercerKernel &lockernel = model.getKernel_unsafe();
 
-    int kdim = lockernel.size();
-    int Nval = model.N() - model.NNC(0);
+    int kdim    = lockernel.size();
+    int kARDdim = lockernel.cScale().indsize();
+    int Nval    = model.N() - model.NNC(0);
 
     int i,j,k;
 
@@ -7631,6 +7393,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 
     Vector<Vector<gentype> > constVecs(kdim);
     Vector<double>           weightval(kdim);
+    SparseVector<gentype>    ARDScale(lockernel.cScale());
 
     for ( i = 0 ; i < kdim ; ++i )
     {
@@ -7644,10 +7407,29 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
 
     if ( tuneK )
     {
+SparseVector<gentype> yres;
+errstream() << "Geometric median: " << xmedian(yres);
+//errstream() << "Geometric MAD: " << xMAD();
+/*
+FIXME: for ARD case, do this per axis
+FIXME: consider using xstddev rather than xmax-xmin
+FIXME: we need to deal with the case where data is *narrow* - that is, xgap < xscale. How to do this?
+FIXME: instead use the 2-norm of the gaps, which is the distance between the corners of the parellogram, and divide by the gap for the unit hypercube
+FIXME: SO, WORK OUT VAR AND SCALE BY THE ASSUMED CASE OF UNIFORM DATA ON A HYPERCUBE
+FIXME: to validate, record the xscale for the sima case (first sim) and see whether that would mess things up)
+FIXME: but only do this once there are more than some threshold number of points in the training set (ie xscale = 1 until N > f(dim)
+
+method: work out meadian, work out distance from median, work out 80% (or whatever) percentile, work out distance
+        scale by the inverse of the expected value of this from a uniform distribution
+        in the ARD case, do this per axis (becomes mode)
+median absolute deviation?
+geometric median in multivariate case?
+*/
+
         // If the data doesn't range 0->1 (unit hypercube) then our assumptions are off
         // Here we calculate the max gap, which will be used to rescale the lengthscale
         // It's not perfect and it makes a bunch of assumptions (range same on all axis,
-        // data covers full range), but it's an ok approx I think?
+        // data covers full range), but hopefully it suffices.
 
         SparseVector<gentype> xtmpmax;
         SparseVector<gentype> xtmpmin;
@@ -7697,9 +7479,67 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
             }
         }
 
-        for ( i = 0 ; i < kdim ; ++i )
+        for ( i = -1 ; i < kdim ; ++i )
         {
-            if ( constVecs(i).size() && !(lockernel.isNomConst(i)) )
+            // Kernel -1 is the ARD scale (if used)
+
+            if ( ( i == -1 ) && kARDdim )
+            {
+                for ( j = 0 ; j < kARDdim ; ++j )
+                {
+                    double lb = 0;
+                    double ub = 0;
+
+                    int addit = 0;
+
+                    // This is basically the lengthscale below, but modified for ARD
+
+                    if ( !(lockernel.cScale().direcref(j).isNomConst) )
+                    {
+                        // This is ARD length-scale - see below
+
+                        double lencorrect = 1/sqrt(Nval);
+
+                        double minscaler = 1/24.0;
+                        double maxscaler = 3/(1.1*1.88264);
+
+                        lencorrect = ( lencorrect < 0.01 ) ? 0.01 : lencorrect;
+
+                        lb = xscale*lencorrect*minscaler*xwidth;
+                        ub = xscale*lencorrect*maxscaler*xwidth;
+
+                        double ubb = xscale*xwidth;
+                        double ulb = xscale*xwidth;
+
+                        ub = ( ub < ubb ) ? (ub+ub+ub+ubb)/4 : ubb;
+                        ub = ( ub > ulb ) ? ub : ulb;
+
+                        lb = ( !lockernel.cScaleLB().isindpresent(j) || lockernel.cScaleLB().direcref(j).isValNull() ) ? lb : ( (double) lockernel.cScaleLB().direcref(j) );
+                        ub = ( !lockernel.cScaleUB().isindpresent(j) || lockernel.cScaleUB().direcref(j).isValNull() ) ? ub : ( (double) lockernel.cScaleUB().direcref(j) );
+
+                        lb = ( !tuneBounds || !(((*tuneBounds).kARDscalelb).isindpresent(j)) || ( (((*tuneBounds).kARDscalelb).direcref(j)) < lb ) ) ? lb : (((*tuneBounds).kARDscalelb).direcref(j));
+                        ub = ( !tuneBounds || !(((*tuneBounds).kARDscaleub).isindpresent(j)) || ( (((*tuneBounds).kARDscaleub).direcref(j)) > ub ) ) ? ub : (((*tuneBounds).kARDscaleub).direcref(j));
+
+                        if ( lb < ub )
+                        {
+                            addit = 1;
+errstream() << "Tune ARD element " << j << " in range " << lb << " to " << ub <<"\n";
+                        }
+                    }
+
+                    if ( addit )
+                    {
+                        kind.add(ddim); kind("&",ddim) = i;
+                        kelm.add(ddim); kelm("&",ddim) = j;
+                        kmin.add(ddim); kmin("&",ddim) = lb;
+                        kmax.add(ddim); kmax("&",ddim) = ub;
+
+                        ++ddim;
+                    }
+                }
+            }
+
+            else if ( ( i >= 0 ) && constVecs(i).size() && !(lockernel.isNomConst(i)) )
             {
                 // Element -1 is the weight of the lockernel in the sum
 
@@ -7726,6 +7566,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
                         if ( lb < ub )
                         {
                             addit = 1;
+errstream() << "Tune weight " << i << " in range " << lb << " to " << ub <<"\n";
                         }
                     }
 
@@ -7734,7 +7575,7 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
                         ;
                     }
 
-                    else if ( ( j == 0 ) && ( lockernel.cType(i) < 800 ) && ( lockernel.cType(i) != 0 ) && ( lockernel.cType(i) != 48 ) && ( lockernel.cType(i) != 200 ) && !(lockernel.cRealConstants(i)(j).isNomConst) ) //&& lockernel.isAdjRealConstants(j,i) )
+                    else if ( !kARDdim && ( j == 0 ) && ( lockernel.cType(i) < 800 ) && ( lockernel.cType(i) != 0 ) && ( lockernel.cType(i) != 48 ) && ( lockernel.cType(i) != 200 ) && !(lockernel.cRealConstants(i)(j).isNomConst) ) //&& lockernel.isAdjRealConstants(j,i) )
                     {
                         // This is length-scale, always, with the single exception of lockernels 0 and 48 where lengthscale is meaningless (log)
 
@@ -7771,11 +7612,29 @@ errstream() << lb << " to " << ub << ",";
 
                         lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
                         ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
-errstream() << lb << " to " << ub << "___";
+errstream() << lb << " to " << ub << "___\n";
 
                         if ( lb < ub )
                         {
                             addit = 1;
+errstream() << "Tune lengthscale " << i << " in range " << lb << " to " << ub <<"\n";
+                        }
+                    }
+
+                    else if ( kARDdim && ( i > 0 ) && ( j == 0 ) && ( lockernel.cType(i) < 800 ) && ( lockernel.cType(i) != 0 ) && ( lockernel.cType(i) != 48 ) && ( lockernel.cType(i) != 200 ) && !(lockernel.cRealConstants(i)(j).isNomConst) ) //&& lockernel.isAdjRealConstants(j,i) )
+                    {
+                        // This is length-scale *SCALING*, always, with the single exception of lockernels 0 and 48 where lengthscale is meaningless (log)
+
+                        lb = lockernel.cRealConstantsLB(i)(j).isValNull() ? 0.1 : ( (double) lockernel.cRealConstantsLB(i)(j) );
+                        ub = lockernel.cRealConstantsUB(i)(j).isValNull() ? 10  : ( (double) lockernel.cRealConstantsUB(i)(j) );
+
+                        lb = ( !tuneBounds || ( (((*tuneBounds).klb)(i)(j)) < lb ) ) ? lb : (((*tuneBounds).klb)(i)(j));
+                        ub = ( !tuneBounds || ( (((*tuneBounds).kub)(i)(j)) > ub ) ) ? ub : (((*tuneBounds).kub)(i)(j));
+
+                        if ( lb < ub )
+                        {
+                            addit = 1;
+errstream() << "Tune lengthscale scaling " << i << " in range " << lb << " to " << ub <<"\n";
                         }
                     }
 
@@ -7792,6 +7651,7 @@ errstream() << lb << " to " << ub << "___";
                         if ( lb < ub )
                         {
                             addit = 1;
+errstream() << "Tune norm-order " << i << " in range " << lb << " to " << ub <<"\n";
                         }
                     }
 
@@ -7808,6 +7668,7 @@ errstream() << lb << " to " << ub << "___";
                         if ( lb < ub )
                         {
                             addit = 1;
+errstream() << "Tune task-relatedness " << i << " in range " << lb << " to " << ub <<"\n";
                         }
                     }
 
@@ -7899,12 +7760,13 @@ tryagain:
 
         int steps = 0;
 
-        if      ( j == -3 )                                    { steps = ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); }
-        else if ( j == -2 )                                    { steps = ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); }
-        else if ( j == -1 )                                    { steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); }
-        else if ( j == 0  )                                    { steps = ( ( ((int) (50/trycount)) > 5 ) ? ((int) (50/trycount)) : 5 ); }
-        else if ( ( j == 1 ) && ( lockernel.cType(i) == 5  ) ) { steps = 6; --altddim;                                                  }
-        else if ( ( j == 1 ) && ( lockernel.cType(i) == 48 ) ) { steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); }
+        if      ( ( j == -3 )                                 ) { steps = ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); }
+        else if ( ( j == -2 )                                 ) { steps = ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); }
+        else if ( ( j == -1 )                                 ) { steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); }
+        else if ( ( j >= 0  ) && ( i == -1 )                  ) { steps = ( ( ((int) (50/trycount)) > 5 ) ? ((int) (50/trycount)) : 5 ); }
+        else if ( ( j == 0  ) && ( i >= 0  )                  ) { steps = ( ( ((int) (50/trycount)) > 5 ) ? ((int) (50/trycount)) : 5 ); }
+        else if ( ( j == 1  ) && ( lockernel.cType(i) == 5  ) ) { steps = 6; --altddim;                                                  }
+        else if ( ( j == 1  ) && ( lockernel.cType(i) == 48 ) ) { steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); }
 
         kstp("&",k) = steps;
         adim *= steps;
@@ -7949,6 +7811,7 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
 
         Vector<Vector<gentype> > bestconstVecs(constVecs); // this will store the best constVecs
         Vector<double>           bestweightval(weightval); // "
+        SparseVector<gentype>    bestARDScale(ARDScale);   // "
 
         double bestCval   = backC;   // "
         double bestepsval = backeps; // "
@@ -8042,10 +7905,11 @@ errstream() << "\n";
 
         for ( j = 0 ; j < ddim ; ++j )
         {
-            if      ( kelm(j) >= 0  ) { bestconstVecs("&",kind(j))("&",kelm(j)) = bestffull(j); }
-            else if ( kelm(j) == -1 ) { bestweightval("&",kind(j))              = bestffull(j); }
-            else if ( kelm(j) == -2 ) { bestCval                                = bestffull(j); }
-            else if ( kelm(j) == -3 ) { bestepsval                              = bestffull(j); }
+            if      ( ( kelm(j) >= 0  ) && ( kind(j) == -1 ) ) { bestARDScale.direref(kelm(j))           = bestffull(j); }
+            else if ( ( kelm(j) >= 0  ) && ( kind(j) >= 0  ) ) { bestconstVecs("&",kind(j))("&",kelm(j)) = bestffull(j); }
+            else if ( ( kelm(j) == -1 )                      ) { bestweightval("&",kind(j))              = bestffull(j); }
+            else if ( ( kelm(j) == -2 )                      ) { bestCval                                = bestffull(j); }
+            else if ( ( kelm(j) == -3 )                      ) { bestepsval                              = bestffull(j); }
         }
 
         {
@@ -8059,6 +7923,7 @@ errstream() << "\n";
             {
                 constVecs = bestconstVecs;
                 weightval = bestweightval;
+                ARDScale  = bestARDScale;
 
                 Cval   = bestCval;
                 epsval = bestepsval;
@@ -8072,6 +7937,8 @@ errstream() << "\n";
                         lockernel.setRealConstants(constVecs(j),j);
                         lockernel.setWeight(wv,j);
                     }
+
+                    if ( kARDdim ) { lockernel.setScale(ARDScale); }
 
                     model.resetKernel(1,-2);
                 }
@@ -8117,14 +7984,16 @@ double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<doub
                         ML_Base &model = *this;
                         MercerKernel &lockernel = model.getKernel_unsafe();
 
-                        int lockdim = lockernel.size();
-                        int locddim = ffull.size();
+                        int lockdim    = lockernel.size();
+                        int lockARDdim = lockernel.cScale().indsize();
+                        int locddim    = ffull.size();
 
                         double locCval   = backC;
                         double locepsval = backeps;
 
                         Vector<Vector<gentype> > locconstVecs(lockdim);
                         Vector<double>           locweightval(lockdim);
+                        SparseVector<gentype>    locARDScale;
 
                         int loctuneK = 0;
                         int loctuneP = 0;
@@ -8135,12 +8004,15 @@ double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<doub
                             locweightval("&",j) = (double) backkernel.cWeight(j);
                         }
 
+                        locARDScale = backkernel.cScale();
+
                         for ( int j = 0 ; j < locddim ; ++j )
                         {
-                            if      ( kelm(j) >= 0  ) { locconstVecs("&",kind(j))("&",kelm(j)) = ffull(j); loctuneK |= 1; }
-                            else if ( kelm(j) == -1 ) { locweightval("&",kind(j))              = ffull(j); loctuneK |= 1; }
-                            else if ( kelm(j) == -2 ) { locCval                                = ffull(j); loctuneP |= 1; }
-                            else if ( kelm(j) == -3 ) { locepsval                              = ffull(j); loctuneP |= 2; }
+                            if      ( ( kelm(j) >= 0  ) && ( kind(j) == -1 ) ) { locARDScale.direref(kelm(j))           = ffull(j); loctuneK |= 1; }
+                            else if ( ( kelm(j) >= 0  ) && ( kind(j) >= 0  ) ) { locconstVecs("&",kind(j))("&",kelm(j)) = ffull(j); loctuneK |= 1; }
+                            else if ( ( kelm(j) == -1 )                      ) { locweightval("&",kind(j))              = ffull(j); loctuneK |= 1; }
+                            else if ( ( kelm(j) == -2 )                      ) { locCval                                = ffull(j); loctuneP |= 1; }
+                            else if ( ( kelm(j) == -3 )                      ) { locepsval                              = ffull(j); loctuneP |= 2; }
                         }
 
                         if ( loctuneK )
@@ -8152,6 +8024,8 @@ double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<doub
                                 lockernel.setRealConstants(locconstVecs(j),j);
                                 lockernel.setWeight(wv,j);
                             }
+
+                            if ( lockARDdim ) { lockernel.setScale(locARDScale); }
 
                             model.resetKernel(1,-2);
                         }
@@ -9255,7 +9129,7 @@ double ML_Base::K1(int ia,
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             gentype UUres;
 
@@ -9272,7 +9146,7 @@ double ML_Base::K1(int ia,
 
             iiplanr("&",0) = iaplanr;
             iiplan("&",0)  = iaplan;
-            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &nullgentype();
+            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &toGentype();
 
             gentype VVres;
             gentype kval(res);
@@ -9398,7 +9272,7 @@ T &ML_Base::K1(T &res,
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             gentype UUres;
 
@@ -9415,7 +9289,7 @@ T &ML_Base::K1(T &res,
 
             iiplanr("&",0) = iaplanr;
             iiplan("&",0)  = iaplan;
-            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &nullgentype();
+            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &toGentype();
 
             gentype VVres;
             gentype kval(res);
@@ -9814,11 +9688,11 @@ double ML_Base::K2x2(int ia, int ib, int ic,
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             {
                 gentype UUres;
@@ -9830,11 +9704,11 @@ double ML_Base::K2x2(int ia, int ib, int ic,
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = icokr;
             iiok("&",1)  = icok;
-            xxalt("&",1) = (*xc).isf4indpresent(3) ? &((*xc).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xc).isf4indpresent(3) ? &((*xc).f4(3)) : &toGentype();
 
             {
                 gentype UUres;
@@ -9855,11 +9729,11 @@ double ML_Base::K2x2(int ia, int ib, int ic,
 
             iiplanr("&",0) = iaplanr;
             iiplan("&",0)  = iaplan;
-            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &nullgentype();
+            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &toGentype();
 
             iiplanr("&",1) = ibplanr;
             iiplan("&",1)  = ibplan;
-            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &nullgentype();
+            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &toGentype();
 
             gentype kvalorig(res);
 
@@ -9874,11 +9748,11 @@ double ML_Base::K2x2(int ia, int ib, int ic,
 
             iiplanr("&",0) = iaplanr;
             iiplan("&",0)  = iaplan;
-            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &nullgentype();
+            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &toGentype();
 
             iiplanr("&",1) = icplanr;
             iiplan("&",1)  = icplan;
-            xxalt("&",1)   = (*xc).isf4indpresent(7) ? &((*xc).f4(7)) : &nullgentype();
+            xxalt("&",1)   = (*xc).isf4indpresent(7) ? &((*xc).f4(7)) : &toGentype();
 
             {
                 gentype VVres;
@@ -10226,11 +10100,11 @@ T &ML_Base::K2x2(T &res,
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             {
                 gentype UUres;
@@ -10242,11 +10116,11 @@ T &ML_Base::K2x2(T &res,
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = icokr;
             iiok("&",1)  = icok;
-            xxalt("&",1) = (*xc).isf4indpresent(3) ? &((*xc).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xc).isf4indpresent(3) ? &((*xc).f4(3)) : &toGentype();
 
             {
                 gentype UUres;
@@ -10267,11 +10141,11 @@ T &ML_Base::K2x2(T &res,
 
             iiplanr("&",0) = iaplanr;
             iiplan("&",0)  = iaplan;
-            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &nullgentype();
+            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &toGentype();
 
             iiplanr("&",1) = ibplanr;
             iiplan("&",1)  = ibplan;
-            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &nullgentype();
+            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &toGentype();
 
             gentype kvalorig(res);
 
@@ -10286,11 +10160,11 @@ T &ML_Base::K2x2(T &res,
 
             iiplanr("&",0) = iaplanr;
             iiplan("&",0)  = iaplan;
-            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &nullgentype();
+            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &toGentype();
 
             iiplanr("&",1) = icplanr;
             iiplan("&",1)  = icplan;
-            xxalt("&",1)   = (*xc).isf4indpresent(7) ? &((*xc).f4(7)) : &nullgentype();
+            xxalt("&",1)   = (*xc).isf4indpresent(7) ? &((*xc).f4(7)) : &toGentype();
 
             {
                 gentype VVres;
@@ -10531,11 +10405,11 @@ errstream() << "K2 evaluated null 3: " << getKernel() << "\n";
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             gentype UUres;
 
@@ -10552,11 +10426,11 @@ errstream() << "K2 evaluated null 3: " << getKernel() << "\n";
 
             iiplanr("&",0) = iaplanr;
             iiplan("&",0)  = iaplan;
-            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &nullgentype();
+            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &toGentype();
 
             iiplanr("&",1) = ibplanr;
             iiplan("&",1)  = ibplan;
-            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &nullgentype();
+            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &toGentype();
 
             gentype VVres;
             gentype kval(res);
@@ -10801,11 +10675,11 @@ errstream() << "K2 evaluated null 3: " << getKernel() << "\n";
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             gentype UUres;
 
@@ -10822,11 +10696,11 @@ errstream() << "K2 evaluated null 3: " << getKernel() << "\n";
 
             iiplanr("&",0) = iaplanr;
             iiplan("&",0)  = iaplan;
-            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &nullgentype();
+            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &toGentype();
 
             iiplanr("&",1) = ibplanr;
             iiplan("&",1)  = ibplan;
-            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &nullgentype();
+            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &toGentype();
 
             gentype VVres;
             gentype kval(res);
@@ -11160,15 +11034,15 @@ double ML_Base::K3(int ia, int ib, int ic,
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             iiokr("&",2) = icokr;
             iiok("&",2)  = icok;
-            xxalt("&",2) = (*xc).isf4indpresent(3) ? &((*xc).f4(3)) : &nullgentype();
+            xxalt("&",2) = (*xc).isf4indpresent(3) ? &((*xc).f4(3)) : &toGentype();
 
             gentype UUres;
 
@@ -11185,15 +11059,15 @@ double ML_Base::K3(int ia, int ib, int ic,
 
             iiplanr("&",0) = iaplanr;
             iiplan("&",0)  = iaplan;
-            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &nullgentype();
+            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &toGentype();
 
             iiplanr("&",1) = ibplanr;
             iiplan("&",1)  = ibplan;
-            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &nullgentype();
+            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &toGentype();
 
             iiplanr("&",2) = icplanr;
             iiplan("&",2)  = icplan;
-            xxalt("&",2)   = (*xc).isf4indpresent(7) ? &((*xc).f4(7)) : &nullgentype();
+            xxalt("&",2)   = (*xc).isf4indpresent(7) ? &((*xc).f4(7)) : &toGentype();
 
             gentype VVres;
             gentype kval(res);
@@ -11520,15 +11394,15 @@ T &ML_Base::K3(T &res,
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             iiokr("&",2) = icokr;
             iiok("&",2)  = icok;
-            xxalt("&",2) = (*xc).isf4indpresent(3) ? &((*xc).f4(3)) : &nullgentype();
+            xxalt("&",2) = (*xc).isf4indpresent(3) ? &((*xc).f4(3)) : &toGentype();
 
             gentype UUres;
 
@@ -11545,15 +11419,15 @@ T &ML_Base::K3(T &res,
 
             iiplanr("&",0) = iaplanr;
             iiplan("&",0)  = iaplan;
-            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &nullgentype();
+            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &toGentype();
 
             iiplanr("&",1) = ibplanr;
             iiplan("&",1)  = ibplan;
-            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &nullgentype();
+            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &toGentype();
 
             iiplanr("&",2) = icplanr;
             iiplan("&",2)  = icplan;
-            xxalt("&",2)   = (*xc).isf4indpresent(7) ? &((*xc).f4(7)) : &nullgentype();
+            xxalt("&",2)   = (*xc).isf4indpresent(7) ? &((*xc).f4(7)) : &toGentype();
 
             gentype VVres;
             gentype kval(res);
@@ -12036,19 +11910,19 @@ double ML_Base::K4(int ia, int ib, int ic, int id,
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             iiokr("&",2) = icokr;
             iiok("&",2)  = icok;
-            xxalt("&",2) = (*xc).isf4indpresent(3) ? &((*xc).f4(3)) : &nullgentype();
+            xxalt("&",2) = (*xc).isf4indpresent(3) ? &((*xc).f4(3)) : &toGentype();
 
             iiokr("&",3) = idokr;
             iiok("&",3)  = idok;
-            xxalt("&",3) = (*xd).isf4indpresent(3) ? &((*xd).f4(3)) : &nullgentype();
+            xxalt("&",3) = (*xd).isf4indpresent(3) ? &((*xd).f4(3)) : &toGentype();
 
             gentype UUres;
 
@@ -12065,19 +11939,19 @@ double ML_Base::K4(int ia, int ib, int ic, int id,
 
             iiplanr("&",0) = iaplanr;
             iiplan("&",0)  = iaplan;
-            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &nullgentype();
+            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &toGentype();
 
             iiplanr("&",1) = ibplanr;
             iiplan("&",1)  = ibplan;
-            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &nullgentype();
+            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &toGentype();
 
             iiplanr("&",2) = icplanr;
             iiplan("&",2)  = icplan;
-            xxalt("&",2)   = (*xc).isf4indpresent(7) ? &((*xc).f4(7)) : &nullgentype();
+            xxalt("&",2)   = (*xc).isf4indpresent(7) ? &((*xc).f4(7)) : &toGentype();
 
             iiplanr("&",3) = idplanr;
             iiplan("&",3)  = idplan;
-            xxalt("&",3)   = (*xd).isf4indpresent(7) ? &((*xd).f4(7)) : &nullgentype();
+            xxalt("&",3)   = (*xd).isf4indpresent(7) ? &((*xd).f4(7)) : &toGentype();
 
             gentype VVres;
             gentype kval(res);
@@ -12560,19 +12434,19 @@ T &ML_Base::K4(T &res,
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             iiokr("&",2) = icokr;
             iiok("&",2)  = icok;
-            xxalt("&",2) = (*xc).isf4indpresent(3) ? &((*xc).f4(3)) : &nullgentype();
+            xxalt("&",2) = (*xc).isf4indpresent(3) ? &((*xc).f4(3)) : &toGentype();
 
             iiokr("&",3) = idokr;
             iiok("&",3)  = idok;
-            xxalt("&",3) = (*xd).isf4indpresent(3) ? &((*xd).f4(3)) : &nullgentype();
+            xxalt("&",3) = (*xd).isf4indpresent(3) ? &((*xd).f4(3)) : &toGentype();
 
             gentype UUres;
 
@@ -12589,19 +12463,19 @@ T &ML_Base::K4(T &res,
 
             iiplanr("&",0) = iaplanr;
             iiplan("&",0)  = iaplan;
-            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &nullgentype();
+            xxalt("&",0)   = (*xa).isf4indpresent(7) ? &((*xa).f4(7)) : &toGentype();
 
             iiplanr("&",1) = ibplanr;
             iiplan("&",1)  = ibplan;
-            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &nullgentype();
+            xxalt("&",1)   = (*xb).isf4indpresent(7) ? &((*xb).f4(7)) : &toGentype();
 
             iiplanr("&",2) = icplanr;
             iiplan("&",2)  = icplan;
-            xxalt("&",2)   = (*xc).isf4indpresent(7) ? &((*xc).f4(7)) : &nullgentype();
+            xxalt("&",2)   = (*xc).isf4indpresent(7) ? &((*xc).f4(7)) : &toGentype();
 
             iiplanr("&",3) = idplanr;
             iiplan("&",3)  = idplan;
-            xxalt("&",3)   = (*xd).isf4indpresent(7) ? &((*xd).f4(7)) : &nullgentype();
+            xxalt("&",3)   = (*xd).isf4indpresent(7) ? &((*xd).f4(7)) : &toGentype();
 
             gentype VVres;
             gentype kval(res);
@@ -12845,7 +12719,7 @@ double ML_Base::Km(int m,
 
                 for ( jj = 0 ; jj < m ; ++jj )
                 {
-                    xxalt("&",jj) = (*(xx(jj))).isf4indpresent(3) ? &((*(xx(jj))).f4(3)) : &nullgentype();
+                    xxalt("&",jj) = (*(xx(jj))).isf4indpresent(3) ? &((*(xx(jj))).f4(3)) : &toGentype();
                 }
 
                 gentype UUres;
@@ -12861,7 +12735,7 @@ double ML_Base::Km(int m,
 
                 for ( jj = 0 ; jj < m ; ++jj )
                 {
-                    xxalt("&",jj) = (*(xx(jj))).isf4indpresent(7) ? &((*(xx(jj))).f4(7)) : &nullgentype();
+                    xxalt("&",jj) = (*(xx(jj))).isf4indpresent(7) ? &((*(xx(jj))).f4(7)) : &toGentype();
                 }
 
                 gentype VVres;
@@ -13125,7 +12999,7 @@ resmode);
 
                 for ( jj = 0 ; jj < m ; ++jj )
                 {
-                    xxalt("&",jj) = (*(xx(jj))).isf4indpresent(3) ? &((*(xx(jj))).f4(3)) : &nullgentype();
+                    xxalt("&",jj) = (*(xx(jj))).isf4indpresent(3) ? &((*(xx(jj))).f4(3)) : &toGentype();
                 }
 
                 gentype UUres;
@@ -13141,7 +13015,7 @@ resmode);
 
                 for ( jj = 0 ; jj < m ; ++jj )
                 {
-                    xxalt("&",jj) = (*(xx(jj))).isf4indpresent(7) ? &((*(xx(jj))).f4(7)) : &nullgentype();
+                    xxalt("&",jj) = (*(xx(jj))).isf4indpresent(7) ? &((*(xx(jj))).f4(7)) : &toGentype();
                 }
 
                 gentype VVres;
@@ -13596,11 +13470,11 @@ void ML_Base::dK(T &xygrad, T &xnormgrad,
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             gentype UUres;
 
@@ -13771,11 +13645,11 @@ void ML_Base::d2K(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T &xyyno
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             gentype UUres;
 
@@ -13952,11 +13826,11 @@ void ML_Base::d2K2delxdelx(T &xxscaleres, T &yyscaleres, T &xyscaleres, T &yxsca
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             gentype UUres;
 
@@ -14131,11 +14005,11 @@ void ML_Base::d2K2delxdely(T &xxscaleres, T &yyscaleres, T &xyscaleres, T &yxsca
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             gentype UUres;
 
@@ -14310,11 +14184,11 @@ void ML_Base::dnK2del(Vector<T> &sc, Vector<Vector<int> > &n, int &minmaxind,
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             gentype UUres;
 
@@ -14484,11 +14358,11 @@ void ML_Base::dK2delx(T &xscaleres, T &yscaleres, int &minmaxind,
 
             iiokr("&",0) = iaokr;
             iiok("&",0)  = iaok;
-            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &nullgentype();
+            xxalt("&",0) = (*xa).isf4indpresent(3) ? &((*xa).f4(3)) : &toGentype();
 
             iiokr("&",1) = ibokr;
             iiok("&",1)  = ibok;
-            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &nullgentype();
+            xxalt("&",1) = (*xb).isf4indpresent(3) ? &((*xb).f4(3)) : &toGentype();
 
             gentype UUres;
 

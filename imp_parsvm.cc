@@ -107,11 +107,6 @@ int IMP_ParSVM::imp(gentype &resi, gentype &resv, const SparseVector<gentype> &x
 
     gh(tempresh,resi,xx);
 
-    //SparseVector<gentype> mgrad;
-    //const static gentype dummy('N');
-    //
-    //dgg(mgrad,dummy,xxmean);
-
     gentype mgrad;
     SparseVector<gentype> &xxmeangrad = xx;
 

@@ -184,7 +184,7 @@ errstream() << "Sample scalarisation model... \n";
 //        ymaxtest.f4("&",11) = 1;
 //        ymaxtest.f4("&",13) = -sampSlack();
 
-        gentype dummy,minres,maxres,sf,dummyb('N');
+        gentype dummy,minres,maxres,sf;
 
         dbias = 0.0;
         dscale = 1.0;
@@ -192,8 +192,8 @@ errstream() << "Sample scalarisation model... \n";
         //(*randscal).gh(dummy,minres,ymintest,2);
         //(*randscal).gh(dummy,maxres,ymaxtest,2);
 
-        imp(minres,dummy,ymintest,dummyb);
-        imp(maxres,dummy,ymaxtest,dummyb);
+        imp(minres,dummy,ymintest,toGentype());
+        imp(maxres,dummy,ymaxtest,toGentype());
 
         dbias  = -(double) minres;
         dscale = 1/((double) (maxres-minres));

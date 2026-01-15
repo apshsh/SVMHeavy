@@ -1425,7 +1425,7 @@ I previously  had sigmay += predsigmay for non multi-fid as well, Justification 
 
             double muR         = (double) muy;
             double sigmaR      = (double) sigmay;
-            double yymaxR      = hhcgt;
+            double yymaxR      = yymaxcorrect;
             double hhR         = hh;
             double alphaR      = alpha;
             double betaR       = beta;
@@ -1725,7 +1725,8 @@ I previously  had sigmay += predsigmay for non multi-fid as well, Justification 
 //errstream() << " = ( " << exploitFactor << " + " << exploreFactor << " ))";
 //errstream() << " + ( " << exploitFactorcgt << " + " << exploreFactorcgt << " ))";
 //errstream() << "\t ( " << minexploreFactorcgt << " to " << maxexploreFactorcgt << " )";
-//errstream() << "\t" << mucgt << "\n";
+//errstream() << "\t" << mucgt;
+//errstream() << "(maxy: " << yymaxcorrect <<  ")" << "\n";
 
     return res;
   }
@@ -2226,7 +2227,7 @@ bool addDataToModel(int &ii,
 
     if ( !ycgt.size() && bopts.numcgt )
     {
-        ycgt.resize(bopts.numcgt) = 0.0_gent; //nullgentype(); - don't want null here!
+        ycgt.resize(bopts.numcgt) = 0.0_gent; //toGentype(); - don't want null here!
         xobstype_cgt.resize(bopts.numcgt) = 0;
     }
 
@@ -2429,8 +2430,8 @@ void SparsenearToSparsenonnear(SparseVector<gentype> &dest, const SparseVector<d
 
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { if ( testisvnan(src(j))                  ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src(j);                  } }
-        else                  { if ( testisvnan(src.n(j-(dim-dimfid),1)) ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src.n(j-(dim-dimfid),1); } }
+        if ( j < dim-dimfid ) { if ( testisvnan(src(j))                  ) { dest("&",j) = toGentype(); } else { dest("&",j).force_double() = src(j);                  } }
+        else                  { if ( testisvnan(src.n(j-(dim-dimfid),1)) ) { dest("&",j) = toGentype(); } else { dest("&",j).force_double() = src.n(j-(dim-dimfid),1); } }
     }
 }
 
@@ -2474,8 +2475,8 @@ void SparsenearToNonsparse(Vector<gentype> &dest, const SparseVector<double> &sr
 
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { if ( testisvnan(src(j))                  ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src(j);                  } }
-        else                  { if ( testisvnan(src.n(j-(dim-dimfid),1)) ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src.n(j-(dim-dimfid),1); } }
+        if ( j < dim-dimfid ) { if ( testisvnan(src(j))                  ) { dest("&",j) = toGentype(); } else { dest("&",j).force_double() = src(j);                  } }
+        else                  { if ( testisvnan(src.n(j-(dim-dimfid),1)) ) { dest("&",j) = toGentype(); } else { dest("&",j).force_double() = src.n(j-(dim-dimfid),1); } }
     }
 }
 
@@ -2519,8 +2520,8 @@ void SparsenonnearToSparsenear(SparseVector<gentype> &dest, const SparseVector<d
 
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { if ( testisvnan(src(j)) ) { dest("&",j)                  = nullgentype(); } else { dest("&",j).force_double()                  = src(j); } }
-        else                  { if ( testisvnan(src(j)) ) { dest.n("&",j-(dim-dimfid),1) = nullgentype(); } else { dest.n("&",j-(dim-dimfid),1).force_double() = src(j); } }
+        if ( j < dim-dimfid ) { if ( testisvnan(src(j)) ) { dest("&",j)                  = toGentype(); } else { dest("&",j).force_double()                  = src(j); } }
+        else                  { if ( testisvnan(src(j)) ) { dest.n("&",j-(dim-dimfid),1) = toGentype(); } else { dest.n("&",j-(dim-dimfid),1).force_double() = src(j); } }
     }
 }
 
@@ -2564,8 +2565,8 @@ void NonsparseToSparsenear(SparseVector<gentype> &dest, const Vector<double> &sr
 
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { if ( testisvnan(src(j)) ) { dest("&",j)                  = nullgentype(); } else { dest("&",j).force_double()                  = src(j); } }
-        else                  { if ( testisvnan(src(j)) ) { dest.n("&",j-(dim-dimfid),1) = nullgentype(); } else { dest.n("&",j-(dim-dimfid),1).force_double() = src(j); } }
+        if ( j < dim-dimfid ) { if ( testisvnan(src(j)) ) { dest("&",j)                  = toGentype(); } else { dest("&",j).force_double()                  = src(j); } }
+        else                  { if ( testisvnan(src(j)) ) { dest.n("&",j-(dim-dimfid),1) = toGentype(); } else { dest.n("&",j-(dim-dimfid),1).force_double() = src(j); } }
     }
 }
 
@@ -2609,8 +2610,8 @@ void NonsparseToSparsenonnear(SparseVector<gentype> &dest, const Vector<double> 
 
     for ( int j = 0 ; j < dim ; ++j )
     {
-        if ( j < dim-dimfid ) { if ( testisvnan(src(j)) ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src(j); } }
-        else                  { if ( testisvnan(src(j)) ) { dest("&",j) = nullgentype(); } else { dest("&",j).force_double() = src(j); } }
+        if ( j < dim-dimfid ) { if ( testisvnan(src(j)) ) { dest("&",j) = toGentype(); } else { dest("&",j).force_double() = src(j); } }
+        else                  { if ( testisvnan(src(j)) ) { dest("&",j) = toGentype(); } else { dest("&",j).force_double() = src(j); } }
     }
 }
 
@@ -3461,8 +3462,8 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                 // ===========================================================
                 // ===========================================================
 
-                gentype gridresis = nullgentype();
-                Vector<gentype> ycgtis(bopts.numcgt,nullgentype());
+                gentype gridresis = toGentype();
+                Vector<gentype> ycgtis(bopts.numcgt,toGentype());
 
                 if ( isgridopt && ( isfullgrid || ( bopts.model_d(Nbasemu+gridi) == 2 ) ) )
                 {
@@ -4175,6 +4176,8 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
 
     while ( CONT_TEST )
     {
+        bool samplingUsed = false;
+
         double varscale = 0;
         std::stringstream errbuffer;
 
@@ -4192,7 +4195,7 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
         fidcost = -1;
         xobstype = 2;
         dummyyres.force_int() = 0;
-        (*fn)(-1,dummyyres,nullptr,fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,nullgentype(),muapproxsize,dummyyres_cgt,false,fidcost,nuscale,fidtotcost);
+        (*fn)(-1,dummyyres,nullptr,fnarg,addvar,xsidechan,xobstype,xobstype_cgt,ycgt,xxreplace,replacexx,addexp,stopflags,toGentype(),muapproxsize,dummyyres_cgt,false,fidcost,nuscale,fidtotcost);
 
         // ===================================================================
         // ===================================================================
@@ -4418,6 +4421,8 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                     double ddelta    = bopts.delta;
                     double sampScale = ( locacq == 12 ) ? ( B + (R*sqrt(2*(mig+1+log(2/ddelta)))) ) : 1.0;
 
+                    samplingUsed = true;
+
                     bopts.model_sample(xmin,xmax,sampScale*sampScale);
                 }
 
@@ -4426,6 +4431,8 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                     double Rcgt         = bopts.R;
                     double ddeltacgt    = bopts.delta;
                     double sampScalecgt = ( bopts.cgtmethod == 5 ) ? ( Bcgt + (Rcgt*sqrt(2*(migcgt+1+log(2/ddeltacgt)))) ) : 1.0;
+
+                    samplingUsed = true;
 
                     bopts.modelcgt_sample(xmin,xmax,sampScalecgt*sampScalecgt);
                 }
@@ -4581,15 +4588,18 @@ errstream() << "phantomxyzxyz xb = " << xb(k) << "\n";
                     gridi = gridires;
                     //gridind.remove(itorem); - do this later if we get a full observation!
                     gridref = itorem;
-                    gridy = (double) bopts.model_y(Nbasemu+gridi); //((*gridsource).y())(gridi);
+                    gridy = ( gridi >= 0 ) ? ((double) bopts.model_y(Nbasemu+gridi)) : valvnan(); //((*gridsource).y())(gridi);
 
-                    if ( !iscontopt )
+                    if ( !iscontopt && ( dres != -200 ) )
                     {
                         gridindtmp.remove(itorem);
                     }
 
-                    gridivec.add(gridivec.size());     gridivec("&",gridivec.size()-1)     = gridi;
-                    gridrefvec.add(gridrefvec.size()); gridrefvec("&",gridrefvec.size()-1) = gridref;
+                    if ( dres != -200 )
+                    {
+                        gridivec.add(gridivec.size());     gridivec("&",gridivec.size()-1)     = gridi;
+                        gridrefvec.add(gridrefvec.size()); gridrefvec("&",gridrefvec.size()-1) = gridref;
+                    }
 
                     errstream() << "Unfiltered result x before fidelity selection: " << xa       << "\n";
                     errstream() << "Unfiltered result y before fidelity selection: " << dummyres << "\n";
@@ -4946,7 +4956,7 @@ errstream() << "\n";
 
                 //errstream() << dres << "...";
 
-                newRecs = currintrinbatchsize;
+                newRecs = ( dres == -200 ) ? 0 : currintrinbatchsize;
 
                 if ( numRecs+newRecs >= xb.size() )
                 {
@@ -5190,7 +5200,7 @@ errstream() << "\n";
                 // ===========================================================
                 // ===========================================================
 
-                if ( bopts.sigmuseparate )
+                if ( bopts.sigmuseparate && ( dres != -200 ) )
                 {
                     if ( isgridopt && isfullfid && ( isfullgrid || ( bopts.model_d(Nbasemu+gridi) == 2 ) ) )
                     {
@@ -5259,9 +5269,10 @@ errstream() << "\n";
             }
         }
 
-outstream() << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
+outstream() << numRecs << ": ";
         //int sigmamod = 0;
         bool doeval = true;
+        bool haveAddedData = false;
 
         for ( k = 0 ; k < numRecs ; ++k )
         {
@@ -5316,8 +5327,8 @@ outstream() << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
 
             if ( doeval )
             {
-                gentype gridresis = nullgentype();
-                Vector<gentype> ycgtis(bopts.numcgt,nullgentype());
+                gentype gridresis = toGentype();
+                Vector<gentype> ycgtis(bopts.numcgt,toGentype());
 
                 if ( isgridopt && ( isfullgrid || ( bopts.model_d(Nbasemu+gridi) == 2 ) ) )
                 {
@@ -5380,6 +5391,8 @@ outstream() << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
 
             while ( addobs )
             {
+                haveAddedData = true;
+
                 if ( ( stopflags & 1 )               ) { stopnow = 1; }
                 if ( ( stopflags & 2 ) && firstinset ) { ++skipcnt;   }
 
@@ -5759,6 +5772,12 @@ outstream() << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
                 isopt = 1;
             }
         }
+
+        if ( !samplingUsed && !haveAddedData )
+        {
+            isopt = 1;
+        }
+
 
         // ===================================================================
         // ===================================================================
@@ -6240,12 +6259,10 @@ class fninnerArg
                     {
                         muapproxsize++;
 
-                        gentype fidtotcostg(fidtotcost);
-
                         allxres.append(allxres.size(),xa);
                         allfres.append(allfres.size(),altres);
                         allcres.append(allcres.size(),altycgt);
-                        allFres.append(allFres.size(),fidtotcostg);
+                        allFres.append(allFres.size(),toGentype(fidtotcost));
                         allmres.append(allmres.size(),altres);
                         is_feas.append(is_feas.size(),x_is_feas);
                         allsres.append(allsres.size());

@@ -1,3 +1,18 @@
+/*
+    virtual       double                 xMAD   (void)                       const;
+needs to be added at:
+
+lsv_generic_deref.hpp:695:    virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getQconst().xmax(res);    }
+lsv_gentyp.hpp:669:           virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getQconst().xmax(res);    }
+lsv_mvrank.hpp:669:           virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getQconst().xmax(res);    }
+lsv_planar.hpp:669:           virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getQconst().xmax(res);    }
+ml_base_deref.hpp:693:        virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getQconst().xmax(res);    }
+ml_mutable.hpp:756:           virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getMLconst().xmax(res);   }
+svm_generic_deref.hpp:695:    virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getQconst().xmax(res);    }
+
+
+in sparsevector: weighted sums and means as per vector
+*/
 
 //
 // ML (machine learning) base type
@@ -167,6 +182,8 @@ public:
     Vector<double> wub; // kernel weight upper bounds
     Vector<Vector<double> > klb; // kernel constant lower bounds
     Vector<Vector<double> > kub; // kernel constant upper bounds
+    SparseVector<double> kARDscalelb; // kernel scale lower bounds
+    SparseVector<double> kARDscaleub; // kernel scale upper bounds
 
     double Cmin;
     double Cmax;
@@ -1344,6 +1361,9 @@ public:
     // ================================================================
 
     // Training data information functions (all assume no far/farfar/farfarfar or multivectors)
+    //
+    // xmedian is the geometric (L1) median
+    // MAD is the geometric (L1) MAD
 
     virtual const SparseVector<gentype> &xsum   (SparseVector<gentype> &res) const;
     virtual const SparseVector<gentype> &xmean  (SparseVector<gentype> &res) const;
@@ -1355,84 +1375,7 @@ public:
     virtual const SparseVector<gentype> &xstddev(SparseVector<gentype> &res) const;
     virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const;
     virtual const SparseVector<gentype> &xmin   (SparseVector<gentype> &res) const;
-
-    // Kernel normalisation function
-    // =============================
-    //
-    // Effectively Normalise the training data (zero mean, unit variance) by
-    // setting shifting/scaling in the kernel as follows:
-    //
-    // xmean   = (1/N) sum_i x_i
-    // xmeansq = (1/N) sum_i x_i.^2
-    // xvar    = (1/N) sum_i (x_i-xmean).^2
-    //         = (1/N) sum_i x_i.^2 + (1/N) sum_i xmean.^2 - (2/N) sum_i x_i.*xmean
-    //         = xmeansq + xmean.^2 - 2 xmean.*((1/N) sum_i x_i)
-    //         = xmeansq + xmean.^2 - 2 xmean.*xmean
-    //         = xmeansq - xmean.^2
-    //
-    // xshift = -xmean
-    // xscale = 1./sqrt(xvar)
-    //
-    // Individual components may be any one of the types supported by gentype.
-    // This includes:
-    //
-    // - real (int or double)
-    // - anion (assume only real, complex, quaternion or octonian)
-    // - vector (assume only of real, anion, vector or matrix)
-    // - matrix (assume only of real, anion, vector or matrix)
-    // - set
-    // - dgraph
-    // - string
-    //
-    // Now:
-    //
-    // - sets, dgraphs and strings cannot be normalised (it makes no sense), so
-    //   we need to detect any feature having this type of argument and then
-    //   place a 0 in the relevant mean, 1 in the relevant variance
-    // - reals evaluate trivially
-    //
-    // Vectors and matrices are more complicated.  For such "scalars":
-    //
-    // mean = (1/N) sum_i y_i
-    // var  = (1/N) sum_i (y_i-mean).(y_i-mean)'
-    //
-    // which is an outer product, ' means conjugate transpose.
-    //
-    // (y_i-mean)  -> A.(y_i-mean)
-    // (y_i-mean)' -> (y_i-mean)'.A'
-    //
-    // so: var -> newvar = A.var.A' = I
-    //     var = BB', B = chol(var)
-    //
-    // choose: A = inv(B)
-    // => newvar = I
-    //
-    // normalisation: y -> A.(y-mean)
-    //
-    // Treatment of missing features:
-    //
-    // By default, "missing" features (ie indices present in some vectors but
-    // not others) are treated as 0s.  An alternative approach may be selected
-    // by setting replaceMissingFeatures = 1.  Under this alternative scheme
-    // missing features are treated as not present and replaced (in the ML)
-    // by the mean value of this feature for those vectors in which it is
-    // present.  This is done prior to calculation of shifting and scaling
-    // factors.
-    //
-    // Unit range: applies to reals/integers/nulls only.  Asserts range of input
-    // must lie between 0 (minimum value) and 1 (maximum value).  Thus
-    //
-    // shift = min(x)
-    // scale = 1/(max(x)-min(x))
-    //
-    // Option: flatnorm: rather than work on a per-feature basis, this sets
-    //         the scale to the min scale.
-    //         noshift: do not apply shifting, only scaling.
-
-    virtual int normKernelNone                  (void);
-    virtual int normKernelZeroMeanUnitVariance  (int flatnorm = 0, int noshift = 0);
-    virtual int normKernelZeroMedianUnitVariance(int flatnorm = 0, int noshift = 0);
-    virtual int normKernelUnitRange             (int flatnorm = 0, int noshift = 0);
+    virtual       double                 xMAD   (void)                       const;
 
     // Helper functions for sparse variables
     //

@@ -310,7 +310,7 @@ double SVM_Planar::K2(int i, int j, const gentype **pxyprod, const SparseVector<
             gentype VVres;
             gentype kval(res);
 
-            VVcallbackdef(VVres,kval,*this,iplanr,jplanr,iplan,jplan,x(i).isf4indpresent(7) ? x(i).f4(7) : nullgentype(),x(j).isf4indpresent(7) ? x(j).f4(7) : nullgentype(),defProjVV());
+            VVcallbackdef(VVres,kval,*this,iplanr,jplanr,iplan,jplan,x(i).isf4indpresent(7) ? x(i).f4(7) : toGentype(),x(j).isf4indpresent(7) ? x(j).f4(7) : toGentype(),defProjVV());
 
             res = (double) VVres;
         }
@@ -399,7 +399,7 @@ gentype &SVM_Planar::K2(gentype &res, int i, int j, const gentype **pxyprod, con
             gentype VVres;
             gentype kval(res);
 
-            VVcallbackdef(VVres,kval,*this,iplanr,jplanr,iplan,jplan,x(i).isf4indpresent(7) ? x(i).f4(7) : nullgentype(),x(j).isf4indpresent(7) ? x(j).f4(7) : nullgentype(),defProjVV());
+            VVcallbackdef(VVres,kval,*this,iplanr,jplanr,iplan,jplan,x(i).isf4indpresent(7) ? x(i).f4(7) : toGentype(),x(j).isf4indpresent(7) ? x(j).f4(7) : toGentype(),defProjVV());
 
             res = VVres;
         }
@@ -488,7 +488,7 @@ gentype &SVM_Planar::K2(gentype &res, int i, int j, const gentype &bias, const g
             gentype VVres;
             gentype kval(res);
 
-            VVcallbackdef(VVres,kval,*this,iplanr,jplanr,iplan,jplan,x(i).isf4indpresent(7) ? x(i).f4(7) : nullgentype(),x(j).isf4indpresent(7) ? x(j).f4(7) : nullgentype(),defProjVV());
+            VVcallbackdef(VVres,kval,*this,iplanr,jplanr,iplan,jplan,x(i).isf4indpresent(7) ? x(i).f4(7) : toGentype(),x(j).isf4indpresent(7) ? x(j).f4(7) : toGentype(),defProjVV());
 
             res = VVres;
         }
@@ -577,7 +577,7 @@ gentype &SVM_Planar::K2(gentype &res, int i, int j, const MercerKernel &altK, co
             gentype VVres;
             gentype kval(res);
 
-            VVcallbackdef(VVres,kval,*this,iplanr,jplanr,iplan,jplan,x(i).isf4indpresent(7) ? x(i).f4(7) : nullgentype(),x(j).isf4indpresent(7) ? x(j).f4(7) : nullgentype(),defProjVV());
+            VVcallbackdef(VVres,kval,*this,iplanr,jplanr,iplan,jplan,x(i).isf4indpresent(7) ? x(i).f4(7) : toGentype(),x(j).isf4indpresent(7) ? x(j).f4(7) : toGentype(),defProjVV());
 
             res = VVres;
         }
@@ -666,7 +666,7 @@ Matrix<double> &SVM_Planar::K2(int spaceDim, Matrix<double> &res, int i, int j, 
             gentype VVres;
             gentype kval(res);
 
-            VVcallbackdef(VVres,kval,*this,iplanr,jplanr,iplan,jplan,x(i).isf4indpresent(7) ? x(i).f4(7) : nullgentype(),x(j).isf4indpresent(7) ? x(j).f4(7) : nullgentype(),defProjVV());
+            VVcallbackdef(VVres,kval,*this,iplanr,jplanr,iplan,jplan,x(i).isf4indpresent(7) ? x(i).f4(7) : toGentype(),x(j).isf4indpresent(7) ? x(j).f4(7) : toGentype(),defProjVV());
 
             res = (const Matrix<double> &) VVres;
         }
@@ -755,7 +755,7 @@ d_anion &SVM_Planar::K2(int spaceDim, d_anion &res, int i, int j, const gentype 
             gentype VVres;
             gentype kval(res);
 
-            VVcallbackdef(VVres,kval,*this,iplanr,jplanr,iplan,jplan,x(i).isf4indpresent(7) ? x(i).f4(7) : nullgentype(),x(j).isf4indpresent(7) ? x(j).f4(7) : nullgentype(),defProjVV());
+            VVcallbackdef(VVres,kval,*this,iplanr,jplanr,iplan,jplan,x(i).isf4indpresent(7) ? x(i).f4(7) : toGentype(),x(j).isf4indpresent(7) ? x(j).f4(7) : toGentype(),defProjVV());
 
             res = (const d_anion &) VVres;
         }
