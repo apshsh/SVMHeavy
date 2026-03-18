@@ -39,10 +39,10 @@
 // Will return 0 on success or an error code otherwise
 //
 
-int solve_quadratic_program_d2cvar1(Vector<optState<double,double> *> &x, Vector<double> &mu, double xi, 
-                                    const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, 
-                                    const Vector<Vector<double> > &gpbase, const Vector<Vector<double> > &gnbase, const Vector<Vector<double> > &hp, 
-                                    const Vector<Vector<double> > &lbbase, const Vector<Vector<double> > &ubbase, 
+int solve_quadratic_program_d2cvar1(Vector<optState<double,double> *> &x, Vector<double> &mu, double xi,
+                                    const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn,
+                                    const Vector<Vector<double>> &gpbase, const Vector<Vector<double>> &gnbase, const Vector<Vector<double>> &hp,
+                                    const Vector<Vector<double>> &lbbase, const Vector<Vector<double>> &ubbase,
                                     int maxitcnt, double maxtraintime, double traintimeend);
 
 #endif

@@ -38,6 +38,7 @@
 #include <string>
 #include <sstream>
 #include <cstdint>
+#include <iterator>
 //#ifdef ENABLE_THREADS
 //#include <atomic>
 //#endif
@@ -123,7 +124,7 @@ public:
              SparseVector(const SparseVector<T> &src);
     explicit SparseVector(const Vector<T>       &src);
     explicit SparseVector();
-    explicit SparseVector(int size, const T *src = nullptr);
+    explicit SparseVector(int size, const T *src = nullptr, int tightalloc = 0);
 
     ~SparseVector();
 
@@ -861,23 +862,27 @@ template <class T> const T &indexedmaxabs(T &res, const Vector<int> &n, const Sp
 
 
 
-template <class T> const SparseVector<T> &geometricMedian(SparseVector<T> &res, const Vector<SparseVector<T> > &a, const Vector<double> &w);
-template <class T> double geometricMAD(SparseVector<T> &medianres, const Vector<SparseVector<T> > &a, const Vector<double> &w);
+template <class T> const SparseVector<T> &geometricMedian(SparseVector<T> &res, const Vector<SparseVector<T>> &a, const Vector<double> &w);
+template <class T> double geometricMAD(SparseVector<T> &medianres, const Vector<SparseVector<T>> &a, const Vector<double> &w);
+template <class T> double geometricVar(SparseVector<T> &medianres, const Vector<SparseVector<T>> &a, const Vector<double> &w);
 
 
 
-template <class T> T &innerProduct                         (T &res,                       const SparseVector<T> &a, const SparseVector<T> &b);
-template <class T> T &innerProductRevConj                  (T &res,                       const SparseVector<T> &a, const SparseVector<T> &b);
-template <class T> T &innerProductScaled                   (T &res,                       const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
-template <class T> T &innerProductScaledRevConj            (T &res,                       const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
-template <class T> T &innerProductLeftScaled               (T &res,                       const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
-template <class T> T &innerProductLeftScaledRevConj        (T &res,                       const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
-template <class T> T &innerProductRightScaled              (T &res,                       const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
-template <class T> T &innerProductRightScaledRevConj       (T &res,                       const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
+template <class T> T &innerProduct                  (T &res, const SparseVector<T> &a, const SparseVector<T> &b);
+template <class T> T &innerProductRevConj           (T &res, const SparseVector<T> &a, const SparseVector<T> &b);
+template <class T> T &innerProductScaled            (T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
+template <class T> T &innerProductScaledRevConj     (T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
+template <class T> T &innerProductScaled            (T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale);
+template <class T> T &innerProductScaledRevConj     (T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale);
+template <class T> T &innerProductLeftScaled        (T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
+template <class T> T &innerProductLeftScaledRevConj (T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
+template <class T> T &innerProductRightScaled       (T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
+template <class T> T &innerProductRightScaledRevConj(T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
+
 template <class T> T &indexedinnerProduct                  (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b);
 template <class T> T &indexedinnerProductRevConj           (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b);
 template <class T> T &indexedinnerProductScaled            (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
-template <class T> T &indexedinnerProductScaledRevConj     (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
+template <class T> T &indexedinnerProductScaledRevConj     (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale);
 template <class T> T &indexedinnerProductLeftScaled        (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
 template <class T> T &indexedinnerProductLeftScaledRevConj (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
 template <class T> T &indexedinnerProductRightScaled       (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
@@ -904,9 +909,24 @@ template <class T> double &mProductAssumeReal    (double &res, const Vector<cons
 
 template <class T> T &oneProductScaled  (T &res, const SparseVector<T> &a, const SparseVector<T> &scale);
 template <class T> T &twoProductScaled  (T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
+template <class T> T &twoProductScaled  (T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale);
 template <class T> T &threeProductScaled(T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &c, const SparseVector<T> &scale);
 template <class T> T &fourProductScaled (T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &c, const SparseVector<T> &d, const SparseVector<T> &scale);
 template <class T> T &mProductScaled    (T &res, const Vector<const SparseVector <T> *> &a, const SparseVector<T> &scale);
+
+template <class T> T &indexedoneProduct  (T &res, const Vector<int> &n, const SparseVector<T> &a);
+template <class T> T &indexedtwoProduct  (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b);
+template <class T> T &indexedthreeProduct(T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &c);
+template <class T> T &indexedfourProduct (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &c, const SparseVector<T> &d);
+template <class T> T &indexedmProduct    (T &res, const Vector<int> &n, const Vector<const SparseVector <T> *> &a);
+
+template <class T> T &indexedoneProductScaled  (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &scale);
+template <class T> T &indexedtwoProductScaled  (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
+template <class T> T &indexedtwoProductScaled  (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale);
+template <class T> T &indexedthreeProductScaled(T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &c, const SparseVector<T> &scale);
+template <class T> T &indexedfourProductScaled (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &c, const SparseVector<T> &d, const SparseVector<T> &scale);
+template <class T> T &indexedmProductScaled    (T &res, const Vector<int> &n, const Vector<const SparseVector <T> *> &a, const SparseVector<T> &scale);
+
 
 
 template <class T> T &oneProductPrelude  (T &res, const SparseVector<T> &a);
@@ -933,20 +953,11 @@ template <class T> T &innerProductPrelude       (T &res, const SparseVector<T> &
 template <class T> T &innerProductRevConjPrelude(T &res, const SparseVector<T> &a, const SparseVector<T> &b);
 
 template <class T> T &innerProductScaledPrelude       (T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
-template <class T> T &innerProductScaledRevConjPrelude(T &res, const SparseVector<T> &a, const SparseVector<T> &b);
+template <class T> T &innerProductScaledRevConjPrelude(T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
 
+template <class T> T &innerProductScaledPrelude       (T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale);
+template <class T> T &innerProductScaledRevConjPrelude(T &res, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale);
 
-template <class T> T &indexedoneProduct  (T &res, const Vector<int> &n, const SparseVector<T> &a);
-template <class T> T &indexedtwoProduct  (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b);
-template <class T> T &indexedthreeProduct(T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &c);
-template <class T> T &indexedfourProduct (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &c, const SparseVector<T> &d);
-template <class T> T &indexedmProduct    (T &res, const Vector<int> &n, const Vector<const SparseVector <T> *> &a);
-
-template <class T> T &indexedoneProductScaled  (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &scale);
-template <class T> T &indexedtwoProductScaled  (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale);
-template <class T> T &indexedthreeProductScaled(T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &c, const SparseVector<T> &scale);
-template <class T> T &indexedfourProductScaled (T &res, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &c, const SparseVector<T> &d, const SparseVector<T> &scale);
-template <class T> T &indexedmProductScaled    (T &res, const Vector<int> &n, const Vector<const SparseVector <T> *> &a, const SparseVector<T> &scale);
 
 // <a^ia,b^ib,c^ic,d^id>
 
@@ -2221,33 +2232,26 @@ SparseVector<T>::SparseVector() : indices(nullptr), content(nullptr),
 }
 
 template <class T>
-SparseVector<T>::SparseVector(int size, const T *src) : indices(nullptr), content(nullptr),
+SparseVector<T>::SparseVector(int size, const T *src, int tightalloc) : indices(nullptr), content(nullptr),
                                   npointer(nullptr), f1pointer(nullptr), f2pointer(nullptr), f3pointer(nullptr), f4pointer(nullptr),
                                   xnupsize(-1), xf1upsize(-1), xf2upsize(-1), xf3upsize(-1), xf4upsize(-1),
                                   altcontent(nullptr), altcontentsp(nullptr), xvecID(0)
 {
     NiceAssert( size >= 0 );
 
-    resetvecID();
+    MEMNEW(indices,Vector<int>(size,nullptr,tightalloc));
+    MEMNEW(content,Vector<T>(1+size,src,tightalloc+2)); // use +2 to flag that final element should not be set as it is not in src
 
-    MEMNEW(indices,Vector<int>);
-    MEMNEW(content,Vector<T>(1));
+    resetvecID();
 
     NiceAssert(indices);
     NiceAssert(content);
 
-    setzero((*content)("&",0));
+    setzero((*content)("&",size)); // The *last* element is the zero element
 
-    if ( size )
+    for ( int i = 0 ; i < size ; ++i )
     {
-        NiceAssert(src);
-
-        int i;
-
-        for ( i = 0 ; i < size ; ++i )
-        {
-            (*this)("&",i) = *src;
-        }
+        (*indices)("&",i) = i;
     }
 }
 
@@ -5963,7 +5967,8 @@ const T &indexedstdev(T &res, const Vector<int> &n, const SparseVector<T> &a)
 
 
 
-template <class T> const SparseVector<T> &geometricMedian(SparseVector<T> &y, const Vector<SparseVector<T> > &x, const Vector<double> &w)
+template <class T>
+const SparseVector<T> &geometricMedian(SparseVector<T> &y, const Vector<SparseVector<T>> &x, const Vector<double> &w)
 {
     NiceAssert( w.size() == x.size() );
 
@@ -6081,7 +6086,8 @@ template <class T> const SparseVector<T> &geometricMedian(SparseVector<T> &y, co
     return y;
 }
 
-template <class T> double geometricMAD(SparseVector<T> &y, const Vector<SparseVector<T> > &x, const Vector<double> &w)
+template <class T>
+double geometricMAD(SparseVector<T> &y, const Vector<SparseVector<T>> &x, const Vector<double> &w)
 {
     NiceAssert( x.size() == w.size() );
 
@@ -6095,7 +6101,7 @@ template <class T> double geometricMAD(SparseVector<T> &y, const Vector<SparseVe
         Vector<double> dist(n,0.0);
         SparseVector<T> temp(y);
 
-        for ( int i = 0 ; i < n ; ++n )
+        for ( int i = 0 ; i < n ; ++i )
         {
             temp =  x(i);
             temp -= y;
@@ -6104,7 +6110,36 @@ template <class T> double geometricMAD(SparseVector<T> &y, const Vector<SparseVe
         }
 
         int i = 0;
-        res = median(dist,i); //,w);
+        res = median(dist,i,w);
+    }
+
+    return res;
+}
+
+template <class T>
+double geometricVar(SparseVector<T> &y, const Vector<SparseVector<T>> &x, const Vector<double> &w)
+{
+    NiceAssert( x.size() == w.size() );
+
+    mean(y,x,w);
+
+    int n = x.size();
+    double res = 0;
+
+    if ( n > 1 )
+    {
+        Vector<double> dist(n,0.0);
+        SparseVector<T> temp(y);
+
+        for ( int i = 0 ; i < n ; ++i )
+        {
+            temp =  x(i);
+            temp -= y;
+
+            dist("&",i) = norm2(temp);
+        }
+
+        mean(res,dist,w);
     }
 
     return res;
@@ -7071,6 +7106,127 @@ T &innerProductScaledPrelude(T &result, const SparseVector<T> &a, const SparseVe
 }
 
 template <class T>
+T &innerProductScaled(T &result, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale)
+{
+    return innerProductScaledPrelude(result,a,b,Lscale,Rscale);
+}
+
+template <class T>
+T &innerProductScaledPrelude(T &result, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale)
+{
+    if ( a.nearnonsparse() && b.nearnonsparse() && Lscale.nearnonsparse() && Rscale.nearnonsparse() )
+    {
+        if ( ( a.size() == b.size() ) && ( a.size() == Lscale.size() ) && ( a.size() == Rscale.size() ) )
+        {
+            retVector<T> tmpva;
+            retVector<T> tmpvb;
+            retVector<T> tmpvc;
+            retVector<T> tmpvd;
+
+            innerProductScaled(result,a(a.ind(),tmpva),b(b.ind(),tmpvb),Lscale(Lscale.ind(),tmpvc),Rscale(Rscale.ind(),tmpvd));
+        }
+
+        else
+        {
+            int dim = ( a.size() < b.size() ) ? a.size() : b.size();
+                dim = ( Lscale.size() < dim ) ? Lscale.size() : dim;
+                dim = ( Rscale.size() < dim ) ? Rscale.size() : dim;
+
+            retVector<T> tmpva;
+            retVector<T> tmpvb;
+            retVector<T> tmpvc;
+            retVector<T> tmpvd;
+            retVector<T> tmpve;
+            retVector<T> tmpvf;
+            retVector<T> tmpvg;
+            retVector<T> tmpvh;
+
+            innerProductScaled(result,a(a.ind(),tmpva)(0,1,dim-1,tmpvd),b(b.ind(),tmpvb)(0,1,dim-1,tmpve),Lscale(Lscale.ind(),tmpvc)(0,1,dim-1,tmpvf),Rscale(Rscale.ind(),tmpvg)(0,1,dim-1,tmpvh));
+        }
+
+        return result;
+    }
+
+    // Basically just a four product with conjugation on a and scale included twice
+
+    BOUND_DEF;
+
+    int csize = Lscale.indsize();
+    int dsize = Rscale.indsize();
+
+    T tempa;
+    T tempb;
+
+    setzero(result);
+    setzero(tempa);
+    setzero(tempb);
+
+    if ( asize && bsize && csize && dsize )
+    {
+        int apos = astart;
+        int bpos = bstart;
+	int cpos = 0;
+        int dpos = 0;
+	int aelm;
+	int belm;
+	int celm;
+        int delm;
+
+        while ( ( apos-astart < asize ) && ( bpos-bstart < bsize ) && ( cpos < csize ) && ( dpos < dsize ) )
+	{
+            aelm = a.ind(apos) - abaseind;
+            belm = b.ind(bpos) - bbaseind;
+	    celm = Lscale.ind(cpos);
+	    delm = Rscale.ind(dpos);
+
+	    if ( ( aelm == belm ) && ( aelm == celm ) && ( aelm == delm ) )
+	    {
+                // conj(s.a).(s.b)
+
+                tempa  = a.direcref(apos);
+                tempa /= Lscale.direcref(cpos);
+
+                tempb  = b.direcref(bpos);
+                tempb /= Rscale.direcref(dpos);
+
+                setconj(tempa);
+                //setconj(tempb);
+                rightmult(tempa,tempb);
+
+                result += tempb;
+
+		++apos;
+		++bpos;
+		++cpos;
+                ++dpos;
+	    }
+
+            else if ( ( aelm <= belm ) && ( aelm <= celm ) && ( aelm <= delm ) )
+	    {
+		++apos;
+	    }
+
+            else if ( ( belm <= aelm ) && ( belm <= celm ) && ( belm <= delm ) )
+	    {
+		++bpos;
+	    }
+
+            else if ( ( celm <= aelm ) && ( celm <= belm ) && ( celm <= delm ) )
+	    {
+		++cpos;
+	    }
+
+	    else
+	    {
+                ++dpos;
+	    }
+	}
+    }
+
+    return postProInnerProd(result);
+}
+
+template <class T>
 T &twoProductScaled(T &result, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale)
 {
     return twoProductScaledPrelude(result,a,b,scale);
@@ -7188,6 +7344,127 @@ T &twoProductScaledPrelude(T &result, const SparseVector<T> &a, const SparseVect
 }
 
 template <class T>
+T &twoProductScaled(T &result, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale)
+{
+    return twoProductScaledPrelude(result,a,b,Lscale,Rscale);
+}
+
+template <class T>
+T &twoProductScaledPrelude(T &result, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale)
+{
+    if ( a.nearnonsparse() && b.nearnonsparse() && Lscale.nearnonsparse() && Rscale.nearnonsparse() )
+    {
+        if ( ( a.size() == b.size() ) && ( a.size() == Lscale.size() ) && ( a.size() == Rscale.size() ) )
+        {
+            retVector<T> tmpva;
+            retVector<T> tmpvb;
+            retVector<T> tmpvc;
+            retVector<T> tmpvd;
+
+            twoProductScaled(result,a(a.ind(),tmpva),b(b.ind(),tmpvb),Lscale(Lscale.ind(),tmpvc),Rscale(Rscale.ind(),tmpvd));
+        }
+
+        else
+        {
+            int dim = ( a.size() < b.size() ) ? a.size() : b.size();
+                dim = ( Lscale.size() < dim ) ? Lscale.size() : dim;
+                dim = ( Rscale.size() < dim ) ? Rscale.size() : dim;
+
+            retVector<T> tmpva;
+            retVector<T> tmpvb;
+            retVector<T> tmpvc;
+            retVector<T> tmpvd;
+            retVector<T> tmpve;
+            retVector<T> tmpvf;
+            retVector<T> tmpvg;
+            retVector<T> tmpvh;
+
+            twoProductScaled(result,a(a.ind(),tmpva)(0,1,dim-1,tmpvd),b(b.ind(),tmpvb)(0,1,dim-1,tmpve),Lscale(Lscale.ind(),tmpvc)(0,1,dim-1,tmpvf),Rscale(Rscale.ind(),tmpvg)(0,1,dim-1,tmpvh));
+        }
+
+        return result;
+    }
+
+    // Basically just a four product with conjugation on a and scale included twice
+
+    BOUND_DEF;
+
+    int csize = Lscale.indsize();
+    int dsize = Rscale.indsize();
+
+    T tempa;
+    T tempb;
+
+    setzero(result);
+    setzero(tempa);
+    setzero(tempb);
+
+    if ( asize && bsize && csize && dsize )
+    {
+        int apos = astart;
+        int bpos = bstart;
+	int cpos = 0;
+        int dpos = 0;
+	int aelm;
+	int belm;
+	int celm;
+        int delm;
+
+        while ( ( apos-astart < asize ) && ( bpos-bstart < bsize ) && ( cpos < csize ) && ( dpos < dsize ) )
+	{
+            aelm = a.ind(apos) - abaseind;
+            belm = b.ind(bpos) - bbaseind;
+	    celm = Lscale.ind(cpos);
+	    delm = Rscale.ind(dpos);
+
+	    if ( ( aelm == belm ) && ( aelm == celm ) && ( aelm == delm ) )
+	    {
+                // (s.a).(s.b)
+
+                tempa  = a.direcref(apos);
+                tempa /= Lscale.direcref(cpos);
+
+                tempb  = b.direcref(bpos);
+                tempb /= Rscale.direcref(dpos);
+
+                //setconj(tempa);
+                //setconj(tempb);
+                rightmult(tempa,tempb);
+
+                result += tempb;
+
+		++apos;
+		++bpos;
+		++cpos;
+                ++dpos;
+	    }
+
+            else if ( ( aelm <= belm ) && ( aelm <= celm ) && ( aelm <= delm ) )
+	    {
+		++apos;
+	    }
+
+            else if ( ( belm <= aelm ) && ( belm <= celm ) && ( belm <= delm ) )
+	    {
+		++bpos;
+	    }
+
+            else if ( ( celm <= aelm ) && ( celm <= belm ) && ( celm <= delm ) )
+	    {
+		++cpos;
+	    }
+
+	    else
+	    {
+                ++dpos;
+	    }
+	}
+    }
+
+    return postProInnerProd(result);
+}
+
+template <class T>
 T &innerProductScaledRevConj(T &result, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale)
 {
     return innerProductScaledRevConjPrelude(result,a,b,scale);
@@ -7266,6 +7543,127 @@ T &innerProductScaledRevConjPrelude(T &result, const SparseVector<T> &a, const S
 
                 tempb  = b.direcref(bpos);
                 tempb /= scale.direcref(dpos);
+
+                //setconj(tempa);
+                setconj(tempb);
+                rightmult(tempa,tempb);
+
+                result += tempb;
+
+		++apos;
+		++bpos;
+		++cpos;
+                ++dpos;
+	    }
+
+            else if ( ( aelm <= belm ) && ( aelm <= celm ) && ( aelm <= delm ) )
+	    {
+		++apos;
+	    }
+
+            else if ( ( belm <= aelm ) && ( belm <= celm ) && ( belm <= delm ) )
+	    {
+		++bpos;
+	    }
+
+            else if ( ( celm <= aelm ) && ( celm <= belm ) && ( celm <= delm ) )
+	    {
+		++cpos;
+	    }
+
+	    else
+	    {
+                ++dpos;
+	    }
+	}
+    }
+
+    return postProInnerProd(result);
+}
+
+template <class T>
+T &innerProductScaledRevConj(T &result, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale)
+{
+    return innerProductScaledRevConjPrelude(result,a,b,Lscale,Rscale);
+}
+
+template <class T>
+T &innerProductScaledRevConjPrelude(T &result, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale)
+{
+    if ( a.nearnonsparse() && b.nearnonsparse() && Lscale.nearnonsparse() && Rscale.nearnonsparse() )
+    {
+        if ( ( a.size() == b.size() ) && ( a.size() == Lscale.size() ) && ( a.size() == Rscale.size() ) )
+        {
+            retVector<T> tmpva;
+            retVector<T> tmpvb;
+            retVector<T> tmpvc;
+            retVector<T> tmpvd;
+
+            innerProductScaledRevConj(result,a(a.ind(),tmpva),b(b.ind(),tmpvb),Lscale(Lscale.ind(),tmpvc),Rscale(Rscale.ind(),tmpvd));
+        }
+
+        else
+        {
+            int dim = ( a.size() < b.size() ) ? a.size() : b.size();
+                dim = ( Lscale.size() < dim ) ? Lscale.size() : dim;
+                dim = ( Rscale.size() < dim ) ? Rscale.size() : dim;
+
+            retVector<T> tmpva;
+            retVector<T> tmpvb;
+            retVector<T> tmpvc;
+            retVector<T> tmpvd;
+            retVector<T> tmpve;
+            retVector<T> tmpvf;
+            retVector<T> tmpvg;
+            retVector<T> tmpvh;
+
+            innerProductScaledRevConj(result,a(a.ind(),tmpva)(0,1,dim-1,tmpvd),b(b.ind(),tmpvb)(0,1,dim-1,tmpve),Lscale(Lscale.ind(),tmpvc)(0,1,dim-1,tmpvf),Rscale(Rscale.ind(),tmpvg)(0,1,dim-1,tmpvh));
+        }
+
+        return result;
+    }
+
+    // Basically just a four product with conjugation on a and scale included twice
+
+    BOUND_DEF;
+
+    int csize = Lscale.indsize();
+    int dsize = Rscale.indsize();
+
+    T tempa;
+    T tempb;
+
+    setzero(result);
+    setzero(tempa);
+    setzero(tempb);
+
+    if ( asize && bsize && csize && dsize )
+    {
+        int apos = astart;
+        int bpos = bstart;
+	int cpos = 0;
+        int dpos = 0;
+	int aelm;
+	int belm;
+	int celm;
+        int delm;
+
+        while ( ( apos-astart < asize ) && ( bpos-bstart < bsize ) && ( cpos < csize ) && ( dpos < dsize ) )
+	{
+            aelm = a.ind(apos) - abaseind;
+            belm = b.ind(bpos) - bbaseind;
+	    celm = Lscale.ind(cpos);
+	    delm = Rscale.ind(dpos);
+
+	    if ( ( aelm == belm ) && ( aelm == celm ) && ( aelm == delm ) )
+	    {
+                // (s.a).conj(s.b)
+
+                tempa  = a.direcref(apos);
+                tempa /= Lscale.direcref(cpos);
+
+                tempb  = b.direcref(bpos);
+                tempb /= Rscale.direcref(dpos);
 
                 //setconj(tempa);
                 setconj(tempb);
@@ -8246,6 +8644,96 @@ T &indexedinnerProductScaled(T &result, const Vector<int> &n, const SparseVector
 }
 
 template <class T>
+T &indexedinnerProductScaled(T &result, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale)
+{
+    // Basically just a four product with conjugation on a and scale included twice
+
+    BOUND_DEF;
+
+    int nsize = n.size();
+    int csize = Lscale.indsize();
+    int dsize = Rscale.indsize();
+
+    T tempa;
+    T tempb;
+
+    setzero(result);
+    setzero(tempa);
+    setzero(tempb);
+
+    if ( nsize && asize && bsize && csize && dsize )
+    {
+        int apos = astart;
+        int bpos = bstart;
+        int npos = 0;
+	int cpos = 0;
+        int dpos = 0;
+        int nelm;
+	int aelm;
+	int belm;
+	int celm;
+        int delm;
+
+        while ( ( npos < nsize ) && ( apos-astart < asize ) && ( bpos-bstart < bsize ) && ( cpos < csize ) && ( dpos < dsize ) )
+	{
+            nelm = n.v(npos);
+            aelm = a.ind(apos) - abaseind;
+            belm = b.ind(bpos) - bbaseind;
+	    celm = Lscale.ind(cpos);
+	    delm = Rscale.ind(dpos);
+
+	    if ( ( aelm == nelm ) && ( belm == nelm ) && ( celm == nelm ) && ( delm == nelm ) )
+	    {
+                tempa  = a.direcref(apos);
+                tempa /= Lscale.direcref(cpos);
+
+                tempb  = b.direcref(bpos);
+                tempb /= Rscale.direcref(dpos);
+
+                setconj(tempa);
+                //setconj(tempb);
+                rightmult(tempa,tempb);
+
+                result += tempb;
+
+                ++npos;
+		++apos;
+		++bpos;
+		++cpos;
+                ++dpos;
+	    }
+
+            else if ( ( nelm <= aelm ) && ( nelm <= belm ) && ( nelm <= celm ) && ( nelm <= delm ) )
+	    {
+		++npos;
+	    }
+
+            else if ( ( aelm <= nelm ) && ( aelm <= belm ) && ( aelm <= celm ) && ( aelm <= delm ) )
+	    {
+		++apos;
+	    }
+
+            else if ( ( belm <= nelm ) && ( belm <= aelm ) && ( belm <= celm ) && ( belm <= delm ) )
+	    {
+		++bpos;
+	    }
+
+            else if ( ( celm <= nelm ) && ( celm <= aelm ) && ( celm <= belm ) && ( celm <= delm ) )
+	    {
+		++cpos;
+	    }
+
+	    else
+	    {
+                ++dpos;
+	    }
+	}
+    }
+
+    return postProInnerProd(result);
+}
+
+template <class T>
 T &indexedtwoProductScaled(T &result, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale)
 {
     // Basically just a four product with conjugation on a and scale included twice
@@ -8336,6 +8824,96 @@ T &indexedtwoProductScaled(T &result, const Vector<int> &n, const SparseVector<T
 }
 
 template <class T>
+T &indexedtwoProductScaled(T &result, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale)
+{
+    // Basically just a four product with conjugation on a and scale included twice
+
+    BOUND_DEF;
+
+    int nsize = n.size();
+    int csize = Lscale.indsize();
+    int dsize = Rscale.indsize();
+
+    T tempa;
+    T tempb;
+
+    setzero(result);
+    setzero(tempa);
+    setzero(tempb);
+
+    if ( nsize && asize && bsize && csize && dsize )
+    {
+        int apos = astart;
+        int bpos = bstart;
+        int npos = 0;
+	int cpos = 0;
+        int dpos = 0;
+        int nelm;
+	int aelm;
+	int belm;
+	int celm;
+        int delm;
+
+        while ( ( npos < nsize ) && ( apos-astart < asize ) && ( bpos-bstart < bsize ) && ( cpos < csize ) && ( dpos < dsize ) )
+	{
+            nelm = n.v(npos);
+            aelm = a.ind(apos) - abaseind;
+            belm = b.ind(bpos) - bbaseind;
+	    celm = Lscale.ind(cpos);
+	    delm = Rscale.ind(dpos);
+
+	    if ( ( aelm == nelm ) && ( belm == nelm ) && ( celm == nelm ) && ( delm == nelm ) )
+	    {
+                tempa  = a.direcref(apos);
+                tempa /= Lscale.direcref(cpos);
+
+                tempb  = b.direcref(bpos);
+                tempb /= Rscale.direcref(dpos);
+
+                //setconj(tempa);
+                //setconj(tempb);
+                rightmult(tempa,tempb);
+
+                result += tempb;
+
+                ++npos;
+		++apos;
+		++bpos;
+		++cpos;
+                ++dpos;
+	    }
+
+            else if ( ( nelm <= aelm ) && ( nelm <= belm ) && ( nelm <= celm ) && ( nelm <= delm ) )
+	    {
+		++npos;
+	    }
+
+            else if ( ( aelm <= nelm ) && ( aelm <= belm ) && ( aelm <= celm ) && ( aelm <= delm ) )
+	    {
+		++apos;
+	    }
+
+            else if ( ( belm <= nelm ) && ( belm <= aelm ) && ( belm <= celm ) && ( belm <= delm ) )
+	    {
+		++bpos;
+	    }
+
+            else if ( ( celm <= nelm ) && ( celm <= aelm ) && ( celm <= belm ) && ( celm <= delm ) )
+	    {
+		++cpos;
+	    }
+
+	    else
+	    {
+                ++dpos;
+	    }
+	}
+    }
+
+    return postProInnerProd(result);
+}
+
+template <class T>
 T &indexedinnerProductScaledRevConj(T &result, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &scale)
 {
     // Basically just a four product with conjugation on a and scale included twice
@@ -8381,6 +8959,96 @@ T &indexedinnerProductScaledRevConj(T &result, const Vector<int> &n, const Spars
 
                 tempb  = b.direcref(bpos);
                 tempb /= scale.direcref(dpos);
+
+                //setconj(tempa);
+                setconj(tempb);
+                rightmult(tempa,tempb);
+
+                result += tempb;
+
+                ++npos;
+		++apos;
+		++bpos;
+		++cpos;
+                ++dpos;
+	    }
+
+            else if ( ( nelm <= aelm ) && ( nelm <= belm ) && ( nelm <= celm ) && ( nelm <= delm ) )
+	    {
+		++npos;
+	    }
+
+            else if ( ( aelm <= nelm ) && ( aelm <= belm ) && ( aelm <= celm ) && ( aelm <= delm ) )
+	    {
+		++apos;
+	    }
+
+            else if ( ( belm <= nelm ) && ( belm <= aelm ) && ( belm <= celm ) && ( belm <= delm ) )
+	    {
+		++bpos;
+	    }
+
+            else if ( ( celm <= nelm ) && ( celm <= aelm ) && ( celm <= belm ) && ( celm <= delm ) )
+	    {
+		++cpos;
+	    }
+
+	    else
+	    {
+                ++dpos;
+	    }
+	}
+    }
+
+    return postProInnerProd(result);
+}
+
+template <class T>
+T &indexedinnerProductScaledRevConj(T &result, const Vector<int> &n, const SparseVector<T> &a, const SparseVector<T> &b, const SparseVector<T> &Lscale, const SparseVector<T> &Rscale)
+{
+    // Basically just a four product with conjugation on a and scale included twice
+
+    BOUND_DEF;
+
+    int nsize = n.size();
+    int csize = Lscale.indsize();
+    int dsize = Rscale.indsize();
+
+    T tempa;
+    T tempb;
+
+    setzero(result);
+    setzero(tempa);
+    setzero(tempb);
+
+    if ( nsize && asize && bsize && csize && dsize )
+    {
+        int apos = astart;
+        int bpos = bstart;
+        int npos = 0;
+	int cpos = 0;
+        int dpos = 0;
+        int nelm;
+	int aelm;
+	int belm;
+	int celm;
+        int delm;
+
+        while ( ( npos < nsize ) && ( apos-astart < asize ) && ( bpos-bstart < bsize ) && ( cpos < csize ) && ( dpos < dsize ) )
+	{
+            nelm = n.v(npos);
+            aelm = a.ind(apos) - abaseind;
+            belm = b.ind(bpos) - bbaseind;
+	    celm = Lscale.ind(cpos);
+	    delm = Rscale.ind(dpos);
+
+	    if ( ( aelm == nelm ) && ( belm == nelm ) && ( celm == nelm ) && ( delm == nelm ) )
+	    {
+                tempa  = a.direcref(apos);
+                tempa /= Lscale.direcref(cpos);
+
+                tempb  = b.direcref(bpos);
+                tempb /= Rscale.direcref(dpos);
 
                 //setconj(tempa);
                 setconj(tempb);

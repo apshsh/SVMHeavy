@@ -141,7 +141,7 @@ static Vector<double> &rowcalc(int i, void *Gphid, retVector<double> &tmp)
 // it is.
 
 template <>
-int fullOptState<Vector<double>,Matrix<double> >::wrapsolve(svmvolatile int &killSwitch)
+int fullOptState<Vector<double>,Matrix<double>>::wrapsolve(svmvolatile int &killSwitch)
 {
     int i,j,jP;
     int aN = x.aN();
@@ -185,7 +185,7 @@ doitagain:
         // Work out slacks to add
 
         Vector<int> chiadd;
-        Vector<Vector<double> > chivec;
+        Vector<Vector<double>> chivec;
 
         for ( i = 0 ; i < bN ; ++i )
         {
@@ -203,7 +203,7 @@ doitagain:
 
         Matrix<double> Gpnloc(Gpn);
 
-        Vector<Vector<double> > gploc(gp);
+        Vector<Vector<double>> gploc(gp);
         Vector<double> hploc(hp);
 
         Vector<double> lbloc(lb);
@@ -221,7 +221,7 @@ doitagain:
 
         GpnRowTwoMagloc.pad(Naug);
 
-        Matrix<Matrix<double> > GpExtend(Naug,aN+Naug);
+        Matrix<Matrix<double>> GpExtend(Naug,aN+Naug);
         Matrix<double> GpsigmaExtend(Naug,aN+Naug);
 
         Matrix<double> GpExtendTemplateOffDiag = Gp(0,0);
@@ -258,9 +258,9 @@ doitagain:
             x.addAlpha(i+aN,0,zeroeg);
         }
 
-        Matrix<Matrix<double> > *newGp = smStack(&Gpfull,&GpExtend);
+        Matrix<Matrix<double>> *newGp = smStack(&Gpfull,&GpExtend);
         Matrix<double> *newGpsigma = smStack(&Gpsigmafull,&GpsigmaExtend);
-        Matrix<Matrix<double> > &Gploc = *newGp;
+        Matrix<Matrix<double>> &Gploc = *newGp;
         //Matrix<double> &Gpsigmaloc = *newGpsigma;
 
         Vector<double> crowres(aN+Naug);
@@ -405,7 +405,7 @@ doitagain:
         // Work out slacks to add
 
         Vector<int> chiadd;
-        Vector<Vector<double> > chivec;
+        Vector<Vector<double>> chivec;
 
         for ( i = 0 ; i < bN ; ++i )
         {
@@ -423,7 +423,7 @@ doitagain:
 
         Matrix<double> Gpnloc(Gpn);
 
-        Vector<Vector<double> > gploc(gp);
+        Vector<Vector<double>> gploc(gp);
         Vector<double> hploc(hp);
 
         Vector<double> lbloc(lb);

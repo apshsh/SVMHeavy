@@ -1,5 +1,6 @@
-//ml_base tuneKernelk to min ||alpha|| with method 4
-
+//FIXME: make xy matrix contain vecInfo (see 2026_02_03_11_50_48keep/ml_base.hpp)
+//FIXME: build these vecInfo into K2 so that the calculation is short-cutted
+//FIXME: resetKernel needs to update xy (see svm_scalar.hpp)
 
 //
 // SVMHeavyv7 Python CLI-like Interface
@@ -52,6 +53,14 @@ inline py::object *&postProInnerProd(py::object *&a) { return a; }
 #include "bayesopt.hpp"
 #include "makemonot.hpp"
 
+//void tester(int i = 0, int is = 0);
+//void tester(int i, int is)
+//{
+//...
+//}
+
+
+
 void dostartup(void);
 
 int glob_MLInd        (int i = 0, int seti = 0);
@@ -60,11 +69,11 @@ int glob_DIRectInd    (int i = 0, int seti = 0);
 int glob_NelderMeadInd(int i = 0, int seti = 0);
 int glob_BayesianInd  (int i = 0, int seti = 0);
 
-int glob_MLInd        (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
-int glob_gridInd      (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
-int glob_DIRectInd    (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
-int glob_NelderMeadInd(int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
-int glob_BayesianInd  (int i, int seti) { static thread_local int iii = 1; if ( i ) { if ( seti && i ) { iii = i; } } return iii; }
+int glob_MLInd        (int i, int seti) { static thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
+int glob_gridInd      (int i, int seti) { static thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
+int glob_DIRectInd    (int i, int seti) { static thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
+int glob_NelderMeadInd(int i, int seti) { static thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
+int glob_BayesianInd  (int i, int seti) { static thread_local int iii = 1; if ( seti && i ) { iii = i; } if ( i ) { return i; } return iii; }
 
 py::object &pygetbuiltin(void);
 py::object &pyisinstance(void);
@@ -101,14 +110,7 @@ py::object &pyeval      (void) { return *pyevalptr      (); }
 py::object &pyvalueerror(void) { return *pyvalueerrorptr(); }
 py::object &pycomplex   (void) { return *pycomplexptr   (); }
 
-// Old static version: this will crash with GIL error on exit
-//
-//py::object &pygetbuiltin(void) { static py::object builtins   = py::module_::import("builtins");   return builtins;   }
-//py::object &pyisinstance(void) { static py::object isinstance = pygetbuiltin().attr("isinstance"); return isinstance; }
-//py::object &pycallable  (void) { static py::object callable   = pygetbuiltin().attr("callable");   return callable;   }
-//py::object &pyeval      (void) { static py::object eval       = pygetbuiltin().attr("eval");       return eval;       }
-//py::object &pyvalueerror(void) { static py::object ValueError = pygetbuiltin().attr("ValueError"); return ValueError; }
-//py::object &pycomplex   (void) { static py::object complex    = pygetbuiltin().attr("complex");    return complex;    }
+// Test python object type
 
 bool isValNone    (const py::object &src) { return src.is_none();                                                            }
 bool isValInteger (const py::object &src) { return !isValNone(src) && py::isinstance<py::int_>(src);                         }
@@ -135,9 +137,11 @@ bool isValCastableToInteger(const py::object &src) { return isValNone(src) || is
 bool isValCastableToReal   (const py::object &src) { return isValNone(src) || isValInteger(src) || isValReal(src);                      }
 bool isValCastableToComplex(const py::object &src) { return isValNone(src) || isValInteger(src) || isValReal(src) || isValComplex(src); }
 
+// Simple, direct, naive casting functions for python objects that *assume* correct typing a-priori
+
 int                  toInt(const py::object &src) { return (int)      py::cast<py::int_>  (src); }
 double               toDbl(const py::object &src) { return (double)   py::cast<py::float_>(src); }
-std::complex<double> toCpl(const py::object &src) { return py::cast<std::complex<double> >(src); }
+std::complex<double> toCpl(const py::object &src) { return py::cast<std::complex<double>> (src); }
 
 // Conversion operators from c++ types (or gentype) to py::object
 
@@ -186,40 +190,40 @@ gentype convFromPy(const py::object &src);
 
 // Helper macros for python module constructions
 
-#define        QDO(modis,dofn,desc)        modis.def(#dofn,  &(mod_ ## dofn),  "Do "               desc);
-#define     QDOARG(modis,dofn,desc,pname)  modis.def(#dofn,  &(mod_ ## dofn),  "Do "               desc, py::arg(pname));
-#define       QGET(modis,getfn,desc)       modis.def(#getfn, &(mod_ ## getfn), "Get "              desc);
-#define    QGETCLA(modis,getfn,desc)       modis.def(#getfn, &(mod_ ## getfn), "For class d, get " desc, py::arg("d"));
-#define    QGETSET(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), "Set "              desc, py::arg(#getfn)); \
-                                           modis.def(#getfn, &(mod_ ## getfn), "Get "              desc);
-#define QGETSETCLA(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), "For class d, set " desc, py::arg("d"), py::arg(#getfn)); \
-                                           modis.def(#getfn, &(mod_ ## getfn), "For class d, get " desc, py::arg("d"));
+#define        QDO(modis,dofn,desc)        modis.def(#dofn,  &(mod_ ## dofn),  "\n\nDo "               desc);
+#define     QDOARG(modis,dofn,desc,pname)  modis.def(#dofn,  &(mod_ ## dofn),  "\n\nDo "               desc, py::arg(pname));
+#define       QGET(modis,getfn,desc)       modis.def(#getfn, &(mod_ ## getfn), "\n\nGet "              desc);
+#define    QGETCLA(modis,getfn,desc)       modis.def(#getfn, &(mod_ ## getfn), "\n\nFor class d, get " desc, py::arg("d"));
+#define    QGETSET(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), "\n\nSet "              desc, py::arg(#getfn)); \
+                                           modis.def(#getfn, &(mod_ ## getfn), "\n\nGet "              desc);
+#define QGETSETCLA(modis,getfn,setfn,desc) modis.def(#setfn, &(mod_ ## setfn), "\n\nFor class d, set " desc, py::arg("d"), py::arg(#getfn)); \
+                                           modis.def(#getfn, &(mod_ ## getfn), "\n\nFor class d, get " desc, py::arg("d"));
 
-#define       QGETD(modis,getfn,getname,desc)               modis.def(getname, &(mod_ ## getfn), "Get "              desc);
-#define    QGETSETD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), "Do "               desc, py::arg(getname)); \
-                                                            modis.def(getname, &(mod_ ## getfn), "Get "              desc);
-#define QGETSETCLAD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), "For class d, set " desc, py::arg("d"), py::arg(getname)); \
-                                                            modis.def(getname, &(mod_ ## getfn), "For class d, get " desc, py::arg("d"));
+#define       QGETD(modis,getfn,getname,desc)               modis.def(getname, &(mod_ ## getfn), "\n\nGet "              desc);
+#define    QGETSETD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), "\n\nDo "               desc, py::arg(getname)); \
+                                                            modis.def(getname, &(mod_ ## getfn), "\n\nGet "              desc);
+#define QGETSETCLAD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_ ## setfn), "\n\nFor class d, set " desc, py::arg("d"), py::arg(getname)); \
+                                                            modis.def(getname, &(mod_ ## getfn), "\n\nFor class d, get " desc, py::arg("d"));
 
-#define QGETSETOPT(modis,varname,ty,sub,desc) modis ## _ ## ty ## _ ## sub.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set " desc, py::arg(#varname)); \
-                                              modis ## _ ## ty ## _ ## sub.def(      #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get " desc);
-#define QGETSETOPTB(modis,varname,ty,desc   ) modis ## _ ##             ty.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "For " #ty          " optimiser, set " desc, py::arg(#varname)); \
-                                              modis ## _ ##             ty.def(      #varname, &(modoptget_ ## ty ## _ ## varname), "For " #ty          " optimiser, get " desc);
-#define QGETSETOPTALL(modis,varname,desc)     modis ## _grid              .def("set" #varname, &(modoptset_grid_       ## varname), "For " "grid"       " optimiser, set " desc, py::arg(#varname)); \
-                                              modis ## _DIRect            .def("set" #varname, &(modoptset_DIRect_     ## varname), "For " "DIRect"     " optimiser, set " desc, py::arg(#varname)); \
-                                              modis ## _NelderMead        .def("set" #varname, &(modoptset_NelderMead_ ## varname), "For " "NelderMead" " optimiser, set " desc, py::arg(#varname)); \
-                                              modis ## _Bayesian          .def("set" #varname, &(modoptset_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, set " desc, py::arg(#varname)); \
-                                              modis ## _grid              .def(      #varname, &(modoptget_grid_       ## varname), "For " "grid"       " optimiser, get " desc); \
-                                              modis ## _DIRect            .def(      #varname, &(modoptget_DIRect_     ## varname), "For " "DIRect"     " optimiser, get " desc); \
-                                              modis ## _NelderMead        .def(      #varname, &(modoptget_NelderMead_ ## varname), "For " "NelderMead" " optimiser, get " desc); \
-                                              modis ## _Bayesian          .def(      #varname, &(modoptget_Bayesian_   ## varname), "For " "Bayesian"   " optimiser, get " desc);
+#define QGETSETOPT(modis,varname,ty,sub,desc) modis ## _ ## ty ## _ ## sub.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "\n\nFor " #ty          " optimiser, set " desc, py::arg(#varname)); \
+                                              modis ## _ ## ty ## _ ## sub.def(      #varname, &(modoptget_ ## ty ## _ ## varname), "\n\nFor " #ty          " optimiser, get " desc);
+#define QGETSETOPTB(modis,varname,ty,desc   ) modis ## _ ##             ty.def("set" #varname, &(modoptset_ ## ty ## _ ## varname), "\n\nFor " #ty          " optimiser, set " desc, py::arg(#varname)); \
+                                              modis ## _ ##             ty.def(      #varname, &(modoptget_ ## ty ## _ ## varname), "\n\nFor " #ty          " optimiser, get " desc);
+#define QGETSETOPTALL(modis,varname,desc)     modis ## _grid              .def("set" #varname, &(modoptset_grid_       ## varname), "\n\nFor " "grid"       " optimiser, set " desc, py::arg(#varname)); \
+                                              modis ## _DIRect            .def("set" #varname, &(modoptset_DIRect_     ## varname), "\n\nFor " "DIRect"     " optimiser, set " desc, py::arg(#varname)); \
+                                              modis ## _NelderMead        .def("set" #varname, &(modoptset_NelderMead_ ## varname), "\n\nFor " "NelderMead" " optimiser, set " desc, py::arg(#varname)); \
+                                              modis ## _Bayesian          .def("set" #varname, &(modoptset_Bayesian_   ## varname), "\n\nFor " "Bayesian"   " optimiser, set " desc, py::arg(#varname)); \
+                                              modis ## _grid              .def(      #varname, &(modoptget_grid_       ## varname), "\n\nFor " "grid"       " optimiser, get " desc); \
+                                              modis ## _DIRect            .def(      #varname, &(modoptget_DIRect_     ## varname), "\n\nFor " "DIRect"     " optimiser, get " desc); \
+                                              modis ## _NelderMead        .def(      #varname, &(modoptget_NelderMead_ ## varname), "\n\nFor " "NelderMead" " optimiser, get " desc); \
+                                              modis ## _Bayesian          .def(      #varname, &(modoptget_Bayesian_   ## varname), "\n\nFor " "Bayesian"   " optimiser, get " desc);
 
 #define QGETSETKERD(modis,getfn,setfn,getname,setname,desc)  modis.def(setname, &(mod_k ## setfn), "\n\nSet kernel param "                  desc, py::arg(getname)); \
-                                                             modis.def(getname, &(mod_k ## getfn), "\n\nGet kernel param "                  desc);                   \
+                                                             modis.def(getname, &(mod_k ## getfn), "\n\nGet kernel param "                  desc                  ); \
                                                    (modis ##  _UU).def(setname, &(mod_e ## setfn), "\n\nSet output kernel param "           desc, py::arg(getname)); \
-                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "\n\nGet output kernel param "           desc);                   \
+                                                   (modis ##  _UU).def(getname, &(mod_e ## getfn), "\n\nGet output kernel param "           desc                  ); \
                                                    (modis ## _RFF).def(setname, &(mod_r ## setfn), "\n\nSet RFF kernel param "              desc, py::arg(getname)); \
-                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "\n\nGet RFF kernel param "              desc);
+                                                   (modis ## _RFF).def(getname, &(mod_r ## getfn), "\n\nGet RFF kernel param "              desc                  );
 #define QGETSETKERQD(modis,getfn,setfn,getname,setname,desc) modis.def(setname, &(mod_k ## setfn), "\n\nSet kernel element q param "        desc, py::arg(getname), py::arg("q") = 0); \
                                                              modis.def(getname, &(mod_k ## getfn), "\n\nGet kernel element q param "        desc,                   py::arg("q") = 0); \
                                                    (modis ##  _UU).def(setname, &(mod_e ## setfn), "\n\nSet output kernel element q param " desc, py::arg(getname), py::arg("q") = 0); \
@@ -227,9 +231,9 @@ gentype convFromPy(const py::object &src);
                                                    (modis ## _RFF).def(setname, &(mod_r ## setfn), "\n\nSet RFF kernel element q param "    desc, py::arg(getname), py::arg("q") = 0); \
                                                    (modis ## _RFF).def(getname, &(mod_r ## getfn), "\n\nSet RFF kernel element q param "    desc,                   py::arg("q") = 0);
 
-#define QIMPA(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), "Evaluate " desc " in gentype", py::arg("x"));
-#define QIMPB(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), "Evaluate " desc " in gentype", py::arg("x"),py::arg("y"));
-#define QIMPC(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), "Evaluate " desc " in gentype", py::arg("x"),py::arg("y"),py::arg("z"));
+#define QIMPA(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), "\n\nEvaluate " desc " in gentype", py::arg("x")                          );
+#define QIMPB(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), "\n\nEvaluate " desc " in gentype", py::arg("x"),py::arg("y")             );
+#define QIMPC(modis,func,desc) modis.def( #func, &( gencalc_ ## func ), "\n\nEvaluate " desc " in gentype", py::arg("x"),py::arg("y"),py::arg("z"));
 
 // Corresponding helper macros to auto-generate function definitions to be used by python module
 
@@ -316,32 +320,18 @@ gentype convFromPy(const py::object &src);
                                        py::object mod_r ## getfn(int q)               { dostartup(); int i = glob_MLInd(0); return convToPy(getMLrefconst(i).getRFFKernel(). getfn (q));  } \
                                        void       mod_r ## setfn(py::object p, int q) { dostartup(); int i = glob_MLInd(0); T altp; convFromPy(altp,p); getMLref(i).getRFFKernel_unsafe(). setfn (altp,q); }
 
-#define MAKEVISA(func)                                                                      \
-py::object gencalc_ ## func (py::object x)                                                  \
-{                                                                                           \
-    return convToPy( func (convFromPy(x)));                                                 \
-}
-
-#define MAKEVISB(func)                                                                      \
-py::object gencalc_ ## func (py::object x, py::object y)                                    \
-{                                                                                           \
-    return convToPy( func (convFromPy(x),convFromPy(y)));                                   \
-}
-
-#define MAKEVISC(func)                                                                      \
-py::object gencalc_ ## func (py::object x, py::object y, py::object z)                      \
-{                                                                                           \
-    return convToPy( func (convFromPy(x),convFromPy(y),convFromPy(z)));                     \
-}
+#define MAKEVISA(func) py::object gencalc_ ## func (py::object x)                             { return convToPy( func (convFromPy(x)));                             }
+#define MAKEVISB(func) py::object gencalc_ ## func (py::object x, py::object y)               { return convToPy( func (convFromPy(x),convFromPy(y)));               }
+#define MAKEVISC(func) py::object gencalc_ ## func (py::object x, py::object y, py::object z) { return convToPy( func (convFromPy(x),convFromPy(y),convFromPy(z))); }
 
 // Actual functions (including auto-generation stubs) used in python module
 
-py::object mloptgrid(      int i, int dim, int numreps, py::object objfn, py::object callback);
-py::object mloptDIRect(    int i, int dim, int numreps, py::object objfn, py::object callback);
+py::object mloptgrid      (int i, int dim, int numreps, py::object objfn, py::object callback);
+py::object mloptDIRect    (int i, int dim, int numreps, py::object objfn, py::object callback);
 py::object mloptNelderMead(int i, int dim, int numreps, py::object objfn, py::object callback);
-py::object mloptBayesian(  int i, int dim, int numreps, py::object objfn, py::object callback);
+py::object mloptBayesian  (int i, int dim, int numreps, py::object objfn, py::object callback);
 
-void plotregret(std::string &simname, py::object resnames, py::object listofres);
+void plotregret(std::string &simname, py::object resnames, py::object listofres, double Rmin, double Rmax, int plotdata, int plotlogy);
 
 int selml(int i = 0);
 
@@ -639,55 +629,68 @@ OPTGETSETDEF(xtol_abs,NelderMead,double)
 OPTGETSETDEF(maxeval, NelderMead,int   )
 OPTGETSETDEF(method,  NelderMead,int   )
 
-OPTGETSETDEF(acq,        Bayesian,int    )
-OPTGETSETDEF(acqcgt,     Bayesian,int    )
-OPTGETSETDEF(startpoints,Bayesian,int    )
-OPTGETSETDEF(totiters,   Bayesian,int    )
-OPTGETSETDEF(startseed,  Bayesian,int    )
-OPTGETSETDEF(algseed,    Bayesian,int    )
-OPTGETSETDEF(itcntmethod,Bayesian,int    )
-OPTGETSETDEF(err,        Bayesian,double )
-OPTGETSETDEF(minstdev,   Bayesian,double )
-OPTGETSETDEF(moodim,     Bayesian,int    )
-OPTGETSETDEF(sigmuseparate,Bayesian,int    )
-OPTGETSETDEF(numcgt,     Bayesian,int    )
-OPTGETSETDEF(cgtmethod,  Bayesian,int    )
-OPTGETSETDEF(cgtmargin,  Bayesian,double )
-OPTGETSETDEF(cgtcertain, Bayesian,double )
-OPTGETSETDEF(ztol,       Bayesian,double )
-OPTGETSETDEF(delta,      Bayesian,double )
-OPTGETSETDEF(zeta,       Bayesian,double )
-OPTGETSETDEF(nu,         Bayesian,double )
-OPTGETSETDEF(modD,       Bayesian,double )
-OPTGETSETDEF(a,          Bayesian,double )
-OPTGETSETDEF(b,          Bayesian,double )
-OPTGETSETDEF(r,          Bayesian,double )
-OPTGETSETDEF(p,          Bayesian,double )
-OPTGETSETDEF(R,          Bayesian,double )
-OPTGETSETDEF(B,          Bayesian,double )
-OPTGETSETDEF(betafn,     Bayesian,gentype)
-OPTGETSETDEF(betafncgt,  Bayesian,gentype)
-OPTGETSETDEF(numfids,    Bayesian,int    )
-OPTGETSETDEF(fidover,    Bayesian,int    )
-OPTGETSETDEF(fidmode,    Bayesian,int    )
-OPTGETSETDEF(dimfid,     Bayesian,int    )
-OPTGETSETDEF(fidbudget,  Bayesian,double )
-OPTGETSETDEF(fidpenalty, Bayesian,gentype)
-OPTGETSETDEF(fidvar,     Bayesian,gentype)
-OPTGETSETDEF(cgtVarScale,Bayesian,double )
-OPTGETSETDEF(PIscale,    Bayesian,int    )
-OPTGETSETDEF(TSmode,     Bayesian,int    )
-OPTGETSETDEF(TSNsamp,    Bayesian,int    )
-OPTGETSETDEF(TSsampType, Bayesian,int    )
-OPTGETSETDEF(TSxsampType,Bayesian,int    )
-OPTGETSETDEF(sigma_cut,  Bayesian,double )
-OPTGETSETDEF(tranmeth,   Bayesian,int    )
-OPTGETSETDEF(alpha0,     Bayesian,double )
-OPTGETSETDEF(beta0,      Bayesian,double )
-OPTGETSETDEF(kxfnum,     Bayesian,int    )
-OPTGETSETDEF(kxfnorm,    Bayesian,int    )
-OPTGETSETDEF(lseeps,     Bayesian,double )
-OPTGETSETDEF(h,          Bayesian,double )
+OPTGETSETDEF(acq,            Bayesian,int    )
+OPTGETSETDEF(randsearch,     Bayesian,int    )
+OPTGETSETDEF(acqcgt,         Bayesian,int    )
+OPTGETSETDEF(cgtscale,       Bayesian,double )
+OPTGETSETDEF(acqvalexp,      Bayesian,int    )
+OPTGETSETDEF(startpoints,    Bayesian,int    )
+OPTGETSETDEF(totiters,       Bayesian,int    )
+OPTGETSETDEF(startseed,      Bayesian,int    )
+OPTGETSETDEF(algseed,        Bayesian,int    )
+OPTGETSETDEF(itcntmethod,    Bayesian,int    )
+OPTGETSETDEF(err,            Bayesian,double )
+OPTGETSETDEF(minstdev,       Bayesian,double )
+OPTGETSETDEF(moodim,         Bayesian,int    )
+OPTGETSETDEF(sigmuseparate,  Bayesian,int    )
+OPTGETSETDEF(numcgt,         Bayesian,int    )
+OPTGETSETDEF(cgtmethod,      Bayesian,int    )
+OPTGETSETDEF(cgtmargin,      Bayesian,double )
+OPTGETSETDEF(cgtcertain,     Bayesian,double )
+OPTGETSETDEF(ztol,           Bayesian,double )
+OPTGETSETDEF(delta,          Bayesian,double )
+OPTGETSETDEF(zeta,           Bayesian,double )
+OPTGETSETDEF(tailweight,     Bayesian,double )
+OPTGETSETDEF(gamma,          Bayesian,double )
+OPTGETSETDEF(gammacgt,       Bayesian,double )
+OPTGETSETDEF(gammaheuristic, Bayesian,int    )
+OPTGETSETDEF(numain,         Bayesian,double )
+OPTGETSETDEF(modD,           Bayesian,double )
+OPTGETSETDEF(a,              Bayesian,double )
+OPTGETSETDEF(b,              Bayesian,double )
+OPTGETSETDEF(r,              Bayesian,double )
+OPTGETSETDEF(p,              Bayesian,double )
+OPTGETSETDEF(R,              Bayesian,double )
+OPTGETSETDEF(B,              Bayesian,double )
+OPTGETSETDEF(betafn,         Bayesian,gentype)
+OPTGETSETDEF(betafncgt,      Bayesian,gentype)
+OPTGETSETDEF(betafnvalexp,   Bayesian,gentype)
+OPTGETSETDEF(numfids,        Bayesian,int    )
+OPTGETSETDEF(fidover,        Bayesian,int    )
+OPTGETSETDEF(fidmode,        Bayesian,int    )
+OPTGETSETDEF(dimfid,         Bayesian,int    )
+OPTGETSETDEF(fidbudget,      Bayesian,double )
+OPTGETSETDEF(fidpenalty,     Bayesian,gentype)
+OPTGETSETDEF(fidvar,         Bayesian,gentype)
+OPTGETSETDEF(cgtVarScale,    Bayesian,double )
+OPTGETSETDEF(PIscale,        Bayesian,int    )
+OPTGETSETDEF(TSmode,         Bayesian,int    )
+OPTGETSETDEF(TSNsamp,        Bayesian,int    )
+OPTGETSETDEF(TSsampType,     Bayesian,int    )
+OPTGETSETDEF(TSxsampType,    Bayesian,int    )
+OPTGETSETDEF(sigma_cut,      Bayesian,double )
+OPTGETSETDEF(tranmeth,       Bayesian,int    )
+OPTGETSETDEF(alpha0,         Bayesian,double )
+OPTGETSETDEF(beta0,          Bayesian,double )
+OPTGETSETDEF(kxfnum,         Bayesian,int    )
+OPTGETSETDEF(kxfnorm,        Bayesian,int    )
+OPTGETSETDEF(lseeps,         Bayesian,double )
+OPTGETSETDEF(norepeats,      Bayesian,int    )
+OPTGETSETDEF(norepdist,      Bayesian,double )
+OPTGETSETDEF(blockdist,      Bayesian,double )
+OPTGETSETDEF(cgtepsgreedypof,Bayesian,double )
+OPTGETSETDEF(h,              Bayesian,double )
+OPTGETSETDEF(maxresamp,      Bayesian,int    )
 
 OPTGETSETDEF(intrinbatch,        Bayesian,int)
 OPTGETSETDEF(intrinbatchmethod,  Bayesian,int)
@@ -695,19 +698,25 @@ OPTGETSETDEF(startpointsmultiobj,Bayesian,int)
 OPTGETSETDEF(totitersmultiobj,   Bayesian,int)
 OPTGETSETDEF(ehimethodmultiobj,  Bayesian,int)
 
-OPTGETSETDEF(tunemu,          Bayesian,int        )
-OPTGETSETDEF(tunecgt,         Bayesian,int        )
-OPTGETSETDEF(tunesigma,       Bayesian,int        )
-OPTGETSETDEF(tunesrcmod,      Bayesian,int        )
-OPTGETSETDEF(tunediffmod,     Bayesian,int        )
-//OPTGETSETDEF(tuneaugxmod,     Bayesian,int        )
-OPTGETSETDEF(modelname,       Bayesian,std::string)
-OPTGETSETDEF(modeloutformat,  Bayesian,int        )
-OPTGETSETDEF(plotfreq,        Bayesian,int        )
-OPTGETSETDEF(modelsave,       Bayesian,int        )
-OPTGETSETDEF(modelbaseline,   Bayesian,gentype    )
-OPTGETSETDEF(cgtsave,         Bayesian,int        )
-OPTGETSETDEF(cgtbaseline,     Bayesian,gentype    )
+OPTGETSETDEF(tunemu,           Bayesian,int        )
+OPTGETSETDEF(tunecgt,          Bayesian,int        )
+OPTGETSETDEF(tunesigma,        Bayesian,int        )
+OPTGETSETDEF(tunesrcmod,       Bayesian,int        )
+OPTGETSETDEF(tunediffmod,      Bayesian,int        )
+//OPTGETSETDEF(tuneaugxmod,      Bayesian,int        )
+OPTGETSETDEF(tunemu_sigma,     Bayesian,int        )
+OPTGETSETDEF(tunecgt_sigma,    Bayesian,int        )
+OPTGETSETDEF(tunesigma_sigma,  Bayesian,int        )
+OPTGETSETDEF(tunesrcmod_sigma, Bayesian,int        )
+OPTGETSETDEF(tunediffmod_sigma,Bayesian,int        )
+//OPTGETSETDEF(tuneaugxmod,      Bayesian,int        )
+OPTGETSETDEF(modelname,        Bayesian,std::string)
+OPTGETSETDEF(modeloutformat,   Bayesian,int        )
+OPTGETSETDEF(plotfreq,         Bayesian,int        )
+OPTGETSETDEF(modelsave,        Bayesian,int        )
+OPTGETSETDEF(modelbaseline,    Bayesian,gentype    )
+OPTGETSETDEF(cgtsave,          Bayesian,int        )
+OPTGETSETDEF(cgtbaseline,      Bayesian,gentype    )
 
 // Functions we might as well import from gentype
 
@@ -850,6 +859,53 @@ void shutdown_module(void)
 
 
 
+#define ENHANCED_RETURN \
+  "                                                                             \n" \
+  "When evaluating f(x) it is possible to return:                               \n" \
+  "                                                                             \n" \
+  "1. y = f(x) (the function f evaluated at x).                                 \n" \
+  "2. A non-trivial return with additional information.                         \n" \
+  "3. None (no observation available).                                          \n" \
+  "                                                                             \n" \
+  "Non-trivial observations are dictionary types with optional arguments:       \n" \
+  "                                                                             \n" \
+"\"y\":  result f(x), or None if not observed.                                  \n" \
+"\"d\":  observe type 0 (None), -1 (f(x)<=y), +1 (f(x)>=y), 2 (f(x)=y, deflt)   \n" \
+"\"c\":  constraint evaluation [c1[x],x2[x],...] (feasble if c(x)>=0).          \n" \
+"\"dc\": constraint observe [d1,d2,...] (each like d for corresponding c)       \n" \
+"\"x\":  alternative observation point. That is, if you don't want to observe   \n" \
+  "      x then you can observe at an alterative vector x' and return it here.  \n" \
+"\"sf\": stop flags. This is a bitfield with the following bits:                \n" \
+  "      1 terminate optimization now.                                          \n" \
+  "      2 don't include observation in observation count.                      \n" \
+  "      4 add x to a list of blocked observations (points to avoid).  These    \n" \
+  "        vectors are stored, and any x within a sphere of diameter (squared)  \n" \
+  "        blockdist of points in this list will be avoided (ie infeasible).    \n" \
+  "                                                                             \n" \
+"\"addvar\":  additional variance for noisier observation of f(x) (dflt 0).     \n" \
+"\"fidcost\": fidelity cost overrite (default -1). If >= 0 then then this is    \n" \
+  "           cost of the observation in the multi-fidelity scenario.           \n" \
+"\"nuscale\": scale factor for nu in beta calculation.                          \n" \
+"\"xsc\":     side-channel vectors.                                             \n" \
+  "                                                                             \n" \
+"\"addexp\": additional experimental results. This is another dictionary for    \n" \
+  "          another observation (eg f(x')), with the same format. You can      \n" \
+  "          recursively include arbitrarily many such experimental results.    \n"
+
+#define ENHANCED_RETURN_BASE \
+  "                                                                             \n" \
+  "When evaluating f(x) it is possible to return:                               \n" \
+  "                                                                             \n" \
+  "1. y = f(x) (the function f evaluated at x).                                 \n" \
+  "2. A non-trivial return with additional information.                         \n" \
+  "                                                                             \n" \
+  "Non-trivial observations are dictionary types with optional arguments:       \n" \
+  "                                                                             \n" \
+"\"y\":  result f(x), or None if not observed.                                  \n" \
+"\"c\":  constraint evaluation [c1[x],x2[x],...] (feasble if c(x)>=0).          \n" \
+"\"sf\": stop flags. This is a bitfield with the following bits:                \n" \
+  "      1 terminate optimization now.                                          \n"
+
 // Python module definition
 
 //PYBIND11_MODULE(_pyheavy, m) {
@@ -889,6 +945,8 @@ PYBIND11_MODULE(pyheavy, m) {
     m_int.def("snakes",   &callsnakes,   "Snakes (test io, streams).",py::arg("w")=snakewide,py::arg("h")=snakehigh);
     m_int.def("calc",     &callintercalc,"Calculator (explore functions available in gentype expressions).");
     m_int.def("log",      &logit,        "Print to log.",py::arg("str"));
+
+//    m_int.def("tester",&tester,"Tester.",py::arg("i")=0,py::arg("j")=0);
 
     // ---------------------------
     // ---------------------------
@@ -1329,17 +1387,31 @@ PYBIND11_MODULE(pyheavy, m) {
                                     "(assumed to be taken) observation g(z) ~ N(...,sigw*sigma()).                  ",
                                     py::arg("xa"),py::arg("xb"),py::arg("p"),py::arg("sigw")=1);
 
-    m_ml.def("tuneKernel",&mltuneKernel,"Tune the kernel to minimise some metric, specified by method:                  \n"
+    m_ml.def("tuneKernel",&mltuneKernel,"Tune hyperparameters to minimise some metric, specified by method:             \n"
                                         "                                                                               \n"
                                         "1 - negative log-likelihood (default)                                          \n"
                                         "2 - leave-one-out error                                                        \n"
                                         "3 - recall error                                                               \n"
+                                        "4 - ||alpha||                                                                  \n"
+                                        "                                                                               \n"
+                                        "These use a heuristic grid-search by default. To use DIRect instead, use:      \n"
+                                        "                                                                               \n"
+                                        "-1 - negative log-likelihood using DIRect                                      \n"
+                                        "-2 - leave-one-out error using DIRect                                          \n"
+                                        "-3 - recall error using DIRect                                                 \n"
+                                        "-4 - ||alpha|| using DIRect                                                    \n"
                                         "                                                                               \n"
                                         "Optional arguments are:                                                        \n"
                                         "                                                                               \n"
                                         "xwidth - the maximum kernel lengthscale override (default 1)                   \n"
-                                        "tuneK  - 0 don't tune kernel parameters, 1 tune kernel parameters (default)    \n"
-                                        "tuneP  - 0 don't tune C (1/sigma) parameter (default), 1 tune C                ",
+                                        "tuneK  - 0 don't tune kernel parameters                                        \n"
+                                        "       - 1 tune kernel parameters (default)                                    \n"
+                                        "tuneP  - 0 don't tune C/eps/sigma                                              \n"
+                                        "       - 1 tune C                                                              \n"
+                                        "       - 2 tune eps                                                            \n"
+                                        "       - 3 tune C and eps                                                      \n"
+                                        "       - 4 tune sigma                                                          \n"
+                                        "       - 6 tune sigma and eps                                                  ",
                                         py::arg("method")=2,py::arg("xwidth")=1,py::arg("tuneK")=1,py::arg("tuneP")=0);
 
     m_ml.def("K0",&mlK0,"Calculate K0()."                                                                   );
@@ -1604,12 +1676,12 @@ PYBIND11_MODULE(pyheavy, m) {
     auto m_opt_NelderMead = m_opt.def_submodule("NelderMead","Nelder-Mead Optimisation");
     auto m_opt_Bayesian   = m_opt.def_submodule("BO",        "Bayesian Optimisation"   );
 
-    m_opt_grid.def(      "opt", &mloptgrid,       "Optimise (minimise) fn : [0,1]^dim to [0,1] using grid optimiser i.",       py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
-    m_opt_DIRect.def(    "opt", &mloptDIRect,     "Optimise (minimise) fn : [0,1]^dim to [0,1] using DIRect optimiser i.",     py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
-    m_opt_NelderMead.def("opt", &mloptNelderMead, "Optimise (minimise) fn : [0,1]^dim to [0,1] using Nelder-Mead optimiser i.",py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
-    m_opt_Bayesian.def(  "opt", &mloptBayesian,   "Optimise (minimise) fn : [0,1]^dim to [0,1] using Bayesian optimiser i.",   py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
+    m_opt_grid.def(      "opt", &mloptgrid,       "Optimise (minimise) fn : [0,1]^dim to [0,1] using grid optimiser i.\n"        ENHANCED_RETURN_BASE,py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
+    m_opt_DIRect.def(    "opt", &mloptDIRect,     "Optimise (minimise) fn : [0,1]^dim to [0,1] using DIRect optimiser i.\n"      ENHANCED_RETURN_BASE,py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
+    m_opt_NelderMead.def("opt", &mloptNelderMead, "Optimise (minimise) fn : [0,1]^dim to [0,1] using Nelder-Mead optimiser i.\n" ENHANCED_RETURN_BASE,py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
+    m_opt_Bayesian.def(  "opt", &mloptBayesian,   "Optimise (minimise) fn : [0,1]^dim to [0,1] using Bayesian optimiser i.\n"    ENHANCED_RETURN,     py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
 
-    m_opt.def("plotRegret",&plotregret,"Plot regret. simname defines filenames, key is descriptions, res is a list of returns from opt.",py::arg("simname"),py::arg("key"),py::arg("res"));
+    m_opt.def("plotRegret",&plotregret,"Plot regret. simname defines filenames, key is descriptions, res is a list of returns from opt.",py::arg("simname"),py::arg("key"),py::arg("res"),py::arg("rmin")=1.0,py::arg("rmax")=0.0,py::arg("plotdata")=0,py::arg("plotlogy")=0);
 
     auto m_opt_Bayesian_model = m_opt_Bayesian.def_submodule("models","Model Options"                               );
     auto m_opt_Bayesian_tune  = m_opt_Bayesian.def_submodule("tune",  "Model Tuning"                                );
@@ -1717,6 +1789,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                        "22 - Zero (minimize 0 placeholder).                                            \n"
                                        "23 - Level set (LSE) with Straddle Heuristic (Bry1).                           \n"
                                        "24 - Level set (LSE) with C2LSE (Ngo1).                                        \n"
+                                       "25 - Mean plus variance.                                                       \n"
                                        "                                                                               \n"
                                        "* beta_n = 2.log((n^{2+dim/2}).(pi^2)/(3.delta))                               \n"
                                        "$ variance of model only.                                                      \n"
@@ -1732,6 +1805,9 @@ PYBIND11_MODULE(pyheavy, m) {
                                        "22 - Zero (minimize 0 placeholder, default).                                   \n"
                                        "23 - Level set (LSE) with Straddle Heuristic (Bry1).                           \n"
                                        "24 - Level set (LSE) with C2LSE (Ngo1).                                        ");
+    QGETSETOPTB(m_opt,cgtscale,Bayesian,"Scale constraint acquisition by this factor (default 1)."                      );
+    QGETSETOPTB(m_opt,acqvalexp,Bayesian,"Like acq, but defines beta scale for calculating prob feasible."              );
+    QGETSETOPTB(m_opt,maxresamp,Bayesian,"Max resamples if inner-loop fails in TS (default 6)."                         );
     QGETSETOPTB(m_opt,betafn, Bayesian,"user-defined beta for acq 11. You can make this a function with the vars:\n"
                                        "                                                                               \n"
                                        "- x_0  = iteration number.                                                     \n"
@@ -1782,9 +1858,29 @@ PYBIND11_MODULE(pyheavy, m) {
                                        "a single iteration, one for each of the acq f1,f2,... given. Note that in this \n"
                                        "case betafn must be a vector of the same format and size, and that acq and     \n"
                                        "acqcgt will then be taken in pairs from betafn and betafncgt.                  ");
+    QGETSETOPTB(m_opt,betafnvalexp,Bayesian,"user-defined beta for acqvalexp 11. See betafncgt."                        );
+    QGETSETOPTB(m_opt,randsearch,Bayesian,"select using random search acq(x) <= U(0,1)                                 ");
     QGETSETOPTB(m_opt,PIscale,Bayesian,"PI scaling: set 0 for standard operation, 1 to scale aquisition function by    \n"
                                        "the PI (probability of improvement) acquisition function. 2 is like 1 but with \n"
                                        "a ``hard ratchett'' to avoid any experiments for no-progress (a bad idea).     ");
+    QGETSETOPTB(m_opt,norepeats,Bayesian,"Prevent repeats:\n"
+                                       "                                                                               \n"
+                                       "0   - usual BO behaviour (default).                                            \n"
+                                       "1   - check all previous observations and skip them (on inner loop).           \n"
+                                       "n<0 - like 1, but only for the previous n experiments.                         \n"
+                                       "                                                                               \n"
+                                       "NB: this helps a lot when tuning hyperparameters on a grid (tunemu etc > 0) but\n"
+                                       "    does very little or nothing if using DIRect (tunemu etc < 0) as this tends \n"
+                                       "    to make the hyperparameters - and thus recommendations - noisier.          ");
+    QGETSETOPTB(m_opt,norepdist,Bayesian,"Repeat detection distance:\n"
+                                       "                                                                               \n"
+                                       "When using norepeats, set this so x = xi or ||x-xi||_2^2 < norepdist is tagged \n"
+                                       "as a repeat (default 0).                                                       ");
+    QGETSETOPTB(m_opt,blockdist,Bayesian,"Block detection distance:\n"
+                                       "                                                                               \n"
+                                       "If the user returns f(xi) = None then xi is stored, and from then forwards if  \n"
+                                       "||x-xi||_2^2 < blockdist then this point is marked infeasible.                 ");
+    QGETSETOPTB(m_opt,cgtepsgreedypof,Bayesian,"epsilon-greedy factor for probality of feasibility (PoF).              ");
 
     QGETSETOPTB(m_opt,sigmuseparate,Bayesian,"posterior separation:\n"
                                              "                                                                               \n"
@@ -1801,29 +1897,34 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPTB(m_opt,minstdev,   Bayesian,"if nz and posterior variance less than this, mark infeasible for inner loop (default 0).");
     QGETSETOPTB(m_opt,ztol,       Bayesian,"zero tolerance factor.");
 
-    QGETSETOPTB(m_opt,startseed,Bayesian,"seed for RNG immediately prior to generating random seeds. -1 for no seed,\n"
-                                         "-2 to seed with time. If >=0 then this is incremented on each use (default 42).");
-    QGETSETOPTB(m_opt,algseed,  Bayesian,"seed for RNG immediately prior to the main algorithm loop. -1 for no seed,\n"
-                                         "-2 to seed with time. If >=0 then this is incremented on each use (default 42)");
+    QGETSETOPTB(m_opt,startseed,  Bayesian,"seed for RNG immediately prior to generating random seeds. -1 for no seed,\n"
+                                           "-2 to seed with time. If >=0 then this is incremented on each use (default 42).");
+    QGETSETOPTB(m_opt,algseed,    Bayesian,"seed for RNG immediately prior to the main algorithm loop. -1 for no seed,\n"
+                                           "-2 to seed with time. If >=0 then this is incremented on each use (default 42)");
+
+    QGETSETOPTB(m_opt,gamma,         Bayesian,"gamma factor to objective posterior variance (default 0)");
+    QGETSETOPTB(m_opt,gammacgt,      Bayesian,"gamma factor in constraint posterior variance (default 1e-6)");
+    QGETSETOPTB(m_opt,gammaheuristic,Bayesian,"0 normal, 1 for gammacgt heuristic in flatland (default 0).");
+    QGETSETOPTB(m_opt,tailweight,    Bayesian,"set >0 for leaky ReLU style EI (default 0)");
 
 
-    QGETSETOPT(m_opt,delta,Bayesian,gpucb,"delta factor used in GP-UCB (default 0.1).                      ");
-    QGETSETOPT(m_opt,nu,   Bayesian,gpucb,"nu factor Srinivas GP-UCB (default 0.2, see Srivinas)           ");
-    QGETSETOPT(m_opt,modD, Bayesian,gpucb,"|D| (grid siez) for GP-UCB finite (deflt -1: size of grid or 10)");
-    QGETSETOPT(m_opt,a,    Bayesian,gpucb,"a constant for Srinivas |D|-infinite gpUCB (default 1)          ");
-    QGETSETOPT(m_opt,b,    Bayesian,gpucb,"b constant for Srinivas |D|-infinite gpUCB (default 1)          ");
-    QGETSETOPT(m_opt,r,    Bayesian,gpucb,"r constant for Srinivas |D|-infinite gpUCB (default 1)          ");
-    QGETSETOPT(m_opt,p,    Bayesian,gpucb,"p value for GP-UCB p variants (default 2)                       ");
-    QGETSETOPT(m_opt,R,    Bayesian,gpucb,"R constant for acquisition functions 12,13,14 (default 1)       ");
-    QGETSETOPT(m_opt,B,    Bayesian,gpucb,"B constant for acquisition functions 12,13,14 (default 1)       ");
+
+    QGETSETOPT(m_opt,delta, Bayesian,gpucb,"delta factor used in GP-UCB (default 0.1).                      ");
+    QGETSETOPT(m_opt,numain,Bayesian,gpucb,"numain factor Srinivas GP-UCB (default 0.2, see Srivinas)       ");
+    QGETSETOPT(m_opt,modD,  Bayesian,gpucb,"|D| (grid siez) for GP-UCB finite (deflt -1: size of grid or 10)");
+    QGETSETOPT(m_opt,a,     Bayesian,gpucb,"a constant for Srinivas |D|-infinite gpUCB (default 1)          ");
+    QGETSETOPT(m_opt,b,     Bayesian,gpucb,"b constant for Srinivas |D|-infinite gpUCB (default 1)          ");
+    QGETSETOPT(m_opt,r,     Bayesian,gpucb,"r constant for Srinivas |D|-infinite gpUCB (default 1)          ");
+    QGETSETOPT(m_opt,p,     Bayesian,gpucb,"p value for GP-UCB p variants (default 2)                       ");
+    QGETSETOPT(m_opt,R,     Bayesian,gpucb,"R constant for acquisition functions 12,13,14 (default 1)       ");
+    QGETSETOPT(m_opt,B,     Bayesian,gpucb,"B constant for acquisition functions 12,13,14 (default 1)       ");
 
 
     QGETSETOPT(m_opt,lseeps,Bayesian,lse,"epsilon factor in LSE (default 0.01).    ");
     QGETSETOPT(m_opt,h,     Bayesian,lse,"level-set objective level h (default 0). ");
 
 
-    QGETSETOPT(m_opt,zeta,Bayesian,ei,"zeta factor in EI (default 0). 0.01 works ok).");
-
+    QGETSETOPT(m_opt,zeta,    Bayesian,ei,"zeta factor in EI (default 0, but 0.01 works ok).");
 
     QGETSETOPT(m_opt,TSmode,     Bayesian,ts,"Thompson sampling mode:\n"
                                              "\n"
@@ -1859,6 +1960,7 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPT(m_opt,numcgt,     Bayesian,cgt,"number of constraints enforced (default 0).");
     QGETSETOPT(m_opt,cgtmethod,  Bayesian,cgt,"constraint method:\n"
                                               "                                                                               \n"
+                                              "-1: don't enforce constraints.                                                 \n"
                                               "0 - calculate P(c(x))>=0 and scale acquisition function by this (default).     \n"
                                               "1 - optimise f(x).ind(c(x)>=0), so that the mean/variance of c are built into  \n"
                                               "    the posterior mean/variance before calculating acquisition function.       \n"
@@ -1867,11 +1969,12 @@ PYBIND11_MODULE(pyheavy, m) {
                                               "4 - Thompson sample c(x) and enforce constraint per iteration.                 \n"
                                               "5 - Thompson sample c(x) and enforce constraint per iteration (scaled variance)\n"
                                               "6 - enforce constraint c(x) > 0 with confidence cgtcertain (level set version).");
-    QGETSETOPT(m_opt,cgtmargin,  Bayesian,cgt,"safety margin for enforcing inequality constraints in the acq fn (default 0.1)");
+    QGETSETOPT(m_opt,cgtmargin,  Bayesian,cgt,"safety margin for enforcing inequality constraints in the acq fn (default 0)");
     QGETSETOPT(m_opt,cgtcertain, Bayesian,cgt,"certainty for cgtmethod 6 (level set enforcement).");
     QGETSETOPT(m_opt,cgtVarScale,Bayesian,cgt,"posterior constraint model variance scale. For example setting cgtVarScale less\n"
                                               "than 1 will tend to increase the probability of feasibility, encouraging the BO\n"
                                               "to explore nearer the margin of the feasible region (assuming PoF scaling).    \n");
+    QGETSETOPT(m_opt,cgtepsgreedypof,Bayesian,cgt,"epsilon-greedy constrained (default 0.0, Pr(c(x)>=0) -> Pr(c(x)>=0)+eps.var(x))");
 
 
     QGETSETOPT(m_opt,moodim,Bayesian,moo,"number of objectives (default 1, single-objective).");
@@ -1940,12 +2043,19 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPT(m_opt,cgtsave,       Bayesian,vis,"save constraint model when plotting (0 don't save (default), 1 save)");
     QGETSETOPT(m_opt,cgtbaseline,   Bayesian,vis,"baseline constraint function for posterior plots (or none)"          );
 
-    QGETSETOPT(m_opt,tunemu,     Bayesian,tune,"Tuning for objective model (0 none, 1 max-log-like (default), 2 LOO, 3 recall." );
-    QGETSETOPT(m_opt,tunecgt,    Bayesian,tune,"Tuning for constraint model (0 none, 1 max-log-like (default), 2 LOO, 3 recall.");
-    QGETSETOPT(m_opt,tunesigma,  Bayesian,tune,"Tuning for noise model (0 none, 1 max-log-like (default), 2 LOO, 3 recall."     );
-    QGETSETOPT(m_opt,tunesrcmod, Bayesian,tune,"Tuning for source model (0 none, 1 max-log-like (default), 2 LOO, 3 recall."    );
-    QGETSETOPT(m_opt,tunediffmod,Bayesian,tune,"Tuning for difference model (0 none, 1 max-log-like (default), 2 LOO, 3 recall.");
+    QGETSETOPT(m_opt,tunemu,     Bayesian,tune,"Tuning for objective model (0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect." );
+    QGETSETOPT(m_opt,tunecgt,    Bayesian,tune,"Tuning for constraint model (0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect.");
+    QGETSETOPT(m_opt,tunesigma,  Bayesian,tune,"Tuning for noise model (0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect."     );
+    QGETSETOPT(m_opt,tunesrcmod, Bayesian,tune,"Tuning for source model (0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect."    );
+    QGETSETOPT(m_opt,tunediffmod,Bayesian,tune,"Tuning for difference model (0 none, 1 max-log-like (default), 2 LOO, 3 recall, -ve DIRect.");
 //    QGETSETOPT(m_opt,tuneaugxmod,Bayesian,tune,"Tuning for x augmentation (side-channel) model (0 none, 1 max-log-likelihood (default), 2 LOO, 3 recall.");
+
+    QGETSETOPT(m_opt,tunemu_sigma,     Bayesian,tune,"Tuning for objective model sigma (0 no, 1 yes)." );
+    QGETSETOPT(m_opt,tunecgt_sigma,    Bayesian,tune,"Tuning for constraint model sigma (0 no, 1 yes).");
+    QGETSETOPT(m_opt,tunesigma_sigma,  Bayesian,tune,"Tuning for noise model sigma (0 no, 1 yes)."     );
+    QGETSETOPT(m_opt,tunesrcmod_sigma, Bayesian,tune,"Tuning for source model sigma (0 no, 1 yes)."    );
+    QGETSETOPT(m_opt,tunediffmod_sigma,Bayesian,tune,"Tuning for difference model sigma (0 no, 1 yes).");
+//    QGETSETOPT(m_opt,tuneaugxmod,Bayesian,tune,"Tuning for x augmentation sigma (0 no, 1 yes)."        );
 
 
     m_opt_Bayesian_model.def("setgridsrc",&boSetgridsource, "For BO, set grid source.",py::arg("j"));
@@ -2309,40 +2419,39 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objf
     return res;
 }
 
-void plotregret(std::string &simname, py::object pyresname, py::object pylistofres)
+void plotregret(std::string &simname, py::object pyresname, py::object pylistofres, double Rmin, double Rmax, int plotdata, int plotlogy)
 {
     Vector<std::string> resname;
-    Vector<Dict<gentype,dictkey> > listofres;
+    Vector<Dict<gentype,dictkey>> listofres;
 
     convFromPy(resname,pyresname);
     convFromPy(listofres,pylistofres);
 
-errstream() << "resname = " << resname << "\n";
-errstream() << "listofres = " << listofres << "\n";
     StrucAssert( resname.size() == listofres.size() );
 
     GlobalOptions temp;
 
-    Vector<Vector<gentype> > resmeanallFres(resname.size());
-    Vector<Vector<gentype> > resmeanallmres(resname.size());
-    Vector<Vector<gentype> > resvarallmres (resname.size());
+    temp.simRmin = Rmin;
+    temp.simRmax = Rmax;
+
+    Vector<Vector<gentype>> resmeanallFres(resname.size());
+    Vector<Vector<gentype>> resmeanallmres(resname.size());
+    Vector<Vector<gentype>> resvarallmres (resname.size());
+
+    Vector<Vector<Vector<gentype>>> resallFres(resname.size());
+    Vector<Vector<Vector<gentype>>> resallfres(resname.size());
 
     for ( int i = 0 ; i < resname.size() ; ++i )
     {
         resmeanallFres("&",i) =  ((const Vector<gentype> &) listofres(i)("meanallcost"));
         resmeanallmres("&",i) = -((const Vector<gentype> &) listofres(i)("meanallm"));
         resvarallmres ("&",i) =  ((const Vector<gentype> &) listofres(i)("varallm"));
-errstream() << "listofres(" << i << ") = " << listofres(i) << "\n";
-errstream() << "listofres(" << i << ")(\"meanallcost\") = " << listofres(i)("meanallcost") << "\n";
-errstream() << "listofres(" << i << ")(\"meanallm\") = " << listofres(i)("meanallm") << "\n";
-errstream() << "listofres(" << i << ")(\"varallm\") = " << listofres(i)("varallm") << "\n";
+
+//        resallFres("&",i) =  ((const Vector<Vector<gentype>> &) listofres(i)("allcost"));
+//        resallfres("&",i) = -((const Vector<Vector<gentype>> &) listofres(i)("allf"));
     }
 
-errstream() << "resmeanallFres = " << resmeanallFres << "\n";
-errstream() << "resmeanallmres = " << resmeanallmres << "\n";
-errstream() << "resvarallmres = " << resvarallmres << "\n";
-
-    temp.plotregret(simname,resmeanallFres,resmeanallmres,resvarallmres,resname);
+    temp.plotregret(simname,resmeanallFres,resmeanallmres,resvarallmres,resname,resallFres,resallfres,plotdata,plotlogy);
 
     return;
 }
@@ -2512,8 +2621,7 @@ py::object mlK0(void)
 py::object mlK1(py::object xa)
 {
     if ( isValTuple(xa) ) { RECURSE_ARG(xa,mlK1,,); }
-
-    if ( isValNone(xa) ) { return mlK0(); }
+    if ( isValNone(xa)  ) { return mlK0();          }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2529,11 +2637,10 @@ py::object mlK1(py::object xa)
 
 py::object mlK2(py::object xa, py::object xb)
 {
-    if      ( isValTuple(xa) ) { RECURSE_ARG(xa,mlK2,,COMMA xb); }
-    else if ( isValTuple(xb) ) { RECURSE_ARG(xb,mlK2,xa COMMA,); }
-
-    if ( isValNone(xa) ) { return mlK1(xb); }
-    if ( isValNone(xb) ) { return mlK1(xa); }
+    if ( isValTuple(xa) ) { RECURSE_ARG(xa,mlK2,,COMMA xb); }
+    if ( isValTuple(xb) ) { RECURSE_ARG(xb,mlK2,xa COMMA,); }
+    if ( isValNone(xa)  ) { return mlK1(xb);                }
+    if ( isValNone(xb)  ) { return mlK1(xa);                }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2549,13 +2656,12 @@ py::object mlK2(py::object xa, py::object xb)
 
 py::object mlK3(py::object xa, py::object xb, py::object xc)
 {
-    if      ( isValTuple(xa) ) { RECURSE_ARG(xa,mlK3,,COMMA xb COMMA xc); }
-    else if ( isValTuple(xb) ) { RECURSE_ARG(xb,mlK3,xa COMMA, COMMA xc); }
-    else if ( isValTuple(xc) ) { RECURSE_ARG(xc,mlK3,xa COMMA xb COMMA,); }
-
-    if ( isValNone(xa) ) { return mlK2(xb,xc); }
-    if ( isValNone(xb) ) { return mlK2(xa,xc); }
-    if ( isValNone(xc) ) { return mlK2(xa,xb); }
+    if ( isValTuple(xa) ) { RECURSE_ARG(xa,mlK3,,COMMA xb COMMA xc); }
+    if ( isValTuple(xb) ) { RECURSE_ARG(xb,mlK3,xa COMMA, COMMA xc); }
+    if ( isValTuple(xc) ) { RECURSE_ARG(xc,mlK3,xa COMMA xb COMMA,); }
+    if ( isValNone(xa)  ) { return mlK2(xb,xc);                      }
+    if ( isValNone(xb)  ) { return mlK2(xa,xc);                      }
+    if ( isValNone(xc)  ) { return mlK2(xa,xb);                      }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2571,15 +2677,14 @@ py::object mlK3(py::object xa, py::object xb, py::object xc)
 
 py::object mlK4(py::object xa, py::object xb, py::object xc, py::object xd)
 {
-    if      ( isValTuple(xa) ) { RECURSE_ARG(xa,mlK4,,COMMA xb COMMA xc COMMA xd); }
-    else if ( isValTuple(xb) ) { RECURSE_ARG(xb,mlK4,xa COMMA, COMMA xc COMMA xd); }
-    else if ( isValTuple(xc) ) { RECURSE_ARG(xc,mlK4,xa COMMA xb COMMA, COMMA xd); }
-    else if ( isValTuple(xd) ) { RECURSE_ARG(xd,mlK4,xa COMMA xb COMMA xc COMMA,); }
-
-    if ( isValNone(xa) ) { return mlK3(xb,xc,xd); }
-    if ( isValNone(xb) ) { return mlK3(xa,xc,xd); }
-    if ( isValNone(xc) ) { return mlK3(xa,xb,xd); }
-    if ( isValNone(xd) ) { return mlK3(xa,xb,xc); }
+    if ( isValTuple(xa) ) { RECURSE_ARG(xa,mlK4,,COMMA xb COMMA xc COMMA xd); }
+    if ( isValTuple(xb) ) { RECURSE_ARG(xb,mlK4,xa COMMA, COMMA xc COMMA xd); }
+    if ( isValTuple(xc) ) { RECURSE_ARG(xc,mlK4,xa COMMA xb COMMA, COMMA xd); }
+    if ( isValTuple(xd) ) { RECURSE_ARG(xd,mlK4,xa COMMA xb COMMA xc COMMA,); }
+    if ( isValNone(xa)  ) { return mlK3(xb,xc,xd);                            }
+    if ( isValNone(xb)  ) { return mlK3(xa,xc,xd);                            }
+    if ( isValNone(xc)  ) { return mlK3(xa,xb,xd);                            }
+    if ( isValNone(xd)  ) { return mlK3(xa,xb,xc);                            }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2595,9 +2700,9 @@ py::object mlK4(py::object xa, py::object xb, py::object xc, py::object xd)
 
 py::object mlKm(py::object xa)
 {
-    if      ( isValTuple(xa) ) { RECURSE_ARG(xa,mlKm,,);                               }
-    else if ( isValNone(xa)  ) { return mlK0();                                        }
-    else if ( !isValList(xa) ) { return makeError("Km requires list, tuple or None."); }
+    if ( isValTuple(xa) ) { RECURSE_ARG(xa,mlKm,,); }
+    if ( isValNone(xa)  ) { return mlK0();          }
+    if ( !isValList(xa) ) { return mlK1(xa);        }
 
     dostartup();
     int i = glob_MLInd(0);
@@ -2632,7 +2737,7 @@ py::object mlKm(py::object xa)
         }
     }
 
-    Vector<SparseVector<gentype> > xxa((int) altxa.size());
+    Vector<SparseVector<gentype>> xxa((int) altxa.size());
 
     int ii = 0;
 
@@ -3907,7 +4012,7 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
 
         // Define global variable store
 
-        static thread_local svmvolatile SparseVector<SparseVector<gentype> > globargvariables;
+        static thread_local svmvolatile SparseVector<SparseVector<gentype>> globargvariables;
 
         // Construct command stack.  All commands must be in awarestream, which
         // is similar to a regular stream but can supply commands from a
@@ -3931,7 +4036,7 @@ void svmheavy(int method, int permode, const std::string commstr, int wml)
 
         // Now that everything has been set up so we can run the actual code.
 
-        SparseVector<SparseVector<int> > returntag;
+        SparseVector<SparseVector<int>> returntag;
 
         runsvm(svmContext,commstack,globargvariables,cligetsetExtVar,returntag);
 

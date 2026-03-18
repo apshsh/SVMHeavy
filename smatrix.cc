@@ -24,7 +24,7 @@ const double &fnRotatElm(int i, int j, const void *args, retVector<double> &tmp)
 const double &fnCutMElm (int i, int j, const void *args, retVector<double> &tmp);
 const double &fnStackElm(int i, int j, const void *args, retVector<double> &tmp);
 
-const Matrix<double> &fnStackElmMat(int i, int j, const void *args, retVector<Matrix<double> > &tmp);
+const Matrix<double> &fnStackElmMat(int i, int j, const void *args, retVector<Matrix<double>> &tmp);
 
 const Vector<double> &fnConstRow(int i, const void *args, retVector<double> &tmp);
 const Vector<double> &fnValsRow (int i, const void *args, retVector<double> &tmp);
@@ -35,7 +35,7 @@ const Vector<double> &fnRotatRow(int i, const void *args, retVector<double> &tmp
 const Vector<double> &fnCutMRow (int i, const void *args, retVector<double> &tmp);
 const Vector<double> &fnStackRow(int i, const void *args, retVector<double> &tmp);
 
-const Vector<Matrix<double> > &fnStackRowMat(int i, const void *args, retVector<Matrix<double> > &tmp);
+const Vector<Matrix<double>> &fnStackRowMat(int i, const void *args, retVector<Matrix<double>> &tmp);
 
 void fnConstDel(const void *args, void *vargs);
 void fnValsDel (const void *args, void *vargs);
@@ -1397,11 +1397,11 @@ Matrix<double> *smStack(const Matrix<double> *A, const Matrix<double> *B)
     nmptr[0] = n;
     nmptr[1] = m;
 
-    Vector<retVector<double> > *Aret = nullptr;
-    Vector<retVector<double> > *Bret = nullptr;
+    Vector<retVector<double>> *Aret = nullptr;
+    Vector<retVector<double>> *Bret = nullptr;
 
-    MEMNEW(Aret,Vector<retVector<double> >((*A).numRows()));
-    MEMNEW(Bret,Vector<retVector<double> >((*B).numRows()));
+    MEMNEW(Aret,Vector<retVector<double>>((*A).numRows()));
+    MEMNEW(Bret,Vector<retVector<double>>((*B).numRows()));
 
     ((void **) args)[0] = (void *) A;
     ((void **) args)[1] = (void *) B;
@@ -1433,8 +1433,8 @@ const Vector<double> &fnStackRow(int i, const void *args, retVector<double> &tmp
     const Matrix<double> &A = *((const Matrix<double> *) ((void **) args)[0]);
     const Matrix<double> &B = *((const Matrix<double> *) ((void **) args)[1]);
 
-    Vector<retVector<double> > &Aret = *((Vector<retVector<double> > *) ((void **) args)[2]);
-    Vector<retVector<double> > &Bret = *((Vector<retVector<double> > *) ((void **) args)[3]);
+    Vector<retVector<double>> &Aret = *((Vector<retVector<double>> *) ((void **) args)[2]);
+    Vector<retVector<double>> &Bret = *((Vector<retVector<double>> *) ((void **) args)[3]);
 
     int m = ( A.numCols() < B.numCols() ) ? A.numCols() : B.numCols();
 
@@ -1452,8 +1452,8 @@ void fnStackDel(const void *args, void *vargs)
 {
     (void) args;
 
-    Vector<retVector<double> > *Aret = ((Vector<retVector<double> > *) ((void **) vargs)[2]);
-    Vector<retVector<double> > *Bret = ((Vector<retVector<double> > *) ((void **) vargs)[3]);
+    Vector<retVector<double>> *Aret = ((Vector<retVector<double>> *) ((void **) vargs)[2]);
+    Vector<retVector<double>> *Bret = ((Vector<retVector<double>> *) ((void **) vargs)[3]);
 
     int *nmptr = (int *) ((void **) vargs)[4];
 
@@ -1475,7 +1475,7 @@ void fnStackDel(const void *args, void *vargs)
 
 // -----------------------------------------------------------------------------------------------
 
-Matrix<Matrix<double> > *smStack(const Matrix<Matrix<double> > *A, const Matrix<Matrix<double> > *B)
+Matrix<Matrix<double>> *smStack(const Matrix<Matrix<double>> *A, const Matrix<Matrix<double>> *B)
 {
     void **tempargs;
 
@@ -1496,11 +1496,11 @@ Matrix<Matrix<double> > *smStack(const Matrix<Matrix<double> > *A, const Matrix<
     nmptr[0] = n;
     nmptr[1] = m;
 
-    Vector<retVector<Matrix<double> > > *Aret = nullptr;
-    Vector<retVector<Matrix<double> > > *Bret = nullptr;
+    Vector<retVector<Matrix<double>>> *Aret = nullptr;
+    Vector<retVector<Matrix<double>>> *Bret = nullptr;
 
-    MEMNEW(Aret,Vector<retVector<Matrix<double> > >((*A).numRows()));
-    MEMNEW(Bret,Vector<retVector<Matrix<double> > >((*B).numRows()));
+    MEMNEW(Aret,Vector<retVector<Matrix<double>>>((*A).numRows()));
+    MEMNEW(Bret,Vector<retVector<Matrix<double>>>((*B).numRows()));
 
     ((void **) args)[0] = (void *) A;
     ((void **) args)[1] = (void *) B;
@@ -1508,30 +1508,30 @@ Matrix<Matrix<double> > *smStack(const Matrix<Matrix<double> > *A, const Matrix<
     ((void **) args)[3] = (void *) Bret;
     ((void **) args)[4] = (void *) nmptr;
 
-    Matrix<Matrix<double> > *res;
+    Matrix<Matrix<double>> *res;
 
-    MEMNEW(res,Matrix<Matrix<double> >(fnStackElmMat,fnStackRowMat,args,n,m,fnStackDelMat,args));
+    MEMNEW(res,Matrix<Matrix<double>>(fnStackElmMat,fnStackRowMat,args,n,m,fnStackDelMat,args));
 
     ((void **) args)[5] = (void *) res;
 
     return res;
 }
 
-const Matrix<double> &fnStackElmMat(int i, int j, const void *args, retVector<Matrix<double> > &)
+const Matrix<double> &fnStackElmMat(int i, int j, const void *args, retVector<Matrix<double>> &)
 {
-    const Matrix<Matrix<double> > &A = *((const Matrix<Matrix<double> > *) ((void **) args)[0]);
-    const Matrix<Matrix<double> > &B = *((const Matrix<Matrix<double> > *) ((void **) args)[1]);
+    const Matrix<Matrix<double>> &A = *((const Matrix<Matrix<double>> *) ((void **) args)[0]);
+    const Matrix<Matrix<double>> &B = *((const Matrix<Matrix<double>> *) ((void **) args)[1]);
 
     return ( i < A.numRows() ) ? A(i,j) : B(i-(A.numRows()),j);
 }
 
-const Vector<Matrix<double> > &fnStackRowMat(int i, const void *args, retVector<Matrix<double> > &tmp)
+const Vector<Matrix<double>> &fnStackRowMat(int i, const void *args, retVector<Matrix<double>> &tmp)
 {
-    const Matrix<Matrix<double> > &A = *((const Matrix<Matrix<double> > *) ((void **) args)[0]);
-    const Matrix<Matrix<double> > &B = *((const Matrix<Matrix<double> > *) ((void **) args)[1]);
+    const Matrix<Matrix<double>> &A = *((const Matrix<Matrix<double>> *) ((void **) args)[0]);
+    const Matrix<Matrix<double>> &B = *((const Matrix<Matrix<double>> *) ((void **) args)[1]);
 
-    Vector<retVector<Matrix<double> > > &Aret = *((Vector<retVector<Matrix<double> > > *) ((void **) args)[2]);
-    Vector<retVector<Matrix<double> > > &Bret = *((Vector<retVector<Matrix<double> > > *) ((void **) args)[3]);
+    Vector<retVector<Matrix<double>>> &Aret = *((Vector<retVector<Matrix<double>>> *) ((void **) args)[2]);
+    Vector<retVector<Matrix<double>>> &Bret = *((Vector<retVector<Matrix<double>>> *) ((void **) args)[3]);
 
     int m = ( A.numCols() < B.numCols() ) ? A.numCols() : B.numCols();
 
@@ -1547,8 +1547,8 @@ void fnStackDelMat(const void *args, void *vargs)
 {
     (void) args;
 
-    Vector<retVector<Matrix<double> > > *Aret = ((Vector<retVector<Matrix<double> > > *) ((void **) vargs)[2]);
-    Vector<retVector<Matrix<double> > > *Bret = ((Vector<retVector<Matrix<double> > > *) ((void **) vargs)[3]);
+    Vector<retVector<Matrix<double>>> *Aret = ((Vector<retVector<Matrix<double>>> *) ((void **) vargs)[2]);
+    Vector<retVector<Matrix<double>>> *Bret = ((Vector<retVector<Matrix<double>>> *) ((void **) vargs)[3]);
 
     int *nmptr = (int *) ((void **) vargs)[4];
 

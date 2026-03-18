@@ -24,11 +24,11 @@ int nelderOpt(int dim,
               gentype         &sres,
               int             &ires,
               int             &mInd,
-              Vector<Vector<gentype> > &allxres,
-              Vector<gentype>          &allfres,
-              Vector<Vector<gentype> > &allcres,
-              Vector<gentype>          &allFres,
-              Vector<gentype>          &allsres,
+              Vector<Vector<gentype>> &allxres,
+              Vector<gentype>         &allfres,
+              Vector<Vector<gentype>> &allcres,
+              Vector<gentype>         &allFres,
+              Vector<gentype>         &allsres,
               const Vector<gentype> &xmin,
               const Vector<gentype> &xmax,
               void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -209,6 +209,8 @@ int nelderOpt(int dim,
 
     int intres;
 
+    errstream() << "Nelder-Mead Optimisation Started (" << nopts.getsimname() << ").\n";
+
     if ( nopts.method )
     {
         //errstream() << "Nelder-Mead Optimisation Initiated:\n";
@@ -239,6 +241,8 @@ int nelderOpt(int dim,
     MEMDELARRAY(xtol_abs); xtol_abs = nullptr;
     MEMDELARRAY(xx);       xx       = nullptr;
 
+    errstream() << "Nelder-Mead Optimisation Ended\n";
+
     return intres;
 }
 
@@ -250,9 +254,9 @@ double fninnerdd(int dim, const double *x, void *arg)
     void (*fn)(gentype &res, Vector<gentype> &, void *arg) = ( (void (*)(gentype &, Vector<gentype> &, void *arg))  (((void **) arg)[1]) );
     void *arginner                                         = ((void *)                      (((void **) arg)[2]));
     int &ires                                              = *((int *)                      (((void **) arg)[3]));
-    Vector<Vector<gentype> > &allxres                      = *((Vector<Vector<gentype> > *) (((void **) arg)[4]));
+    Vector<Vector<gentype>> &allxres                       = *((Vector<Vector<gentype>> *)  (((void **) arg)[4]));
     Vector<gentype> &allfres                               = *((Vector<gentype> *)          (((void **) arg)[5]));
-    Vector<Vector<gentype> > &allcres                      = *((Vector<Vector<gentype> > *) (((void **) arg)[6]));
+    Vector<Vector<gentype>> &allcres                       = *((Vector<Vector<gentype>> *)  (((void **) arg)[6]));
     gentype &fres                                          = *((gentype *)                  (((void **) arg)[7]));
     Vector<gentype> &xres                                  = *((Vector<gentype> *)          (((void **) arg)[8]));
     gentype &tempres                                       = *((gentype *)                  (((void **) arg)[9]));
@@ -276,7 +280,9 @@ errstream() << "\n";
         ires = allfres.size();
         fres = tempres;
         xres = xx;
+outstream() << "***";
     }
+outstream() << "\n";
 
     if ( 1 )
     {
@@ -299,11 +305,11 @@ int nelderOpt(int dim,
               gentype         &sres,
               int             &ires,
               int             &mInd,
-              Vector<Vector<gentype> > &allxres,
-              Vector<gentype>          &allfres,
-              Vector<Vector<gentype> > &allcres,
-              Vector<gentype>          &allFres,
-              Vector<gentype>          &allsres,
+              Vector<Vector<gentype>> &allxres,
+              Vector<gentype>         &allfres,
+              Vector<Vector<gentype>> &allcres,
+              Vector<gentype>         &allFres,
+              Vector<gentype>         &allsres,
               const Vector<gentype> &xmin,
               const Vector<gentype> &xmax,
               void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -383,6 +389,10 @@ int nelderOpt(int dim,
         allFres("&",i) = i;
     }
 
+    // for consistency with bayesopt
+    fres.negate();
+    allfres.negate();
+
     return res;
 }
 
@@ -398,14 +408,14 @@ int NelderOptions::optim(int dim,
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<gentype> > &allxres,
-                      Vector<gentype>          &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype>          &allFres,
-                      Vector<gentype>          &allmres,
-                      Vector<gentype>          &allsres,
-                      Vector<double>           &s_score,
-                      Vector<int>              &is_feas,
+                      Vector<Vector<gentype>> &allxres,
+                      Vector<gentype>         &allfres,
+                      Vector<Vector<gentype>> &allcres,
+                      Vector<gentype>         &allFres,
+                      Vector<gentype>         &allmres,
+                      Vector<gentype>         &allsres,
+                      Vector<double>          &s_score,
+                      Vector<int>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),

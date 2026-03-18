@@ -103,6 +103,8 @@ public:
     // tunediffmod: set to tune diffapprox at every step (default 1)
     // tuneaugxmod: set to tune augxapprox at every step (default 1)
     //
+    // tune*_sigma:      also tune sigma (prior noise)
+    //
     // 0: don't tune
     // 1: tune for max-likelihood
     // 2: tune for leave-one-out (default)
@@ -187,6 +189,13 @@ public:
     int tunediffmod;
     int tuneaugxmod;
 
+    int tunemu_sigma;
+    int tunesigma_sigma;
+    int tunesrcmod_sigma;
+    int tunecgt_sigma;
+    int tunediffmod_sigma;
+    int tuneaugxmod_sigma;
+
     SparseVector<gentype> xtemplate;
 
     int usemodelaugx;
@@ -232,14 +241,14 @@ public:
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<gentype> > &allXres,
-                      Vector<gentype>          &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype>          &allFres,
-                      Vector<gentype>          &allmres,
-                      Vector<gentype>          &allsres,
-                      Vector<double>           &s_score,
-                      Vector<int>              &is_feas,
+                      Vector<Vector<gentype>> &allXres,
+                      Vector<gentype>         &allfres,
+                      Vector<Vector<gentype>> &allcres,
+                      Vector<gentype>         &allFres,
+                      Vector<gentype>         &allmres,
+                      Vector<gentype>         &allsres,
+                      Vector<double>          &s_score,
+                      Vector<int>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -259,15 +268,15 @@ public:
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<Vector<gentype> > > &allxres,
-                      Vector<Vector<Vector<gentype> > > &allXres,
-                      Vector<Vector<gentype> >          &allfres,
-                      Vector<Vector<Vector<gentype> > > &allcres,
-                      Vector<Vector<gentype> >          &allFres,
-                      Vector<Vector<gentype> >          &allmres,
-                      Vector<Vector<gentype> >          &allsres,
-                      Vector<Vector<double> >           &s_score,
-                      Vector<Vector<int> >              &is_feas,
+                      Vector<Vector<Vector<gentype>>> &allxres,
+                      Vector<Vector<Vector<gentype>>> &allXres,
+                      Vector<Vector<gentype>>         &allfres,
+                      Vector<Vector<Vector<gentype>>> &allcres,
+                      Vector<Vector<gentype>>         &allFres,
+                      Vector<Vector<gentype>>         &allmres,
+                      Vector<Vector<gentype>>         &allsres,
+                      Vector<Vector<double>>          &s_score,
+                      Vector<Vector<int>>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -300,15 +309,15 @@ public:
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<gentype> > &allxres,
-                      Vector<Vector<gentype> > &allXres,
-                      Vector<gentype>          &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype>          &allFres,
-                      Vector<gentype>          &allmres,
-                      Vector<gentype>          &allsres,
-                      Vector<double>           &s_score,
-                      Vector<int>              &is_feas,
+                      Vector<Vector<gentype>> &allxres,
+                      Vector<Vector<gentype>> &allXres,
+                      Vector<gentype>         &allfres,
+                      Vector<Vector<gentype>> &allcres,
+                      Vector<gentype>         &allFres,
+                      Vector<gentype>         &allmres,
+                      Vector<gentype>         &allsres,
+                      Vector<double>          &s_score,
+                      Vector<int>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -327,7 +336,7 @@ public:
     template <class S>
     const SparseVector<gentype> &model_convertx(int &isvarnz, SparseVector<gentype> &resvar, SparseVector<gentype> &res, const SparseVector<S> &x, int useOrigin = 0, int useShortcut = 0, int debug = 0) const;
     template <class S>
-    const Vector<SparseVector<gentype> > &model_convertx(Vector<SparseVector<gentype> > &res, const Vector<SparseVector<S> > &x) const
+    const Vector<SparseVector<gentype>> &model_convertx(Vector<SparseVector<gentype>> &res, const Vector<SparseVector<S>> &x) const
     {
         return GlobalOptions::model_convertx(res,x);
     }
@@ -345,11 +354,11 @@ public:
 
     // Sample model for Thompson sampling
 
-    void model_sample  (const Vector<double> &xmin, const Vector<double> &xmax, double sampScale);
+    void model_sample  (const Vector<double> &xmin, const Vector<double> &xmax, double sampScale, double diagperturb);
     void model_unsample(void);
     int  model_issample(void) const;
 
-    void modelcgt_sample  (const Vector<double> &xmin, const Vector<double> &xmax, double sampScale);
+    void modelcgt_sample  (const Vector<double> &xmin, const Vector<double> &xmax, double sampScale, double diagperturb);
     void modelcgt_unsample(void);
     int  modelcgt_issample(void) const;
 
@@ -415,6 +424,8 @@ public:
     int model_muTrainingVector_cgt   (                         Vector<gentype> &resmu, int i) const;
     int model_muvarTrainingVector_cgt(Vector<gentype> &resvar, Vector<gentype> &resmu, int i) const;
 
+    double model_K2_cgt(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, int q = 0) const { gentype res; return (double) getcgtapprox(q).K2(res,xa,xb); }
+
     int model_addTrainingVector_musigma(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x,                                                     double varadd = 0);
     int model_addTrainingVector_musigma(const gentype &y, const gentype &ypred, const SparseVector<gentype> &x, const Vector<gentype> &xsidechan, int xobstype = 2, double varadd = 0);
 
@@ -427,7 +438,7 @@ public:
     int model_muTrainingVector (Vector<double> &resmu, int i) const;
     int model_varTrainingVector(gentype &resvar,       int i) const;
 
-    template <class S> int  model_covar(Matrix<gentype> &rescov, const Vector<SparseVector<S> > &x) const;
+    template <class S> int  model_covar(Matrix<gentype> &rescov, const Vector<SparseVector<S>> &x) const;
     template <class S> void model_stabProb(double &res, const SparseVector<S> &x, int p, double pnrm, int rot, double mu, double B) const;
 
     int  model_covar(Matrix<gentype> &rescov, const Vector<int> &i, int q = 0) const { return getsigmaapprox(q).covar(rescov,i); }
@@ -581,10 +592,10 @@ public:
 
     // Some data for short-cut version
 
-    mutable Matrix<gentype> xmodprod; // xmodprod(i,j) is inner products between x(i) and xbasisj
-    int xshortcutenabled;             // set 1 if we can do fast calculation of inner product using xmodprod and xbasisprod
-    mutable Vector<gentype> xsp;      // vector used to record inner product of xi and suggested vector
-    mutable Vector<gentype **> xspp;  // pointery stuff for some reason
+//    mutable Matrix<gentype> xmodprod; // xmodprod(i,j) is inner products between x(i) and xbasisj
+//    int xshortcutenabled;             // set 1 if we can do fast calculation of inner product using xmodprod and xbasisprod
+//    mutable Vector<gentype> xsp;      // vector used to record inner product of xi and suggested vector
+//    mutable Vector<gentype **> xspp;  // pointery stuff for some reason
 
     // Models in use
 
@@ -615,8 +626,8 @@ public:
     // Local store for x vectors
 
     Vector<int> locires;
-    Vector<SparseVector<gentype> > locxres;
-    Vector<SparseVector<gentype> > locxresunconv;
+    Vector<SparseVector<gentype>> locxres;
+    Vector<SparseVector<gentype>> locxresunconv;
     Vector<gentype> locyres;
 
     // Other stuff for speed
@@ -1214,6 +1225,7 @@ int SMBOOptions::model_mu(gentype &resg, const SparseVector<S> &x, const vecInfo
 
         const SparseVector<gentype> *xxx = &xx;
 
+/*
         if ( !model_issample() && xshortcutenabled )
         {
             xxx = &model_convertx(xx,x,0,1);
@@ -1291,8 +1303,9 @@ int SMBOOptions::model_mu(gentype &resg, const SparseVector<S> &x, const vecInfo
         }
 
         else
+*/
         {
-bailout:
+//bailout:
             {
                 xx.zeronotnu(0);
 
@@ -1360,6 +1373,7 @@ int SMBOOptions::model_mu(Vector<double> &resg, const SparseVector<S> &x, const 
         gentype xxp;
         const SparseVector<gentype> *xxx = &xx;
 
+/*
         if ( !model_issample() && xshortcutenabled )
         {
             xxx = &model_convertx(xx,x,0,1);
@@ -1437,8 +1451,9 @@ int SMBOOptions::model_mu(Vector<double> &resg, const SparseVector<S> &x, const 
         }
 
         else
+*/
         {
-bailout:
+//bailout:
             {
                 xx.zeronotnu(0);
 
@@ -1531,6 +1546,7 @@ int SMBOOptions::model_muvar(gentype &resv, gentype &resmu, const SparseVector<S
         gentype xxp;
         const SparseVector<gentype> *xxx = &xx;
 
+/*
         if ( !model_issample() && xshortcutenabled )
         {
             xxx = &model_convertx(xx,x,0,1);
@@ -1612,8 +1628,9 @@ int SMBOOptions::model_muvar(gentype &resv, gentype &resmu, const SparseVector<S
         }
 
         else
+*/
         {
-bailout:
+//bailout:
             if ( debugit )
             {
                 errstream() << "phantomxqq 14: " << x << "\n";
@@ -1992,9 +2009,9 @@ int SMBOOptions::model_predmuvar(gentype &resv_pred, gentype &resv, gentype &res
 
 
 template <class S>
-int SMBOOptions::model_covar(Matrix<gentype> &resv, const Vector<SparseVector<S> > &x) const
+int SMBOOptions::model_covar(Matrix<gentype> &resv, const Vector<SparseVector<S>> &x) const
 {
-    Vector<SparseVector<gentype> > xxx;
+    Vector<SparseVector<gentype>> xxx;
 
     model_convertx(xxx,x);
 

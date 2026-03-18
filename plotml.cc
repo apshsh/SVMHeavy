@@ -22,7 +22,6 @@
 //#ifdef NDEBUG
 #define DO_CLEANUP
 //#endif
-//#define DO_CLEANUP
 
 
 #define NUMSAMP 1000
@@ -43,7 +42,7 @@ int plotfn2d(double xmin, double xmax, double omin, double omax,
     int xindi = ( xusevar <= 5 ) ? xusevar : 0;
     int xindj = ( xusevar == 6 ) ? 2 : 0;
 
-    SparseVector<SparseVector<gentype> > evalargs;
+    SparseVector<SparseVector<gentype>> evalargs;
     gentype &x = evalargs("&",xindj)("&",xindi);
 
     // Create the mean/variance datafile to plot
@@ -89,7 +88,7 @@ int surffn(double xmin, double xmax, double ymin, double ymax, double omin, doub
     int yindi = ( yusevar <= 5 ) ? yusevar : 0;
     int yindj = ( yusevar == 6 ) ? 2 : 0;
 
-    SparseVector<SparseVector<gentype> > evalargs;
+    SparseVector<SparseVector<gentype>> evalargs;
     gentype &x = evalargs("&",xindj)("&",xindi);
     gentype &y = evalargs("&",yindj)("&",yindi);
 
@@ -145,7 +144,7 @@ int plotml(const ML_Base &ml, int xindex,
     int xindi = ( xusevar <= 5 ) ? xusevar : 0;
     int xindj = ( xusevar == 6 ) ? 2 : 0;
 
-    SparseVector<SparseVector<gentype> > evalargs;
+    SparseVector<SparseVector<gentype>> evalargs;
     gentype &xbase = evalargs("&",xindj)("&",xindi);
 
     // Create the mean/variance datafile to plot
@@ -315,7 +314,7 @@ int plotml(const ML_Base &ml, int xindex, int yindex,
     int yindi = ( yusevar <= 5 ) ? yusevar : 0;
     int yindj = ( yusevar == 6 ) ? 2 : 0;
 
-    SparseVector<SparseVector<gentype> > evalargs;
+    SparseVector<SparseVector<gentype>> evalargs;
     gentype &xbase = evalargs("&",xindj)("&",xindi);
     gentype &ybase = evalargs("&",yindj)("&",yindi);
 
@@ -506,11 +505,11 @@ int plotml(const ML_Base &ml, int xindex, int yindex,
 // Do a simple line-plot with optional variance, baseline and datapoints
 
 int plot2d(const Vector<double> &x, const Vector<double> &y, const Vector<double> &yvar, const Vector<double> &ybaseline,
-           const Vector<Vector<double> > &xpos, const Vector<Vector<double> > &ypos,
-           const Vector<Vector<double> > &xneg, const Vector<Vector<double> > &yneg,
-           const Vector<Vector<double> > &xequ, const Vector<Vector<double> > &yequ,
+           const Vector<Vector<double>> &xpos, const Vector<Vector<double>> &ypos,
+           const Vector<Vector<double>> &xneg, const Vector<Vector<double>> &yneg,
+           const Vector<Vector<double>> &xequ, const Vector<Vector<double>> &yequ,
            double xmin, double xmax, double omin, double omax,
-           const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar)
+           const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar, int plotlogy)
 {
     NiceAssert( x.size() == y.size() );
     NiceAssert( x.size() == yvar.size() );
@@ -528,25 +527,10 @@ int plot2d(const Vector<double> &x, const Vector<double> &y, const Vector<double
 
     for ( i = 0 ; i < x.size() ; ++i )
     {
-        if ( incvar && ( incdata & 2 ) )
-        {
-            dnamefile << x(i) << "\t" << y(i) << "\t" << (STDDEVSCALE*sqrt(yvar(i))) << "\t" << ybaseline(i) << "\n";
-        }
-
-        else if ( !incvar && ( incdata & 2 ) )
-        {
-            dnamefile << x(i) << "\t" << y(i) << "\t0\t" << ybaseline(i) << "\n";
-        }
-
-        else if ( incvar && !( incdata & 2 ) )
-        {
-            dnamefile << x(i) << "\t" << y(i) << "\t" << (STDDEVSCALE*sqrt(yvar(i))) << "\t0\n";
-        }
-
-        else if ( !incvar && !( incdata & 2 ) )
-        {
-            dnamefile << x(i) << "\t" << y(i) << "0\t0\n";
-        }
+        if      (  incvar &&  ( incdata & 2 ) ) { dnamefile << x(i) << "\t" << y(i) << "\t" << (STDDEVSCALE*sqrt(yvar(i))) << "\t" << ybaseline(i) << "\n"; }
+        else if ( !incvar &&  ( incdata & 2 ) ) { dnamefile << x(i) << "\t" << y(i) << "\t" << "0"                         << "\t" << ybaseline(i) << "\n"; }
+        else if (  incvar && !( incdata & 2 ) ) { dnamefile << x(i) << "\t" << y(i) << "\t" << (STDDEVSCALE*sqrt(yvar(i))) << "\t" << "0"          << "\n"; }
+        else if ( !incvar && !( incdata & 2 ) ) { dnamefile << x(i) << "\t" << y(i) << "\t" << "0"                         << "\t" << "0"          << "\n"; }
     }
 
     dnamefile.close();
@@ -571,20 +555,9 @@ int plot2d(const Vector<double> &x, const Vector<double> &y, const Vector<double
                 NiceAssert( xneg(q).size() == yneg(q).size() );
                 NiceAssert( xequ(q).size() == yequ(q).size() );
 
-                for ( i = 0 ; i < xpos(q).size() ; ++i )
-                {
-                    dnameposfile << xpos(q)(i) << "\t" << ypos(q)(i) << "\t" << (q+1) << "\n";
-                }
-
-                for ( i = 0 ; i < xneg(q).size() ; ++i )
-                {
-                    dnamenegfile << xneg(q)(i) << "\t" << yneg(q)(i) << "\t" << (q+1) << "\n";
-                }
-
-                for ( i = 0 ; i < xequ(q).size() ; ++i )
-                {
-                    dnameequfile << xequ(q)(i) << "\t" << yequ(q)(i) << "\t" << (q+1) << "\n";
-                }
+                for ( i = 0 ; i < xpos(q).size() ; ++i ) { dnameposfile << xpos(q)(i) << "\t" << ypos(q)(i) << "\t" << (q+1) << "\n"; }
+                for ( i = 0 ; i < xneg(q).size() ; ++i ) { dnamenegfile << xneg(q)(i) << "\t" << yneg(q)(i) << "\t" << (q+1) << "\n"; }
+                for ( i = 0 ; i < xequ(q).size() ; ++i ) { dnameequfile << xequ(q)(i) << "\t" << yequ(q)(i) << "\t" << (q+1) << "\n"; }
             }
         }
 
@@ -596,20 +569,9 @@ int plot2d(const Vector<double> &x, const Vector<double> &y, const Vector<double
             NiceAssert( xneg(q).size() == yneg(q).size() );
             NiceAssert( xequ(q).size() == yequ(q).size() );
 
-            for ( i = 0 ; i < xpos(q).size() ; ++i )
-            {
-                dnameposfile << xpos(q)(i) << "\t" << ypos(q)(i) << "\n";
-            }
-
-            for ( i = 0 ; i < xneg(q).size() ; ++i )
-            {
-                dnamenegfile << xneg(q)(i) << "\t" << yneg(q)(i) << "\n";
-            }
-
-            for ( i = 0 ; i < xequ(q).size() ; ++i )
-            {
-                dnameequfile << xequ(q)(i) << "\t" << yequ(q)(i) << "\n";
-            }
+            for ( i = 0 ; i < xpos(q).size() ; ++i ) { dnameposfile << xpos(q)(i) << "\t" << ypos(q)(i) << "\n"; }
+            for ( i = 0 ; i < xneg(q).size() ; ++i ) { dnamenegfile << xneg(q)(i) << "\t" << yneg(q)(i) << "\n"; }
+            for ( i = 0 ; i < xequ(q).size() ; ++i ) { dnameequfile << xequ(q)(i) << "\t" << yequ(q)(i) << "\n"; }
         }
 
         dnameposfile.close();
@@ -620,14 +582,14 @@ int plot2d(const Vector<double> &x, const Vector<double> &y, const Vector<double
     int doline = 2;
     int numdat = ( xpos.size() > 1 ) ? xpos.size() : 0;
 
-    return doplot(xmin,xmax,omin,omax,fname,dname,outformat,incdata,incvar,doline,numdat);
+    return doplot(xmin,xmax,omin,omax,fname,dname,outformat,incdata,incvar,doline,numdat,plotlogy);
 }
 
 // Plot multiple graphs (specified by y) on a single 2-d axis
 
-int multiplot2d(const Vector<Vector<gentype> > &y, const Vector<Vector<gentype> > &yvar, Vector<std::string> &plotlabels,
+int multiplot2d(const Vector<Vector<gentype>> &y, const Vector<Vector<gentype>> &yvar, Vector<std::string> &plotlabels,
            double omin, double omax,
-           const std::string &fname, const std::string &dname, int outformat, const std::string &title)
+           const std::string &fname, const std::string &dname, int outformat, const std::string &title, int plotlogy)
 {
     NiceAssert( y.size() == yvar.size() );
     NiceAssert( y.size() == plotlabels.size() );
@@ -704,7 +666,7 @@ int multiplot2d(const Vector<Vector<gentype> > &y, const Vector<Vector<gentype> 
 
     //int numdatfiles = q; // total number of lines to draw
 
-    int ires = domultiplot2d(xmin,xmax,omin,omax,fname,dname,outformat,title,dnamelist,repind,objind,plotlabels,maxobj,1);
+    int ires = domultiplot2d(xmin,xmax,omin,omax,fname,dname,outformat,title,dnamelist,repind,objind,plotlabels,maxobj,1,plotlogy);
 
 #ifdef DO_CLEANUP
         if ( dnamelist.size() )
@@ -723,13 +685,13 @@ int multiplot2d(const Vector<Vector<gentype> > &y, const Vector<Vector<gentype> 
 
 
 
-int multiplot2d(const Vector<Vector<double> > &x,
-                const Vector<Vector<double> > &y,
-                const Vector<Vector<double> > &yvar,
+int multiplot2d(const Vector<Vector<double>> &x,
+                const Vector<Vector<double>> &y,
+                const Vector<Vector<double>> &yvar,
                 const Vector<std::string> &plotlabels,
                 double xmin, double xmax,
                 double omin, double omax,
-                const std::string &fname, const std::string &dname, int outformat, const std::string &title, int incvar)
+                const std::string &fname, const std::string &dname, int outformat, const std::string &title, int incvar, int plotlogy)
 {
     NiceAssert( y.size() == yvar.size() );
     NiceAssert( y.size() == plotlabels.size() );
@@ -788,7 +750,7 @@ int multiplot2d(const Vector<Vector<double> > &x,
 
     //int numdatfiles = q; // total number of lines to draw
 
-    int ires = domultiplot2d(xmin,xmax,omin,omax,fname,dname,outformat,title,dnamelist,repind,objind,plotlabels,maxobj,1);
+    int ires = domultiplot2d(xmin,xmax,omin,omax,fname,dname,outformat,title,dnamelist,repind,objind,plotlabels,maxobj,1,plotlogy);
 
 #ifdef DO_CLEANUP
         if ( dnamelist.size() )

@@ -349,14 +349,14 @@ template <class T> Set<T> &atoSet(Set<T> &dest, const std::string &src);
 template <class T> Set<T> operator+(const Set<T> &left_op);
 template <class T> Set<T> operator-(const Set<T> &left_op);
 
-template <class T> Set<T>          operator+(const Set<T> &left_op, const Set<T> &right_op);
-template <class T> Set<T>          operator+(const Set<T> &left_op, const T      &right_op);
-template <class T> Set<T>          operator+(const T      &left_op, const Set<T> &right_op);
-template <class T> Set<T>          operator-(const Set<T> &left_op, const Set<T> &right_op);
-template <class T> Set<T>          operator-(const Set<T> &left_op, const T      &right_op);
-template <class T> Set<Vector<T> > operator*(const Set<T> &left_op, const Set<T> &right_op);
-template <class T> Set<Vector<T> > operator*(const Set<T> &left_op, const T      &right_op);
-template <class T> Set<Vector<T> > operator*(const T      &left_op, const Set<T> &right_op);
+template <class T> Set<T>         operator+(const Set<T> &left_op, const Set<T> &right_op);
+template <class T> Set<T>         operator+(const Set<T> &left_op, const T      &right_op);
+template <class T> Set<T>         operator+(const T      &left_op, const Set<T> &right_op);
+template <class T> Set<T>         operator-(const Set<T> &left_op, const Set<T> &right_op);
+template <class T> Set<T>         operator-(const Set<T> &left_op, const T      &right_op);
+template <class T> Set<Vector<T>> operator*(const Set<T> &left_op, const Set<T> &right_op);
+template <class T> Set<Vector<T>> operator*(const Set<T> &left_op, const T      &right_op);
+template <class T> Set<Vector<T>> operator*(const T      &left_op, const Set<T> &right_op);
 
 template <class T> Set<T> &operator+=(Set<T> &left_op, const Set<T> &right_op);
 template <class T> Set<T> &operator+=(Set<T> &left_op, const T      &right_op);
@@ -609,8 +609,8 @@ template <class T> double &mProduct(double &res, int m, const Set<T> *a)
 template <class T> Set<T> operator+(const Set<T> &left_op) { Set<T> res(left_op); return res.posate(); }
 template <class T> Set<T> operator-(const Set<T> &left_op) { Set<T> res(left_op); return res.negate(); }
 
-template <class T> Set<Vector<T> > operator*(const T &left_op, const Set<T> &right_op) { Set<T> ll(left_op);  return ll*right_op; }
-template <class T> Set<Vector<T> > operator*(const Set<T> &left_op, const T &right_op) { Set<T> rr(right_op); return left_op*rr;  }
+template <class T> Set<Vector<T>> operator*(const T &left_op, const Set<T> &right_op) { Set<T> ll(left_op);  return ll*right_op; }
+template <class T> Set<Vector<T>> operator*(const Set<T> &left_op, const T &right_op) { Set<T> rr(right_op); return left_op*rr;  }
 
 template <class T> Set<T> operator+(const Set<T> &left_op, const Set<T> &right_op) { Set<T> res(left_op); return res += right_op; }
 template <class T> Set<T> operator+(const T      &left_op, const Set<T> &right_op) { Set<T> ll(left_op);  return ll+right_op;     }
@@ -622,9 +622,9 @@ template <class T> Set<T> operator-(const Set<T> &left_op, const T      &right_o
 template <class T> Set<T> &operator+=(Set<T> &left_op, const T &right_op) { Set<T> rr(right_op); return left_op += rr; }
 template <class T> Set<T> &operator-=(Set<T> &left_op, const T &right_op) { Set<T> rr(right_op); return left_op -= rr; }
 
-template <class T> Set<Vector<T> > operator*(const Set<T> &left_op, const Set<T> &right_op)
+template <class T> Set<Vector<T>> operator*(const Set<T> &left_op, const Set<T> &right_op)
 {
-    Set<Vector<T> > res(left_op.isinfset() || right_op.isinfset(), (!left_op.isnegset() != !right_op.isnegset()));
+    Set<Vector<T>> res(left_op.isinfset() || right_op.isinfset(), (!left_op.isnegset() != !right_op.isnegset()));
 
     if ( !res.isinfset() )
     {

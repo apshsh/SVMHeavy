@@ -23,7 +23,7 @@ time_used curr_time;
 
 Vector<int> firstiter; // set 1 for first iteration at this level
 Vector<double> fnvalprev;
-Vector<Vector<double> > alphaprev;
+Vector<Vector<double>> alphaprev;
 
 // Overload to return 1 for gradient descent (or more generally if fnval is evaluated)
 

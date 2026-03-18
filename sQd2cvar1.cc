@@ -35,9 +35,9 @@
 #define RANDOMSEEDA time(nullptr)
 #define RANDOMSEEDB 42
 
-int trainMG2(Vector<optState<double,double> *> &x, const Matrix<double> &Gp, const Matrix<double> &Gpn, const Matrix<double> &Gn, Vector<Vector<double> > &gp, Vector<Vector<double> > &gn, const Vector<Vector<double> > &hp, const Vector<Vector<double> > &lb, const Vector<Vector<double> > &ub, const Matrix<double> &Gpsigma, Vector<double> &mu, double &xi, Vector<Vector<int> > &Sh, Vector<Vector<int> > &Sl, int &itcnt, const Vector<Vector<int> > &ranorder, int Ntrain, int n, int maxitcnt, double maxtraintime, double traintimeend);
+int trainMG2(Vector<optState<double,double> *> &x, const Matrix<double> &Gp, const Matrix<double> &Gpn, const Matrix<double> &Gn, Vector<Vector<double>> &gp, Vector<Vector<double>> &gn, const Vector<Vector<double>> &hp, const Vector<Vector<double>> &lb, const Vector<Vector<double>> &ub, const Matrix<double> &Gpsigma, Vector<double> &mu, double &xi, Vector<Vector<int>> &Sh, Vector<Vector<int>> &Sl, int &itcnt, const Vector<Vector<int>> &ranorder, int Ntrain, int n, int maxitcnt, double maxtraintime, double traintimeend);
 
-int solve_quadratic_program_d2cvar1(Vector<optState<double,double> *> &x, Vector<double> &mu, double xi, const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<Vector<double> > &gpbase, const Vector<Vector<double> > &gnbase, const Vector<Vector<double> > &hp, const Vector<Vector<double> > &lbbase, const Vector<Vector<double> > &ubbase, int maxitcnt, double maxtraintime, double traintimeend)
+int solve_quadratic_program_d2cvar1(Vector<optState<double,double> *> &x, Vector<double> &mu, double xi, const Matrix<double> &Gp, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<Vector<double>> &gpbase, const Vector<Vector<double>> &gnbase, const Vector<Vector<double>> &hp, const Vector<Vector<double>> &lbbase, const Vector<Vector<double>> &ubbase, int maxitcnt, double maxtraintime, double traintimeend)
 {
     int n = x.size();
     int Ntrain = mu.size();
@@ -82,10 +82,10 @@ int solve_quadratic_program_d2cvar1(Vector<optState<double,double> *> &x, Vector
     }
 #endif
 
-    Vector<Vector<double> > gp(gpbase);
-    Vector<Vector<double> > gn(gnbase);
-    Vector<Vector<double> > lb(lbbase);
-    Vector<Vector<double> > ub(ubbase);
+    Vector<Vector<double>> gp(gpbase);
+    Vector<Vector<double>> gn(gnbase);
+    Vector<Vector<double>> lb(lbbase);
+    Vector<Vector<double>> ub(ubbase);
 
     int res = 0;
     int i,j,k,kl,ll,s,iP;
@@ -96,7 +96,7 @@ int solve_quadratic_program_d2cvar1(Vector<optState<double,double> *> &x, Vector
 
     srand(RANDOMSEEDB);
 
-    Vector<Vector<int> > ranorder(RANDOMLOOPPERIOD);
+    Vector<Vector<int>> ranorder(RANDOMLOOPPERIOD);
 
     for ( i = 0 ; i < RANDOMLOOPPERIOD ; ++i )
     {
@@ -146,8 +146,8 @@ int solve_quadratic_program_d2cvar1(Vector<optState<double,double> *> &x, Vector
     //
     // if both are 1 then it is constrained at zero
 
-    Vector<Vector<int> > Sh(Ntrain);
-    Vector<Vector<int> > Sl(Ntrain);
+    Vector<Vector<int>> Sh(Ntrain);
+    Vector<Vector<int>> Sl(Ntrain);
 
     int Np = 0;
     int Nn = 0;
@@ -587,9 +587,9 @@ int trystep(int i, int j, Vector<int> &Sij, Vector<double> &beta, Vector<double>
 	    Vector<double> &Dbeta, Vector<double> &DbetaGrad, Vector<double> &Dalphai, Vector<double> &Dalphaj, Vector<double> &DalphaGradi, Vector<double> &DalphaGradj,
 	    Vector<int> &nonoptlisti, Vector<int> &nonoptlistj, Vector<int> &nonopttypei, Vector<int> &nonopttypej, Vector<int> &atbndlisti, Vector<int> &atbndlistj,
             Vector<int> &atbndtypei, Vector<int> &atbndtypej, Vector<optState<double,double> *> &x, const Matrix<double> &Gp, const Matrix<double> &Gpn, const Matrix<double> &Gn,
-	    Vector<Vector<double> > &gp, Vector<Vector<double> > &gn, const Vector<Vector<double> > &hp,
-	    const Vector<Vector<double> > &lb, const Vector<Vector<double> > &ub, const Matrix<double> &Gpsigma, Vector<double> &mu, double xi,
-	    Vector<Vector<int> > &Sh, Vector<Vector<int> > &Sl, int n, int isbetaopt);
+	    Vector<Vector<double>> &gp, Vector<Vector<double>> &gn, const Vector<Vector<double>> &hp,
+	    const Vector<Vector<double>> &lb, const Vector<Vector<double>> &ub, const Matrix<double> &Gpsigma, Vector<double> &mu, double xi,
+	    Vector<Vector<int>> &Sh, Vector<Vector<int>> &Sl, int n, int isbetaopt);
 
 class listelm;
 class listelm
@@ -609,7 +609,7 @@ public:
     listelm *nextdiff;
 };
 
-int trainMG2(Vector<optState<double,double> *> &x, const Matrix<double> &Gp, const Matrix<double> &Gpn, const Matrix<double> &Gn, Vector<Vector<double> > &gp, Vector<Vector<double> > &gn, const Vector<Vector<double> > &hp, const Vector<Vector<double> > &lb, const Vector<Vector<double> > &ub, const Matrix<double> &Gpsigma, Vector<double> &mu, double &xi, Vector<Vector<int> > &Sh, Vector<Vector<int> > &Sl, int &itcnt, const Vector<Vector<int> > &ranorder, int Ntrain, int n, int maxitcnt, double maxtraintime, double traintimeend)
+int trainMG2(Vector<optState<double,double> *> &x, const Matrix<double> &Gp, const Matrix<double> &Gpn, const Matrix<double> &Gn, Vector<Vector<double>> &gp, Vector<Vector<double>> &gn, const Vector<Vector<double>> &hp, const Vector<Vector<double>> &lb, const Vector<Vector<double>> &ub, const Matrix<double> &Gpsigma, Vector<double> &mu, double &xi, Vector<Vector<int>> &Sh, Vector<Vector<int>> &Sl, int &itcnt, const Vector<Vector<int>> &ranorder, int Ntrain, int n, int maxitcnt, double maxtraintime, double traintimeend)
 {
     Vector<int> Sij(n);
 
@@ -655,7 +655,7 @@ int trainMG2(Vector<optState<double,double> *> &x, const Matrix<double> &Gp, con
     int i,j,ii,jj;
     int s;
 
-    Vector<Vector<double> > fbar(Ntrain);
+    Vector<Vector<double>> fbar(Ntrain);
 
     for ( i = 0 ; i < Ntrain ; ++i )
     {
@@ -1160,9 +1160,9 @@ int trystep(int i, int j, Vector<int> &Sij, Vector<double> &beta, Vector<double>
 	    Vector<double> &Dbeta, Vector<double> &DbetaGrad, Vector<double> &Dalphai, Vector<double> &Dalphaj, Vector<double> &DalphaGradi, Vector<double> &DalphaGradj,
 	    Vector<int> &nonoptlisti, Vector<int> &nonoptlistj, Vector<int> &nonopttypei, Vector<int> &nonopttypej, Vector<int> &atbndlisti, Vector<int> &atbndlistj,
             Vector<int> &atbndtypei, Vector<int> &atbndtypej, Vector<optState<double,double> *> &x, const Matrix<double> &Gp, const Matrix<double> &Gpn, const Matrix<double> &Gn,
-	    Vector<Vector<double> > &gp, Vector<Vector<double> > &gn, const Vector<Vector<double> > &hp,
-	    const Vector<Vector<double> > &lb, const Vector<Vector<double> > &ub, const Matrix<double> &Gpsigma, Vector<double> &mu, double xi,
-	    Vector<Vector<int> > &Sh, Vector<Vector<int> > &Sl, int n, int isbetaopt)
+	    Vector<Vector<double>> &gp, Vector<Vector<double>> &gn, const Vector<Vector<double>> &hp,
+	    const Vector<Vector<double>> &lb, const Vector<Vector<double>> &ub, const Matrix<double> &Gpsigma, Vector<double> &mu, double xi,
+	    Vector<Vector<int>> &Sh, Vector<Vector<int>> &Sl, int n, int isbetaopt)
 {
     NiceAssert( i >= 0 );
     NiceAssert( j >= 0 );

@@ -53,7 +53,7 @@ public:
 
     fullOptStateSMOVect(optState<Vector<double>,S> &_x,
         const Matrix<S> &_qGp, const Matrix<double> &_qGpsigma, const Matrix<double> &_qGn, Matrix<double> &_qGpn,
-        const Vector<Vector<double> > &_gp, const Vector<Vector<double> > &_gn, Vector<double> &_hp,
+        const Vector<Vector<double>> &_gp, const Vector<Vector<double>> &_gn, Vector<double> &_hp,
         const Vector<double> &_lb, const Vector<double> &_ub,
         double (*_fixHigherOrderTerms)(fullOptState<Vector<double>,S> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *_htArg = nullptr,
         double _stepscalefactor = 1,
@@ -77,7 +77,7 @@ public:
 
     fullOptStateSMOVect(optState<Vector<double>,S> &_x,
         const Matrix<S> &_qGp, const Matrix<double> &_qGpsigma, const Matrix<double> &_qGn, Matrix<double> &_qGpn,
-        const Vector<Vector<double> > &_gp, const Vector<Vector<double> > &_gn,
+        const Vector<Vector<double>> &_gp, const Vector<Vector<double>> &_gn,
         const Vector<double> &_lb, const Vector<double> &_ub,
         double (*_fixHigherOrderTerms)(fullOptState<Vector<double>,S> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *_htArg = nullptr,
         double _stepscalefactor = 1,
@@ -101,7 +101,7 @@ public:
 
     fullOptStateSMOVect(optState<Vector<double>,S> &_x,
         const Matrix<S> &_qGp, const Matrix<double> &_qGpsigma, const Matrix<double> &_qGn, Matrix<double> &_qGpn,
-        const Vector<Vector<double> > &_gp, const Vector<Vector<double> > &_gn, Vector<double> &_hp,
+        const Vector<Vector<double>> &_gp, const Vector<Vector<double>> &_gn, Vector<double> &_hp,
         const Vector<double> &_lb, const Vector<double> &_ub, const Vector<double> &_qGpnRowTwoMag,
         double (*_fixHigherOrderTerms)(fullOptState<Vector<double>,S> &x, void *, const Vector<double> &, const Vector<double> &, double &) = nullptr, void *_htArg = nullptr,
         double _stepscalefactor = 1,
@@ -129,7 +129,7 @@ public:
 
     virtual fullOptState<Vector<double>,S> *gencopy(int _chistart,
         const Matrix<S> &_qGp, const Matrix<double> &_qGpsigma, const Matrix<double> &_qGn, Matrix<double> &_qGpn,
-        const Vector<Vector<double> > &_gp, const Vector<Vector<double> > &_gn, Vector<double> &_hp,
+        const Vector<Vector<double>> &_gp, const Vector<Vector<double>> &_gn, Vector<double> &_hp,
         const Vector<double> &_lb, const Vector<double> &_ub, const Vector<double> &_qGpnRowTwoMag)
     {
         fullOptStateSMOVect<S> *res;
@@ -232,7 +232,7 @@ public:
 template<class S>
 int solve_quadratic_program_smoVect(svmvolatile int &killSwitch, optState<Vector<double>,S> &op,
     const Matrix<S> &GpGrad, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn,
-    const Vector<Vector<double> > &gp, const Vector<Vector<double> > &gn, const Vector<double> &hpeff,
+    const Vector<Vector<double>> &gp, const Vector<Vector<double>> &gn, const Vector<double> &hpeff,
     const Vector<double> &ubeff,
     stopCond sc, //int maxitcnt, double maxtraintime, double traintimeend,
     int zcmaxitcnt, int inmaxitcnt, double kappa, double stol, double iota, int vdim);
@@ -283,11 +283,11 @@ int fullOptStateSMOVect<S>::solve(svmvolatile int &killSwitch)
 template <class T>
 class smoVectScratch;
 
-//int solve_quadratic_program_smoVect(optState<Vector<double>,T> &op, const Matrix<T> &GpGrad, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<Vector<double> > &gp, const Vector<Vector<double> > &gn, const Vector<double> &hpeff, const Vector<double> &ubeff, int maxitcnt, double maxtraintime, int traintimeend, int zcmaxitcnt, int inmaxitcnt, double kappa, double ztol, double stol, double mu, double iota, int vdim);
+//int solve_quadratic_program_smoVect(optState<Vector<double>,T> &op, const Matrix<T> &GpGrad, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn, const Vector<Vector<double>> &gp, const Vector<Vector<double>> &gn, const Vector<double> &hpeff, const Vector<double> &ubeff, int maxitcnt, double maxtraintime, int traintimeend, int zcmaxitcnt, int inmaxitcnt, double kappa, double ztol, double stol, double mu, double iota, int vdim);
 
 template <class T> int optSMOVect(svmvolatile int &killSwitch, optState<Vector<double>,T> &op,
                                   const Matrix<double> &Gp, const Matrix<T> &GpGrad, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn,
-                                  const Vector<Vector<double> > &gp, const Vector<Vector<double> > &gn, const Vector<double> &hpeff, const Vector<double> &ubeff,
+                                  const Vector<Vector<double>> &gp, const Vector<Vector<double>> &gn, const Vector<double> &hpeff, const Vector<double> &ubeff,
                                   stopCond sc, //int maxitcnt, double maxtraintime, double traintimeend,
                                   smoVectScratch<T> &pad, int vdim);
 
@@ -434,7 +434,7 @@ public:
 template <class T> 
 int solve_quadratic_program_smoVect(svmvolatile int &killSwitch, optState<Vector<double>,T> &op,
                                     const Matrix<T> &GpGrad, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn,
-                                    const Vector<Vector<double> > &gp, const Vector<Vector<double> > &gn, const Vector<double> &hpeff, const Vector<double> &ubeff,
+                                    const Vector<Vector<double>> &gp, const Vector<Vector<double>> &gn, const Vector<double> &hpeff, const Vector<double> &ubeff,
                                     stopCond sc, //int maxitcnt, double maxtraintime, double traintimeend,
                                     int zcmaxitcnt, int inmaxitcnt, double kappa, double stol, double iota, int vdim)
 {
@@ -484,7 +484,7 @@ int solve_quadratic_program_smoVect(svmvolatile int &killSwitch, optState<Vector
 template <class T>
 int optSMOVect(svmvolatile int &killSwitch, optState<Vector<double>,T> &op,
                const Matrix<double> &Gp, const Matrix<T> &GpGrad, const Matrix<double> &Gpsigma, const Matrix<double> &Gn, const Matrix<double> &Gpn,
-               const Vector<Vector<double> > &gp, const Vector<Vector<double> > &gn, const Vector<double> &hpeff, const Vector<double> &ubeff,
+               const Vector<Vector<double>> &gp, const Vector<Vector<double>> &gn, const Vector<double> &hpeff, const Vector<double> &ubeff,
                stopCond sc, //int maxitcntint, double maxtraintime, double traintimeend,
                smoVectScratch<T> &pad, int vdim)
 {
@@ -496,7 +496,7 @@ int optSMOVect(svmvolatile int &killSwitch, optState<Vector<double>,T> &op,
     Vector<double> fm(N);
     Vector<int> epivot(N);
     Vector<int> fpivot(N);
-    Vector<Vector<double> > g(N);
+    Vector<Vector<double>> g(N);
     double absg;
     double absa;
 

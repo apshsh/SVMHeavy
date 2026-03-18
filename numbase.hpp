@@ -501,6 +501,7 @@ inline double fastfiveProduct (const double *svm_restrict a, const int *svm_rest
 
 inline double fastoneProduct  (const double *svm_restrict a, int n, const double *svm_restrict scale) noexcept;
 inline double fasttwoProduct  (const double *svm_restrict a, const double *svm_restrict b, int n, const double *svm_restrict scale) noexcept;
+inline double fasttwoProduct  (const double *svm_restrict a, const double *svm_restrict b, int n, const double *svm_restrict Lscale, const double *svm_restrict Rscale) noexcept;
 inline double fastthreeProduct(const double *svm_restrict a, const double *svm_restrict b, const double *svm_restrict c, int n, const double *svm_restrict scale) noexcept;
 inline double fastfourProduct (const double *svm_restrict a, const double *svm_restrict b, const double *svm_restrict c, const double *svm_restrict d, int n, const double *svm_restrict scale) noexcept;
 inline double fastfiveProduct (const double *svm_restrict a, const double *svm_restrict b, const double *svm_restrict c, const double *svm_restrict d, const double *svm_restrict e, int n, const double *svm_restrict scale) noexcept;
@@ -1836,196 +1837,113 @@ inline double fastfiveProduct(const double *svm_restrict a, const int *svm_restr
 inline double fastoneProduct(const double *svm_restrict a, int n) noexcept
 {
     double res = 0.0;
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        res += a[i];
-    }
-
+    for ( int i = 0 ; i < n ; ++i ) { res += a[i]; }
     return res;
 }
 
 inline double fasttwoProduct(const double *svm_restrict a, const double *svm_restrict b, int n) noexcept
 {
     double res = 0.0;
-
     // Note the splitting of data-dependent operations to allow for pipelining of multiplication and assignment operations.
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        //res += a[i]*b[i];
-        res = std::fma(a[i],b[i],res);
-    }
-
+    for ( int i = 0 ; i < n ; ++i ) { res = std::fma(a[i],b[i],res); }
     return res;
 }
 
 inline double fastthreeProduct(const double *svm_restrict a, const double *svm_restrict b, const double *svm_restrict c, int n) noexcept
 {
     double res = 0.0;
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        //res += a[i]*b[i]*c[i];
-        res = std::fma(a[i]*b[i],c[i],res);
-    }
-
+    for ( int i = 0 ; i < n ; ++i ) { res = std::fma(a[i]*b[i],c[i],res); }
     return res;
 }
 
 inline double fastfourProduct(const double *svm_restrict a, const double *svm_restrict b, const double *svm_restrict c, const double *svm_restrict d, int n) noexcept
 {
     double res = 0.0;
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        //res += a[i]*b[i]*c[i]*d[i];
-        res = std::fma(a[i]*b[i],c[i]*d[i],res);
-    }
-
+    for ( int i = 0 ; i < n ; ++i ) { res = std::fma(a[i]*b[i],c[i]*d[i],res); }
     return res;
 }
 
 inline double fastfiveProduct(const double *svm_restrict a, const double *svm_restrict b, const double *svm_restrict c, const double *svm_restrict d, const double *svm_restrict e, int n) noexcept
 {
     double res = 0.0;
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        //res += a[i]*b[i]*c[i]*d[i]*e[i];
-        res = std::fma(a[i]*b[i],c[i]*d[i]*e[i],res);
-    }
-
+    for ( int i = 0 ; i < n ; ++i ) { res = std::fma(a[i]*b[i],c[i]*d[i]*e[i],res); }
     return res;
 }
 
 inline double fastoneProduct(const double *svm_restrict a, int n, const double *svm_restrict scale) noexcept
 {
     double res = 0.0;
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        res += a[i]/scale[i];
-    }
-
+    for ( int i = 0 ; i < n ; ++i ) { res += a[i]/scale[i]; }
     return res;
 }
 
 inline double fasttwoProduct(const double *svm_restrict a, const double *svm_restrict b, int n, const double *svm_restrict scale) noexcept
 {
     double res = 0.0;
+    for ( int i = 0 ; i < n ; ++i ) { res = std::fma(a[i]/scale[i],b[i]/scale[i],res); }
+    return res;
+}
 
-    // Note the splitting of data-dependent operations to allow for pipelining of multiplication and assignment operations.
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        //res += a[i]*b[i];
-        res = std::fma(a[i]/scale[i],b[i]/scale[i],res);
-    }
-
+inline double fasttwoProduct(const double *svm_restrict a, const double *svm_restrict b, int n, const double *svm_restrict Lscale, const double *svm_restrict Rscale) noexcept
+{
+    double res = 0.0;
+    for ( int i = 0 ; i < n ; ++i ) { res = std::fma(a[i]/Lscale[i],b[i]/Rscale[i],res); }
     return res;
 }
 
 inline double fastthreeProduct(const double *svm_restrict a, const double *svm_restrict b, const double *svm_restrict c, int n, const double *svm_restrict scale) noexcept
 {
     double res = 0.0;
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        //res += a[i]*b[i]*c[i];
-        res = std::fma((a[i]/scale[i])*(b[i]/scale[i]),c[i]/scale[i],res);
-    }
-
+    for ( int i = 0 ; i < n ; ++i ) { res = std::fma((a[i]/scale[i])*(b[i]/scale[i]),c[i]/scale[i],res); }
     return res;
 }
 
 inline double fastfourProduct(const double *svm_restrict a, const double *svm_restrict b, const double *svm_restrict c, const double *svm_restrict d, int n, const double *svm_restrict scale) noexcept
 {
     double res = 0.0;
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        //res += a[i]*b[i]*c[i]*d[i];
-        res = std::fma((a[i]/scale[i])*(b[i]/scale[i]),(c[i]/scale[i])*(d[i]/scale[i]),res);
-    }
-
+    for ( int i = 0 ; i < n ; ++i ) { res = std::fma((a[i]/scale[i])*(b[i]/scale[i]),(c[i]/scale[i])*(d[i]/scale[i]),res); }
     return res;
 }
 
 inline double fastfiveProduct(const double *svm_restrict a, const double *svm_restrict b, const double *svm_restrict c, const double *svm_restrict d, const double *svm_restrict e, int n, const double *svm_restrict scale) noexcept
 {
     double res = 0.0;
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        //res += a[i]*b[i]*c[i]*d[i]*e[i];
-        res = std::fma((a[i]/scale[i])*(b[i]/scale[i]),(c[i]/scale[i])*(d[i]/scale[i])*(e[i]/scale[i]),res);
-    }
-
+    for ( int i = 0 ; i < n ; ++i ) { res = std::fma((a[i]/scale[i])*(b[i]/scale[i]),(c[i]/scale[i])*(d[i]/scale[i])*(e[i]/scale[i]),res); }
     return res;
 }
 
 inline double fastoneProduct(const double *svm_restrict a, const int *svm_restrict ai, int ab, int as, int n) noexcept
 {
     double res = 0.0;
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        res += a[ai[ab+(i*as)]];
-    }
-
+    for ( int i = 0 ; i < n ; ++i ) { res += a[ai[ab+(i*as)]]; }
     return res;
 }
 
 inline double fasttwoProduct(const double *svm_restrict a, const int *svm_restrict ai, int ab, int as, const double *svm_restrict b, const int *svm_restrict bi, int bb, int bs, int n) noexcept
 {
     double res = 0.0;
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        //res += a[ai[ab+(i*as)]]*b[bi[bb+(i*bs)]];
-        res = std::fma(a[ai[ab+(i*as)]],b[bi[bb+(i*bs)]],res);
-    }
-
+    for ( int i = 0 ; i < n ; ++i ) { res = std::fma(a[ai[ab+(i*as)]],b[bi[bb+(i*bs)]],res); }
     return res;
 }
 
 inline double fastthreeProduct(const double *svm_restrict a, const int *svm_restrict ai, int ab, int as, const double *svm_restrict b, const int *svm_restrict bi, int bb, int bs, const double *svm_restrict c, const int *svm_restrict ci, int cb, int cs, int n) noexcept
 {
     double res = 0.0;
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        //res += a[ai[ab+(i*as)]]*b[bi[bb+(i*bs)]]*c[ci[cb+(i*cs)]];
-        res = std::fma(a[ai[ab+(i*as)]]*b[bi[bb+(i*bs)]],c[ci[cb+(i*cs)]],res);
-    }
-
+    for ( int i = 0 ; i < n ; ++i ) { res = std::fma(a[ai[ab+(i*as)]]*b[bi[bb+(i*bs)]],c[ci[cb+(i*cs)]],res); }
     return res;
 }
 
 inline double fastfourProduct(const double *svm_restrict a, const int *svm_restrict ai, int ab, int as, const double *svm_restrict b, const int *svm_restrict bi, int bb, int bs, const double *svm_restrict c, const int *svm_restrict ci, int cb, int cs, const double *svm_restrict d, const int *svm_restrict di, int db, int ds, int n) noexcept
 {
     double res = 0.0;
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        //res += a[ai[ab+(i*as)]]*b[bi[bb+(i*bs)]]*c[ci[cb+(i*cs)]]*d[di[db+(i*ds)]];
-        res = std::fma(a[ai[ab+(i*as)]]*b[bi[bb+(i*bs)]],c[ci[cb+(i*cs)]]*d[di[db+(i*ds)]],res);
-    }
-
+    for ( int i = 0 ; i < n ; ++i ) { res = std::fma(a[ai[ab+(i*as)]]*b[bi[bb+(i*bs)]],c[ci[cb+(i*cs)]]*d[di[db+(i*ds)]],res); }
     return res;
 }
 
 inline double fastfiveProduct(const double *svm_restrict a, const int *svm_restrict ai, int ab, int as, const double *svm_restrict b, const int *svm_restrict bi, int bb, int bs, const double *svm_restrict c, const int *svm_restrict ci, int cb, int cs, const double *svm_restrict d, const int *svm_restrict di, int db, int ds, const double *svm_restrict e, const int *svm_restrict ei, int eb, int es, int n) noexcept
 {
     double res = 0.0;
-
-    for ( int i = 0 ; i < n ; ++i )
-    {
-        //res += a[ai[ab+(i*as)]]*b[bi[bb+(i*bs)]]*c[ci[cb+(i*cs)]]*d[di[db+(i*ds)]]*e[ei[eb+(i*es)]];
-        res = std::fma(a[ai[ab+(i*as)]]*b[bi[bb+(i*bs)]],c[ci[cb+(i*cs)]]*d[di[db+(i*ds)]]*e[ei[eb+(i*es)]],res);
-    }
-
+    for ( int i = 0 ; i < n ; ++i ) { res = std::fma(a[ai[ab+(i*as)]]*b[bi[bb+(i*bs)]],c[ci[cb+(i*cs)]]*d[di[db+(i*ds)]]*e[ei[eb+(i*es)]],res); }
     return res;
 }
 #endif
@@ -2033,14 +1951,8 @@ inline double fastfiveProduct(const double *svm_restrict a, const int *svm_restr
 inline double fastoneProductSparse  (const double *svm_restrict a, const int *svm_restrict ai, int an) noexcept
 {
     (void) ai;
-
     double res = 0.0;
-
-    for ( int i = 0 ; i < an ; ++i )
-    {
-        res += a[i];
-    }
-
+    for ( int i = 0 ; i < an ; ++i ) { res += a[i]; }
     return res;
 }
 
@@ -2061,23 +1973,9 @@ inline double fasttwoProductSparse  (const double *svm_restrict a, const int *sv
             aelm = ai[apos];
             belm = bi[bpos];
 
-	    if ( aelm == belm )
-	    {
-                res = std::fma(a[apos],b[bpos],res);
-
-		++apos;
-                ++bpos;
-	    }
-
-	    else if ( aelm < belm )
-	    {
-		++apos;
-	    }
-
-	    else
-	    {
-                ++bpos;
-	    }
+	    if      ( aelm == belm ) { res = std::fma(a[apos],b[bpos],res); ++apos; ++bpos; }
+	    else if ( aelm <= belm ) {                                      ++apos;         }
+	    else                     {                                      ++bpos;         }
 	}
     }
 
@@ -2104,29 +2002,10 @@ inline double fastthreeProductSparse(const double *svm_restrict a, const int *sv
             belm = bi[bpos];
             celm = ci[cpos];
 
-	    if ( ( aelm == belm ) && ( aelm == celm ) )
-	    {
-                res = std::fma(a[apos]*b[bpos],c[cpos],res);
-
-		++apos;
-                ++bpos;
-                ++cpos;
-	    }
-
-            else if ( ( aelm <= belm ) && ( aelm <= celm ) )
-	    {
-		++apos;
-	    }
-
-            else if ( ( belm <= aelm ) && ( belm <= celm ) )
-	    {
-		++bpos;
-	    }
-
-            else
-	    {
-		++cpos;
-	    }
+	    if      ( ( aelm == belm ) && ( aelm == celm ) ) { res = std::fma(a[apos]*b[bpos],c[cpos],res); ++apos; ++bpos; ++cpos; }
+            else if ( ( aelm <= belm ) && ( aelm <= celm ) ) {                                              ++apos;                 }
+            else if ( ( belm <= aelm ) && ( belm <= celm ) ) {                                                      ++bpos;         }
+            else                                             {                                                              ++cpos; }
 	}
     }
 
@@ -2156,35 +2035,11 @@ inline double fastfourProductSparse (const double *svm_restrict a, const int *sv
             celm = ci[cpos];
             delm = di[dpos];
 
-	    if ( ( aelm == belm ) && ( aelm == celm ) && ( aelm == delm ) )
-	    {
-                res = std::fma(a[apos]*b[bpos],c[cpos]*d[dpos],res);
-
-		++apos;
-                ++bpos;
-                ++cpos;
-                ++dpos;
-	    }
-
-            else if ( ( aelm <= belm ) && ( aelm <= celm ) && ( aelm <= delm ) )
-	    {
-		++apos;
-	    }
-
-            else if ( ( belm <= aelm ) && ( belm <= celm ) && ( belm <= delm ) )
-	    {
-		++bpos;
-	    }
-
-            else if ( ( celm <= aelm ) && ( celm <= belm ) && ( celm <= delm ) )
-	    {
-		++cpos;
-	    }
-
-	    else
-	    {
-                ++dpos;
-	    }
+	    if      ( ( aelm == belm ) && ( aelm == celm ) && ( aelm == delm ) ) { res = std::fma(a[apos]*b[bpos],c[cpos]*d[dpos],res); ++apos; ++bpos; ++cpos; ++dpos; }
+            else if ( ( aelm <= belm ) && ( aelm <= celm ) && ( aelm <= delm ) ) {                                                      ++apos;                         }
+            else if ( ( belm <= aelm ) && ( belm <= celm ) && ( belm <= delm ) ) {                                                              ++bpos;                 }
+            else if ( ( celm <= aelm ) && ( celm <= belm ) && ( celm <= delm ) ) {                                                                      ++cpos;         }
+	    else                                                                 {                                                                              ++dpos; }
 	}
     }
 
@@ -2217,41 +2072,12 @@ inline double fastfiveProductSparse (const double *svm_restrict a, const int *sv
             delm = di[dpos];
             eelm = ei[epos];
 
-	    if ( ( aelm == belm ) && ( aelm == celm ) && ( aelm == delm ) && ( aelm == eelm ) )
-	    {
-                res = std::fma(a[apos]*b[bpos],c[cpos]*d[dpos]*e[epos],res);
-
-		++apos;
-                ++bpos;
-                ++cpos;
-                ++dpos;
-                ++epos;
-	    }
-
-            else if ( ( aelm <= belm ) && ( aelm <= celm ) && ( aelm <= delm ) && ( aelm <= eelm ) )
-	    {
-		++apos;
-	    }
-
-            else if ( ( belm <= aelm ) && ( belm <= celm ) && ( belm <= delm ) && ( belm <= eelm ) )
-	    {
-		++bpos;
-	    }
-
-            else if ( ( celm <= aelm ) && ( celm <= belm ) && ( celm <= delm ) && ( celm <= eelm ) )
-	    {
-		++cpos;
-	    }
-
-            else if ( ( delm <= aelm ) && ( delm <= belm ) && ( delm <= celm ) && ( delm <= eelm ) )
-	    {
-		++dpos;
-	    }
-
-	    else
-	    {
-                ++epos;
-	    }
+	    if      ( ( aelm == belm ) && ( aelm == celm ) && ( aelm == delm ) && ( aelm == eelm ) ) { res = std::fma(a[apos]*b[bpos],c[cpos]*d[dpos]*e[epos],res); ++apos; ++bpos; ++cpos; ++dpos; ++epos; }
+            else if ( ( aelm <= belm ) && ( aelm <= celm ) && ( aelm <= delm ) && ( aelm <= eelm ) ) {                                                              ++apos;                                 }
+            else if ( ( belm <= aelm ) && ( belm <= celm ) && ( belm <= delm ) && ( belm <= eelm ) ) {                                                                      ++bpos;                         }
+            else if ( ( celm <= aelm ) && ( celm <= belm ) && ( celm <= delm ) && ( celm <= eelm ) ) {                                                                              ++cpos;                 }
+            else if ( ( delm <= aelm ) && ( delm <= belm ) && ( delm <= celm ) && ( delm <= eelm ) ) {                                                                                      ++dpos;         }
+	    else                                                                                     {                                                                                              ++epos; }
 	}
     }
 

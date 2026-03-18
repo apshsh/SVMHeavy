@@ -95,28 +95,28 @@ int plotml(const ML_Base &ml, int xindoes, int yindex,
 // Do a simple line-plot with optional variance, baseline and datapoints
 
 int plot2d(const Vector<double> &x, const Vector<double> &y, const Vector<double> &yvar, const Vector<double> &ybaseline,
-           const Vector<Vector<double> > &xpos, const Vector<Vector<double> > &ypos,
-           const Vector<Vector<double> > &xneg, const Vector<Vector<double> > &yneg,
-           const Vector<Vector<double> > &xequ, const Vector<Vector<double> > &yequ,
+           const Vector<Vector<double>> &xpos, const Vector<Vector<double>> &ypos,
+           const Vector<Vector<double>> &xneg, const Vector<Vector<double>> &yneg,
+           const Vector<Vector<double>> &xequ, const Vector<Vector<double>> &yequ,
            double xmin, double xmax, double omin, double omax,
-           const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar);
+           const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar, int plotlogy);
 
 
 // Plot multiple graphs (specified by y) on a single 2-d axis
 
-int multiplot2d(const Vector<Vector<gentype> > &y, const Vector<Vector<gentype> > &yvar, Vector<std::string> &plotlabels,
+int multiplot2d(const Vector<Vector<gentype>> &y, const Vector<Vector<gentype>> &yvar, Vector<std::string> &plotlabels,
            double omin, double omax,
-           const std::string &fname, const std::string &dname, int outformat, const std::string &title);
+           const std::string &fname, const std::string &dname, int outformat, const std::string &title, int plotlogy);
 
 // Plot multiple graphs (specified by x and y) on a single 2-d axis
 
-int multiplot2d(const Vector<Vector<double> > &x,
-                const Vector<Vector<double> > &y,
-                const Vector<Vector<double> > &yvar,
+int multiplot2d(const Vector<Vector<double>> &x,
+                const Vector<Vector<double>> &y,
+                const Vector<Vector<double>> &yvar,
                 const Vector<std::string> &plotlabels,
                 double xmin, double xmax,
                 double omin, double omax,
-                const std::string &fname, const std::string &dname, int outformat, const std::string &title, int incvar);
+                const std::string &fname, const std::string &dname, int outformat, const std::string &title, int incvar, int plotlogy);
 
 
 // Simple scatter plot

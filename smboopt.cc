@@ -73,6 +73,13 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
     tunediffmod = 1; //2;
     tuneaugxmod = 1; //2;
 
+    tunemu_sigma      = 0;
+    tunesigma_sigma   = 0;
+    tunecgt_sigma     = 0;
+    tunesrcmod_sigma  = 0;
+    tunediffmod_sigma = 0;
+    tuneaugxmod_sigma = 0;
+
     usemodelaugx = 0;
     modelnaive   = 0;
     makenoise    = 0;
@@ -87,7 +94,7 @@ SMBOOptions::SMBOOptions() : GlobalOptions()
 
     firsttrain = 0;
 
-    xshortcutenabled = 0;
+//    xshortcutenabled = 0;
 
     locdim = 0;
 
@@ -297,6 +304,13 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
     tunediffmod = src.tunediffmod;
     tuneaugxmod = src.tuneaugxmod;
 
+    tunemu_sigma      = src.tunemu_sigma;
+    tunesigma_sigma   = src.tunesigma_sigma;
+    tunesrcmod_sigma  = src.tunesrcmod_sigma;
+    tunecgt_sigma     = src.tunecgt_sigma;
+    tunediffmod_sigma = src.tunediffmod_sigma;
+    tuneaugxmod_sigma = src.tuneaugxmod_sigma;
+
     xtemplate = src.xtemplate;
 
     usemodelaugx = src.usemodelaugx;
@@ -325,10 +339,10 @@ SMBOOptions &SMBOOptions::operator=(const SMBOOptions &src)
 
     firsttrain = src.firsttrain;
 
-    xmodprod.resize(0,0);
-    xshortcutenabled = 0;
-    xsp.resize(0);
-    xspp.resize(0);
+//    xmodprod.resize(0,0);
+//    xshortcutenabled = 0;
+//    xsp.resize(0);
+//    xspp.resize(0);
 
     locires       = src.locires;
     locxres       = src.locxres;
@@ -364,10 +378,10 @@ void SMBOOptions::reset(void)
 
     firsttrain = 1;
 
-    xmodprod.resize(0,0);
-    xshortcutenabled = 0;
-    xsp.resize(0);
-    xspp.resize(0);
+//    xmodprod.resize(0,0);
+//    xshortcutenabled = 0;
+//    xsp.resize(0);
+//    xspp.resize(0);
 
     locires.resize(0);
     locxres.resize(0);
@@ -530,15 +544,15 @@ int SMBOOptions::realOptim(int dim,
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<gentype> > &allxres,
-                      Vector<Vector<gentype> > &allXres,
-                      Vector<gentype>          &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype>          &allFres,
-                      Vector<gentype>          &allmres,
-                      Vector<gentype>          &allsres,
-                      Vector<double>           &s_score,
-                      Vector<int>              &is_feas,
+                      Vector<Vector<gentype>> &allxres,
+                      Vector<Vector<gentype>> &allXres,
+                      Vector<gentype>         &allfres,
+                      Vector<Vector<gentype>> &allcres,
+                      Vector<gentype>         &allFres,
+                      Vector<gentype>         &allmres,
+                      Vector<gentype>         &allsres,
+                      Vector<double>          &s_score,
+                      Vector<int>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -783,6 +797,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
             {
                 errstream() << ", " << calcnegloglikelihood(getmuapprox(i),1) << " (mu " << i << "): ";
                 printoneline(errstream(),(getmuapprox(i).getKernel()).cScale()) << ", ";
+                errstream() << getmuapprox(i).sigma() << ", ";
 
                 for ( int iii = 0 ; iii < (getmuapprox(i).getKernel()).size() ; iii++ )
                 {
@@ -831,6 +846,7 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
             {
                 errstream() << ", " << calcnegloglikelihood(getcgtapprox(i),1) << " (cgt " << i << "): ";
                 printoneline(errstream(),(getcgtapprox(i).getKernel()).cScale()) << ", ";
+                errstream() << getcgtapprox(i).sigma() << ", ";
 
                 for ( int iii = 0 ; iii < (getcgtapprox(i).getKernel()).size() ; iii++ )
                 {
@@ -850,19 +866,19 @@ void SMBOOptions::model_log(int stage, double xmin, double xmax, double ymin, do
 /*
         gentype ytmp,yvartmp;
 
-        Vector<Vector<double> > xplot(ydim);
-        Vector<Vector<double> > yplot(ydim);
-        Vector<Vector<double> > yvvar(ydim);
-        Vector<Vector<double> > ybase(ydim);
+        Vector<Vector<double>> xplot(ydim);
+        Vector<Vector<double>> yplot(ydim);
+        Vector<Vector<double>> yvvar(ydim);
+        Vector<Vector<double>> ybase(ydim);
 
-        Vector<Vector<double> > xpos(ydim);
-        Vector<Vector<double> > ypos(ydim);
+        Vector<Vector<double>> xpos(ydim);
+        Vector<Vector<double>> ypos(ydim);
 
-        Vector<Vector<double> > xneg(ydim);
-        Vector<Vector<double> > yneg(ydim);
+        Vector<Vector<double>> xneg(ydim);
+        Vector<Vector<double>> yneg(ydim);
 
-        Vector<Vector<double> > xequ(ydim);
-        Vector<Vector<double> > yequ(ydim);
+        Vector<Vector<double>> xequ(ydim);
+        Vector<Vector<double>> yequ(ydim);
 */
 
         int xind = 0;
@@ -1436,6 +1452,7 @@ void SMBOOptions::model_clear(void)
 
 void SMBOOptions::model_update(void)
 {
+/*
 #ifndef TURNOFFSHORTCUT
     if ( !ismodelaug() && ( ( modeltype == 0 ) || ( modeltype == 1 ) ) )
     {
@@ -1459,9 +1476,10 @@ void SMBOOptions::model_update(void)
         xshortcutenabled = 1;
     }
 #endif
+*/
 }
 
-void SMBOOptions::model_sample(const Vector<double> &qmin, const Vector<double> &qmax, double sampScale)
+void SMBOOptions::model_sample(const Vector<double> &qmin, const Vector<double> &qmax, double sampScale, double diagperturb)
 {
     if ( !model_issample() )
     {
@@ -1500,7 +1518,7 @@ errstream() << "Sample objective model\n";
 
             getmuapprox_sample("&",i).setsigma(SIGMA_ADD); // effectively noiseless samples for practical purposes
             getmuapprox_sample("&",i).setsigma_cut(sigma_cut); // scale factor may be set
-            getmuapprox_sample("&",i).setSampleMode(TSmode,xxmin(xminrettmp),xxmax(xmaxrettmp),TSNsamp,sampSplit,TSsampType,TSxsampType,sampScale);
+            getmuapprox_sample("&",i).setSampleMode(TSmode,xxmin(xminrettmp),xxmax(xmaxrettmp),TSNsamp,sampSplit,TSsampType,TSxsampType,sampScale,0.0,diagperturb);
         }
     }
 
@@ -1512,9 +1530,7 @@ void SMBOOptions::model_unsample(void)
 {
     if ( model_issample() )
     {
-        int i;
-
-        for ( i = 0 ; i < muapprox_sample.size() ; i++ )
+        for ( int i = 0 ; i < muapprox_sample.size() ; i++ )
         {
             MEMDEL(muapprox_sample("&",i)); muapprox_sample("&",i) = nullptr;
         }
@@ -1534,7 +1550,7 @@ int SMBOOptions::model_issample(void) const
 
 
 
-void SMBOOptions::modelcgt_sample(const Vector<double> &qmin, const Vector<double> &qmax, double sampScale)
+void SMBOOptions::modelcgt_sample(const Vector<double> &qmin, const Vector<double> &qmax, double sampScale, double diagperturb)
 {
     if ( !modelcgt_issample() )
     {
@@ -1573,7 +1589,7 @@ errstream() << "Sample objective model\n";
 
             getcgtapprox_sample("&",i).setsigma(SIGMA_ADD); // effectively noiseless samples for practical purposes
             getcgtapprox_sample("&",i).setsigma_cut(sigma_cut); // scale factor may be set
-            getcgtapprox_sample("&",i).setSampleMode(TSmode,xxmin(xminrettmp),xxmax(xmaxrettmp),TSNsamp,sampSplit,TSsampType,TSxsampType,sampScale);
+            getcgtapprox_sample("&",i).setSampleMode(TSmode,xxmin(xminrettmp),xxmax(xmaxrettmp),TSNsamp,sampSplit,TSsampType,TSxsampType,sampScale,0.0,diagperturb);
         }
     }
 
@@ -1585,9 +1601,7 @@ void SMBOOptions::modelcgt_unsample(void)
 {
     if ( modelcgt_issample() )
     {
-        int i;
-
-        for ( i = 0 ; i < cgtapprox_sample.size() ; i++ )
+        for ( int i = 0 ; i < cgtapprox_sample.size() ; i++ )
         {
             MEMDEL(cgtapprox_sample("&",i)); cgtapprox_sample("&",i) = nullptr;
         }
@@ -1824,7 +1838,7 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
         if ( tunediffmod && diffmodel.N() )
         {
 //errstrean() << "phantomxyziii diffmodel\n";
-            diffmodel.tuneKernel(tunediffmod,getxwidth(),1,0,nullptr);
+            diffmodel.tuneKernel(tunediffmod,getxwidth(),1,( tunediffmod_sigma ? 4 : 0 ),nullptr);
         }
 
         ires |= modelaugx_int_train(res,killSwitch);
@@ -1834,7 +1848,7 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
             for ( i = 0 ; i < augxapprox.size() ; ++i )
             {
 //errstrean() << "phantomxyziii augx " << i << "\n";
-                getaugxapprox("&",i).tuneKernel(tuneaugxmod,getxwidth(),1,0,nullptr);
+                getaugxapprox("&",i).tuneKernel(tuneaugxmod,getxwidth(),1,( tuneaugxmod_sigma ? 4 : 0 ),nullptr);
             }
         }
 
@@ -1875,13 +1889,14 @@ int SMBOOptions::model_train(int &res, svmvolatile int &killSwitch)
                     }
                 }
 
-                getmuapprox("&",i).tuneKernel(tunemu,getxwidth(),1,0,&tuneBounds);
+                getmuapprox("&",i).tuneKernel(tunemu,getxwidth(),1,( tunemu_sigma ? 4 : 0 ),&tuneBounds);
             }
         }
 
 errstream() << "-:" << tunecgt << ":-";
         if ( tunecgt && cgtapprox.size() )
         {
+errstream() << ":woot:-";
             for ( i = 0 ; i < cgtapprox.size() ; ++i )
             {
                 tkBounds tuneBounds(getcgtapprox(i).getKernel());
@@ -1909,7 +1924,7 @@ errstream() << "-:" << tunecgt << ":-";
                 }
 
 errstream() << ":!" << i << ",";
-                getcgtapprox("&",i).tuneKernel(tunecgt,CGOFFsCALE*getxwidth(),1,0,&tuneBounds);
+                getcgtapprox("&",i).tuneKernel(tunecgt,CGOFFsCALE*getxwidth(),1,( tunecgt_sigma ? 4 : 0 ),&tuneBounds);
 errstream() << "!:";
             }
         }
@@ -1919,7 +1934,7 @@ errstream() << "!:";
         if ( tunesigma && sigmuseparate )
         {
 //errstrean() << "phantomxyziii sigapprox\n";
-            sigmaapprox.tuneKernel(tunesigma,getxwidth(),1,0,nullptr);
+            sigmaapprox.tuneKernel(tunesigma,getxwidth(),1,( tunesigma_sigma ? 4 : 0 ),nullptr);
         }
 
         return ires;
@@ -2752,7 +2767,7 @@ int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype
             if ( firsttrain && srcmodel.N() && tunesrcmod )
             {
 //outstream() << "Tuning source model\n";
-                srcmodel.tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
+                srcmodel.tuneKernel(tunesrcmod,getxwidth(),1,( tunesrcmod_sigma ? 4 : 0 ),nullptr);
                 firsttrain = 0;
                 int dummy = 0;
                 srcmodel.train(dummy);
@@ -2778,7 +2793,7 @@ int SMBOOptions::modeldiff_int_addTrainingVector(const gentype &y, const gentype
 
             if ( firsttrain && srcmodel.N() && tunesrcmod )
             {
-                srcmodel.tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
+                srcmodel.tuneKernel(tunesrcmod,getxwidth(),1,( tunesrcmod_sigma ? 4 : 0 ),nullptr);
                 firsttrain = 0;
                 int dummy = 0;
                 srcmodel.train(dummy);
@@ -2837,7 +2852,7 @@ int SMBOOptions::modeldiff_int_train(int &res, svmvolatile int &killSwitch)
 
             if ( firsttrain && srcmodel.N() && tunesrcmod )
             {
-                srcmodel.tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
+                srcmodel.tuneKernel(tunesrcmod,getxwidth(),1,( tunesrcmod_sigma ? 4 : 0 ),nullptr);
                 firsttrain = 0;
                 int dummy = 0;
                 srcmodel.train(dummy);
@@ -2858,7 +2873,7 @@ int SMBOOptions::modeldiff_int_train(int &res, svmvolatile int &killSwitch)
 
             if ( firsttrain && srcmodel.N() && tunesrcmod )
             {
-                srcmodel.tuneKernel(tunesrcmod,getxwidth(),1,0,nullptr);
+                srcmodel.tuneKernel(tunesrcmod,getxwidth(),1,( tunesrcmod_sigma ? 4 : 0 ),nullptr);
                 firsttrain = 0;
                 int dummy = 0;
                 srcmodel.train(dummy);
@@ -3233,9 +3248,9 @@ double SMBOOptions::model_err(int dim, const Vector<double> &xmin, const Vector<
     gentype sdummy;
     int idummy;
     int midummy;
-    Vector<Vector<gentype> > allxdummy;
+    Vector<Vector<gentype>> allxdummy;
     Vector<gentype> allfdummy;
-    Vector<Vector<gentype> > allcdummy;
+    Vector<Vector<gentype>> allcdummy;
     Vector<gentype> allFdummy;
     Vector<gentype> allmdummy;
     Vector<gentype> allsupdummy;

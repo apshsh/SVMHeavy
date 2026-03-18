@@ -36,7 +36,7 @@ const char *dashtypes(int j);
 int domultiplot2d(double xmin, double xmax, double omin, double omax,
                   const std::string &fname, const std::string &dname, int outformat, const std::string &title,
                   const Vector<std::string> &dnamelist, const Vector<int> &repind, const Vector<int> &objind, const Vector<std::string> &plotlabels,
-                  int maxobj, int incvar)
+                  int maxobj, int incvar, int plotlogy)
 {
     int numdatfiles = dnamelist.size(); // total number of lines to draw
     int q;
@@ -45,15 +45,8 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
 
     std::string dnameplot(dname);
 
-    if ( outformat <= 2 )
-    {
-        dnameplot += ".plot";
-    }
-
-    else if ( outformat == 3 )
-    {
-        dnameplot += ".m";
-    }
+    if      ( outformat <= 2 ) { dnameplot += ".plot"; }
+    else if ( outformat == 3 ) { dnameplot += ".m";    }
 
     std::ofstream dnameplotfile(dnameplot);
 
@@ -66,10 +59,7 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
         dnameplotfile << "set term dumb\n";
         dnameplotfile << "set size ratio 0.75\n";
 
-        if ( title.length() )
-        {
-            dnameplotfile << "set title \"" << title << "\"\n";
-        }
+        if ( title.length() ) { dnameplotfile << "set title \"" << title << "\"\n"; }
     }
 
     else if ( outformat == 1 )
@@ -78,10 +68,7 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
         dnameplotfile << "set output \"" << fname << ".ps\"\n";
         dnameplotfile << "set size ratio 0.75\n";
 
-        if ( title.length() )
-        {
-            dnameplotfile << "set title \"" << title << "\"\n";
-        }
+        if ( title.length() ) { dnameplotfile << "set title \"" << title << "\"\n"; }
 
         lwcomm = "lw 2";
     }
@@ -92,10 +79,7 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
         dnameplotfile << "set output \"" << fname << ".pdf\"\n";
         dnameplotfile << "set size ratio 0.75\n";
 
-        if ( title.length() )
-        {
-            dnameplotfile << "set title \"" << title << "\"\n";
-        }
+        if ( title.length() ) { dnameplotfile << "set title \"" << title << "\"\n"; }
 
         lwcomm = "lw 1";
     }
@@ -104,15 +88,8 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
     {
         dnameplotfile << "function svmh_fig_" << fname << " = " << dname << "()\n";
 
-        if ( title.length() )
-        {
-            dnameplotfile << "svmh_fig_" << fname << " = figure('Name','" << title << "');\n";
-        }
-
-        else
-        {
-            dnameplotfile << "svmh_fig_" << fname << " = figure;\n";
-        }
+        if ( title.length() ) { dnameplotfile << "svmh_fig_" << fname << " = figure('Name','" << title << "');\n"; }
+        else                  { dnameplotfile << "svmh_fig_" << fname << " = figure;\n"; }
 
         dnameplotfile << "hold on;\n";
     }
@@ -123,15 +100,10 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
 
     if ( outformat <= 2 )
     {
-        if ( xmin < xmax )
-        {
-            dnameplotfile << "set xrange [ " << xmin << " : " << xmax << " ]\n";
-        }
+        if ( xmin < xmax ) { dnameplotfile << "set xrange [ " << xmin << " : " << xmax << " ]\n"; }
+        if ( omin < omax ) { dnameplotfile << "set yrange [ " << omin << " : " << omax << " ]\n"; }
 
-        if ( omin < omax )
-        {
-            dnameplotfile << "set yrange [ " << omin << " : " << omax << " ]\n";
-        }
+        if ( plotlogy ) { dnameplotfile << "set logscale y 2\n"; }
 
         dnameplotfile << "set border 3\n";
         dnameplotfile << "set xtics nomirror font \",8\"\n";
@@ -253,7 +225,8 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
             }
         }
 
-        dnameplotfile << "plot(";
+        if ( plotlogy ) { dnameplotfile << "semilogy("; }
+        else            { dnameplotfile << "plot(";     }
 
         for ( q = 0 ; q < numdatfiles ; ++q )
         {
@@ -303,15 +276,8 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
 
     if ( outformat == 3 )
     {
-        if ( xmin < xmax )
-        {
-            dnameplotfile << "xlim([ " << xmin << "," << xmax << " ]);\n";
-        }
-
-        if ( omin < omax )
-        {
-            dnameplotfile << "ylim([ " << omin << "," << omax << " ]);\n";
-        }
+        if ( xmin < xmax ) { dnameplotfile << "xlim([ " << xmin << "," << xmax << " ]);\n"; }
+        if ( omin < omax ) { dnameplotfile << "ylim([ " << omin << "," << omax << " ]);\n"; }
 
         dnameplotfile << "hold off;\n";
         dnameplotfile << "end\n";
@@ -386,7 +352,7 @@ int domultiplot2d(double xmin, double xmax, double omin, double omax,
         svm_system(delstringb.c_str());
 #endif
 #endif
-errstream() << "phantomx 8\n";
+//errstream() << "phantomx 8\n";
     }
 
     else if ( outformat == 3 )
@@ -412,7 +378,7 @@ errstream() << "phantomx 8\n";
 
 
 
-int doplot(double xmin, double xmax, double omin, double omax, const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar, int doline, int numdat)
+int doplot(double xmin, double xmax, double omin, double omax, const std::string &fname, const std::string &dname, int outformat, int incdata, int incvar, int doline, int numdat, int plotlogy)
 {
     std::string dnamepos = dname+"_pos";
     std::string dnameneg = dname+"_neg";
@@ -423,15 +389,8 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
 
     std::string dnameplot(dname);
 
-    if ( outformat <= 2 )
-    {
-        dnameplot += ".plot";
-    }
-
-    else if ( outformat == 3 )
-    {
-        dnameplot += ".m";
-    }
+    if      ( outformat <= 2 ) { dnameplot += ".plot"; }
+    else if ( outformat == 3 ) { dnameplot += ".m";    }
 
     std::ofstream dnameplotfile(dnameplot);
 
@@ -449,7 +408,6 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
         dnameplotfile << "set terminal postscript portrait enhanced color dashed lw 1 \"DejaVuSans\" 12\n";
         dnameplotfile << "set output \"" << fname << ".ps\"\n";
         dnameplotfile << "set size ratio 0.75\n";
-
         lwcomm = "lw 2";
     }
 
@@ -458,14 +416,12 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
         dnameplotfile << "set terminal pdfcairo enhanced truecolor dashed lw 1\n";
         dnameplotfile << "set output \"" << fname << ".pdf\"\n";
         dnameplotfile << "set size ratio 0.75\n";
-
         lwcomm = "lw 1";
     }
 
     else if ( outformat == 3 )
     {
         dnameplotfile << "function svmh_fig_" << fname << " = " << dname << "()\n";
-
         dnameplotfile << "svmh_fig_" << fname << " = figure;\n";
         dnameplotfile << "hold on;\n";
     }
@@ -476,15 +432,10 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
 
     if ( outformat <= 2 )
     {
-        if ( xmin < xmax )
-        {
-            dnameplotfile << "set xrange [ " << xmin << " : " << xmax << " ]\n";
-        }
+        if ( xmin < xmax ) { dnameplotfile << "set xrange [ " << xmin << " : " << xmax << " ]\n"; }
+        if ( omin < omax ) { dnameplotfile << "set yrange [ " << omin << " : " << omax << " ]\n"; }
 
-        if ( omin < omax )
-        {
-            dnameplotfile << "set yrange [ " << omin << " : " << omax << " ]\n";
-        }
+        if ( plotlogy ) { dnameplotfile << "set logscale y 2\n"; }
 
         dnameplotfile << "set border 3\n";
         dnameplotfile << "set xtics nomirror font \",8\"\n";
@@ -501,23 +452,12 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
 
     if ( outformat <= 2 )
     {
-        if ( numdat )
-        {
-            dnameplotfile << "set encoding utf8\n";
-            dnameplotfile << "symbol(z) = \"•✷+△♠□♣♥♦\"[int(z):int(z)]\n";
-        }
+        if ( numdat ) { dnameplotfile << "set encoding utf8\n"; }
 
         dnameplotfile << "plot \\\n";
 
-        if ( incvar )
-        {
-            dnameplotfile << "'" << dname << "' using 1:($2-$3):($2+$3) with filledcurve lt 2 t \"\", \\\n'" << dname << "' using 1:2 " << linetype << " lt -1 " << lwcomm << " t \"\"";
-        }
-
-        else
-        {
-            dnameplotfile << "'" << dname << "' using 1:2 " << linetype << " lt -1 " << lwcomm << " t \"\"";
-        }
+        if ( incvar ) { dnameplotfile << "'" << dname << "' using 1:($2-$3):($2+$3) with filledcurve lt 2 t \"\", \\\n'" << dname << "' using 1:2 " << linetype << " lt -1 " << lwcomm << " t \"\""; }
+        else          { dnameplotfile << "'" << dname << "' using 1:2 " << linetype << " lt -1 " << lwcomm << " t \"\""; }
 
         // Additional data if needed
 
@@ -535,9 +475,12 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
 
         else if ( ( 1 & incdata ) && numdat )
         {
-            dnameplotfile << ", \\\n'" << dnamepos << "' using 1:2:(symbol($3)) lt -1 lw 1 ps 0.5 t\"\"";
-            dnameplotfile << ", \\\n'" << dnameneg << "' using 1:2:(symbol($3)) lt -1 lw 1 ps 0.5 t\"\"";
-            dnameplotfile << ", \\\n'" << dnameequ << "' using 1:2:(symbol($3)) lt -1 lw 1 ps 0.5 t\"\"";
+            for ( int i = 1 ; i <= numdat ; ++i )
+            {
+                dnameplotfile << ", \\\n'" << dnamepos << "' using 1:($3 == " << i << " ? $2 : 1/0) lt -1 lw 1 pt " << (i+(2*numdat)) << " ps 0.5 t\"\"";
+                dnameplotfile << ", \\\n'" << dnameneg << "' using 1:($3 == " << i << " ? $2 : 1/0) lt -1 lw 1 pt " << (i+(1*numdat)) << " ps 0.5 t\"\"";
+                dnameplotfile << ", \\\n'" << dnameequ << "' using 1:($3 == " << i << " ? $2 : 1/0) lt -1 lw 1 pt " << (i+(0*numdat)) << " ps 0.5 t\"\"";
+            }
         }
 
         dnameplotfile << "\n";
@@ -617,11 +560,14 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
             dnameplotfile << "h = fill(xvalsare, inBetween, '" << ct << "', 'FaceAlpha', 0.3);\n";
         }
 
+        if ( plotlogy ) { dnameplotfile << "semilogy("; }
+        else            { dnameplotfile << "plot(";     }
+
         {
             char ct = 'k';
             std::string lt = "-";
 
-            dnameplotfile << "plot(" << xvarnamelist.c_str() << "," << yvarnamelist.c_str() << ",'LineStyle','" << lt << "','Color','" << ct << "','DisplayName','" << "');\n";
+            dnameplotfile << xvarnamelist.c_str() << "," << yvarnamelist.c_str() << ",'LineStyle','" << lt << "','Color','" << ct << "','DisplayName','" << "');\n";
         }
 
         if ( ( 2 & incdata ) )
@@ -629,7 +575,7 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
             char ct = 'b';
             std::string lt = "-.";
 
-            dnameplotfile << "plot(" << xvarnamelist.c_str() << "," << yrefvarnamelist.c_str() << ",'LineStyle','" << lt << "','Color','" << ct << "','DisplayName','" << "');\n";
+            dnameplotfile << xvarnamelist.c_str() << "," << yrefvarnamelist.c_str() << ",'LineStyle','" << lt << "','Color','" << ct << "','DisplayName','" << "');\n";
         }
 
         if ( ( 1 & incdata ) )
@@ -661,15 +607,8 @@ int doplot(double xmin, double xmax, double omin, double omax, const std::string
 
     if ( outformat == 3 )
     {
-        if ( xmin < xmax )
-        {
-            dnameplotfile << "xlim([ " << xmin << "," << xmax << " ]);\n";
-        }
-
-        if ( omin < omax )
-        {
-            dnameplotfile << "ylim([ " << omin << "," << omax << " ]);\n";
-        }
+        if ( xmin < xmax ) { dnameplotfile << "xlim([ " << xmin << "," << xmax << " ]);\n"; }
+        if ( omin < omax ) { dnameplotfile << "ylim([ " << omin << "," << omax << " ]);\n"; }
 
         dnameplotfile << "hold off;\n";
         dnameplotfile << "end\n";

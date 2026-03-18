@@ -75,7 +75,7 @@ Matrix<double> *smRotat(double sina, double cosa, const Vector<double> &b);
 Matrix<double> *smCutM(int m, int s, int t);
 Matrix<double> *smBlockDiag(const Vector<const Matrix<double> *> &src);
 Matrix<double> *smStack(const Matrix<double> *A, const Matrix<double> *B);
-Matrix<Matrix<double> > *smStack(const Matrix<Matrix<double> > *A, const Matrix<Matrix<double> > *B);
+Matrix<Matrix<double>> *smStack(const Matrix<Matrix<double>> *A, const Matrix<Matrix<double>> *B);
 
 Matrix<double> *smConst(int m, int n, double *val);
 Matrix<double> *smDiag(Vector<double> *b);
