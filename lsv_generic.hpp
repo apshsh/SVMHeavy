@@ -90,8 +90,8 @@ public:
     virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
@@ -105,9 +105,9 @@ public:
     virtual int sety(const Vector<int> &i, const Vector<double> &y) override { (void) i; (void) y; NiceThrow("sety fallback 2"); return 1; }
     virtual int sety(                      const Vector<double> &y) override {           (void) y; NiceThrow("sety fallback 3"); return 1; }
 
-    virtual int sety(int                i, const Vector<double>          &y) override { (void) i; (void) y; NiceThrow("Whatever"); return 1; }
-    virtual int sety(const Vector<int> &i, const Vector<Vector<double> > &y) override { (void) i; (void) y; NiceThrow("Whatever"); return 1; }
-    virtual int sety(                      const Vector<Vector<double> > &y) override {           (void) y; NiceThrow("Whatever"); return 1; }
+    virtual int sety(int                i, const Vector<double>         &y) override { (void) i; (void) y; NiceThrow("Whatever"); return 1; }
+    virtual int sety(const Vector<int> &i, const Vector<Vector<double>> &y) override { (void) i; (void) y; NiceThrow("Whatever"); return 1; }
+    virtual int sety(                      const Vector<Vector<double>> &y) override {           (void) y; NiceThrow("Whatever"); return 1; }
 
     virtual int sety(int                i, const d_anion         &y) override { (void) i; (void) y; NiceThrow("Whatever"); return 1; }
     virtual int sety(const Vector<int> &i, const Vector<d_anion> &y) override { (void) i; (void) y; NiceThrow("Whatever"); return 1; }
@@ -153,15 +153,15 @@ public:
     virtual void dgTrainingVectorX(Vector<gentype> &resx, const Vector<int> &i) const override { ML_Base::dgTrainingVectorX(resx,i); return; }
     virtual void dgTrainingVectorX(Vector<double>  &resx, const Vector<int> &i) const override { ML_Base::dgTrainingVectorX(resx,i); return; }
 
-    virtual void dgTrainingVector(Vector<gentype>         &res, gentype        &resn, int i) const override;
-    virtual void dgTrainingVector(Vector<double>          &res, double         &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
-    virtual void dgTrainingVector(Vector<Vector<double> > &res, Vector<double> &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
-    virtual void dgTrainingVector(Vector<d_anion>         &res, d_anion        &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
+    virtual void dgTrainingVector(Vector<gentype>        &res, gentype        &resn, int i) const override;
+    virtual void dgTrainingVector(Vector<double>         &res, double         &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
+    virtual void dgTrainingVector(Vector<Vector<double>> &res, Vector<double> &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
+    virtual void dgTrainingVector(Vector<d_anion>        &res, d_anion        &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
 
-    virtual void dgTrainingVector(Vector<gentype>         &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
-    virtual void dgTrainingVector(Vector<double>          &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
-    virtual void dgTrainingVector(Vector<Vector<double> > &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
-    virtual void dgTrainingVector(Vector<d_anion>         &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<gentype>        &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<double>         &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<Vector<double>> &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<d_anion>        &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
 
 
 

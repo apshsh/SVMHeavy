@@ -242,7 +242,7 @@ int LSV_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentyp
     return res;
 }
 
-int LSV_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int LSV_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
@@ -265,7 +265,7 @@ int LSV_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector
     return res;
 }
 
-int LSV_Generic::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int LSV_Generic::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );

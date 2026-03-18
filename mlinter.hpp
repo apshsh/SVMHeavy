@@ -74,9 +74,9 @@ class SVMThreadContext;
 
 int runsvm(SVMThreadContext *svmContext,
            Stack<awarestream *> *commstack,
-           svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
+           svmvolatile SparseVector<SparseVector<gentype>> &globargvariables,
            int (*getsetExtVar)(gentype &res, const gentype &src, int num),
-           SparseVector<SparseVector<int> > &returntag);
+           SparseVector<SparseVector<int>> &returntag);
 
 // Kill all threads, including main (0) thread if killmain is set.
 
@@ -244,7 +244,7 @@ public:
     int NelderMeadInd;
     int BayesianInd;
     gentype biasdefault;
-    SparseVector<SparseVector<gentype> > argvariables;
+    SparseVector<SparseVector<gentype>> argvariables;
     SparseVector<ofiletype> filevariables;
     SparseVector<gentype> xtemplate;
     int depthin;

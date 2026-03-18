@@ -130,20 +130,20 @@ public:
     virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double sigmaweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double sigmaweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &sigmaweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &sigmaweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &sigmaweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype>> &x, const Vector<double> &sigmaweigh, const Vector<double> &epsweigh) override;
 
     virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
     virtual int removeTrainingVector(int i, int num                             ) override { return ML_Base::removeTrainingVector(i,num); }
 
-    virtual int setx(int                i, const SparseVector<gentype>          &x) override { int res = getQ().setx(i,x); resetKernelTree(); return res; }
-    virtual int setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &x) override { int res = getQ().setx(i,x); resetKernelTree(); return res; }
-    virtual int setx(                      const Vector<SparseVector<gentype> > &x) override { int res = getQ().setx(  x); resetKernelTree(); return res; }
+    virtual int setx(int                i, const SparseVector<gentype>         &x) override { int res = getQ().setx(i,x); resetKernelTree(); return res; }
+    virtual int setx(const Vector<int> &i, const Vector<SparseVector<gentype>> &x) override { int res = getQ().setx(i,x); resetKernelTree(); return res; }
+    virtual int setx(                      const Vector<SparseVector<gentype>> &x) override { int res = getQ().setx(  x); resetKernelTree(); return res; }
 
-    virtual int qswapx(int                i, SparseVector<gentype>          &x, int dontupdate = 0) override { int res = getQ().qswapx(i,x,dontupdate); resetKernelTree(); return res; }
-    virtual int qswapx(const Vector<int> &i, Vector<SparseVector<gentype> > &x, int dontupdate = 0) override { int res = getQ().qswapx(i,x,dontupdate); resetKernelTree(); return res; }
-    virtual int qswapx(                      Vector<SparseVector<gentype> > &x, int dontupdate = 0) override { int res = getQ().qswapx(  x,dontupdate); resetKernelTree(); return res; }
+    virtual int qswapx(int                i, SparseVector<gentype>         &x, int dontupdate = 0) override { int res = getQ().qswapx(i,x,dontupdate); resetKernelTree(); return res; }
+    virtual int qswapx(const Vector<int> &i, Vector<SparseVector<gentype>> &x, int dontupdate = 0) override { int res = getQ().qswapx(i,x,dontupdate); resetKernelTree(); return res; }
+    virtual int qswapx(                      Vector<SparseVector<gentype>> &x, int dontupdate = 0) override { int res = getQ().qswapx(  x,dontupdate); resetKernelTree(); return res; }
 
     virtual int setd(int                i, int                nd) override;
     virtual int setd(const Vector<int> &i, const Vector<int> &nd) override;

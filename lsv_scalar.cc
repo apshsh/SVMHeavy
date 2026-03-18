@@ -1383,11 +1383,12 @@ int LSV_Scalar::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int i
 
     int dtva = xtang(ia) & (7+32+64);
     int dtvb = xtang(ib) & (7+32+64);
-    int dtvi = xtang(ii) & (7+32+64);
+//    int dtvi = xtang(ii) & (7+32+64);
 
     NiceAssert( dtva >= 0 );
     NiceAssert( dtvb >= 0 );
-    NiceAssert( dtvi == 0 );
+//    NiceAssert( dtvi == 0 );
+    NiceAssert( ( xtang(ii) & (7+32+64) ) == 0 );
 
     retVector<double> tmpva;
 

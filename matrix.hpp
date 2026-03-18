@@ -17,6 +17,8 @@
 #include <string.h>
 #include <sstream>
 #include <limits.h>
+#include <type_traits>
+#include <iterator>
 #include "randfun.hpp"
 #include "vector.hpp"
 #include "sparsevector.hpp"
@@ -56,8 +58,8 @@ template <class T> class retMatrix;
 
 OVERLAYMAKEFNVECTOR(Matrix<int>)
 OVERLAYMAKEFNVECTOR(Matrix<double>)
-OVERLAYMAKEFNVECTOR(Vector<Matrix<int> >)
-OVERLAYMAKEFNVECTOR(Vector<Matrix<double> >)
+OVERLAYMAKEFNVECTOR(Vector<Matrix<int>>)
+OVERLAYMAKEFNVECTOR(Vector<Matrix<double>>)
 
 // Constant type matrices
 //
@@ -668,6 +670,67 @@ public:
     void cheatsetdref(void *newdref)         { dref  = newdref;  }
     void cheatsetcdref(const void *newcdref) { cdref = newcdref; }
 
+    // Playing with iterators for the heck of it
+
+    struct Iterator
+    {
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type   = std::ptrdiff_t; // meaningless for forward iterator, but required
+        using value_type        = T;
+        using pointer           = T *;
+        using reference         = T &;
+
+        Iterator(int ind, Matrix<T> *that) : Matrix<T>("&"), m_ind(ind), m_that(that) {}
+
+        reference operator*()  const { return  (*m_that)("&",m_ind%numRows(),m_ind/numRows()); }
+        pointer   operator->()       { return &(*m_that)("&",m_ind%numRows(),m_ind/numRows()); }
+
+        Iterator& operator++()    { m_ind++;                         return *this; }
+        Iterator  operator++(int) { Iterator tmp = *this; ++(*this); return tmp;   }
+
+        friend bool operator==(const Iterator& a, const Iterator& b) { return a.m_ind == b.m_ind; };
+        friend bool operator!=(const Iterator& a, const Iterator& b) { return a.m_ind != b.m_ind; };
+
+    private:
+
+        int m_ind;
+        Matrix<T> *m_that;
+    };
+
+    struct ConstantIterator
+    {
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type   = std::ptrdiff_t; // meaningless for forward iterator, but required
+        using value_type        = T;
+        using pointer           = const T *;
+        using reference         = const T &;
+
+        ConstantIterator(int ind, const Matrix<T> *that) : Matrix<T>("&"), m_ind(ind), m_that(that) {}
+
+        reference operator*()  const { return  (*m_that)(m_ind%numRows(),m_ind/numRows()); }
+        pointer   operator->()       { return &(*m_that)(m_ind%numRows(),m_ind/numRows()); }
+
+        ConstantIterator& operator++()    { m_ind++;                         return *this; }
+        ConstantIterator  operator++(int) { Iterator tmp = *this; ++(*this); return tmp;   }
+
+        friend bool operator==(const ConstantIterator& a, const ConstantIterator& b) { return a.m_ind == b.m_ind; };
+        friend bool operator!=(const ConstantIterator& a, const ConstantIterator& b) { return a.m_ind != b.m_ind; };
+
+    private:
+
+        int m_ind;
+        const Matrix<T> *m_that;
+    };
+
+    Iterator begin() { Iterator res(0,                  this); return res; }
+    Iterator end()   { Iterator res(numRows()*numCols(),this); return res; }
+
+    ConstantIterator begin() const { ConstantIterator res(0,                  this); return res; }
+    ConstantIterator end()   const { ConstantIterator res(numRows()*numCols(),this); return res; }
+
+    ConstantIterator cbegin() const { ConstantIterator res(0,                  this); return res; }
+    ConstantIterator cend()   const { ConstantIterator res(numRows()*numCols(),this); return res; }
+
 private:
 
     // dnumRows: the height of the matrix
@@ -717,8 +780,8 @@ private:
     bool iscover;
 
     const Matrix<T> *bkref;
-    Vector<Vector<T> > *content;
-    const Vector<Vector<T> > *ccontent;
+    Vector<Vector<T>> *content;
+    const Vector<Vector<T>> *ccontent;
     const DynArray<int> *pivotRow;
     const DynArray<int> *pivotCol;
 
@@ -776,8 +839,8 @@ template <class T> void qswap(Matrix<T> &a, Matrix<T> &b)
     qswap(a.useLweight,b.useLweight);
 
     const Matrix<T> *bkref;
-    Vector<Vector<T> > *content;
-    const Vector<Vector<T> > *ccontent;
+    Vector<Vector<T>> *content;
+    const Vector<Vector<T>> *ccontent;
     const DynArray<int> *pivotRow;
     const DynArray<int> *pivotCol;
 
@@ -1691,7 +1754,7 @@ Matrix<T>::Matrix() : dnumRows(0),
                       Lweight(nullptr),
                       useLweight(false)
 {
-    MEMNEW(content,Vector<Vector<T> >(dnumRows));
+    MEMNEW(content,Vector<Vector<T>>(dnumRows));
     ccontent = content;
 
     NiceAssert( content );
@@ -1725,7 +1788,7 @@ Matrix<T>::Matrix(const T &) : dnumRows(0),
                       Lweight(nullptr),
                       useLweight(false)
 {
-    MEMNEW(content,Vector<Vector<T> >(dnumRows));
+    MEMNEW(content,Vector<Vector<T>>(dnumRows));
     ccontent = content;
 
     NiceAssert( content );
@@ -1764,7 +1827,7 @@ Matrix<T>::Matrix(int numRows, int numCols) : dnumRows(numRows),
     NiceAssert( numRows >= 0 );
     NiceAssert( numCols >= 0 );
 
-    MEMNEW(content,Vector<Vector<T> >(dnumRows));
+    MEMNEW(content,Vector<Vector<T>>(dnumRows));
     ccontent = content;
 
     NiceAssert( content );
@@ -1902,7 +1965,7 @@ Matrix<T>::Matrix(const Matrix<T> &src) : dnumRows(0),
                                           Lweight(nullptr),
                                           useLweight(false)
 {
-    MEMNEW(content,Vector<Vector<T> >);
+    MEMNEW(content,Vector<Vector<T>>);
     ccontent = content;
 
     NiceAssert( content );
@@ -2002,9 +2065,9 @@ Matrix<T>::Matrix(const char *, const Vector<T> &ccondummy) : dnumRows(INT_MAX-1
 {
     bkref = this;
 
-    Vector<Vector<T> > *cccontent = nullptr;
+    Vector<Vector<T>> *cccontent = nullptr;
 
-    MEMNEW(cccontent,Vector<Vector<T> >(1));
+    MEMNEW(cccontent,Vector<Vector<T>>(1));
     (*cccontent)("&",0).assignover(ccondummy);
     ccontent = cccontent;
 }
@@ -4491,7 +4554,7 @@ inline const Matrix<int> &cntintmatrix(int numRows, int numCols, retMatrix<int> 
 
     if ( firstcall || ( numRows > cntres.dnumRows ) || ( numCols > cntres.dnumCols ) )
     {
-        static thread_local Vector<Vector<int> > *ccontent = nullptr;
+        static thread_local Vector<Vector<int>> *ccontent = nullptr;
         static thread_local retVector<int> zvecstore;
 
         int locnumRows = ( firstcall || ( numRows > cntres.dnumRows ) ) ? numRows+MAXHACKYHEAD : cntres.dnumRows;
@@ -4511,7 +4574,7 @@ inline const Matrix<int> &cntintmatrix(int numRows, int numCols, retMatrix<int> 
             cntres.iibCol = 0;
             cntres.iisCol = 1;
 
-            MEMNEW(ccontent,Vector<Vector<int> >(1));
+            MEMNEW(ccontent,Vector<Vector<int>>(1));
 
             (*ccontent)("&",0).assignover(cntintvec(locnumCols,zvecstore));
             (*ccontent)("&",0).dsize = ( locnumCols = (*((*ccontent)(0)).ccontent).array_size() );
@@ -4567,7 +4630,7 @@ inline const Matrix<int> &deltaintmatrix(int pos, int numRows, int numCols, retM
 
     if ( firstcall || ( numRows > deltares.dnumRows ) || ( numCols > deltares.dnumCols ) )
     {
-        static thread_local Vector<Vector<int> > *ccontent = nullptr;
+        static thread_local Vector<Vector<int>> *ccontent = nullptr;
         static thread_local retVector<int> zvecstore;
 
         int locnumRows = ( firstcall || ( numRows > deltares.dnumRows ) ) ? numRows+MAXHACKYHEAD : deltares.dnumRows;
@@ -4587,7 +4650,7 @@ inline const Matrix<int> &deltaintmatrix(int pos, int numRows, int numCols, retM
             deltares.iibCol = 0;
             deltares.iisCol = 1;
 
-            MEMNEW(ccontent,Vector<Vector<int> >(1));
+            MEMNEW(ccontent,Vector<Vector<int>>(1));
 
             (*ccontent)("&",0).assignover(deltaintvec(pos,locnumCols,zvecstore));
             (*ccontent)("&",0).dsize = ( locnumCols = (*((*ccontent)(0)).ccontent).array_size() );
@@ -4650,8 +4713,8 @@ inline const Matrix<int> &identintmatrix(int numRows, int numCols, retMatrix<int
 
     if ( firstcall || ( numRows > identres.dnumRows ) || ( numCols > identres.dnumCols ) )
     {
-        static thread_local Vector<Vector<int> > *ccontent = nullptr;
-        static thread_local Vector<retVector<int> > *zvecstore = nullptr;
+        static thread_local Vector<Vector<int>> *ccontent = nullptr;
+        static thread_local Vector<retVector<int>> *zvecstore = nullptr;
         static thread_local retVector<int> zzvecst;
 
         if ( firstcall || ( numRows > identres.dnumRows ) || ( numCols > identres.dnumCols ) )
@@ -4673,8 +4736,8 @@ inline const Matrix<int> &identintmatrix(int numRows, int numCols, retMatrix<int
                 identres.iibCol = 0;
                 identres.iisCol = 1;
 
-                MEMNEW(ccontent,Vector<Vector<int> >(locnumRows));
-                MEMNEW(zvecstore,Vector<retVector<int> >(locnumRows));
+                MEMNEW(ccontent,Vector<Vector<int>>(locnumRows));
+                MEMNEW(zvecstore,Vector<retVector<int>>(locnumRows));
 
                 for ( int i = 0 ; i < locnumRows ; ++i )
                 {
@@ -4709,8 +4772,8 @@ inline const Matrix<int> &identintmatrix(int numRows, int numCols, retMatrix<int
             {
                 if ( locnumCols >= identres.dnumCols )
                 {
-                    MEMNEW(ccontent,Vector<Vector<int> >(locnumRows));
-                    MEMNEW(zvecstore,Vector<retVector<int> >(locnumRows));
+                    MEMNEW(ccontent,Vector<Vector<int>>(locnumRows));
+                    MEMNEW(zvecstore,Vector<retVector<int>>(locnumRows));
 
                     for ( int i = 0 ; i < locnumRows ; ++i )
                     {
@@ -4758,7 +4821,7 @@ inline const Matrix<double> &cntdoublematrix(int numRows, int numCols, retMatrix
 
     if ( firstcall || ( numRows > cntres.dnumRows ) || ( numCols > cntres.dnumCols ) )
     {
-        static thread_local Vector<Vector<double> > *ccontent = nullptr;
+        static thread_local Vector<Vector<double>> *ccontent = nullptr;
         static thread_local retVector<double> zvecstore;
 
         int locnumRows = ( firstcall || ( numRows > cntres.dnumRows ) ) ? numRows+MAXHACKYHEAD : cntres.dnumRows;
@@ -4778,7 +4841,7 @@ inline const Matrix<double> &cntdoublematrix(int numRows, int numCols, retMatrix
             cntres.iibCol = 0;
             cntres.iisCol = 1;
 
-            MEMNEW(ccontent,Vector<Vector<double> >(1));
+            MEMNEW(ccontent,Vector<Vector<double>>(1));
 
             (*ccontent)("&",0).assignover(cntdoublevec(locnumCols,zvecstore));
             (*ccontent)("&",0).dsize = ( locnumCols = (*((*ccontent)(0)).ccontent).array_size() );
@@ -4834,7 +4897,7 @@ inline const Matrix<double> &deltadoublematrix(int pos, int numRows, int numCols
 
     if ( firstcall || ( numRows > deltares.dnumRows ) || ( numCols > deltares.dnumCols ) )
     {
-        static thread_local Vector<Vector<double> > *ccontent = nullptr;
+        static thread_local Vector<Vector<double>> *ccontent = nullptr;
         static thread_local retVector<double> zvecstore;
 
         int locnumRows = ( firstcall || ( numRows > deltares.dnumRows ) ) ? numRows+MAXHACKYHEAD : deltares.dnumRows;
@@ -4854,7 +4917,7 @@ inline const Matrix<double> &deltadoublematrix(int pos, int numRows, int numCols
             deltares.iibCol = 0;
             deltares.iisCol = 1;
 
-            MEMNEW(ccontent,Vector<Vector<double> >(1));
+            MEMNEW(ccontent,Vector<Vector<double>>(1));
 
             (*ccontent)("&",0).assignover(deltadoublevec(pos,locnumCols,zvecstore));
             (*ccontent)("&",0).dsize = ( locnumCols = (*((*ccontent)(0)).ccontent).array_size() );
@@ -4914,8 +4977,8 @@ inline const Matrix<double> &identdoublematrix(int numRows, int numCols, retMatr
 
     if ( firstcall || ( numRows > identres.dnumRows ) || ( numCols > identres.dnumCols ) )
     {
-        static thread_local Vector<Vector<double> > *ccontent = nullptr;
-        static thread_local Vector<retVector<double> > *zvecstore = nullptr;
+        static thread_local Vector<Vector<double>> *ccontent = nullptr;
+        static thread_local Vector<retVector<double>> *zvecstore = nullptr;
         static thread_local retVector<double> zzvecst;
 
         if ( firstcall || ( numRows > identres.dnumRows ) || ( numCols > identres.dnumCols ) )
@@ -4937,8 +5000,8 @@ inline const Matrix<double> &identdoublematrix(int numRows, int numCols, retMatr
                 identres.iibCol = 0;
                 identres.iisCol = 1;
 
-                MEMNEW(ccontent,Vector<Vector<double> >(locnumRows));
-                MEMNEW(zvecstore,Vector<retVector<double> >(locnumRows));
+                MEMNEW(ccontent,Vector<Vector<double>>(locnumRows));
+                MEMNEW(zvecstore,Vector<retVector<double>>(locnumRows));
 
                 for ( int i = 0 ; i < locnumRows ; ++i )
                 {
@@ -4973,8 +5036,8 @@ inline const Matrix<double> &identdoublematrix(int numRows, int numCols, retMatr
             {
                 if ( locnumCols >= identres.dnumCols )
                 {
-                    MEMNEW(ccontent,Vector<Vector<double> >(locnumRows));
-                    MEMNEW(zvecstore,Vector<retVector<double> >(locnumRows));
+                    MEMNEW(ccontent,Vector<Vector<double>>(locnumRows));
+                    MEMNEW(zvecstore,Vector<retVector<double>>(locnumRows));
 
                     for ( int i = 0 ; i < locnumRows ; ++i )
                     {

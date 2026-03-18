@@ -32,6 +32,7 @@ give a vector or matrix, which could potentially be used as a matrix-valued kern
 //#endif
 #include "nlopt_direct.hpp"
 #include "ml_mutable.hpp"
+#include "directopt.hpp"
 
 #define LARGE_TRAIN_BOUNDARY       5000
 // SEE ALSO KCACHE_H
@@ -453,23 +454,20 @@ int ML_Base::incgvernum(void)
         return res;
 }
 
+
+
+
+
+
 const SparseVector<gentype> &ML_Base::xsum(SparseVector<gentype> &res) const
 {
     res.zero();
 
-    if ( N() )
+    for ( int i = 0 ; i < N() ; ++i )
     {
-        // Use x so function polymorphs correctly
+        const SparseVector<gentype> &xx = x(i);
 
-        res.nearassign(x(0));
-
-        //if ( N() > 1 )
-        {
-            for ( int i = 1 ; i < N() ; ++i )
-            {
-                res.nearadd(x(i));
-            }
-        }
+        if ( d()(i) ) { res.nearadd(xx); }
     }
 
     return res;
@@ -479,47 +477,19 @@ const SparseVector<gentype> &ML_Base::xsqsum(SparseVector<gentype> &res) const
 {
     res.zero();
 
-    if ( N() )
+    bool havest = false;
+
+    for ( int i = 0 ; i < N() ; ++i )
     {
-        // Use x so function polymorphs correctly
+        const SparseVector<gentype> &xx = x(i);
 
-        res.nearassign(x(0));
-
-        int i,j,k;
-
-        for ( i = 0 ; i < N() ; ++i )
+        if ( d()(i) && xx.nindsize() )
         {
-            const SparseVector<gentype> &xx = x(i);
-
-            if ( xx.nindsize() )
+            for ( int j = 0 ; j < xx.nindsize() ; ++j )
             {
-                for ( j = 0 ; j < xx.nindsize() ; ++j )
-                {
-                    k = xx.ind(j);
-
-                    if ( xx(k).isValNull()    ||
-                         xx(k).isValInteger() ||
-                         xx(k).isValReal()    ||
-                         xx(k).isValAnion()   ||
-                         xx(k).isValVector()  ||
-                         xx(k).isValMatrix()     )
-                    {
-                        if ( i )
-                        {
-                            res("&",k) += outerProd(xx(k),xx(k));
-                        }
-
-                        else
-                        {
-                            res("&",k) = outerProd(xx(k),xx(k));
-                        }
-                    }
-
-                    else
-                    {
-                        res("&",k) = "\"wtf\"";
-                    }
-                }
+                if ( xx.direcref(j).isValNull() ) { ; }
+                else if ( havest ) { res("&",xx.ind(j)) += outerProd(xx.direcref(j),xx.direcref(j));                }
+                else               { res("&",xx.ind(j)) =  outerProd(xx.direcref(j),xx.direcref(j)); havest = true; }
             }
         }
     }
@@ -535,28 +505,10 @@ const SparseVector<gentype> &ML_Base::xmean(SparseVector<gentype> &res) const
 
     xsum(res);
 
-    if ( xspaceDim() )
+    for ( int i = 0 ; i < xspaceDim() ; ++i )
     {
-        int i;
-        int indkeyscale = isXAssumedConsistent() ? N() : 1;
-
-        for ( i = 0 ; i < xspaceDim() ; ++i )
-        {
-            if ( res(indKey()(i)).isValNull()    ||
-                 res(indKey()(i)).isValInteger() ||
-                 res(indKey()(i)).isValReal()    ||
-                 res(indKey()(i)).isValAnion()   ||
-                 res(indKey()(i)).isValVector()  ||
-                 res(indKey()(i)).isValMatrix()     )
-            {
-                res("&",indKey()(i)) *= (1.0/(indkeyscale*indKeyCount()(i)));
-            }
-
-            else
-            {
-                res("&",indKey()(i)) = 0;
-            }
-        }
+        if ( res(indKey()(i)).isValNull() ) { ; }
+        else { res("&",indKey()(i)) *= (1.0/indKeyCount()(i)); }
     }
 
     return res;
@@ -566,28 +518,10 @@ const SparseVector<gentype> &ML_Base::xsqmean(SparseVector<gentype> &res) const
 {
     xsqsum(res);
 
-    if ( xspaceDim() )
+    for ( int i = 0 ; i < xspaceDim() ; ++i )
     {
-        int i;
-        int indkeyscale = isXAssumedConsistent() ? N() : 1;
-
-        for ( i = 0 ; i < xspaceDim() ; ++i )
-        {
-            if ( res(indKey()(i)).isValNull()    ||
-                 res(indKey()(i)).isValInteger() ||
-                 res(indKey()(i)).isValReal()    ||
-                 res(indKey()(i)).isValAnion()   ||
-                 res(indKey()(i)).isValVector()  ||
-                 res(indKey()(i)).isValMatrix()     )
-            {
-                res("&",indKey()(i)) *= (1.0/(indkeyscale*indKeyCount()(i)));
-            }
-
-            else
-            {
-                res("&",indKey()(i)) = 0;
-            }
-        }
+        if ( res(indKey()(i)).isValNull() ) { ; }
+        else { res("&",indKey()(i)) *= (1.0/indKeyCount()(i)); }
     }
 
     return res;
@@ -597,25 +531,10 @@ const SparseVector<gentype> &ML_Base::xmeansq(SparseVector<gentype> &res) const
 {
     xmean(res);
 
-    //if ( res.nindsize() )
+    for ( int i = 0 ; i < xspaceDim() ; ++i )
     {
-        for ( int i = 0 ; i < res.nindsize() ; ++i )
-        {
-            if ( res.direcref(i).isValNull()    ||
-                 res.direcref(i).isValInteger() ||
-                 res.direcref(i).isValReal()    ||
-                 res.direcref(i).isValAnion()   ||
-                 res.direcref(i).isValVector()  ||
-                 res.direcref(i).isValMatrix()     )
-            {
-                res.direref(i) = outerProd(res.direcref(i),res.direcref(i));
-            }
-
-            else
-            {
-                res.direref(i) = 0;
-            }
-        }
+        if ( res(indKey()(i)).isValNull() ) { ; }
+        else { res("&",indKey()(i)) = outerProd(res(indKey()(i)),res(indKey()(i))); }
     }
 
     return res;
@@ -623,84 +542,97 @@ const SparseVector<gentype> &ML_Base::xmeansq(SparseVector<gentype> &res) const
 
 const SparseVector<gentype> &ML_Base::xmedian(SparseVector<gentype> &res) const
 {
-    retVector<double> tmpva;
+    res.zero();
 
-    return geometricMedian(res,x(),onedoublevec(x().size(),tmpva));
+    for ( int j = 0 ; j < xspaceDim() ; ++j )
+    {
+        Vector<gentype> featvec;
+
+        for ( int i = 0 ; i < N() ; ++i )
+        {
+            const SparseVector<gentype> &xx = x(i);
+
+            if ( d()(i) && xx.isindpresent(indKey()(j)) && !xx(indKey()(j)).isValNull() )
+            {
+                featvec.add(featvec.size());
+                featvec("&",featvec.size()-1) = xx(indKey()(j));
+            }
+        }
+
+        res("&",indKey()(j)) = median(featvec);
+    }
+
+    return res;
 }
 
-double ML_Base::xMAD(void) const
+const SparseVector<gentype> &ML_Base::xMAD(SparseVector<gentype> &res) const
 {
-    retVector<double> tmpva;
-    SparseVector<gentype> xmed;
+    res.zero();
 
-    return geometricMAD(xmed,x(),onedoublevec(x().size(),tmpva));
+    for ( int j = 0 ; j < xspaceDim() ; ++j )
+    {
+        Vector<gentype> featvec;
+
+        for ( int i = 0 ; i < N() ; ++i )
+        {
+            if ( d()(i) && x()(i).isindpresent(indKey()(j)) && !x()(i)(indKey()(j)).isValNull() )
+            {
+                featvec.add(featvec.size());
+                featvec("&",featvec.size()-1) = x()(i)(indKey()(j));
+            }
+        }
+
+        res("&",indKey()(j)) = MAD(featvec);
+    }
+
+    return res;
 }
 
 const SparseVector<gentype> &ML_Base::xvar(SparseVector<gentype> &res) const
 {
-    // var(x) = 1/N sum_i (x_i-m)^2
-    //          1/N sum_i x_i^2 + 1/N sum_i m^2 - 2/N sum_i x_i 1/N sum_j x_j
-    //          1/N sum_i x_i^2 + m^2 - 2 1/N sum_i x_i 1/N sum_j x_j
-    //          1/N sum_i x_i^2 + m^2 - 2 m^2
-    //          1/N sum_i x_i^2 - m^2 
-    //          xsqmean - xmeansq
-
     SparseVector<gentype> xmeansqval;
 
     xsqmean(res);
     xmeansq(xmeansqval);
-
     xmeansqval.negate();
 
-    res += xmeansqval;
-
-    return res;
+    return res += xmeansqval;
 }
 
 const SparseVector<gentype> &ML_Base::xstddev(SparseVector<gentype> &res) const
 {
     xvar(res);
 
-    //if ( res.nindsize() )
+    for ( int j = 0 ; j < res.nindsize() ; ++j )
     {
-        for ( int i = 0 ; i < res.nindsize() ; ++i )
+        if ( res.direcref(j).isValNull()    ||
+             res.direcref(j).isValInteger() ||
+             res.direcref(j).isValReal()    ||
+             res.direcref(j).isValAnion()       )
         {
-            if ( res.direcref(i).isValNull()    ||
-                 res.direcref(i).isValInteger() ||
-                 res.direcref(i).isValReal()    ||
-                 res.direcref(i).isValAnion()       )
+            if ( ( (double) norm2(res.direcref(j)) ) >= zerotol() ) { res.direref(j) = sqrt(res.direcref(j)); }
+            else                                                    { res.direref(j) = 1;                     }
+        }
+
+        else if ( res.direcref(j).isValMatrix() )
+        {
+            if ( ( (double) det(res.direcref(j)) ) >= zerotol() )
             {
-                if ( ( (double) norm2(res.direcref(i)) ) >= zerotol() )
-                {
-                    res.direref(i) = sqrt(res.direcref(i));
-                }
+                Matrix<gentype> temp((const Matrix<gentype> &) res.direcref(j));
 
-                else
-                {
-                    res.direref(i) = 1;
-                }
-            }
-
-            else if ( res.direcref(i).isValMatrix() )
-            {
-                if ( ( (double) det(res.direcref(i)) ) >= zerotol() )
-                {
-                    Matrix<gentype> temp((const Matrix<gentype> &) res.direcref(i));
-
-                    ((const Matrix<gentype> &) res.direref(i)).naiveChol(temp,1);
-                    res.direref(i) = temp;
-                }
-
-                else
-                {
-                    res.direref(i) = 1;
-                }
+                ((const Matrix<gentype> &) res.direref(j)).naiveChol(temp,1);
+                res.direref(j) = temp;
             }
 
             else
             {
-                res.direref(i) = "\"wtf\"";
+                res.direref(j) = 1;
             }
+        }
+
+        else
+        {
+            res.direref(j) = "\"wtf\"";
         }
     }
 
@@ -711,137 +643,167 @@ const SparseVector<gentype> &ML_Base::xmax(SparseVector<gentype> &res) const
 {
     res.zero();
 
-    if ( xspaceDim() && N() )
+    for ( int j = 0 ; j < xspaceDim() ; ++j )
     {
-        int i,j,k;
-        int indkeyscale = isXAssumedConsistent() ? N() : 1;
+        Vector<gentype> featvec;
 
-        for ( i = 0 ; i < xspaceDim() ; ++i )
+        for ( int i = 0 ; i < N() ; ++i )
         {
-            Vector<gentype> featvec(indkeyscale*indKeyCount()(i));
+            const SparseVector<gentype> &xx = x(i);
 
-            k = 0;
-
-            for ( j = 0 ; j < N() ; ++j )
+            if ( d()(i) && xx.isindpresent(indKey()(j)) && !xx(indKey()(j)).isValNull() )
             {
-                SparseVector<gentype> xx = x(j);
-
-                if ( xx.isindpresent(indKey()(i)) )
-                {
-                    featvec("&",k) = xx(indKey()(i));
-                    ++k;
-                }
-            }
-
-            gentype featveccomp(featvec);
-
-            res("&",indKey()(i)) = max(featveccomp);
-        }
-    }
-
-    //if ( res.nindsize() )
-    {
-        for ( int i = 0 ; i < res.nindsize() ; ++i )
-        {
-            if ( !( res.direcref(i).isValNull()    ||
-                    res.direcref(i).isValInteger() ||
-                    res.direcref(i).isValReal()    ||
-                    res.direcref(i).isValAnion()   ||
-                    res.direcref(i).isValVector()  ||
-                    res.direcref(i).isValMatrix()     ) )
-            {
-                res.direref(i) = 0;
+                featvec.add(featvec.size());
+                featvec("&",featvec.size()-1) = xx(indKey()(j));
             }
         }
+
+        res("&",indKey()(j)) = max(featvec);
+
+//        gentype featveccomp(featvec);
+//        res("&",indKey()(i)) = max(featveccomp);
     }
 
     return res;
 }
-
 
 const SparseVector<gentype> &ML_Base::xmin(SparseVector<gentype> &res) const
 {
     res.zero();
 
-    if ( xspaceDim() && N() )
+    for ( int j = 0 ; j < xspaceDim() ; ++j )
     {
-        int i,j,k;
-        int indkeyscale = isXAssumedConsistent() ? N() : 1;
+        Vector<gentype> featvec;
 
-        for ( i = 0 ; i < xspaceDim() ; ++i )
+        for ( int i = 0 ; i < N() ; ++i )
         {
-            Vector<gentype> featvec(indkeyscale*indKeyCount()(i));
+            const SparseVector<gentype> &xx = x(i);
 
-            k = 0;
-
-            for ( j = 0 ; j < N() ; ++j )
+            if ( d()(i) && xx.isindpresent(indKey()(j)) && !xx(indKey()(j)).isValNull() )
             {
-                const SparseVector<gentype> &xx = x(j);
-
-                if ( xx.isindpresent(indKey()(i)) )
-                {
-                    featvec("&",k) = xx(indKey()(i));
-                    ++k;
-                }
-            }
-
-            gentype featveccomp(featvec);
-
-            res("&",indKey()(i)) = min(featveccomp);
-        }
-    }
-
-    //if ( res.nindsize() )
-    {
-        for ( int i = 0 ; i < res.nindsize() ; ++i )
-        {
-            if ( !( res.direcref(i).isValNull()    ||
-                    res.direcref(i).isValInteger() ||
-                    res.direcref(i).isValReal()    ||
-                    res.direcref(i).isValAnion()   ||
-                    res.direcref(i).isValVector()  ||
-                    res.direcref(i).isValMatrix()     ) )
-            {
-                res.direref(i) = 0;
+                featvec.add(featvec.size());
+                featvec("&",featvec.size()-1) = xx(indKey()(j));
             }
         }
+
+        res("&",indKey()(j)) = min(featvec);
+
+//        gentype featveccomp(featvec);
+//        res("&",indKey()(i)) = min(featveccomp);
     }
 
     return res;
 }
 
+
+
+
+
+
+const SparseVector<gentype> &ML_Base::xgmean(SparseVector<gentype> &res) const
+{
+    Vector<SparseVector<gentype>> xx;
+    Vector<double> w;
+
+    for ( int j = 0 ; j < N() ; ++j )
+    {
+        if ( d()(j) ) { xx.add(xx.size()); xx("&",xx.size()-1) = x(j).n(); w.add(w.size()); w("&",w.size()-1) = Cweight()(j); }
+    }
+
+    return mean(res,xx,w);
+}
+
+const SparseVector<gentype> &ML_Base::xgmedian(SparseVector<gentype> &res) const
+{
+    Vector<SparseVector<gentype>> xx;
+    Vector<double> w;
+
+    for ( int j = 0 ; j < N() ; ++j )
+    {
+        if ( d()(j) ) { xx.add(xx.size()); xx("&",xx.size()-1) = x(j).n(); w.add(w.size()); w("&",w.size()-1) = Cweight()(j); }
+    }
+
+    return geometricMedian(res,xx,w);
+}
+
+double ML_Base::xgvar(SparseVector<gentype> &res) const
+{
+    Vector<SparseVector<gentype>> xx;
+    Vector<double> w;
+
+    for ( int j = 0 ; j < N() ; ++j )
+    {
+        if ( d()(j) ) { xx.add(xx.size()); xx("&",xx.size()-1) = x(j).n(); w.add(w.size()); w("&",w.size()-1) = Cweight()(j); }
+    }
+
+    return geometricVar(res,xx,w);
+}
+
+double ML_Base::xgstddev(SparseVector<gentype> &res) const
+{
+    return sqrt(xgvar(res));
+}
+
+double ML_Base::xgMAD(SparseVector<gentype> &res) const
+{
+    Vector<SparseVector<gentype>> xx;
+    Vector<double> w;
+
+    for ( int j = 0 ; j < N() ; ++j )
+    {
+        if ( d()(j) ) { xx.add(xx.size()); xx("&",xx.size()-1) = x(j).n(); w.add(w.size()); w("&",w.size()-1) = Cweight()(j); }
+    }
+
+    return geometricMAD(res,xx,w);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 SparseVector<gentype> &ML_Base::xlateToSparse(SparseVector<gentype> &dest, const Vector<gentype> &src) const
 {
-        NiceAssert( src.size() == xspaceDim() );
+    NiceAssert( src.size() == xspaceDim() );
 
-        dest.zero();
+    dest.zero();
 
-        //if ( xspaceDim() )
-        {
-            for ( int i = 0 ; i < xspaceDim() ; ++i )
-            {
-                dest("&",indKey()(i)) = src(i);
-            }
-        }
+    for ( int i = 0 ; i < xspaceDim() ; ++i )
+    {
+        dest("&",indKey()(i)) = src(i);
+    }
 
-        return dest;
+    return dest;
 }
 
 SparseVector<gentype> &ML_Base::xlateToSparse(SparseVector<gentype> &dest, const Vector<double> &src) const
 {
-        NiceAssert( src.size() == xspaceDim() );
+    NiceAssert( src.size() == xspaceDim() );
 
-        dest.zero();
+    dest.zero();
 
-        //if ( xspaceDim() )
-        {
-            for ( int i = 0 ; i < xspaceDim() ; ++i )
-            {
-                dest("&",indKey()(i)) = src(i);
-            }
-        }
+    for ( int i = 0 ; i < xspaceDim() ; ++i )
+    {
+        dest("&",indKey()(i)) = src(i);
+    }
 
-        return dest;
+    return dest;
 }
 
 SparseVector<gentype> &ML_Base::xlateToSparse(SparseVector<gentype> &dest, const SparseVector<double> &src) const
@@ -850,12 +812,9 @@ SparseVector<gentype> &ML_Base::xlateToSparse(SparseVector<gentype> &dest, const
 
     NiceAssert( dest.nindsize() == src.nindsize() );
 
-    //if ( dest.nindsize() )
+    for ( int i = 0 ; i < dest.nindsize() ; ++i )
     {
-        for ( int i = 0 ; i < dest.nindsize() ; ++i )
-        {
-            dest.direref(i) = src.direcref(i);
-        }
+        dest.direref(i) = src.direcref(i);
     }
 
     return dest;
@@ -863,140 +822,134 @@ SparseVector<gentype> &ML_Base::xlateToSparse(SparseVector<gentype> &dest, const
 
 Vector<gentype> &ML_Base::xlateFromSparse(Vector<gentype> &dest, const SparseVector<gentype> &src) const
 {
-        dest.resize(xspaceDim());
-        dest.zero();
+    dest.resize(xspaceDim());
+    dest.zero();
 
-        //if ( src.nindsize() )
+    int ikInd = 0;
+
+    for ( int i = 0 ; i < src.nindsize() ; ++i )
+    {
+        int oob = 1;
+
+        if ( ikInd < xspaceDim() )
         {
-            int ikInd = 0;
+            oob = 0;
 
-            for ( int i = 0 ; i < src.nindsize() ; ++i )
+            while ( indKey()(ikInd) < src.ind(i) )
             {
-                int oob = 1;
+                ++ikInd;
 
-                if ( ikInd < xspaceDim() )
+                if ( ikInd >= xspaceDim() )
                 {
-                    oob = 0;
-
-                    while ( indKey()(ikInd) < src.ind(i) )
-                    {
-                        ++ikInd;
-
-                        if ( ikInd >= xspaceDim() )
-                        {
-                            oob = 1;
-                            break;
-                        }
-                    }
-                }
-
-                (void) oob;
-                // Design change: don't add unknown indices at all.  That
-                // way if you are using real vectors to represent sparse
-                // (for example in ml_serial) then then the inner product
-                // calls will have aligned sizes, and hence won't throw
-                // an exception.  This is OK, as the indices that are not
-                // in the ML already will simply be multiplied by zero and
-                // hence leaving them out should technically make no diff.
-
-                //if ( oob )
-                //{
-                //    // General rule: put unknown indices at the end
-                //
-                //    int j;
-                //
-                //    for ( j = i ; j < src.nindsize() ; ++j )
-                //    {
-                //        dest.add(dest.size());
-                //        dest("&",dest.size()-1) = src.direcref(j);
-                //    }
-                //
-                //    return dest;
-                //}
-                //
-                //if ( indKey()(ikInd) != src.ind(i) )
-                //{
-                //    dest.add(dest.size());
-                //    dest("&",dest.size()-1) = src.direcref(i);
-                //}
-                //
-                //else
-                {
-                    dest("&",ikInd) = src.direcref(i);
+                    oob = 1;
+                    break;
                 }
             }
         }
 
-        return dest;
+        (void) oob;
+        // Design change: don't add unknown indices at all.  That
+        // way if you are using real vectors to represent sparse
+        // (for example in ml_serial) then then the inner product
+        // calls will have aligned sizes, and hence won't throw
+        // an exception.  This is OK, as the indices that are not
+        // in the ML already will simply be multiplied by zero and
+        // hence leaving them out should technically make no diff.
+
+        //if ( oob )
+        //{
+        //    // General rule: put unknown indices at the end
+        //
+        //    int j;
+        //
+        //    for ( j = i ; j < src.nindsize() ; ++j )
+        //    {
+        //        dest.add(dest.size());
+        //        dest("&",dest.size()-1) = src.direcref(j);
+        //    }
+        //
+        //    return dest;
+        //}
+        //
+        //if ( indKey()(ikInd) != src.ind(i) )
+        //{
+        //    dest.add(dest.size());
+        //    dest("&",dest.size()-1) = src.direcref(i);
+        //}
+        //
+        //else
+        {
+            dest("&",ikInd) = src.direcref(i);
+        }
+    }
+
+    return dest;
 }
 
 Vector<double> &ML_Base::xlateFromSparse(Vector<double> &dest, const SparseVector<gentype> &src) const
 {
-        dest.resize(xspaceDim());
-        dest.zero();
+    dest.resize(xspaceDim());
+    dest.zero();
 
-        //if ( src.nindsize() )
+    int ikInd = 0;
+
+    for ( int i = 0 ; i < src.nindsize() ; ++i )
+    {
+        int oob = 1;
+
+        if ( ikInd < xspaceDim() )
         {
-            int ikInd = 0;
+            oob = 0;
 
-            for ( int i = 0 ; i < src.nindsize() ; ++i )
+            while ( indKey()(ikInd) < src.ind(i) )
             {
-                int oob = 1;
+                ++ikInd;
 
-                if ( ikInd < xspaceDim() )
+                if ( ikInd >= xspaceDim() )
                 {
-                    oob = 0;
-
-                    while ( indKey()(ikInd) < src.ind(i) )
-                    {
-                        ++ikInd;
-
-                        if ( ikInd >= xspaceDim() )
-                        {
-                            oob = 1;
-                            break;
-                        }
-                    }
-                }
-
-                (void) oob;
-                // Design change: don't add unknown indices at all.  That
-                // way if you are using real vectors to represent sparse
-                // (for example in ml_serial) then then the inner product
-                // calls will have aligned sizes, and hence won't throw
-                // an exception.  This is OK, as the indices that are not
-                // in the ML already will simply be multiplied by zero and
-                // hence leaving them out should technically make no diff.
-
-                //if ( oob )
-                //{
-                //    // General rule: put unknown indices at the end
-                //
-                //    int j;
-                //
-                //    for ( j = i ; j < src.nindsize() ; ++j )
-                //    {
-                //        dest.add(dest.size());
-                //        dest("&",dest.size()-1) = (double) src.direcref(j);
-                //    }
-                //
-                //    return dest;
-                //}
-                //
-                //if ( indKey()(ikInd) != src.ind(i) )
-                //{
-                //    dest.add(dest.size());
-                //    dest("&",dest.size()-1) = (double) src.direcref(i);
-                //}
-                //
-                //else
-                {
-                    dest("&",ikInd) = (double) src.direcref(i);
+                    oob = 1;
+                    break;
                 }
             }
         }
 
-        return dest;
+        (void) oob;
+        // Design change: don't add unknown indices at all.  That
+        // way if you are using real vectors to represent sparse
+        // (for example in ml_serial) then then the inner product
+        // calls will have aligned sizes, and hence won't throw
+        // an exception.  This is OK, as the indices that are not
+        // in the ML already will simply be multiplied by zero and
+        // hence leaving them out should technically make no diff.
+
+        //if ( oob )
+        //{
+        //    // General rule: put unknown indices at the end
+        //
+        //    int j;
+        //
+        //    for ( j = i ; j < src.nindsize() ; ++j )
+        //    {
+        //        dest.add(dest.size());
+        //        dest("&",dest.size()-1) = (double) src.direcref(j);
+        //    }
+        //
+        //    return dest;
+        //}
+        //
+        //if ( indKey()(ikInd) != src.ind(i) )
+        //{
+        //    dest.add(dest.size());
+        //    dest("&",dest.size()-1) = (double) src.direcref(i);
+        //}
+        //
+        //else
+        {
+            dest("&",ikInd) = (double) src.direcref(i);
+        }
+    }
+
+    return dest;
 }
 
 Vector<double> &ML_Base::xlateFromSparse(Vector<double> &dest, const SparseVector<double> &src) const
@@ -1326,7 +1279,7 @@ void ML_Base::addToIndexKeyAndUpdate(const SparseVector<gentype> &newz, int u)
         if ( !(indexKey.isindpresent(u+1)) )
         {
             Vector<int> dummy;
-            Vector<Vector<int> > dummyb;
+            Vector<Vector<int>> dummyb;
 
             indexKey("&",u+1)      = dummy;
             indexKeyCount("&",u+1) = dummy;
@@ -1868,7 +1821,7 @@ int ML_Base::addTrainingVector(int i, const gentype &y, const SparseVector<genty
     xalphaState.add(i);
 
     // If x() is not accurate don't worry as it will be done via callback
-    getKernel().getvecInfo(traininfo("&",i),x(i),nullptr,isXConsistent(),assumeReal); //x()(i));
+    getKernel().getvecInfo(traininfo("&",i),x(i),isXConsistent(),assumeReal); //x()(i));
     traintang("&",i)   = detangle_x(i);
     xalphaState("&",i) = dval ? 1 : 0; //1;
 
@@ -1955,7 +1908,7 @@ int ML_Base::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &
     xalphaState.add(i);
 
     // If x() is not accurate don't worry as it will be done via callback
-    getKernel().getvecInfo(traininfo("&",i),x(i),nullptr,isXConsistent(),assumeReal); //x()(i));
+    getKernel().getvecInfo(traininfo("&",i),x(i),isXConsistent(),assumeReal); //x()(i));
     traintang("&",i)   = detangle_x(i);
     xalphaState("&",i) = dval ? 1 : 0; //1;
 
@@ -1968,7 +1921,7 @@ int ML_Base::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &
     return 0;
 }
 
-int ML_Base::addTrainingVector(int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &xx, const Vector<double> &nCweigh, const Vector<double> &nepsweigh)
+int ML_Base::addTrainingVector(int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &xx, const Vector<double> &nCweigh, const Vector<double> &nepsweigh)
 {
     int Nadd = y.size();
 
@@ -2055,7 +2008,7 @@ int ML_Base::addTrainingVector(int i, const Vector<gentype> &y, const Vector<Spa
         xalphaState.add(i+j);
 
         // If x() is not accurate don't worry as it will be done via callback
-        getKernel().getvecInfo(traininfo("&",i+j),x(i+j),nullptr,isXConsistent(),assumeReal); //()(i+j));
+        getKernel().getvecInfo(traininfo("&",i+j),x(i+j),isXConsistent(),assumeReal); //()(i+j));
         traintang("&",i+j)   = detangle_x(i+j);
         xalphaState("&",i+j) = 1;
 
@@ -2069,7 +2022,7 @@ int ML_Base::addTrainingVector(int i, const Vector<gentype> &y, const Vector<Spa
     return 0;
 }
 
-int ML_Base::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype> > &xx, const Vector<double> &nCweigh, const Vector<double> &nepsweigh)
+int ML_Base::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype>> &xx, const Vector<double> &nCweigh, const Vector<double> &nepsweigh)
 {
     int Nadd = y.size();
 
@@ -2156,7 +2109,7 @@ int ML_Base::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVe
         xalphaState.add(i+j);
 
         // If x() is not accurate don't worry as it will be done via callback
-        getKernel().getvecInfo(traininfo("&",i+j),x(i+j),nullptr,isXConsistent(),assumeReal); //()(i+j));
+        getKernel().getvecInfo(traininfo("&",i+j),x(i+j),isXConsistent(),assumeReal); //()(i+j));
         xalphaState("&",i+j) = 1;
         traintang("&",i+j) = detangle_x(i+j);
 
@@ -2302,7 +2255,7 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
             if ( modind && d()(i) )
 	    {
                 // If x() is not accurate don't worry as it will be done via callback
-                getKernel().getvecInfo(traininfo("&",i),x(i),nullptr,isXConsistent(),assumeReal); //()(i));
+                getKernel().getvecInfo(traininfo("&",i),x(i),isXConsistent(),assumeReal); //()(i));
                 traintang("&",i) = detangle_x(i);
 	    }
 	}
@@ -2317,7 +2270,7 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
             if ( modind )
 	    {
                 // If x() is not accurate don't worry as it will be done via callback
-                getKernel().getvecInfo(traininfo("&",i),x(i),nullptr,isXConsistent(),assumeReal); //()(i));
+                getKernel().getvecInfo(traininfo("&",i),x(i),isXConsistent(),assumeReal); //()(i));
                 traintang("&",i) = detangle_x(i);
 	    }
 	}
@@ -2330,7 +2283,7 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
         if ( modind )
         {
             // If x() is not accurate don't worry as it will be done via callback
-            getKernel().getvecInfo(traininfo("&",onlyChangeRowI),x(onlyChangeRowI),nullptr,isXConsistent(),assumeReal); //()(onlyChangeRowI));
+            getKernel().getvecInfo(traininfo("&",onlyChangeRowI),x(onlyChangeRowI),isXConsistent(),assumeReal); //()(onlyChangeRowI));
             traintang("&",onlyChangeRowI) = detangle_x(onlyChangeRowI);
         }
     }
@@ -2399,7 +2352,7 @@ int ML_Base::setKernel(const MercerKernel &xkernel, int modind, int onlyChangeRo
             if ( modind && d()(i) )
 	    {
                 // If x() is not accurate don't worry as it will be done via callback
-                getKernel().getvecInfo(traininfo("&",i),x(i),nullptr,isXConsistent(),assumeReal); //()(i));
+                getKernel().getvecInfo(traininfo("&",i),x(i),isXConsistent(),assumeReal); //()(i));
                 traintang("&",i) = detangle_x(i);
 	    }
 	}
@@ -2414,7 +2367,7 @@ int ML_Base::setKernel(const MercerKernel &xkernel, int modind, int onlyChangeRo
             if ( modind )
 	    {
                 // If x() is not accurate don't worry as it will be done via callback
-                getKernel().getvecInfo(traininfo("&",i),x(i),nullptr,isXConsistent(),assumeReal); //()(i));
+                getKernel().getvecInfo(traininfo("&",i),x(i),isXConsistent(),assumeReal); //()(i));
                 traintang("&",i) = detangle_x(i);
 	    }
 	}
@@ -2425,7 +2378,7 @@ int ML_Base::setKernel(const MercerKernel &xkernel, int modind, int onlyChangeRo
         res = 1;
 
         // If x() is not accurate don't worry as it will be done via callback
-        getKernel().getvecInfo(traininfo("&",onlyChangeRowI),x(onlyChangeRowI),nullptr,isXConsistent(),assumeReal); //()(onlyChangeRowI));
+        getKernel().getvecInfo(traininfo("&",onlyChangeRowI),x(onlyChangeRowI),isXConsistent(),assumeReal); //()(onlyChangeRowI));
         traintang("&",onlyChangeRowI) = detangle_x(onlyChangeRowI);
     }
 
@@ -2471,7 +2424,7 @@ int ML_Base::setx(int i, const SparseVector<gentype> &xx)
     return res |= resetKernel(1,i);
 }
 
-int ML_Base::setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &xx)
+int ML_Base::setx(const Vector<int> &i, const Vector<SparseVector<gentype>> &xx)
 {
     incxvernum();
     incgvernum();
@@ -2514,7 +2467,7 @@ int ML_Base::setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &xx
     return res;
 }
 
-int ML_Base::setx(const Vector<SparseVector<gentype> > &xx)
+int ML_Base::setx(const Vector<SparseVector<gentype>> &xx)
 {
     incxvernum();
     incgvernum();
@@ -2593,7 +2546,7 @@ int ML_Base::qswapx(int i, SparseVector<gentype> &xx, int dontupdate)
     return res;
 }
 
-int ML_Base::qswapx(const Vector<int> &i, Vector<SparseVector<gentype> > &xx, int dontupdate)
+int ML_Base::qswapx(const Vector<int> &i, Vector<SparseVector<gentype>> &xx, int dontupdate)
 {
     incxvernum();
     incgvernum();
@@ -2638,7 +2591,7 @@ int ML_Base::qswapx(const Vector<int> &i, Vector<SparseVector<gentype> > &xx, in
     return res;
 }
 
-int ML_Base::qswapx(Vector<SparseVector<gentype> > &xx, int dontupdate)
+int ML_Base::qswapx(Vector<SparseVector<gentype>> &xx, int dontupdate)
 {
     incxvernum();
     incgvernum();
@@ -2873,7 +2826,7 @@ int ML_Base::sety(int i, const Vector<double> &z)
     return sety(i,y);
 }
 
-int ML_Base::sety(const Vector<int> &i, const Vector<Vector<double> > &z)
+int ML_Base::sety(const Vector<int> &i, const Vector<Vector<double>> &z)
 {
     Vector<gentype> y(z.size());
 
@@ -2888,7 +2841,7 @@ int ML_Base::sety(const Vector<int> &i, const Vector<Vector<double> > &z)
     return sety(i,y);
 }
 
-int ML_Base::sety(const Vector<Vector<double> > &z)
+int ML_Base::sety(const Vector<Vector<double>> &z)
 {
     Vector<gentype> y(z.size());
 
@@ -5659,11 +5612,11 @@ void ML_Base::Kmxfer(gentype &res, int &minmaxind, int typeis,
         case 800:
         case 810:
         {
-            Vector<SparseVector<gentype> > *xx = nullptr;
+            Vector<SparseVector<gentype>> *xx = nullptr;
 
             if ( !( i >= 0 ) )
             {
-                MEMNEW(xx,Vector<SparseVector<gentype> >(x.size()));
+                MEMNEW(xx,Vector<SparseVector<gentype>>(x.size()));
 
                 int ir;
 
@@ -7050,11 +7003,11 @@ void ML_Base::Kmxfer(double &res, int &minmaxind, int typeis,
         case 800:
         case 810:
         {
-            Vector<SparseVector<gentype> > *xx = nullptr;
+            Vector<SparseVector<gentype>> *xx = nullptr;
 
             if ( !( i >= 0 ) )
             {
-                MEMNEW(xx,Vector<SparseVector<gentype> >(x.size()));
+                MEMNEW(xx,Vector<SparseVector<gentype>>(x.size()));
 
                 int ir;
 
@@ -7355,6 +7308,7 @@ double ML_Base::getvalIfPresent_v(int numi, int numj, int &isgood) const
 
 
 
+double evalkernarg(int adin, const double *ffullcont, void *probarg);
 
 
 double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, const tkBounds *tuneBounds, paraDef *probbnd)
@@ -7388,10 +7342,11 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
     Vector<double> &kmin = probbndref.lb;  // range minimum
     Vector<double> &kmax = probbndref.ub;  // range maximum
 
-    double Cval   = 1;
-    double epsval = 1;
+    double Cval     = 1;
+    double sigmaval = 1;
+    double epsval   = 1;
 
-    Vector<Vector<gentype> > constVecs(kdim);
+    Vector<Vector<gentype>> constVecs(kdim);
     Vector<double>           weightval(kdim);
     SparseVector<gentype>    ARDScale(lockernel.cScale());
 
@@ -7408,23 +7363,23 @@ double ML_Base::tuneKernel(int method, double xwidth, int tuneK, int tuneP, cons
     if ( tuneK )
     {
 SparseVector<gentype> yres;
-errstream() << "Geometric median: " << xmedian(yres);
-//errstream() << "Geometric MAD: " << xMAD();
-/*
-FIXME: for ARD case, do this per axis
-FIXME: consider using xstddev rather than xmax-xmin
-FIXME: we need to deal with the case where data is *narrow* - that is, xgap < xscale. How to do this?
-FIXME: instead use the 2-norm of the gaps, which is the distance between the corners of the parellogram, and divide by the gap for the unit hypercube
-FIXME: SO, WORK OUT VAR AND SCALE BY THE ASSUMED CASE OF UNIFORM DATA ON A HYPERCUBE
-FIXME: to validate, record the xscale for the sima case (first sim) and see whether that would mess things up)
-FIXME: but only do this once there are more than some threshold number of points in the training set (ie xscale = 1 until N > f(dim)
+errstream() << "Mean:    \t";         printoneline(errstream(),xmean   (yres)); errstream() << "\n";
+errstream() << "Median:  \t";         printoneline(errstream(),xmedian (yres)); errstream() << "\n";
+errstream() << "MAD:     \t";         printoneline(errstream(),xMAD    (yres)); errstream() << "\n";
+errstream() << "var:     \t";         printoneline(errstream(),xvar    (yres)); errstream() << "\n";
+errstream() << "stdev:   \t";         printoneline(errstream(),xstddev (yres)); errstream() << "\n";
+errstream() << "Geometric mean:  \t"; printoneline(errstream(),xgmean  (yres)); errstream() << "\n";
+errstream() << "Geometric median:\t"; printoneline(errstream(),xgmedian(yres)); errstream() << "\n";
+errstream() << "Geometric MAD:   \t"  << xgMAD(yres)    << "\n";
+errstream() << "Geometric var:   \t"  << xgvar(yres)    << "\n";
+errstream() << "Geometric stdev: \t"  << xgstddev(yres) << "\n";
+//errstream() << "Geometric MAD delf:\t" << sqrt((0.5*0.5)+(0.25*(xspaceDim()-1)*(xspaceDim()-1))) << "\n";
+//errstream() << "Geometric MAD corr:\t" << xgMAD(yres)/sqrt((0.5*0.5)+(0.25*(xspaceDim()-1)*(xspaceDim()-1))) << "\n";
 
-method: work out meadian, work out distance from median, work out 80% (or whatever) percentile, work out distance
-        scale by the inverse of the expected value of this from a uniform distribution
-        in the ARD case, do this per axis (becomes mode)
-median absolute deviation?
-geometric median in multivariate case?
-*/
+//xscale = 3*xgMAD(yres)/sqrt((0.5*0.5)+(0.25*(xspaceDim()-1)*(xspaceDim()-1))); - this is worse than the original
+
+//xscaleupper: xscale
+//xscalelower: min(xscale,1)
 
         // If the data doesn't range 0->1 (unit hypercube) then our assumptions are off
         // Here we calculate the max gap, which will be used to rescale the lengthscale
@@ -7461,6 +7416,22 @@ geometric median in multivariate case?
                 }
             }
         }
+
+xscale = std::min(xscale,std::max(0.1,4*xgstddev(yres)));
+
+errstream() << "xscale: \t"  << xscale << "\n";
+
+
+
+
+
+
+
+
+
+
+
+
 
         Vector<int> uu(kdim,-1); // default to full dimension
 
@@ -7736,6 +7707,31 @@ errstream() << "Tune task-relatedness " << i << " in range " << lb << " to " << 
         }
     }
 
+    if ( tuneP & 4 )
+    {
+        // tune sigma
+
+        double lb = !tuneBounds ? DEFCMIN : ((*tuneBounds).sigmamin);
+        double ub = !tuneBounds ? DEFCMAX : ((*tuneBounds).sigmamax);
+
+        int addit = 0;
+
+        if ( lb < ub )
+        {
+            addit = 1;
+        }
+
+        if ( addit )
+        {
+            kind.add(ddim); kind("&",ddim) = -4;
+            kelm.add(ddim); kelm("&",ddim) = -4;
+            kmin.add(ddim); kmin("&",ddim) = lb;
+            kmax.add(ddim); kmax("&",ddim) = ub;
+
+            ++ddim;
+        }
+    }
+
     // Return if method 0
 
     if ( !method )
@@ -7743,7 +7739,9 @@ errstream() << "Tune task-relatedness " << i << " in range " << lb << " to " << 
         return 1;
     }
 
+
     // Work out dimension and scale to bounds
+    // Want at most MAXADIM evaluations
 
     Vector<int> kstp(ddim,1);    // number of steps over range
 
@@ -7760,7 +7758,8 @@ tryagain:
 
         int steps = 0;
 
-        if      ( ( j == -3 )                                 ) { steps = ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); }
+        if      ( ( j == -4 )                                 ) { steps = ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); }
+        else if ( ( j == -3 )                                 ) { steps = ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); }
         else if ( ( j == -2 )                                 ) { steps = ( ( ((int) (20/trycount)) > 5 ) ? ((int) (20/trycount)) : 5 ); }
         else if ( ( j == -1 )                                 ) { steps = ( ( ((int) (15/trycount)) > 5 ) ? ((int) (15/trycount)) : 5 ); }
         else if ( ( j >= 0  ) && ( i == -1 )                  ) { steps = ( ( ((int) (50/trycount)) > 5 ) ? ((int) (50/trycount)) : 5 ); }
@@ -7772,7 +7771,7 @@ tryagain:
         adim *= steps;
     }
 
-    if ( ( adim*numzooms > MAXADIM ) && ( trycount == 1 ) )
+    if ( ( method > 0 ) && ( adim*numzooms > MAXADIM ) && ( trycount == 1 ) )
     {
         // adim/trycount^ddim = MAXADIM
         // adim = MAXADIM.trycount^ddim
@@ -7797,111 +7796,155 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
 
         MercerKernel &backkernel = probbndref.backkernel;
 
-        double &backC   = probbndref.backC;
-        double &backeps = probbndref.backeps;
+        double &backC     = probbndref.backC;
+        double &backsigma = probbndref.backsigma;
+        double &backeps   = probbndref.backeps;
 
-        backC   = 0.0;
-        backeps = 0.0;
+        backC     = 0.0;
+        backsigma = 0.0;
+        backeps   = 0.0;
 
         if ( tuneK     ) { backkernel = lockernel; }
         if ( tuneP & 1 ) { backC      = C();       }
         if ( tuneP & 2 ) { backeps    = eps();     }
+        if ( tuneP & 4 ) { backsigma  = sigma();   }
 
         // Store for optimal results
 
-        Vector<Vector<gentype> > bestconstVecs(constVecs); // this will store the best constVecs
+        Vector<Vector<gentype>> bestconstVecs(constVecs); // this will store the best constVecs
         Vector<double>           bestweightval(weightval); // "
         SparseVector<gentype>    bestARDScale(ARDScale);   // "
 
-        double bestCval   = backC;   // "
-        double bestepsval = backeps; // "
+        double bestCval     = backC;     // "
+        double bestsigmaval = backsigma; // "
+        double bestepsval   = backeps;   // "
 
-        // For all points in grid: set parameters, train, do tests, reset to start point
-
-        Vector<int> pointspec(ddim); // we use this to pre-size the elements of stepgrid
-        Vector<Vector<int> > stepgrid(adim);
-
-        stepgrid = ( pointspec = 0 );
-
-        for ( i = 1 ; i < adim ; ++i )
-        {
-            stepgrid("&",i) = stepgrid(i-1);
-
-            for ( j = 0 ; j < ddim ; ++j )
-            {
-                ++(stepgrid("&",i)("&",j));
-
-                if ( stepgrid(i)(j) < kstp(j) ) { break; }
-                else { stepgrid("&",i)("&",j) = 0; }
-            }
-        }
-//errstream() << "stepgrid = " << stepgrid << "\n";
-
-        Vector<double> ffull(ddim);
         Vector<double> bestffull(ddim);
 
-        Vector<double> basekmin(kmin); // range minimum backup
-        Vector<double> basekmax(kmax); // range maximum backup
-
-        for ( int restart = 0 ; restart < numrestarts ; ++restart )
+        if ( method < 0 )
         {
-            for ( int zooms = 0 ; zooms < numzooms ; ++zooms )
+            void *evalargs[3];
+            int locmethod = -method;
+
+            evalargs[0] = (void *) &probbndref;
+            evalargs[1] = (void *) &locmethod;
+            evalargs[2] = (void *) this;
+
+            gentype fres;
+            DIRectOptions dopts;
+            svmvolatile int killSwitch = 0;
+
+            dopts.maxevals = MAXADIM;
+
+            int ires = directOpt(ddim,bestffull,fres,kmin,kmax,evalkernarg,evalargs,dopts,killSwitch);
+
+            if ( ( ires != -200 ) && fres.isCastableToRealWithoutLoss() )
             {
-                if ( !zooms )
+                bestres = ( ((double) fres) < 0 ) ? log(((double) fres)) : (((double) fres)-1);
+            }
+errstream() << "tuneKernel: direct result = " << ires << "\n";
+errstream() << "tuneKernel: direct bestffull = " << bestffull << "\n";
+errstream() << "tuneKernel: direct fres = " << fres << "\n";
+        }
+
+        else
+        {
+            // For all points in grid: set parameters, train, do tests, reset to start point
+
+            Vector<int> pointspec(ddim); // we use this to pre-size the elements of stepgrid
+            Vector<Vector<int>> stepgrid(adim);
+
+            stepgrid = ( pointspec = 0 );
+
+            for ( i = 1 ; i < adim ; ++i )
+            {
+                stepgrid("&",i) = stepgrid(i-1);
+
+                for ( j = 0 ; j < ddim ; ++j )
                 {
-                    kmin = basekmin;
-                    kmax = basekmax;
+                    ++(stepgrid("&",i)("&",j));
+
+                    if ( stepgrid(i)(j) < kstp(j) ) { break; }
+                    else { stepgrid("&",i)("&",j) = 0; }
                 }
+            }
+//errstream() << "stepgrid = " << stepgrid << "\n";
 
-                else
+            Vector<double> ffull(ddim);
+//            Vector<double> bestffull(ddim);
+
+            Vector<double> basekmin(kmin); // range minimum backup
+            Vector<double> basekmax(kmax); // range maximum backup
+
+            for ( int restart = 0 ; restart < numrestarts ; ++restart )
+            {
+                for ( int zooms = 0 ; zooms < numzooms ; ++zooms )
                 {
-                    // Zoom grid around current optimal
-
-                    for ( j = 0 ; j < ddim ; ++j )
+                    if ( !zooms )
                     {
-                        double ublbdiff = zoomfactor*(kmax(j)-kmin(j));
-                        double midpoint = bestffull(j);
-
-                        double newkmin = midpoint-(ublbdiff/2);
-                        double newkmax = midpoint+(ublbdiff/2);
-
-                        kmin("&",j) = ( newkmin > kmin(j) ) ? newkmin : kmin(j);
-                        kmax("&",j) = ( newkmax < kmax(j) ) ? newkmax : kmax(j);
+                        kmin = basekmin;
+                        kmax = basekmax;
                     }
-                }
 
-                // Work out results on all of grid
-
-                for ( i = 0 ; i < adim ; ++i )
-                {
-                    //weightval = 1.0;
-
-                    for ( j = 0 ; j < ddim ; ++j )
+                    else
                     {
+                        // Zoom grid around current optimal
+
+                        for ( j = 0 ; j < ddim ; ++j )
+                        {
+                            double ublbdiff = zoomfactor*(kmax(j)-kmin(j));
+                            double midpoint = bestffull(j);
+
+                            double newkmin = midpoint-(ublbdiff/2);
+                            double newkmax = midpoint+(ublbdiff/2);
+
+                            kmin("&",j) = ( newkmin > kmin(j) ) ? newkmin : kmin(j);
+                            kmax("&",j) = ( newkmax < kmax(j) ) ? newkmax : kmax(j);
+                        }
+                    }
+
+                    // Work out results on all of grid
+
+                    for ( i = 0 ; i < adim ; ++i )
+                    {
+                        //weightval = 1.0;
+
+                        for ( j = 0 ; j < ddim ; ++j )
+                        {
 //errstream() << "stepgrid(" << i << ") = " << stepgrid(i) << "\n";
-                        if ( restart ) { randufill(ffull("&",j),kmin(j),kmax(j)); } // random point in range (uniform distribution) for restarts
-                        else           { ffull("&",j) = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1)); } // nice even grid
+                            if ( restart ) { randufill(ffull("&",j),kmin(j),kmax(j)); } // random point in range (uniform distribution) for restarts
+                            else           { ffull("&",j) = kmin(j) + ((kmax(j)-kmin(j))*stepgrid(i)(j)/((double) kstp(j)-1)); } // nice even grid
+                        }
+
+//                        double evalval = evalkernarg(ffull.size(),&ffull(0),(void *) evalargs);
+                        double evalval = evalkernel(method,probbndref,ffull);
+
+//errstream() << "[[" << evalval << ",";
+//printoneline(errstream(),ffull);
+//errstream() << "]]";
+
+                        if ( !( testisvnan(evalval) || testisinf(evalval) ) && ( evalval < bestres ) )
+                        {
+                            if ( type() >= 400 ) { reset(); } // for some reason this helps!
+
+//errstream() << "[[!!]]";
+                            bestres   = evalval;
+                            bestffull = ffull;
+                        }
+
+//errstream() << "\n";
                     }
-
-                    double evalval = evalkernel(method,probbndref,ffull);
-
-errstream() << "[[" << evalval << ",";
-printoneline(errstream(),ffull);
-errstream() << "]]";
-
-                    if ( !( testisvnan(evalval) || testisinf(evalval) ) && ( evalval < bestres ) )
-                    {
-                        if ( type() >= 400 ) { reset(); } // for some reason this helps!
-
-errstream() << "[[!!]]";
-                        bestres   = evalval;
-                        bestffull = ffull;
-                    }
-
-errstream() << "\n";
                 }
             }
         }
+
+
+
+
+
+
+
+
 
         for ( j = 0 ; j < ddim ; ++j )
         {
@@ -7910,6 +7953,7 @@ errstream() << "\n";
             else if ( ( kelm(j) == -1 )                      ) { bestweightval("&",kind(j))              = bestffull(j); }
             else if ( ( kelm(j) == -2 )                      ) { bestCval                                = bestffull(j); }
             else if ( ( kelm(j) == -3 )                      ) { bestepsval                              = bestffull(j); }
+            else if ( ( kelm(j) == -4 )                      ) { bestsigmaval                            = bestffull(j); }
         }
 
         {
@@ -7925,8 +7969,9 @@ errstream() << "\n";
                 weightval = bestweightval;
                 ARDScale  = bestARDScale;
 
-                Cval   = bestCval;
-                epsval = bestepsval;
+                Cval     = bestCval;
+                sigmaval = bestsigmaval;
+                epsval   = bestepsval;
 
                 if ( tuneK )
                 {
@@ -7943,8 +7988,9 @@ errstream() << "\n";
                     model.resetKernel(1,-2);
                 }
 
-                if ( tuneP & 1 ) { setC(Cval);     }
-                if ( tuneP & 2 ) { seteps(epsval); }
+                if ( tuneP & 1 ) { setC(Cval);         }
+                if ( tuneP & 2 ) { seteps(epsval);     }
+                if ( tuneP & 4 ) { setsigma(sigmaval); }
             }
 
             else
@@ -7952,9 +7998,10 @@ errstream() << "\n";
                 if ( tuneK )     { lockernel = backkernel; resetKernel(); }
                 if ( tuneP & 1 ) { setC(backC);                           }
                 if ( tuneP & 2 ) { seteps(backeps);                       }
+                if ( tuneP & 4 ) { setsigma(backsigma);                   }
             }
 
-            int dummy;
+            int dummy = 0;
             model.train(dummy);
         }
     }
@@ -7964,6 +8011,23 @@ errstream() << "\n";
 
 
 
+
+
+double evalkernarg(int adin, const double *ffullcont, void *probarg)
+{
+    void **probargarg = (void **) probarg;
+
+    paraDef &probbnd = *((paraDef *) probargarg[0]);
+    int method       = *((int *)     probargarg[1]);
+    ML_Base &thisone = *((ML_Base *) probargarg[2]);
+
+    Vector<double> ffull(adin,ffullcont,1);
+
+    double res = thisone.evalkernel(method,probbnd,ffull);
+
+//errstream() << "tuneKernel inner(" << ffull << ") = " << res << " -> " << ( testisvnan(res) ? res : ( ( res < 0 ) ? exp(res) : (1+res) ) ) << "\n";
+    return testisvnan(res) ? res : ( ( res < 0 ) ? exp(res) : (1+res) );
+}
 
 
 double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<double> &ffull)
@@ -7977,8 +8041,9 @@ double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<doub
 
     const MercerKernel &backkernel = probbnd.backkernel;
 
-    const double &backC   = probbnd.backC;
-    const double &backeps = probbnd.backeps;
+    const double &backC     = probbnd.backC;
+    const double &backsigma = probbnd.backsigma;
+    const double &backeps   = probbnd.backeps;
 
                     {
                         ML_Base &model = *this;
@@ -7988,10 +8053,11 @@ double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<doub
                         int lockARDdim = lockernel.cScale().indsize();
                         int locddim    = ffull.size();
 
-                        double locCval   = backC;
-                        double locepsval = backeps;
+                        double locCval     = backC;
+                        double locsigmaval = backsigma;
+                        double locepsval   = backeps;
 
-                        Vector<Vector<gentype> > locconstVecs(lockdim);
+                        Vector<Vector<gentype>> locconstVecs(lockdim);
                         Vector<double>           locweightval(lockdim);
                         SparseVector<gentype>    locARDScale;
 
@@ -8013,6 +8079,7 @@ double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<doub
                             else if ( ( kelm(j) == -1 )                      ) { locweightval("&",kind(j))              = ffull(j); loctuneK |= 1; }
                             else if ( ( kelm(j) == -2 )                      ) { locCval                                = ffull(j); loctuneP |= 1; }
                             else if ( ( kelm(j) == -3 )                      ) { locepsval                              = ffull(j); loctuneP |= 2; }
+                            else if ( ( kelm(j) == -4 )                      ) { locsigmaval                            = ffull(j); loctuneP |= 4; }
                         }
 
                         if ( loctuneK )
@@ -8030,8 +8097,9 @@ double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<doub
                             model.resetKernel(1,-2);
                         }
 
-                        if ( loctuneP & 1 ) { setC(locCval);     }
-                        if ( loctuneP & 2 ) { seteps(locepsval); }
+                        if ( loctuneP & 1 ) { setC(locCval);         }
+                        if ( loctuneP & 2 ) { seteps(locepsval);     }
+                        if ( loctuneP & 4 ) { setsigma(locsigmaval); }
 
                         int rescode = 0;
                         reset();
@@ -8059,6 +8127,7 @@ double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<doub
                             if ( loctuneK )     { lockernel = backkernel; resetKernel(1,-2); }
                             if ( loctuneP & 1 ) { setC(backC);                               }
                             if ( loctuneP & 2 ) { seteps(backeps);                           }
+                            if ( loctuneP & 4 ) { setsigma(backsigma);                       }
 
                             reset();
                         }
@@ -8888,7 +8957,7 @@ void ML_Base::d2K2delxdely(double  &xxscaleres, double  &yyscaleres, double  &xy
     return;
 }
 
-void ML_Base::dnK2del(Vector<gentype> &sc, Vector<Vector<int> > &n, int &minmaxind, 
+void ML_Base::dnK2del(Vector<gentype> &sc, Vector<Vector<int>> &n, int &minmaxind, 
                      const Vector<int> &q, 
                      int i, int j, 
                      const gentype **pxyprod, 
@@ -8901,7 +8970,7 @@ void ML_Base::dnK2del(Vector<gentype> &sc, Vector<Vector<int> > &n, int &minmaxi
     return;
 }
 
-void ML_Base::dnK2del(Vector<double> &sc, Vector<Vector<int> > &n, int &minmaxind, 
+void ML_Base::dnK2del(Vector<double> &sc, Vector<Vector<int>> &n, int &minmaxind, 
                      const Vector<int> &q, 
                      int i, int j, 
                      const gentype **pxyprod, 
@@ -9048,14 +9117,7 @@ double ML_Base::K1(int ia,
 
     else if ( xa->isnofaroffindpresent() )
     {
-        const double *x00 = nullptr;
-
-        if ( xa && isxymat(altK) && ( ia >= 0 ) && ( (*xa).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-        }
-
-        res = altK.K1(*xa,*xainfo,bias,pxyprod,ia,xspaceDim(),isXConsistent() && istrv(ia),resmode,MLid(),x00,assumeReal);
+        res = altK.K1(*xa,*xainfo,bias,pxyprod,ia,xspaceDim(),isXConsistent() && istrv(ia),resmode,MLid(),assumeReal);
     }
 
     else
@@ -9114,7 +9176,7 @@ double ML_Base::K1(int ia,
         const SparseVector<gentype> *xai = xauntang ? xauntang : xa;
         const vecInfo *xainfoi = xainfountang ? xainfountang : xainfo;
 
-        res = altK.K1(*xai,*xainfoi,bias,nullptr,ia,xspaceDim(),isXConsistent() && istrv(ia),resmode,MLid(),nullptr,assumeReal);
+        res = altK.K1(*xai,*xainfoi,bias,nullptr,ia,xspaceDim(),isXConsistent() && istrv(ia),resmode,MLid(),assumeReal);
 
         res += iadiagoffset;
 
@@ -9191,14 +9253,7 @@ T &ML_Base::K1(T &res,
 
     else if ( xa->isnofaroffindpresent() )
     {
-        const double *x00 = nullptr;
-
-        if ( xa && isxymat(altK) && ( ia >= 0 ) && ( (*xa).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-        }
-
-        altK.K1(res,*xa,*xainfo,bias,pxyprod,ia,xspaceDim(),isXConsistent() && istrv(ia),resmode,MLid(),x00,assumeReal);
+        altK.K1(res,*xa,*xainfo,bias,pxyprod,ia,xspaceDim(),isXConsistent() && istrv(ia),resmode,MLid(),assumeReal);
     }
 
     else
@@ -9257,7 +9312,7 @@ T &ML_Base::K1(T &res,
         const SparseVector<gentype> *xai = xauntang ? xauntang : xa;
         const vecInfo *xainfoi = xainfountang ? xainfountang : xainfo;
 
-        altK.K1(res,*xai,*xainfoi,bias,nullptr,ia,xspaceDim(),isXConsistent() && istrv(ia),resmode,MLid(),nullptr,assumeReal);
+        altK.K1(res,*xai,*xainfoi,bias,nullptr,ia,xspaceDim(),isXConsistent() && istrv(ia),resmode,MLid(),assumeReal);
 
         res += iadiagoffset;
 
@@ -9464,27 +9519,10 @@ double ML_Base::K2x2(int ia, int ib, int ic,
 
     else if ( xa->isnofaroffindpresent() && xb->isnofaroffindpresent() && xc->isnofaroffindpresent() )
     {
-        const double *x00 = nullptr;
-        const double *x10 = nullptr;
-        const double *x11 = nullptr;
-        const double *x20 = nullptr;
-        //const double *x21 = nullptr;
-        const double *x22 = nullptr;
-
-        if ( xa && xb && xc && isxymat(altK) && ( ia >= 0 ) && ( ib >= 0 ) && ( ic >= 0 ) && ( (*xa).nupsize() == 1 ) && ( (*xb).nupsize() == 1 ) && ( (*xc).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-            x10 = &(getxymatelm(altK,ib,ia));
-            x11 = &(getxymatelm(altK,ib,ib));
-            x20 = &(getxymatelm(altK,ic,ia));
-            //x21 = &(getxymatelm(altK,ic,ib));
-            x22 = &(getxymatelm(altK,ic,ic));
-        }
-
         double resb;
 
-        res  = altK.K2(*xa,*xb,*xainfo,*xbinfo,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),x00,x10,x11,assumeReal);
-        resb = altK.K2(*xa,*xc,*xainfo,*xcinfo,bias,nullptr,ia,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ic),resmode,MLid(),x00,x20,x22,assumeReal);
+        res  = altK.K2(*xa,*xb,*xainfo,*xbinfo,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),assumeReal);
+        resb = altK.K2(*xa,*xc,*xainfo,*xcinfo,bias,nullptr,ia,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ic),resmode,MLid(),assumeReal);
 
         res *= resb;
 //        altK.K2x2(res,*xa,*xb,*xc,*xainfo,*xbinfo,*xcinfo,bias,ia,ib,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic),resmode,MLid(),x00,x10,x11,x20,x21,x22,assumeReal);
@@ -9649,15 +9687,15 @@ double ML_Base::K2x2(int ia, int ib, int ic,
         {
              double resb;
 
-             res  = altK.K2(*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),nullptr,nullptr,nullptr,assumeReal);
-             resb = altK.K2(*xai,*xci,*xainfoi,*xcinfoi,bias,nullptr,ia,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ic),resmode,MLid(),nullptr,nullptr,nullptr,assumeReal);
+             res  = altK.K2(*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),assumeReal);
+             resb = altK.K2(*xai,*xci,*xainfoi,*xcinfoi,bias,nullptr,ia,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ic),resmode,MLid(),assumeReal);
 
              res *= resb;
         }
 
         else if ( issameset )
         {
-            res = altK.K2x2(*xai,*xbi,*xci,*xainfoi,*xbinfoi,*xcinfoi,bias,ia,ib,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic),resmode,MLid(),nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,assumeReal);
+            res = altK.K2x2(*xai,*xbi,*xci,*xainfoi,*xbinfoi,*xcinfoi,bias,ia,ib,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic),resmode,MLid(),assumeReal);
         }
 
         else
@@ -9876,27 +9914,10 @@ T &ML_Base::K2x2(T &res,
 
     else if ( xa->isnofaroffindpresent() && xb->isnofaroffindpresent() && xc->isnofaroffindpresent() )
     {
-        const double *x00 = nullptr;
-        const double *x10 = nullptr;
-        const double *x11 = nullptr;
-        const double *x20 = nullptr;
-        //const double *x21 = nullptr;
-        const double *x22 = nullptr;
-
-        if ( xa && xb && xc && isxymat(altK) && ( ia >= 0 ) && ( ib >= 0 ) && ( ic >= 0 ) && ( (*xa).nupsize() == 1 ) && ( (*xb).nupsize() == 1 ) && ( (*xc).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-            x10 = &(getxymatelm(altK,ib,ia));
-            x11 = &(getxymatelm(altK,ib,ib));
-            x20 = &(getxymatelm(altK,ic,ia));
-            //x21 = &(getxymatelm(altK,ic,ib));
-            x22 = &(getxymatelm(altK,ic,ic));
-        }
-
         T resb;
 
-        altK.K2(res ,*xa,*xb,*xainfo,*xbinfo,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),x00,x10,x11,assumeReal);
-        altK.K2(resb,*xa,*xc,*xainfo,*xcinfo,bias,nullptr,ia,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ic),resmode,MLid(),x00,x20,x22,assumeReal);
+        altK.K2(res ,*xa,*xb,*xainfo,*xbinfo,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),assumeReal);
+        altK.K2(resb,*xa,*xc,*xainfo,*xcinfo,bias,nullptr,ia,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ic),resmode,MLid(),assumeReal);
 
         res *= resb;
 //        altK.K2x2(res,*xa,*xb,*xc,*xainfo,*xbinfo,*xcinfo,bias,ia,ib,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic),resmode,MLid(),x00,x10,x11,x20,x21,x22,assumeReal);
@@ -10061,15 +10082,15 @@ T &ML_Base::K2x2(T &res,
         {
              T resb;
 
-             altK.K2(res ,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),nullptr,nullptr,nullptr,assumeReal);
-             altK.K2(resb,*xai,*xci,*xainfoi,*xcinfoi,bias,nullptr,ia,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ic),resmode,MLid(),nullptr,nullptr,nullptr,assumeReal);
+             altK.K2(res ,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),assumeReal);
+             altK.K2(resb,*xai,*xci,*xainfoi,*xcinfoi,bias,nullptr,ia,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ic),resmode,MLid(),assumeReal);
 
              res *= resb;
         }
 
         else if ( issameset )
         {
-            altK.K2x2(res,*xai,*xbi,*xci,*xainfoi,*xbinfoi,*xcinfoi,bias,ia,ib,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic),resmode,MLid(),nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,assumeReal);
+            altK.K2x2(res,*xai,*xbi,*xci,*xainfoi,*xbinfoi,*xcinfoi,bias,ia,ib,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic),resmode,MLid(),assumeReal);
         }
 
         else
@@ -10192,69 +10213,26 @@ double ML_Base::K2(int ia, int ib,
 {
     const MercerKernel &altK = ( ( RFFordata(ia) && RFFordata(ib) ) ? getRFFKernel() : basealtK );
 
+//phantomx
+    if ( !xa ) { xa = &x(ia); xainfo = &xinfo(ia); }
+    if ( !xb ) { xb = &x(ib); xbinfo = &xinfo(ib); }
+
+    vecInfo xinfoxa;
+    vecInfo xinfoxb;
+
+    if ( !xainfo ) { getKernel().getvecInfo(xinfoxa,*xa); xainfo = &xinfoxa; }
+    if ( !xbinfo ) { getKernel().getvecInfo(xinfoxb,*xb); xbinfo = &xinfoxb; }
+
     double res = 0;
 
-//phantomx
-    if ( !xa )
-    {
-        xa     = &x(ia);
-        xainfo = &xinfo(ia);
-    }
-
-    if ( !xb )
-    {
-        xb     = &x(ib);
-        xbinfo = &xinfo(ib);
-    }
-
-    if ( !xainfo && !xbinfo )
-    {
-        vecInfo xinfoxa;
-        vecInfo xinfoxb;
-
-        getKernel().getvecInfo(xinfoxa,*xa);
-        getKernel().getvecInfo(xinfoxb,*xb);
-
-        res = K2(ia,ib,bias,basealtK,pxyprod,xa,xb,&xinfoxa,&xinfoxb,resmode);
-    }
-
-    else if ( !xainfo )
-    {
-        vecInfo xinfox;
-
-        getKernel().getvecInfo(xinfox,*xa);
-
-        res = K2(ia,ib,bias,basealtK,pxyprod,xa,xb,&xinfox,xbinfo,resmode);
-    }
-
-    else if ( !xbinfo )
-    {
-        vecInfo xinfoy;
-
-        getKernel().getvecInfo(xinfoy,*xb);
-
-        res = K2(ia,ib,bias,basealtK,pxyprod,xa,xb,xainfo,&xinfoy,resmode);
-    }
-
-    else if ( ( ia >= 0 ) && ( ib >= 0 ) && ( K2mat.numRows() ) && ( K2mat.numCols() ) )
+    if ( ( ia >= 0 ) && ( ib >= 0 ) && ( K2mat.numRows() ) && ( K2mat.numCols() ) )
     {
         res = K2mat(ia,ib);
     }
 
     else if ( xa->isnofaroffindpresent() && xb->isnofaroffindpresent() )
     {
-        const double *x00 = nullptr;
-        const double *x10 = nullptr;
-        const double *x11 = nullptr;
-
-        if ( xa && xb && isxymat(altK) && ( ia >= 0 ) && ( ib >= 0 ) && ( (*xa).nupsize() == 1 ) && ( (*xb).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-            x10 = &(getxymatelm(altK,ib,ia));
-            x11 = &(getxymatelm(altK,ib,ib));
-        }
-
-        res = altK.K2(*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),x00,x10,x11,assumeReal);
+        res = altK.K2(*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),assumeReal);
     }
 
     else
@@ -10311,22 +10289,14 @@ double ML_Base::K2(int ia, int ib,
 
         if ( loctanga & 2048 )
         {
-            double restmp;
+            double restmp = 0.0;
 
             for ( int i = 0 ; i < sumind.size() ; i++ )
             {
-                if ( !i )
-                {
-                    res = K2(sumind(i),ib,bias,basealtK,nullptr,nullptr,xb,nullptr,xbinfo,resmode);
-                    res *= sumweight(i);
-                }
+                restmp = K2(sumind(i),ib,bias,basealtK,nullptr,nullptr,xb,nullptr,xbinfo,resmode);
+                restmp *= sumweight(i);
 
-                else
-                {
-                    restmp = K2(sumind(i),ib,bias,basealtK,nullptr,nullptr,xb,nullptr,xbinfo,resmode);
-                    restmp *= sumweight(i);
-                    res += restmp;
-                }
+                res += restmp;
             }
 
             return res;
@@ -10336,22 +10306,14 @@ double ML_Base::K2(int ia, int ib,
 
         if ( loctangb & 2048 )
         {
-            double restmp;
+            double restmp = 0.0;
 
             for ( int i = 0 ; i < sumind.size() ; i++ )
             {
-                if ( !i )
-                {
-                    res = K2(ia,sumind(i),bias,basealtK,nullptr,xa,nullptr,xainfo,nullptr,resmode);
-                    res *= sumweight(i);
-                }
+                restmp = K2(ia,sumind(i),bias,basealtK,nullptr,xa,nullptr,xainfo,nullptr,resmode);
+                restmp *= sumweight(i);
 
-                else
-                {
-                    restmp = K2(ia,sumind(i),bias,basealtK,nullptr,xa,nullptr,xainfo,nullptr,resmode);
-                    restmp *= sumweight(i);
-                    res += restmp;
-                }
+                res += restmp;
             }
 
             return res;
@@ -10365,9 +10327,8 @@ double ML_Base::K2(int ia, int ib,
         const vecInfo *xainfoi = xainfountang ? xainfountang : xainfo;
         const vecInfo *xbinfoi = xbinfountang ? xbinfountang : xbinfo;
 
-        if ( issameset )
-        {
-            res = altK.K2(*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),nullptr,nullptr,nullptr,assumeReal);
+        if ( issameset ) { res = altK.K2(*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),assumeReal); }
+        else             { res = 0.0; }
 
 if ( testisvnan(res) ) //|| testisinf(res) )
 {
@@ -10379,12 +10340,6 @@ errstream() << "K2 evaluated null 2c: " << bias << "\n";
 errstream() << "K2 evaluated null 2d: " << ia << "," << ib << "\n";
 errstream() << "K2 evaluated null 3: " << getKernel() << "\n";
 }
-        }
-
-        else
-        {
-            res = 0.0;
-        }
 
         if ( xauntang ) { MEMDEL(xauntang); }
         if ( xbuntang ) { MEMDEL(xbuntang); }
@@ -10392,10 +10347,7 @@ errstream() << "K2 evaluated null 3: " << getKernel() << "\n";
         if ( xainfountang ) { MEMDEL(xainfountang); }
         if ( xbinfountang ) { MEMDEL(xbinfountang); }
 
-        if ( ia == ib )
-        {
-            res += iadiagoffset;
-        }
+        if ( ia == ib ) { res += iadiagoffset; }
 
         if ( iaokr || ibokr )
         {
@@ -10465,66 +10417,23 @@ T &ML_Base::K2(T &res,
     const MercerKernel &altK = ( ( RFFordata(ia) && RFFordata(ib) ) ? getRFFKernel() : basealtK );
 
 //phantomx
-    if ( !xa )
-    {
-        xa     = &x(ia);
-        xainfo = &xinfo(ia);
-    }
+    if ( !xa ) { xa = &x(ia); xainfo = &xinfo(ia); }
+    if ( !xb ) { xb = &x(ib); xbinfo = &xinfo(ib); }
 
-    if ( !xb )
-    {
-        xb     = &x(ib);
-        xbinfo = &xinfo(ib);
-    }
+    vecInfo xinfoxa;
+    vecInfo xinfoxb;
 
-    if ( !xainfo && !xbinfo )
-    {
-        vecInfo xinfoxa;
-        vecInfo xinfoxb;
+    if ( !xainfo ) { getKernel().getvecInfo(xinfoxa,*xa); xainfo = &xinfoxa; }
+    if ( !xbinfo ) { getKernel().getvecInfo(xinfoxb,*xb); xbinfo = &xinfoxb; }
 
-        getKernel().getvecInfo(xinfoxa,*xa);
-        getKernel().getvecInfo(xinfoxb,*xb);
-
-        K2(res,ia,ib,bias,basealtK,pxyprod,xa,xb,&xinfoxa,&xinfoxb,resmode);
-    }
-
-    else if ( !xainfo )
-    {
-        vecInfo xinfox;
-
-        getKernel().getvecInfo(xinfox,*xa);
-
-        K2(res,ia,ib,bias,basealtK,pxyprod,xa,xb,&xinfox,xbinfo,resmode);
-    }
-
-    else if ( !xbinfo )
-    {
-        vecInfo xinfoy;
-
-        getKernel().getvecInfo(xinfoy,*xb);
-
-        K2(res,ia,ib,bias,basealtK,pxyprod,xa,xb,xainfo,&xinfoy,resmode);
-    }
-
-    else if ( ( ia >= 0 ) && ( ib >= 0 ) && ( K2mat.numRows() ) && ( K2mat.numCols() ) )
+    if ( ( ia >= 0 ) && ( ib >= 0 ) && ( K2mat.numRows() ) && ( K2mat.numCols() ) )
     {
         res = (T) K2mat(ia,ib);
     }
 
     else if ( xa->isnofaroffindpresent() && xb->isnofaroffindpresent() )
     {
-        const double *x00 = nullptr;
-        const double *x10 = nullptr;
-        const double *x11 = nullptr;
-
-        if ( xa && xb && isxymat(altK) && ( ia >= 0 ) && ( ib >= 0 ) && ( (*xa).nupsize() == 1 ) && ( (*xb).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-            x10 = &(getxymatelm(altK,ib,ia));
-            x11 = &(getxymatelm(altK,ib,ib));
-        }
-
-        altK.K2(res,*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),x00,x10,x11,assumeReal);
+        altK.K2(res,*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),assumeReal);
     }
 
     else
@@ -10585,18 +10494,11 @@ T &ML_Base::K2(T &res,
 
             for ( int i = 0 ; i < sumind.size() ; i++ )
             {
-                if ( !i )
-                {
-                    K2(res,sumind(i),ib,bias,basealtK,nullptr,nullptr,xb,nullptr,xbinfo,resmode);
-                    res *= sumweight(i);
-                }
+                K2(restmp,sumind(i),ib,bias,basealtK,nullptr,nullptr,xb,nullptr,xbinfo,resmode);
+                restmp *= sumweight(i);
 
-                else
-                {
-                    K2(restmp,sumind(i),ib,bias,basealtK,nullptr,nullptr,xb,nullptr,xbinfo,resmode);
-                    restmp *= sumweight(i);
-                    res += restmp;
-                }
+                if ( !i ) { res =  restmp; }
+                else      { res += restmp; }
             }
 
             return res;
@@ -10610,18 +10512,11 @@ T &ML_Base::K2(T &res,
 
             for ( int i = 0 ; i < sumind.size() ; i++ )
             {
-                if ( !i )
-                {
-                    K2(res,ia,sumind(i),bias,basealtK,nullptr,xa,nullptr,xainfo,nullptr,resmode);
-                    res *= sumweight(i);
-                }
+                K2(restmp,ia,sumind(i),bias,basealtK,nullptr,xa,nullptr,xainfo,nullptr,resmode);
+                restmp *= sumweight(i);
 
-                else
-                {
-                    K2(restmp,ia,sumind(i),bias,basealtK,nullptr,xa,nullptr,xainfo,nullptr,resmode);
-                    restmp *= sumweight(i);
-                    res += restmp;
-                }
+                if ( !i ) { res =  restmp; }
+                else      { res += restmp; }
             }
 
             return res;
@@ -10635,9 +10530,8 @@ T &ML_Base::K2(T &res,
         const vecInfo *xainfoi = xainfountang ? xainfountang : xainfo;
         const vecInfo *xbinfoi = xbinfountang ? xbinfountang : xbinfo;
 
-        if ( issameset )
-        {
-            altK.K2(res,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),nullptr,nullptr,nullptr,assumeReal);
+        if ( issameset ) { altK.K2(res,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),resmode,MLid(),assumeReal); }
+        else             { res = 0.0; }
 
 if ( testisvnan(res) ) //|| testisinf(res) )
 {
@@ -10649,12 +10543,6 @@ errstream() << "K2 evaluated null 2c: " << bias << "\n";
 errstream() << "K2 evaluated null 2d: " << ia << "," << ib << "\n";
 errstream() << "K2 evaluated null 3: " << getKernel() << "\n";
 }
-        }
-
-        else
-        {
-            res = 0.0;
-        }
 
         if ( xauntang ) { MEMDEL(xauntang); }
         if ( xbuntang ) { MEMDEL(xbuntang); }
@@ -10662,10 +10550,7 @@ errstream() << "K2 evaluated null 3: " << getKernel() << "\n";
         if ( xainfountang ) { MEMDEL(xainfountang); }
         if ( xbinfountang ) { MEMDEL(xbinfountang); }
 
-        if ( ia == ib )
-        {
-            res += iadiagoffset;
-        }
+        if ( ia == ib ) { res += iadiagoffset; }
 
         if ( iaokr || ibokr )
         {
@@ -10828,24 +10713,7 @@ double ML_Base::K3(int ia, int ib, int ic,
 
     else if ( xa->isnofaroffindpresent() && xb->isnofaroffindpresent() && xc->isnofaroffindpresent() )
     {
-        const double *x00 = nullptr;
-        const double *x10 = nullptr;
-        const double *x11 = nullptr;
-        const double *x20 = nullptr;
-        const double *x21 = nullptr;
-        const double *x22 = nullptr;
-
-        if ( xa && xb && xc && isxymat(altK) && ( ia >= 0 ) && ( ib >= 0 ) && ( ic >= 0 ) && ( (*xa).nupsize() == 1 ) && ( (*xb).nupsize() == 1 ) && ( (*xc).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-            x10 = &(getxymatelm(altK,ib,ia));
-            x11 = &(getxymatelm(altK,ib,ib));
-            x20 = &(getxymatelm(altK,ic,ia));
-            x21 = &(getxymatelm(altK,ic,ib));
-            x22 = &(getxymatelm(altK,ic,ic));
-        }
-
-        res = altK.K3(*xa,*xb,*xc,*xainfo,*xbinfo,*xcinfo,bias,pxyprod,ia,ib,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic),resmode,MLid(),x00,x10,x11,x20,x21,x22,assumeReal);
+        res = altK.K3(*xa,*xb,*xc,*xainfo,*xbinfo,*xcinfo,bias,pxyprod,ia,ib,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic),resmode,MLid(),assumeReal);
     }
 
     else
@@ -11005,7 +10873,7 @@ double ML_Base::K3(int ia, int ib, int ic,
 
         if ( issameset )
         {
-            res = altK.K3(*xai,*xbi,*xci,*xainfoi,*xbinfoi,*xcinfoi,bias,nullptr,ia,ib,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic),resmode,MLid(),nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,assumeReal);
+            res = altK.K3(*xai,*xbi,*xci,*xainfoi,*xbinfoi,*xcinfoi,bias,nullptr,ia,ib,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic),resmode,MLid(),assumeReal);
         }
 
         else
@@ -11188,24 +11056,7 @@ T &ML_Base::K3(T &res,
 
     else if ( xa->isnofaroffindpresent() && xb->isnofaroffindpresent() && xc->isnofaroffindpresent() )
     {
-        const double *x00 = nullptr;
-        const double *x10 = nullptr;
-        const double *x11 = nullptr;
-        const double *x20 = nullptr;
-        const double *x21 = nullptr;
-        const double *x22 = nullptr;
-
-        if ( xa && xb && xc && isxymat(altK) && ( ia >= 0 ) && ( ib >= 0 ) && ( ic >= 0 ) && ( (*xa).nupsize() == 1 ) && ( (*xb).nupsize() == 1 ) && ( (*xc).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-            x10 = &(getxymatelm(altK,ib,ia));
-            x11 = &(getxymatelm(altK,ib,ib));
-            x20 = &(getxymatelm(altK,ic,ia));
-            x21 = &(getxymatelm(altK,ic,ib));
-            x22 = &(getxymatelm(altK,ic,ic));
-        }
-
-        altK.K3(res,*xa,*xb,*xc,*xainfo,*xbinfo,*xcinfo,bias,pxyprod,ia,ib,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic),resmode,MLid(),x00,x10,x11,x20,x21,x22,assumeReal);
+        altK.K3(res,*xa,*xb,*xc,*xainfo,*xbinfo,*xcinfo,bias,pxyprod,ia,ib,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic),resmode,MLid(),assumeReal);
     }
 
     else
@@ -11365,7 +11216,7 @@ T &ML_Base::K3(T &res,
 
         if ( issameset )
         {
-            altK.K3(res,*xai,*xbi,*xci,*xainfoi,*xbinfoi,*xcinfoi,bias,nullptr,ia,ib,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic),resmode,MLid(),nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,assumeReal);
+            altK.K3(res,*xai,*xbi,*xci,*xainfoi,*xbinfoi,*xcinfoi,bias,nullptr,ia,ib,ic,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic),resmode,MLid(),assumeReal);
         }
 
         else
@@ -11650,32 +11501,7 @@ double ML_Base::K4(int ia, int ib, int ic, int id,
 
     else if ( xa->isnofaroffindpresent() && xb->isnofaroffindpresent() && xc->isnofaroffindpresent() && xd->isnofaroffindpresent() )
     {
-        const double *x00 = nullptr;
-        const double *x10 = nullptr;
-        const double *x11 = nullptr;
-        const double *x20 = nullptr;
-        const double *x21 = nullptr;
-        const double *x22 = nullptr;
-        const double *x30 = nullptr;
-        const double *x31 = nullptr;
-        const double *x32 = nullptr;
-        const double *x33 = nullptr;
-
-        if ( isxymat(altK) && ( ia >= 0 ) && ( ib >= 0 ) && ( ic >= 0 ) && ( id >= 0 ) && ( (*xa).nupsize() == 1 ) && ( (*xb).nupsize() == 1 ) && ( (*xc).nupsize() == 1 ) && ( (*xd).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-            x10 = &(getxymatelm(altK,ib,ia));
-            x11 = &(getxymatelm(altK,ib,ib));
-            x20 = &(getxymatelm(altK,ic,ia));
-            x21 = &(getxymatelm(altK,ic,ib));
-            x22 = &(getxymatelm(altK,ic,ic));
-            x30 = &(getxymatelm(altK,id,ia));
-            x31 = &(getxymatelm(altK,id,ib));
-            x32 = &(getxymatelm(altK,id,ic));
-            x33 = &(getxymatelm(altK,id,id));
-        }
-
-        res = altK.K4(*xa,*xb,*xc,*xd,*xainfo,*xbinfo,*xcinfo,*xdinfo,bias,pxyprod,ia,ib,ic,id,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic) && istrv(id),resmode,MLid(),x00,x10,x11,x20,x21,x22,x30,x31,x32,x33,assumeReal);
+        res = altK.K4(*xa,*xb,*xc,*xd,*xainfo,*xbinfo,*xcinfo,*xdinfo,bias,pxyprod,ia,ib,ic,id,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic) && istrv(id),resmode,MLid(),assumeReal);
     }
 
     else
@@ -11879,7 +11705,7 @@ double ML_Base::K4(int ia, int ib, int ic, int id,
 
         if ( issameset )
         {
-            res = altK.K4(*xai,*xbi,*xci,*xdi,*xainfoi,*xbinfoi,*xcinfoi,*xdinfoi,bias,nullptr,ia,ib,ic,id,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic) && istrv(id),resmode,MLid(),nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,assumeReal);
+            res = altK.K4(*xai,*xbi,*xci,*xdi,*xainfoi,*xbinfoi,*xcinfoi,*xdinfoi,bias,nullptr,ia,ib,ic,id,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic) && istrv(id),resmode,MLid(),assumeReal);
         }
 
         else
@@ -12174,32 +12000,7 @@ T &ML_Base::K4(T &res,
 
     else if ( xa->isnofaroffindpresent() && xb->isnofaroffindpresent() && xc->isnofaroffindpresent() && xd->isnofaroffindpresent() )
     {
-        const double *x00 = nullptr;
-        const double *x10 = nullptr;
-        const double *x11 = nullptr;
-        const double *x20 = nullptr;
-        const double *x21 = nullptr;
-        const double *x22 = nullptr;
-        const double *x30 = nullptr;
-        const double *x31 = nullptr;
-        const double *x32 = nullptr;
-        const double *x33 = nullptr;
-
-        if ( isxymat(altK) && ( ia >= 0 ) && ( ib >= 0 ) && ( ic >= 0 ) && ( id >= 0 ) && ( (*xa).nupsize() == 1 ) && ( (*xb).nupsize() == 1 ) && ( (*xc).nupsize() == 1 ) && ( (*xd).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-            x10 = &(getxymatelm(altK,ib,ia));
-            x11 = &(getxymatelm(altK,ib,ib));
-            x20 = &(getxymatelm(altK,ic,ia));
-            x21 = &(getxymatelm(altK,ic,ib));
-            x22 = &(getxymatelm(altK,ic,ic));
-            x30 = &(getxymatelm(altK,id,ia));
-            x31 = &(getxymatelm(altK,id,ib));
-            x32 = &(getxymatelm(altK,id,ic));
-            x33 = &(getxymatelm(altK,id,id));
-        }
-
-        altK.K4(res,*xa,*xb,*xc,*xd,*xainfo,*xbinfo,*xcinfo,*xdinfo,bias,pxyprod,ia,ib,ic,id,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic) && istrv(id),resmode,MLid(),x00,x10,x11,x20,x21,x22,x30,x31,x32,x33,assumeReal);
+        altK.K4(res,*xa,*xb,*xc,*xd,*xainfo,*xbinfo,*xcinfo,*xdinfo,bias,pxyprod,ia,ib,ic,id,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic) && istrv(id),resmode,MLid(),assumeReal);
     }
 
     else
@@ -12403,7 +12204,7 @@ T &ML_Base::K4(T &res,
 
         if ( issameset )
         {
-            altK.K4(res,*xai,*xbi,*xci,*xdi,*xainfoi,*xbinfoi,*xcinfoi,*xdinfoi,bias,nullptr,ia,ib,ic,id,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic) && istrv(id),resmode,MLid(),nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,assumeReal);
+            altK.K4(res,*xai,*xbi,*xci,*xdi,*xainfoi,*xbinfoi,*xcinfoi,*xdinfoi,bias,nullptr,ia,ib,ic,id,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib) && istrv(ic) && istrv(id),resmode,MLid(),assumeReal);
         }
 
         else
@@ -12694,7 +12495,7 @@ double ML_Base::Km(int m,
 
             if ( issameset )
             {
-                res = altK.Km(m,xx,xxinfo,bias,i,nullptr,xspaceDim(),isXConsistent() && istrv(i),resmode,MLid(),nullptr,assumeReal);
+                res = altK.Km(m,xx,xxinfo,bias,i,nullptr,xspaceDim(),isXConsistent() && istrv(i),resmode,MLid(),assumeReal);
             }
 
             else
@@ -12749,17 +12550,7 @@ double ML_Base::Km(int m,
 
         else
         {
-            // This needs to be outside the next statement to ensure it remains on the stack until used!
-            retMatrix<double> tmpma;
-
-            const Matrix<double> *xyp = nullptr;
-
-            if ( isxymat(altK) && ( i >= z ) )
-            {
-                xyp = &((getxymat(altK))(i,i,tmpma));
-            }
-
-            res = altK.Km(m,*xxx,*xxxinfo,bias,i,pxyprod,xspaceDim(),isXConsistent() && istrv(i),resmode,MLid(),xyp,assumeReal);
+            res = altK.Km(m,*xxx,*xxxinfo,bias,i,pxyprod,xspaceDim(),isXConsistent() && istrv(i),resmode,MLid(),assumeReal);
         }
     }
 
@@ -12974,7 +12765,7 @@ resmode);
 
             if ( issameset )
             {
-                res = altK.Km(m,xx,xxinfo,bias,i,nullptr,xspaceDim(),isXConsistent() && istrv(i),resmode,MLid(),nullptr,assumeReal);
+                res = altK.Km(m,xx,xxinfo,bias,i,nullptr,xspaceDim(),isXConsistent() && istrv(i),resmode,MLid(),assumeReal);
             }
 
             else
@@ -13029,17 +12820,7 @@ resmode);
 
         else
         {
-            // This needs to be outside the next statement to ensure it remains on the stack until used!
-            retMatrix<double> tmpma;
-
-            const Matrix<double> *xyp = nullptr;
-
-            if ( isxymat(altK) && ( i >= z ) )
-            {
-                xyp = &((getxymat(altK))(i,i,tmpma));
-            }
-
-            res = altK.Km(m,*xxx,*xxxinfo,bias,i,pxyprod,xspaceDim(),isXConsistent() && istrv(i),resmode,MLid(),xyp,assumeReal);
+            res = altK.Km(m,*xxx,*xxxinfo,bias,i,pxyprod,xspaceDim(),isXConsistent() && istrv(i),resmode,MLid(),assumeReal);
         }
     }
 
@@ -13090,26 +12871,7 @@ double ML_Base::KK2ip(int ib, int jb, double bias, const gentype **pxyprod, cons
 
     // Shortcut for speed
 
-    if ( !xx && !yy )
-    {
-        const SparseVector<gentype> &xib = x(ib);
-        const SparseVector<gentype> &xjb = x(jb);
-
-        const vecInfo &xinfoi = xinfo(ib);
-        const vecInfo &xinfoj = xinfo(jb);
-
-        return KK2ip(ib,jb,bias,pxyprod,&xib,&xjb,&xinfoi,&xinfoj);
-    }
-
-    else if ( xx && !yy )
-    {
-        const SparseVector<gentype> &xjb = x(jb);
-        const vecInfo &xinfoj = xinfo(jb);
-
-        return KK2ip(ib,jb,bias,pxyprod,xx,&xjb,xxinfo,&xinfoj);
-    }
-
-    else if ( !xx && yy )
+    if ( !xx )
     {
         const SparseVector<gentype> &xib = x(ib);
         const vecInfo &xinfoi = xinfo(ib);
@@ -13117,13 +12879,21 @@ double ML_Base::KK2ip(int ib, int jb, double bias, const gentype **pxyprod, cons
         return KK2ip(ib,jb,bias,pxyprod,&xib,yy,&xinfoi,yyinfo);
     }
 
-        const SparseVector<gentype> &xxx  = (*xx).n();
-        const SparseVector<gentype> &xxxx = xxx.nup(0);
+    if ( !yy )
+    {
+        const SparseVector<gentype> &xjb = x(jb);
+        const vecInfo &xinfoj = xinfo(jb);
 
-        const SparseVector<gentype> &yyy  = (*yy).n();
-        const SparseVector<gentype> &yyyy = yyy.nup(0);
+        return KK2ip(ib,jb,bias,pxyprod,xx,&xjb,xxinfo,&xinfoj);
+    }
 
-        return altK.K2ip(xxxx,yyyy,*xxinfo,*yyinfo,bias,pxyprod,ib,jb,0,0,MLid(),assumeReal);
+    const SparseVector<gentype> &xxx  = (*xx).n();
+    const SparseVector<gentype> &xxxx = xxx.nup(0);
+
+    const SparseVector<gentype> &yyy  = (*yy).n();
+    const SparseVector<gentype> &yyyy = yyy.nup(0);
+
+    return altK.K2ip(xxxx,yyyy,*xxinfo,*yyinfo,bias,pxyprod,ib,jb,0,0,MLid(),assumeReal);
 }
 
 double ML_Base::KK3ip(int ia, int ib, int ic, double bias, const gentype **pxyprod, const SparseVector<gentype> *xa, const SparseVector<gentype> *xb, const SparseVector<gentype> *xc, const vecInfo *xainfo, const vecInfo *xbinfo, const vecInfo *xcinfo) const
@@ -13369,18 +13139,7 @@ void ML_Base::dK(T &xygrad, T &xnormgrad,
 //errstream() << "phantomxyggghhh 1\n";
         int dummyind = -1;
 
-        const double *x00 = nullptr;
-        const double *x10 = nullptr;
-        const double *x11 = nullptr;
-
-        if ( xa && xb && isxymat(altK) && ( ia >= 0 ) && ( ib >= 0 ) && ( (*xa).nupsize() == 1 ) && ( (*xb).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-            x10 = &(getxymatelm(altK,ib,ia));
-            x11 = &(getxymatelm(altK,ib,ib));
-        }
-
-        altK.dK(xygrad,xnormgrad,dummyind,*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),x00,x10,x11,deepDeriv,assumeReal);
+        altK.dK2(xygrad,xnormgrad,dummyind,*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),deepDeriv,assumeReal);
     }
 
     else
@@ -13454,7 +13213,7 @@ void ML_Base::dK(T &xygrad, T &xnormgrad,
 
         //NiceAssert( issameset );
 
-        altK.dK(xygrad,xnormgrad,dummyind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),nullptr,nullptr,nullptr,deepDeriv,assumeReal);
+        altK.dK2(xygrad,xnormgrad,dummyind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),deepDeriv,assumeReal);
 
         if ( xai     ) { MEMDEL(xai);     }
         if ( xainfoi ) { MEMDEL(xainfoi); }
@@ -13545,19 +13304,7 @@ void ML_Base::d2K(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T &xyyno
 
     else if ( xa->isnofaroffindpresent() && xb->isnofaroffindpresent() )
     {
-//errstream() << "phantomxyggghhh 1\n";
-        const double *x00 = nullptr;
-        const double *x10 = nullptr;
-        const double *x11 = nullptr;
-
-        if ( xa && xb && isxymat(altK) && ( ia >= 0 ) && ( ib >= 0 ) && ( (*xa).nupsize() == 1 ) && ( (*xb).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-            x10 = &(getxymatelm(altK,ib,ia));
-            x11 = &(getxymatelm(altK,ib,ib));
-        }
-
-        altK.d2K(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,minmaxind,*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),x00,x10,x11,0,assumeReal);
+        altK.d2K2(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,minmaxind,*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),0,assumeReal);
     }
 
     else
@@ -13629,7 +13376,7 @@ void ML_Base::d2K(T &xygrad, T &xnormgrad, T &xyxygrad, T &xyxnormgrad, T &xyyno
 
         //NiceAssert( issameset );
 
-        altK.d2K(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,minmaxind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),nullptr,nullptr,nullptr,0,assumeReal);
+        altK.d2K2(xygrad,xnormgrad,xyxygrad,xyxnormgrad,xyynormgrad,xnormxnormgrad,xnormynormgrad,ynormynormgrad,minmaxind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),0,assumeReal);
 
         if ( xai     ) { MEMDEL(xai);     }
         if ( xainfoi ) { MEMDEL(xainfoi); }
@@ -13727,18 +13474,7 @@ void ML_Base::d2K2delxdelx(T &xxscaleres, T &yyscaleres, T &xyscaleres, T &yxsca
     else if ( xa->isnofaroffindpresent() && xb->isnofaroffindpresent() )
     {
 //errstream() << "phantomxyggghhh 1\n";
-        const double *x00 = nullptr;
-        const double *x10 = nullptr;
-        const double *x11 = nullptr;
-
-        if ( xa && xb && isxymat(altK) && ( ia >= 0 ) && ( ib >= 0 ) && ( (*xa).nupsize() == 1 ) && ( (*xb).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-            x10 = &(getxymatelm(altK,ib,ia));
-            x11 = &(getxymatelm(altK,ib,ib));
-        }
-
-        altK.d2K2delxdelx(xxscaleres,yyscaleres,xyscaleres,yxscaleres,constres,minmaxind,*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),x00,x10,x11,0,assumeReal);
+        altK.d2K2delxdelx(xxscaleres,yyscaleres,xyscaleres,yxscaleres,constres,minmaxind,*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),0,assumeReal);
     }
 
     else
@@ -13810,7 +13546,7 @@ void ML_Base::d2K2delxdelx(T &xxscaleres, T &yyscaleres, T &xyscaleres, T &yxsca
 
         //NiceAssert( issameset );
 
-        altK.d2K2delxdelx(xxscaleres,yyscaleres,xyscaleres,yxscaleres,constres,minmaxind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),nullptr,nullptr,nullptr,0,assumeReal);
+        altK.d2K2delxdelx(xxscaleres,yyscaleres,xyscaleres,yxscaleres,constres,minmaxind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),0,assumeReal);
 
         if ( xai     ) { MEMDEL(xai);     }
         if ( xainfoi ) { MEMDEL(xainfoi); }
@@ -13906,18 +13642,7 @@ void ML_Base::d2K2delxdely(T &xxscaleres, T &yyscaleres, T &xyscaleres, T &yxsca
     else if ( xa->isnofaroffindpresent() && xb->isnofaroffindpresent() )
     {
 //errstream() << "phantomxyggghhh 1\n";
-        const double *x00 = nullptr;
-        const double *x10 = nullptr;
-        const double *x11 = nullptr;
-
-        if ( xa && xb && isxymat(altK) && ( ia >= 0 ) && ( ib >= 0 ) && ( (*xa).nupsize() == 1 ) && ( (*xb).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-            x10 = &(getxymatelm(altK,ib,ia));
-            x11 = &(getxymatelm(altK,ib,ib));
-        }
-
-        altK.d2K2delxdely(xxscaleres,yyscaleres,xyscaleres,yxscaleres,constres,minmaxind,*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),x00,x10,x11,0,assumeReal);
+        altK.d2K2delxdely(xxscaleres,yyscaleres,xyscaleres,yxscaleres,constres,minmaxind,*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),0,assumeReal);
     }
 
     else
@@ -13989,7 +13714,7 @@ void ML_Base::d2K2delxdely(T &xxscaleres, T &yyscaleres, T &xyscaleres, T &yxsca
 
         //NiceAssert( issameset );
 
-        altK.d2K2delxdely(xxscaleres,yyscaleres,xyscaleres,yxscaleres,constres,minmaxind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),nullptr,nullptr,nullptr,0,assumeReal);
+        altK.d2K2delxdely(xxscaleres,yyscaleres,xyscaleres,yxscaleres,constres,minmaxind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),0,assumeReal);
 
         if ( xai     ) { MEMDEL(xai);     }
         if ( xainfoi ) { MEMDEL(xainfoi); }
@@ -14030,7 +13755,7 @@ void ML_Base::d2K2delxdely(T &xxscaleres, T &yyscaleres, T &xyscaleres, T &yxsca
 }
 
 template <class T>
-void ML_Base::dnK2del(Vector<T> &sc, Vector<Vector<int> > &n, int &minmaxind, 
+void ML_Base::dnK2del(Vector<T> &sc, Vector<Vector<int>> &n, int &minmaxind, 
                      const Vector<int> &q, 
                      int ia, int ib, 
                      const T &bias, const MercerKernel &basealtK, const gentype **pxyprod, 
@@ -14085,18 +13810,7 @@ void ML_Base::dnK2del(Vector<T> &sc, Vector<Vector<int> > &n, int &minmaxind,
     else if ( xa->isnofaroffindpresent() && xb->isnofaroffindpresent() )
     {
 //errstream() << "phantomxyggghhh 1\n";
-        const double *x00 = nullptr;
-        const double *x10 = nullptr;
-        const double *x11 = nullptr;
-
-        if ( xa && xb && isxymat(altK) && ( ia >= 0 ) && ( ib >= 0 ) && ( (*xa).nupsize() == 1 ) && ( (*xb).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-            x10 = &(getxymatelm(altK,ib,ia));
-            x11 = &(getxymatelm(altK,ib,ib));
-        }
-
-        altK.dnK2del(sc,n,minmaxind,q,*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),x00,x10,x11,0,assumeReal);
+        altK.dnK2del(sc,n,minmaxind,q,*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),0,assumeReal);
     }
 
     else
@@ -14168,7 +13882,7 @@ void ML_Base::dnK2del(Vector<T> &sc, Vector<Vector<int> > &n, int &minmaxind,
 
         //NiceAssert( issameset );
 
-        altK.dnK2del(sc,n,minmaxind,q,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),nullptr,nullptr,nullptr,0,assumeReal);
+        altK.dnK2del(sc,n,minmaxind,q,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),0,assumeReal);
 
         if ( xai     ) { MEMDEL(xai);     }
         if ( xainfoi ) { MEMDEL(xainfoi); }
@@ -14259,18 +13973,7 @@ void ML_Base::dK2delx(T &xscaleres, T &yscaleres, int &minmaxind,
     else if ( xa->isnofaroffindpresent() && xb->isnofaroffindpresent() )
     {
 //errstream() << "phantomxyggghhh 1\n";
-        const double *x00 = nullptr;
-        const double *x10 = nullptr;
-        const double *x11 = nullptr;
-
-        if ( xa && xb && isxymat(altK) && ( ia >= 0 ) && ( ib >= 0 ) && ( (*xa).nupsize() == 1 ) && ( (*xb).nupsize() == 1 ) )
-        {
-            x00 = &(getxymatelm(altK,ia,ia));
-            x10 = &(getxymatelm(altK,ib,ia));
-            x11 = &(getxymatelm(altK,ib,ib));
-        }
-
-        altK.dK2delx(xscaleres,yscaleres,minmaxind,*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),x00,x10,x11,assumeReal);
+        altK.dK2delx(xscaleres,yscaleres,minmaxind,*xa,*xb,*xainfo,*xbinfo,bias,pxyprod,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),assumeReal);
     }
 
     else
@@ -14342,7 +14045,7 @@ void ML_Base::dK2delx(T &xscaleres, T &yscaleres, int &minmaxind,
 
         //NiceAssert( issameset );
 
-        altK.dK2delx(xscaleres,yscaleres,minmaxind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),nullptr,nullptr,nullptr,assumeReal);
+        altK.dK2delx(xscaleres,yscaleres,minmaxind,*xai,*xbi,*xainfoi,*xbinfoi,bias,nullptr,ia,ib,xspaceDim(),isXConsistent() && istrv(ia) && istrv(ib),MLid(),assumeReal);
 
         if ( xai     ) { MEMDEL(xai);     }
         if ( xainfoi ) { MEMDEL(xainfoi); }
@@ -14410,7 +14113,7 @@ double ML_Base::distK(int i, int j) const
 //phantomx
     //FIXME: implement gradients and rank
 
-    double res = altK.distK(x(i),x(j),xinfo(i),xinfo(j),i,j,xspaceDim(),isXConsistent() && istrv(i) && istrv(j),MLid(),nullptr,0,0,assumeReal);
+    double res = altK.distK(x(i),x(j),xinfo(i),xinfo(j),i,j,xspaceDim(),isXConsistent() && istrv(i) && istrv(j),MLid(),assumeReal);
 
     return res;
 }
@@ -14422,7 +14125,7 @@ void ML_Base::ddistKdx(double &xscaleres, double &yscaleres, int &minmaxind, int
 //phantomx
     //FIXME: implement gradients and rank
 
-    altK.ddistKdx(xscaleres,yscaleres,minmaxind,x(i),x(j),xinfo(i),xinfo(j),i,j,xspaceDim(),isXConsistent() && istrv(i) && istrv(j),MLid(),nullptr,0,0,assumeReal);
+    altK.ddistKdx(xscaleres,yscaleres,minmaxind,x(i),x(j),xinfo(i),xinfo(j),i,j,xspaceDim(),isXConsistent() && istrv(i) && istrv(j),MLid(),assumeReal);
 
     return;
 }
@@ -14587,7 +14290,7 @@ void ML_Base::dgTrainingVector(Vector<double> &res, double &resn, int i) const
     return;
 }
 
-void ML_Base::dgTrainingVector(Vector<Vector<double> > &res, Vector<double> &resn, int i) const
+void ML_Base::dgTrainingVector(Vector<Vector<double>> &res, Vector<double> &resn, int i) const
 {
     Vector<gentype> tres;
     gentype tresn;
@@ -14932,7 +14635,7 @@ void ML_Base::dgTrainingVector(Vector<double> &res, const Vector<int> &i) const
     return;
 }
 
-void ML_Base::dgTrainingVector(Vector<Vector<double> > &res, const Vector<int> &i) const
+void ML_Base::dgTrainingVector(Vector<Vector<double>> &res, const Vector<int> &i) const
 {
     NiceAssert( i >= 0 );
 
@@ -14999,7 +14702,7 @@ int ML_Base::covar(Matrix<gentype> &resv, const Vector<int> &i) const
     return 0;
 }
 
-int ML_Base::covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &xx) const
+int ML_Base::covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype>> &xx) const
 {
     int m = xx.size();
     int res = 0;
@@ -15316,7 +15019,7 @@ gentype &UUcallbackdef(gentype &res, int mm, const ML_Base &caller, Vector<int> 
 
     if ( ( sum(iokr) > 0 ) || ( defbasis >= 0 ) )
     {
-        Vector<SparseVector<gentype> > x(m);
+        Vector<SparseVector<gentype>> x(m);
         Vector<vecInfo> xinfo(m);
 
         for ( i = m-1 ; i >= 0 ; --i )
@@ -15356,22 +15059,22 @@ gentype &UUcallbackdef(gentype &res, int mm, const ML_Base &caller, Vector<int> 
 
             else if ( m == 1 )
             {
-                caller.getUUOutputKernel().K1(res,x(z),xinfo(z),0_gent,nullptr,iok(z),0,0,0,caller.MLid(),nullptr);
+                caller.getUUOutputKernel().K1(res,x(z),xinfo(z),0_gent,nullptr,iok(z),0,0,0,caller.MLid());
             }
 
             else if ( m == 2 )
             {
-                caller.getUUOutputKernel().K2(res,x(z),x(1),xinfo(z),xinfo(1),0_gent,nullptr,iok(z),iok(1),0,0,0,caller.MLid(),nullptr,nullptr,nullptr);
+                caller.getUUOutputKernel().K2(res,x(z),x(1),xinfo(z),xinfo(1),0_gent,nullptr,iok(z),iok(1),0,0,0,caller.MLid());
             }
 
             else if ( m == 3 )
             {
-                caller.getUUOutputKernel().K3(res,x(z),x(1),x(2),xinfo(z),xinfo(1),xinfo(2),0_gent,nullptr,iok(z),iok(1),iok(2),0,0,0,caller.MLid(),nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
+                caller.getUUOutputKernel().K3(res,x(z),x(1),x(2),xinfo(z),xinfo(1),xinfo(2),0_gent,nullptr,iok(z),iok(1),iok(2),0,0,0,caller.MLid());
             }
 
             else if ( m == 4 )
             {
-                caller.getUUOutputKernel().K4(res,x(z),x(1),x(2),x(3),xinfo(z),xinfo(1),xinfo(2),xinfo(3),0_gent,nullptr,iok(z),iok(1),iok(2),iok(3),0,0,0,caller.MLid(),nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
+                caller.getUUOutputKernel().K4(res,x(z),x(1),x(2),x(3),xinfo(z),xinfo(1),xinfo(2),xinfo(3),0_gent,nullptr,iok(z),iok(1),iok(2),iok(3),0,0,0,caller.MLid());
             }
 
             else if ( m >= 5 )
@@ -15387,7 +15090,7 @@ gentype &UUcallbackdef(gentype &res, int mm, const ML_Base &caller, Vector<int> 
                     ii("&",i) = iok(i);
                 }
 
-                caller.getUUOutputKernel().Km(m,res,xx,xxinfo,0_gent,ii,nullptr,0,0,0,caller.MLid(),nullptr);
+                caller.getUUOutputKernel().Km(m,res,xx,xxinfo,0_gent,ii,nullptr,0,0,0,caller.MLid());
             }
         }
 
@@ -15999,7 +15702,7 @@ int ML_Base::getparam(int ind, gentype &val, const gentype &xa, int ia, const ge
 
         int i,m = (int) xa;
 
-        Vector<SparseVector<gentype> > xx(m);
+        Vector<SparseVector<gentype>> xx(m);
         const Vector<gentype> &xxb = (const Vector<gentype> &) xb;
 
         NiceAssert( xxb.size() == m );

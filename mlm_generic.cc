@@ -174,14 +174,14 @@ int MLM_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentyp
     return getQQ().qaddTrainingVector(i,y,x,sigmaweigh,epsweigh,dval);
 }
 
-int MLM_Generic::addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &sigmaweigh, const Vector<double> &epsweigh)
+int MLM_Generic::addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &sigmaweigh, const Vector<double> &epsweigh)
 {
     if ( tsize() )
     {
         int ii;
 
         Vector<gentype> tempy(y.size());
-        Vector<SparseVector<gentype> > tempx(x.size());
+        Vector<SparseVector<gentype>> tempx(x.size());
 
         for ( ii = 0 ; ii < tsize() ; ++ii )
         {
@@ -192,7 +192,7 @@ int MLM_Generic::addTrainingVector (int i, const Vector<gentype> &y, const Vecto
     return getQQ().addTrainingVector(i,y,x,sigmaweigh,epsweigh);
 }
 
-int MLM_Generic::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype> > &x, const Vector<double> &sigmaweigh, const Vector<double> &epsweigh)
+int MLM_Generic::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype>> &x, const Vector<double> &sigmaweigh, const Vector<double> &epsweigh)
 {
     if ( tsize() )
     {
@@ -465,7 +465,6 @@ int MLM_Generic::home(void)
 
             // Keep xy cache at base level
 
-            mltree("&",z).getKernel_unsafe().setsuggestXYcache(1);
             mltree("&",z).resetKernel(modind);
 
             // Ensure tree makes sense

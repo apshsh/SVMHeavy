@@ -71,19 +71,19 @@
 // safeatof: a "safe" version of ascii to gentype
 
 int grabnextarg(Stack<awarestream *> &commstack, std::string &currentarg);
-int grabargs(int num, Vector<Vector<std::string> > &destlist, Stack<awarestream *> &commstack, std::string &currentarg, int allowvetor = 1);
+int grabargs(int num, Vector<Vector<std::string>> &destlist, Stack<awarestream *> &commstack, std::string &currentarg, int allowvetor = 1);
 int puttylump(const std::string &src, Stack<awarestream *> &commstack);
 
-int     safeatoi(const std::string &src, SparseVector<SparseVector<gentype> > &argvariables);
-double  safeatof(const std::string &src, SparseVector<SparseVector<gentype> > &argvariables);
-gentype safeatog(const std::string &src, SparseVector<SparseVector<gentype> > &argvariables);
+int     safeatoi(const std::string &src, SparseVector<SparseVector<gentype>> &argvariables);
+double  safeatof(const std::string &src, SparseVector<SparseVector<gentype>> &argvariables);
+gentype safeatog(const std::string &src, SparseVector<SparseVector<gentype>> &argvariables);
 
-                   int             &safeatowhatever(int &res,             const std::string &src, SparseVector<SparseVector<gentype> > &argvariables);
-                   double          &safeatowhatever(double &res,          const std::string &src, SparseVector<SparseVector<gentype> > &argvariables);
-                   gentype         &safeatowhatever(gentype &res,         const std::string &src, SparseVector<SparseVector<gentype> > &argvariables);
-template <class T> Vector<T>       &safeatowhatever(Vector<T> &res,       const std::string &src, SparseVector<SparseVector<gentype> > &argvariables);
-template <class T> Matrix<T>       &safeatowhatever(Matrix<T> &res,       const std::string &src, SparseVector<SparseVector<gentype> > &argvariables);
-template <class T> SparseVector<T> &safeatowhatever(SparseVector<T> &res, const std::string &src, SparseVector<SparseVector<gentype> > &argvariables);
+                   int             &safeatowhatever(int &res,             const std::string &src, SparseVector<SparseVector<gentype>> &argvariables);
+                   double          &safeatowhatever(double &res,          const std::string &src, SparseVector<SparseVector<gentype>> &argvariables);
+                   gentype         &safeatowhatever(gentype &res,         const std::string &src, SparseVector<SparseVector<gentype>> &argvariables);
+template <class T> Vector<T>       &safeatowhatever(Vector<T> &res,       const std::string &src, SparseVector<SparseVector<gentype>> &argvariables);
+template <class T> Matrix<T>       &safeatowhatever(Matrix<T> &res,       const std::string &src, SparseVector<SparseVector<gentype>> &argvariables);
+template <class T> SparseVector<T> &safeatowhatever(SparseVector<T> &res, const std::string &src, SparseVector<SparseVector<gentype>> &argvariables);
 
 void stripcurlybrackets(std::string &evalargs);
 void stripquotes(std::string &evalargs);
@@ -125,7 +125,7 @@ void stripquotes(std::string &evalargs);
 void xlateDataSourceSuffixes(int isANtype, int fileargpos, int setibase,
                              const Vector<std::string> &currcommand,
                              const std::string &subcom,
-                             SparseVector<SparseVector<gentype> > &argvariables,
+                             SparseVector<SparseVector<gentype>> &argvariables,
                              SparseVector<ofiletype> &filevariables,
                              int &reverse, int &ignoreStart, int &imax, int &ibase, int &uselinesvector,
                              int &israw, int &startpoint, int &coercetosingle, int &coercefromsingle,
@@ -167,7 +167,7 @@ void preExtractLinesFromFile(ofiletype &filelines, gentype &linesleft, std::stri
 // currcommandis overwrites currcomand(0)
 
 void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &currcommandis, const Vector<std::string> &currcomand, int ktype,
-                   SparseVector<SparseVector<gentype> > &argvariables, int &kernnum, int firstcall);
+                   SparseVector<SparseVector<gentype>> &argvariables, int &kernnum, int firstcall);
 
 
 // SVM testing functions
@@ -188,19 +188,19 @@ void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &cu
 //
 // Arguments in the testFileVectors form copy that of addtrainingData.
 
-void testLOO        (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum, int startpoint,                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
-void testRecall     (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
-void testCross      (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum, int numreps, int startpoint, int randcross, int numfolds,                  gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
-void testSparSens   (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum, int minbad, int maxbad, double noisemean, double noisevar, int startpoint, gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
-void testFileVectors(int binaryRelabel, int singleDrop, std::string &logfile, const ML_Mutable &svmbase, std::string &tfilename, int reverse, int ignoreStart, int imax,            int &firstsum, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, gentype &finalresult, int uselinesvector, Vector<int> &linesread,                                                                                                            const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num),                const SparseVector<gentype> &xtemplate);
-void testTest       (                                   std::string &logfile, const ML_Mutable &svmbase, const Vector<SparseVector<gentype> > &xtest, const Vector<gentype> &ytest, int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int startpoint, int suppressfb, int useThreads);
-void testnegloglike (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables,                                            int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
-void testmaxinfogain(                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables,                                            int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
-void testRKHSnorm   (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables,                                            int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
+void testLOO        (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum, int startpoint,                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
+void testRecall     (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
+void testCross      (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum, int numreps, int startpoint, int randcross, int numfolds,                  gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
+void testSparSens   (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum, int minbad, int maxbad, double noisemean, double noisevar, int startpoint, gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
+void testFileVectors(int binaryRelabel, int singleDrop, std::string &logfile, const ML_Mutable &svmbase, std::string &tfilename, int reverse, int ignoreStart, int imax,            int &firstsum, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, gentype &finalresult, int uselinesvector, Vector<int> &linesread,                                                                                                            const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num),                const SparseVector<gentype> &xtemplate);
+void testTest       (                                   std::string &logfile, const ML_Mutable &svmbase, const Vector<SparseVector<gentype>> &xtest, const Vector<gentype> &ytest, int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int startpoint, int suppressfb, int useThreads);
+void testnegloglike (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables,                                            int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
+void testmaxinfogain(                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables,                                            int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
+void testRKHSnorm   (                                   std::string &logfile, const ML_Mutable &svmbase,                                                                            int &firstsum,                                                                            gentype &finalresult,                                                                                                                                                        const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables,                                            int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads);
 
 
 
-int loadDataFromMatlab(const std::string &xmatname, const std::string &ymatname, Vector<SparseVector<gentype> > &x, Vector<gentype> &dz, char targtype, int (*getsetExtVar)(gentype &res, const gentype &src, int num));
+int loadDataFromMatlab(const std::string &xmatname, const std::string &ymatname, Vector<SparseVector<gentype>> &x, Vector<gentype> &dz, char targtype, int (*getsetExtVar)(gentype &res, const gentype &src, int num));
 
 // Help function
 // =============
@@ -411,15 +411,15 @@ void egetparam(int svmind, int fnind, Vector<gentype> &val, const Vector<gentype
 
 int runsvmint(SVMThreadContext *svmContext,
               Stack<awarestream *> *xxxcommstack,
-              svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
+              svmvolatile SparseVector<SparseVector<gentype>> &globargvariables,
               int (*getsetExtVar)(gentype &res, const gentype &src, int num),
-              SparseVector<SparseVector<int> > &returntag);
+              SparseVector<SparseVector<int>> &returntag);
 
 int runsvm(SVMThreadContext *svmContext,
            Stack<awarestream *> *xxxcommstack,
-           svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
+           svmvolatile SparseVector<SparseVector<gentype>> &globargvariables,
            int (*getsetExtVar)(gentype &res, const gentype &src, int num),
-           SparseVector<SparseVector<int> > &returntag)
+           SparseVector<SparseVector<int>> &returntag)
 {
     // Install gentype global function
 
@@ -475,10 +475,10 @@ void runInteract(void)
 
 #define LOGVARPREFIX "svmh_"
 
-template <class T> int writeLog(const Vector<T> &resy, const Vector<Vector<T> > &resx, const std::string &resfilename); // just to file for this one
-template <class T> int writeLog(const Vector<T> &resy, const Vector<T> &rest, const Vector<Vector<T> > &resx, const std::string &resfilename); // just to file for this one
+template <class T> int writeLog(const Vector<T> &resy, const Vector<Vector<T>> &resx, const std::string &resfilename); // just to file for this one
+template <class T> int writeLog(const Vector<T> &resy, const Vector<T> &rest, const Vector<Vector<T>> &resx, const std::string &resfilename); // just to file for this one
 template <class T> int writeLog(const Vector<T> &res, const std::string &resfilename, int (*getsetExtVar)(gentype &res, const gentype &src, int num));
-template <>        int writeLog(const Vector<Vector<gentype> > &res, const std::string &resfilename, int (*getsetExtVar)(gentype &res, const gentype &src, int num));
+template <>        int writeLog(const Vector<Vector<gentype>> &res, const std::string &resfilename, int (*getsetExtVar)(gentype &res, const gentype &src, int num));
 template <class T> int writeLog(const Matrix<T> &res, const std::string &resfilename, int (*getsetExtVar)(gentype &res, const gentype &src, int num));
 
 template <class T>
@@ -551,7 +551,7 @@ int writeLog(const Vector<T> &res, const std::string &resfilename, int (*getsetE
 }
 
 template <>
-int writeLog(const Vector<Vector<gentype> > &resx, const std::string &resfilename, int (*getsetExtVar)(gentype &res, const gentype &src, int num))
+int writeLog(const Vector<Vector<gentype>> &resx, const std::string &resfilename, int (*getsetExtVar)(gentype &res, const gentype &src, int num))
 {
     (void) getsetExtVar;
 
@@ -620,7 +620,7 @@ int writeLog(const Vector<Vector<gentype> > &resx, const std::string &resfilenam
 }
 
 template <class T>
-int writeLog(const Vector<T> &resy, const Vector<Vector<T> > &resx, const std::string &resfilename)
+int writeLog(const Vector<T> &resy, const Vector<Vector<T>> &resx, const std::string &resfilename)
 {
     NiceAssert( resy.size() == resx.size() );
 
@@ -663,7 +663,7 @@ int writeLog(const Vector<T> &resy, const Vector<Vector<T> > &resx, const std::s
 #define MINVARREC 1e-12
 
 template <class T>
-int writeLog(const Vector<T> &resy, const Vector<T> &ress, const Vector<Vector<T> > &resx, const std::string &resfilename)
+int writeLog(const Vector<T> &resy, const Vector<T> &ress, const Vector<Vector<T>> &resx, const std::string &resfilename)
 {
     NiceAssert( resy.size() == resx.size() );
     NiceAssert( ress.size() == resx.size() );
@@ -1035,18 +1035,18 @@ int regML(SparseVector<ML_Mutable *> &mlbase, int mlInd, ML_Mutable *whattoreg)
 
 int callsvm(SVMThreadContext *svmContext,
             Stack<awarestream *> *xxxgridcommstack,
-            svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
+            svmvolatile SparseVector<SparseVector<gentype>> &globargvariables,
             int (*getsetExtVar)(gentype &res, const gentype &src, int num),
-            SparseVector<SparseVector<gentype> > &gridargvars,
+            SparseVector<SparseVector<gentype>> &gridargvars,
             int locverblevel,
             gentype &locfinalresult,
             std::string &loclogfile);
 
 int callsvm(SVMThreadContext *svmContext,
             Stack<awarestream *> *xxxgridcommstack,
-            svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
+            svmvolatile SparseVector<SparseVector<gentype>> &globargvariables,
             int (*getsetExtVar)(gentype &res, const gentype &src, int num),
-            SparseVector<SparseVector<gentype> > &gridargvars,
+            SparseVector<SparseVector<gentype>> &gridargvars,
             int locverblevel,
             gentype &locfinalresult,
             std::string &loclogfile)
@@ -1057,7 +1057,7 @@ int callsvm(SVMThreadContext *svmContext,
 
     int                                  &verblevel         = svmContext->verblevel;
     gentype                              &finalresult       = svmContext->finalresult;
-    SparseVector<SparseVector<gentype> > &argvariables      = svmContext->argvariables;
+    SparseVector<SparseVector<gentype>> &argvariables      = svmContext->argvariables;
     int                                  &depthin           = svmContext->depthin;
     std::string                          &logfile           = svmContext->logfile;
 
@@ -1074,7 +1074,7 @@ int callsvm(SVMThreadContext *svmContext,
     qswap(argvariables,gridargvars);  // temporarily swap argvariables (which we want to preserve) and gridargvars (which will be used by the call)
     qswap(logfile,loclogfile);
 
-    SparseVector<SparseVector<int> > returntag;
+    SparseVector<SparseVector<int>> returntag;
 
     int res = runsvmint(svmContext,&gridcommstack,globargvariables,getsetExtVar,returntag);
 
@@ -1117,9 +1117,9 @@ int callsvm(SVMThreadContext *svmContext,
 
 int runsvmint(SVMThreadContext *svmContext,
               Stack<awarestream *> *xxxcommstack,
-              svmvolatile SparseVector<SparseVector<gentype> > &globargvariables,
+              svmvolatile SparseVector<SparseVector<gentype>> &globargvariables,
               int (*getsetExtVar)(gentype &res, const gentype &src, int num),
-              SparseVector<SparseVector<int> > &returntag)
+              SparseVector<SparseVector<int>> &returntag)
 {
     BLK_Generic::getsetExtVar = getsetExtVar;
 
@@ -1138,7 +1138,7 @@ int runsvmint(SVMThreadContext *svmContext,
     int                                  &BayesianInd       = svmContext->BayesianInd;
     gentype                              &biasdefault       = svmContext->biasdefault;
     SparseVector<gentype>                &xtemplate         = svmContext->xtemplate;
-    SparseVector<SparseVector<gentype> > &argvariables      = svmContext->argvariables;
+    SparseVector<SparseVector<gentype>> &argvariables      = svmContext->argvariables;
     SparseVector<ofiletype>              &filevariables     = svmContext->filevariables;
     int                                  &depthin           = svmContext->depthin;
     std::string                          &logfile           = svmContext->logfile;
@@ -1183,24 +1183,24 @@ int runsvmint(SVMThreadContext *svmContext,
 
     // Command processing vectors
 
-    Vector<Vector<std::string> > loggingopt;
-    Vector<Vector<std::string> > multirunopt;
-    Vector<Vector<std::string> > svmsetupopt;
-    Vector<Vector<std::string> > svmpresetupopt;
-    Vector<Vector<std::string> > preloadopt;
-    Vector<Vector<std::string> > loadopt;
-    Vector<Vector<std::string> > postloadopt;
-    Vector<Vector<std::string> > learningopt;
-    Vector<Vector<std::string> > kernelopt;
-    Vector<Vector<std::string> > tuningopt;
-    Vector<Vector<std::string> > gridopt;
-    Vector<Vector<std::string> > xferopt;
-    Vector<Vector<std::string> > featureopt;
-    Vector<Vector<std::string> > fuzzyopt;
-    Vector<Vector<std::string> > bootopt;
-    Vector<Vector<std::string> > optimopt;
-    Vector<Vector<std::string> > performopt;
-    Vector<Vector<std::string> > reportopt;
+    Vector<Vector<std::string>> loggingopt;
+    Vector<Vector<std::string>> multirunopt;
+    Vector<Vector<std::string>> svmsetupopt;
+    Vector<Vector<std::string>> svmpresetupopt;
+    Vector<Vector<std::string>> preloadopt;
+    Vector<Vector<std::string>> loadopt;
+    Vector<Vector<std::string>> postloadopt;
+    Vector<Vector<std::string>> learningopt;
+    Vector<Vector<std::string>> kernelopt;
+    Vector<Vector<std::string>> tuningopt;
+    Vector<Vector<std::string>> gridopt;
+    Vector<Vector<std::string>> xferopt;
+    Vector<Vector<std::string>> featureopt;
+    Vector<Vector<std::string>> fuzzyopt;
+    Vector<Vector<std::string>> bootopt;
+    Vector<Vector<std::string>> optimopt;
+    Vector<Vector<std::string>> performopt;
+    Vector<Vector<std::string>> reportopt;
 
     int argbatchsize = 0;
     int skipon = 0;
@@ -1298,7 +1298,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                 // Reached rep command
 
-                Vector<Vector<std::string> > zifargs;
+                Vector<Vector<std::string>> zifargs;
 
                 if ( grabargs(3,zifargs,commstack,currentarg) )
                 {
@@ -1357,7 +1357,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                 // Reached if command
 
-                Vector<Vector<std::string> > zifargs;
+                Vector<Vector<std::string>> zifargs;
 
                 if ( grabargs(2,zifargs,commstack,currentarg) )
                 {
@@ -1397,7 +1397,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                 // Reached if command
 
-                Vector<Vector<std::string> > zifargs;
+                Vector<Vector<std::string>> zifargs;
 
                 if ( grabargs(2,zifargs,commstack,currentarg) )
                 {
@@ -1437,7 +1437,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                 // Reached if command
 
-                Vector<Vector<std::string> > zifargs;
+                Vector<Vector<std::string>> zifargs;
 
                 if ( grabargs(4,zifargs,commstack,currentarg) )
                 {
@@ -1518,7 +1518,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                 // Reached while command
 
-                Vector<Vector<std::string> > zifargs;
+                Vector<Vector<std::string>> zifargs;
 
                 if ( grabargs(3,zifargs,commstack,currentarg) )
                 {
@@ -1574,7 +1574,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                 // Reached usleep command
 
-                Vector<Vector<std::string> > zifargs;
+                Vector<Vector<std::string>> zifargs;
 
                 if ( grabargs(2,zifargs,commstack,currentarg) )
                 {
@@ -1595,7 +1595,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                 // Reached msleep command
 
-                Vector<Vector<std::string> > zifargs;
+                Vector<Vector<std::string>> zifargs;
 
                 if ( grabargs(2,zifargs,commstack,currentarg) )
                 {
@@ -1616,7 +1616,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                 // Reached sleep command
 
-                Vector<Vector<std::string> > zifargs;
+                Vector<Vector<std::string>> zifargs;
 
                 if ( grabargs(2,zifargs,commstack,currentarg) )
                 {
@@ -2627,8 +2627,8 @@ int runsvmint(SVMThreadContext *svmContext,
                       ( currentarg == "-kuc"   ) || ( currentarg == "-km"    ) || ( currentarg == "-kum"   ) ||
                       ( currentarg == "-kS"    ) || ( currentarg == "-kA"    ) || ( currentarg == "-kuS"   ) ||
                       ( currentarg == "-kMS"   ) || ( currentarg == "-kMA"   ) || ( currentarg == "-kMuS"  ) ||
-                      ( currentarg == "-kU"    ) || ( currentarg == "-koz"   ) || ( currentarg == "-mtb"   ) ||
-                      ( currentarg == "-bmx"   ) || ( currentarg == "-kOz"   ) ||
+                      ( currentarg == "-kU"    ) || ( currentarg == "-koz"   ) ||
+                      ( currentarg == "-kOz"   ) ||
                       ( currentarg == "-ekn"   ) || ( currentarg == "-ekp"   ) || ( currentarg == "-eknp"  ) ||
                       ( currentarg == "-eku"   ) || ( currentarg == "-ekss"  ) || ( currentarg == "-ekus"  ) ||
                       ( currentarg == "-eknn"  ) || ( currentarg == "-ekuu"  ) || ( currentarg == "-ekc"   ) ||
@@ -4253,9 +4253,9 @@ int runsvmint(SVMThreadContext *svmContext,
 
                     else if ( currcommand(0) == "-fat" ) { mooalpha = safeatof(currcommand(1),argvariables); } // Set something
                     else if ( currcommand(0) == "-fVg" ) { int nn = safeatoi(currcommand(1),argvariables); argvariables("&",0)("&",nn) = currcommand(2); } // Set integer variable
-                    else if ( currcommand(0) == "-fWg" ) { int nn = safeatoi(currcommand(1),argvariables); safeatowhatever(argvariables("&",0)("&",nn),currcommand(2),const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)); argvariables("&",0)("&",nn).finalise(); } // Set integer variable
-                    else if ( currcommand(0) == "-fVG" ) { int nn = safeatoi(currcommand(1),argvariables); const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn) = currcommand(2); } // Set integer variable
-                    else if ( currcommand(0) == "-fWG" ) { int nn = safeatoi(currcommand(1),argvariables); safeatowhatever(const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn),currcommand(2),argvariables); const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn).finalise(); } // Set integer variable
+                    else if ( currcommand(0) == "-fWg" ) { int nn = safeatoi(currcommand(1),argvariables); safeatowhatever(argvariables("&",0)("&",nn),currcommand(2),const_cast<SparseVector<SparseVector<gentype>> &>(globargvariables)); argvariables("&",0)("&",nn).finalise(); } // Set integer variable
+                    else if ( currcommand(0) == "-fVG" ) { int nn = safeatoi(currcommand(1),argvariables); const_cast<SparseVector<SparseVector<gentype>> &>(globargvariables)("&",0)("&",nn) = currcommand(2); } // Set integer variable
+                    else if ( currcommand(0) == "-fWG" ) { int nn = safeatoi(currcommand(1),argvariables); safeatowhatever(const_cast<SparseVector<SparseVector<gentype>> &>(globargvariables)("&",0)("&",nn),currcommand(2),argvariables); const_cast<SparseVector<SparseVector<gentype>> &>(globargvariables)("&",0)("&",nn).finalise(); } // Set integer variable
 
                     else if ( currcommand(0) == "-fuG" )
                     {
@@ -4267,7 +4267,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         Vector<double> xxx;
                         safeatowhatever(xxx,currcommand(3),argvariables);
                         evalTestFn(fnnum,rrr,xxx);
-                        const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn) = rrr;
+                        const_cast<SparseVector<SparseVector<gentype>> &>(globargvariables)("&",0)("&",nn) = rrr;
                     }
 
                     else if ( currcommand(0) == "-fuuG" )
@@ -4284,7 +4284,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         safeatowhatever(xxx,currcommand(3),argvariables);
                         safeatowhatever(aaa,currcommand(3),argvariables);
                         evalTestFn(fnnum,rrr,xxx,&aaa);
-                        const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn) = rrr;
+                        const_cast<SparseVector<SparseVector<gentype>> &>(globargvariables)("&",0)("&",nn) = rrr;
                     }
 
                     else if ( currcommand(0) == "-ftG" )
@@ -4299,7 +4299,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         safeatowhatever(xxx,currcommand(4),argvariables);
                         Vector<double> rrr(MM);
                         evalTestFn(fnnum,xxx.size(),MM,rrr,xxx,mooalpha);
-                        const_cast<SparseVector<SparseVector<gentype> > &>(globargvariables)("&",0)("&",nn) = rrr;
+                        const_cast<SparseVector<SparseVector<gentype>> &>(globargvariables)("&",0)("&",nn) = rrr;
                     }
 
                     else if ( currcommand(0) == "-fM" )
@@ -4618,9 +4618,9 @@ int runsvmint(SVMThreadContext *svmContext,
                         gentype cf(cfn);
 
                         int jj,kk;
-                        Vector<SparseVector<gentype> > xdata(N);
+                        Vector<SparseVector<gentype>> xdata(N);
                         Vector<gentype> ydata(N);
-                        SparseVector<SparseVector<gentype> > z;
+                        SparseVector<SparseVector<gentype>> z;
                         Vector<double> Qweight(N);
 
                         Qweight = 1.0;
@@ -4795,7 +4795,7 @@ int runsvmint(SVMThreadContext *svmContext,
 
                         int anomaliesRelabelled = 0;
 
-                        Vector<SparseVector<gentype> > xxx;
+                        Vector<SparseVector<gentype>> xxx;
                         Vector<gentype> yyy;
 
                         Vector<gentype> zassign;
@@ -4815,7 +4815,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         std::stringstream xstr(currcommand(2));
 
                         Vector<gentype> dz(1);
-                        Vector<SparseVector<gentype> > x(1);
+                        Vector<SparseVector<gentype>> x(1);
                         gentype temp;
 
                         streamItIn(xstr,x("&",0),0);
@@ -4827,7 +4827,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-AY" )
                     {
                         Vector<gentype> dz(1);
-                        Vector<SparseVector<gentype> > x(1);
+                        Vector<SparseVector<gentype>> x(1);
                         gentype temp,ttmpg;
 
                         safeatowhatever(dz("&",0),currcommand(1),argvariables);
@@ -4839,7 +4839,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-AZ" )
                     {
                         Vector<gentype> dz(1);
-                        Vector<SparseVector<gentype> > x(1);
+                        Vector<SparseVector<gentype>> x(1);
                         gentype temp,ttmpg;
                         int nInd = safeatoi(currcommand(3),argvariables);
 
@@ -4860,7 +4860,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         std::stringstream xstr(currcommand(2));
 
                         Vector<gentype> dz;
-                        Vector<SparseVector<gentype> > x;
+                        Vector<SparseVector<gentype>> x;
                         gentype temp;
 
                         dstr >> dz;
@@ -4878,7 +4878,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         safeatowhatever(dd,currcommand(1),argvariables);
                         safeatowhatever(xx,currcommand(2),argvariables);
 
-                        Vector<SparseVector<gentype> > x(xx.size());
+                        Vector<SparseVector<gentype>> x(xx.size());
 
                         int ij;
 
@@ -4903,7 +4903,7 @@ int runsvmint(SVMThreadContext *svmContext,
                         safeatowhatever(xx,currcommand(2),argvariables);
                         safeatowhatever(ss,currcommand(3),argvariables);
 
-                        Vector<SparseVector<gentype> > x(xx.size());
+                        Vector<SparseVector<gentype>> x(xx.size());
 
                         int ij;
 
@@ -4920,7 +4920,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-AW" )
                     {
                         Vector<gentype> dz;
-                        Vector<SparseVector<gentype> > x;
+                        Vector<SparseVector<gentype>> x;
                         gentype temp;
 
                         int pointsadded = loadDataFromMatlab(currcommand(2),currcommand(1),x,dz,getMLrefconst(MLInd).targType(),getsetExtVar);
@@ -5446,35 +5446,35 @@ int runsvmint(SVMThreadContext *svmContext,
                     optname = "sim "+ssj.str();
                 }
 
-                Vector<Vector<Vector<gentype> > > vecallxres;
-                Vector<Vector<Vector<gentype> > > vecallrawxres;
-                Vector<Vector<gentype> >          vecallfres;
-                Vector<Vector<Vector<gentype> > > vecallcres;
-                Vector<Vector<gentype> >          vecallFres;
-                Vector<Vector<gentype> >          vecallmres;
-                Vector<Vector<int> >              vecallires;
-                Vector<Vector<gentype> >          vecallsres;
-                Vector<Vector<double> >           vecallhres;
-                Vector<Vector<double> >           vecsscore;
-                Vector<Vector<int> >              vecis_feas;
+                Vector<Vector<Vector<gentype>>> vecallxres;
+                Vector<Vector<Vector<gentype>>> vecallrawxres;
+                Vector<Vector<gentype>>         vecallfres;
+                Vector<Vector<Vector<gentype>>> vecallcres;
+                Vector<Vector<gentype>>         vecallFres;
+                Vector<Vector<gentype>>         vecallmres;
+                Vector<Vector<int>>             vecallires;
+                Vector<Vector<gentype>>         vecallsres;
+                Vector<Vector<double>>          vecallhres;
+                Vector<Vector<double>>          vecsscore;
+                Vector<Vector<int>>             vecis_feas;
 
-                Vector<gentype>          vecmeanfres;
-                Vector<gentype>          vecmeanFres;
-                Vector<gentype>          vecmeanires;
-                Vector<gentype>          vecmeantres;
-                Vector<gentype>          vecmeanTres;
-                Vector<Vector<gentype> > vecmeanallfres;
-                Vector<Vector<gentype> > vecmeanallFres;
-                Vector<Vector<gentype> > vecmeanallmres;
+                Vector<gentype>         vecmeanfres;
+                Vector<gentype>         vecmeanFres;
+                Vector<gentype>         vecmeanires;
+                Vector<gentype>         vecmeantres;
+                Vector<gentype>         vecmeanTres;
+                Vector<Vector<gentype>> vecmeanallfres;
+                Vector<Vector<gentype>> vecmeanallFres;
+                Vector<Vector<gentype>> vecmeanallmres;
 
-                Vector<gentype>          vecvarfres;
-                Vector<gentype>          vecvarFres;
-                Vector<gentype>          vecvarires;
-                Vector<gentype>          vecvartres;
-                Vector<gentype>          vecvarTres;
-                Vector<Vector<gentype> > vecvarallfres;
-                Vector<Vector<gentype> > vecvarallFres;
-                Vector<Vector<gentype> > vecvarallmres;
+                Vector<gentype>         vecvarfres;
+                Vector<gentype>         vecvarFres;
+                Vector<gentype>         vecvarires;
+                Vector<gentype>         vecvartres;
+                Vector<gentype>         vecvarTres;
+                Vector<Vector<gentype>> vecvarallfres;
+                Vector<Vector<gentype>> vecvarallFres;
+                Vector<Vector<gentype>> vecvarallmres;
 
                 Vector<std::string> vecnames;
 
@@ -5916,7 +5916,7 @@ int runsvmint(SVMThreadContext *svmContext,
                     else if ( currcommand(0) == "-gbD"    ) { getBayesianref(BayesianInd).delta               = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbzz"   ) { getBayesianref(BayesianInd).zeta                = safeatof(currcommand(1),argvariables); }
 
-                    if      ( currcommand(0) == "-gbk"   ) { getBayesianref(BayesianInd).nu                  = safeatof(currcommand(1),argvariables); }
+                    if      ( currcommand(0) == "-gbk"   ) { getBayesianref(BayesianInd).numain              = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbx"   ) { getBayesianref(BayesianInd).modD                = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbo"   ) { getBayesianref(BayesianInd).a                   = safeatof(currcommand(1),argvariables); }
                     else if ( currcommand(0) == "-gbB"   ) { getBayesianref(BayesianInd).b                   = safeatof(currcommand(1),argvariables); }
@@ -6183,17 +6183,17 @@ int runsvmint(SVMThreadContext *svmContext,
 
                                 vecnames.add(numtests);
 
-                                Vector<Vector<gentype> > &allxres    = vecallxres("&",numtests);
-                                Vector<Vector<gentype> > &allrawxres = vecallrawxres("&",numtests);
-                                Vector<gentype>          &allfres    = vecallfres("&",numtests);
-                                Vector<Vector<gentype> > &allcres    = vecallcres("&",numtests);
-                                Vector<gentype>          &allFres    = vecallFres("&",numtests);
-                                Vector<gentype>          &allmres    = vecallmres("&",numtests);
-                                Vector<int>              &allires    = vecallires("&",numtests);
-                                Vector<gentype>          &allsres    = vecallsres("&",numtests);
-                                Vector<double>           &allhres    = vecallhres("&",numtests);
-                                Vector<double>           &sscore     = vecsscore("&",numtests);
-                                Vector<int>              &is_feas    = vecis_feas("&",numtests);
+                                Vector<Vector<gentype>> &allxres    = vecallxres("&",numtests);
+                                Vector<Vector<gentype>> &allrawxres = vecallrawxres("&",numtests);
+                                Vector<gentype>         &allfres    = vecallfres("&",numtests);
+                                Vector<Vector<gentype>> &allcres    = vecallcres("&",numtests);
+                                Vector<gentype>         &allFres    = vecallFres("&",numtests);
+                                Vector<gentype>         &allmres    = vecallmres("&",numtests);
+                                Vector<int>             &allires    = vecallires("&",numtests);
+                                Vector<gentype>         &allsres    = vecallsres("&",numtests);
+                                Vector<double>          &allhres    = vecallhres("&",numtests);
+                                Vector<double>          &sscore     = vecsscore("&",numtests);
+                                Vector<int>             &is_feas    = vecis_feas("&",numtests);
 
                                 gentype         &meanfres    = vecmeanfres("&",numtests);
                                 gentype         &meanFres    = vecmeanFres("&",numtests);
@@ -6409,8 +6409,8 @@ errstream() << "phantomabc ires = " << ires << "\n";
                                     errstream() << "Setting result " << xres << "\n";
 
                                     {
-                                        //SparseVector<SparseVector<gentype> > gridargvars(argvariables);
-                                        SparseVector<SparseVector<gentype> > &gridargvars = argvariables;
+                                        //SparseVector<SparseVector<gentype>> gridargvars(argvariables);
+                                        SparseVector<SparseVector<gentype>> &gridargvars = argvariables;
 
                                         // Not necessarily true NiceAssert( xres.size() == argnums.size() );
 
@@ -6512,12 +6512,12 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                                     if ( verblevel && ( logfile.length() > 0 ) )
                                     {
-                                        retVector<Vector<gentype> > tmpvaa;
-                                        retVector<gentype>          tmpvbb;
-                                        retVector<gentype>          tmpvc;
-                                        retVector<Vector<gentype> > tmpvq;
-                                        retVector<double>           tmpvd;
-                                        retVector<int>              tmpve;
+                                        retVector<Vector<gentype>> tmpvaa;
+                                        retVector<gentype>         tmpvbb;
+                                        retVector<gentype>         tmpvc;
+                                        retVector<Vector<gentype>> tmpvq;
+                                        retVector<double>          tmpvd;
+                                        retVector<int>             tmpve;
 
                                         errstream() << "Writing gridfile... ";
 
@@ -6655,7 +6655,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                         if ( numtests && plotoptres )
                         {
-                            multiplot2d(vecmeanallmres,vecvarallmres,vecnames,optplotymin,optplotymax,optplotname,optplotdataname,optplotoutformat,optplottitle);
+                            multiplot2d(vecmeanallmres,vecvarallmres,vecnames,optplotymin,optplotymax,optplotname,optplotdataname,optplotoutformat,optplottitle,0);
                         }
 //
 //FIXMEFIXME FIXME in the 2-objective case we should plot the Pareto front
@@ -6754,7 +6754,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
                 int useDescent = 0;
 
-                Vector<SparseVector<gentype> > xtest;
+                Vector<SparseVector<gentype>> xtest;
                 Vector<gentype> ytest;
                 int startdirty = 0;
                 int traverse = 0;
@@ -7308,7 +7308,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                         std::stringstream xstr(currcommand(2));
 
                         Vector<gentype> dz;
-                        Vector<SparseVector<gentype> > x;
+                        Vector<SparseVector<gentype>> x;
 
                         dstr >> dz;
                         streamItIn(xstr,x,0);
@@ -7326,7 +7326,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     {
                         int firstsum = 1;
                         Vector<gentype> dz;
-                        Vector<SparseVector<gentype> > x;
+                        Vector<SparseVector<gentype>> x;
                         gentype temp;
 
                         loadDataFromMatlab(currcommand(2),currcommand(1),x,dz,getMLrefconst(MLInd).targType(),getsetExtVar);
@@ -7372,9 +7372,9 @@ errstream() << "phantomabc ires = " << ires << "\n";
 
 
                         int jj,kk;
-                        Vector<SparseVector<gentype> > xdata(N);
+                        Vector<SparseVector<gentype>> xdata(N);
                         Vector<gentype> ydata(N);
-                        SparseVector<SparseVector<gentype> > z;
+                        SparseVector<SparseVector<gentype>> z;
                         Vector<double> Qweight(N);
 
                         Qweight = 1.0;
@@ -7883,7 +7883,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     { 
                         int m = safeatoi(currcommand(1),argvariables);
 
-                        Vector<SparseVector<gentype> > xx(m);
+                        Vector<SparseVector<gentype>> xx(m);
 
                         for ( int ii = 0 ; ii < m ; ++ii )
                         {
@@ -8045,7 +8045,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     else if ( currcommand(0) == "-hV" )
                     {
                         std::stringstream xstr(currcommand(1));
-                        Vector<SparseVector<gentype> > x;
+                        Vector<SparseVector<gentype>> x;
                         Vector<gentype> resh;
                         Vector<gentype> resg;
 
@@ -8075,7 +8075,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     else if ( currcommand(0) == "-hhV" )
                     {
                         std::stringstream xstr(currcommand(1));
-                        Vector<SparseVector<gentype> > x;
+                        Vector<SparseVector<gentype>> x;
                         Vector<gentype> resh;
                         Vector<gentype> resg;
 
@@ -8361,7 +8361,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     else if ( currcommand(0) == "-hVv" )
                     {
                         std::stringstream xstr(currcommand(1));
-                        Vector<SparseVector<gentype> > x;
+                        Vector<SparseVector<gentype>> x;
                         Vector<gentype> resh;
                         gentype dummy;
 
@@ -8383,7 +8383,7 @@ errstream() << "phantomabc ires = " << ires << "\n";
                     else if ( currcommand(0) == "-hVV" )
                     {
                         std::stringstream xstr(currcommand(1));
-                        Vector<SparseVector<gentype> > x;
+                        Vector<SparseVector<gentype>> x;
                         Matrix<gentype> resh;
 
                         streamItIn(xstr,x,0);
@@ -8868,8 +8868,8 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
     gentype &finalresult                                               = *((gentype                               *) ((void **) arg)[3] );
     std::string &logfile                                               = *((std::string                           *) ((void **) arg)[4] );
     int &depthin                                                       = *((int                                   *) ((void **) arg)[5] );
-    SparseVector<SparseVector<gentype> > &argvariables                 = *((SparseVector<SparseVector<gentype> >  *) ((void **) arg)[6] );
-    svmvolatile SparseVector<SparseVector<gentype> > &globargvariables = *((SparseVector<SparseVector<gentype> >  *) ((void **) arg)[8] );
+    SparseVector<SparseVector<gentype>> &argvariables                  = *((SparseVector<SparseVector<gentype>>   *) ((void **) arg)[6] );
+    svmvolatile SparseVector<SparseVector<gentype>> &globargvariables  = *((SparseVector<SparseVector<gentype>>   *) ((void **) arg)[8] );
     Vector<int> &argnums                                               = *((Vector<int>                           *) ((void **) arg)[9] );
     int (*getsetExtVar)(gentype &, const gentype &, int)               = ((int (*)(gentype &, const gentype &, int)) ((void **) arg)[10]);
     //SparseVector<ML_Mutable *> &svmbase                                = *((SparseVector<ML_Mutable *>            *) ((void **) arg)[11]);
@@ -8898,7 +8898,7 @@ void gridelmrun(gentype &res, Vector<gentype> &x, void *arg)
     int itnumalt = (-itnum)/10000; // relevant if itnum < 0
     int itnumid  = (-itnum)%10000; // relevant if itnum < 0
 
-    SparseVector<SparseVector<gentype> > gridargvars(argvariables);
+    SparseVector<SparseVector<gentype>> gridargvars(argvariables);
 
     NiceAssert( ( x.size() >= argnums.size() ) || !x.size() );
 
@@ -9164,7 +9164,7 @@ int grabnextarg(Stack<awarestream *> &commstack, std::string &currentarg)
     return stopnow;
 }
 
-int grabargs(int num, Vector<Vector<std::string> > &destlist, Stack<awarestream *> &commstack, std::string &currentarg, int allowvetor)
+int grabargs(int num, Vector<Vector<std::string>> &destlist, Stack<awarestream *> &commstack, std::string &currentarg, int allowvetor)
 {
     int i,j;
     size_t k;
@@ -9451,22 +9451,22 @@ void stripquotes(std::string &evalarg)
     return;
 }
 
-int &safeatowhatever(int &res, const std::string &src, SparseVector<SparseVector<gentype> > &argvariables)
+int &safeatowhatever(int &res, const std::string &src, SparseVector<SparseVector<gentype>> &argvariables)
 {
     return res = safeatoi(src,argvariables);
 }
 
-double &safeatowhatever(double &res, const std::string &src, SparseVector<SparseVector<gentype> > &argvariables)
+double &safeatowhatever(double &res, const std::string &src, SparseVector<SparseVector<gentype>> &argvariables)
 {
     return res = safeatof(src,argvariables);
 }
 
-gentype &safeatowhatever(gentype &res, const std::string &src, SparseVector<SparseVector<gentype> > &argvariables)
+gentype &safeatowhatever(gentype &res, const std::string &src, SparseVector<SparseVector<gentype>> &argvariables)
 {
     return res = safeatog(src,argvariables);
 }
 
-template <class T> Vector<T> &safeatowhatever(Vector<T> &res, const std::string &src, SparseVector<SparseVector<gentype> > &argvariables)
+template <class T> Vector<T> &safeatowhatever(Vector<T> &res, const std::string &src, SparseVector<SparseVector<gentype>> &argvariables)
 {
     gentype temp(safeatog(src,argvariables));
 
@@ -9489,7 +9489,7 @@ template <class T> Vector<T> &safeatowhatever(Vector<T> &res, const std::string 
     return res;
 }
 
-template <class T> SparseVector<T> &safeatowhatever(SparseVector<T> &res, const std::string &src, SparseVector<SparseVector<gentype> > &argvariables)
+template <class T> SparseVector<T> &safeatowhatever(SparseVector<T> &res, const std::string &src, SparseVector<SparseVector<gentype>> &argvariables)
 {
     // reset target
 
@@ -9513,7 +9513,7 @@ template <class T> SparseVector<T> &safeatowhatever(SparseVector<T> &res, const 
     return res;
 }
 
-template <class T> Matrix<T> &safeatowhatever(Matrix<T> &res, const std::string &src, SparseVector<SparseVector<gentype> > &argvariables)
+template <class T> Matrix<T> &safeatowhatever(Matrix<T> &res, const std::string &src, SparseVector<SparseVector<gentype>> &argvariables)
 {
     std::string xsrc("M:");
 
@@ -9546,7 +9546,7 @@ template <class T> Matrix<T> &safeatowhatever(Matrix<T> &res, const std::string 
     return res;
 }
 
-int safeatoi(const std::string &src, SparseVector<SparseVector<gentype> > &argvariables)
+int safeatoi(const std::string &src, SparseVector<SparseVector<gentype>> &argvariables)
 {
     gentype srceqn(src);
     int res;
@@ -9568,7 +9568,7 @@ int safeatoi(const std::string &src, SparseVector<SparseVector<gentype> > &argva
     return res;
 }
 
-double safeatof(const std::string &src, SparseVector<SparseVector<gentype> > &argvariables)
+double safeatof(const std::string &src, SparseVector<SparseVector<gentype>> &argvariables)
 {
     gentype srceqn(src);
     double res;
@@ -9590,7 +9590,7 @@ double safeatof(const std::string &src, SparseVector<SparseVector<gentype> > &ar
     return res;
 }
 
-gentype safeatog(const std::string &src, SparseVector<SparseVector<gentype> > &argvariables)
+gentype safeatog(const std::string &src, SparseVector<SparseVector<gentype>> &argvariables)
 {
     gentype res(src);
 
@@ -9599,7 +9599,7 @@ gentype safeatog(const std::string &src, SparseVector<SparseVector<gentype> > &a
     return res;
 }
 
-void xlateDataSourceSuffixes(int isANtype, int fileargpos, int setibase, const Vector<std::string> &currcommand, const std::string &subcom, SparseVector<SparseVector<gentype> > &argvariables, SparseVector<ofiletype> &filevariables,
+void xlateDataSourceSuffixes(int isANtype, int fileargpos, int setibase, const Vector<std::string> &currcommand, const std::string &subcom, SparseVector<SparseVector<gentype>> &argvariables, SparseVector<ofiletype> &filevariables,
      int &reverse, int &ignoreStart, int &imax, int &ibase, int &uselinesvector, int &israw, int &startpoint, int &coercetosingle, int &coercefromsingle, gentype &fromsingletarget, std::string &trainfile, Vector<int> &linesread)
 {
     int randorder = 0; // set 1 for random ordering
@@ -9764,7 +9764,7 @@ void preExtractLinesFromFile(ofiletype &filelines, gentype &linesleft, std::stri
 
 
 void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &currcommandis, const Vector<std::string> &currcommand, int ktype,
-                   SparseVector<SparseVector<gentype> > &argvariables, int &kernnum, int firstcall)
+                   SparseVector<SparseVector<gentype>> &argvariables, int &kernnum, int firstcall)
 {
     // Process this first
 
@@ -9898,8 +9898,6 @@ void processKernel(ML_Base &kernML, MercerKernel &theKern, const std::string &cu
                         else if ( currcommandis == "-kwlb" ) { gentype tmpg; safeatowhatever(tmpg,currcommand(1),argvariables); theKern.setWeightLB(tmpg,kernnum); }
                         else if ( currcommandis == "-kwub" ) { gentype tmpg; safeatowhatever(tmpg,currcommand(1),argvariables); theKern.setWeightUB(tmpg,kernnum); }
                         else if ( currcommandis == "-kt"   ) { theKern.setType(safeatoi(currcommand(1),argvariables),kernnum); }
-                        else if ( currcommandis == "-mtb"  ) { theKern.setsuggestXYcache(1); }
-                        else if ( currcommandis == "-bmx"  ) { theKern.setsuggestXYcache(0); }
 //                        else if ( currcommandis == "-kcy " ) { theKern.setChurnInner(1); }
 //                        else if ( currcommandis == "-kcn"  ) { theKern.setChurnInner(0); }
                         else if ( currcommandis == "-kan"  ) { theKern.setAltDiff(safeatoi(currcommand(1),argvariables)); }
@@ -10219,7 +10217,7 @@ errstream() << "set xscale: " << xscale << "\n";
                             std::stringstream xbstr(currcommand(2));
 
                             Vector<int> linGradOrd;
-                            Vector<Matrix<double> > linGradScal;
+                            Vector<Matrix<double>> linGradScal;
 
                             streamItIn(xastr,linGradOrd,0);
                             //streamItIn(xbstr,linGradScal,0);
@@ -10477,7 +10475,7 @@ errstream() << "set xscale: " << xscale << "\n";
 
 
 
-void testTest(std::string &logfile, const ML_Mutable &svmbase, const Vector<SparseVector<gentype> > &xtest, const Vector<gentype> &ytest, int &firstsum, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int startpoint, int suppressfb, int useThreads)
+void testTest(std::string &logfile, const ML_Mutable &svmbase, const Vector<SparseVector<gentype>> &xtest, const Vector<gentype> &ytest, int &firstsum, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int startpoint, int suppressfb, int useThreads)
 {
     Vector<int> cnt;
     Matrix<int> cfm;
@@ -10584,7 +10582,7 @@ void testTest(std::string &logfile, const ML_Mutable &svmbase, const Vector<Spar
     return;
 }
 
-void testLOO(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, int startpoint, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int recordres, int logres,int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
+void testLOO(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, int startpoint, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int recordres, int logres,int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
 {
     Vector<int> cnt;
     Matrix<int> cfm;
@@ -10689,7 +10687,7 @@ void testLOO(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, int
     return;
 }
 
-void testRecall(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
+void testRecall(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
 {
     Vector<int> cnt;
     Matrix<int> cfm;
@@ -10794,16 +10792,16 @@ void testRecall(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, 
     return;
 }
 
-void testCross(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, int numreps, int startpoint, int randcross, int numfolds, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
+void testCross(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, int numreps, int startpoint, int randcross, int numfolds, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
 {
     Vector<double> repres;
     Vector<double> cnt;
     Matrix<double> cfm;
     double res = 0.0;
     int i,j;
-    Vector<Vector<gentype> > resh;
-    Vector<Vector<gentype> > resg;
-    Vector<Vector<gentype> > gvarres;
+    Vector<Vector<gentype>> resh;
+    Vector<Vector<gentype>> resg;
+    Vector<Vector<gentype>> gvarres;
 
     res = calcCross(svmbase,numfolds,randcross,repres,cnt,cfm,resh,resg,gvarres,numreps,startpoint,recordxvar,0,useThreads);
 
@@ -10946,7 +10944,7 @@ void testCross(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, i
     return;
 }
 
-void testSparSens(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, int minbad, int maxbad, double noisemean, double noisevar, int startpoint, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
+void testSparSens(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, int minbad, int maxbad, double noisemean, double noisevar, int startpoint, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
 {
     Vector<double> repres;
     Vector<double> cnt;
@@ -10954,9 +10952,9 @@ void testSparSens(std::string &logfile, const ML_Mutable &svmbase, int &firstsum
     double res = 0.0;
     int i,j;
     int numreps = maxbad-minbad+1;
-    Vector<Vector<gentype> > resh;
-    Vector<Vector<gentype> > resg;
-    Vector<Vector<gentype> > gvarres;
+    Vector<Vector<gentype>> resh;
+    Vector<Vector<gentype>> resg;
+    Vector<Vector<gentype>> gvarres;
 
     res = calcSparSens(svmbase,repres,cnt,cfm,resh,resg,gvarres,minbad,maxbad,noisemean,noisevar,startpoint,recordxvar,useThreads);
 
@@ -11092,7 +11090,7 @@ void testSparSens(std::string &logfile, const ML_Mutable &svmbase, int &firstsum
     return;
 }
 
-void testFileVectors(int binaryRelabel, int singleDrop, std::string &logfile, const ML_Mutable &svmbase, std::string &tfilename, int reverse, int ignoreStart, int imax, int &firstsum, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, gentype &finalresult, int uselinesvector, Vector<int> &linesread, const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), const SparseVector<gentype> &xtemplate)
+void testFileVectors(int binaryRelabel, int singleDrop, std::string &logfile, const ML_Mutable &svmbase, std::string &tfilename, int reverse, int ignoreStart, int imax, int &firstsum, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, gentype &finalresult, int uselinesvector, Vector<int> &linesread, const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int recordres, int logres, int recordxvar, int (*getsetExtVar)(gentype &res, const gentype &src, int num), const SparseVector<gentype> &xtemplate)
 {
     int pointsadded;
 
@@ -11211,7 +11209,7 @@ void testFileVectors(int binaryRelabel, int singleDrop, std::string &logfile, co
     return;
 }
 
-void testnegloglike(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
+void testnegloglike(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
 {
     (void) getsetExtVar;
     (void) logfile;
@@ -11234,7 +11232,7 @@ void testnegloglike(std::string &logfile, const ML_Mutable &svmbase, int &firsts
     return;
 }
 
-void testmaxinfogain(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
+void testmaxinfogain(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
 {
     (void) getsetExtVar;
     (void) logfile;
@@ -11257,7 +11255,7 @@ void testmaxinfogain(std::string &logfile, const ML_Mutable &svmbase, int &first
     return;
 }
 
-void testRKHSnorm(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype> > &argvariables, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
+void testRKHSnorm(std::string &logfile, const ML_Mutable &svmbase, int &firstsum, gentype &finalresult, const gentype &resfilter, SparseVector<SparseVector<gentype>> &argvariables, int (*getsetExtVar)(gentype &res, const gentype &src, int num), int useThreads)
 {
     (void) getsetExtVar;
     (void) logfile;
@@ -11296,7 +11294,7 @@ void testRKHSnorm(std::string &logfile, const ML_Mutable &svmbase, int &firstsum
 
 
 
-int loadDataFromMatlab(const std::string &xmatname, const std::string &ymatname, Vector<SparseVector<gentype> > &x, Vector<gentype> &dz, char targtype, int (*getsetExtVar)(gentype &res, const gentype &src, int num))
+int loadDataFromMatlab(const std::string &xmatname, const std::string &ymatname, Vector<SparseVector<gentype>> &x, Vector<gentype> &dz, char targtype, int (*getsetExtVar)(gentype &res, const gentype &src, int num))
 {
     gentype Xmat;
     gentype ymat;
@@ -13504,12 +13502,6 @@ void printhelp(std::ostream &output, int basic, int advanced)
     output << ( (          advanced ) ? "                  ** Assumptions: these can speed up optimisation, **         \n" : "" );
     output << ( (          advanced ) ? "                  ** but make  sure they're  valid and  disable if **         \n" : "" );
     output << ( (          advanced ) ? "                  ** they are not.                                 **         \n" : "" );
-    output << ( (          advanced ) ? "                                                                              \n" : "" );
-    output << ( (          advanced ) ? "         -mtb            - always use  inner-product cache for speed.  This is\n" : "" );
-    output << ( (          advanced ) ? "                           faster  if you're  doing kernel  tuning,  but  uses\n" : "" );
-    output << ( (          advanced ) ? "                           almost double  the memory and offers  no speedup if\n" : "" );
-    output << ( (          advanced ) ? "                           kernel is not tuned.                               \n" : "" );
-    output << ( (          advanced ) ? "         -bmx            - save memory by not using inner-prd cache (default).\n" : "" );
     output << ( (          advanced ) ? "                                                                              \n" : "" );
 //    output << ( (          advanced ) ? "         -kcy            - enable re-calc  of <x,y>,  ||x-y|| (where possible)\n" : "" );
 //    output << ( (          advanced ) ? "                           when adjusting  kernel parameters.  Note  that this\n" : "" );
@@ -16118,7 +16110,6 @@ void printhelpvars(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "fnA(h,9068)    = singmethod                                                   \n" : "" );
     output << ( ( basic || advanced ) ? "fnA(h,9069)    = rejectThreshold                                              \n" : "" );
     output << ( ( basic || advanced ) ? "fnA(h,9070)    = Gp                                                           \n" : "" );
-    output << ( ( basic || advanced ) ? "fnA(h,9071)    = XX                                                           \n" : "" );
     output << ( ( basic || advanced ) ? "fnA(h,9072)    = kerndiag                                                     \n" : "" );
     output << ( ( basic || advanced ) ? "fnA(h,9073)    = bias                                                         \n" : "" );
     output << ( ( basic || advanced ) ? "fnA(h,9074)    = alpha                                                        \n" : "" );
@@ -16145,7 +16136,6 @@ void printhelpvars(std::ostream &output, int basic, int advanced)
     output << ( ( basic || advanced ) ? "fnB(h,9116,i)  = QuadBiasForce(i)                                             \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "fnC(h,9200,i,j)= Gp(i,j)                                                      \n" : "" );
-    output << ( ( basic || advanced ) ? "fnC(h,9201,i,j)= XX(i,j)                                                      \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );
     output << ( ( basic || advanced ) ? "                  -- LSV specific options                          --         \n" : "" );
     output << ( ( basic || advanced ) ? "                                                                              \n" : "" );

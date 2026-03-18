@@ -1,18 +1,3 @@
-/*
-    virtual       double                 xMAD   (void)                       const;
-needs to be added at:
-
-lsv_generic_deref.hpp:695:    virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getQconst().xmax(res);    }
-lsv_gentyp.hpp:669:           virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getQconst().xmax(res);    }
-lsv_mvrank.hpp:669:           virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getQconst().xmax(res);    }
-lsv_planar.hpp:669:           virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getQconst().xmax(res);    }
-ml_base_deref.hpp:693:        virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getQconst().xmax(res);    }
-ml_mutable.hpp:756:           virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getMLconst().xmax(res);   }
-svm_generic_deref.hpp:695:    virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const override { return getQconst().xmax(res);    }
-
-
-in sparsevector: weighted sums and means as per vector
-*/
 
 //
 // ML (machine learning) base type
@@ -134,6 +119,10 @@ const gentype &VVcallbackdef(gentype &res, int m, const gentype &kval, const ML_
 
 #define DEFCMIN 0.01
 #define DEFCMAX 10
+#define DEFSIGMIN 1e-4
+//#define DEFSIGMIN 0.005 this is apparently standard in some other BO libraries, but seems quite high
+#define DEFSIGMAX 1
+//#define DEFSIGMAX 2 again, this is standard in some BO libraries, but seems way too high!
 #define DEFEPSMIN 1e-5
 #define DEFEPSMAX 2
 #define NUMZOOMS   1
@@ -147,8 +136,12 @@ class tkBounds
 public:
     explicit tkBounds()
     {
-        Cmin = 0.01;
-        Cmax = 100;
+        Cmin = DEFCMIN;
+        Cmax = DEFCMAX;
+
+        sigmamin = DEFSIGMIN;
+        sigmamax = DEFSIGMAX;
+
         epsmin = 0;
         epsmax = 1;
     }
@@ -170,6 +163,9 @@ public:
         Cmin = DEFCMIN;
         Cmax = DEFCMAX;
 
+        sigmamin = DEFSIGMIN;
+        sigmamax = DEFSIGMAX;
+
         epsmin = DEFEPSMIN;
         epsmax = DEFEPSMAX;
 
@@ -180,13 +176,19 @@ public:
 
     Vector<double> wlb; // kernel weight lower bounds
     Vector<double> wub; // kernel weight upper bounds
-    Vector<Vector<double> > klb; // kernel constant lower bounds
-    Vector<Vector<double> > kub; // kernel constant upper bounds
+
+    Vector<Vector<double>> klb; // kernel constant lower bounds
+    Vector<Vector<double>> kub; // kernel constant upper bounds
+
     SparseVector<double> kARDscalelb; // kernel scale lower bounds
     SparseVector<double> kARDscaleub; // kernel scale upper bounds
 
     double Cmin;
     double Cmax;
+
+    double sigmamin;
+    double sigmamax;
+
     double epsmin;
     double epsmax;
 
@@ -202,6 +204,7 @@ public:
 
     MercerKernel backkernel;
     double backC;
+    double backsigma;
     double backeps;
 
     // What the data represents
@@ -442,24 +445,24 @@ public:
 
     virtual double sparlvl(void) const { return 0; }
 
-    virtual const Vector<SparseVector<gentype> > &x          (void) const { return altxsrc ? (*altxsrc).x() : allxdatagent;  }
-    virtual const Vector<gentype>                &y          (void) const { return alltraintarg;                             }
-    virtual const Vector<double>                 &yR         (void) const { return alltraintargR;                            }
-    virtual const Vector<d_anion>                &yA         (void) const { return alltraintargA;                            }
-    virtual const Vector<Vector<double> >        &yV         (void) const { return alltraintargV;                            }
-    virtual const Vector<gentype>                &yp         (void) const { return alltraintargp;                            }
-    virtual const Vector<double>                 &ypR        (void) const { return alltraintargpR;                           }
-    virtual const Vector<d_anion>                &ypA        (void) const { return alltraintargpA;                           }
-    virtual const Vector<Vector<double> >        &ypV        (void) const { return alltraintargpV;                           }
-    virtual const Vector<vecInfo>                &xinfo      (void) const { return altxsrc ? (*altxsrc).xinfo() : traininfo; }
-    virtual const Vector<int>                    &xtang      (void) const { return altxsrc ? (*altxsrc).xtang() : traintang; }
-    virtual const Vector<int>                    &d          (void) const { return x_d;                                      }
-    virtual const Vector<double>                 &Cweight    (void) const { return xCweight;                                 }
-    virtual const Vector<double>                 &Cweightfuzz(void) const { return xCweightfuzz;                             }
-    virtual const Vector<double>                 &sigmaweight(void) const;
-    virtual const Vector<double>                 &epsweight  (void) const { return xepsweight;                               }
-    virtual const Vector<gentype>                &alphaVal   (void) const { NiceThrow("alphaVal has no meaning here"); static const Vector<gentype> dummy; return dummy; }
-    virtual const Vector<int>                    &alphaState (void) const { return xalphaState;                              }
+    virtual const Vector<SparseVector<gentype>> &x          (void) const { return altxsrc ? (*altxsrc).x() : allxdatagent;  }
+    virtual const Vector<gentype>               &y          (void) const { return alltraintarg;                             }
+    virtual const Vector<double>                &yR         (void) const { return alltraintargR;                            }
+    virtual const Vector<d_anion>               &yA         (void) const { return alltraintargA;                            }
+    virtual const Vector<Vector<double>>        &yV         (void) const { return alltraintargV;                            }
+    virtual const Vector<gentype>               &yp         (void) const { return alltraintargp;                            }
+    virtual const Vector<double>                &ypR        (void) const { return alltraintargpR;                           }
+    virtual const Vector<d_anion>               &ypA        (void) const { return alltraintargpA;                           }
+    virtual const Vector<Vector<double>>        &ypV        (void) const { return alltraintargpV;                           }
+    virtual const Vector<vecInfo>               &xinfo      (void) const { return altxsrc ? (*altxsrc).xinfo() : traininfo; }
+    virtual const Vector<int>                   &xtang      (void) const { return altxsrc ? (*altxsrc).xtang() : traintang; }
+    virtual const Vector<int>                   &d          (void) const { return x_d;                                      }
+    virtual const Vector<double>                &Cweight    (void) const { return xCweight;                                 }
+    virtual const Vector<double>                &Cweightfuzz(void) const { return xCweightfuzz;                             }
+    virtual const Vector<double>                &sigmaweight(void) const;
+    virtual const Vector<double>                &epsweight  (void) const { return xepsweight;                               }
+    virtual const Vector<gentype>               &alphaVal   (void) const { NiceThrow("alphaVal has no meaning here"); static const Vector<gentype> dummy; return dummy; }
+    virtual const Vector<int>                   &alphaState (void) const { return xalphaState;                              }
 
     virtual const SparseVector<gentype> &x       (int i)              const override { return xgetloc(i);                                     }
     virtual const SparseVector<gentype> &x       (int i, int altMLid) const override { kernPrecursor *tmp = nullptr; getaltML(tmp,altMLid);  NiceAssert(tmp); return (*tmp).x(i);  }
@@ -656,13 +659,21 @@ public:
     //         1 = max-likelihood
     //         2 = loo error
     //         3 = recall
+    //         4 = ||alpha||
+    //        -1 = max-likelihood using DIRect (not grid)
+    //        -2 = loo error using DIRect (not grid)
+    //        -3 = recall using DIRect (not grid)
+    //        -4 = ||alpha|| using DIRect (not grid)
     // xwidth: maximum length-scale
     // tuneK:  0 = don't tune kernel
     //         1 = tune kernel
     // tuneP:  0 = don't tune model parameters
-    //         1 = tune model parameter C (NOT IMPLEMENTED YET)
-    //         2 = tune model parameter eps (NOT IMPLEMENTED YET)
-    //         3 = tune model parameters C and eps (NOT IMPLEMENTED YET)
+    //         1 = tune model parameter C
+    //         2 = tune model parameter eps
+    //         4 = tune model parameter sigma
+    //         - this is a bitfield, but you can't tune both C and sigma (roughly
+    //           C = 1/sigma, so just choose whichever is "linear")
+    //         - options: 0,1,2,3,4,6
     // tunebounds: optional lower and upper bound overrides for tuning. See datatypes
     // probbnd: if given, the bounds worked out are stored here
     //
@@ -711,7 +722,7 @@ public:
     virtual gentype &K2(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); K2(res,ia,ib); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
     virtual gentype &K3(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xcinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int ic = setInnerWildpc(&xc,xcinf); K3(res,ia,ib,ic);  resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr ),( xcinf == nullptr )); return res; }
     virtual gentype &K4(gentype &res, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xc, const SparseVector<gentype> &xd, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xcinf = nullptr, const vecInfo *xdinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); int ic = setInnerWildpc(&xc,xcinf); int id = setInnerWildpd(&xd,xdinf); K4(res,ia,ib,ic,id); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr ),(xcinf == nullptr),(xdinf == nullptr)); return res; }
-    virtual gentype &Km(gentype &res, const Vector<SparseVector<gentype> > &xx) const { int m = xx.size(); setInnerWildpx(&xx); retVector<int> tmpva; Vector<int> ii(cntintvec(m,tmpva)); ii += 1; ii *= -100; Km(m,res,ii); resetInnerWildp(); return res; }
+    virtual gentype &Km(gentype &res, const Vector<SparseVector<gentype>> &xx) const { int m = xx.size(); setInnerWildpx(&xx); retVector<int> tmpva; Vector<int> ii(cntintvec(m,tmpva)); ii += 1; ii *= -100; Km(m,res,ii); resetInnerWildp(); return res; }
 
     virtual double  K2ip(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); double res = K2ip(ia,ib,0.0); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
     virtual double distK(const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int ib = setInnerWildpb(&xb,xbinf); double res = distK(ia,ib); resetInnerWildp(( xainf == nullptr ),( xbinf == nullptr )); return res; }
@@ -800,8 +811,8 @@ public:
     virtual void d2K2delxdelx(double  &xxscaleres, double  &yyscaleres, double  &xyscaleres, double  &yxscaleres, double  &constres, int &minmaxind, int i, int j, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xx = nullptr, const SparseVector<gentype> *yy = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *yyinfo = nullptr) const;
     virtual void d2K2delxdely(double  &xxscaleres, double  &yyscaleres, double  &xyscaleres, double  &yxscaleres, double  &constres, int &minmaxind, int i, int j, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xx = nullptr, const SparseVector<gentype> *yy = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *yyinfo = nullptr) const;
 
-    virtual void dnK2del(Vector<gentype> &sc, Vector<Vector<int> > &n, int &minmaxind, const Vector<int> &q, int i, int j, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xx = nullptr, const SparseVector<gentype> *yy = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *yyinfo = nullptr) const;
-    virtual void dnK2del(Vector<double>  &sc, Vector<Vector<int> > &n, int &minmaxind, const Vector<int> &q, int i, int j, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xx = nullptr, const SparseVector<gentype> *yy = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *yyinfo = nullptr) const;
+    virtual void dnK2del(Vector<gentype> &sc, Vector<Vector<int>> &n, int &minmaxind, const Vector<int> &q, int i, int j, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xx = nullptr, const SparseVector<gentype> *yy = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *yyinfo = nullptr) const;
+    virtual void dnK2del(Vector<double>  &sc, Vector<Vector<int>> &n, int &minmaxind, const Vector<int> &q, int i, int j, const gentype **pxyprod = nullptr, const SparseVector<gentype> *xx = nullptr, const SparseVector<gentype> *yy = nullptr, const vecInfo *xainfo = nullptr, const vecInfo *yyinfo = nullptr) const;
 
     virtual double distK(int i, int j) const;
 
@@ -861,20 +872,20 @@ public:
     virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
     virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh);
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh);
+    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh);
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh);
 
     virtual int removeTrainingVector(int i                                      ) { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x);
     virtual int removeTrainingVector(int i, int num                             );
 
-    virtual int setx(int                i, const SparseVector<gentype>          &x);
-    virtual int setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &x);
-    virtual int setx(                      const Vector<SparseVector<gentype> > &x);
+    virtual int setx(int                i, const SparseVector<gentype>         &x);
+    virtual int setx(const Vector<int> &i, const Vector<SparseVector<gentype>> &x);
+    virtual int setx(                      const Vector<SparseVector<gentype>> &x);
 
-    virtual int qswapx(int                i, SparseVector<gentype>          &x, int dontupdate = 0);
-    virtual int qswapx(const Vector<int> &i, Vector<SparseVector<gentype> > &x, int dontupdate = 0);
-    virtual int qswapx(                      Vector<SparseVector<gentype> > &x, int dontupdate = 0);
+    virtual int qswapx(int                i, SparseVector<gentype>         &x, int dontupdate = 0);
+    virtual int qswapx(const Vector<int> &i, Vector<SparseVector<gentype>> &x, int dontupdate = 0);
+    virtual int qswapx(                      Vector<SparseVector<gentype>> &x, int dontupdate = 0);
 
     virtual int sety(int                i, const gentype         &y);
     virtual int sety(const Vector<int> &i, const Vector<gentype> &y);
@@ -884,9 +895,9 @@ public:
     virtual int sety(const Vector<int> &i, const Vector<double> &z);
     virtual int sety(                      const Vector<double> &z);
 
-    virtual int sety(int                i, const Vector<double>          &z);
-    virtual int sety(const Vector<int> &i, const Vector<Vector<double> > &z);
-    virtual int sety(                      const Vector<Vector<double> > &z);
+    virtual int sety(int                i, const Vector<double>         &z);
+    virtual int sety(const Vector<int> &i, const Vector<Vector<double>> &z);
+    virtual int sety(                      const Vector<Vector<double>> &z);
 
     virtual int sety(int                i, const d_anion         &z);
     virtual int sety(const Vector<int> &i, const Vector<d_anion> &z);
@@ -1130,9 +1141,10 @@ public:
     // sampScale: sample is from GP(mean,sampScale^2.covariance)
     // sampSlack: if > 0 then the sample box is expanded to [-xmax,xmax] along
     //            the edges, [-sampSlack,0] on the boundaries of the extra boxes.
+    // diagperturb: diagonal offset added to cov matrix to make the sample noisier
 
     virtual int  isSampleMode(void) const { return 0; }
-    virtual int setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double sampScale, double sampSlack = 0) { (void) nv; (void) xmin; (void) xmax; (void) Nsamp; (void) sampSplit; (void) sampType; (void) xsampType; (void) sampScale; (void) sampSlack; return 0; }
+    virtual int setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double sampScale, double sampSlack = 0, double diagperturb = 0) { (void) nv; (void) xmin; (void) xmax; (void) Nsamp; (void) sampSplit; (void) sampType; (void) xsampType; (void) sampScale; (void) sampSlack; (void) diagperturb; return 0; }
 
     // Training functions:
     //
@@ -1234,17 +1246,17 @@ public:
 
     virtual void deTrainingVectorX(Vector<gentype> &resx, const Vector<int> &i) const;
 
-    virtual void dgTrainingVector(Vector<gentype>         &res, gentype        &resn, int i) const { (void) res; (void) resn; (void) i; NiceThrow("Function dgTrainingVector not available for this ML type."); }
-    virtual void dgTrainingVector(Vector<double>          &res, double         &resn, int i) const;
-    virtual void dgTrainingVector(Vector<Vector<double> > &res, Vector<double> &resn, int i) const;
-    virtual void dgTrainingVector(Vector<d_anion>         &res, d_anion        &resn, int i) const;
+    virtual void dgTrainingVector(Vector<gentype>        &res, gentype        &resn, int i) const { (void) res; (void) resn; (void) i; NiceThrow("Function dgTrainingVector not available for this ML type."); }
+    virtual void dgTrainingVector(Vector<double>         &res, double         &resn, int i) const;
+    virtual void dgTrainingVector(Vector<Vector<double>> &res, Vector<double> &resn, int i) const;
+    virtual void dgTrainingVector(Vector<d_anion>        &res, d_anion        &resn, int i) const;
 
     virtual void deTrainingVector(Vector<gentype> &res, gentype &resn, int i) const { dgTrainingVector(res,resn,i); double scale = 0.0; dedgTrainingVector(scale,i); res.scale(scale); resn *= scale; }
 
-    virtual void dgTrainingVector(Vector<gentype>         &res, const Vector<int> &i) const;
-    virtual void dgTrainingVector(Vector<double>          &res, const Vector<int> &i) const;
-    virtual void dgTrainingVector(Vector<Vector<double> > &res, const Vector<int> &i) const;
-    virtual void dgTrainingVector(Vector<d_anion>         &res, const Vector<int> &i) const;
+    virtual void dgTrainingVector(Vector<gentype>        &res, const Vector<int> &i) const;
+    virtual void dgTrainingVector(Vector<double>         &res, const Vector<int> &i) const;
+    virtual void dgTrainingVector(Vector<Vector<double>> &res, const Vector<int> &i) const;
+    virtual void dgTrainingVector(Vector<d_anion>        &res, const Vector<int> &i) const;
 
     virtual void deTrainingVector(Vector<gentype> &res, const Vector<int> &i) const;
 
@@ -1268,10 +1280,10 @@ public:
 
     virtual void deX(Vector<gentype> &resx, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); deTrainingVectorX(resx,ia); resetInnerWildp(xinf == nullptr); }
 
-    virtual void dg(Vector<gentype>         &res, gentype        &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
-    virtual void dg(Vector<double>          &res, double         &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
-    virtual void dg(Vector<Vector<double> > &res, Vector<double> &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
-    virtual void dg(Vector<d_anion>         &res, d_anion        &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
+    virtual void dg(Vector<gentype>        &res, gentype        &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
+    virtual void dg(Vector<double>         &res, double         &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
+    virtual void dg(Vector<Vector<double>> &res, Vector<double> &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
+    virtual void dg(Vector<d_anion>        &res, d_anion        &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); dgTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
 
     virtual void de(Vector<gentype> &res, gentype &resn, const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const { int ia = setInnerWildpa(&x,xinf); setWildTargpp(y); deTrainingVector(res,resn,ia); resetInnerWildp(xinf == nullptr); }
 
@@ -1291,8 +1303,8 @@ public:
     virtual int var(gentype &resv, gentype &resmu, int i,                                                           gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const { return cov(resv,resmu,i,i,pxyprodi,pxyprodi,pxyprodii); }
     virtual int var(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const { int ia = setInnerWildpa(&xa,xainf); int res = cov(resv,resmu,ia,ia,pxyprodx,pxyprodx,pxyprodxx); resetInnerWildp(xainf == nullptr); return res; }
 
-    virtual int covar(Matrix<gentype> &resv, const Vector<int>                    &i) const;
-    virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const;
+    virtual int covar(Matrix<gentype> &resv, const Vector<int>                   &i) const;
+    virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype>> &x) const;
 
     // Level-set functions
     //
@@ -1333,10 +1345,10 @@ public:
     //
     // (u=-1 for overall, u>=0 gives only dimension for relevant minor/up type - see sparsevector)
 
-    virtual const Vector<int>          &indKey         (int u = -1) const { if ( indexKey.isindpresent(u+1)      ) { return indexKey(u+1);      } const static Vector<int>          dummy; return dummy; }
-    virtual const Vector<int>          &indKeyCount    (int u = -1) const { if ( indexKeyCount.isindpresent(u+1) ) { return indexKeyCount(u+1); } const static Vector<int>          dummy; return dummy; }
-    virtual const Vector<int>          &dattypeKey     (int u = -1) const { if ( typeKey.isindpresent(u+1)       ) { return typeKey(u+1);       } const static Vector<int>          dummy; return dummy; }
-    virtual const Vector<Vector<int> > &dattypeKeyBreak(int u = -1) const { if ( typeKeyBreak.isindpresent(u+1)  ) { return typeKeyBreak(u+1);  } const static Vector<Vector<int> > dummy; return dummy; }
+    virtual const Vector<int>         &indKey         (int u = -1) const { if ( indexKey.isindpresent(u+1)      ) { return indexKey(u+1);      } const static Vector<int>          dummy; return dummy; }
+    virtual const Vector<int>         &indKeyCount    (int u = -1) const { if ( indexKeyCount.isindpresent(u+1) ) { return indexKeyCount(u+1); } const static Vector<int>          dummy; return dummy; }
+    virtual const Vector<int>         &dattypeKey     (int u = -1) const { if ( typeKey.isindpresent(u+1)       ) { return typeKey(u+1);       } const static Vector<int>          dummy; return dummy; }
+    virtual const Vector<Vector<int>> &dattypeKeyBreak(int u = -1) const { if ( typeKeyBreak.isindpresent(u+1)  ) { return typeKeyBreak(u+1);  } const static Vector<Vector<int>> dummy; return dummy; }
 
     // Other functions
     //
@@ -1362,20 +1374,26 @@ public:
 
     // Training data information functions (all assume no far/farfar/farfarfar or multivectors)
     //
-    // xmedian is the geometric (L1) median
-    // MAD is the geometric (L1) MAD
+    // xmean, xmedian ... operate elementwise
+    // xgmean, xgmedian ... operator vectorwise (xgmedian is the L1 or geometric median, as is xgMAD)
 
-    virtual const SparseVector<gentype> &xsum   (SparseVector<gentype> &res) const;
-    virtual const SparseVector<gentype> &xmean  (SparseVector<gentype> &res) const;
-    virtual const SparseVector<gentype> &xmeansq(SparseVector<gentype> &res) const;
-    virtual const SparseVector<gentype> &xsqsum (SparseVector<gentype> &res) const;
-    virtual const SparseVector<gentype> &xsqmean(SparseVector<gentype> &res) const;
-    virtual const SparseVector<gentype> &xmedian(SparseVector<gentype> &res) const;
-    virtual const SparseVector<gentype> &xvar   (SparseVector<gentype> &res) const;
-    virtual const SparseVector<gentype> &xstddev(SparseVector<gentype> &res) const;
-    virtual const SparseVector<gentype> &xmax   (SparseVector<gentype> &res) const;
-    virtual const SparseVector<gentype> &xmin   (SparseVector<gentype> &res) const;
-    virtual       double                 xMAD   (void)                       const;
+    virtual const SparseVector<gentype> &xmax    (SparseVector<gentype> &res) const;
+    virtual const SparseVector<gentype> &xmin    (SparseVector<gentype> &res) const;
+    virtual const SparseVector<gentype> &xsum    (SparseVector<gentype> &res) const;
+    virtual const SparseVector<gentype> &xsqsum  (SparseVector<gentype> &res) const;
+    virtual const SparseVector<gentype> &xmean   (SparseVector<gentype> &res) const;
+    virtual const SparseVector<gentype> &xsqmean (SparseVector<gentype> &res) const;
+    virtual const SparseVector<gentype> &xmeansq (SparseVector<gentype> &res) const;
+    virtual const SparseVector<gentype> &xvar    (SparseVector<gentype> &res) const;
+    virtual const SparseVector<gentype> &xstddev (SparseVector<gentype> &res) const;
+    virtual const SparseVector<gentype> &xmedian (SparseVector<gentype> &res) const;
+    virtual const SparseVector<gentype> &xMAD    (SparseVector<gentype> &res) const;
+
+    virtual const SparseVector<gentype> &xgmean  (SparseVector<gentype> &res) const;
+    virtual const SparseVector<gentype> &xgmedian(SparseVector<gentype> &res) const;
+    virtual       double                 xgvar   (SparseVector<gentype> &res) const; // res set to xgmean
+    virtual       double                 xgstddev(SparseVector<gentype> &res) const; // res set to xgmean
+    virtual       double                 xgMAD   (SparseVector<gentype> &res) const; // res set to xgmedian
 
     // Helper functions for sparse variables
     //
@@ -1857,14 +1875,6 @@ protected:
 
     virtual double getvalIfPresent_v(int numi, int numj, int &isgood) const;
 
-    // Inner-product cache: over-write this with a non-nullptr return in classes where
-    // a kernel cache is available
-
-    virtual int isxymat(const MercerKernel &altK) const { (void) altK; return 0; }
-    virtual const Matrix<double> &getxymat(const MercerKernel &altK) const { (void) altK; NiceThrow("xymat not available here!"); const static Matrix<double> dummy; return dummy; }
-    virtual const double &getxymatelm(const MercerKernel &altK, int i, int j) const { return getxymat(altK)(i,j); }
-
-
 private:
 
     int locNcalc(void) const
@@ -1943,11 +1953,11 @@ private:
     template <class T> void d2K2delxdelx(T &xxscaleres, T &yyscaleres, T &xyscaleres, T & yxscaleres, T &constres, int &minmaxind, int i, int j, const T &bias, const MercerKernel &Kx, const gentype **pxyprod, const SparseVector<gentype> *xx, const SparseVector<gentype> *yy, const vecInfo *xainfo, const vecInfo *yyinfo) const;
     template <class T> void d2K2delxdely(T &xxscaleres, T &yyscaleres, T &xyscaleres, T & yxscaleres, T &constres, int &minmaxind, int i, int j, const T &bias, const MercerKernel &Kx, const gentype **pxyprod, const SparseVector<gentype> *xx, const SparseVector<gentype> *yy, const vecInfo *xainfo, const vecInfo *yyinfo) const;
 
-    template <class T> void dnK2del(Vector<T> &sc, Vector<Vector<int> > &n, int &minmaxind, const Vector<int> &q, int i, int j, const T &bias, const MercerKernel &Kx, const gentype **pxyprod, const SparseVector<gentype> *xx, const SparseVector<gentype> *yy, const vecInfo *xainfo, const vecInfo *yyinfo) const;
+    template <class T> void dnK2del(Vector<T> &sc, Vector<Vector<int>> &n, int &minmaxind, const Vector<int> &q, int i, int j, const T &bias, const MercerKernel &Kx, const gentype **pxyprod, const SparseVector<gentype> *xx, const SparseVector<gentype> *yy, const vecInfo *xainfo, const vecInfo *yyinfo) const;
 
     // Base data
 
-    Vector<SparseVector<gentype> > allxdatagent;
+    Vector<SparseVector<gentype>> allxdatagent;
 //FIXME    Vector<const SparseVector<gentype> *> allxdatagentp;
     MercerKernel kernel;
     mutable gentype ytargdata;
@@ -1961,11 +1971,11 @@ private:
     Vector<gentype> alltraintarg;
     Vector<double> alltraintargR;
     Vector<d_anion> alltraintargA;
-    Vector<Vector<double> > alltraintargV;
+    Vector<Vector<double>> alltraintargV;
     Vector<gentype> alltraintargp;
     Vector<double> alltraintargpR;
     Vector<d_anion> alltraintargpA;
-    Vector<Vector<double> > alltraintargpV;
+    Vector<Vector<double>> alltraintargpV;
     Vector<vecInfo> traininfo;
     Vector<int> traintang;
 //FIXME    Vector<const vecInfo *> traininfop;
@@ -2049,7 +2059,7 @@ private:
     mutable int wildxdimc;
     mutable int wildxdimd;
 
-    mutable const Vector<SparseVector<gentype> > *wildxxgent;
+    mutable const Vector<SparseVector<gentype>> *wildxxgent;
     mutable Vector<vecInfo> wildxxinfo;
     mutable Vector<int> wildxxtang;
     mutable int wildxxdim;
@@ -2101,10 +2111,10 @@ private:
     //               - 10: string
     //               - 11: equations
 
-    SparseVector<Vector<int> > indexKey;
-    SparseVector<Vector<int> > indexKeyCount;
-    SparseVector<Vector<int> > typeKey;
-    SparseVector<Vector<Vector<int> > > typeKeyBreak;
+    SparseVector<Vector<int>> indexKey;
+    SparseVector<Vector<int>> indexKeyCount;
+    SparseVector<Vector<int>> typeKey;
+    SparseVector<Vector<Vector<int>>> typeKeyBreak;
 
     // Each ML_Base instantiated has a unique ID, and corresponding to
     // that ID are x and g version numbers (see above).  These are
@@ -2419,7 +2429,7 @@ private:
         return -5;
     }
 
-    virtual void setInnerWildpx(const Vector<SparseVector<gentype> > *xl) const
+    virtual void setInnerWildpx(const Vector<SparseVector<gentype>> *xl) const
     {
         int i;
 
