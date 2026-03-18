@@ -138,7 +138,7 @@ public:
     virtual int reset(void) override;
     virtual int restart(void) override { SVM_Vector_Mredbin temp; *this = temp; return 1; }
 
-    virtual int setAlphaV(const Vector<Vector<double> > &newAlpha) override;
+    virtual int setAlphaV(const Vector<Vector<double>> &newAlpha) override;
     virtual int setBiasV(const Vector<double>  &newBias) override;
 
     virtual std::ostream &printstream(std::ostream &output, int dep) const override;
@@ -179,9 +179,9 @@ public:
     virtual char targType(void) const override { return 'V'; }
     virtual double calcDist(const gentype &ha, const gentype &hb, int ia = -1, int db = 2) const override;
 
-    virtual const Vector<int>          &ClassLabels(void)   const override { return Q.ClassLabels(); }
-    virtual const Vector<Vector<int> > &ClassRep(void)      const override { return Q.ClassRep();    }
-    virtual int                         findID(int ref)     const override { return Q.findID(ref);   }
+    virtual const Vector<int>         &ClassLabels(void)   const override { return Q.ClassLabels(); }
+    virtual const Vector<Vector<int>> &ClassRep(void)      const override { return Q.ClassRep();    }
+    virtual int                        findID(int ref)     const override { return Q.findID(ref);   }
 
     virtual int isLinearCost(void)      const override { return Q.isLinearCost();    }
     virtual int isQuadraticCost(void)   const override { return Q.isQuadraticCost(); }
@@ -285,17 +285,17 @@ public:
     virtual double autosetCval(void)  const override { return Q.autosetCval()/tspaceDim(); }
     virtual double autosetnuval(void) const override { return 0;                           }
 
-    virtual const Vector<int>                  &d          (void)      const override { return (Q.d())(interlace,retva);         }
-    virtual const Vector<double>               &Cweight    (void)      const override { return (Q.Cweight())(interlace,retvb);   }
-    virtual const Vector<double>               &Cweightfuzz(void)      const override { return onedvec;                          }
-    virtual const Vector<double>               &epsweight  (void)      const override { return (Q.epsweight())(interlace,retvc); }
-    virtual const Matrix<double>               &Gp         (void)      const override { return Q.Gp();                           }
-    virtual const Vector<double>               &kerndiag   (void)      const override { return Q.kerndiag();                     }
-    virtual const Vector<int>                  &alphaState (void)      const override { return xalphaState;                      }
-    virtual const Vector<Vector<double> >      &zV         (void)      const override { return traintarg;                        }
-    virtual const Vector<double>               &biasV      (int raw=0) const override { (void) raw; return dbiasA;               }
-    virtual const Vector<Vector<double> >      &alphaV     (int raw=0) const override { (void) raw; return dalphaA;              }
-    virtual const Vector<Vector<double> >      &getu       (void)      const override { return Q.getu();                         }
+    virtual const Vector<int>                 &d          (void)      const override { return (Q.d())(interlace,retva);         }
+    virtual const Vector<double>              &Cweight    (void)      const override { return (Q.Cweight())(interlace,retvb);   }
+    virtual const Vector<double>              &Cweightfuzz(void)      const override { return onedvec;                          }
+    virtual const Vector<double>              &epsweight  (void)      const override { return (Q.epsweight())(interlace,retvc); }
+    virtual const Matrix<double>              &Gp         (void)      const override { return Q.Gp();                           }
+    virtual const Vector<double>              &kerndiag   (void)      const override { return Q.kerndiag();                     }
+    virtual const Vector<int>                 &alphaState (void)      const override { return xalphaState;                      }
+    virtual const Vector<Vector<double>>      &zV         (void)      const override { return traintarg;                        }
+    virtual const Vector<double>              &biasV      (int raw=0) const override { (void) raw; return dbiasA;               }
+    virtual const Vector<Vector<double>>      &alphaV     (int raw=0) const override { (void) raw; return dalphaA;              }
+    virtual const Vector<Vector<double>>      &getu       (void)      const override { return Q.getu();                         }
 
     virtual const Vector<double> &zV(int i) const override { return ( i >= 0 ) ? zV()(i) : ((const Vector<double> &) y(i)); }
 
@@ -330,9 +330,9 @@ public:
 
     virtual int randomise(double sparsity) override;
 
-    virtual int sety(int                i, const Vector<double>          &z) override;
-    virtual int sety(const Vector<int> &i, const Vector<Vector<double> > &z) override;
-    virtual int sety(                      const Vector<Vector<double> > &z) override;
+    virtual int sety(int                i, const Vector<double>         &z) override;
+    virtual int sety(const Vector<int> &i, const Vector<Vector<double>> &z) override;
+    virtual int sety(                      const Vector<Vector<double>> &z) override;
 
     virtual int autosetOff(void)            override { return Q.autosetOff();                     }
     virtual int autosetCscaled(double Cval) override { return Q.autosetCscaled(Cval*tspaceDim()); }
@@ -358,14 +358,14 @@ public:
     virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int addTrainingVector (int i, const Vector<double>  &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
     virtual int qaddTrainingVector(int i, const Vector<double>  &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
 
-    virtual int addTrainingVector (int i, const Vector<Vector<double> >  &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
-    virtual int qaddTrainingVector(int i, const Vector<Vector<double> >  &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
+    virtual int addTrainingVector (int i, const Vector<Vector<double>>  &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
+    virtual int qaddTrainingVector(int i, const Vector<Vector<double>>  &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
 
     virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
@@ -447,10 +447,10 @@ private:
 
     Vector<int> interlace; // [ 0 m 2m ... ] (m=tspaceDim)
 
-    Vector<Vector<double> > traintarg;
+    Vector<Vector<double>> traintarg;
     Vector<int> xalphaState;
     Vector<double> onedvec;
-    Vector<Vector<double> > dalphaA;
+    Vector<Vector<double>> dalphaA;
     Vector<double> dbiasA;
     Matrix<double> Gpn;
 

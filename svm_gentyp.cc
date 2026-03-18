@@ -133,7 +133,7 @@ int SVM_Gentyp::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype
     return SVM_Vector::qaddTrainingVector(i,yrep,x,Cweigh,epsweigh,dval);
 }
 
-int SVM_Gentyp::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Gentyp::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == xx.size() );
 
@@ -152,7 +152,7 @@ int SVM_Gentyp::addTrainingVector (int i, const Vector<gentype> &z, const Vector
     return res;
 }
 
-int SVM_Gentyp::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Gentyp::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == xx.size() );
 

@@ -211,7 +211,7 @@ int SVM_MulBin::addTrainingVector(int i, int d, const SparseVector<gentype> &x, 
     return qaddTrainingVector(i,d,xx,Cweigh,epsweigh,z);
 }
 
-int SVM_MulBin::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_MulBin::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == x.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -232,7 +232,7 @@ int SVM_MulBin::addTrainingVector(int i, const Vector<gentype> &z, const Vector<
     return res;
 }
 
-int SVM_MulBin::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_MulBin::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == x.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -253,7 +253,7 @@ int SVM_MulBin::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<Spars
     return res;
 }
 
-int SVM_MulBin::addTrainingVector(int i, const Vector<int> &d, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<double> &z)
+int SVM_MulBin::addTrainingVector(int i, const Vector<int> &d, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<double> &z)
 {
     NiceAssert( d.size() == x.size() );
     NiceAssert( d.size() == Cweigh.size() );
@@ -275,7 +275,7 @@ int SVM_MulBin::addTrainingVector(int i, const Vector<int> &d, const Vector<Spar
     return res;
 }
 
-int SVM_MulBin::qaddTrainingVector(int i, const Vector<int> &d, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<double> &z)
+int SVM_MulBin::qaddTrainingVector(int i, const Vector<int> &d, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<double> &z)
 {
     NiceAssert( d.size() == x.size() );
     NiceAssert( d.size() == Cweigh.size() );

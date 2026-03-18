@@ -120,13 +120,13 @@ public:
     virtual double lrb(void) const override { return loclrb; }
 
     // These must be wrong size.  Polymorphism will be called by ml_base to access inequalities
-    virtual const Vector<gentype>         &y          (void) const override { return locz;           }
-    virtual const Vector<double>          &yR         (void) const override { return loczr;          }
-    virtual const Vector<d_anion>         &yA         (void) const override { NiceThrow("yA not defined in svm_scalar_rff"); const static Vector<d_anion>         dummy; return dummy; }
-    virtual const Vector<Vector<double> > &yV         (void) const override { NiceThrow("yV not defined in svm_scalar_rff"); const static Vector<Vector<double> > dummy; return dummy; }
-    virtual const Vector<double>          &Cweight    (void) const override { return locCweight;     }
-    virtual const Vector<double>          &epsweight  (void) const override { return locepsweight;   }
-    virtual const Vector<double>          &Cweightfuzz(void) const override { return locCweightfuzz; }
+    virtual const Vector<gentype>        &y          (void) const override { return locz;           }
+    virtual const Vector<double>         &yR         (void) const override { return loczr;          }
+    virtual const Vector<d_anion>        &yA         (void) const override { NiceThrow("yA not defined in svm_scalar_rff"); const static Vector<d_anion>         dummy; return dummy; }
+    virtual const Vector<Vector<double>> &yV         (void) const override { NiceThrow("yV not defined in svm_scalar_rff"); const static Vector<Vector<double>> dummy; return dummy; }
+    virtual const Vector<double>         &Cweight    (void) const override { return locCweight;     }
+    virtual const Vector<double>         &epsweight  (void) const override { return locepsweight;   }
+    virtual const Vector<double>         &Cweightfuzz(void) const override { return locCweightfuzz; }
 
     // Kernel transfer
 
@@ -163,22 +163,22 @@ public:
     virtual int addTrainingVector (int i, double z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, double z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<double> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d) override;
-    virtual int qaddTrainingVector(int i, const Vector<double> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d) override;
+    virtual int addTrainingVector (int i, const Vector<double> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d) override;
+    virtual int qaddTrainingVector(int i, const Vector<double> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d) override;
 
     virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int removeTrainingVector(int i                                      ) override;
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
     virtual int removeTrainingVector(int i, int num                             ) override;
 
-    virtual int setx(int                i, const SparseVector<gentype>          &x) override;
-    virtual int setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &x) override;
-    virtual int setx(                      const Vector<SparseVector<gentype> > &x) override;
+    virtual int setx(int                i, const SparseVector<gentype>         &x) override;
+    virtual int setx(const Vector<int> &i, const Vector<SparseVector<gentype>> &x) override;
+    virtual int setx(                      const Vector<SparseVector<gentype>> &x) override;
 
     virtual int sety(int                i, double                z) override;
     virtual int sety(const Vector<int> &i, const Vector<double> &z) override;

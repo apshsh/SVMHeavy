@@ -397,7 +397,7 @@ int SVM_Vector::qaddTrainingVector(int i, const gentype &z,       SparseVector<g
     return SVM_Vector::qaddTrainingVector(i,zd,x,Cweigh,epsweigh,dval);
 }
 
-int SVM_Vector::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Vector::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == xx.size() );
 
@@ -416,7 +416,7 @@ int SVM_Vector::addTrainingVector (int i, const Vector<gentype> &z, const Vector
     return res;
 }
 
-int SVM_Vector::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Vector::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == xx.size() );
 
@@ -459,7 +459,7 @@ int SVM_Vector::qaddTrainingVector(int i, const Vector<double> &z,       SparseV
     return res;
 }
 
-int SVM_Vector::addTrainingVector( int i, const Vector<Vector<double> > &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
+int SVM_Vector::addTrainingVector( int i, const Vector<Vector<double>> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
     int res = 0;
 
@@ -471,7 +471,7 @@ int SVM_Vector::addTrainingVector( int i, const Vector<Vector<double> > &z, cons
     return res;
 }
 
-int SVM_Vector::qaddTrainingVector(int i, const Vector<Vector<double> > &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
+int SVM_Vector::qaddTrainingVector(int i, const Vector<Vector<double>> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
     int res = 0;
 

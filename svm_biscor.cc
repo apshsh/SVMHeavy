@@ -575,7 +575,7 @@ int SVM_BiScor::addTrainingVector (int i, const gentype &z, const SparseVector<g
     return qaddTrainingVector(i,z,xxx,Cweigh,epsweigh,dval);
 }
 
-int SVM_BiScor::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_BiScor::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == x.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -596,7 +596,7 @@ int SVM_BiScor::addTrainingVector(int i, const Vector<gentype> &z, const Vector<
     return res;
 }
 
-int SVM_BiScor::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_BiScor::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == x.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -642,7 +642,7 @@ int SVM_BiScor::removeTrainingVector(int i, int num)
     return res;
 }
 
-int SVM_BiScor::setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &x)
+int SVM_BiScor::setx(const Vector<int> &i, const Vector<SparseVector<gentype>> &x)
 {
     NiceAssert( i.size() == x.size() );
 
@@ -661,14 +661,14 @@ int SVM_BiScor::setx(const Vector<int> &i, const Vector<SparseVector<gentype> > 
     return res;
 }
 
-int SVM_BiScor::setx(const Vector<SparseVector<gentype> > &x)
+int SVM_BiScor::setx(const Vector<SparseVector<gentype>> &x)
 {
     retVector<int> tmpva;
 
     return setx(cntintvec(N(),tmpva),x);
 }
 
-int SVM_BiScor::qswapx(const Vector<int> &i, Vector<SparseVector<gentype> > &x, int dontupdate)
+int SVM_BiScor::qswapx(const Vector<int> &i, Vector<SparseVector<gentype>> &x, int dontupdate)
 {
     NiceAssert( i.size() == x.size() );
 
@@ -687,7 +687,7 @@ int SVM_BiScor::qswapx(const Vector<int> &i, Vector<SparseVector<gentype> > &x, 
     return res;
 }
 
-int SVM_BiScor::qswapx(Vector<SparseVector<gentype> > &x, int dontupdate)
+int SVM_BiScor::qswapx(Vector<SparseVector<gentype>> &x, int dontupdate)
 {
     retVector<int> tmpva;
 

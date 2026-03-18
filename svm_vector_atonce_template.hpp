@@ -32,7 +32,7 @@ void evalSigmaSVM_Vector_atonce_temp_matrix(double &res, int i, int j, const gen
 template <class T> class SVM_Vector_atonce_temp;
 
 Matrix<double> *alloc_gp(void *kerncache, int nrows, int ncols, const double &dummy);
-Matrix<Matrix<double> > *alloc_gp(void *kerncache, int nrows, int ncols, const Matrix<double> &dummy);
+Matrix<Matrix<double>> *alloc_gp(void *kerncache, int nrows, int ncols, const Matrix<double> &dummy);
 
 // Swap function
 
@@ -63,7 +63,7 @@ public:
     virtual int reset(void) override;
     virtual int restart(void) override { SVM_Vector_atonce_temp<T> temp; *this = temp; return 1; }
 
-    virtual int setAlphaV(const Vector<Vector<double> > &newAlpha) override;
+    virtual int setAlphaV(const Vector<Vector<double>> &newAlpha) override;
     virtual int setBiasV(const Vector<double> &newBias) override;
 
     virtual std::ostream &printstream(std::ostream &output, int dep) const override;
@@ -103,9 +103,9 @@ public:
     virtual char targType(void) const override { return 'V'; }
     virtual double calcDist(const gentype &ha, const gentype &hb, int ia = -1, int db = 2) const override;
 
-    virtual const Vector<int>          &ClassLabels(void)   const override { return classLabelsval;                    }
-    virtual const Vector<Vector<int> > &ClassRep(void)      const override { return classRepval;                       }
-    virtual int                         findID(int ref)     const override { NiceAssert( ref == 2 ); (void) ref; return 2; }
+    virtual const Vector<int>         &ClassLabels(void)   const override { return classLabelsval;                    }
+    virtual const Vector<Vector<int>> &ClassRep(void)      const override { return classRepval;                       }
+    virtual int                        findID(int ref)     const override { NiceAssert( ref == 2 ); (void) ref; return 2; }
 
     virtual int isLinearCost(void)      const override { return costType == 0;    }
     virtual int isQuadraticCost(void)   const override { return costType == 1;    }
@@ -209,15 +209,15 @@ public:
     virtual double autosetCval(void)  const override { return autosetCvalx;  }
     virtual double autosetnuval(void) const override { return 0;            }
 
-    virtual const Vector<int>                  &d          (void)      const override { return trainclass;                                  }
-    virtual const Vector<double>               &Cweight    (void)      const override { return Cweightval;                                  }
-    virtual const Vector<double>               &Cweightfuzz(void)      const override { return Cweightvalfuzz;                              }
-    virtual const Vector<double>               &epsweight  (void)      const override { return epsweightval;                                }
-    virtual const Vector<int>                  &alphaState (void)      const override { return Q.alphaState();                              }
-    virtual const Vector<Vector<double> >      &zV         (void)      const override { return traintarg;                                   }
-    virtual const Vector<double>               &biasV      (int raw=0) const override { (void) raw; return Q.beta()(0);                     }
-    virtual const Vector<Vector<double> >      &alphaV     (int raw=0) const override { (void) raw; return Q.alpha();                       }
-    virtual const Vector<Vector<double> >      &getu       (void)      const override { return u;                                           }
+    virtual const Vector<int>                 &d          (void)      const override { return trainclass;                                  }
+    virtual const Vector<double>              &Cweight    (void)      const override { return Cweightval;                                  }
+    virtual const Vector<double>              &Cweightfuzz(void)      const override { return Cweightvalfuzz;                              }
+    virtual const Vector<double>              &epsweight  (void)      const override { return epsweightval;                                }
+    virtual const Vector<int>                 &alphaState (void)      const override { return Q.alphaState();                              }
+    virtual const Vector<Vector<double>>      &zV         (void)      const override { return traintarg;                                   }
+    virtual const Vector<double>              &biasV      (int raw=0) const override { (void) raw; return Q.beta()(0);                     }
+    virtual const Vector<Vector<double>>      &alphaV     (int raw=0) const override { (void) raw; return Q.alpha();                       }
+    virtual const Vector<Vector<double>>      &getu       (void)      const override { return u;                                           }
 
     virtual const Vector<double> &zV(int i) const override { return ( i >= 0 ) ? zV()(i) : ((const Vector<double> &) y(i)); }
 
@@ -252,9 +252,9 @@ public:
 
     virtual int randomise(double sparsity) override;
 
-    virtual int sety(int                i, const Vector<double>          &z) override;
-    virtual int sety(const Vector<int> &i, const Vector<Vector<double> > &z) override;
-    virtual int sety(                      const Vector<Vector<double> > &z) override;
+    virtual int sety(int                i, const Vector<double>         &z) override;
+    virtual int sety(const Vector<int> &i, const Vector<Vector<double>> &z) override;
+    virtual int sety(                      const Vector<Vector<double>> &z) override;
 
     virtual int autosetOff(void)            override { autosetLevel = 0; return 0; }
     virtual int autosetCscaled(double Cval) override { NiceAssert( Cval > 0 ); autosetCvalx = Cval; int res = setC( (N()-NNC(0)) ? (Cval/((N()-NNC(0)))) : 1.0); autosetLevel = 1; return res; }
@@ -280,14 +280,14 @@ public:
     virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int addTrainingVector (int i, const Vector<double> &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
     virtual int qaddTrainingVector(int i, const Vector<double> &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
 
-    virtual int addTrainingVector (int i, const Vector<Vector<double> > &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
-    virtual int qaddTrainingVector(int i, const Vector<Vector<double> > &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
+    virtual int addTrainingVector (int i, const Vector<Vector<double>> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
+    virtual int qaddTrainingVector(int i, const Vector<Vector<double>> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
 
     virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
@@ -373,9 +373,9 @@ private:
     Vector<T> kerndiag;               // kernel diagonals
     Vector<double> diagoff;           // diagonal offset for hessian (used by quadratic cost)
 
-    Vector<int>          classLabelsval; // Convenience: [ -1 +1 2 ] (-1,+1 unused)
-    Vector<Vector<int> > classRepval;    // Convenience: [ [ -1 ] [ +1 ] [ 0 ] ] 
-    Vector<Vector<double> > u; // Convenience, empty
+    Vector<int>         classLabelsval; // Convenience: [ -1 +1 2 ] (-1,+1 unused)
+    Vector<Vector<int>> classRepval;    // Convenience: [ [ -1 ] [ +1 ] [ 0 ] ] 
+    Vector<Vector<double>> u; // Convenience, empty
 
     T dummyarg;
 
@@ -387,7 +387,7 @@ private:
 
     // Training data
 
-    Vector<Vector<double> > traintarg;
+    Vector<Vector<double>> traintarg;
     Vector<int> trainclass;
     Vector<double> Cweightval;
     Vector<double> Cweightvalfuzz;
@@ -406,8 +406,8 @@ private:
     Matrix<double> *Gpsigma;
     Matrix<double> Gn;
     Matrix<double> Gpn;
-    Vector<Vector<double> > gp;
-    Vector<Vector<double> > gn;
+    Vector<Vector<double>> gp;
+    Vector<Vector<double>> gn;
     Vector<double> hp;
     Vector<double> ub;
 
@@ -893,7 +893,7 @@ double SVM_Vector_atonce_temp<T>::calcDist(const gentype &ha, const gentype &hb,
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::setAlphaV(const Vector<Vector<double> > &newAlpha)
+int SVM_Vector_atonce_temp<T>::setAlphaV(const Vector<Vector<double>> &newAlpha)
 {
     if ( N() )
     {
@@ -912,7 +912,7 @@ int SVM_Vector_atonce_temp<T>::setBiasV(const Vector<double> &newBias)
 {
     isStateOpt = 0;
 
-    Vector<Vector<double> > newBeta(1);
+    Vector<Vector<double>> newBeta(1);
 
     newBeta("&",0) = newBias;
     Q.setBetahpzero(newBeta,*Gpsigma,*GpGrad,Gn,Gpn,gp,gn);
@@ -1236,7 +1236,7 @@ int SVM_Vector_atonce_temp<T>::sety(int i, const Vector<double> &z)
 
     isStateOpt = 0;
 
-    Vector<Vector<double> > gpnew(gp);
+    Vector<Vector<double>> gpnew(gp);
 
     if ( i >= 0 )
     {
@@ -1356,7 +1356,7 @@ int SVM_Vector_atonce_temp<T>::setd(const Vector<int> &j, const Vector<int> &d)
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::sety(const Vector<int> &j, const Vector<Vector<double> > &z)
+int SVM_Vector_atonce_temp<T>::sety(const Vector<int> &j, const Vector<Vector<double>> &z)
 {
     NiceAssert( z.size() == j.size() );
 
@@ -1366,9 +1366,9 @@ int SVM_Vector_atonce_temp<T>::sety(const Vector<int> &j, const Vector<Vector<do
     {
         isStateOpt = 0;
 
-        Vector<Vector<double> > gpnew(gp);
+        Vector<Vector<double>> gpnew(gp);
 
-        retVector<Vector<double> > tmpva;
+        retVector<Vector<double>> tmpva;
 
         traintarg("&",j,tmpva) = z;
 
@@ -1486,7 +1486,7 @@ int SVM_Vector_atonce_temp<T>::setd(const Vector<int> &d)
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::sety(const Vector<Vector<double> > &z)
+int SVM_Vector_atonce_temp<T>::sety(const Vector<Vector<double>> &z)
 {
     NiceAssert( z.size() == N() );
 
@@ -1496,7 +1496,7 @@ int SVM_Vector_atonce_temp<T>::sety(const Vector<Vector<double> > &z)
     {
         isStateOpt = 0;
 
-        Vector<Vector<double> > gpnew(gp);
+        Vector<Vector<double>> gpnew(gp);
 
         traintarg = z;
 
@@ -1838,7 +1838,7 @@ int SVM_Vector_atonce_temp<T>::qaddTrainingVector(int i, const gentype &z,      
 
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Vector_atonce_temp<T>::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -1860,7 +1860,7 @@ int SVM_Vector_atonce_temp<T>::addTrainingVector (int i, const Vector<gentype> &
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Vector_atonce_temp<T>::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -2006,7 +2006,7 @@ int SVM_Vector_atonce_temp<T>::qaddTrainingVector(int i, const Vector<double> &z
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::addTrainingVector(int i, const Vector<Vector<double> > &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
+int SVM_Vector_atonce_temp<T>::addTrainingVector(int i, const Vector<Vector<double>> &z, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -2029,7 +2029,7 @@ int SVM_Vector_atonce_temp<T>::addTrainingVector(int i, const Vector<Vector<doub
 }
 
 template <class T>
-int SVM_Vector_atonce_temp<T>::qaddTrainingVector(int i, const Vector<Vector<double> > &z,      Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
+int SVM_Vector_atonce_temp<T>::qaddTrainingVector(int i, const Vector<Vector<double>> &z,      Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -2748,7 +2748,7 @@ int SVM_Vector_atonce_temp<T>::presolveit(const Vector<double> &betaGrad)
     int i;
     Vector<double> betaGradUnit(betaGrad);
     Vector<double> alphaProject(N());
-    Vector<Vector<double> > alphaRest(N());
+    Vector<Vector<double>> alphaRest(N());
     Vector<double> alphaRestNorm(N());
     Vector<double> alphaProjectLB(N());
     double absbetaGrad = abs2(betaGrad);
@@ -2904,7 +2904,7 @@ int SVM_Vector_atonce_temp<T>::presolveit(const Vector<double> &betaGrad)
         }
     }
 
-    Vector<Vector<double> > newalpha(alphaV());
+    Vector<Vector<double>> newalpha(alphaV());
 
     for ( i = 0 ; i < N() ; ++i )
     {
@@ -3096,7 +3096,7 @@ int SVM_Vector_atonce_temp<T>::randomise(double sparsity)
         // Need to randomise canmod alphas, set rest to zero
         // (need to take care as meaning of zero differs depending on goutType)
 
-        Vector<Vector<double> > newalpha(N());
+        Vector<Vector<double>> newalpha(N());
 
         // Set zero
 

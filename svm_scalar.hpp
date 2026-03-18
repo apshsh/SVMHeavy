@@ -157,9 +157,9 @@ public:
 
     virtual int numInternalClasses(void) const override { return 2; }
 
-    virtual const Vector<int>          &ClassLabels(void)    const override { return classLabelsval;                                                                                    }
-    virtual const Vector<Vector<int> > &ClassRep   (void)    const override { return classRepval;                                                                                       }
-    virtual int                         findID     (int ref) const override { NiceAssert( ref && ( ref >= -1 ) && ( ref <= 2 ) ); return ( ref == -1 ) ? 0 : ( ( ref == +1 ) ? 1 : 2 ); }
+    virtual const Vector<int>         &ClassLabels(void)    const override { return classLabelsval;                                                                                    }
+    virtual const Vector<Vector<int>> &ClassRep   (void)    const override { return classRepval;                                                                                       }
+    virtual int                        findID     (int ref) const override { NiceAssert( ref && ( ref >= -1 ) && ( ref <= 2 ) ); return ( ref == -1 ) ? 0 : ( ( ref == +1 ) ? 1 : 2 ); }
 
     virtual int isLinearCost   (void)  const override { return costType == 0;   }
     virtual int isQuadraticCost(void)  const override { return costType == 1;   }
@@ -268,19 +268,18 @@ public:
     virtual double autosetCval (void) const override { return autosetCvalx;  }
     virtual double autosetnuval(void) const override { return autosetnuvalx; }
 
-    virtual const Vector<double>               &Cweight    (void)    const override { return Cweightval;                                                      }
-    virtual const Vector<double>               &Cweightfuzz(void)    const override { return Cweightfuzzval;                                                  }
-    virtual const Vector<double>               &epsweight  (void)    const override { return epsweightval;                                                    }
-    virtual const Matrix<double>               &Gp         (void)    const override { return *Gpval;                                                          }
-    virtual const Matrix<double>               &XX         (void)    const override { return *xyval;                                                          }
-    virtual const Vector<double>               &kerndiag   (void)    const override { return kerndiagval;                                                     }
-    virtual const Vector<double>               &diagoffset (void)    const override { return diagoff;                                                         }
-    virtual const Vector<int>                  &alphaState (void)    const override { return Q.alphaState();                                                  }
-    virtual const Vector<Vector<double> >      &getu       (void)    const override { return u;                                                               }
-    virtual const Vector<int>                  &d          (void)    const override { return trainclass;                                                      }
-    virtual const Vector<double>               &zR         (void)    const override { return traintarg;                                                       }
-    virtual       double                        biasR      (void)    const override { return ( isFixedBias() || !(Q.beta().size()) ) ? bfixval : Q.beta()(0); }
-    virtual const Vector<double>               &alphaR     (void)    const override { return Q.alpha();                                                       }
+    virtual const Vector<double>              &Cweight    (void)    const override { return Cweightval;                                                      }
+    virtual const Vector<double>              &Cweightfuzz(void)    const override { return Cweightfuzzval;                                                  }
+    virtual const Vector<double>              &epsweight  (void)    const override { return epsweightval;                                                    }
+    virtual const Matrix<double>              &Gp         (void)    const override { return *Gpval;                                                          }
+    virtual const Vector<double>              &kerndiag   (void)    const override { return kerndiagval;                                                     }
+    virtual const Vector<double>              &diagoffset (void)    const override { return diagoff;                                                         }
+    virtual const Vector<int>                 &alphaState (void)    const override { return Q.alphaState();                                                  }
+    virtual const Vector<Vector<double>>      &getu       (void)    const override { return u;                                                               }
+    virtual const Vector<int>                 &d          (void)    const override { return trainclass;                                                      }
+    virtual const Vector<double>              &zR         (void)    const override { return traintarg;                                                       }
+    virtual       double                       biasR      (void)    const override { return ( isFixedBias() || !(Q.beta().size()) ) ? bfixval : Q.beta()(0); }
+    virtual const Vector<double>              &alphaR     (void)    const override { return Q.alpha();                                                       }
 
     virtual double zR(int i) const override { return ( i >= 0 ) ? zR()(i) : ((double) y(i)); }
 
@@ -343,9 +342,9 @@ public:
     virtual int sety(const Vector<int> &i, const Vector<double> &z) override;
     virtual int sety(                      const Vector<double> &z) override;
 
-    virtual int sety(int                i, const Vector<double>          &y) override { return SVM_Generic::sety(i,y); }
-    virtual int sety(const Vector<int> &i, const Vector<Vector<double> > &y) override { return SVM_Generic::sety(i,y); }
-    virtual int sety(                      const Vector<Vector<double> > &y) override { return SVM_Generic::sety(  y); }
+    virtual int sety(int                i, const Vector<double>         &y) override { return SVM_Generic::sety(i,y); }
+    virtual int sety(const Vector<int> &i, const Vector<Vector<double>> &y) override { return SVM_Generic::sety(i,y); }
+    virtual int sety(                      const Vector<Vector<double>> &y) override { return SVM_Generic::sety(  y); }
 
     virtual int sety(int                i, const d_anion         &y) override { return SVM_Generic::sety(i,y); }
     virtual int sety(const Vector<int> &i, const Vector<d_anion> &y) override { return SVM_Generic::sety(i,y); }
@@ -393,14 +392,14 @@ public:
     virtual int addTrainingVector (int i, double z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
     virtual int qaddTrainingVector(int i, double z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
 
-    virtual int addTrainingVector (int i, const Vector<double> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
-    virtual int qaddTrainingVector(int i, const Vector<double> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
+    virtual int addTrainingVector (int i, const Vector<double> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
+    virtual int qaddTrainingVector(int i, const Vector<double> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
 
     virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
@@ -672,25 +671,6 @@ protected:
     // Inner-product cache: over-write this with a non-nullptr return in classes where
     // a kernel cache is available
 
-    virtual int isxymat(const MercerKernel &altK) const override
-    {
-        return ( ( ( altK.suggestXYcache() || altK.wantsXYprod() ) && ( iskip != -2 ) && xyval ) ) ? 1 : 0;
-    }
-
-    virtual const Matrix<double> &getxymat(const MercerKernel &altK) const override
-    {
-        NiceAssert( ( ( altK.suggestXYcache() || altK.wantsXYprod() ) && ( iskip != -2 ) && xyval ) );
-
-        const static Matrix<double> dummy;
-
-        return ( ( ( altK.suggestXYcache() || altK.wantsXYprod() ) && ( iskip != -2 ) && xyval ) ) ? *xyval : dummy;
-    }
-
-    virtual const double &getxymatelm(const MercerKernel &altK, int i, int j) const override
-    {
-         return getxymat(altK)(i,j);
-    }
-
     virtual bool disableDiag(void) const
     {
         return false;
@@ -744,9 +724,9 @@ private:
     Vector<double> kerndiagval;        // kernel diagonals
     Vector<double> diagoff;            // diagonal offset for hessian (used by quadratic cost)
 
-    Vector<int>             classLabelsval; // Convenience: [ -1 +1 2 ]
-    Vector<Vector<int> >    classRepval;    // Convenience: [ [ -1 ] [ +1 ] [ 0 ] ]
-    Vector<Vector<double> > u;              // Convenience: [ [ -1 ] [ +1 ] ]
+    Vector<int>            classLabelsval; // Convenience: [ -1 +1 2 ]
+    Vector<Vector<int>>    classRepval;    // Convenience: [ [ -1 ] [ +1 ] [ 0 ] ]
+    Vector<Vector<double>> u;              // Convenience: [ [ -1 ] [ +1 ] ]
 
     int autosetLevel;     // 0 = none, 1 = C/N, 2 = Cmean, 3 = Cmedian, 4 = CNmean, 5 = CNmedian, 6 = LinBiasForce
     double autosetCvalx;  // Cval used if autosetLevel == 1,6

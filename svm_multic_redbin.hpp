@@ -61,7 +61,7 @@ public:
     virtual int reset(void) override;
     virtual int restart(void) override { SVM_MultiC_redbin temp; *this = temp; return 1; }
 
-    virtual int setAlphaV(const Vector<Vector<double> > &newAlpha) override;
+    virtual int setAlphaV(const Vector<Vector<double>> &newAlpha) override;
     virtual int setBiasV(const Vector<double> &newBias) override;
 
     virtual std::ostream &printstream(std::ostream &output, int dep) const override;
@@ -100,9 +100,9 @@ public:
     virtual char targType(void) const override { return 'Z'; }
     virtual double calcDist(const gentype &ha, const gentype &hb, int ia = -1, int db = 2) const override;
 
-    virtual const Vector<int>          &ClassLabels(void)   const override { return label_placeholder.getreftoID(); }
-    virtual const Vector<Vector<int> > &ClassRep(void)      const override { return classRepval;                    }
-    virtual int                         findID(int ref)     const override { return label_placeholder.findID(ref);  }
+    virtual const Vector<int>         &ClassLabels(void)   const override { return label_placeholder.getreftoID(); }
+    virtual const Vector<Vector<int>> &ClassRep(void)      const override { return classRepval;                    }
+    virtual int                        findID(int ref)     const override { return label_placeholder.findID(ref);  }
 
     virtual int isLinearCost(void)      const override { return costType == 0;      }
     virtual int isQuadraticCost(void)   const override { return costType == 1;      }
@@ -204,16 +204,16 @@ public:
     virtual double autosetCval(void)  const override { return autosetCvalx;  }
     virtual double autosetnuval(void) const override { return autosetnuvalx; }
 
-    virtual const Vector<int>                  &d          (void)      const override { return trainclass;                                  }
-    virtual const Vector<double>               &Cweight    (void)      const override { return Cweightval;                                  }
-    virtual const Vector<double>               &Cweightfuzz(void)      const override { return Cweightvalfuzz;                              }
-    virtual const Vector<double>               &epsweight  (void)      const override { return epsweightval;                                }
-    virtual const Matrix<double>               &Gp         (void)      const override { return *Gpval;                                      }
-    virtual const Vector<double>               &kerndiag   (void)      const override { return xxkerndiag;                                  }
-    virtual const Vector<int>                  &alphaState (void)      const override { return dalphaState;                                 }
-    virtual const Vector<double>               &biasV      (int raw=0) const override { (void) raw; return db;                              }
-    virtual const Vector<Vector<double> >      &alphaV     (int raw=0) const override { (void) raw; return dalpha;                          }
-    virtual const Vector<Vector<double> >      &getu       (void)      const override { return notu;                                        }
+    virtual const Vector<int>                 &d          (void)      const override { return trainclass;                                  }
+    virtual const Vector<double>              &Cweight    (void)      const override { return Cweightval;                                  }
+    virtual const Vector<double>              &Cweightfuzz(void)      const override { return Cweightvalfuzz;                              }
+    virtual const Vector<double>              &epsweight  (void)      const override { return epsweightval;                                }
+    virtual const Matrix<double>              &Gp         (void)      const override { return *Gpval;                                      }
+    virtual const Vector<double>              &kerndiag   (void)      const override { return xxkerndiag;                                  }
+    virtual const Vector<int>                 &alphaState (void)      const override { return dalphaState;                                 }
+    virtual const Vector<double>              &biasV      (int raw=0) const override { (void) raw; return db;                              }
+    virtual const Vector<Vector<double>>      &alphaV     (int raw=0) const override { (void) raw; return dalpha;                          }
+    virtual const Vector<Vector<double>>      &getu       (void)      const override { return notu;                                        }
 
     virtual int isClassifier(void) const override { return 1; }
     virtual int singmethod(void) const override { return QA.singmethod(); }
@@ -313,14 +313,14 @@ public:
     virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int addTrainingVector (int i, int d, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1);
     virtual int qaddTrainingVector(int i, int d,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1);
 
-    virtual int addTrainingVector (int i, const Vector<int> &d, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh);
-    virtual int qaddTrainingVector(int i, const Vector<int> &d,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh);
+    virtual int addTrainingVector (int i, const Vector<int> &d, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh);
+    virtual int qaddTrainingVector(int i, const Vector<int> &d,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh);
 
     virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
@@ -417,15 +417,15 @@ private:
     // Ns: number of support vectors
 
     Vector<SVM_Binary> Q;           // stored classrep-wise.
-    Vector<Vector<double> > dalpha; // stored classrep-wise
+    Vector<Vector<double>> dalpha;  // stored classrep-wise
     Vector<int> dalphaState;
     Vector<double> db;              // stored classrep-wise
     IDStore label_placeholder;
-    Vector<Vector<int> > classRepval;  // stored classlabel-wise.
-    Vector<Vector<double> > notu;   // irrelevant placeholder
-    int Ns;                         // number of support vectors
-    Vector<int> Nnc;                // number of vector not constrained at zero
-    int isStateOpt;                 // set if SVM is in optimal state
+    Vector<Vector<int>> classRepval; // stored classlabel-wise.
+    Vector<Vector<double>> notu;     // irrelevant placeholder
+    int Ns;                          // number of support vectors
+    Vector<int> Nnc;                 // number of vector not constrained at zero
+    int isStateOpt;                  // set if SVM is in optimal state
 
     // Anomaly detection (if used)
 
@@ -434,7 +434,7 @@ private:
 
     // Training data
 
-//    Vector<SparseVector<gentype> > traindata;
+//    Vector<SparseVector<gentype>> traindata;
     Vector<int> trainclass;
     Vector<double> Cweightval;
     Vector<double> Cweightvalfuzz;

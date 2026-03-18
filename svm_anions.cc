@@ -16,10 +16,10 @@
 
 
 
-void AtoVvect(const Vector<d_anion> &src, Vector<Vector<double> > &dest);
-void VtoAvect(const Vector<Vector<double> > &src, Vector<d_anion> &dest);
-void AtoVvect(const Vector<d_anion> &src, Vector<Vector<double> > &dest);
-void VtoAvect(const Vector<Vector<double> > &src, Vector<gentype> &dest);
+void AtoVvect(const Vector<d_anion> &src, Vector<Vector<double>> &dest);
+void VtoAvect(const Vector<Vector<double>> &src, Vector<d_anion> &dest);
+void AtoVvect(const Vector<d_anion> &src, Vector<Vector<double>> &dest);
+void VtoAvect(const Vector<Vector<double>> &src, Vector<gentype> &dest);
 
 void AtoV(const d_anion &src, Vector<double> &dest)
 {
@@ -97,7 +97,7 @@ void VtoA(const Vector<gentype> &src, d_anion &dest)
     return;
 }
 
-void AtoVvect(const Vector<d_anion> &src, Vector<Vector<double> > &dest)
+void AtoVvect(const Vector<d_anion> &src, Vector<Vector<double>> &dest)
 {
     dest.resize(src.size());
 
@@ -114,7 +114,7 @@ void AtoVvect(const Vector<d_anion> &src, Vector<Vector<double> > &dest)
     return;
 }
 
-void VtoAvect(const Vector<Vector<double> > &src, Vector<d_anion> &dest)
+void VtoAvect(const Vector<Vector<double>> &src, Vector<d_anion> &dest)
 {
     dest.resize(src.size());
 
@@ -131,7 +131,7 @@ void VtoAvect(const Vector<Vector<double> > &src, Vector<d_anion> &dest)
     return;
 }
 
-void AtoVvect(const Vector<gentype> &src, Vector<Vector<double> > &dest)
+void AtoVvect(const Vector<gentype> &src, Vector<Vector<double>> &dest)
 {
     dest.resize(src.size());
 
@@ -148,7 +148,7 @@ void AtoVvect(const Vector<gentype> &src, Vector<Vector<double> > &dest)
     return;
 }
 
-void VtoAvect(const Vector<Vector<double> > &src, Vector<gentype> &dest)
+void VtoAvect(const Vector<Vector<double>> &src, Vector<gentype> &dest)
 {
     dest.resize(src.size());
 
@@ -242,7 +242,7 @@ int SVM_Anions::reset(void)
 
 int SVM_Anions::setAlphaA(const Vector<d_anion> &newAlpha)
 {
-    Vector<Vector<double> > newAlphaV;
+    Vector<Vector<double>> newAlphaV;
 
     AtoVvect(newAlpha,newAlphaV);
 
@@ -463,7 +463,7 @@ int SVM_Anions::qaddTrainingVector(int i, const gentype &z,       SparseVector<g
     return SVM_Anions::qaddTrainingVector(i,(const d_anion &) z,x,Cweigh,epsweigh,dval); //2);
 }
 
-int SVM_Anions::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Anions::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -484,7 +484,7 @@ int SVM_Anions::addTrainingVector (int i, const Vector<gentype> &z, const Vector
     return res;
 }
 
-int SVM_Anions::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Anions::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -535,7 +535,7 @@ int SVM_Anions::qaddTrainingVector(int i, const d_anion &z,       SparseVector<g
     return SVM_Vector::qaddTrainingVector(i,zv,x,Cweigh,epsweigh,d);
 }
 
-int SVM_Anions::addTrainingVector( int i, const Vector<d_anion> &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
+int SVM_Anions::addTrainingVector( int i, const Vector<d_anion> &z, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -557,7 +557,7 @@ int SVM_Anions::addTrainingVector( int i, const Vector<d_anion> &z, const Vector
     return res;
 }
 
-int SVM_Anions::qaddTrainingVector(int i, const Vector<d_anion> &z,       Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
+int SVM_Anions::qaddTrainingVector(int i, const Vector<d_anion> &z,       Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -744,7 +744,7 @@ std::istream &SVM_Anions::inputstream(std::istream &input)
 
 
 
-int SVM_Anions::setAlphaV(const Vector<Vector<double> > &newAlpha)
+int SVM_Anions::setAlphaV(const Vector<Vector<double>> &newAlpha)
 {
     (void) newAlpha;
 
@@ -772,7 +772,7 @@ int SVM_Anions::sety(int i, const Vector<double> &z)
     return 1;
 }
 
-int SVM_Anions::sety(const Vector<int> &i, const Vector<Vector<double> > &z)
+int SVM_Anions::sety(const Vector<int> &i, const Vector<Vector<double>> &z)
 {
     (void) i;
     (void) z;
@@ -782,7 +782,7 @@ int SVM_Anions::sety(const Vector<int> &i, const Vector<Vector<double> > &z)
     return 1;
 }
 
-int SVM_Anions::sety(const Vector<Vector<double> > &z)
+int SVM_Anions::sety(const Vector<Vector<double>> &z)
 {
     (void) z;
 

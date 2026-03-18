@@ -752,7 +752,7 @@ int SVM_Binary_rff::qaddTrainingVector(int i, const gentype &z, SparseVector<gen
     return SVM_Binary_rff::qaddTrainingVector(i,(int) z,x,Cweigh,epsweigh);
 }
 
-int SVM_Binary_rff::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Binary_rff::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<int> zz(z.size());
     Vector<double> xz(z.size());
@@ -772,7 +772,7 @@ int SVM_Binary_rff::addTrainingVector(int i, const Vector<gentype> &z, const Vec
     return SVM_Binary_rff::addTrainingVector(i,zz,x,Cweigh,epsweigh,xz);
 }
 
-int SVM_Binary_rff::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Binary_rff::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<int> zz(z.size());
     Vector<double> xz(z.size());
@@ -850,7 +850,7 @@ int SVM_Binary_rff::qaddTrainingVector(int i, int xd, SparseVector<gentype> &x, 
     return res;
 }
 
-int SVM_Binary_rff::addTrainingVector(int i, const Vector<int> &xd, const Vector<SparseVector<gentype> > &xx, const Vector<double> &xCweigh, const Vector<double> &xepsweigh, const Vector<double> &xz)
+int SVM_Binary_rff::addTrainingVector(int i, const Vector<int> &xd, const Vector<SparseVector<gentype>> &xx, const Vector<double> &xCweigh, const Vector<double> &xepsweigh, const Vector<double> &xz)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= SVM_Binary_rff::N() );
@@ -893,7 +893,7 @@ int SVM_Binary_rff::addTrainingVector(int i, const Vector<int> &xd, const Vector
     return res;
 }
 
-int SVM_Binary_rff::qaddTrainingVector(int i, const Vector<int> &xd, Vector<SparseVector<gentype> > &xx, const Vector<double> &xCweigh, const Vector<double> &xepsweigh, const Vector<double> &xz)
+int SVM_Binary_rff::qaddTrainingVector(int i, const Vector<int> &xd, Vector<SparseVector<gentype>> &xx, const Vector<double> &xCweigh, const Vector<double> &xepsweigh, const Vector<double> &xz)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= SVM_Binary_rff::N() );

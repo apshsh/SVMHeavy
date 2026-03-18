@@ -124,16 +124,16 @@ public:
 
     virtual double eps(void) const override { return cyceps; }
 
-    virtual const Vector<gentype>         &y        (void) const override { return locyg;        }
-    virtual const Vector<double>          &yR       (void) const override { NiceThrow("yR not defined in svm_cyclic");  const static Vector<double>          dummy; return dummy; }
-    virtual const Vector<d_anion>         &yA       (void) const override { NiceThrow("yA not defined in svm_cyclic");  const static Vector<d_anion>         dummy; return dummy; }
-    virtual const Vector<Vector<double> > &yV       (void) const override { return locy;         }
-    virtual const Vector<gentype>         &yp       (void) const override { NiceThrow("yp  not defined in svm_cyclic"); const static Vector<gentype>         dummy; return dummy; }
-    virtual const Vector<double>          &ypR      (void) const override { NiceThrow("ypR not defined in svm_cyclic"); const static Vector<double>          dummy; return dummy; }
-    virtual const Vector<d_anion>         &ypA      (void) const override { NiceThrow("ypA not defined in svm_cyclic"); const static Vector<d_anion>         dummy; return dummy; }
-    virtual const Vector<Vector<double> > &ypV      (void) const override { NiceThrow("ypV not defined in svm_cyclic"); const static Vector<Vector<double> > dummy; return dummy; }
-    virtual const Vector<int>             &d        (void) const override { return locd;         }
-    virtual const Vector<double>          &epsweight(void) const override { return cycepsweight; }
+    virtual const Vector<gentype>        &y        (void) const override { return locyg;        }
+    virtual const Vector<double>         &yR       (void) const override { NiceThrow("yR not defined in svm_cyclic");  const static Vector<double>         dummy; return dummy; }
+    virtual const Vector<d_anion>        &yA       (void) const override { NiceThrow("yA not defined in svm_cyclic");  const static Vector<d_anion>        dummy; return dummy; }
+    virtual const Vector<Vector<double>> &yV       (void) const override { return locy;         }
+    virtual const Vector<gentype>        &yp       (void) const override { NiceThrow("yp  not defined in svm_cyclic"); const static Vector<gentype>        dummy; return dummy; }
+    virtual const Vector<double>         &ypR      (void) const override { NiceThrow("ypR not defined in svm_cyclic"); const static Vector<double>         dummy; return dummy; }
+    virtual const Vector<d_anion>        &ypA      (void) const override { NiceThrow("ypA not defined in svm_cyclic"); const static Vector<d_anion>        dummy; return dummy; }
+    virtual const Vector<Vector<double>> &ypV      (void) const override { NiceThrow("ypV not defined in svm_cyclic"); const static Vector<Vector<double>> dummy; return dummy; }
+    virtual const Vector<int>            &d        (void) const override { return locd;         }
+    virtual const Vector<double>         &epsweight(void) const override { return cycepsweight; }
 
     // Kernel stuff
 
@@ -145,16 +145,16 @@ public:
     virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
     virtual int removeTrainingVector(int i, int num                             ) override;
 
-    virtual int setx(int                i, const SparseVector<gentype>          &x) override;
-    virtual int setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &x) override;
-    virtual int setx(                      const Vector<SparseVector<gentype> > &x) override;
+    virtual int setx(int                i, const SparseVector<gentype>         &x) override;
+    virtual int setx(const Vector<int> &i, const Vector<SparseVector<gentype>> &x) override;
+    virtual int setx(                      const Vector<SparseVector<gentype>> &x) override;
 
     virtual int sety(int                i, const gentype         &z) override;
     virtual int sety(const Vector<int> &i, const Vector<gentype> &z) override;
@@ -190,7 +190,7 @@ private:
 
     // Local basis and factorisation
 
-    Vector<Vector<double> > locy;
+    Vector<Vector<double>> locy;
     Vector<gentype> locyg;
     Vector<int> locd;
     Vector<double> cycepsweight;

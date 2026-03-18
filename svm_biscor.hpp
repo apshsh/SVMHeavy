@@ -102,14 +102,14 @@ public:
     // they will be called by ml_base to access inequalities, and these
     // are stored past the locN boundary
 
-    virtual const Vector<gentype>         &y  (void) const override { return locz; }
-    virtual const Vector<double>          &yR (void) const override { NiceThrow("yR not defined in svm_biscor");  const static Vector<double>          dummy; return dummy; }
-    virtual const Vector<d_anion>         &yA (void) const override { NiceThrow("yA not defined in svm_biscor");  const static Vector<d_anion>         dummy; return dummy; }
-    virtual const Vector<Vector<double> > &yV (void) const override { NiceThrow("yV not defined in svm_biscor");  const static Vector<Vector<double> > dummy; return dummy; }
-    virtual const Vector<gentype>         &yp (void) const override { NiceThrow("yp  not defined in svm_biscor"); const static Vector<gentype>         dummy; return dummy; }
-    virtual const Vector<double>          &ypR(void) const override { NiceThrow("ypR not defined in svm_biscor"); const static Vector<double>          dummy; return dummy; }
-    virtual const Vector<d_anion>         &ypA(void) const override { NiceThrow("ypA not defined in svm_biscor"); const static Vector<d_anion>         dummy; return dummy; }
-    virtual const Vector<Vector<double> > &ypV(void) const override { NiceThrow("ypV not defined in svm_biscor"); const static Vector<Vector<double> > dummy; return dummy; }
+    virtual const Vector<gentype>        &y  (void) const override { return locz; }
+    virtual const Vector<double>         &yR (void) const override { NiceThrow("yR not defined in svm_biscor");  const static Vector<double>         dummy; return dummy; }
+    virtual const Vector<d_anion>        &yA (void) const override { NiceThrow("yA not defined in svm_biscor");  const static Vector<d_anion>        dummy; return dummy; }
+    virtual const Vector<Vector<double>> &yV (void) const override { NiceThrow("yV not defined in svm_biscor");  const static Vector<Vector<double>> dummy; return dummy; }
+    virtual const Vector<gentype>        &yp (void) const override { NiceThrow("yp  not defined in svm_biscor"); const static Vector<gentype>        dummy; return dummy; }
+    virtual const Vector<double>         &ypR(void) const override { NiceThrow("ypR not defined in svm_biscor"); const static Vector<double>         dummy; return dummy; }
+    virtual const Vector<d_anion>        &ypA(void) const override { NiceThrow("ypA not defined in svm_biscor"); const static Vector<d_anion>        dummy; return dummy; }
+    virtual const Vector<Vector<double>> &ypV(void) const override { NiceThrow("ypV not defined in svm_biscor"); const static Vector<Vector<double>> dummy; return dummy; }
 
     // Training set modification:
     //
@@ -121,20 +121,20 @@ public:
     virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int removeTrainingVector(int i                                      ) override;
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
     virtual int removeTrainingVector(int i, int num                             ) override;
 
-    virtual int setx(int                i, const SparseVector<gentype>          &x) override;
-    virtual int setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &x) override;
-    virtual int setx(                      const Vector<SparseVector<gentype> > &x) override;
+    virtual int setx(int                i, const SparseVector<gentype>         &x) override;
+    virtual int setx(const Vector<int> &i, const Vector<SparseVector<gentype>> &x) override;
+    virtual int setx(                      const Vector<SparseVector<gentype>> &x) override;
 
-    virtual int qswapx(int                i, SparseVector<gentype>          &x, int dontupdate = 0) override;
-    virtual int qswapx(const Vector<int> &i, Vector<SparseVector<gentype> > &x, int dontupdate = 0) override;
-    virtual int qswapx(                      Vector<SparseVector<gentype> > &x, int dontupdate = 0) override;
+    virtual int qswapx(int                i, SparseVector<gentype>         &x, int dontupdate = 0) override;
+    virtual int qswapx(const Vector<int> &i, Vector<SparseVector<gentype>> &x, int dontupdate = 0) override;
+    virtual int qswapx(                      Vector<SparseVector<gentype>> &x, int dontupdate = 0) override;
 
     virtual int sety(int                i, const gentype         &z) override;
     virtual int sety(const Vector<int> &i, const Vector<gentype> &z) override;

@@ -356,20 +356,9 @@ void evalKSVM_Scalar_fast(double &res, int i, int j, const gentype **pxyprod, co
 
     NiceAssert( realOwner );
 
-    if ( i != j )
-    {
-        res = realOwner->K2(i,j,pxyprod);
-    }
-
-    else if ( realOwner->useLweight )
-    {
-        res = realOwner->kerndiagval(i) + (((realOwner->diagoff)(i))/(((realOwner->Lweightval)(i))*((realOwner->Lweightval)(j))));
-    }
-
-    else
-    {
-        res = realOwner->kerndiagval(i) + ((realOwner->diagoff)(i));
-    }
+    if      ( i != j )                { res = realOwner->K2(i,j,pxyprod); }
+    else if ( realOwner->useLweight ) { res = realOwner->kerndiagval(i) + (((realOwner->diagoff)(i))/(((realOwner->Lweightval)(i))*((realOwner->Lweightval)(j)))); }
+    else                              { res = realOwner->kerndiagval(i) + ((realOwner->diagoff)(i)); }
 
     NiceAssert( !testisvnan(res) );
     //NiceAssert( !testisinf(res) );
@@ -409,15 +398,8 @@ void evalSigmaSVM_Scalar(double &res, int i, int j, const gentype **pxyprod, con
 
     int N = ( Gp.numRows() < Gp.numCols() ) ? Gp.numRows() : Gp.numCols();
 
-    if ( ( i < N ) && ( j < N ) )
-    {
-        res = Gp(i,i)+Gp(j,j)-(2.0*Gp(i,j));
-    }
-
-    else
-    {
-        res = 0;
-    }
+    if ( ( i < N ) && ( j < N ) ) { res = Gp(i,i)+Gp(j,j)-(2.0*Gp(i,j)); }
+    else                          { res = 0;                             }
 
     return;
 }
@@ -752,10 +734,7 @@ int SVM_Scalar::setBiasR(double newBias)
     {
         Vector<double> gpnew(traintarg);
 
-        if ( prim() )
-        {
-            gpnew -= ypR();
-        }
+        if ( prim() ) { gpnew -= ypR(); }
 
 	bfixval = newBias;
 	gpnew.negate();
@@ -776,8 +755,6 @@ int SVM_Scalar::scale(double a)
     NiceAssert( a >= 0.0 );
     NiceAssert( a <= 1.0 );
 
-    int i,d;
-
     if ( a == 0.0 )
     {
 	isStateOpt = 0;
@@ -787,15 +764,11 @@ int SVM_Scalar::scale(double a)
 
 	// Constrain all alphas to zero (use setd to cheat here)
 
-        //if ( SVM_Scalar::N() )
-	{
-            for ( i = 0 ; i < SVM_Scalar::N() ; ++i )
-	    {
-		d = trainclass(i);
-
-                SVM_Scalar::setdinternal(i,0);
-                SVM_Scalar::setdinternal(i,d);
-	    }
+        for ( int i = 0 ; i < SVM_Scalar::N() ; ++i )
+        {
+            int d = trainclass(i);
+            SVM_Scalar::setdinternal(i,0);
+            SVM_Scalar::setdinternal(i,d);
 	}
 
 	Q.scale(a,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
@@ -810,20 +783,10 @@ int SVM_Scalar::scale(double a)
 
 	// Free alphas at bounds.
 
-        //if ( SVM_Scalar::N() )
-	{
-            for ( i = 0 ; i < SVM_Scalar::N() ; ++i )
-	    {
-		if ( alphaState()(i) == -2 )
-		{
-		    Q.modAlphaLBtoLF(Q.findInAlphaLB(i),*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-		}
-
-		else if ( alphaState()(i) == +2 )
-		{
-		    Q.modAlphaUBtoUF(Q.findInAlphaUB(i),*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-		}
-	    }
+        for ( int i = 0 ; i < SVM_Scalar::N() ; ++i )
+        {
+            if      ( alphaState()(i) == -2 ) { Q.modAlphaLBtoLF(Q.findInAlphaLB(i),*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp); }
+            else if ( alphaState()(i) == +2 ) { Q.modAlphaUBtoUF(Q.findInAlphaUB(i),*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp); }
 	}
 
 	// scale alpha and b
@@ -974,29 +937,12 @@ int SVM_Scalar::setQuadraticCost(void)
             isMaxInfGainCalced   = 0;
 	}
 
-	int i;
-
 	costType = 1;
 
 	recalcdiagoff(-1);
 
-	//if ( NLB() )
-	{
-	    for ( i = NLB()-1 ; i >= 0  ; --i )
-	    {
-		Q.modAlphaLBtoLF(i,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-
-	    }
-	}
-
-	//if ( NUB() )
-	{
-	    for ( i = NUB()-1 ; i >= 0 ; --i )
-	    {
-		Q.modAlphaUBtoUF(i,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-
-	    }
-	}
+        for ( int i = NLB()-1 ; i >= 0 ; --i ) { Q.modAlphaLBtoLF(i,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp); }
+        for ( int i = NUB()-1 ; i >= 0 ; --i ) { Q.modAlphaUBtoUF(i,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp); }
 
 	recalcLUB(-1);
     }
@@ -1042,29 +988,12 @@ int SVM_Scalar::set1NormCost(void)
             isMaxInfGainCalced   = 0;
 	}
 
-	int i;
-
         costType = 2;
 
         recalcCRDR(-1);
 
-	//if ( NLB() )
-	{
-	    for ( i = NLB()-1 ; i >= 0  ; --i )
-	    {
-		Q.modAlphaLBtoLF(i,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-
-	    }
-	}
-
-	//if ( NUB() )
-	{
-	    for ( i = NUB()-1 ; i >= 0 ; --i )
-	    {
-		Q.modAlphaUBtoUF(i,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-
-	    }
-	}
+        for ( int i = NLB()-1 ; i >= 0 ; --i ) { Q.modAlphaLBtoLF(i,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp); }
+        for ( int i = NUB()-1 ; i >= 0 ; --i ) { Q.modAlphaUBtoUF(i,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp); }
 
         recalcLUB(-1);
     }
@@ -1107,30 +1036,19 @@ int SVM_Scalar::setVarBias(void)
 
         biasType = 0;
 
-	int i;
+        for ( int i = 0 ; i < GPNWIDTH(biasdim) ; ++i )
+        {
+            Q.changeBetaRestrict(i,0,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
+            Q.modBetaCtoF(i,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
 
-	//if ( GPNWIDTH(biasdim) )
-	{
-	    for ( i = 0 ; i < GPNWIDTH(biasdim) ; ++i )
-	    {
-		Q.changeBetaRestrict(i,0,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-		Q.modBetaCtoF(i,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-
-		if ( wasfixedbias )
-		{
-		    Q.betaStep(i,bfixval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-		}
-	    }
+            if ( wasfixedbias ) { Q.betaStep(i,bfixval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp); }
 	}
 
 	if ( wasfixedbias )
 	{
             Vector<double> gpnew(traintarg);
 
-            if ( prim() )
-            {
-                gpnew -= ypR();
-            }
+            if ( prim() ) { gpnew -= ypR(); }
 
 	    gpnew.negate();
 	    Q.refactgp(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gpnew,gn,hp);
@@ -1139,25 +1057,10 @@ int SVM_Scalar::setVarBias(void)
 	    bfixval = 0.0;
 	}
 
-	if ( SVM_Scalar::isOptActive() )
-	{
-	    setOptActive();
-	}
-
-	else if ( SVM_Scalar::isOptD2C() )
-	{
-            setOptD2C();
-	}
-
-	else if ( SVM_Scalar::isOptSMO() )
-	{
-            setOptSMO();
-	}
-
-        else
-        {
-            setOptGrad();
-        }
+	if      ( SVM_Scalar::isOptActive() ) { setOptActive(); }
+	else if ( SVM_Scalar::isOptD2C()    ) { setOptD2C();    }
+	else if ( SVM_Scalar::isOptSMO()    ) { setOptSMO();    }
+        else                                  { setOptGrad();   }
 
         SVM_Generic::basesetbias(biasR());
     }
@@ -1177,45 +1080,22 @@ int SVM_Scalar::setFixedBias(double newbias)
     {
         biasType = 3;
 
-	int i;
-
-	//if ( GPNWIDTH(biasdim) )
-	{
-	    for ( i = 0 ; i < GPNWIDTH(biasdim) ; ++i )
-	    {
-		Q.changeBetaRestrict(i,3,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp); // this will zero it as well as constrain it
-	    }
-	}
-
-	if ( SVM_Scalar::isOptActive() )
-	{
-	    setOptActive();
-	}
-
-	else if ( SVM_Scalar::isOptD2C() )
-	{
-            setOptD2C();
-	}
-
-	else if ( SVM_Scalar::isOptSMO() )
-	{
-            setOptSMO();
-	}
-
-        else
+        for ( int i = 0 ; i < GPNWIDTH(biasdim) ; ++i )
         {
-            setOptGrad();
-        }
+            Q.changeBetaRestrict(i,3,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp); // this will zero it as well as constrain it
+	}
+
+	if      ( SVM_Scalar::isOptActive() ) { setOptActive(); }
+	else if ( SVM_Scalar::isOptD2C()    ) { setOptD2C();    }
+	else if ( SVM_Scalar::isOptSMO()    ) { setOptSMO();    }
+        else                                  { setOptGrad();   }
     }
 
     if ( SVM_Scalar::N() )
     {
         Vector<double> gpnew(traintarg);
 
-        if ( prim() )
-        {
-            gpnew -= ypR();
-        }
+        if ( prim() ) { gpnew -= ypR(); }
 
 	gpnew.negate();
 	gpnew += bfixval;
@@ -1290,10 +1170,7 @@ int SVM_Scalar::setPosBias(void)
 {
     if ( !SVM_Scalar::isPosBias() )
     {
-        if ( ( biasR() < 0 ) || SVM_Scalar::isNegBias() )
-	{
-	    setFixedBias(0.0);
-	}
+        if ( ( biasR() < 0 ) || SVM_Scalar::isNegBias() ) { setFixedBias(0.0); }
 
 	isStateOpt = 0;
 
@@ -1305,30 +1182,19 @@ int SVM_Scalar::setPosBias(void)
 
         biasType = 1;
 
-	int i;
+        for ( int i = 0 ; i < GPNWIDTH(biasdim) ; ++i )
+        {
+            Q.changeBetaRestrict(i,1,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
+            Q.modBetaCtoF(i,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
 
-	//if ( GPNWIDTH(biasdim) )
-	{
-	    for ( i = 0 ; i < GPNWIDTH(biasdim) ; ++i )
-	    {
-		Q.changeBetaRestrict(i,1,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-		Q.modBetaCtoF(i,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-
-		if ( wasfixedbias )
-		{
-		    Q.betaStep(i,newbias,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-		}
-	    }
+            if ( wasfixedbias ) { Q.betaStep(i,newbias,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp); }
 	}
 
 	if ( wasfixedbias )
 	{
             Vector<double> gpnew(traintarg);
 
-            if ( prim() )
-            {
-                gpnew -= ypR();
-            }
+            if ( prim() ) { gpnew -= ypR(); }
 
 	    gpnew.negate();
 	    Q.refactgp(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gpnew,gn,hp);
@@ -1337,25 +1203,10 @@ int SVM_Scalar::setPosBias(void)
 	    bfixval = 0.0;
 	}
 
-	if ( SVM_Scalar::isOptActive() )
-	{
-	    setOptActive();
-	}
-
-	else if ( SVM_Scalar::isOptD2C() )
-	{
-            setOptD2C();
-	}
-
-	else if ( SVM_Scalar::isOptSMO() )
-	{
-            setOptSMO();
-	}
-
-        else
-        {
-            setOptGrad();
-        }
+	if      ( SVM_Scalar::isOptActive() ) { setOptActive(); }
+	else if ( SVM_Scalar::isOptD2C()    ) { setOptD2C();    }
+	else if ( SVM_Scalar::isOptSMO()    ) { setOptSMO();    }
+        else                                  { setOptGrad();   }
 
         SVM_Generic::basesetbias(biasR());
     }
@@ -1367,10 +1218,7 @@ int SVM_Scalar::setNegBias(void)
 {
     if ( !SVM_Scalar::isNegBias() )
     {
-        if ( ( biasR() > 0 ) || SVM_Scalar::isPosBias() )
-	{
-	    setFixedBias(0.0);
-	}
+        if ( ( biasR() > 0 ) || SVM_Scalar::isPosBias() ) { setFixedBias(0.0); }
 
 	isStateOpt = 0;
 
@@ -1382,30 +1230,19 @@ int SVM_Scalar::setNegBias(void)
 
         biasType = 2;
 
-	int i;
+        for ( int i = 0 ; i < GPNWIDTH(biasdim) ; ++i )
+        {
+            Q.changeBetaRestrict(i,2,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
+            Q.modBetaCtoF(i,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
 
-	//if ( GPNWIDTH(biasdim) )
-	{
-	    for ( i = 0 ; i < GPNWIDTH(biasdim) ; ++i )
-	    {
-		Q.changeBetaRestrict(i,2,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-		Q.modBetaCtoF(i,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-
-		if ( wasfixedbias )
-		{
-		    Q.betaStep(i,newbias,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
-		}
-	    }
+            if ( wasfixedbias ) { Q.betaStep(i,newbias,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp); }
 	}
 
 	if ( wasfixedbias )
 	{
             Vector<double> gpnew(traintarg);
 
-            if ( prim() )
-            {
-                gpnew -= ypR();
-            }
+            if ( prim() ) { gpnew -= ypR(); }
 
 	    gpnew.negate();
 	    Q.refactgp(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gpnew,gn,hp);
@@ -1414,25 +1251,10 @@ int SVM_Scalar::setNegBias(void)
 	    bfixval = 0.0;
 	}
 
-	if ( SVM_Scalar::isOptActive() )
-	{
-	    setOptActive();
-	}
-
-	else if ( SVM_Scalar::isOptD2C() )
-	{
-            setOptD2C();
-	}
-
-	else if ( SVM_Scalar::isOptSMO() )
-	{
-            setOptSMO();
-	}
-
-        else
-        {
-            setOptGrad();
-        }
+	if      ( SVM_Scalar::isOptActive() ) { setOptActive(); }
+	else if ( SVM_Scalar::isOptD2C()    ) { setOptD2C();    }
+	else if ( SVM_Scalar::isOptSMO()    ) { setOptSMO();    }
+        else                                  { setOptGrad();   }
 
         SVM_Generic::basesetbias(biasR());
     }
@@ -1458,25 +1280,10 @@ int SVM_Scalar::setVarBias(int q)
 	Q.changeBetaRestrict(q,0,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
 	Q.modBetaCtoF(q,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
 
-	if ( SVM_Scalar::isOptActive() )
-	{
-	    setOptActive();
-	}
-
-	else if ( SVM_Scalar::isOptD2C() )
-	{
-            setOptD2C();
-	}
-
-	else if ( SVM_Scalar::isOptSMO() )
-	{
-            setOptSMO();
-	}
-
-        else
-        {
-            setOptGrad();
-        }
+	if      ( SVM_Scalar::isOptActive() ) { setOptActive(); }
+	else if ( SVM_Scalar::isOptD2C()    ) { setOptD2C();    }
+	else if ( SVM_Scalar::isOptSMO()    ) { setOptSMO();    }
+        else                                  { setOptGrad();   }
 
         SVM_Generic::basesetbias(biasR());
     }
@@ -1494,10 +1301,7 @@ int SVM_Scalar::setPosBias(int q)
     {
 	Vector<double> realbeta(Q.beta());
 
-	if ( SVM_Scalar::isNegBias(q) )
-	{
-            setVarBias(q);
-	}
+	if ( SVM_Scalar::isNegBias(q) ) { setVarBias(q); }
 
 	if ( realbeta(q) < 0 )
 	{
@@ -1515,25 +1319,10 @@ int SVM_Scalar::setPosBias(int q)
 	Q.changeBetaRestrict(q,1,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
 	Q.modBetaCtoF(q,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
 
-	if ( SVM_Scalar::isOptActive() )
-	{
-	    setOptActive();
-	}
-
-	else if ( SVM_Scalar::isOptD2C() )
-	{
-            setOptD2C();
-	}
-
-	else if ( SVM_Scalar::isOptSMO() )
-	{
-            setOptSMO();
-	}
-
-        else
-        {
-            setOptGrad();
-        }
+	if      ( SVM_Scalar::isOptActive() ) { setOptActive(); }
+	else if ( SVM_Scalar::isOptD2C()    ) { setOptD2C();    }
+	else if ( SVM_Scalar::isOptSMO()    ) { setOptSMO();    }
+        else                                  { setOptGrad();   }
 
         SVM_Generic::basesetbias(biasR());
     }
@@ -1551,10 +1340,7 @@ int SVM_Scalar::setNegBias(int q)
     {
 	Vector<double> realbeta(Q.beta());
 
-	if ( SVM_Scalar::isPosBias(q) )
-	{
-            setVarBias(q);
-	}
+	if ( SVM_Scalar::isPosBias(q) ) { setVarBias(q); }
 
 	if ( realbeta(q) > 0 )
 	{
@@ -1572,25 +1358,10 @@ int SVM_Scalar::setNegBias(int q)
 	Q.changeBetaRestrict(q,2,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
 	Q.modBetaCtoF(q,*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
 
-	if ( SVM_Scalar::isOptActive() )
-	{
-	    setOptActive();
-	}
-
-	else if ( SVM_Scalar::isOptD2C() )
-	{
-            setOptD2C();
-	}
-
-	else if ( SVM_Scalar::isOptSMO() )
-	{
-            setOptSMO();
-	}
-
-        else
-        {
-            setOptGrad();
-        }
+	if      ( SVM_Scalar::isOptActive() ) { setOptActive(); }
+	else if ( SVM_Scalar::isOptD2C()    ) { setOptD2C();    }
+	else if ( SVM_Scalar::isOptSMO()    ) { setOptSMO();    }
+        else                                  { setOptGrad();   }
 
         SVM_Generic::basesetbias(biasR());
     }
@@ -1619,25 +1390,10 @@ int SVM_Scalar::setFixedTube(void)
 
 	tubeshrink = 0;
 
-	if ( SVM_Scalar::isOptActive() )
-	{
-	    setOptActive();
-	}
-
-	else if ( SVM_Scalar::isOptD2C() )
-	{
-	    setOptD2C();
-	}
-
-	else if ( SVM_Scalar::isOptSMO() )
-	{
-	    setOptSMO();
-	}
-
-        else
-        {
-            setOptGrad();
-        }
+	if      ( SVM_Scalar::isOptActive() ) { setOptActive(); }
+	else if ( SVM_Scalar::isOptD2C()    ) { setOptD2C();    }
+	else if ( SVM_Scalar::isOptSMO()    ) { setOptSMO();    }
+        else                                  { setOptGrad();   }
     }
 
     return 0;
@@ -1654,25 +1410,10 @@ int SVM_Scalar::setShrinkTube(void)
 
 	tubeshrink = 1;
 
-	if ( SVM_Scalar::isOptActive() )
-	{
-	    setOptActive();
-	}
-
-	else if ( SVM_Scalar::isOptD2C() )
-	{
-	    setOptD2C();
-	}
-
-	else if ( SVM_Scalar::isOptSMO() )
-	{
-	    setOptSMO();
-	}
-
-        else
-        {
-            setOptGrad();
-        }
+	if      ( SVM_Scalar::isOptActive() ) { setOptActive(); }
+	else if ( SVM_Scalar::isOptD2C()    ) { setOptD2C();    }
+	else if ( SVM_Scalar::isOptSMO()    ) { setOptSMO();    }
+        else                                  { setOptGrad();   }
     }
 
     return 0;
@@ -1694,10 +1435,7 @@ int SVM_Scalar::setRestrictEpsNeg(void)
 
 int SVM_Scalar::setOptActive(void)
 {
-    if ( !SVM_Scalar::isOptActive() )
-    {
-	optType = 0;
-    }
+    if ( !SVM_Scalar::isOptActive() ) { optType = 0; }
 
     Q.setkeepfact(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),1);
 
@@ -1709,20 +1447,10 @@ int SVM_Scalar::setOptActive(void)
 
 int SVM_Scalar::setOptSMO(void)
 {
-    if ( !SVM_Scalar::isOptSMO() )
-    {
-	optType = 1;
-    }
+    if ( !SVM_Scalar::isOptSMO() ) { optType = 1; }
 
-    if ( SVM_Scalar::isPosBias() || SVM_Scalar::isNegBias() || SVM_Scalar::isShrinkTube() )
-    {
-	Q.setkeepfact(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),1);
-    }
-
-    else
-    {
-	Q.setkeepfact(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),0);
-    }
+    if ( SVM_Scalar::isPosBias() || SVM_Scalar::isNegBias() || SVM_Scalar::isShrinkTube() ) { Q.setkeepfact(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),1); }
+    else                                                                                    { Q.setkeepfact(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),0); }
 
     // Fix kernel cache memory ratios
     setmemsize(memsize());
@@ -1732,20 +1460,10 @@ int SVM_Scalar::setOptSMO(void)
 
 int SVM_Scalar::setOptD2C(void)
 {
-    if ( !SVM_Scalar::isOptD2C() )
-    {
-	optType = 2;
-    }
+    if ( !SVM_Scalar::isOptD2C() ) { optType = 2; }
 
-    if ( SVM_Scalar::isPosBias() || SVM_Scalar::isNegBias() || SVM_Scalar::isShrinkTube() )
-    {
-	Q.setkeepfact(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),1);
-    }
-
-    else
-    {
-	Q.setkeepfact(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),0);
-    }
+    if ( SVM_Scalar::isPosBias() || SVM_Scalar::isNegBias() || SVM_Scalar::isShrinkTube() ) { Q.setkeepfact(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),1); }
+    else                                                                                    { Q.setkeepfact(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),0); }
 
     // Fix kernel cache memory ratios
     setmemsize(memsize());
@@ -1755,20 +1473,10 @@ int SVM_Scalar::setOptD2C(void)
 
 int SVM_Scalar::setOptGrad(void)
 {
-    if ( !SVM_Scalar::isOptGrad() )
-    {
-	optType = 3;
-    }
+    if ( !SVM_Scalar::isOptGrad() ) { optType = 3; }
 
-    if ( SVM_Scalar::isPosBias() || SVM_Scalar::isNegBias() || SVM_Scalar::isShrinkTube() )
-    {
-	Q.setkeepfact(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),1);
-    }
-
-    else
-    {
-	Q.setkeepfact(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),0);
-    }
+    if ( SVM_Scalar::isPosBias() || SVM_Scalar::isNegBias() || SVM_Scalar::isShrinkTube() ) { Q.setkeepfact(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),1); }
+    else                                                                                    { Q.setkeepfact(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),0); }
 
     // Fix kernel cache memory ratios
     setmemsize(memsize());
@@ -1787,10 +1495,7 @@ int SVM_Scalar::setLinBiasForce(double newval)
 
     retVector<double> tmpva;
 
-    if ( autosetLevel == 6 )
-    {
-        SVM_Scalar::autosetOff();
-    }
+    if ( autosetLevel == 6 ) { SVM_Scalar::autosetOff(); }
 
     Vector<double> gnnew(gn);
 
@@ -1810,14 +1515,9 @@ int SVM_Scalar::setQuadBiasForce(double newval)
 
     quadbiasforceval = newval;
 
-    int i;
-
     if ( GPNWIDTH(biasdim) )
     {
-	for ( i = 0 ; i < GPNWIDTH(biasdim) ; ++i )
-	{
-	    Gn("&",i,i) = -newval;
-	}
+        for ( int i = 0 ; i < GPNWIDTH(biasdim) ; ++i ) { Gn("&",i,i) = -newval; }
 
 	Q.refact(*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
     }
@@ -1858,10 +1558,7 @@ int SVM_Scalar::setd(int i, int d)
 
         res |= SVM_Scalar::setdinternal(i,d);
 
-	if ( !d || !oldd )
-	{
-            res |= SVM_Scalar::fixautosettings(0,1);
-	}
+	if ( !d || !oldd ) { res |= SVM_Scalar::fixautosettings(0,1); }
     }
 
     return res;
@@ -1911,13 +1608,7 @@ int SVM_Scalar::sety(const Vector<int> &j, const Vector<gentype> &yn)
 
     int res = 0;
 
-    //if ( j.size() )
-    {
-        for ( int i = 0 ; i < j.size() ; ++i )
-        {
-            res |= sety(j(i),yn(i));
-        }
-    }
+    for ( int i = 0 ; i < j.size() ; ++i ) { res |= sety(j(i),yn(i)); }
 
     return res;
 }
@@ -1928,13 +1619,7 @@ int SVM_Scalar::sety(const Vector<gentype> &yn)
 
     int res = 0;
 
-    //if ( SVM_Scalar::N() )
-    {
-        for ( int i = 0 ; i < SVM_Scalar::N() ; ++i )
-        {
-            res |= sety(i,yn(i));
-        }
-    }
+    for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { res |= sety(i,yn(i)); }
 
     return res;
 }
@@ -1959,11 +1644,7 @@ int SVM_Scalar::sety(int i, double zn)
         traintarg("&",i) = zn;
         gpnew("&",i) = bfixval-zn;
 
-        if ( prim() )
-        {
-//outstream() << "phantomxyzabc: sety: Adjustment made!\n";
-            gpnew("&",i) += ypR()(i);
-        }
+        if ( prim() ) { gpnew("&",i) += ypR()(i); }
 
 	Q.refactgp(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gpnew,gn,hp,i);
 
@@ -1975,10 +1656,7 @@ int SVM_Scalar::sety(int i, double zn)
         traintarg = zn;
         gpnew = bfixval-zn;
 
-        if ( prim() )
-        {
-            gpnew += ypR();
-        }
+        if ( prim() ) { gpnew += ypR(); }
 
 	Q.refactgp(*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gpnew,gn,hp,i);
 
@@ -2001,20 +1679,9 @@ int SVM_Scalar::setCweight(int i, double xC)
 
     Cweightval("&",i) = xC;
 
-    if ( SVM_Scalar::isLinearCost() )
-    {
-	recalcLUB(i);
-    }
-
-    else if ( SVM_Scalar::isQuadraticCost() )
-    {
-	recalcdiagoff(i);
-    }
-
-    else if ( SVM_Scalar::is1NormCost() )
-    {
-        recalcCRDR(i);
-    }
+    if      ( SVM_Scalar::isLinearCost()    ) { recalcLUB(i);     }
+    else if ( SVM_Scalar::isQuadraticCost() ) { recalcdiagoff(i); }
+    else if ( SVM_Scalar::is1NormCost()     ) { recalcCRDR(i);    }
 
     return 1;
 }
@@ -2040,10 +1707,7 @@ int SVM_Scalar::setLweight(int i, double xL)
             isQuasiLogLikeCalced = 0;
             isMaxInfGainCalced   = 0;
 
-            if ( Q.factbad(Gn,GPNorGPNEXT(Gpn,GpnExt)) )
-            {
-                return setLweight(Lweightval); // trigger full refactorisation from scratch
-            }
+            if ( Q.factbad(Gn,GPNorGPNEXT(Gpn,GpnExt)) ) { return setLweight(Lweightval); } // trigger full refactorisation from scratch
 
             //if ( abs2(alphaR()(i)) > zerotol() )
             {
@@ -3405,7 +3069,7 @@ int SVM_Scalar::qaddTrainingVector(int i, const gentype &zi, SparseVector<gentyp
 //    return SVM_Scalar::qaddTrainingVector(i,(double) zi,x,Cweigh,epsweigh,d); //2);
 //}
 
-int SVM_Scalar::addTrainingVector(int i, const Vector<double> &zi, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
+int SVM_Scalar::addTrainingVector(int i, const Vector<double> &zi, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
     // NB: GpnExt must be extended before calling this.
 
@@ -3464,7 +3128,7 @@ int SVM_Scalar::addTrainingVector(int i, const Vector<double> &zi, const Vector<
     return res;
 }
 
-int SVM_Scalar::qaddTrainingVector(int i, const Vector<double> &zi, Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
+int SVM_Scalar::qaddTrainingVector(int i, const Vector<double> &zi, Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
     // NB: GpnExt must be extended before calling this.
 
@@ -3525,7 +3189,7 @@ int SVM_Scalar::qaddTrainingVector(int i, const Vector<double> &zi, Vector<Spars
     return res;
 }
 
-int SVM_Scalar::addTrainingVector(int i, const Vector<gentype> &zi, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Scalar::addTrainingVector(int i, const Vector<gentype> &zi, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     // NB: GpnExt must be extended before calling this.
 
@@ -3591,7 +3255,7 @@ int SVM_Scalar::addTrainingVector(int i, const Vector<gentype> &zi, const Vector
 //    return SVM_Scalar::addTrainingVector(i,zzi,x,Cweigh,epsweigh,ddd);
 //}
 
-int SVM_Scalar::qaddTrainingVector(int i, const Vector<gentype> &zi, Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Scalar::qaddTrainingVector(int i, const Vector<gentype> &zi, Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     // NB: GpnExt must be extended before calling this.
 
@@ -5751,11 +5415,12 @@ int SVM_Scalar::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int i
 
     int dtva = xtang(ia) & (7+32+64);
     int dtvb = xtang(ib) & (7+32+64);
-    int dtvi = xtang(ii) & (7+32+64);
+//    int dtvi = xtang(ii) & (7+32+64);
 
     NiceAssert( dtva >= 0 );
     NiceAssert( dtvb >= 0 );
-    NiceAssert( dtvi == 0 );
+//    NiceAssert( dtvi == 0 );
+    NiceAssert( ( xtang(ii) & (7+32+64) ) == 0 );
 
     retVector<double> tmpva;
 
@@ -7115,7 +6780,7 @@ int SVM_Scalar::inintrain(int &res, svmvolatile int &killSwitch, double (*fixHig
 
         SparseVector<gentype> zv;
 
-        Vector<Vector<double> > phi2i(NN); // phi2(x_i)
+        Vector<Vector<double>> phi2i(NN); // phi2(x_i)
         Vector<double> phi2z;              // phi2(0)
 
         phi2(phi2z,zv).size();

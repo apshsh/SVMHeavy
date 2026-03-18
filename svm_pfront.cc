@@ -83,12 +83,12 @@ int SVM_PFront::qaddTrainingVector(int i, const gentype &, SparseVector<gentype>
     return SVM_PFront::qaddTrainingVector(i,x,Cweigh,epsweigh);
 }
 
-int SVM_PFront::addTrainingVector(int i, const Vector<gentype> &, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_PFront::addTrainingVector(int i, const Vector<gentype> &, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     return SVM_PFront::addTrainingVector(i,x,Cweigh,epsweigh);
 }
 
-int SVM_PFront::qaddTrainingVector(int i, const Vector<gentype> &, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_PFront::qaddTrainingVector(int i, const Vector<gentype> &, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     return SVM_PFront::qaddTrainingVector(i,x,Cweigh,epsweigh);
 }
@@ -103,7 +103,7 @@ int SVM_PFront::qaddTrainingVector(int i, SparseVector<gentype> &x, double Cweig
     return SVM_Binary::qaddTrainingVector(i,1,x,Cweigh,epsweigh);
 }
 
-int SVM_PFront::addTrainingVector(int i, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_PFront::addTrainingVector(int i, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<gentype> d(x.size());
     gentype tempz(1);
@@ -113,7 +113,7 @@ int SVM_PFront::addTrainingVector(int i, const Vector<SparseVector<gentype> > &x
     return SVM_Binary::addTrainingVector(i,d,x,Cweigh,epsweigh);
 }
 
-int SVM_PFront::qaddTrainingVector(int i, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_PFront::qaddTrainingVector(int i, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<gentype> d(x.size());
     gentype tempz(1);

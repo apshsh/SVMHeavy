@@ -77,8 +77,8 @@ public:
     virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
@@ -106,69 +106,6 @@ public:
 
     virtual double e(int i)                                                                           const override;
     virtual double e(const gentype &y, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override { return SVM_Generic::e(y,x,xinf); }
-
-protected:
-    // Inner-product cache: used to accelerate kernel transfer
-
-    virtual int isxymat(const MercerKernel &altK) const override
-    {
-        return ( xyvalid && ( altK.suggestXYcache() || altK.wantsXYprod() ) ) ? 1 : 0;
-    }
-
-    virtual const Matrix<double> &getxymat(const MercerKernel &altK) const override
-    {
-        (void) altK;
-
-        NiceThrow("Can't do m-kernel xymat in svm_kconst (you can for m=0,1,2,3,4, but not in general).");
-
-        const static Matrix<double> dummy;
-
-        return dummy;
-    }
-
-    virtual const double &getxymatelm(const MercerKernel &altK, int i, int j) const override
-    {
-        (void) altK;
-
-        NiceAssert( isxymat(altK) );
-
-        if ( ( i >= 0 ) && ( j >= 0 ) )
-        {
-            return (KxferDatStore.gxvinnerProdsFull)(i,j);
-        }
-
-        else if ( ( i == -42 ) && ( j >= 0 ) )
-        {
-            return (KxferDatStore.allxainnerProdsFull)(xyvalid)(j);
-        }
-
-        else if ( ( i == -43 ) && ( j >= 0 ) )
-        {
-            return (KxferDatStore.allxbinnerProdsFull)(xyvalid)(j);
-        }
-
-        else if ( ( i >= 0 ) && ( i == -42 ) )
-        {
-            return (KxferDatStore.allxainnerProdsFull)(xyvalid)(i);
-        }
-
-        else if ( ( i >= 0 ) && ( i == -43 ) )
-        {
-            return (KxferDatStore.allxbinnerProdsFull)(xyvalid)(i);
-        }
-
-        else if ( ( i == -42 ) && ( j == -42 ) )
-        {
-            return (KxferDatStore.allxaxainnerProd)(xyvalid);
-        }
-
-        else if ( ( i == -43 ) && ( j == -43 ) )
-        {
-            return (KxferDatStore.allxbxbinnerProd)(xyvalid);
-        }
-
-        return (KxferDatStore.allxaxbinnerProd)(xyvalid);
-    }
 
 private:
     virtual int gTrainingVector(double &res, int &unusedvar, int i, int raw = 0, gentype ***pxyprodi = nullptr) const;

@@ -508,7 +508,7 @@ int SVM_Vector_Mredbin::reset(void)
     return res;
 }
 
-int SVM_Vector_Mredbin::setAlphaV(const Vector<Vector<double> > &newAlpha)
+int SVM_Vector_Mredbin::setAlphaV(const Vector<Vector<double>> &newAlpha)
 {
     NiceAssert( newAlpha.size() == N() );
 
@@ -758,7 +758,7 @@ int SVM_Vector_Mredbin::setd(const Vector<int> &j, const Vector<int> &d)
     return res;
 }
 
-int SVM_Vector_Mredbin::sety(const Vector<int> &j, const Vector<Vector<double> > &z)
+int SVM_Vector_Mredbin::sety(const Vector<int> &j, const Vector<Vector<double>> &z)
 {
     NiceAssert( z.size() == j.size() );
 
@@ -854,7 +854,7 @@ int SVM_Vector_Mredbin::setd(const Vector<int> &d)
     return res;
 }
 
-int SVM_Vector_Mredbin::sety(const Vector<Vector<double> > &z)
+int SVM_Vector_Mredbin::sety(const Vector<Vector<double>> &z)
 {
     NiceAssert( z.size() == N() );
 
@@ -1357,7 +1357,7 @@ int SVM_Vector_Mredbin::qaddTrainingVector(int i, const gentype &z,       Sparse
     return SVM_Vector_Mredbin::qaddTrainingVector(i,zd,x,Cweigh,epsweigh,dval); //2);
 }
 
-int SVM_Vector_Mredbin::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Vector_Mredbin::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -1378,7 +1378,7 @@ int SVM_Vector_Mredbin::addTrainingVector (int i, const Vector<gentype> &z, cons
     return res;
 }
 
-int SVM_Vector_Mredbin::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Vector_Mredbin::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -1427,7 +1427,7 @@ int SVM_Vector_Mredbin::qaddTrainingVector(int i, const Vector<double>  &z, Spar
     return res;
 }
 
-int SVM_Vector_Mredbin::addTrainingVector (int i, const Vector<Vector<double> > &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
+int SVM_Vector_Mredbin::addTrainingVector (int i, const Vector<Vector<double>> &z, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -1449,7 +1449,7 @@ int SVM_Vector_Mredbin::addTrainingVector (int i, const Vector<Vector<double> > 
     return res;
 }
 
-int SVM_Vector_Mredbin::qaddTrainingVector(int i, const Vector<Vector<double> > &z,       Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
+int SVM_Vector_Mredbin::qaddTrainingVector(int i, const Vector<Vector<double>> &z,       Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );

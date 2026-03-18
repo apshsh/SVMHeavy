@@ -65,7 +65,7 @@ public:
     virtual int reset(void) override;
     virtual int restart(void) override { SVM_Vector_redbin<BaseRegressorClass> temp; *this = temp; return 1; }
 
-    virtual int setAlphaV(const Vector<Vector<double> > &newAlpha) override;
+    virtual int setAlphaV(const Vector<Vector<double>> &newAlpha) override;
     virtual int setBiasV(const Vector<double> &newBias) override;
 
     virtual std::ostream &printstream(std::ostream &output, int dep) const override;
@@ -106,9 +106,9 @@ public:
     virtual char targType(void) const override { return 'V'; }
     virtual double calcDist(const gentype &ha, const gentype &hb, int ia = -1, int db = 2) const override;
 
-    virtual const Vector<int>          &ClassLabels(void)   const override { return classLabelsval;                    }
-    virtual const Vector<Vector<int> > &ClassRep(void)      const override { return classRepval;                       }
-    virtual int                         findID(int ref)     const override { NiceAssert( ref == 2 ); (void) ref; return 2; }
+    virtual const Vector<int>         &ClassLabels(void)   const override { return classLabelsval;                    }
+    virtual const Vector<Vector<int>> &ClassRep(void)      const override { return classRepval;                       }
+    virtual int                        findID(int ref)     const override { NiceAssert( ref == 2 ); (void) ref; return 2; }
 
     virtual int isLinearCost(void)      const override { return costType == 0;      }
     virtual int isQuadraticCost(void)   const override { return costType == 1;      }
@@ -216,17 +216,17 @@ public:
     virtual double autosetCval(void)  const override { return autosetCvalx; }
     virtual double autosetnuval(void) const override { return 0;            }
 
-    virtual const Vector<int>                  &d          (void) const override { return trainclass;         }
-    virtual const Vector<double>               &Cweight    (void) const override { return Q(0).Cweight();     }
-    virtual const Vector<double>               &Cweightfuzz(void) const override { return Q(0).Cweightfuzz(); }
-    virtual const Vector<double>               &epsweight  (void) const override { return Q(0).epsweight();   }
-    virtual const Matrix<double>               &Gp         (void) const override { return *Gpval;             }
-    virtual const Vector<double>               &kerndiag   (void) const override { return kerndiagval;        }
-    virtual const Vector<int>                  &alphaState (void) const override { return dalphaState;        }
-    virtual const Vector<Vector<double> >      &zV         (void) const override { return traintarg;          }
-    virtual const Vector<double>               &biasV      (int raw=0)  const override { (void) raw; return db;                 }
-    virtual const Vector<Vector<double> >      &alphaV     (int raw=0)  const override { (void) raw; return dalpha;             }
-    virtual const Vector<Vector<double> >      &getu       (void) const override { return u;                  }
+    virtual const Vector<int>                 &d          (void) const override { return trainclass;         }
+    virtual const Vector<double>              &Cweight    (void) const override { return Q(0).Cweight();     }
+    virtual const Vector<double>              &Cweightfuzz(void) const override { return Q(0).Cweightfuzz(); }
+    virtual const Vector<double>              &epsweight  (void) const override { return Q(0).epsweight();   }
+    virtual const Matrix<double>              &Gp         (void) const override { return *Gpval;             }
+    virtual const Vector<double>              &kerndiag   (void) const override { return kerndiagval;        }
+    virtual const Vector<int>                 &alphaState (void) const override { return dalphaState;        }
+    virtual const Vector<Vector<double>>      &zV         (void) const override { return traintarg;          }
+    virtual const Vector<double>              &biasV      (int raw=0)  const override { (void) raw; return db;                 }
+    virtual const Vector<Vector<double>>      &alphaV     (int raw=0)  const override { (void) raw; return dalpha;             }
+    virtual const Vector<Vector<double>>      &getu       (void) const override { return u;                  }
 
     virtual const Vector<double> &zV(int i) const override { return ( i >= 0 ) ? zV()(i) : ((const Vector<double> &) y(i)); }
 
@@ -262,9 +262,9 @@ public:
 
     virtual int randomise(double sparsity) override;
 
-    virtual int sety(int                i, const Vector<double>          &z) override;
-    virtual int sety(const Vector<int> &i, const Vector<Vector<double> > &z) override;
-    virtual int sety(                      const Vector<Vector<double> > &z) override;
+    virtual int sety(int                i, const Vector<double>         &z) override;
+    virtual int sety(const Vector<int> &i, const Vector<Vector<double>> &z) override;
+    virtual int sety(                      const Vector<Vector<double>> &z) override;
 
     virtual int autosetOff(void)            override { autosetLevel = 0; return 0; }
     virtual int autosetCscaled(double Cval) override { NiceAssert( Cval > 0 ); autosetCvalx = Cval; int res = setC( (N()-NNC(0)) ? (Cval/((N()-NNC(0)))) : 1.0); autosetLevel = 1; return res; }
@@ -300,8 +300,8 @@ public:
     virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int addTrainingVector( int i, const Vector<double> &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
     virtual int qaddTrainingVector(int i, const Vector<double> &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
@@ -309,8 +309,8 @@ public:
     virtual int addTrainingVector( int i, const Vector<gentype> &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
     virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2);
 
-    virtual int addTrainingVector( int i, const Vector<Vector<double> > &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
-    virtual int qaddTrainingVector(int i, const Vector<Vector<double> > &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
+    virtual int addTrainingVector( int i, const Vector<Vector<double>> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
+    virtual int qaddTrainingVector(int i, const Vector<Vector<double>> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d);
 
     virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
@@ -403,9 +403,9 @@ private:
     Vector<double> kerndiagval;       // kernel diagonals
     Vector<double> diagoff;           // diagonal offset for hessian (used by quadratic cost)
 
-    Vector<int>          classLabelsval; // Convenience: [ -1 +1 2 ] (-1,+1 unused)
-    Vector<Vector<int> > classRepval;    // Convenience: [ [ -1 ] [ +1 ] [ 0 ] ] 
-    Vector<Vector<double> > u; // Convenience, empty
+    Vector<int>         classLabelsval; // Convenience: [ -1 +1 2 ] (-1,+1 unused)
+    Vector<Vector<int>> classRepval;    // Convenience: [ [ -1 ] [ +1 ] [ 0 ] ] 
+    Vector<Vector<double>> u; // Convenience, empty
 
     int autosetLevel;    // 0 = none, 1 = C/N, 2 = Cmean, 3 = Cmedian, 4 = CNmean, 5 = CNmedian, 6 = LinBiasForce
     double autosetCvalx;  // Cval used if autosetLevel == 1,6
@@ -413,7 +413,7 @@ private:
     // Optimisation state
 
     Vector<BaseRegressorClass> Q;
-    Vector<Vector<double> > dalpha;
+    Vector<Vector<double>> dalpha;
     Vector<int> dalphaState;
     Vector<double> db;
     int Ns;
@@ -423,7 +423,7 @@ private:
     // Training data
 
     Vector<int> trainclass;
-    Vector<Vector<double> > traintarg;
+    Vector<Vector<double>> traintarg;
 
     // Quadratic program definition
     //
@@ -956,7 +956,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::reset(void)
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::setAlphaV(const Vector<Vector<double> > &newAlpha)
+int SVM_Vector_redbin<BaseRegressorClass>::setAlphaV(const Vector<Vector<double>> &newAlpha)
 {
     NiceAssert( newAlpha.size() == N() );
 
@@ -1910,7 +1910,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::addTrainingVector(int i, const Vector
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Vector_redbin<BaseRegressorClass>::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -1932,7 +1932,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::addTrainingVector (int i, const Vecto
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::addTrainingVector (int i, const Vector<Vector<double> > &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
+int SVM_Vector_redbin<BaseRegressorClass>::addTrainingVector (int i, const Vector<Vector<double>> &z, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -1955,7 +1955,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::addTrainingVector (int i, const Vecto
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::qaddTrainingVector(int i, const Vector<Vector<double> > &z,       Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
+int SVM_Vector_redbin<BaseRegressorClass>::qaddTrainingVector(int i, const Vector<Vector<double>> &z,       Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -1978,7 +1978,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::qaddTrainingVector(int i, const Vecto
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Vector_redbin<BaseRegressorClass>::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( z.size() == xx.size() );
     NiceAssert( z.size() == Cweigh.size() );
@@ -3196,7 +3196,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::sety(const Vector<gentype> &yn)
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::sety(const Vector<int> &j, const Vector<Vector<double> > &z)
+int SVM_Vector_redbin<BaseRegressorClass>::sety(const Vector<int> &j, const Vector<Vector<double>> &z)
 {
     NiceAssert( z.size() == j.size() );
 
@@ -3216,7 +3216,7 @@ int SVM_Vector_redbin<BaseRegressorClass>::sety(const Vector<int> &j, const Vect
 }
 
 template <class BaseRegressorClass>
-int SVM_Vector_redbin<BaseRegressorClass>::sety(const Vector<Vector<double> > &z)
+int SVM_Vector_redbin<BaseRegressorClass>::sety(const Vector<Vector<double>> &z)
 {
     NiceAssert( z.size() == N() );
 

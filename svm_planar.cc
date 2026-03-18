@@ -1577,7 +1577,7 @@ int SVM_Planar::addTrainingVector (int i, double z, const SparseVector<gentype> 
     return SVM_Planar::qaddTrainingVector(i,z,xxx,Cweigh,epsweigh,d);
 }
 
-int SVM_Planar::addTrainingVector (int i, const Vector<double> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &xxd)
+int SVM_Planar::addTrainingVector (int i, const Vector<double> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &xxd)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= SVM_Planar::N() );
@@ -1601,7 +1601,7 @@ int SVM_Planar::addTrainingVector (int i, const Vector<double> &z, const Vector<
     return res;
 }
 
-int SVM_Planar::qaddTrainingVector(int i, const Vector<double> &z, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &xxd)
+int SVM_Planar::qaddTrainingVector(int i, const Vector<double> &z, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &xxd)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= SVM_Planar::N() );
@@ -1635,7 +1635,7 @@ int SVM_Planar::qaddTrainingVector(int i, const gentype &zi, SparseVector<gentyp
     return SVM_Planar::qaddTrainingVector(i,(double) zi,x,Cweigh,epsweigh,dval); //2);
 }
 
-int SVM_Planar::addTrainingVector(int i, const Vector<gentype> &zi, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Planar::addTrainingVector(int i, const Vector<gentype> &zi, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<double> zzi(zi.size());
     Vector<int> ddd(zi.size());
@@ -1655,7 +1655,7 @@ int SVM_Planar::addTrainingVector(int i, const Vector<gentype> &zi, const Vector
     return SVM_Planar::addTrainingVector(i,zzi,x,Cweigh,epsweigh,ddd);
 }
 
-int SVM_Planar::qaddTrainingVector(int i, const Vector<gentype> &zi, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Planar::qaddTrainingVector(int i, const Vector<gentype> &zi, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<double> zzi(zi.size());
     Vector<int> ddd(zi.size());
@@ -1675,7 +1675,7 @@ int SVM_Planar::qaddTrainingVector(int i, const Vector<gentype> &zi, Vector<Spar
     return SVM_Planar::qaddTrainingVector(i,zzi,x,Cweigh,epsweigh,ddd);
 }
 
-int SVM_Planar::setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &x)
+int SVM_Planar::setx(const Vector<int> &i, const Vector<SparseVector<gentype>> &x)
 {
     NiceAssert( i.size() == x.size() );
 
@@ -1694,7 +1694,7 @@ int SVM_Planar::setx(const Vector<int> &i, const Vector<SparseVector<gentype> > 
     return res;
 }
 
-int SVM_Planar::setx(const Vector<SparseVector<gentype> > &x)
+int SVM_Planar::setx(const Vector<SparseVector<gentype>> &x)
 {
     NiceAssert( x.size() == SVM_Planar::N() );
 

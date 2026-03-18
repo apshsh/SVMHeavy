@@ -190,10 +190,10 @@ int SVM_MvRank::train(int &res, svmvolatile int &killSwitch)
 
     // Steps and such-like
 
-    Vector<Vector<double> > &ubase = reflocbasis();
-    Vector<Vector<double> > ubaseprev(ubase);
-    Vector<Vector<double> > ugrad(ubase); // M.ubase
-    Vector<Vector<double> > ustep(ubase);
+    Vector<Vector<double>> &ubase = reflocbasis();
+    Vector<Vector<double>> ubaseprev(ubase);
+    Vector<Vector<double>> ugrad(ubase); // M.ubase
+    Vector<Vector<double>> ustep(ubase);
     Vector<double> ubar(d);
 
     // Starting point
@@ -459,9 +459,9 @@ int SVM_MvRank::train(int &res, svmvolatile int &killSwitch)
 
     // Steps and such-like
 
-    Vector<Vector<double> > &ubase = locbasis;
-    Vector<Vector<double> > ugrad(ubase); // M.ubase
-    Vector<Vector<double> > ustep(ubase);
+    Vector<Vector<double>> &ubase = locbasis;
+    Vector<Vector<double>> ugrad(ubase); // M.ubase
+    Vector<Vector<double>> ustep(ubase);
 
     // Randomise/normalise basis
 
@@ -705,13 +705,13 @@ int SVM_MvRank::train(int &res, svmvolatile int &killSwitch)
 
     // Steps and such-like
 
-    Vector<Vector<double> > &ubase = locbasis;
-    Vector<Vector<double> > ugrad(ubase); // M.ubase
-    Vector<Vector<double> > ustep(ubase);
+    Vector<Vector<double>> &ubase = locbasis;
+    Vector<Vector<double>> ugrad(ubase); // M.ubase
+    Vector<Vector<double>> ustep(ubase);
 
     // Active sets and pivots
 
-    Vector<Vector<int> > ii(M);
+    Vector<Vector<int>> ii(M);
     Vector<int> ni(M);
 
     for ( i = 0 ; i < M ; ++i )

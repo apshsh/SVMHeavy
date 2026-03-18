@@ -526,7 +526,7 @@ int SVM_Cyclic::setx(int i, const SparseVector<gentype> &xx)
     return res;
 }
 
-int SVM_Cyclic::setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &xx)
+int SVM_Cyclic::setx(const Vector<int> &i, const Vector<SparseVector<gentype>> &xx)
 {
     int j;
     int res = 0;
@@ -539,7 +539,7 @@ int SVM_Cyclic::setx(const Vector<int> &i, const Vector<SparseVector<gentype> > 
     return res;
 }
 
-int SVM_Cyclic::setx(const Vector<SparseVector<gentype> > &xx)
+int SVM_Cyclic::setx(const Vector<SparseVector<gentype>> &xx)
 {
     int j;
     int res = 0;
@@ -747,7 +747,7 @@ int SVM_Cyclic::addTrainingVector (int i, const gentype &z, const SparseVector<g
     return qaddTrainingVector(i,z,xx,Cweigh,epsweigh,dval);
 }
 
-int SVM_Cyclic::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Cyclic::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= SVM_Cyclic::N() );
@@ -771,7 +771,7 @@ int SVM_Cyclic::addTrainingVector(int i, const Vector<gentype> &z, const Vector<
     return res;
 }
 
-int SVM_Cyclic::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Cyclic::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= SVM_Cyclic::N() );

@@ -714,7 +714,7 @@ int SVM_Binary::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype
     return SVM_Binary::qaddTrainingVector(i,(int) z,x,Cweigh,epsweigh);
 }
 
-int SVM_Binary::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Binary::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<int> zz(z.size());
     Vector<double> xz(z.size());
@@ -732,7 +732,7 @@ int SVM_Binary::addTrainingVector(int i, const Vector<gentype> &z, const Vector<
     return SVM_Binary::addTrainingVector(i,zz,x,Cweigh,epsweigh,xz);
 }
 
-int SVM_Binary::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Binary::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<int> zz(z.size());
     Vector<double> xz(z.size());
@@ -808,7 +808,7 @@ int SVM_Binary::qaddTrainingVector(int i, int xd, SparseVector<gentype> &x, doub
     return res;
 }
 
-int SVM_Binary::addTrainingVector(int i, const Vector<int> &xd, const Vector<SparseVector<gentype> > &xx, const Vector<double> &xCweigh, const Vector<double> &xepsweigh, const Vector<double> &xz)
+int SVM_Binary::addTrainingVector(int i, const Vector<int> &xd, const Vector<SparseVector<gentype>> &xx, const Vector<double> &xCweigh, const Vector<double> &xepsweigh, const Vector<double> &xz)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= SVM_Binary::N() );
@@ -862,7 +862,7 @@ int SVM_Binary::addTrainingVector(int i, const Vector<int> &xd, const Vector<Spa
     return res;
 }
 
-int SVM_Binary::qaddTrainingVector(int i, const Vector<int> &xd, Vector<SparseVector<gentype> > &xx, const Vector<double> &xCweigh, const Vector<double> &xepsweigh, const Vector<double> &xz)
+int SVM_Binary::qaddTrainingVector(int i, const Vector<int> &xd, Vector<SparseVector<gentype>> &xx, const Vector<double> &xCweigh, const Vector<double> &xepsweigh, const Vector<double> &xz)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= SVM_Binary::N() );

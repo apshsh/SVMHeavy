@@ -68,7 +68,7 @@ public:
     virtual int reset(void) override;
     virtual int restart(void) override { SVM_MultiC_atonce temp; *this = temp; return 1; }
 
-    virtual int setAlphaV(const Vector<Vector<double> > &newAlpha) override;
+    virtual int setAlphaV(const Vector<Vector<double>> &newAlpha) override;
     virtual int setBiasV(const Vector<double> &newBias) override;
 
     virtual std::ostream &printstream(std::ostream &output, int dep) const override;
@@ -107,9 +107,9 @@ public:
     virtual char targType(void) const override { return 'Z'; }
     virtual double calcDist(const gentype &ha, const gentype &hb, int ia = -1, int db = 2) const override;
 
-    virtual const Vector<int>          &ClassLabels(void)   const override { return label_placeholder.getreftoID(); }
-    virtual const Vector<Vector<int> > &ClassRep(void)      const override { return classRepval;                    }
-    virtual int                         findID(int ref)     const override { return label_placeholder.findID(ref);  }
+    virtual const Vector<int>         &ClassLabels(void)   const override { return label_placeholder.getreftoID(); }
+    virtual const Vector<Vector<int>> &ClassRep(void)      const override { return classRepval;                    }
+    virtual int                        findID(int ref)     const override { return label_placeholder.findID(ref);  }
 
     virtual int isLinearCost(void)      const override { return costType == 0; }
     virtual int isQuadraticCost(void)   const override { return costType == 1; }
@@ -211,16 +211,16 @@ public:
     virtual double autosetCval(void)  const override { return autosetCvalx;  }
     virtual double autosetnuval(void) const override { return autosetnuvalx; }
 
-    virtual const Vector<int>                  &d          (void)      const override { return trainclass;                                      }
-    virtual const Vector<double>               &Cweight    (void)      const override { return Cweightval;                                      }
-    virtual const Vector<double>               &Cweightfuzz(void)      const override { return onedvec;                                         }
-    virtual const Vector<double>               &epsweight  (void)      const override { return epsweightval;                                    }
-    virtual const Matrix<double>               &Gp         (void)      const override { return *Gpval;                                          }
-    virtual const Vector<double>               &kerndiag   (void)      const override { return QA.kerndiag(); } // kerndiagval;                                     }
-    virtual const Vector<int>                  &alphaState (void)      const override { return dalphaState;                                     }
-    virtual const Vector<double>               &biasV      (int raw=0) const override { return ( ismaxwins() || raw ) ? db : dbReduced;         }
-    virtual const Vector<Vector<double> >      &alphaV     (int raw=0) const override { return ( ismaxwins() || raw ) ? dalpha : dalphaReduced; }
-    virtual const Vector<Vector<double> >      &getu       (void)      const override { return u;                                               }
+    virtual const Vector<int>                 &d          (void)      const override { return trainclass;                                      }
+    virtual const Vector<double>              &Cweight    (void)      const override { return Cweightval;                                      }
+    virtual const Vector<double>              &Cweightfuzz(void)      const override { return onedvec;                                         }
+    virtual const Vector<double>              &epsweight  (void)      const override { return epsweightval;                                    }
+    virtual const Matrix<double>              &Gp         (void)      const override { return *Gpval;                                          }
+    virtual const Vector<double>              &kerndiag   (void)      const override { return QA.kerndiag(); } // kerndiagval;                                     }
+    virtual const Vector<int>                 &alphaState (void)      const override { return dalphaState;                                     }
+    virtual const Vector<double>              &biasV      (int raw=0) const override { return ( ismaxwins() || raw ) ? db : dbReduced;         }
+    virtual const Vector<Vector<double>>      &alphaV     (int raw=0) const override { return ( ismaxwins() || raw ) ? dalpha : dalphaReduced; }
+    virtual const Vector<Vector<double>>      &getu       (void)      const override { return u;                                               }
 
     virtual int isClassifier(void) const override { return 1; }
     virtual int singmethod(void) const override { return QA.singmethod(); }
@@ -303,14 +303,14 @@ public:
     virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int addTrainingVector (int i, int d, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1);
     virtual int qaddTrainingVector(int i, int d,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1);
 
-    virtual int addTrainingVector (int i, const Vector<int> &d, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh);
-    virtual int qaddTrainingVector(int i, const Vector<int> &d,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh);
+    virtual int addTrainingVector (int i, const Vector<int> &d, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh);
+    virtual int qaddTrainingVector(int i, const Vector<int> &d,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh);
 
     virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
@@ -419,16 +419,16 @@ private:
     //           The number of classes is given by classRep.size()
     // Ns: number of support vectors
 
-    Vector<Vector<double> > dalpha; // stored classrep-wise
-    Vector<Vector<double> > dalphaReduced; // reduced version of above
+    Vector<Vector<double>> dalpha;        // stored classrep-wise
+    Vector<Vector<double>> dalphaReduced; // reduced version of above
     Vector<int> dalphaState;
     Vector<double> db;              // stored classrep-wise
     Vector<double> dbReduced;       // reduced version of above
     IDStore label_placeholder;
-    Vector<Vector<int> > classRepval;  // stored classlabel-wise.
-    int Ns;                         // number of support vectors
-    Vector<int> Nnc;                // number of vector in each class
-    Vector<Vector<double> > u;
+    Vector<Vector<int>> classRepval;  // stored classlabel-wise.
+    int Ns;                           // number of support vectors
+    Vector<int> Nnc;                  // number of vector in each class
+    Vector<Vector<double>> u;
     int isStateOpt;                 // set if SVM is in optimal state
 
     // Secondary anomaly detection (if used)
@@ -472,8 +472,8 @@ private:
     // CCMcl(0,t+1)   = CMcl(0,t+1) (max-wins) or CMcl(1,t+1) (recursive division)
     // CCMcl(s+1,t+1) = CCMcl(s+1,0)*CCMcl(0,t+1)
 
-    Matrix<Matrix<double> > CMcl;
-    Matrix<Matrix<double> > CCMcl;
+    Matrix<Matrix<double>> CMcl;
+    Matrix<Matrix<double>> CCMcl;
 
     // Functions to calculate these
 
@@ -507,8 +507,8 @@ private:
     Vector<double> &upDim(  const Vector<double> &dTDimArg, Vector<double> &nDimArg ) const;
     Vector<double> &downDim(const Vector<double> &nDimArg , Vector<double> &dTDimArg) const;
 
-    Vector<Vector<double> > &upDim(  const Vector<Vector<double> > &dTDimArg, Vector<Vector<double> > &nDimArg ) const;
-    Vector<Vector<double> > &downDim(const Vector<Vector<double> > &nDimArg , Vector<Vector<double> > &dTDimArg) const;
+    Vector<Vector<double>> &upDim(  const Vector<Vector<double>> &dTDimArg, Vector<Vector<double>> &nDimArg ) const;
+    Vector<Vector<double>> &downDim(const Vector<Vector<double>> &nDimArg , Vector<Vector<double>> &dTDimArg) const;
 
     // Various bits needed by the active set optimisation hack for rec div but 
     // which should probably be removed.
@@ -557,11 +557,11 @@ private:
     Vector<int> fakeredir;
 };
 
-Vector<double> &updim(const Vector<Vector<double> > &u, const Vector<double> &dTDimArg, Vector<double> &nDimArg);
-Vector<double> &downdim(const Vector<Vector<double> > &u, const Vector<double> &nDimArg, Vector<double> &dTDimArg);
+Vector<double> &updim  (const Vector<Vector<double>> &u, const Vector<double> &dTDimArg, Vector<double> &nDimArg );
+Vector<double> &downdim(const Vector<Vector<double>> &u, const Vector<double> &nDimArg,  Vector<double> &dTDimArg);
 
-Vector<Vector<double> > &updim(const Vector<Vector<double> > &u, const Vector<Vector<double> > &dTDimArg, Vector<Vector<double> > &nDimArg);
-Vector<Vector<double> > &downdim(const Vector<Vector<double> > &u, const Vector<Vector<double> > &nDimArg, Vector<Vector<double> > &dTDimArg);
+Vector<Vector<double>> &updim  (const Vector<Vector<double>> &u, const Vector<Vector<double>> &dTDimArg, Vector<Vector<double>> &nDimArg );
+Vector<Vector<double>> &downdim(const Vector<Vector<double>> &u, const Vector<Vector<double>> &nDimArg,  Vector<Vector<double>> &dTDimArg);
 
 // max wins: for each Q, Cclass and epsclass are set to 1 and Cweight, epsweight are set instead.
 // rec div:  for each Q, Cclass and epsclass are set to 1 and Cweight, epsweight are set instead.

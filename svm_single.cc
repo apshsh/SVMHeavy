@@ -297,7 +297,7 @@ int SVM_Single::qaddTrainingVector(int i, const gentype &z, SparseVector<gentype
     return SVM_Single::qaddTrainingVector(i,x,Cweigh,epsweigh,(double) z);
 }
 
-int SVM_Single::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Single::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<double> zz(z.size());
 
@@ -306,7 +306,7 @@ int SVM_Single::addTrainingVector(int i, const Vector<gentype> &z, const Vector<
     return SVM_Single::addTrainingVector(i,x,Cweigh,epsweigh,zz);
 }
 
-int SVM_Single::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Single::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<double> zz(z.size());
 
@@ -337,7 +337,7 @@ int SVM_Single::qaddTrainingVector(int i, SparseVector<gentype> &x, double Cweig
     return res;
 }
 
-int SVM_Single::addTrainingVector(int i, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<double> &z)
+int SVM_Single::addTrainingVector(int i, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<double> &z)
 {
     Vector<int> dd(x.size());
 
@@ -355,7 +355,7 @@ int SVM_Single::addTrainingVector(int i, const Vector<SparseVector<gentype> > &x
     return SVM_Binary::addTrainingVector(i,dd,x,Cweigh,epsweigh,zz);
 }
 
-int SVM_Single::qaddTrainingVector(int i, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<double> &z)
+int SVM_Single::qaddTrainingVector(int i, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<double> &z)
 {
     Vector<int> dd(x.size());
 

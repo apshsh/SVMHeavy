@@ -47,7 +47,7 @@ void evalSigmaSVM_Vector_atonce_temp_matrix(double &res, int i, int j, const gen
 
     gentype tempres;
 
-    SVM_Vector_atonce_temp<Matrix<double> > *realOwner = (SVM_Vector_atonce_temp<Matrix<double> > *) owner;
+    SVM_Vector_atonce_temp<Matrix<double>> *realOwner = (SVM_Vector_atonce_temp<Matrix<double>> *) owner;
 
     NiceAssert( realOwner );
 
@@ -169,13 +169,13 @@ Matrix<double> *alloc_gp(void *kerncache, int nrows, int ncols, const double &du
     return res;
 }
 
-Matrix<Matrix<double> > *alloc_gp(void *kerncache, int nrows, int ncols, const Matrix<double> &dummy)
+Matrix<Matrix<double>> *alloc_gp(void *kerncache, int nrows, int ncols, const Matrix<double> &dummy)
 {
     (void) dummy;
 
-    Matrix<Matrix<double> > *res;
+    Matrix<Matrix<double>> *res;
 
-    MEMNEW(res,Matrix<Matrix<double> >(Kcache_celm_matrix,Kcache_crow_matrix,kerncache,nrows,ncols));
+    MEMNEW(res,Matrix<Matrix<double>>(Kcache_celm_matrix,Kcache_crow_matrix,kerncache,nrows,ncols));
 
     return res;
 }

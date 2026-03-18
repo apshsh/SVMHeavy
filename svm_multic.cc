@@ -26,7 +26,7 @@ int SVM_MultiC::qaddTrainingVector(int i, const gentype &z,       SparseVector<g
     return SVM_MultiC::qaddTrainingVector(i,(int) z,x,Cweigh,epsweigh);
 }
 
-int SVM_MultiC::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_MultiC::addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<int> zz(z.size());
 
@@ -43,7 +43,7 @@ int SVM_MultiC::addTrainingVector (int i, const Vector<gentype> &z, const Vector
     return SVM_MultiC::addTrainingVector(i,zz,x,Cweigh,epsweigh);
 }
 
-int SVM_MultiC::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_MultiC::qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<int> zz(z.size());
 
@@ -92,7 +92,7 @@ int SVM_MultiC::qaddTrainingVector(int i, int d,       SparseVector<gentype> &x,
     return res;
 }
 
-int SVM_MultiC::addTrainingVector( int i, const Vector<int> &d, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_MultiC::addTrainingVector( int i, const Vector<int> &d, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     int res = 0;
 
@@ -116,7 +116,7 @@ int SVM_MultiC::addTrainingVector( int i, const Vector<int> &d, const Vector<Spa
     return res;
 }
 
-int SVM_MultiC::qaddTrainingVector(int i, const Vector<int> &d,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_MultiC::qaddTrainingVector(int i, const Vector<int> &d,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     int res = 0;
 

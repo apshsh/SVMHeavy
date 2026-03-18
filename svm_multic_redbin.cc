@@ -282,7 +282,7 @@ int SVM_MultiC_redbin::reset(void)
     return res;
 }
 
-int SVM_MultiC_redbin::setAlphaV(const Vector<Vector<double> > &newAlpha)
+int SVM_MultiC_redbin::setAlphaV(const Vector<Vector<double>> &newAlpha)
 {
     NiceAssert( newAlpha.size() == N() );
 
@@ -1687,7 +1687,7 @@ int SVM_MultiC_redbin::qaddTrainingVector(int i, const gentype &z, SparseVector<
     return SVM_MultiC_redbin::qaddTrainingVector(i,(int) z,x,Cweigh,epsweigh);
 }
 
-int SVM_MultiC_redbin::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_MultiC_redbin::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<int> zz(z.size());
 
@@ -1704,7 +1704,7 @@ int SVM_MultiC_redbin::addTrainingVector(int i, const Vector<gentype> &z, const 
     return SVM_MultiC_redbin::addTrainingVector(i,zz,x,Cweigh,epsweigh);
 }
 
-int SVM_MultiC_redbin::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_MultiC_redbin::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<int> zz(z.size());
 
@@ -1834,7 +1834,7 @@ int SVM_MultiC_redbin::qaddTrainingVector(int i, int y, SparseVector<gentype> &x
     return res;
 }
 
-int SVM_MultiC_redbin::addTrainingVector(int i, const Vector<int> &y, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_MultiC_redbin::addTrainingVector(int i, const Vector<int> &y, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
@@ -1877,7 +1877,7 @@ int SVM_MultiC_redbin::addTrainingVector(int i, const Vector<int> &y, const Vect
     return res;
 }
 
-int SVM_MultiC_redbin::qaddTrainingVector(int i, const Vector<int> &y, Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_MultiC_redbin::qaddTrainingVector(int i, const Vector<int> &y, Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );

@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 
         // Define global variable store
 
-        svmvolatile SparseVector<SparseVector<gentype> > globargvariables;
+        svmvolatile SparseVector<SparseVector<gentype>> globargvariables;
 
         // Construct command stack.  All commands must be in awarestream, which
         // is similar to a regular stream but can supply commands from a
@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 
         // Now that everything has been set up so we can run the actual code.
 
-        SparseVector<SparseVector<int> > returntag;
+        SparseVector<SparseVector<int>> returntag;
 
         runsvm(svmContext,commstack,globargvariables,cligetsetExtVar,returntag);
 

@@ -56,14 +56,14 @@ public:
     virtual int type(void)    const override { return 18; }
     virtual int subtype(void) const override { return 0;  }
 
-    virtual const Vector<gentype>         &y        (void) const override { return locy;  }
-    virtual const Vector<double>          &yR       (void) const override { return loczR; }
-    virtual const Vector<d_anion>         &yA       (void) const override { NiceThrow("yA not defined in svm_mulbin");  const static Vector<d_anion>         dummy; return dummy; }
-    virtual const Vector<Vector<double> > &yV       (void) const override { NiceThrow("yV not defined in svm_mulbin");  const static Vector<Vector<double> > dummy; return dummy; }
-    virtual const Vector<gentype>         &yp       (void) const override { NiceThrow("yp  not defined in svm_mulbin"); const static Vector<gentype>         dummy; return dummy; }
-    virtual const Vector<double>          &ypR      (void) const override { NiceThrow("ypA not defined in svm_mulbin"); const static Vector<double>          dummy; return dummy; }
-    virtual const Vector<d_anion>         &ypA      (void) const override { NiceThrow("ypA not defined in svm_mulbin"); const static Vector<d_anion>         dummy; return dummy; }
-    virtual const Vector<Vector<double> > &ypV      (void) const override { NiceThrow("ypV not defined in svm_mulbin"); const static Vector<Vector<double> > dummy; return dummy; }
+    virtual const Vector<gentype>        &y        (void) const override { return locy;  }
+    virtual const Vector<double>         &yR       (void) const override { return loczR; }
+    virtual const Vector<d_anion>        &yA       (void) const override { NiceThrow("yA not defined in svm_mulbin");  const static Vector<d_anion>        dummy; return dummy; }
+    virtual const Vector<Vector<double>> &yV       (void) const override { NiceThrow("yV not defined in svm_mulbin");  const static Vector<Vector<double>> dummy; return dummy; }
+    virtual const Vector<gentype>        &yp       (void) const override { NiceThrow("yp  not defined in svm_mulbin"); const static Vector<gentype>        dummy; return dummy; }
+    virtual const Vector<double>         &ypR      (void) const override { NiceThrow("ypA not defined in svm_mulbin"); const static Vector<double>         dummy; return dummy; }
+    virtual const Vector<d_anion>        &ypA      (void) const override { NiceThrow("ypA not defined in svm_mulbin"); const static Vector<d_anion>        dummy; return dummy; }
+    virtual const Vector<Vector<double>> &ypV      (void) const override { NiceThrow("ypV not defined in svm_mulbin"); const static Vector<Vector<double>> dummy; return dummy; }
     virtual const Vector<double>  &zR(void) const override { return loczR; }
 
     virtual double zR(int i) const override { if ( i >= 0 ) { return zR()(i); } return 0; } // Tests always set zR(-1) = 0, so this is safe
@@ -73,14 +73,14 @@ public:
     virtual int addTrainingVector (int i, const gentype &z, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &z,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &z,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int addTrainingVector (int i, int d, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, double z = 0.0);
     virtual int qaddTrainingVector(int i, int d,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, double z = 0.0);
 
-    virtual int addTrainingVector (int i, const Vector<int> &d, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<double> &z);
-    virtual int qaddTrainingVector(int i, const Vector<int> &d,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<double> &z);
+    virtual int addTrainingVector (int i, const Vector<int> &d, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<double> &z);
+    virtual int qaddTrainingVector(int i, const Vector<int> &d,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<double> &z);
 
     virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;

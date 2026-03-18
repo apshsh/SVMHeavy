@@ -1763,8 +1763,8 @@ int SVM_Scalar_rff::setNRffRep(int nv)
             // INDIM is unchanged, but :::: 7 is added or removed from random features
             // NOTE: need to change x as a block to ensure that :::: 7 is consistent!
 
-            retVector<SparseVector<gentype> > tmpvj;
-            Vector<SparseVector<gentype> > xxa(x()(N(),1,N()+calcwdim()-1,tmpvj));
+            retVector<SparseVector<gentype>> tmpvj;
+            Vector<SparseVector<gentype>> xxa(x()(N(),1,N()+calcwdim()-1,tmpvj));
 
             int i,j,m;
 
@@ -1825,8 +1825,8 @@ int SVM_Scalar_rff::setNRffRep(int nv)
 
             // First, we need to update the existing x vectors to fix dimension of :::: 7
 
-            retVector<SparseVector<gentype> > tmpvj;
-            Vector<SparseVector<gentype> > xxa(x()(N(),1,N()+calcwdim()-1,tmpvj));
+            retVector<SparseVector<gentype>> tmpvj;
+            Vector<SparseVector<gentype>> xxa(x()(N(),1,N()+calcwdim()-1,tmpvj));
 
             int i,j,m;
 
@@ -1948,8 +1948,8 @@ int SVM_Scalar_rff::setNRffRep(int nv)
             int reindim = INDIM;
             int NRffval = NRff();
 
-            retVector<SparseVector<gentype> > tmpvj;
-            Vector<SparseVector<gentype> > xxa(x()(N(),1,N()+calcwdim()-1,tmpvj));
+            retVector<SparseVector<gentype>> tmpvj;
+            Vector<SparseVector<gentype>> xxa(x()(N(),1,N()+calcwdim()-1,tmpvj));
 
             int i,j,m;
 
@@ -2074,13 +2074,13 @@ int SVM_Scalar_rff::setReOnly(int nv)
 
         retVector<int> tmpvj;
         retVector<gentype> tmpvjj;
-        retVector<SparseVector<gentype> > tmpvkk;
+        retVector<SparseVector<gentype>> tmpvkk;
         retVector<double> tmpvjjj;
         retVector<double> tmpvkkk;
         Vector<int> jj(cntintvec(oldwdim,tmpvj));
         jj += N();
         Vector<gentype> yyy(SVM_Scalar::y()(jj,tmpvjj));
-        Vector<SparseVector<gentype> > xxx(SVM_Scalar::x()(jj,tmpvkk));
+        Vector<SparseVector<gentype>> xxx(SVM_Scalar::x()(jj,tmpvkk));
         SVM_Scalar::addTrainingVector(N()+oldwdim,yyy,xxx,onedoublevec(oldwdim,tmpvjjj),onedoublevec(oldwdim,tmpvkkk));
 
         locaw.resize(newwdim);
@@ -2129,8 +2129,8 @@ int SVM_Scalar_rff::setLSRffoirRFFDist(double lsrffscale, int scalelsrff)
 
         double lengthscale(calcRefLengthScale());
 
-        retVector<SparseVector<gentype> > tmpvj;
-        Vector<SparseVector<gentype> > xtemp(x()(N(),1,N()+wdim-1,tmpvj));
+        retVector<SparseVector<gentype>> tmpvj;
+        Vector<SparseVector<gentype>> xtemp(x()(N(),1,N()+wdim-1,tmpvj));
 
         errstream() << "@\b";
 
@@ -2335,7 +2335,7 @@ int SVM_Scalar_rff::fixupfeatures(void)
 
         double lengthscale(calcRefLengthScale());
 
-        Vector<SparseVector<gentype> > xxa(wdim);
+        Vector<SparseVector<gentype>> xxa(wdim);
 
         for ( j = 0 ; j < NRffval ; ++j )
         {
@@ -2963,11 +2963,14 @@ double SVM_Scalar_rff::K2(int ia, int ib, const gentype **pxyprod, const SparseV
         const vecInfo *xxinfo = xainfo;       xainfo = xbinfo; xbinfo = xxinfo;
     }
 
-    if ( !xa ) { xa = &x(ia); }
-    if ( !xb ) { xb = &x(ib); }
+    if ( !xa ) { xa = &x(ia); xainfo = &xinfo(ia); }
+    if ( !xb ) { xb = &x(ib); xbinfo = &xinfo(ib); }
 
-    if ( !xainfo ) { xainfo = &xinfo(ia); }
-    if ( !xbinfo ) { xbinfo = &xinfo(ib); }
+    vecInfo xinfoxa;
+    vecInfo xinfoxb;
+
+    if ( !xainfo ) { getKernel().getvecInfo(xinfoxa,*xa); xainfo = &xinfoxa; }
+    if ( !xbinfo ) { getKernel().getvecInfo(xinfoxb,*xb); xbinfo = &xinfoxb; }
 
     // Now we know that ia > N() >= ib
     // Ordering: cos first, then sin
@@ -2995,11 +2998,14 @@ double SVM_Scalar_rff::K2(int ia, int ib, const gentype **pxyprod, const SparseV
         const vecInfo *xafarinfo = nullptr;
         const vecInfo *xbfarinfo = nullptr;
 
-        int ixa,iia,xalr,xarr,xagr,xagrR,iaokr,iaok,adiagr,agmuL,agmuR,agradOrder,agradOrderR,iaplanr,iaplan,iaset,iadenseint,iadensederiv;
-        int ixb,iib,xblr,xbrr,xbgr,xbgrR,ibokr,ibok,bdiagr,bgmuL,bgmuR,bgradOrder,bgradOrderR,ibplanr,ibplan,ibset,ibdenseint,ibdensederiv;
+        int ixa,iia,xalr,xarr,xagr,iaokr,iaok,adiagr,agradOrder,iaplanr,iaplan,iaset,iadenseint,iadensederiv;
+        int ixb,iib,xblr,xbrr,xbgr,ibokr,ibok,bdiagr,bgradOrder,ibplanr,ibplan,ibset,ibdenseint,ibdensederiv;
 
         double arankL,arankR;
         double brankL,brankR;
+
+        int xagrR,agradOrderR,agmuL,agmuR;
+        int xbgrR,bgradOrderR,bgmuL,bgmuR;
 
         const gentype *ixatup = nullptr;
         const gentype *iiatup = nullptr;
@@ -6057,7 +6063,7 @@ int SVM_Scalar_rff::qaddTrainingVector(int i, const gentype &zi, SparseVector<ge
     return SVM_Scalar_rff::qaddTrainingVector(i,(double) zi,x,Cweigh,epsweigh,dval); //2);
 }
 
-int SVM_Scalar_rff::addTrainingVector(int i, const Vector<gentype> &zi, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Scalar_rff::addTrainingVector(int i, const Vector<gentype> &zi, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<double> zzi(zi.size());
     Vector<int> ddd(zi.size());
@@ -6077,7 +6083,7 @@ int SVM_Scalar_rff::addTrainingVector(int i, const Vector<gentype> &zi, const Ve
     return SVM_Scalar_rff::addTrainingVector(i,zzi,x,Cweigh,epsweigh,ddd);
 }
 
-int SVM_Scalar_rff::qaddTrainingVector(int i, const Vector<gentype> &zi, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Scalar_rff::qaddTrainingVector(int i, const Vector<gentype> &zi, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<double> zzi(zi.size());
     Vector<int> ddd(zi.size());
@@ -6097,7 +6103,7 @@ int SVM_Scalar_rff::qaddTrainingVector(int i, const Vector<gentype> &zi, Vector<
     return SVM_Scalar_rff::qaddTrainingVector(i,zzi,x,Cweigh,epsweigh,ddd);
 }
 
-int SVM_Scalar_rff::addTrainingVector(int i, const Vector<double> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
+int SVM_Scalar_rff::addTrainingVector(int i, const Vector<double> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
     NiceAssert( d.size() == x.size() );
     NiceAssert( z.size() == x.size() );
@@ -6119,7 +6125,7 @@ int SVM_Scalar_rff::addTrainingVector(int i, const Vector<double> &z, const Vect
     return res;
 }
 
-int SVM_Scalar_rff::qaddTrainingVector(int i, const Vector<double> &z, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
+int SVM_Scalar_rff::qaddTrainingVector(int i, const Vector<double> &z, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh, const Vector<int> &d)
 {
     NiceAssert( d.size() == x.size() );
     NiceAssert( z.size() == x.size() );
@@ -6246,7 +6252,7 @@ int SVM_Scalar_rff::setd(const Vector<int> &d)
     return setd(cntintvec(N(),tmpva),d);
 }
 
-int SVM_Scalar_rff::setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &x)
+int SVM_Scalar_rff::setx(const Vector<int> &i, const Vector<SparseVector<gentype>> &x)
 {
     NiceAssert( i.size() == x.size() );
 
@@ -6265,7 +6271,7 @@ int SVM_Scalar_rff::setx(const Vector<int> &i, const Vector<SparseVector<gentype
     return res;
 }
 
-int SVM_Scalar_rff::setx(const Vector<SparseVector<gentype> > &x)
+int SVM_Scalar_rff::setx(const Vector<SparseVector<gentype>> &x)
 {
     retVector<int> tmpva;
 
@@ -6596,7 +6602,6 @@ void SVM_Scalar_rff::K1xfer(gentype &res, int &minmaxind, int typeis,
 
     int vdim = NRff();
     int Ndim = N();
-    int i;
     double vsc = sqrt(1.0/((double) vdim));
 
     double phia;
@@ -6605,16 +6610,12 @@ void SVM_Scalar_rff::K1xfer(gentype &res, int &minmaxind, int typeis,
 
     res = 0.0;
 
-    for ( i = 0 ; i < vdim ; ++i )
+    for ( int i = 0 ; i < vdim ; ++i )
     {
         phia = K2ip(ia,i,nullptr,&xa,&x(i+Ndim).n(),&xainfo,&xinfo(i+Ndim));
 
-        res += v(i)*vsc*cos(phia);
-
-        if ( !ReOnly() )
-        {
-            res += v(i)*vsc*sin(phia);
-        }
+                           res += v(i)*vsc*cos(phia);
+        if ( !ReOnly() ) { res += v(i)*vsc*sin(phia); }
     }
 }
 
@@ -6639,7 +6640,6 @@ void SVM_Scalar_rff::K1xfer(double &res, int &minmaxind, int typeis,
 
     int vdim = NRff();
     int Ndim = N();
-    int i;
     double vsc = sqrt(1.0/((double) vdim));
 
     double phia;
@@ -6648,16 +6648,12 @@ void SVM_Scalar_rff::K1xfer(double &res, int &minmaxind, int typeis,
 
     res = 0.0;
 
-    for ( i = 0 ; i < vdim ; ++i )
+    for ( int i = 0 ; i < vdim ; ++i )
     {
         phia = K2ip(ia,i,nullptr,&xa,&x(i+Ndim).n(),&xainfo,&xinfo(i+Ndim));
 
-        res += v(i)*vsc*cos(phia);
-
-        if ( !ReOnly() )
-        {
-            res += v(i)*vsc*sin(phia);
-        }
+                           res += v(i)*vsc*cos(phia);
+        if ( !ReOnly() ) { res += v(i)*vsc*sin(phia); }
     }
 }
 
@@ -6682,7 +6678,6 @@ void SVM_Scalar_rff::K2xfer(gentype &dxyprod, gentype &ddiffis, gentype &res, in
 
     int vdim = NRff();
     int Ndim = N();
-    int i;
     double vsc = sqrt(1.0/((double) vdim));
 
     double phia;
@@ -6693,17 +6688,13 @@ void SVM_Scalar_rff::K2xfer(gentype &dxyprod, gentype &ddiffis, gentype &res, in
 
     res = 0.0;
 
-    for ( i = 0 ; i < vdim ; ++i )
+    for ( int i = 0 ; i < vdim ; ++i )
     {
         phia = K2ip(ia,i,nullptr,&xa,&x(i+Ndim).n(),&xainfo,&xinfo(i+Ndim));
         phib = K2ip(ib,i,nullptr,&xb,&x(i+Ndim).n(),&xbinfo,&xinfo(i+Ndim));
 
-        res += v(i)*vsc*cos(phia)*vsc*cos(phib);
-
-        if ( !ReOnly() )
-        {
-            res += v(i)*vsc*sin(phia)*vsc*sin(phib);
-        }
+                           res += v(i)*vsc*cos(phia)*vsc*cos(phib);
+        if ( !ReOnly() ) { res += v(i)*vsc*sin(phia)*vsc*sin(phib); }
     }
 }
 
@@ -6728,7 +6719,6 @@ void SVM_Scalar_rff::K2xfer(double &dxyprod, double &ddiffis, double &res, int &
 
     int vdim = NRff();
     int Ndim = N();
-    int i;
     double vsc = sqrt(1.0/((double) vdim));
 
     double phia;
@@ -6739,17 +6729,13 @@ void SVM_Scalar_rff::K2xfer(double &dxyprod, double &ddiffis, double &res, int &
 
     res = 0.0;
 
-    for ( i = 0 ; i < vdim ; ++i )
+    for ( int i = 0 ; i < vdim ; ++i )
     {
         phia = K2ip(ia,i,nullptr,&xa,&x(i+Ndim).n(),&xainfo,&xinfo(i+Ndim));
         phib = K2ip(ib,i,nullptr,&xb,&x(i+Ndim).n(),&xbinfo,&xinfo(i+Ndim));
 
-        res += v(i)*vsc*cos(phia)*vsc*cos(phib);
-
-        if ( !ReOnly() )
-        {
-            res += v(i)*vsc*sin(phia)*vsc*sin(phib);
-        }
+                           res += v(i)*vsc*cos(phia)*vsc*cos(phib);
+        if ( !ReOnly() ) { res += v(i)*vsc*sin(phia)*vsc*sin(phib); }
     }
 }
 
@@ -6774,7 +6760,6 @@ void SVM_Scalar_rff::K3xfer(gentype &res, int &minmaxind, int typeis,
 
     int vdim = NRff();
     int Ndim = N();
-    int i;
     double vsc = sqrt(1.0/((double) vdim));
 
     double phia;
@@ -6787,18 +6772,14 @@ void SVM_Scalar_rff::K3xfer(gentype &res, int &minmaxind, int typeis,
 
     res = 0.0;
 
-    for ( i = 0 ; i < vdim ; ++i )
+    for ( int i = 0 ; i < vdim ; ++i )
     {
         phia = K2ip(ia,i,nullptr,&xa,&x(i+Ndim).n(),&xainfo,&xinfo(i+Ndim));
         phib = K2ip(ib,i,nullptr,&xb,&x(i+Ndim).n(),&xbinfo,&xinfo(i+Ndim));
         phic = K2ip(ic,i,nullptr,&xc,&x(i+Ndim).n(),&xcinfo,&xinfo(i+Ndim));
 
-        res += v(i)*vsc*cos(phia)*vsc*cos(phib)*vsc*cos(phic);
-
-        if ( !ReOnly() )
-        {
-            res += v(i)*vsc*sin(phia)*vsc*sin(phib)*vsc*sin(phic);
-        }
+                           res += v(i)*vsc*cos(phia)*vsc*cos(phib)*vsc*cos(phic);
+        if ( !ReOnly() ) { res += v(i)*vsc*sin(phia)*vsc*sin(phib)*vsc*sin(phic); }
     }
 }
 
@@ -6823,7 +6804,6 @@ void SVM_Scalar_rff::K3xfer(double &res, int &minmaxind, int typeis,
 
     int vdim = NRff();
     int Ndim = N();
-    int i;
     double vsc = sqrt(1.0/((double) vdim));
 
     double phia;
@@ -6836,18 +6816,14 @@ void SVM_Scalar_rff::K3xfer(double &res, int &minmaxind, int typeis,
 
     res = 0.0;
 
-    for ( i = 0 ; i < vdim ; ++i )
+    for ( int i = 0 ; i < vdim ; ++i )
     {
         phia = K2ip(ia,i,nullptr,&xa,&x(i+Ndim).n(),&xainfo,&xinfo(i+Ndim));
         phib = K2ip(ib,i,nullptr,&xb,&x(i+Ndim).n(),&xbinfo,&xinfo(i+Ndim));
         phic = K2ip(ic,i,nullptr,&xc,&x(i+Ndim).n(),&xcinfo,&xinfo(i+Ndim));
 
-        res += v(i)*vsc*cos(phia)*vsc*cos(phib)*vsc*cos(phic);
-
-        if ( !ReOnly() )
-        {
-            res += v(i)*vsc*sin(phia)*vsc*sin(phib)*vsc*sin(phic);
-        }
+                           res += v(i)*vsc*cos(phia)*vsc*cos(phib)*vsc*cos(phic);
+        if ( !ReOnly() ) { res += v(i)*vsc*sin(phia)*vsc*sin(phib)*vsc*sin(phic); }
     }
 }
 
@@ -6872,7 +6848,6 @@ void SVM_Scalar_rff::K4xfer(gentype &res, int &minmaxind, int typeis,
 
     int vdim = NRff();
     int Ndim = N();
-    int i;
     double vsc = sqrt(1.0/((double) vdim));
 
     double phia;
@@ -6887,19 +6862,15 @@ void SVM_Scalar_rff::K4xfer(gentype &res, int &minmaxind, int typeis,
 
     res = 0.0;
 
-    for ( i = 0 ; i < vdim ; ++i )
+    for ( int i = 0 ; i < vdim ; ++i )
     {
         phia = K2ip(ia,i,nullptr,&xa,&x(i+Ndim).n(),&xainfo,&xinfo(i+Ndim));
         phib = K2ip(ib,i,nullptr,&xb,&x(i+Ndim).n(),&xbinfo,&xinfo(i+Ndim));
         phic = K2ip(ic,i,nullptr,&xc,&x(i+Ndim).n(),&xcinfo,&xinfo(i+Ndim));
         phid = K2ip(id,i,nullptr,&xd,&x(i+Ndim).n(),&xdinfo,&xinfo(i+Ndim));
 
-        res += v(i)*vsc*cos(phia)*vsc*cos(phib)*vsc*cos(phic)*vsc*cos(phid);
-
-        if ( !ReOnly() )
-        {
-            res += v(i)*vsc*sin(phia)*vsc*sin(phib)*vsc*sin(phic)*vsc*sin(phid);
-        }
+                           res += v(i)*vsc*cos(phia)*vsc*cos(phib)*vsc*cos(phic)*vsc*cos(phid);
+        if ( !ReOnly() ) { res += v(i)*vsc*sin(phia)*vsc*sin(phib)*vsc*sin(phic)*vsc*sin(phid); }
     }
 }
 
@@ -6924,7 +6895,6 @@ void SVM_Scalar_rff::K4xfer(double &res, int &minmaxind, int typeis,
 
     int vdim = NRff();
     int Ndim = N();
-    int i;
     double vsc = sqrt(1.0/((double) vdim));
 
     double phia;
@@ -6939,19 +6909,15 @@ void SVM_Scalar_rff::K4xfer(double &res, int &minmaxind, int typeis,
 
     res = 0.0;
 
-    for ( i = 0 ; i < vdim ; ++i )
+    for ( int i = 0 ; i < vdim ; ++i )
     {
         phia = K2ip(ia,i,nullptr,&xa,&x(i+Ndim).n(),&xainfo,&xinfo(i+Ndim));
         phib = K2ip(ib,i,nullptr,&xb,&x(i+Ndim).n(),&xbinfo,&xinfo(i+Ndim));
         phic = K2ip(ic,i,nullptr,&xc,&x(i+Ndim).n(),&xcinfo,&xinfo(i+Ndim));
         phid = K2ip(id,i,nullptr,&xd,&x(i+Ndim).n(),&xdinfo,&xinfo(i+Ndim));
 
-        res += v(i)*vsc*cos(phia)*vsc*cos(phib)*vsc*cos(phic)*vsc*cos(phid);
-
-        if ( !ReOnly() )
-        {
-            res += v(i)*vsc*sin(phia)*vsc*sin(phib)*vsc*sin(phic)*vsc*sin(phid);
-        }
+                           res += v(i)*vsc*cos(phia)*vsc*cos(phib)*vsc*cos(phic)*vsc*cos(phid);
+        if ( !ReOnly() ) { res += v(i)*vsc*sin(phia)*vsc*sin(phib)*vsc*sin(phic)*vsc*sin(phid); }
     }
 }
 
@@ -6976,19 +6942,18 @@ void SVM_Scalar_rff::Kmxfer(gentype &res, int &minmaxind, int typeis,
 
     int vdim = NRff();
     int Ndim = N();
-    int i,j;
     double vsc = sqrt(1.0/((double) vdim));
 
     double phi;
 
     res = 0.0;
 
-    for ( i = 0 ; i < vdim ; ++i )
+    for ( int i = 0 ; i < vdim ; ++i )
     {
         double tmpa = v(i);
         double tmpb = v(i);
 
-        for ( j = 0 ; j < xx.size() ; ++j )
+        for ( int j = 0 ; j < xx.size() ; ++j )
         {
             int ii = (typeis-(100*(typeis/100)))/10 ? iii(j) : -42-j;
 
@@ -6998,12 +6963,8 @@ void SVM_Scalar_rff::Kmxfer(gentype &res, int &minmaxind, int typeis,
             tmpb *= vsc*sin(phi);
         }
 
-        res += tmpa;
-
-        if ( !ReOnly() )
-        {
-            res += tmpb;
-        }
+                           res += tmpa;
+        if ( !ReOnly() ) { res += tmpb; }
     }
 }
 
@@ -7028,19 +6989,18 @@ void SVM_Scalar_rff::Kmxfer(double &res, int &minmaxind, int typeis,
 
     int vdim = NRff();
     int Ndim = N();
-    int i,j;
     double vsc = sqrt(1.0/((double) vdim));
 
     double phi;
 
     res = 0.0;
 
-    for ( i = 0 ; i < vdim ; ++i )
+    for ( int i = 0 ; i < vdim ; ++i )
     {
         double tmpa = v(i);
         double tmpb = v(i);
 
-        for ( j = 0 ; j < xx.size() ; ++j )
+        for ( int j = 0 ; j < xx.size() ; ++j )
         {
             int ii = (typeis-(100*(typeis/100)))/10 ? iii(j) : -42-j;
 
@@ -7050,12 +7010,8 @@ void SVM_Scalar_rff::Kmxfer(double &res, int &minmaxind, int typeis,
             tmpb *= vsc*sin(phi);
         }
 
-        res += tmpa;
-
-        if ( !ReOnly() )
-        {
-            res += tmpb;
-        }
+                           res += tmpa;
+        if ( !ReOnly() ) { res += tmpb; }
     }
 }
 

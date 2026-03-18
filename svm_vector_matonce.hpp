@@ -31,7 +31,7 @@ class SVM_Vector_Matonce;
 void qswap(SVM_Vector_Matonce &a, SVM_Vector_Matonce &b);
 
 
-class SVM_Vector_Matonce : public SVM_Vector_atonce_temp<Matrix<double> >
+class SVM_Vector_Matonce : public SVM_Vector_atonce_temp<Matrix<double>>
 {
 public:
 
@@ -100,7 +100,7 @@ inline void SVM_Vector_Matonce::qswapinternal(ML_Base &bb)
 
     SVM_Vector_Matonce &b = dynamic_cast<SVM_Vector_Matonce &>(bb.getML());
 
-    SVM_Vector_atonce_temp<Matrix<double> >::qswapinternal(b);
+    SVM_Vector_atonce_temp<Matrix<double>>::qswapinternal(b);
 
     return;
 }
@@ -111,7 +111,7 @@ inline void SVM_Vector_Matonce::semicopy(const ML_Base &bb)
 
     const SVM_Vector_Matonce &b = dynamic_cast<const SVM_Vector_Matonce &>(bb.getMLconst());
 
-    SVM_Vector_atonce_temp<Matrix<double> >::semicopy(b);
+    SVM_Vector_atonce_temp<Matrix<double>>::semicopy(b);
 
     return;
 }
@@ -122,7 +122,7 @@ inline void SVM_Vector_Matonce::assign(const ML_Base &bb, int onlySemiCopy)
 
     const SVM_Vector_Matonce &src = dynamic_cast<const SVM_Vector_Matonce &>(bb.getMLconst());
 
-    SVM_Vector_atonce_temp<Matrix<double> >::assign(src,onlySemiCopy);
+    SVM_Vector_atonce_temp<Matrix<double>>::assign(src,onlySemiCopy);
 
     return;
 }

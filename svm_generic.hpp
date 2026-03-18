@@ -70,23 +70,23 @@ public:
         return *this;
     }
 
-    SparseVector<SparseVector<gentype> > allxaprev;                     // previous xa vector (if different then need to recalculate)
-    SparseVector<Matrix<SparseVector<gentype> > > allxadirectProdsFull; // pre-calculated direct products between xa, x(j) and x(k)
-    SparseVector<Vector<double> >  allxainnerProdsFull;                 // pre-calculated inner products between xa, x(j)
-    SparseVector<Vector<double> >  allxbinnerProdsFull;                 // pre-calculated inner products between xa, x(j)
-    SparseVector<double> allxaxbinnerProd;                              // pre-calculated inner products between xa, xb
-    SparseVector<double> allxaxainnerProd;                              // pre-calculated inner products between xa, xa
-    SparseVector<double> allxbxbinnerProd;                              // pre-calculated inner products between xb, xb
-    SparseVector<SparseVector<gentype> > alldiagkernsgentype;           // cached evaluations of K(ia,ia), ia >= 0, if done
-    SparseVector<SparseVector<double>  > alldiagkernsdouble;            // cached evaluations of K(ia,ia), ia >= 0, if done
-    SparseVector<int> allprevxbvernum;                                  // version number of x
-    SparseVector<gentype> allipres;                                     // scrachpad for inner products
+    SparseVector<SparseVector<gentype>> allxaprev;                     // previous xa vector (if different then need to recalculate)
+    SparseVector<Matrix<SparseVector<gentype>>> allxadirectProdsFull;  // pre-calculated direct products between xa, x(j) and x(k)
+    SparseVector<Vector<double>>  allxainnerProdsFull;                 // pre-calculated inner products between xa, x(j)
+    SparseVector<Vector<double>>  allxbinnerProdsFull;                 // pre-calculated inner products between xa, x(j)
+    SparseVector<double> allxaxbinnerProd;                             // pre-calculated inner products between xa, xb
+    SparseVector<double> allxaxainnerProd;                             // pre-calculated inner products between xa, xa
+    SparseVector<double> allxbxbinnerProd;                             // pre-calculated inner products between xb, xb
+    SparseVector<SparseVector<gentype>> alldiagkernsgentype;           // cached evaluations of K(ia,ia), ia >= 0, if done
+    SparseVector<SparseVector<double>>  alldiagkernsdouble;            // cached evaluations of K(ia,ia), ia >= 0, if done
+    SparseVector<int> allprevxbvernum;                                 // version number of x
+    SparseVector<gentype> allipres;                                    // scrachpad for inner products
 
-    Matrix<SparseVector<gentype> > gxvdirectProdsFull; // pre-calculated direct products between x(j) and x(k)
-    Matrix<double> gxvinnerProdsFull;                  // pre-calculated inner products between x(j) and x(k)
-    Matrix<double> gaadirectProdsFull;                 // pre-calculated direct products between alpha(j) and alpha(k)
-    Vector<int> gprevalphaState;                       // previous alpha state (element change used when updating above caches)
-    Vector<int> gprevbalphaState;                      // like above, but used in different place
+    Matrix<SparseVector<gentype>> gxvdirectProdsFull; // pre-calculated direct products between x(j) and x(k)
+    Matrix<double> gxvinnerProdsFull;                 // pre-calculated inner products between x(j) and x(k)
+    Matrix<double> gaadirectProdsFull;                // pre-calculated direct products between alpha(j) and alpha(k)
+    Vector<int> gprevalphaState;                      // previous alpha state (element change used when updating above caches)
+    Vector<int> gprevbalphaState;                     // like above, but used in different place
 
     int gprevxvernum; // version number of x for evaluator
     int gprevgvernum; // version number of alpha for evaluator
@@ -122,10 +122,10 @@ public:
 
     // Constructors, destructors, assignment etc..
 
-    SVM_Generic()                                            : ML_Base() { xyvalid = 0; setaltx(nullptr);                 return;       }
-    SVM_Generic(const SVM_Generic &src)                      : ML_Base() { xyvalid = 0; setaltx(nullptr); assign(src,0);  return;       }
-    SVM_Generic(const SVM_Generic &src, const ML_Base *srcx) : ML_Base() { xyvalid = 0; setaltx(srcx);    assign(src,-1); return;       }
-    SVM_Generic &operator=(const SVM_Generic &src)                       { xyvalid = 0;                   assign(src);    return *this; }
+    SVM_Generic()                                            : ML_Base() { setaltx(nullptr);                 return;       }
+    SVM_Generic(const SVM_Generic &src)                      : ML_Base() { setaltx(nullptr); assign(src,0);  return;       }
+    SVM_Generic(const SVM_Generic &src, const ML_Base *srcx) : ML_Base() { setaltx(srcx);    assign(src,-1); return;       }
+    SVM_Generic &operator=(const SVM_Generic &src)                       {                   assign(src);    return *this; }
     virtual ~SVM_Generic() { return; }
 
     virtual int  prealloc    (int expectedN)       override;
@@ -185,8 +185,8 @@ public:
     virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
@@ -200,9 +200,9 @@ public:
     virtual int sety(const Vector<int> &i, const Vector<double> &y) override { return ML_Base::sety(i,y); }
     virtual int sety(                      const Vector<double> &y) override { return ML_Base::sety(  y); }
 
-    virtual int sety(int                i, const Vector<double>          &y) override { return ML_Base::sety(i,y); }
-    virtual int sety(const Vector<int> &i, const Vector<Vector<double> > &y) override { return ML_Base::sety(i,y); }
-    virtual int sety(                      const Vector<Vector<double> > &y) override { return ML_Base::sety(  y); }
+    virtual int sety(int                i, const Vector<double>         &y) override { return ML_Base::sety(i,y); }
+    virtual int sety(const Vector<int> &i, const Vector<Vector<double>> &y) override { return ML_Base::sety(i,y); }
+    virtual int sety(                      const Vector<Vector<double>> &y) override { return ML_Base::sety(  y); }
 
     virtual int sety(int                i, const d_anion         &y) override { return ML_Base::sety(i,y); }
     virtual int sety(const Vector<int> &i, const Vector<d_anion> &y) override { return ML_Base::sety(i,y); }
@@ -214,15 +214,15 @@ public:
 
     // Evaluation Functions:
 
-    virtual void dgTrainingVector(Vector<gentype>         &res, gentype        &resn, int i) const override;
-    virtual void dgTrainingVector(Vector<double>          &res, double         &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
-    virtual void dgTrainingVector(Vector<Vector<double> > &res, Vector<double> &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
-    virtual void dgTrainingVector(Vector<d_anion>         &res, d_anion        &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
+    virtual void dgTrainingVector(Vector<gentype>        &res, gentype        &resn, int i) const override;
+    virtual void dgTrainingVector(Vector<double>         &res, double         &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
+    virtual void dgTrainingVector(Vector<Vector<double>> &res, Vector<double> &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
+    virtual void dgTrainingVector(Vector<d_anion>        &res, d_anion        &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
 
-    virtual void dgTrainingVector(Vector<gentype>         &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
-    virtual void dgTrainingVector(Vector<double>          &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
-    virtual void dgTrainingVector(Vector<Vector<double> > &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
-    virtual void dgTrainingVector(Vector<d_anion>         &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<gentype>        &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<double>         &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<Vector<double>> &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<d_anion>        &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
 
     // kerndiag override
 
@@ -242,9 +242,9 @@ public:
     virtual int setAlpha(const Vector<gentype> &newAlpha);
     virtual int setBias (const gentype         &newBias );
 
-    virtual int setAlphaR(const Vector<double>          &newAlpha) { (void) newAlpha; NiceThrow("Function setAlphaR not available for this SVM type."); return 0; }
-    virtual int setAlphaV(const Vector<Vector<double> > &newAlpha) { (void) newAlpha; NiceThrow("Function setAlphaV not available for this SVM type."); return 0; }
-    virtual int setAlphaA(const Vector<d_anion>         &newAlpha) { (void) newAlpha; NiceThrow("Function setAlphaA not available for this SVM type."); return 0; }
+    virtual int setAlphaR(const Vector<double>         &newAlpha) { (void) newAlpha; NiceThrow("Function setAlphaR not available for this SVM type."); return 0; }
+    virtual int setAlphaV(const Vector<Vector<double>> &newAlpha) { (void) newAlpha; NiceThrow("Function setAlphaV not available for this SVM type."); return 0; }
+    virtual int setAlphaA(const Vector<d_anion>        &newAlpha) { (void) newAlpha; NiceThrow("Function setAlphaA not available for this SVM type."); return 0; }
 
     virtual int setBiasR(      double          newBias) { (void) newBias; NiceThrow("Function setBiasR not available for this SVM type."); return 0; }
     virtual int setBiasV(const Vector<double> &newBias) { (void) newBias; NiceThrow("Function setBiasV not available for this SVM type."); return 0; }
@@ -272,8 +272,8 @@ public:
     virtual int NUF(int q) const { (void) q; return 0;     }
     virtual int NUB(int q) const { (void) q; return 0;     }
 
-    virtual const Vector<Vector<int> > &ClassRep(void)  const { const static Vector<Vector<int> > dummy; return dummy; }
-    virtual int                         findID(int ref) const { (void) ref; return 0;                                  }
+    virtual const Vector<Vector<int>> &ClassRep(void)  const { const static Vector<Vector<int>> dummy; return dummy; }
+    virtual int                        findID(int ref) const { (void) ref; return 0;                                 }
 
     virtual int isLinearCost   (void)  const { return 0;           }
     virtual int isQuadraticCost(void)  const { return 0;           }
@@ -373,21 +373,20 @@ public:
     virtual double F    (void) const { return 0;             }
     virtual double G    (void) const { return 1;             }
 
-    virtual const Matrix<double>          &Gp         (void)        const {             NiceThrow("Function Gp not available for this SVM type.");          return dummyMret;      }
-    virtual const Matrix<double>          &XX         (void)        const {             NiceThrow("Function XX not available for this SVM type.");          return dummyMret;      }
-    virtual const Vector<double>          &kerndiag   (void)        const {             NiceThrow("Function kerndiag not available for this SVM type.");    return dummyvret;      }
-    virtual const Vector<Vector<double> > &getu       (void)        const {             NiceThrow("Function getu not available for this SVM type.");        return dummyvVret;     }
-    virtual const gentype                 &bias       (void)        const {                                                                                 return dbias;          }
-    virtual const Vector<gentype>         &alpha      (void)        const {                                                                                 return dalpha;         }
-    virtual const Vector<double>          &zR         (void)        const {             NiceThrow("Function zR not available for this SVM type.");          return dummyvret;      }
-    virtual const Vector<Vector<double> > &zV         (void)        const {             NiceThrow("Function zV not available for this SVM type.");          return dummyvVret;     }
-    virtual const Vector<d_anion>         &zA         (void)        const {             NiceThrow("Function zA not available for this SVM type.");          return dummyaret;      }
-    virtual       double                   biasR      (void)        const {             NiceThrow("Function biasR not available for this SVM type.");       return dummyrret;      }
-    virtual const Vector<double>          &biasV      (int raw = 0) const { (void) raw; NiceThrow("Function biasV not available for this SVM type.");       return dummyvret;      }
-    virtual const d_anion                 &biasA      (void)        const {             NiceThrow("Function biasA not available for this SVM type.");       return dummyanion; }
-    virtual const Vector<double>          &alphaR     (void)        const {             NiceThrow("Function alaphR not available for this SVM type.");      return dummyvret;      }
-    virtual const Vector<Vector<double> > &alphaV     (int raw = 0) const { (void) raw; NiceThrow("Function alphaV not available for this SVM type.");      return dummyvVret;     }
-    virtual const Vector<d_anion>         &alphaA     (void)        const {             NiceThrow("Function alphaA not available for this SVM type.");      return dummyaret;      }
+    virtual const Matrix<double>         &Gp         (void)        const {             NiceThrow("Function Gp not available for this SVM type.");          return dummyMret;      }
+    virtual const Vector<double>         &kerndiag   (void)        const {             NiceThrow("Function kerndiag not available for this SVM type.");    return dummyvret;      }
+    virtual const Vector<Vector<double>> &getu       (void)        const {             NiceThrow("Function getu not available for this SVM type.");        return dummyvVret;     }
+    virtual const gentype                &bias       (void)        const {                                                                                 return dbias;          }
+    virtual const Vector<gentype>        &alpha      (void)        const {                                                                                 return dalpha;         }
+    virtual const Vector<double>         &zR         (void)        const {             NiceThrow("Function zR not available for this SVM type.");          return dummyvret;      }
+    virtual const Vector<Vector<double>> &zV         (void)        const {             NiceThrow("Function zV not available for this SVM type.");          return dummyvVret;     }
+    virtual const Vector<d_anion>        &zA         (void)        const {             NiceThrow("Function zA not available for this SVM type.");          return dummyaret;      }
+    virtual       double                  biasR      (void)        const {             NiceThrow("Function biasR not available for this SVM type.");       return dummyrret;      }
+    virtual const Vector<double>         &biasV      (int raw = 0) const { (void) raw; NiceThrow("Function biasV not available for this SVM type.");       return dummyvret;      }
+    virtual const d_anion                &biasA      (void)        const {             NiceThrow("Function biasA not available for this SVM type.");       return dummyanion; }
+    virtual const Vector<double>         &alphaR     (void)        const {             NiceThrow("Function alaphR not available for this SVM type.");      return dummyvret;      }
+    virtual const Vector<Vector<double>> &alphaV     (int raw = 0) const { (void) raw; NiceThrow("Function alphaV not available for this SVM type.");      return dummyvVret;     }
+    virtual const Vector<d_anion>        &alphaA     (void)        const {             NiceThrow("Function alphaA not available for this SVM type.");      return dummyaret;      }
 
     virtual       double          zR(int i) const { (void) i; NiceThrow("Function zR not available for this SVM type.");                                    return 0;     }
     virtual const Vector<double> &zV(int i) const { (void) i; NiceThrow("Function zV not available for this SVM type."); const static Vector<double> dummy; return dummy; }
@@ -575,15 +574,6 @@ protected:
 
     virtual double getvalIfPresent_v(int numi, int numj, int &isgood) const override { return ML_Base::getvalIfPresent_v(numi,numj,isgood); }
 
-    // Inner-product cache: over-write this with a non-nullptr return in classes where
-    // a kernel cache is available
-
-    mutable int xyvalid; // also mlid of caller
-
-    virtual int isxymat(const MercerKernel &altK) const override { (void) altK; return 0; }
-    virtual const Matrix<double> &getxymat(const MercerKernel &altK) const override { (void) altK; NiceThrow("xymat not available here!"); const static Matrix<double> dummy; return dummy; }
-    virtual const double &getxymatelm(const MercerKernel &altK, int i, int j) const override { return getxymat(altK)(i,j); }
-
     // Cached access to K matrix
 public:
     virtual double getKval(int i, int j) const { (void) i; (void) j; NiceThrow("getKval not defined here"); return 0.0; }
@@ -623,7 +613,7 @@ private:
 
     Matrix<double> dummyMret;
     Vector<double> dummyvret;
-    Vector<Vector<double> > dummyvVret;
+    Vector<Vector<double>> dummyvVret;
     double dummyrret;
     d_anion dummyanion;
     Vector<d_anion> dummyaret;
@@ -716,8 +706,6 @@ inline void SVM_Generic::qswapinternal(ML_Base &bb)
     qswap(dbias      ,b.dbias      );
     qswap(xalphaState,b.xalphaState);
 
-    qswap(xyvalid,b.xyvalid);
-
     return;
 }
 
@@ -732,8 +720,6 @@ inline void SVM_Generic::semicopy(const ML_Base &bb)
     dalpha      = b.dalpha;
     dbias       = b.dbias;
     xalphaState = b.xalphaState;
-
-    xyvalid = b.xyvalid;
 
     incgvernum();
 
@@ -752,7 +738,6 @@ inline void SVM_Generic::assign(const ML_Base &bb, int onlySemiCopy)
     dbias       = src.dbias;
     xalphaState = src.xalphaState;
 
-    xyvalid       = src.xyvalid;
     KxferDatStore = KxferDatStore;
 
     return;

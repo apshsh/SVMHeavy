@@ -220,8 +220,8 @@ double SVM_MultiC_atonce::EPSWEIGH_CALC(int _xclass_, double _epsweigh_, int _s_
 // _s_ is the SVM number.
 
 
-Vector<Vector<double> > &addclasstou(Vector<Vector<double> > &u);
-Vector<Vector<double> > &addclasstou(Vector<Vector<double> > &u)
+Vector<Vector<double>> &addclasstou(Vector<Vector<double>> &u);
+Vector<Vector<double>> &addclasstou(Vector<Vector<double>> &u)
 {
     int q;
     int nold = u.size();
@@ -696,7 +696,7 @@ int SVM_MultiC_atonce::reset(void)
     return res;
 }
 
-int SVM_MultiC_atonce::setAlphaV(const Vector<Vector<double> > &newAlpha)
+int SVM_MultiC_atonce::setAlphaV(const Vector<Vector<double>> &newAlpha)
 {
     NiceAssert( newAlpha.size() == N() );
 
@@ -2064,7 +2064,7 @@ int SVM_MultiC_atonce::qaddTrainingVector(int i, const gentype &z, SparseVector<
     return SVM_MultiC_atonce::qaddTrainingVector(i,(int) z,x,Cweigh,epsweigh);
 }
 
-int SVM_MultiC_atonce::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_MultiC_atonce::addTrainingVector(int i, const Vector<gentype> &z, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<int> zz(z.size());
 
@@ -2083,7 +2083,7 @@ int SVM_MultiC_atonce::addTrainingVector(int i, const Vector<gentype> &z, const 
     return SVM_MultiC_atonce::addTrainingVector(i,zz,x,Cweigh,epsweigh);
 }
 
-int SVM_MultiC_atonce::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_MultiC_atonce::qaddTrainingVector(int i, const Vector<gentype> &z, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     Vector<int> zz(z.size());
 
@@ -2227,14 +2227,14 @@ int SVM_MultiC_atonce::qaddTrainingVector(int i, int y, SparseVector<gentype> &x
     return res;
 }
 
-int SVM_MultiC_atonce::addTrainingVector(int i, const Vector<int> &y, const Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_MultiC_atonce::addTrainingVector(int i, const Vector<int> &y, const Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
-    Vector<SparseVector<gentype> > xxx(xx);
+    Vector<SparseVector<gentype>> xxx(xx);
 
     return SVM_MultiC_atonce::qaddTrainingVector(i,y,xxx,Cweigh,epsweigh);
 }
 
-int SVM_MultiC_atonce::qaddTrainingVector(int i, const Vector<int> &y, Vector<SparseVector<gentype> > &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_MultiC_atonce::qaddTrainingVector(int i, const Vector<int> &y, Vector<SparseVector<gentype>> &xx, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( i >= 0 );
     NiceAssert( i <= N() );
@@ -4749,7 +4749,7 @@ std::istream &SVM_MultiC_atonce::inputstream(std::istream &input)
     return input;
 }
 
-Vector<double> &updim(const Vector<Vector<double> > &u, const Vector<double> &dTDimArg, Vector<double> &nDimArg)
+Vector<double> &updim(const Vector<Vector<double>> &u, const Vector<double> &dTDimArg, Vector<double> &nDimArg)
 {
     int s;
     double dT = (u.size())-1;;
@@ -4768,7 +4768,7 @@ Vector<double> &updim(const Vector<Vector<double> > &u, const Vector<double> &dT
     return nDimArg;
 }
 
-Vector<double> &downdim(const Vector<Vector<double> > &u, const Vector<double> &nDimArg, Vector<double> &dTDimArg)
+Vector<double> &downdim(const Vector<Vector<double>> &u, const Vector<double> &nDimArg, Vector<double> &dTDimArg)
 {
     int s;
     double dT = (u.size())-1;;
@@ -4786,7 +4786,7 @@ Vector<double> &downdim(const Vector<Vector<double> > &u, const Vector<double> &
     return dTDimArg;
 }
 
-Vector<Vector<double> > &updim(const Vector<Vector<double> > &u, const Vector<Vector<double> > &dTDimArg, Vector<Vector<double> > &nDimArg)
+Vector<Vector<double>> &updim(const Vector<Vector<double>> &u, const Vector<Vector<double>> &dTDimArg, Vector<Vector<double>> &nDimArg)
 {
     int i;
 
@@ -4800,7 +4800,7 @@ Vector<Vector<double> > &updim(const Vector<Vector<double> > &u, const Vector<Ve
     return nDimArg;
 }
 
-Vector<Vector<double> > &downdim(const Vector<Vector<double> > &u, const Vector<Vector<double> > &nDimArg, Vector<Vector<double> > &dTDimArg)
+Vector<Vector<double>> &downdim(const Vector<Vector<double>> &u, const Vector<Vector<double>> &nDimArg, Vector<Vector<double>> &dTDimArg)
 {
     int i;
 
@@ -4838,7 +4838,7 @@ Vector<double> &SVM_MultiC_atonce::downDim(const Vector<double> &nDimArg, Vector
     return dTDimArg;
 }
 
-Vector<Vector<double> > &SVM_MultiC_atonce::upDim(const Vector<Vector<double> > &dTDimArg, Vector<Vector<double> > &nDimArg) const
+Vector<Vector<double>> &SVM_MultiC_atonce::upDim(const Vector<Vector<double>> &dTDimArg, Vector<Vector<double>> &nDimArg) const
 {
     if ( isrecdiv() )
     {
@@ -4850,7 +4850,7 @@ Vector<Vector<double> > &SVM_MultiC_atonce::upDim(const Vector<Vector<double> > 
     return nDimArg;
 }
 
-Vector<Vector<double> > &SVM_MultiC_atonce::downDim(const Vector<Vector<double> > &nDimArg, Vector<Vector<double> > &dTDimArg) const
+Vector<Vector<double>> &SVM_MultiC_atonce::downDim(const Vector<Vector<double>> &nDimArg, Vector<Vector<double>> &dTDimArg) const
 {
     if ( isrecdiv() )
     {
@@ -4881,8 +4881,8 @@ int SVM_MultiC_atonce::autosetLinBiasForce(double nuval, double Cval, int ncut)
 }
 
 
-//void construct_u(Vector<Vector<double> > &u, int n);
-//void construct_u(Vector<Vector<double> > &u, int n)
+//void construct_u(Vector<Vector<double>> &u, int n);
+//void construct_u(Vector<Vector<double>> &u, int n)
 //{
 //    int s,t,q;
 //    Vector<double> utemplate(dT(n));

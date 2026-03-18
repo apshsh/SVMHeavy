@@ -264,7 +264,7 @@ int SVM_KConst::qaddTrainingVector(int i, const gentype &y,       SparseVector<g
     return res;
 }
 
-int SVM_KConst::addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_KConst::addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     int res = SVM_Generic::addTrainingVector(i,y,x,Cweigh,epsweigh);
 
@@ -282,7 +282,7 @@ int SVM_KConst::addTrainingVector (int i, const Vector<gentype> &y, const Vector
     return res;
 }
 
-int SVM_KConst::qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_KConst::qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     int res = SVM_Generic::qaddTrainingVector(i,y,x,Cweigh,epsweigh);
 

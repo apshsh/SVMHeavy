@@ -11,21 +11,21 @@
 #include "svm_vector_matonce.hpp"
 
 
-SVM_Vector_Matonce::SVM_Vector_Matonce() : SVM_Vector_atonce_temp<Matrix<double> >()
+SVM_Vector_Matonce::SVM_Vector_Matonce() : SVM_Vector_atonce_temp<Matrix<double>>()
 {
     setaltx(nullptr);
 
     return;
 }
 
-SVM_Vector_Matonce::SVM_Vector_Matonce(const SVM_Vector_Matonce &src) : SVM_Vector_atonce_temp<Matrix<double> >(static_cast<const SVM_Vector_atonce_temp<Matrix<double> > &>(src))
+SVM_Vector_Matonce::SVM_Vector_Matonce(const SVM_Vector_Matonce &src) : SVM_Vector_atonce_temp<Matrix<double>>(static_cast<const SVM_Vector_atonce_temp<Matrix<double>> &>(src))
 {
     setaltx(nullptr);
 
     return;
 }
 
-SVM_Vector_Matonce::SVM_Vector_Matonce(const SVM_Vector_Matonce &src, const ML_Base *xsrc) : SVM_Vector_atonce_temp<Matrix<double> >(static_cast<const SVM_Vector_atonce_temp<Matrix<double> > &>(src),static_cast<const SVM_Vector_atonce_temp<Matrix<double> > *>(xsrc))
+SVM_Vector_Matonce::SVM_Vector_Matonce(const SVM_Vector_Matonce &src, const ML_Base *xsrc) : SVM_Vector_atonce_temp<Matrix<double>>(static_cast<const SVM_Vector_atonce_temp<Matrix<double>> &>(src),static_cast<const SVM_Vector_atonce_temp<Matrix<double>> *>(xsrc))
 {
     setaltx(xsrc);
 
@@ -41,14 +41,14 @@ std::ostream &SVM_Vector_Matonce::printstream(std::ostream &output, int dep) con
 {
     repPrint(output,'>',dep) << "Vector atonce SVM (matrix kernel)\n\n";
 
-    (static_cast<const SVM_Vector_atonce_temp<Matrix<double> > &>(*this)).SVM_Vector_atonce_temp<Matrix<double> >::printstream(output,dep+1);
+    (static_cast<const SVM_Vector_atonce_temp<Matrix<double>> &>(*this)).SVM_Vector_atonce_temp<Matrix<double>>::printstream(output,dep+1);
 
     return output;
 }
 
 std::istream &SVM_Vector_Matonce::inputstream(std::istream &input)
 {
-    (static_cast<SVM_Vector_atonce_temp<Matrix<double> > &>(*this)).SVM_Vector_atonce_temp<Matrix<double> >::inputstream(input);
+    (static_cast<SVM_Vector_atonce_temp<Matrix<double>> &>(*this)).SVM_Vector_atonce_temp<Matrix<double>>::inputstream(input);
 
     return input;
 }

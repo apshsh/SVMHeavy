@@ -151,7 +151,7 @@ int SVM_Generic::qaddTrainingVector(int i, const gentype &y,       SparseVector<
     return res;
 }
 
-int SVM_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     int Nadd = y.size();
 
@@ -174,7 +174,7 @@ int SVM_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector
     return res;
 }
 
-int SVM_Generic::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int SVM_Generic::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     int Nadd = y.size();
 
@@ -1307,11 +1307,11 @@ errstream() << "BADBADBAD";
 
                     // Cache shared by all MLs
 
-                    Matrix<SparseVector<gentype> > &xvdirectProdsFull = (KxferDatStore).gxvdirectProdsFull;
-                    Matrix<double> &xvinnerProdsFull                  = (KxferDatStore).gxvinnerProdsFull;
-                    Matrix<double> &aadirectProdsFull                 = (KxferDatStore).gaadirectProdsFull;
-                    Vector<int> &prevalphaState                       = (KxferDatStore).gprevalphaState;
-                    Vector<int> &prevbalphaState                      = (KxferDatStore).gprevbalphaState;
+                    Matrix<SparseVector<gentype>> &xvdirectProdsFull = (KxferDatStore).gxvdirectProdsFull;
+                    Matrix<double> &xvinnerProdsFull                 = (KxferDatStore).gxvinnerProdsFull;
+                    Matrix<double> &aadirectProdsFull                = (KxferDatStore).gaadirectProdsFull;
+                    Vector<int> &prevalphaState                      = (KxferDatStore).gprevalphaState;
+                    Vector<int> &prevbalphaState                     = (KxferDatStore).gprevbalphaState;
 
                     int &prevxvernum = (KxferDatStore).gprevxvernum;
                     int &prevgvernum = (KxferDatStore).gprevgvernum;
@@ -1327,16 +1327,16 @@ errstream() << "BADBADBAD";
 
                     // Cached values relating to the caller (mlid)
 
-                    SparseVector<gentype> &xaprev                     = ((KxferDatStore).allxaprev)("&",mlid);                  // previous xa vector (if different then need to recalculate)
-                    Matrix<SparseVector<gentype> > &xadirectProdsFull = ((KxferDatStore).allxadirectProdsFull)("&",mlid);       // pre-calculated direct products between xa, x(j) and x(k)
-                    Vector<double> &xainnerProdsFull                  = ((KxferDatStore).allxainnerProdsFull)("&",mlid);        // pre-calculated direct products between xa, x(j)
-                    Vector<double> &xbinnerProdsFull                  = ((KxferDatStore).allxbinnerProdsFull)("&",mlid);        // pre-calculated direct products between xb, x(j)
-                    double &xaxbinnerProd                             = ((KxferDatStore).allxaxbinnerProd)("&",mlid);
-                    double &xaxainnerProd                             = ((KxferDatStore).allxaxainnerProd)("&",mlid);
-                    double &xbxbinnerProd                             = ((KxferDatStore).allxbxbinnerProd)("&",mlid);
-                    SparseVector<gentype> &diagkerns                  = ((KxferDatStore).alldiagkernsgentype)("&",mlid);        // cached evaluations of K(ia,ia), ia >= 0, if done
-                    int &prevxbvernum                                 = ((KxferDatStore).allprevxbvernum)("&",mlid);            // version number of x
-                    gentype &ipres                                    = ((KxferDatStore).allipres)("&",mlid);                   // scratchpad for ipres
+                    SparseVector<gentype> &xaprev                    = ((KxferDatStore).allxaprev)("&",mlid);                  // previous xa vector (if different then need to recalculate)
+                    Matrix<SparseVector<gentype>> &xadirectProdsFull = ((KxferDatStore).allxadirectProdsFull)("&",mlid);       // pre-calculated direct products between xa, x(j) and x(k)
+                    Vector<double> &xainnerProdsFull                 = ((KxferDatStore).allxainnerProdsFull)("&",mlid);        // pre-calculated direct products between xa, x(j)
+                    Vector<double> &xbinnerProdsFull                 = ((KxferDatStore).allxbinnerProdsFull)("&",mlid);        // pre-calculated direct products between xb, x(j)
+                    double &xaxbinnerProd                            = ((KxferDatStore).allxaxbinnerProd)("&",mlid);
+                    double &xaxainnerProd                            = ((KxferDatStore).allxaxainnerProd)("&",mlid);
+                    double &xbxbinnerProd                            = ((KxferDatStore).allxbxbinnerProd)("&",mlid);
+                    SparseVector<gentype> &diagkerns                 = ((KxferDatStore).alldiagkernsgentype)("&",mlid);        // cached evaluations of K(ia,ia), ia >= 0, if done
+                    int &prevxbvernum                                = ((KxferDatStore).allprevxbvernum)("&",mlid);            // version number of x
+                    gentype &ipres                                   = ((KxferDatStore).allipres)("&",mlid);                   // scratchpad for ipres
 
                     int NN = N();
                     int Nb = N();
@@ -1855,8 +1855,8 @@ errstream() << "BADBADBAD";
                         {
                             innerProductAssumeReal(xaxbinnerProd,xa,xb);
 
-                            xaxainnerProd = getKernel().getmnorm(xainfo,xa,2,isXConsistent(),1);
-                            xbxbinnerProd = getKernel().getmnorm(xbinfo,xb,2,isXConsistent(),1);
+                            getKernel().getmnorm(xaxainnerProd,xainfo,xa,2,isXConsistent(),1);
+                            getKernel().getmnorm(xbxbinnerProd,xbinfo,xb,2,isXConsistent(),1);
                         }
 
                         if ( prevNb != Nb )
@@ -1889,8 +1889,6 @@ errstream() << "BADBADBAD";
                             prevNb = Nb;
                         }
 
-                        (xyvalid) = mlid; // xymat will now be used by K4 call, avoiding the requirement for any further inner products
-
                         for ( j = 0 ; j < Nb ; ++j )
                         {
                             if ( alphaState()(j) )
@@ -1918,8 +1916,6 @@ errstream() << "BADBADBAD";
                                 }
                             }
                         }
-
-                        (xyvalid) = 0;
 
                         if ( ( iacall == ibcall ) && ( iacall >= 0 ) )
                         {
@@ -2289,11 +2285,11 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
 
                     // Cache shared by all MLs
 
-                    Matrix<SparseVector<gentype> > &xvdirectProdsFull = (KxferDatStore).gxvdirectProdsFull;
-                    Matrix<double> &xvinnerProdsFull                  = (KxferDatStore).gxvinnerProdsFull;
-                    Matrix<double> &aadirectProdsFull                 = (KxferDatStore).gaadirectProdsFull;
-                    Vector<int> &prevalphaState                       = (KxferDatStore).gprevalphaState;
-                    Vector<int> &prevbalphaState                      = (KxferDatStore).gprevbalphaState;
+                    Matrix<SparseVector<gentype>> &xvdirectProdsFull = (KxferDatStore).gxvdirectProdsFull;
+                    Matrix<double> &xvinnerProdsFull                 = (KxferDatStore).gxvinnerProdsFull;
+                    Matrix<double> &aadirectProdsFull                = (KxferDatStore).gaadirectProdsFull;
+                    Vector<int> &prevalphaState                      = (KxferDatStore).gprevalphaState;
+                    Vector<int> &prevbalphaState                     = (KxferDatStore).gprevbalphaState;
 
                     int &prevxvernum = (KxferDatStore).gprevxvernum;
                     int &prevgvernum = (KxferDatStore).gprevgvernum;
@@ -2309,16 +2305,16 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
 
                     // Cached values relating to the caller (mlid)
 
-                    SparseVector<gentype> &xaprev                     = ((KxferDatStore).allxaprev)("&",mlid);                 // previous xa vector (if different then need to recalculate)
-                    Matrix<SparseVector<gentype> > &xadirectProdsFull = ((KxferDatStore).allxadirectProdsFull)("&",mlid);      // pre-calculated direct products between xa, x(j) and x(k)
-                    Vector<double> &xainnerProdsFull                  = ((KxferDatStore).allxainnerProdsFull)("&",mlid);       // pre-calculated direct products between xa, x(j)
-                    Vector<double> &xbinnerProdsFull                  = ((KxferDatStore).allxbinnerProdsFull)("&",mlid);       // pre-calculated direct products between xb, x(j)
-                    double &xaxbinnerProd                             = ((KxferDatStore).allxaxbinnerProd)("&",mlid);
-                    double &xaxainnerProd                             = ((KxferDatStore).allxaxainnerProd)("&",mlid);
-                    double &xbxbinnerProd                             = ((KxferDatStore).allxbxbinnerProd)("&",mlid);
-                    SparseVector<double> &diagkerns                   = ((KxferDatStore).alldiagkernsdouble)("&",mlid);        // cached evaluations of K(ia,ia), ia >= 0, if done
-                    int &prevxbvernum                                 = ((KxferDatStore).allprevxbvernum)("&",mlid);           // version number of x
-                    gentype &ipres                                    = ((KxferDatStore).allipres)("&",mlid);                  // scratchpad for ipres
+                    SparseVector<gentype> &xaprev                    = ((KxferDatStore).allxaprev)("&",mlid);                 // previous xa vector (if different then need to recalculate)
+                    Matrix<SparseVector<gentype>> &xadirectProdsFull = ((KxferDatStore).allxadirectProdsFull)("&",mlid);      // pre-calculated direct products between xa, x(j) and x(k)
+                    Vector<double> &xainnerProdsFull                 = ((KxferDatStore).allxainnerProdsFull)("&",mlid);       // pre-calculated direct products between xa, x(j)
+                    Vector<double> &xbinnerProdsFull                 = ((KxferDatStore).allxbinnerProdsFull)("&",mlid);       // pre-calculated direct products between xb, x(j)
+                    double &xaxbinnerProd                            = ((KxferDatStore).allxaxbinnerProd)("&",mlid);
+                    double &xaxainnerProd                            = ((KxferDatStore).allxaxainnerProd)("&",mlid);
+                    double &xbxbinnerProd                            = ((KxferDatStore).allxbxbinnerProd)("&",mlid);
+                    SparseVector<double> &diagkerns                  = ((KxferDatStore).alldiagkernsdouble)("&",mlid);        // cached evaluations of K(ia,ia), ia >= 0, if done
+                    int &prevxbvernum                                = ((KxferDatStore).allprevxbvernum)("&",mlid);           // version number of x
+                    gentype &ipres                                   = ((KxferDatStore).allipres)("&",mlid);                  // scratchpad for ipres
 
                     int NN = N();
                     int Nb = N();
@@ -2874,8 +2870,8 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
                         {
                             innerProductAssumeReal(xaxbinnerProd,xa,xb);
 
-                            xaxainnerProd = getKernel().getmnorm(xainfo,xa,2,isXConsistent(),1);
-                            xbxbinnerProd = getKernel().getmnorm(xbinfo,xb,2,isXConsistent(),1);
+                            getKernel().getmnorm(xaxainnerProd,xainfo,xa,2,isXConsistent(),1);
+                            getKernel().getmnorm(xbxbinnerProd,xbinfo,xb,2,isXConsistent(),1);
                         }
 
                         if ( prevNb != Nb )
@@ -2916,8 +2912,6 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
 //errstream() << "phantomxyz 4 K2xfer: xbxbinnerProd = " << xbxbinnerProd << "\n";
 //errstream() << "phantomxyz 5 K2xfer: xvinnerProdsFull = " << xvinnerProdsFull << "\n";
 //errstream() << "phantomxyz 6 K2xfer: aadirectProdsFull = " << aadirectProdsFull << "\n";
-                        (xyvalid) = mlid; // xymat will now be used by K4 call, avoiding the requirement for any further inner products
-
                         for ( j = 0 ; j < Nb ; ++j )
                         {
                             if ( alphaState()(j) )
@@ -2945,8 +2939,6 @@ void SVM_Generic::K2xfer(double &dxyprod, double &ddiffis, double &res, int &min
                                 }
                             }
                         }
-
-                        (xyvalid) = 0;
 
                         if ( ( iacall == ibcall ) && ( iacall >= 0 ) )
                         {
@@ -4588,11 +4580,11 @@ void SVM_Generic::Kmxfer(gentype &res, int &minmaxind, int typeis,
         case 801:
         case 811:
         {
-            Vector<SparseVector<gentype> > *xx = nullptr;
+            Vector<SparseVector<gentype>> *xx = nullptr;
 
             if ( !( i >= 0 ) )
             {
-                MEMNEW(xx,Vector<SparseVector<gentype> >(x.size()));
+                MEMNEW(xx,Vector<SparseVector<gentype>>(x.size()));
 
                 int ir;
 
@@ -4723,11 +4715,11 @@ void SVM_Generic::Kmxfer(gentype &res, int &minmaxind, int typeis,
             NiceAssert( !( resmode & 0x80 ) );
             NiceAssert( !(m%2) );
 
-            Vector<SparseVector<gentype> > *xx = nullptr;
+            Vector<SparseVector<gentype>> *xx = nullptr;
 
             if ( !( i >= 0 ) )
             {
-                MEMNEW(xx,Vector<SparseVector<gentype> >(x.size()));
+                MEMNEW(xx,Vector<SparseVector<gentype>>(x.size()));
 
                 int ir;
 
@@ -5009,11 +5001,11 @@ void SVM_Generic::Kmxfer(double &res, int &minmaxind, int typeis,
         case 801:
         case 811:
         {
-            Vector<SparseVector<gentype> > *xx = nullptr;
+            Vector<SparseVector<gentype>> *xx = nullptr;
 
             if ( !( i >= 0 ) )
             {
-                MEMNEW(xx,Vector<SparseVector<gentype> >(x.size()));
+                MEMNEW(xx,Vector<SparseVector<gentype>>(x.size()));
 
                 int ir;
 
@@ -5144,11 +5136,11 @@ void SVM_Generic::Kmxfer(double &res, int &minmaxind, int typeis,
             NiceAssert( !( resmode & 0x80 ) );
             NiceAssert( !(m%2) );
 
-            Vector<SparseVector<gentype> > *xx = nullptr;
+            Vector<SparseVector<gentype>> *xx = nullptr;
 
             if ( !( i >= 0 ) )
             {
-                MEMNEW(xx,Vector<SparseVector<gentype> >(x.size()));
+                MEMNEW(xx,Vector<SparseVector<gentype>>(x.size()));
 
                 int ir;
 
@@ -5666,7 +5658,7 @@ int SVM_Generic::setAlpha(const Vector<gentype> &newAlpha)
 
         else if ( isUnderlyingVector() )
         {
-            Vector<Vector<double> > nAlpha(newAlpha.size());
+            Vector<Vector<double>> nAlpha(newAlpha.size());
 
             for ( i = 0 ; i < nAlpha.size() ; ++i )
             {
@@ -5863,7 +5855,6 @@ int SVM_Generic::getparam(int ind, gentype &val, const gentype &xa, int ia, cons
         case 9068: { val = singmethod();                  desc = "SVM_Scalar::singmethod"; break; }
         case 9069: { val = rejectThreshold();             desc = "SVM_Scalar::rejectThreshold"; break; }
         case 9070: { val = Gp();                          desc = "SVM_Scalar::Gp"; break; }
-        case 9071: { val = XX();                          desc = "SVM_Scalar::XX"; break; }
         case 9072: { val = kerndiag();                    desc = "SVM_Scalar::kerndiag"; break; }
         case 9073: { val = bias();                        desc = "SVM_Scalar::bias"; break; }
         case 9074: { val = alpha();                       desc = "SVM_Scalar::alpha"; break; }
@@ -5902,7 +5893,6 @@ int SVM_Generic::getparam(int ind, gentype &val, const gentype &xa, int ia, cons
         case 9116: { val = QuadBiasForceclass((int) xa); desc = "SVM_Scalar::QuadBiasForceclass"; break; }
 
         case 9200: { val = Gp()((int) xa, (int) xb); desc = "SVM_Scalar::Gp"; break; }
-        case 9201: { val = XX()((int) xa, (int) xb); desc = "SVM_Scalar::XX"; break; }
 
         default:
         {

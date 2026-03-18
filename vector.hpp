@@ -18,6 +18,8 @@
 #include <string>
 #include <sstream>
 #include <type_traits>
+#include <iterator>
+#include <cstddef>
 #include "randfun.hpp"
 #include "qswapbase.hpp"
 #include "dynarray.hpp"
@@ -413,6 +415,8 @@ public:
 
     Vector<T> &vscaleAdd(const Vector<T> &a, const Vector<T> &b);
 
+    template <class S> Vector<T> &addTo(const S &a);
+
     // Add and remove element functions
     //
     // add:    ( c ) (i)          ( c ) (i)
@@ -634,6 +638,67 @@ public:
 
     virtual bool iseq(const Vector<T> &b) { if ( imoverhere ) { return overhere().iseq(b); } else { NiceThrow("Not in FuncVector 21"); } return 0; }
 
+    // Playing with iterators for the heck of it
+
+    struct Iterator
+    {
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type   = std::ptrdiff_t; // meaningless for forward iterator, but required
+        using value_type        = T;
+        using pointer           = T *;
+        using reference         = T &;
+
+        Iterator(int ind, Vector<T> *that) : Vector<T>(), m_ind(ind), m_that(that) {}
+
+        reference operator*()  const { return  (*m_that)("&",m_ind); }
+        pointer   operator->()       { return &(*m_that)("&",m_ind); }
+
+        Iterator& operator++()    { m_ind++;                         return *this; }
+        Iterator  operator++(int) { Iterator tmp = *this; ++(*this); return tmp;   }
+
+        friend bool operator==(const Iterator& a, const Iterator& b) { return a.m_ind == b.m_ind; };
+        friend bool operator!=(const Iterator& a, const Iterator& b) { return a.m_ind != b.m_ind; };
+
+    private:
+
+        int m_ind;
+        Vector<T> *m_that;
+    };
+
+    struct ConstantIterator
+    {
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type   = std::ptrdiff_t; // meaningless for forward iterator, but required
+        using value_type        = T;
+        using pointer           = const T *;
+        using reference         = const T &;
+
+        ConstantIterator(int ind, const Vector<T> *that) : Vector<T>(), m_ind(ind), m_that(that) {}
+
+        reference operator*()  const { return  (*m_that)(m_ind); }
+        pointer   operator->()       { return &(*m_that)(m_ind); }
+
+        ConstantIterator& operator++()    { m_ind++;                         return *this; }
+        ConstantIterator  operator++(int) { Iterator tmp = *this; ++(*this); return tmp;   }
+
+        friend bool operator==(const ConstantIterator& a, const ConstantIterator& b) { return a.m_ind == b.m_ind; };
+        friend bool operator!=(const ConstantIterator& a, const ConstantIterator& b) { return a.m_ind != b.m_ind; };
+
+    private:
+
+        int m_ind;
+        const Vector<T> *m_that;
+    };
+
+    Iterator begin() { Iterator res(0,     this); return res; }
+    Iterator end()   { Iterator res(size(),this); return res; }
+
+    ConstantIterator begin() const { ConstantIterator res(0,     this); return res; }
+    ConstantIterator end()   const { ConstantIterator res(size(),this); return res; }
+
+    ConstantIterator cbegin() const { ConstantIterator res(0,     this); return res; }
+    ConstantIterator cend()   const { ConstantIterator res(size(),this); return res; }
+
 private:
 
     // dsize: size of vector
@@ -808,7 +873,7 @@ template <class T> void qswap(retVector<T> &a, retVector<T> &b)
 {
     // Don't want to assert nbase == 0, because it may not be
     // Just reset: this should only be used when a,b are *not* in active use!
-    // (eg if you have Vector<retVector<T> >, like in kcache)
+    // (eg if you have Vector<retVector<T>>, like in kcache)
 
     a.reset();
     b.reset();
@@ -948,12 +1013,14 @@ template <class T> const T &vari    (T &res, const Vector<T> &a);
 template <class T> const T &stdev   (T &res, const Vector<T> &a);
 
 template <class T> const T &median(const Vector<T> &a, int &i, const Vector<double> &w);
-template <class T> const Vector<T> &geometricMedian(Vector<T> &res, const Vector<Vector<T> > &a, const Vector<double> &w);
-template <class T> double MAD(double &medianres, const Vector<T> &a);
-template <class T> double geometricMAD(Vector<T> &medianres, const Vector<Vector<T> > &a, const Vector<double> &w);
+template <class T> const Vector<T> &geometricMedian(Vector<T> &res, const Vector<Vector<T>> &a, const Vector<double> &w);
+template <class T> double MAD(const Vector<T> &a);
+template <class T> double geometricMAD(Vector<T> &medianres, const Vector<Vector<T>> &a, const Vector<double> &w);
+template <class T> double geometricVar(Vector<T> &medianres, const Vector<Vector<T>> &a, const Vector<double> &w);
 
-template <class T> const T &sum (T &res, const Vector<T> &a, const Vector<double> &weights);
-template <class T> const T &mean(T &res, const Vector<T> &a, const Vector<double> &weights);
+template <class T> const T &sum   (T &res, const Vector<T> &a,         const Vector<double> &weights);
+template <class T> const T &mean  (T &res, const Vector<T> &a,         const Vector<double> &weights);
+template <class T> const T &median(        const Vector<T> &a, int &i, const Vector<double> &weights);
 
 template <class S, class T> const T &sumb(T &result, const Vector<S> &left_op, const Vector<T> &right_op);
 
@@ -971,40 +1038,36 @@ template <> inline const double &abssum(double &res, const Vector<double> &a);
 
 //template <class T> T maxabs  (const Vector<T> &a, const Vector<T> &b, int &i);
 
-template <class T> T &innerProduct                         (T &res,                       const Vector<T> &a, const Vector<T> &b                        );
-template <class T> T &innerProductRevConj                  (T &res,                       const Vector<T> &a, const Vector<T> &b                        );
-template <class T> T &innerProductScaled                   (T &res,                       const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
-template <class T> T &innerProductScaledRevConj            (T &res,                       const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
-template <class T> T &innerProductRightScaled              (T &res,                       const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
-template <class T> T &innerProductRightScaledRevConj       (T &res,                       const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
-template <class T> T &innerProductLeftScaled               (T &res,                       const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
-template <class T> T &innerProductLeftScaledRevConj        (T &res,                       const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
+template <class T> T &innerProduct                  (T &res, const Vector<T> &a, const Vector<T> &b);
+template <class T> T &innerProductRevConj           (T &res, const Vector<T> &a, const Vector<T> &b);
+template <class T> T &innerProductScaled            (T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
+template <class T> T &innerProductScaledRevConj     (T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
+template <class T> T &innerProductScaled            (T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &Lscale, const Vector<T> &Rscale);
+template <class T> T &innerProductScaledRevConj     (T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &Lscale, const Vector<T> &Rscale);
+template <class T> T &innerProductLeftScaled        (T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
+template <class T> T &innerProductLeftScaledRevConj (T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
+template <class T> T &innerProductRightScaled       (T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
+template <class T> T &innerProductRightScaledRevConj(T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
 
-template <class T> T &indexedinnerProduct                  (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b                        );
+template <class T> T &indexedinnerProduct                  (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b);
+template <class T> T &indexedinnerProductRevConj           (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b);
 template <class T> T &indexedinnerProductScaled            (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
-template <class T> T &indexedinnerProductRevConj           (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b                        );
 template <class T> T &indexedinnerProductScaledRevConj     (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
-template <class T> T &indexedinnerProductRightScaled       (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
-template <class T> T &indexedinnerProductRightScaledRevConj(T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
 template <class T> T &indexedinnerProductLeftScaled        (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
 template <class T> T &indexedinnerProductLeftScaledRevConj (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
+template <class T> T &indexedinnerProductRightScaled       (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
+template <class T> T &indexedinnerProductRightScaledRevConj(T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
 
-template <class T> T &twoProductRightScaled        (T &res,                       const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
 template <class T> T &twoProductLeftScaled         (T &res,                       const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
-template <class T> T &indexedtwoProductRightScaled (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
+template <class T> T &twoProductRightScaled        (T &res,                       const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
 template <class T> T &indexedtwoProductLeftScaled  (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
+template <class T> T &indexedtwoProductRightScaled (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
 
 template <class T> T &oneProduct  (T &res, const Vector<T> &a);
 template <class T> T &twoProduct  (T &res, const Vector<T> &a, const Vector<T> &b);
 template <class T> T &threeProduct(T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &c);
 template <class T> T &fourProduct (T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &c, const Vector<T> &d);
 template <class T> T &mProduct    (T &res, const Vector<const Vector <T> *> &a);
-
-template <class T> T &oneProductScaled  (T &res, const Vector<T> &a, const Vector<T> &scale);
-template <class T> T &twoProductScaled  (T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
-template <class T> T &threeProductScaled(T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &c, const Vector<T> &scale);
-template <class T> T &fourProductScaled (T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &c, const Vector<T> &d, const Vector<T> &scale);
-template <class T> T &mProductScaled    (T &res, const Vector<const Vector <T> *> &a, const Vector<T> &scale);
 
 template <class T> double &innerProductAssumeReal(double &res, const Vector<T> &a, const Vector<T> &b);
 
@@ -1014,6 +1077,13 @@ template <class T> double &threeProductAssumeReal(double &res, const Vector<T> &
 template <class T> double &fourProductAssumeReal (double &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &c, const Vector<T> &d);
 template <class T> double &mProductAssumeReal    (double &res, const Vector<const Vector <T> *> &a);
 
+template <class T> T &oneProductScaled  (T &res, const Vector<T> &a, const Vector<T> &scale);
+template <class T> T &twoProductScaled  (T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
+template <class T> T &twoProductScaled  (T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &Lscale, const Vector<T> &Rscale);
+template <class T> T &threeProductScaled(T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &c, const Vector<T> &scale);
+template <class T> T &fourProductScaled (T &res, const Vector<T> &a, const Vector<T> &b, const Vector<T> &c, const Vector<T> &d, const Vector<T> &scale);
+template <class T> T &mProductScaled    (T &res, const Vector<const Vector <T> *> &a, const Vector<T> &scale);
+
 template <class T> T &indexedoneProduct  (T &res, const Vector<int> &n, const Vector<T> &a);
 template <class T> T &indexedtwoProduct  (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b);
 template <class T> T &indexedthreeProduct(T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &c);
@@ -1022,9 +1092,12 @@ template <class T> T &indexedmProduct    (T &res, const Vector<int> &n, const Ve
 
 template <class T> T &indexedoneProductScaled  (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &scale);
 template <class T> T &indexedtwoProductScaled  (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale);
+template <class T> T &indexedtwoProductScaled  (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &Lscale, const Vector<T> &Rscale);
 template <class T> T &indexedthreeProductScaled(T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &c, const Vector<T> &scale);
 template <class T> T &indexedfourProductScaled (T &res, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &c, const Vector<T> &d, const Vector<T> &scale);
 template <class T> T &indexedmProductScaled    (T &res, const Vector<int> &n, const Vector<const Vector <T> *> &a, const Vector<T> &scale);
+
+
 
 template <> inline double &innerProductAssumeReal(double &res, const Vector<double> &a, const Vector<double> &b);
 
@@ -1594,6 +1667,10 @@ Vector<T>::Vector(int size, const T *src, int tightalloc) : newln('\n'),
 {
     NiceAssert( size >= 0 );
 
+    int backoff = 0;
+
+    if ( defaulttightalloc >= 2 ) { backoff = 1; defaulttightalloc -= 2; } // this indicates that the final element should not be set from src (see sparsevector)
+
     MEMNEW(content,DynArray<T>);
     (*content) = { nullptr,0,0,defaulttightalloc,false,false,false };
     (*content).resize(dsize);
@@ -1603,7 +1680,7 @@ Vector<T>::Vector(int size, const T *src, int tightalloc) : newln('\n'),
 
     if ( src )
     {
-        for ( int i = 0 ; i < size ; ++i )
+        for ( int i = 0 ; i < size-backoff ; ++i )
         {
             (*this).set(i,src[i]);
         }
@@ -3506,6 +3583,13 @@ const Vector<T> &Vector<T>::operator()(int ib, int is, int im, retVector<T> &res
 
 // Scaled addition:
 
+template <> template <> inline Vector<double> &Vector<double>::addTo(const double &a);
+template <> template <> inline Vector<double> &Vector<double>::addTo(const double &a)
+{
+    return *this += a;
+}
+
+
 template <> template <> inline Vector<double> &Vector<double>::scaleAdd(const double &a, const Vector<double> &b);
 template <> template <> inline Vector<double> &Vector<double>::scaleAdd(const double &a, const Vector<double> &b)
 {
@@ -3674,6 +3758,17 @@ Vector<T> &Vector<T>::vscaleAdd(const Vector<T> &a, const Vector<T> &b)
         {
             (*this)("&",i) += ((a(i))*(b(i)));
         }
+    }
+
+    return *this;
+}
+
+template <class T>
+template <class S> Vector<T> &Vector<T>::addTo(const S &a)
+{
+    for ( int i = 0 ; i < size() ; ++i )
+    {
+        (*this)("&",i) += a;
     }
 
     return *this;
@@ -5676,6 +5771,92 @@ const T &mean(T &res, const Vector<T> &a, const Vector<double> &weights)
 }
 
 template <class T>
+const T &median(const Vector<T> &a, int &ii, const Vector<double> &weights)
+{
+    const T *res = nullptr;
+
+    ii = 0;
+
+    if ( a.size() == 1 )
+    {
+        res = &(a(0));
+    }
+
+    else if ( a.size() > 1 )
+    {
+        // Aim: a(outdex) should be arranged from largest to smallest
+
+        Vector<int> outdex;
+
+        int i,j;
+
+        for ( i = a.size()-1 ; i >= 0 ; --i )
+        {
+            j = 0;
+
+            if ( outdex.size() )
+            {
+                for ( j = 0 ; j < outdex.size() ; ++j )
+                {
+                    if ( a(outdex.v(j)) <= a(i) )
+                    {
+                        break;
+                    }
+                }
+            }
+
+            outdex.add(j);
+            outdex.sv(j,i);
+        }
+
+        // work out cumulative weights
+
+        Vector<double> cw(weights);
+
+        for ( i = 1 ; i < cw.size() ; ++i )
+        {
+            cw("&",outdex(i)) += cw(outdex(i-1));
+        }
+
+        // Normalize cw in range 0->1
+
+        cw /= cw(outdex(cw.size()-1));
+
+        // Find the halfway point
+
+        for ( i = 0 ; i < cw.size() ; ++i )
+        {
+            if ( cw(outdex(i)) >= 0.5 )
+            {
+                ii = outdex(i);
+                break;
+            }
+        }
+
+        res = &(a(ii));
+    }
+
+    else
+    {
+        static thread_local int frun = 1;
+        static thread_local T defres;
+
+        ii = 0;
+
+        if ( frun )
+        {
+            setzero(defres);
+            frun = 0;
+        }
+
+        res = &defres;
+    }
+
+    return *res;
+}
+
+
+template <class T>
 T mean(const Vector<T> &a)
 {
     T res;
@@ -6081,7 +6262,8 @@ template <class T> Vector<T> &setrand(Vector<T> &a)
 #define GMMAfits 5
 #define ZTOLgm 1e-20
 
-template <class T> const Vector<T> &geometricMedian(Vector<T> &y, const Vector<Vector<T> > &x, const Vector<double> &w)
+template <class T>
+const Vector<T> &geometricMedian(Vector<T> &y, const Vector<Vector<T>> &x, const Vector<double> &w)
 {
     NiceAssert( w.size() == x.size() );
 
@@ -6199,29 +6381,8 @@ template <class T> const Vector<T> &geometricMedian(Vector<T> &y, const Vector<V
     return y;
 }
 
-template <class T> double MAD(double &y, const Vector<T> &x)
-{
-    median(y,x);
-
-    int n = x.size();
-    double res = 0;
-
-    if ( n > 1 )
-    {
-        Vector<double> dist(n,0.0);
-
-        for ( int i = 0 ; i < n ; ++n )
-        {
-            dist("&",i) = abs2(x(i)-y);
-        }
-
-        res = median(dist);
-    }
-
-    return res;
-}
-
-template <class T> double geometricMAD(Vector<T> &y, const Vector<Vector<T> > &x, const Vector<double> &w)
+template <class T>
+double geometricMAD(Vector<T> &y, const Vector<Vector<T>> &x, const Vector<double> &w)
 {
     NiceAssert( x.size() == w.size() );
 
@@ -6235,7 +6396,7 @@ template <class T> double geometricMAD(Vector<T> &y, const Vector<Vector<T> > &x
         Vector<double> dist(n,0.0);
         Vector<T> temp(y);
 
-        for ( int i = 0 ; i < n ; ++n )
+        for ( int i = 0 ; i < n ; ++i )
         {
             temp =  x(i);
             temp -= y;
@@ -6244,7 +6405,59 @@ template <class T> double geometricMAD(Vector<T> &y, const Vector<Vector<T> > &x
         }
 
         int i = 0;
-        res = median(dist,i); //,w);
+        res = median(dist,i,w);
+    }
+
+    return res;
+}
+
+template <class T>
+double geometricVar(Vector<T> &y, const Vector<Vector<T>> &x, const Vector<double> &w)
+{
+    NiceAssert( x.size() == w.size() );
+
+    mean(y,x,w);
+
+    int n = x.size();
+    double res = 0;
+
+    if ( n > 1 )
+    {
+        Vector<double> dist(n,0.0);
+        Vector<T> temp(y);
+
+        for ( int i = 0 ; i < n ; ++i )
+        {
+            temp =  x(i);
+            temp -= y;
+
+            dist("&",i) = norm2(temp);
+        }
+
+        mean(res,dist,w);
+    }
+
+    return res;
+}
+
+template <class T>
+double MAD(const Vector<T> &x)
+{
+    T y = median(x);
+
+    int n = x.size();
+    double res = 0;
+
+    if ( n > 1 )
+    {
+        Vector<double> dist(n,0.0);
+
+        for ( int i = 0 ; i < n ; ++i )
+        {
+            dist("&",i) = abs2(x(i)-y);
+        }
+
+        res = median(dist);
     }
 
     return res;
@@ -6377,21 +6590,16 @@ template <class T> int testisninf(const Vector<T> &x)
 template <class T>
 double &oneProductAssumeReal(double &res, const Vector<T> &a)
 {
-    if ( a.infsize() )
+    if   ( a.infsize() )
     {
         a.inner1Real(res);
     }
 
     else
     {
-        int dim = a.size();
-
         res = 0;
 
-        for ( int i = 0 ; i < dim ; ++i )
-        {
-            res += (double) a(i);
-	}
+        for ( int i = 0 ; i < a.size() ; ++i ) { res += (double) a(i); }
     }
 
     return res;
@@ -6399,19 +6607,10 @@ double &oneProductAssumeReal(double &res, const Vector<T> &a)
 
 template <> inline double &oneProductAssumeReal(double &res, const Vector<double> &a)
 {
-    int size = a.size();
-
     res = 0;
 
-    if ( size && a.contiguous() )
-    {
-        res = fastoneProduct(&a(0),size);
-    }
-
-    else if ( size )
-    {
-        res = fastoneProduct(a.unsafeccontent(),a.unsafepivot(),a.unsafeib(),a.unsafeis(),size);
-    }
+    if      ( a.size() && a.contiguous() ) { res = fastoneProduct(&a(0),a.size());                                                        }
+    else if ( a.size()                   ) { res = fastoneProduct(a.unsafeccontent(),a.unsafepivot(),a.unsafeib(),a.unsafeis(),a.size()); }
 
     return res;
 }
@@ -6424,27 +6623,22 @@ T &oneProduct(T &result, const Vector<T> &a)
         a.inner1(result);
     }
 
+    else if ( a.size() )
+    {
+        result = a(0);
+
+        for ( int i = 1 ; i < a.size() ; ++i )
+        {
+            result += a(i);
+        }
+    }
+
     else
     {
-        int dim = a.size();
-
-        if ( dim )
-        {
-            result = a(0);
-
-            for ( int i = 1 ; i < dim ; ++i )
-            {
-                result += a(i);
-	    }
-	}
-
-        else
-        {
-            setzero(result);
-        }
-
-        postProInnerProd(result);
+        setzero(result);
     }
+
+    postProInnerProd(result);
 
     return result;
 }
@@ -6927,6 +7121,79 @@ T &innerProductScaled(T &result, const Vector<T> &a, const Vector<T> &b, const V
 }
 
 template <class T>
+T &innerProductScaled(T &result, const Vector<T> &a, const Vector<T> &b, const Vector<T> &Lscale, const Vector<T> &Rscale)
+{
+    if ( a.infsize() || b.infsize() )
+    {
+        NiceThrow("Scaled FuncVector inner product not supported.");
+
+        return result;
+    }
+
+    NiceAssert( a.size() == b.size() );
+    NiceAssert( a.size() == Lscale.size() );
+    NiceAssert( a.size() == Rscale.size() );
+
+    int dim = a.size();
+
+    if svm_constexpr_if ( !(std::is_floating_point<T>::value) && !(std::is_integral<T>::value) )
+    {
+        T tempa;
+        T tempb;
+
+        setzero(result);
+        setzero(tempa);
+        setzero(tempb);
+
+        if ( dim )
+        {
+            tempa  = a(0);
+            tempa /= Lscale(0);
+
+            tempb  = b(0);
+            tempb /= Rscale(0);
+
+            setconj(tempa);
+            //setconj(tempb);
+            rightmult(tempa,tempb);
+
+            result = tempb;
+
+            for ( int i = 1 ; i < dim ; ++i )
+            {
+                // conj(l).r = conj(conj(r).l) (staying type T at all times)
+
+                tempa  = a(i);
+                tempa /= Lscale(i);
+
+                tempb  = b(i);
+                tempb /= Rscale(i);
+
+                setconj(tempa);
+                //setconj(tempb);
+                rightmult(tempa,tempb);
+
+                result += tempb;
+            }
+	}
+    }
+
+    else
+    {
+        result = 0;
+
+        for ( int i = 0 ; i < dim ; ++i )
+        {
+            result += a(i)*b(i)/(Lscale(i)*Rscale(i));
+	}
+
+        return result;
+    }
+
+    return postProInnerProd(result);
+}
+
+template <class T>
 T &twoProductScaled(T &result, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale)
 {
     if ( a.infsize() || b.infsize() )
@@ -6999,6 +7266,79 @@ T &twoProductScaled(T &result, const Vector<T> &a, const Vector<T> &b, const Vec
 }
 
 template <class T>
+T &twoProductScaled(T &result, const Vector<T> &a, const Vector<T> &b, const Vector<T> &Lscale, const Vector<T> &Rscale)
+{
+    if ( a.infsize() || b.infsize() )
+    {
+        NiceThrow("Scaled FuncVector inner product not supported.");
+
+        return result;
+    }
+
+    NiceAssert( a.size() == b.size() );
+    NiceAssert( a.size() == Lscale.size() );
+    NiceAssert( a.size() == Rscale.size() );
+
+    int dim = a.size();
+
+    if svm_constexpr_if ( !(std::is_floating_point<T>::value) && !(std::is_integral<T>::value) )
+    {
+        T tempa;
+        T tempb;
+
+        setzero(result);
+        setzero(tempa);
+        setzero(tempb);
+
+        if ( dim )
+        {
+            tempa  = a(0);
+            tempa /= Lscale(0);
+
+            tempb  = b(0);
+            tempb /= Rscale(0);
+
+            //setconj(tempa);
+            //setconj(tempb);
+            rightmult(tempa,tempb);
+
+            result = tempb;
+
+            for ( int i = 1 ; i < dim ; ++i )
+	    {
+                // conj(l).r = conj(conj(r).l) (staying type T at all times)
+
+                tempa  = a(i);
+                tempa /= Lscale(i);
+
+                tempb  = b(i);
+                tempb /= Rscale(i);
+
+                //setconj(tempa);
+                //setconj(tempb);
+                rightmult(tempa,tempb);
+
+                result += tempb;
+	    }
+	}
+    }
+
+    else
+    {
+        result = 0;
+
+        for ( int i = 0 ; i < dim ; ++i )
+        {
+            result += a(i)*b(i)/(Lscale(i)*Rscale(i));
+	}
+
+        return result;
+    }
+
+    return postProInnerProd(result);
+}
+
+template <class T>
 T &innerProductScaledRevConj(T &result, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale)
 {
     if ( a.infsize() || b.infsize() )
@@ -7062,6 +7402,79 @@ T &innerProductScaledRevConj(T &result, const Vector<T> &a, const Vector<T> &b, 
         for ( int i = 0 ; i < dim ; ++i )
         {
             result += a(i)*b(i)/(scale(i)*scale(i));
+	}
+
+        return result;
+    }
+
+    return postProInnerProd(result);
+}
+
+template <class T>
+T &innerProductScaledRevConj(T &result, const Vector<T> &a, const Vector<T> &b, const Vector<T> &Lscale, const Vector<T> &Rscale)
+{
+    if ( a.infsize() || b.infsize() )
+    {
+        NiceThrow("Scaled FuncVector inner product not supported.");
+
+        return result;
+    }
+
+    NiceAssert( a.size() == b.size() );
+    NiceAssert( a.size() == Lscale.size() );
+    NiceAssert( a.size() == Rscale.size() );
+
+    int dim = a.size();
+
+    if svm_constexpr_if ( !(std::is_floating_point<T>::value) && !(std::is_integral<T>::value) )
+    {
+        T tempa;
+        T tempb;
+
+        setzero(result);
+        setzero(tempa);
+        setzero(tempb);
+
+        if ( dim )
+        {
+            tempa  = a(0);
+            tempa /= Lscale(0);
+
+            tempb  = b(0);
+            tempb /= Rscale(0);
+
+            //setconj(tempa);
+            setconj(tempb);
+            rightmult(tempa,tempb);
+
+            result = tempb;
+
+            for ( int i = 1 ; i < dim ; ++i )
+	    {
+                // conj(l).r = conj(conj(r).l) (staying type T at all times)
+
+                tempa  = a(i);
+                tempa /= Lscale(i);
+
+                tempb  = b(i);
+                tempb /= Rscale(i);
+
+                //setconj(tempa);
+                setconj(tempb);
+                rightmult(tempa,tempb);
+
+                result += tempb;
+	    }
+	}
+    }
+
+    else
+    {
+        result = 0;
+
+        for ( int i = 0 ; i < dim ; ++i )
+        {
+            result += a(i)*b(i)/(Lscale(i)*Rscale(i));
 	}
 
         return result;
@@ -7806,6 +8219,103 @@ T &indexedinnerProductScaled(T &result, const Vector<int> &n, const Vector<T> &a
 }
 
 template <class T>
+T &indexedinnerProductScaled(T &result, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &Lscale, const Vector<T> &Rscale)
+{
+    if ( a.infsize() || b.infsize() )
+    {
+        NiceThrow("Indexed FuncVector inner product not supported.");
+
+        return result;
+    }
+
+    // Basically just a four product with conjugation on a and scale included twice
+
+    int nsize = n.size();
+    int asize = a.size(); //indsize();
+    int bsize = b.size(); //indsize();
+    int csize = Lscale.size(); //indsize();
+    int dsize = Rscale.size(); //indsize();
+
+    T tempa;
+    T tempb;
+
+    setzero(result);
+    setzero(tempa);
+    setzero(tempb);
+
+    if ( nsize && asize && bsize && csize && dsize )
+    {
+        int npos = 0;
+	int apos = 0;
+	int bpos = 0;
+	int cpos = 0;
+        int dpos = 0;
+        int nelm;
+	int aelm;
+	int belm;
+	int celm;
+        int delm;
+
+	while ( ( npos < nsize ) && ( apos < asize ) && ( bpos < bsize ) && ( cpos < csize ) && ( dpos < dsize ) )
+	{
+            nelm = n.v(npos);
+            aelm = apos; //a.ind(apos);
+	    belm = bpos; //b.ind(bpos);
+	    celm = cpos; //scale.ind(cpos);
+	    delm = dpos; //scale.ind(dpos);
+
+	    if ( ( aelm == nelm ) && ( belm == nelm ) && ( celm == nelm ) && ( delm == nelm ) )
+	    {
+                tempa  = a(apos);
+                tempa /= Lscale(cpos);
+
+                tempb  = b(bpos);
+                tempb /= Rscale(dpos);
+
+                setconj(tempa);
+                //setconj(tempb);
+                rightmult(tempa,tempb);
+
+                result += tempb;
+
+                ++npos;
+		++apos;
+		++bpos;
+		++cpos;
+                ++dpos;
+	    }
+
+            else if ( ( nelm <= aelm ) && ( nelm <= belm ) && ( nelm <= celm ) && ( nelm <= delm ) )
+	    {
+		++npos;
+	    }
+
+            else if ( ( aelm <= nelm ) && ( aelm <= belm ) && ( aelm <= celm ) && ( aelm <= delm ) )
+	    {
+		++apos;
+	    }
+
+            else if ( ( belm <= nelm ) && ( belm <= aelm ) && ( belm <= celm ) && ( belm <= delm ) )
+	    {
+		++bpos;
+	    }
+
+            else if ( ( celm <= nelm ) && ( celm <= aelm ) && ( celm <= belm ) && ( celm <= delm ) )
+	    {
+		++cpos;
+	    }
+
+	    else
+	    {
+                ++dpos;
+	    }
+	}
+    }
+
+    return postProInnerProd(result);
+}
+
+template <class T>
 T &indexedtwoProductScaled(T &result, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale)
 {
     if ( a.infsize() || b.infsize() )
@@ -7903,6 +8413,103 @@ T &indexedtwoProductScaled(T &result, const Vector<int> &n, const Vector<T> &a, 
 }
 
 template <class T>
+T &indexedtwoProductScaled(T &result, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &Lscale, const Vector<T> &Rscale)
+{
+    if ( a.infsize() || b.infsize() )
+    {
+        NiceThrow("Indexed FuncVector inner product not supported.");
+
+        return result;
+    }
+
+    // Basically just a four product with conjugation on a and scale included twice
+
+    int nsize = n.size();
+    int asize = a.size(); //indsize();
+    int bsize = b.size(); //indsize();
+    int csize = Lscale.size(); //indsize();
+    int dsize = Rscale.size(); //indsize();
+
+    T tempa;
+    T tempb;
+
+    setzero(result);
+    setzero(tempa);
+    setzero(tempb);
+
+    if ( nsize && asize && bsize && csize && dsize )
+    {
+        int npos = 0;
+	int apos = 0;
+	int bpos = 0;
+	int cpos = 0;
+        int dpos = 0;
+        int nelm;
+	int aelm;
+	int belm;
+	int celm;
+        int delm;
+
+	while ( ( npos < nsize ) && ( apos < asize ) && ( bpos < bsize ) && ( cpos < csize ) && ( dpos < dsize ) )
+	{
+            nelm = n.v(npos);
+            aelm = apos; //a.ind(apos);
+	    belm = bpos; //b.ind(bpos);
+	    celm = cpos; //scale.ind(cpos);
+	    delm = dpos; //scale.ind(dpos);
+
+	    if ( ( aelm == nelm ) && ( belm == nelm ) && ( celm == nelm ) && ( delm == nelm ) )
+	    {
+                tempa  = a(apos);
+                tempa /= Lscale(cpos);
+
+                tempb  = b(bpos);
+                tempb /= Rscale(dpos);
+
+                //setconj(tempa);
+                //setconj(tempb);
+                rightmult(tempa,tempb);
+
+                result += tempb;
+
+                ++npos;
+		++apos;
+		++bpos;
+		++cpos;
+                ++dpos;
+	    }
+
+            else if ( ( nelm <= aelm ) && ( nelm <= belm ) && ( nelm <= celm ) && ( nelm <= delm ) )
+	    {
+		++npos;
+	    }
+
+            else if ( ( aelm <= nelm ) && ( aelm <= belm ) && ( aelm <= celm ) && ( aelm <= delm ) )
+	    {
+		++apos;
+	    }
+
+            else if ( ( belm <= nelm ) && ( belm <= aelm ) && ( belm <= celm ) && ( belm <= delm ) )
+	    {
+		++bpos;
+	    }
+
+            else if ( ( celm <= nelm ) && ( celm <= aelm ) && ( celm <= belm ) && ( celm <= delm ) )
+	    {
+		++cpos;
+	    }
+
+	    else
+	    {
+                ++dpos;
+	    }
+	}
+    }
+
+    return postProInnerProd(result);
+}
+
+template <class T>
 T &indexedinnerProductScaledRevConj(T &result, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &scale)
 {
     if ( a.infsize() || b.infsize() )
@@ -7955,6 +8562,103 @@ T &indexedinnerProductScaledRevConj(T &result, const Vector<int> &n, const Vecto
 
                 tempb  = b(bpos);
                 tempb /= scale(dpos);
+
+                //setconj(tempa);
+                setconj(tempb);
+                rightmult(tempa,tempb);
+
+                result += tempb;
+
+                ++npos;
+		++apos;
+		++bpos;
+		++cpos;
+                ++dpos;
+	    }
+
+            else if ( ( nelm <= aelm ) && ( nelm <= belm ) && ( nelm <= celm ) && ( nelm <= delm ) )
+	    {
+		++npos;
+	    }
+
+            else if ( ( aelm <= nelm ) && ( aelm <= belm ) && ( aelm <= celm ) && ( aelm <= delm ) )
+	    {
+		++apos;
+	    }
+
+            else if ( ( belm <= nelm ) && ( belm <= aelm ) && ( belm <= celm ) && ( belm <= delm ) )
+	    {
+		++bpos;
+	    }
+
+            else if ( ( celm <= nelm ) && ( celm <= aelm ) && ( celm <= belm ) && ( celm <= delm ) )
+	    {
+		++cpos;
+	    }
+
+	    else
+	    {
+                ++dpos;
+	    }
+	}
+    }
+
+    return postProInnerProd(result);
+}
+
+template <class T>
+T &indexedinnerProductScaledRevConj(T &result, const Vector<int> &n, const Vector<T> &a, const Vector<T> &b, const Vector<T> &Lscale, const Vector<T> &Rscale)
+{
+    if ( a.infsize() || b.infsize() )
+    {
+        NiceThrow("Indexed FuncVector inner product not supported.");
+
+        return result;
+    }
+
+    // Basically just a four product with conjugation on a and scale included twice
+
+    int nsize = n.size();
+    int asize = a.size(); //indsize();
+    int bsize = b.size(); //indsize();
+    int csize = Lscale.size(); //indsize();
+    int dsize = Rscale.size(); //indsize();
+
+    T tempa;
+    T tempb;
+
+    setzero(result);
+    setzero(tempa);
+    setzero(tempb);
+
+    if ( nsize && asize && bsize && csize && dsize )
+    {
+        int npos = 0;
+	int apos = 0;
+	int bpos = 0;
+	int cpos = 0;
+        int dpos = 0;
+        int nelm;
+	int aelm;
+	int belm;
+	int celm;
+        int delm;
+
+	while ( ( npos < nsize ) && ( apos < asize ) && ( bpos < bsize ) && ( cpos < csize ) && ( dpos < dsize ) )
+	{
+            nelm = n.v(npos);
+            aelm = apos; //a.ind(apos);
+	    belm = bpos; //b.ind(bpos);
+	    celm = cpos; //scale.ind(cpos);
+	    delm = dpos; //scale.ind(dpos);
+
+	    if ( ( aelm == nelm ) && ( belm == nelm ) && ( celm == nelm ) && ( delm == nelm ) )
+	    {
+                tempa  = a(apos);
+                tempa /= Lscale(cpos);
+
+                tempb  = b(bpos);
+                tempb /= Rscale(dpos);
 
                 //setconj(tempa);
                 setconj(tempb);
@@ -10908,7 +11612,7 @@ OVERLAYMAKEFNVECTOR(int)
 OVERLAYMAKEFNVECTOR(double)
 OVERLAYMAKEFNVECTOR(Vector<int>)
 OVERLAYMAKEFNVECTOR(Vector<double>)
-OVERLAYMAKEFNVECTOR(Vector<SparseVector<gentype> >)
+OVERLAYMAKEFNVECTOR(Vector<SparseVector<gentype>>)
 
 
 
