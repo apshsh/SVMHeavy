@@ -270,15 +270,8 @@ double gentypeToMatrixRep(const gentype &temp, int dim, int iq, int jq)
 
     if ( temp.isCastableToRealWithoutLoss() )
     {
-        if ( iq == jq )
-        {
-            res = temp.cast_double(0);
-        }
-
-        else
-        {
-            res = 0.0;
-        }
+        if ( iq == jq ) { res = temp.cast_double(0); }
+        else            { res = 0.0;                 }
     }
 
     else if ( temp.isCastableToAnionWithoutLoss() )
@@ -299,96 +292,36 @@ double gentypeToMatrixRep(const gentype &temp, int dim, int iq, int jq)
         //                              [ Kj  Kk  K0 -Ki ] [ yj ]
         //                              [ Kk -Kj  Ki  K0 ] [ yk ]
 
-        if ( order == 0 )
-        {
-            // real case
+        int r = 1; if ( order >= 3 ) { while ( !epsilon(order,iq,r,jq) && ( r < 1<<order ) ) { ++r; } }
 
-            res = restemp(0);
-        }
-
-        else if ( order == 1 )
-        {
-            // complex case
-
-            if (      ( iq == 0 ) && ( jq == 0 ) ) { res =  restemp(0); }
-            else if ( ( iq == 0 ) && ( jq == 1 ) ) { res = -restemp(1); }
-            else if ( ( iq == 1 ) && ( jq == 0 ) ) { res =  restemp(1); }
-            else if ( ( iq == 1 ) && ( jq == 1 ) ) { res =  restemp(0); }
-
-            else
-            {
-                NiceThrow("Order error in matrix representation computation (mercer).");
-            }
-        }
-
-        else if ( order == 2 )
-        {
-            // quaternion case
-
-            if (      ( iq == 0 ) && ( jq == 0 ) ) { res =  restemp(0); }
-            else if ( ( iq == 0 ) && ( jq == 1 ) ) { res = -restemp(1); }
-            else if ( ( iq == 0 ) && ( jq == 2 ) ) { res = -restemp(2); }
-            else if ( ( iq == 0 ) && ( jq == 3 ) ) { res = -restemp(3); }
-            else if ( ( iq == 1 ) && ( jq == 0 ) ) { res =  restemp(1); }
-            else if ( ( iq == 1 ) && ( jq == 1 ) ) { res =  restemp(0); }
-            else if ( ( iq == 1 ) && ( jq == 2 ) ) { res = -restemp(3); }
-            else if ( ( iq == 1 ) && ( jq == 3 ) ) { res =  restemp(2); }
-            else if ( ( iq == 2 ) && ( jq == 0 ) ) { res =  restemp(2); }
-            else if ( ( iq == 2 ) && ( jq == 1 ) ) { res =  restemp(3); }
-            else if ( ( iq == 2 ) && ( jq == 2 ) ) { res =  restemp(0); }
-            else if ( ( iq == 2 ) && ( jq == 3 ) ) { res = -restemp(1); }
-            else if ( ( iq == 3 ) && ( jq == 0 ) ) { res =  restemp(3); }
-            else if ( ( iq == 3 ) && ( jq == 1 ) ) { res = -restemp(2); }
-            else if ( ( iq == 3 ) && ( jq == 2 ) ) { res =  restemp(1); }
-            else if ( ( iq == 3 ) && ( jq == 3 ) ) { res =  restemp(0); }
-
-            else
-            {
-                NiceThrow("Order error in matrix representation computation (mercer).");
-            }
-        }
-
-        else
-        {
-            // general case
-
-            int r;
-
-            if ( iq == jq )
-            {
-                res = restemp(0);
-            }
-
-            else if ( !iq )
-            {
-                res = -restemp(jq);
-            }
-
-            else if ( !jq )
-            {
-                res = restemp(iq);
-            }
-
-            else
-            {
-                r = 1;
-
-                while ( !epsilon(order,iq,r,jq) && ( r < 1<<order ) )
-                {
-                    ++r;
-                }
-
-                if ( r < 1<<order )
-                {
-                    res = epsilon(order,iq,r,jq)*restemp(r);
-                }
-
-                else
-                {
-                    res = 0.0;
-                }
-            }
-        }
+        if      ( order == 0 ) {                                        { res =  restemp(0);                         } } // real case
+        else if ( order == 1 ) { if      ( ( iq == 0 ) && ( jq == 0 ) ) { res =  restemp(0);                         }   // complex case
+                                 else if ( ( iq == 0 ) && ( jq == 1 ) ) { res = -restemp(1);                         }
+                                 else if ( ( iq == 1 ) && ( jq == 0 ) ) { res =  restemp(1);                         }
+                                 else if ( ( iq == 1 ) && ( jq == 1 ) ) { res =  restemp(0);                         }
+                                 else { NiceThrow("Order error in matrix representation computation (mercer)");      } }
+        else if ( order == 2 ) { if      ( ( iq == 0 ) && ( jq == 0 ) ) { res =  restemp(0);                         }   // quaternion case
+                                 else if ( ( iq == 0 ) && ( jq == 1 ) ) { res = -restemp(1);                         }
+                                 else if ( ( iq == 0 ) && ( jq == 2 ) ) { res = -restemp(2);                         }
+                                 else if ( ( iq == 0 ) && ( jq == 3 ) ) { res = -restemp(3);                         }
+                                 else if ( ( iq == 1 ) && ( jq == 0 ) ) { res =  restemp(1);                         }
+                                 else if ( ( iq == 1 ) && ( jq == 1 ) ) { res =  restemp(0);                         }
+                                 else if ( ( iq == 1 ) && ( jq == 2 ) ) { res = -restemp(3);                         }
+                                 else if ( ( iq == 1 ) && ( jq == 3 ) ) { res =  restemp(2);                         }
+                                 else if ( ( iq == 2 ) && ( jq == 0 ) ) { res =  restemp(2);                         }
+                                 else if ( ( iq == 2 ) && ( jq == 1 ) ) { res =  restemp(3);                         }
+                                 else if ( ( iq == 2 ) && ( jq == 2 ) ) { res =  restemp(0);                         }
+                                 else if ( ( iq == 2 ) && ( jq == 3 ) ) { res = -restemp(1);                         }
+                                 else if ( ( iq == 3 ) && ( jq == 0 ) ) { res =  restemp(3);                         }
+                                 else if ( ( iq == 3 ) && ( jq == 1 ) ) { res = -restemp(2);                         }
+                                 else if ( ( iq == 3 ) && ( jq == 2 ) ) { res =  restemp(1);                         }
+                                 else if ( ( iq == 3 ) && ( jq == 3 ) ) { res =  restemp(0);                         }
+                                 else { NiceThrow("Order error in matrix representation computation (mercer)");      } }
+        else                   { if      ( iq == jq                   ) { res =  restemp(0);                         }
+                                 else if ( !iq                        ) { res = -restemp(jq);                        }
+                                 else if ( !jq                        ) { res =  restemp(iq);                        }
+                                 else if ( r < 1<<order               ) { res =  epsilon(order,iq,r,jq)*restemp(r);  }
+                                 else                                   { res =  0.0;                                } }
     }
 
     else if ( temp.isCastableToMatrixWithoutLoss() )
@@ -412,26 +345,15 @@ Matrix<double> &gentypeToMatrixRep(Matrix<double> &res, const gentype &src, int 
     if ( src.isCastableToRealWithoutLoss() )
     {
         double tempres = src.cast_double(0);
-
-        for ( int i = 0 ; i < spaceDim ; ++i )
-        {
-            res("&",i,i) = tempres;
-        }
+        for ( int i = 0 ; i < spaceDim ; ++i ) { res("&",i,i) = tempres; }
     }
 
     else if ( src.isCastableToAnionWithoutLoss() )
     {
         int order = ceilintlog2(spaceDim);
-
         NiceAssert( spaceDim == 1<<order );
-
         d_anion tempres = src.cast_anion(0);
-
-        for ( int i = 0 ; i < spaceDim ; ++i )
-        {
-            res("&",i,i) = tempres(0);
-        }
-
+        for ( int i = 0 ; i < spaceDim ; ++i ) { res("&",i,i) = tempres(0); }
         tempres.setorder(order);
 
         // Re(conj(x).Kij.y)
@@ -456,32 +378,18 @@ Matrix<double> &gentypeToMatrixRep(Matrix<double> &res, const gentype &src, int 
         {
             // complex case
 
-            res("&",0,0) =  tempres(0);
-            res("&",0,1) = -tempres(1);
-            res("&",1,0) =  tempres(1);
-            res("&",1,1) =  tempres(0);
+            res("&",0,0) =  tempres(0); res("&",0,1) = -tempres(1);
+            res("&",1,0) =  tempres(1); res("&",1,1) =  tempres(0);
         }
 
         else if ( order == 2 )
         {
             // quaternion case
 
-            res("&",0,0) =  tempres(0);
-            res("&",0,1) = -tempres(1);
-            res("&",0,2) = -tempres(2);
-            res("&",0,3) = -tempres(3);
-            res("&",1,0) =  tempres(1);
-            res("&",1,1) =  tempres(0);
-            res("&",1,2) = -tempres(3);
-            res("&",1,3) =  tempres(2);
-            res("&",2,0) =  tempres(2);
-            res("&",2,1) =  tempres(3);
-            res("&",2,2) =  tempres(0);
-            res("&",2,3) = -tempres(1);
-            res("&",3,0) =  tempres(3);
-            res("&",3,1) = -tempres(2);
-            res("&",3,2) =  tempres(1);
-            res("&",3,3) =  tempres(0);
+            res("&",0,0) =  tempres(0); res("&",0,1) = -tempres(1); res("&",0,2) = -tempres(2); res("&",0,3) = -tempres(3);
+            res("&",1,0) =  tempres(1); res("&",1,1) =  tempres(0); res("&",1,2) = -tempres(3); res("&",1,3) =  tempres(2);
+            res("&",2,0) =  tempres(2); res("&",2,1) =  tempres(3); res("&",2,2) =  tempres(0); res("&",2,3) = -tempres(1);
+            res("&",3,0) =  tempres(3); res("&",3,1) = -tempres(2); res("&",3,2) =  tempres(1); res("&",3,3) =  tempres(0);
         }
 
         else
@@ -494,39 +402,16 @@ Matrix<double> &gentypeToMatrixRep(Matrix<double> &res, const gentype &src, int 
             {
                 for ( s = 0 ; s < tempres.size() ; ++s )
                 {
-                    if ( q == s )
-                    {
-                        res("&",q,s) = tempres(0);
-                    }
-
-                    else if ( !q )
-                    {
-                        res("&",q,s) = -tempres(s);
-                    }
-
-                    else if ( !s )
-                    {
-                        res("&",q,s) = tempres(q);
-                    }
+                    if      ( q == s ) { res("&",q,s) =  tempres(0); }
+                    else if ( !q     ) { res("&",q,s) = -tempres(s); }
+                    else if ( !s     ) { res("&",q,s) =  tempres(q); }
 
                     else
                     {
-                        r = 1;
+                        r = 1; while ( !epsilon(order,q,r,s) && ( r < tempres.size() ) ) { ++r; }
 
-                        while ( !epsilon(order,q,r,s) && ( r < tempres.size() ) )
-                        {
-                            ++r;
-                        }
-
-                        if ( r < tempres.size() )
-                        {
-                            res("&",q,s) = epsilon(order,q,r,s)*tempres(r);
-                        }
-
-                        else
-                        {
-                            res("&",q,s) = 0;
-                        }
+                        if ( r < tempres.size() ) { res("&",q,s) = epsilon(order,q,r,s)*tempres(r); }
+                        else                      { res("&",q,s) = 0;                               }
                     }
                 }
             }
@@ -924,6 +809,217 @@ donepoint:
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
+
+
+
+
+gentype::gentype(const SparseVector<std::string> &src) : typeis('V'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
+{
+    MEMNEW(vectorval,Vector<gentype>);
+    SparseToNonSparse(*vectorval,src);
+}
+
+gentype::gentype(const SparseVector<int> &src) : typeis('V'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
+{
+    if ( src.nearnonsparse() )
+    {
+        int srcsize = src.indsize();
+
+        MEMNEW(vectorval,Vector<gentype>(srcsize));
+        MEMNEW(vectorvalreal,Vector<double>(srcsize));
+
+        retVector<int> tmpva;
+
+        (*vectorval).castassign(src(tmpva));
+        (*vectorvalreal).castassign(src(tmpva));
+    }
+
+    else
+    {
+        MEMNEW(vectorval,Vector<gentype>);
+        SparseToNonSparse(*vectorval,src);
+    }
+}
+
+gentype::gentype(const SparseVector<double> &src) : typeis('V'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
+{
+    if ( src.nearnonsparse() )
+    {
+        int srcsize = src.indsize();
+
+        retVector<double> tmpva;
+
+        MEMNEW(vectorval,Vector<gentype>(srcsize));
+        MEMNEW(vectorvalreal,Vector<double>(src(tmpva)));
+
+        (*vectorval).castassign(src(tmpva));
+    }
+
+    else
+    {
+        MEMNEW(vectorval,Vector<gentype>);
+        SparseToNonSparse(*vectorval,src);
+    }
+}
+
+gentype::gentype(const SparseVector<gentype> &src) : typeis('V'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
+{
+    int srcns = src.nearnonsparse();
+
+    if ( srcns && src.altcontent )
+    {
+        int srcsize = src.indsize();
+
+        retVector<gentype> tmpva;
+
+        MEMNEW(vectorval,Vector<gentype>(src(tmpva)));
+        MEMNEW(vectorvalreal,Vector<double>(srcsize));
+
+        for ( int i = 0 ; i < srcsize ; ++i )
+        {
+            (*vectorvalreal).sv(i,(src.altcontent)[i]);
+        }
+    }
+
+    else if ( srcns )
+    {
+        retVector<gentype> tmpva;
+
+        MEMNEW(vectorval,Vector<gentype>(src(tmpva)));
+    }
+
+    else
+    {
+        MEMNEW(vectorval,Vector<gentype>);
+        SparseToNonSparse(*vectorval,src);
+    }
+}
+
+gentype::gentype(int srcsize, const double *src) : typeis('V'), varid_isscalar(false), isNomConst(false), fnnameind(0), varid_numpts(DEFAULT_INTEGRAL_SLICES), intval(0), doubleval(0.0), complexval(0.0), varid_xi(nullptr), varid_xj(nullptr), anionval(nullptr), vectorval(nullptr), matrixval(nullptr), setval(nullptr), dictval(nullptr), dgraphval(nullptr), stringval(nullptr), eqnargs(nullptr), altpycall(nullptr), thisfninfo(nullptr), vectorvalreal(nullptr), vectorvalint(nullptr), matrixvalreal(nullptr), sparsevectorval(nullptr), sparsevectorvalreal(nullptr)
+{
+    if ( ( ( srcsize > 0 ) && src ) || ( srcsize == 0 ) )
+    {
+        typeis = 'V';
+
+        MEMNEW(vectorval,Vector<gentype>(srcsize));
+        MEMNEW(vectorvalreal,Vector<double>(srcsize));
+
+        for ( int i = 0 ; i < srcsize ; ++i )
+        {
+            (*vectorval)("&",i).force_double() = src[i];
+            (*vectorvalreal).sv(i,src[i]);
+        }
+    }
+
+    else
+    {
+        typeis = 'N';
+    }
+}
+
+gentype &gentype::operator=(const Vector<double> &src)
+{
+    deleteVectMatMem('V',src.size());
+    (*vectorval).castassign(src);
+    MEMNEW(vectorvalreal,Vector<double>(src));
+    typeis = 'V';
+
+    return *this;
+}
+
+gentype &gentype::operator=(const SparseVector<double> &src)
+{
+    if ( src.nearnonsparse() )
+    {
+        int srcsize = src.indsize();
+
+        retVector<double> tmpva;
+
+        deleteVectMatMem('V',srcsize);
+        MEMNEW(vectorvalreal,Vector<double>(src(tmpva)));
+
+        (*vectorval).castassign(src(tmpva));
+    }
+
+    else
+    {
+        deleteVectMatMem('V',0);
+        SparseToNonSparse(*vectorval,src);
+    }
+
+    typeis = 'V';
+
+    return *this;
+}
+
+gentype &gentype::operator=(const SparseVector<gentype> &src)
+{
+    typeis = 'V';
+
+    int srcns = src.nearnonsparse();
+
+    if ( srcns && src.altcontent )
+    {
+        int srcsize = src.indsize();
+
+        retVector<gentype> tmpva;
+
+        deleteVectMatMem('V',srcsize);
+        MEMNEW(vectorvalreal,Vector<double>(srcsize));
+
+        *vectorval = src(tmpva);
+
+        for ( int i = 0 ; i < srcsize ; ++i )
+        {
+            (*vectorvalreal).sv(i,(src.altcontent)[i]);
+        }
+    }
+
+    else if ( srcns )
+    {
+        int srcsize = src.indsize();
+
+        retVector<gentype> tmpva;
+
+        deleteVectMatMem('V',srcsize);
+
+        *vectorval = src(tmpva);
+    }
+
+    else
+    {
+        deleteVectMatMem('V',0);
+        SparseToNonSparse(*vectorval,src);
+    }
+
+    typeis = 'V';
+
+    return *this;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
@@ -1022,8 +1118,8 @@ const gentype &innerProduct(gentype &res, const gentype &a, const gentype &b)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
-        SparseVector<SparseVector<gentype> > xb;
+        SparseVector<SparseVector<gentype>> xa;
+        SparseVector<SparseVector<gentype>> xb;
 
         gentype aa;
         gentype bb;
@@ -1066,8 +1162,8 @@ const gentype &innerProduct(gentype &res, const gentype &a, const gentype &b)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
-        SparseVector<SparseVector<gentype> > xb;
+        SparseVector<SparseVector<gentype>> xa;
+        SparseVector<SparseVector<gentype>> xb;
 
         gentype aa;
         gentype bb;
@@ -1120,7 +1216,7 @@ const gentype &innerProduct(gentype &res, const gentype &a, const gentype &b)
         gentype aa;
         gentype bb;
         const Vector<gentype> &bvec = b.cast_vector(0);
-        SparseVector<SparseVector<gentype> > x;
+        SparseVector<SparseVector<gentype>> x;
 
         res.zero();
 
@@ -1153,7 +1249,7 @@ const gentype &innerProduct(gentype &res, const gentype &a, const gentype &b)
         gentype aa;
         gentype bb;
         const Vector<gentype> &avec = a.cast_vector(0);
-        SparseVector<SparseVector<gentype> > x;
+        SparseVector<SparseVector<gentype>> x;
 
         res.zero();
 
@@ -1188,7 +1284,7 @@ const gentype &innerProduct(gentype &res, const gentype &a, const gentype &b)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xb;
+        SparseVector<SparseVector<gentype>> xb;
 
         gentype aa;
         gentype bb;
@@ -1225,7 +1321,7 @@ const gentype &innerProduct(gentype &res, const gentype &a, const gentype &b)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         gentype aa;
         gentype bb;
@@ -1388,8 +1484,8 @@ const gentype &innerProductRevConj(gentype &res, const gentype &a, const gentype
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
-        SparseVector<SparseVector<gentype> > xb;
+        SparseVector<SparseVector<gentype>> xa;
+        SparseVector<SparseVector<gentype>> xb;
 
         gentype aa;
         gentype bb;
@@ -1432,8 +1528,8 @@ const gentype &innerProductRevConj(gentype &res, const gentype &a, const gentype
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
-        SparseVector<SparseVector<gentype> > xb;
+        SparseVector<SparseVector<gentype>> xa;
+        SparseVector<SparseVector<gentype>> xb;
 
         gentype aa;
         gentype bb;
@@ -1486,7 +1582,7 @@ const gentype &innerProductRevConj(gentype &res, const gentype &a, const gentype
         gentype aa;
         gentype bb;
         const Vector<gentype> &bvec = b.cast_vector(0);
-        SparseVector<SparseVector<gentype> > x;
+        SparseVector<SparseVector<gentype>> x;
 
         res.zero();
 
@@ -1519,7 +1615,7 @@ const gentype &innerProductRevConj(gentype &res, const gentype &a, const gentype
         gentype aa;
         gentype bb;
         const Vector<gentype> &avec = a.cast_vector(0);
-        SparseVector<SparseVector<gentype> > x;
+        SparseVector<SparseVector<gentype>> x;
 
         res.zero();
 
@@ -1554,7 +1650,7 @@ const gentype &innerProductRevConj(gentype &res, const gentype &a, const gentype
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xb;
+        SparseVector<SparseVector<gentype>> xb;
 
         gentype aa;
         gentype bb;
@@ -1591,7 +1687,7 @@ const gentype &innerProductRevConj(gentype &res, const gentype &a, const gentype
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         gentype aa;
         gentype bb;
@@ -1721,7 +1817,7 @@ const gentype &oneProduct(gentype &res, const gentype &a)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         gentype aa;
 
@@ -1755,7 +1851,7 @@ const gentype &oneProduct(gentype &res, const gentype &a)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         gentype aa;
 
@@ -1850,8 +1946,8 @@ const gentype &twoProduct(gentype &res, const gentype &a, const gentype &b)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
-        SparseVector<SparseVector<gentype> > xb;
+        SparseVector<SparseVector<gentype>> xa;
+        SparseVector<SparseVector<gentype>> xb;
 
         gentype aa;
         gentype bb;
@@ -1892,8 +1988,8 @@ const gentype &twoProduct(gentype &res, const gentype &a, const gentype &b)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
-        SparseVector<SparseVector<gentype> > xb;
+        SparseVector<SparseVector<gentype>> xa;
+        SparseVector<SparseVector<gentype>> xb;
 
         gentype aa;
         gentype bb;
@@ -1944,7 +2040,7 @@ const gentype &twoProduct(gentype &res, const gentype &a, const gentype &b)
         gentype aa;
         gentype bb;
         const Vector<gentype> &bvec = b.cast_vector(0);
-        SparseVector<SparseVector<gentype> > x;
+        SparseVector<SparseVector<gentype>> x;
 
         res.zero();
 
@@ -1975,7 +2071,7 @@ const gentype &twoProduct(gentype &res, const gentype &a, const gentype &b)
         gentype aa;
         gentype bb;
         const Vector<gentype> &avec = a.cast_vector(0);
-        SparseVector<SparseVector<gentype> > x;
+        SparseVector<SparseVector<gentype>> x;
 
         res.zero();
 
@@ -2008,7 +2104,7 @@ const gentype &twoProduct(gentype &res, const gentype &a, const gentype &b)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xb;
+        SparseVector<SparseVector<gentype>> xb;
 
         gentype aa;
         gentype bb;
@@ -2043,7 +2139,7 @@ const gentype &twoProduct(gentype &res, const gentype &a, const gentype &b)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         gentype aa;
         gentype bb;
@@ -2594,6 +2690,11 @@ int gentype::makeEqn(const char *src, int processxyzvw)
 
 // Casting operators
 
+gentype &gentype::toNone(gentype &res) const
+{
+    return toNull(res);
+}
+
 gentype &gentype::toNull(gentype &res) const
 {
     std::string errstr;
@@ -2713,6 +2814,11 @@ gentype &gentype::toString(gentype &res)  const
     return res;
 }
 
+void gentype::cast_none(int finalise) const
+{
+    cast_null(finalise);
+}
+
 void gentype::cast_null(int finalise) const
 {
     if ( !isValNull() )
@@ -2722,7 +2828,7 @@ void gentype::cast_null(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype>> tempargs;
 
             // This will throw if finalisation doesn't result in a null
             temp.fastevaluate(tempargs,finalise);
@@ -2751,7 +2857,7 @@ int gentype::cast_int(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype>> tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             intval = temp.cast_int(0);
@@ -2779,7 +2885,7 @@ double gentype::cast_double(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype>> tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             doubleval = temp.cast_double(0);
@@ -2809,7 +2915,7 @@ std::complex<double> gentype::cast_complex(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype>> tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             complexval = temp.cast_complex(0);
@@ -2849,7 +2955,7 @@ const d_anion &gentype::cast_anion(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype>> tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             *anionval = temp.cast_anion(0);
@@ -2882,7 +2988,7 @@ const Vector<gentype> &gentype::cast_vector(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype>> tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             *vectorval = temp.cast_vector(0);
@@ -2905,25 +3011,15 @@ const Vector<double> &gentype::cast_vector_real(int finalise) const
 
     int vsize = (*vectorval).size();
 
-    if ( vectorvalreal == nullptr )
-    {
-        MEMNEW(vectorvalreal,Vector<double>(vsize));
-    }
-
-    else
-    {
-        (*vectorvalreal).resize(vsize);
-    }
+    if ( vectorvalreal == nullptr ) { MEMNEW(vectorvalreal,Vector<double>(vsize)); }
+    else                            { (*vectorvalreal).resize(vsize);              }
 
     if ( vsize )
     {
         Vector<gentype> &vg = *vectorval;
         Vector<double>  &vr = *vectorvalreal;
 
-        for ( int i = 0 ; i < vsize ; ++i )
-        {
-            vr("&",i) = (double) vg(i);
-        }
+        for ( int i = 0 ; i < vsize ; ++i ) { vr("&",i) = (double) vg(i); }
     }
 
     return *vectorvalreal;
@@ -2935,25 +3031,15 @@ const Vector<int> &gentype::cast_vector_int(int finalise) const
 
     int vsize = (*vectorval).size();
 
-    if ( vectorvalint == nullptr )
-    {
-        MEMNEW(vectorvalint,Vector<int>(vsize));
-    }
-
-    else
-    {
-        (*vectorvalint).resize(vsize);
-    }
+    if ( vectorvalint == nullptr ) { MEMNEW(vectorvalint,Vector<int>(vsize)); }
+    else                           { (*vectorvalint).resize(vsize);           }
 
     if ( vsize )
     {
         Vector<gentype> &vg = *vectorval;
         Vector<int>     &vi = *vectorvalint;
 
-        for ( int i = 0 ; i < vsize ; ++i )
-        {
-            vi("&",i) = (int) ((double) vg(i)); // *first* cast to double to avoid throw, *then* cast to int
-        }
+        for ( int i = 0 ; i < vsize ; ++i ) { vi("&",i) = (int) ((double) vg(i)); } // *first* cast to double to avoid throw, *then* cast to int
     }
 
     return *vectorvalint;
@@ -2965,11 +3051,7 @@ const SparseVector<gentype> &gentype::cast_sparsevector(int finalise) const
 
     int vsize = (*vectorval).size();
 
-    if ( sparsevectorval == nullptr )
-    {
-        MEMNEW(sparsevectorval,SparseVector<gentype>);
-    }
-
+    if ( sparsevectorval == nullptr ) { MEMNEW(sparsevectorval,SparseVector<gentype>); }
     (*sparsevectorval).zero();
 
     if ( vsize )
@@ -3017,11 +3099,7 @@ const SparseVector<double> &gentype::cast_sparsevector_real(int finalise) const
 
     int vsize = (*vectorval).size();
 
-    if ( sparsevectorvalreal == nullptr )
-    {
-        MEMNEW(sparsevectorvalreal,SparseVector<double>);
-    }
-
+    if ( sparsevectorvalreal == nullptr ) { MEMNEW(sparsevectorvalreal,SparseVector<double>); }
     (*sparsevectorvalreal).zero(); // empty vector
 
     if ( vsize )
@@ -3079,7 +3157,7 @@ const Matrix<gentype> &gentype::cast_matrix(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype>> tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             *matrixval = temp.cast_matrix(0);
@@ -3146,7 +3224,7 @@ const Set<gentype> &gentype::cast_set(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype>> tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             *setval = temp.cast_set(0);
@@ -3179,7 +3257,7 @@ const Dict<gentype,dictkey> &gentype::cast_dict(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype>> tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             *dictval = temp.cast_dict(0);
@@ -3212,7 +3290,7 @@ const Dgraph<gentype,double> &gentype::cast_dgraph(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype>> tempargs;
 
             temp.fastevaluate(tempargs,finalise);
             *dgraphval = temp.cast_dgraph(0);
@@ -3236,7 +3314,7 @@ const std::string  &gentype::cast_string(int finalise) const
         if ( finalise && isValEqn() )
         {
             gentype temp(*this);
-            SparseVector<SparseVector<gentype> > tempargs;
+            SparseVector<SparseVector<gentype>> tempargs;
 
             temp.fastevaluate(tempargs,finalise);
 
@@ -3265,6 +3343,11 @@ const std::string  &gentype::cast_string(int finalise) const
     }
 
     return *stringval;
+}
+
+gentype &gentype::morph_none(void)
+{
+    return morph_null();
 }
 
 gentype &gentype::morph_null(void)
@@ -4403,7 +4486,7 @@ int gentype::loctoString(std::string &res, std::string &errstr) const
 
 
 
-SparseVector<SparseVector<int> > &gentype::varsUsed(SparseVector<SparseVector<int> > &res) const
+SparseVector<SparseVector<int>> &gentype::varsUsed(SparseVector<SparseVector<int>> &res) const
 {
     const static int varInd = getfnind("var");
     const static int VarInd = getfnind("Var");
@@ -4752,7 +4835,7 @@ int gentype::realDeriv(const gentype &ix, const gentype &jx)
             else if ( realDerivDefinedDir() )
             {
                 gentype tempres(*((*thisfninfo).realderiv));
-                SparseVector<SparseVector<gentype> > temparg;
+                SparseVector<SparseVector<gentype>> temparg;
 
                 if ( (*thisfninfo).numargs )
                 {
@@ -4851,7 +4934,7 @@ int gentype::realDeriv(const gentype &ix, const gentype &jx)
 // isIndeterm: 1 global function indeterminant
 //             2 random indeterminant
 
-int gentype::fastevaluate(const SparseVector<SparseVector<gentype> > &evalargs, int finalise)
+int gentype::fastevaluate(const SparseVector<SparseVector<gentype>> &evalargs, int finalise)
 {
     const static int nullptrInd   = getfnind("");
     const static int varInd       = getfnind("var");
@@ -6953,7 +7036,7 @@ void getsetunsetegenFunc(int i, int j, int mode, const eGenFunc fnaddr, const Ve
 
 
 
-gentype gentype::var(const SparseVector<SparseVector<gentype> > &evalargs, const Vector<gentype> &argres) const
+gentype gentype::var(const SparseVector<SparseVector<gentype>> &evalargs, const Vector<gentype> &argres) const
 {
     gentype res;
 
@@ -7055,7 +7138,7 @@ gentype gentype::var(const SparseVector<SparseVector<gentype> > &evalargs, const
     return res;
 }
 
-int gentype::OP_var(const SparseVector<SparseVector<gentype> > &evalargs)
+int gentype::OP_var(const SparseVector<SparseVector<gentype>> &evalargs)
 {
     int res = 0;
 
@@ -12863,15 +12946,8 @@ gentype idiv(const gentype &a, const gentype &b)
 
     if ( a.isCastableToIntegerWithoutLoss() && b.isCastableToIntegerWithoutLoss() )
     {
-        if ( b.cast_int(0) )
-        {
-            res = a.cast_int(0) / b.cast_int(0);
-        }
-
-        else
-        {
-            constructError(a,b,res,"divide by zero error");
-        }
+        if ( b.cast_int(0) ) { res = a.cast_int(0) / b.cast_int(0);            }
+        else                 { constructError(a,b,res,"divide by zero error"); }
     }
 
     else
@@ -12897,15 +12973,8 @@ gentype &OP_idiv(gentype &a, const gentype &b)
 
     if ( a.isCastableToIntegerWithoutLoss() && b.isCastableToIntegerWithoutLoss() )
     {
-        if ( b.cast_int(0) )
-        {
-            a = a.cast_int(0) / b.cast_int(0);
-        }
-
-        else
-        {
-            constructError(a,b,a,"divide by zero error");
-        }
+        if ( b.cast_int(0) ) { a = a.cast_int(0) / b.cast_int(0);            }
+        else                 { constructError(a,b,a,"divide by zero error"); }
     }
 
     else
@@ -13471,15 +13540,8 @@ gentype eps_comm(const gentype &n, const gentype &q, const gentype &r, const gen
 	int rr = r.cast_int(0);
 	int ss = s.cast_int(0);
 
-	if ( !qq || !rr || !ss )
-	{
-            res = 0;
-	}
-
-	else
-	{
-	    res = epsilon(nn,qq-1,rr-1,ss-1);
-	}
+	if ( !qq || !rr || !ss ) { res = 0;                          }
+	else                     { res = epsilon(nn,qq-1,rr-1,ss-1); }
     }
 
     return res;
@@ -13519,15 +13581,8 @@ gentype eps_assoc(const gentype &n, const gentype &q, const gentype &r, const ge
 	int ss = s.cast_int(0);
 	int tt = t.cast_int(0);
 
-	if ( !qq || !rr || !ss || !tt )
-	{
-            res = 0;
-	}
-
-	else
-	{
-	    res = epsilon(nn,qq-1,rr-1,ss-1,tt=1);
-	}
+	if ( !qq || !rr || !ss || !tt ) { res = 0;                               }
+	else                            { res = epsilon(nn,qq-1,rr-1,ss-1,tt=1); }
     }
 
     return res;
@@ -15289,7 +15344,7 @@ gentype absinf(const gentype &a)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         double temp = 0;
         double restemp = 0;
@@ -15324,7 +15379,7 @@ gentype absinf(const gentype &a)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         double temp = 0;
         double restemp = 0;
@@ -15406,7 +15461,7 @@ gentype abs0(const gentype &a)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         double temp = 0;
         double restemp = 0;
@@ -15441,7 +15496,7 @@ gentype abs0(const gentype &a)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         double temp = 0;
         double restemp = 0;
@@ -15523,7 +15578,7 @@ gentype norm1(const gentype &a)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         gentype aa,bb;
 
@@ -15576,7 +15631,7 @@ gentype norm1(const gentype &a)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         gentype aa,bb;
 
@@ -15680,7 +15735,7 @@ gentype norm2(const gentype &a)
 //errstream() << "phantomxg 1: " << numpts << "\n";
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         gentype aa,bb;
 
@@ -15739,7 +15794,7 @@ gentype norm2(const gentype &a)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         gentype aa,bb;
 
@@ -15841,7 +15896,7 @@ gentype normp(const gentype &a, const gentype &q)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         gentype aa,bb;
 
@@ -15896,7 +15951,7 @@ gentype normp(const gentype &a, const gentype &q)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         gentype aa,bb;
 
@@ -17890,7 +17945,7 @@ gentype derefv(const gentype &a, const gentype &i)
             res.scalarfn_setj(js);
         }
 
-        SparseVector<SparseVector<gentype> > subvals;
+        SparseVector<SparseVector<gentype>> subvals;
 
         subvals("&",vi)("&",vj) = i;
 
@@ -19447,7 +19502,7 @@ gentype &postProInnerProd(gentype &a)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         gentype aa;
 
@@ -19483,7 +19538,7 @@ gentype &postProInnerProd(gentype &a)
 
         res.zero();
 
-        SparseVector<SparseVector<gentype> > xa;
+        SparseVector<SparseVector<gentype>> xa;
 
         gentype aa;
 
@@ -20010,7 +20065,7 @@ bool isopstartkey(int x)
         gentype &resval = GETX;                                                                                                       \
         gentype &altval = GETY;                                                                                                       \
                                                                                                                                       \
-        SparseVector<SparseVector<gentype> > temp;                                                                                    \
+        SparseVector<SparseVector<gentype>> temp;                                                                                    \
                                                                                                                                       \
         if      ( ftype == 1  ) { resval = sqrt(norm2(oparga)+norm2(opargb)); altval = PUTINDRG(arg(cayleyDickson(oparga,opargb))); } \
         else if ( ftype == 2  ) { resval = oparga*cos(PUTINRAD(opargb));      altval = oparga*sin(PUTINRAD(opargb));                } \
@@ -20103,7 +20158,7 @@ bool isopstartkey(int x)
                                                                                                                                       \
             gentype &resval = GETX;                                                                                                   \
                                                                                                                                       \
-            SparseVector<SparseVector<gentype> > temp;                                                                                \
+            SparseVector<SparseVector<gentype>> temp;                                                                                \
                                                                                                                                       \
                  if ( ftype == 1000 ) { resval = associate    (oparga,opargb,opargc);                                               } \
             else if ( ftype == 1001 ) { resval = antiassociate(oparga,opargb,opargc);                                               } \
@@ -20115,7 +20170,7 @@ bool isopstartkey(int x)
         std::string evalstring;                                                                                                       \
         std::string tempstring;                                                                                                       \
                                                                                                                                       \
-        SparseVector<SparseVector<gentype> > temp;                                                                                    \
+        SparseVector<SparseVector<gentype>> temp;                                                                                    \
                                                                                                                                       \
         int iiii = 0;                                                                                                                  \
                                                                                                                                       \
@@ -20177,7 +20232,7 @@ bool isopstartkey(int x)
         gentype &resval = GETX;                                                                                                       \
         gentype &altval = GETY;                                                                                                       \
                                                                                                                                       \
-        SparseVector<SparseVector<gentype> > temp;                                                                                    \
+        SparseVector<SparseVector<gentype>> temp;                                                                                    \
                                                                                                                                       \
         if      ( ftype == 1  ) { resval = sqrt(norm2(oparga)+norm2(opargb)); altval = PUTINDRG(arg(cayleyDickson(oparga,opargb))); } \
         else if ( ftype == 2  ) { resval = oparga*cos(PUTINRAD(opargb));      altval = oparga*sin(PUTINRAD(opargb));                } \
@@ -20270,7 +20325,7 @@ bool isopstartkey(int x)
                                                                                                                                       \
             gentype &resval = GETX;                                                                                                   \
                                                                                                                                       \
-            SparseVector<SparseVector<gentype> > temp;                                                                                \
+            SparseVector<SparseVector<gentype>> temp;                                                                                \
                                                                                                                                       \
                  if ( ftype == 1000 ) { resval = associate    (oparga,opargb,opargc);                                               } \
             else if ( ftype == 1001 ) { resval = antiassociate(oparga,opargb,opargc);                                               } \
@@ -20282,7 +20337,7 @@ bool isopstartkey(int x)
         std::string evalstring;                                                                                                       \
         std::string tempstring;                                                                                                       \
                                                                                                                                       \
-        SparseVector<SparseVector<gentype> > temp;                                                                                    \
+        SparseVector<SparseVector<gentype>> temp;                                                                                    \
                                                                                                                                       \
         int iiii = 0;                                                                                                                  \
                                                                                                                                       \
@@ -23187,7 +23242,7 @@ int genplotit(double xmin, double xmax, double ymin, double ymax,
 
     int doline = 1;
 
-    SparseVector<SparseVector<gentype> > evalargs;
+    SparseVector<SparseVector<gentype>> evalargs;
     gentype &x = evalargs("&",indj)("&",indi);
 
     // Create the mean/variance datafile to plot
@@ -23403,6 +23458,27 @@ template <> gentype &innerProductScaled(gentype &gres, const SparseVector<gentyp
     return gres;
 }
 
+template <> gentype &innerProductScaled(gentype &gres, const SparseVector<gentype> &a, const SparseVector<gentype> &b, const SparseVector<gentype> &Lscale, const SparseVector<gentype> &Rscale)
+{
+    if ( a.altcontent && b.altcontent && Lscale.altcontent && Rscale.altcontent )
+    {
+        int dim = a.size();
+
+        dim = ( b.size() < dim ) ? b.size() : dim;
+        dim = ( Lscale.size() < dim ) ? Lscale.size() : dim;
+        dim = ( Rscale.size() < dim ) ? Rscale.size() : dim;
+
+        gres = fasttwoProduct(a.altcontent,b.altcontent,dim,Lscale.altcontent,Rscale.altcontent);
+    }
+
+    else
+    {
+        innerProductScaledPrelude(gres,a,b,Lscale,Rscale);
+    }
+
+    return gres;
+}
+
 template <> gentype &twoProduct(gentype &gres, const SparseVector<gentype> &a, const SparseVector<gentype> &b)
 {
     if ( a.altcontent && b.altcontent )
@@ -23442,6 +23518,27 @@ template <> gentype &twoProductScaled(gentype &gres, const SparseVector<gentype>
     return gres;
 }
 
+template <> gentype &twoProductScaled(gentype &gres, const SparseVector<gentype> &a, const SparseVector<gentype> &b, const SparseVector<gentype> &Lscale, const SparseVector<gentype> &Rscale)
+{
+    if ( a.altcontent && b.altcontent && Lscale.altcontent && Rscale.altcontent )
+    {
+        int dim = a.size();
+
+        dim = ( b.size() < dim ) ? b.size() : dim;
+        dim = ( Lscale.size() < dim ) ? Lscale.size() : dim;
+        dim = ( Rscale.size() < dim ) ? Rscale.size() : dim;
+
+        gres = fasttwoProduct(a.altcontent,b.altcontent,dim,Lscale.altcontent,Rscale.altcontent);
+    }
+
+    else
+    {
+        twoProductScaledPrelude(gres,a,b,Lscale,Rscale);
+    }
+
+    return gres;
+}
+
 template <> gentype &innerProductRevConj(gentype &gres, const SparseVector<gentype> &a, const SparseVector<gentype> &b)
 {
     if ( a.altcontent && b.altcontent )
@@ -23476,6 +23573,27 @@ template <> gentype &innerProductScaledRevConj(gentype &gres, const SparseVector
     else
     {
         innerProductScaledRevConjPrelude(gres,a,b,scale);
+    }
+
+    return gres;
+}
+
+template <> gentype &innerProductScaledRevConj(gentype &gres, const SparseVector<gentype> &a, const SparseVector<gentype> &b, const SparseVector<gentype> &Lscale, const SparseVector<gentype> &Rscale)
+{
+    if ( a.altcontent && b.altcontent && Lscale.altcontent && Rscale.altcontent )
+    {
+        int dim = a.size();
+
+        dim = ( b.size() < dim ) ? b.size() : dim;
+        dim = ( Lscale.size() < dim ) ? Lscale.size() : dim;
+        dim = ( Rscale.size() < dim ) ? Rscale.size() : dim;
+
+        gres = fasttwoProduct(a.altcontent,b.altcontent,dim,Lscale.altcontent,Rscale.altcontent);
+    }
+
+    else
+    {
+        innerProductScaledRevConjPrelude(gres,a,b,Lscale,Rscale);
     }
 
     return gres;
@@ -24003,7 +24121,7 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<gentype> &src)
 
 template <>
 template <>
-Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<int> > &src)
+Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<int>> &src)
 {
     NiceAssert( !infsize() );
 
@@ -24056,7 +24174,7 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<int> > &src)
 
 template <>
 template <>
-Vector<gentype> &Vector<gentype>::castassign(const Vector<SparseVector<gentype> > &src)
+Vector<gentype> &Vector<gentype>::castassign(const Vector<SparseVector<gentype>> &src)
 {
     NiceAssert( !infsize() );
 
@@ -24111,7 +24229,7 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<SparseVector<gentype> 
 
 template <>
 template <>
-Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<gentype> > &src)
+Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<gentype>> &src)
 {
     NiceAssert( !infsize() );
 
@@ -24165,7 +24283,7 @@ Vector<gentype> &Vector<gentype>::castassign(const Vector<Vector<gentype> > &src
 
 template <>
 template <>
-Vector<SparseVector<gentype> >& Vector<SparseVector<gentype> >::castassign(const Vector<SparseVector<gentype> > &src)
+Vector<SparseVector<gentype>>& Vector<SparseVector<gentype>>::castassign(const Vector<SparseVector<gentype>> &src)
 {
     return assign(src);
 }

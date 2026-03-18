@@ -23,14 +23,14 @@ int GridOptions::optim(int dim,
                        gentype         &sres,
                        int             &ires,
                        int             &mInd,
-                       Vector<Vector<gentype> > &allxres,
-                       Vector<gentype>          &allfres,
-                       Vector<Vector<gentype> > &allcres,
-                       Vector<gentype>          &allFres,
-                       Vector<gentype>          &allmres,
-                       Vector<gentype>          &allsres,
-                       Vector<double>           &s_score,
-                       Vector<int>              &is_feas,
+                       Vector<Vector<gentype>> &allxres,
+                       Vector<gentype>         &allfres,
+                       Vector<Vector<gentype>> &allcres,
+                       Vector<gentype>         &allFres,
+                       Vector<gentype>         &allmres,
+                       Vector<gentype>         &allsres,
+                       Vector<double>          &s_score,
+                       Vector<int>             &is_feas,
                        const Vector<gentype> &xmin,
                        const Vector<gentype> &xmax,
                        void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -38,6 +38,8 @@ int GridOptions::optim(int dim,
                        svmvolatile int &killSwitch)
 {
    (void) mInd;
+
+    errstream() << "Grid Optimisation Started\n";
 
     Vector<int> llocdistMode(getlocdistMode());
     Vector<int> llocvarsType(getlocvarsType());
@@ -90,7 +92,7 @@ int GridOptions::optim(int dim,
 
     // Enumerate testpoints on all axis
 
-    Vector<Vector<gentype> > gridmarks(dim);
+    Vector<Vector<gentype>> gridmarks(dim);
     Vector<int> isAxisRandom(llocvarsType); // This will be zero for all exis except the random ones
 
     isAxisRandom = 0;
@@ -245,7 +247,9 @@ int GridOptions::optim(int dim,
             fres = locfres;
             dres = locdres;
             ires = j;
+outstream() << "***";
         }
+outstream() << "\n";
 
         // Terminate if hardmin/max found, increment otherwise
 
@@ -319,14 +323,14 @@ int GridOptions::optim(int dim,
         gentype subsres;
         int subires = 0;
         int submInd = 0;
-        Vector<Vector<Vector<gentype> > > suballxres;
-        Vector<Vector<gentype> >          suballfres;
-        Vector<Vector<Vector<gentype> > > suballcres;
-        Vector<Vector<gentype> >          suballmres;
-        Vector<Vector<gentype> >          suballFres;
-        Vector<Vector<gentype> >          suballsres;
-        Vector<Vector<double> >           subs_score;
-        Vector<Vector<int> >              subis_feas;
+        Vector<Vector<Vector<gentype>>> suballxres;
+        Vector<Vector<gentype>>         suballfres;
+        Vector<Vector<Vector<gentype>>> suballcres;
+        Vector<Vector<gentype>>         suballmres;
+        Vector<Vector<gentype>>         suballFres;
+        Vector<Vector<gentype>>         suballsres;
+        Vector<Vector<double>>          subs_score;
+        Vector<Vector<int>>             subis_feas;
         Vector<gentype> subxmin(xmin);
         Vector<gentype> subxmax(xmax);
 
@@ -363,8 +367,8 @@ int GridOptions::optim(int dim,
         subdistMode = 0; // So we don't get twice-applied whatever scales.
         subvarsType = 1; // So we only round to integer once.
 
-        Vector<gentype> subxignore;                      // We only really care about "raw" here
-        Vector<Vector<Vector<gentype> > > suballxignore; // We only really care about "raw" here
+        Vector<gentype> subxignore;                    // We only really care about "raw" here
+        Vector<Vector<Vector<gentype>>> suballxignore; // We only really care about "raw" here
 
         gentype dummymeanfres, dummyvarfres;
         gentype dummymeanFres, dummyvarFres;
@@ -421,6 +425,14 @@ int GridOptions::optim(int dim,
 
     is_feas.resize(allfres.size());
     is_feas = 1;
+
+    // for consistency with bayesopt
+    fres.negate();
+    mres.negate();
+    allfres.negate();
+    allmres.negate();
+
+    errstream() << "Grid Optimisation Ended\n";
 
     return res;
 }

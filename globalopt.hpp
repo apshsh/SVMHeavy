@@ -95,6 +95,7 @@ public:
     // simFmax: on regret plot, end of x (iteration/budget) range (default 0)
     // simRmin: on regret plot, start of y (regret) range (default 1, simRmin > simRmax means auto)
     // simRmax: on regret plot, end of y (regret) range (default 0)
+    // logyplot: 0 for linear y axis, 1 for log y axis
 
     std::string simname;      // "", which derives to optname+"_regret"
     int         simoutformat; // 2
@@ -103,11 +104,9 @@ public:
     double      simFmax;      // 0
     double      simRmin;      // 1
     double      simRmax;      // 0
+    int         logyplot;     // 1
 
-    std::string getsimname(void)
-    {
-        return ( simname != "" ) ? simname : (optname+"_regret");
-    }
+    std::string getsimname(void) const { return ( simname != "" ) ? simname : (optname+"_regret"); }
 
     // recursive allxres
 
@@ -273,14 +272,14 @@ public:
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<gentype> > &allXres,
-                      Vector<gentype>          &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype>          &allFres,
-                      Vector<gentype>          &allmres,
-                      Vector<gentype>          &allsres,
-                      Vector<double>           &s_score,
-                      Vector<int>              &is_feas,
+                      Vector<Vector<gentype>> &allXres,
+                      Vector<gentype>         &allfres,
+                      Vector<Vector<gentype>> &allcres,
+                      Vector<gentype>         &allFres,
+                      Vector<gentype>         &allmres,
+                      Vector<gentype>         &allsres,
+                      Vector<double>          &s_score,
+                      Vector<int>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -394,7 +393,7 @@ public:
     }
 
     template <class T>
-    void calcmeanvar(Vector<T> &meanres, Vector<T> &varires, const Vector<Vector<T> > &src)
+    void calcmeanvar(Vector<T> &meanres, Vector<T> &varires, const Vector<Vector<T>> &src)
     {
         meanres.resize(src(0).size());
         varires.resize(src(0).size());
@@ -422,15 +421,15 @@ public:
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<Vector<gentype> > > &allxres,
-                      Vector<Vector<Vector<gentype> > > &allXres,
-                      Vector<Vector<gentype> >          &allfres,
-                      Vector<Vector<Vector<gentype> > > &allcres,
-                      Vector<Vector<gentype> >          &allFres,
-                      Vector<Vector<gentype> >          &allmres,
-                      Vector<Vector<gentype> >          &allsres,
-                      Vector<Vector<double> >           &s_score,
-                      Vector<Vector<int> >              &is_feas,
+                      Vector<Vector<Vector<gentype>>> &allxres,
+                      Vector<Vector<Vector<gentype>>> &allXres,
+                      Vector<Vector<gentype>>         &allfres,
+                      Vector<Vector<Vector<gentype>>> &allcres,
+                      Vector<Vector<gentype>>         &allFres,
+                      Vector<Vector<gentype>>         &allmres,
+                      Vector<Vector<gentype>>         &allsres,
+                      Vector<Vector<double>>          &s_score,
+                      Vector<Vector<int>>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -458,15 +457,15 @@ public:
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<gentype> > &allxres,
-                      Vector<Vector<gentype> > &allXres,
-                      Vector<gentype>          &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype>          &allFres,
-                      Vector<gentype>          &allmres,
-                      Vector<gentype>          &allsres,
-                      Vector<double>           &s_score,
-                      Vector<int>              &is_feas,
+                      Vector<Vector<gentype>> &allxres,
+                      Vector<Vector<gentype>> &allXres,
+                      Vector<gentype>         &allfres,
+                      Vector<Vector<gentype>> &allcres,
+                      Vector<gentype>         &allFres,
+                      Vector<gentype>         &allmres,
+                      Vector<gentype>         &allsres,
+                      Vector<double>          &s_score,
+                      Vector<int>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -484,15 +483,15 @@ public:
                       Vector<gentype> &meanallFres, Vector<gentype> &varallFres,
                       Vector<gentype> &meanallmres, Vector<gentype> &varallmres)
     {
-        Vector<Vector<Vector<gentype> > > vecallxres;
-        Vector<Vector<Vector<gentype> > > vecallXres;
-        Vector<Vector<gentype> >          vecallfres;
-        Vector<Vector<Vector<gentype> > > vecallcres;
-        Vector<Vector<gentype> >          vecallFres;
-        Vector<Vector<gentype> >          vecallmres;
-        Vector<Vector<gentype> >          vecallsres;
-        Vector<Vector<double> >           vecs_score;
-        Vector<Vector<int> >              vecis_feas;
+        Vector<Vector<Vector<gentype>>> vecallxres;
+        Vector<Vector<Vector<gentype>>> vecallXres;
+        Vector<Vector<gentype>>         vecallfres;
+        Vector<Vector<Vector<gentype>>> vecallcres;
+        Vector<Vector<gentype>>         vecallFres;
+        Vector<Vector<gentype>>         vecallmres;
+        Vector<Vector<gentype>>         vecallsres;
+        Vector<Vector<double>>          vecs_score;
+        Vector<Vector<int>>             vecis_feas;
 
         int retcode = optim(dim,
                       xres,Xres,fres,cres,Fres,mres,sres,ires,mInd,
@@ -524,15 +523,15 @@ public:
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<gentype> > &allxres,
-                      Vector<Vector<gentype> > &allXres,
-                      Vector<gentype>          &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype>          &allFres,
-                      Vector<gentype>          &allmres,
-                      Vector<gentype>          &allsres,
-                      Vector<double>           &s_score,
-                      Vector<int>              &is_feas,
+                      Vector<Vector<gentype>> &allxres,
+                      Vector<Vector<gentype>> &allXres,
+                      Vector<gentype>         &allfres,
+                      Vector<Vector<gentype>> &allcres,
+                      Vector<gentype>         &allFres,
+                      Vector<gentype>         &allmres,
+                      Vector<gentype>         &allsres,
+                      Vector<double>          &s_score,
+                      Vector<int>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -542,12 +541,19 @@ public:
                       svmvolatile int &killSwitch);
 
     // Plot regret
+    //
+    // plotdata: 0 for no, 1 for yes (doesn't work for multiplot)
+    // logploty: 0 for linear y axis, 1 for log y axis
 
     void plotregret(const std::string &locsimname,
-                    const Vector<Vector<gentype> > &resmeanallFres,
-                    const Vector<Vector<gentype> > &resmeanallmres,
-                    const Vector<Vector<gentype> > &resvarallmres,
-                    const Vector<std::string> &resname);
+                    const Vector<Vector<gentype>> &resmeanallFres,
+                    const Vector<Vector<gentype>> &resmeanallmres,
+                    const Vector<Vector<gentype>> &resvarallmres,
+                    const Vector<std::string> &resname,
+                    const Vector<Vector<Vector<gentype>>> &allFres,
+                    const Vector<Vector<Vector<gentype>>> &allfres,
+                    int plotdata,
+                    int plotlogy);
 
     // Overload to set sample distributions in models (if any)
 
@@ -877,7 +883,7 @@ public:
                                 resbuffer >> varlist("&",ii);
                             }
 
-                            SparseVector<SparseVector<gentype> > xy;
+                            SparseVector<SparseVector<gentype>> xy;
                             xy("&",1)("&",0) = projOpNowInd; // fill in var(1,0) with registered projOp index
                             xy("&",2)("&",0) = varlist; // replace var(0,ivect(0,1,var(2,0)-1)) with [ x y ... ]
                             xxmod("&",(res.ind())(0)).substitute(xy); // now gg(x,y,...) for ML projOp (that is, a function)
@@ -936,7 +942,7 @@ public:
                                 resbuffer >> varlist("&",ii);
                             }
 
-                            SparseVector<SparseVector<gentype> > xy;
+                            SparseVector<SparseVector<gentype>> xy;
                             xy("&",1)("&",0) = projOpNowInd; // fill in var(1,0) with registered projOp index
                             xy("&",2)("&",0) = varlist; // replace var(0,ivect(0,1,var(2,0)-1)) with [ x y ... ]
                             xxmod("&",(res.ind())(0)).substitute(xy); // now gg(x) for ML projOp (that is, a function)
@@ -1177,7 +1183,7 @@ public:
                         resbuffer >> varlist("&",ii);
                     }
 
-                    SparseVector<SparseVector<gentype> > xy;
+                    SparseVector<SparseVector<gentype>> xy;
                     xy("&",1)("&",0) = projOpInd; // fill in var(1,0) with registered projOp index
                     xy("&",2)("&",0) = varlist; // replace var(0,ivect(0,1,var(2,0)-1)) with [ x y ... ]
                     xxmod("&",0).substitute(xy);
@@ -1212,7 +1218,7 @@ public:
                         resbuffer >> varlist("&",ii);
                     }
 
-                    SparseVector<SparseVector<gentype> > xy;
+                    SparseVector<SparseVector<gentype>> xy;
                     xy("&",1)("&",0) = projOpInd; // fill in var(1,0) with registered projOp index
                     xy("&",2)("&",0) = varlist; // replace var(0,ivect(0,1,var(2,0)-1)) with [ x y ... ]
                     xxmod("&",0).substitute(xy);
@@ -1243,7 +1249,7 @@ public:
     }
 
     template <class S>
-    const Vector<SparseVector<gentype> > &model_convertx(Vector<SparseVector<gentype> > &res, const Vector<SparseVector<S> > &x) const
+    const Vector<SparseVector<gentype>> &model_convertx(Vector<SparseVector<gentype>> &res, const Vector<SparseVector<S>> &x) const
     {
         res = x;
 
@@ -1261,7 +1267,7 @@ public:
     }
 
     template <class S>
-    const Vector<Vector<gentype> > &convertx(int dim, Vector<Vector<gentype> > &res, const Vector<Vector<S> > &x) const
+    const Vector<Vector<gentype>> &convertx(int dim, Vector<Vector<gentype>> &res, const Vector<Vector<S>> &x) const
     {
         res = x;
 
@@ -1313,7 +1319,7 @@ public:
     const Vector<gentype> &getxpweight(void) const { return xpweight; }
     int getxpweightIsWeight(void)            const { return xpweightIsWeight; }
 
-    const Vector<SparseVector<gentype> > &getxbasis(void) const { return xbasis; }
+    const Vector<SparseVector<gentype>> &getxbasis(void) const { return xbasis; }
     const Matrix<gentype> &getxbasisprod(void)            const { return xbasisprod; }
 
 private:
@@ -1373,7 +1379,7 @@ private:
 
     mutable Vector<gentype> xpweight; // We assume that this is single-threaded
     mutable int xpweightIsWeight; // if 1 then xpweight contains the actual weights
-    Vector<SparseVector<gentype> > xbasis; // when xpweightIsWeight set this will be the basis vectors themselves
+    Vector<SparseVector<gentype>> xbasis; // when xpweightIsWeight set this will be the basis vectors themselves
     Matrix<gentype> xbasisprod; // when xpweightIsWeight set this will be the inner products of the basis vectors (function) themselves
 
     // Convert vectors from optimisation space to "real" space.  The optimisers
@@ -1434,9 +1440,14 @@ public:
 //                                                            unchanged otherwise
 // "addvar"       addvar (0)                 null or double   additional variance in measurement
 // "x"            xxreplace (empty)          null or vector   x replacement
-//                replacexx (0)              null or int      0 by default, 1 if "x" given
-// "sf"           stopflags (0)              null or int      0 by default, 1 to stop optimisation now
-// "fidcost"      fidcost (-1)               null or double   -1 by default, >=0 to override fidelity cost
+//                replacexx (0)              null or int      0 by default
+//                                                            1 if "x" given
+// "sf"           stopflags (0)              null or int      0 by default
+//                                                            1 to stop optimisation now
+//                                                            2 don't include in count
+//                                                            4 add x to blocked list
+// "fidcost"      fidcost (-1)               null or double   -1 by default
+//                                                            >=0 to override fidelity cost
 // "nuscale"      nuscale (unchanged)        null or double   change the beta scale factor
 // "xsc"          xsidechan (empty)          null or vector   additional side-channel vector [ xx1 ... xxn ]
 // "addexp"       addexp (null)              null or gentype  additional observation

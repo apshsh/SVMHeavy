@@ -100,14 +100,14 @@ public:
     virtual double sigmaclass(int d) const override { NiceAssert( ( d >= -1 ) && ( d <= 2 ) ); return xsigmaclass(d+1);   }
     virtual double epsclass  (int)   const override {                                          return 0.0;                }
 
-    virtual const Vector<gentype>         &y          (void) const override { return dy;           }
-    virtual const Vector<double>          &yR         (void) const override { return dyR;          }
-    virtual const Vector<d_anion>         &yA         (void) const override { return dyA;          }
-    virtual const Vector<Vector<double> > &yV         (void) const override { return dyV;          }
-    virtual const Vector<int>             &d          (void) const override { return xd;           }
-    virtual const Vector<double>          &Cweight    (void) const override { return dCweight;     }
-    virtual const Vector<double>          &sigmaweight(void) const override { return dsigmaweight; }
-    virtual const Vector<double>          &epsweight  (void) const override { static thread_local Vector<double> xxepsweight; xxepsweight.resize(N()) = 1.0; return xxepsweight;   }
+    virtual const Vector<gentype>        &y          (void) const override { return dy;           }
+    virtual const Vector<double>         &yR         (void) const override { return dyR;          }
+    virtual const Vector<d_anion>        &yA         (void) const override { return dyA;          }
+    virtual const Vector<Vector<double>> &yV         (void) const override { return dyV;          }
+    virtual const Vector<int>            &d          (void) const override { return xd;           }
+    virtual const Vector<double>         &Cweight    (void) const override { return dCweight;     }
+    virtual const Vector<double>         &sigmaweight(void) const override { return dsigmaweight; }
+    virtual const Vector<double>         &epsweight  (void) const override { static thread_local Vector<double> xxepsweight; xxepsweight.resize(N()) = 1.0; return xxepsweight;   }
 
     virtual const gentype        &y (int i) const override { return ( i >= 0 ) ? y ()(i) : getQQconst().y (i); }
     virtual       double          yR(int i) const override { return ( i >= 0 ) ? yR()(i) : getQQconst().yR(i); }
@@ -130,8 +130,8 @@ public:
     virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int removeTrainingVector(int i                                      ) override { xisTrained = 0; SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
@@ -145,9 +145,9 @@ public:
     virtual int sety(const Vector<int> &i, const Vector<double> &nv) override;
     virtual int sety(                      const Vector<double> &nv) override;
 
-    virtual int sety(int                i, const Vector<double>          &nv) override;
-    virtual int sety(const Vector<int> &i, const Vector<Vector<double> > &nv) override;
-    virtual int sety(                      const Vector<Vector<double> > &nv) override;
+    virtual int sety(int                i, const Vector<double>         &nv) override;
+    virtual int sety(const Vector<int> &i, const Vector<Vector<double>> &nv) override;
+    virtual int sety(                      const Vector<Vector<double>> &nv) override;
 
     virtual int sety(int                i, const d_anion         &nv) override;
     virtual int sety(const Vector<int> &i, const Vector<d_anion> &nv) override;
@@ -157,15 +157,15 @@ public:
     virtual int setd(const Vector<int> &i, const Vector<int> &nd) override;
     virtual int setd(                      const Vector<int> &nd) override;
 
-    virtual int setCweight(int i,                double nv               ) override;
+    virtual int setCweight(int                i, double                nv) override;
     virtual int setCweight(const Vector<int> &i, const Vector<double> &nv) override;
     virtual int setCweight(                      const Vector<double> &nv) override;
 
-    virtual int setCweightfuzz(int i,                double nv               ) override { (void) i; (void) nv; NiceThrow("Weight fuzzing not available for gpr models"); return 1; }
+    virtual int setCweightfuzz(int                i, double                nv) override { (void) i; (void) nv; NiceThrow("Weight fuzzing not available for gpr models"); return 1; }
     virtual int setCweightfuzz(const Vector<int> &i, const Vector<double> &nv) override { (void) i; (void) nv; NiceThrow("Weight fuzzing not available for gpr models"); return 1; }
     virtual int setCweightfuzz(                      const Vector<double> &nv) override {           (void) nv; NiceThrow("Weight fuzzing not available for gpr models"); return 1; }
 
-    virtual int setsigmaweight(int i,                double nv               ) override;
+    virtual int setsigmaweight(int                i, double                nv) override;
     virtual int setsigmaweight(const Vector<int> &i, const Vector<double> &nv) override;
     virtual int setsigmaweight(                      const Vector<double> &nv) override;
 
@@ -204,7 +204,7 @@ public:
     // Sampling mode
 
     virtual int  isSampleMode(void) const override { return sampleMode; }
-    virtual int setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double xsampScale, double sampSlack = 0) override;
+    virtual int setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double xsampScale, double sampSlack = 0, double diagperturb = 0) override;
 
     // Training functions:
 
@@ -233,7 +233,7 @@ public:
     virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ib, int ii, double sigmaweighti = 1.0                                                                                                                                                                           ) const override { return ML_Base_Deref::predcov(resv_pred,resv,resmu,ia,ib,ii,sigmaweighti); }
     virtual int predcov(gentype &resv_pred, gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const SparseVector<gentype> &xx, double sigmaweighti = 1.0, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, const vecInfo *xxinf = nullptr) const override;
 
-    virtual int cov(gentype &resv, gentype &resmu, int i, int j,                                                                                                                     gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override { return ML_Base_Deref::cov(resv,resmu,i,j,pxyprodx,pxyprody,pxyprodij); }
+    virtual int cov(gentype &resv, gentype &resmu, int ia, int ib,                                                                                                                   gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override { return ML_Base_Deref::cov(resv,resmu,ia,ib,pxyprodx,pxyprody,pxyprodij); }
     virtual int cov(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xb, const vecInfo *xainf = nullptr, const vecInfo *xbinf = nullptr, gentype ***pxyprodx = nullptr, gentype ***pxyprody = nullptr, gentype **pxyprodij = nullptr) const override;
 
     virtual int predvar(gentype &resv_pred, gentype &resv, gentype &resmu, int ia, int ii, double sigmaweighti = 1.0                                                                                                                  ) const override { return ML_Base::predvar(resv_pred,resv,resmu,ia,ii,sigmaweighti); }
@@ -242,8 +242,8 @@ public:
     virtual int var(gentype &resv, gentype &resmu, int i,                                                           gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return ML_Base::var(resv,resmu,i,pxyprodi,pxyprodii); }
     virtual int var(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override;
 
-    virtual int covar(Matrix<gentype> &resv, const Vector<int>                    &i) const override { return ML_Base::covar(resv,i); }
-    virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const override;
+    virtual int covar(Matrix<gentype> &resv, const Vector<int>                   &i) const override { return ML_Base::covar(resv,i); }
+    virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype>> &x) const override;
 
     virtual int noisevar(gentype &resv, gentype &resmu, int i,                           const SparseVector<gentype> &xvar, int u = -1,                                 gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return ML_Base::noisevar(resv,resmu,i,xvar,u,pxyprodi,pxyprodii); }
     virtual int noisevar(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override;
@@ -315,7 +315,7 @@ public:
 
     // Grid generation, available anywhere.  Returns number of samples
 
-    int genSampleGrid(Vector<SparseVector<gentype> > &res, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int xsampType, double sampSlack);
+    int genSampleGrid(Vector<SparseVector<gentype>> &res, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int xsampType, double sampSlack);
 
     int isLocked; // set 1 to prevent further (re)training
 private:
@@ -330,7 +330,7 @@ private:
     Vector<gentype> dy;
     Vector<double> dyR;
     Vector<d_anion> dyA;
-    Vector<Vector<double> > dyV;
+    Vector<Vector<double>> dyV;
 
 public:
     int xisTrained;
@@ -356,6 +356,7 @@ private:
 
     int sampleMode;
     double sampleScale;
+    double diagonperturb;
 };
 
 inline double norm2(const GPR_Generic &a);
@@ -397,20 +398,21 @@ inline void GPR_Generic::qswapinternal(ML_Base &bb)
 
     qswap(isLocked,b.isLocked);
 
-    qswap(xd          ,b.xd          );
-    qswap(Nnc         ,b.Nnc         );
-    qswap(dsigma      ,b.dsigma      );
-    qswap(dsigma_cut  ,b.dsigma_cut  );
-    qswap(dsigmaweight,b.dsigmaweight);
-    qswap(xsigmaclass ,b.xsigmaclass );
-    qswap(dy          ,b.dy          );
-    qswap(dyR         ,b.dyR         );
-    qswap(dyA         ,b.dyA         );
-    qswap(dyV         ,b.dyV         );
-    qswap(dCweight    ,b.dCweight    );
-    qswap(sampleMode  ,b.sampleMode  );
-    qswap(sampleScale ,b.sampleScale );
-    qswap(xisTrained  ,b.xisTrained  );
+    qswap(xd           ,b.xd           );
+    qswap(Nnc          ,b.Nnc          );
+    qswap(dsigma       ,b.dsigma       );
+    qswap(dsigma_cut   ,b.dsigma_cut   );
+    qswap(dsigmaweight ,b.dsigmaweight );
+    qswap(xsigmaclass  ,b.xsigmaclass  );
+    qswap(dy           ,b.dy           );
+    qswap(dyR          ,b.dyR          );
+    qswap(dyA          ,b.dyA          );
+    qswap(dyV          ,b.dyV          );
+    qswap(dCweight     ,b.dCweight     );
+    qswap(sampleMode   ,b.sampleMode   );
+    qswap(sampleScale  ,b.sampleScale  );
+    qswap(diagonperturb,b.diagonperturb);
+    qswap(xisTrained   ,b.xisTrained   );
 
     return;
 }
@@ -425,20 +427,21 @@ inline void GPR_Generic::semicopy(const ML_Base &bb)
 
     isLocked = b.isLocked;
 
-    xd           = b.xd;
-    Nnc          = b.Nnc;
-    dsigma       = b.dsigma;
-    dsigma_cut   = b.dsigma_cut;
-    dsigmaweight = b.dsigmaweight;
-    xsigmaclass  = b.xsigmaclass;
-    dy           = b.dy;
-    dyR          = b.dyR;
-    dyA          = b.dyA;
-    dyV          = b.dyV;
-    dCweight     = b.dCweight;
-    sampleMode   = b.sampleMode;
-    sampleScale  = b.sampleScale;
-    xisTrained   = b.xisTrained;
+    xd            = b.xd;
+    Nnc           = b.Nnc;
+    dsigma        = b.dsigma;
+    dsigma_cut    = b.dsigma_cut;
+    dsigmaweight  = b.dsigmaweight;
+    xsigmaclass   = b.xsigmaclass;
+    dy            = b.dy;
+    dyR           = b.dyR;
+    dyA           = b.dyA;
+    dyV           = b.dyV;
+    dCweight      = b.dCweight;
+    sampleMode    = b.sampleMode;
+    sampleScale   = b.sampleScale;
+    diagonperturb = b.diagonperturb;
+    xisTrained    = b.xisTrained;
 
     return;
 }
@@ -453,20 +456,21 @@ inline void GPR_Generic::assign(const ML_Base &bb, int onlySemiCopy)
 
     isLocked = src.isLocked;
 
-    xd           = src.xd;
-    Nnc          = src.Nnc;
-    dsigma       = src.dsigma;
-    dsigma_cut   = src.dsigma_cut;
-    dsigmaweight = src.dsigmaweight;
-    xsigmaclass  = src.xsigmaclass;
-    dy           = src.dy;
-    dyR          = src.dyR;
-    dyA          = src.dyA;
-    dyV          = src.dyV;
-    dCweight     = src.dCweight;
-    sampleMode   = src.sampleMode;
-    sampleScale  = src.sampleScale;
-    xisTrained   = src.xisTrained;
+    xd            = src.xd;
+    Nnc           = src.Nnc;
+    dsigma        = src.dsigma;
+    dsigma_cut    = src.dsigma_cut;
+    dsigmaweight  = src.dsigmaweight;
+    xsigmaclass   = src.xsigmaclass;
+    dy            = src.dy;
+    dyR           = src.dyR;
+    dyA           = src.dyA;
+    dyV           = src.dyV;
+    dCweight      = src.dCweight;
+    sampleMode    = src.sampleMode;
+    sampleScale   = src.sampleScale;
+    diagonperturb = src.diagonperturb;
+    xisTrained    = src.xisTrained;
 
     return;
 }

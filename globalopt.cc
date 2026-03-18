@@ -30,6 +30,7 @@ GlobalOptions::GlobalOptions()
         simFmax = 0;
         simRmin = 1;
         simRmax = 0;
+        logyplot = 1;
 
         altallxres = nullptr;
 
@@ -130,6 +131,7 @@ GlobalOptions &GlobalOptions::operator=(const GlobalOptions &src)
         simFmax = src.simFmax;
         simRmin = src.simRmin;
         simRmax = src.simRmax;
+        logyplot = src.logyplot;
 
     altallxres = src.altallxres;
 
@@ -278,15 +280,15 @@ int GlobalOptions::optim(int dim,
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<Vector<gentype> > > &allxres,
-                      Vector<Vector<Vector<gentype> > > &allXres,
-                      Vector<Vector<gentype> >          &allfres,
-                      Vector<Vector<Vector<gentype> > > &allcres,
-                      Vector<Vector<gentype> >          &allFres,
-                      Vector<Vector<gentype> >          &allmres,
-                      Vector<Vector<gentype> >          &allsres,
-                      Vector<Vector<double> >           &s_score,
-                      Vector<Vector<int> >              &is_feas,
+                      Vector<Vector<Vector<gentype>>> &allxres,
+                      Vector<Vector<Vector<gentype>>> &allXres,
+                      Vector<Vector<gentype>>         &allfres,
+                      Vector<Vector<Vector<gentype>>> &allcres,
+                      Vector<Vector<gentype>>         &allFres,
+                      Vector<Vector<gentype>>         &allmres,
+                      Vector<Vector<gentype>>         &allsres,
+                      Vector<Vector<double>>          &s_score,
+                      Vector<Vector<int>>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -309,7 +311,7 @@ int GlobalOptions::optim(int dim,
         int res = 0;
         int nr = static_cast<int>(numReps);
 
-        {
+//        {
             allxres.resize(nr);
             allXres.resize(nr);
             allfres.resize(nr);
@@ -351,7 +353,7 @@ int GlobalOptions::optim(int dim,
                 {
                     if ( !startyet )
                     {
-                        if ( is_feas(jj)(kk) && allmres(jj)(kk).isCastableToRealWithoutLoss() ) { startyet = 1;                            }
+                        if ( is_feas(jj)(kk) && allmres(jj)(kk).isCastableToRealWithoutLoss() ) { startyet = 1;                          }
                         else                                                                    { allmres("&",jj)("&",kk) = toGentype(); }
                     }
 
@@ -379,9 +381,9 @@ int GlobalOptions::optim(int dim,
             Vector<int> ii(nr);
             bool isdone = false;
 
-            Vector<Vector<gentype> > vecallfres(allfres);
-            Vector<Vector<gentype> > vecallFres(allFres);
-            Vector<Vector<gentype> > vecallmres(allmres);
+            Vector<Vector<gentype>> vecallfres(allfres);
+            Vector<Vector<gentype>> vecallFres(allFres);
+            Vector<Vector<gentype>> vecallmres(allmres);
 
             for ( size_t j = 0 ; j < numReps ; ++j )
             {
@@ -450,13 +452,16 @@ int GlobalOptions::optim(int dim,
             calcmeanvar(meanallfres,varallfres,vecallfres);
             calcmeanvar(meanallFres,varallFres,vecallFres);
             calcmeanvar(meanallmres,varallmres,vecallmres);
-        }
+//        }
 
         std::string locsimname = getsimname();
 
-        Vector<Vector<gentype> > resmeanallFres(1,meanallFres);
-        Vector<Vector<gentype> > resmeanallmres(1,meanallmres);
-        Vector<Vector<gentype> > resvarallmres(1,varallmres);
+        Vector<Vector<gentype>> resmeanallFres(1,meanallFres);
+        Vector<Vector<gentype>> resmeanallmres(1,meanallmres);
+        Vector<Vector<gentype>> resvarallmres(1,varallmres);
+
+        Vector<Vector<Vector<gentype>>> resallFres(1,vecallFres);
+        Vector<Vector<Vector<gentype>>> resallfres(1,vecallfres);
 
         Vector<std::string> resname(1,"regret");
 
@@ -464,7 +469,7 @@ int GlobalOptions::optim(int dim,
 
         if ( simfreq )
         {
-            plotregret(locsimname,resmeanallFres,resmeanallmres,resvarallmres,resname);
+            plotregret(locsimname,resmeanallFres,resmeanallmres,resvarallmres,resname,resallFres,resallfres,1,logyplot);
         }
 
         needsReset = true;
@@ -473,10 +478,14 @@ int GlobalOptions::optim(int dim,
     }
 
 void GlobalOptions::plotregret(const std::string &locsimname,
-                               const Vector<Vector<gentype> > &resmeanallFres,
-                               const Vector<Vector<gentype> > &resmeanallmres,
-                               const Vector<Vector<gentype> > &resvarallmres,
-                               const Vector<std::string> &resname)
+                               const Vector<Vector<gentype>> &resmeanallFres,
+                               const Vector<Vector<gentype>> &resmeanallmres,
+                               const Vector<Vector<gentype>> &resvarallmres,
+                               const Vector<std::string> &resname,
+                               const Vector<Vector<Vector<gentype>>> &allFres,
+                               const Vector<Vector<Vector<gentype>>> &allfres,
+                               int plotdata,
+                               int plotlogy)
 {
     int numcurves = resmeanallFres.size();
 
@@ -484,6 +493,9 @@ void GlobalOptions::plotregret(const std::string &locsimname,
     StrucAssert( resmeanallmres.size() == numcurves );
     StrucAssert( resvarallmres.size()  == numcurves );
     StrucAssert( resname.size()        == numcurves );
+
+    StrucAssert( !plotdata || ( allFres.size() == numcurves ) );
+    StrucAssert( !plotdata || ( allfres.size() == numcurves ) );
 
     // Find unused filename to prevent sequential overwrite
 
@@ -504,17 +516,17 @@ void GlobalOptions::plotregret(const std::string &locsimname,
     int incvar  = 1;
     int incdata = 1;
 
-    Vector<Vector<double> > resxdata    (numcurves);
-    Vector<Vector<double> > resydata    (numcurves);
-    Vector<Vector<double> > resyvar     (numcurves);
-    Vector<Vector<double> > resybaseline(numcurves);
+    Vector<Vector<double>> resxdata    (numcurves);
+    Vector<Vector<double>> resydata    (numcurves);
+    Vector<Vector<double>> resyvar     (numcurves);
+    Vector<Vector<double>> resybaseline(numcurves);
 
-    Vector<Vector<Vector<double> > > resxpos(numcurves);
-    Vector<Vector<Vector<double> > > resypos(numcurves);
-    Vector<Vector<Vector<double> > > resxneg(numcurves);
-    Vector<Vector<Vector<double> > > resyneg(numcurves);
-    Vector<Vector<Vector<double> > > resxequ(numcurves);
-    Vector<Vector<Vector<double> > > resyequ(numcurves);
+    Vector<Vector<Vector<double>>> resxpos(numcurves);
+    Vector<Vector<Vector<double>>> resypos(numcurves);
+    Vector<Vector<Vector<double>>> resxneg(numcurves);
+    Vector<Vector<Vector<double>>> resyneg(numcurves);
+    Vector<Vector<Vector<double>>> resxequ(numcurves);
+    Vector<Vector<Vector<double>>> resyequ(numcurves);
 
     for ( int ii = 0 ; ii < numcurves ; ++ii )
     {
@@ -527,24 +539,24 @@ void GlobalOptions::plotregret(const std::string &locsimname,
         Vector<double> &yvar      = resyvar     ("&",ii);
         Vector<double> &ybaseline = resybaseline("&",ii);
 
-        Vector<Vector<double> > &xpos = resxpos("&",ii);
-        Vector<Vector<double> > &ypos = resypos("&",ii);
-        Vector<Vector<double> > &xneg = resxneg("&",ii);
-        Vector<Vector<double> > &yneg = resyneg("&",ii);
-        Vector<Vector<double> > &xequ = resxequ("&",ii);
-        Vector<Vector<double> > &yequ = resyequ("&",ii);
+        Vector<Vector<double>> &xpos = resxpos("&",ii);
+        Vector<Vector<double>> &ypos = resypos("&",ii);
+        Vector<Vector<double>> &xneg = resxneg("&",ii);
+        Vector<Vector<double>> &yneg = resyneg("&",ii);
+        Vector<Vector<double>> &xequ = resxequ("&",ii);
+        Vector<Vector<double>> &yequ = resyequ("&",ii);
 
         xdata    .resize(meanallFres.size());
         ydata    .resize(meanallmres.size());
         yvar     .resize(varallmres .size());
         ybaseline.resize(meanallmres.size());
 
-        xpos.resize(0); //allFres.size());
-        ypos.resize(0); //allFres.size());
-        xneg.resize(0); //allFres.size());
-        yneg.resize(0); //allFres.size());
-        xequ.resize(0); //allFres.size());
-        yequ.resize(0); //allmres.size());
+        xpos.resize(0);
+        ypos.resize(0);
+        xneg.resize(0);
+        yneg.resize(0);
+        xequ.resize(0);
+        yequ.resize(0);
 
         ybaseline = 0.0;
 
@@ -554,25 +566,48 @@ void GlobalOptions::plotregret(const std::string &locsimname,
             else                              { xdata("&",i) = meanallFres(i); ydata("&",i) = -meanallmres(i); yvar("&",i) = varallmres(i); }
         }
 
-        //for ( int j = 0 ; j < allFres.size() ; ++j )
-        //{
-        //    xequ("&",j).resize(allFres(j).size());
-        //    yequ("&",j).resize(allmres(j).size());
-        //
-        //    for ( int i = allFres(j).size()-1 ; i >= 0 ; --i )
-        //    {
-        //        if ( allmres(j)(i).isValNone() ) { xequ("&",j).remove(i); yequ("&",j).remove(i);                            }
-        //        else                             { xequ("^",j)("&",i) = allFres(j)(i); yequ("&",j)("&",i) = -allmres(j)(i); }
-        //    }
-        //}
+        if ( plotdata )
+        {
+            const Vector<Vector<gentype>> &Fres = allFres(ii);
+            const Vector<Vector<gentype>> &fres = allfres(ii);
 
-        if ( xequ.size() <= 1 ) { incdata = 0; }
+            xpos.resize(Fres.size());
+            ypos.resize(fres.size());
+            xneg.resize(Fres.size());
+            yneg.resize(fres.size());
+            xequ.resize(Fres.size());
+            yequ.resize(fres.size());
+
+            for ( int j = Fres.size()-1 ; j >= 0 ; --j )
+            {
+                xpos("&",j).resize(0);
+                ypos("&",j).resize(0);
+                xneg("&",j).resize(0);
+                yneg("&",j).resize(0);
+                xequ("&",j).resize(Fres(j).size());
+                yequ("&",j).resize(fres(j).size());
+
+                for ( int i = Fres(j).size()-1 ; i >= 0 ; --i )
+                {
+                    if ( Fres(j)(i).isValNone() ) { xequ("&",j).remove(i); yequ("&",j).remove(i);                      }
+                    else                          { xequ("^",j)("&",i) = Fres(j)(i); yequ("^",j)("&",i) = -fres(j)(i); }
+                }
+            }
+        }
+
+        if ( xequ.size() == 0 ) { incdata = 0; }
 
         // Plot
 
         if ( numcurves == 1 )
         {
-            plot2d(xdata,ydata,yvar,ybaseline,xpos,ypos,xneg,yneg,xequ,yequ,simFmin,simFmax,simRmin,simRmax,plotname,plotname+"_dat",simoutformat,incdata,incvar);
+//if ( plotdata )
+//{
+//errstream() << "incdata = " << incdata << "\n";
+//errstream() << "xequ = " << xequ << "\n";
+//errstream() << "yequ = " << yequ << "\n";
+//}
+            plot2d(xdata,ydata,yvar,ybaseline,xpos,ypos,xneg,yneg,xequ,yequ,simFmin,simFmax,simRmin,simRmax,plotname,plotname+"_dat",simoutformat,incdata,incvar,plotlogy);
         }
     }
 
@@ -580,7 +615,7 @@ void GlobalOptions::plotregret(const std::string &locsimname,
     {
         std::string title("Regret convergence");
 
-        multiplot2d(resxdata,resydata,resyvar,resname,simFmin,simFmax,simRmin,simRmax,plotname,plotname+"_dat",simoutformat,title,incvar);
+        multiplot2d(resxdata,resydata,resyvar,resname,simFmin,simFmax,simRmin,simRmax,plotname,plotname+"_dat",simoutformat,title,incvar,plotlogy);
     }
 
     return;
@@ -597,15 +632,15 @@ int GlobalOptions::realOptim(int dim,
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<gentype> > &allxres,
-                      Vector<Vector<gentype> > &allXres,
-                      Vector<gentype>          &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype>          &allFres,
-                      Vector<gentype>          &allmres,
-                      Vector<gentype>          &allsres,
-                      Vector<double>           &s_score,
-                      Vector<int>              &is_feas,
+                      Vector<Vector<gentype>> &allxres,
+                      Vector<Vector<gentype>> &allXres,
+                      Vector<gentype>         &allfres,
+                      Vector<Vector<gentype>> &allcres,
+                      Vector<gentype>         &allFres,
+                      Vector<gentype>         &allmres,
+                      Vector<gentype>         &allsres,
+                      Vector<double>          &s_score,
+                      Vector<int>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,
@@ -678,7 +713,7 @@ int GlobalOptions::realOptim(int dim,
         void *backoverfnargs[19]; // It is very important that overfnargs[15] is defined here!
         void **overfnargs = backoverfnargs+3;
 
-        //SparseVector<SparseVector<gentype> > altaltxmod;
+        //SparseVector<SparseVector<gentype>> altaltxmod;
 
         overfnargs[0] = (void *)  fnarg;
         overfnargs[1] = (void *) &dim;
@@ -746,7 +781,7 @@ int GlobalOptions::realOptim(int dim,
                 sampleInd("&",j)  = j;
                 sampleDist("&",j) = "urand(x,y)";
 
-                SparseVector<SparseVector<gentype> > xy;
+                SparseVector<SparseVector<gentype>> xy;
 
                 xy("&",0)("&",0) = 0.0;
                 xy("&",0)("&",1) = 1.0;
@@ -843,15 +878,15 @@ int GlobalOptions::realOptim(int dim,
             SparseVector<gentype> altlocxres;
             SparseVector<gentype> altlocXres;
 
-            Vector<Vector<gentype> > locallxres;
-            Vector<Vector<gentype> > locallXres;
-            Vector<gentype>          locallfres;
-            Vector<Vector<gentype> > locallcres;
-            Vector<gentype>          locallFres;
-            Vector<gentype>          locallmres;
-            Vector<gentype>          locallsres;
-            Vector<double>           locs_score;
-            Vector<int>              locis_feas;
+            Vector<Vector<gentype>> locallxres;
+            Vector<Vector<gentype>> locallXres;
+            Vector<gentype>         locallfres;
+            Vector<Vector<gentype>> locallcres;
+            Vector<gentype>         locallFres;
+            Vector<gentype>         locallmres;
+            Vector<gentype>         locallsres;
+            Vector<double>          locs_score;
+            Vector<int>             locis_feas;
 
             stopearly = 0;
 
@@ -1346,14 +1381,14 @@ int GlobalOptions::makeSubspace(int dim, void *fnarg, int substatus, const Spars
 
 void overfn(gentype &res, Vector<gentype> &x, void *arg)
 {
-    //SparseVector<SparseVector<gentype> > &altaltxmod = *((SparseVector<SparseVector<gentype> > *) ((void **) arg)[-3]);
+    //SparseVector<SparseVector<gentype>> &altaltxmod = *((SparseVector<SparseVector<gentype>> *) ((void **) arg)[-3]);
     //int &usealtoptfn                                 = *((int *)                                  ((void **) arg)[-2]);
     //gentype &altoptfn                                = *((gentype *)                              ((void **) arg)[-1]);
     void *fnarg                                      = ((void *)                                  ((void **) arg)[0]);
     int &dim                                         = *((int *)                                  ((void **) arg)[1]);
     Vector<gentype> &xmod                            = *((Vector<gentype> *)                      ((void **) arg)[2]);
     GlobalOptions &gopts                             = *((GlobalOptions *)                        ((void **) arg)[3]);
-    Vector<Vector<gentype> > &allxres                = *((Vector<Vector<gentype> > *)             ((void **) arg)[4]);
+    Vector<Vector<gentype>> &allxres                 = *((Vector<Vector<gentype>> *)              ((void **) arg)[4]);
     gentype &penterm                                 = *((gentype *)                              ((void **) arg)[5]);
 
     void (*fn)(gentype &, Vector<gentype> &, void *) = ((void (*)(gentype &, Vector<gentype> &, void *)) ((void **) arg)[6]);
@@ -1439,10 +1474,10 @@ void overfn(gentype &res, Vector<gentype> &x, void *arg)
 //static thread_local int counter = 0;
 ////static int lineblank = 0;
 counter++;
-resbuffer << " (" << counter << ")                ";
+resbuffer << " (" << counter << ")"; //                ";
 //blankPrint(outstream(),lineblank);
 //lineblank = nullPrint(outstream(),resbuffer.str());
-outstream() << resbuffer.str() << "\n";
+outstream() << resbuffer.str(); // << "\n";
 //        errstream() << resbuffer.str() << "\n";
     }
 
@@ -1923,7 +1958,7 @@ int readres(gentype &res, Vector<gentype> &ycgt, int &stopflags)
     double addvar = 0;
     SparseVector<gentype> xxreplace;
     int replacexx;
-    gentype addexp;
+    gentype addexp('N');
     Vector<gentype> xsidechan;
     int xobstype = 2;
     Vector<int> xobstype_cgt;
@@ -1931,6 +1966,12 @@ int readres(gentype &res, Vector<gentype> &ycgt, int &stopflags)
     double nuscale = 1;
 
     int ires = readres(res,addvar,ycgt,xxreplace,replacexx,addexp,stopflags,xsidechan,xobstype,xobstype_cgt,fidcost,nuscale);
+
+    StrucAssert( !replacexx );
+    StrucAssert( addvar == 0 );
+    StrucAssert( addexp.isValNull() );
+    StrucAssert( addexp.size() == 0 );
+    StrucAssert( xobstype == 2 );
 
     return ires;
 }

@@ -36,8 +36,9 @@ GPR_Generic::GPR_Generic() : ML_Base_Deref()
     dsigma     = DEFAULT_SIGMA;
     dsigma_cut = DEFAULT_SIGMA_CUT;
 
-    sampleMode  = 0;
-    sampleScale = 1.0;
+    sampleMode    = 0;
+    sampleScale   = 1.0;
+    diagonperturb = 0.0;
 
     setaltx(nullptr);
 
@@ -56,8 +57,9 @@ GPR_Generic::GPR_Generic(const GPR_Generic &src) : ML_Base_Deref()
     dsigma     = DEFAULT_SIGMA;
     dsigma_cut = DEFAULT_SIGMA_CUT;
 
-    sampleMode  = 0;
-    sampleScale = 1.0;
+    sampleMode    = 0;
+    sampleScale   = 1.0;
+    diagonperturb = 0.0;
 
     setaltx(nullptr);
 
@@ -78,8 +80,9 @@ GPR_Generic::GPR_Generic(const GPR_Generic &src, const ML_Base *srcx) : ML_Base_
     dsigma     = DEFAULT_SIGMA;
     dsigma_cut = DEFAULT_SIGMA_CUT;
 
-    sampleMode  = 0;
-    sampleScale = 1.0;
+    sampleMode    = 0;
+    sampleScale   = 1.0;
+    diagonperturb = 0.0;
 
     setaltx(srcx);
 
@@ -111,20 +114,21 @@ int GPR_Generic::prealloc(int expectedN)
 
 std::ostream &GPR_Generic::printstream(std::ostream &output, int dep) const
 {
-    repPrint(output,'>',dep) << "Measurement sigma:         " << dsigma       << "\n";
-    repPrint(output,'>',dep) << "Measurement sigma_cut:     " << dsigma_cut   << "\n";
-    repPrint(output,'>',dep) << "Measurement sigma weights: " << dsigmaweight << "\n";
-    repPrint(output,'>',dep) << "Measurement C weights:     " << dCweight     << "\n";
-    repPrint(output,'>',dep) << "Measurement sigma class:   " << xsigmaclass  << "\n";
-    repPrint(output,'>',dep) << "Local (actual) y:          " << dy           << "\n";
-    repPrint(output,'>',dep) << "Local (actual) yR:         " << dyR          << "\n";
-    repPrint(output,'>',dep) << "Local (actual) yA:         " << dyA          << "\n";
-    repPrint(output,'>',dep) << "Local (actual) yV:         " << dyV          << "\n";
-    repPrint(output,'>',dep) << "Local (actual) d:          " << xd           << "\n";
-    repPrint(output,'>',dep) << "Class counts Nnc:          " << Nnc          << "\n";
-    repPrint(output,'>',dep) << "Sample mode:               " << sampleMode   << "\n";
-    repPrint(output,'>',dep) << "Sample scale:              " << sampleScale  << "\n";
-    repPrint(output,'>',dep) << "Underlying LS-SVM:         " << getQconst()  << "\n\n";
+    repPrint(output,'>',dep) << "Measurement sigma:         " << dsigma        << "\n";
+    repPrint(output,'>',dep) << "Measurement sigma_cut:     " << dsigma_cut    << "\n";
+    repPrint(output,'>',dep) << "Measurement sigma weights: " << dsigmaweight  << "\n";
+    repPrint(output,'>',dep) << "Measurement C weights:     " << dCweight      << "\n";
+    repPrint(output,'>',dep) << "Measurement sigma class:   " << xsigmaclass   << "\n";
+    repPrint(output,'>',dep) << "Local (actual) y:          " << dy            << "\n";
+    repPrint(output,'>',dep) << "Local (actual) yR:         " << dyR           << "\n";
+    repPrint(output,'>',dep) << "Local (actual) yA:         " << dyA           << "\n";
+    repPrint(output,'>',dep) << "Local (actual) yV:         " << dyV           << "\n";
+    repPrint(output,'>',dep) << "Local (actual) d:          " << xd            << "\n";
+    repPrint(output,'>',dep) << "Class counts Nnc:          " << Nnc           << "\n";
+    repPrint(output,'>',dep) << "Sample mode:               " << sampleMode    << "\n";
+    repPrint(output,'>',dep) << "Sample scale:              " << sampleScale   << "\n";
+    repPrint(output,'>',dep) << "Sample perturbation diag:  " << diagonperturb << "\n";
+    repPrint(output,'>',dep) << "Underlying LS-SVM:         " << getQconst()   << "\n\n";
 
     ML_Base::printstream(output,dep+1);
 
@@ -148,6 +152,7 @@ std::istream &GPR_Generic::inputstream(std::istream &input )
     input >> dummy; input >> Nnc;
     input >> dummy; input >> sampleMode;
     input >> dummy; input >> sampleScale;
+    input >> dummy; input >> diagonperturb;
     input >> dummy; input >> getQ();
 
     ML_Base::inputstream(input);
@@ -199,7 +204,7 @@ int GPR_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentyp
     return getQ().qaddTrainingVector(i,y,x,Cweigh,epsweigh,dval);
 }
 
-int GPR_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int GPR_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( y.size() == x.size() );
     NiceAssert( y.size() == Cweigh.size() );
@@ -217,7 +222,7 @@ int GPR_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector
     return res;
 }
 
-int GPR_Generic::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int GPR_Generic::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( y.size() == x.size() );
     NiceAssert( y.size() == Cweigh.size() );
@@ -371,7 +376,7 @@ int GPR_Generic::sety(int i, const Vector<double> &nv)
     return sety(i,n);
 }
 
-int GPR_Generic::sety(const Vector<int> &i, const Vector<Vector<double> > &nv)
+int GPR_Generic::sety(const Vector<int> &i, const Vector<Vector<double>> &nv)
 {
     xisTrained = 0;
 
@@ -389,7 +394,7 @@ int GPR_Generic::sety(const Vector<int> &i, const Vector<Vector<double> > &nv)
     return sety(i,n);
 }
 
-int GPR_Generic::sety(const Vector<Vector<double> > &nv)
+int GPR_Generic::sety(const Vector<Vector<double>> &nv)
 {
     xisTrained = 0;
 
@@ -466,15 +471,10 @@ int GPR_Generic::setsigmaweight(const Vector<int> &i, const Vector<double> &nv)
 
     NiceAssert( i.size() == nv.size() );
 
-    if ( i.size() )
+    for ( int j = 0 ; j < i.size() ; ++j )
     {
-        int j;
-
-        for ( j = 0 ; j < i.size() ; ++j )
-        {
-            dCweight("&",i(j)) = 1/nv(j);
-            dsigmaweight("&",i(j)) = nv(j);
-        }
+        dCweight("&",i(j)) = 1/nv(j);
+        dsigmaweight("&",i(j)) = nv(j);
     }
 
     retVector<double> tmpva;
@@ -488,15 +488,10 @@ int GPR_Generic::setsigmaweight(const Vector<double> &nv)
 
     NiceAssert( N() == nv.size() );
 
-    if ( nv.size() )
+    for ( int j = 0 ; j < nv.size() ; ++j )
     {
-        int j;
-
-        for ( j = 0 ; j < nv.size() ; ++j )
-        {
-            dCweight("&",j) = 1/nv(j);
-            dsigmaweight("&",j) = nv(j);
-        }
+        dCweight("&",j) = 1/nv(j);
+        dsigmaweight("&",j) = nv(j);
     }
 
     return getQ().setCweight(dCweight);
@@ -521,15 +516,10 @@ int GPR_Generic::setCweight(const Vector<int> &i, const Vector<double> &nv)
 
     NiceAssert( i.size() == nv.size() );
 
-    if ( i.size() )
+    for ( int j = 0 ; j < i.size() ; ++j )
     {
-        int j;
-
-        for ( j = 0 ; j < i.size() ; ++j )
-        {
-            dCweight("&",i(j)) = nv(j);
-            dsigmaweight("&",i(j)) = 1/nv(j);
-        }
+        dCweight("&",i(j)) = nv(j);
+        dsigmaweight("&",i(j)) = 1/nv(j);
     }
 
     return getQ().setCweight(i,nv);
@@ -541,15 +531,10 @@ int GPR_Generic::setCweight(const Vector<double> &nv)
 
     NiceAssert( N() == nv.size() );
 
-    if ( nv.size() )
+    for ( int j = 0 ; j < nv.size() ; ++j )
     {
-        int j;
-
-        for ( j = 0 ; j < nv.size() ; ++j )
-        {
-            dCweight("&",j) = nv(j);
-            dsigmaweight("&",j) = 1/nv(j);
-        }
+        dCweight("&",j) = nv(j);
+        dsigmaweight("&",j) = 1/nv(j);
     }
 
     return getQ().setCweight(nv);
@@ -591,10 +576,7 @@ int GPR_Generic::setd(int i, int nd)
 
     xd("&",i) = nd;
 
-    if ( isNaiveConst() )
-    {
-        return getQ().setd(i,nd);
-    }
+    if ( isNaiveConst() ) { return getQ().setd(i,nd); }
 
     // the LSV layer only sees 0 (constrained) or 2 (unconstrained)
 
@@ -614,10 +596,7 @@ int GPR_Generic::setd(const Vector<int> &i, const Vector<int> &nd)
         res |= setd(i(ii),nd(ii));
     }
 
-    if ( isNaiveConst() )
-    {
-        return getQ().setd(i,nd);
-    }
+    if ( isNaiveConst() ) { return getQ().setd(i,nd); }
 
     return res;
 }
@@ -817,7 +796,7 @@ int GPR_Generic::cov(gentype &resv, gentype &resmu, const SparseVector<gentype> 
 
             if ( 3 == isSampleMode() )
             {
-                randnfill(resmu.force_double(),(double) resmean,sampleScale*sqrt((double) resv));
+                randnfill(resmu.force_double(),(double) resmean,(sampleScale*sqrt((double) resv))+diagonperturb);
             }
 
             else if ( 4 == isSampleMode() )
@@ -826,7 +805,7 @@ int GPR_Generic::cov(gentype &resv, gentype &resmu, const SparseVector<gentype> 
 
                 while ( ((double) resmu) < 0 )
                 {
-                    randnfill(resmu.force_double(),(double) resmean,sampleScale*sqrt((double) resv));
+                    randnfill(resmu.force_double(),(double) resmean,(sampleScale*sqrt((double) resv))+diagonperturb);
                 }
             }
 
@@ -836,7 +815,7 @@ int GPR_Generic::cov(gentype &resv, gentype &resmu, const SparseVector<gentype> 
 
                 while ( ((double) resmu) > 0 )
                 {
-                    randnfill(resmu.force_double(),(double) resmean,sampleScale*sqrt((double) resv));
+                    randnfill(resmu.force_double(),(double) resmean,(sampleScale*sqrt((double) resv))+diagonperturb);
                 }
             }
         }
@@ -883,7 +862,7 @@ int GPR_Generic::predcov(gentype &resv_pred, gentype &resv, gentype &resmu, cons
     return res;
 }
 
-int GPR_Generic::covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &xx) const
+int GPR_Generic::covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype>> &xx) const
 {
     int res = 0;
 
@@ -938,7 +917,7 @@ int GPR_Generic::var(gentype &resv, gentype &resmu, const SparseVector<gentype> 
 
             if ( 3 == isSampleMode() )
             {
-                randnfill(resmu.force_double(),(double) resmean,sampleScale*sqrt((double) resv));
+                randnfill(resmu.force_double(),(double) resmean,(sampleScale*sqrt((double) resv))+diagonperturb);
             }
 
             else if ( 4 == isSampleMode() )
@@ -947,7 +926,7 @@ int GPR_Generic::var(gentype &resv, gentype &resmu, const SparseVector<gentype> 
 
                 while ( ((double) resmu) < 0 )
                 {
-                    randnfill(resmu.force_double(),(double) resmean,sampleScale*sqrt((double) resv));
+                    randnfill(resmu.force_double(),(double) resmean,(sampleScale*sqrt((double) resv))+diagonperturb);
                 }
             }
 
@@ -957,7 +936,7 @@ int GPR_Generic::var(gentype &resv, gentype &resmu, const SparseVector<gentype> 
 
                 while ( ((double) resmu) > 0 )
                 {
-                    randnfill(resmu.force_double(),(double) resmean,sampleScale*sqrt((double) resv));
+                    randnfill(resmu.force_double(),(double) resmean,(sampleScale*sqrt((double) resv))+diagonperturb);
                 }
             }
 
@@ -1116,10 +1095,10 @@ int GPR_Generic::getparam(int ind, gentype &val, const gentype &xa, int ia, cons
 #define CONVPT 1e-5
 
 #undef SIGMA_ADD
-#define SIGMA_ADD 1e-3
+#define SIGMA_ADD ( ( sigma() < 1e-3 ) ? sigma() : 1e-3 )
 
 
-int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double sampScale, double sampSlack)
+int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double sampScale, double sampSlack, double diagperturb)
 {
     //int debugit = 0; //1; // set 1 in gdb to turn on feedback
 
@@ -1167,8 +1146,8 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
         // No presampling done yet.  Our approach is to pre-sample x
         // and then do the actual Thompson sampling.
 
-        setSampleMode(2,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack); // presample
-        setSampleMode(1,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack); // actual sample
+        setSampleMode(2,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack,diagperturb); // presample
+        setSampleMode(1,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack,diagperturb); // actual sample
     }
 
     else if ( ( nv == 2 ) && ( sampleMode == 0 ) )
@@ -1264,40 +1243,13 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
 
                     SparseVector<gentype> realx = x()(i);
 
-                    if ( xitang == 0 )
-                    {
-                        loctype = 0;
-                    }
-
-                    else if ( xitang == 2+128 )
-                    {
-                        loctype = 1;
-                    }
-
-                    else if ( xitang == 1 )
-                    {
-                        loctype = 2;
-                    }
-
-                    //else if ( xitang == 1+2+128 )
-                    //{
-                    //    loctype = 3;
-                    //}
-
-                    //else if ( xitang == 1+2+512 )
-                    //{
-                    //    loctype = 4;
-                    //}
-
-                    //else if ( xitang == 1+2+128+512 )
-                    //{
-                    //    loctype = 5;
-                    //}
-
-                    else
-                    {
-                        NiceThrow("Observation type not suppored when sampling g(x)^2 using postType 2xx,3xx");
-                    }
+                    if      ( xitang == 0           ) { loctype = 0; }
+                    else if ( xitang == 2+128       ) { loctype = 1; }
+                    else if ( xitang == 1           ) { loctype = 2; }
+                    //else if ( xitang == 1+2+128     ) { loctype = 3; }
+                    //else if ( xitang == 1+2+512     ) { loctype = 4; }
+                    //else if ( xitang == 1+2+128+512 ) { loctype = 5; }
+                    else { NiceThrow("Observation type not suppored when sampling g(x)^2 using postType 2xx,3xx"); }
 
                     if ( ( loctype == 0 ) && ( d()(i) == -1 ) )
                     {
@@ -1575,7 +1527,7 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
 
         // Pre-sample by setting up grid, adding to model and working out partial Cholesky factorisation
 
-        Vector<SparseVector<gentype> > xx;
+        Vector<SparseVector<gentype>> xx;
 
         if ( Nsamp )
         {
@@ -1614,14 +1566,18 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
 
         // Add vectors to model, with d = 0 for now (do this preemptively to avoid double-calculation)
         //
-        // NB: we set y = muBias() as a sort of minimal baseline to prevent numerical difficulties
+        // NB: - we set y = muBias() as a sort of minimal baseline to prevent numerical difficulties
+        //     - recall that C = 1/sigma, so this Cweightval makes C = 1/SIGMA_ADD, so sigma = SIGMA_ADD
+        //
+        //sigmaweightval = min(SIGMA_ADD/sigma(),sigma_cut()=1.1) (so only every increase sigma by a factor of 1.1 max)
+        //Cweightval = max(sigma()/SIGMA_ADD,1/sigma_cut())
 
-        double sigweightval = ( ( (sigma()/SIGMA_ADD) > (1.0/sigma_cut()) ) ? (sigma()/SIGMA_ADD) : (1.0/sigma_cut()) );
-        //double sigweightval = sigma()/SIGMA_ADD;
+        double Cweightval = ( ( (sigma()/SIGMA_ADD) > (1.0/sigma_cut()) ) ? (sigma()/SIGMA_ADD) : (1.0/sigma_cut()) );
+        //double Cweightval = sigma()/SIGMA_ADD;
 
         for ( i = 0 ; i < Ntotsamp ; ++i )
         {
-            qaddTrainingVector(Npresamp+i,muBias(),xx("&",i),sigweightval,0); // This destroys x(i), but that doesn't matter as we don't need it after this
+            qaddTrainingVector(Npresamp+i,muBias(),xx("&",i),Cweightval,0); // This destroys x(i), but that doesn't matter as we don't need it after this
             setd(Npresamp+i,0); // disable until after we have trained on the prior
         }
 
@@ -1698,10 +1654,7 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
 
             // Draw random vector
 
-            for ( i = 0 ; i < Ntotsamp ; ++i )
-            {
-                randnfill(rr("&",i));
-            }
+            for ( i = 0 ; i < Ntotsamp ; ++i ) { randnfill(rr("&",i)); }
 
             //if ( debugit ) { errstream() << "phantomxyz rr = " << rr << "\n"; }
 
@@ -1727,21 +1680,29 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
                     {
                         cov(altvs,ms,Npresamp+i,Npresamp+j);
 
-                        vv("&",i,j) = ( (double) altvs ) + ( ( i == j ) ? SIGMA_ADD : 0.0 );
+                        //vv("&",i,j) = ( (double) altvs ) + ( ( i == j ) ? SIGMA_ADD : 0.0 ); - UPDATE: we grow the diagonal offset as needed, not a-prior
+                        vv("&",i,j) = (double) altvs;
 
-                        if ( i == j )
-                        {
-                            m("&",i) = (double) ms;
-                        }
+                        if ( i == j ) { m("&",i) = (double) ms; }
                     }
                 }
+
+                vv *= sampScale*sampScale; // Don't forget to scale by the sample-scale factor
+                vv.diagoffset(diagperturb);
 
                 //if ( debugit ) { errstream() << "phantomxyz prior covariance = " << vv << "\n"; }
                 //if ( debugit ) { errstream() << "phantomxyz prior mean = " << m << "\n"; }
 
                 // Calculate targets
 
-                vv.naivepartChol(L,p,s);
+                s = -1; // this is a placeholder
+
+                while ( s < Ntotsamp )
+                {
+errstream() << "&TS&";
+                    vv.naivepartChol(L,p,s);
+                    if ( s < Ntotsamp ) { vv.diagoffset(SIGMA_ADD); } // add offset as required
+                }
 
                 yr("&",p,tmpva) = (L(p,p(0,1,s-1,tmpvb),tmpma))*rr(p(0,1,s-1,tmpvc),tmpvd); // Note that p includes all variables, so no need to pre-zero yr
                 yr += m;
@@ -1754,37 +1715,10 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
                 {
                     if ( ( sampSplit == 1 ) || ( sampSplit == 0 ) )
                     {
-                        if ( yType == 1 )
-                        {
-                            for ( i = 0 ; i < Ntotsamp ; ++i )
-                            {
-                                yr("&",i) = ( yr(i) >= 0.0 ) ? yr(i) : 0.0;
-                            }
-                        }
-
-                        else if ( yType == 2 )
-                        {
-                            for ( i = 0 ; i < Ntotsamp ; ++i )
-                            {
-                                yr("&",i) = ( yr(i) >= 0.0 ) ? yr(i) : -yr(i);
-                            }
-                        }
-
-                        else if ( yType == 3 )
-                        {
-                            for ( i = 0 ; i < Ntotsamp ; ++i )
-                            {
-                                yr("&",i) = ( yr(i) <= 0.0 ) ? yr(i) : 0.0;
-                            }
-                        }
-
-                        else if ( yType == 4 )
-                        {
-                            for ( i = 0 ; i < Ntotsamp ; ++i )
-                            {
-                                yr("&",i) = ( yr(i) <= 0.0 ) ? yr(i) : -yr(i);
-                            }
-                        }
+                        if      ( yType == 1 ) { for ( i = 0 ; i < Ntotsamp ; ++i ) { yr("&",i) = ( yr(i) >= 0.0 ) ? yr(i) : 0.0;    } }
+                        else if ( yType == 2 ) { for ( i = 0 ; i < Ntotsamp ; ++i ) { yr("&",i) = ( yr(i) >= 0.0 ) ? yr(i) : -yr(i); } }
+                        else if ( yType == 3 ) { for ( i = 0 ; i < Ntotsamp ; ++i ) { yr("&",i) = ( yr(i) <= 0.0 ) ? yr(i) : 0.0;    } }
+                        else if ( yType == 4 ) { for ( i = 0 ; i < Ntotsamp ; ++i ) { yr("&",i) = ( yr(i) <= 0.0 ) ? yr(i) : -yr(i); } }
                     }
 
                     else if ( sampSplit == 2 )
@@ -1797,13 +1731,7 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
                         //
                         // Also symmetrise at the same time
 
-                        for ( i = 0 ; i < matsize ; ++i )
-                        {
-                            for ( j = 0 ; j <= i ; ++j )
-                            {
-                                yreal("&",j,i) = ( yreal("&",i,j) = (yr(i+(j*matsize))+yr(j+(i*matsize)))/2 );
-                            }
-                        }
+                        for ( i = 0 ; i < matsize ; ++i ) { for ( j = 0 ; j <= i ; ++j ) { yreal("&",j,i) = ( yreal("&",i,j) = (yr(i+(j*matsize))+yr(j+(i*matsize)))/2 ); } }
 
                         Matrix<double> yyreal(yreal);
 
@@ -1861,13 +1789,7 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
 
                         // Convert back to vectorised form
 
-                        for ( i = 0 ; i < matsize ; ++i )
-                        {
-                            for ( j = 0 ; j < matsize ; ++j )
-                            {
-                                yr("&",i+(j*matsize)) = yyreal(i,j);
-                            }
-                        }
+                        for ( i = 0 ; i < matsize ; ++i ) { for ( j = 0 ; j < matsize ; ++j ) { yr("&",i+(j*matsize)) = yyreal(i,j); } }
                     }
                 }
 
@@ -2020,9 +1942,9 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
                 {
                     // Grab local copy of prior x
 
-                    retVector<SparseVector<gentype> > tmpvg;
+                    retVector<SparseVector<gentype>> tmpvg;
 
-                    Vector<SparseVector<gentype> > xloc = x()(0,1,Npresamp-1,tmpvg);
+                    Vector<SparseVector<gentype>> xloc = x()(0,1,Npresamp-1,tmpvg);
 
                     double yv,xr,zr;
                     double wx,wz;
@@ -2276,16 +2198,8 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
                                 double nowmag = (hxprev(i)+hxstep(i)+gx(i))*(hxprev(i)+hxstep(i)+gx(i));
                                 double locstep = fabs(prevmag-nowmag);
 
-                                if ( prevmag > 1 )
-                                {
-                                    locstep /= prevmag;
-                                }
-
-                                if ( locstep > CONVPT )
-                                {
-                                    isConverged = false;
-                                    break;
-                                }
+                                if ( prevmag > 1      ) { locstep /= prevmag;         }
+                                if ( locstep > CONVPT ) { isConverged = false; break; }
                             }
 
                             if ( ( intype(i) == 11 ) || ( intype(i) == 12 ) || ( intype(i) == 13 ) )
@@ -2294,16 +2208,8 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
                                 double nowmag = (dhxprev(i)+dhxstep(i)+dgx(i))*(dhxprev(i)+dhxstep(i)+dgx(i));
                                 double locstep = fabs(prevmag-nowmag);
 
-                                if ( prevmag > 1 )
-                                {
-                                    locstep /= prevmag;
-                                }
-
-                                if ( locstep > CONVPT )
-                                {
-                                    isConverged = false;
-                                    break;
-                                }
+                                if ( prevmag > 1      ) { locstep /= prevmag;         }
+                                if ( locstep > CONVPT ) { isConverged = false; break; }
                             }
 
                             if ( ( intype(i) == 21 ) || ( intype(i) == 22 ) || ( intype(i) == 23 ) )
@@ -2312,16 +2218,8 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
                                 double nowmag = (hzprev(i)+hzstep(i)+gz(i))*(hzprev(i)+hzstep(i)+gz(i));
                                 double locstep = fabs(prevmag-nowmag);
 
-                                if ( prevmag > 1 )
-                                {
-                                    locstep /= prevmag;
-                                }
-
-                                if ( locstep > CONVPT )
-                                {
-                                    isConverged = false;
-                                    break;
-                                }
+                                if ( prevmag > 1      ) { locstep /= prevmag;         }
+                                if ( locstep > CONVPT ) { isConverged = false; break; }
                             }
                         }
 
@@ -2540,23 +2438,13 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
 
             for ( i = 0 ; i < Ntotsamp ; i++ )
             {
-                if ( yType == 6 )
-                {
-                    randnfill(aa("&",Npresamp+i).force_double(),0,1);
-                }
-
-                else if ( yType == 7 )
-                {
-                    randufill(aa("&",Npresamp+i).force_double(),-1,1);
-                }
+                if      ( yType == 6 ) { randnfill(aa("&",Npresamp+i).force_double(), 0,1); }
+                else if ( yType == 7 ) { randufill(aa("&",Npresamp+i).force_double(),-1,1); }
             }
 
             // Enable grid
 
-            for ( i = 0 ; i < Ntotsamp ; ++i )
-            {
-                setd(Npresamp+i,2);
-            }
+            for ( i = 0 ; i < Ntotsamp ; ++i ) { setd(Npresamp+i,2); }
 
             // Set alpha to rectified value
 
@@ -2577,15 +2465,8 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
 
             for ( i = 0 ; i < Npresamp+Ntotsamp ; i++ )
             {
-                if ( ( ((double) aa(i)) < 0 ) && ( alphaType == 1 ) )
-                {
-                    setnegate(aa("&",i));
-                }
-
-                if ( ( ((double) aa(i)) > 0 ) && ( alphaType == 2 ) )
-                {
-                    setnegate(aa("&",i));
-                }
+                if ( ( ((double) aa(i)) < 0 ) && ( alphaType == 1 ) ) { setnegate(aa("&",i)); }
+                if ( ( ((double) aa(i)) > 0 ) && ( alphaType == 2 ) ) { setnegate(aa("&",i)); }
             }
 
             // Set alpha to rectified value
@@ -2755,10 +2636,11 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
         xisTrained = 1;
     }
 
-    sampleMode  = nv;
-    sampleScale = sampScale;
+    sampleMode    = nv;
+    sampleScale   = sampScale;
+    diagonperturb = diagperturb;
 
-    return sampleMode | ML_Base::setSampleMode(nv,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack);
+    return sampleMode | ML_Base::setSampleMode(nv,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack,diagperturb);
 }
 
 // Nsamp:     number of samples
@@ -2769,7 +2651,7 @@ int GPR_Generic::setSampleMode(int nv, const Vector<gentype> &xmin, const Vector
 //            2 - pre-defined sequence of random samples, same everytime
 //            3 - grid of Nsamp^dim samples
 
-int GPR_Generic::genSampleGrid(Vector<SparseVector<gentype> > &res, const Vector<gentype> &xqmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int xsampType, double sampSlack)
+int GPR_Generic::genSampleGrid(Vector<SparseVector<gentype>> &res, const Vector<gentype> &xqmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int xsampType, double sampSlack)
 {
     int dim = xqmin.size();
     int allowGridSample  = ( xsampType == 3 ) ? 1 : 0; // 0 is implicitly random

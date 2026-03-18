@@ -12,7 +12,7 @@
 #include "errortest.hpp"
 
 
-double optFeatHillClimb(ML_Base &svm, int n, int m, int rndit, Vector<int> &usedfeats, std::ostream &logdest, int useDescent, const Vector<SparseVector<gentype> > &xtest, const Vector<gentype> &ytest, int startpoint, int traverse, int startdirty)
+double optFeatHillClimb(ML_Base &svm, int n, int m, int rndit, Vector<int> &usedfeats, std::ostream &logdest, int useDescent, const Vector<SparseVector<gentype>> &xtest, const Vector<gentype> &ytest, int startpoint, int traverse, int startdirty)
 {
     double baselineres = 1e6;
     int i,j,k,l;
