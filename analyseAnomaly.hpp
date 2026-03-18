@@ -59,7 +59,7 @@
 //     speed and memory preservation).
 
 
-int anAnomalyCreate(SVM_Generic &ml, Vector<SparseVector<gentype> > &x, Vector<gentype> &zassign, Vector<int> &trigVect, Vector<int> &anomVect, Vector<int> &addVect, int Nnew, double adist, double nadist, int Mclass, int addVectsToML = 3, int anomalyClass = 0);
+int anAnomalyCreate(SVM_Generic &ml, Vector<SparseVector<gentype>> &x, Vector<gentype> &zassign, Vector<int> &trigVect, Vector<int> &anomVect, Vector<int> &addVect, int Nnew, double adist, double nadist, int Mclass, int addVectsToML = 3, int anomalyClass = 0);
 
 #endif
 

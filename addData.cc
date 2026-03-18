@@ -86,7 +86,7 @@ int genericMLDataLoad(int binaryRelabel,
                       int reverse, 
                       int ignoreStart, 
                       int imax, 
-                      Vector<SparseVector<gentype> > &xtest, 
+                      Vector<SparseVector<gentype>> &xtest, 
                       Vector<gentype> &ytest, 
                       Vector<int> &outkernind,
                       int ibase, 
@@ -129,7 +129,7 @@ int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemplate, con
 
 int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemplate, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread, const std::string &savefile)
 {
-    Vector<SparseVector<gentype> > xtest;
+    Vector<SparseVector<gentype>> xtest;
     Vector<gentype> ytest;
     Vector<gentype> ytestresh;
     Vector<gentype> ytestresg;
@@ -162,7 +162,7 @@ int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemplate, con
                              static_cast<ML_Base *>(&mlbase));
 }
 
-int loadFileForHillClimb(const ML_Base &mlbase, const SparseVector<gentype> &xtemplate, const std::string &trainfile, int reverse, int ignoreStart, int imax, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread, Vector<SparseVector<gentype> > &xtest, Vector<gentype> &ytest)
+int loadFileForHillClimb(const ML_Base &mlbase, const SparseVector<gentype> &xtemplate, const std::string &trainfile, int reverse, int ignoreStart, int imax, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread, Vector<SparseVector<gentype>> &xtest, Vector<gentype> &ytest)
 {
     Vector<gentype> ytestresh;
     Vector<gentype> ytestresg;
@@ -199,7 +199,7 @@ int loadFileForHillClimb(const ML_Base &mlbase, const SparseVector<gentype> &xte
 
 int loadFileAndTest(const ML_Base &mlbase, const SparseVector<gentype> &xtemplate, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread, Vector<gentype> &ytest, Vector<gentype> &ytestresh, Vector<gentype> &ytestresg, Vector<gentype> &gvarres, int dovartest, Vector<int> &outkernind, int savex)
 {
-    Vector<SparseVector<gentype> > xtest;
+    Vector<SparseVector<gentype>> xtest;
     std::string savefile("");
 
     return genericMLDataLoad(binaryRelabel,
@@ -230,7 +230,7 @@ int loadFileAndTest(const ML_Base &mlbase, const SparseVector<gentype> &xtemplat
 
 int loadFileAndSave(const ML_Base &mlbase, const SparseVector<gentype> &xtemplate, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread, Vector<gentype> &ytest, Vector<gentype> &ytestresh, Vector<gentype> &ytestresg, Vector<gentype> &gvarres, int dovartest, Vector<int> &outkernind, const std::string &savefile)
 {
-    Vector<SparseVector<gentype> > xtest;
+    Vector<SparseVector<gentype>> xtest;
 
     return genericMLDataLoad(binaryRelabel,
                              singleDrop,
@@ -268,7 +268,7 @@ int genericMLDataLoad(int binaryRelabel,
                       int reverse,
                       int ignoreStart,
                       int imax,
-                      Vector<SparseVector<gentype> > &xtest,
+                      Vector<SparseVector<gentype>> &xtest,
                       Vector<gentype> &ytest,
                       Vector<int> &outkernind,
                       int ibase,
@@ -679,7 +679,7 @@ int genericMLDataLoad(int binaryRelabel,
     return pointsadded;
 }
 
-int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemplate, Vector<SparseVector<gentype> > &x, const Vector<gentype> &yy, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget)
+int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemplate, Vector<SparseVector<gentype>> &x, const Vector<gentype> &yy, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget)
 {
     Vector<gentype> sigmaweight(x.size());
 
@@ -688,7 +688,7 @@ int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemplate, Vec
     return addtrainingdata(mlbase,xtemplate,x,yy,sigmaweight,ibase,coercetosingle,coercefromsingle,fromsingletarget);
 }
 
-int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemplate, Vector<SparseVector<gentype> > &x, const Vector<gentype> &yy, const Vector<gentype> &sigmaweight, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget)
+int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemplate, Vector<SparseVector<gentype>> &x, const Vector<gentype> &yy, const Vector<gentype> &sigmaweight, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget)
 {
     Vector<gentype> y(yy);
 
@@ -907,7 +907,7 @@ SparseVector<gentype> &addtemptox(SparseVector<gentype> &x, const SparseVector<g
     return x;
 }
 
-Vector<SparseVector<gentype> > &addtemptox(Vector<SparseVector<gentype> > &x, const SparseVector<gentype> &xtemp)
+Vector<SparseVector<gentype>> &addtemptox(Vector<SparseVector<gentype>> &x, const SparseVector<gentype> &xtemp)
 {
     if ( x.size() )
     {

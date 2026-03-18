@@ -77,11 +77,11 @@ int loadFileAndSave(const ML_Base &mlbase, const char *trainfile, int reverse = 
 
 int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, const std::string &savefile);
 
-int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, Vector<SparseVector<gentype> > &x, const Vector<gentype> &y,                                     int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget);
-int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, Vector<SparseVector<gentype> > &x, const Vector<gentype> &y, const Vector<gentype> &sigmaweight, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget);
+int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, Vector<SparseVector<gentype>> &x, const Vector<gentype> &y,                                     int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget);
+int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, Vector<SparseVector<gentype>> &x, const Vector<gentype> &y, const Vector<gentype> &sigmaweight, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget);
 int addtrainingdata(ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread, const std::string &savefile);
 
-int loadFileForHillClimb(const ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax,            int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread, Vector<SparseVector<gentype> > &xtest, Vector<gentype> &ytest);
+int loadFileForHillClimb(const ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax,            int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread, Vector<SparseVector<gentype>> &xtest, Vector<gentype> &ytest);
 int loadFileAndTest(     const ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread,                                        Vector<gentype> &ytest, Vector<gentype> &ytestresh, Vector<gentype> &ytestresg, Vector<gentype> &gvarres, int dovartest, Vector<int> &outkernind, int savex = 0);
 int loadFileAndSave(     const ML_Base &mlbase, const SparseVector<gentype> &xtemp, const std::string &trainfile, int reverse, int ignoreStart, int imax, int ibase, int coercetosingle, int coercefromsingle, const gentype &fromsingletarget, int binaryRelabel, int singleDrop, int uselinesvector, Vector<int> &linesread,                                        Vector<gentype> &ytest, Vector<gentype> &ytestresh, Vector<gentype> &ytestresg, Vector<gentype> &gvarres, int dovartest, Vector<int> &outkernind, const std::string &savefile);
 
@@ -96,7 +96,7 @@ int addbasisdataVV(ML_Base &dest, const std::string &fname);
 // Writes (but never over-writes) parts of x with contents of xtemp
 
 SparseVector<gentype> &addtemptox(SparseVector<gentype> &x, const SparseVector<gentype> &xtemp);
-Vector<SparseVector<gentype> > &addtemptox(Vector<SparseVector<gentype> > &x, const SparseVector<gentype> &xtemp);
+Vector<SparseVector<gentype>> &addtemptox(Vector<SparseVector<gentype>> &x, const SparseVector<gentype> &xtemp);
 
 
 

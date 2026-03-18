@@ -200,6 +200,7 @@ class d_anion
     d_anion &simplify(void);
     d_anion &setorder(int neworder);
     d_anion &resize(int newdim);
+    d_anion &negate(void) { if ( is_im ) { (*value_inf).negate(); (*value_0).negate(); } else { value_real *= -1; } return *this; }
 
     /*
        String casting operator
