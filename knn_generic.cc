@@ -171,7 +171,7 @@ int KNN_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentyp
     return 1;
 }
 
-int KNN_Generic::addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int KNN_Generic::addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     int j;
 
@@ -200,7 +200,7 @@ int KNN_Generic::addTrainingVector (int i, const Vector<gentype> &y, const Vecto
     return 1;
 }
 
-int KNN_Generic::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int KNN_Generic::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     int j;
 
@@ -741,15 +741,15 @@ int KNN_Generic::ggTrainingVectorInt(Vector<double> &resg, int j, int retaltg, g
     {
         effkay = distcalcTrainingVector(effkay,iiscr,kdistscr,j,Nnz);
 
-        retVector<int>             tmpva;
-        retVector<int>             tmpvb;
-        retVector<Vector<double> > tmpvc;
-        retVector<double>          tmpvd;
-        retVector<int>             tmpve;
-        retVector<Vector<double> > tmpvf;
+        retVector<int>            tmpva;
+        retVector<int>            tmpvb;
+        retVector<Vector<double>> tmpvc;
+        retVector<double>         tmpvd;
+        retVector<int>            tmpve;
+        retVector<Vector<double>> tmpvf;
 
-        const Vector<Vector<double> > &yk = yV()(iiscr(0,1,effkay-1,tmpva),tmpvc);
-        const Vector<Vector<double> > &ykp = ypV()(iiscr(0,1,effkay-1,tmpve),tmpvf);
+        const Vector<Vector<double>> &yk = yV()(iiscr(0,1,effkay-1,tmpva),tmpvc);
+        const Vector<Vector<double>> &ykp = ypV()(iiscr(0,1,effkay-1,tmpve),tmpvf);
         const Vector<double> &kdistk = kdistscr(iiscr(0,1,effkay-1,tmpvb),tmpvd);
 
         // knext is the next distance after k set, or final in kset plus a

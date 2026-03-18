@@ -98,8 +98,8 @@ public:
     virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
@@ -118,15 +118,15 @@ public:
     virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
     virtual int gh(gentype &resh, gentype &resg, const SparseVector<gentype> &x, int retaltg = 0, const vecInfo *xinf = nullptr, gentype ***pxyprodx = nullptr) const override { return ML_Base::gh(resh,resg,x,retaltg,xinf,pxyprodx); }
 
-    virtual void dgTrainingVector(Vector<gentype>         &res, gentype        &resn, int i) const override;
-    virtual void dgTrainingVector(Vector<double>          &res, double         &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
-    virtual void dgTrainingVector(Vector<Vector<double> > &res, Vector<double> &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
+    virtual void dgTrainingVector(Vector<gentype>        &res, gentype        &resn, int i) const override;
+    virtual void dgTrainingVector(Vector<double>         &res, double         &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
+    virtual void dgTrainingVector(Vector<Vector<double>> &res, Vector<double> &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
     virtual void dgTrainingVector(Vector<d_anion>         &res, d_anion        &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
 
-    virtual void dgTrainingVector(Vector<gentype>         &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
-    virtual void dgTrainingVector(Vector<double>          &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
-    virtual void dgTrainingVector(Vector<Vector<double> > &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
-    virtual void dgTrainingVector(Vector<d_anion>         &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<gentype>        &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<double>         &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<Vector<double>> &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<d_anion>        &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
 
     // ================================================================
     //     KNN Specific functions
@@ -182,7 +182,7 @@ protected:
         return;
     }
 
-    virtual void hfn(Vector<double> &res, const Vector<Vector<double> > &yk, const Vector<double> &kdistsq, const Vector<double> &weights, int Nnz, int effkay) const
+    virtual void hfn(Vector<double> &res, const Vector<Vector<double>> &yk, const Vector<double> &kdistsq, const Vector<double> &weights, int Nnz, int effkay) const
     {
         (void) res;
         (void) yk;

@@ -172,8 +172,9 @@ errstream() << "Sample scalarisation model... \n";
         //int sampleType = 7;       // alpha from uniform distribution
         int xsampleType = 0;      // True random grid
         double sampleScale = 1.0; // No scaling for now
+        double diagperturb = 0.0; // no diagonal perturb for now
 
-        (*randscal).setSampleMode(sampleTSmode,ymin,ymax,Nsamp(),sampSplit,sampleType,xsampleType,sampleScale,sampSlack());
+        (*randscal).setSampleMode(sampleTSmode,ymin,ymax,Nsamp(),sampSplit,sampleType,xsampleType,sampleScale,sampSlack(),diagperturb);
 
         SparseVector<gentype> ymintest(ymin);
         SparseVector<gentype> ymaxtest(ymax);

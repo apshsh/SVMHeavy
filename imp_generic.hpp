@@ -74,7 +74,7 @@ public:
 
     virtual void assign       (const ML_Base &src, int onlySemiCopy = 0) override;
     virtual void semicopy     (const ML_Base &src)                       override;
-    virtual void qswapinternal(ML_Base &b)                               override;
+    virtual void qswapinternal(      ML_Base &b)                         override;
 
     virtual int getparam (int ind, gentype         &val, const gentype         &xa, int ia, const gentype         &xb, int ib, charptr &desc) const override;
     virtual int egetparam(int ind, Vector<gentype> &val, const Vector<gentype> &xa, int ia, const Vector<gentype> &xb, int ib               ) const override;
@@ -100,20 +100,20 @@ public:
     virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int removeTrainingVector(int i                                      ) override { SparseVector<gentype> x; gentype y; return removeTrainingVector(i,y,x); }
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
     virtual int removeTrainingVector(int i, int num                             ) override;
 
-    virtual int setx(int                i, const SparseVector<gentype>          &x) override;
-    virtual int setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &x) override;
-    virtual int setx(                      const Vector<SparseVector<gentype> > &x) override;
+    virtual int setx(int                i, const SparseVector<gentype>         &x) override;
+    virtual int setx(const Vector<int> &i, const Vector<SparseVector<gentype>> &x) override;
+    virtual int setx(                      const Vector<SparseVector<gentype>> &x) override;
 
-    virtual int qswapx(int                i, SparseVector<gentype>          &x, int dontupdate = 0) override;
-    virtual int qswapx(const Vector<int> &i, Vector<SparseVector<gentype> > &x, int dontupdate = 0) override;
-    virtual int qswapx(                      Vector<SparseVector<gentype> > &x, int dontupdate = 0) override;
+    virtual int qswapx(int                i, SparseVector<gentype>         &x, int dontupdate = 0) override;
+    virtual int qswapx(const Vector<int> &i, Vector<SparseVector<gentype>> &x, int dontupdate = 0) override;
+    virtual int qswapx(                      Vector<SparseVector<gentype>> &x, int dontupdate = 0) override;
 
     virtual int setd(int                i, int                nd) override;
     virtual int setd(const Vector<int> &i, const Vector<int> &nd) override;
@@ -121,7 +121,7 @@ public:
 
     // General modification and autoset functions
 
-    virtual int reset(void)   override { untrain(); return 1;       }
+    virtual int reset  (void) override { untrain(); return 1;     }
     virtual int restart(void) override { return getQ().restart(); }
 
     // Training functions:

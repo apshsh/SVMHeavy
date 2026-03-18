@@ -107,7 +107,7 @@ int IMP_Generic::qaddTrainingVector(int i, const gentype &y, SparseVector<gentyp
     return 1;
 }
 
-int IMP_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int IMP_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( y.size() == x.size() );
     NiceAssert( y.size() == Cweigh.size() );
@@ -122,7 +122,7 @@ int IMP_Generic::addTrainingVector(int i, const Vector<gentype> &y, const Vector
     return 1;
 }
 
-int IMP_Generic::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int IMP_Generic::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( y.size() == x.size() );
     NiceAssert( y.size() == Cweigh.size() );
@@ -161,7 +161,7 @@ int IMP_Generic::setx(int i, const SparseVector<gentype> &x)
     return 1;
 }
 
-int IMP_Generic::setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &x)
+int IMP_Generic::setx(const Vector<int> &i, const Vector<SparseVector<gentype>> &x)
 {
     untrain();
     getQ().setx(i,x);
@@ -169,7 +169,7 @@ int IMP_Generic::setx(const Vector<int> &i, const Vector<SparseVector<gentype> >
     return 1;
 }
 
-int IMP_Generic::setx(const Vector<SparseVector<gentype> > &x)
+int IMP_Generic::setx(const Vector<SparseVector<gentype>> &x)
 {
     untrain();
     getQ().setx(x);
@@ -185,7 +185,7 @@ int IMP_Generic::qswapx(int i, SparseVector<gentype> &x, int dontupdate)
     return 1;
 }
 
-int IMP_Generic::qswapx(const Vector<int> &i, Vector<SparseVector<gentype> > &x, int dontupdate)
+int IMP_Generic::qswapx(const Vector<int> &i, Vector<SparseVector<gentype>> &x, int dontupdate)
 {
     untrain();
     getQ().qswapx(i,x,dontupdate);
@@ -193,7 +193,7 @@ int IMP_Generic::qswapx(const Vector<int> &i, Vector<SparseVector<gentype> > &x,
     return 1;
 }
 
-int IMP_Generic::qswapx(Vector<SparseVector<gentype> > &x, int dontupdate)
+int IMP_Generic::qswapx(Vector<SparseVector<gentype>> &x, int dontupdate)
 {
     untrain();
     getQ().qswapx(x,dontupdate);

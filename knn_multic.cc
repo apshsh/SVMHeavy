@@ -125,7 +125,7 @@ int KNN_MultiC::qaddTrainingVector(int i, const gentype &y,       SparseVector<g
     return 1;
 }
 
-int KNN_MultiC::addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int KNN_MultiC::addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     if ( y.size() )
     {
@@ -159,7 +159,7 @@ int KNN_MultiC::addTrainingVector (int i, const Vector<gentype> &y, const Vector
     return 1;
 }
 
-int KNN_MultiC::qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int KNN_MultiC::qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     if ( y.size() )
     {

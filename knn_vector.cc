@@ -142,7 +142,7 @@ int KNN_Vector::qaddTrainingVector(int i, const gentype &_y,       SparseVector<
     return 1;
 }
 
-int KNN_Vector::addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int KNN_Vector::addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( y.size() == x.size() );
     NiceAssert( y.size() == Cweigh.size() );
@@ -161,7 +161,7 @@ int KNN_Vector::addTrainingVector (int i, const Vector<gentype> &y, const Vector
     return 1;
 }
 
-int KNN_Vector::qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int KNN_Vector::qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( y.size() == x.size() );
     NiceAssert( y.size() == Cweigh.size() );
@@ -305,7 +305,7 @@ void KNN_Vector::hfn(gentype &res, const Vector<gentype> &yk, const Vector<doubl
     return;
 }
 
-void KNN_Vector::hfn(Vector<double> &res, const Vector<Vector<double> > &yk, const Vector<double> &kdistsq, const Vector<double> &weights, int Nnz, int effkay) const
+void KNN_Vector::hfn(Vector<double> &res, const Vector<Vector<double>> &yk, const Vector<double> &kdistsq, const Vector<double> &weights, int Nnz, int effkay) const
 {
     (void) Nnz;
     (void) kdistsq;

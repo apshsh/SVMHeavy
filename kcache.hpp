@@ -398,14 +398,14 @@ const Vector<T> &Kcache_crow(int numi, const void *owner, retVector<T> &);
 template <class T>
 const T &Kcache_celm(int numi, int numj, const void *owner, retVector<T> &);
 
-const Vector<double >         &Kcache_crow_double (int numi, const void *owner, retVector<double>          &tmp);
-const Vector<gentype>         &Kcache_crow_gentype(int numi, const void *owner, retVector<gentype>         &tmp);
-const Vector<Matrix<double> > &Kcache_crow_matrix (int numi, const void *owner, retVector<Matrix<double> > &tmp);
+const Vector<double >        &Kcache_crow_double (int numi, const void *owner, retVector<double>         &tmp);
+const Vector<gentype>        &Kcache_crow_gentype(int numi, const void *owner, retVector<gentype>        &tmp);
+const Vector<Matrix<double>> &Kcache_crow_matrix (int numi, const void *owner, retVector<Matrix<double>> &tmp);
 
-      double          Kcache_celm_v_double(int numi, int numj, const void *owner, retVector<double>          &);
-const double         &Kcache_celm_double  (int numi, int numj, const void *owner, retVector<double>          &);
-const gentype        &Kcache_celm_gentype (int numi, int numj, const void *owner, retVector<gentype>         &);
-const Matrix<double> &Kcache_celm_matrix  (int numi, int numj, const void *owner, retVector<Matrix<double> > &);
+      double          Kcache_celm_v_double(int numi, int numj, const void *owner, retVector<double>         &);
+const double         &Kcache_celm_double  (int numi, int numj, const void *owner, retVector<double>         &);
+const gentype        &Kcache_celm_gentype (int numi, int numj, const void *owner, retVector<gentype>        &);
+const Matrix<double> &Kcache_celm_matrix  (int numi, int numj, const void *owner, retVector<Matrix<double>> &);
 
 
 

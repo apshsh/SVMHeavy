@@ -24,9 +24,9 @@ const Vector<gentype> &Kcache_crow_gentype(int numi, const void *owner, retVecto
     return typed_owner->getrow(numi,tmp);
 }
 
-const Vector<Matrix<double> > &Kcache_crow_matrix(int numi, const void *owner, retVector<Matrix<double> > &tmp)
+const Vector<Matrix<double>> &Kcache_crow_matrix(int numi, const void *owner, retVector<Matrix<double>> &tmp)
 {
-    Kcache<Matrix<double> > *typed_owner = (Kcache<Matrix<double> > *) owner;
+    Kcache<Matrix<double>> *typed_owner = (Kcache<Matrix<double>> *) owner;
 
     return typed_owner->getrow(numi,tmp);
 }
@@ -52,9 +52,9 @@ const gentype &Kcache_celm_gentype(int numi, int numj, const void *owner, retVec
     return typed_owner->getval(numi,numj,tmp);
 }
 
-const Matrix<double> &Kcache_celm_matrix(int numi, int numj, const void *owner, retVector<Matrix<double> > &tmp)
+const Matrix<double> &Kcache_celm_matrix(int numi, int numj, const void *owner, retVector<Matrix<double>> &tmp)
 {
-    Kcache<Matrix<double> > *typed_owner = (Kcache<Matrix<double> > *) owner;
+    Kcache<Matrix<double>> *typed_owner = (Kcache<Matrix<double>> *) owner;
 
     return typed_owner->getval(numi,numj,tmp);
 }
