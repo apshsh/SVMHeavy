@@ -75,20 +75,21 @@ public:
 
     // Sampling stuff
 
-    virtual int setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double sampScale, double sampSlack = 0) override
+    virtual int setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double sampScale, double sampSlack = 0, double diagperturb = 0) override
     {
-        localygood    = 0;
-        locsampleMode = nv;
-        locxmin       = xmin;
-        locxmax       = xmax;
-        locxsampType  = xsampType;
-        locNsamp      = Nsamp;
-        locsampSplit  = sampSplit;
-        locsampType   = sampType;
-        locsampScale  = sampScale;
-        locsampSlack  = sampSlack;
+        localygood     = 0;
+        locsampleMode  = nv;
+        locxmin        = xmin;
+        locxmax        = xmax;
+        locxsampType   = xsampType;
+        locNsamp       = Nsamp;
+        locsampSplit   = sampSplit;
+        locsampType    = sampType;
+        locsampScale   = sampScale;
+        locsampSlack   = sampSlack;
+        locdiagperturb = diagperturb;
 
-        return BLK_Generic::setSampleMode(nv,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack);
+        return BLK_Generic::setSampleMode(nv,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack,diagperturb);
     }
 
     // Trips for y update
@@ -98,10 +99,10 @@ public:
 
     // This is really only used in one place - see globalopt.h
 
-    virtual const Vector<gentype>         &y (void) const override;
-    virtual const Vector<double>          &yR(void) const override { static thread_local Vector<double>          dummy; NiceThrow("yR not available in blk_bernst"); return dummy; }
-    virtual const Vector<d_anion>         &yA(void) const override { static thread_local Vector<d_anion>         dummy; NiceThrow("yA not available in blk_bernst"); return dummy; }
-    virtual const Vector<Vector<double> > &yV(void) const override { static thread_local Vector<Vector<double> > dummy; NiceThrow("yV not available in blk_bernst"); return dummy; }
+    virtual const Vector<gentype>        &y (void) const override;
+    virtual const Vector<double>         &yR(void) const override { static thread_local Vector<double>         dummy; NiceThrow("yR not available in blk_bernst"); return dummy; }
+    virtual const Vector<d_anion>        &yA(void) const override { static thread_local Vector<d_anion>        dummy; NiceThrow("yA not available in blk_bernst"); return dummy; }
+    virtual const Vector<Vector<double>> &yV(void) const override { static thread_local Vector<Vector<double>> dummy; NiceThrow("yV not available in blk_bernst"); return dummy; }
 
 private:
 
@@ -121,6 +122,7 @@ private:
     int locsampType;
     double locsampScale;
     double locsampSlack;
+    double locdiagperturb;
 };
 
 inline double norm2(const BLK_Bernst &a);
@@ -142,17 +144,18 @@ inline void BLK_Bernst::qswapinternal(ML_Base &bb)
 
     BLK_Bernst &b = dynamic_cast<BLK_Bernst &>(bb.getML());
 
-    qswap(localy       ,b.localy       );
-    qswap(localygood   ,b.localygood   );
-    qswap(locsampleMode,b.locsampleMode);
-    qswap(locxmin      ,b.locxmin      );
-    qswap(locxmax      ,b.locxmax      );
-    qswap(locxsampType ,b.locxsampType );
-    qswap(locNsamp     ,b.locNsamp     );
-    qswap(locsampSplit ,b.locsampSplit );
-    qswap(locsampType  ,b.locsampType  );
-    qswap(locsampScale ,b.locsampScale );
-    qswap(locsampSlack ,b.locsampSlack );
+    qswap(localy        ,b.localy        );
+    qswap(localygood    ,b.localygood    );
+    qswap(locsampleMode ,b.locsampleMode );
+    qswap(locxmin       ,b.locxmin       );
+    qswap(locxmax       ,b.locxmax       );
+    qswap(locxsampType  ,b.locxsampType  );
+    qswap(locNsamp      ,b.locNsamp      );
+    qswap(locsampSplit  ,b.locsampSplit  );
+    qswap(locsampType   ,b.locsampType   );
+    qswap(locsampScale  ,b.locsampScale  );
+    qswap(locsampSlack  ,b.locsampSlack  );
+    qswap(locdiagperturb,b.locdiagperturb);
 
     BLK_Generic::qswapinternal(b);
 
@@ -167,17 +170,18 @@ inline void BLK_Bernst::semicopy(const ML_Base &bb)
 
     BLK_Generic::semicopy(b);
 
-    localy        = b.localy;
-    localygood    = b.localygood;
-    locsampleMode = b.locsampleMode;
-    locxmin       = b.locxmin;
-    locxmax       = b.locxmax;
-    locxsampType  = b.locxsampType;
-    locNsamp      = b.locNsamp;
-    locsampSplit  = b.locsampSplit;
-    locsampType   = b.locsampType;
-    locsampScale  = b.locsampScale;
-    locsampSlack  = b.locsampSlack;
+    localy         = b.localy;
+    localygood     = b.localygood;
+    locsampleMode  = b.locsampleMode;
+    locxmin        = b.locxmin;
+    locxmax        = b.locxmax;
+    locxsampType   = b.locxsampType;
+    locNsamp       = b.locNsamp;
+    locsampSplit   = b.locsampSplit;
+    locsampType    = b.locsampType;
+    locsampScale   = b.locsampScale;
+    locsampSlack   = b.locsampSlack;
+    locdiagperturb = b.locdiagperturb;
 
     return;
 }
@@ -190,17 +194,18 @@ inline void BLK_Bernst::assign(const ML_Base &bb, int onlySemiCopy)
 
     BLK_Generic::assign(src,onlySemiCopy);
 
-    localy        = src.localy;
-    localygood    = src.localygood;
-    locsampleMode = src.locsampleMode;
-    locxmin       = src.locxmin;
-    locxmax       = src.locxmax;
-    locxsampType  = src.locxsampType;
-    locNsamp      = src.locNsamp;
-    locsampSplit  = src.locsampSplit;
-    locsampType   = src.locsampType;
-    locsampScale  = src.locsampScale;
-    locsampSlack  = src.locsampSlack;
+    localy         = src.localy;
+    localygood     = src.localygood;
+    locsampleMode  = src.locsampleMode;
+    locxmin        = src.locxmin;
+    locxmax        = src.locxmax;
+    locxsampType   = src.locxsampType;
+    locNsamp       = src.locNsamp;
+    locsampSplit   = src.locsampSplit;
+    locsampType    = src.locsampType;
+    locsampScale   = src.locsampScale;
+    locsampSlack   = src.locsampSlack;
+    locdiagperturb = src.locdiagperturb;
 
     return;
 }

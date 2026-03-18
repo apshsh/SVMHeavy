@@ -79,6 +79,7 @@ public:
     //          ~ Bogunovic, Misspecified GP Bandit Optim., Lemma 1
     // REMOVED evaluse: 0 = normal operation
     // REMOVED          1 = user has option to change x and/or y
+    // randsearch: randomly generate x, randomly generate t in U(0,1), use x if t <= a(x)
     // sigmuseparate: for multi-recommendation by default both sigma and by
     //         are approximated by the same ML.  Alternatively you can do
     //         them separately: mu is updated for each batch, and sigma
@@ -119,7 +120,8 @@ public:
     //
     // h: h in level-set optimization
     //
-    // cgtmethod: 0 - calculate probability of c(x)>=0, scale acquisition function by this (default)
+    // cgtmethod: -1: don't enforce constraint
+    //            0 - calculate probability of c(x)>=0, scale acquisition function by this (default)
     //            1 - build c(x) into mean/variance calculation before calculating acquisition function
     //            2 - as per 1, but also add beta.var_c(x)
     //            3 - as per 1, but also add sgn(beta).var_c(x)
@@ -129,20 +131,24 @@ public:
     // cgtmargin: margin for cgt pass used in acquisiton function
     // cgtcertain: beta confidence factor for cgtmethod == 6
     //
-    // ztol:   zero tolerance (used when assessing sigma > 0, sigma = 0)
-    // delta:  used by GP-UCB algorithm (0.1 by default)
-    // nu:     used by GP-UCB algorithm (almost always 1)
-    // modD:   used by GP-UCB {p} finite, size of search space set (-1 to infer from gridopt, if available - default).
-    // a,b,r:  used by GP-UCB {p} infinite, see Srinivas theorem 2.
-    // p:      used by GP-UCB p {in}finite, see Srinivas appendix.  Basically
-    //         rather than set pi_t = (pi^2.t^2)/6 we3 set
-    //         pi_t = zeta(p) t^p, which satisfies all the relevant
-    //         requirements.  Srinivas considers the special case p = 2,
-    //         where we note that zeta(2) = (pi^2)/6.
-    // R:      scale factor used in TS (mode 12) (default 1)
-    // B:      if <= 0 then not used, otherwise this is the bound on ||f||_K^2
-    //         (default 1)
-    // zeta:   the additional exploration heuristic for EI (default 0.01)
+    // ztol:     zero tolerance (used when assessing sigma > 0, sigma = 0)
+    // delta:    used by GP-UCB algorithm (0.1 by default)
+    // numain:   used by GP-UCB algorithm (almost always 1)
+    // nucgt:    used by GP-UCB algorithm (almost always 1)
+    // nuvalexp: used by GP-UCB algorithm (almost always 1)
+    // modD:     used by GP-UCB {p} finite, size of search space set (-1 to infer from gridopt, if available - default).
+    // a,b,r:    used by GP-UCB {p} infinite, see Srinivas theorem 2.
+    // p:        used by GP-UCB p {in}finite, see Srinivas appendix.  Basically
+    //           rather than set pi_t = (pi^2.t^2)/6 we3 set
+    //           pi_t = zeta(p) t^p, which satisfies all the relevant
+    //           requirements.  Srinivas considers the special case p = 2,
+    //           where we note that zeta(2) = (pi^2)/6.
+    // R:        scale factor used in TS (mode 12) (default 1)
+    // B:        if <= 0 then not used, otherwise this is the bound on ||f||_K^2
+    //           (default 1)
+    // zeta:     the additional exploration heuristic for EI (default 0.01)
+    // gamma:    additional variance (added to actual variance) for model (default 0)
+    // gammacgt: additional variance (added to actual variance) for constraint model (default 0)
     //
     // impmeasu: improvement measure function.  If set will be used instead
     //           of EI/PI/whatever.
@@ -208,6 +214,13 @@ public:
     // cgtVarScale: scale the posterior constraint variance by this. For example setting
     //              this less than 1 will make the algorithm explore closer to the
     //              constraint boundary if using probability of feasibility.
+    //
+    // norepeats: 0 just use BO
+    //            1 prevent repeated observations of x using comparison and nan return on the inner loop
+    // norepdist: when working out repeats, a repeat is a point x such that x == xi ||x-xi||_2^2 < norepdist
+    //
+    // blockdist: if the user returns f(x) = none, the point is stored and skipped (like norepeats)
+    //            if ||x-xi||_2^2 < blockdist
     //
     // Usage eg from Kandasamy with budget 100: ./svmheavyv7.exe -L res100
     // sigma value:            -gmd 0.5/14
@@ -322,8 +335,11 @@ public:
 
     int    acq;
     int    acqcgt;
+    double cgtscale;
+    int    acqvalexp;
     int    intrinbatch;
     int    intrinbatchmethod;
+    int    randsearch;
     //int    evaluse;
     //int    sigmuseparate;
     int    startpoints;
@@ -341,11 +357,23 @@ public:
     double h;
     double hcgt;
     double lseeps;
+    int    norepeats;
+    double norepdist;
+    double blockdist;
+    double cgtepsgreedypof; // p(c(x)>=0) -> (1-eps)p(c(x)>=0) + eps      (epsilon greedy)
+    double tailweight; // set >0 if you want negative EI to discourage exploring backwards
+
+    int maxresamp; // max resamples if DIRect fails in flatland in TS case
 
     double ztol;
     double delta;
     double zeta;
-    double nu;
+    double gamma;
+    double gammacgt;
+    int gammaheuristic;
+    double numain;
+    double nucgt;
+    double nuvalexp;
     double modD;
     double a;
     double b;
@@ -355,6 +383,7 @@ public:
     double B;
     gentype betafn;
     gentype betafncgt;
+    gentype betafnvalexp;
 
     IMP_Generic    *impmeasu;
     ML_Base        *direcpre;
@@ -416,8 +445,11 @@ public:
 
         acq               = 1;
         acqcgt            = 22;
+        cgtscale          = 1;
+        acqvalexp         = 25;
         intrinbatch       = 1;
         intrinbatchmethod = 0;
+        randsearch        = 0;
         //evaluse           = 0;
         //sigmuseparate     = 0;
         startpoints       = -1; //5; //500; //10;
@@ -435,23 +467,35 @@ public:
         h                 = 0;
         hcgt              = 0;
         lseeps            = 0.01;
+        norepeats         = 0;
+        norepdist         = 0;
+        blockdist         = 0;
+        cgtepsgreedypof   = 0;
+        maxresamp         = 10;
+        tailweight        = 0;
 
-        ztol   = DEFAULT_BAYES_ZTOL;
-        delta  = DEFAULT_BAYES_DELTA;
-        zeta   = 0; //0.01; use true EI as default, even if it's a bit slow
-        nu     = DEFAULT_BAYES_NU;
-        modD   = -1; // this is entirely arbitrary and must be set by the user
-        a      = DEFAULT_BAYES_A; // a value
-        b      = DEFAULT_BAYES_B; // another value
-        r      = DEFAULT_BAYES_R; // This is basically the width of our search region in
+        ztol     = DEFAULT_BAYES_ZTOL;
+        delta    = DEFAULT_BAYES_DELTA;
+        zeta     = 0; //0.01; use true EI as default, even if it's a bit slow
+        gamma    = 0; //0.01; use true EI as default, even if it's a bit slow
+        gammacgt = 1e-6; //0.01; use true EI as default, even if it's a bit slow
+        gammaheuristic = 0;
+        numain   = DEFAULT_BAYES_NU;
+        nucgt    = DEFAULT_BAYES_NU;
+        nuvalexp = DEFAULT_BAYES_NU;
+        modD     = -1; // this is entirely arbitrary and must be set by the user
+        a        = DEFAULT_BAYES_A; // a value
+        b        = DEFAULT_BAYES_B; // another value
+        r        = DEFAULT_BAYES_R; // This is basically the width of our search region in
                                   // any given dimension.  Usually you would want to
                                   // normalise to 0->1, so 1 is correct.
-        p         = DEFAULT_BAYES_P;
-        betafn    = 0;
-        betafncgt = 0;
-        R         = 1;
-        //B         = 1; // small positive value or things get weird.
-        B         = -1; // use actual norm
+        p            = DEFAULT_BAYES_P;
+        betafn       = 0;
+        betafncgt    = 0;
+        betafnvalexp = 0;
+        R            = 1;
+        //B            = 1; // small positive value or things get weird.
+        B            = -1; // use actual norm
 
         numfids    = 0;
         dimfid     = 1;
@@ -504,8 +548,11 @@ public:
 
         acq               = src.acq;
         acqcgt            = src.acqcgt;
+        cgtscale          = src.cgtscale;
+        acqvalexp         = src.acqvalexp;
         intrinbatch       = src.intrinbatch;
         intrinbatchmethod = src.intrinbatchmethod;
+        randsearch        = src.randsearch;
         //evaluse           = src.evaluse;
         //sigmuseparate     = src.sigmuseparate;
         startpoints       = src.startpoints;
@@ -530,12 +577,23 @@ public:
         h                 = src.h;
         hcgt              = src.hcgt;
         lseeps            = src.lseeps;
+        norepeats         = src.norepeats;
+        norepdist         = src.norepdist;
+        blockdist         = src.blockdist;
+        cgtepsgreedypof   = src.cgtepsgreedypof;
         cgtVarScale       = src.cgtVarScale;
+        maxresamp         = src.maxresamp;
+        tailweight        = src.tailweight;
 
         ztol      = src.ztol;
         delta     = src.delta;
         zeta      = src.zeta;
-        nu        = src.nu;
+        gamma     = src.gamma;
+        gammacgt  = src.gammacgt;
+        gammaheuristic = src.gammaheuristic;
+        numain    = src.numain;
+        nucgt     = src.nucgt;
+        nuvalexp  = src.nuvalexp;
         modD      = src.modD;
         a         = src.a;
         b         = src.b;
@@ -543,6 +601,7 @@ public:
         p         = src.p;
         betafn    = src.betafn;
         betafncgt = src.betafncgt;
+        betafnvalexp = src.betafnvalexp;
         R         = src.R;
         B         = src.B;
 
@@ -688,14 +747,14 @@ public:
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<gentype> > &allxres,
-                      Vector<gentype>          &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype>          &allFres,
-                      Vector<gentype>          &allmres,
-                      Vector<gentype>          &allsres,
-                      Vector<double>           &s_score,
-                      Vector<int>              &is_feas,
+                      Vector<Vector<gentype>> &allxres,
+                      Vector<gentype>         &allfres,
+                      Vector<Vector<gentype>> &allcres,
+                      Vector<gentype>         &allFres,
+                      Vector<gentype>         &allmres,
+                      Vector<gentype>         &allsres,
+                      Vector<double>          &s_score,
+                      Vector<int>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -712,15 +771,15 @@ public:
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<Vector<gentype> > > &allxres,
-                      Vector<Vector<Vector<gentype> > > &allXres,
-                      Vector<Vector<gentype> >          &allfres,
-                      Vector<Vector<Vector<gentype> > > &allcres,
-                      Vector<Vector<gentype> >          &allFres,
-                      Vector<Vector<gentype> >          &allmres,
-                      Vector<Vector<gentype> >          &allsres,
-                      Vector<Vector<double> >           &s_score,
-                      Vector<Vector<int> >              &is_feas,
+                      Vector<Vector<Vector<gentype>>> &allxres,
+                      Vector<Vector<Vector<gentype>>> &allXres,
+                      Vector<Vector<gentype>>         &allfres,
+                      Vector<Vector<Vector<gentype>>> &allcres,
+                      Vector<Vector<gentype>>         &allFres,
+                      Vector<Vector<gentype>>         &allmres,
+                      Vector<Vector<gentype>>         &allsres,
+                      Vector<Vector<double>>          &s_score,
+                      Vector<Vector<int>>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,

@@ -24,13 +24,14 @@ BLK_Conect::BLK_Conect(int xisIndPrune) : BLK_Generic(xisIndPrune)
 {
     localygood = 0;
 
-    locsampleMode = 0;
-    locxsampType  = 3;
-    locNsamp      = -1;
-    locsampSplit  = 1;
-    locsampType   = 0;
-    locsampScale  = 1.0;
-    locsampSlack  = 0.0;
+    locsampleMode  = 0;
+    locxsampType   = 3;
+    locNsamp       = -1;
+    locsampSplit   = 1;
+    locsampType    = 0;
+    locsampScale   = 1.0;
+    locsampSlack   = 0.0;
+    locdiagperturb = 0.0;
 
     setaltx(nullptr);
 
@@ -340,7 +341,7 @@ int BLK_Conect::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype
     return res;
 }
 
-int BLK_Conect::addTrainingVector(int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int BLK_Conect::addTrainingVector(int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     int ii;
     int res = 0;
@@ -397,7 +398,7 @@ int BLK_Conect::addTrainingVector(int i, const Vector<gentype> &y, const Vector<
     return res;
 }
 
-int BLK_Conect::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int BLK_Conect::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     int ii;
     int res = 0;
@@ -520,7 +521,7 @@ int BLK_Conect::setx(int i, const SparseVector<gentype> &x)
     return res;
 }
 
-int BLK_Conect::setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &x)
+int BLK_Conect::setx(const Vector<int> &i, const Vector<SparseVector<gentype>> &x)
 {
     int ii;
     int res = 0;
@@ -535,7 +536,7 @@ int BLK_Conect::setx(const Vector<int> &i, const Vector<SparseVector<gentype> > 
     return res;
 }
 
-int BLK_Conect::setx(const Vector<SparseVector<gentype> > &x)
+int BLK_Conect::setx(const Vector<SparseVector<gentype>> &x)
 {
     int ii;
     int res = 0;
@@ -667,7 +668,7 @@ int BLK_Conect::sety(int i, const Vector<double> &z)
     return res;
 }
 
-int BLK_Conect::sety(const Vector<int> &i, const Vector<Vector<double> > &z)
+int BLK_Conect::sety(const Vector<int> &i, const Vector<Vector<double>> &z)
 {
     int ii;
     int res = 0;
@@ -684,7 +685,7 @@ int BLK_Conect::sety(const Vector<int> &i, const Vector<Vector<double> > &z)
     return res;
 }
 
-int BLK_Conect::sety(const Vector<Vector<double> > &z)
+int BLK_Conect::sety(const Vector<Vector<double>> &z)
 {
     int ii;
     int res = 0;
@@ -1817,7 +1818,7 @@ const Vector<gentype> &BLK_Conect::y(void) const
     {
         int ii,jj;
 
-        Vector<Vector<gentype> > &yall = localyparts;
+        Vector<Vector<gentype>> &yall = localyparts;
 
         if ( !localygood )
         {
@@ -1855,7 +1856,7 @@ const Vector<gentype> &BLK_Conect::y(void) const
             {
                 // Generate x grid only if required.
 
-                Vector<SparseVector<gentype> > xgrid;
+                Vector<SparseVector<gentype>> xgrid;
                 static thread_local GPR_Generic sampler;
                 sampler.genSampleGrid(xgrid,locxmin,locxmax,locNsamp,locsampSplit,locxsampType,locsampSlack);
 
@@ -2322,7 +2323,7 @@ void BLK_Conect::stabProbTrainingVector(double  &res, int i, int p, double pnrm,
 
 void BLK_Conect::dgTrainingVector(Vector<gentype> &res, gentype &resn, int i) const
 {
-    Vector<Vector<gentype> > vecres(numReps());
+    Vector<Vector<gentype>> vecres(numReps());
     Vector<gentype> vecresn(numReps());
 
     int ii;
@@ -2345,7 +2346,7 @@ void BLK_Conect::dgTrainingVector(Vector<gentype> &res, gentype &resn, int i) co
 
 void BLK_Conect::dgTrainingVector(Vector<gentype> &res, const Vector<int> &i) const
 {
-    Vector<Vector<gentype> > vecres(numReps());
+    Vector<Vector<gentype>> vecres(numReps());
 
     int ii;
 
@@ -2365,7 +2366,7 @@ void BLK_Conect::dgTrainingVector(Vector<gentype> &res, const Vector<int> &i) co
 
 void BLK_Conect::dg(Vector<gentype> &res, gentype &resn, const SparseVector<gentype> &x, const vecInfo *xinf) const
 {
-    Vector<Vector<gentype> > vecres(numReps());
+    Vector<Vector<gentype>> vecres(numReps());
     Vector<gentype> vecresn(numReps());
 
     int ii;
@@ -2388,7 +2389,7 @@ void BLK_Conect::dg(Vector<gentype> &res, gentype &resn, const SparseVector<gent
 
 void BLK_Conect::dg(Vector<double> &res, double &resn, const SparseVector<gentype> &x, const vecInfo *xinf) const
 {
-    Vector<Vector<double> > vecres(numReps());
+    Vector<Vector<double>> vecres(numReps());
     Vector<double> vecresn(numReps());
 
     int ii;
@@ -2409,10 +2410,10 @@ void BLK_Conect::dg(Vector<double> &res, double &resn, const SparseVector<gentyp
     return;
 }
 
-void BLK_Conect::dg(Vector<Vector<double> > &res, Vector<double> &resn, const SparseVector<gentype> &x, const vecInfo *xinf) const
+void BLK_Conect::dg(Vector<Vector<double>> &res, Vector<double> &resn, const SparseVector<gentype> &x, const vecInfo *xinf) const
 {
-    Vector<Vector<Vector<double> > > vecres(numReps());
-    Vector<Vector<double> > vecresn(numReps());
+    Vector<Vector<Vector<double>>> vecres(numReps());
+    Vector<Vector<double>> vecresn(numReps());
 
     int ii;
 
@@ -2434,7 +2435,7 @@ void BLK_Conect::dg(Vector<Vector<double> > &res, Vector<double> &resn, const Sp
 
 void BLK_Conect::dgX(Vector<gentype> &resx, const SparseVector<gentype> &x, const vecInfo *xinf) const
 {
-    Vector<Vector<gentype> > vecresx(numReps());
+    Vector<Vector<gentype>> vecresx(numReps());
 
     int ii;
 
@@ -2454,7 +2455,7 @@ void BLK_Conect::dgX(Vector<gentype> &resx, const SparseVector<gentype> &x, cons
 
 void BLK_Conect::dgX(Vector<double> &resx, const SparseVector<gentype> &x, const vecInfo *xinf) const
 {
-    Vector<Vector<double> > vecresx(numReps());
+    Vector<Vector<double>> vecresx(numReps());
 
     int ii;
 
@@ -2474,7 +2475,7 @@ void BLK_Conect::dgX(Vector<double> &resx, const SparseVector<gentype> &x, const
 
 void BLK_Conect::dg(Vector<d_anion> &res, d_anion &resn, const SparseVector<gentype> &x, const vecInfo *xinf) const
 {
-    Vector<Vector<d_anion> > vecres(numReps());
+    Vector<Vector<d_anion>> vecres(numReps());
     Vector<d_anion> vecresn(numReps());
 
     int ii;

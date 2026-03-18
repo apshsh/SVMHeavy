@@ -133,7 +133,7 @@ public:
 
     virtual double sparlvl(void) const override;
 
-    virtual const Vector<SparseVector<gentype> > &x          (void) const override { return getRepConst().x();           }
+    virtual const Vector<SparseVector<gentype>>  &x          (void) const override { return getRepConst().x();           }
 //    virtual const Vector<gentype>                &y          (void) const override { return getRepConst().y();           }
     virtual const Vector<vecInfo>                &xinfo      (void) const override { return getRepConst().xinfo();       }
     virtual const Vector<int>                    &xtang      (void) const override { return getRepConst().xtang();       }
@@ -166,20 +166,20 @@ public:
     virtual int addTrainingVector (int i, const gentype &y, const SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
     virtual int qaddTrainingVector(int i, const gentype &y,       SparseVector<gentype> &x, double Cweigh = 1, double epsweigh = 1, int d = 2) override;
 
-    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
-    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
+    virtual int qaddTrainingVector(int i, const Vector<gentype> &y,       Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh) override;
 
     virtual int removeTrainingVector(int i                                      ) override;
     virtual int removeTrainingVector(int i, gentype &y, SparseVector<gentype> &x) override;
     virtual int removeTrainingVector(int i, int num                             ) override;
 
-    virtual int setx(int                i, const SparseVector<gentype>          &x) override;
-    virtual int setx(const Vector<int> &i, const Vector<SparseVector<gentype> > &x) override;
-    virtual int setx(                      const Vector<SparseVector<gentype> > &x) override;
+    virtual int setx(int                i, const SparseVector<gentype>         &x) override;
+    virtual int setx(const Vector<int> &i, const Vector<SparseVector<gentype>> &x) override;
+    virtual int setx(                      const Vector<SparseVector<gentype>> &x) override;
 
-    virtual int qswapx(int                i, SparseVector<gentype>          &x, int dontupdate = 0) override { (void) i; (void) x; (void) dontupdate; NiceThrow("blk_connect: qswapx not implemented here."); return 1; }
-    virtual int qswapx(const Vector<int> &i, Vector<SparseVector<gentype> > &x, int dontupdate = 0) override { (void) i; (void) x; (void) dontupdate; NiceThrow("blk_connect: qswapx not implemented here."); return 1; }
-    virtual int qswapx(                      Vector<SparseVector<gentype> > &x, int dontupdate = 0) override {           (void) x; (void) dontupdate; NiceThrow("blk_connect: qswapx not implemented here."); return 1; }
+    virtual int qswapx(int                i, SparseVector<gentype>         &x, int dontupdate = 0) override { (void) i; (void) x; (void) dontupdate; NiceThrow("blk_connect: qswapx not implemented here."); return 1; }
+    virtual int qswapx(const Vector<int> &i, Vector<SparseVector<gentype>> &x, int dontupdate = 0) override { (void) i; (void) x; (void) dontupdate; NiceThrow("blk_connect: qswapx not implemented here."); return 1; }
+    virtual int qswapx(                      Vector<SparseVector<gentype>> &x, int dontupdate = 0) override {           (void) x; (void) dontupdate; NiceThrow("blk_connect: qswapx not implemented here."); return 1; }
 
     virtual int sety(int                i, const gentype         &y) override;
     virtual int sety(const Vector<int> &i, const Vector<gentype> &y) override;
@@ -189,9 +189,9 @@ public:
     virtual int sety(const Vector<int> &i, const Vector<double> &z) override;
     virtual int sety(                      const Vector<double> &z) override;
 
-    virtual int sety(int                i, const Vector<double>          &z) override;
-    virtual int sety(const Vector<int> &i, const Vector<Vector<double> > &z) override;
-    virtual int sety(                      const Vector<Vector<double> > &z) override;
+    virtual int sety(int                i, const Vector<double>         &z) override;
+    virtual int sety(const Vector<int> &i, const Vector<Vector<double>> &z) override;
+    virtual int sety(                      const Vector<Vector<double>> &z) override;
 
     virtual int sety(int                i, const d_anion         &z) override;
     virtual int sety(const Vector<int> &i, const Vector<d_anion> &z) override;
@@ -316,15 +316,15 @@ public:
     virtual int hh(gentype &resh,                int i,                  gentype ***pxyprodi = nullptr) const override { return BLK_Generic::hh(resh,     i,        pxyprodi); }
     virtual int gh(gentype &resh, gentype &resg, int i, int retaltg = 0, gentype ***pxyprodi = nullptr) const override;
 
-    virtual void dgTrainingVector(Vector<gentype>         &res, gentype        &resn, int i) const override;
-    virtual void dgTrainingVector(Vector<double>          &res, double         &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
-    virtual void dgTrainingVector(Vector<Vector<double> > &res, Vector<double> &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
-    virtual void dgTrainingVector(Vector<d_anion>         &res, d_anion        &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
+    virtual void dgTrainingVector(Vector<gentype>        &res, gentype        &resn, int i) const override;
+    virtual void dgTrainingVector(Vector<double>         &res, double         &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
+    virtual void dgTrainingVector(Vector<Vector<double>> &res, Vector<double> &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
+    virtual void dgTrainingVector(Vector<d_anion>        &res, d_anion        &resn, int i) const override { ML_Base::dgTrainingVector(res,resn,i); return; }
 
-    virtual void dgTrainingVector(Vector<gentype>         &res, const Vector<int> &i) const override;
-    virtual void dgTrainingVector(Vector<double>          &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
-    virtual void dgTrainingVector(Vector<Vector<double> > &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
-    virtual void dgTrainingVector(Vector<d_anion>         &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<gentype>        &res, const Vector<int> &i) const override;
+    virtual void dgTrainingVector(Vector<double>         &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<Vector<double>> &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
+    virtual void dgTrainingVector(Vector<d_anion>        &res, const Vector<int> &i) const override { ML_Base::dgTrainingVector(res,i); return; }
 
     virtual void stabProbTrainingVector(double  &res, int i, int p, double pnrm, int rot, double mu, double B) const override;
 
@@ -335,10 +335,10 @@ public:
     virtual void dgX(Vector<gentype> &resx, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override;
     virtual void dgX(Vector<double>  &resx, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override;
 
-    virtual void dg(Vector<gentype>         &res, gentype        &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override;
-    virtual void dg(Vector<double>          &res, double         &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override;
-    virtual void dg(Vector<Vector<double> > &res, Vector<double> &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override;
-    virtual void dg(Vector<d_anion>         &res, d_anion        &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override;
+    virtual void dg(Vector<gentype>        &res, gentype        &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override;
+    virtual void dg(Vector<double>         &res, double         &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override;
+    virtual void dg(Vector<Vector<double>> &res, Vector<double> &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override;
+    virtual void dg(Vector<d_anion>        &res, d_anion        &resn, const SparseVector<gentype> &x, const vecInfo *xinf = nullptr) const override;
 
     virtual void stabProb(double  &res, const SparseVector<gentype> &x, int p, double pnrm, int rot, double mu, double B) const override;
 
@@ -356,8 +356,8 @@ public:
     virtual int var(gentype &resv, gentype &resmu, int i,                                                           gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return cov(resv,resmu,i,i,pxyprodi,pxyprodi,pxyprodii); }
     virtual int var(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override { return cov(resv,resmu,xa,xa,xainf,xainf,pxyprodx,pxyprodx,pxyprodxx); }
 
-    virtual int covar(Matrix<gentype> &resv, const Vector<int>                    &i) const override { return ML_Base::covar(resv,i); }
-    virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype> > &x) const override { return ML_Base::covar(resv,x); }
+    virtual int covar(Matrix<gentype> &resv, const Vector<int>                   &i) const override { return ML_Base::covar(resv,i); }
+    virtual int covar(Matrix<gentype> &resv, const Vector<SparseVector<gentype>> &x) const override { return ML_Base::covar(resv,x); }
 
     virtual int noisevar(gentype &resv, gentype &resmu, int i,                           const SparseVector<gentype> &xvar, int u = -1,                                 gentype ***pxyprodi = nullptr, gentype **pxyprodii = nullptr) const override { return ML_Base::noisevar(resv,resmu,i,xvar,u,pxyprodi,pxyprodii); }
     virtual int noisevar(gentype &resv, gentype &resmu, const SparseVector<gentype> &xa, const SparseVector<gentype> &xvar, int u = -1, const vecInfo *xainf = nullptr, gentype ***pxyprodx = nullptr, gentype **pxyprodxx = nullptr) const override { return ML_Base::noisevar(resv,resmu,xa,xvar,u,xainf,pxyprodx,pxyprodxx); }
@@ -367,10 +367,10 @@ public:
 
     // Training data tracking functions:
 
-    virtual const Vector<int>          &indKey         (int u = -1) const override { return getRepConst().indKey(u);          }
-    virtual const Vector<int>          &indKeyCount    (int u = -1) const override { return getRepConst().indKeyCount(u);     }
-    virtual const Vector<int>          &dattypeKey     (int u = -1) const override { return getRepConst().dattypeKey(u);      }
-    virtual const Vector<Vector<int> > &dattypeKeyBreak(int u = -1) const override { return getRepConst().dattypeKeyBreak(u); }
+    virtual const Vector<int>         &indKey         (int u = -1) const override { return getRepConst().indKey(u);          }
+    virtual const Vector<int>         &indKeyCount    (int u = -1) const override { return getRepConst().indKeyCount(u);     }
+    virtual const Vector<int>         &dattypeKey     (int u = -1) const override { return getRepConst().dattypeKey(u);      }
+    virtual const Vector<Vector<int>> &dattypeKeyBreak(int u = -1) const override { return getRepConst().dattypeKeyBreak(u); }
 
     // Other functions
 
@@ -385,28 +385,29 @@ public:
 
     // Sampling stuff
 
-    virtual int setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double sampScale, double sampSlack = 0) override
+    virtual int setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double sampScale, double sampSlack = 0, double diagperturb = 0) override
     {
         int res = 0;
         int i;
 
-        localygood    = 0;
-        locsampleMode = nv;
-        locxmin       = xmin;
-        locxmax       = xmax;
-        locxsampType  = xsampType;
-        locNsamp      = Nsamp;
-        locsampSplit  = sampSplit;
-        locsampType   = sampType;
-        locsampScale  = sampScale;
-        locsampSlack  = sampSlack;
+        localygood     = 0;
+        locsampleMode  = nv;
+        locxmin        = xmin;
+        locxmax        = xmax;
+        locxsampType   = xsampType;
+        locNsamp       = Nsamp;
+        locsampSplit   = sampSplit;
+        locsampType    = sampType;
+        locsampScale   = sampScale;
+        locsampSlack   = sampSlack;
+        locdiagperturb = diagperturb;
 
         for ( i = 0 ; i < numReps() ; ++i )
         {
-            res |= getRep(i).setSampleMode(nv,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack);
+            res |= getRep(i).setSampleMode(nv,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack,diagperturb);
         }
 
-        return res | BLK_Generic::setSampleMode(nv,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack);
+        return res | BLK_Generic::setSampleMode(nv,xmin,xmax,Nsamp,sampSplit,sampType,xsampType,sampScale,sampSlack,diagperturb);
     }
 
 
@@ -441,7 +442,7 @@ private:
     ML_Base defbase;
     BLK_Consen combit;
 
-    mutable Vector<Vector<gentype> > localyparts;
+    mutable Vector<Vector<gentype>> localyparts;
     mutable Vector<gentype> localy;
     mutable int localygood; // 0 not good, 1 good, -1 individual components good, sum bad
 
@@ -506,6 +507,7 @@ private:
     int locsampType;
     double locsampScale;
     double locsampSlack;
+    double locdiagperturb;
 
 public:
     virtual void fastg(gentype &res) const override;
@@ -548,15 +550,16 @@ inline void BLK_Conect::qswapinternal(ML_Base &bb)
     qswap(localyparts,b.localyparts);
     qswap(localygood ,b.localygood );
 
-    qswap(locsampleMode,b.locsampleMode);
-    qswap(locxmin      ,b.locxmin      );
-    qswap(locxmax      ,b.locxmax      );
-    qswap(locxsampType ,b.locxsampType );
-    qswap(locNsamp     ,b.locNsamp     );
-    qswap(locsampSplit ,b.locsampSplit );
-    qswap(locsampType  ,b.locsampType  );
-    qswap(locsampScale ,b.locsampScale );
-    qswap(locsampSlack ,b.locsampSlack );
+    qswap(locsampleMode ,b.locsampleMode );
+    qswap(locxmin       ,b.locxmin       );
+    qswap(locxmax       ,b.locxmax       );
+    qswap(locxsampType  ,b.locxsampType  );
+    qswap(locNsamp      ,b.locNsamp      );
+    qswap(locsampSplit  ,b.locsampSplit  );
+    qswap(locsampType   ,b.locsampType   );
+    qswap(locsampScale  ,b.locsampScale  );
+    qswap(locsampSlack  ,b.locsampSlack  );
+    qswap(locdiagperturb,b.locdiagperturb);
 
     return;
 }
@@ -573,15 +576,16 @@ inline void BLK_Conect::semicopy(const ML_Base &bb)
     localy      = b.localy;
     localygood  = b.localygood;
 
-    locsampleMode = b.locsampleMode;
-    locxmin       = b.locxmin;
-    locxmax       = b.locxmax;
-    locxsampType  = b.locxsampType;
-    locNsamp      = b.locNsamp;
-    locsampSplit  = b.locsampSplit;
-    locsampType   = b.locsampType;
-    locsampScale  = b.locsampScale;
-    locsampSlack  = b.locsampSlack;
+    locsampleMode  = b.locsampleMode;
+    locxmin        = b.locxmin;
+    locxmax        = b.locxmax;
+    locxsampType   = b.locxsampType;
+    locNsamp       = b.locNsamp;
+    locsampSplit   = b.locsampSplit;
+    locsampType    = b.locsampType;
+    locsampScale   = b.locsampScale;
+    locsampSlack   = b.locsampSlack;
+    locdiagperturb = b.locdiagperturb;
 
     return;
 }
@@ -598,15 +602,16 @@ inline void BLK_Conect::assign(const ML_Base &bb, int onlySemiCopy)
     localy      = src.localy;
     localygood  = src.localygood;
 
-    locsampleMode = src.locsampleMode;
-    locxmin       = src.locxmin;
-    locxmax       = src.locxmax;
-    locxsampType  = src.locxsampType;
-    locNsamp      = src.locNsamp;
-    locsampSplit  = src.locsampSplit;
-    locsampType   = src.locsampType;
-    locsampScale  = src.locsampScale;
-    locsampSlack  = src.locsampSlack;
+    locsampleMode  = src.locsampleMode;
+    locxmin        = src.locxmin;
+    locxmax        = src.locxmax;
+    locxsampType   = src.locxsampType;
+    locNsamp       = src.locNsamp;
+    locsampSplit   = src.locsampSplit;
+    locsampType    = src.locsampType;
+    locsampScale   = src.locsampScale;
+    locsampSlack   = src.locsampSlack;
+    locdiagperturb = src.locdiagperturb;
 
     return;
 }

@@ -13,7 +13,7 @@
 
 double calcK(int samekern, const ML_Base &ml, const MercerKernel &distkern, int i, int j);
 
-int calcFuzzML(ML_Base &ml, const gentype &fuzzfn, const SparseVector<SparseVector<gentype> > &argvariables, const MercerKernel &distkern, double f, double m, double nu, int setCoreps)
+int calcFuzzML(ML_Base &ml, const gentype &fuzzfn, const SparseVector<SparseVector<gentype>> &argvariables, const MercerKernel &distkern, double f, double m, double nu, int setCoreps)
 {
     int res = 0;
     int i,j,k,l;
@@ -64,7 +64,7 @@ int calcFuzzML(ML_Base &ml, const gentype &fuzzfn, const SparseVector<SparseVect
 
     int N = ml.N();
     int NC = ml.numInternalClasses();
-    Vector<Vector<int> > indvec(NC);
+    Vector<Vector<int>> indvec(NC);
 
     for ( i = 0 ; i < NC ; ++i )
     {
@@ -217,7 +217,7 @@ int calcFuzzML(ML_Base &ml, const gentype &fuzzfn, const SparseVector<SparseVect
         }
     }
 
-    SparseVector<SparseVector<gentype> > locvar(argvariables);
+    SparseVector<SparseVector<gentype>> locvar(argvariables);
 
     (locvar("&",3))("&",0) = f;
     (locvar("&",3))("&",1) = m;

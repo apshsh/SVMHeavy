@@ -40,6 +40,7 @@
 // -101: invalid args
 // -102: forced stop
 // -200: no result found
+// -300: stuck in flatland (ie it's [1,1.05] everywhere)
 
 // Required by Bayesopt
 
@@ -47,7 +48,7 @@ class DIRectOptions;
 
 int directOpt(int dim,
               Vector<double> &xres,
-              gentype &fres,
+              gentype        &fres,
               const Vector<double> &xmin,
               const Vector<double> &xmax,
               double (*fn)(int n, const double *x, void *arg),
@@ -56,14 +57,12 @@ int directOpt(int dim,
               svmvolatile int &killSwitch,
               bool jitterbound = false);
 
-// jitterbound: I find that if you use this in the inner loop of
-// a BO for a particularly flat objective it tends to be a bit
-// repetitive and subsequently get stuck. Setting jitterbound to
-// true will slightly perturb the bounds (inwards, not outwards)
-// to inject some randomness into the process, hopefully preventing
-// the issue.
-
 #define JITTERVAR 1e-2
+
+// nan doesn't work reliably in optimized builds, so returning a value
+// >= this trigger value during optimization will have the same effect
+#define NANTRIGTEST 1e11
+#define NANTRIGSET  1e12
 
 
 class DIRectOptions : public GlobalOptions
@@ -88,8 +87,8 @@ public:
     {
         optname = "opt_DIRect";
 
-        maxits            = 400; //200;
-        maxevals          = 2000; //1000;
+        maxits            = 1000; //1000; //400; //200;
+        maxevals          = 10000; //5000; //2000; //1000; - actual maxevals is maxevals*dim
         eps               = 1e-4;
         //algorithm         = DIRECT_ORIGINAL;
         algorithm         = DIRECT_GABLONSKY; // always use this so the "hidden constraint" feature is accessible!
@@ -147,14 +146,14 @@ public:
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<gentype> > &allxres,
-                      Vector<gentype>          &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype>          &allFres,
-                      Vector<gentype>          &allmres,
-                      Vector<gentype>          &allsres,
-                      Vector<double>           &s_score,
-                      Vector<int>              &is_feas,
+                      Vector<Vector<gentype>> &allxres,
+                      Vector<gentype>         &allfres,
+                      Vector<Vector<gentype>> &allcres,
+                      Vector<gentype>         &allFres,
+                      Vector<gentype>         &allmres,
+                      Vector<gentype>         &allsres,
+                      Vector<double>          &s_score,
+                      Vector<int>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -171,15 +170,15 @@ public:
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<Vector<gentype> > > &allxres,
-                      Vector<Vector<Vector<gentype> > > &allXres,
-                      Vector<Vector<gentype> >          &allfres,
-                      Vector<Vector<Vector<gentype> > > &allcres,
-                      Vector<Vector<gentype> >          &allFres,
-                      Vector<Vector<gentype> >          &allmres,
-                      Vector<Vector<gentype> >          &allsres,
-                      Vector<Vector<double> >           &s_score,
-                      Vector<Vector<int> >              &is_feas,
+                      Vector<Vector<Vector<gentype>>> &allxres,
+                      Vector<Vector<Vector<gentype>>> &allXres,
+                      Vector<Vector<gentype>>         &allfres,
+                      Vector<Vector<Vector<gentype>>> &allcres,
+                      Vector<Vector<gentype>>         &allFres,
+                      Vector<Vector<gentype>>         &allmres,
+                      Vector<Vector<gentype>>         &allsres,
+                      Vector<Vector<double>>          &s_score,
+                      Vector<Vector<int>>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       const Vector<int> &distMode,

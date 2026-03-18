@@ -364,7 +364,7 @@ inline void qswap(FuncVector *&a, FuncVector *&b)
 
 Vector<gentype> &makeanRKHSVector(Vector<gentype> &res, const MercerKernel &kern, const SparseVector<gentype> &x, const gentype &a);
 Vector<gentype> &makeanRKHSVector(Vector<gentype> &res, const MercerKernel &kern, const SparseVector<gentype> &x, const gentype &a, int m);
-Vector<gentype> &makeanRKHSVector(Vector<gentype> &res, const MercerKernel &kern, const Vector<SparseVector<gentype> > &x, const Vector<vecInfo> &xinfo, const Vector<gentype> &a, int alphaasvec = 0, int m = 2);
+Vector<gentype> &makeanRKHSVector(Vector<gentype> &res, const MercerKernel &kern, const Vector<SparseVector<gentype>> &x, const Vector<vecInfo> &xinfo, const Vector<gentype> &a, int alphaasvec = 0, int m = 2);
 
 class RKHSVector : public FuncVector
 {
@@ -381,7 +381,7 @@ public:
     // Special constructor for ML_Base
 
     RKHSVector &resetit(const MercerKernel &_spKern,
-                        const Vector<SparseVector<gentype> > &_xx,
+                        const Vector<SparseVector<gentype>> &_xx,
                         const Vector<vecInfo> &_xxinfo,
                         const Vector<gentype> &_alpha,
                         int _alphaasvector = 0,
@@ -490,15 +490,15 @@ public:
     const Vector<gentype> &a(const Vector<int> &i,   retVector<gentype> &tmp) const { NiceAssert( !revertToFunc ); return alpha(i,tmp);        }
     const Vector<gentype> &a(int ib, int is, int im, retVector<gentype> &tmp) const { NiceAssert( !revertToFunc ); return alpha(ib,is,im,tmp); }
 
-    Vector<SparseVector<gentype> > &x(const char *dummy,                         retVector<SparseVector<gentype> > &tmp) { unsample(); NiceAssert( !revertToFunc ); retVector<int> tmpvb; xxinfook(dummy,tmpvb)          = 0; return xx(dummy,tmp);          }
-    SparseVector<gentype>          &x(const char *dummy, int i                                                         ) { unsample(); NiceAssert( !revertToFunc );                       xxinfook(dummy,i)              = 0; return xx(dummy,i);            }
-    Vector<SparseVector<gentype> > &x(const char *dummy, const Vector<int> &i,   retVector<SparseVector<gentype> > &tmp) { unsample(); NiceAssert( !revertToFunc ); retVector<int> tmpvb; xxinfook(dummy,i,tmpvb)        = 0; return xx(dummy,i,tmp);        }
-    Vector<SparseVector<gentype> > &x(const char *dummy, int ib, int is, int im, retVector<SparseVector<gentype> > &tmp) { unsample(); NiceAssert( !revertToFunc ); retVector<int> tmpvb; xxinfook(dummy,ib,is,im,tmpvb) = 0; return xx(dummy,ib,is,im,tmp); }
+    Vector<SparseVector<gentype>> &x(const char *dummy,                         retVector<SparseVector<gentype>> &tmp) { unsample(); NiceAssert( !revertToFunc ); retVector<int> tmpvb; xxinfook(dummy,tmpvb)          = 0; return xx(dummy,tmp);          }
+    SparseVector<gentype>         &x(const char *dummy, int i                                                        ) { unsample(); NiceAssert( !revertToFunc );                       xxinfook(dummy,i)              = 0; return xx(dummy,i);            }
+    Vector<SparseVector<gentype>> &x(const char *dummy, const Vector<int> &i,   retVector<SparseVector<gentype>> &tmp) { unsample(); NiceAssert( !revertToFunc ); retVector<int> tmpvb; xxinfook(dummy,i,tmpvb)        = 0; return xx(dummy,i,tmp);        }
+    Vector<SparseVector<gentype>> &x(const char *dummy, int ib, int is, int im, retVector<SparseVector<gentype>> &tmp) { unsample(); NiceAssert( !revertToFunc ); retVector<int> tmpvb; xxinfook(dummy,ib,is,im,tmpvb) = 0; return xx(dummy,ib,is,im,tmp); }
 
-    const Vector<SparseVector<gentype> > &x(                        retVector<SparseVector<gentype> > &tmp) const { NiceAssert( !revertToFunc ); return getxx()(tmp);          }
-    const SparseVector<gentype>          &x(int i                                                         ) const { NiceAssert( !revertToFunc ); return getxx(i);              }
-    const Vector<SparseVector<gentype> > &x(const Vector<int> &i,   retVector<SparseVector<gentype> > &tmp) const { NiceAssert( !revertToFunc ); return getxx()(i,tmp);        }
-    const Vector<SparseVector<gentype> > &x(int ib, int is, int im, retVector<SparseVector<gentype> > &tmp) const { NiceAssert( !revertToFunc ); return getxx()(ib,is,im,tmp); }
+    const Vector<SparseVector<gentype>> &x(                        retVector<SparseVector<gentype>> &tmp) const { NiceAssert( !revertToFunc ); return getxx()(tmp);          }
+    const SparseVector<gentype>         &x(int i                                                        ) const { NiceAssert( !revertToFunc ); return getxx(i);              }
+    const Vector<SparseVector<gentype>> &x(const Vector<int> &i,   retVector<SparseVector<gentype>> &tmp) const { NiceAssert( !revertToFunc ); return getxx()(i,tmp);        }
+    const Vector<SparseVector<gentype>> &x(int ib, int is, int im, retVector<SparseVector<gentype>> &tmp) const { NiceAssert( !revertToFunc ); return getxx()(ib,is,im,tmp); }
 
     const MercerKernel &kern(void) const        {             NiceAssert( !revertToFunc );               return getspKern(); }
           MercerKernel &kern(const char *dummy) { unsample(); NiceAssert( !revertToFunc ); (void) dummy; return spKern;      }
@@ -611,7 +611,7 @@ public:
 private:
 
     MercerKernel spKern;
-    Vector<SparseVector<gentype> > xx;
+    Vector<SparseVector<gentype>> xx;
     mutable Vector<vecInfo> xxinfo; // can be constructed on the fly
     mutable Vector<int> xxinfook;   // can be constructed on the fly
     Vector<gentype> alpha;
@@ -624,7 +624,7 @@ private:
 
     const MercerKernel &getspKern(void) const { return spKern; }
 
-    const Vector<SparseVector<gentype> > &getxx(void)  const { return xx;    }
+    const Vector<SparseVector<gentype>> &getxx(void)  const { return xx;    }
     const SparseVector<gentype> &getxx(int i) const { return xx(i); }
 
     const Vector<vecInfo> &getxxinfo(void)  const { return xxinfo;    }

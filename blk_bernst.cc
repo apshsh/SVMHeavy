@@ -22,12 +22,14 @@ BLK_Bernst::BLK_Bernst(int xisIndPrune) : BLK_Generic(xisIndPrune)
 
     localygood = 0;
 
-    locsampleMode = 0;
-    locxsampType  = 3;
-    locNsamp      = -1;
-    locsampSplit  = 1;
-    locsampType   = 0;
-    locsampScale  = 1.0;
+    locsampleMode  = 0;
+    locxsampType   = 3;
+    locNsamp       = -1;
+    locsampSplit   = 1;
+    locsampType    = 0;
+    locsampScale   = 1.0;
+    locsampSlack   = 0.0;
+    locdiagperturb = 0.0;
 
     return;
 }
@@ -54,7 +56,7 @@ const Vector<gentype> &BLK_Bernst::y(void) const
 
         // Generate x grid
 
-        Vector<SparseVector<gentype> > xgrid;
+        Vector<SparseVector<gentype>> xgrid;
         static thread_local GPR_Generic sampler;
         sampler.genSampleGrid(xgrid,locxmin,locxmax,locNsamp,locsampSplit,locxsampType,locsampSlack);
 

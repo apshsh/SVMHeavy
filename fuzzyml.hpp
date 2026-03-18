@@ -54,7 +54,7 @@
 // setCoreps = 1: set C weights, 0 set eps weights
 
 
-int calcFuzzML(ML_Base &ml, const gentype &fuzzfn, const SparseVector<SparseVector<gentype> > &argvariables, const MercerKernel &distkern, double f, double m, double nu, int setCoreps);
+int calcFuzzML(ML_Base &ml, const gentype &fuzzfn, const SparseVector<SparseVector<gentype>> &argvariables, const MercerKernel &distkern, double f, double m, double nu, int setCoreps);
 
 #endif
 

@@ -75,7 +75,7 @@ int BLK_System::gh(gentype &resh, gentype &resg, int i, int retaltg, gentype ***
     int j;
     int tempresh;
 
-    SparseVector<SparseVector<gentype> > xx;
+    SparseVector<SparseVector<gentype>> xx;
 
     xx("&",0) = x(i);
 

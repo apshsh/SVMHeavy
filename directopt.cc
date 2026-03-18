@@ -17,10 +17,10 @@ int directOpt(int dim,
               Vector<gentype> &Xres,
               gentype         &fres,
               int             &ires,
-              Vector<Vector<gentype> > &allxres,
+              Vector<Vector<gentype>> &allxres,
               Vector<gentype>          &allfres,
-              Vector<Vector<gentype> > &allcres,
-              Vector<gentype>          &allsres,
+              Vector<Vector<gentype>> &allcres,
+              Vector<gentype>         &allsres,
               const Vector<gentype> &xmin,
               const Vector<gentype> &xmax,
               void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -57,6 +57,10 @@ double tst_obj(int n, const double *x, int *resflag, void *fnarginnerdr)
     int            &icnt       = *((int            *) (((void **) fnarginnerdr)[13]));
     double         *jitter     =  ((double         *) (((void **) fnarginnerdr)[14]));
     int            &feasrescnt = *((int            *) (((void **) fnarginnerdr)[15]));
+    double         &yminfnd    = *((double         *) (((void **) fnarginnerdr)[16]));
+    double         &ymaxfnd    = *((double         *) (((void **) fnarginnerdr)[17]));
+
+    (void) effdim;
 
     NiceAssert( n == effdim );
 
@@ -66,7 +70,27 @@ double tst_obj(int n, const double *x, int *resflag, void *fnarginnerdr)
     {
         if ( xmin(i) < xmax(i) )
         {
-            xx[i] = ((x[ii]*(xmax(i)-xmin(i)))+xmin(i)+jitter[ii]);
+            if ( jitter[ii] == 0 )
+            {
+                xx[i] = x[ii];
+            }
+
+            else if ( xx[i] <= 0.5 )
+            {
+                xx[i] = ((x[ii]-0.5)*(1+jitter[ii])) + (0.5*(1+jitter[ii]));
+//0:   -0.5*1.1 + 0.5*1.1 = 0
+//0.5:            0.5*1.1 = 0.55
+            }
+
+            else
+            {
+                xx[i] = ((x[ii]-0.5)*(1-jitter[ii])) + (0.5*(1+jitter[ii]));
+
+//0.5:            0.5*1.1 = 0.55
+//1:    0.5*0.9 + 0.5*1.1 = 1
+            }
+
+            xx[i] = (xx[i]*(xmax(i)-xmin(i)))+xmin(i);
 
             if ( xx[i] >= xmax(i) ) { xx[i] = xmax(i); }
             if ( xx[i] <= xmin(i) ) { xx[i] = xmin(i); }
@@ -92,8 +116,9 @@ double tst_obj(int n, const double *x, int *resflag, void *fnarginnerdr)
     // indicate (passback) infeasibility. We translate
     // that here.
 
-    if ( std::isnan(res) )
+    if ( std::isnan(res) || ( res >= NANTRIGTEST ) )
     {
+        res = HUGE_VAL;
         *resflag = 1;
     }
 
@@ -107,11 +132,20 @@ double tst_obj(int n, const double *x, int *resflag, void *fnarginnerdr)
             // error) it will return any old result. This bit of code saves
             // the best test result so far so we can return it instead.
 
+            if ( ires == -1 )
+            {
+                yminfnd = res;
+                ymaxfnd = res;
+            }
+
             ires = icnt;
             yres = res;
 
             for ( i = 0 ; i < dim ; ++i ) { xxres[i] = xx[i]; }
         }
+
+        if ( res < yminfnd ) { yminfnd = res; }
+        if ( res > ymaxfnd ) { ymaxfnd = res; }
 
         if      ( res <= hardmin ) { /* Trigger early termination if hardmin reached */ killSwitch = 1; }
         else if ( res >= hardmax ) { /* Trigger early termination if hardmax reached */ killSwitch = 1; }
@@ -160,7 +194,7 @@ int directOpt(int dim,
     for ( i = 0 ; i < dim ; ++i ) { if ( xmin(i) < xmax(i) ) { ++effdim; } }
 
     long int maxits          = dopts.maxits;
-    long int maxevals        = dopts.maxevals;
+    long int maxevals        = (dopts.maxevals)*dim;
     double eps               = dopts.eps;
     double maxtraintime      = dopts.maxtraintime;
     double traintimeoverride = dopts.traintimeoverride;
@@ -176,7 +210,7 @@ int directOpt(int dim,
     double *xx;
     double magic_eps_abs = 1e-4; //0;
     double volume_reltol = 0.0;
-    double sigma_reltol = -1.0;
+    double sigma_reltol  = -1.0;
 
     MEMNEWARRAY(x,     double,effdim+1); // effdim might be 0
     MEMNEWARRAY(l,     double,effdim+1);
@@ -193,9 +227,12 @@ int directOpt(int dim,
         else               { jitter[ii] = 0;                      }
     }
 
-    int feasrescnt = 0;
+    int feasrescnt  = 0;
 
-    void *fnarginner[16];
+    double yminfnd = 0;
+    double ymaxfnd = 0;
+
+    void *fnarginner[18];
 
     fnarginner[0] = (void *)  fn;
     fnarginner[1] = (void *)  fnarg;
@@ -213,7 +250,7 @@ int directOpt(int dim,
     int     iresalt = -1;
     int     itcnt   = 0;
 
-    MEMNEWARRAY(xxresalt,double,dim);
+    MEMNEWARRAY(xxresalt,double,dim+1);
 
     fnarginner[10] = (void *)  xxresalt;
     fnarginner[11] = (void *) &yresalt;
@@ -221,12 +258,16 @@ int directOpt(int dim,
     fnarginner[13] = (void *) &itcnt;
     fnarginner[14] = (void *)  jitter;
     fnarginner[15] = (void *) &feasrescnt;
+    fnarginner[16] = (void *) &yminfnd;
+    fnarginner[17] = (void *) &ymaxfnd;
 
     void *fnarginnerdr = (void *) fnarginner;
 
     //errstream() << "DIRect Optimisation Initiated:\n";
 
     // Note use of effdim here!
+
+    errstream() << "DIRect Optimisation Started (" << dopts.getsimname() << ").\n";
 
     int intres = 0;
 
@@ -259,11 +300,18 @@ int directOpt(int dim,
     // the best result as detected by the callback, not what
     // direct might happen to return if it gets lost.
 
+//errstream() << "done xmin = " << xmin << "\n";
+//errstream() << "done xmax = " << xmax << "\n";
+//errstream() << "done feasrescnt = " << feasrescnt << "\n";
+//errstream() << "done yminfnd = " << yminfnd << "\n";
+//errstream() << "done ymaxfnd = " << ymaxfnd << "\n";
     for ( i = 0 ; i < dim ; ++i )
     {
-        if ( xmin(i) < xmax(i) ) { Xres("&",i) = feasrescnt ? ((xxresalt[i]*(xmax(i)-xmin(i)))+xmin(i)+jitter[ii]) : valvnan("No solution found"); }
-        else                     { Xres("&",i) = xmin(i);                                                                                          }
+//errstream() << "xxresalt[" << i << "] = " << xxresalt[i] << "\n";
+        if ( xmin(i) < xmax(i) ) { Xres("&",i) = feasrescnt ? xxresalt[i] : valvnan("No solution found"); }
+        else                     { Xres("&",i) = xmin(i);                                                 }
     }
+//errstream() << "done Xres = " << Xres << "\n";
 
     if ( feasrescnt ) { fres.force_double() = yresalt; }
     else              { fres.force_null();             }
@@ -275,9 +323,9 @@ int directOpt(int dim,
     MEMDELARRAY(l);        l        = nullptr;
     MEMDELARRAY(x);        x        = nullptr;
 
-    //errstream() << "DIRect Optimisation Ended\n";
+    errstream() << "DIRect Optimisation Ended: " << yminfnd << "\t" << ymaxfnd << "\n";
 
-    return feasrescnt ? intres : -200;
+    return feasrescnt ? ( ( ymaxfnd-yminfnd > 1e-6 ) ? intres : -300 ) : -200;
 }
 
 
@@ -288,23 +336,16 @@ double fninnerd(int dim, const double *x, void *arg)
     void (*fn)(gentype &res, Vector<gentype> &, void *arg) = ( (void (*)(gentype &, Vector<gentype> &, void *arg))  (((void **) arg)[1]) );
     void *arginner                                         = ((void *)                      (((void **) arg)[2]));
     int &ires                                              = *((int *)                      (((void **) arg)[3]));
-    Vector<Vector<gentype> > &allxres                      = *((Vector<Vector<gentype> > *) (((void **) arg)[4]));
+    Vector<Vector<gentype>> &allxres                       = *((Vector<Vector<gentype>> *)  (((void **) arg)[4]));
     Vector<gentype> &allfres                               = *((Vector<gentype> *)          (((void **) arg)[5]));
-    Vector<Vector<gentype> > &allcres                      = *((Vector<Vector<gentype> > *) (((void **) arg)[6]));
+    Vector<Vector<gentype>> &allcres                       = *((Vector<Vector<gentype>> *)  (((void **) arg)[6]));
     gentype &fres                                          = *((gentype *)                  (((void **) arg)[7]));
     Vector<gentype> &xres                                  = *((Vector<gentype> *)          (((void **) arg)[8]));
     gentype &tempres                                       = *((gentype *)                  (((void **) arg)[9]));
     svmvolatile int &killSwitch                            = *((int *)                      (((void **) arg)[10]));
+    int &feascnt                                           = *((int *)                      (((void **) arg)[11]));
 
-    if ( dim )
-    {
-        int i;
-
-        for ( i = 0 ; i < dim ; ++i )
-        {
-            xx("&",i) = x[i];
-        }
-    }
+    if ( dim ) { for ( int i = 0 ; i < dim ; ++i ) { xx("&",i) = x[i]; } }
 
     tempres.force_int() = 0;
     (*fn)(tempres,xx,arginner);
@@ -324,31 +365,38 @@ errstream() << "\n";
 
     killSwitch = stopflags;
 
-    if ( !intres && ( ( allfres.size() == 0 ) || ( tempres < fres ) ) )
+//    if ( !intres && ( ( allfres.size() == 0 ) || ( tempres < fres ) ) )
+    if ( !intres && ( !feascnt || ( tempres < fres ) ) )
     {
         ires = allfres.size();
         fres = tempres;
         xres = xx;
+outstream() << "***";
     }
+outstream() << "\n";
 
     if ( !intres )
+    {
+        feascnt++;
+    }
+
     {
         allfres.append(allfres.size(),tempres);
         allcres.append(allcres.size(),ycgt);
         allxres.append(allxres.size(),xx);
     }
 
-    return !intres ? ((double) tempres) : valvnan("null returned to indicate not a result");
+    return !intres ? ((double) tempres) : NANTRIGSET; // valvnan("null returned to indicate not a result");
 }
 
 int directOpt(int dim,
               Vector<gentype> &xres,
               gentype         &fres,
               int             &ires,
-              Vector<Vector<gentype> > &allxres,
-              Vector<gentype>          &allfres,
-              Vector<Vector<gentype> > &allcres,
-              Vector<gentype>          &allsres,
+              Vector<Vector<gentype>> &allxres,
+              Vector<gentype>         &allfres,
+              Vector<Vector<gentype>> &allcres,
+              Vector<gentype>         &allsres,
               const Vector<gentype> &xmin,
               const Vector<gentype> &xmax,
               void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -380,9 +428,10 @@ int directOpt(int dim,
         locxmax("&",i) = (double) xmax(i);
     }
 
-    void *fnarginner[11];
+    void *fnarginner[12];
     Vector<gentype> xx(dim);
     gentype tempres;
+    int feascnt = 0;
 
     fnarginner[0]  = (void *) &xx;
     fnarginner[1]  = (void *) fn;
@@ -395,6 +444,7 @@ int directOpt(int dim,
     fnarginner[8]  = (void *) &xres;
     fnarginner[9]  = (void *) &tempres;
     fnarginner[10] = (void *) &killSwitch;
+    fnarginner[11] = (void *) &feascnt;
 
     int res = -200;
 
@@ -445,6 +495,10 @@ int directOpt(int dim,
 
     allsres.resize(allxres.size()) = toGentype();
 
+    // for consistency with bayesopt
+    fres.negate();
+    allfres.negate();
+
     return res;
 }
 
@@ -463,14 +517,14 @@ int DIRectOptions::optim(int dim,
                       gentype         &sres,
                       int             &ires,
                       int             &mInd,
-                      Vector<Vector<gentype> > &allxres,
-                      Vector<gentype>          &allfres,
-                      Vector<Vector<gentype> > &allcres,
-                      Vector<gentype>          &allFres,
-                      Vector<gentype>          &allmres,
-                      Vector<gentype>          &allsres,
-                      Vector<double>           &s_score,
-                      Vector<int>              &is_feas,
+                      Vector<Vector<gentype>> &allxres,
+                      Vector<gentype>         &allfres,
+                      Vector<Vector<gentype>> &allcres,
+                      Vector<gentype>         &allFres,
+                      Vector<gentype>         &allmres,
+                      Vector<gentype>         &allsres,
+                      Vector<double>          &s_score,
+                      Vector<int>             &is_feas,
                       const Vector<gentype> &xmin,
                       const Vector<gentype> &xmax,
                       void (*fn)(gentype &res, Vector<gentype> &x, void *arg),
@@ -491,7 +545,8 @@ int DIRectOptions::optim(int dim,
     allFres.resize(allfres.size()); for ( int i = 0 ; i < allfres.size() ; ++i ) { allFres("&",i) = i; }
 
     s_score.resize(allfres.size()) = 1.0;
-    is_feas.resize(allfres.size()) = 1;
+//    is_feas.resize(allfres.size()) = 1;
+    is_feas.resize(allcres.size()); for ( int i = 0 ; i < allcres.size() ; ++i ) { is_feas("&",i) = ( allcres(i) >= 0.0_gent ) ? 1 : 0; }
 
     return res;
 }

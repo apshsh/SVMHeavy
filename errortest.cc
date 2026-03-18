@@ -173,23 +173,23 @@ double calcRecall(const ML_Base &baseML, Vector<int> &cnt, Matrix<int> &cfm, int
 
 double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres, Vector<double> &cnt, Matrix<double> &cfm, int numreps, int startpoint, int suppressfb, int useThreads)
 {
-    Vector<Vector<gentype> > resh;
-    Vector<Vector<gentype> > resg;
-    Vector<Vector<gentype> > gvarres;
+    Vector<Vector<gentype>> resh;
+    Vector<Vector<gentype>> resg;
+    Vector<Vector<gentype>> gvarres;
 
     return calcCross(baseML,m,rndit,repres,cnt,cfm,resh,resg,gvarres,numreps,startpoint,0,suppressfb,useThreads);
 }
 
 double calcSparSens(const ML_Base &baseML, Vector<double> &repres, Vector<double> &cnt, Matrix<double> &cfm, int minbad, int maxbad, double noisemean, double noisevar, int startpoint, int suppressfb, int useThreads)
 {
-    Vector<Vector<gentype> > resh;
-    Vector<Vector<gentype> > resg;
-    Vector<Vector<gentype> > gvarres;
+    Vector<Vector<gentype>> resh;
+    Vector<Vector<gentype>> resg;
+    Vector<Vector<gentype>> gvarres;
 
     return calcSparSens(baseML,repres,cnt,cfm,resh,resg,gvarres,minbad,maxbad,noisemean,noisevar,startpoint,0,suppressfb,useThreads);
 }
 
-double calcTest(const ML_Base &baseML, const Vector<SparseVector<gentype> > &xtest, const Vector<gentype> &ytest, int startpoint, int suppressfb, int useThreads)
+double calcTest(const ML_Base &baseML, const Vector<SparseVector<gentype>> &xtest, const Vector<gentype> &ytest, int startpoint, int suppressfb, int useThreads)
 {
     Vector<int> cnt;
     Matrix<int> cfm;
@@ -197,7 +197,7 @@ double calcTest(const ML_Base &baseML, const Vector<SparseVector<gentype> > &xte
     return calcTest(baseML,xtest,ytest,cnt,cfm,startpoint,suppressfb,useThreads);
 }
 
-double calcTest(const ML_Base &baseML, const Vector<SparseVector<gentype> > &xtest, const Vector<gentype> &ytest, Vector<int> &cnt, Matrix<int> &cfm, int startpoint, int suppressfb, int useThreads)
+double calcTest(const ML_Base &baseML, const Vector<SparseVector<gentype>> &xtest, const Vector<gentype> &ytest, Vector<int> &cnt, Matrix<int> &cfm, int startpoint, int suppressfb, int useThreads)
 {
     Vector<gentype> resh;
     Vector<gentype> resg;
@@ -349,8 +349,8 @@ void *doafold(void *args_ptr);
 void *doatest(void *args_ptr);
 
 
-double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres, Vector<double> &cnt, Matrix<double> &cfm, Vector<Vector<gentype> > &resh, Vector<Vector<gentype> > &resg, 
-                 Vector<Vector<gentype> > &gvarres, int numreps, int startpoint, int calcgvarres, int suppressfb, int useThreads)
+double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres, Vector<double> &cnt, Matrix<double> &cfm, Vector<Vector<gentype>> &resh, Vector<Vector<gentype>> &resg, 
+                 Vector<Vector<gentype>> &gvarres, int numreps, int startpoint, int calcgvarres, int suppressfb, int useThreads)
 {
 
 #ifndef ENABLE_THREADS
@@ -478,7 +478,7 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
 		}
 	    }
 
-	    Vector<Vector<int> > blockidvect(m);
+	    Vector<Vector<int>> blockidvect(m);
 
             int Nnzleft = Nnz;
 
@@ -507,8 +507,8 @@ double calcCross(const ML_Base &baseML, int m, int rndit, Vector<double> &repres
 
             int Nnonz = 0;
 
-            Vector<Vector<double> > vtmpcnt(m);
-            Vector<Matrix<double> > vtmpcfm(m);
+            Vector<Vector<double>> vtmpcnt(m);
+            Vector<Matrix<double>> vtmpcfm(m);
             Vector<double> vtmpres(m);
             Vector<int> vNnonz(m);
 
@@ -1198,7 +1198,7 @@ errstream() << "\n";
     return res;
 }
 
-double calcTest(const ML_Base &baseML, const Vector<SparseVector<gentype> > &xtest, const Vector<gentype> &ytest, Vector<int> &cnt, Matrix<int> &cfm, Vector<gentype> &resh, Vector<gentype> &resg, Vector<gentype> &gvarres, int calcgvarres, int startpoint, int suppressfb, int useThreads)
+double calcTest(const ML_Base &baseML, const Vector<SparseVector<gentype>> &xtest, const Vector<gentype> &ytest, Vector<int> &cnt, Matrix<int> &cfm, Vector<gentype> &resh, Vector<gentype> &resg, Vector<gentype> &gvarres, int calcgvarres, int startpoint, int suppressfb, int useThreads)
 {
     (void) startpoint;
     (void) suppressfb;
@@ -1276,7 +1276,7 @@ double calcTest(const ML_Base &baseML, const Vector<SparseVector<gentype> > &xte
     return res;
 }
 
-double calcSparSens(const ML_Base &baseML, Vector<double> &repres, Vector<double> &cnt, Matrix<double> &cfm, Vector<Vector<gentype> > &resh, Vector<Vector<gentype> > &resg, Vector<Vector<gentype> > &gvarres, int minbad, int maxbad, double noisemean, double noisevar, int startpoint, int calcgvarres, int suppressfb, int useThreads)
+double calcSparSens(const ML_Base &baseML, Vector<double> &repres, Vector<double> &cnt, Matrix<double> &cfm, Vector<Vector<gentype>> &resh, Vector<Vector<gentype>> &resg, Vector<Vector<gentype>> &gvarres, int minbad, int maxbad, double noisemean, double noisevar, int startpoint, int calcgvarres, int suppressfb, int useThreads)
 {
     (void) useThreads; // kept for future reference
 

@@ -582,8 +582,8 @@ inline const DynArray<double> *pinfdoublearray(void)
 inline const DynArray<int> *cntintarray(int size)
 {
     static thread_local int maxsize = 0;
-    static thread_local std::unique_ptr<DynArray<int> > vogonpoetry(new DynArray<int>({nullptr,0,0,0,false,false,true})); // deletion is automatic thanks to unique_ptr ownership
-//    static thread_local std::unique_ptr<DynArray<int> > vogonpoetry(new DynArray<int>({nullptr,0,0,0,false,false,false})); // deletion is automatic thanks to unique_ptr ownership
+    static thread_local std::unique_ptr<DynArray<int>> vogonpoetry(new DynArray<int>({nullptr,0,0,0,false,false,true})); // deletion is automatic thanks to unique_ptr ownership
+//    static thread_local std::unique_ptr<DynArray<int>> vogonpoetry(new DynArray<int>({nullptr,0,0,0,false,false,false})); // deletion is automatic thanks to unique_ptr ownership
     static thread_local DynArray<int> *cntarray = vogonpoetry.get();
 
     NiceAssert( size >= 0 );

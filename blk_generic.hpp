@@ -104,7 +104,7 @@ public:
     virtual const ML_Base &getMLconst(void) const override { return static_cast<const ML_Base &>(getBLKconst()); }
 
     virtual int  isSampleMode(void) const override { return xissample; }
-    virtual int setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double sampScale, double sampSlack = 0) override;
+    virtual int setSampleMode(int nv, const Vector<gentype> &xmin, const Vector<gentype> &xmax, int Nsamp, int sampSplit, int sampType, int xsampType, double sampScale, double sampSlack = 0, double diagperturb = 0) override;
 
     // Make this null so that it can be included as a prior without wasting time in optimising... nothing
     virtual double tuneKernel(int, double, int = 1, int = 0, const tkBounds * = nullptr, paraDef * = nullptr) override { return 0; }

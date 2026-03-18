@@ -98,7 +98,7 @@ int BLK_AveVec::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype
     return 1;
 }
 
-int BLK_AveVec::addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int BLK_AveVec::addTrainingVector (int i, const Vector<gentype> &y, const Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( y.size() == x.size()        );
     NiceAssert( y.size() == Cweigh.size()   );
@@ -118,7 +118,7 @@ int BLK_AveVec::addTrainingVector (int i, const Vector<gentype> &y, const Vector
     return res;
 }
 
-int BLK_AveVec::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype> > &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
+int BLK_AveVec::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVector<gentype>> &x, const Vector<double> &Cweigh, const Vector<double> &epsweigh)
 {
     NiceAssert( y.size() == x.size()        );
     NiceAssert( y.size() == Cweigh.size()   );

@@ -1650,7 +1650,7 @@ FuncVector &FuncVector::assign(const gentype &src)
 
 gentype &FuncVector::operator()(gentype &res, const SparseVector<gentype> &i) const 
 { 
-    SparseVector<SparseVector<gentype> > ii; 
+    SparseVector<SparseVector<gentype>> ii; 
 
     ii("&",0) = i; 
 
@@ -3822,7 +3822,7 @@ double calcL2distsq(const Vector<gentype> &ff, gentype &g, int dim, int scaleit,
     {
         f.sample(gran);
 
-        SparseVector<SparseVector<gentype> > xx;
+        SparseVector<SparseVector<gentype>> xx;
         SparseVector<gentype> &x = xx("&",0);
         gentype fv,gv;
 
@@ -3858,7 +3858,7 @@ double calcL2distsq(const Vector<gentype> &ff, gentype &g, int dim, int scaleit,
     else
     {
         Vector<int> i(dim);
-        SparseVector<SparseVector<gentype> > xx;
+        SparseVector<SparseVector<gentype>> xx;
         SparseVector<gentype> &x = xx("&",0);
         gentype fv,gv;
 
@@ -3925,7 +3925,7 @@ errstream() << "dim = " << dim << "\n";
 
     {
         Vector<int> i(dim);
-        SparseVector<SparseVector<gentype> > xx;
+        SparseVector<SparseVector<gentype>> xx;
         SparseVector<gentype> &x = xx("&",0);
         gentype fv,gv;
 
@@ -4496,7 +4496,7 @@ Vector<gentype> &makeanRKHSVector(Vector<gentype> &res, const MercerKernel &kern
     return res;
 }
 
-Vector<gentype> &makeanRKHSVector(Vector<gentype> &res, const MercerKernel &kern, const Vector<SparseVector<gentype> > &x, const Vector<vecInfo> &xinfo, const Vector<gentype> &a, int alphaasvec, int m)
+Vector<gentype> &makeanRKHSVector(Vector<gentype> &res, const MercerKernel &kern, const Vector<SparseVector<gentype>> &x, const Vector<vecInfo> &xinfo, const Vector<gentype> &a, int alphaasvec, int m)
 {
 /*
     if ( type() == 2 )
