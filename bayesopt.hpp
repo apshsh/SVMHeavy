@@ -393,6 +393,15 @@ public:
     Vector<double>  direcmax;
     ML_Base        *gridsource;
 
+    double weightmain;
+    double weightcgt;
+    double weightmisc;
+
+    double alphascale;
+    double betascale;
+    double alphascalecgt;
+    double betascalecgt;
+
     // Multi-Fidelity details
 
     int     numfids;
@@ -473,6 +482,15 @@ public:
         cgtepsgreedypof   = 0;
         maxresamp         = 10;
         tailweight        = 0;
+
+        weightmain = 1.0;
+        weightcgt  = 1.0;
+        weightmisc = 1.0;
+
+        alphascale    = 1;
+        betascale     = 1;
+        alphascalecgt = 1;
+        betascalecgt  = 1;
 
         ztol     = DEFAULT_BAYES_ZTOL;
         delta    = DEFAULT_BAYES_DELTA;
@@ -584,6 +602,15 @@ public:
         cgtVarScale       = src.cgtVarScale;
         maxresamp         = src.maxresamp;
         tailweight        = src.tailweight;
+
+        weightmain = src.weightmain;
+        weightcgt  = src.weightcgt;
+        weightmisc = src.weightmisc;
+
+        alphascale    = src.alphascale;
+        betascale     = src.betascale;
+        alphascalecgt = src.alphascalecgt;
+        betascalecgt  = src.betascalecgt;
 
         ztol      = src.ztol;
         delta     = src.delta;

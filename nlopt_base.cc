@@ -4,7 +4,7 @@
 std::ostream &directstream(void)
 {
 //    return std::cerr;
-    static NullOStream devnullstream;
+    static NullOStream thread_local devnullstream;
 
     return devnullstream;
 //    return errstream();

@@ -399,11 +399,11 @@ public:
     virtual int isUnderlyingVector(void) const { return 0; }
     virtual int isUnderlyingAnions(void) const { return 0; }
 
-    virtual const Vector<int> &ClassLabels       (void)             const { const static Vector<int> temp;         return temp;         }
-    virtual       int          getInternalClass  (const gentype &)  const {                                        return 0;            }
-    virtual       int          numInternalClasses(void)             const {                                        return numClasses(); }
-    virtual       int          isenabled         (int i)            const { if ( y()(i).isNomConst ) { return 0; } return d()(i);       }
-    virtual       int          isVarDefined      (void)             const {                                        return 0;            }
+    virtual const Vector<int> &ClassLabels       (void)             const { const static thread_local Vector<int> temp; return temp;         }
+    virtual       int          getInternalClass  (const gentype &)  const {                                             return 0;            }
+    virtual       int          numInternalClasses(void)             const {                                             return numClasses(); }
+    virtual       int          isenabled         (int i)            const { if ( y()(i).isNomConst ) { return 0; }      return d()(i);       }
+    virtual       int          isVarDefined      (void)             const {                                             return 0;            }
 
     virtual const int *ClassLabelsInt     (void)  const {                return &(getMLconst().ClassLabels()(0)); }
     virtual       int  getInternalClassInt(int y) const { gentype yy(y); return getInternalClass(yy);             }
@@ -464,19 +464,19 @@ public:
     virtual const Vector<gentype>               &alphaVal   (void) const { NiceThrow("alphaVal has no meaning here"); static const Vector<gentype> dummy; return dummy; }
     virtual const Vector<int>                   &alphaState (void) const { return xalphaState;                              }
 
-    virtual const SparseVector<gentype> &x       (int i)              const override { return xgetloc(i);                                     }
+    virtual const SparseVector<gentype> &x       (int i)              const override {                                                      return xgetloc(i);  }
     virtual const SparseVector<gentype> &x       (int i, int altMLid) const override { kernPrecursor *tmp = nullptr; getaltML(tmp,altMLid);  NiceAssert(tmp); return (*tmp).x(i);  }
-    virtual const gentype               &y       (int i)              const          { if ( i >= 0 ) { return y()(i);   } return ytargdata;   }
-    virtual       double                 yR      (int i)              const          { if ( i >= 0 ) { return yR()(i);  } return ytargdataR;  }
-    virtual const d_anion               &yA      (int i)              const          { if ( i >= 0 ) { return yA()(i);  } return ytargdataA;  }
-    virtual const Vector<double>        &yV      (int i)              const          { if ( i >= 0 ) { return yV()(i);  } return ytargdataV;  }
-    virtual const gentype               &yp      (int i)              const          { if ( i >= 0 ) { return yp()(i);  } return ytargdatap;  }
-    virtual       double                 ypR     (int i)              const          { if ( i >= 0 ) { return ypR()(i); } return ytargdatapR; }
-    virtual const d_anion               &ypA     (int i)              const          { if ( i >= 0 ) { return ypA()(i); } return ytargdatapA; }
-    virtual const Vector<double>        &ypV     (int i)              const          { if ( i >= 0 ) { return ypV()(i); } return ytargdatapV; }
-    virtual const vecInfo               &xinfo   (int i)              const          { return locxinfo(i);                                    }
-    virtual       int                    xtang   (int i)              const          { return locxtang(i);                                    }
-    virtual       double                 alphaVal(int)                const          { NiceThrow("alphaVal has no meaning here"); return 0.0; }
+    virtual const gentype               &y       (int i)              const          { if ( i >= 0 ) { return y()(i);   }                   return ytargdata;   }
+    virtual       double                 yR      (int i)              const          { if ( i >= 0 ) { return yR()(i);  }                   return ytargdataR;  }
+    virtual const d_anion               &yA      (int i)              const          { if ( i >= 0 ) { return yA()(i);  }                   return ytargdataA;  }
+    virtual const Vector<double>        &yV      (int i)              const          { if ( i >= 0 ) { return yV()(i);  }                   return ytargdataV;  }
+    virtual const gentype               &yp      (int i)              const          { if ( i >= 0 ) { return yp()(i);  }                   return ytargdatap;  }
+    virtual       double                 ypR     (int i)              const          { if ( i >= 0 ) { return ypR()(i); }                   return ytargdatapR; }
+    virtual const d_anion               &ypA     (int i)              const          { if ( i >= 0 ) { return ypA()(i); }                   return ytargdatapA; }
+    virtual const Vector<double>        &ypV     (int i)              const          { if ( i >= 0 ) { return ypV()(i); }                   return ytargdatapV; }
+    virtual const vecInfo               &xinfo   (int i)              const          {                                                      return locxinfo(i); }
+    virtual       int                    xtang   (int i)              const          {                                                      return locxtang(i); }
+    virtual       double                 alphaVal(int i)              const          { (void) i; NiceThrow("alphaVal has no meaning here"); return 0.0;         }
 
     virtual int xisrank      (int i)                               const { const SparseVector<gentype> &xres = x(i); return xres.isf1offindpresent() || xres.isf4indpresent(1);  }
     virtual int xisgrad      (int i)                               const { const SparseVector<gentype> &xres = x(i); return xres.isf2offindpresent(); }
@@ -573,7 +573,25 @@ public:
     // indexes themselves changed.
     //
     // The onlyChangeRowI argument is used to indicate that the change
-    // only affects that row.  Set -1 if change affects all rows (default).
+    // only affects that row:
+    //
+    // >= 0: change only affects the row given.
+    // = -1: change affects all rows (default).
+    //       **this will flush the Gp cache, which could cause an expensive matrix recalculation   **
+    // = -2: change affects rows with d != 0, cheat version
+    //       **this will invalidate all parts of Gp with d == 0 but not flush them. It's faster    **
+    //       **(cace friendly), but after you'll need to resetKernel with onlyChangeRowI== -1 or -3**
+    // = -3: change affects rows with d != 0, full version
+    //       **this will flush the Gp cache of rows with d=0 and update all other rows             **
+    //
+    // NB: if we write:
+    //
+    // Gp = [ Ga  Gab ] (part with d != 0)
+    //      [ Gba Gb  ] (part with d == 0)
+    //
+    // onlyChangeRowI == -1 will flush all of Gp so it can be recalculated on demand
+    // onlyChangeRowI == -2 will update Ga and invalidate Gab, Gba and Gb (but not flush)
+    // onlyChangeRowI == -3 will update those rows that are cached
     //
     // The updateInfo argument may be used to suppress updating traininfo
     // if not required.  By default this is 1 (do update), set 0 if modind
@@ -658,12 +676,14 @@ public:
     // method: 0 = just work out bounds and problems and return
     //         1 = max-likelihood
     //         2 = loo error
-    //         3 = recall
-    //         4 = ||alpha||
+    //         4 = recall
+    //         8 = ||alpha||
     //        -1 = max-likelihood using DIRect (not grid)
     //        -2 = loo error using DIRect (not grid)
-    //        -3 = recall using DIRect (not grid)
-    //        -4 = ||alpha|| using DIRect (not grid)
+    //        -4 = recall using DIRect (not grid)
+    //        -8 = ||alpha|| using DIRect (not grid)
+    //         ... & 16 = set variable bias for tuning (handy for imbalanced datasets)
+    //         ... & 32 = rescale for imbalanced data
     // xwidth: maximum length-scale
     // tuneK:  0 = don't tune kernel
     //         1 = tune kernel
@@ -1345,10 +1365,10 @@ public:
     //
     // (u=-1 for overall, u>=0 gives only dimension for relevant minor/up type - see sparsevector)
 
-    virtual const Vector<int>         &indKey         (int u = -1) const { if ( indexKey.isindpresent(u+1)      ) { return indexKey(u+1);      } const static Vector<int>          dummy; return dummy; }
-    virtual const Vector<int>         &indKeyCount    (int u = -1) const { if ( indexKeyCount.isindpresent(u+1) ) { return indexKeyCount(u+1); } const static Vector<int>          dummy; return dummy; }
-    virtual const Vector<int>         &dattypeKey     (int u = -1) const { if ( typeKey.isindpresent(u+1)       ) { return typeKey(u+1);       } const static Vector<int>          dummy; return dummy; }
-    virtual const Vector<Vector<int>> &dattypeKeyBreak(int u = -1) const { if ( typeKeyBreak.isindpresent(u+1)  ) { return typeKeyBreak(u+1);  } const static Vector<Vector<int>> dummy; return dummy; }
+    virtual const Vector<int>         &indKey         (int u = -1) const { if ( indexKey.isindpresent(u+1)      ) { return indexKey(u+1);      } const static thread_local Vector<int>          dummy; return dummy; }
+    virtual const Vector<int>         &indKeyCount    (int u = -1) const { if ( indexKeyCount.isindpresent(u+1) ) { return indexKeyCount(u+1); } const static thread_local Vector<int>          dummy; return dummy; }
+    virtual const Vector<int>         &dattypeKey     (int u = -1) const { if ( typeKey.isindpresent(u+1)       ) { return typeKey(u+1);       } const static thread_local Vector<int>          dummy; return dummy; }
+    virtual const Vector<Vector<int>> &dattypeKeyBreak(int u = -1) const { if ( typeKeyBreak.isindpresent(u+1)  ) { return typeKeyBreak(u+1);  } const static thread_local Vector<Vector<int>> dummy; return dummy; }
 
     // Other functions
     //
@@ -1919,10 +1939,10 @@ private:
 
     // Templated to limit code redundancy
 
-    template <class T> T &K0(T &res, const T &bias, const MercerKernel &Kx, const gentype **pxyprod, int resmode) const;
-    template <class T> T &K1(T &res, int ia, const T &bias, const MercerKernel &Kx, const gentype **pxyprod, const SparseVector<gentype> *xa, const vecInfo *xainfo, int resmode) const;
-    template <class T> T &K2(T &res, int ia, int ib, const T &bias, const MercerKernel &Kx, const gentype **pxyprod, const SparseVector<gentype> *xa, const SparseVector<gentype> *xb, const vecInfo *xainfo, const vecInfo *xbinfo, int resmode) const;
-    template <class T> T &K3(T &res, int ia, int ib, int ic, const T &bias, const MercerKernel &Kx, const gentype **pxyprod, const SparseVector<gentype> *xa, const SparseVector<gentype> *xb, const SparseVector<gentype> *xc, const vecInfo *xainfo, const vecInfo *xbinfo, const vecInfo *xcinfo, int resmode) const;
+    template <class T> T &K0(T &res,                                 const T &bias, const MercerKernel &Kx, const gentype **pxyprod,                                                                                                                                                                                                                                 int resmode) const;
+    template <class T> T &K1(T &res, int ia,                         const T &bias, const MercerKernel &Kx, const gentype **pxyprod, const SparseVector<gentype> *xa,                                                                                                    const vecInfo *xainfo,                                                                      int resmode) const;
+    template <class T> T &K2(T &res, int ia, int ib,                 const T &bias, const MercerKernel &Kx, const gentype **pxyprod, const SparseVector<gentype> *xa, const SparseVector<gentype> *xb,                                                                   const vecInfo *xainfo, const vecInfo *xbinfo,                                               int resmode) const;
+    template <class T> T &K3(T &res, int ia, int ib, int ic,         const T &bias, const MercerKernel &Kx, const gentype **pxyprod, const SparseVector<gentype> *xa, const SparseVector<gentype> *xb, const SparseVector<gentype> *xc,                                  const vecInfo *xainfo, const vecInfo *xbinfo, const vecInfo *xcinfo,                        int resmode) const;
     template <class T> T &K4(T &res, int ia, int ib, int ic, int id, const T &bias, const MercerKernel &Kx, const gentype **pxyprod, const SparseVector<gentype> *xa, const SparseVector<gentype> *xb, const SparseVector<gentype> *xc, const SparseVector<gentype> *xd, const vecInfo *xainfo, const vecInfo *xbinfo, const vecInfo *xcinfo, const vecInfo *xdinfo, int resmode) const;
     template <class T> T &Km(int m, T &res, Vector<int> &ii, const T &bias, const MercerKernel &Kx, const gentype **pxyprod, Vector<const SparseVector<gentype> *> *xx, Vector<const vecInfo *> *xzinfo, int resmode) const;
 

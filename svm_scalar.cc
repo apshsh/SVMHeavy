@@ -487,7 +487,7 @@ SVM_Scalar::SVM_Scalar() : SVM_Generic()
     xCclass   = 1.0;
     xepsclass = 1.0;
 
-    const static gentype defaultcostfnfuzztval(DEFAULT_COSTFNFUZZT);
+    const static thread_local gentype defaultcostfnfuzztval(DEFAULT_COSTFNFUZZT);
 
     maxiterfuzztval = DEFAULT_MAXITERFUZZT;
     usefuzztval     = 0;
@@ -2496,7 +2496,7 @@ void SVM_Scalar::prepareKernel(void)
 
 int SVM_Scalar::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 {
-    NiceAssert( onlyChangeRowI >= -2 );
+    NiceAssert( onlyChangeRowI >= -3 );
     NiceAssert( onlyChangeRowI < SVM_Scalar::N() );
 
     int res = 0;
@@ -2507,49 +2507,63 @@ int SVM_Scalar::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
         res = SVM_Generic::resetKernel(modind,onlyChangeRowI,updateInfo);
     }
 
-    else if ( SVM_Scalar::N() && ( onlyChangeRowI == -2 ) )
+    else if ( SVM_Scalar::N() && ( onlyChangeRowI == -3 ) )
     {
         res = SVM_Generic::resetKernel(modind,onlyChangeRowI,updateInfo);
 
-        if ( fixxycache )
-        {
-            xycache.setSymmetry(1);
-        }
+        if ( fixxycache ) { xycache.setSymmetry(1); }
 
         kerncache.setSymmetry(getKernel().getSymmetry());
         sigmacache.setSymmetry(1);
 
         res |= 1;
 
-        int i;
+	isStateOpt = 0;
+
+        isQuasiLogLikeCalced = 0;
+        isMaxInfGainCalced   = 0;
+
+        for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { kerndiagval("&",i) = K2(i,i); } // recalculate full diagonal regardless
+
+        if ( fixxycache ) { xycache.clear(); }
+
+        for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) {  kerncache.recalc(i,1); } // setting conservedata without d will cause full recalculation if in cache.
+        for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { sigmacache.recalc(i,1); } // setting conservedata withoug d will cause full recalculation if in cache
+
+        if ( prim() )
+        {
+            gp = bfixval;
+            gp -= traintarg;
+            gp += ypR();
+        }
+
+        Q.refact(*Gpval,*Gpval,Gn,GPNorGPNEXT(Gpn,GpnExt),gp,gn,hp);
+
+        res |= SVM_Scalar::fixautosettings(1,0);
+    }
+
+    else if ( SVM_Scalar::N() && ( onlyChangeRowI == -2 ) )
+    {
+        res = SVM_Generic::resetKernel(modind,onlyChangeRowI,updateInfo);
+
+        if ( fixxycache ) { xycache.setSymmetry(1); }
+
+        kerncache.setSymmetry(getKernel().getSymmetry());
+        sigmacache.setSymmetry(1);
+
+        res |= 1;
 
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
         isMaxInfGainCalced   = 0;
 
-        for ( i = 0 ; i < SVM_Scalar::N() ; ++i )
-	{
-            if ( SVM_Scalar::d()(i) )
-            {
-                kerndiagval("&",i) = K2(i,i);
-  	    }
-	}
+        for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { if ( SVM_Scalar::d()(i) ) { kerndiagval("&",i) = K2(i,i); } }
 
-//errstream() << "phantomxyz 0 K2 = " << kerndiagval << "\n";
-        if ( fixxycache )
-        {
-            xycache.clear();
-        }
+        if ( fixxycache ) { xycache.clear(); }
 
-        for ( i = 0 ; i < SVM_Scalar::N() ; ++i )
-        {
-            if ( SVM_Scalar::d()(i) )
-            {
-                kerncache.recalc(i);
-                sigmacache.recalc(i);
-  	    }
-        }
+        for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { if ( SVM_Scalar::d()(i) ) {  kerncache.recalc(i,1,&d()); } } // note we set conservedata here and pass d, which will invalidate d=0 part of this row if cached
+        for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { if ( SVM_Scalar::d()(i) ) { sigmacache.recalc(i,1,&d()); } } // note we set conservedata here and pass d, which will invalidate d=0 part of this row if cached
 
         if ( prim() )
         {
@@ -2568,35 +2582,23 @@ int SVM_Scalar::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 fallbackMethod:
         res = SVM_Generic::resetKernel(modind,onlyChangeRowI,updateInfo);
 
-        if ( fixxycache )
-        {
-            xycache.setSymmetry(1);
-        }
+        if ( fixxycache ) { xycache.setSymmetry(1); }
 
         kerncache.setSymmetry(getKernel().getSymmetry());
         sigmacache.setSymmetry(1);
 
         res |= 1;
 
-        int i;
-
 	isStateOpt = 0;
 
         isQuasiLogLikeCalced = 0;
         isMaxInfGainCalced   = 0;
 
-        for ( i = 0 ; i < SVM_Scalar::N() ; ++i )
-	{
-            kerndiagval("&",i) = K2(i,i);
-	}
+        for ( int i = 0 ; i < SVM_Scalar::N() ; ++i ) { kerndiagval("&",i) = K2(i,i); }
 
-//errstream() << "phantomxyz 0 K2 = " << kerndiagval << "\n";
-        if ( fixxycache )
-        {
-            xycache.clear();
-        }
+        if ( fixxycache ) { xycache.clear(); }
 
-        kerncache.clear();
+         kerncache.clear();
         sigmacache.clear();
 
         if ( prim() )
@@ -2718,7 +2720,7 @@ updateInfo = 1;
 
 int SVM_Scalar::setKernel(const MercerKernel &xkernel, int modind, int onlyChangeRowI)
 {
-    NiceAssert( onlyChangeRowI >= -1 );
+    NiceAssert( onlyChangeRowI >= -3 );
     NiceAssert( onlyChangeRowI < SVM_Scalar::N() );
 
     int res = 0;
@@ -2728,7 +2730,7 @@ int SVM_Scalar::setKernel(const MercerKernel &xkernel, int modind, int onlyChang
         res = SVM_Generic::setKernel(xkernel,modind,onlyChangeRowI);
     }
 
-    else if ( SVM_Scalar::N() && ( onlyChangeRowI == -1 ) )
+    else if ( SVM_Scalar::N() && ( onlyChangeRowI < 0 ) )
     {
         res = SVM_Generic::setKernel(xkernel,modind,onlyChangeRowI);
 
@@ -3401,7 +3403,7 @@ double SVM_Scalar::loglikelihood(void) const
         int i;
 
         isQuasiLogLikeCalced = 1;
-        (quasiloglike)         = 0;
+        quasiloglike         = 0;
 
         // Close enough: res = -1/2 y.inv(Gp).y - 1/2 log(det(Gp)) - n/2 log 2pi
         //                   = -1/2 y'.alpha - 1/2 log(det(Gp)) - n/2 log 2.pi
@@ -3422,15 +3424,12 @@ double SVM_Scalar::loglikelihood(void) const
         // logdet(Ktrue + inv(L).D.inv(L)) = logdet(L.Ktrue.L + D) + log(det(inv(L))^2)
         //                                 = logdet(L.Ktrue.L + D) - 2.logdet(L) (note correction factor)
 
-        //if ( N() )
+        for ( i = 0 ; i < SVM_Scalar::N() ; ++i )
         {
-            for ( i = 0 ; i < SVM_Scalar::N() ; ++i )
+            if ( alphaState()(i) )
             {
-                if ( alphaState()(i) )
-                {
 //                    (quasiloglike) -= (((double) (y(i)*alpha()(i)))/2);
-                    (quasiloglike) -= (zR()(i)*alphaR()(i)/2);
-                }
+                quasiloglike -= (zR()(i)*alphaR()(i)/2);
             }
         }
 
@@ -3440,7 +3439,7 @@ double SVM_Scalar::loglikelihood(void) const
             {
                 if ( alphaState()(i) )
                 {
-                    (quasiloglike) += 2.0*log(Lweightval(i))/2.0;
+                    quasiloglike += 2.0*log(Lweightval(i))/2.0;
                 }
             }
         }
@@ -3449,11 +3448,11 @@ double SVM_Scalar::loglikelihood(void) const
         // the Cholesky factorisation instead.  Also the determinant of chol(G)^2 scales
         // linearly, whereas the "raw" determinant scales horribly.
 
-        (quasiloglike) -= Q.fact_logdet()/2.0; // log(Q.fact_det())/2.0;
-        (quasiloglike) -= NUMBASE_LN2PI*SVM_Scalar::NS()/2.0;
+        quasiloglike -= Q.fact_logdet()/2.0; // log(Q.fact_det())/2.0;
+        quasiloglike -= NUMBASE_LN2PI*SVM_Scalar::NS()/2.0;
     }
 
-    return (quasiloglike);
+    return quasiloglike;
 }
 
 double SVM_Scalar::maxinfogain(void) const

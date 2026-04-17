@@ -272,8 +272,8 @@ public:
     virtual int NUF(int q) const { (void) q; return 0;     }
     virtual int NUB(int q) const { (void) q; return 0;     }
 
-    virtual const Vector<Vector<int>> &ClassRep(void)  const { const static Vector<Vector<int>> dummy; return dummy; }
-    virtual int                        findID(int ref) const { (void) ref; return 0;                                 }
+    virtual const Vector<Vector<int>> &ClassRep(void)  const { const static thread_local Vector<Vector<int>> dummy; return dummy; }
+    virtual int                        findID(int ref) const { (void) ref;                                          return 0;     }
 
     virtual int isLinearCost   (void)  const { return 0;           }
     virtual int isQuadraticCost(void)  const { return 0;           }
@@ -334,11 +334,11 @@ public:
     virtual int    outermaxitcnt(void) const { return MULTINORM_MAXITS;        }
     virtual int    outermaxcache(void) const { return MULTINORM_FULLCACHE_N;   }
 
-    virtual       int      maxiterfuzzt(void) const { return DEFAULT_MAXITERFUZZT;                                 }
-    virtual       int      usefuzzt    (void) const { return 0;                                                    }
-    virtual       double   lrfuzzt     (void) const { return DEFAULT_LRFUZZT;                                      }
-    virtual       double   ztfuzzt     (void) const { return DEFAULT_ZTFUZZT;                                      }
-    virtual const gentype &costfnfuzzt (void) const { const static gentype temp(DEFAULT_COSTFNFUZZT); return temp; }
+    virtual       int      maxiterfuzzt(void) const { return DEFAULT_MAXITERFUZZT;                                              }
+    virtual       int      usefuzzt    (void) const { return 0;                                                                 }
+    virtual       double   lrfuzzt     (void) const { return DEFAULT_LRFUZZT;                                                   }
+    virtual       double   ztfuzzt     (void) const { return DEFAULT_ZTFUZZT;                                                   }
+    virtual const gentype &costfnfuzzt (void) const { const static thread_local gentype temp(DEFAULT_COSTFNFUZZT); return temp; }
 
     virtual int m(void) const { return DEFAULT_EMM; }
 

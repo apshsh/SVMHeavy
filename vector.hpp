@@ -11462,77 +11462,21 @@ template <class T> Vector<T> &randtfill(Vector<T> &res) { return res.applyon(ran
 #define MINZEROSIZE        1000000
 #define ZEROALLOCAHEADFRAC 1.2
 
-inline const Vector<int> &zerointvecbasic(void)
-{
-    const static Vector<int> zerores(zerointarray(),"&");
+inline const Vector<int> &zerointvecbasic(void) { const static thread_local Vector<int> zerores(zerointarray(),"&"); return zerores; }
+inline const Vector<int> &oneintvecbasic (void) { const static thread_local Vector<int> oneres (oneintarray (),"&"); return oneres;  }
 
-    return zerores;
-}
+inline const Vector<double> &zerodoublevecbasic(void) { const static thread_local Vector<double> zerores(zerodoublearray(),"&"); return zerores; }
+inline const Vector<double> &onedoublevecbasic (void) { const static thread_local Vector<double> oneres (onedoublearray (),"&"); return oneres;  }
+inline const Vector<double> &ninfdoublevecbasic(void) { const static thread_local Vector<double> ninfres(ninfdoublearray(),"&"); return ninfres; }
+inline const Vector<double> &pinfdoublevecbasic(void) { const static thread_local Vector<double> pinfres(pinfdoublearray(),"&"); return pinfres; }
 
-inline const Vector<int> &oneintvecbasic(void)
-{
-    const static Vector<int> oneres(oneintarray(),"&");
+inline const Vector<int> &zerointvec(int size, retVector<int> &tmpv) { return zerointvecbasic()(0,1,size-1,tmpv); }
+inline const Vector<int> &oneintvec (int size, retVector<int> &tmpv) { return oneintvecbasic ()(0,1,size-1,tmpv); }
 
-    return oneres;
-}
-
-inline const Vector<double> &zerodoublevecbasic(void)
-{
-    const static Vector<double> zerores(zerodoublearray(),"&");
-
-    return zerores;
-}
-
-inline const Vector<double> &onedoublevecbasic(void)
-{
-    const static Vector<double> oneres(onedoublearray(),"&");
-
-    return oneres;
-}
-
-inline const Vector<double> &ninfdoublevecbasic(void)
-{
-    const static Vector<double> ninfres(ninfdoublearray(),"&");
-
-    return ninfres;
-}
-
-inline const Vector<double> &pinfdoublevecbasic(void)
-{
-    const static Vector<double> pinfres(pinfdoublearray(),"&");
-
-    return pinfres;
-}
-
-inline const Vector<int> &zerointvec(int size, retVector<int> &tmpv)
-{
-    return zerointvecbasic()(0,1,size-1,tmpv);
-}
-
-inline const Vector<double> &zerodoublevec(int size, retVector<double> &tmpv)
-{
-    return zerodoublevecbasic()(0,1,size-1,tmpv);
-}
-
-inline const Vector<int> &oneintvec(int size, retVector<int> &tmpv)
-{
-    return oneintvecbasic()(0,1,size-1,tmpv);
-}
-
-inline const Vector<double> &onedoublevec(int size, retVector<double> &tmpv)
-{
-    return onedoublevecbasic()(0,1,size-1,tmpv);
-}
-
-inline const Vector<double> &ninfdoublevec(int size, retVector<double> &tmpv)
-{
-    return ninfdoublevecbasic()(0,1,size-1,tmpv);
-}
-
-inline const Vector<double> &pinfdoublevec(int size, retVector<double> &tmpv)
-{
-    return pinfdoublevecbasic()(0,1,size-1,tmpv);
-}
+inline const Vector<double> &zerodoublevec(int size, retVector<double> &tmpv) { return zerodoublevecbasic()(0,1,size-1,tmpv); }
+inline const Vector<double> &onedoublevec (int size, retVector<double> &tmpv) { return onedoublevecbasic ()(0,1,size-1,tmpv); }
+inline const Vector<double> &ninfdoublevec(int size, retVector<double> &tmpv) { return ninfdoublevecbasic()(0,1,size-1,tmpv); }
+inline const Vector<double> &pinfdoublevec(int size, retVector<double> &tmpv) { return pinfdoublevecbasic()(0,1,size-1,tmpv); }
 
 inline const Vector<int> &cntintvec(int size, retVector<int> &tmpv)
 {

@@ -407,20 +407,20 @@ template <class T> int testisinf (const Set<T> &x) { (void) x; return 0; }
 template <class T> int testispinf(const Set<T> &x) { (void) x; return 0; }
 template <class T> int testisninf(const Set<T> &x) { (void) x; return 0; }
 
-template <class T> T max(const Set<T> &a, const Set<T> &b) { static T infres(valpinf()); return ( a.isinfset() || b.isinfset() ) ? infres : max(a.all(),b.all()); }
-template <class T> T min(const Set<T> &a, const Set<T> &b) { static T infres(valpinf()); return ( a.isinfset() || b.isinfset() ) ? infres : min(a.all(),b.all()); }
+template <class T> T max(const Set<T> &a, const Set<T> &b) { static thread_local T infres(valpinf()); return ( a.isinfset() || b.isinfset() ) ? infres : max(a.all(),b.all()); }
+template <class T> T min(const Set<T> &a, const Set<T> &b) { static thread_local T infres(valpinf()); return ( a.isinfset() || b.isinfset() ) ? infres : min(a.all(),b.all()); }
 
-template <class T> const T &max     (const Set<T> &a) { int i = 0; static T infres(valpinf()); return a.isinfset() ? infres : max     (a.all(),i); }
-template <class T> const T &min     (const Set<T> &a) { int i = 0; static T infres(valninf()); return a.isinfset() ? infres : min     (a.all(),i); }
-template <class T>       T  maxabs  (const Set<T> &a) { int i = 0; static T infres(valpinf()); return a.isinfset() ? infres : maxabs  (a.all(),i); }
-template <class T>       T  minabs  (const Set<T> &a) { int i = 0; static T infres(0);         return a.isinfset() ? infres : minabs  (a.all(),i); }
-template <class T>       T  sqmaxabs(const Set<T> &a) {            static T infres(valpinf()); return a.isinfset() ? infres : sqmaxabs(a.all());   }
-template <class T>       T  sqminabs(const Set<T> &a) {            static T infres(0);         return a.isinfset() ? infres : sqminabs(a.all());   }
-template <class T>       T  sum     (const Set<T> &a) {            static T infres(valvnan()); return a.isinfset() ? infres : sum     (a.all());   }
-template <class T>       T  prod    (const Set<T> &a) {            static T infres(valvnan()); return a.isinfset() ? infres : prod    (a.all());   }
-template <class T>       T  Prod    (const Set<T> &a) {            static T infres(valvnan()); return a.isinfset() ? infres : Prod    (a.all());   }
-template <class T>       T  mean    (const Set<T> &a) {            static T infres(valvnan()); return a.isinfset() ? infres : mean    (a.all());   }
-template <class T> const T &median  (const Set<T> &a) { int i = 0; static T infres(valvnan()); return a.isinfset() ? infres : median  (a.all(),i); }
+template <class T> const T &max     (const Set<T> &a) { int i = 0; static thread_local T infres(valpinf()); return a.isinfset() ? infres : max     (a.all(),i); }
+template <class T> const T &min     (const Set<T> &a) { int i = 0; static thread_local T infres(valninf()); return a.isinfset() ? infres : min     (a.all(),i); }
+template <class T>       T  maxabs  (const Set<T> &a) { int i = 0; static thread_local T infres(valpinf()); return a.isinfset() ? infres : maxabs  (a.all(),i); }
+template <class T>       T  minabs  (const Set<T> &a) { int i = 0; static thread_local T infres(0);         return a.isinfset() ? infres : minabs  (a.all(),i); }
+template <class T>       T  sqmaxabs(const Set<T> &a) {            static thread_local T infres(valpinf()); return a.isinfset() ? infres : sqmaxabs(a.all());   }
+template <class T>       T  sqminabs(const Set<T> &a) {            static thread_local T infres(0);         return a.isinfset() ? infres : sqminabs(a.all());   }
+template <class T>       T  sum     (const Set<T> &a) {            static thread_local T infres(valvnan()); return a.isinfset() ? infres : sum     (a.all());   }
+template <class T>       T  prod    (const Set<T> &a) {            static thread_local T infres(valvnan()); return a.isinfset() ? infres : prod    (a.all());   }
+template <class T>       T  Prod    (const Set<T> &a) {            static thread_local T infres(valvnan()); return a.isinfset() ? infres : Prod    (a.all());   }
+template <class T>       T  mean    (const Set<T> &a) {            static thread_local T infres(valvnan()); return a.isinfset() ? infres : mean    (a.all());   }
+template <class T> const T &median  (const Set<T> &a) { int i = 0; static thread_local T infres(valvnan()); return a.isinfset() ? infres : median  (a.all(),i); }
 
 template <class T> Set<T> &setident (Set<T> &a) { return a.ident();  }
 template <class T> Set<T> &setzero  (Set<T> &a) { return a.zero();   }

@@ -2660,11 +2660,11 @@ public:
 
     gentype &Keqn(gentype &res, int resmode = 1) const
     {
-        const static SparseVector<gentype> x;
-        const static SparseVector<gentype> y;
+        const static thread_local SparseVector<gentype> x;
+        const static thread_local SparseVector<gentype> y;
 
-        const static vecInfo xinfo;
-        const static vecInfo yinfo;
+        const static thread_local vecInfo xinfo;
+        const static thread_local vecInfo yinfo;
 
 //        K2(res,x,y,xinfo,yinfo,defaultgentype(),nullptr,DEFAULT_VECT_INDEX,DEFAULT_VECT_INDEX,0,0,resmode,0,nullptr,nullptr,nullptr,0);
         K2(res,x,y,xinfo,yinfo,0_gent,nullptr,DEFAULT_VECT_INDEX,DEFAULT_VECT_INDEX-1,0,0,resmode,0,0);
@@ -4167,7 +4167,7 @@ public:
     int isSimpleXferKernel (void) const { return ( isSimpleKernel() && ( cType() >= 800 ) && ( cType() <= 829 ) ); }
     int isSimpleKernelChain(void) const { return ( ( size() == 2 )  && ( ( cType() >= 800 ) && ( cType() <= 829 ) )
                                           && !isNormalised(0) && !isNormalised(1) && isChained(0) && !isSplit(0) && !isMulSplit(0) && !isMagTerm() ); }
-    int isTrivialKernel    (int allowsymm = 0) const { const static gentype tempsampdist("[ ]"); return ( ( size() == 1 ) && !isFullNorm() && ( allowsymm || !isSymmSet() ) && !isProd() && !isIndex() && !isScaled() &&
+    int isTrivialKernel    (int allowsymm = 0) const { const static thread_local gentype tempsampdist("[ ]"); return ( ( size() == 1 ) && !isFullNorm() && ( allowsymm || !isSymmSet() ) && !isProd() && !isIndex() && !isScaled() &&
                                           ( isAltDiff() == 1 ) && !isNormalised() && !isChained() && !isSplit() && !isMulSplit() && !isMagTerm() &&
                                           ( numSamples() == DEFAULT_NUMKERNSAMP ) && ( sampleDistribution() == tempsampdist ) && ( sampleIndices().size() == 0 ) &&
                                           ( cRealOverwrite().indsize() == 0 ) && ( cIntOverwrite().indsize() == 0 ) ); }

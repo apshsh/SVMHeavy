@@ -331,7 +331,7 @@ py::object mloptDIRect    (int i, int dim, int numreps, py::object objfn, py::ob
 py::object mloptNelderMead(int i, int dim, int numreps, py::object objfn, py::object callback);
 py::object mloptBayesian  (int i, int dim, int numreps, py::object objfn, py::object callback);
 
-void plotregret(std::string &simname, py::object resnames, py::object listofres, double Rmin, double Rmax, int plotdata, int plotlogy);
+void plotregret(std::string &simname, py::object resnames, py::object listofres, double Rmin, double Rmax, int plotdata, int plotlogy, double Fmin, double Fmax);
 
 int selml(int i = 0);
 
@@ -691,6 +691,13 @@ OPTGETSETDEF(blockdist,      Bayesian,double )
 OPTGETSETDEF(cgtepsgreedypof,Bayesian,double )
 OPTGETSETDEF(h,              Bayesian,double )
 OPTGETSETDEF(maxresamp,      Bayesian,int    )
+OPTGETSETDEF(weightmain,     Bayesian,double )
+OPTGETSETDEF(weightcgt,      Bayesian,double )
+OPTGETSETDEF(weightmisc,     Bayesian,double )
+OPTGETSETDEF(alphascale,     Bayesian,double )
+OPTGETSETDEF(betascale,      Bayesian,double )
+OPTGETSETDEF(alphascalecgt,  Bayesian,double )
+OPTGETSETDEF(betascalecgt,   Bayesian,double )
 
 OPTGETSETDEF(intrinbatch,        Bayesian,int)
 OPTGETSETDEF(intrinbatchmethod,  Bayesian,int)
@@ -1391,15 +1398,18 @@ PYBIND11_MODULE(pyheavy, m) {
                                         "                                                                               \n"
                                         "1 - negative log-likelihood (default)                                          \n"
                                         "2 - leave-one-out error                                                        \n"
-                                        "3 - recall error                                                               \n"
-                                        "4 - ||alpha||                                                                  \n"
+                                        "4 - recall error                                                               \n"
+                                        "8 - ||alpha||                                                                  \n"
                                         "                                                                               \n"
                                         "These use a heuristic grid-search by default. To use DIRect instead, use:      \n"
                                         "                                                                               \n"
                                         "-1 - negative log-likelihood using DIRect                                      \n"
                                         "-2 - leave-one-out error using DIRect                                          \n"
-                                        "-3 - recall error using DIRect                                                 \n"
-                                        "-4 - ||alpha|| using DIRect                                                    \n"
+                                        "-4 - recall error using DIRect                                                 \n"
+                                        "-8 - ||alpha|| using DIRect                                                    \n"
+                                        "                                                                               \n"
+                                        "...&16 (eg 17 or -17) to tune parameters for variable bias case.               \n"
+                                        "...&32 tune on rebalanced data                                                 \n"
                                         "                                                                               \n"
                                         "Optional arguments are:                                                        \n"
                                         "                                                                               \n"
@@ -1681,7 +1691,7 @@ PYBIND11_MODULE(pyheavy, m) {
     m_opt_NelderMead.def("opt", &mloptNelderMead, "Optimise (minimise) fn : [0,1]^dim to [0,1] using Nelder-Mead optimiser i.\n" ENHANCED_RETURN_BASE,py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
     m_opt_Bayesian.def(  "opt", &mloptBayesian,   "Optimise (minimise) fn : [0,1]^dim to [0,1] using Bayesian optimiser i.\n"    ENHANCED_RETURN,     py::arg("i")=0,py::arg("dim")=1,py::arg("numreps")=1,py::arg("fn"),py::arg("callback")=py::none());
 
-    m_opt.def("plotRegret",&plotregret,"Plot regret. simname defines filenames, key is descriptions, res is a list of returns from opt.",py::arg("simname"),py::arg("key"),py::arg("res"),py::arg("rmin")=1.0,py::arg("rmax")=0.0,py::arg("plotdata")=0,py::arg("plotlogy")=0);
+    m_opt.def("plotRegret",&plotregret,"Plot regret. simname defines filenames, key is descriptions, res is a list of returns from opt.",py::arg("simname"),py::arg("key"),py::arg("res"),py::arg("rmin")=1.0,py::arg("rmax")=0.0,py::arg("plotdata")=0,py::arg("plotlogy")=0,py::arg("xmin")=1.0,py::arg("xmax")=0.0);
 
     auto m_opt_Bayesian_model = m_opt_Bayesian.def_submodule("models","Model Options"                               );
     auto m_opt_Bayesian_tune  = m_opt_Bayesian.def_submodule("tune",  "Model Tuning"                                );
@@ -1790,6 +1800,7 @@ PYBIND11_MODULE(pyheavy, m) {
                                        "23 - Level set (LSE) with Straddle Heuristic (Bry1).                           \n"
                                        "24 - Level set (LSE) with C2LSE (Ngo1).                                        \n"
                                        "25 - Mean plus variance.                                                       \n"
+                                       "26 - Level set (LSE) with C2LSE (Mgo1), tanh to range 0-1.                     \n"
                                        "                                                                               \n"
                                        "* beta_n = 2.log((n^{2+dim/2}).(pi^2)/(3.delta))                               \n"
                                        "$ variance of model only.                                                      \n"
@@ -1804,7 +1815,15 @@ PYBIND11_MODULE(pyheavy, m) {
                                        "11 - Multi-strategy learning or user-defined.                                  \n"
                                        "22 - Zero (minimize 0 placeholder, default).                                   \n"
                                        "23 - Level set (LSE) with Straddle Heuristic (Bry1).                           \n"
-                                       "24 - Level set (LSE) with C2LSE (Ngo1).                                        ");
+                                       "24 - Level set (LSE) with C2LSE (Ngo1).                                        \n"
+                                       "26 - Level set (LSE) with C2LSE (Mgo1), tanh to range 0-1.                     ");
+    QGETSETOPTB(m_opt,weightmain,Bayesian,"Scale main acquisition by this factor (default 1)."                          );
+    QGETSETOPTB(m_opt,weightcgt ,Bayesian,"Scale constraint acquisition by this factor (default 1)."                    );
+    QGETSETOPTB(m_opt,weightmisc,Bayesian,"Scale misc acquisition by this factor (default 1)."                          );
+    QGETSETOPTB(m_opt,alphascale,Bayesian,"Scale alpha (posterior mean) part of acquisition function (dflt 1)."         );
+    QGETSETOPTB(m_opt,betascale, Bayesian,"Scale beta (posterior variance) part of acquisition function (dflt 1)."      );
+    QGETSETOPTB(m_opt,alphascalecgt,Bayesian,"Scale alpha (posterior mean) part of cgt acquisition function (dflt 1)."      );
+    QGETSETOPTB(m_opt,betascalecgt, Bayesian,"Scale beta (posterior variance) part of cgt acquisition function (dflt 1)."   );
     QGETSETOPTB(m_opt,cgtscale,Bayesian,"Scale constraint acquisition by this factor (default 1)."                      );
     QGETSETOPTB(m_opt,acqvalexp,Bayesian,"Like acq, but defines beta scale for calculating prob feasible."              );
     QGETSETOPTB(m_opt,maxresamp,Bayesian,"Max resamples if inner-loop fails in TS (default 6)."                         );
@@ -1862,7 +1881,8 @@ PYBIND11_MODULE(pyheavy, m) {
     QGETSETOPTB(m_opt,randsearch,Bayesian,"select using random search acq(x) <= U(0,1)                                 ");
     QGETSETOPTB(m_opt,PIscale,Bayesian,"PI scaling: set 0 for standard operation, 1 to scale aquisition function by    \n"
                                        "the PI (probability of improvement) acquisition function. 2 is like 1 but with \n"
-                                       "a ``hard ratchett'' to avoid any experiments for no-progress (a bad idea).     ");
+                                       "a ``hard ratchett'' to avoid any experiments for no-progress (a bad idea).     \n"
+                                       "3 is like 1, but also scale acqcgt.                                            ");
     QGETSETOPTB(m_opt,norepeats,Bayesian,"Prevent repeats:\n"
                                        "                                                                               \n"
                                        "0   - usual BO behaviour (default).                                            \n"
@@ -2419,7 +2439,7 @@ py::object mlopt(GlobalOptions &optimiser, int dim, int numreps, py::object objf
     return res;
 }
 
-void plotregret(std::string &simname, py::object pyresname, py::object pylistofres, double Rmin, double Rmax, int plotdata, int plotlogy)
+void plotregret(std::string &simname, py::object pyresname, py::object pylistofres, double Rmin, double Rmax, int plotdata, int plotlogy, double Fmin, double Fmax)
 {
     Vector<std::string> resname;
     Vector<Dict<gentype,dictkey>> listofres;
@@ -2433,6 +2453,9 @@ void plotregret(std::string &simname, py::object pyresname, py::object pylistofr
 
     temp.simRmin = Rmin;
     temp.simRmax = Rmax;
+
+    temp.simFmin = Fmin;
+    temp.simFmax = Fmax;
 
     Vector<Vector<gentype>> resmeanallFres(resname.size());
     Vector<Vector<gentype>> resmeanallmres(resname.size());
@@ -2811,9 +2834,9 @@ void callsnakes(int wide, int high) { dostartup(); snakes(wide,high,(20*high)/23
 
 void svmheavy(int method, int permode, const std::string commstr, int wml);
 
-void svmheavya(void)                      { static std::string dummy; svmheavy(1,-1,dummy,-1);      }
-void svmheavyb(int permode)               { static std::string dummy; svmheavy(2,permode,dummy,-1); }
-void svmheavyc(const std::string commstr) {                           svmheavy(3,-1,commstr,-1);    }
+void svmheavya(void)                      { static thread_local std::string dummy; svmheavy(1,-1,dummy,-1);      }
+void svmheavyb(int permode)               { static thread_local std::string dummy; svmheavy(2,permode,dummy,-1); }
+void svmheavyc(const std::string commstr) {                                        svmheavy(3,-1,commstr,-1);    }
 
 double mlcalcLOO   (void)                          { dostartup(); int i = glob_MLInd(0); return calcLOO(getMLref(i));                   }
 double mlcalcRecall(void)                          { dostartup(); int i = glob_MLInd(0); return calcRecall(getMLref(i));                }

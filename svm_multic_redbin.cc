@@ -1099,8 +1099,6 @@ int SVM_MultiC_redbin::sety(const Vector<gentype> &yn)
 
 int SVM_MultiC_redbin::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 {
-    (void) onlyChangeRowI;
-
     int res = 0;
 
     isStateOpt = 0;
@@ -1150,8 +1148,6 @@ QA.setKernel(getKernel());
 
 int SVM_MultiC_redbin::setKernel(const MercerKernel &xkernel, int modind, int onlyChangeRowI)
 {
-    (void) onlyChangeRowI;
-
     isStateOpt = 0;
 
     int res = QA.setKernel(xkernel);

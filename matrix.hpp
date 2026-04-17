@@ -4479,53 +4479,17 @@ const Matrix<T> &Matrix<T>::operator()(const Vector<int> &i, const Vector<int> &
 
 #define MAXHACKYHEAD 1000000
 
-inline const Matrix<int> &zerointmatrixbasic(void)
-{
-    const static Matrix<int> zerores("&",zerointvecbasic());
+inline const Matrix<int> &zerointmatrixbasic(void) { const static thread_local Matrix<int> zerores("&",zerointvecbasic()); return zerores; }
+inline const Matrix<int> &oneintmatrixbasic (void) { const static thread_local Matrix<int> oneres ("&",oneintvecbasic ()); return oneres;  }
 
-    return zerores;
-}
+inline const Matrix<double> &zerodoublematrixbasic(void) { const static thread_local Matrix<double> zerores("&",zerodoublevecbasic()); return zerores; }
+inline const Matrix<double> &onedoublematrixbasic (void) { const static thread_local Matrix<double> oneres ("&",onedoublevecbasic ()); return oneres;  }
 
-inline const Matrix<int> &oneintmatrixbasic(void)
-{
-    const static Matrix<int> oneres("&",oneintvecbasic());
+inline const Matrix<int> &zerointmatrix(int numRows, int numCols, retMatrix<int> &tmpm) { return zerointmatrixbasic()(0,1,numRows-1,0,1,numCols-1,tmpm); }
+inline const Matrix<int> &oneintmatrix (int numRows, int numCols, retMatrix<int> &tmpm) { return oneintmatrixbasic ()(0,1,numRows-1,0,1,numCols-1,tmpm); }
 
-    return oneres;
-}
-
-inline const Matrix<double> &zerodoublematrixbasic(void)
-{
-    const static Matrix<double> zerores("&",zerodoublevecbasic());
-
-    return zerores;
-}
-
-inline const Matrix<double> &onedoublematrixbasic(void)
-{
-    const static Matrix<double> oneres("&",onedoublevecbasic());
-
-    return oneres;
-}
-
-inline const Matrix<int> &zerointmatrix(int numRows, int numCols, retMatrix<int> &tmpm)
-{
-    return zerointmatrixbasic()(0,1,numRows-1,0,1,numCols-1,tmpm);
-}
-
-inline const Matrix<int> &oneintmatrix(int numRows, int numCols, retMatrix<int> &tmpm)
-{
-    return oneintmatrixbasic()(0,1,numRows-1,0,1,numCols-1,tmpm);
-}
-
-inline const Matrix<double> &zerodoublematrix(int numRows, int numCols, retMatrix<double> &tmpm)
-{
-    return zerodoublematrixbasic()(0,1,numRows-1,0,1,numCols-1,tmpm);
-}
-
-inline const Matrix<double> &onedoublematrix(int numRows, int numCols, retMatrix<double> &tmpm)
-{
-    return onedoublematrixbasic()(0,1,numRows-1,0,1,numCols-1,tmpm);
-}
+inline const Matrix<double> &zerodoublematrix(int numRows, int numCols, retMatrix<double> &tmpm) { return zerodoublematrixbasic()(0,1,numRows-1,0,1,numCols-1,tmpm); }
+inline const Matrix<double> &onedoublematrix (int numRows, int numCols, retMatrix<double> &tmpm) { return onedoublematrixbasic ()(0,1,numRows-1,0,1,numCols-1,tmpm); }
 
 
 

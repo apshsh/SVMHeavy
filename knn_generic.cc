@@ -409,7 +409,7 @@ int KNN_Generic::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 
     (void) modind;
 
-    NiceAssert( onlyChangeRowI >= -2 );
+    NiceAssert( onlyChangeRowI >= -3 );
     NiceAssert( onlyChangeRowI < N() );
 
     incgvernum();
@@ -417,7 +417,7 @@ int KNN_Generic::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
     ML_Base::resetKernel(modind,onlyChangeRowI,updateInfo);
     kerncache.setSymmetry(getKernel().getSymmetry());
 
-    if ( N() && ( ( onlyChangeRowI == -1 ) || ( onlyChangeRowI == -2 ) ) )
+    if ( N() && ( ( onlyChangeRowI == -1 ) || ( onlyChangeRowI == -2 ) || ( onlyChangeRowI == -3 ) ) )
     {
         kerncache.clear();
         res = 1;
@@ -440,13 +440,13 @@ int KNN_Generic::setKernel(const MercerKernel &xkernel, int modind, int onlyChan
 
     incgvernum();
 
-    NiceAssert( onlyChangeRowI >= -2 );
+    NiceAssert( onlyChangeRowI >= -3 );
     NiceAssert( onlyChangeRowI < N() );
 
     ML_Base::setKernel(xkernel,modind,onlyChangeRowI);
     kerncache.setSymmetry(getKernel().getSymmetry());
 
-    if ( N() && ( ( onlyChangeRowI == -1 ) || ( onlyChangeRowI == -2 ) ) )
+    if ( N() && ( ( onlyChangeRowI == -1 ) || ( onlyChangeRowI == -2 ) || ( onlyChangeRowI == -3 ) ) )
     {
         kerncache.clear();
         res = 1;

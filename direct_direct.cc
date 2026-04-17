@@ -1649,9 +1649,9 @@ L100:
 
 /* Table of constant values */
 
-static integer c__1 = 1;
-static integer c__32 = 32;
-static integer c__0 = 0;
+static thread_local integer c__1 = 1;
+static thread_local integer c__32 = 32;
+static thread_local integer c__0 = 0;
 
 /* +-----------------------------------------------------------------------+ */
 /* | INTEGER Function DIRGetlevel                                          | */

@@ -791,6 +791,7 @@ class fninnerinnerArg
 
             case 23:  /* LSE Saddle, Bry1    */ { alphamain = 0; numain = 1; epsmain = 0;     break; }
             case 24:  /* LSE C2LSE, Ngo1     */ { alphamain = 0; numain = 1; epsmain = 0;     break; }
+            case 26:  /* LSE C2LSE tanh, Ng01*/ { alphamain = 0; numain = 1; epsmain = 0;     break; }
 
             case 22:  /* Zero                */ { alphamain = 0; numain = 1; epsmain = 0;     break; }
             case 0:   /* Mean only           */ { alphamain = 1; numain = 1; epsmain = 0;     break; }
@@ -834,6 +835,7 @@ class fninnerinnerArg
 
             case 23:  /* LSE Saddle, Bry1    */ { alphacgt = 0; nucgt = 1; epscgt = 0;     break; }
             case 24:  /* LSE C2LSE, Ngo1     */ { alphacgt = 0; nucgt = 1; epscgt = 0;     break; }
+            case 26:  /* LSE C2LSE tanh, Ngo1*/ { alphacgt = 0; nucgt = 1; epscgt = 0;     break; }
 
             case 22:  /* Zero                */ { alphacgt = 0; nucgt = 1; epscgt = 0;     break; }
             case 0:   /* Mean only           */ { alphacgt = 1; nucgt = 1; epscgt = 0;     break; }
@@ -877,6 +879,7 @@ class fninnerinnerArg
 
             case 23:  /* LSE Saddle, Bry1    */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 0;     break; }
             case 24:  /* LSE C2LSE, Ngo1     */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 0;     break; }
+            case 26:  /* LSE C2LSE tanh, Ngo1*/ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 0;     break; }
 
             case 22:  /* Zero                */ { alphavalexp = 0; nuvalexp = 1; epsvalexp = 0;     break; }
             case 0:   /* Mean only           */ { alphavalexp = 1; nuvalexp = 1; epsvalexp = 0;     break; }
@@ -951,6 +954,12 @@ class fninnerinnerArg
     betamain   = nuscale*numain  *epsmain;   // remember that nu can change!
     betacgt    = nuscale*nucgt   *epscgt;    // remember that nu can change!
     betavalexp = nuscale*nuvalexp*epsvalexp; // remember that nu can change!
+
+    alphamain *= bbopts.alphascale;
+    alphacgt  *= bbopts.alphascalecgt;
+
+    betamain *= bbopts.betascale;
+    betacgt  *= bbopts.betascalecgt;
 
          if ( justreturnbeta == 1 ) { return betamain;    }
     else if ( justreturnbeta == 2 ) { return betacgt;     }
@@ -1284,6 +1293,11 @@ class fninnerinnerArg
         if      ( !answisy && ( (double) sigmay > ztol ) ) { double tempvalue = (((((double) muy)-yymaxcorrect)/((double) sigmay))*NUMBASE_SQRT1ON2); resscalemain = normPhi(tempvalue); }
         else if ( (double) muy <= yymaxcorrect           ) { resscalemain = 0; if ( PIscale == 2 ) { resfeas = false; } }
         else                                               { resscalemain = 1;                                          }
+
+        if ( PIscale == 3 )
+        {
+            resscalecgt = resscalemain;
+        }
     }
 
     // =======================================================================
@@ -1683,6 +1697,20 @@ class fninnerinnerArg
                     break;
                 }
 
+                case 26: // LSE C2LSE, Ngo1, tanh
+                {
+                    exploitFactorR = 0;
+                    exploreFactorR = tanh(log(1+(sigmaR/std::max(bbopts.lseeps,std::abs(muR-hhR)))));
+
+                    minexploitFactorR = 0;
+                    maxexploitFactorR = 0;
+
+                    minexploreFactorR = 0;
+                    maxexploreFactorR = 1;
+
+                    break;
+                }
+
                 default: // gpUCB variants
                 {
                     exploitFactorR = alphaR*(muR-mumin);
@@ -1801,6 +1829,20 @@ class fninnerinnerArg
                     minexploreFactorR = 0; //log(1+modelsigmaR/((mumax-mumin)+std::abs(hhR)));
                     maxexploreFactorR = 1; // This is arbitrary! The real max is very large, and we don't want to "squash" what matters.
                                            // "real" max: log(1+((1+modelsigmaR)/lseeps))
+
+                    break;
+                }
+
+                case 26: // LSE C2LSE, Ngo1, tanh
+                {
+                    exploitFactorR = 0;
+                    exploreFactorR = tanh(log(1+(sigmaR/std::max(bbopts.lseeps,std::abs(muR-hhR)))));
+
+                    minexploitFactorR = 0;
+                    maxexploitFactorR = 0;
+
+                    minexploreFactorR = 0;
+                    maxexploreFactorR = 1;
 
                     break;
                 }
@@ -1951,12 +1993,13 @@ class fninnerinnerArg
 //errstream() << resmain << "\t" << rescgt << "\t" << resmisc << " ->\t";
     double res = 0;
     int termcnt = 0;
+    double termweight = 0;
 
-    if ( objresfeasmain ) { res += resmain; termcnt++; }
-    if ( objresfeascgt  ) { res += rescgt;  termcnt++; }
-    if ( objresfeasmisc ) { res += resmisc; termcnt++; }
+    if ( objresfeasmain ) { res += (bbopts.weightmain)*resmain; termcnt++; termweight += bbopts.weightmain; }
+    if ( objresfeascgt  ) { res += (bbopts.weightcgt) *rescgt;  termcnt++; termweight += bbopts.weightcgt;  }
+    if ( objresfeasmisc ) { res += (bbopts.weightmisc)*resmisc; termcnt++; termweight += bbopts.weightmisc; }
 
-    if ( termcnt ) { res /= termcnt; }
+    if ( termcnt ) { res /= termweight; }
 
 //errstream() << "muy = " << muy << ",\t";
 //errstream() << "res = " << res << " + " << (bbopts.tailweight) << " * " << restail << " ->\t";

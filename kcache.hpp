@@ -159,6 +159,9 @@ public:
          removes row rownum and recalculates relevant values in columns.
          This does not incur additional cost and may save flops if the
          row is not required again.
+       - conservedata: if set 1 then don't just remove the row but recalculate
+         it instead.
+       - if conservedata and d set then only recalc for d(i) != 0
 
        set...Cheat:
 
@@ -181,7 +184,7 @@ public:
     void setPreferLower(int nv)          { preferLower = nv;     }
     void setmemsize(int xmemsize, int xmin_rowdim, int modprealloc = 0);
     void clear(void);
-    void recalc(int rownum);
+    void recalc(int rownum, int conservedata = 0, const Vector<int> *d = nullptr);
     void setInnerCheat(void (*reverseK)(T &, const T &, void *), void *carg);
     void setDistCheat (void (*reverseK)(T &, const T &, void *), void *carg);
 
@@ -266,7 +269,7 @@ public:
     const T getval_v(int numi, int numj, retVector<T> &tmpva);
     const T *getvalIfPresent(int numi, int numj) const;
     const T getvalIfPresent_v(int numi, int numj, int &isgood) const;
-    const Vector<T> &getrow(int numi, retVector<T> &tmp);
+    const Vector<T> &getrow(int numi, retVector<T> &tmp, int conservedata = 0, const Vector<int> *d = nullptr);
     int isRowInCache(int numi);
 
     /*
@@ -345,6 +348,8 @@ private:
     Vector<T> diagvals;
 
     void evalcacheind(T &, int i, int j);
+
+    Vector<T> dummyresx;
 
     // We need to lock getrow for parallel operation so that
     // row accesses don't collide or operate partially.  Note
@@ -667,15 +672,7 @@ void Kcache<T>::clear(void)
 
         // Reset diagonal values
 
-        if ( trainsize )
-        {
-	    int i;
-
-            for ( i = 0 ; i < trainsize ; ++i )
-            {
-                (*evalCache)(diagvals("&",i),i,i,nullptr,evalArg);
-            }
-        }
+        for ( int i = 0 ; i < trainsize ; ++i ) { (*evalCache)(diagvals("&",i),i,i,nullptr,evalArg); }
 
         // Set row_ident == 0
 
@@ -690,7 +687,7 @@ void Kcache<T>::clear(void)
 }
 
 template <class T>
-void Kcache<T>::recalc(int rownum)
+void Kcache<T>::recalc(int rownum, int conservedata, const Vector<int> *d)
 {
     NiceAssert( rownum >= 0 );
     NiceAssert( rownum < trainsize );
@@ -698,6 +695,17 @@ void Kcache<T>::recalc(int rownum)
     // Reset diagonal
 
     (*evalCache)(diagvals("&",rownum),rownum,rownum,nullptr,evalArg);
+
+    // If data conservation chosen then divert to recalculate.
+
+    if ( conservedata )
+    {
+        retVector<T> tmp;
+
+        getrow(rownum,tmp,conservedata,d);
+
+        return;
+    }
 
     // Remove row from lookup
 
@@ -1484,8 +1492,8 @@ const T Kcache<T>::getvalIfPresent_v(int numi, int numj, int &isgood) const
     return diagvals.v(numi); // if reached isgood = 0, so return value never actually used
 }
 
-template <> inline const Vector<double> &Kcache<double>::getrow(int numi, retVector<double> &tmp);
-template <> inline const Vector<double> &Kcache<double>::getrow(int numi, retVector<double> &tmp)
+template <> inline const Vector<double> &Kcache<double>::getrow(int numi, retVector<double> &tmp, int conservedata, const Vector<int> *d);
+template <> inline const Vector<double> &Kcache<double>::getrow(int numi, retVector<double> &tmp, int conservedata, const Vector<int> *d)
 {
     NiceAssert( numi >= 0 );
     NiceAssert( numi < trainsize );
@@ -1493,17 +1501,33 @@ template <> inline const Vector<double> &Kcache<double>::getrow(int numi, retVec
     int j;
     Klink<double> *pos_ptr = lookup.v(numi);
 
-    if ( !pos_ptr )
+    if ( conservedata && pos_ptr )
+    {
+        for ( j = 0 ; j < trainsize ; ++j )
+        {
+            if ( !d || (*d)(j) )
+            {
+                evalcacheind((pos_ptr->kernel_row)("&",j),numi,j);
+            }
+        }
+    }
+
+    else if ( conservedata )
+    {
+        return dummyresx;
+    }
+
+    else if ( !pos_ptr )
     {
         // This block must be thread-safe!
 //#ifdef ENABLE_THREADS
 //        cachelock.lock();
 //#endif
-
-        pos_ptr = lookup.v(numi); // in case this has changed (race condition)
-
-        if ( !pos_ptr )
-        {
+//
+//        pos_ptr = lookup.v(numi); // in case this has changed (race condition)
+//
+//        if ( !pos_ptr )
+//        {
 	    /*
 	       If not found, construct the relevant row.
 	    */
@@ -1551,7 +1575,7 @@ template <> inline const Vector<double> &Kcache<double>::getrow(int numi, retVec
             //first_element->kernel_row = ... see above;
 
             lookup.sv(numi,first_element);
-        }
+//        }
 
 //#ifdef ENABLE_THREADS
 //        cachelock.unlock();
@@ -1564,8 +1588,8 @@ template <> inline const Vector<double> &Kcache<double>::getrow(int numi, retVec
 //#ifdef ENABLE_THREADS
 //        cachelock.lock();
 //#endif
-        if ( pos_ptr != first_element )
-        {
+//        if ( pos_ptr != first_element )
+//        {
 	    /*
 	       Put the row at the top of the list
 	    */
@@ -1593,8 +1617,8 @@ template <> inline const Vector<double> &Kcache<double>::getrow(int numi, retVec
 	        first_element->prev = pos_ptr;
 	        first_element = pos_ptr;
 	    }
-	}
-
+//	}
+//
 //#ifdef ENABLE_THREADS
 //        cachelock.unlock();
 //#endif
@@ -1604,7 +1628,7 @@ template <> inline const Vector<double> &Kcache<double>::getrow(int numi, retVec
 }
 
 template <class T>
-const Vector<T> &Kcache<T>::getrow(int numi, retVector<T> &tmp)
+const Vector<T> &Kcache<T>::getrow(int numi, retVector<T> &tmp, int conservedata, const Vector<int> *d)
 {
     NiceAssert( numi >= 0 );
     NiceAssert( numi < trainsize );
@@ -1612,17 +1636,33 @@ const Vector<T> &Kcache<T>::getrow(int numi, retVector<T> &tmp)
     int j;
     Klink<T> *pos_ptr = lookup.v(numi);
 
-    if ( !pos_ptr )
+    if ( conservedata && pos_ptr )
+    {
+        for ( j = 0 ; j < trainsize ; ++j )
+        {
+            if ( !d || (*d)(j) )
+            {
+                evalcacheind((pos_ptr->kernel_row)("&",j),numi,j);
+            }
+        }
+    }
+
+    else if ( conservedata )
+    {
+        return dummyresx;
+    }
+
+    else if ( !pos_ptr )
     {
         // This block must be thread-safe!
 //#ifdef ENABLE_THREADS
 //        cachelock.lock();
 //#endif
-
-        pos_ptr = lookup.v(numi); // in case this has changed (race condition)
-
-        if ( !pos_ptr )
-        {
+//
+//        pos_ptr = lookup.v(numi); // in case this has changed (race condition)
+//
+//        if ( !pos_ptr )
+//        {
 	    /*
 	       If not found, construct the relevant row.
 	    */
@@ -1670,8 +1710,8 @@ const Vector<T> &Kcache<T>::getrow(int numi, retVector<T> &tmp)
             //first_element->kernel_row = ... see above;
 
             lookup.sv(numi,first_element);
-        }
-
+//        }
+//
 //#ifdef ENABLE_THREADS
 //        cachelock.unlock();
 //#endif
@@ -1683,8 +1723,8 @@ const Vector<T> &Kcache<T>::getrow(int numi, retVector<T> &tmp)
 //#ifdef ENABLE_THREADS
 //        cachelock.lock();
 //#endif
-        if ( pos_ptr != first_element )
-        {
+//        if ( pos_ptr != first_element )
+//        {
 	    /*
 	       Put the row at the top of the list
 	    */
@@ -1712,8 +1752,8 @@ const Vector<T> &Kcache<T>::getrow(int numi, retVector<T> &tmp)
 	        first_element->prev = pos_ptr;
 	        first_element = pos_ptr;
 	    }
-	}
-
+//	}
+//
 //#ifdef ENABLE_THREADS
 //        cachelock.unlock();
 //#endif

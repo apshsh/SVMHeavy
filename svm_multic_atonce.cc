@@ -1310,7 +1310,7 @@ int SVM_MultiC_atonce::resetKernel(int modind, int onlyChangeRowI, int updateInf
     kerncache.setSymmetry(getKernel().getSymmetry());
     sigmacache.setSymmetry(1);
 
-    if ( N() && ( ( onlyChangeRowI == -1 ) || ( onlyChangeRowI == -2 ) ) )
+    if ( N() && ( onlyChangeRowI < 0 ) )
     {
         res |= 1;
         //res |= QA.resetKernel(modind,onlyChangeRowI);
@@ -1395,7 +1395,7 @@ int SVM_MultiC_atonce::setKernel(const MercerKernel &xkernel, int modind, int on
     kerncache.setSymmetry(getKernel().getSymmetry());
     sigmacache.setSymmetry(1);
 
-    if ( N() && ( ( onlyChangeRowI == -1 ) || ( onlyChangeRowI == -2 ) ) )
+    if ( N() && ( onlyChangeRowI < 0 ) )
     {
         res |= 1;
         //res |= QA.setKernel(xkernel,modind,onlyChangeRowI);

@@ -1068,8 +1068,6 @@ int SVM_Vector_redbin<BaseRegressorClass>::setQuadraticCost(void)
 template <class BaseRegressorClass>
 int SVM_Vector_redbin<BaseRegressorClass>::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 {
-    (void) onlyChangeRowI;
-
     int res = 0;
     int fixxycache = getKernel().isIPdiffered();
 
@@ -1115,8 +1113,6 @@ int SVM_Vector_redbin<BaseRegressorClass>::resetKernel(int modind, int onlyChang
 template <class BaseRegressorClass>
 int SVM_Vector_redbin<BaseRegressorClass>::setKernel(const MercerKernel &xkernel, int modind, int onlyChangeRowI)
 {
-    (void) onlyChangeRowI;
-
     int res = 0;
 
     if ( N() )

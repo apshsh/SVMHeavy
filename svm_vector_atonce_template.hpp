@@ -150,11 +150,11 @@ public:
     virtual double outerlr(void)      const override { return MULTINORM_OUTERSTEP;     }
     virtual double outertol(void)     const override { return MULTINORM_OUTERACCUR;    }
 
-    virtual       int      maxiterfuzzt(void) const override { return DEFAULT_MAXITERFUZZT;                                 }
-    virtual       int      usefuzzt(void)     const override { return 0;                                                    }
-    virtual       double   lrfuzzt(void)      const override { return DEFAULT_LRFUZZT;                                      }
-    virtual       double   ztfuzzt(void)      const override { return DEFAULT_ZTFUZZT;                                      }
-    virtual const gentype &costfnfuzzt(void)  const override { const static gentype temp(DEFAULT_COSTFNFUZZT); return temp; }
+    virtual       int      maxiterfuzzt(void) const override { return DEFAULT_MAXITERFUZZT;                                              }
+    virtual       int      usefuzzt(void)     const override { return 0;                                                                 }
+    virtual       double   lrfuzzt(void)      const override { return DEFAULT_LRFUZZT;                                                   }
+    virtual       double   ztfuzzt(void)      const override { return DEFAULT_ZTFUZZT;                                                   }
+    virtual const gentype &costfnfuzzt(void)  const override { const static thread_local gentype temp(DEFAULT_COSTFNFUZZT); return temp; }
 
     virtual double LinBiasForce(void)        const override { return 0;           }
     virtual double QuadBiasForce(void)       const override { return 0;           }
@@ -623,7 +623,7 @@ inline void SVM_Vector_atonce_temp<T>::assign(const ML_Base &bb, int onlySemiCop
     MEMDEL(GpGrad);  GpGrad = nullptr;
     MEMDEL(Gpsigma); Gpsigma = nullptr;
 
-    const static T dummy = src.dummyarg;
+    const static thread_local T dummy = src.dummyarg;
 
     GpGrad  = alloc_gp((void *) &kerncache,trainclass.size(),trainclass.size(),dummy);
     MEMNEW(Gpsigma,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &sigmacache,trainclass.size(),trainclass.size()));
@@ -768,7 +768,7 @@ SVM_Vector_atonce_temp<T>::SVM_Vector_atonce_temp() : SVM_Generic()
     sigmacache.reset(0,getsigmacallback(dummyarg),(void *) this);
     sigmacache.setmemsize(DEFAULT_MEMSIZE,MINROWDIM);
 
-    const static T dummy = dummyarg;
+    const static thread_local T dummy = dummyarg;
 
     GpGrad  = alloc_gp((void *) &kerncache,0,0,dummy);
     MEMNEW(Gpsigma,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &sigmacache,0,0));
@@ -816,7 +816,7 @@ SVM_Vector_atonce_temp<T>::SVM_Vector_atonce_temp(const SVM_Vector_atonce_temp<T
     sigmacache.reset(0,getsigmacallback(dummyarg),(void *) this);
     sigmacache.setmemsize(DEFAULT_MEMSIZE,MINROWDIM);
 
-    const static T dummy = dummyarg;
+    const static thread_local T dummy = dummyarg;
 
     GpGrad  = alloc_gp((void *) &kerncache,0,0,dummy);
     MEMNEW(Gpsigma,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &sigmacache,0,0));
@@ -837,7 +837,7 @@ SVM_Vector_atonce_temp<T>::SVM_Vector_atonce_temp(const SVM_Vector_atonce_temp<T
     sigmacache.reset(0,getsigmacallback(dummyarg),(void *) this);
     sigmacache.setmemsize(DEFAULT_MEMSIZE,MINROWDIM);
 
-    const static T dummy = dummyarg;
+    const static thread_local T dummy = dummyarg;
 
     GpGrad  = alloc_gp((void *) &kerncache,0,0,dummy);
     MEMNEW(Gpsigma,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &sigmacache,0,0));
@@ -864,7 +864,7 @@ int isKunreal_nontemp(const Matrix<double> &dummy);
 template <class T>
 int SVM_Vector_atonce_temp<T>::isKreal(void) const
 {
-    const static T temp = dummyarg;
+    const static thread_local T temp = dummyarg;
 
     return isKreal_nontemp(temp);
 }
@@ -872,7 +872,7 @@ int SVM_Vector_atonce_temp<T>::isKreal(void) const
 template <class T>
 int SVM_Vector_atonce_temp<T>::isKunreal(void) const
 {
-    const static T temp = dummyarg;
+    const static thread_local T temp = dummyarg;
 
     return isKunreal_nontemp(temp);
 }
@@ -1128,8 +1128,6 @@ int SVM_Vector_atonce_temp<T>::sety(const Vector<gentype> &yn)
 template <class T>
 int SVM_Vector_atonce_temp<T>::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 {
-    (void) onlyChangeRowI;
-
     int res = 0;
 
     if ( N() )
@@ -1145,10 +1143,9 @@ int SVM_Vector_atonce_temp<T>::resetKernel(int modind, int onlyChangeRowI, int u
 
     if ( N() )
     {
-	int i;
         gentype tempres;
 
-	for ( i = 0 ; i < N() ; ++i )
+	for ( int i = 0 ; i < N() ; ++i )
 	{
             K2(tempres,i,i);
             KFinaliser(kerndiag("&",i),tempres,tspaceDim());
@@ -1168,8 +1165,6 @@ int SVM_Vector_atonce_temp<T>::resetKernel(int modind, int onlyChangeRowI, int u
 template <class T>
 int SVM_Vector_atonce_temp<T>::setKernel(const MercerKernel &xkernel, int modind, int onlyChangeRowI)
 {
-    (void) onlyChangeRowI;
-
     int res = 0;
 
     if ( N() )
@@ -1185,10 +1180,9 @@ int SVM_Vector_atonce_temp<T>::setKernel(const MercerKernel &xkernel, int modind
 
     if ( N() )
     {
-	int i;
         gentype tempres;
 
-	for ( i = 0 ; i < N() ; ++i )
+	for ( int i = 0 ; i < N() ; ++i )
 	{
             K2(tempres,i,i);
             KFinaliser(kerndiag("&",i),tempres,tspaceDim());
@@ -3009,7 +3003,7 @@ std::istream &SVM_Vector_atonce_temp<T>::inputstream(std::istream &input)
     MEMDEL(GpGrad);  GpGrad = nullptr;
     MEMDEL(Gpsigma); Gpsigma = nullptr;
 
-    const static T dummydupe = dummyarg;
+    const static thread_local T dummydupe = dummyarg;
 
     GpGrad  = alloc_gp((void *) &kerncache,N(),N(),dummydupe);
     MEMNEW(Gpsigma,Matrix<double>(Kcache_celm_v_double,Kcache_celm_double,Kcache_crow_double,(void *) &(sigmacache),N(),N()));

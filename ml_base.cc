@@ -26,6 +26,9 @@ give a vector or matrix, which could potentially be used as a matrix-valued kern
 #include <string>
 #include "mercer.hpp"
 #include "ml_base.hpp"
+#include "svm_generic.hpp"
+#include "gpr_generic.hpp"
+#include "lsv_generic.hpp"
 #include "randfun.hpp"
 //#ifdef ENABLE_THREADS
 //#include <mutex>
@@ -1788,7 +1791,7 @@ int ML_Base::addTrainingVector(int i, const gentype &y, const SparseVector<genty
     alltraintargA.add(i);  alltraintargA("&",i)  = (const d_anion &) y;
     alltraintargV.add(i);  alltraintargV("&",i)  = (const Vector<double> &) y;
 
-    const static Vector<double> empvec;
+    const static thread_local Vector<double> empvec;
 
     alltraintargp.add(i);  calcprior(alltraintargp("&",i),allxdatagent(i));
     alltraintargpR.add(i); alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
@@ -1875,7 +1878,7 @@ int ML_Base::qaddTrainingVector(int i, const gentype &y, SparseVector<gentype> &
     alltraintargA.add(i);  alltraintargA("&",i)  = (const d_anion &) y;
     alltraintargV.add(i);  alltraintargV("&",i)  = (const Vector<double> &) y;
 
-    const static Vector<double> empvec;
+    const static thread_local Vector<double> empvec;
 
     alltraintargp.add(i);  calcprior(alltraintargp("&",i),allxdatagent(i));
     alltraintargpR.add(i); alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
@@ -1975,7 +1978,7 @@ int ML_Base::addTrainingVector(int i, const Vector<gentype> &y, const Vector<Spa
         alltraintargA.add(i+j);  alltraintargA("&",i+j)  = (const d_anion &) y(j);
         alltraintargV.add(i+j);  alltraintargV("&",i+j)  = (const Vector<double> &) y(j);
 
-        const static Vector<double> empvec;
+        const static thread_local Vector<double> empvec;
 
         alltraintargp.add(i+j);  calcprior(alltraintargp("&",i+j),allxdatagent(i+j));;
         alltraintargpR.add(i+j); alltraintargpR("&",i+j) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i+j) ) : 0.0;
@@ -2076,7 +2079,7 @@ int ML_Base::qaddTrainingVector(int i, const Vector<gentype> &y, Vector<SparseVe
         alltraintargA.add(i+j);  alltraintargA("&",i+j)  = (const d_anion &) y(j);
         alltraintargV.add(i+j);  alltraintargV("&",i+j)  = (const Vector<double> &) y(j);
 
-        const static Vector<double> empvec;
+        const static thread_local Vector<double> empvec;
 
         alltraintargp.add(i+j);  calcprior(alltraintargp("&",i+j),allxdatagent(i+j));;
         alltraintargpR.add(i+j); alltraintargpR("&",i+j) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i+j) ) : 0.0;
@@ -2239,29 +2242,141 @@ int ML_Base::removeTrainingVector(int i, int num)
 
 int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 {
-    NiceAssert( onlyChangeRowI >= -2 );
+    NiceAssert( onlyChangeRowI >= -3 );
     NiceAssert( onlyChangeRowI < ML_Base::N() );
 
     calcSetAssumeReal();
 
     int res = 1;
 
-    if ( ML_Base::N() && ( onlyChangeRowI == -2 ) && updateInfo )
+    if ( ML_Base::N() && ( onlyChangeRowI == -3 ) )
     {
         res = 1;
 
-        for ( int i = 0 ; i < ML_Base::N() ; ++i )
-	{
-            if ( modind && d()(i) )
+        if ( updateInfo )
+        {
+            for ( int i = 0 ; i < ML_Base::N() ; ++i )
 	    {
-                // If x() is not accurate don't worry as it will be done via callback
-                getKernel().getvecInfo(traininfo("&",i),x(i),isXConsistent(),assumeReal); //()(i));
-                traintang("&",i) = detangle_x(i);
+                if ( modind )
+	        {
+                    // If x() is not accurate don't worry as it will be done via callback
+                    getKernel().getvecInfo(traininfo("&",i),x(i),isXConsistent(),assumeReal); //()(i));
+                    traintang("&",i) = detangle_x(i);
+	        }
 	    }
 	}
+
+        const static thread_local Vector<double> empvec;
+
+        for ( int i = 0 ; i < ML_Base::N() ; i++ )
+        {
+            calcprior(alltraintargp("&",i),allxdatagent(i));
+            alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
+            alltraintargpA("&",i) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+            alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
+        }
     }
 
-    else if ( ML_Base::N() && ( onlyChangeRowI == -1 ) && updateInfo )
+    else if ( ML_Base::N() && ( onlyChangeRowI == -2 ) )
+    {
+        res = 1;
+
+        if ( updateInfo )
+        {
+            for ( int i = 0 ; i < ML_Base::N() ; ++i )
+	    {
+                if ( modind && d()(i) )
+	        {
+                    // If x() is not accurate don't worry as it will be done via callback
+                    getKernel().getvecInfo(traininfo("&",i),x(i),isXConsistent(),assumeReal); //()(i));
+                    traintang("&",i) = detangle_x(i);
+	        }
+	    }
+	}
+
+        const static thread_local Vector<double> empvec;
+
+        for ( int i = 0 ; i < ML_Base::N() ; i++ )
+        {
+            if ( d()(i) )
+            {
+                calcprior(alltraintargp("&",i),allxdatagent(i));
+                alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
+                alltraintargpA("&",i) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+                alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
+            }
+        }
+    }
+
+    else if ( ML_Base::N() && ( onlyChangeRowI == -1 ) )
+    {
+        res = 1;
+
+        if ( updateInfo )
+        {
+            for ( int i = 0 ; i < ML_Base::N() ; ++i )
+            {
+                if ( modind )
+	        {
+                    // If x() is not accurate don't worry as it will be done via callback
+                    getKernel().getvecInfo(traininfo("&",i),x(i),isXConsistent(),assumeReal); //()(i));
+                    traintang("&",i) = detangle_x(i);
+	        }
+	    }
+	}
+
+        const static thread_local Vector<double> empvec;
+
+        for ( int i = 0 ; i < ML_Base::N() ; i++ )
+        {
+            calcprior(alltraintargp("&",i),allxdatagent(i));
+            alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
+            alltraintargpA("&",i) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+            alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
+        }
+    }
+
+    else if ( onlyChangeRowI >= 0 )
+    {
+        res = 1;
+
+        if ( updateInfo )
+        {
+            int i = onlyChangeRowI;
+
+            if ( modind )
+            {
+                // If x() is not accurate don't worry as it will be done via callback
+                getKernel().getvecInfo(traininfo("&",i),x(i),isXConsistent(),assumeReal); //()(onlyChangeRowI));
+                traintang("&",i) = detangle_x(i);
+            }
+        }
+
+        int i = onlyChangeRowI;
+
+        const static thread_local Vector<double> empvec;
+
+        calcprior(alltraintargp("&",i),allxdatagent(i));
+        alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
+        alltraintargpA("&",i) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
+        alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
+    }
+
+    return res;
+}
+
+int ML_Base::setKernel(const MercerKernel &xkernel, int modind, int onlyChangeRowI)
+{
+    kernel = xkernel;
+
+    NiceAssert( onlyChangeRowI >= -3 );
+    NiceAssert( onlyChangeRowI < ML_Base::N() );
+
+    calcSetAssumeReal();
+
+    int res = 1;
+
+    if ( ML_Base::N() && ( onlyChangeRowI == -3 ) )
     {
         res = 1;
 
@@ -2276,74 +2391,7 @@ int ML_Base::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 	}
     }
 
-    else if ( ( onlyChangeRowI >= 0 ) && updateInfo )
-    {
-        res = 1;
-
-        if ( modind )
-        {
-            // If x() is not accurate don't worry as it will be done via callback
-            getKernel().getvecInfo(traininfo("&",onlyChangeRowI),x(onlyChangeRowI),isXConsistent(),assumeReal); //()(onlyChangeRowI));
-            traintang("&",onlyChangeRowI) = detangle_x(onlyChangeRowI);
-        }
-    }
-
-    if ( onlyChangeRowI >= 0 )
-    {
-        int i = onlyChangeRowI;
-
-        const static Vector<double> empvec;
-
-        calcprior(alltraintargp("&",i),allxdatagent(i));
-        alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
-        alltraintargpA("&",i) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
-        alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
-    }
-
-    else if ( onlyChangeRowI == -1 )
-    {
-        const static Vector<double> empvec;
-
-        for ( int i = 0 ; i < ML_Base::N() ; i++ )
-        {
-            calcprior(alltraintargp("&",i),allxdatagent(i));
-            alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
-            alltraintargpA("&",i) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
-            alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
-        }
-    }
-
-    else
-    {
-        const static Vector<double> empvec;
-
-        for ( int i = 0 ; i < ML_Base::N() ; i++ )
-        {
-            if ( d()(i) )
-            {
-                calcprior(alltraintargp("&",i),allxdatagent(i));
-                alltraintargpR("&",i) = ( gOutType() == 'R' ) ? ( (double) alltraintargp(i) ) : 0.0;
-                alltraintargpA("&",i) = ( gOutType() == 'A' ) ? ( (const d_anion &) alltraintargp(i) ) : 0_gent;
-                alltraintargpV("&",i) = ( gOutType() == 'V' ) ? ( (const Vector<double> &) alltraintargp(i) ) : empvec;
-            }
-        }
-    }
-
-    return res;
-}
-
-int ML_Base::setKernel(const MercerKernel &xkernel, int modind, int onlyChangeRowI)
-{
-    kernel = xkernel;
-
-    NiceAssert( onlyChangeRowI >= -2 );
-    NiceAssert( onlyChangeRowI < ML_Base::N() );
-
-    calcSetAssumeReal();
-
-    int res = 1;
-
-    if ( ML_Base::N() && ( onlyChangeRowI == -2 ) )
+    else if ( ML_Base::N() && ( onlyChangeRowI == -2 ) )
     {
         res = 1;
 
@@ -7732,13 +7780,30 @@ errstream() << "Tune task-relatedness " << i << " in range " << lb << " to " << 
         }
     }
 
+    // Detect variable bias tuning
+
+    int varbiastune = 0; // 0 do nothing, 1 need to set bias variable and reset to fixed at end
+
+    if ( ( method > 0 ) && (   method  & 16 ) ) { varbiastune = 1;               method -= 16;               }
+    if ( ( method < 0 ) && ( (-method) & 16 ) ) { varbiastune = 1; method *= -1; method -= 16; method *= -1; }
+
+    if ( varbiastune && ( type() >=   0 ) && ( type() <=  99 ) && dynamic_cast<const SVM_Generic &>(getMLconst()).isVarBias  () ) { varbiastune = 0; }
+    if ( varbiastune && ( type() >= 400 ) && ( type() <= 499 ) && dynamic_cast<const GPR_Generic &>(getMLconst()).isVarmuBias() ) { varbiastune = 0; }
+    if ( varbiastune && ( type() >= 500 ) && ( type() <= 599 ) && dynamic_cast<const LSV_Generic &>(getMLconst()).isVardelta () ) { varbiastune = 0; }
+
+    // Rebalancing
+
+    int reweighttune = 0; // 0 do nothing, 1 tune on re-scaled data
+
+    if ( ( method > 0 ) && (   method  & 32 ) ) { reweighttune = 1;               method -= 32;               }
+    if ( ( method < 0 ) && ( (-method) & 32 ) ) { reweighttune = 1; method *= -1; method -= 32; method *= -1; }
+
     // Return if method 0
 
     if ( !method )
     {
         return 1;
     }
-
 
     // Work out dimension and scale to bounds
     // Want at most MAXADIM evaluations
@@ -7790,6 +7855,52 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
 
     if ( ddim )
     {
+        // Set variable bias if required
+
+        int biastype = 0; // 0 for fixed, 1 for positive, 2 for negative
+        double fixbias = 0.0;
+
+        if ( varbiastune && ( type() >= 0 ) && ( type() <= 99 ) && dynamic_cast<const SVM_Generic &>(getMLconst()).isFixedBias() && isUnderlyingScalar() )
+        {
+            fixbias = dynamic_cast<const SVM_Generic &>(getMLconst()).biasR();
+        }
+
+        if ( varbiastune && ( type() >= 0 ) && ( type() <= 99 ) && dynamic_cast<const SVM_Generic &>(getMLconst()).isFixedBias() ) { biastype = 0; }
+        if ( varbiastune && ( type() >= 0 ) && ( type() <= 99 ) && dynamic_cast<const SVM_Generic &>(getMLconst()).isPosBias()   ) { biastype = 1; }
+        if ( varbiastune && ( type() >= 0 ) && ( type() <= 99 ) && dynamic_cast<const SVM_Generic &>(getMLconst()).isNegBias()   ) { biastype = 2; }
+
+        if ( varbiastune && ( type() >=   0 ) && ( type() <=  99 ) ) { dynamic_cast<SVM_Generic &>(getML()).setVarBias  (); errstream() << "_svsvm_"; }
+        if ( varbiastune && ( type() >= 400 ) && ( type() <= 499 ) ) { dynamic_cast<GPR_Generic &>(getML()).setVarmuBias(); errstream() << "_svgpr_"; }
+        if ( varbiastune && ( type() >= 500 ) && ( type() <= 599 ) ) { dynamic_cast<LSV_Generic &>(getML()).setVardelta (); errstream() << "_svlsv_"; }
+
+        // Variable reweighting if required
+
+        Vector<double> baseCweight(Cweight());
+
+        if ( reweighttune )
+        {
+            Vector<int> pospt;
+            Vector<int> negpt;
+
+            for ( i = 0 ; i < N() ; ++i )
+            {
+                if ( ( d()(i) == +1 ) || ( ( d()(i) == 2 ) && ( yR()(i) > 0 ) ) ) { pospt.append(pospt.size(),i); }
+                if ( ( d()(i) == -1 ) || ( ( d()(i) == 2 ) && ( yR()(i) < 0 ) ) ) { pospt.append(pospt.size(),i); }
+            }
+
+            //    C+.N+ = C-.N-
+            // => C+.N+ = (1-C+).N-
+            // => C+.(N++N-) = N-
+            // => C+ = N-/(N++N-)
+            // => C- = N+/(N++N-)
+
+            if ( pospt.size() && negpt.size() )
+            {
+                for ( i = 0 ; i < pospt.size() ; ++i ) { setCweight(pospt(i),((double) negpt.size())/((double) (pospt.size()+negpt.size()))); }
+                for ( i = 0 ; i < negpt.size() ; ++i ) { setCweight(negpt(i),((double) pospt.size())/((double) (pospt.size()+negpt.size()))); }
+            }
+        }
+
         // Save "base state". This becomes a restore point if an error is thrown,
         // and a reset point before the final training (to avoid cumulative numerical
         // errors).
@@ -7812,8 +7923,8 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
         // Store for optimal results
 
         Vector<Vector<gentype>> bestconstVecs(constVecs); // this will store the best constVecs
-        Vector<double>           bestweightval(weightval); // "
-        SparseVector<gentype>    bestARDScale(ARDScale);   // "
+        Vector<double>          bestweightval(weightval); // "
+        SparseVector<gentype>   bestARDScale(ARDScale);   // "
 
         double bestCval     = backC;     // "
         double bestsigmaval = backsigma; // "
@@ -7835,6 +7946,8 @@ errstream() << "tuneKernel: trycount = " << trycount << "\n";
             svmvolatile int killSwitch = 0;
 
             dopts.maxevals = MAXADIM;
+
+            resetKernel(1,-1); // start with an empty cache, let it build as required
 
             int ires = directOpt(ddim,bestffull,fres,kmin,kmax,evalkernarg,evalargs,dopts,killSwitch);
 
@@ -7985,7 +8098,7 @@ errstream() << "tuneKernel: direct fres = " << fres << "\n";
 
                     if ( kARDdim ) { lockernel.setScale(ARDScale); }
 
-                    model.resetKernel(1,-2);
+                    model.resetKernel(1,-3); //-1);
                 }
 
                 if ( tuneP & 1 ) { setC(Cval);         }
@@ -7995,11 +8108,23 @@ errstream() << "tuneKernel: direct fres = " << fres << "\n";
 
             else
             {
-                if ( tuneK )     { lockernel = backkernel; resetKernel(); }
-                if ( tuneP & 1 ) { setC(backC);                           }
-                if ( tuneP & 2 ) { seteps(backeps);                       }
-                if ( tuneP & 4 ) { setsigma(backsigma);                   }
+                if ( tuneK )     { lockernel = backkernel; resetKernel(1,-1); }
+                if ( tuneP & 1 ) { setC(backC);                               }
+                if ( tuneP & 2 ) { seteps(backeps);                           }
+                if ( tuneP & 4 ) { setsigma(backsigma);                       }
             }
+
+            // Revert weights if required
+
+            if ( reweighttune ) { setCweight(baseCweight); }
+
+            // Revert biasing if required
+
+            if ( varbiastune && ( type() >=   0 ) && ( type() <=  99 ) && ( biastype == 0 ) ) { dynamic_cast<SVM_Generic &>(getML()).setFixedBias (fixbias); errstream() << "_szsvm_\n"; }
+            if ( varbiastune && ( type() >=   0 ) && ( type() <=  99 ) && ( biastype == 1 ) ) { dynamic_cast<SVM_Generic &>(getML()).setPosBias   ();        errstream() << "_spsvm_\n"; }
+            if ( varbiastune && ( type() >=   0 ) && ( type() <=  99 ) && ( biastype == 2 ) ) { dynamic_cast<SVM_Generic &>(getML()).setNegBias   ();        errstream() << "_snsvm_\n"; }
+            if ( varbiastune && ( type() >= 400 ) && ( type() <= 499 )                      ) { dynamic_cast<GPR_Generic &>(getML()).setZeromuBias();        errstream() << "_szgpr_\n"; }
+            if ( varbiastune && ( type() >= 500 ) && ( type() <= 599 )                      ) { dynamic_cast<LSV_Generic &>(getML()).setZerodelta ();        errstream() << "_szlsv_\n"; }
 
             int dummy = 0;
             model.train(dummy);
@@ -8045,93 +8170,96 @@ double ML_Base::evalkernel(int method, const paraDef &probbnd, const Vector<doub
     const double &backsigma = probbnd.backsigma;
     const double &backeps   = probbnd.backeps;
 
-                    {
-                        ML_Base &model = *this;
-                        MercerKernel &lockernel = model.getKernel_unsafe();
+    {
+        ML_Base &model = *this;
+        MercerKernel &lockernel = model.getKernel_unsafe();
 
-                        int lockdim    = lockernel.size();
-                        int lockARDdim = lockernel.cScale().indsize();
-                        int locddim    = ffull.size();
+        int lockdim    = lockernel.size();
+        int lockARDdim = lockernel.cScale().indsize();
+        int locddim    = ffull.size();
 
-                        double locCval     = backC;
-                        double locsigmaval = backsigma;
-                        double locepsval   = backeps;
+        double locCval     = backC;
+        double locsigmaval = backsigma;
+        double locepsval   = backeps;
 
-                        Vector<Vector<gentype>> locconstVecs(lockdim);
-                        Vector<double>           locweightval(lockdim);
-                        SparseVector<gentype>    locARDScale;
+        Vector<Vector<gentype>> locconstVecs(lockdim);
+        Vector<double>           locweightval(lockdim);
+        SparseVector<gentype>    locARDScale;
 
-                        int loctuneK = 0;
-                        int loctuneP = 0;
+        int loctuneK = 0;
+        int loctuneP = 0;
 
-                        for ( int j = 0 ; j < lockdim ; ++j )
-                        {
-                            locconstVecs("&",j) = backkernel.cRealConstants(j);
-                            locweightval("&",j) = (double) backkernel.cWeight(j);
-                        }
+        for ( int j = 0 ; j < lockdim ; ++j )
+        {
+            locconstVecs("&",j) = backkernel.cRealConstants(j);
+            locweightval("&",j) = (double) backkernel.cWeight(j);
+        }
 
-                        locARDScale = backkernel.cScale();
+        locARDScale = backkernel.cScale();
 
-                        for ( int j = 0 ; j < locddim ; ++j )
-                        {
-                            if      ( ( kelm(j) >= 0  ) && ( kind(j) == -1 ) ) { locARDScale.direref(kelm(j))           = ffull(j); loctuneK |= 1; }
-                            else if ( ( kelm(j) >= 0  ) && ( kind(j) >= 0  ) ) { locconstVecs("&",kind(j))("&",kelm(j)) = ffull(j); loctuneK |= 1; }
-                            else if ( ( kelm(j) == -1 )                      ) { locweightval("&",kind(j))              = ffull(j); loctuneK |= 1; }
-                            else if ( ( kelm(j) == -2 )                      ) { locCval                                = ffull(j); loctuneP |= 1; }
-                            else if ( ( kelm(j) == -3 )                      ) { locepsval                              = ffull(j); loctuneP |= 2; }
-                            else if ( ( kelm(j) == -4 )                      ) { locsigmaval                            = ffull(j); loctuneP |= 4; }
-                        }
+        for ( int j = 0 ; j < locddim ; ++j )
+        {
+            if      ( ( kelm(j) >= 0  ) && ( kind(j) == -1 ) ) { locARDScale.direref(kelm(j))           = ffull(j); loctuneK |= 1; }
+            else if ( ( kelm(j) >= 0  ) && ( kind(j) >= 0  ) ) { locconstVecs("&",kind(j))("&",kelm(j)) = ffull(j); loctuneK |= 1; }
+            else if ( ( kelm(j) == -1 )                      ) { locweightval("&",kind(j))              = ffull(j); loctuneK |= 1; }
+            else if ( ( kelm(j) == -2 )                      ) { locCval                                = ffull(j); loctuneP |= 1; }
+            else if ( ( kelm(j) == -3 )                      ) { locepsval                              = ffull(j); loctuneP |= 2; }
+            else if ( ( kelm(j) == -4 )                      ) { locsigmaval                            = ffull(j); loctuneP |= 4; }
+        }
 
-                        if ( loctuneK )
-                        {
-                            for ( int j = 0 ; j < lockdim ; ++j )
-                            {
-                                gentype wv(locweightval(j));
+        if ( loctuneK )
+        {
+            for ( int j = 0 ; j < lockdim ; ++j )
+            {
+                gentype wv(locweightval(j));
 
-                                lockernel.setRealConstants(locconstVecs(j),j);
-                                lockernel.setWeight(wv,j);
-                            }
+                lockernel.setRealConstants(locconstVecs(j),j);
+                lockernel.setWeight(wv,j);
+            }
 
-                            if ( lockARDdim ) { lockernel.setScale(locARDScale); }
+            if ( lockARDdim ) { lockernel.setScale(locARDScale); }
 
-                            model.resetKernel(1,-2);
-                        }
+            model.resetKernel(1,-2); // use -2 to only update d!=0 part, invalidating unused portions
+        }
 
-                        if ( loctuneP & 1 ) { setC(locCval);         }
-                        if ( loctuneP & 2 ) { seteps(locepsval);     }
-                        if ( loctuneP & 4 ) { setsigma(locsigmaval); }
+        if ( loctuneP & 1 ) { setC(locCval);         }
+        if ( loctuneP & 2 ) { seteps(locepsval);     }
+        if ( loctuneP & 4 ) { setsigma(locsigmaval); }
 
-                        int rescode = 0;
-                        reset();
-                        model.train(rescode);
+        int rescode = 0;
 
-                        if ( !method )
-                        {
-                            return 0;
-                        }
+        reset();
+        model.train(rescode);
 
-//                        if ( rescode )
-//                        {
-//                            isgood = false;
-//                        }
+        if ( !method )
+        {
+            return 0;
+        }
 
-                        if      ( method == 1 ) { evalval = calcnegloglikelihood(model,1); }
-                        else if ( method == 2 ) { evalval = calcLOO(model,0,1);            }
-                        else if ( method == 3 ) { evalval = calcRecall(model,0,1);         }
-                        else if ( method == 4 ) { evalval = norm2(alphaVal());             }
+//        if ( rescode )
+//        {
+//            isgood = false;
+//        }
 
-                        if ( testisvnan(evalval) || testisinf(evalval) )
-                        {
-                            reset();
+        evalval = 0.0;
 
-                            if ( loctuneK )     { lockernel = backkernel; resetKernel(1,-2); }
-                            if ( loctuneP & 1 ) { setC(backC);                               }
-                            if ( loctuneP & 2 ) { seteps(backeps);                           }
-                            if ( loctuneP & 4 ) { setsigma(backsigma);                       }
+        if ( method & 1 ) { evalval += calcnegloglikelihood(model,1); }
+        if ( method & 2 ) { evalval += calcLOO(model,0,1);            }
+        if ( method & 4 ) { evalval += calcRecall(model,0,1);         }
+        if ( method & 8 ) { evalval += norm2(alphaVal());             }
 
-                            reset();
-                        }
-                    }
+        if ( testisvnan(evalval) || testisinf(evalval) )
+        {
+            reset();
+
+            if ( loctuneK )     { lockernel = backkernel; resetKernel(1,-1); }
+            if ( loctuneP & 1 ) { setC(backC);                               }
+            if ( loctuneP & 2 ) { seteps(backeps);                           }
+            if ( loctuneP & 4 ) { setsigma(backsigma);                       }
+
+            reset();
+        }
+    }
 
     return evalval;
 }
@@ -8271,7 +8399,7 @@ void ML_Base::calcprior(gentype &res, const SparseVector<gentype> &xa, const vec
 
 void ML_Base::calcallprior(void)
 {
-    const static Vector<double> empvec;
+    const static thread_local Vector<double> empvec;
 
     for ( int i = 0 ; i < ML_Base::N() ; i++ )
     {

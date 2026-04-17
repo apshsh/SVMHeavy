@@ -254,16 +254,12 @@ void LSV_Binary::prepareKernel(void)
 
 int LSV_Binary::resetKernel(int modind, int onlyChangeRowI, int updateInfo)
 {
-    int res = LSV_Scalar::resetKernel(modind,onlyChangeRowI,updateInfo);
-
-    return res;
+    return LSV_Scalar::resetKernel(modind,onlyChangeRowI,updateInfo);
 }
 
 int LSV_Binary::setKernel(const MercerKernel &xkernel, int modind, int onlyChangeRowI)
 {
-    int res = LSV_Scalar::setKernel(xkernel,modind,onlyChangeRowI);
-
-    return res;
+    return LSV_Scalar::setKernel(xkernel,modind,onlyChangeRowI);
 }
 
 int LSV_Binary::sety(int i, const gentype &zn)

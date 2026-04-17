@@ -284,8 +284,8 @@ template <class K, class T>
 std::ostream &operator<<(std::ostream &output, const Dict<K,T> &src)
 {
     int size = src.size();
-    static T temp;
-    static std::string quoteish = isTaString(temp) ? "\"" : "";
+    const static thread_local T temp;
+    const static thread_local std::string quoteish = isTaString(temp) ? "\"" : "";
 
     output << "{{ ";
 
@@ -315,8 +315,8 @@ std::istream &operator>>(std::istream &input, Dict<K,T> &dest)
 
     std::string dummy;
     char tt;
-    static T temp;
-    static bool stringcase = isTaString(temp);
+    const static thread_local T temp;
+    const static thread_local bool stringcase = isTaString(temp);
 
     while ( isspace(input.peek()) )
     {
@@ -381,8 +381,8 @@ std::istream &streamItIn(std::istream &input, Dict<K,T> &dest, int processxyzvw)
 
     std::string dummy;
     char tt;
-    static T temp;
-    static bool stringcase = isTaString(temp);
+    const static thread_local T temp;
+    const static thread_local bool stringcase = isTaString(temp);
 
     while ( isspace(input.peek()) )
     {

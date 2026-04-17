@@ -2031,8 +2031,11 @@ int SMBOOptions::model_setyd(int imu, int isigma, int nd, const gentype &ny, dou
 
     if ( sigmuseparate )
     {
-        res += sigmaapprox.sety(isigma,ny);
-        res += sigmaapprox.setd(isigma,nd);
+        int iisigma = ( ( sigmaapprox.type() == 212 ) ? (-isigma-1) : isigma );
+        int nnd = ( nd == -2 ) ? 2 : nd;
+
+        res += sigmaapprox.sety(iisigma,ny);
+        res += sigmaapprox.setd(iisigma,nnd);
 
         if ( varadd )
         {
@@ -2093,8 +2096,11 @@ int SMBOOptions::model_setyd_sigma(int isigma, int nd, const gentype &ny, double
 
     if ( sigmuseparate )
     {
-        res += sigmaapprox.sety(isigma,ny);
-        res += sigmaapprox.setd(isigma,nd);
+        int iisigma = ( ( sigmaapprox.type() == 212 ) ? (-isigma-1) : isigma );
+        int nnd = ( nd == -2 ) ? 2 : nd;
+
+        res += sigmaapprox.sety(iisigma,ny);
+        res += sigmaapprox.setd(iisigma,nnd);
 
         if ( varadd )
         {
