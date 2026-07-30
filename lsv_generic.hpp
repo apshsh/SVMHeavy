@@ -287,16 +287,11 @@ protected:
 
         dbias = bis;
 
-        int i;
-
         killfasts();
 
         dalpha.resize(alphais.size());
 
-        for ( i = 0 ; i < alphais.size() ; ++i )
-        {
-            dalpha("&",i) = alphais(i);
-        }
+        for ( int i = 0 ; i < alphais.size() ; ++i ) { dalpha("&",i) = alphais(i); }
 
         return;
     }
@@ -307,26 +302,18 @@ protected:
 
     // The definition of zero depends on the target type
 
-    virtual gentype &makezero(gentype &val) 
-    { 
-        val.force_null(); 
+    virtual gentype &makezero(gentype &val)
+    {
+        val.force_null();
 
-        return val; 
+        return val;
     }
 
-    Vector<gentype> &makeveczero(Vector<gentype> &val) 
-    { 
-        int i; 
+    Vector<gentype> &makeveczero(Vector<gentype> &val)
+    {
+        for ( int i = 0 ; i < val.size() ; ++i ) { makezero(val("&",i)); }
 
-        if ( val.size() )
-        {
-            for ( i = 0 ; i < val.size() ; ++i )
-            {
-                makezero(val("&",i));
-            }
-        }
-
-        return val; 
+        return val;
     }
 };
 
